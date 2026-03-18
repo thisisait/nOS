@@ -15,7 +15,7 @@ install_bun: true                 # Bun JavaScript runtime / bundler
 install_python: true              # Python + pyenv + pip balíčky
 install_golang: true              # Go jazyk + vývojové nástroje
 install_dotnet: true              # .NET SDK (C#, F#)
-install_nemoclaw: true            # NVIDIA NemoClaw – secured OpenClaw agent
+install_openclaw: true            # OpenClaw AI agent (self-hosted, Ollama backend)
 configure_dotfiles: true          # Dotfiles (git, zsh, vim …)
 configure_terminal: true          # Terminal téma
 configure_osx: true               # macOS system defaults
@@ -217,26 +217,36 @@ dotnet_global_tools:
   - name: dotnet-script         # C# scripting
 
 # ==============================================================================
-# NEMOCLAW (NVIDIA secured OpenClaw agent)
+# OPENCLAW – self-hosted AI agent (Ollama backend, žádný API klíč)
+# Dokumentace: https://github.com/openclaw/openclaw
+# Ollama integrace: https://ollama.com/blog/openclaw
 # ==============================================================================
 
-# Získej API klíč na: https://build.nvidia.com
-nemoclaw_nvidia_api_key: ""   # PŘEPIŠ nebo nastav env: NVIDIA_API_KEY
+# Uživatel a domovský adresář pro agentické prostředí
+openclaw_user: "pazny"
+openclaw_base_dir: "/Users/pazny"
 
-# Verze z GitHub releases (prázdné = latest)
-nemoclaw_version: "latest"
+# Adresáře agentického systému
+openclaw_agents_dir: "/Users/pazny/agents"         # instalace, konfigurace agentů
+openclaw_projects_dir: "/Users/pazny/projects"     # projekty hostované přes nginx
+openclaw_log_dir: "/Users/pazny/agents/log"        # strukturované .md logy
 
-# Spustit 'nemoclaw onboard' po instalaci (vyžaduje api key a Docker)
-nemoclaw_run_onboard: true
+# OpenClaw konfigurace (~/.openclaw/)
+openclaw_config_dir: "~/.openclaw"
 
-# Vytvořit agentický systémový profil (přehled konfigurace)
-nemoclaw_create_system_profile: true
+# Ollama model – doporučeno pro 36GB RAM: qwen3.5:27b
+# Alternativy: qwen3.5:14b (rychlejší), llama3.3:70b (silnější, pomalejší)
+openclaw_model: "qwen3.5:27b"
 
-# Základní model pro lokální inferenci
-nemoclaw_model: "nemotron-3-super-120b"
+# Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
+openclaw_install_daemon: true
 
-# Adresář pro NemoClaw konfiguraci a profily
-nemoclaw_config_dir: "~/.nemoclaw"
+# Jméno agenta (persona)
+openclaw_agent_name: "Inspektor Klepítko"
+
+# Concurrent sub-agents
+openclaw_max_concurrent_agents: 4
+openclaw_max_concurrent_subagents: 8
 
 # ==============================================================================
 # DOTFILES

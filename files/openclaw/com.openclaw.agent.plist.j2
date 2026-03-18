@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.openclaw.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>openclaw</string>
+        <string>start</string>
+        <string>--daemon</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_env.HOME }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>OLLAMA_API_KEY</key>
+        <string>ollama-local</string>
+        <key>OPENCLAW_WORKSPACE</key>
+        <string>{{ openclaw_agents_dir }}</string>
+        <key>OPENCLAW_MODEL</key>
+        <string>{{ openclaw_model }}</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ openclaw_agents_dir }}/openclaw.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ openclaw_agents_dir }}/openclaw.stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>{{ openclaw_agents_dir }}</string>
+</dict>
+</plist>

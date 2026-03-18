@@ -97,11 +97,11 @@
       tags: ['sublime-text']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # NVIDIA NemoClaw – secured OpenClaw agent
+    # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/nemoclaw.yml
-      when: install_nemoclaw | default(false)
-      tags: ['nemoclaw', 'ai', 'agent']
+    - import_tasks: tasks/openclaw.yml
+      when: install_openclaw | default(false)
+      tags: ['openclaw', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Post-provision háky
