@@ -86,6 +86,87 @@ mkcert -cert-file /opt/homebrew/etc/nginx/ssl/local-dev.crt \
 | Python | `127.0.0.1:8000` | `upstream python_*` |
 | Go | `127.0.0.1:8080` | `upstream go_*` |
 | .NET | `127.0.0.1:5000` | `upstream dotnet_*` |
+| Kiwix (Docker) | `127.0.0.1:8888` | proxy_pass |
+| tileserver-gl | `127.0.0.1:8080` | proxy_pass |
+
+---
+
+## IIAB – Self-hosted Knowledge Services
+
+Server provozuje lokální znalostní infrastrukturu (IIAB-like services).
+Všechny IIAB služby jsou přístupné přes nginx na `*.dev.local` doménách.
+
+### Přehled IIAB služeb
+
+| Služba | Doména | Stack | Status |
+|--------|--------|-------|--------|
+| **WordPress** | `wordpress.dev.local` | PHP-FPM + MariaDB | volitelné |
+| **Nextcloud** | `cloud.dev.local` | PHP-FPM + MariaDB | volitelné |
+| **Kiwix** | `kiwix.dev.local` | Docker kiwix-serve | volitelné |
+| **Offline Mapy** | `maps.dev.local` | tileserver-gl (Node) | volitelné |
+
+### Kiwix – offline znalostní báze
+
+```
+ZIM soubory: ~/pazny/kiwix/
+```
+
+Stažení ZIM souboru:
+```bash
+~/pazny/kiwix/download-zim.sh https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim
+```
+
+Dostupné knowledge bases (zim soubory):
+- Wikipedia CS / EN (různé velikosti)
+- Project Gutenberg (knihy)
+- Stack Overflow CS/EN
+- OpenStreetMap
+
+### WordPress
+
+```
+Soubory:  ~/pazny/projects/wordpress/
+URL:      https://wordpress.dev.local
+Config:   ~/pazny/projects/wordpress/wp-config.php
+DB:       wordpress @ 127.0.0.1:3306
+```
+
+### Nextcloud
+
+```
+Soubory:  ~/pazny/projects/nextcloud/
+Data:     ~/pazny/nextcloud-data/
+URL:      https://cloud.dev.local
+DB:       nextcloud @ 127.0.0.1:3306
+```
+
+CLI administrace (occ):
+```bash
+php ~/pazny/projects/nextcloud/occ <příkaz>
+```
+
+### Offline Mapy
+
+```
+MBTiles:  ~/pazny/maps/
+URL:      https://maps.dev.local
+```
+
+Stažení mapových dat:
+```bash
+~/pazny/maps/download-maps.sh
+# Viz komentáře pro zdroje dat (MapTiler, Geofabrik, BBBike)
+```
+
+### MariaDB
+
+```bash
+mysql -u root -p   # lokální přístup
+# nebo:
+mysql -h 127.0.0.1 -u root -p
+```
+
+Databáze: `wordpress`, `nextcloud`
 
 ---
 

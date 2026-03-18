@@ -1,0 +1,354 @@
+---
+# ==============================================================================
+# macOS ROZŠÍŘENÁ NASTAVENÍ
+# Automatizuje většinu "Manual settings to automate someday" z full-mac-setup.md
+# + standardní developer defaults
+# ==============================================================================
+
+# ── FINDER ────────────────────────────────────────────────────────────────────
+
+- name: "[Finder] Show hidden files"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: AppleShowAllFiles
+    type: bool
+    value: "{{ macos_finder_show_hidden_files | default(true) }}"
+
+- name: "[Finder] Show all file extensions"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleShowAllExtensions
+    type: bool
+    value: "{{ macos_finder_show_extensions | default(true) }}"
+
+- name: "[Finder] Show path bar"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowPathbar
+    type: bool
+    value: "{{ macos_finder_show_path_bar | default(true) }}"
+
+- name: "[Finder] Show status bar"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowStatusBar
+    type: bool
+    value: "{{ macos_finder_show_status_bar | default(true) }}"
+
+- name: "[Finder] Disable click-to-show Desktop (Stage Manager)"
+  community.general.osx_defaults:
+    domain: com.apple.WindowManager
+    key: EnableStandardClickToShowDesktop
+    type: bool
+    value: "{{ not (macos_finder_disable_desktop_click | default(true)) }}"
+
+- name: "[Finder] Set default search scope"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXDefaultSearchScope
+    type: string
+    value: "{{ macos_finder_default_search_scope | default('SCcf') }}"
+
+- name: "[Finder] Show POSIX path in title bar"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: _FXShowPosixPathInTitle
+    type: bool
+    value: "{{ macos_finder_show_posix_path_title | default(false) }}"
+
+- name: "[Finder] Keep folders on top when sorting by name"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: _FXSortFoldersFirst
+    type: bool
+    value: true
+
+- name: "[Finder] Disable warning when changing file extension"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXEnableExtensionChangeWarning
+    type: bool
+    value: false
+
+- name: "[Finder] Use column view by default"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXPreferredViewStyle
+    type: string
+    value: "clmv"   # Nlsv=list, icnv=icon, clmv=column, Flwv=gallery
+
+- name: "[Finder] Expand save dialog by default"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSNavPanelExpandedStateForSaveMode
+    type: bool
+    value: true
+
+- name: "[Finder] Expand print dialog by default"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: PMPrintingExpandedStateForPrint
+    type: bool
+    value: true
+
+- name: "[Finder] Avoid creating .DS_Store files on network/USB volumes"
+  community.general.osx_defaults:
+    domain: com.apple.desktopservices
+    key: DSDontWriteNetworkStores
+    type: bool
+    value: true
+
+- name: "[Finder] Avoid creating .DS_Store files on USB"
+  community.general.osx_defaults:
+    domain: com.apple.desktopservices
+    key: DSDontWriteUSBStores
+    type: bool
+    value: true
+
+- name: "[Finder] Restart Finder to apply changes"
+  ansible.builtin.command: killall Finder
+  changed_when: false
+  failed_when: false
+
+# ── KLÁVESNICE ────────────────────────────────────────────────────────────────
+
+- name: "[Keyboard] Set key repeat rate (fast)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: KeyRepeat
+    type: int
+    value: "{{ macos_keyboard_repeat_rate | default(2) }}"
+
+- name: "[Keyboard] Set key repeat delay (short)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: InitialKeyRepeat
+    type: int
+    value: "{{ macos_keyboard_repeat_delay | default(15) }}"
+
+- name: "[Keyboard] Disable press-and-hold (enable key repeat)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: ApplePressAndHoldEnabled
+    type: bool
+    value: "{{ macos_keyboard_press_hold | default(false) }}"
+
+- name: "[Keyboard] Enable full keyboard access for all controls (Tab in dialogs)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: 3
+
+# ── ACCESSIBILITY ─────────────────────────────────────────────────────────────
+
+- name: "[Accessibility] Reduce transparency"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: reduceTransparency
+    type: bool
+    value: "{{ macos_reduce_transparency | default(true) }}"
+
+- name: "[Accessibility] Reduce motion"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: reduceMotion
+    type: bool
+    value: "{{ macos_reduce_motion | default(false) }}"
+
+# ── SCREENSHOT ────────────────────────────────────────────────────────────────
+
+- name: "[Screenshot] Ensure screenshot directory exists"
+  ansible.builtin.file:
+    path: "{{ macos_screenshot_location | default('~/Desktop') | expanduser }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Screenshot] Set screenshot save location"
+  community.general.osx_defaults:
+    domain: com.apple.screencapture
+    key: location
+    type: string
+    value: "{{ macos_screenshot_location | default('~/Desktop') }}"
+
+- name: "[Screenshot] Set screenshot format"
+  community.general.osx_defaults:
+    domain: com.apple.screencapture
+    key: type
+    type: string
+    value: "{{ macos_screenshot_format | default('png') }}"
+
+- name: "[Screenshot] Disable shadow in screenshots"
+  community.general.osx_defaults:
+    domain: com.apple.screencapture
+    key: disable-shadow
+    type: bool
+    value: true
+
+# ── DOCK ──────────────────────────────────────────────────────────────────────
+
+- name: "[Dock] Set autohide"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: autohide
+    type: bool
+    value: "{{ macos_dock_autohide | default(true) }}"
+
+- name: "[Dock] Disable autohide delay"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: autohide-delay
+    type: float
+    value: 0
+
+- name: "[Dock] Set autohide animation speed"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: autohide-time-modifier
+    type: float
+    value: 0.5
+
+- name: "[Dock] Hide recent apps"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: show-recents
+    type: bool
+    value: "{{ not (macos_dock_show_recents | default(false)) }}"
+
+- name: "[Dock] Set tile size"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: tilesize
+    type: int
+    value: "{{ macos_dock_tilesize | default(48) }}"
+
+- name: "[Dock] Set minimize effect"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: mineffect
+    type: string
+    value: "{{ macos_dock_minimize_effect | default('scale') }}"
+
+- name: "[Dock] Restart Dock to apply changes"
+  ansible.builtin.command: killall Dock
+  changed_when: false
+  failed_when: false
+
+# ── SAFARI (developer settings) ───────────────────────────────────────────────
+
+- name: "[Safari] Show full URL in address bar"
+  community.general.osx_defaults:
+    domain: com.apple.Safari
+    key: ShowFullURLInSmartSearchField
+    type: bool
+    value: "{{ macos_safari_show_full_url | default(true) }}"
+
+- name: "[Safari] Enable Developer menu"
+  community.general.osx_defaults:
+    domain: com.apple.Safari
+    key: IncludeDebugMenu
+    type: bool
+    value: "{{ macos_safari_developer_menu | default(true) }}"
+
+- name: "[Safari] Enable Web Inspector"
+  community.general.osx_defaults:
+    domain: com.apple.Safari
+    key: WebKitDeveloperExtrasEnabledPreferenceKey
+    type: bool
+    value: "{{ macos_safari_developer_menu | default(true) }}"
+
+- name: "[Safari] Enable Web Inspector (new pref key)"
+  community.general.osx_defaults:
+    domain: com.apple.Safari
+    key: com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled
+    type: bool
+    value: "{{ macos_safari_developer_menu | default(true) }}"
+
+# ── TERMINAL ──────────────────────────────────────────────────────────────────
+
+- name: "[Terminal] Enable Secure Keyboard Entry"
+  community.general.osx_defaults:
+    domain: com.apple.Terminal
+    key: SecureKeyboardEntry
+    type: bool
+    value: "{{ macos_terminal_secure_keyboard | default(true) }}"
+
+# ── SYSTÉM / VÝKON ────────────────────────────────────────────────────────────
+
+- name: "[System] Disable automatic termination of inactive apps"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSDisableAutomaticTermination
+    type: bool
+    value: true
+
+- name: "[System] Disable smart quotes (annoying for developers)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSAutomaticQuoteSubstitutionEnabled
+    type: bool
+    value: false
+
+- name: "[System] Disable smart dashes"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSAutomaticDashSubstitutionEnabled
+    type: bool
+    value: false
+
+- name: "[System] Disable auto-correct"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSAutomaticSpellingCorrectionEnabled
+    type: bool
+    value: false
+
+- name: "[System] Set sidebar icon size to medium"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSTableViewDefaultSizeMode
+    type: int
+    value: 2
+
+- name: "[System] Expand save panel by default"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSNavPanelExpandedStateForSaveMode2
+    type: bool
+    value: true
+
+# ── SÍŤ / SDÍLENÍ ─────────────────────────────────────────────────────────────
+
+- name: "[Network] Set computer name (ComputerName)"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/SystemConfiguration/com.apple.smb.server
+    key: NetBIOSName
+    type: string
+    value: "mac-studio"
+  become: true
+
+# ── POZNÁMKY – co nelze automatizovat ─────────────────────────────────────────
+
+- name: "[Notice] Print manual steps reminder"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════
+       ⚠️  Kroky, které je TŘEBA provést MANUÁLNĚ:
+      ══════════════════════════════════════════════════════════
+       1. Caps Lock → Esc:
+          System Settings > Keyboard > Keyboard Shortcuts >
+          Modifier Keys > Caps Lock = Escape
+
+       2. Full Disk Access pro Terminal:
+          System Settings > Privacy & Security > Full Disk Access
+          > + Terminal.app
+
+       3. Wireless Keyboard Shortcuts (Mission Control atd.):
+          System Settings > Keyboard > Keyboard Shortcuts
+
+       4. Wireguard VPN konfigurace:
+          Manuální import .conf souborů
+
+       5. Time Machine záloha:
+          Manuální výběr disku v System Settings > General
+      ══════════════════════════════════════════════════════════

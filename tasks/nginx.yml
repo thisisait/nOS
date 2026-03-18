@@ -40,12 +40,18 @@
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
     mode: '0644'
   loop:
+    # ── Dev šablony ───────────────────────────────────────────────────────────
     - default.conf
     - php-app.conf
     - node-proxy.conf
     - python-proxy.conf
     - go-proxy.conf
     - static-site.conf
+    # ── IIAB šablony (nasazeny vždy, aktivovány pouze pokud je služba zapnutá)
+    - wordpress.conf
+    - nextcloud.conf
+    - kiwix.conf
+    - maps.conf
   notify: Restart nginx
 
 - name: Enable configured nginx sites (symlink)
@@ -87,9 +93,3 @@
 - name: Test nginx configuration
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
   changed_when: false
-
-# Handler je definován v handlers/ – pro jednoduchost přidáme inline
-- name: Restart nginx (inline fallback)
-  ansible.builtin.command: brew services restart nginx
-  changed_when: false
-  listen: Restart nginx

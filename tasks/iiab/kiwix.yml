@@ -1,0 +1,162 @@
+---
+# ==============================================================================
+# KIWIX – offline Wikipedia, Gutenberg, ZIM soubory
+# Na macOS běží přes Docker (kiwix-serve nemá Homebrew formula)
+# Vyžaduje: Docker Desktop, Nginx
+# ==============================================================================
+
+- name: "[Kiwix] Verify Docker Desktop is installed"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app
+  register: docker_app
+
+- name: "[Kiwix] Fail if Docker Desktop is missing"
+  ansible.builtin.fail:
+    msg: >
+      Docker Desktop není nainstalován! Kiwix vyžaduje Docker.
+      Přidej 'docker' do homebrew_cask_apps nebo nastav install_cask_apps: true.
+  when: not docker_app.stat.exists
+
+- name: "[Kiwix] Ensure Kiwix data directory exists"
+  ansible.builtin.file:
+    path: "{{ kiwix_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Kiwix] Pull kiwix-serve Docker image"
+  ansible.builtin.command: docker pull ghcr.io/kiwix/kiwix-serve:latest
+  register: kiwix_pull
+  changed_when: "'Status: Image is up to date' not in kiwix_pull.stdout"
+
+- name: "[Kiwix] Download configured ZIM files"
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ kiwix_data_dir }}/{{ item.dest }}"
+    mode: '0644'
+    timeout: 3600   # ZIM soubory mohou být velké (GB)
+  loop: "{{ kiwix_zim_files | default([]) }}"
+  when: (kiwix_zim_files | default([])) | length > 0
+
+- name: "[Kiwix] Create launchd plist for kiwix-serve Docker container"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.kiwix.serve.plist"
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+          <key>Label</key>
+          <string>com.kiwix.serve</string>
+
+          <key>ProgramArguments</key>
+          <array>
+              <string>/usr/local/bin/docker</string>
+              <string>run</string>
+              <string>--rm</string>
+              <string>--name</string>
+              <string>kiwix-serve</string>
+              <string>-v</string>
+              <string>{{ kiwix_data_dir }}:/data</string>
+              <string>-p</string>
+              <string>{{ kiwix_port | default(8888) }}:8080</string>
+              <string>ghcr.io/kiwix/kiwix-serve:latest</string>
+              <string>/data/*.zim</string>
+          </array>
+
+          <key>RunAtLoad</key>
+          <true/>
+
+          <key>KeepAlive</key>
+          <true/>
+
+          <key>StandardOutPath</key>
+          <string>{{ openclaw_agents_dir | default('~/pazny/agents') }}/kiwix.stdout.log</string>
+
+          <key>StandardErrorPath</key>
+          <string>{{ openclaw_agents_dir | default('~/pazny/agents') }}/kiwix.stderr.log</string>
+      </dict>
+      </plist>
+    mode: '0644'
+
+- name: "[Kiwix] Load launchd daemon"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.kiwix.serve.plist
+  register: kiwix_launchd
+  changed_when: kiwix_launchd.rc == 0
+  failed_when: false
+
+- name: "[Kiwix] Deploy nginx reverse proxy vhost"
+  ansible.builtin.copy:
+    src: nginx/sites-available/kiwix.conf
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/kiwix.conf"
+    mode: '0644'
+  notify: Restart nginx
+
+- name: "[Kiwix] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/kiwix.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/kiwix.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+
+- name: "[Kiwix] Create ZIM file download helper script"
+  ansible.builtin.copy:
+    dest: "{{ kiwix_data_dir }}/download-zim.sh"
+    content: |
+      #!/usr/bin/env zsh
+      # Pomocný script pro stahování ZIM souborů
+      # Použití: ./download-zim.sh <url>
+      # Seznam ZIM souborů: https://download.kiwix.org/zim/
+      #
+      # Doporučené soubory:
+      #   Wikipedia CS (mini): https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim (~500MB)
+      #   Wikipedia CS (full): https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_2024-11.zim (~2GB)
+      #   Wikipedia EN (mini): https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_mini_2024-11.zim (~8GB)
+      #   Gutenberg CS:        https://download.kiwix.org/zim/gutenberg/gutenberg_cs_all_2023-06.zim (~300MB)
+      #   Stack Overflow CS:   https://download.kiwix.org/zim/stackoverflow.com/stackoverflow.com_cs_all_2024-05.zim (~600MB)
+      #   OpenStreetMap:       https://download.kiwix.org/zim/openstreetmap.zim (~1.5GB)
+
+      set -euo pipefail
+
+      DATA_DIR="{{ kiwix_data_dir }}"
+
+      if [ $# -eq 0 ]; then
+        echo "Použití: $0 <url-zim-souboru>"
+        echo "Příklad: $0 https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
+        exit 1
+      fi
+
+      URL="$1"
+      FILENAME=$(basename "$URL")
+      DEST="$DATA_DIR/$FILENAME"
+
+      echo "Stahuji: $URL"
+      echo "Cíl:     $DEST"
+      curl -L --progress-bar -o "$DEST" "$URL"
+      echo ""
+      echo "Hotovo! Restartuj Kiwix: launchctl kickstart -k gui/$(id -u)/com.kiwix.serve"
+    mode: '0755'
+
+- name: "[Kiwix] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       🦉 Kiwix nainstalován
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ kiwix_domain | default('kiwix.dev.local') }}
+       Port:      {{ kiwix_port | default(8888) }}
+       ZIM dir:   {{ kiwix_data_dir }}
+
+       Stahování ZIM souborů:
+         {{ kiwix_data_dir }}/download-zim.sh <url>
+
+       Nebo přidej do default.config.yml:
+         kiwix_zim_files:
+           - url: "https://download.kiwix.org/zim/wikipedia/..."
+             dest: "wikipedia_cs.zim"
+
+       Přidej do /etc/hosts:   127.0.0.1 {{ kiwix_domain | default('kiwix.dev.local') }}
+      ══════════════════════════════════════════════════════

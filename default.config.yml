@@ -5,23 +5,47 @@
 # Comment out (#) any line to SKIP that component during provisioning.
 # ==============================================================================
 
-install_homebrew_packages: true   # Základní CLI nástroje přes Homebrew
+# ── Homebrew & Apps ───────────────────────────────────────────────────────────
+install_homebrew_packages: true   # CLI nástroje (včetně build tools: cmake, ninja, llvm…)
 install_cask_apps: true           # GUI aplikace přes Homebrew Cask
 install_mas_apps: false           # Mac App Store aplikace
-install_nginx: true               # Nginx web server (homebrew service)
-install_php: true                 # PHP 8.x + PHP-FPM
+
+# ── Web server ────────────────────────────────────────────────────────────────
+install_nginx: true               # Nginx (reverse proxy, PHP-FPM, vhosts)
+
+# ── Jazyky / runtime ──────────────────────────────────────────────────────────
+install_php: true                 # PHP 8.x + PHP-FPM + Composer
 install_node: true                # Node.js + NVM + globální npm balíčky
 install_bun: true                 # Bun JavaScript runtime / bundler
 install_python: true              # Python + pyenv + pip balíčky
-install_golang: true              # Go jazyk + vývojové nástroje
-install_dotnet: true              # .NET SDK (C#, F#)
-install_openclaw: true            # OpenClaw AI agent (self-hosted, Ollama backend)
+install_golang: true              # Go jazyk + gopls, golangci-lint, air
+install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
+
+# ── AI Agent ──────────────────────────────────────────────────────────────────
+install_openclaw: true            # OpenClaw (Inspektor Klepítko, Ollama, bez API klíče)
+
+# ── macOS systémová konfigurace ────────────────────────────────────────────────
 configure_dotfiles: true          # Dotfiles (git, zsh, vim …)
 configure_terminal: true          # Terminal téma
-configure_osx: true               # macOS system defaults
+configure_osx: true               # Základní macOS defaults (.osx script)
+configure_macos_defaults: true    # Rozšířená macOS nastavení (Finder, klávesnice, Dock…)
 configure_dock: false             # Dock layout (vyžaduje dockutil)
 configure_sudoers: false          # Vlastní sudoers pravidla
 configure_sublime: false          # Sublime Text editor
+
+# ── Systémové služby (vyžadují sudo) ──────────────────────────────────────────
+enable_ssh: false                 # Remote Login / SSH server
+enable_samba: false               # Sdílení souborů přes SMB (Windows/Linux)
+enable_vnc: false                 # Sdílení obrazovky (VNC / Apple Remote Desktop)
+enable_remote_management: false   # Apple Remote Desktop (ARD) – plná správa
+
+# ── IIAB – self-hosted knowledge services ─────────────────────────────────────
+# Vyžaduje: install_nginx: true, install_php: true
+install_mariadb: false            # MariaDB databáze (nutná pro WordPress + Nextcloud)
+install_wordpress: false          # WordPress CMS  [vyžaduje: mariadb, php, nginx]
+install_nextcloud: false          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
+install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM soubory  [vyžaduje: Docker]
+install_offline_maps: false       # Offline mapy – tileserver-gl + OpenMapTiles MBTiles  [vyžaduje: node]
 
 # ==============================================================================
 # HOMEBREW – obecné nastavení
@@ -67,6 +91,25 @@ homebrew_installed_packages:
   - git-lfs
   - pre-commit
   - act                  # GitHub Actions lokálně
+  # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
+  # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
+  # ninja:      Rychlý build systém (cmake backend, meson backend)
+  # llvm:       Clang/LLVM – vyžaduje kiwix-tools build, některé Rust crates
+  # ccache:     Compiler cache – zrychlí opakovanou kompilaci 5–10×
+  # pkg-config: Správa knihovních závislostí (nutný pro many brew --HEAD formulas)
+  # libomp:     OpenMP parallelism – Ollama CPU inference, numpy, scipy
+  # openblas:   BLAS/LAPACK – numpy, scipy, ML workloads bez GPU
+  # protobuf:   Protocol Buffers – gRPC, ONNX, TFLite, OpenClaw tools
+  # meson:      Build systém (kiwix-tools, libzim)
+  - cmake
+  - ninja
+  - llvm
+  - ccache
+  - pkg-config
+  - libomp
+  - openblas
+  - protobuf
+  - meson
 
 homebrew_taps:
   - homebrew/services
@@ -264,7 +307,7 @@ dotfiles_files:
   - .vimrc
 
 # ==============================================================================
-# macOS DEFAULTS
+# macOS DEFAULTS (.osx script)
 # ==============================================================================
 
 osx_script: "~/.osx --no-restart"
@@ -273,6 +316,75 @@ configure_sudoers: false
 sudoers_custom_config: ""
 # sudoers_custom_config: |
 #   %admin ALL=(ALL) NOPASSWD: ALL
+
+# ==============================================================================
+# macOS ROZŠÍŘENÁ NASTAVENÍ (configure_macos_defaults)
+# Automatizuje vše z "Manual settings to automate someday" + developer defaults
+# ==============================================================================
+
+# ── Finder ────────────────────────────────────────────────────────────────────
+macos_finder_show_hidden_files: true          # Zobrazit skryté soubory (Cmd+Shift+.)
+macos_finder_show_extensions: true           # Zobrazit přípony souborů
+macos_finder_show_path_bar: true             # Zobrazit path bar dole
+macos_finder_show_status_bar: true           # Zobrazit status bar dole
+macos_finder_disable_desktop_click: true     # Zakázat klik na plochu (Stage Manager)
+macos_finder_default_search_scope: "SCcf"   # Hledat v aktuální složce (SCcf) / počítači (SCev)
+macos_finder_show_posix_path_title: false    # Zobrazit POSIX path v title baru
+
+# ── Klávesnice ────────────────────────────────────────────────────────────────
+macos_keyboard_repeat_rate: 2        # 0=fastest … 120=slowest (2 = Fast)
+macos_keyboard_repeat_delay: 15      # 0=shortest … 120=longest (15 = Short)
+macos_keyboard_press_hold: false     # false = key repeat (ne accent menu)
+# Caps Lock → Esc: NELZE plně automatizovat (HW-specific IOKit), viz README
+
+# ── Accessibility ─────────────────────────────────────────────────────────────
+macos_reduce_transparency: true      # Snížit průhlednost (výkon)
+macos_reduce_motion: false           # Snížit pohyb animací
+
+# ── Screenshot ────────────────────────────────────────────────────────────────
+macos_screenshot_location: "~/Desktop"   # Kam ukládat screenshoty
+macos_screenshot_format: "png"           # png | jpg | pdf | tiff
+
+# ── Dock ──────────────────────────────────────────────────────────────────────
+macos_dock_autohide: true            # Automaticky skrýt Dock
+macos_dock_show_recents: false       # Nezobrazovat nedávné aplikace
+macos_dock_tilesize: 48              # Velikost ikon (pixels)
+macos_dock_minimize_effect: "scale"  # genie | scale
+
+# ── Safari (vývojářské) ───────────────────────────────────────────────────────
+macos_safari_show_status_bar: true        # Zobrazit status bar
+macos_safari_show_full_url: true          # Zobrazit plnou URL
+macos_safari_developer_menu: true         # Zapnout Developer menu
+# Poznámka: Userscripts (Return YouTube Dislike) je třeba instalovat manuálně
+
+# ── Terminal ──────────────────────────────────────────────────────────────────
+macos_terminal_secure_keyboard: true  # Secure keyboard entry
+
+# ── Systém ────────────────────────────────────────────────────────────────────
+macos_disable_gatekeeper: false       # NEDOPORUČENO – nechej false pro bezpečnost
+# Full Disk Access pro Terminal: NELZE automatizovat (SIP protected)
+# Installer sám o to požádá při prvním spuštění
+
+# ==============================================================================
+# SYSTÉMOVÉ SLUŽBY
+# ==============================================================================
+
+# SSH
+ssh_port: 22
+ssh_allow_groups: "admin staff"   # Skupiny s SSH přístupem
+ssh_password_auth: false          # false = pouze klíče (bezpečnější)
+
+# Samba / SMB
+samba_workgroup: "WORKGROUP"
+samba_shares:
+  - name: "projects"
+    path: "/Users/pazny/projects"
+    comment: "Pazny projects"
+    browseable: true
+    writable: true
+
+# VNC
+vnc_password: ""   # PŘEPIŠ! Prázdné = VNC se nespustí bezpečně
 
 # ==============================================================================
 # DOCK
@@ -302,6 +414,88 @@ sublime_package_control:
   - "Theme - Cobalt2"
   - "TrailingSpaces"
   - "WordingStatus"
+
+# ==============================================================================
+# IIAB – MARIADB
+# ==============================================================================
+
+mariadb_root_password: "changeme_root"   # PŘEPIŠ před spuštěním!
+mariadb_bind_address: "127.0.0.1"       # Jen lokálně
+
+mariadb_databases:
+  - name: "wordpress"
+  - name: "nextcloud"
+
+mariadb_users:
+  - name: "wordpress"
+    password: "changeme_wp"              # PŘEPIŠ!
+    priv: "wordpress.*:ALL"
+  - name: "nextcloud"
+    password: "changeme_nc"              # PŘEPIŠ!
+    priv: "nextcloud.*:ALL"
+
+# ==============================================================================
+# IIAB – WORDPRESS
+# ==============================================================================
+
+wordpress_domain: "wordpress.dev.local"
+wordpress_dir: "/Users/pazny/projects/wordpress"
+wordpress_db_name: "wordpress"
+wordpress_db_user: "wordpress"
+wordpress_db_password: "changeme_wp"    # Musí odpovídat mariadb_users výše
+wordpress_db_host: "127.0.0.1"
+wordpress_table_prefix: "wp_"
+
+# ==============================================================================
+# IIAB – NEXTCLOUD
+# ==============================================================================
+
+nextcloud_domain: "cloud.dev.local"
+nextcloud_dir: "/Users/pazny/projects/nextcloud"
+nextcloud_data_dir: "/Users/pazny/nextcloud-data"
+nextcloud_db_name: "nextcloud"
+nextcloud_db_user: "nextcloud"
+nextcloud_db_password: "changeme_nc"   # Musí odpovídat mariadb_users výše
+nextcloud_db_host: "127.0.0.1"
+nextcloud_admin_user: "admin"
+nextcloud_admin_password: "changeme_admin"  # PŘEPIŠ!
+
+# ==============================================================================
+# IIAB – KIWIX (offline Wikipedia, Gutenberg, ZIM soubory)
+# Kiwix běží v Docker kontejneru (nejjednodušší na macOS)
+# ==============================================================================
+
+kiwix_domain: "kiwix.dev.local"
+kiwix_port: 8888                           # Lokální port kiwix-serve
+kiwix_data_dir: "/Users/pazny/kiwix"       # Sem ukládej .zim soubory
+
+# ZIM soubory ke stažení (prázdné = nestahovat automaticky)
+# Velikosti: Wikipedia CZ ~2GB, EN ~90GB, Gutenberg ~60GB
+# Viz: https://download.kiwix.org/zim/
+kiwix_zim_files: []
+# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
+#   dest: "wikipedia_cs_mini.zim"
+# - url: "https://download.kiwix.org/zim/gutenberg/gutenberg_cs_all_2023-06.zim"
+#   dest: "gutenberg_cs.zim"
+# - url: "https://download.kiwix.org/zim/openstreetmap.zim"
+#   dest: "openstreetmap.zim"
+# - url: "https://download.kiwix.org/zim/stackoverflow/stackoverflow.com_cs_all_2024-05.zim"
+#   dest: "stackoverflow_cs.zim"
+
+# ==============================================================================
+# IIAB – OFFLINE MAPY (tileserver-gl + MBTiles)
+# ==============================================================================
+
+maps_domain: "maps.dev.local"
+maps_port: 8080
+maps_data_dir: "/Users/pazny/maps"        # Sem ukládej .mbtiles soubory
+
+# MBTiles soubory ke stažení (prázdné = nestahovat automaticky)
+# Viz: https://data.maptiler.com/downloads/ nebo https://openmaptiles.org/
+maps_mbtiles_files: []
+# - url: "https://data.maptiler.com/downloads/europe/czech-republic/"
+#   dest: "czech-republic.mbtiles"
+#   # POZOR: Vyžaduje registraci na maptiler.com (free tier k dispozici)
 
 # ==============================================================================
 # POST-PROVISION

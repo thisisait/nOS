@@ -12,6 +12,31 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+  # ============================================================================
+  # HANDLERS – centralizované, volatelné přes notify: z libovolného task souboru
+  # ============================================================================
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.command: brew services restart nginx
+
+    - name: Reload nginx
+      ansible.builtin.command: >
+        {{ homebrew_prefix }}/bin/nginx -s reload
+      failed_when: false
+      # Pokud reload selže (např. nginx neběží), proveď restart
+      notify: Restart nginx
+
+    - name: Restart php-fpm
+      ansible.builtin.command: brew services restart "php@{{ php_version }}"
+
+    - name: Restart mariadb
+      ansible.builtin.command: brew services restart mariadb
+
+    - name: Restart openclaw
+      ansible.builtin.command: >
+        launchctl kickstart -k "gui/{{ ansible_user_uid }}/com.openclaw.agent"
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
@@ -35,7 +60,7 @@
 
   tasks:
     # ──────────────────────────────────────────────────────────────────────────
-    # Systémová konfigurace
+    # macOS systémová nastavení
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sudoers.yml
       when: configure_sudoers | default(false)
@@ -48,6 +73,21 @@
     - import_tasks: tasks/osx.yml
       when: configure_osx | default(true)
       tags: ['osx']
+
+    - import_tasks: tasks/macos-defaults.yml
+      when: configure_macos_defaults | default(true)
+      tags: ['macos-defaults', 'osx']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Systémové služby (SSH, Samba, VNC)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/system-services.yml
+      when: >
+        (enable_ssh | default(false)) or
+        (enable_samba | default(false)) or
+        (enable_vnc | default(false)) or
+        (enable_remote_management | default(false))
+      tags: ['system-services', 'ssh', 'samba', 'vnc']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Web server
@@ -95,6 +135,29 @@
     - import_tasks: tasks/sublime-text.yml
       when: configure_sublime | default(false)
       tags: ['sublime-text']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # IIAB – self-hosted knowledge services
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/iiab/mariadb.yml
+      when: install_mariadb | default(false)
+      tags: ['iiab', 'mariadb', 'database']
+
+    - import_tasks: tasks/iiab/wordpress.yml
+      when: install_wordpress | default(false)
+      tags: ['iiab', 'wordpress']
+
+    - import_tasks: tasks/iiab/nextcloud.yml
+      when: install_nextcloud | default(false)
+      tags: ['iiab', 'nextcloud']
+
+    - import_tasks: tasks/iiab/kiwix.yml
+      when: install_kiwix | default(false)
+      tags: ['iiab', 'kiwix', 'zim']
+
+    - import_tasks: tasks/iiab/maps.yml
+      when: install_offline_maps | default(false)
+      tags: ['iiab', 'maps']
 
     # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)

@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# MARIADB – instalace a konfigurace (sdílená závislost pro WP + Nextcloud)
+# ==============================================================================
+
+- name: "[MariaDB] Install MariaDB via Homebrew"
+  community.general.homebrew:
+    name: mariadb
+    state: present
+
+- name: "[MariaDB] Start MariaDB service"
+  ansible.builtin.command: brew services start mariadb
+  register: mariadb_svc
+  changed_when: "'already started' not in mariadb_svc.stdout"
+  failed_when:
+    - mariadb_svc.rc != 0
+    - "'already started' not in mariadb_svc.stdout"
+
+- name: "[MariaDB] Wait for MariaDB to be ready"
+  ansible.builtin.wait_for:
+    port: 3306
+    host: "{{ mariadb_bind_address | default('127.0.0.1') }}"
+    timeout: 30
+
+- name: "[MariaDB] Set MariaDB bind-address"
+  ansible.builtin.ini_file:
+    path: "{{ homebrew_prefix }}/etc/my.cnf"
+    section: mysqld
+    option: bind-address
+    value: "{{ mariadb_bind_address | default('127.0.0.1') }}"
+    mode: '0644'
+    create: true
+  notify: Restart mariadb
+
+- name: "[MariaDB] Set root password"
+  community.mysql.mysql_user:
+    login_unix_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"
+    name: root
+    password: "{{ mariadb_root_password }}"
+    host_all: true
+    state: present
+  no_log: true
+  ignore_errors: true   # Může selhat pokud root password je již nastaven
+
+- name: "[MariaDB] Remove anonymous users"
+  community.mysql.mysql_user:
+    login_unix_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"
+    login_password: "{{ mariadb_root_password }}"
+    name: ""
+    host_all: true
+    state: absent
+  no_log: true
+
+- name: "[MariaDB] Remove test database"
+  community.mysql.mysql_db:
+    login_unix_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"
+    login_password: "{{ mariadb_root_password }}"
+    name: test
+    state: absent
+
+- name: "[MariaDB] Create databases"
+  community.mysql.mysql_db:
+    login_unix_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+  loop: "{{ mariadb_databases | default([]) }}"
+  no_log: true
+
+- name: "[MariaDB] Create database users"
+  community.mysql.mysql_user:
+    login_unix_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    priv: "{{ item.priv }}"
+    host: "{{ item.host | default('127.0.0.1') }}"
+    state: present
+  loop: "{{ mariadb_users | default([]) }}"
+  no_log: true

@@ -119,8 +119,3 @@
   failed_when:
     - phpfpm_svc.rc != 0
     - "'already started' not in phpfpm_svc.stdout"
-
-- name: Restart php-fpm (inline handler)
-  ansible.builtin.command: brew services restart "php@{{ php_version }}"
-  changed_when: false
-  listen: Restart php-fpm

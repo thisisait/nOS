@@ -1,0 +1,130 @@
+---
+# ==============================================================================
+# NEXTCLOUD – self-hosted cloud storage
+# Vyžaduje: MariaDB, PHP-FPM, Nginx
+# ==============================================================================
+
+- name: "[Nextcloud] Ensure directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0750'
+  loop:
+    - "{{ nextcloud_dir }}"
+    - "{{ nextcloud_data_dir }}"
+
+- name: "[Nextcloud] Check if Nextcloud is already installed"
+  ansible.builtin.stat:
+    path: "{{ nextcloud_dir }}/index.php"
+  register: nc_installed
+
+- name: "[Nextcloud] Get latest Nextcloud version"
+  ansible.builtin.uri:
+    url: https://download.nextcloud.com/server/releases/latest.tar.bz2
+    method: HEAD
+    follow_redirects: safe
+  register: nc_latest
+  when: not nc_installed.stat.exists
+
+- name: "[Nextcloud] Download latest Nextcloud"
+  ansible.builtin.get_url:
+    url: https://download.nextcloud.com/server/releases/latest.tar.bz2
+    dest: /tmp/nextcloud.tar.bz2
+    mode: '0644'
+    timeout: 300
+  when: not nc_installed.stat.exists
+
+- name: "[Nextcloud] Extract Nextcloud"
+  ansible.builtin.unarchive:
+    src: /tmp/nextcloud.tar.bz2
+    dest: /tmp/
+    remote_src: true
+  when: not nc_installed.stat.exists
+
+- name: "[Nextcloud] Copy Nextcloud files to project dir"
+  ansible.builtin.shell: |
+    cp -r /tmp/nextcloud/. {{ nextcloud_dir }}/
+    rm -rf /tmp/nextcloud /tmp/nextcloud.tar.bz2
+  args:
+    creates: "{{ nextcloud_dir }}/index.php"
+
+- name: "[Nextcloud] Set permissions on Nextcloud directory"
+  ansible.builtin.file:
+    path: "{{ nextcloud_dir }}"
+    mode: '0750'
+    recurse: true
+
+- name: "[Nextcloud] Run Nextcloud installation (occ)"
+  ansible.builtin.shell: |
+    php {{ nextcloud_dir }}/occ maintenance:install \
+      --database "mysql" \
+      --database-host "{{ nextcloud_db_host | default('127.0.0.1') }}" \
+      --database-name "{{ nextcloud_db_name }}" \
+      --database-user "{{ nextcloud_db_user }}" \
+      --database-pass "{{ nextcloud_db_password }}" \
+      --admin-user "{{ nextcloud_admin_user }}" \
+      --admin-pass "{{ nextcloud_admin_password }}" \
+      --data-dir "{{ nextcloud_data_dir }}"
+  args:
+    executable: /bin/zsh
+    creates: "{{ nextcloud_dir }}/config/config.php"
+  environment:
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version | default('8.3') }}/bin:{{ homebrew_prefix }}/bin:{{ ansible_env.PATH }}"
+  no_log: true
+
+- name: "[Nextcloud] Add trusted domain"
+  ansible.builtin.shell: |
+    php {{ nextcloud_dir }}/occ config:system:set \
+      trusted_domains 1 --value="{{ nextcloud_domain }}"
+  args:
+    executable: /bin/zsh
+  environment:
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version | default('8.3') }}/bin:{{ homebrew_prefix }}/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+
+- name: "[Nextcloud] Set background job to cron"
+  ansible.builtin.shell: |
+    php {{ nextcloud_dir }}/occ background:cron
+  args:
+    executable: /bin/zsh
+  environment:
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version | default('8.3') }}/bin:{{ homebrew_prefix }}/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+
+- name: "[Nextcloud] Add Nextcloud cron job"
+  ansible.builtin.cron:
+    name: "Nextcloud background jobs"
+    minute: "*/5"
+    job: >
+      {{ homebrew_prefix }}/opt/php@{{ php_version | default('8.3') }}/bin/php
+      -f {{ nextcloud_dir }}/cron.php
+
+- name: "[Nextcloud] Deploy nginx vhost"
+  ansible.builtin.copy:
+    src: "nginx/sites-available/nextcloud.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/nextcloud.conf"
+    mode: '0644'
+  notify: Restart nginx
+
+- name: "[Nextcloud] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/nextcloud.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/nextcloud.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+
+- name: "[Nextcloud] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Nextcloud nainstalován
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ nextcloud_domain }}
+       Dir:       {{ nextcloud_dir }}
+       Data:      {{ nextcloud_data_dir }}
+       Admin:     {{ nextcloud_admin_user }}
+       DB:        {{ nextcloud_db_name }} @ {{ nextcloud_db_host }}
+
+       Přidej do /etc/hosts:   127.0.0.1 {{ nextcloud_domain }}
+      ══════════════════════════════════════════════════════

@@ -1,0 +1,128 @@
+---
+# ==============================================================================
+# WORDPRESS – instalace, konfigurace, nginx vhost
+# Vyžaduje: MariaDB, PHP-FPM, Nginx
+# ==============================================================================
+
+- name: "[WordPress] Ensure WordPress directory exists"
+  ansible.builtin.file:
+    path: "{{ wordpress_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[WordPress] Check if WordPress is already installed"
+  ansible.builtin.stat:
+    path: "{{ wordpress_dir }}/wp-login.php"
+  register: wp_installed
+
+- name: "[WordPress] Download latest WordPress"
+  ansible.builtin.get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /tmp/wordpress.tar.gz
+    mode: '0644'
+    timeout: 120
+  when: not wp_installed.stat.exists
+
+- name: "[WordPress] Extract WordPress"
+  ansible.builtin.unarchive:
+    src: /tmp/wordpress.tar.gz
+    dest: /tmp/
+    remote_src: true
+  when: not wp_installed.stat.exists
+
+- name: "[WordPress] Copy WordPress files to project dir"
+  ansible.builtin.shell: |
+    cp -r /tmp/wordpress/. {{ wordpress_dir }}/
+    rm -rf /tmp/wordpress /tmp/wordpress.tar.gz
+  args:
+    creates: "{{ wordpress_dir }}/wp-login.php"
+
+- name: "[WordPress] Set correct permissions on wp-content"
+  ansible.builtin.file:
+    path: "{{ wordpress_dir }}/wp-content"
+    state: directory
+    mode: '0775'
+    recurse: true
+
+- name: "[WordPress] Create wp-config.php from sample"
+  ansible.builtin.copy:
+    src: "{{ wordpress_dir }}/wp-config-sample.php"
+    dest: "{{ wordpress_dir }}/wp-config.php"
+    remote_src: true
+    force: false
+    mode: '0640'
+
+- name: "[WordPress] Configure database connection in wp-config.php"
+  ansible.builtin.replace:
+    path: "{{ wordpress_dir }}/wp-config.php"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  loop:
+    - regexp: "database_name_here"
+      replace: "{{ wordpress_db_name }}"
+    - regexp: "username_here"
+      replace: "{{ wordpress_db_user }}"
+    - regexp: "password_here"
+      replace: "{{ wordpress_db_password }}"
+    - regexp: "localhost"
+      replace: "{{ wordpress_db_host | default('127.0.0.1') }}"
+    - regexp: "'wp_'"
+      replace: "'{{ wordpress_table_prefix | default('wp_') }}'"
+  no_log: true
+
+- name: "[WordPress] Fetch WordPress security keys"
+  ansible.builtin.uri:
+    url: https://api.wordpress.org/secret-key/1.1/salt/
+    return_content: true
+  register: wp_salts
+
+- name: "[WordPress] Inject security keys into wp-config.php"
+  ansible.builtin.replace:
+    path: "{{ wordpress_dir }}/wp-config.php"
+    regexp: "(?s)define\\( 'AUTH_KEY'.*?define\\( 'NONCE_SALT'.*?\\);"
+    replace: "{{ wp_salts.content }}"
+  when: wp_salts.status == 200
+
+- name: "[WordPress] Enable pretty permalinks via .htaccess (nginx uses try_files)"
+  ansible.builtin.copy:
+    dest: "{{ wordpress_dir }}/.htaccess"
+    content: |
+      # BEGIN WordPress
+      RewriteEngine On
+      RewriteBase /
+      RewriteRule ^index\.php$ - [L]
+      RewriteCond %{REQUEST_FILENAME} !-f
+      RewriteCond %{REQUEST_FILENAME} !-d
+      RewriteRule . /index.php [L]
+      # END WordPress
+    force: false
+    mode: '0644'
+
+- name: "[WordPress] Deploy nginx vhost"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/nginx/sites-available/wordpress.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/wordpress.conf"
+    mode: '0644'
+  notify: Restart nginx
+
+- name: "[WordPress] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/wordpress.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/wordpress.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+
+- name: "[WordPress] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       WordPress nainstalován
+      ══════════════════════════════════════════════════════
+       URL:      https://{{ wordpress_domain }}
+       Dir:      {{ wordpress_dir }}
+       DB:       {{ wordpress_db_name }} @ {{ wordpress_db_host }}
+
+       Dokončení: přejdi na https://{{ wordpress_domain }}/wp-admin/install.php
+       Přidej do /etc/hosts:   127.0.0.1 {{ wordpress_domain }}
+      ══════════════════════════════════════════════════════

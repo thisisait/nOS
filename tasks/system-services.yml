@@ -1,0 +1,140 @@
+---
+# ==============================================================================
+# SYSTÉMOVÉ SLUŽBY – SSH, Samba, VNC / Apple Remote Desktop
+# Vyžaduje: become: true (sudo)
+# ==============================================================================
+
+# ── SSH / Remote Login ────────────────────────────────────────────────────────
+
+- name: "[SSH] Enable Remote Login"
+  ansible.builtin.command: systemsetup -setremotelogin on
+  become: true
+  when: enable_ssh | default(false)
+  register: ssh_enable
+  changed_when: "'Remote Login is already On' not in ssh_enable.stdout"
+
+- name: "[SSH] Configure sshd_config"
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED – mac-dev-playbook"
+    block: |
+      Port {{ ssh_port | default(22) }}
+      PasswordAuthentication {{ 'yes' if (ssh_password_auth | default(false)) else 'no' }}
+      ChallengeResponseAuthentication no
+      UsePAM yes
+      AllowGroups {{ ssh_allow_groups | default('admin') }}
+      MaxAuthTries 5
+      LoginGraceTime 30
+    backup: true
+  become: true
+  when: enable_ssh | default(false)
+  notify: Restart ssh
+
+- name: "[SSH] Ensure ~/.ssh directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.ssh"
+    state: directory
+    mode: '0700'
+  when: enable_ssh | default(false)
+
+# Handler – definován v main.yml (brew services nemůže restartovat sshd)
+- name: Restart ssh
+  ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
+  become: true
+  listen: Restart ssh
+  changed_when: false
+
+# ── Samba / SMB ───────────────────────────────────────────────────────────────
+
+- name: "[Samba] Enable macOS File Sharing (SMB)"
+  ansible.builtin.command: launchctl load -w /System/Library/LaunchDaemons/com.apple.smbd.plist
+  become: true
+  when: enable_samba | default(false)
+  register: smb_enable
+  changed_when: smb_enable.rc == 0
+  failed_when: false
+
+- name: "[Samba] Set SMB workgroup"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/SystemConfiguration/com.apple.smb.server
+    key: Workgroup
+    type: string
+    value: "{{ samba_workgroup | default('WORKGROUP') }}"
+  become: true
+  when: enable_samba | default(false)
+
+- name: "[Samba] Enable File Sharing for configured paths"
+  ansible.builtin.command: >
+    sharing -a "{{ item.path }}" -S "{{ item.name }}" -s 001
+  loop: "{{ samba_shares | default([]) }}"
+  become: true
+  when: enable_samba | default(false)
+  register: samba_share
+  changed_when: samba_share.rc == 0
+  failed_when: false
+
+# ── VNC / Screen Sharing ──────────────────────────────────────────────────────
+
+- name: "[VNC] Check VNC password is set"
+  ansible.builtin.fail:
+    msg: >
+      'vnc_password' je prázdné! Nastav 'vnc_password' v config.yml pro
+      bezpečné spuštění VNC sdílení obrazovky.
+  when:
+    - enable_vnc | default(false)
+    - (vnc_password | default('')) | length == 0
+
+- name: "[VNC] Enable Screen Sharing (VNC)"
+  ansible.builtin.command: >
+    /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart
+    -activate
+    -configure -clientopts -setvnclegacy -vnclegacy yes
+    -configure -clientopts -setvncpw -vncpw "{{ vnc_password }}"
+    -configure -access -on
+    -configure -allowAccessFor -allUsers
+    -restart -agent
+  become: true
+  when:
+    - enable_vnc | default(false)
+    - (vnc_password | default('')) | length > 0
+  no_log: true   # Neskrývat heslo v logu
+  register: vnc_enable
+  changed_when: vnc_enable.rc == 0
+
+- name: "[VNC] Load Screen Sharing daemon"
+  ansible.builtin.command: >
+    launchctl load -w
+    /System/Library/LaunchDaemons/com.apple.screensharing.plist
+  become: true
+  when:
+    - enable_vnc | default(false)
+    - (vnc_password | default('')) | length > 0
+  register: vnc_daemon
+  changed_when: vnc_daemon.rc == 0
+  failed_when: false
+
+# ── Apple Remote Desktop (plná správa) ───────────────────────────────────────
+
+- name: "[ARD] Enable Apple Remote Desktop full access"
+  ansible.builtin.command: >
+    /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart
+    -activate
+    -configure -access -on
+    -configure -allowAccessFor -allUsers
+    -configure -allPrivileges
+    -restart -agent -menu
+  become: true
+  when: enable_remote_management | default(false)
+  register: ard_enable
+  changed_when: ard_enable.rc == 0
+
+# ── Souhrn ────────────────────────────────────────────────────────────────────
+
+- name: "[Services] Print enabled system services"
+  ansible.builtin.debug:
+    msg: |
+      Systémové služby:
+        SSH:  {{ 'ZAPNUTO (port ' + (ssh_port | default(22) | string) + ')' if (enable_ssh | default(false)) else 'vypnuto' }}
+        SMB:  {{ 'ZAPNUTO (workgroup: ' + (samba_workgroup | default('WORKGROUP')) + ')' if (enable_samba | default(false)) else 'vypnuto' }}
+        VNC:  {{ 'ZAPNUTO' if (enable_vnc | default(false)) else 'vypnuto' }}
+        ARD:  {{ 'ZAPNUTO' if (enable_remote_management | default(false)) else 'vypnuto' }}
