@@ -1,0 +1,235 @@
+---
+# ==============================================================================
+# NVIDIA NemoClaw – Secured OpenClaw Agent
+#
+# NemoClaw přidává bezpečnostní a privacy vrstvu na OpenClaw agenty.
+# Vyžaduje: Docker Desktop, NVIDIA API klíč (https://build.nvidia.com)
+# Dokumentace: https://github.com/nvidia-nemoclaw/NemoClaw
+# macOS known gaps: https://github.com/NVIDIA/NemoClaw/issues/260
+# ==============================================================================
+
+- name: "[NemoClaw] Verify Docker Desktop is installed"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app
+  register: docker_app
+
+- name: "[NemoClaw] Fail if Docker Desktop is missing"
+  ansible.builtin.fail:
+    msg: >
+      Docker Desktop není nainstalován! NemoClaw vyžaduje Docker.
+      Nastav 'install_cask_apps: true' a přidej 'docker' do homebrew_cask_apps.
+  when: not docker_app.stat.exists
+
+- name: "[NemoClaw] Check if NemoClaw is already installed"
+  ansible.builtin.stat:
+    path: /Applications/NemoClaw.app
+  register: nemoclaw_app
+
+- name: "[NemoClaw] Get latest release version from GitHub"
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/nvidia-nemoclaw/NemoClaw/releases/latest
+    method: GET
+    return_content: true
+    headers:
+      Accept: application/vnd.github.v3+json
+  register: nemoclaw_release
+  when:
+    - not nemoclaw_app.stat.exists
+    - nemoclaw_version | default('latest') == 'latest'
+
+- name: "[NemoClaw] Set release tag fact"
+  ansible.builtin.set_fact:
+    nemoclaw_release_tag: >-
+      {{ nemoclaw_release.json.tag_name
+         if (nemoclaw_version | default('latest') == 'latest')
+         else nemoclaw_version }}
+  when: not nemoclaw_app.stat.exists
+
+- name: "[NemoClaw] Set DMG download URL"
+  ansible.builtin.set_fact:
+    nemoclaw_dmg_url: >-
+      https://github.com/nvidia-nemoclaw/NemoClaw/releases/download/{{ nemoclaw_release_tag }}/NemoClaw-macOS-arm64.dmg
+    nemoclaw_dmg_path: /tmp/NemoClaw-macOS-arm64.dmg
+  when: not nemoclaw_app.stat.exists
+
+- name: "[NemoClaw] Download NemoClaw DMG installer"
+  ansible.builtin.get_url:
+    url: "{{ nemoclaw_dmg_url }}"
+    dest: "{{ nemoclaw_dmg_path }}"
+    mode: '0644'
+    timeout: 300
+  when: not nemoclaw_app.stat.exists
+
+- name: "[NemoClaw] Mount DMG"
+  ansible.builtin.command: hdiutil attach "{{ nemoclaw_dmg_path }}" -mountpoint /Volumes/NemoClaw -nobrowse -quiet
+  args:
+    creates: /Volumes/NemoClaw/NemoClaw.app
+  when: not nemoclaw_app.stat.exists
+
+- name: "[NemoClaw] Copy .app to /Applications"
+  ansible.builtin.command: cp -Rf /Volumes/NemoClaw/NemoClaw.app /Applications/
+  args:
+    creates: /Applications/NemoClaw.app
+  when: not nemoclaw_app.stat.exists
+
+- name: "[NemoClaw] Detach DMG"
+  ansible.builtin.command: hdiutil detach /Volumes/NemoClaw -quiet
+  when: not nemoclaw_app.stat.exists
+  failed_when: false
+
+- name: "[NemoClaw] Remove DMG installer"
+  ansible.builtin.file:
+    path: "{{ nemoclaw_dmg_path }}"
+    state: absent
+  when: not nemoclaw_app.stat.exists
+
+# macOS workaround – NVM Node version conflict (issue #260)
+- name: "[NemoClaw] Fix NVM Node version conflict (macOS workaround)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm install 24 --no-progress 2>/dev/null || true
+    nvm alias default 24
+  args:
+    executable: /bin/zsh
+  changed_when: false
+  when: install_node | default(true)
+
+# macOS workaround – inference.local DNS (issue #260)
+- name: "[NemoClaw] Add inference.local to /etc/hosts (sandbox DNS workaround)"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 inference.local"
+    state: present
+  become: true
+
+# Vytvoření konfiguračního adresáře pro NemoClaw
+- name: "[NemoClaw] Ensure NemoClaw config directory exists"
+  ansible.builtin.file:
+    path: "{{ nemoclaw_config_dir | expanduser }}"
+    state: directory
+    mode: '0700'
+
+# Systémový profil – snímek konfigurace pro agenta
+- name: "[NemoClaw] Generate system configuration profile for agent"
+  ansible.builtin.shell: |
+    cat > {{ nemoclaw_config_dir | expanduser }}/system-profile.json << 'PROFILE'
+    {
+      "generated": "{{ ansible_date_time.iso8601 }}",
+      "hostname": "{{ ansible_hostname }}",
+      "os": "{{ ansible_system }} {{ ansible_distribution }} {{ ansible_distribution_version }}",
+      "arch": "{{ ansible_architecture }}",
+      "cpu_cores": {{ ansible_processor_vcpus }},
+      "memory_mb": {{ ansible_memtotal_mb }},
+      "homebrew_prefix": "{{ homebrew_prefix }}",
+      "stacks": {
+        "nginx": {{ install_nginx | default(true) | to_json }},
+        "php": {{ install_php | default(true) | to_json }},
+        "php_version": "{{ php_version | default('8.3') }}",
+        "node": {{ install_node | default(true) | to_json }},
+        "node_version": "{{ node_nvm_version | default('lts/*') }}",
+        "bun": {{ install_bun | default(true) | to_json }},
+        "python": {{ install_python | default(true) | to_json }},
+        "python_version": "{{ python_version | default('3.13') }}",
+        "golang": {{ install_golang | default(true) | to_json }},
+        "dotnet": {{ install_dotnet | default(true) | to_json }}
+      },
+      "nginx_sites_enabled": {{ nginx_sites_enabled | default(['default.conf']) | to_json }},
+      "webroot": "{{ ansible_env.HOME }}/Sites",
+      "nemoclaw_model": "{{ nemoclaw_model | default('nemotron-3-super-120b') }}"
+    }
+    PROFILE
+  args:
+    executable: /bin/zsh
+  when: nemoclaw_create_system_profile | default(true)
+  changed_when: true
+
+- name: "[NemoClaw] Write NemoClaw agent policy (policy.yml)"
+  ansible.builtin.copy:
+    dest: "{{ nemoclaw_config_dir | expanduser }}/policy.yml"
+    content: |
+      # NemoClaw – OpenShell Security Policy
+      # Vygenerováno Ansible playbook
+      version: "1"
+
+      privacy:
+        data_residency: local           # Preferuj lokální inferenci
+        telemetry: false                # Vypnout NVIDIA telemetrii
+        audit_log: true                 # Logovat akce agenta
+
+      sandbox:
+        network_access: restricted      # Pouze povolené domény
+        allowed_domains:
+          - build.nvidia.com
+          - api.anthropic.com
+          - github.com
+          - pypi.org
+          - registry.npmjs.org
+        filesystem_access:
+          - "{{ ansible_env.HOME }}/Sites"
+          - "{{ ansible_env.HOME }}/Development"
+          - "{{ ansible_env.HOME }}/.nemoclaw"
+          - /tmp
+
+      inference:
+        primary: local                  # Nejprve zkus lokální model
+        local_model: "{{ nemoclaw_model | default('nemotron-3-super-120b') }}"
+        fallback: cloud                 # Cloud fallback přes NVIDIA API
+        cloud_provider: nvidia
+
+      agent:
+        system_profile: "{{ nemoclaw_config_dir | expanduser }}/system-profile.json"
+        capabilities:
+          - code_execution
+          - file_operations
+          - web_search
+          - system_info
+    mode: '0600'
+
+# Onboarding (vyžaduje NVIDIA API klíč)
+- name: "[NemoClaw] Run nemoclaw onboard (neinteraktivní)"
+  ansible.builtin.shell: |
+    export NVIDIA_API_KEY="{{ nemoclaw_nvidia_api_key | default(lookup('env', 'NVIDIA_API_KEY')) }}"
+    if [ -z "$NVIDIA_API_KEY" ]; then
+      echo "SKIP: NVIDIA_API_KEY není nastaven. Spusť 'nemoclaw onboard' manuálně."
+      exit 0
+    fi
+    /Applications/NemoClaw.app/Contents/MacOS/nemoclaw onboard \
+      --api-key "$NVIDIA_API_KEY" \
+      --model "{{ nemoclaw_model | default('nemotron-3-super-120b') }}" \
+      --policy "{{ nemoclaw_config_dir | expanduser }}/policy.yml" \
+      --non-interactive 2>&1 || echo "Onboarding skipped (run manually if needed)"
+  args:
+    executable: /bin/zsh
+  when: nemoclaw_run_onboard | default(true)
+  register: nemoclaw_onboard
+  changed_when: "'already configured' not in nemoclaw_onboard.stdout"
+
+- name: "[NemoClaw] Show onboard result"
+  ansible.builtin.debug:
+    msg: "{{ nemoclaw_onboard.stdout_lines | default(['NemoClaw onboard neproběhl (API klíč chybí nebo app není nainstalována)']) }}"
+  when: nemoclaw_run_onboard | default(true)
+
+- name: "[NemoClaw] Print next steps"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       NemoClaw – Co dál
+      ══════════════════════════════════════════════════════
+       1. Nastav NVIDIA_API_KEY v config.yml nebo env:
+          nemoclaw_nvidia_api_key: "nvapi-xxxx"
+
+       2. Pokud onboard neproběhl automaticky:
+          nemoclaw onboard
+
+       3. Spusť OpenClaw agenta:
+          nemoclaw start
+
+       4. Systémový profil uložen v:
+          {{ nemoclaw_config_dir | expanduser }}/system-profile.json
+
+       5. Policy soubor:
+          {{ nemoclaw_config_dir | expanduser }}/policy.yml
+
+       Dokumentace: https://github.com/nvidia-nemoclaw/NemoClaw
+      ══════════════════════════════════════════════════════

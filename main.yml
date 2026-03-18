@@ -14,38 +14,98 @@
 
   roles:
     - role: elliotweiser.osx-command-line-tools
+
     - role: geerlingguy.mac.homebrew
+      when: install_homebrew_packages | default(true)
       tags: ['homebrew']
+
     - role: geerlingguy.dotfiles
-      when: configure_dotfiles
+      when: configure_dotfiles | default(true)
       tags: ['dotfiles']
+
     - role: geerlingguy.mac.mas
-      when: (mas_installed_apps | length > 0) or (mas_installed_app_ids | length > 0)
+      when: |
+        (install_mas_apps | default(false)) and
+        ((mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0))
       tags: ['mas']
+
     - role: geerlingguy.mac.dock
-      when: configure_dock
+      when: configure_dock | default(false)
       tags: ['dock']
 
   tasks:
+    # ──────────────────────────────────────────────────────────────────────────
+    # Systémová konfigurace
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sudoers.yml
-      when: configure_sudoers
+      when: configure_sudoers | default(false)
       tags: ['sudoers']
 
     - import_tasks: tasks/terminal.yml
-      when: configure_terminal
+      when: configure_terminal | default(true)
       tags: ['terminal']
 
     - import_tasks: tasks/osx.yml
-      when: configure_osx
+      when: configure_osx | default(true)
       tags: ['osx']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Web server
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/nginx.yml
+      when: install_nginx | default(true)
+      tags: ['nginx', 'webserver']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Jazyky a runtime prostředí
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/php.yml
+      when: install_php | default(true)
+      tags: ['php']
+
+    - import_tasks: tasks/node.yml
+      when: install_node | default(true)
+      tags: ['node', 'nodejs']
+
+    - import_tasks: tasks/bun.yml
+      when: install_bun | default(true)
+      tags: ['bun']
+
+    - import_tasks: tasks/python.yml
+      when: install_python | default(true)
+      tags: ['python']
+
+    - import_tasks: tasks/golang.yml
+      when: install_golang | default(true)
+      tags: ['go', 'golang']
+
+    - import_tasks: tasks/dotnet.yml
+      when: install_dotnet | default(true)
+      tags: ['dotnet', 'csharp']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Extra balíčky (composer, gem, npm, pip)
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/extra-packages.yml
       tags: ['extra-packages']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Editory
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sublime-text.yml
-      when: configure_sublime
+      when: configure_sublime | default(false)
       tags: ['sublime-text']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # NVIDIA NemoClaw – secured OpenClaw agent
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/nemoclaw.yml
+      when: install_nemoclaw | default(false)
+      tags: ['nemoclaw', 'ai', 'agent']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Post-provision háky
+    # ──────────────────────────────────────────────────────────────────────────
     - name: Run post-provision task files in a block.
       tags: ['post']
       block:

@@ -1,0 +1,41 @@
+---
+# ==============================================================================
+# GO – jazyk a vývojové nástroje
+# ==============================================================================
+
+- name: Install Go via Homebrew
+  community.general.homebrew:
+    name: go
+    state: present
+
+- name: Ensure Go workspace directories exist
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/go/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - bin
+    - src
+    - pkg
+
+- name: Add Go to shell profile (.zshrc)
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} GO – ANSIBLE MANAGED"
+    block: |
+      export GOPATH="$HOME/go"
+      export GOROOT="{{ homebrew_prefix }}/opt/go/libexec"
+      export PATH="$GOPATH/bin:$GOROOT/bin:$PATH"
+    create: true
+    mode: '0644'
+
+- name: Install Go development tools
+  ansible.builtin.command: >
+    {{ homebrew_prefix }}/bin/go install {{ item }}
+  loop: "{{ go_packages | default([]) }}"
+  environment:
+    GOPATH: "{{ ansible_env.HOME }}/go"
+    GOROOT: "{{ homebrew_prefix }}/opt/go/libexec"
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ homebrew_prefix }}/opt/go/libexec/bin:{{ homebrew_prefix }}/bin:{{ ansible_env.PATH }}"
+    HOME: "{{ ansible_env.HOME }}"
+  changed_when: false

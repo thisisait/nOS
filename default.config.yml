@@ -1,31 +1,251 @@
 ---
-configure_dotfiles: true
-configure_terminal: true
-configure_osx: true
+# ==============================================================================
+# INSTALLATION QUEUE
+# Zakomentuj (#) libovolný řádek pro PŘESKOČENÍ dané komponenty.
+# Comment out (#) any line to SKIP that component during provisioning.
+# ==============================================================================
 
-# Set to 'true' to configure the Dock via dockutil.
-configure_dock: false
-dockitems_remove: []
-# - Launchpad
-# - TV
-# - Podcasts
-# - 'App Store'
-dockitems_persist: []
-# - name: "Sublime Text"
-#   path: "/Applications/Sublime Text.app/"
-#   pos: 5
+install_homebrew_packages: true   # Základní CLI nástroje přes Homebrew
+install_cask_apps: true           # GUI aplikace přes Homebrew Cask
+install_mas_apps: false           # Mac App Store aplikace
+install_nginx: true               # Nginx web server (homebrew service)
+install_php: true                 # PHP 8.x + PHP-FPM
+install_node: true                # Node.js + NVM + globální npm balíčky
+install_bun: true                 # Bun JavaScript runtime / bundler
+install_python: true              # Python + pyenv + pip balíčky
+install_golang: true              # Go jazyk + vývojové nástroje
+install_dotnet: true              # .NET SDK (C#, F#)
+install_nemoclaw: true            # NVIDIA NemoClaw – secured OpenClaw agent
+configure_dotfiles: true          # Dotfiles (git, zsh, vim …)
+configure_terminal: true          # Terminal téma
+configure_osx: true               # macOS system defaults
+configure_dock: false             # Dock layout (vyžaduje dockutil)
+configure_sudoers: false          # Vlastní sudoers pravidla
+configure_sublime: false          # Sublime Text editor
 
-configure_sudoers: false
-sudoers_custom_config: ""
-# Example:
-# sudoers_custom_config: |
-#   # Allow users in admin group to use sudo with no password.
-#   %admin ALL=(ALL) NOPASSWD: ALL
+# ==============================================================================
+# HOMEBREW – obecné nastavení
+# ==============================================================================
+
+homebrew_prefix: "/opt/homebrew"  # Apple Silicon; Intel: /usr/local
+
+homebrew_installed_packages:
+  # Základní nástroje
+  - autoconf
+  - bash-completion
+  - git
+  - gh
+  - gpg
+  - wget
+  - curl
+  - jq
+  - yq
+  - htop
+  - tmux
+  - tree
+  - pv
+  - watch
+  - readline
+  - openssl
+  - libevent
+  - sqlite
+  - gettext
+  - ssh-copy-id
+  - zsh-history-substring-search
+  # Síť / diagnostika
+  - nmap
+  - httpie
+  - iperf
+  - wrk
+  - mkcert               # lokální SSL certifikáty
+  - nss                  # mkcert backend
+  # Média
+  - gifsicle
+  - pngpaste
+  - doxygen
+  # Vývojové nástroje (zahrnuty i když konkrétní stack skip)
+  - git-lfs
+  - pre-commit
+  - act                  # GitHub Actions lokálně
+
+homebrew_taps:
+  - homebrew/services
+
+homebrew_cask_appdir: /Applications
+
+homebrew_cask_apps:
+  - docker               # Docker Desktop (vyžaduje NemoClaw)
+  - visual-studio-code
+  - iterm2
+  - google-chrome
+  - firefox
+  - sequel-ace           # GUI pro MySQL/MariaDB
+  - tableplus            # GUI pro více DB
+  - insomnia             # REST / GraphQL klient
+  - sublime-text
+  - slack
+  - transmit
+  - dropbox
+  - handbrake
+  - licecap
+
+# ==============================================================================
+# MAC APP STORE
+# ==============================================================================
+mas_installed_apps: []
+mas_email: ""
+mas_password: ""
+
+# ==============================================================================
+# NGINX
+# ==============================================================================
+
+nginx_worker_processes: "auto"
+nginx_worker_connections: 2048
+nginx_keepalive_timeout: 65
+nginx_client_max_body_size: "100m"
+nginx_gzip: true
+nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
+nginx_ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+
+# Sites ke zkopírování do sites-available (budou aktivovány symlinkem)
+nginx_sites_enabled:
+  - default.conf
+  # - php-app.conf          # PHP + PHP-FPM aplikace
+  # - node-proxy.conf       # Node.js reverse proxy
+  # - python-proxy.conf     # Python / FastAPI / Django reverse proxy
+  # - go-proxy.conf         # Go HTTP service reverse proxy
+  # - static-site.conf      # Statické soubory s cachováním
+
+# ==============================================================================
+# PHP
+# ==============================================================================
+
+php_version: "8.3"
+php_memory_limit: "256M"
+php_upload_max_filesize: "64M"
+php_post_max_size: "64M"
+php_max_execution_time: 300
+php_date_timezone: "Europe/Prague"
+
+php_extensions:
+  - "php@{{ php_version }}-redis"
+  - "php@{{ php_version }}-imagick"
+
+php_composer_packages:
+  []
+  # - name: laravel/installer
+  #   state: present
+  # - name: drush/drush
+  #   state: present
+
+# ==============================================================================
+# NODE.JS
+# ==============================================================================
+
+node_nvm_version: "lts/*"   # nebo konkrétní: "22", "20"
+
+node_global_packages:
+  - yarn
+  - pnpm
+  - typescript
+  - ts-node
+  - tsx
+  - nodemon
+  - pm2
+  - eslint
+  - prettier
+  - @anthropic-ai/sdk  # Claude API SDK
+
+npm_packages: []
+# - name: webpack
+#   state: present
+#   version: "^5.0"
+
+# ==============================================================================
+# BUN
+# ==============================================================================
+
+bun_global_packages: []
+# - name: "@hono/hono"
+#   state: present
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+
+python_version: "3.13"   # pyenv install target
+
+pip_packages:
+  - name: virtualenv
+  - name: black
+  - name: ruff
+  - name: mypy
+  - name: pytest
+  - name: httpx
+  - name: fastapi
+  - name: uvicorn
+  - name: rich
+  - name: ansible
+  - name: anthropic     # Claude API SDK
+
+# ==============================================================================
+# GO
+# ==============================================================================
+
+go_packages:
+  - "golang.org/x/tools/gopls@latest"
+  - "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+  - "github.com/go-task/task/v3/cmd/task@latest"
+  - "github.com/air-verse/air@latest"
+  - "github.com/cosmtrek/air@latest"
+
+gem_packages: []
+# - name: bundler
+#   state: present
+
+composer_packages: []
+
+# ==============================================================================
+# .NET / C#
+# ==============================================================================
+
+dotnet_sdk_cask: "dotnet-sdk"   # Homebrew Cask název
+
+dotnet_global_tools:
+  - name: dotnet-ef             # Entity Framework CLI
+  - name: dotnet-script         # C# scripting
+
+# ==============================================================================
+# NEMOCLAW (NVIDIA secured OpenClaw agent)
+# ==============================================================================
+
+# Získej API klíč na: https://build.nvidia.com
+nemoclaw_nvidia_api_key: ""   # PŘEPIŠ nebo nastav env: NVIDIA_API_KEY
+
+# Verze z GitHub releases (prázdné = latest)
+nemoclaw_version: "latest"
+
+# Spustit 'nemoclaw onboard' po instalaci (vyžaduje api key a Docker)
+nemoclaw_run_onboard: true
+
+# Vytvořit agentický systémový profil (přehled konfigurace)
+nemoclaw_create_system_profile: true
+
+# Základní model pro lokální inferenci
+nemoclaw_model: "nemotron-3-super-120b"
+
+# Adresář pro NemoClaw konfiguraci a profily
+nemoclaw_config_dir: "~/.nemoclaw"
+
+# ==============================================================================
+# DOTFILES
+# ==============================================================================
 
 dotfiles_repo: https://github.com/geerlingguy/dotfiles.git
 dotfiles_repo_accept_hostkey: true
 dotfiles_repo_local_destination: ~/Development/GitHub/dotfiles
-dotfiles_repo_version: master # Replace with your default branch
+dotfiles_repo_version: master
 dotfiles_files:
   - .zshrc
   - .gitignore
@@ -33,78 +253,29 @@ dotfiles_files:
   - .osx
   - .vimrc
 
-homebrew_installed_packages:
-  # - ansible # Installed via Pip.
-  - autoconf
-  - bash-completion
-  - doxygen
-  - gettext
-  - gifsicle
-  - git
-  - gh
-  - go
-  - gpg
-  - httpie
-  - iperf
-  - libevent
-  - sqlite
-  - nmap
-  - node
-  - nvm
-  - php
-  - pngpaste
-  - ssh-copy-id
-  - readline
-  - openssl
-  - pv
-  - wget
-  - wrk
-  - zsh-history-substring-search
-
-homebrew_taps: []
-
-homebrew_cask_appdir: /Applications
-homebrew_cask_apps:
-  - chromedriver
-  - docker
-  - dropbox
-  - firefox
-  - google-chrome
-  - handbrake
-  - licecap
-  - sequel-ace
-  - slack
-  - sublime-text
-  - transmit
-
-# See `geerlingguy.mac.mas` role documentation for usage instructions.
-mas_installed_apps: []
-mas_email: ""
-mas_password: ""
+# ==============================================================================
+# macOS DEFAULTS
+# ==============================================================================
 
 osx_script: "~/.osx --no-restart"
 
-# Install packages from other package managers.
-# Note: You are responsible for making sure the required package managers are
-# installed, eg. through homebrew.
-composer_packages: []
-# - name: drush
-#   state: present # present/absent, default: present
-#   version: "^8.1" # default: N/A
-gem_packages: []
-# - name: bundler
-#   state: present # present/absent/latest, default: present
-#   version: "~> 1.15.1" # default: N/A
-npm_packages: []
-# - name: webpack
-#   state: present # present/absent/latest, default: present
-#   version: "^2.6" # default: N/A
-pip_packages: []
-# - name: mkdocs
-#   state: present # present/absent/latest, default: present
-#   version: "0.16.3" # default: N/A
+configure_sudoers: false
+sudoers_custom_config: ""
+# sudoers_custom_config: |
+#   %admin ALL=(ALL) NOPASSWD: ALL
 
-# Set to 'true' to configure Sublime Text.
+# ==============================================================================
+# DOCK
+# ==============================================================================
+
+configure_dock: false
+dockitems_remove: []
+dockitems_persist: []
+
+# ==============================================================================
+# SUBLIME TEXT
+# ==============================================================================
+
 configure_sublime: false
 sublime_base_path: "~/Library/Application Support/Sublime Text"
 sublime_config_path: "Packages/User"
@@ -122,5 +293,8 @@ sublime_package_control:
   - "TrailingSpaces"
   - "WordingStatus"
 
-# Glob pattern to ansible task files to run after all other tasks are finished.
+# ==============================================================================
+# POST-PROVISION
+# ==============================================================================
+
 post_provision_tasks: []

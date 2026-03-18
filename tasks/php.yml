@@ -1,0 +1,126 @@
+---
+# ==============================================================================
+# PHP – instalace, PHP-FPM a konfigurace
+# ==============================================================================
+
+- name: Install PHP via Homebrew
+  community.general.homebrew:
+    name: "php@{{ php_version }}"
+    state: present
+
+- name: Install common PHP extensions via Homebrew
+  community.general.homebrew:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "php@{{ php_version }}-redis"
+    - "php@{{ php_version }}-imagick"
+  ignore_errors: true   # extension availability varies by version
+
+- name: Install additional PHP extensions from config
+  community.general.homebrew:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ php_extensions | default([]) }}"
+  ignore_errors: true
+
+- name: Install Composer
+  ansible.builtin.shell: |
+    EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+    if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]; then
+      >&2 echo 'ERROR: Invalid installer checksum'
+      rm composer-setup.php
+      exit 1
+    fi
+    php composer-setup.php --install-dir=/opt/homebrew/bin --filename=composer --quiet
+    rm composer-setup.php
+  args:
+    creates: "{{ homebrew_prefix }}/bin/composer"
+    executable: /bin/zsh
+
+- name: Install global Composer packages
+  community.general.composer:
+    command: require
+    global_command: true
+    arguments: "{{ item.name }}{% if item.version is defined %}:{{ item.version }}{% endif %}"
+  loop: "{{ php_composer_packages | default([]) }}"
+  environment:
+    COMPOSER_HOME: "{{ ansible_env.HOME }}/.composer"
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_env.PATH }}"
+
+- name: Set PHP memory_limit
+  community.general.ini_file:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php.ini"
+    section: PHP
+    option: memory_limit
+    value: "{{ php_memory_limit }}"
+    mode: '0644'
+  notify: Restart php-fpm
+
+- name: Set PHP upload_max_filesize
+  community.general.ini_file:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php.ini"
+    section: PHP
+    option: upload_max_filesize
+    value: "{{ php_upload_max_filesize }}"
+    mode: '0644'
+  notify: Restart php-fpm
+
+- name: Set PHP post_max_size
+  community.general.ini_file:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php.ini"
+    section: PHP
+    option: post_max_size
+    value: "{{ php_post_max_size }}"
+    mode: '0644'
+  notify: Restart php-fpm
+
+- name: Set PHP max_execution_time
+  community.general.ini_file:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php.ini"
+    section: PHP
+    option: max_execution_time
+    value: "{{ php_max_execution_time }}"
+    mode: '0644'
+  notify: Restart php-fpm
+
+- name: Set PHP date.timezone
+  community.general.ini_file:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php.ini"
+    section: Date
+    option: date.timezone
+    value: "{{ php_date_timezone }}"
+    mode: '0644'
+  notify: Restart php-fpm
+
+- name: Configure PHP-FPM pool (www.conf)
+  ansible.builtin.blockinfile:
+    path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php-fpm.d/www.conf"
+    marker: "; {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      ; Výkonnostní nastavení pro Mac Studio 36GB
+      pm = dynamic
+      pm.max_children = 20
+      pm.start_servers = 4
+      pm.min_spare_servers = 2
+      pm.max_spare_servers = 6
+      pm.max_requests = 500
+      pm.status_path = /fpm-status
+    insertafter: "^\\[www\\]"
+    backup: true
+  notify: Restart php-fpm
+
+- name: Start PHP-FPM service
+  ansible.builtin.command: brew services start "php@{{ php_version }}"
+  register: phpfpm_svc
+  changed_when: "'already started' not in phpfpm_svc.stdout"
+  failed_when:
+    - phpfpm_svc.rc != 0
+    - "'already started' not in phpfpm_svc.stdout"
+
+- name: Restart php-fpm (inline handler)
+  ansible.builtin.command: brew services restart "php@{{ php_version }}"
+  changed_when: false
+  listen: Restart php-fpm

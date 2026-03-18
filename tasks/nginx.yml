@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# NGINX – instalace a konfigurace
+# ==============================================================================
+
+- name: Install nginx via Homebrew
+  community.general.homebrew:
+    name: nginx
+    state: present
+
+- name: Install mkcert for local SSL certificates
+  community.general.homebrew:
+    name:
+      - mkcert
+      - nss
+    state: present
+
+- name: Ensure nginx sites directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ homebrew_prefix }}/etc/nginx/sites-available"
+    - "{{ homebrew_prefix }}/etc/nginx/sites-enabled"
+    - "{{ homebrew_prefix }}/etc/nginx/conf.d"
+    - "{{ homebrew_prefix }}/var/log/nginx"
+
+- name: Deploy main nginx.conf
+  ansible.builtin.copy:
+    src: nginx/nginx.conf
+    dest: "{{ homebrew_prefix }}/etc/nginx/nginx.conf"
+    backup: true
+    mode: '0644'
+  notify: Restart nginx
+
+- name: Deploy nginx virtual host templates
+  ansible.builtin.copy:
+    src: "nginx/sites-available/{{ item }}"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
+    mode: '0644'
+  loop:
+    - default.conf
+    - php-app.conf
+    - node-proxy.conf
+    - python-proxy.conf
+    - go-proxy.conf
+    - static-site.conf
+  notify: Restart nginx
+
+- name: Enable configured nginx sites (symlink)
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/{{ item }}"
+    state: link
+    force: true
+  loop: "{{ nginx_sites_enabled | default(['default.conf']) }}"
+  notify: Restart nginx
+
+- name: Install mkcert CA into system trust store
+  ansible.builtin.command: mkcert -install
+  changed_when: false
+
+- name: Generate local dev wildcard certificate
+  ansible.builtin.command: >
+    mkcert
+    -cert-file {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt
+    -key-file  {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key
+    "localhost" "127.0.0.1" "::1" "*.localhost" "*.dev.local"
+  args:
+    creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
+
+- name: Ensure nginx SSL directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
+    state: directory
+    mode: '0700'
+
+- name: Start and enable nginx via brew services
+  ansible.builtin.command: brew services start nginx
+  register: nginx_svc
+  changed_when: "'already started' not in nginx_svc.stdout"
+  failed_when:
+    - nginx_svc.rc != 0
+    - "'already started' not in nginx_svc.stdout"
+
+- name: Test nginx configuration
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
+  changed_when: false
+
+# Handler je definován v handlers/ – pro jednoduchost přidáme inline
+- name: Restart nginx (inline fallback)
+  ansible.builtin.command: brew services restart nginx
+  changed_when: false
+  listen: Restart nginx
