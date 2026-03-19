@@ -1,0 +1,79 @@
+---
+# ==============================================================================
+# DNSMASQ – automatický DNS resolver pro *.dev.local
+# Odstraňuje nutnost ručně editovat /etc/hosts
+#
+# Jak to funguje:
+#   1. dnsmasq naslouchá na 127.0.0.1:53
+#   2. macOS /etc/resolver/dev.local přesměruje *.dev.local dotazy na dnsmasq
+#   3. dnsmasq odpoví 127.0.0.1 pro všechny *.dev.local domény
+#
+# Výsledek: grafana.dev.local, gitea.dev.local, n8n.dev.local... fungují
+# automaticky bez jakékoliv ruční konfigurace.
+# ==============================================================================
+
+- name: Install dnsmasq via Homebrew
+  community.general.homebrew:
+    name: dnsmasq
+    state: present
+
+- name: Deploy dnsmasq configuration
+  ansible.builtin.blockinfile:
+    path: "{{ homebrew_prefix }}/etc/dnsmasq.conf"
+    marker: "# {mark} DEV.LOCAL (ansible managed)"
+    block: |
+      # Přesměruj všechny *.dev.local dotazy na localhost
+      address=/.{{ dnsmasq_dev_domain | default('dev.local') }}/{{ dnsmasq_dev_address | default('127.0.0.1') }}
+
+      # Volitelné vlastní záznamy
+      {% for entry in dnsmasq_additional_addresses | default([]) %}
+      address=/{{ entry.domain }}/{{ entry.address }}
+      {% endfor %}
+
+      # Omez dnsmasq na localhost (bezpečnost)
+      listen-address=127.0.0.1
+      bind-interfaces
+
+      # Nezasílat dotazy s .local na upstream DNS (mDNS/Bonjour doménou)
+      local=/dev.local/
+
+      # Rychlejší cache
+      cache-size=1000
+    create: true
+    mode: '0644'
+  notify: Restart dnsmasq
+
+- name: Ensure /etc/resolver directory exists
+  ansible.builtin.file:
+    path: /etc/resolver
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Create macOS resolver for dev.local domain
+  ansible.builtin.copy:
+    dest: "/etc/resolver/{{ dnsmasq_dev_domain | default('dev.local') }}"
+    content: |
+      # Vygenerováno Ansible – *.{{ dnsmasq_dev_domain | default('dev.local') }} → dnsmasq
+      nameserver 127.0.0.1
+      port {{ dnsmasq_port | default(53) }}
+    mode: '0644'
+  become: true
+
+- name: Start dnsmasq via brew services
+  ansible.builtin.command: brew services start dnsmasq
+  register: dnsmasq_svc
+  changed_when: "'already started' not in dnsmasq_svc.stdout"
+  failed_when:
+    - dnsmasq_svc.rc != 0
+    - "'already started' not in dnsmasq_svc.stdout"
+
+- name: Verify dnsmasq resolves dev.local correctly
+  ansible.builtin.command: "dig +short grafana.dev.local @127.0.0.1"
+  register: dns_check
+  changed_when: false
+  failed_when: false
+
+- name: Show DNS verification result
+  ansible.builtin.debug:
+    msg: "DNS check grafana.dev.local → {{ dns_check.stdout | default('(prázdné – dnsmasq se spouští)') }}"

@@ -49,6 +49,10 @@
       ansible.builtin.command: brew services restart prometheus
       failed_when: false
 
+    - name: Restart dnsmasq
+      ansible.builtin.command: brew services restart dnsmasq
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
@@ -170,6 +174,17 @@
     - import_tasks: tasks/iiab/maps.yml
       when: install_offline_maps | default(false)
       tags: ['iiab', 'maps']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Síť – Tailscale + dnsmasq
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/tailscale.yml
+      when: install_tailscale | default(true)
+      tags: ['tailscale', 'network', 'vpn']
+
+    - import_tasks: tasks/dnsmasq.yml
+      when: install_dnsmasq | default(true)
+      tags: ['dnsmasq', 'dns', 'network']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Shell extras – starship prompt + aliases

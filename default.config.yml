@@ -55,6 +55,10 @@ install_gitea: false              # Gitea – self-hosted Git server            
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
 install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
 
+# ── Síť / přístup ─────────────────────────────────────────────────────────────
+install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
+install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (bez /etc/hosts editace)
+
 # ==============================================================================
 # HOMEBREW – obecné nastavení
 # ==============================================================================
@@ -119,6 +123,8 @@ homebrew_installed_packages:
   - exiftool             # exiftool – čtení/zápis metadat médií
   # ── Databáze ─────────────────────────────────────────────────────────────
   - redis                # Redis – in-memory cache + pub/sub (projekty, Nextcloud)
+  # ── Zálohy ───────────────────────────────────────────────────────────────
+  - restic               # Restic – šifrované zálohy (Backblaze B2, SFTP, lokální disk)
   # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
   # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
   # ninja:      Rychlý build systém (cmake backend, meson backend)
@@ -205,6 +211,12 @@ homebrew_cask_apps:
   - obsidian             # Obsidian – lokální .md knowledge base + kanban
                          # ↳ Propojí se s ~/pazny/agents/log/ a Grafana
 
+  # ── Síť / přístup ─────────────────────────────────────────────────────────
+  - tailscale            # Tailscale – WireGuard mesh VPN (přístup ke všem službám odkudkoliv)
+
+  # ── Virtualizace ──────────────────────────────────────────────────────────
+  # - utm                # UTM – macOS/Linux VM na Apple Silicon (testování Ansible, OS images)
+
   # ── Systémové utility ─────────────────────────────────────────────────────
   - dropbox              # Dropbox – cloud sync
   - ice                  # Ice – free Bartender (organizace menu baru)
@@ -279,7 +291,8 @@ node_global_packages:
   - pm2
   - eslint
   - prettier
-  - @anthropic-ai/sdk  # Claude API SDK
+  - "@anthropic-ai/sdk"          # Claude API SDK
+  - "@anthropic-ai/claude-code"  # Claude Code CLI (tento nástroj)
 
 npm_packages: []
 # - name: webpack
@@ -710,7 +723,7 @@ n8n_timezone: "Europe/Prague"
 # ==============================================================================
 
 gitea_domain: "git.dev.local"
-gitea_http_port: 3000   # pozor: kolize s Grafana! Gitea se spustí na jiném portu
+gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva → Gitea na 3003
 gitea_ssh_port: 2222
 gitea_data_dir: "/Users/pazny/gitea"
 gitea_admin_user: "pazny"
@@ -731,6 +744,42 @@ uptime_kuma_data_dir: "/Users/pazny/uptime-kuma"
 calibreweb_domain: "books.dev.local"
 calibreweb_port: 8083
 calibreweb_books_dir: "/Users/pazny/calibre"   # Calibre library
+
+# ==============================================================================
+# TAILSCALE – WireGuard mesh VPN
+# Po instalaci: tailscale up (interaktivní login v prohlížeči)
+# Služby pak dostupné přes: http://mac-studio.<tailnet>.ts.net:<PORT>
+# ==============================================================================
+
+tailscale_accept_routes: false    # Přijímat subnet routes od jiných nodů
+tailscale_exit_node: false        # Používat tento Mac jako exit node
+# tailscale_auth_key: ""          # Pre-auth key pro neinteraktivní setup (z admin console)
+
+# ==============================================================================
+# DNSMASQ – automatický *.dev.local DNS resolver
+# Odstraňuje nutnost ručně editovat /etc/hosts
+# ==============================================================================
+
+dnsmasq_dev_domain: "dev.local"           # Doména pro lokální vývoj
+dnsmasq_dev_address: "127.0.0.1"          # Cíl všech *.dev.local dotazů
+dnsmasq_port: 53                          # DNS port (53 = výchozí)
+dnsmasq_additional_addresses: []          # Další vlastní DNS záznamy
+# dnsmasq_additional_addresses:
+#   - domain: "api.external.test"
+#     address: "192.168.1.100"
+
+# ==============================================================================
+# RESTIC – zálohy
+# Dokumentace: https://restic.readthedocs.io/
+# ==============================================================================
+
+restic_backup_paths:
+  - "{{ ansible_env.HOME }}/pazny"     # Agenti, projekty, data služeb
+
+# Restic repozitář – nakonfiguruj dle cíle:
+# restic_repo: "s3:s3.us-east-005.backblazeb2.com/bucket-name"
+# restic_repo: "sftp:user@nas:/backup/mac-studio"
+# restic_repo: "/Volumes/Backup/restic"
 
 # ==============================================================================
 # POST-PROVISION

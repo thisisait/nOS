@@ -307,6 +307,8 @@ ansible-playbook main.yml -K --tags "TAG"
 | `grafana` | Pouze Grafana |
 | `macos-defaults` | macOS systémová nastavení |
 | `system-services` | SSH, Samba, VNC |
+| `tailscale` | Tailscale VPN |
+| `dnsmasq` | Lokální DNS pro *.dev.local |
 | `iiab` | Všechny IIAB služby |
 | `n8n` | n8n workflow automation |
 | `gitea` | Gitea Git server |
@@ -319,18 +321,10 @@ Některé nastavení macOS nelze plně automatizovat (SIP, HW-specifické nastav
 
 1. **Caps Lock → Escape** – System Settings → Keyboard → Modifier Keys → nastavit pro každou klávesnici zvlášť
 2. **Full Disk Access pro Terminal** – System Settings → Privacy & Security → Full Disk Access → přidat Terminal / Ghostty
-3. **mkcert SSL** – po instalaci spustit `mkcert -install` pro důvěryhodné lokální certifikáty
-4. **VNC heslo** – pokud `enable_vnc: true`, nastav `vnc_password` v `config.yml` před spuštěním
-5. **`.dev.local` domény** – přidat do `/etc/hosts`:
-   ```
-   127.0.0.1  grafana.dev.local
-   127.0.0.1  gitea.dev.local
-   127.0.0.1  n8n.dev.local
-   127.0.0.1  wordpress.dev.local
-   127.0.0.1  cloud.dev.local
-   127.0.0.1  kiwix.dev.local
-   127.0.0.1  maps.dev.local
-   ```
+3. **VNC heslo** – pokud `enable_vnc: true`, nastav `vnc_password` v `config.yml` před spuštěním
+4. **Tailscale login** – po instalaci otevři aplikaci Tailscale a přihlas se na https://login.tailscale.com
+
+> **mkcert a `.dev.local` DNS jsou automatizovány** – mkcert CA se nainstaluje do systému automaticky a dnsmasq zajistí přeložení všech `*.dev.local` domén na `127.0.0.1` bez zásahu do `/etc/hosts`.
 
 ---
 

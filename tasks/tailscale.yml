@@ -1,0 +1,38 @@
+---
+# ==============================================================================
+# TAILSCALE – WireGuard mesh VPN
+# Zpřístupní všechny self-hosted služby odkudkoliv bez portforwardingu
+#
+# Po instalaci spusť ručně:
+#   tailscale up
+#   → otevře se prohlížeč pro login na https://login.tailscale.com
+#
+# Služby pak dostupné přes:
+#   http://mac-studio.<tailnet>.ts.net:3000   (Grafana)
+#   http://mac-studio.<tailnet>.ts.net:3003   (Gitea)
+#   http://mac-studio.<tailnet>.ts.net:5678   (n8n)
+#   ... atd.
+# ==============================================================================
+
+- name: Install Tailscale via Homebrew Cask
+  community.general.homebrew_cask:
+    name: tailscale
+    state: present
+
+- name: Check if tailscaled is running
+  ansible.builtin.command: pgrep -x tailscaled
+  register: tailscaled_check
+  changed_when: false
+  failed_when: false
+
+- name: Start Tailscale system extension (GUI required for first run)
+  ansible.builtin.debug:
+    msg: |
+      Tailscale byl nainstalován. Dokončení nastavení:
+        1. Otevři Tailscale v Applications
+        2. Klikni "Log in" a přihlas se na https://login.tailscale.com
+        3. Po přihlášení bude Mac Studio dostupný jako node v tvé tailnet
+
+      Pro SSH přes Tailscale: tailscale up --ssh
+      Pro subnet router (celá domácí síť): tailscale up --advertise-routes=192.168.1.0/24
+  when: tailscaled_check.rc != 0

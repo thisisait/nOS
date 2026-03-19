@@ -4,11 +4,16 @@
 # LGTM Stack (Logs, Grafana, Traces, Metrics) – plně nakonfigurovaný
 # ==============================================================================
 
-# ── Homebrew tap pro Grafana nástroje ─────────────────────────────────────────
+# ── Homebrew tapy pro observability nástroje ──────────────────────────────────
 
 - name: Add Grafana Homebrew tap
   community.general.homebrew_tap:
     name: grafana/grafana
+    state: present
+
+- name: Add Prometheus community Homebrew tap (nginx-prometheus-exporter)
+  community.general.homebrew_tap:
+    name: prometheus/prometheus
     state: present
 
 # ── Instalace LGTM stack přes Homebrew ───────────────────────────────────────
@@ -20,8 +25,22 @@
       - prometheus
       - loki
       - tempo
-      - grafana/grafana/alloy  # Grafana Alloy (successor to Grafana Agent)
+      - grafana/grafana/alloy                             # Unified collector
+      - prometheus/prometheus/nginx-prometheus-exporter   # nginx stub_status → Prometheus (port 9113)
+      - node_exporter                                     # System metrics (CPU, RAM, disk, network)
     state: present
+
+- name: Add hipages Homebrew tap (php-fpm_exporter)
+  community.general.homebrew_tap:
+    name: hipages/tap
+    state: present
+  when: alloy_scrape_phpfpm | default(true)
+
+- name: Install php-fpm_exporter (PHP-FPM status → Prometheus, port 9253)
+  community.general.homebrew:
+    name: hipages/tap/php-fpm_exporter
+    state: present
+  when: alloy_scrape_phpfpm | default(true)
 
 # ── Adresářová struktura ──────────────────────────────────────────────────────
 
@@ -145,11 +164,22 @@
     - tempo
     - grafana
     - alloy
+    - node_exporter
+    - nginx-prometheus-exporter
   register: svc_result
   changed_when: "'already started' not in svc_result.stdout"
   failed_when:
     - svc_result.rc != 0
     - "'already started' not in svc_result.stdout"
+
+- name: Start php-fpm_exporter service
+  ansible.builtin.command: brew services start php-fpm_exporter
+  register: phpfpm_svc
+  changed_when: "'already started' not in phpfpm_svc.stdout"
+  failed_when:
+    - phpfpm_svc.rc != 0
+    - "'already started' not in phpfpm_svc.stdout"
+  when: alloy_scrape_phpfpm | default(true)
 
 - name: Wait for Grafana to become available
   ansible.builtin.wait_for:

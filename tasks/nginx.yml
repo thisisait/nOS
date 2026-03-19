@@ -70,6 +70,12 @@
   ansible.builtin.command: mkcert -install
   changed_when: false
 
+- name: Ensure nginx SSL directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
+    state: directory
+    mode: '0700'
+
 - name: Generate local dev wildcard certificate
   ansible.builtin.command: >
     mkcert
@@ -78,12 +84,6 @@
     "localhost" "127.0.0.1" "::1" "*.localhost" "*.dev.local"
   args:
     creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
-
-- name: Ensure nginx SSL directory exists
-  ansible.builtin.file:
-    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
-    state: directory
-    mode: '0700'
 
 - name: Start and enable nginx via brew services
   ansible.builtin.command: brew services start nginx
