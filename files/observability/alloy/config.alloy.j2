@@ -195,7 +195,7 @@ otelcol.receiver.otlp "default" {
 
 otelcol.exporter.otlp "tempo" {
   client {
-    endpoint = "localhost:4317"
+    endpoint = "localhost:{{ tempo_otlp_grpc_port | default(4317) }}"
     tls {
       insecure = true
     }

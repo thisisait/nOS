@@ -3,23 +3,19 @@
 # n8n – workflow automation (Docker)
 # ==============================================================================
 
-- name: Ensure n8n data directory exists
+- name: Ensure n8n data and log directories exist
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/pazny/n8n"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/pazny/n8n"
+    - "{{ ansible_env.HOME }}/pazny/agents/log"
 
 - name: Pull n8n Docker image
   community.docker.docker_image:
     name: "n8nio/n8n:{{ n8n_version | default('latest') }}"
     source: pull
-
-- name: Deploy n8n launchd plist
-  ansible.builtin.template:
-    src: launchd/com.n8n.plist.j2
-    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.n8n.plist"
-    mode: '0644'
-  notify: Load n8n launchd
 
 - name: Create n8n launchd plist
   ansible.builtin.copy:

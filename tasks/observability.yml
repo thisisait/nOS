@@ -168,17 +168,13 @@
     - nginx-prometheus-exporter
   register: svc_result
   changed_when: "'already started' not in svc_result.stdout"
-  failed_when:
-    - svc_result.rc != 0
-    - "'already started' not in svc_result.stdout"
+  failed_when: svc_result.rc != 0 and 'already started' not in svc_result.stdout
 
 - name: Start php-fpm_exporter service
   ansible.builtin.command: brew services start php-fpm_exporter
   register: phpfpm_svc
   changed_when: "'already started' not in phpfpm_svc.stdout"
-  failed_when:
-    - phpfpm_svc.rc != 0
-    - "'already started' not in phpfpm_svc.stdout"
+  failed_when: phpfpm_svc.rc != 0 and 'already started' not in phpfpm_svc.stdout
   when: alloy_scrape_phpfpm | default(true)
 
 - name: Wait for Grafana to become available

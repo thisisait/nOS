@@ -715,6 +715,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n.dev.local"
 n8n_port: 5678
+n8n_version: "latest"      # nebo konkrétní: "1.40.0"
 n8n_data_dir: "/Users/pazny/n8n"
 n8n_timezone: "Europe/Prague"
 
@@ -727,7 +728,10 @@ gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva → Gite
 gitea_ssh_port: 2222
 gitea_data_dir: "/Users/pazny/gitea"
 gitea_admin_user: "pazny"
-gitea_admin_email: ""   # VYPLŇ!
+gitea_admin_email: ""                          # VYPLŇ!
+gitea_secret_key: "changeme_random_32_chars"   # PŘEPIŠ! (openssl rand -hex 32)
+gitea_internal_token: "changeme_internal_tok"  # PŘEPIŠ! (openssl rand -hex 32)
+gitea_disable_registration: false              # true = pouze admin může přidávat uživatele
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)
@@ -735,6 +739,7 @@ gitea_admin_email: ""   # VYPLŇ!
 
 uptime_kuma_domain: "uptime.dev.local"
 uptime_kuma_port: 3001
+uptime_kuma_version: "1"   # nebo konkrétní: "1.23.13"
 uptime_kuma_data_dir: "/Users/pazny/uptime-kuma"
 
 # ==============================================================================
@@ -743,6 +748,7 @@ uptime_kuma_data_dir: "/Users/pazny/uptime-kuma"
 
 calibreweb_domain: "books.dev.local"
 calibreweb_port: 8083
+calibreweb_version: "latest"   # nebo konkrétní: "0.6.21"
 calibreweb_books_dir: "/Users/pazny/calibre"   # Calibre library
 
 # ==============================================================================

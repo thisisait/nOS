@@ -11,6 +11,7 @@
   loop:
     - "{{ ansible_env.HOME }}/pazny/calibre-web/config"
     - "{{ ansible_env.HOME }}/pazny/calibre-web/books"
+    - "{{ ansible_env.HOME }}/pazny/agents/log"
 
 - name: Pull Calibre-Web Docker image
   community.docker.docker_image:
