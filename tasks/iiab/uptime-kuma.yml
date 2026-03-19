@@ -37,7 +37,7 @@
           <string>--name</string>
           <string>uptime-kuma</string>
           <string>-p</string>
-          <string>{{ uptime_kuma_port | default(3002) }}:3001</string>
+          <string>{{ uptime_kuma_port | default(3001) }}:3001</string>
           <string>-v</string>
           <string>{{ ansible_env.HOME }}/pazny/uptime-kuma:/app/data</string>
           <string>louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}</string>

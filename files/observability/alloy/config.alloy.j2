@@ -93,7 +93,7 @@ prometheus.remote_write "default" {
 // Nginx access logy
 local.file_match "nginx_access" {
   path_targets = [{
-    __path__ = "/opt/homebrew/var/log/nginx/*.access.log",
+    __path__ = "{{ homebrew_prefix }}/var/log/nginx/*.access.log",
   }]
 }
 
@@ -127,7 +127,7 @@ loki.process "nginx" {
 // Nginx error logy
 local.file_match "nginx_error" {
   path_targets = [{
-    __path__ = "/opt/homebrew/var/log/nginx/*.error.log",
+    __path__ = "{{ homebrew_prefix }}/var/log/nginx/*.error.log",
   }]
 }
 
@@ -152,10 +152,10 @@ loki.source.file "agent_logs" {
 {% endif %}
 
 // Systémové logy (macOS unified log – přes journald emulaci není dostupná,
-// ale brew services logy jsou v /opt/homebrew/var/log/)
+// ale brew services logy jsou v {{ homebrew_prefix }}/var/log/)
 local.file_match "homebrew_services" {
   path_targets = [{
-    __path__ = "/opt/homebrew/var/log/*.log",
+    __path__ = "{{ homebrew_prefix }}/var/log/*.log",
   }]
 }
 
@@ -185,7 +185,7 @@ otelcol.receiver.otlp "default" {
     endpoint = "0.0.0.0:{{ tempo_otlp_grpc_port | default(4317) }}"
   }
   http {
-    endpoint = "0.0.0.0:4318"
+    endpoint = "0.0.0.0:{{ alloy_otlp_http_port | default(4318) }}"
   }
 
   output {

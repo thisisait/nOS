@@ -22,8 +22,10 @@
     - name: Reload nginx
       ansible.builtin.command: >
         {{ homebrew_prefix }}/bin/nginx -s reload
+      register: nginx_reload
       failed_when: false
-      # Pokud reload selže (např. nginx neběží), proveď restart
+      # Pokud reload selže (nginx neběží), spustí se restart
+      changed_when: nginx_reload.rc != 0
       notify: Restart nginx
 
     - name: Restart php-fpm

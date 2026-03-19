@@ -97,7 +97,7 @@
   when:
     - enable_vnc | default(false)
     - (vnc_password | default('')) | length > 0
-  no_log: true   # Neskrývat heslo v logu
+  no_log: true   # Skrýt heslo v logu
   register: vnc_enable
   changed_when: vnc_enable.rc == 0
 
