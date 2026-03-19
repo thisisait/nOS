@@ -88,6 +88,17 @@ mkcert -cert-file /opt/homebrew/etc/nginx/ssl/local-dev.crt \
 | .NET | `127.0.0.1:5000` | `upstream dotnet_*` |
 | Kiwix (Docker) | `127.0.0.1:8888` | proxy_pass |
 | tileserver-gl | `127.0.0.1:8080` | proxy_pass |
+| Grafana | `127.0.0.1:3000` | proxy_pass |
+| Prometheus | `127.0.0.1:9090` | interní |
+| Loki | `127.0.0.1:3100` | interní |
+| Tempo | `127.0.0.1:3200` | interní |
+| Grafana Alloy UI | `127.0.0.1:12345` | interní |
+| OTLP gRPC | `0.0.0.0:4317` | traces ingestion |
+| OTLP HTTP | `0.0.0.0:4318` | traces ingestion |
+| n8n | `127.0.0.1:5678` | proxy_pass |
+| Gitea | `127.0.0.1:3001` | proxy_pass |
+| Uptime Kuma | `127.0.0.1:3002` | proxy_pass |
+| Calibre-Web | `127.0.0.1:8083` | proxy_pass |
 
 ---
 
@@ -104,6 +115,10 @@ Všechny IIAB služby jsou přístupné přes nginx na `*.dev.local` doménách.
 | **Nextcloud** | `cloud.dev.local` | PHP-FPM + MariaDB | volitelné |
 | **Kiwix** | `kiwix.dev.local` | Docker kiwix-serve | volitelné |
 | **Offline Mapy** | `maps.dev.local` | tileserver-gl (Node) | volitelné |
+| **n8n** | `n8n.dev.local` | Docker n8nio/n8n | volitelné |
+| **Gitea** | `gitea.dev.local` | Homebrew gitea | volitelné |
+| **Uptime Kuma** | `uptime.dev.local` | Docker louislam/uptime-kuma | volitelné |
+| **Calibre-Web** | `books.dev.local` | Docker linuxserver/calibre-web | volitelné |
 
 ### Kiwix – offline znalostní báze
 
@@ -167,6 +182,72 @@ mysql -h 127.0.0.1 -u root -p
 ```
 
 Databáze: `wordpress`, `nextcloud`
+
+---
+
+## Observability Stack (LGTM)
+
+Server provozuje plně nakonfigurovaný observability stack pro monitoring, logy a traces.
+
+### Přehled komponent
+
+| Komponenta | Doména | Port | Účel |
+|------------|--------|------|------|
+| **Grafana** | `grafana.dev.local` | 3000 | Dashboardy, vizualizace |
+| **Prometheus** | interní | 9090 | Metriky (scrape, storage) |
+| **Loki** | interní | 3100 | Log aggregation |
+| **Tempo** | interní | 3200 | Distribuované traces |
+| **Grafana Alloy** | interní UI | 12345 | Unified collector (metrics+logs+traces) |
+
+### Klíčové cesty
+
+| Cesta | Obsah |
+|-------|-------|
+| `/opt/homebrew/etc/grafana/grafana.ini` | Grafana hlavní config |
+| `/opt/homebrew/etc/grafana/provisioning/` | Auto-provisioning datasources + dashboards |
+| `/opt/homebrew/etc/prometheus.yml` | Prometheus scrape config |
+| `/opt/homebrew/etc/loki/local-config.yaml` | Loki storage config |
+| `/opt/homebrew/etc/tempo.yaml` | Tempo tracing config |
+| `/opt/homebrew/etc/alloy/config.alloy` | Grafana Alloy pipeline config |
+| `~/pazny/observability/dashboards/` | Stažené community dashboardy (JSON) |
+| `/opt/homebrew/var/lib/loki/` | Loki data |
+| `/opt/homebrew/var/lib/tempo/` | Tempo data |
+
+### Správa služeb
+
+```bash
+# Status všech observability služeb
+brew services list | grep -E 'grafana|prometheus|loki|tempo|alloy'
+
+# Restart jednotlivých komponent
+brew services restart grafana
+brew services restart prometheus
+brew services restart loki
+brew services restart tempo
+brew services restart alloy
+
+# Grafana API (admin heslo v default.config.yml: grafana_admin_password)
+curl -u admin:changeme_grafana http://localhost:3000/api/health
+```
+
+### Grafana Alloy – co sbírá
+
+- **Metriky**: Systém (CPU, RAM, disk, network), Nginx, PHP-FPM, Redis
+- **Logy**: Nginx access/error logy, agent logy z `~/pazny/agents/log/`
+- **Traces**: OTLP přijímač na portu 4317 (gRPC) a 4318 (HTTP)
+
+### Odeslání traces z aplikace
+
+```python
+# Python – OpenTelemetry SDK
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+exporter = OTLPSpanExporter(endpoint="http://localhost:4317", insecure=True)
+```
+
+```javascript
+// Node.js – OpenTelemetry SDK
+const exporter = new OTLPTraceExporter({ url: 'http://localhost:4318/v1/traces' })
+```
 
 ---
 

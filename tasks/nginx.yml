@@ -52,6 +52,9 @@
     - nextcloud.conf
     - kiwix.conf
     - maps.conf
+    - grafana.conf
+    - n8n.conf
+    - gitea.conf
   notify: Restart nginx
 
 - name: Enable configured nginx sites (symlink)

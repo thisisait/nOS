@@ -1,0 +1,64 @@
+---
+# ==============================================================================
+# Uptime Kuma – self-hosted monitoring / status page (Docker)
+# ==============================================================================
+
+- name: Ensure Uptime Kuma data directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/pazny/uptime-kuma"
+    state: directory
+    mode: '0755'
+
+- name: Pull Uptime Kuma Docker image
+  community.docker.docker_image:
+    name: "louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}"
+    source: pull
+
+- name: Create Uptime Kuma launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.uptimekuma.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.uptimekuma</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>uptime-kuma</string>
+          <string>-p</string>
+          <string>{{ uptime_kuma_port | default(3002) }}:3001</string>
+          <string>-v</string>
+          <string>{{ ansible_env.HOME }}/pazny/uptime-kuma:/app/data</string>
+          <string>louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/uptime-kuma.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/uptime-kuma.error.log</string>
+      </dict>
+      </plist>
+
+- name: Load Uptime Kuma launchd agent
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.uptimekuma.plist
+  register: kuma_load
+  changed_when: kuma_load.rc == 0
+  failed_when: false

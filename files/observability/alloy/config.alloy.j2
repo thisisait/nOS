@@ -1,0 +1,204 @@
+// ==============================================================================
+// Grafana Alloy konfigurace (River/Alloy syntax)
+// Unified collector: metriky, logy, traces → LGTM stack
+// Vygenerováno Ansible – ruční úpravy budou přepsány
+// ==============================================================================
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// METRIKY
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Systémové metriky (CPU, RAM, disk, network) – node_exporter kompatibilní
+prometheus.exporter.unix "local" {
+  set_collectors = [
+    "cpu", "diskstats", "filesystem", "loadavg",
+    "meminfo", "netdev", "netstat", "os", "stat",
+    "time", "uname", "vmstat",
+  ]
+}
+
+prometheus.scrape "unix_metrics" {
+  targets    = prometheus.exporter.unix.local.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+  job_name   = "integrations/node_exporter"
+  scrape_interval = "15s"
+}
+
+{% if alloy_scrape_nginx | default(true) %}
+// Nginx metriky (nginx-prometheus-exporter na portu 9113)
+prometheus.scrape "nginx" {
+  targets = [{
+    __address__ = "localhost:9113",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "nginx"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_phpfpm | default(true) %}
+// PHP-FPM metriky (php-fpm_exporter / status page)
+prometheus.scrape "phpfpm" {
+  targets = [{
+    __address__ = "localhost:9253",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "phpfpm"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_redis | default(true) %}
+// Redis metriky
+prometheus.exporter.redis "local" {
+  redis_addr = "localhost:6379"
+}
+
+prometheus.scrape "redis" {
+  targets    = prometheus.exporter.redis.local.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+  job_name   = "redis"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+// Self-monitoring – Alloy vlastní metriky
+prometheus.scrape "alloy_self" {
+  targets = [{
+    __address__ = "localhost:{{ alloy_ui_port | default(12345) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "alloy"
+  scrape_interval = "15s"
+}
+
+// Remote write do Prometheuse
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://localhost:{{ prometheus_port | default(9090) }}/api/v1/write"
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGY → Loki
+// ─────────────────────────────────────────────────────────────────────────────
+
+{% if alloy_tail_nginx_logs | default(true) %}
+// Nginx access logy
+local.file_match "nginx_access" {
+  path_targets = [{
+    __path__ = "/opt/homebrew/var/log/nginx/*.access.log",
+  }]
+}
+
+loki.source.file "nginx_access" {
+  targets    = local.file_match.nginx_access.targets
+  forward_to = [loki.process.nginx.receiver]
+}
+
+loki.process "nginx" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.regex {
+    expression = `^(?P<remote_addr>\S+) - (?P<remote_user>\S+) \[(?P<time_local>[^\]]+)\] "(?P<method>\S+) (?P<request>[^"]+)" (?P<status>\d+) (?P<bytes_sent>\d+)`
+  }
+
+  stage.labels {
+    values = {
+      method = "",
+      status = "",
+    }
+  }
+
+  stage.static_labels {
+    values = {
+      job    = "nginx",
+      host   = "mac-studio-local",
+    }
+  }
+}
+
+// Nginx error logy
+local.file_match "nginx_error" {
+  path_targets = [{
+    __path__ = "/opt/homebrew/var/log/nginx/*.error.log",
+  }]
+}
+
+loki.source.file "nginx_error" {
+  targets    = local.file_match.nginx_error.targets
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
+{% if alloy_tail_agent_logs | default(true) %}
+// OpenClaw agent logy (.md soubory v ~/pazny/agents/log/)
+local.file_match "agent_logs" {
+  path_targets = [{
+    __path__ = "{{ ansible_env.HOME }}/pazny/agents/log/*.md",
+  }]
+}
+
+loki.source.file "agent_logs" {
+  targets    = local.file_match.agent_logs.targets
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
+// Systémové logy (macOS unified log – přes journald emulaci není dostupná,
+// ale brew services logy jsou v /opt/homebrew/var/log/)
+local.file_match "homebrew_services" {
+  path_targets = [{
+    __path__ = "/opt/homebrew/var/log/*.log",
+  }]
+}
+
+loki.source.file "homebrew_services" {
+  targets    = local.file_match.homebrew_services.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// Loki write endpoint
+loki.write "default" {
+  endpoint {
+    url = "http://localhost:{{ loki_port | default(3100) }}/loki/api/v1/push"
+  }
+  external_labels = {
+    host = "mac-studio-local",
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRACES (OTLP) → Tempo
+// ─────────────────────────────────────────────────────────────────────────────
+
+{% if alloy_receive_otlp | default(true) %}
+// OTLP přijímač – aplikace posílají traces přes OpenTelemetry SDK
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:{{ tempo_otlp_grpc_port | default(4317) }}"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "localhost:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+{% endif %}

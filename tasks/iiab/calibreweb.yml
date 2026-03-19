@@ -1,0 +1,77 @@
+---
+# ==============================================================================
+# Calibre-Web – e-book library management (Docker)
+# ==============================================================================
+
+- name: Ensure Calibre-Web directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/pazny/calibre-web/config"
+    - "{{ ansible_env.HOME }}/pazny/calibre-web/books"
+
+- name: Pull Calibre-Web Docker image
+  community.docker.docker_image:
+    name: "lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}"
+    source: pull
+
+- name: Create Calibre-Web launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.calibreweb.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.calibreweb</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>calibre-web</string>
+          <string>-p</string>
+          <string>{{ calibreweb_port | default(8083) }}:8083</string>
+          <string>-v</string>
+          <string>{{ ansible_env.HOME }}/pazny/calibre-web/config:/config</string>
+          <string>-v</string>
+          <string>{{ ansible_env.HOME }}/pazny/calibre-web/books:/books</string>
+          <string>-e</string>
+          <string>PUID=1000</string>
+          <string>-e</string>
+          <string>PGID=1000</string>
+          <string>-e</string>
+          <string>TZ=Europe/Prague</string>
+          <string>-e</string>
+          <string>DOCKER_MODS=linuxserver/mods:universal-calibre</string>
+          <string>lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/calibre-web.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/calibre-web.error.log</string>
+      </dict>
+      </plist>
+
+- name: Load Calibre-Web launchd agent
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.calibreweb.plist
+  register: calibre_load
+  changed_when: calibre_load.rc == 0
+  failed_when: false

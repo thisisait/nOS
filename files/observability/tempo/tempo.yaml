@@ -1,0 +1,59 @@
+# ==============================================================================
+# Tempo konfigurace – distribuované tracing
+# ==============================================================================
+
+server:
+  http_listen_port: 3200
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
+    jaeger:
+      protocols:
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+        grpc:
+          endpoint: 0.0.0.0:14250
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h  # 7 dní
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      host: mac-studio-local
+  storage:
+    path: /opt/homebrew/var/lib/tempo/generator/wal
+    remote_write:
+      - url: http://localhost:9090/api/v1/write
+        send_exemplars: true
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /opt/homebrew/var/lib/tempo/wal
+    local:
+      path: /opt/homebrew/var/lib/tempo/blocks
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
+    ingestion:
+      rate_limit_bytes: 15000000
+      burst_size_bytes: 20000000
+
+usage_report:
+  reporting_enabled: false

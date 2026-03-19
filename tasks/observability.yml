@@ -1,0 +1,196 @@
+---
+# ==============================================================================
+# OBSERVABILITY – Grafana + Prometheus + Loki + Tempo + Grafana Alloy
+# LGTM Stack (Logs, Grafana, Traces, Metrics) – plně nakonfigurovaný
+# ==============================================================================
+
+# ── Homebrew tap pro Grafana nástroje ─────────────────────────────────────────
+
+- name: Add Grafana Homebrew tap
+  community.general.homebrew_tap:
+    name: grafana/grafana
+    state: present
+
+# ── Instalace LGTM stack přes Homebrew ───────────────────────────────────────
+
+- name: Install LGTM observability stack via Homebrew
+  community.general.homebrew:
+    name:
+      - grafana
+      - prometheus
+      - loki
+      - tempo
+      - grafana/grafana/alloy  # Grafana Alloy (successor to Grafana Agent)
+    state: present
+
+# ── Adresářová struktura ──────────────────────────────────────────────────────
+
+- name: Ensure observability config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ homebrew_prefix }}/etc/grafana/provisioning/datasources"
+    - "{{ homebrew_prefix }}/etc/grafana/provisioning/dashboards"
+    - "{{ homebrew_prefix }}/etc/alloy"
+    - "{{ homebrew_prefix }}/var/log/grafana-alloy"
+    - "{{ ansible_env.HOME }}/pazny/observability/dashboards"
+
+# ── Prometheus konfigurace ────────────────────────────────────────────────────
+
+- name: Deploy Prometheus configuration
+  ansible.builtin.copy:
+    src: observability/prometheus/prometheus.yml
+    dest: "{{ homebrew_prefix }}/etc/prometheus.yml"
+    backup: true
+    mode: '0644'
+
+# ── Loki konfigurace ──────────────────────────────────────────────────────────
+
+- name: Deploy Loki configuration
+  ansible.builtin.copy:
+    src: observability/loki/local-config.yaml
+    dest: "{{ homebrew_prefix }}/etc/loki/local-config.yaml"
+    backup: true
+    mode: '0644'
+
+- name: Ensure Loki data directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/var/lib/loki"
+    state: directory
+    mode: '0755'
+
+# ── Tempo konfigurace ─────────────────────────────────────────────────────────
+
+- name: Deploy Tempo configuration
+  ansible.builtin.copy:
+    src: observability/tempo/tempo.yaml
+    dest: "{{ homebrew_prefix }}/etc/tempo.yaml"
+    backup: true
+    mode: '0644'
+
+- name: Ensure Tempo data directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/var/lib/tempo"
+    state: directory
+    mode: '0755'
+
+# ── Grafana konfigurace ───────────────────────────────────────────────────────
+
+- name: Deploy Grafana datasources provisioning
+  ansible.builtin.template:
+    src: observability/grafana/provisioning/datasources/all.yml.j2
+    dest: "{{ homebrew_prefix }}/etc/grafana/provisioning/datasources/all.yml"
+    mode: '0644'
+  notify: Restart grafana
+
+- name: Deploy Grafana dashboard provisioning config
+  ansible.builtin.template:
+    src: observability/grafana/provisioning/dashboards/all.yml.j2
+    dest: "{{ homebrew_prefix }}/etc/grafana/provisioning/dashboards/all.yml"
+    mode: '0644'
+  notify: Restart grafana
+
+- name: Set Grafana admin password
+  ansible.builtin.ini_file:
+    path: "{{ homebrew_prefix }}/etc/grafana/grafana.ini"
+    section: security
+    option: admin_password
+    value: "{{ grafana_admin_password | default('changeme_grafana') }}"
+    mode: '0640'
+    backup: true
+  notify: Restart grafana
+
+- name: Configure Grafana server domain
+  ansible.builtin.ini_file:
+    path: "{{ homebrew_prefix }}/etc/grafana/grafana.ini"
+    section: server
+    option: domain
+    value: "{{ grafana_domain | default('grafana.dev.local') }}"
+    mode: '0640'
+  notify: Restart grafana
+
+- name: Configure Grafana server root_url
+  ansible.builtin.ini_file:
+    path: "{{ homebrew_prefix }}/etc/grafana/grafana.ini"
+    section: server
+    option: root_url
+    value: "https://{{ grafana_domain | default('grafana.dev.local') }}"
+    mode: '0640'
+  notify: Restart grafana
+
+# ── Grafana Alloy konfigurace ─────────────────────────────────────────────────
+
+- name: Deploy Grafana Alloy configuration
+  ansible.builtin.template:
+    src: observability/alloy/config.alloy.j2
+    dest: "{{ homebrew_prefix }}/etc/alloy/config.alloy"
+    mode: '0644'
+  notify: Restart alloy
+
+# ── Grafana dashboard provisioning přes API ───────────────────────────────────
+
+- name: Ensure Grafana dashboard download directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/pazny/observability/dashboards"
+    state: directory
+    mode: '0755'
+
+- name: Start observability services
+  ansible.builtin.command: brew services start {{ item }}
+  loop:
+    - prometheus
+    - loki
+    - tempo
+    - grafana
+    - alloy
+  register: svc_result
+  changed_when: "'already started' not in svc_result.stdout"
+  failed_when:
+    - svc_result.rc != 0
+    - "'already started' not in svc_result.stdout"
+
+- name: Wait for Grafana to become available
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ grafana_port | default(3000) }}"
+    delay: 5
+    timeout: 60
+
+- name: Download community Grafana dashboards
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/latest/download"
+    dest: "{{ ansible_env.HOME }}/pazny/observability/dashboards/dashboard-{{ item.id }}.json"
+    mode: '0644'
+  loop: "{{ grafana_dashboards | default([]) }}"
+  ignore_errors: true  # Pokud není internet, přeskočíme
+
+- name: Import downloaded dashboards into Grafana via API
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/dashboards/import"
+    method: POST
+    user: admin
+    password: "{{ grafana_admin_password | default('changeme_grafana') }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      dashboard: "{{ lookup('file', ansible_env.HOME + '/pazny/observability/dashboards/dashboard-' + item.id | string + '.json') | from_json }}"
+      folderId: 0
+      overwrite: true
+    status_code: [200, 412]
+  loop: "{{ grafana_dashboards | default([]) }}"
+  ignore_errors: true
+  when: >
+    (ansible_env.HOME + '/pazny/observability/dashboards/dashboard-' + item.id | string + '.json') is file
+
+# ── Nginx vhost pro Grafana ───────────────────────────────────────────────────
+
+- name: Enable Grafana nginx vhost
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/grafana.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/grafana.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

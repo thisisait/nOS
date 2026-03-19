@@ -1,0 +1,43 @@
+# ==============================================================================
+# Prometheus konfigurace
+# Vygenerováno Ansible – ruční úpravy budou přepsány
+# ==============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    host: mac-studio-local
+
+# ── Pravidla alertů ───────────────────────────────────────────────────────────
+rule_files:
+  # - "rules/*.yml"
+
+# ── Scrape konfigurace ────────────────────────────────────────────────────────
+# Poznámka: Primární sběr dat probíhá přes Grafana Alloy (OTLP/scrape).
+# Prometheus přímo scrape-uje jen sebe a Alloy metrics endpoint.
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: grafana-alloy
+    static_configs:
+      - targets: ['localhost:12345']
+
+  - job_name: grafana
+    static_configs:
+      - targets: ['localhost:3000']
+
+  - job_name: loki
+    static_configs:
+      - targets: ['localhost:3100']
+
+  - job_name: tempo
+    static_configs:
+      - targets: ['localhost:3200']
+
+# ── Remote write (pro Alloy → Prometheus pipeline) ────────────────────────────
+# Alloy zapisuje metriky přímo přes remote_write do Prometheuse
+# Povoleno přes --enable-feature=remote-write-receiver při startu

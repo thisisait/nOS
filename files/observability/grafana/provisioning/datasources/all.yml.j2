@@ -1,0 +1,58 @@
+# ==============================================================================
+# Grafana datasources provisioning
+# Vygenerováno Ansible – ruční úpravy budou přepsány
+# ==============================================================================
+
+apiVersion: 1
+
+datasources:
+  # ── Prometheus – metriky ──────────────────────────────────────────────────
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://localhost:{{ prometheus_port | default(9090) }}
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+    version: 1
+    editable: false
+
+  # ── Loki – logy ──────────────────────────────────────────────────────────
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://localhost:{{ loki_port | default(3100) }}
+    jsonData:
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '"trace_id":"(\w+)"'
+          name: TraceID
+          url: '$${__value.raw}'
+    version: 1
+    editable: false
+
+  # ── Tempo – traces ────────────────────────────────────────────────────────
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://localhost:{{ tempo_http_port | default(3200) }}
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: '-30m'
+        spanEndTimeShift: '30m'
+    version: 1
+    editable: false

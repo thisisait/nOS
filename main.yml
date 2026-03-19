@@ -37,6 +37,18 @@
         launchctl kickstart -k "gui/{{ ansible_user_uid }}/com.openclaw.agent"
       failed_when: false
 
+    - name: Restart grafana
+      ansible.builtin.command: brew services restart grafana
+      failed_when: false
+
+    - name: Restart alloy
+      ansible.builtin.command: brew services restart alloy
+      failed_when: false
+
+    - name: Restart prometheus
+      ansible.builtin.command: brew services restart prometheus
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
@@ -160,11 +172,44 @@
       tags: ['iiab', 'maps']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Shell extras – starship prompt + aliases
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/shell-extras.yml
+      when: install_shell_extras | default(true)
+      tags: ['shell', 'shell-extras', 'starship']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/openclaw.yml
       when: install_openclaw | default(false)
       tags: ['openclaw', 'ai', 'agent']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Observability – Grafana + Prometheus + Loki + Tempo + Alloy
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/observability.yml
+      when: install_observability | default(true)
+      tags: ['observability', 'grafana', 'prometheus', 'loki', 'tempo', 'alloy']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # IIAB extra – n8n, Gitea, Uptime Kuma, Calibre-Web
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/iiab/n8n.yml
+      when: install_n8n | default(false)
+      tags: ['iiab', 'n8n', 'automation']
+
+    - import_tasks: tasks/iiab/gitea.yml
+      when: install_gitea | default(false)
+      tags: ['iiab', 'gitea', 'git']
+
+    - import_tasks: tasks/iiab/uptime-kuma.yml
+      when: install_uptime_kuma | default(false)
+      tags: ['iiab', 'uptime-kuma', 'monitoring']
+
+    - import_tasks: tasks/iiab/calibreweb.yml
+      when: install_calibreweb | default(false)
+      tags: ['iiab', 'calibre', 'ebooks']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Post-provision háky

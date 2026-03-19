@@ -1,0 +1,93 @@
+---
+# ==============================================================================
+# Gitea – self-hosted Git service (Homebrew)
+# ==============================================================================
+
+- name: Install Gitea via Homebrew
+  community.general.homebrew:
+    name: gitea
+    state: present
+
+- name: Ensure Gitea data directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/pazny/gitea"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Gitea config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/pazny/gitea/conf"
+    state: directory
+    mode: '0755'
+
+- name: Deploy Gitea app.ini configuration
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/pazny/gitea/conf/app.ini"
+    mode: '0640'
+    backup: true
+    content: |
+      APP_NAME = Gitea – Mac Studio
+      RUN_MODE = prod
+      RUN_USER = {{ ansible_user_id }}
+
+      [server]
+      DOMAIN           = {{ gitea_domain | default('gitea.dev.local') }}
+      HTTP_PORT        = {{ gitea_port | default(3001) }}
+      ROOT_URL         = https://{{ gitea_domain | default('gitea.dev.local') }}
+      DISABLE_SSH      = false
+      SSH_PORT         = {{ gitea_ssh_port | default(2222) }}
+      OFFLINE_MODE     = true
+
+      [database]
+      DB_TYPE  = sqlite3
+      PATH     = {{ ansible_env.HOME }}/pazny/gitea/gitea.db
+
+      [repository]
+      ROOT = {{ ansible_env.HOME }}/pazny/gitea/repositories
+
+      [log]
+      MODE      = file
+      LEVEL     = Warn
+      ROOT_PATH = {{ ansible_env.HOME }}/pazny/agents/log/gitea
+
+      [security]
+      INSTALL_LOCK   = true
+      SECRET_KEY     = {{ gitea_secret_key | default('changeme_gitea_secret') }}
+      INTERNAL_TOKEN = {{ gitea_internal_token | default('changeme_gitea_token') }}
+
+      [service]
+      DISABLE_REGISTRATION              = {{ gitea_disable_registration | default(false) | string | lower }}
+      REQUIRE_SIGNIN_VIEW               = false
+      DEFAULT_KEEP_EMAIL_PRIVATE        = true
+      DEFAULT_ALLOW_CREATE_ORGANIZATION = true
+
+      [mailer]
+      ENABLED = false
+
+      [openid]
+      ENABLE_OPENID_SIGNIN = false
+      ENABLE_OPENID_SIGNUP = false
+
+- name: Configure GITEA_WORK_DIR environment for brew services
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export GITEA_WORK_DIR="{{ ansible_env.HOME }}/pazny/gitea"'
+    regexp: 'GITEA_WORK_DIR='
+    create: true
+
+- name: Start Gitea via brew services
+  ansible.builtin.command: brew services start gitea
+  register: gitea_svc
+  changed_when: "'already started' not in gitea_svc.stdout"
+  failed_when:
+    - gitea_svc.rc != 0
+    - "'already started' not in gitea_svc.stdout"
+
+- name: Enable Gitea nginx vhost
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/gitea.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/gitea.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

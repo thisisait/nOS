@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# SHELL EXTRAS – starship prompt + moderní CLI aliasy
+# ==============================================================================
+
+- name: Install starship via Homebrew
+  community.general.homebrew:
+    name: starship
+    state: present
+
+# ── Starship konfigurace ───────────────────────────────────────────────────────
+
+- name: Ensure starship config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config"
+    state: directory
+    mode: '0755'
+
+- name: Deploy starship config (preset: {{ starship_preset | default('gruvbox-rainbow') }})
+  ansible.builtin.template:
+    src: starship.toml.j2
+    dest: "{{ ansible_env.HOME }}/.config/starship.toml"
+    mode: '0644'
+    backup: true
+
+# ── Zsh konfigurace – starship init + aliasy ──────────────────────────────────
+
+- name: Ensure ~/.zshrc exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    state: touch
+    mode: '0644'
+
+- name: Add starship init to ~/.zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} STARSHIP PROMPT (ansible managed)"
+    block: |
+      # Starship cross-shell prompt
+      eval "$(starship init zsh)"
+    create: true
+
+- name: Add zoxide init to ~/.zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} ZOXIDE (ansible managed)"
+    block: |
+      # Zoxide – smart cd
+      eval "$(zoxide init zsh)"
+    create: true
+
+- name: Add fzf init to ~/.zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} FZF (ansible managed)"
+    block: |
+      # fzf – fuzzy finder
+      [ -f {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh
+      [ -f {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh
+    create: true
+
+- name: Add modern CLI aliases to ~/.zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} MODERN CLI ALIASES (ansible managed)"
+    block: |
+      # Modern CLI tool aliases
+      {% for alias in shell_aliases | default([]) %}
+      alias {{ alias.name }}="{{ alias.command }}"
+      {% endfor %}
+    create: true
+
+# ── Bash konfigurace (fallback) ───────────────────────────────────────────────
+
+- name: Add starship init to ~/.bash_profile
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bash_profile"
+    marker: "# {mark} STARSHIP PROMPT (ansible managed)"
+    block: |
+      eval "$(starship init bash)"
+    create: true

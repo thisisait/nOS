@@ -32,6 +32,7 @@ configure_macos_defaults: true    # Rozšířená macOS nastavení (Finder, klá
 configure_dock: false             # Dock layout (vyžaduje dockutil)
 configure_sudoers: false          # Vlastní sudoers pravidla
 configure_sublime: false          # Sublime Text editor
+install_shell_extras: true        # Starship prompt + shell aliasy (bat, eza, fzf, zoxide, lazygit)
 
 # ── Systémové služby (vyžadují sudo) ──────────────────────────────────────────
 enable_ssh: false                 # Remote Login / SSH server
@@ -39,13 +40,20 @@ enable_samba: false               # Sdílení souborů přes SMB (Windows/Linux)
 enable_vnc: false                 # Sdílení obrazovky (VNC / Apple Remote Desktop)
 enable_remote_management: false   # Apple Remote Desktop (ARD) – plná správa
 
-# ── IIAB – self-hosted knowledge services ─────────────────────────────────────
+# ── Observability – Grafana LGTM stack ────────────────────────────────────────
+install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+
+# ── IIAB – self-hosted knowledge & productivity services ──────────────────────
 # Vyžaduje: install_nginx: true, install_php: true
 install_mariadb: false            # MariaDB databáze (nutná pro WordPress + Nextcloud)
-install_wordpress: false          # WordPress CMS  [vyžaduje: mariadb, php, nginx]
+install_wordpress: false          # WordPress CMS            [vyžaduje: mariadb, php, nginx]
 install_nextcloud: false          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
-install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM soubory  [vyžaduje: Docker]
-install_offline_maps: false       # Offline mapy – tileserver-gl + OpenMapTiles MBTiles  [vyžaduje: node]
+install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
+install_offline_maps: false       # Offline mapy – tileserver-gl + MBTiles    [vyžaduje: node]
+install_n8n: false                # n8n – workflow automation                  [vyžaduje: Docker]
+install_gitea: false              # Gitea – self-hosted Git server             [Homebrew]
+install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
+install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
 
 # ==============================================================================
 # HOMEBREW – obecné nastavení
@@ -91,6 +99,26 @@ homebrew_installed_packages:
   - git-lfs
   - pre-commit
   - act                  # GitHub Actions lokálně
+  # ── Moderní CLI náhrady ──────────────────────────────────────────────────
+  - ripgrep              # rg  – rychlejší grep (regex, .gitignore-aware)
+  - fd                   # fd  – rychlejší find
+  - bat                  # bat – cat se syntax highlighting + git diff
+  - eza                  # eza – moderní ls (ikony, stromy, git status)
+  - fzf                  # fzf – fuzzy finder (Ctrl+R history, Ctrl+T files)
+  - zoxide               # z   – chytré cd (váhuje historii)
+  - starship             # starship – GPU-fast cross-shell prompt
+  - lazygit              # lazygit – TUI pro git (add/commit/push/merge)
+  - ncdu                 # ncdu – interaktivní disk usage TUI
+  - duf                  # duf  – moderní df (diskový přehled)
+  - tldr                 # tldr – zkrácené man pages s příklady
+  - hyperfine            # hyperfine – CLI benchmarking
+  # ── Media (Blender renders, FL Studio exports, video workflow) ────────────
+  - ffmpeg               # ffmpeg – konverze audio/video (nutné pro Blender+FL)
+  - imagemagick          # convert – batch zpracování obrázků
+  - yt-dlp               # yt-dlp – stahování videa/audia z YT a dalších
+  - exiftool             # exiftool – čtení/zápis metadat médií
+  # ── Databáze ─────────────────────────────────────────────────────────────
+  - redis                # Redis – in-memory cache + pub/sub (projekty, Nextcloud)
   # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
   # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
   # ninja:      Rychlý build systém (cmake backend, meson backend)
@@ -173,11 +201,17 @@ homebrew_cask_apps:
   # - inkscape           # Inkscape – vektorová grafika (open-source AI)
   # - davinci-resolve    # DaVinci Resolve – video střih
 
+  # ── Observability ─────────────────────────────────────────────────────────
+  - obsidian             # Obsidian – lokální .md knowledge base + kanban
+                         # ↳ Propojí se s ~/pazny/agents/log/ a Grafana
+
   # ── Systémové utility ─────────────────────────────────────────────────────
   - dropbox              # Dropbox – cloud sync
-  # - stats              # Stats – system monitor v menu baru
+  - ice                  # Ice – free Bartender (organizace menu baru)
+  - stats                # Stats – CPU/GPU/RAM/network v menu baru
   # - rectangle          # Rectangle – window manager
   # - alt-tab            # AltTab – Windows-like app switcher
+  # - bettertouchtool    # BetterTouchTool – trackpad/klávesnice customization
 
 # ==============================================================================
 # MAC APP STORE
@@ -267,6 +301,7 @@ bun_global_packages: []
 python_version: "3.13"   # pyenv install target
 
 pip_packages:
+  # ── Dev základ ──────────────────────────────────────────────────────────
   - name: virtualenv
   - name: black
   - name: ruff
@@ -278,6 +313,18 @@ pip_packages:
   - name: rich
   - name: ansible
   - name: anthropic     # Claude API SDK
+  # ── Data Science / AI ────────────────────────────────────────────────────
+  - name: jupyterlab    # Jupyter notebooks (Ollama experimenty, data analýza)
+  - name: numpy
+  - name: pandas
+  - name: matplotlib
+  - name: transformers  # HuggingFace modely (lokální inference vedle Ollama)
+  - name: langchain     # LLM orchestrace + chains
+  - name: langchain-community
+  - name: openai        # OpenAI SDK (kompatibilní s Ollama API)
+  # ── Observability klient ─────────────────────────────────────────────────
+  - name: opentelemetry-sdk
+  - name: opentelemetry-exporter-otlp  # OTLP traces z Python projektů → Tempo
 
 # ==============================================================================
 # GO
@@ -543,6 +590,147 @@ maps_mbtiles_files: []
 # - url: "https://data.maptiler.com/downloads/europe/czech-republic/"
 #   dest: "czech-republic.mbtiles"
 #   # POZOR: Vyžaduje registraci na maptiler.com (free tier k dispozici)
+
+# ==============================================================================
+# SHELL EXTRAS – Starship + aliasy
+# ==============================================================================
+
+# Starship preset: plain-text | bracketed-segments | gruvbox-rainbow | tokyo-night
+starship_preset: "gruvbox-rainbow"
+
+# Aliasy přidané do ~/.zshrc
+shell_aliases:
+  - alias: ls
+    command: "eza --icons --group-directories-first"
+  - alias: ll
+    command: "eza -la --icons --git --group-directories-first"
+  - alias: lt
+    command: "eza --tree --icons --level=3"
+  - alias: cat
+    command: "bat --style=numbers,changes,header"
+  - alias: grep
+    command: "rg"
+  - alias: find
+    command: "fd"
+  - alias: du
+    command: "ncdu"
+  - alias: df
+    command: "duf"
+  - alias: lg
+    command: "lazygit"
+  - alias: nr
+    command: "npm run"
+  - alias: br
+    command: "bun run"
+
+# ==============================================================================
+# OBSERVABILITY – Grafana LGTM stack + Alloy
+# Architektura:
+#   Alloy (collector) → Prometheus (metrics) → Grafana (dashboards)
+#                    → Loki (logs)            →
+#                    → Tempo (traces)         →
+# ==============================================================================
+
+# ── Porty ─────────────────────────────────────────────────────────────────────
+grafana_port: 3000
+prometheus_port: 9090
+loki_port: 3100
+tempo_http_port: 3200
+tempo_otlp_grpc_port: 4317
+tempo_otlp_http_port: 4318
+alloy_ui_port: 12345
+alloy_otlp_grpc_port: 4317
+alloy_otlp_http_port: 4318
+
+# ── Domény ────────────────────────────────────────────────────────────────────
+grafana_domain: "grafana.dev.local"
+# Ostatní služby nejsou veřejně exponovány (localhost only), přes Grafana
+
+# ── Grafana ───────────────────────────────────────────────────────────────────
+grafana_admin_user: "admin"
+grafana_admin_password: "changeme_grafana"   # PŘEPIŠ!
+grafana_allow_embedding: false
+grafana_analytics: false    # Vypnout telemetrii
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus_retention: "30d"
+prometheus_storage_path: "/Users/pazny/observability/prometheus"
+
+# ── Loki ──────────────────────────────────────────────────────────────────────
+loki_retention: "744h"   # 31 dní
+loki_storage_path: "/Users/pazny/observability/loki"
+
+# ── Tempo ─────────────────────────────────────────────────────────────────────
+tempo_retention: "168h"  # 7 dní (traces bývají objemnější)
+tempo_storage_path: "/Users/pazny/observability/tempo"
+
+# ── Alloy – co sbírat ─────────────────────────────────────────────────────────
+alloy_scrape_nginx: true           # nginx stub_status → Prometheus
+alloy_scrape_phpfpm: true          # PHP-FPM status → Prometheus
+alloy_scrape_mariadb: false        # MariaDB metriky (zapni pokud install_mariadb: true)
+alloy_scrape_redis: true           # Redis metriky → Prometheus
+alloy_tail_nginx_logs: true        # Nginx access+error logy → Loki
+alloy_tail_agent_logs: true        # ~/pazny/agents/*.log → Loki
+alloy_tail_php_logs: true          # PHP-FPM logy → Loki
+alloy_receive_otlp: true           # OTLP přijímač pro app traces/metrics/logs → Tempo
+
+# ── Grafana dashboardy ke stažení z grafana.com ───────────────────────────────
+# ID dashboardů z https://grafana.com/grafana/dashboards/
+grafana_dashboards:
+  - id: 1860    # Node Exporter Full (system metrics)
+    revision: 37
+    name: "node-exporter-full.json"
+  - id: 12708   # macOS System Overview
+    revision: 3
+    name: "macos-system.json"
+  - id: 13639   # Nginx via Prometheus
+    revision: 2
+    name: "nginx.json"
+  - id: 12485   # PHP-FPM
+    revision: 1
+    name: "phpfpm.json"
+  - id: 16098   # Loki Dashboard quick search
+    revision: 1
+    name: "loki-search.json"
+  - id: 15489   # Tempo / Traces
+    revision: 2
+    name: "tempo-traces.json"
+
+# ==============================================================================
+# IIAB – N8N (workflow automation)
+# ==============================================================================
+
+n8n_domain: "n8n.dev.local"
+n8n_port: 5678
+n8n_data_dir: "/Users/pazny/n8n"
+n8n_timezone: "Europe/Prague"
+
+# ==============================================================================
+# IIAB – GITEA (self-hosted Git)
+# ==============================================================================
+
+gitea_domain: "git.dev.local"
+gitea_http_port: 3000   # pozor: kolize s Grafana! Gitea se spustí na jiném portu
+gitea_ssh_port: 2222
+gitea_data_dir: "/Users/pazny/gitea"
+gitea_admin_user: "pazny"
+gitea_admin_email: ""   # VYPLŇ!
+
+# ==============================================================================
+# IIAB – UPTIME KUMA (monitoring dashboard)
+# ==============================================================================
+
+uptime_kuma_domain: "uptime.dev.local"
+uptime_kuma_port: 3001
+uptime_kuma_data_dir: "/Users/pazny/uptime-kuma"
+
+# ==============================================================================
+# IIAB – CALIBRE-WEB (ebook server)
+# ==============================================================================
+
+calibreweb_domain: "books.dev.local"
+calibreweb_port: 8083
+calibreweb_books_dir: "/Users/pazny/calibre"   # Calibre library
 
 # ==============================================================================
 # POST-PROVISION
