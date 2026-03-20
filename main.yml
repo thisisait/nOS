@@ -237,6 +237,22 @@
       when: install_gitlab | default(false)
       tags: ['iiab', 'gitlab', 'git']
 
+    - import_tasks: tasks/iiab/woodpecker.yml
+      when: install_woodpecker | default(false)
+      tags: ['iiab', 'woodpecker', 'ci', 'cicd']
+
+    - import_tasks: tasks/iiab/openwebui.yml
+      when: install_openwebui | default(false)
+      tags: ['iiab', 'openwebui', 'ai']
+
+    - import_tasks: tasks/iiab/portainer.yml
+      when: install_portainer | default(false)
+      tags: ['iiab', 'portainer', 'docker']
+
+    - import_tasks: tasks/iiab/jellyfin.yml
+      when: install_jellyfin | default(false)
+      tags: ['iiab', 'jellyfin', 'media']
+
     - import_tasks: tasks/iiab/uptime-kuma.yml
       when: install_uptime_kuma | default(false)
       tags: ['iiab', 'uptime-kuma', 'monitoring']

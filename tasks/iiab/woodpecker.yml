@@ -1,0 +1,199 @@
+---
+# ==============================================================================
+# Woodpecker CI – lightweight CI/CD napojen na Gitea (Docker)
+#
+# Architektura: dva kontejnery
+#   woodpecker-server  – web UI + API + task queue
+#   woodpecker-agent   – runner, provádí pipeline kroky
+#
+# Integrace s Giteou:
+#   Woodpecker používá Gitea OAuth2 pro přihlašování.
+#   MANUÁLNÍ KROK: V Gitee vytvoř OAuth2 aplikaci a vlož ID+secret do config.yml.
+#   Gitea → Settings → Applications → OAuth2 Applications
+#   Callback URL: https://{{ woodpecker_domain }}/authorize
+# ==============================================================================
+
+- name: "[Woodpecker] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ woodpecker_data_dir }}"
+    - "{{ ansible_env.HOME }}/pazny/agents/log"
+
+- name: "[Woodpecker] Pull server Docker image"
+  community.docker.docker_image:
+    name: "woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}"
+    source: pull
+
+- name: "[Woodpecker] Pull agent Docker image"
+  community.docker.docker_image:
+    name: "woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}"
+    source: pull
+
+# ── Server launchd plist ─────────────────────────────────────────────────────
+
+- name: "[Woodpecker] Create server launchd plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.woodpecker.server.plist"
+    mode: '0644'
+    backup: true
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.woodpecker.server</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>woodpecker-server</string>
+          <!-- Web UI port -->
+          <string>-p</string>
+          <string>{{ woodpecker_port | default(8060) }}:8000</string>
+          <!-- gRPC port pro agenty -->
+          <string>-p</string>
+          <string>{{ woodpecker_grpc_port | default(9060) }}:9000</string>
+          <string>-v</string>
+          <string>{{ woodpecker_data_dir }}:/var/lib/woodpecker</string>
+          <!-- Gitea OAuth2 integrace -->
+          <string>-e</string>
+          <string>WOODPECKER_GITEA=true</string>
+          <string>-e</string>
+          <string>WOODPECKER_GITEA_URL=https://{{ gitea_domain | default('git.dev.local') }}</string>
+          <string>-e</string>
+          <string>WOODPECKER_GITEA_CLIENT={{ woodpecker_gitea_client | default('') }}</string>
+          <string>-e</string>
+          <string>WOODPECKER_GITEA_SECRET={{ woodpecker_gitea_secret | default('') }}</string>
+          <!-- Sdílené tajemství pro autentizaci agentů -->
+          <string>-e</string>
+          <string>WOODPECKER_AGENT_SECRET={{ woodpecker_agent_secret }}</string>
+          <!-- Veřejná URL serveru (pro webhooky z Gitey) -->
+          <string>-e</string>
+          <string>WOODPECKER_HOST=https://{{ woodpecker_domain | default('ci.dev.local') }}</string>
+          <string>-e</string>
+          <string>WOODPECKER_OPEN={{ woodpecker_open_registration | default(false) | string | lower }}</string>
+          <string>woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-server.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-server.error.log</string>
+      </dict>
+      </plist>
+
+# ── Agent launchd plist ──────────────────────────────────────────────────────
+
+- name: "[Woodpecker] Create agent launchd plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.woodpecker.agent.plist"
+    mode: '0644'
+    backup: true
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.woodpecker.agent</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>woodpecker-agent</string>
+          <!-- Přístup k Docker socketu pro spouštění pipeline kontejnerů -->
+          <string>-v</string>
+          <string>/var/run/docker.sock:/var/run/docker.sock</string>
+          <!-- Připojení na server -->
+          <string>-e</string>
+          <string>WOODPECKER_SERVER=host.docker.internal:{{ woodpecker_grpc_port | default(9060) }}</string>
+          <string>-e</string>
+          <string>WOODPECKER_AGENT_SECRET={{ woodpecker_agent_secret }}</string>
+          <string>-e</string>
+          <string>WOODPECKER_MAX_WORKFLOWS={{ woodpecker_max_workflows | default(4) }}</string>
+          <!-- Backend pro pipeline joby -->
+          <string>-e</string>
+          <string>WOODPECKER_BACKEND=docker</string>
+          <string>woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-agent.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-agent.error.log</string>
+      </dict>
+      </plist>
+
+# ── Spuštění ─────────────────────────────────────────────────────────────────
+
+- name: "[Woodpecker] Load server launchd agent"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.woodpecker.server.plist
+  register: woodpecker_server_load
+  changed_when: woodpecker_server_load.rc == 0
+  failed_when: false
+
+- name: "[Woodpecker] Load agent launchd agent"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.woodpecker.agent.plist
+  register: woodpecker_agent_load
+  changed_when: woodpecker_agent_load.rc == 0
+  failed_when: false
+
+- name: "[Woodpecker] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/woodpecker.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/woodpecker.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[Woodpecker] Display Gitea OAuth2 setup instructions"
+  ansible.builtin.debug:
+    msg: |
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║  WOODPECKER CI – MANUÁLNÍ KROK (pouze při první instalaci)         ║
+      ║                                                                     ║
+      ║  V Gitee vytvoř OAuth2 aplikaci:                                   ║
+      ║    https://{{ gitea_domain | default('git.dev.local') }}/user/settings/applications  ║
+      ║    Název: Woodpecker CI                                             ║
+      ║    Redirect URI: https://{{ woodpecker_domain | default('ci.dev.local') }}/authorize ║
+      ║                                                                     ║
+      ║  Zkopíruj Client ID + Secret do config.yml:                        ║
+      ║    woodpecker_gitea_client: "<client-id>"                          ║
+      ║    woodpecker_gitea_secret: "<client-secret>"                      ║
+      ║                                                                     ║
+      ║  Pak spusť: ansible-playbook main.yml -K --tags woodpecker         ║
+      ╚══════════════════════════════════════════════════════════════════════╝
+  when: >
+    (woodpecker_gitea_client | default('')) == '' or
+    (woodpecker_gitea_secret | default('')) == ''

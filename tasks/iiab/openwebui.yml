@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# Open WebUI – chat UI pro Ollama (Docker)
+#
+# Připojuje se na Ollama démon běžící na hostu (port 11434).
+# Na macOS Docker Desktop je host.docker.internal automaticky dostupné.
+# ==============================================================================
+
+- name: "[Open WebUI] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ openwebui_data_dir }}"
+    - "{{ ansible_env.HOME }}/pazny/agents/log"
+
+- name: "[Open WebUI] Pull Docker image"
+  community.docker.docker_image:
+    name: "ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}"
+    source: pull
+
+- name: "[Open WebUI] Create launchd plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.openwebui.plist"
+    mode: '0644'
+    backup: true
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.openwebui</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>open-webui</string>
+          <string>-p</string>
+          <string>{{ openwebui_port | default(3004) }}:8080</string>
+          <string>-v</string>
+          <string>{{ openwebui_data_dir }}:/app/backend/data</string>
+          <!-- Připojení na Ollama běžící na hostu -->
+          <string>-e</string>
+          <string>OLLAMA_BASE_URL=http://host.docker.internal:11434</string>
+          <!-- Vypnout telemetrii -->
+          <string>-e</string>
+          <string>SCARF_NO_ANALYTICS=true</string>
+          <string>-e</string>
+          <string>DO_NOT_TRACK=true</string>
+          <string>-e</string>
+          <string>ANONYMIZED_TELEMETRY=false</string>
+          <string>ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/openwebui.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/openwebui.error.log</string>
+      </dict>
+      </plist>
+
+- name: "[Open WebUI] Load launchd agent"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.openwebui.plist
+  register: openwebui_load
+  changed_when: openwebui_load.rc == 0
+  failed_when: false
+
+- name: "[Open WebUI] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/openwebui.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/openwebui.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

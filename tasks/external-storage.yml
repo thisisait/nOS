@@ -32,6 +32,14 @@
     n8n_data_dir: "{{ external_storage_root }}/n8n"
     gitea_data_dir: "{{ external_storage_root }}/gitea"
     gitlab_data_dir: "{{ external_storage_root }}/gitlab"
+    openwebui_data_dir: "{{ external_storage_root }}/openwebui"
+    woodpecker_data_dir: "{{ external_storage_root }}/woodpecker"
+    portainer_data_dir: "{{ external_storage_root }}/portainer"
+    jellyfin_config_dir: "{{ external_storage_root }}/jellyfin/config"
+    jellyfin_cache_dir: "{{ external_storage_root }}/jellyfin/cache"
+    jellyfin_movies_dir: "{{ external_storage_root }}/media/movies"
+    jellyfin_shows_dir: "{{ external_storage_root }}/media/shows"
+    jellyfin_music_dir: "{{ external_storage_root }}/media/music"
     uptime_kuma_data_dir: "{{ external_storage_root }}/uptime-kuma"
     nextcloud_data_dir: "{{ external_storage_root }}/nextcloud-data"
     wordpress_dir: "{{ external_storage_root }}/wordpress"
@@ -56,6 +64,14 @@
     - "{{ external_storage_root }}/n8n"
     - "{{ external_storage_root }}/gitea"
     - "{{ external_storage_root }}/gitlab"
+    - "{{ external_storage_root }}/openwebui"
+    - "{{ external_storage_root }}/woodpecker"
+    - "{{ external_storage_root }}/portainer"
+    - "{{ external_storage_root }}/jellyfin/config"
+    - "{{ external_storage_root }}/jellyfin/cache"
+    - "{{ external_storage_root }}/media/movies"
+    - "{{ external_storage_root }}/media/shows"
+    - "{{ external_storage_root }}/media/music"
     - "{{ external_storage_root }}/uptime-kuma"
     - "{{ external_storage_root }}/nextcloud-data"
     - "{{ external_storage_root }}/wordpress"
@@ -151,6 +167,11 @@
       │    n8n         → {{ external_storage_root }}/n8n
       │    gitea       → {{ external_storage_root }}/gitea
       │    gitlab      → {{ external_storage_root }}/gitlab
+      │    openwebui   → {{ external_storage_root }}/openwebui
+      │    woodpecker  → {{ external_storage_root }}/woodpecker
+      │    portainer   → {{ external_storage_root }}/portainer
+      │    jellyfin    → {{ external_storage_root }}/jellyfin/{config,cache}
+      │    media       → {{ external_storage_root }}/media/{movies,shows,music}
       │    uptime-kuma → {{ external_storage_root }}/uptime-kuma
       │    nextcloud   → {{ external_storage_root }}/nextcloud-data
       │    wordpress   → {{ external_storage_root }}/wordpress

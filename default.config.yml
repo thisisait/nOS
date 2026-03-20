@@ -53,6 +53,10 @@ install_offline_maps: false       # Offline mapy – tileserver-gl + MBTiles    
 install_n8n: false                # n8n – workflow automation                  [vyžaduje: Docker]
 install_gitea: false              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [vyžaduje: Docker, ~4 GB RAM]
+install_woodpecker: false         # Woodpecker CI – CI/CD pro Gitea            [vyžaduje: Docker, Gitea OAuth2]
+install_openwebui: false          # Open WebUI – chat UI pro Ollama            [vyžaduje: Docker, Ollama]
+install_portainer: false          # Portainer CE – Docker management UI        [vyžaduje: Docker]
+install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
 install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
 
@@ -754,6 +758,54 @@ gitlab_timezone: "Europe/Prague"
 gitlab_signup_enabled: false    # Zakáže registraci nových uživatelů
 gitlab_puma_workers: 2          # Worker procesy (min 2, pro 36 GB klidně 4)
 gitlab_sidekiq_concurrency: 10  # Background job vlákna
+
+# ==============================================================================
+# IIAB – OPEN WEBUI (chat UI pro Ollama)
+# Vyžaduje: install_openclaw: true (Ollama musí běžet na portu 11434)
+# ==============================================================================
+
+openwebui_domain: "ai.dev.local"
+openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
+openwebui_version: "main"        # nebo konkrétní: "0.5.20"
+openwebui_data_dir: "/Users/pazny/openwebui"
+
+# ==============================================================================
+# IIAB – WOODPECKER CI (CI/CD napojen na Gitea)
+# Vyžaduje: install_gitea: true + manuální OAuth2 aplikace v Gitee
+# ==============================================================================
+
+woodpecker_domain: "ci.dev.local"
+woodpecker_port: 8060            # Web UI
+woodpecker_grpc_port: 9060       # gRPC pro agenty (interní)
+woodpecker_version: "latest"
+woodpecker_data_dir: "/Users/pazny/woodpecker"
+woodpecker_agent_secret: "changeme_woodpecker_agent"  # PŘEPIŠ! (openssl rand -hex 32)
+woodpecker_gitea_client: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
+woodpecker_gitea_secret: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
+woodpecker_open_registration: false  # true = kdokoliv se může přihlásit přes Gitea
+woodpecker_max_workflows: 4      # Max paralelních pipeline runů na agenta
+
+# ==============================================================================
+# IIAB – PORTAINER CE (Docker management UI)
+# ==============================================================================
+
+portainer_domain: "portainer.dev.local"
+portainer_port: 9000
+portainer_version: "latest"
+portainer_data_dir: "/Users/pazny/portainer"
+
+# ==============================================================================
+# IIAB – JELLYFIN (media server)
+# ==============================================================================
+
+jellyfin_domain: "media.dev.local"
+jellyfin_port: 8096
+jellyfin_version: "latest"
+jellyfin_config_dir: "/Users/pazny/jellyfin/config"
+jellyfin_cache_dir: "/Users/pazny/jellyfin/cache"
+jellyfin_movies_dir: "/Users/pazny/media/movies"   # Přepiš na svou knihovnu
+jellyfin_shows_dir: "/Users/pazny/media/shows"
+jellyfin_music_dir: "/Users/pazny/media/music"
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)

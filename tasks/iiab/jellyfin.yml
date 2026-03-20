@@ -1,0 +1,118 @@
+---
+# ==============================================================================
+# Jellyfin – self-hosted media server (Docker)
+#
+# Streamuje filmy, seriály, hudbu a fotky do prohlížeče / Jellyfin klientů.
+# Na Apple Silicon není hardwarová akcelerace v Dockeru dostupná → software.
+#
+# Mediální knihovna:
+#   jellyfin_movies_dir   – filmy (MP4, MKV, …)
+#   jellyfin_shows_dir    – seriály (složky po sezónách)
+#   jellyfin_music_dir    – hudba (MP3, FLAC, …)
+# ==============================================================================
+
+- name: "[Jellyfin] Ensure config, cache and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ jellyfin_config_dir }}"
+    - "{{ jellyfin_cache_dir }}"
+    - "{{ jellyfin_movies_dir }}"
+    - "{{ jellyfin_shows_dir }}"
+    - "{{ jellyfin_music_dir }}"
+    - "{{ ansible_env.HOME }}/pazny/agents/log"
+
+- name: "[Jellyfin] Pull Docker image"
+  community.docker.docker_image:
+    name: "jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}"
+    source: pull
+
+- name: "[Jellyfin] Create launchd plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.jellyfin.plist"
+    mode: '0644'
+    backup: true
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.jellyfin</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>jellyfin</string>
+          <string>-p</string>
+          <string>{{ jellyfin_port | default(8096) }}:8096</string>
+          <!-- Konfigurace a cache (malé, interní SSD) -->
+          <string>-v</string>
+          <string>{{ jellyfin_config_dir }}:/config</string>
+          <string>-v</string>
+          <string>{{ jellyfin_cache_dir }}:/cache</string>
+          <!-- Mediální knihovny (jen pro čtení – ochrana před náhodným smazáním) -->
+          <string>-v</string>
+          <string>{{ jellyfin_movies_dir }}:/media/movies:ro</string>
+          <string>-v</string>
+          <string>{{ jellyfin_shows_dir }}:/media/shows:ro</string>
+          <string>-v</string>
+          <string>{{ jellyfin_music_dir }}:/media/music:ro</string>
+          <string>jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/jellyfin.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/pazny/agents/log/jellyfin.error.log</string>
+      </dict>
+      </plist>
+
+- name: "[Jellyfin] Load launchd agent"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.jellyfin.plist
+  register: jellyfin_load
+  changed_when: jellyfin_load.rc == 0
+  failed_when: false
+
+- name: "[Jellyfin] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/jellyfin.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/jellyfin.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[Jellyfin] Display post-install note"
+  ansible.builtin.debug:
+    msg: |
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║  JELLYFIN – PRVNÍ SPUŠTĚNÍ                                         ║
+      ║                                                                     ║
+      ║  Otevři: https://{{ jellyfin_domain | default('media.dev.local') }}                ║
+      ║  Projdi průvodce nastavením (admin účet, knihovny).                ║
+      ║                                                                     ║
+      ║  Mediální složky v kontejneru:                                     ║
+      ║    /media/movies  → {{ jellyfin_movies_dir }}
+      ║    /media/shows   → {{ jellyfin_shows_dir }}
+      ║    /media/music   → {{ jellyfin_music_dir }}
+      ║                                                                     ║
+      ║  Poznámka: Apple Silicon nemá HW akceleraci v Dockeru.            ║
+      ║  Transcoding bude software (CPU) – pro přímé přehrávání bez       ║
+      ║  transcodování to nevadí.                                          ║
+      ╚══════════════════════════════════════════════════════════════════════╝

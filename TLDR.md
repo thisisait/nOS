@@ -16,7 +16,7 @@ Playbook nainstaluje a nakonfiguruje **vsechno** od nuly:
 | **Web server** | Nginx s reverse proxy, HTTPS (mkcert), vhost sablony pro PHP/Node/Python/Go/static |
 | **AI agent** | OpenClaw + Ollama + stazeni modelu (qwen3.5:27b) |
 | **Observability** | Grafana + Prometheus + Loki + Tempo + Alloy (plny LGTM stack) |
-| **IIAB sluzby** | MariaDB, WordPress, Nextcloud, Kiwix, offline mapy, n8n, Gitea, GitLab CE, Uptime Kuma, Calibre-Web |
+| **IIAB sluzby** | MariaDB, WordPress, Nextcloud, Kiwix, offline mapy, n8n, Gitea, GitLab CE, Woodpecker CI, Open WebUI, Portainer, Jellyfin, Uptime Kuma, Calibre-Web |
 | **Sit** | Tailscale VPN, dnsmasq (*.dev.local DNS), SSH/Samba/VNC (volitelne) |
 | **Shell** | Starship prompt, fzf, zoxide, bat, eza, lazygit + aliasy v .zshrc |
 | **macOS** | Finder, klavesnice, Dock, Safari, screenshot — automatizovane defaults |
@@ -170,6 +170,11 @@ ollama list
 ├── docker/             # Docker Desktop disk image (MANUAL!)
 ├── gitea/              # Git repozitare (Gitea)
 ├── gitlab/             # GitLab repozitare + data (VELKE - desitky GB)
+├── openwebui/          # Open WebUI data (chat historie, RAG dokumenty)
+├── woodpecker/         # Woodpecker CI data (pipeline logy, artefakty)
+├── portainer/          # Portainer konfigurace
+├── jellyfin/           # Jellyfin config + cache
+├── media/              # Medialni knihovna (movies, shows, music)
 ├── kiwix/              # ZIM archivy (Wikipedia, Gutenberg...)
 ├── maps/               # MBTiles (offline mapy)
 ├── n8n/                # Workflow data
@@ -249,6 +254,10 @@ ansible-playbook main.yml -K --tags "kiwix"
 | Gitea SSH | 2222 | — |
 | GitLab | 8929 | gitlab.dev.local |
 | GitLab SSH | 2224 | — |
+| Open WebUI | 3004 | ai.dev.local |
+| Woodpecker CI | 8060 | ci.dev.local |
+| Portainer | 9000 | portainer.dev.local |
+| Jellyfin | 8096 | media.dev.local |
 | n8n | 5678 | n8n.dev.local |
 | WordPress | — | wordpress.dev.local |
 | Nextcloud | — | cloud.dev.local |
