@@ -3,7 +3,7 @@
 # ==============================================================================
 
 server:
-  http_listen_port: 3200
+  http_listen_port: {{ tempo_port | default(3200) }}
   log_level: warn
 
 distributor:
@@ -11,9 +11,9 @@ distributor:
     otlp:
       protocols:
         http:
-          endpoint: 0.0.0.0:4318
+          endpoint: 0.0.0.0:{{ tempo_otlp_http_port | default(4318) }}
         grpc:
-          endpoint: 0.0.0.0:4317
+          endpoint: 0.0.0.0:{{ tempo_otlp_grpc_port | default(4317) }}
     jaeger:
       protocols:
         thrift_http:
@@ -34,18 +34,18 @@ metrics_generator:
       source: tempo
       host: mac-studio-local
   storage:
-    path: /opt/homebrew/var/lib/tempo/generator/wal
+    path: {{ homebrew_prefix }}/var/lib/tempo/generator/wal
     remote_write:
-      - url: http://localhost:9090/api/v1/write
+      - url: http://localhost:{{ prometheus_port | default(9090) }}/api/v1/write
         send_exemplars: true
 
 storage:
   trace:
     backend: local
     wal:
-      path: /opt/homebrew/var/lib/tempo/wal
+      path: {{ homebrew_prefix }}/var/lib/tempo/wal
     local:
-      path: /opt/homebrew/var/lib/tempo/blocks
+      path: {{ homebrew_prefix }}/var/lib/tempo/blocks
 
 overrides:
   defaults:

@@ -20,24 +20,24 @@ rule_files:
 scrape_configs:
   - job_name: prometheus
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['localhost:{{ prometheus_port | default(9090) }}']
 
   - job_name: grafana-alloy
     static_configs:
-      - targets: ['localhost:12345']
+      - targets: ['localhost:{{ alloy_ui_port | default(12345) }}']
 
   - job_name: grafana
     static_configs:
-      - targets: ['localhost:3000']
+      - targets: ['localhost:{{ grafana_port | default(3000) }}']
 
   - job_name: loki
     static_configs:
-      - targets: ['localhost:3100']
+      - targets: ['localhost:{{ loki_port | default(3100) }}']
 
   - job_name: tempo
     static_configs:
-      - targets: ['localhost:3200']
+      - targets: ['localhost:{{ tempo_port | default(3200) }}']
 
-# ── Remote write (pro Alloy → Prometheus pipeline) ────────────────────────────
-# Alloy zapisuje metriky přímo přes remote_write do Prometheuse
-# Povoleno přes --enable-feature=remote-write-receiver při startu
+# ── Remote write receiver (pro Alloy → Prometheus pipeline) ──────────────────
+# Povoleno přes --enable-feature=remote-write-receiver při startu prometheuse
+# Viz task: "Configure Prometheus remote-write-receiver feature flag"

@@ -55,6 +55,12 @@
       ansible.builtin.command: brew services restart dnsmasq
       failed_when: false
 
+    - name: Restart ssh
+      ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
+      become: true
+      changed_when: false
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
@@ -108,18 +114,18 @@
       tags: ['system-services', 'ssh', 'samba', 'vnc']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Web server
-    # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/nginx.yml
-      when: install_nginx | default(true)
-      tags: ['nginx', 'webserver']
-
-    # ──────────────────────────────────────────────────────────────────────────
     # Jazyky a runtime prostředí
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/php.yml
       when: install_php | default(true)
       tags: ['php']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Web server (až po PHP, aby socket existoval před nginx -t)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/nginx.yml
+      when: install_nginx | default(true)
+      tags: ['nginx', 'webserver']
 
     - import_tasks: tasks/node.yml
       when: install_node | default(true)

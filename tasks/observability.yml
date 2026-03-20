@@ -59,16 +59,24 @@
 # ── Prometheus konfigurace ────────────────────────────────────────────────────
 
 - name: Deploy Prometheus configuration
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: observability/prometheus/prometheus.yml
     dest: "{{ homebrew_prefix }}/etc/prometheus.yml"
     backup: true
     mode: '0644'
+  notify: Restart prometheus
+
+- name: Enable Prometheus remote-write-receiver feature flag
+  ansible.builtin.copy:
+    dest: "{{ homebrew_prefix }}/etc/prometheus.args"
+    content: "--enable-feature=remote-write-receiver\n"
+    mode: '0644'
+  notify: Restart prometheus
 
 # ── Loki konfigurace ──────────────────────────────────────────────────────────
 
 - name: Deploy Loki configuration
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: observability/loki/local-config.yaml
     dest: "{{ homebrew_prefix }}/etc/loki/local-config.yaml"
     backup: true
@@ -83,7 +91,7 @@
 # ── Tempo konfigurace ─────────────────────────────────────────────────────────
 
 - name: Deploy Tempo configuration
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: observability/tempo/tempo.yaml
     dest: "{{ homebrew_prefix }}/etc/tempo.yaml"
     backup: true

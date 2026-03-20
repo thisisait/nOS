@@ -151,6 +151,20 @@ loki.source.file "agent_logs" {
 }
 {% endif %}
 
+{% if alloy_tail_php_logs | default(true) %}
+// PHP-FPM logy
+local.file_match "php_fpm_logs" {
+  path_targets = [{
+    __path__ = "{{ homebrew_prefix }}/var/log/php@{{ php_version | default('8.3') }}-fpm.log",
+  }]
+}
+
+loki.source.file "php_fpm_logs" {
+  targets    = local.file_match.php_fpm_logs.targets
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
 // Systémové logy (macOS unified log – přes journald emulaci není dostupná,
 // ale brew services logy jsou v {{ homebrew_prefix }}/var/log/)
 local.file_match "homebrew_services" {

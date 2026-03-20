@@ -11,11 +11,11 @@ server:
 
 common:
   instance_addr: 127.0.0.1
-  path_prefix: /opt/homebrew/var/lib/loki
+  path_prefix: {{ homebrew_prefix }}/var/lib/loki
   storage:
     filesystem:
-      chunks_directory: /opt/homebrew/var/lib/loki/chunks
-      rules_directory: /opt/homebrew/var/lib/loki/rules
+      chunks_directory: {{ homebrew_prefix }}/var/lib/loki/chunks
+      rules_directory: {{ homebrew_prefix }}/var/lib/loki/rules
   replication_factor: 1
   ring:
     kvstore:
@@ -49,7 +49,7 @@ limits_config:
   max_query_lookback: 0    # 0 = unlimited
 
 compactor:
-  working_directory: /opt/homebrew/var/lib/loki/retention
+  working_directory: {{ homebrew_prefix }}/var/lib/loki/retention
   compaction_interval: 10m
   retention_enabled: true
   retention_delete_delay: 2h

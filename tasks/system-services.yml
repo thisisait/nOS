@@ -37,13 +37,6 @@
     mode: '0700'
   when: enable_ssh | default(false)
 
-# Handler – definován v main.yml (brew services nemůže restartovat sshd)
-- name: Restart ssh
-  ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
-  become: true
-  listen: Restart ssh
-  changed_when: false
-
 # ── Samba / SMB ───────────────────────────────────────────────────────────────
 
 - name: "[Samba] Enable macOS File Sharing (SMB)"
