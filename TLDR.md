@@ -26,16 +26,34 @@ Playbook nainstaluje a nakonfiguruje **vsechno** od nuly:
 
 ## Prerequisites — co udelat PRED spustenim
 
+### TL;DR — jeden prikaz misto ctyr kroku
+
+```bash
+git clone <repo-url> ~/mac-dev-playbook
+cd ~/mac-dev-playbook
+./bootstrap.sh
+```
+
+`bootstrap.sh` automaticky nainstaluje: **Xcode CLT → Homebrew → Ansible → Galaxy role**.
+
+---
+
+### Nebo rucne, krok po kroku
+
 ### 1. Xcode Command Line Tools
 
 ```bash
 xcode-select --install
 ```
 
-### 2. Ansible
+### 2. Ansible (pres Homebrew — doporuceno)
 
 ```bash
-pip3 install ansible
+# Nejprve nainstaluj Homebrew pokud jeste neni:
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/opt/homebrew/bin/brew shellenv)"   # Apple Silicon
+
+brew install ansible
 ```
 
 ### 3. Klonovat repo + Galaxy zavislosti
@@ -207,6 +225,7 @@ ansible-playbook main.yml -K
 
 | Problem | Reseni |
 |---------|--------|
+| `ansible-galaxy: command not found` | Ansible neni nainstalovan — spust `./bootstrap.sh` |
 | `Galaxy role not found` | `ansible-galaxy install -r requirements.yml --force` |
 | `External SSD not mounted` | Pripoj disk, nebo `configure_external_storage: false` |
 | `brew: command not found` | Restart terminal, Homebrew neni v PATH |
