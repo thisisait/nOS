@@ -10,19 +10,19 @@
 
 - name: Ensure Gitea data directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/pazny/gitea"
+    path: "{{ ansible_env.HOME }}/gitea"
     state: directory
     mode: '0755'
 
 - name: Ensure Gitea config directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/pazny/gitea/conf"
+    path: "{{ ansible_env.HOME }}/gitea/conf"
     state: directory
     mode: '0755'
 
 - name: Deploy Gitea app.ini configuration
   ansible.builtin.copy:
-    dest: "{{ ansible_env.HOME }}/pazny/gitea/conf/app.ini"
+    dest: "{{ ansible_env.HOME }}/gitea/conf/app.ini"
     mode: '0640'
     backup: true
     content: |
@@ -40,15 +40,15 @@
 
       [database]
       DB_TYPE  = sqlite3
-      PATH     = {{ ansible_env.HOME }}/pazny/gitea/gitea.db
+      PATH     = {{ ansible_env.HOME }}/gitea/gitea.db
 
       [repository]
-      ROOT = {{ ansible_env.HOME }}/pazny/gitea/repositories
+      ROOT = {{ ansible_env.HOME }}/gitea/repositories
 
       [log]
       MODE      = file
       LEVEL     = Warn
-      ROOT_PATH = {{ ansible_env.HOME }}/pazny/agents/log/gitea
+      ROOT_PATH = {{ ansible_env.HOME }}/agents/log/gitea
 
       [security]
       INSTALL_LOCK   = true
@@ -71,7 +71,7 @@
 - name: Configure GITEA_WORK_DIR environment for brew services
   ansible.builtin.lineinfile:
     path: "{{ ansible_env.HOME }}/.zshrc"
-    line: 'export GITEA_WORK_DIR="{{ ansible_env.HOME }}/pazny/gitea"'
+    line: 'export GITEA_WORK_DIR="{{ ansible_env.HOME }}/gitea"'
     regexp: 'GITEA_WORK_DIR='
     create: true
 

@@ -214,7 +214,7 @@ homebrew_cask_apps:
 
   # ── Observability ─────────────────────────────────────────────────────────
   - obsidian             # Obsidian – lokální .md knowledge base + kanban
-                         # ↳ Propojí se s ~/pazny/agents/log/ a Grafana
+                         # ↳ Propojí se s ~/agents/log/ a Grafana
 
   # ── Síť / přístup ─────────────────────────────────────────────────────────
   - tailscale            # Tailscale – WireGuard mesh VPN (přístup ke všem službám odkudkoliv)
@@ -688,7 +688,7 @@ alloy_scrape_mariadb: false        # MariaDB metriky (zapni pokud install_mariad
 alloy_scrape_redis: true           # Redis metriky → Prometheus
 redis_port: 6379                   # Redis port
 alloy_tail_nginx_logs: true        # Nginx access+error logy → Loki
-alloy_tail_agent_logs: true        # ~/pazny/agents/*.log → Loki
+alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
 alloy_tail_php_logs: true          # PHP-FPM logy → Loki
 alloy_receive_otlp: true           # OTLP přijímač pro app traces/metrics/logs → Tempo
 

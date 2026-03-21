@@ -21,9 +21,9 @@ Vždy piš strukturované logy každé operace.
 
 | Cesta | Účel |
 |-------|------|
-| `~/pazny/projects/` | Webové projekty (webroot pro nginx) |
-| `~/pazny/agents/` | OpenClaw konfigurace a agentické nástroje |
-| `~/pazny/agents/log/` | Strukturované logy agentické práce (.md soubory) |
+| `~/projects/` | Webové projekty (webroot pro nginx) |
+| `~/agents/` | OpenClaw konfigurace a agentické nástroje |
+| `~/agents/log/` | Strukturované logy agentické práce (.md soubory) |
 | `/opt/homebrew/etc/nginx/nginx.conf` | Hlavní nginx konfigurace |
 | `/opt/homebrew/etc/nginx/sites-available/` | Nginx vhost šablony |
 | `/opt/homebrew/etc/nginx/sites-enabled/` | Aktivní nginx vhosty (symlinky) |
@@ -48,7 +48,7 @@ Vždy piš strukturované logy každé operace.
 
 ### Jak nasadit nový projekt
 
-1. **Zkopíruj soubory** do `~/pazny/projects/<nazev-projektu>/`
+1. **Zkopíruj soubory** do `~/projects/<nazev-projektu>/`
 2. **Vyber vhost šablonu** z `/opt/homebrew/etc/nginx/sites-available/`
    - `php-app.conf` → Laravel, Symfony, WordPress
    - `node-proxy.conf` → Express, Next.js, Fastify
@@ -123,12 +123,12 @@ Všechny IIAB služby jsou přístupné přes nginx na `*.dev.local` doménách.
 ### Kiwix – offline znalostní báze
 
 ```
-ZIM soubory: ~/pazny/kiwix/
+ZIM soubory: ~/kiwix/
 ```
 
 Stažení ZIM souboru:
 ```bash
-~/pazny/kiwix/download-zim.sh https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim
+~/kiwix/download-zim.sh https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim
 ```
 
 Dostupné knowledge bases (zim soubory):
@@ -140,36 +140,36 @@ Dostupné knowledge bases (zim soubory):
 ### WordPress
 
 ```
-Soubory:  ~/pazny/projects/wordpress/
+Soubory:  ~/projects/wordpress/
 URL:      https://wordpress.dev.local
-Config:   ~/pazny/projects/wordpress/wp-config.php
+Config:   ~/projects/wordpress/wp-config.php
 DB:       wordpress @ 127.0.0.1:3306
 ```
 
 ### Nextcloud
 
 ```
-Soubory:  ~/pazny/projects/nextcloud/
-Data:     ~/pazny/nextcloud-data/
+Soubory:  ~/projects/nextcloud/
+Data:     ~/nextcloud-data/
 URL:      https://cloud.dev.local
 DB:       nextcloud @ 127.0.0.1:3306
 ```
 
 CLI administrace (occ):
 ```bash
-php ~/pazny/projects/nextcloud/occ <příkaz>
+php ~/projects/nextcloud/occ <příkaz>
 ```
 
 ### Offline Mapy
 
 ```
-MBTiles:  ~/pazny/maps/
+MBTiles:  ~/maps/
 URL:      https://maps.dev.local
 ```
 
 Stažení mapových dat:
 ```bash
-~/pazny/maps/download-maps.sh
+~/maps/download-maps.sh
 # Viz komentáře pro zdroje dat (MapTiler, Geofabrik, BBBike)
 ```
 
@@ -209,7 +209,7 @@ Server provozuje plně nakonfigurovaný observability stack pro monitoring, logy
 | `/opt/homebrew/etc/loki/local-config.yaml` | Loki storage config |
 | `/opt/homebrew/etc/tempo.yaml` | Tempo tracing config |
 | `/opt/homebrew/etc/alloy/config.alloy` | Grafana Alloy pipeline config |
-| `~/pazny/observability/dashboards/` | Stažené community dashboardy (JSON) |
+| `~/observability/dashboards/` | Stažené community dashboardy (JSON) |
 | `/opt/homebrew/var/lib/loki/` | Loki data |
 | `/opt/homebrew/var/lib/tempo/` | Tempo data |
 
@@ -233,7 +233,7 @@ curl -u admin:changeme_grafana http://localhost:3000/api/health
 ### Grafana Alloy – co sbírá
 
 - **Metriky**: Systém (CPU, RAM, disk, network), Nginx, PHP-FPM, Redis
-- **Logy**: Nginx access/error logy, agent logy z `~/pazny/agents/log/`
+- **Logy**: Nginx access/error logy, agent logy z `~/agents/log/`
 - **Traces**: OTLP přijímač na portu 4317 (gRPC) a 4318 (HTTP)
 
 ### Odeslání traces z aplikace
@@ -253,7 +253,7 @@ const exporter = new OTLPTraceExporter({ url: 'http://localhost:4318/v1/traces' 
 
 ## Logování agentické práce
 
-**Každý netriviální úkol musíš zalogovat** jako `.md` soubor v `~/pazny/agents/log/`.
+**Každý netriviální úkol musíš zalogovat** jako `.md` soubor v `~/agents/log/`.
 
 ### Konvence pojmenování souboru
 ```
@@ -310,14 +310,14 @@ Jako **DevOps Lead** deleguj specializovanou práci sub-agentům:
 
 ### Příkaz pro vytvoření sub-agenta
 ```
-Deleguj na CodeAgent: [popis úkolu] – výstup ulož do ~/pazny/agents/log/
+Deleguj na CodeAgent: [popis úkolu] – výstup ulož do ~/agents/log/
 ```
 
 ---
 
 ## Pravidla a hodnoty
 
-1. **Loguj vždy** – každá operace musí mít záznam v `~/pazny/agents/log/`
+1. **Loguj vždy** – každá operace musí mít záznam v `~/agents/log/`
 2. **Testuj před nasazením** – `nginx -t` před každým restartem
 3. **Zálohuj před změnou** – config soubory zálohovej s `.bak` příponou
 4. **Minimální práva** – používej nejnižší potřebná práva

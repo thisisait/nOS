@@ -9,9 +9,9 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ ansible_env.HOME }}/pazny/calibre-web/config"
-    - "{{ ansible_env.HOME }}/pazny/calibre-web/books"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/calibre-web/config"
+    - "{{ ansible_env.HOME }}/calibre-web/books"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: Pull Calibre-Web Docker image
   community.docker.docker_image:
@@ -40,9 +40,9 @@
           <string>-p</string>
           <string>{{ calibreweb_port | default(8083) }}:8083</string>
           <string>-v</string>
-          <string>{{ ansible_env.HOME }}/pazny/calibre-web/config:/config</string>
+          <string>{{ ansible_env.HOME }}/calibre-web/config:/config</string>
           <string>-v</string>
-          <string>{{ ansible_env.HOME }}/pazny/calibre-web/books:/books</string>
+          <string>{{ ansible_env.HOME }}/calibre-web/books:/books</string>
           <string>-e</string>
           <string>PUID={{ ansible_user_uid }}</string>
           <string>-e</string>
@@ -63,9 +63,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/calibre-web.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/calibre-web.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/calibre-web.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/calibre-web.error.log</string>
       </dict>
       </plist>
 

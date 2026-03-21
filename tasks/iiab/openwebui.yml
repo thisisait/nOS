@@ -13,7 +13,7 @@
     mode: '0755'
   loop:
     - "{{ openwebui_data_dir }}"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: "[Open WebUI] Pull Docker image"
   community.docker.docker_image:
@@ -66,9 +66,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/openwebui.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/openwebui.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/openwebui.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/openwebui.error.log</string>
       </dict>
       </plist>
 

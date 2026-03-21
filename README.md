@@ -65,9 +65,9 @@ Self-hosted AI agent bez API klíče:
 
 Cesty:
 ```
-~/pazny/agents/          # konfigurace agentů
-~/pazny/projects/        # projekty hostované přes nginx
-~/pazny/agents/log/      # strukturované .md logy agentické práce
+~/agents/          # konfigurace agentů
+~/projects/        # projekty hostované přes nginx
+~/agents/log/      # strukturované .md logy agentické práce
 ```
 
 ### Observability – LGTM Stack
@@ -124,7 +124,7 @@ Editory, terminály, prohlížeče, nástroje a kreativní software nainstalovan
 **Bezpečnost:** LastPass, OpenVPN Connect
 **Média:** VLC, Spotify, HandBrake
 **Kreativní:** Blender, FL Studio
-**Observability:** Obsidian (propojení s `~/pazny/agents/log/`)
+**Observability:** Obsidian (propojení s `~/agents/log/`)
 **Systém:** Dropbox, Ice (menu bar), Stats (systémové metriky v menu baru)
 
 </details>
@@ -133,41 +133,45 @@ Editory, terminály, prohlížeče, nástroje a kreativní software nainstalovan
 
 ## Rychlý start
 
-### 1. Předpoklady
-
-```bash
-# Xcode command line tools
-xcode-select --install
-
-# Python do $PATH (pro Ansible)
-export PATH="$HOME/Library/Python/3.x/bin:/opt/homebrew/bin:$PATH"
-
-# Ansible
-pip3 install ansible
-```
-
-### 2. Klonování a instalace rolí
+### 1. Bootstrap (automatický)
 
 ```bash
 git clone <tento-repozitar> ~/mac-dev-playbook
 cd ~/mac-dev-playbook
-ansible-galaxy install -r requirements.yml
+bash bootstrap.sh       # Nainstaluje: Xcode CLT → Homebrew → Ansible → Galaxy role → config soubory
 ```
 
-### 3. Přizpůsobení
+Nebo krok po kroku (jako Jupyter notebook):
 
 ```bash
-cp default.config.yml config.yml
-# Uprav config.yml dle potřeby (viz sekce níže)
+bash bootstrap/01-xcode-clt.sh   # Xcode Command Line Tools
+bash bootstrap/02-homebrew.sh    # Homebrew
+bash bootstrap/03-ansible.sh     # Ansible
+bash bootstrap/04-galaxy.sh      # Ansible Galaxy role
+bash bootstrap/05-config.sh      # Vytvoří config.yml + credentials.yml ze šablon
 ```
 
-> **Důležité:** Hesla v `config.yml` jsou výchozí placeholder hodnoty. Před spuštěním přepiš všechna `changeme_*` hesla.
+### 2. Přizpůsobení
 
-### 4. Spuštění
+Bootstrap vytvoří dva soubory (oba v `.gitignore`):
+
+| Soubor | Obsah | Jak často editovat |
+|--------|-------|-------------------|
+| `config.yml` | Feature toggles (`install_*: true/false`) | Jednou na začátku |
+| `credentials.yml` | Hesla, tokeny, API klíče | Jednou – vyplnit `changeme_*` |
+
+```bash
+nano config.yml           # Zapni/vypni komponenty
+nano credentials.yml      # Vyplň hesla (POVINNÉ před spuštěním!)
+```
+
+> **Důležité:** Hesla v `credentials.yml` jsou výchozí placeholder hodnoty (`changeme_*`). Přepiš je všechna před spuštěním. Generátor: `openssl rand -hex 32`
+
+### 3. Spuštění
 
 ```bash
 # Plná instalace
-ansible-playbook main.yml --ask-become-pass
+ansible-playbook main.yml -K
 
 # Pouze konkrétní část (např. jen observability)
 ansible-playbook main.yml -K --tags "observability"
@@ -219,67 +223,59 @@ install_calibreweb: false
 
 ## Přizpůsobení
 
-Vytvoř soubor `config.yml` (přepisuje `default.config.yml`) a uprav jen to, co potřebuješ:
+Konfigurace je rozdělena do 3 vrstev (pozdější přepisuje předchozí):
 
-```yaml
-# config.yml – přepiš výchozí hodnoty
-
-# Uživatelské cesty
-openclaw_user: "tvujuzivatel"
-openclaw_base_dir: "/Users/tvujuzivatel"
-
-# Bezpečnostní hesla – VŽDY PŘEPIŠ!
-mariadb_root_password: "silne-heslo"
-grafana_admin_password: "silne-heslo"
-wordpress_db_password: "silne-heslo"
-nextcloud_admin_password: "silne-heslo"
-gitea_secret_key: "nahodny-string-32-znaku"
-
-# Ollama model (závisí na RAM)
-# 36 GB RAM: qwen3.5:27b (doporučeno)
-# 16 GB RAM: qwen3.5:14b
-# 64 GB RAM: llama3.3:70b
-openclaw_model: "qwen3.5:27b"
-
-# Vlastní dotfiles
-dotfiles_repo: "https://github.com/tvujuzivatel/dotfiles.git"
-
-# Přidat vlastní npm balíčky
-node_global_packages:
-  - yarn
-  - pnpm
-  - typescript
-  - vue-cli          # vlastní přidání
-
-# Přidat vlastní pip balíčky
-pip_packages:
-  - name: fastapi
-  - name: httpx
-  - name: mujprojekt  # vlastní přidání
 ```
+default.config.yml   ← výchozí hodnoty (neupravuj)
+  ↓ override
+config.yml           ← feature toggles: co zapnout/vypnout (gitignored)
+  ↓ override
+credentials.yml      ← hesla, tokeny, API klíče (gitignored)
+```
+
+**config.yml** (ze šablony `config.example.yml`):
+```yaml
+install_openclaw: true
+install_observability: true
+install_wordpress: false     # zapni jen co potřebuješ
+```
+
+**credentials.yml** (ze šablony `credentials.example.yml`):
+```yaml
+mariadb_root_password: "silne-heslo"      # openssl rand -hex 32
+grafana_admin_password: "silne-heslo"
+nextcloud_admin_password: "silne-heslo"
+gitea_secret_key: "nahodny-64-char-hex"
+
+# Volitelné – cesty se odvodí automaticky z uživatelského jména
+# dotfiles_repo: "https://github.com/tvujuzivatel/dotfiles.git"
+# openclaw_model: "qwen3.5:14b"   # menší model pro méně RAM
+```
+
+> Výchozí cesty (`/Users/<tvuj-user>/agents/`, `/Users/<tvuj-user>/projects/` apod.) se nastavují automaticky z `ansible_user_id` – nemusíš je přepisovat.
 
 ---
 
 ## Adresářová struktura
 
 ```
-~/pazny/
+~/                          # /Users/<tvuj-uzivatel>/
 ├── agents/
-│   ├── log/          # .md logy agentické práce (YYYY-MM-DD_TASK-NNN_popis.md)
-│   └── ...           # OpenClaw konfigurace
-├── projects/         # Projekty hostované přes nginx
-│   └── default/      # Výchozí landing page
+│   ├── log/                # .md logy agentické práce (YYYY-MM-DD_TASK-NNN_popis.md)
+│   └── ...                 # OpenClaw konfigurace
+├── projects/               # Projekty hostované přes nginx
+│   └── default/            # Výchozí landing page
 ├── observability/
-│   ├── dashboards/   # Stažené Grafana dashboardy (JSON)
-│   ├── prometheus/   # Prometheus data
-│   ├── loki/         # Loki data
-│   └── tempo/        # Tempo data
-├── kiwix/            # ZIM soubory (offline Wikipedia, Gutenberg…)
-├── maps/             # MBTiles soubory (offline mapy)
-├── gitea/            # Gitea data + repozitáře
-├── n8n/              # n8n data + workflow
-├── calibre-web/      # Calibre knihovna + config
-└── uptime-kuma/      # Uptime Kuma data
+│   ├── dashboards/         # Stažené Grafana dashboardy (JSON)
+│   ├── prometheus/         # Prometheus data
+│   ├── loki/               # Loki data
+│   └── tempo/              # Tempo data
+├── kiwix/                  # ZIM soubory (offline Wikipedia, Gutenberg…)
+├── maps/                   # MBTiles soubory (offline mapy)
+├── gitea/                  # Gitea data + repozitáře
+├── n8n/                    # n8n data + workflow
+├── calibre-web/            # Calibre knihovna + config
+└── uptime-kuma/            # Uptime Kuma data
 ```
 
 ---
@@ -321,7 +317,7 @@ Některé nastavení macOS nelze plně automatizovat (SIP, HW-specifické nastav
 
 1. **Caps Lock → Escape** – System Settings → Keyboard → Modifier Keys → nastavit pro každou klávesnici zvlášť
 2. **Full Disk Access pro Terminal** – System Settings → Privacy & Security → Full Disk Access → přidat Terminal / Ghostty
-3. **VNC heslo** – pokud `enable_vnc: true`, nastav `vnc_password` v `config.yml` před spuštěním
+3. **VNC heslo** – pokud `enable_vnc: true`, nastav `vnc_password` v `credentials.yml` před spuštěním
 4. **Tailscale login** – po instalaci otevři aplikaci Tailscale a přihlas se na https://login.tailscale.com
 
 > **mkcert a `.dev.local` DNS jsou automatizovány** – mkcert CA se nainstaluje do systému automaticky a dnsmasq zajistí přeložení všech `*.dev.local` domén na `127.0.0.1` bez zásahu do `/etc/hosts`.
@@ -333,7 +329,16 @@ Některé nastavení macOS nelze plně automatizovat (SIP, HW-specifické nastav
 ```
 mac-dev-playbook/
 ├── main.yml                      # Hlavní playbook (handlers + task imports)
-├── default.config.yml            # Výchozí konfigurace (INSTALLATION QUEUE zde)
+├── default.config.yml            # Výchozí konfigurace – NEUPRAVUJ
+├── config.example.yml            # Šablona → config.yml (feature toggles)
+├── credentials.example.yml       # Šablona → credentials.yml (hesla, tokeny)
+├── bootstrap.sh                  # Bootstrap – spustí všechny kroky
+├── bootstrap/
+│   ├── 01-xcode-clt.sh           # Krok 1: Xcode CLT
+│   ├── 02-homebrew.sh            # Krok 2: Homebrew
+│   ├── 03-ansible.sh             # Krok 3: Ansible
+│   ├── 04-galaxy.sh              # Krok 4: Galaxy role
+│   └── 05-config.sh              # Krok 5: config.yml + credentials.yml
 ├── requirements.yml              # Ansible Galaxy role závislosti
 ├── inventory                     # Ansible inventory (localhost)
 │

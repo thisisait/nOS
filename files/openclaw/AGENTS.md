@@ -10,7 +10,7 @@ Tento soubor definuje specializované sub-agenty, které **Inspektor Klepítko**
 **Specializace:** Vývoj a refaktoring kódu
 
 **Kontext:**
-- Přístup ke zdrojovým kódům v `~/pazny/projects/`
+- Přístup ke zdrojovým kódům v `~/projects/`
 - Zná stacky: PHP, Node.js/TypeScript, Python, Go, C#
 - Výstup vždy commituje do gitu
 
@@ -44,7 +44,7 @@ Deleguj na InfraAgent: Nastav nginx vhost pro projekt [název] na doméně [*.de
 **Specializace:** Nasazování aplikací, build pipeline
 
 **Kontext:**
-- Target directory: `~/pazny/projects/<projekt>/`
+- Target directory: `~/projects/<projekt>/`
 - Composer (PHP), npm/bun (Node.js), pip (Python), go build, dotnet publish
 - pm2 pro Node.js procesy (produkční)
 - uvicorn/gunicorn pro Python (produkční)
@@ -102,7 +102,7 @@ Deleguj na MonitorAgent: Zkontroluj nginx logy za poslední hodinu – hledej 5x
 - PostgreSQL (pokud nainstalováno): `brew services info postgresql`
 - Redis (pokud nainstalováno): `brew services info redis`
 - SQLite pro vývojové projekty
-- Zálohy ukládej do `~/pazny/agents/backups/`
+- Zálohy ukládej do `~/agents/backups/`
 
 **Aktivace:**
 ```
@@ -117,7 +117,7 @@ Deleguj na DataAgent: Proveď zálohu databáze projektu [název]
 Inspektor Klepítko (DevOps Lead)
 │
 ├── Přijme úkol
-├── Vytvoří log soubor v ~/pazny/agents/log/
+├── Vytvoří log soubor v ~/agents/log/
 ├── Rozdělí na sub-úkoly
 │
 ├──► CodeAgent    (kód)

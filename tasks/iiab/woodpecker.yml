@@ -20,7 +20,7 @@
     mode: '0755'
   loop:
     - "{{ woodpecker_data_dir }}"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: "[Woodpecker] Pull server Docker image"
   community.docker.docker_image:
@@ -91,9 +91,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-server.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/woodpecker-server.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-server.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/woodpecker-server.error.log</string>
       </dict>
       </plist>
 
@@ -144,9 +144,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-agent.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/woodpecker-agent.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/woodpecker-agent.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/woodpecker-agent.error.log</string>
       </dict>
       </plist>
 

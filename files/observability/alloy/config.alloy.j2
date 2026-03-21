@@ -138,10 +138,10 @@ loki.source.file "nginx_error" {
 {% endif %}
 
 {% if alloy_tail_agent_logs | default(true) %}
-// OpenClaw agent logy (.md soubory v ~/pazny/agents/log/)
+// OpenClaw agent logy (.md soubory v ~/agents/log/)
 local.file_match "agent_logs" {
   path_targets = [{
-    __path__ = "{{ ansible_env.HOME }}/pazny/agents/log/*.md",
+    __path__ = "{{ ansible_env.HOME }}/agents/log/*.md",
   }]
 }
 

@@ -22,7 +22,7 @@
     - "{{ jellyfin_movies_dir }}"
     - "{{ jellyfin_shows_dir }}"
     - "{{ jellyfin_music_dir }}"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: "[Jellyfin] Pull Docker image"
   community.docker.docker_image:
@@ -75,9 +75,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/jellyfin.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/jellyfin.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/jellyfin.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/jellyfin.error.log</string>
       </dict>
       </plist>
 

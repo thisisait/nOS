@@ -172,7 +172,7 @@
     dest: "{{ openclaw_agents_dir }}/onboard.sh"
     mode: '0755'
 
-# ── 6. Nginx – aktualizace webroot na ~/pazny/projects/ ──────────────────────
+# ── 6. Nginx – aktualizace webroot na ~/projects/ ──────────────────────
 
 - name: "[OpenClaw] Ensure nginx default project dir exists"
   ansible.builtin.file:

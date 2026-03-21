@@ -3,7 +3,7 @@
 # Inspektor Klepítko – Onboarding Script
 # Spusť po dokončení Ansible playbooku pro inicializaci agentického prostředí
 #
-# Použití: ~/pazny/agents/onboard.sh
+# Použití: ~/agents/onboard.sh
 # ==============================================================================
 
 set -euo pipefail
@@ -15,9 +15,9 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
 
-AGENTS_DIR=~/pazny/agents
-PROJECTS_DIR=~/pazny/projects
-LOG_DIR=~/pazny/agents/log
+AGENTS_DIR=~/agents
+PROJECTS_DIR=~/projects
+LOG_DIR=~/agents/log
 OPENCLAW_CONFIG=~/.openclaw
 HOMEBREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
 NGINX_CONF="${HOMEBREW_PREFIX}/etc/nginx"
@@ -172,7 +172,7 @@ Připravit prostředí pro agentic DevOps operace.
 ## Adresáře
 
 \`\`\`
-~/pazny/
+~/
 ├── agents/          ← OpenClaw, konfigurace agentů
 │   ├── log/         ← Strukturované logy agentické práce
 │   └── onboard.sh   ← Tento script
@@ -196,7 +196,7 @@ ${NGINX_CONF}/sites-available/
 Systém inicializován. Inspektor Klepítko je připraven přijímat úkoly.
 
 ## Poznámky
-- Přidej projekt: zkopíruj do ~/pazny/projects/<název>/ + nastav nginx vhost
+- Přidej projekt: zkopíruj do ~/projects/<název>/ + nastav nginx vhost
 - SSL: \`mkcert -cert-file ... -key-file ... "*.dev.local"\`
 - Spuštění agenta: \`openclaw start\`
 EOF
@@ -215,7 +215,7 @@ echo -e "  ${BOLD}Spuštění agenta:${RESET}"
 echo -e "    openclaw start"
 echo ""
 echo -e "  ${BOLD}Nový projekt (příklad):${RESET}"
-echo -e "    mkdir -p ~/pazny/projects/muj-projekt"
+echo -e "    mkdir -p ~/projects/muj-projekt"
 echo -e "    cp ${NGINX_CONF}/sites-available/php-app.conf \\"
 echo -e "       ${NGINX_CONF}/sites-available/muj-projekt.conf"
 echo -e "    # uprav server_name a root v muj-projekt.conf"

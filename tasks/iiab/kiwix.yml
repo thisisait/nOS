@@ -71,10 +71,10 @@
           <true/>
 
           <key>StandardOutPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/pazny/agents') }}/kiwix.stdout.log</string>
+          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/kiwix.stdout.log</string>
 
           <key>StandardErrorPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/pazny/agents') }}/kiwix.stderr.log</string>
+          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/kiwix.stderr.log</string>
       </dict>
       </plist>
     mode: '0644'

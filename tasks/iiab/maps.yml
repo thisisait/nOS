@@ -99,10 +99,10 @@
           <true/>
 
           <key>StandardOutPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/pazny/agents') }}/maps.stdout.log</string>
+          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/maps.stdout.log</string>
 
           <key>StandardErrorPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/pazny/agents') }}/maps.stderr.log</string>
+          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/maps.stderr.log</string>
 
           <key>WorkingDirectory</key>
           <string>{{ maps_data_dir }}</string>

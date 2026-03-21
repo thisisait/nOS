@@ -54,7 +54,7 @@
     - "{{ homebrew_prefix }}/etc/grafana/provisioning/dashboards"
     - "{{ homebrew_prefix }}/etc/alloy"
     - "{{ homebrew_prefix }}/var/log/grafana-alloy"
-    - "{{ ansible_env.HOME }}/pazny/observability/dashboards"
+    - "{{ ansible_env.HOME }}/observability/dashboards"
 
 # ── Prometheus konfigurace ────────────────────────────────────────────────────
 
@@ -166,7 +166,7 @@
 
 - name: Ensure Grafana dashboard download directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/pazny/observability/dashboards"
+    path: "{{ ansible_env.HOME }}/observability/dashboards"
     state: directory
     mode: '0755'
 
@@ -208,7 +208,7 @@
 - name: Download community Grafana dashboards
   ansible.builtin.get_url:
     url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/latest/download"
-    dest: "{{ ansible_env.HOME }}/pazny/observability/dashboards/dashboard-{{ item.id }}.json"
+    dest: "{{ ansible_env.HOME }}/observability/dashboards/dashboard-{{ item.id }}.json"
     mode: '0644'
   loop: "{{ grafana_dashboards | default([]) }}"
   ignore_errors: true  # Pokud není internet, přeskočíme
@@ -222,14 +222,14 @@
     force_basic_auth: true
     body_format: json
     body:
-      dashboard: "{{ lookup('file', ansible_env.HOME + '/pazny/observability/dashboards/dashboard-' + item.id | string + '.json') | from_json }}"
+      dashboard: "{{ lookup('file', ansible_env.HOME + '/observability/dashboards/dashboard-' + item.id | string + '.json') | from_json }}"
       folderId: 0
       overwrite: true
     status_code: [200, 412]
   loop: "{{ grafana_dashboards | default([]) }}"
   ignore_errors: true
   when: >
-    (ansible_env.HOME + '/pazny/observability/dashboards/dashboard-' + item.id | string + '.json') is file
+    (ansible_env.HOME + '/observability/dashboards/dashboard-' + item.id | string + '.json') is file
 
 # ── Nginx vhost pro Grafana ───────────────────────────────────────────────────
 

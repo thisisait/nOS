@@ -9,8 +9,8 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ ansible_env.HOME }}/pazny/uptime-kuma"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/uptime-kuma"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: Pull Uptime Kuma Docker image
   community.docker.docker_image:
@@ -39,7 +39,7 @@
           <string>-p</string>
           <string>{{ uptime_kuma_port | default(3001) }}:3001</string>
           <string>-v</string>
-          <string>{{ ansible_env.HOME }}/pazny/uptime-kuma:/app/data</string>
+          <string>{{ ansible_env.HOME }}/uptime-kuma:/app/data</string>
           <string>louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}</string>
         </array>
         <key>RunAtLoad</key>
@@ -52,9 +52,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/uptime-kuma.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/uptime-kuma.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/uptime-kuma.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/uptime-kuma.error.log</string>
       </dict>
       </plist>
 

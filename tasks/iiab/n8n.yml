@@ -9,8 +9,8 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ ansible_env.HOME }}/pazny/n8n"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/n8n"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: Pull n8n Docker image
   community.docker.docker_image:
@@ -39,7 +39,7 @@
           <string>-p</string>
           <string>{{ n8n_port | default(5678) }}:5678</string>
           <string>-v</string>
-          <string>{{ ansible_env.HOME }}/pazny/n8n:/home/node/.n8n</string>
+          <string>{{ ansible_env.HOME }}/n8n:/home/node/.n8n</string>
           <string>-e</string>
           <string>N8N_HOST={{ n8n_domain | default('n8n.dev.local') }}</string>
           <string>-e</string>
@@ -60,9 +60,9 @@
         <key>ThrottleInterval</key>
         <integer>30</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/n8n.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/n8n.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/n8n.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/n8n.error.log</string>
       </dict>
       </plist>
 

@@ -24,8 +24,8 @@
   loop:
     - "{{ gitlab_data_dir }}"
     - "{{ gitlab_config_dir }}"
-    - "{{ ansible_env.HOME }}/pazny/gitlab-logs"
-    - "{{ ansible_env.HOME }}/pazny/agents/log"
+    - "{{ ansible_env.HOME }}/gitlab-logs"
+    - "{{ ansible_env.HOME }}/agents/log"
 
 # ── Konfigurace (gitlab.rb) ───────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@
           <string>-v</string>
           <string>{{ gitlab_config_dir }}:/etc/gitlab</string>
           <string>-v</string>
-          <string>{{ ansible_env.HOME }}/pazny/gitlab-logs:/var/log/gitlab</string>
+          <string>{{ ansible_env.HOME }}/gitlab-logs:/var/log/gitlab</string>
           <string>-v</string>
           <string>{{ gitlab_data_dir }}:/var/opt/gitlab</string>
 
@@ -151,9 +151,9 @@
         <key>ThrottleInterval</key>
         <integer>60</integer>
         <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/gitlab.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/gitlab.log</string>
         <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/pazny/agents/log/gitlab.error.log</string>
+        <string>{{ ansible_env.HOME }}/agents/log/gitlab.error.log</string>
       </dict>
       </plist>
 
