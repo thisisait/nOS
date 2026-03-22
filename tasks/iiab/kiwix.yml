@@ -37,56 +37,6 @@
   loop: "{{ kiwix_zim_files | default([]) }}"
   when: (kiwix_zim_files | default([])) | length > 0
 
-- name: "[Kiwix] Create launchd plist for kiwix-serve Docker container"
-  ansible.builtin.copy:
-    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.kiwix.serve.plist"
-    content: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-          <key>Label</key>
-          <string>com.kiwix.serve</string>
-
-          <key>ProgramArguments</key>
-          <array>
-              <string>/usr/local/bin/docker</string>
-              <string>run</string>
-              <string>--rm</string>
-              <string>--name</string>
-              <string>kiwix-serve</string>
-              <string>-v</string>
-              <string>{{ kiwix_data_dir }}:/data</string>
-              <string>-p</string>
-              <string>{{ kiwix_port | default(8888) }}:8080</string>
-              <string>ghcr.io/kiwix/kiwix-serve:latest</string>
-              <string>/data/*.zim</string>
-          </array>
-
-          <key>RunAtLoad</key>
-          <true/>
-
-          <key>KeepAlive</key>
-          <true/>
-
-          <key>StandardOutPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/kiwix.stdout.log</string>
-
-          <key>StandardErrorPath</key>
-          <string>{{ openclaw_agents_dir | default(ansible_env.HOME + '/agents') }}/kiwix.stderr.log</string>
-      </dict>
-      </plist>
-    mode: '0644'
-
-- name: "[Kiwix] Load launchd daemon"
-  ansible.builtin.command: >
-    launchctl load -w
-    {{ ansible_env.HOME }}/Library/LaunchAgents/com.kiwix.serve.plist
-  register: kiwix_launchd
-  changed_when: kiwix_launchd.rc == 0
-  failed_when: false
-
 - name: "[Kiwix] Deploy nginx reverse proxy vhost"
   ansible.builtin.template:
     src: nginx/sites-available/kiwix.conf

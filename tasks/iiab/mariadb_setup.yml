@@ -1,0 +1,51 @@
+---
+# ==============================================================================
+# MARIADB – post-start nastavení (spouštěno PO startu docker compose stacku)
+# Vytváří databáze a uživatele definované v mariadb_databases / mariadb_users
+# ==============================================================================
+
+- name: "[MariaDB] Wait for port to be ready"
+  ansible.builtin.wait_for:
+    port: "{{ mariadb_port | default(3306) }}"
+    host: "127.0.0.1"
+    timeout: 60
+  check_mode: false
+
+- name: "[MariaDB] Remove test database"
+  community.mysql.mysql_db:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: test
+    state: absent
+  ignore_errors: true
+
+- name: "[MariaDB] Create databases"
+  community.mysql.mysql_db:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+  loop: "{{ mariadb_databases | default([]) }}"
+  no_log: true
+
+# host: '%' – PHP-FPM a další klienti se připojují přes Docker port-forward;
+# uvnitř MariaDB kontejneru to nepřijde jako 127.0.0.1 ale jako gateway IP
+- name: "[MariaDB] Create database users"
+  community.mysql.mysql_user:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    priv: "{{ item.priv }}"
+    host: "{{ item.host | default('%') }}"
+    state: present
+  loop: "{{ mariadb_users | default([]) }}"
+  no_log: true

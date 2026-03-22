@@ -38,22 +38,24 @@
       ansible.builtin.command: brew services restart "php@{{ php_version | default('8.3') }}"
 
     - name: Restart mariadb
-      ansible.builtin.shell: |
-        launchctl unload {{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist 2>/dev/null || true
-        sleep 2
-        launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist
+      ansible.builtin.shell: >
+        /usr/local/bin/docker compose
+        -f "{{ iiab_compose_dir }}/docker-compose.yml"
+        up -d --no-deps mariadb
       failed_when: false
 
     - name: Restart traefik
-      ansible.builtin.shell: |
-        launchctl unload {{ ansible_env.HOME }}/Library/LaunchAgents/homebrew.mxcl.traefik.plist 2>/dev/null || true
-        launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/homebrew.mxcl.traefik.plist
+      ansible.builtin.shell: >
+        /usr/local/bin/docker compose
+        -f "{{ iiab_compose_dir }}/docker-compose.yml"
+        up -d --no-deps traefik
       failed_when: false
 
     - name: Restart homeassistant
-      ansible.builtin.shell: |
-        launchctl unload {{ ansible_env.HOME }}/Library/LaunchAgents/com.homeassistant.plist 2>/dev/null || true
-        launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/com.homeassistant.plist
+      ansible.builtin.shell: >
+        /usr/local/bin/docker compose
+        -f "{{ iiab_compose_dir }}/docker-compose.yml"
+        up -d --no-deps homeassistant
       failed_when: false
 
     - name: Restart openclaw
@@ -294,6 +296,33 @@
     - include_tasks: tasks/iiab/homeassistant.yml
       when: install_homeassistant | default(false)
       tags: ['iiab', 'homeassistant', 'iot']
+
+    - include_tasks: tasks/iiab/rustfs.yml
+      when: install_rustfs | default(false)
+      tags: ['iiab', 'rustfs', 's3', 'storage']
+
+    # Stack: spustí (nebo aktualizuje) celý docker compose po konfiguraci všech služeb
+    - import_tasks: tasks/iiab/stack.yml
+      when: >
+        install_mariadb | default(false) or
+        install_n8n | default(false) or
+        install_kiwix | default(false) or
+        install_jellyfin | default(false) or
+        install_uptime_kuma | default(false) or
+        install_calibreweb | default(false) or
+        install_portainer | default(false) or
+        install_gitlab | default(false) or
+        install_woodpecker | default(false) or
+        install_openwebui | default(false) or
+        install_homeassistant | default(false) or
+        install_traefik | default(false) or
+        install_rustfs | default(false)
+      tags: ['iiab', 'stack', 'docker']
+
+    # MariaDB post-start: vytvoří DB a uživatele (až MariaDB poběží)
+    - import_tasks: tasks/iiab/mariadb_setup.yml
+      when: install_mariadb | default(false)
+      tags: ['iiab', 'mariadb', 'database']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Post-provision háky

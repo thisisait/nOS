@@ -1,0 +1,140 @@
+---
+# ==============================================================================
+# IIAB STACK – jeden docker compose pro všechny Docker služby
+# Nahrazuje individuální LaunchAgent plists (com.n8n, com.jellyfin, …).
+# ==============================================================================
+
+- name: "[Stack] Ensure iiab compose directory exists"
+  ansible.builtin.file:
+    path: "{{ iiab_compose_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Stack] Deploy docker-compose.yml from template"
+  ansible.builtin.template:
+    src: "iiab/docker-compose.yml.j2"
+    dest: "{{ iiab_compose_dir }}/docker-compose.yml"
+    mode: '0644'
+
+# Startup wrapper: čeká na Docker socket před spuštěním compose
+- name: "[Stack] Deploy start-stack.sh"
+  ansible.builtin.copy:
+    dest: "{{ iiab_compose_dir }}/start-stack.sh"
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Čeká na Docker Engine (race condition při boot) a pak spouští stack
+      set -euo pipefail
+      for i in $(seq 1 30); do
+        /usr/local/bin/docker info >/dev/null 2>&1 && break
+        echo "Waiting for Docker... ($i/30)"
+        sleep 3
+      done
+      exec /usr/local/bin/docker compose \
+        -f "{{ iiab_compose_dir }}/docker-compose.yml" \
+        up -d --remove-orphans
+
+# ── Odstraň staré individuální plists ────────────────────────────────────────
+# Každý byl nahrazen tímto stackem – unload + smazání zabrání dvojímu spuštění
+
+- name: "[Stack] Unload old individual LaunchAgent plists"
+  ansible.builtin.shell: |
+    launchctl unload "{{ ansible_env.HOME }}/Library/LaunchAgents/{{ item }}" 2>/dev/null || true
+  loop:
+    - com.mariadb.plist
+    - com.n8n.plist
+    - com.kiwix.serve.plist
+    - com.jellyfin.plist
+    - com.uptimekuma.plist
+    - com.calibreweb.plist
+    - com.portainer.plist
+    - com.gitlab.plist
+    - com.woodpecker.server.plist
+    - com.woodpecker.agent.plist
+    - com.openwebui.plist
+    - com.homeassistant.plist
+    - homebrew.mxcl.traefik.plist
+  changed_when: false
+  failed_when: false
+
+- name: "[Stack] Remove old individual LaunchAgent plists"
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/Library/LaunchAgents/{{ item }}"
+    state: absent
+  loop:
+    - com.mariadb.plist
+    - com.n8n.plist
+    - com.kiwix.serve.plist
+    - com.jellyfin.plist
+    - com.uptimekuma.plist
+    - com.calibreweb.plist
+    - com.portainer.plist
+    - com.gitlab.plist
+    - com.woodpecker.server.plist
+    - com.woodpecker.agent.plist
+    - com.openwebui.plist
+    - com.homeassistant.plist
+    - homebrew.mxcl.traefik.plist
+
+# ── Jeden plist pro celý stack ────────────────────────────────────────────────
+
+- name: "[Stack] Create com.iiab-stack LaunchAgent plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.iiab-stack.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.iiab-stack</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/bin/bash</string>
+          <string>{{ iiab_compose_dir }}/start-stack.sh</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <!-- restart: unless-stopped v compose zajišťuje obnovu kontejnerů.
+             Launchd spouští jen start-stack.sh (neblokující -d), takže
+             KeepAlive není potřeba. -->
+        <key>KeepAlive</key>
+        <false/>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/agents/log/iiab-stack.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/agents/log/iiab-stack.error.log</string>
+      </dict>
+      </plist>
+
+- name: "[Stack] Check if com.iiab-stack is already loaded"
+  ansible.builtin.shell: |
+    launchctl list 2>/dev/null | grep -q com.iiab-stack && echo loaded || echo not_loaded
+  register: stack_launchd_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Stack] Load iiab-stack LaunchAgent"
+  ansible.builtin.command: >
+    launchctl load -w
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.iiab-stack.plist
+  when: stack_launchd_status.stdout | trim == 'not_loaded'
+  register: stack_load
+  changed_when: stack_load.rc == 0
+  failed_when: stack_load.rc != 0
+  check_mode: false
+
+# Pokud stack už běží (reload při re-provisioning), aplikujeme změny bez restartu
+- name: "[Stack] Apply compose changes without full restart"
+  ansible.builtin.shell: >
+    /usr/local/bin/docker compose
+    -f "{{ iiab_compose_dir }}/docker-compose.yml"
+    up -d --remove-orphans
+  when: stack_launchd_status.stdout | trim == 'loaded'
+  register: stack_apply
+  changed_when: "'Started' in stack_apply.stdout or 'Recreated' in stack_apply.stdout"
+  failed_when: false
+  check_mode: false

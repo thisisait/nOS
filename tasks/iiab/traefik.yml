@@ -1,13 +1,9 @@
 ---
 # ==============================================================================
-# TRAEFIK – reverse proxy / ingress pro lokální vývoj
+# TRAEFIK – reverse proxy / ingress pro lokální vývoj (Docker)
+# Spouštěno přes IIAB stack (docker compose)
 # Dashboard: http://localhost:{{ traefik_dashboard_port | default(8080) }}
 # ==============================================================================
-
-- name: "[Traefik] Install via Homebrew"
-  community.general.homebrew:
-    name: traefik
-    state: present
 
 - name: "[Traefik] Create config and conf.d directories"
   ansible.builtin.file:
@@ -15,13 +11,12 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ homebrew_prefix }}/etc/traefik"
-    - "{{ homebrew_prefix }}/etc/traefik/conf.d"
-    - "{{ ansible_env.HOME }}/agents/log"
+    - "{{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}"
+    - "{{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}/conf.d"
 
 - name: "[Traefik] Deploy traefik.yml config"
   ansible.builtin.copy:
-    dest: "{{ homebrew_prefix }}/etc/traefik/traefik.yml"
+    dest: "{{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}/traefik.yml"
     mode: '0644'
     content: |
       api:
@@ -30,93 +25,33 @@
 
       entryPoints:
         web:
-          address: ":{{ traefik_http_port | default(80) }}"
+          address: ":80"
         websecure:
-          address: ":{{ traefik_https_port | default(443) }}"
+          address: ":443"
 
       providers:
+        docker:
+          exposedByDefault: false
+          network: iiab_net
         file:
-          directory: "{{ homebrew_prefix }}/etc/traefik/conf.d"
+          directory: "/etc/traefik/conf.d"
           watch: true
 
       log:
         level: "{{ traefik_log_level | default('INFO') }}"
-        filePath: "{{ ansible_env.HOME }}/agents/log/traefik.log"
 
-      accessLog:
-        filePath: "{{ ansible_env.HOME }}/agents/log/traefik-access.log"
+      accessLog: {}
   notify: Restart traefik
-
-- name: "[Traefik] Create launchd plist"
-  ansible.builtin.copy:
-    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/homebrew.mxcl.traefik.plist"
-    mode: '0644'
-    content: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>homebrew.mxcl.traefik</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>{{ homebrew_prefix }}/bin/traefik</string>
-          <string>--configFile={{ homebrew_prefix }}/etc/traefik/traefik.yml</string>
-          <string>--api.dashboard=true</string>
-          <string>--ping</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true/>
-        <key>KeepAlive</key>
-        <dict>
-          <key>Crashed</key>
-          <true/>
-        </dict>
-        <key>ThrottleInterval</key>
-        <integer>10</integer>
-        <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/traefik.log</string>
-        <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/traefik.error.log</string>
-      </dict>
-      </plist>
-  notify: Restart traefik
-
-- name: "[Traefik] Check if launchd service is already loaded"
-  ansible.builtin.shell: |
-    launchctl list 2>/dev/null | grep -q homebrew.mxcl.traefik && echo loaded || echo not_loaded
-  register: traefik_launchd_status
-  changed_when: false
-  failed_when: false
-  check_mode: false
-
-- name: "[Traefik] Load Traefik launchd service"
-  ansible.builtin.command: >
-    launchctl load -w
-    {{ ansible_env.HOME }}/Library/LaunchAgents/homebrew.mxcl.traefik.plist
-  when: traefik_launchd_status.stdout | trim == 'not_loaded'
-  register: traefik_load
-  changed_when: traefik_load.rc == 0
-  failed_when: traefik_load.rc != 0
-  check_mode: false
-
-- name: "[Traefik] Wait for dashboard to be ready"
-  ansible.builtin.wait_for:
-    port: "{{ traefik_dashboard_port | default(8080) }}"
-    host: "127.0.0.1"
-    timeout: 20
-  check_mode: false
 
 - name: "[Traefik] Print info"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Traefik spuštěn
+       Traefik připraven (spouští se přes IIAB stack)
       ══════════════════════════════════════════════════════
        Dashboard:  http://localhost:{{ traefik_dashboard_port | default(8080) }}/dashboard/
        HTTP:       :{{ traefik_http_port | default(80) }}
        HTTPS:      :{{ traefik_https_port | default(443) }}
-       Konfig:     {{ homebrew_prefix }}/etc/traefik/traefik.yml
-       Logy:       ~/agents/log/traefik*.log
+       Konfig:     {{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}/traefik.yml
+       conf.d:     {{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}/conf.d/
       ══════════════════════════════════════════════════════

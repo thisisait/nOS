@@ -1,102 +1,27 @@
 ---
 # ==============================================================================
 # HOME ASSISTANT – home automation platform (Docker)
+# Spouštěno přes IIAB stack (docker compose)
 # Web UI: http://localhost:{{ homeassistant_port | default(8123) }}
 # ==============================================================================
 
-- name: "[HomeAssistant] Ensure config and log directories exist"
+- name: "[HomeAssistant] Ensure config directory exists"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ homeassistant_config_dir | default(ansible_env.HOME + '/homeassistant') }}"
     state: directory
     mode: '0755'
-  loop:
-    - "{{ homeassistant_config_dir | default(ansible_env.HOME + '/homeassistant') }}"
-    - "{{ ansible_env.HOME }}/agents/log"
 
 - name: "[HomeAssistant] Pull Docker image"
   community.docker.docker_image:
     name: "homeassistant/home-assistant:{{ homeassistant_version | default('stable') }}"
     source: pull
 
-- name: "[HomeAssistant] Create launchd plist"
-  ansible.builtin.copy:
-    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.homeassistant.plist"
-    mode: '0644'
-    content: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>com.homeassistant</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>/usr/local/bin/docker</string>
-          <string>run</string>
-          <string>--rm</string>
-          <string>--name</string>
-          <string>homeassistant</string>
-          <string>--privileged</string>
-          <string>--network</string>
-          <string>host</string>
-          <string>-p</string>
-          <string>{{ homeassistant_port | default(8123) }}:8123</string>
-          <string>-v</string>
-          <string>{{ homeassistant_config_dir | default(ansible_env.HOME + '/homeassistant') }}:/config</string>
-          <string>-e</string>
-          <string>TZ={{ homeassistant_timezone | default('Europe/Prague') }}</string>
-          <string>homeassistant/home-assistant:{{ homeassistant_version | default('stable') }}</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true/>
-        <key>KeepAlive</key>
-        <dict>
-          <key>Crashed</key>
-          <true/>
-        </dict>
-        <key>ThrottleInterval</key>
-        <integer>30</integer>
-        <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/homeassistant.log</string>
-        <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/homeassistant.error.log</string>
-      </dict>
-      </plist>
-  notify: Restart homeassistant
-
-- name: "[HomeAssistant] Check if launchd service is already loaded"
-  ansible.builtin.shell: |
-    launchctl list 2>/dev/null | grep -q com.homeassistant && echo loaded || echo not_loaded
-  register: ha_launchd_status
-  changed_when: false
-  failed_when: false
-  check_mode: false
-
-- name: "[HomeAssistant] Load launchd agent"
-  ansible.builtin.command: >
-    launchctl load -w
-    {{ ansible_env.HOME }}/Library/LaunchAgents/com.homeassistant.plist
-  when: ha_launchd_status.stdout | trim == 'not_loaded'
-  register: ha_load
-  changed_when: ha_load.rc == 0
-  failed_when: false
-  check_mode: false
-
-- name: "[HomeAssistant] Wait for web UI to be ready"
-  ansible.builtin.wait_for:
-    port: "{{ homeassistant_port | default(8123) }}"
-    host: "127.0.0.1"
-    timeout: 60
-  check_mode: false
-
 - name: "[HomeAssistant] Print info"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Home Assistant spuštěn
+       Home Assistant připraven (spouští se přes IIAB stack)
       ══════════════════════════════════════════════════════
        Web UI:    http://localhost:{{ homeassistant_port | default(8123) }}
        Konfig:    {{ homeassistant_config_dir | default(ansible_env.HOME + '/homeassistant') }}
-       Logy:      ~/agents/log/homeassistant*.log
       ══════════════════════════════════════════════════════

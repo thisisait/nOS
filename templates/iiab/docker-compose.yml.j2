@@ -1,0 +1,319 @@
+# =============================================================================
+# IIAB Docker Compose Stack
+# Generováno Ansiblem – NEUPRAVUJ ručně
+#
+# Restart celého stacku:
+#   launchctl kickstart -k gui/$(id -u)/com.iiab-stack
+# Restart jedné služby:
+#   docker compose -f {{ iiab_compose_dir }}/docker-compose.yml restart <name>
+# Logy:
+#   docker compose -f {{ iiab_compose_dir }}/docker-compose.yml logs -f <name>
+# =============================================================================
+
+services:
+
+{% if install_mariadb | default(false) %}
+  mariadb:
+    image: mariadb:{{ mariadb_version | default('lts') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
+    volumes:
+      - {{ mariadb_data_dir | default(ansible_env.HOME + '/mariadb/data') }}:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_n8n | default(false) %}
+  n8n:
+    image: n8nio/n8n:{{ n8n_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ n8n_port | default(5678) }}:5678"
+    volumes:
+      - {{ ansible_env.HOME }}/n8n:/home/node/.n8n
+    environment:
+      N8N_HOST: "{{ n8n_domain | default('n8n.dev.local') }}"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: "https://{{ n8n_domain | default('n8n.dev.local') }}/"
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_kiwix | default(false) %}
+  kiwix:
+    image: ghcr.io/kiwix/kiwix-serve:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ kiwix_port | default(8888) }}:8080"
+    volumes:
+      - {{ kiwix_data_dir }}:/data
+    command: /data/*.zim
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+{% if install_jellyfin | default(false) %}
+  jellyfin:
+    image: jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ jellyfin_port | default(8096) }}:8096"
+    volumes:
+      - {{ jellyfin_config_dir }}:/config
+      - {{ jellyfin_cache_dir }}:/cache
+      - {{ jellyfin_movies_dir }}:/media/movies:ro
+      - {{ jellyfin_shows_dir }}:/media/shows:ro
+      - {{ jellyfin_music_dir }}:/media/music:ro
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_uptime_kuma | default(false) %}
+  uptime-kuma:
+    image: louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ uptime_kuma_port | default(3001) }}:3001"
+    volumes:
+      - {{ ansible_env.HOME }}/uptime-kuma:/app/data
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+{% if install_calibreweb | default(false) %}
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ calibreweb_port | default(8083) }}:8083"
+    volumes:
+      - {{ ansible_env.HOME }}/calibre-web/config:/config
+      - {{ ansible_env.HOME }}/calibre-web/books:/books
+    environment:
+      PUID: "{{ ansible_user_uid }}"
+      PGID: "{{ ansible_user_gid }}"
+      TZ: "{{ calibreweb_timezone | default('Europe/Prague') }}"
+      DOCKER_MODS: linuxserver/mods:universal-calibre
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+{% if install_portainer | default(false) %}
+  portainer:
+    image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ portainer_port | default(9000) }}:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - {{ portainer_data_dir }}:/data
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+{% if install_gitlab | default(false) %}
+  gitlab:
+    image: gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}
+    restart: unless-stopped
+    hostname: "{{ gitlab_domain | default('gitlab.dev.local') }}"
+    shm_size: 256m
+    ports:
+      - "127.0.0.1:{{ gitlab_http_port | default(8929) }}:{{ gitlab_http_port | default(8929) }}"
+      - "127.0.0.1:{{ gitlab_ssh_port | default(2224) }}:22"
+    volumes:
+      - {{ gitlab_config_dir }}:/etc/gitlab
+      - {{ ansible_env.HOME }}/gitlab-logs:/var/log/gitlab
+      - {{ gitlab_data_dir }}:/var/opt/gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://{{ gitlab_domain | default('gitlab.dev.local') }}'
+        gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+{% endif %}
+{% if install_woodpecker | default(false) %}
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ woodpecker_port | default(8060) }}:8000"
+      - "127.0.0.1:{{ woodpecker_grpc_port | default(9060) }}:9000"
+    volumes:
+      - {{ woodpecker_data_dir }}:/var/lib/woodpecker
+    environment:
+      WOODPECKER_GITEA: "true"
+      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
+      WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
+      WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default('changeme_woodpecker') }}"
+      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci.dev.local') }}"
+      WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Interní gRPC přes iiab_net – nepotřebuje host.docker.internal
+      WOODPECKER_SERVER: "woodpecker-server:9000"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default('changeme_woodpecker') }}"
+      WOODPECKER_MAX_WORKFLOWS: "{{ woodpecker_max_workflows | default(4) }}"
+      WOODPECKER_BACKEND: docker
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_openwebui | default(false) %}
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ openwebui_port | default(3004) }}:8080"
+    volumes:
+      - {{ openwebui_data_dir }}:/app/backend/data
+    environment:
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_homeassistant | default(false) %}
+  homeassistant:
+    image: homeassistant/home-assistant:{{ homeassistant_version | default('stable') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ homeassistant_port | default(8123) }}:8123"
+    volumes:
+      - {{ homeassistant_config_dir | default(ansible_env.HOME + '/homeassistant') }}:/config
+    environment:
+      TZ: "{{ homeassistant_timezone | default('Europe/Prague') }}"
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_traefik | default(false) %}
+  traefik:
+    image: traefik:{{ traefik_image_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "{{ traefik_http_port | default(80) }}:80"
+      - "{{ traefik_https_port | default(443) }}:443"
+      - "127.0.0.1:{{ traefik_dashboard_port | default(8080) }}:8080"
+    volumes:
+      - {{ traefik_config_dir | default(ansible_env.HOME + '/iiab/traefik') }}:/etc/traefik:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_rustfs | default(false) %}
+  rustfs:
+    image: rustfs/rustfs:{{ rustfs_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ rustfs_api_port | default(9000) }}:9000"
+      - "127.0.0.1:{{ rustfs_console_port | default(9001) }}:9001"
+    volumes:
+      - {{ rustfs_data_dir | default(ansible_env.HOME + '/rustfs/data') }}:/data
+    environment:
+      RUSTFS_ACCESS_KEY: "{{ rustfs_access_key }}"
+      RUSTFS_SECRET_KEY: "{{ rustfs_secret_key }}"
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+
+networks:
+  iiab_net:
+    driver: bridge
+    ipam:
+      config:
+        # Explicitní subnet – vyhne se kolizi s Docker defaultem (172.17.x.x)
+        - subnet: 172.20.0.0/16

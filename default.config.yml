@@ -60,8 +60,9 @@ install_portainer: false          # Portainer CE – Docker management UI       
 install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
 install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
-install_traefik: false            # Traefik – reverse proxy / ingress pro lokální vývoj
-install_homeassistant: false      # Home Assistant – home automation            [vyžaduje: Docker]
+install_traefik: false            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
+install_homeassistant: false      # Home Assistant – home automation                        [Docker]
+install_rustfs: false             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
 # ── Síť / přístup ─────────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
@@ -910,16 +911,30 @@ post_provision_tasks: []
 # TRAEFIK
 # ==============================================================================
 
+# ── IIAB Stack ────────────────────────────────────────────────────────────────
+iiab_compose_dir: "{{ ansible_env.HOME }}/iiab"   # umístění docker-compose.yml
+
+# ── Traefik ────────────────────────────────────────────────────────────────────
+traefik_image_version: "latest"
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8080
 traefik_log_level: "INFO"           # DEBUG / INFO / WARN / ERROR
+traefik_config_dir: "{{ ansible_env.HOME }}/iiab/traefik"
 
-# ==============================================================================
-# HOME ASSISTANT
-# ==============================================================================
-
+# ── Home Assistant ─────────────────────────────────────────────────────────────
 homeassistant_version: "stable"     # stable / latest / konkrétní tag (2025.1.0)
 homeassistant_port: 8123
 homeassistant_timezone: "Europe/Prague"
 homeassistant_config_dir: "{{ ansible_env.HOME }}/homeassistant"
+
+# ==============================================================================
+# RUSTFS – S3-compatible object storage
+# ==============================================================================
+
+rustfs_version: "latest"
+rustfs_api_port: 9000               # S3 API (aws-cli, rclone, restic, SDK…)
+rustfs_console_port: 9001           # Web konzole
+rustfs_data_dir: "{{ ansible_env.HOME }}/rustfs/data"
+rustfs_access_key: "rustfsadmin"    # PŘEPIŠ před spuštěním!
+rustfs_secret_key: "changeme_rustfs_secret"   # PŘEPIŠ!

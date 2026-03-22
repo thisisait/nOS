@@ -88,82 +88,12 @@
       # ── Registrace ────────────────────────────────────────────────────────────
       gitlab_rails['gitlab_signup_enabled'] = {{ gitlab_signup_enabled | default(false) | string | lower }}
 
-# ── launchd plist (docker run jako systémová služba) ─────────────────────────
-
 - name: "[GitLab] Pull Docker image"
   community.docker.docker_image:
     name: "gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}"
     source: pull
   async: 600
   poll: 30
-
-- name: "[GitLab] Create launchd plist"
-  ansible.builtin.copy:
-    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.gitlab.plist"
-    mode: '0644'
-    backup: true
-    content: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>com.gitlab</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>/usr/local/bin/docker</string>
-          <string>run</string>
-          <string>--rm</string>
-          <string>--name</string>
-          <string>gitlab</string>
-
-          <!-- HTTP port (Nginx proxy → GitLab interní) -->
-          <string>-p</string>
-          <string>{{ gitlab_http_port | default(8929) }}:{{ gitlab_http_port | default(8929) }}</string>
-
-          <!-- SSH port pro Git operace -->
-          <string>-p</string>
-          <string>{{ gitlab_ssh_port | default(2224) }}:22</string>
-
-          <!-- Datové adresáře -->
-          <string>-v</string>
-          <string>{{ gitlab_config_dir }}:/etc/gitlab</string>
-          <string>-v</string>
-          <string>{{ ansible_env.HOME }}/gitlab-logs:/var/log/gitlab</string>
-          <string>-v</string>
-          <string>{{ gitlab_data_dir }}:/var/opt/gitlab</string>
-
-          <!-- Sdílená paměť pro Omnibus (výchozí 64m je málo) -->
-          <string>--shm-size</string>
-          <string>256m</string>
-
-          <string>gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true/>
-        <key>KeepAlive</key>
-        <dict>
-          <key>Crashed</key>
-          <true/>
-        </dict>
-        <!-- GitLab startuje dlouho – dej mu čas -->
-        <key>ThrottleInterval</key>
-        <integer>60</integer>
-        <key>StandardOutPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/gitlab.log</string>
-        <key>StandardErrorPath</key>
-        <string>{{ ansible_env.HOME }}/agents/log/gitlab.error.log</string>
-      </dict>
-      </plist>
-
-- name: "[GitLab] Load launchd agent"
-  ansible.builtin.command: >
-    launchctl load -w
-    {{ ansible_env.HOME }}/Library/LaunchAgents/com.gitlab.plist
-  register: gitlab_load
-  changed_when: gitlab_load.rc == 0
-  failed_when: false
 
 - name: "[GitLab] Enable nginx vhost"
   ansible.builtin.file:
