@@ -176,7 +176,7 @@
     # ──────────────────────────────────────────────────────────────────────────
     # IIAB – self-hosted knowledge services
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/iiab/mariadb.yml
+    - include_tasks: tasks/iiab/mariadb.yml
       when: install_mariadb | default(false)
       tags: ['iiab', 'mariadb', 'database']
 
