@@ -1,0 +1,114 @@
+---
+# ==============================================================================
+# PI AGENTS – coding agent framework (pi.dev)
+# npm balíček: @mariozechner/pi-coding-agent
+# Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
+#
+# Požadavky: install_node: true (nvm + Node.js musí být nainstalováno)
+# ==============================================================================
+
+# ── 1. Instalace PI CLI ────────────────────────────────────────────────────────
+
+- name: "[PI] Check if pi CLI is already installed"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    command -v pi
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_env.HOME }}/.nvm"
+  register: pi_which
+  changed_when: false
+  failed_when: false
+
+- name: "[PI] Install PI CLI via npm (@mariozechner/pi-coding-agent)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    npm install -g @mariozechner/pi-coding-agent
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_env.HOME }}/.nvm"
+  when: pi_which.rc != 0
+  changed_when: true
+
+# ── 2. Adresářová struktura ────────────────────────────────────────────────────
+
+- name: "[PI] Create PI agent directory structure"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ pi_config_dir }}"
+    - "{{ pi_config_dir }}/extensions"
+    - "{{ pi_config_dir }}/skills"
+    - "{{ pi_config_dir }}/themes"
+    - "{{ pi_config_dir }}/prompts"
+
+# ── 3. PI Autoresearch extension ───────────────────────────────────────────────
+
+- name: "[PI] Check if pi-autoresearch extension is installed"
+  ansible.builtin.stat:
+    path: "{{ pi_config_dir }}/extensions/pi-autoresearch"
+  register: pi_autoresearch_stat
+  when: pi_install_autoresearch | default(true)
+
+- name: "[PI] Clone pi-autoresearch repository"
+  ansible.builtin.git:
+    repo: "https://github.com/davebcn87/pi-autoresearch.git"
+    dest: "{{ ansible_env.HOME }}/.pi/pi-autoresearch-src"
+    version: main
+    force: false
+  when:
+    - pi_install_autoresearch | default(true)
+    - not pi_autoresearch_stat.stat.exists
+  register: pi_autoresearch_clone
+
+- name: "[PI] Install pi-autoresearch extension files"
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/.pi/pi-autoresearch-src/extensions/pi-autoresearch/"
+    dest: "{{ pi_config_dir }}/extensions/pi-autoresearch/"
+    mode: '0755'
+    remote_src: true
+  when:
+    - pi_install_autoresearch | default(true)
+    - pi_autoresearch_clone is defined
+    - pi_autoresearch_clone.changed
+
+- name: "[PI] Install pi-autoresearch skill files"
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/.pi/pi-autoresearch-src/skills/autoresearch-create/"
+    dest: "{{ pi_config_dir }}/skills/autoresearch-create/"
+    mode: '0755'
+    remote_src: true
+  when:
+    - pi_install_autoresearch | default(true)
+    - pi_autoresearch_clone is defined
+    - pi_autoresearch_clone.changed
+
+# ── 4. Finální výpis ──────────────────────────────────────────────────────────
+
+- name: "[PI] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       PI Agent Framework – připraven
+      ══════════════════════════════════════════════════════
+       CLI:        npm -g @mariozechner/pi-coding-agent
+       Config:     {{ pi_config_dir }}/
+       Extensions: {{ pi_config_dir }}/extensions/
+       Skills:     {{ pi_config_dir }}/skills/
+
+       Použití:
+         pi                         # spustit interaktivní agent
+         pi "co chceš udělat"       # jednorázový příkaz
+
+       Autoresearch extension:
+         /skill:autoresearch-create  # inicializace optimalizační smyčky
+         /autoresearch <text>        # vstoupit do autoresearch módu
+         Ctrl+X                     # přepnout dashboard
+      ══════════════════════════════════════════════════════

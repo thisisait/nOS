@@ -31,9 +31,10 @@ install_dotnet: true
 
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # Ollama + OpenClaw daemon
+install_pi_agents: false          # PI coding agent (pi.dev) + pi-autoresearch extension
 
 # ── macOS systémová konfigurace ───────────────────────────────────────────────
-configure_dotfiles: true
+configure_dotfiles: false         # Vyžaduje vlastní dotfiles repo – nastav v credentials.yml
 configure_terminal: true
 configure_osx: true               # .osx script (základní defaults)
 configure_macos_defaults: true    # Rozšířená nastavení (Finder, Dock, klávesnice…)

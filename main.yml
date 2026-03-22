@@ -221,6 +221,10 @@
       when: install_openclaw | default(false)
       tags: ['openclaw', 'ai', 'agent']
 
+    - import_tasks: tasks/pi-agents.yml
+      when: install_pi_agents | default(false)
+      tags: ['pi', 'pi-agents', 'ai', 'agent']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Observability – Grafana + Prometheus + Loki + Tempo + Alloy
     # ──────────────────────────────────────────────────────────────────────────

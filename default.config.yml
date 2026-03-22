@@ -23,9 +23,10 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepítko, Ollama, bez API klíče)
+install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 
 # ── macOS systémová konfigurace ────────────────────────────────────────────────
-configure_dotfiles: true          # Dotfiles (git, zsh, vim …)
+configure_dotfiles: false         # Dotfiles – vyžaduje vlastní repo! Nastav dotfiles_repo v credentials.yml
 configure_terminal: true          # Terminal téma
 configure_osx: true               # Základní macOS defaults (.osx script)
 configure_macos_defaults: true    # Rozšířená macOS nastavení (Finder, klávesnice, Dock…)
@@ -402,6 +403,18 @@ openclaw_agent_name: "Inspektor Klepítko"
 # Concurrent sub-agents
 openclaw_max_concurrent_agents: 4
 openclaw_max_concurrent_subagents: 8
+
+# ==============================================================================
+# PI AGENTS – coding agent framework (pi.dev / @mariozechner/pi-coding-agent)
+# Dokumentace: https://github.com/badlogic/pi-mono
+# Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
+# ==============================================================================
+
+# Adresář PI agenta
+pi_config_dir: "{{ ansible_env.HOME }}/.pi/agent"
+
+# Nainstalovat pi-autoresearch extension (optimalizační smyčka pro experimenty)
+pi_install_autoresearch: true
 
 # ==============================================================================
 # DOTFILES
