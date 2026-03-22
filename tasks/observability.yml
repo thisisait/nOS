@@ -198,12 +198,21 @@
   failed_when: redis_svc.rc != 0 and 'already started' not in redis_svc.stdout
   when: alloy_scrape_redis | default(true)
 
-- name: Wait for Grafana to become available
+- name: Wait for Grafana port to open
   ansible.builtin.wait_for:
     host: 127.0.0.1
     port: "{{ grafana_port | default(3000) }}"
     delay: 5
     timeout: 60
+
+- name: Wait for Grafana API to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/health"
+    status_code: 200
+  register: grafana_health
+  until: grafana_health.status == 200 and (grafana_health.json.database | default('') == 'ok')
+  retries: 20
+  delay: 5
 
 - name: Download community Grafana dashboards
   ansible.builtin.get_url:

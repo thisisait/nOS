@@ -324,7 +324,7 @@
     domain: /Library/Preferences/SystemConfiguration/com.apple.smb.server
     key: NetBIOSName
     type: string
-    value: "mac-studio"
+    value: "{{ macos_computer_name | default(ansible_hostname) }}"
   become: true
 
 # ── POZNÁMKY – co nelze automatizovat ─────────────────────────────────────────

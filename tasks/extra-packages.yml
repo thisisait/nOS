@@ -17,7 +17,7 @@
   loop: "{{ npm_packages }}"
 
 - name: Install global Pip packages.
-  pip:
+  ansible.builtin.pip:
     name: "{{ item.name | default(item) }}"
     state: "{{ item.state | default('present') }}"
     version: "{{ item.version | default(omit) }}"

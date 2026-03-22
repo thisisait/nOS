@@ -48,7 +48,7 @@
           <string>-e</string>
           <string>PGID={{ ansible_user_gid }}</string>
           <string>-e</string>
-          <string>TZ=Europe/Prague</string>
+          <string>TZ={{ calibreweb_timezone | default('Europe/Prague') }}</string>
           <string>-e</string>
           <string>DOCKER_MODS=linuxserver/mods:universal-calibre</string>
           <string>lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}</string>

@@ -46,21 +46,7 @@
   changed_when: false
   failed_when: false
 
-- name: "[OpenClaw] Install OpenClaw via Ollama launcher"
-  ansible.builtin.shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
-    OLLAMA_API_KEY="ollama-local" ollama launch openclaw --non-interactive 2>&1 || true
-  args:
-    executable: /bin/zsh
-  environment:
-    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_env.PATH }}"
-    NVM_DIR: "{{ ansible_env.HOME }}/.nvm"
-  when: openclaw_which.rc != 0
-  changed_when: true
-
-# Fallback: instalace přes npm pokud ollama launch selže
-- name: "[OpenClaw] Install OpenClaw via npm (fallback)"
+- name: "[OpenClaw] Install OpenClaw via npm"
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"

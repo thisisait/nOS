@@ -58,7 +58,7 @@ Ansible playbook pro automatizaci macOS vývojového prostředí na **Mac Studio
 Self-hosted AI agent bez API klíče:
 
 - **Ollama** – lokální LLM inference (model `qwen3.5:27b`, optimální pro 36 GB RAM)
-- **OpenClaw** – agentic framework instalovaný přes `ollama launch openclaw`
+- **OpenClaw** – agentic framework instalovaný přes `npm install -g openclaw`
 - Agent běží jako **launchd daemon** (vždy zapnutý, autorestart)
 - Persona: **DevOps Lead Engineer** s přehledem o celé konfiguraci serveru
 - 6 sub-agentů: CodeAgent, InfraAgent, DeployAgent, SecurityAgent, MonitorAgent, DataAgent

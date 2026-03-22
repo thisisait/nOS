@@ -472,6 +472,7 @@ macos_safari_developer_menu: true         # Zapnout Developer menu
 macos_terminal_secure_keyboard: true  # Secure keyboard entry
 
 # ── Systém ────────────────────────────────────────────────────────────────────
+macos_computer_name: ""               # NetBIOS název počítače; prázdné = použij ansible_hostname
 macos_disable_gatekeeper: false       # NEDOPORUČENO – nechej false pro bezpečnost
 # Full Disk Access pro Terminal: NELZE automatizovat (SIP protected)
 # Installer sám o to požádá při prvním spuštění
@@ -821,6 +822,7 @@ calibreweb_domain: "books.dev.local"
 calibreweb_port: 8083
 calibreweb_version: "latest"   # nebo konkrétní: "0.6.21"
 calibreweb_books_dir: "/Users/{{ ansible_user_id }}/calibre"   # Calibre library
+calibreweb_timezone: "Europe/Prague"
 
 # ==============================================================================
 # TAILSCALE – WireGuard mesh VPN
