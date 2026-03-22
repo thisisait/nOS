@@ -9,7 +9,7 @@
     state: present
 
 - name: "[MariaDB] Install PyMySQL (required by community.mysql modules)"
-  ansible.builtin.command: pip3 install PyMySQL
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install PyMySQL"
   changed_when: false
 
 - name: "[MariaDB] Start MariaDB service"
