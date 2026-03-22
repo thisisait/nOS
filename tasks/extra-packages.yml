@@ -17,12 +17,13 @@
   loop: "{{ npm_packages }}"
 
 - name: Install global Pip packages.
-  ansible.builtin.pip:
-    name: "{{ item.name | default(item) }}"
-    state: "{{ item.state | default('present') }}"
-    version: "{{ item.version | default(omit) }}"
-    executable: "{{ item.executable | default('pip3') }}"
+  ansible.builtin.command: >
+    pip3 install
+    {% if item.state | default('present') == 'absent' %}--uninstall -y{% endif %}
+    {% if item.version is defined %}"{{ item.name | default(item) }}=={{ item.version }}"{% else %}{{ item.name | default(item) }}{% endif %}
   loop: "{{ pip_packages }}"
+  changed_when: false
+  ignore_errors: true
 
 - name: Install global Ruby gems.
   gem:
