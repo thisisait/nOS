@@ -3,31 +3,33 @@
 # PHP – instalace, PHP-FPM a konfigurace
 # ==============================================================================
 
-- name: Tap shivammathur/php for PHP extensions
-  community.general.homebrew_tap:
-    name: shivammathur/php
-    state: present
-
 - name: Install PHP via Homebrew
   community.general.homebrew:
     name: "php@{{ php_version }}"
     state: present
 
-- name: Install common PHP extensions via Homebrew
+- name: Install imagemagick (required for imagick PECL extension)
   community.general.homebrew:
-    name: "shivammathur/php/{{ item }}"
+    name: imagemagick
     state: present
-  loop:
-    - "php@{{ php_version }}-redis"
-    - "php@{{ php_version }}-imagick"
-  ignore_errors: true   # extension availability varies by PHP version
 
-- name: Install additional PHP extensions from config
-  community.general.homebrew:
-    name: "shivammathur/php/{{ item }}"
-    state: present
+- name: Install common PHP extensions via PECL
+  ansible.builtin.shell: |
+    export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
+    pecl list | grep -q "^{{ item }}\b" || pecl install {{ item }}
+  loop:
+    - redis
+    - imagick
+  ignore_errors: true   # extension availability varies by PHP version
+  changed_when: true
+
+- name: Install additional PHP extensions from config via PECL
+  ansible.builtin.shell: |
+    export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
+    pecl list | grep -q "^{{ item }}\b" || pecl install {{ item }}
   loop: "{{ php_extensions | default([]) }}"
   ignore_errors: true
+  changed_when: true
 
 - name: Install Composer
   ansible.builtin.shell: |
