@@ -18,13 +18,17 @@
     path: "{{ nextcloud_dir }}/index.php"
   register: nc_installed
 
+- name: "[Nextcloud] Remove stale/partial archive"
+  ansible.builtin.file:
+    path: /tmp/nextcloud.tar.bz2
+    state: absent
+  when: not nc_installed.stat.exists
+
 - name: "[Nextcloud] Download latest Nextcloud"
   ansible.builtin.shell: |
     curl -L --fail --retry 3 --retry-delay 5 \
       -o /tmp/nextcloud.tar.bz2 \
       https://download.nextcloud.com/server/releases/latest.tar.bz2
-  args:
-    creates: /tmp/nextcloud.tar.bz2
   when: not nc_installed.stat.exists
 
 - name: "[Nextcloud] Verify downloaded archive"
