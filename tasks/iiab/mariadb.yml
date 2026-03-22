@@ -8,17 +8,18 @@
     name: mariadb
     state: present
 
-# ansible.builtin.pip potřebuje 'packaging' na cílovém Pythonu – pro Python 3.14
-# to selhává. Používáme command modul přímo (nevyžaduje žádné pomocné knihovny).
+# shell (ne command) se spustí i v check_mode; homebrew_prefix místo
+# ansible_python_interpreter – přímý path, žádná auto-resolution ani 'packaging'.
 - name: "[MariaDB] Install PyMySQL (required by community.mysql modules)"
-  ansible.builtin.command: >-
-    {{ ansible_python_interpreter }} -m pip install
-    --break-system-packages --quiet PyMySQL
+  ansible.builtin.shell: >-
+    {{ homebrew_prefix }}/bin/python3 -m pip install
+    --break-system-packages PyMySQL
   register: pymysql_result
   changed_when: "'Successfully installed' in pymysql_result.stdout"
   failed_when:
     - pymysql_result.rc != 0
     - "'already satisfied' not in pymysql_result.stdout"
+  check_mode: false
 
 # bind-address se nastaví PŘED startem → první spuštění nevyžaduje restart
 - name: "[MariaDB] Set MariaDB bind-address"
@@ -32,22 +33,18 @@
   notify: Restart mariadb
 
 - name: "[MariaDB] Start MariaDB service"
-  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services start mariadb"
+  ansible.builtin.shell: "{{ homebrew_prefix }}/bin/brew services start mariadb"
   register: mariadb_svc
-  changed_when: >
-    mariadb_svc.rc == 0 and
-    'already started' not in (mariadb_svc.stdout | default('')) and
-    'already started' not in (mariadb_svc.stderr | default(''))
-  failed_when:
-    - mariadb_svc.rc != 0
-    - "'already started' not in (mariadb_svc.stdout | default(''))"
-    - "'already started' not in (mariadb_svc.stderr | default(''))"
+  changed_when: mariadb_svc.rc == 0 and 'already started' not in mariadb_svc.stdout
+  failed_when: mariadb_svc.rc != 0 and 'already started' not in mariadb_svc.stdout
+  check_mode: false
 
 - name: "[MariaDB] Wait for MariaDB to be ready"
   ansible.builtin.wait_for:
     port: 3306
     host: "{{ mariadb_bind_address | default('127.0.0.1') }}"
     timeout: 30
+  check_mode: false
 
 # První spuštění: root bez hesla. Ignore_errors → idempotentní při dalším běhu.
 - name: "[MariaDB] Set root password (first run – no existing password)"
