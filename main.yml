@@ -39,8 +39,9 @@
 
     - name: Restart mariadb
       ansible.builtin.shell: |
-        launchctl unload {{ homebrew_prefix }}/opt/mariadb/homebrew.mxcl.mariadb.plist 2>/dev/null || true
-        launchctl load -w {{ homebrew_prefix }}/opt/mariadb/homebrew.mxcl.mariadb.plist
+        launchctl unload {{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist 2>/dev/null || true
+        sleep 2
+        launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist
       failed_when: false
 
     - name: Restart traefik

@@ -545,8 +545,9 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "changeme_root"   # PŘEPIŠ před spuštěním!
-mariadb_bind_address: "127.0.0.1"       # Jen lokálně
-mariadb_socket: "{{ homebrew_prefix }}/var/mysql/mysql.sock"  # Intel: /usr/local/var/mysql/mysql.sock
+mariadb_version: "lts"                  # lts / 11 / 10.11 – Docker image tag
+mariadb_port: 3306
+mariadb_data_dir: "{{ ansible_env.HOME }}/mariadb/data"   # persistence dat mimo kontejner
 
 mariadb_databases:
   - name: "wordpress"

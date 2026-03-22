@@ -1,15 +1,22 @@
 ---
 # ==============================================================================
-# MARIADB – instalace a konfigurace (sdílená závislost pro WP + Nextcloud)
+# MARIADB – Docker
+# Nativní Homebrew na macOS trpí problémy s inicializací dat a launchd.
+# Docker je spolehlivější a konzistentní s ostatními IIAB službami (n8n, kiwix…).
+# TCP: 127.0.0.1:{{ mariadb_port | default(3306) }}
+# Kompatibilní s: WordPress, Nextcloud, IIAB dashboard, Kiwix
 # ==============================================================================
 
-- name: "[MariaDB] Install MariaDB via Homebrew"
-  community.general.homebrew:
-    name: mariadb
-    state: present
+- name: "[MariaDB] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ mariadb_data_dir | default(ansible_env.HOME + '/mariadb/data') }}"
+    - "{{ ansible_env.HOME }}/agents/log"
 
-# shell (ne command) se spustí i v check_mode; homebrew_prefix místo
-# ansible_python_interpreter – přímý path, žádná auto-resolution ani 'packaging'.
+# PyMySQL potřebuje community.mysql moduly na control node (Mac → Docker TCP)
 - name: "[MariaDB] Install PyMySQL (required by community.mysql modules)"
   ansible.builtin.shell: >-
     {{ homebrew_prefix }}/bin/python3 -m pip install
@@ -21,70 +28,88 @@
     - "'already satisfied' not in pymysql_result.stdout"
   check_mode: false
 
-# bind-address se nastaví PŘED startem → první spuštění nevyžaduje restart
-- name: "[MariaDB] Set MariaDB bind-address"
-  ansible.builtin.ini_file:
-    path: "{{ homebrew_prefix }}/etc/my.cnf"
-    section: mysqld
-    option: bind-address
-    value: "{{ mariadb_bind_address | default('127.0.0.1') }}"
+- name: "[MariaDB] Pull MariaDB Docker image"
+  community.docker.docker_image:
+    name: "mariadb:{{ mariadb_version | default('lts') }}"
+    source: pull
+
+- name: "[MariaDB] Create launchd plist"
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist"
     mode: '0644'
-    create: true
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.mariadb</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/local/bin/docker</string>
+          <string>run</string>
+          <string>--rm</string>
+          <string>--name</string>
+          <string>mariadb</string>
+          <string>-p</string>
+          <string>127.0.0.1:{{ mariadb_port | default(3306) }}:3306</string>
+          <string>-v</string>
+          <string>{{ mariadb_data_dir | default(ansible_env.HOME + '/mariadb/data') }}:/var/lib/mysql</string>
+          <string>-e</string>
+          <string>MARIADB_ROOT_PASSWORD={{ mariadb_root_password }}</string>
+          <string>-e</string>
+          <string>MARIADB_CHARACTER_SET_SERVER=utf8mb4</string>
+          <string>-e</string>
+          <string>MARIADB_COLLATION_SERVER=utf8mb4_unicode_ci</string>
+          <string>mariadb:{{ mariadb_version | default('lts') }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <dict>
+          <key>Crashed</key>
+          <true/>
+        </dict>
+        <key>ThrottleInterval</key>
+        <integer>30</integer>
+        <key>StandardOutPath</key>
+        <string>{{ ansible_env.HOME }}/agents/log/mariadb.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ ansible_env.HOME }}/agents/log/mariadb.error.log</string>
+      </dict>
+      </plist>
   notify: Restart mariadb
 
-# brew services interně validuje keg a může selhat i při správné instalaci.
-# Používáme launchctl přímo – stejný vzor jako n8n, portainer, atd.
 - name: "[MariaDB] Check if launchd service is already loaded"
   ansible.builtin.shell: |
-    launchctl list 2>/dev/null | grep -q homebrew.mxcl.mariadb && echo loaded || echo not_loaded
+    launchctl list 2>/dev/null | grep -q com.mariadb && echo loaded || echo not_loaded
   register: mariadb_launchd_status
   changed_when: false
   failed_when: false
   check_mode: false
 
-- name: "[MariaDB] Load MariaDB launchd service"
+- name: "[MariaDB] Load MariaDB launchd agent"
   ansible.builtin.command: >
     launchctl load -w
-    {{ homebrew_prefix }}/opt/mariadb/homebrew.mxcl.mariadb.plist
+    {{ ansible_env.HOME }}/Library/LaunchAgents/com.mariadb.plist
   when: mariadb_launchd_status.stdout | trim == 'not_loaded'
   register: mariadb_load
   changed_when: mariadb_load.rc == 0
-  failed_when: mariadb_load.rc != 0
+  failed_when: false
   check_mode: false
 
-- name: "[MariaDB] Wait for MariaDB socket to be ready"
+- name: "[MariaDB] Wait for MariaDB port to be ready"
   ansible.builtin.wait_for:
-    path: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
-    timeout: 30
+    port: "{{ mariadb_port | default(3306) }}"
+    host: "127.0.0.1"
+    timeout: 60
   check_mode: false
-
-# První spuštění: root bez hesla. Ignore_errors → idempotentní při dalším běhu.
-- name: "[MariaDB] Set root password (first run – no existing password)"
-  community.mysql.mysql_user:
-    login_unix_socket: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
-    login_user: root
-    login_password: ""
-    name: root
-    password: "{{ mariadb_root_password }}"
-    host_all: true
-    state: present
-  no_log: true
-  ignore_errors: true
-
-- name: "[MariaDB] Remove anonymous users"
-  community.mysql.mysql_user:
-    login_unix_socket: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
-    login_user: root
-    login_password: "{{ mariadb_root_password }}"
-    name: ""
-    host_all: true
-    state: absent
-  no_log: true
-  ignore_errors: true
 
 - name: "[MariaDB] Remove test database"
   community.mysql.mysql_db:
-    login_unix_socket: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
     login_user: root
     login_password: "{{ mariadb_root_password }}"
     name: test
@@ -93,7 +118,8 @@
 
 - name: "[MariaDB] Create databases"
   community.mysql.mysql_db:
-    login_unix_socket: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
     login_user: root
     login_password: "{{ mariadb_root_password }}"
     name: "{{ item.name }}"
@@ -103,15 +129,17 @@
   loop: "{{ mariadb_databases | default([]) }}"
   no_log: true
 
+# host: '%' – spojení přicházejí přes Docker port-forward, ne přímo z 127.0.0.1
 - name: "[MariaDB] Create database users"
   community.mysql.mysql_user:
-    login_unix_socket: "{{ mariadb_socket | default(homebrew_prefix + '/var/mysql/mysql.sock') }}"
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
     login_user: root
     login_password: "{{ mariadb_root_password }}"
     name: "{{ item.name }}"
     password: "{{ item.password }}"
     priv: "{{ item.priv }}"
-    host: "{{ item.host | default('127.0.0.1') }}"
+    host: "{{ item.host | default('%') }}"
     state: present
   loop: "{{ mariadb_users | default([]) }}"
   no_log: true
