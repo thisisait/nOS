@@ -11,7 +11,7 @@
     name: grafana/grafana
     state: present
 
-- name: Add Prometheus community Homebrew tap (nginx-prometheus-exporter)
+- name: Add Prometheus community Homebrew tap (node_exporter)
   community.general.homebrew_tap:
     name: prometheus/prometheus
     state: present
@@ -26,7 +26,7 @@
       - loki
       # tempo is not in Homebrew – installed via binary download below
       - grafana-alloy                                     # Unified collector (grafana/grafana tap)
-      - nginx-prometheus-exporter                         # nginx stub_status → Prometheus (port 9113, prometheus/prometheus tap)
+      # nginx-prometheus-exporter is not in Homebrew – installed via binary download below
       - node_exporter                                     # System metrics (CPU, RAM, disk, network)
     state: present
 
@@ -53,6 +53,87 @@
     mode: '0755'
     remote_src: true
   when: not tempo_binary_stat.stat.exists
+
+# ── nginx-prometheus-exporter – binary install (not in Homebrew) ─────────────
+
+- name: Check if nginx-prometheus-exporter binary is already installed
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/bin/nginx-prometheus-exporter"
+  register: nginx_exporter_binary_stat
+
+- name: Download nginx-prometheus-exporter binary archive
+  ansible.builtin.get_url:
+    url: "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v{{ nginx_prometheus_exporter_version }}/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin_{{ 'arm64' if ansible_machine == 'arm64' else 'amd64' }}.tar.gz"
+    dest: "/tmp/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin.tar.gz"
+    mode: '0644'
+  when: not nginx_exporter_binary_stat.stat.exists
+
+- name: Extract nginx-prometheus-exporter binary to homebrew bin
+  ansible.builtin.unarchive:
+    src: "/tmp/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin.tar.gz"
+    dest: "{{ homebrew_prefix }}/bin"
+    include:
+      - nginx-prometheus-exporter
+    mode: '0755'
+    remote_src: true
+  when: not nginx_exporter_binary_stat.stat.exists
+
+# ── launchd plists pro binárně instalované služby ────────────────────────────
+
+- name: Create Tempo launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/io.grafana.tempo.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>io.grafana.tempo</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>{{ homebrew_prefix }}/bin/tempo</string>
+          <string>-config.file={{ homebrew_prefix }}/etc/tempo.yaml</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>{{ homebrew_prefix }}/var/log/tempo.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ homebrew_prefix }}/var/log/tempo.err</string>
+      </dict>
+      </plist>
+
+- name: Create nginx-prometheus-exporter launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.nginx.nginx-prometheus-exporter</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>{{ homebrew_prefix }}/bin/nginx-prometheus-exporter</string>
+          <string>--nginx.scrape-uri=http://127.0.0.1:{{ nginx_stub_status_port | default(8080) }}/nginx_status</string>
+          <string>--web.listen-address=:{{ nginx_exporter_port | default(9113) }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>{{ homebrew_prefix }}/var/log/nginx-prometheus-exporter.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ homebrew_prefix }}/var/log/nginx-prometheus-exporter.err</string>
+      </dict>
+      </plist>
 
 - name: Add hipages Homebrew tap (php-fpm_exporter)
   community.general.homebrew_tap:
@@ -194,19 +275,29 @@
     state: directory
     mode: '0755'
 
-- name: Start observability services
+- name: Start observability services (Homebrew-managed)
   ansible.builtin.command: brew services start {{ item }}
   loop:
     - prometheus
     - loki
-    - tempo
     - grafana
     - alloy
     - node_exporter
-    - nginx-prometheus-exporter
   register: svc_result
   changed_when: "'already started' not in svc_result.stdout"
   failed_when: svc_result.rc != 0 and 'already started' not in svc_result.stdout
+
+- name: Load Tempo launchd service
+  ansible.builtin.command: launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/io.grafana.tempo.plist
+  register: tempo_launchctl
+  changed_when: tempo_launchctl.rc == 0
+  failed_when: false
+
+- name: Load nginx-prometheus-exporter launchd service
+  ansible.builtin.command: launchctl load -w {{ ansible_env.HOME }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist
+  register: nginx_exporter_launchctl
+  changed_when: nginx_exporter_launchctl.rc == 0
+  failed_when: false
 
 - name: Start php-fpm_exporter service
   ansible.builtin.command: brew services start php-fpm_exporter
