@@ -1,6 +1,7 @@
 ---
 - name: Configure host.
   hosts: all
+  gather_facts: true
 
   vars_files:
     - default.config.yml
@@ -322,7 +323,9 @@
         install_openwebui | default(false) or
         install_homeassistant | default(false) or
         install_traefik | default(false) or
-        install_rustfs | default(false)
+        install_rustfs | default(false) or
+        install_wordpress | default(false) or
+        install_nextcloud | default(false)
       tags: ['iiab', 'stack', 'docker']
 
     # MariaDB post-start: vytvoří DB a uživatele (až MariaDB poběží)

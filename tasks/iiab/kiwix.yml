@@ -5,17 +5,18 @@
 # Vyžaduje: Docker Desktop, Nginx
 # ==============================================================================
 
-- name: "[Kiwix] Verify Docker Desktop is installed"
-  ansible.builtin.stat:
-    path: /Applications/Docker.app
-  register: docker_app
+- name: "[Kiwix] Verify Docker daemon is available"
+  ansible.builtin.command: docker info
+  register: kiwix_docker_check
+  changed_when: false
+  failed_when: false
 
-- name: "[Kiwix] Fail if Docker Desktop is missing"
+- name: "[Kiwix] Fail if Docker is not running"
   ansible.builtin.fail:
     msg: >
-      Docker Desktop není nainstalován! Kiwix vyžaduje Docker.
-      Přidej 'docker' do homebrew_cask_apps nebo nastav install_cask_apps: true.
-  when: not docker_app.stat.exists
+      Docker není dostupný (docker info selhalo). Kiwix vyžaduje běžící Docker.
+      Spusť Docker Desktop nebo přidej 'docker' do homebrew_cask_apps.
+  when: kiwix_docker_check.rc != 0
 
 - name: "[Kiwix] Ensure Kiwix data directory exists"
   ansible.builtin.file:

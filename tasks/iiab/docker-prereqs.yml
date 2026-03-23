@@ -31,7 +31,7 @@
   ansible.builtin.shell: >-
     {{ homebrew_prefix }}/bin/python3 -m pip install
     --break-system-packages
-    docker requests PyMySQL
+    PyMySQL
   register: docker_sdk_result
   changed_when: "'Successfully installed' in docker_sdk_result.stdout"
   failed_when:
