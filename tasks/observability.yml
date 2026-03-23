@@ -25,7 +25,7 @@
       - prometheus
       - loki
       # tempo is not in Homebrew – installed via binary download below
-      - grafana/grafana/alloy                             # Unified collector
+      - grafana-alloy                                     # Unified collector (grafana/grafana tap)
       - prometheus/prometheus/nginx-prometheus-exporter   # nginx stub_status → Prometheus (port 9113)
       - node_exporter                                     # System metrics (CPU, RAM, disk, network)
     state: present
