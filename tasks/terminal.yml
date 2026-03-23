@@ -1,27 +1,27 @@
 ---
 # Custom Terminal theme.
 - name: Get current Terminal profile.
-  command: defaults read com.apple.terminal 'Default Window Settings'
+  ansible.builtin.command: defaults read com.apple.terminal 'Default Window Settings'
   register: terminal_theme
   changed_when: false
   failed_when: false
   check_mode: false
 
 - name: Ensure custom Terminal profile is added.
-  copy:
+  ansible.builtin.copy:
     src: files/terminal/JJG-Term.terminal
     dest: /tmp/JJG-Term.terminal
   changed_when: false
   when: "'JJG-Term' not in terminal_theme.stdout"
 
 - name: Ensure custom Terminal profile is added.
-  command: open /tmp/JJG-Term.terminal
+  ansible.builtin.command: open /tmp/JJG-Term.terminal
   changed_when: false
   when: "'JJG-Term' not in terminal_theme.stdout"
 
 # TODO: This doesn't work in Yosemite. Consider a different solution?
 - name: Ensure custom Terminal profile is set as default.
-  command: "{{ item }}"
+  ansible.builtin.command: "{{ item }}"
   loop:
     - defaults write com.apple.terminal 'Default Window Settings' -string JJG-Term
     - defaults write com.apple.terminal 'Startup Window Settings' -string JJG-Term

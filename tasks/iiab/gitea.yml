@@ -26,7 +26,7 @@
     mode: '0640'
     backup: true
     content: |
-      APP_NAME = Gitea – Mac Studio
+      APP_NAME = Gitea – {{ ansible_hostname }}
       RUN_MODE = prod
       RUN_USER = {{ ansible_user_id }}
 
