@@ -26,7 +26,7 @@
       - loki
       # tempo is not in Homebrew – installed via binary download below
       - grafana-alloy                                     # Unified collector (grafana/grafana tap)
-      - prometheus/prometheus/nginx-prometheus-exporter   # nginx stub_status → Prometheus (port 9113)
+      - nginx-prometheus-exporter                         # nginx stub_status → Prometheus (port 9113, prometheus/prometheus tap)
       - node_exporter                                     # System metrics (CPU, RAM, disk, network)
     state: present
 
@@ -62,7 +62,7 @@
 
 - name: Install php-fpm_exporter (PHP-FPM status → Prometheus, port 9253)
   community.general.homebrew:
-    name: hipages/tap/php-fpm_exporter
+    name: php-fpm_exporter
     state: present
   when: alloy_scrape_phpfpm | default(true)
 
