@@ -23,9 +23,22 @@
       sleep 3
     done
     exit 1
+  register: docker_wait
   when: docker_info.rc != 0
   changed_when: false
+  failed_when: false
   check_mode: false
+
+- name: "[Docker] Fail if Docker is still not available"
+  ansible.builtin.fail:
+    msg: >-
+      Docker daemon is not running after 60 s. Start Docker Desktop
+      manually and re-run the playbook.
+  when:
+    - docker_info.rc != 0
+    - docker_wait is not skipped
+    - docker_wait.rc != 0
+    - not ansible_check_mode
 
 - name: "[Docker] Install Python docker SDK + dependencies"
   ansible.builtin.command: >-

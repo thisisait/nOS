@@ -49,6 +49,7 @@
     state: directory
     mode: '0755'
   become: true
+  when: not ansible_check_mode
 
 - name: Create macOS resolver for dev.local domain
   ansible.builtin.copy:
@@ -59,6 +60,7 @@
       port {{ dnsmasq_port | default(53) }}
     mode: '0644'
   become: true
+  when: not ansible_check_mode
 
 - name: Start dnsmasq via brew services
   ansible.builtin.command: brew services start dnsmasq

@@ -161,17 +161,39 @@
       </dict>
       </plist>
 
-- name: Add hipages Homebrew tap (php-fpm_exporter)
-  community.general.homebrew_tap:
-    name: hipages/php-fpm_exporter
-    state: present
+- name: Check if php-fpm_exporter binary is already installed
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/bin/php-fpm_exporter"
+  register: phpfpm_exporter_binary_stat
   when: alloy_scrape_phpfpm | default(true)
 
-- name: Install php-fpm_exporter (PHP-FPM status → Prometheus, port 9253)
-  community.general.homebrew:
-    name: php-fpm_exporter
-    state: present
+- name: Download php-fpm_exporter binary archive
+  ansible.builtin.get_url:
+    url: "https://github.com/hipages/php-fpm_exporter/releases/download/v{{ phpfpm_exporter_version }}/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin_{{ 'arm64' if ansible_facts['machine'] == 'arm64' else 'amd64' }}.tar.gz"
+    dest: "/tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz"
+    mode: '0644'
+  when:
+    - alloy_scrape_phpfpm | default(true)
+    - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
+
+- name: Check if php-fpm_exporter archive was downloaded
+  ansible.builtin.stat:
+    path: "/tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz"
+  register: phpfpm_exporter_archive_stat
   when: alloy_scrape_phpfpm | default(true)
+
+- name: Extract php-fpm_exporter binary to homebrew bin
+  ansible.builtin.unarchive:
+    src: "/tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz"
+    dest: "{{ homebrew_prefix }}/bin"
+    include:
+      - php-fpm_exporter
+    mode: '0755'
+    remote_src: true
+  when:
+    - alloy_scrape_phpfpm | default(true)
+    - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
+    - phpfpm_exporter_archive_stat.stat.exists | default(false)
 
 # ── Adresářová struktura ──────────────────────────────────────────────────────
 
@@ -325,11 +347,43 @@
   changed_when: nginx_exporter_launchctl.rc == 0
   failed_when: false
 
-- name: Start php-fpm_exporter service
-  ansible.builtin.command: brew services start php-fpm_exporter
-  register: phpfpm_svc
-  changed_when: "'already started' not in phpfpm_svc.stdout"
-  failed_when: phpfpm_svc.rc != 0 and 'already started' not in phpfpm_svc.stdout
+- name: Create php-fpm_exporter launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.hipages.php-fpm-exporter</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>{{ homebrew_prefix }}/bin/php-fpm_exporter</string>
+          <string>server</string>
+          <string>--phpfpm.scrape-uri</string>
+          <string>tcp://127.0.0.1:9000/status</string>
+          <string>--web.listen-address</string>
+          <string>:{{ phpfpm_exporter_port | default(9253) }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>{{ homebrew_prefix }}/var/log/php-fpm_exporter.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ homebrew_prefix }}/var/log/php-fpm_exporter.err</string>
+      </dict>
+      </plist>
+  when: alloy_scrape_phpfpm | default(true)
+
+- name: Load php-fpm_exporter launchd service
+  ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist
+  register: phpfpm_launchctl
+  changed_when: phpfpm_launchctl.rc == 0
+  failed_when: false
   when: alloy_scrape_phpfpm | default(true)
 
 - name: Start Redis service (scraped by Alloy)

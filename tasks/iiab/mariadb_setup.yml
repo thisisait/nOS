@@ -21,6 +21,15 @@
     state: absent
   failed_when: false
 
+- name: "[MariaDB] Check connection to MariaDB"
+  community.mysql.mysql_info:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+  register: mariadb_conn
+  ignore_errors: true  # noqa: ignore-errors – potřebujeme registrovat failed stav
+
 - name: "[MariaDB] Create databases"
   community.mysql.mysql_db:
     login_host: "127.0.0.1"
@@ -33,6 +42,7 @@
     state: present
   loop: "{{ mariadb_databases | default([]) }}"
   no_log: true
+  when: mariadb_conn is not failed
 
 # host: '%' – PHP-FPM a další klienti se připojují přes Docker port-forward;
 # uvnitř MariaDB kontejneru to nepřijde jako 127.0.0.1 ale jako gateway IP
@@ -49,3 +59,4 @@
     state: present
   loop: "{{ mariadb_users | default([]) }}"
   no_log: true
+  when: mariadb_conn is not failed

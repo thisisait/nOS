@@ -326,6 +326,7 @@
     type: string
     value: "{{ macos_computer_name | default(ansible_facts['hostname']) }}"
   become: true
+  when: not ansible_check_mode
 
 # ── POZNÁMKY – co nelze automatizovat ─────────────────────────────────────────
 

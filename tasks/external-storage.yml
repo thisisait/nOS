@@ -19,7 +19,9 @@
       Externí SSD není připojeno na {{ external_storage_root }}.
       Připoj disk a spusť playbook znovu, nebo nastav
       configure_external_storage: false v config.yml.
-  when: not _ssd_mount.stat.exists or not _ssd_mount.stat.isdir
+  when:
+    - not ansible_check_mode
+    - not _ssd_mount.stat.exists or not _ssd_mount.stat.isdir
 
 # ── Override datových cest přes set_fact ─────────────────────────────────────
 # set_fact má vyšší prioritu než vars_files → přepíše default.config.yml hodnoty

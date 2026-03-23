@@ -61,7 +61,7 @@
 
     - name: Restart openclaw
       ansible.builtin.command: >
-        launchctl kickstart -k "gui/{{ ansible_user_uid }}/com.openclaw.agent"
+        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.openclaw.agent"
       failed_when: false
 
     - name: Restart grafana
@@ -132,10 +132,11 @@
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/system-services.yml
       when: >
-        (enable_ssh | default(false)) or
+        not ansible_check_mode and
+        ((enable_ssh | default(false)) or
         (enable_samba | default(false)) or
         (enable_vnc | default(false)) or
-        (enable_remote_management | default(false))
+        (enable_remote_management | default(false)))
       tags: ['system-services', 'ssh', 'samba', 'vnc']
 
     # ──────────────────────────────────────────────────────────────────────────

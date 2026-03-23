@@ -182,8 +182,8 @@ services:
       - {{ ansible_facts['env']['HOME'] }}/calibre-web/config:/config
       - {{ calibreweb_books_dir }}:/books
     environment:
-      PUID: "{{ ansible_user_uid }}"
-      PGID: "{{ ansible_user_gid }}"
+      PUID: "{{ ansible_facts['user_uid'] }}"
+      PGID: "{{ ansible_facts['user_gid'] }}"
       TZ: "{{ calibreweb_timezone | default('Europe/Prague') }}"
       DOCKER_MODS: linuxserver/mods:universal-calibre
     networks:
