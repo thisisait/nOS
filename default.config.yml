@@ -673,6 +673,7 @@ shell_aliases:
 grafana_port: 3000
 prometheus_port: 9090
 loki_port: 3100
+tempo_version: "2.10.0"           # github.com/grafana/tempo/releases – no Homebrew formula
 tempo_http_port: 3200
 tempo_otlp_grpc_port: 4327    # Tempo interní OTLP gRPC (Alloy → Tempo)
 tempo_otlp_http_port: 4328    # Tempo interní OTLP HTTP (Alloy → Tempo)
