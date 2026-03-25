@@ -7,11 +7,12 @@
 # ── SSH / Remote Login ────────────────────────────────────────────────────────
 
 - name: "[SSH] Enable Remote Login"
-  ansible.builtin.command: systemsetup -setremotelogin on
+  ansible.builtin.command: launchctl load -w /System/Library/LaunchDaemons/ssh.plist
   become: true
   when: enable_ssh | default(false)
   register: ssh_enable
-  changed_when: "'Remote Login is already On' not in ssh_enable.stdout"
+  changed_when: ssh_enable.rc == 0
+  failed_when: false
 
 - name: "[SSH] Configure sshd_config"
   ansible.builtin.blockinfile:
