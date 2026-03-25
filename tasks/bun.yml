@@ -3,8 +3,8 @@
 # BUN – JavaScript runtime, bundler, package manager
 # ==============================================================================
 
-- name: Install Bun via Homebrew cask
-  community.general.homebrew_cask:
+- name: Install Bun via Homebrew
+  community.general.homebrew:
     name: bun
     state: present
 
