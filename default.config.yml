@@ -358,7 +358,6 @@ go_packages:
   - "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
   - "github.com/go-task/task/v3/cmd/task@latest"
   - "github.com/air-verse/air@latest"
-  - "github.com/cosmtrek/air@latest"
 
 gem_packages: []
 # - name: bundler
