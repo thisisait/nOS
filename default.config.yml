@@ -154,8 +154,7 @@ homebrew_installed_packages:
   - protobuf
   - meson
 
-homebrew_taps:
-  - homebrew/services
+homebrew_taps: []
 
 homebrew_cask_appdir: /Applications
 
