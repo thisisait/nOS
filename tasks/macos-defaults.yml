@@ -148,6 +148,8 @@
     key: reduceTransparency
     type: bool
     value: "{{ macos_reduce_transparency | default(true) }}"
+  become: true
+  when: not ansible_check_mode
 
 - name: "[Accessibility] Reduce motion"
   community.general.osx_defaults:
@@ -155,6 +157,8 @@
     key: reduceMotion
     type: bool
     value: "{{ macos_reduce_motion | default(false) }}"
+  become: true
+  when: not ansible_check_mode
 
 # ── SCREENSHOT ────────────────────────────────────────────────────────────────
 
