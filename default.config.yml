@@ -132,8 +132,9 @@ homebrew_installed_packages:
   - exiftool             # exiftool – čtení/zápis metadat médií
   # ── Databáze ─────────────────────────────────────────────────────────────
   - redis                # Redis – in-memory cache + pub/sub (projekty, Nextcloud)
-  # ── Zálohy ───────────────────────────────────────────────────────────────
+  # ── Zálohy a údržba ──────────────────────────────────────────────────────
   - restic               # Restic – šifrované zálohy (Backblaze B2, SFTP, lokální disk)
+  - mac-cleanup-go       # TUI macOS cleaner – cache, logy, Xcode, brew (github.com/2ykwang/mac-cleanup-go)
   # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
   # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
   # ninja:      Rychlý build systém (cmake backend, meson backend)
