@@ -318,8 +318,13 @@
     - grafana-alloy
     - node_exporter
   register: svc_result
-  changed_when: "'already started' not in svc_result.stdout"
-  failed_when: svc_result.rc != 0 and 'already started' not in svc_result.stdout
+  changed_when: >
+    'already started' not in (svc_result.stdout | default('')) and
+    'Bootstrap failed: 5' not in (svc_result.stderr | default(''))
+  failed_when: >
+    svc_result.rc != 0 and
+    'already started' not in (svc_result.stdout | default('')) and
+    'Bootstrap failed: 5' not in (svc_result.stderr | default(''))
 
 - name: Load Tempo launchd service
   ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/io.grafana.tempo.plist

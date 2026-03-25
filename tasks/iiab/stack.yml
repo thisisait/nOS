@@ -131,14 +131,14 @@
   failed_when: stack_load.rc != 0
   check_mode: false
 
-# Pokud stack už běží (reload při re-provisioning), aplikujeme změny bez restartu
-- name: "[Stack] Apply compose changes without full restart"
+# Vždy zajistit, že kontejnery běží (launchctl load je asynchronní,
+# při re-run nemusí compose vůbec proběhnout)
+- name: "[Stack] Ensure all containers are running (docker compose up)"
   ansible.builtin.shell: >
     {{ homebrew_prefix }}/bin/docker compose
     -f "{{ iiab_compose_dir }}/docker-compose.yml"
     up -d --remove-orphans
-  when: stack_launchd_status.stdout | trim == 'loaded'
   register: stack_apply
-  changed_when: "'Started' in stack_apply.stdout or 'Recreated' in stack_apply.stdout"
+  changed_when: "'Started' in (stack_apply.stderr | default('')) or 'Created' in (stack_apply.stderr | default(''))"
   failed_when: false
   check_mode: false
