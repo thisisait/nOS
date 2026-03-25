@@ -4,11 +4,14 @@
 # Nahrazuje individuální LaunchAgent plists (com.n8n, com.jellyfin, …).
 # ==============================================================================
 
-- name: "[Stack] Ensure iiab compose directory exists"
+- name: "[Stack] Ensure iiab compose and log directories exist"
   ansible.builtin.file:
-    path: "{{ iiab_compose_dir }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ iiab_compose_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
 - name: "[Stack] Deploy docker-compose.yml from template"
   ansible.builtin.template:
@@ -137,8 +140,29 @@
   ansible.builtin.shell: >
     {{ homebrew_prefix }}/bin/docker compose
     -f "{{ iiab_compose_dir }}/docker-compose.yml"
-    up -d --remove-orphans
+    up -d --remove-orphans 2>&1
   register: stack_apply
-  changed_when: "'Started' in (stack_apply.stderr | default('')) or 'Created' in (stack_apply.stderr | default(''))"
-  failed_when: false
+  changed_when: "'Started' in (stack_apply.stdout | default('')) or 'Created' in (stack_apply.stdout | default(''))"
   check_mode: false
+
+- name: "[Stack] Show compose output"
+  ansible.builtin.debug:
+    msg: "{{ stack_apply.stdout_lines | default([]) }}"
+  when: stack_apply.stdout_lines | default([]) | length > 0
+
+- name: "[Stack] Wait for containers to stabilize"
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: "[Stack] Show running containers"
+  ansible.builtin.shell: >
+    {{ homebrew_prefix }}/bin/docker compose
+    -f "{{ iiab_compose_dir }}/docker-compose.yml"
+    ps --format "table {{'{{'}}.Name{{'}}'}}\t{{'{{'}}.Status{{'}}'}}" 2>&1
+  register: stack_ps
+  changed_when: false
+  check_mode: false
+
+- name: "[Stack] Container status"
+  ansible.builtin.debug:
+    msg: "{{ stack_ps.stdout_lines | default(['No containers found']) }}"
