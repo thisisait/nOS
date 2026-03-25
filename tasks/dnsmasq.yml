@@ -62,14 +62,16 @@
   become: true
   when: not ansible_check_mode
 
-- name: Start dnsmasq via brew services (requires root for port 53)
-  ansible.builtin.command: brew services start dnsmasq
-  become: true
+- name: Start dnsmasq via brew services (requires root for port 53)  # noqa: command-instead-of-shell
+  ansible.builtin.shell: >-
+    sudo -A {{ homebrew_prefix }}/bin/brew services start dnsmasq
+  environment:
+    SUDO_ASKPASS: "{{ lookup('env', 'HOME') }}/.ansible_askpass"
   register: dnsmasq_svc
-  changed_when: "'already started' not in dnsmasq_svc.stdout"
+  changed_when: "'already started' not in (dnsmasq_svc.stdout | default(''))"
   failed_when:
     - dnsmasq_svc.rc != 0
-    - "'already started' not in dnsmasq_svc.stdout"
+    - "'already started' not in (dnsmasq_svc.stdout | default(''))"
 
 - name: Verify dnsmasq resolves dev.local correctly
   ansible.builtin.command: "dig +short grafana.dev.local @127.0.0.1"
