@@ -29,11 +29,11 @@
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
-    nvm install {{ node_nvm_version | default('lts/*') }}
-    nvm alias default {{ node_nvm_version | default('lts/*') }}
+    nvm install '{{ node_nvm_version | default('lts/*') }}'
+    nvm alias default '{{ node_nvm_version | default('lts/*') }}'
     nvm use default
   args:
-    executable: /bin/zsh
+    executable: /bin/bash
   changed_when: false
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
@@ -45,7 +45,7 @@
     nvm use default
     npm install -g {{ item }}
   args:
-    executable: /bin/zsh
+    executable: /bin/bash
   loop: "{{ node_global_packages | default([]) }}"
   changed_when: false
   environment:
@@ -58,7 +58,7 @@
     nvm use default
     npm install -g {% if item.version is defined %}{{ item.name }}@{{ item.version }}{% else %}{{ item.name }}{% endif %}
   args:
-    executable: /bin/zsh
+    executable: /bin/bash
   loop: "{{ npm_packages | default([]) }}"
   changed_when: false
   environment:
