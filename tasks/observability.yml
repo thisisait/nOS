@@ -191,6 +191,7 @@
     - "{{ homebrew_prefix }}/etc/grafana/provisioning/datasources"
     - "{{ homebrew_prefix }}/etc/grafana/provisioning/dashboards"
     - "{{ homebrew_prefix }}/etc/grafana-alloy"
+    - "{{ homebrew_prefix }}/etc/loki"
     - "{{ homebrew_prefix }}/var/log/grafana-alloy"
     - "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
 
