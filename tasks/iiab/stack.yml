@@ -134,25 +134,22 @@
   failed_when: stack_load.rc != 0
   check_mode: false
 
-# Vždy zajistit, že kontejnery běží (launchctl load je asynchronní,
-# při re-run nemusí compose vůbec proběhnout)
-- name: "[Stack] Ensure all containers are running (docker compose up)"
+# Vždy zajistit, že kontejnery běží. --wait čeká na healthy/running stav
+# všech kontejnerů (včetně prvního image pull). Timeout 10 min pro first-run.
+- name: "[Stack] Ensure all containers are running (docker compose up --wait)"
   ansible.builtin.shell: >
     {{ homebrew_prefix }}/bin/docker compose
     -f "{{ iiab_compose_dir }}/docker-compose.yml"
-    up -d --remove-orphans 2>&1
+    up -d --remove-orphans --wait --wait-timeout 600 2>&1
   register: stack_apply
   changed_when: "'Started' in (stack_apply.stdout | default('')) or 'Created' in (stack_apply.stdout | default(''))"
   check_mode: false
+  timeout: 660
 
 - name: "[Stack] Show compose output"
   ansible.builtin.debug:
     msg: "{{ stack_apply.stdout_lines | default([]) }}"
   when: stack_apply.stdout_lines | default([]) | length > 0
-
-- name: "[Stack] Wait for containers to stabilize"
-  ansible.builtin.pause:
-    seconds: 10
 
 - name: "[Stack] Show running containers"
   ansible.builtin.shell: >
