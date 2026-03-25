@@ -212,7 +212,7 @@ homebrew_cask_apps:
 
   # ── Kreativní nástroje ────────────────────────────────────────────────────
   - blender              # Blender – 3D modelování, animace, rendering
-  - fl-studio            # FL Studio – DAW pro hudební produkci
+  # - fl-studio            # FL Studio – není v Homebrew, instaluj manuálně z image-line.com
   # - gimp               # GIMP – rastrová grafika (open-source PS)
   # - inkscape           # Inkscape – vektorová grafika (open-source AI)
   # - davinci-resolve    # DaVinci Resolve – video střih

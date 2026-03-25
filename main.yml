@@ -3,6 +3,18 @@
   hosts: all
   gather_facts: true
 
+  # Sudo heslo – nahrazuje -K flag. vars_prompt zajistí, že heslo je dostupné
+  # jako Jinja2 proměnná (ansible_become_password z -K není přístupné v tasku).
+  # Spuštění: ansible-playbook main.yml (heslo se zeptá automaticky)
+  vars_prompt:
+    - name: sudo_password
+      prompt: "Sudo heslo (Enter pro přeskočení sudo tasků)"
+      private: true
+      default: ""
+
+  vars:
+    ansible_become_password: "{{ sudo_password }}"
+
   vars_files:
     - default.config.yml
 
@@ -26,16 +38,16 @@
       ansible.builtin.copy:
         content: |
           #!/bin/bash
-          echo "{{ ansible_become_password }}"
+          echo "{{ sudo_password }}"
         dest: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
         mode: '0700'
       no_log: true
       changed_when: false
       tags: ['always']
-      when: ansible_become_password is defined and ansible_become_password | length > 0
+      when: sudo_password | default('') | length > 0
 
   environment:
-    SUDO_ASKPASS: "{{ ansible_facts['env']['HOME'] + '/.ansible_askpass' if (ansible_become_password | default('') | length > 0) else '' }}"
+    SUDO_ASKPASS: "{{ ansible_facts['env']['HOME'] + '/.ansible_askpass' if (sudo_password | default('') | length > 0) else '' }}"
 
   # ============================================================================
   # HANDLERS – centralizované, volatelné přes notify: z libovolného task souboru
