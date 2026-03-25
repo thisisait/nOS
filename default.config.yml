@@ -228,8 +228,8 @@ homebrew_cask_apps:
   # - utm                # UTM – macOS/Linux VM na Apple Silicon (testování Ansible, OS images)
 
   # ── Systémové utility ─────────────────────────────────────────────────────
-  - dropbox              # Dropbox – cloud sync
-  - ice                  # Ice – free Bartender (organizace menu baru)
+  # - dropbox              # Dropbox – cloud sync (odkomentuj v config.yml pokud chceš)
+  - jordanbaird-ice      # Ice – free Bartender (organizace menu baru)
   - stats                # Stats – CPU/GPU/RAM/network v menu baru
   # - rectangle          # Rectangle – window manager
   # - alt-tab            # AltTab – Windows-like app switcher
