@@ -11,10 +11,7 @@
     name: grafana/grafana
     state: present
 
-- name: Add Prometheus community Homebrew tap (node_exporter)
-  community.general.homebrew_tap:
-    name: prometheus/prometheus
-    state: present
+# node_exporter je v homebrew-core, tap prometheus/prometheus není potřeba
 
 # ── Instalace LGTM stack přes Homebrew ───────────────────────────────────────
 
