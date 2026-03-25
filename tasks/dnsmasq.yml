@@ -62,8 +62,9 @@
   become: true
   when: not ansible_check_mode
 
-- name: Start dnsmasq via brew services
+- name: Start dnsmasq via brew services (requires root for port 53)
   ansible.builtin.command: brew services start dnsmasq
+  become: true
   register: dnsmasq_svc
   changed_when: "'already started' not in dnsmasq_svc.stdout"
   failed_when:
