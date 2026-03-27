@@ -257,13 +257,12 @@ nginx_gzip: true
 nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
 nginx_ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
 
-# Sites ke zkopírování do sites-available (budou aktivovány symlinkem)
-nginx_sites_enabled:
-  - default.conf
-  # - php-app.conf          # PHP + PHP-FPM aplikace
-  # - node-proxy.conf       # Node.js reverse proxy
-  # - python-proxy.conf     # Python / FastAPI / Django reverse proxy
-  # - go-proxy.conf         # Go HTTP service reverse proxy
+# Nginx sites – aktivují se AUTOMATICKY podle install_* flagů.
+# Pro ruční override nastav nginx_sites_enabled v config.yml.
+# Pro přidání vlastních sites použij nginx_sites_extra:
+# nginx_sites_extra:
+#   - php-app.conf
+#   - python-proxy.conf
   # - static-site.conf      # Statické soubory s cachováním
 
 # ==============================================================================

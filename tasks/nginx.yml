@@ -62,14 +62,45 @@
     - woodpecker.conf
   notify: Restart nginx
 
-- name: Enable configured nginx sites (symlink)
+- name: Build list of nginx sites to enable
+  ansible.builtin.set_fact:
+    _nginx_sites_auto: >-
+      {{ ['default.conf']
+         + ((install_wordpress | default(false)) | ternary(['wordpress.conf'], []))
+         + ((install_nextcloud | default(false)) | ternary(['nextcloud.conf'], []))
+         + ((install_kiwix | default(false)) | ternary(['kiwix.conf'], []))
+         + ((install_offline_maps | default(false)) | ternary(['maps.conf'], []))
+         + ((install_observability | default(true)) | ternary(['grafana.conf'], []))
+         + ((install_n8n | default(false)) | ternary(['n8n.conf'], []))
+         + ((install_gitea | default(false)) | ternary(['gitea.conf'], []))
+         + ((install_gitlab | default(false)) | ternary(['gitlab.conf'], []))
+         + ((install_jellyfin | default(false)) | ternary(['jellyfin.conf'], []))
+         + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
+         + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
+         + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
+         + (nginx_sites_extra | default([]))
+      }}
+
+- name: Enable nginx sites (symlink)
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/{{ item }}"
     state: link
     force: true
-  loop: "{{ nginx_sites_enabled | default(['default.conf']) }}"
-  notify: Restart nginx
+  loop: "{{ nginx_sites_enabled | default(_nginx_sites_auto) }}"
+  notify: Reload nginx
+
+- name: Remove disabled nginx sites
+  ansible.builtin.shell: |
+    for f in {{ homebrew_prefix }}/etc/nginx/sites-enabled/*.conf; do
+      name=$(basename "$f")
+      found=false
+      for enabled in {{ (nginx_sites_enabled | default(_nginx_sites_auto)) | join(' ') }}; do
+        [ "$name" = "$enabled" ] && found=true && break
+      done
+      $found || rm -f "$f"
+    done
+  changed_when: false
 
 - name: Install mkcert CA into system trust store
   ansible.builtin.command: mkcert -install

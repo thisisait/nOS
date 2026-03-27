@@ -99,9 +99,7 @@ shell_aliases:
 dnsmasq_dev_domain: "dev.local"
 dnsmasq_dev_address: "127.0.0.1"
 
-# ── Nginx – pouze default vhost ───────────────────────────────────────────────
-nginx_sites_enabled:
-  - default.conf
+# ── Nginx – auto-detekce z install_* flagů (v CI = jen default.conf) ─────────
 
 # ── Dummy hesla pro CI (nepoužívají se, install_* je false) ──────────────────
 mariadb_root_password: "ci-test-password"
