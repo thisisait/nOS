@@ -67,7 +67,11 @@ services:
     image: nextcloud:{{ nextcloud_version | default('stable') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ nextcloud_port | default(8085) }}:80"
+{% else %}
       - "127.0.0.1:{{ nextcloud_port | default(8085) }}:80"
+{% endif %}
     volumes:
       - {{ nextcloud_dir }}:/var/www/html
       - {{ nextcloud_data_dir }}:/data
@@ -100,7 +104,11 @@ services:
     image: n8nio/n8n:{{ n8n_version | default('latest') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ n8n_port | default(5678) }}:5678"
+{% else %}
       - "127.0.0.1:{{ n8n_port | default(5678) }}:5678"
+{% endif %}
     volumes:
       - {{ n8n_data_dir }}:/home/node/.n8n
     environment:
@@ -125,7 +133,11 @@ services:
     image: ghcr.io/kiwix/kiwix-serve:latest
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ kiwix_port | default(8888) }}:8080"
+{% else %}
       - "127.0.0.1:{{ kiwix_port | default(8888) }}:8080"
+{% endif %}
     volumes:
       - {{ kiwix_data_dir }}:/data
     command: /data/*.zim
@@ -143,7 +155,7 @@ services:
     image: jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}
     restart: unless-stopped
     ports:
-{% if jellyfin_lan_access | default(true) %}
+{% if jellyfin_lan_access | default(false) or services_lan_access | default(false) %}
       - "{{ jellyfin_port | default(8096) }}:8096"
 {% else %}
       - "127.0.0.1:{{ jellyfin_port | default(8096) }}:8096"
@@ -208,7 +220,11 @@ services:
     image: ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ openwebui_port | default(3004) }}:8080"
+{% else %}
       - "127.0.0.1:{{ openwebui_port | default(3004) }}:8080"
+{% endif %}
     volumes:
       - {{ openwebui_data_dir }}:/app/backend/data
     environment:

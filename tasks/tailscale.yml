@@ -7,11 +7,17 @@
 #   tailscale up
 #   → otevře se prohlížeč pro login na https://login.tailscale.com
 #
-# Služby pak dostupné přes:
-#   http://<hostname>.<tailnet>.ts.net:3000   (Grafana)
+# Služby pak dostupné přes porty (vyžaduje services_lan_access: true):
+#   http://<hostname>.<tailnet>.ts.net:3000   (Grafana – homepage)
 #   http://<hostname>.<tailnet>.ts.net:3003   (Gitea)
 #   http://<hostname>.<tailnet>.ts.net:5678   (n8n)
-#   ... atd.
+#   http://<hostname>.<tailnet>.ts.net:8096   (Jellyfin)
+#   http://<hostname>.<tailnet>.ts.net:8085   (Nextcloud)
+#   http://<hostname>.<tailnet>.ts.net:8888   (Kiwix)
+#   http://<hostname>.<tailnet>.ts.net:3004   (Open WebUI)
+#   http://<hostname>.<tailnet>.ts.net:9002   (Portainer)
+#
+# Homepage (https://<tailscale_hostname>/) → Grafana (nastav tailscale_hostname v config.yml)
 # ==============================================================================
 
 - name: Install Tailscale via Homebrew Cask

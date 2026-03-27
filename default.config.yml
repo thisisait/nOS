@@ -864,7 +864,8 @@ calibreweb_timezone: "Europe/Prague"
 tailscale_accept_routes: false    # Přijímat subnet routes od jiných nodů
 tailscale_exit_node: false        # Používat tento Mac jako exit node
 # tailscale_auth_key: ""          # Pre-auth key pro neinteraktivní setup (z admin console)
-tailscale_hostname: ""            # Tailscale FQDN (např. mac-studio.tailnet-abc.ts.net) pro nginx server_name
+tailscale_hostname: ""            # Tailscale FQDN (např. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
+services_lan_access: false        # true = Docker služby na 0.0.0.0 (přístup přes Tailscale/LAN po portech)
 
 # ==============================================================================
 # POWER MANAGEMENT – pmset nastavení (pouze při napájení -c)

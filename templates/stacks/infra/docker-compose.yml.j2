@@ -10,7 +10,11 @@ services:
     image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ portainer_port | default(9002) }}:9000"
+{% else %}
       - "127.0.0.1:{{ portainer_port | default(9002) }}:9000"
+{% endif %}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - {{ portainer_data_dir }}:/data

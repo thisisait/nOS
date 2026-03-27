@@ -29,6 +29,7 @@ enable_remote_management: false
 
 install_observability: false  # Grafana stack – neblokuje CI, ale zpomaluje ~5min
 install_tailscale: false      # Vyžaduje interaktivní login
+services_lan_access: false    # CI nepotřebuje LAN/Tailscale přístup
 install_dnsmasq: true         # Testuje DNS resolver setup
 
 install_mariadb: false

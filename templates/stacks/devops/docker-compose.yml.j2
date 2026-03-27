@@ -10,7 +10,11 @@ services:
     image: gitea/gitea:{{ gitea_version | default('latest') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ gitea_port | default(3003) }}:3000"
+{% else %}
       - "127.0.0.1:{{ gitea_port | default(3003) }}:3000"
+{% endif %}
       - "127.0.0.1:{{ gitea_ssh_port | default(2222) }}:22"
     volumes:
       - {{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}:/data

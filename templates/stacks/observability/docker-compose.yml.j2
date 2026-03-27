@@ -12,7 +12,11 @@ services:
     image: grafana/grafana:{{ grafana_version | default('latest') }}
     restart: unless-stopped
     ports:
+{% if services_lan_access | default(false) %}
+      - "{{ grafana_port | default(3000) }}:3000"
+{% else %}
       - "127.0.0.1:{{ grafana_port | default(3000) }}:3000"
+{% endif %}
     volumes:
       - {{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}:/var/lib/grafana
       - {{ stacks_dir }}/observability/grafana/provisioning:/etc/grafana/provisioning:ro
