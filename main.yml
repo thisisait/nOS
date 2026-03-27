@@ -380,6 +380,11 @@
       when: install_gitea | default(false)
       tags: ['iiab', 'gitea']
 
+    # Uptime Kuma post-start: automatická konfigurace monitorů
+    - import_tasks: tasks/iiab/uptime-kuma-monitors.yml
+      when: install_uptime_kuma | default(false)
+      tags: ['iiab', 'uptime-kuma', 'monitoring']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Service Registry – JSON katalog + Grafana dashboard
     # ──────────────────────────────────────────────────────────────────────────

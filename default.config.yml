@@ -547,7 +547,7 @@ sublime_package_control:
 # IIAB – MARIADB
 # ==============================================================================
 
-mariadb_root_password: "changeme_root"   # PŘEPIŠ před spuštěním!
+mariadb_root_password: "changeme_pw_mariadb"   # PŘEPIŠ v credentials.yml!
 mariadb_version: "lts"                  # lts / 11 / 10.11 – Docker image tag
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persistence dat mimo kontejner
@@ -558,10 +558,10 @@ mariadb_databases:
 
 mariadb_users:
   - name: "wordpress"
-    password: "changeme_wp"              # PŘEPIŠ!
+    password: "{{ wordpress_db_password }}"
     priv: "wordpress.*:ALL"
   - name: "nextcloud"
-    password: "changeme_nc"              # PŘEPIŠ!
+    password: "{{ nextcloud_db_password }}"
     priv: "nextcloud.*:ALL"
 
 # ==============================================================================
@@ -572,7 +572,7 @@ wordpress_domain: "wordpress.dev.local"
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
 wordpress_db_name: "wordpress"
 wordpress_db_user: "wordpress"
-wordpress_db_password: "changeme_wp"    # Musí odpovídat mariadb_users výše
+wordpress_db_password: "changeme_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
 wordpress_table_prefix: "wp_"
 wordpress_version: "latest"             # Docker image tag
@@ -587,10 +587,10 @@ nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
 nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
-nextcloud_db_password: "changeme_nc"   # Musí odpovídat mariadb_users výše
+nextcloud_db_password: "changeme_pw_nextcloud"
 nextcloud_db_host: "127.0.0.1"         # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
 nextcloud_admin_user: "admin"
-nextcloud_admin_password: "changeme_admin"  # PŘEPIŠ!
+nextcloud_admin_password: "changeme_pw_nextcloud_admin"
 nextcloud_version: "stable"             # Docker image tag (stable / latest / 29)
 nextcloud_port: 8085                    # Lokální port kontejneru (nginx proxy)
 
@@ -703,7 +703,7 @@ gitea_version: "latest"
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
-grafana_admin_password: "changeme_grafana"   # PŘEPIŠ!
+grafana_admin_password: "changeme_pw_grafana"
 grafana_allow_embedding: false
 grafana_analytics: false    # Vypnout telemetrii
 
@@ -759,10 +759,9 @@ gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva → Gite
 gitea_ssh_port: 2222
 gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"
 gitea_admin_user: "{{ ansible_facts['user_id'] }}"
-gitea_admin_password: "changeme_gitea"         # PŘEPIŠ v credentials.yml
+gitea_admin_password: "changeme_pw_gitea"
 gitea_admin_email: ""                          # VYPLŇ!
-gitea_secret_key: "changeme_random_32_chars"   # PŘEPIŠ! (openssl rand -hex 32)
-gitea_internal_token: "changeme_internal_tok"  # PŘEPIŠ! (openssl rand -hex 32)
+gitea_secret_key: "changeme_pw_gitea_secret"
 gitea_disable_registration: false              # true = pouze admin může přidávat uživatele
 
 # ==============================================================================
@@ -792,7 +791,7 @@ openwebui_domain: "ai.dev.local"
 openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
 openwebui_version: "main"        # nebo konkrétní: "0.5.20"
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
-openwebui_secret_key: "changeme_openwebui_secret"  # PŘEPIŠ v credentials.yml
+openwebui_secret_key: "changeme_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
 
 # ==============================================================================
@@ -805,7 +804,7 @@ woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC pro agenty (interní)
 woodpecker_version: "v3"                # latest tag odstraněn, musí být semver (v3/v3.x/v3.x.y)
 woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
-woodpecker_agent_secret: "changeme_woodpecker_agent"  # PŘEPIŠ! (openssl rand -hex 32)
+woodpecker_agent_secret: "changeme_pw_woodpecker"
 woodpecker_gitea_client: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
 woodpecker_gitea_secret: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
 woodpecker_open_registration: false  # true = kdokoliv se může přihlásit přes Gitea
@@ -819,7 +818,7 @@ portainer_domain: "portainer.dev.local"
 portainer_port: 9002                   # 9000/9001 rezervováno pro RustFS (S3 API + console)
 portainer_version: "latest"
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
-portainer_admin_password: "changeme_portainer"  # PŘEPIŠ v credentials.yml
+portainer_admin_password: "changeme_pw_portainer"
 
 # ==============================================================================
 # IIAB – JELLYFIN (media server)
@@ -843,6 +842,9 @@ uptime_kuma_domain: "uptime.dev.local"
 uptime_kuma_port: 3001
 uptime_kuma_version: "1"   # nebo konkrétní: "1.23.13"
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
+uptime_kuma_admin_user: "admin"
+uptime_kuma_admin_password: "changeme_pw_uptime_kuma"
+uptime_kuma_auto_monitors: true  # Automaticky vytvořit monitory pro všechny install_* služby
 
 # ==============================================================================
 # IIAB – CALIBRE-WEB (ebook server)
@@ -978,5 +980,5 @@ rustfs_version: "latest"
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
 rustfs_console_port: 9001           # Web konzole
 rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
-rustfs_access_key: "rustfsadmin"    # PŘEPIŠ před spuštěním!
-rustfs_secret_key: "changeme_rustfs_secret"   # PŘEPIŠ!
+rustfs_access_key: "changeme_pw_rustfs_access"
+rustfs_secret_key: "changeme_pw_rustfs_secret"

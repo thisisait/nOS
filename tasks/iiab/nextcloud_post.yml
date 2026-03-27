@@ -1,9 +1,12 @@
 ---
 # ==============================================================================
-# NEXTCLOUD POST-START – nastavení trusted_domains přes occ
+# NEXTCLOUD POST-START – sync konfigurace po startu kontejneru
 # Běží PO docker compose up, aby kontejner existoval.
-# Pro nové instalace stačí NEXTCLOUD_TRUSTED_DOMAINS env var,
-# pro existující instalace (config.php už existuje) musíme použít occ.
+#
+# Řeší:
+#   1. DB heslo v config.php – env var MYSQL_PASSWORD se čte jen při první
+#      inicializaci, při změně credentials.yml je potřeba sync přes occ
+#   2. trusted_domains – pro existující instalace (config.php) musíme occ
 # ==============================================================================
 
 - name: "[Nextcloud Post] Check if Nextcloud container is running"
@@ -16,6 +19,33 @@
   failed_when: false
   check_mode: false
 
+# ── DB password sync ─────────────────────────────────────────────────────
+- name: "[Nextcloud Post] Get current DB password from config.php"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:get dbpassword 2>/dev/null || echo "__NC_NOT_INSTALLED__"
+  register: _nc_current_dbpass
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _nc_container.stdout | default('') | length > 0
+
+- name: "[Nextcloud Post] Update DB password in config.php"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set dbpassword
+    --value={{ nextcloud_db_password | quote }}
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+    - _nc_current_dbpass.stdout | default('') | trim != nextcloud_db_password
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+# ── trusted_domains sync ─────────────────────────────────────────────────
 - name: "[Nextcloud Post] Get current trusted_domains"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
