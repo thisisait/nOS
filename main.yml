@@ -368,16 +368,12 @@
     - import_tasks: tasks/stacks/stack-up.yml
       tags: ['iiab', 'stack', 'docker', 'stacks']
 
-    # Verifikace: ověří že všechny služby odpovídají, při selhání čeká na manuální opravu
-    - import_tasks: tasks/iiab/stack_verify.yml
-      tags: ['iiab', 'stack', 'verify', 'stacks']
-
-    # MariaDB post-start: vytvoří DB a uživatele (až MariaDB poběží)
+    # MariaDB post-start: vytvoří DB a uživatele (MUSÍ běžet před verify/onboarding!)
     - import_tasks: tasks/iiab/mariadb_setup.yml
       when: install_mariadb | default(false)
       tags: ['iiab', 'mariadb', 'database']
 
-    # Nextcloud post-start: nastavení trusted_domains přes occ
+    # Nextcloud post-start: sync DB hesla a trusted_domains
     - import_tasks: tasks/iiab/nextcloud_post.yml
       when: install_nextcloud | default(false)
       tags: ['iiab', 'nextcloud']
@@ -391,6 +387,10 @@
     - import_tasks: tasks/iiab/uptime-kuma-monitors.yml
       when: install_uptime_kuma | default(false)
       tags: ['iiab', 'uptime-kuma', 'monitoring']
+
+    # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
+    - import_tasks: tasks/iiab/stack_verify.yml
+      tags: ['iiab', 'stack', 'verify', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Service Registry – JSON katalog + Grafana dashboard
