@@ -6,10 +6,9 @@
 # ==============================================================================
 
 - name: "[Uptime Kuma] Install uptime-kuma-api Python package"
-  ansible.builtin.pip:
-    name: uptime-kuma-api
-    state: present
+  ansible.builtin.command: pip3 install uptime-kuma-api
   register: _kuma_pip
+  changed_when: "'Successfully installed' in (_kuma_pip.stdout | default(''))"
   ignore_errors: true
 
 - name: "[Uptime Kuma] Wait for API to be ready"
