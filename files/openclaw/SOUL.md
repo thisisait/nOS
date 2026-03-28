@@ -24,23 +24,88 @@ Vždy piš strukturované logy každé operace.
 | `~/projects/` | Webové projekty (webroot pro nginx) |
 | `~/agents/` | OpenClaw konfigurace a agentické nástroje |
 | `~/agents/log/` | Strukturované logy agentické práce (.md soubory) |
-| `/opt/homebrew/etc/nginx/nginx.conf` | Hlavní nginx konfigurace |
-| `/opt/homebrew/etc/nginx/sites-available/` | Nginx vhost šablony |
-| `/opt/homebrew/etc/nginx/sites-enabled/` | Aktivní nginx vhosty (symlinky) |
+| `~/stacks/` | Docker Compose soubory (iiab, observability, infra, devops) |
+| `/opt/homebrew/etc/nginx/` | Nginx konfigurace (sites-available, sites-enabled, ssl) |
 | `/opt/homebrew/etc/php/8.3/` | PHP konfigurace |
 | `~/.openclaw/` | OpenClaw konfigurace a paměť |
+| `~/projects/default/service-registry.json` | Katalog všech služeb (JSON) |
 
-### Nainstalované stacky
+---
 
-- **Nginx** – web server, reverse proxy (homebrew service)
-- **PHP 8.3 + PHP-FPM** – backend (unix socket / port 9000)
-- **Node.js** – přes NVM (LTS), pm2 pro produkci
-- **Bun** – rychlý JS runtime / bundler
-- **Python 3.13** – přes pyenv, uvicorn/gunicorn pro produkci
-- **Go** – nativní HTTP servery (port 8080 výchozí)
-- **.NET / C#** – Kestrel (port 5000 výchozí)
-- **Ollama** – lokální LLM inference (model: qwen3.5:27b)
-- **Docker** – kontejnerizace (volitelné)
+## Architektura služeb
+
+Server provozuje 4 Docker stacky + nativní Homebrew služby.
+
+### Docker stacky (~/stacks/)
+
+| Stack | Compose | Služby |
+|-------|---------|--------|
+| **iiab** | `~/stacks/iiab/docker-compose.yml` | MariaDB, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS |
+| **observability** | `~/stacks/observability/docker-compose.yml` | Grafana, Prometheus, Loki, Tempo |
+| **infra** | `~/stacks/infra/docker-compose.yml` | Portainer, Traefik |
+| **devops** | `~/stacks/devops/docker-compose.yml` | Gitea, Woodpecker CI (server + agent), GitLab |
+
+Správa stacků:
+```bash
+docker compose -p iiab ps              # stav kontejnerů
+docker compose -p iiab logs <služba>   # logy
+docker compose -p iiab restart <služba>
+```
+
+### Nativní Homebrew služby
+
+| Služba | Příkaz | Port |
+|--------|--------|------|
+| Nginx | `brew services restart nginx` | 80, 443 |
+| PHP-FPM | `brew services restart php@8.3` | socket |
+| dnsmasq | `brew services restart dnsmasq` | 53 |
+| Grafana Alloy | `brew services restart grafana-alloy` | 12345 (UI) |
+| Ollama | `brew services restart ollama` | 11434 |
+
+---
+
+## Porty a přístupy
+
+### Lokální přístup (*.dev.local přes nginx HTTPS proxy)
+
+| Služba | Doména | Port | Health check |
+|--------|--------|------|-------------|
+| Grafana | `grafana.dev.local` | 3000 | `/api/health` |
+| Nextcloud | `cloud.dev.local` | 8085 | `/status.php` |
+| n8n | `n8n.dev.local` | 5678 | `/healthz` |
+| Gitea | `gitea.dev.local` | 3003 | `/` |
+| Jellyfin | `media.dev.local` | 8096 | `/health` |
+| Open WebUI | `ai.dev.local` | 3004 | `/` |
+| Portainer | `portainer.dev.local` | 9002 | `/` |
+| Kiwix | `kiwix.dev.local` | 8888 | `/` |
+| WordPress | `wordpress.dev.local` | 8084 | `/` |
+| Uptime Kuma | `uptime.dev.local` | 3001 | `/` |
+
+### Vzdálený přístup (Tailscale)
+
+Pokud je `services_lan_access: true`, služby jsou dostupné přes porty:
+```
+http://<tailscale-hostname>:3000   → Grafana (homepage)
+http://<tailscale-hostname>:8096   → Jellyfin
+http://<tailscale-hostname>:3003   → Gitea
+http://<tailscale-hostname>:5678   → n8n
+http://<tailscale-hostname>:8085   → Nextcloud
+http://<tailscale-hostname>:3004   → Open WebUI
+http://<tailscale-hostname>:9002   → Portainer
+http://<tailscale-hostname>:8888   → Kiwix
+```
+
+### Interní služby (jen localhost)
+
+| Služba | Port | Účel |
+|--------|------|------|
+| Prometheus | 9090 | Metriky |
+| Loki | 3100 | Logy |
+| Tempo | 3200 | Traces |
+| MariaDB | 3306 | Databáze |
+| Ollama | 11434 | LLM inference |
+| Alloy OTLP gRPC | 4317 | App traces ingestion |
+| Alloy OTLP HTTP | 4318 | App traces ingestion |
 
 ---
 
@@ -78,166 +143,42 @@ mkcert -cert-file /opt/homebrew/etc/nginx/ssl/local-dev.crt \
        "muj-projekt.dev.local"
 ```
 
-### Port konvence
-| Stack | Výchozí port | Upstream blok v nginx |
-|-------|-------------|----------------------|
-| PHP-FPM | `127.0.0.1:9000` | `upstream php_fpm` |
-| Node.js | `127.0.0.1:3000` | `upstream nodejs_*` |
-| Python | `127.0.0.1:8000` | `upstream python_*` |
-| Go | `127.0.0.1:8080` | `upstream go_*` |
-| .NET | `127.0.0.1:5000` | `upstream dotnet_*` |
-| Kiwix (Docker) | `127.0.0.1:8888` | proxy_pass |
-| tileserver-gl | `127.0.0.1:8080` | proxy_pass |
-| Grafana | `127.0.0.1:3000` | proxy_pass |
-| Prometheus | `127.0.0.1:9090` | interní |
-| Loki | `127.0.0.1:3100` | interní |
-| Tempo | `127.0.0.1:3200` | interní |
-| Grafana Alloy UI | `127.0.0.1:12345` | interní |
-| OTLP gRPC | `0.0.0.0:4317` | traces ingestion |
-| OTLP HTTP | `0.0.0.0:4318` | traces ingestion |
-| n8n | `127.0.0.1:5678` | proxy_pass |
-| Gitea | `127.0.0.1:3001` | proxy_pass |
-| Uptime Kuma | `127.0.0.1:3002` | proxy_pass |
-| Calibre-Web | `127.0.0.1:8083` | proxy_pass |
-
 ---
 
-## IIAB – Self-hosted Knowledge Services
+## Databáze
 
-Server provozuje lokální znalostní infrastrukturu (IIAB-like services).
-Všechny IIAB služby jsou přístupné přes nginx na `*.dev.local` doménách.
-
-### Přehled IIAB služeb
-
-| Služba | Doména | Stack | Status |
-|--------|--------|-------|--------|
-| **WordPress** | `wordpress.dev.local` | PHP-FPM + MariaDB | volitelné |
-| **Nextcloud** | `cloud.dev.local` | PHP-FPM + MariaDB | volitelné |
-| **Kiwix** | `kiwix.dev.local` | Docker kiwix-serve | volitelné |
-| **Offline Mapy** | `maps.dev.local` | tileserver-gl (Node) | volitelné |
-| **n8n** | `n8n.dev.local` | Docker n8nio/n8n | volitelné |
-| **Gitea** | `gitea.dev.local` | Homebrew gitea | volitelné |
-| **Uptime Kuma** | `uptime.dev.local` | Docker louislam/uptime-kuma | volitelné |
-| **Calibre-Web** | `books.dev.local` | Docker linuxserver/calibre-web | volitelné |
-
-### Kiwix – offline znalostní báze
-
-```
-ZIM soubory: ~/kiwix/
-```
-
-Stažení ZIM souboru:
-```bash
-~/kiwix/download-zim.sh https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim
-```
-
-Dostupné knowledge bases (zim soubory):
-- Wikipedia CS / EN (různé velikosti)
-- Project Gutenberg (knihy)
-- Stack Overflow CS/EN
-- OpenStreetMap
-
-### WordPress
-
-```
-Soubory:  ~/projects/wordpress/
-URL:      https://wordpress.dev.local
-Config:   ~/projects/wordpress/wp-config.php
-DB:       wordpress @ 127.0.0.1:3306
-```
-
-### Nextcloud
-
-```
-Soubory:  ~/projects/nextcloud/
-Data:     ~/nextcloud-data/
-URL:      https://cloud.dev.local
-DB:       nextcloud @ 127.0.0.1:3306
-```
-
-CLI administrace (occ):
-```bash
-php ~/projects/nextcloud/occ <příkaz>
-```
-
-### Offline Mapy
-
-```
-MBTiles:  ~/maps/
-URL:      https://maps.dev.local
-```
-
-Stažení mapových dat:
-```bash
-~/maps/download-maps.sh
-# Viz komentáře pro zdroje dat (MapTiler, Geofabrik, BBBike)
-```
-
-### MariaDB
+### MariaDB (Docker – stack iiab)
 
 ```bash
-mysql -u root -p   # lokální přístup
-# nebo:
-mysql -h 127.0.0.1 -u root -p
+docker compose -p iiab exec mariadb mariadb -u root -p
 ```
 
 Databáze: `wordpress`, `nextcloud`
+Uživatelé: `wordpress`, `nextcloud` (hesla v credentials.yml)
 
 ---
 
-## Observability Stack (LGTM)
+## Observability Stack (Docker – stack observability)
 
-Server provozuje plně nakonfigurovaný observability stack pro monitoring, logy a traces.
+| Komponenta | Port | Účel |
+|------------|------|------|
+| **Grafana** | 3000 | Dashboardy, vizualizace |
+| **Prometheus** | 9090 | Metriky (scrape, storage) |
+| **Loki** | 3100 | Log aggregation |
+| **Tempo** | 3200 | Distribuované traces |
+| **Grafana Alloy** | 12345 | Unified collector (Homebrew, ne Docker) |
 
-### Přehled komponent
-
-| Komponenta | Doména | Port | Účel |
-|------------|--------|------|------|
-| **Grafana** | `grafana.dev.local` | 3000 | Dashboardy, vizualizace |
-| **Prometheus** | interní | 9090 | Metriky (scrape, storage) |
-| **Loki** | interní | 3100 | Log aggregation |
-| **Tempo** | interní | 3200 | Distribuované traces |
-| **Grafana Alloy** | interní UI | 12345 | Unified collector (metrics+logs+traces) |
-
-### Klíčové cesty
-
-| Cesta | Obsah |
-|-------|-------|
-| `/opt/homebrew/etc/grafana/grafana.ini` | Grafana hlavní config |
-| `/opt/homebrew/etc/grafana/provisioning/` | Auto-provisioning datasources + dashboards |
-| `/opt/homebrew/etc/prometheus.yml` | Prometheus scrape config |
-| `/opt/homebrew/etc/loki/local-config.yaml` | Loki storage config |
-| `/opt/homebrew/etc/tempo.yaml` | Tempo tracing config |
-| `/opt/homebrew/etc/alloy/config.alloy` | Grafana Alloy pipeline config |
-| `~/observability/dashboards/` | Stažené community dashboardy (JSON) |
-| `/opt/homebrew/var/lib/loki/` | Loki data |
-| `/opt/homebrew/var/lib/tempo/` | Tempo data |
-
-### Správa služeb
-
+### Správa
 ```bash
-# Status všech observability služeb
-brew services list | grep -E 'grafana|prometheus|loki|tempo|alloy'
+# Docker služby
+docker compose -p observability restart grafana
+docker compose -p observability logs loki --tail 50
 
-# Restart jednotlivých komponent
-brew services restart grafana
-brew services restart prometheus
-brew services restart loki
-brew services restart tempo
-brew services restart alloy
-
-# Grafana API (admin heslo v default.config.yml: grafana_admin_password)
-curl -u admin:changeme_grafana http://localhost:3000/api/health
+# Alloy (Homebrew)
+brew services restart grafana-alloy
 ```
 
-### Grafana Alloy – co sbírá
-
-- **Metriky**: Systém (CPU, RAM, disk, network), Nginx, PHP-FPM, Redis
-- **Logy**: Nginx access/error logy, agent logy z `~/agents/log/`
-- **Traces**: OTLP přijímač na portu 4317 (gRPC) a 4318 (HTTP)
-
 ### Odeslání traces z aplikace
-
 ```python
 # Python – OpenTelemetry SDK
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -302,15 +243,28 @@ Jako **DevOps Lead** deleguj specializovanou práci sub-agentům:
 | Sub-agent | Odpovědnost |
 |-----------|-------------|
 | `CodeAgent` | Psaní a refaktoring kódu |
-| `InfraAgent` | Nginx konfigurace, systémové nastavení |
+| `InfraAgent` | Nginx konfigurace, Docker compose, systémové nastavení |
 | `DeployAgent` | Nasazování aplikací, CI/CD |
 | `SecurityAgent` | Audit bezpečnosti, permissions, SSL |
-| `MonitorAgent` | Sledování logů, výkonu, uptime |
-| `DataAgent` | Databáze, migrace, zálohy |
+| `MonitorAgent` | Sledování logů, výkonu, uptime (Grafana, Uptime Kuma) |
+| `DataAgent` | Databáze, migrace, zálohy (MariaDB) |
 
-### Příkaz pro vytvoření sub-agenta
-```
-Deleguj na CodeAgent: [popis úkolu] – výstup ulož do ~/agents/log/
+---
+
+## Playbook management
+
+Server je spravován Ansible playbookem. Pro změny konfigurace:
+
+```bash
+# Celý playbook
+ansible-playbook main.yml -K
+
+# Jen konkrétní komponenta
+ansible-playbook main.yml -K --tags "nginx"
+ansible-playbook main.yml -K --tags "observability"
+
+# Čistý reset (smaže vše a nainstaluje znovu)
+ansible-playbook main.yml -K -e blank=true
 ```
 
 ---
