@@ -1,51 +1,19 @@
 {
-  "models": {
-    "providers": {
-      "ollama": {
-        "apiKey": "ollama-local",
-        "baseUrl": "http://127.0.0.1:11434",
-        "api": "ollama"
-      }
-    }
-  },
-
   "agents": {
     "defaults": {
       "model": {
         "primary": "ollama/{{ openclaw_model }}",
         "fallbacks": []
       },
-      "reasoning": false,
-      "maxConcurrent": {{ openclaw_max_concurrent_agents | default(4) }},
-      "contextWindow": 131072,
-      "systemPromptFile": "{{ ansible_facts['env']['HOME'] }}/.openclaw/SOUL.md"
+      "maxConcurrent": {{ openclaw_max_concurrent_agents | default(4) }}
     }
   },
 
-  "subagents": {
-    "maxConcurrent": {{ openclaw_max_concurrent_subagents | default(8) }},
-    "model": {
-      "primary": "ollama/{{ openclaw_model }}"
-    },
-    "reasoning": false
+  "gateway": {
+    "mode": "local"
   },
 
   "tools": {
-    "webSearch": { "enabled": true },
-    "webFetch":  { "enabled": true },
-    "exec":      { "enabled": true },
-    "fileRead":  { "enabled": true },
-    "fileWrite": { "enabled": true }
-  },
-
-  "workspace": {
-    "agentsDir":   "{{ openclaw_agents_dir }}",
-    "projectsDir": "{{ openclaw_projects_dir }}",
-    "logDir":      "{{ openclaw_log_dir }}"
-  },
-
-  "privacy": {
-    "telemetry": false,
-    "crashReports": false
+    "exec": {}
   }
 }
