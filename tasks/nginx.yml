@@ -60,6 +60,12 @@
     - openwebui.conf
     - portainer.conf
     - woodpecker.conf
+    - uptime-kuma.conf
+    - calibreweb.conf
+    - homeassistant.conf
+    - rustfs.conf
+    - traefik.conf
+    - openclaw.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -78,6 +84,12 @@
          + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
          + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
          + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
+         + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf'], []))
+         + ((install_calibreweb | default(false)) | ternary(['calibreweb.conf'], []))
+         + ((install_homeassistant | default(false)) | ternary(['homeassistant.conf'], []))
+         + ((install_rustfs | default(false)) | ternary(['rustfs.conf'], []))
+         + ((install_traefik | default(false)) | ternary(['traefik.conf'], []))
+         + ((install_openclaw | default(false)) | ternary(['openclaw.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

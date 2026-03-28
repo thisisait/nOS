@@ -403,6 +403,8 @@ ollama_num_parallel: 2         # Max paralelních inference requestů
 
 # Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
 openclaw_install_daemon: true
+openclaw_domain: "claw.dev.local"
+openclaw_gateway_port: 18789
 
 # Jméno agenta (persona)
 openclaw_agent_name: "Inspektor Klepítko"
@@ -961,12 +963,14 @@ traefik_image_version: "latest"
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8080
+traefik_domain: "traefik.dev.local"
 traefik_log_level: "INFO"           # DEBUG / INFO / WARN / ERROR
 traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
 homeassistant_version: "stable"     # stable / latest / konkrétní tag (2025.1.0)
 homeassistant_port: 8123
+homeassistant_domain: "home.dev.local"
 homeassistant_timezone: "Europe/Prague"
 homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 # true = privileged + network_mode: host → mDNS/Bonjour auto-discovery
@@ -982,6 +986,7 @@ homeassistant_privileged: false
 rustfs_version: "latest"
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
 rustfs_console_port: 9001           # Web konzole
+rustfs_domain: "fs.dev.local"
 rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
 rustfs_access_key: "changeme_pw_rustfs_access"
 rustfs_secret_key: "changeme_pw_rustfs_secret"
