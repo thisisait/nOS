@@ -1178,7 +1178,7 @@ superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
 # Federovaná identita: @user.bsky.dev.local → SSO pro všechny služby
 # ==============================================================================
 
-bluesky_pds_hostname: "bsky.dev.local"
+bluesky_pds_hostname: "bsky.dev.lan"     # .local zakázán AT Protocol specifikací
 bluesky_pds_port: 2583
 bluesky_pds_version: "latest"
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
