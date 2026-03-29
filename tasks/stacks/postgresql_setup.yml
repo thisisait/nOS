@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# POSTGRESQL – post-start nastavení (vytváří DB a uživatele)
+# Analogie k mariadb_setup.yml – běží PO startu infra stacku.
+# ==============================================================================
+
+- name: "[PostgreSQL] Wait for PostgreSQL to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ postgresql_port | default(5432) }}"
+    timeout: 2
+  register: _pg_tcp
+  failed_when: false
+  retries: 1
+  delay: 1
+
+- name: "[PostgreSQL] Verify PostgreSQL is accepting connections"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql pg_isready -U {{ postgresql_root_user | default('postgres') }}
+  register: _pg_ready
+  retries: 10
+  delay: 5
+  until: _pg_ready.rc == 0
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: "[PostgreSQL] Connection failed – diagnostics"
+  ansible.builtin.pause:
+    prompt: |-
+      ══════════════════════════════════════════════════════════════════════
+       PostgreSQL: nedostupny po 50 sekundach
+
+       Diagnoza:
+         {{ docker_bin }} compose -p infra logs postgresql
+
+       Stiskni ENTER po oprave
+      ══════════════════════════════════════════════════════════════════════
+  when:
+    - _pg_ready is failed
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Create databases and users"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }} -c "{{ item }}"
+  loop:
+    # ── Mattermost
+    - "SELECT 'CREATE DATABASE mattermost' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mattermost')\\gexec"
+    - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ mattermost_db_user | default('mattermost') }}') THEN CREATE USER {{ mattermost_db_user | default('mattermost') }} WITH PASSWORD '{{ mattermost_db_password | default('changeme_pw_mattermost') }}'; END IF; END $$;"
+    - "GRANT ALL PRIVILEGES ON DATABASE mattermost TO {{ mattermost_db_user | default('mattermost') }};"
+    - "ALTER DATABASE mattermost OWNER TO {{ mattermost_db_user | default('mattermost') }};"
+    # ── Outline
+    - "SELECT 'CREATE DATABASE outline' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'outline')\\gexec"
+    - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ outline_db_user | default('outline') }}') THEN CREATE USER {{ outline_db_user | default('outline') }} WITH PASSWORD '{{ outline_db_password | default('changeme_pw_outline') }}'; END IF; END $$;"
+    - "GRANT ALL PRIVILEGES ON DATABASE outline TO {{ outline_db_user | default('outline') }};"
+    - "ALTER DATABASE outline OWNER TO {{ outline_db_user | default('outline') }};"
+    # ── Metabase
+    - "SELECT 'CREATE DATABASE metabase' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'metabase')\\gexec"
+    - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ metabase_db_user | default('metabase') }}') THEN CREATE USER {{ metabase_db_user | default('metabase') }} WITH PASSWORD '{{ metabase_db_password | default('changeme_pw_metabase') }}'; END IF; END $$;"
+    - "GRANT ALL PRIVILEGES ON DATABASE metabase TO {{ metabase_db_user | default('metabase') }};"
+    - "ALTER DATABASE metabase OWNER TO {{ metabase_db_user | default('metabase') }};"
+    # ── Superset
+    - "SELECT 'CREATE DATABASE superset' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'superset')\\gexec"
+    - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ superset_db_user | default('superset') }}') THEN CREATE USER {{ superset_db_user | default('superset') }} WITH PASSWORD '{{ superset_db_password | default('changeme_pw_superset') }}'; END IF; END $$;"
+    - "GRANT ALL PRIVILEGES ON DATABASE superset TO {{ superset_db_user | default('superset') }};"
+    - "ALTER DATABASE superset OWNER TO {{ superset_db_user | default('superset') }};"
+  loop_control:
+    label: "SQL"
+  changed_when: false
+  failed_when: false
+  when:
+    - _pg_ready is not failed
+    - not ansible_check_mode

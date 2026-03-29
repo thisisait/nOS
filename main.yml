@@ -147,6 +147,39 @@
       tags: ['blank', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Auto-enable dependencies (ERPNext → MariaDB+Redis, Mattermost → PostgreSQL, atd.)
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: Auto-enable MariaDB for services that require it
+      ansible.builtin.set_fact:
+        install_mariadb: true
+      when: >
+        (install_wordpress | default(false)) or
+        (install_nextcloud | default(false)) or
+        (install_erpnext | default(false)) or
+        (install_freescout | default(false)) or
+        (install_freepbx | default(false))
+      tags: ['always']
+
+    - name: Auto-enable PostgreSQL for services that require it
+      ansible.builtin.set_fact:
+        install_postgresql: true
+      when: >
+        (install_mattermost | default(false)) or
+        (install_outline | default(false)) or
+        (install_metabase | default(false)) or
+        (install_superset | default(false))
+      tags: ['always']
+
+    - name: Auto-enable Redis Docker for services that require it
+      ansible.builtin.set_fact:
+        redis_docker: true
+      when: >
+        (install_erpnext | default(false)) or
+        (install_outline | default(false)) or
+        (install_superset | default(false))
+      tags: ['always']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # macOS systémová nastavení
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sudoers.yml
@@ -372,6 +405,11 @@
     - import_tasks: tasks/iiab/mariadb_setup.yml
       when: install_mariadb | default(false)
       tags: ['iiab', 'mariadb', 'database']
+
+    # PostgreSQL post-start: vytvoří DB a uživatele pro Mattermost, Outline, Metabase, Superset
+    - import_tasks: tasks/stacks/postgresql_setup.yml
+      when: install_postgresql | default(false)
+      tags: ['infra', 'postgresql', 'database']
 
     # Nextcloud post-start: sync DB hesla a trusted_domains
     - import_tasks: tasks/iiab/nextcloud_post.yml

@@ -39,8 +39,28 @@ install_kiwix: false
 install_offline_maps: false
 install_n8n: false
 install_gitea: false
+install_gitlab: false
+install_woodpecker: false
 install_uptime_kuma: false
 install_calibreweb: false
+install_portainer: false
+install_traefik: false
+install_jellyfin: false
+install_openwebui: false
+install_homeassistant: false
+install_rustfs: false
+install_postgresql: false
+redis_docker: false
+install_erpnext: false
+install_freescout: false
+install_mattermost: false
+install_outline: false
+install_freepbx: false
+install_qgis_server: false
+install_engineering_apps: false
+install_metabase: false
+install_superset: false
+install_bluesky_pds: false
 
 configure_dotfiles: false   # Geerlingguy dotfiles – zbytečné v CI
 configure_sublime: false
