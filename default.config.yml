@@ -1142,7 +1142,7 @@ freepbx_timezone: "Europe/Prague"
 
 qgis_domain: "gis.dev.local"
 qgis_port: 8071
-qgis_version: "3.36"
+qgis_version: "latest"                 # POZOR: pouze amd64 (emulace přes Rosetta na ARM64)
 qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 
 # ==============================================================================

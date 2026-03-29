@@ -179,6 +179,13 @@
         (install_superset | default(false))
       tags: ['always']
 
+    - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
+      ansible.builtin.command: brew services stop redis
+      when: redis_docker | default(false) | bool
+      failed_when: false
+      changed_when: false
+      tags: ['always']
+
     # ──────────────────────────────────────────────────────────────────────────
     # macOS systémová nastavení
     # ──────────────────────────────────────────────────────────────────────────

@@ -8,7 +8,8 @@ services:
 
 {% if install_qgis_server | default(false) %}
   qgis-server:
-    image: kartoza/qgis-server:{{ qgis_version | default('3.36') }}
+    image: kartoza/qgis-server:{{ qgis_version | default('latest') }}
+    platform: linux/amd64    # Pouze amd64 – Docker Desktop emuluje přes Rosetta
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ qgis_port | default(8071) }}:80"
