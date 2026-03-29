@@ -1,0 +1,45 @@
+---
+# ==============================================================================
+# NEXTCLOUD – Docker kontejner (nextcloud:stable)
+# DB přes MariaDB na iiab_net, nginx reverse proxy na port {{ nextcloud_port }}
+# ==============================================================================
+
+- name: "[Nextcloud] Ensure directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0750'
+  loop:
+    - "{{ nextcloud_dir }}"
+    - "{{ nextcloud_data_dir }}"
+
+- name: "[Nextcloud] Deploy nginx vhost"
+  ansible.builtin.template:
+    src: "nginx/sites-available/nextcloud.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/nextcloud.conf"
+    mode: '0644'
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[Nextcloud] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/nextcloud.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/nextcloud.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[Nextcloud] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Nextcloud (Docker) připraven
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ nextcloud_domain }}
+       Kontejner: nextcloud → 127.0.0.1:{{ nextcloud_port | default(8085) }}
+       Data:      {{ nextcloud_data_dir }}
+       DB:        {{ nextcloud_db_name }} @ mariadb (iiab_net)
+
+       Přidej do /etc/hosts:   127.0.0.1 {{ nextcloud_domain }}
+      ══════════════════════════════════════════════════════

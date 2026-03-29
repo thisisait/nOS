@@ -1,0 +1,118 @@
+---
+# ==============================================================================
+# PI AGENTS – coding agent framework (pi.dev)
+# npm balíček: @mariozechner/pi-coding-agent
+# Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
+#
+# Požadavky: install_node: true (nvm + Node.js musí být nainstalováno)
+# ==============================================================================
+
+# ── 1. Instalace PI CLI ────────────────────────────────────────────────────────
+
+- name: "[PI] Check if pi CLI is already installed"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    command -v pi
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  register: pi_which
+  changed_when: false
+  failed_when: false
+
+- name: "[PI] Install PI CLI via npm (@mariozechner/pi-coding-agent)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    npm install -g @mariozechner/pi-coding-agent
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: pi_which.rc != 0
+  changed_when: true
+
+# ── 2. Adresářová struktura ────────────────────────────────────────────────────
+
+- name: "[PI] Create PI agent directory structure"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ pi_config_dir }}"
+    - "{{ pi_config_dir }}/extensions"
+    - "{{ pi_config_dir }}/skills"
+    - "{{ pi_config_dir }}/themes"
+    - "{{ pi_config_dir }}/prompts"
+
+# ── 3. Ollama provider pro PI ─────────────────────────────────────────────────
+
+- name: "[PI] Configure Ollama provider (OLLAMA_API_KEY in .zshrc)"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} PI-AGENTS – ANSIBLE MANAGED"
+    block: |
+      export OLLAMA_API_KEY="ollama-local"
+    create: true
+
+# ── 4. PI Autoresearch extension (přes pi install, ne ruční kopie) ────────────
+
+- name: "[PI] Check if pi-autoresearch is installed via pi install"
+  ansible.builtin.stat:
+    path: "{{ pi_config_dir }}/git/github.com/davebcn87/pi-autoresearch"
+  register: _pi_autoresearch_git
+  when: pi_install_autoresearch | default(true)
+
+- name: "[PI] Remove old manual extension copy (conflict fix)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ pi_config_dir }}/extensions/pi-autoresearch"
+    - "{{ pi_config_dir }}/skills/autoresearch-create"
+    - "{{ pi_config_dir }}/skills/autoresearch-finalize"
+  when: pi_install_autoresearch | default(true)
+
+- name: "[PI] Install pi-autoresearch via pi install"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    export OLLAMA_API_KEY="ollama-local"
+    pi install https://github.com/davebcn87/pi-autoresearch
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when:
+    - pi_install_autoresearch | default(true)
+    - not (_pi_autoresearch_git.stat.exists | default(false))
+  changed_when: true
+  failed_when: false
+
+# ── 5. Finální výpis ──────────────────────────────────────────────────────────
+
+- name: "[PI] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       PI Agent Framework – připraven
+      ══════════════════════════════════════════════════════
+       CLI:        npm -g @mariozechner/pi-coding-agent
+       Config:     {{ pi_config_dir }}/
+       Extensions: {{ pi_config_dir }}/extensions/
+       Skills:     {{ pi_config_dir }}/skills/
+
+       Použití:
+         pi                         # spustit interaktivní agent
+         pi "co chceš udělat"       # jednorázový příkaz
+
+       Autoresearch extension:
+         /skill:autoresearch-create  # inicializace optimalizační smyčky
+         /autoresearch <text>        # vstoupit do autoresearch módu
+         Ctrl+X                     # přepnout dashboard
+      ══════════════════════════════════════════════════════

@@ -1,31 +1,459 @@
 ---
-configure_dotfiles: true
-configure_terminal: true
-configure_osx: true
+# ==============================================================================
+# INSTALLATION QUEUE
+# Zakomentuj (#) libovolný řádek pro PŘESKOČENÍ dané komponenty.
+# Comment out (#) any line to SKIP that component during provisioning.
+# ==============================================================================
 
-# Set to 'true' to configure the Dock via dockutil.
-configure_dock: false
-dockitems_remove: []
-# - Launchpad
-# - TV
-# - Podcasts
-# - 'App Store'
-dockitems_persist: []
-# - name: "Sublime Text"
-#   path: "/Applications/Sublime Text.app/"
-#   pos: 5
+# ── Homebrew & Apps ───────────────────────────────────────────────────────────
+install_homebrew_packages: true   # CLI nástroje (včetně build tools: cmake, ninja, llvm…)
+install_cask_apps: true           # GUI aplikace přes Homebrew Cask
+install_mas_apps: false           # Mac App Store aplikace
 
-configure_sudoers: false
-sudoers_custom_config: ""
-# Example:
-# sudoers_custom_config: |
-#   # Allow users in admin group to use sudo with no password.
-#   %admin ALL=(ALL) NOPASSWD: ALL
+# ── Web server ────────────────────────────────────────────────────────────────
+install_nginx: true               # Nginx (reverse proxy, PHP-FPM, vhosts)
+
+# ── Jazyky / runtime ──────────────────────────────────────────────────────────
+install_php: true                 # PHP 8.x + PHP-FPM + Composer
+install_node: true                # Node.js + NVM + globální npm balíčky
+install_bun: true                 # Bun JavaScript runtime / bundler
+install_python: true              # Python + pyenv + pip balíčky
+install_golang: true              # Go jazyk + gopls, golangci-lint, air
+install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
+
+# ── AI Agent ──────────────────────────────────────────────────────────────────
+install_openclaw: true            # OpenClaw (Inspektor Klepítko, Ollama, bez API klíče)
+install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
+
+# ── macOS systémová konfigurace ────────────────────────────────────────────────
+configure_dotfiles: false         # Dotfiles – vyžaduje vlastní repo! Nastav dotfiles_repo v credentials.yml
+configure_terminal: true          # Terminal téma
+configure_osx: true               # Základní macOS defaults (.osx script)
+configure_macos_defaults: true    # Rozšířená macOS nastavení (Finder, klávesnice, Dock…)
+configure_dock: false             # Dock layout (vyžaduje dockutil)
+configure_sudoers: false          # Vlastní sudoers pravidla
+configure_sublime: false          # Sublime Text editor
+install_shell_extras: true        # Starship prompt + shell aliasy (bat, eza, fzf, zoxide, lazygit)
+
+# ── Systémové služby (vyžadují sudo) ──────────────────────────────────────────
+enable_ssh: false                 # Remote Login / SSH server
+enable_samba: false               # Sdílení souborů přes SMB (Windows/Linux)
+enable_vnc: false                 # Sdílení obrazovky (VNC / Apple Remote Desktop)
+enable_remote_management: false   # Apple Remote Desktop (ARD) – plná správa
+
+# ── Observability – Grafana LGTM stack ────────────────────────────────────────
+install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+
+# ── IIAB – self-hosted knowledge & productivity services ──────────────────────
+# Vyžaduje: install_nginx: true, install_php: true
+install_mariadb: false            # MariaDB databáze (nutná pro WordPress + Nextcloud)
+install_wordpress: false          # WordPress CMS            [vyžaduje: mariadb, php, nginx]
+install_nextcloud: false          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
+install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
+install_offline_maps: false       # Offline mapy – tileserver-gl + MBTiles    [vyžaduje: node]
+install_n8n: false                # n8n – workflow automation                  [vyžaduje: Docker]
+install_gitea: false              # Gitea – self-hosted Git server             [Homebrew]
+install_gitlab: false             # GitLab CE – full DevOps platform           [vyžaduje: Docker, ~4 GB RAM]
+install_woodpecker: false         # Woodpecker CI – CI/CD pro Gitea            [vyžaduje: Docker, Gitea OAuth2]
+install_openwebui: false          # Open WebUI – chat UI pro Ollama            [vyžaduje: Docker, Ollama]
+install_portainer: false          # Portainer CE – Docker management UI        [vyžaduje: Docker]
+install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
+install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
+install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
+install_traefik: false            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
+install_homeassistant: false      # Home Assistant – home automation                        [Docker]
+install_rustfs: false             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
+
+# ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
+install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting              [vyžaduje: MariaDB, Redis Docker]
+install_freescout: false          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
+install_mattermost: false         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
+install_outline: false            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
+
+# ── VoIP stack (telekomunikace) ──────────────────────────────────────────────
+install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
+
+# ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
+install_qgis_server: false        # QGIS Server – GIS mapový server                     [Docker]
+install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                          [Homebrew Cask]
+
+# ── Data stack (analytika/BI) ────────────────────────────────────────────────
+install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
+install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
+
+# ── Identita / federace ───────────────────────────────────────────────────────
+install_bluesky_pds: false        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
+
+# ── Síť / přístup ─────────────────────────────────────────────────────────────
+install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
+install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (bez /etc/hosts editace)
+
+# ==============================================================================
+# HOMEBREW – obecné nastavení
+# ==============================================================================
+
+homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['machine'] == 'arm64' else '/usr/local' }}"
+
+# Docker Desktop instaluje binárky do /usr/local/bin bez ohledu na architekturu
+docker_bin: /usr/local/bin/docker
+
+homebrew_installed_packages:
+  # Základní nástroje
+  - autoconf
+  - bash-completion
+  - git
+  - gh
+  - gpg
+  - wget
+  - curl
+  - jq
+  - yq
+  - htop
+  - tmux
+  - tree
+  - pv
+  - watch
+  - readline
+  - openssl
+  - libevent
+  - sqlite
+  - gettext
+  - ssh-copy-id
+  - zsh-history-substring-search
+  # Síť / diagnostika
+  - nmap
+  - httpie
+  - iperf
+  - wrk
+  - mkcert               # lokální SSL certifikáty
+  - nss                  # mkcert backend
+  # Média
+  - gifsicle
+  - pngpaste
+  - doxygen
+  # Vývojové nástroje (zahrnuty i když konkrétní stack skip)
+  - git-lfs
+  - pre-commit
+  - act                  # GitHub Actions lokálně
+  # ── Moderní CLI náhrady ──────────────────────────────────────────────────
+  - ripgrep              # rg  – rychlejší grep (regex, .gitignore-aware)
+  - fd                   # fd  – rychlejší find
+  - bat                  # bat – cat se syntax highlighting + git diff
+  - eza                  # eza – moderní ls (ikony, stromy, git status)
+  - fzf                  # fzf – fuzzy finder (Ctrl+R history, Ctrl+T files)
+  - zoxide               # z   – chytré cd (váhuje historii)
+  - starship             # starship – GPU-fast cross-shell prompt
+  - lazygit              # lazygit – TUI pro git (add/commit/push/merge)
+  - ncdu                 # ncdu – interaktivní disk usage TUI
+  - duf                  # duf  – moderní df (diskový přehled)
+  - tldr                 # tldr – zkrácené man pages s příklady
+  - hyperfine            # hyperfine – CLI benchmarking
+  # ── Media (Blender renders, FL Studio exports, video workflow) ────────────
+  - ffmpeg               # ffmpeg – konverze audio/video (nutné pro Blender+FL)
+  - imagemagick          # convert – batch zpracování obrázků
+  - yt-dlp               # yt-dlp – stahování videa/audia z YT a dalších
+  - exiftool             # exiftool – čtení/zápis metadat médií
+  # ── Databáze ─────────────────────────────────────────────────────────────
+  - redis                # Redis – in-memory cache + pub/sub (projekty, Nextcloud)
+  # ── Zálohy a údržba ──────────────────────────────────────────────────────
+  - restic               # Restic – šifrované zálohy (Backblaze B2, SFTP, lokální disk)
+  - mac-cleanup-go       # TUI macOS cleaner – cache, logy, Xcode, brew (github.com/2ykwang/mac-cleanup-go)
+  # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
+  # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
+  # ninja:      Rychlý build systém (cmake backend, meson backend)
+  # llvm:       Clang/LLVM – vyžaduje kiwix-tools build, některé Rust crates
+  # ccache:     Compiler cache – zrychlí opakovanou kompilaci 5–10×
+  # pkg-config: Správa knihovních závislostí (nutný pro many brew --HEAD formulas)
+  # libomp:     OpenMP parallelism – Ollama CPU inference, numpy, scipy
+  # openblas:   BLAS/LAPACK – numpy, scipy, ML workloads bez GPU
+  # protobuf:   Protocol Buffers – gRPC, ONNX, TFLite, OpenClaw tools
+  # meson:      Build systém (kiwix-tools, libzim)
+  - cmake
+  - ninja
+  - llvm
+  - ccache
+  - pkg-config
+  - libomp
+  - openblas
+  - protobuf
+  - meson
+
+homebrew_taps: []
+
+homebrew_cask_appdir: /Applications
+homebrew_cask_accept_external_apps: true
+
+homebrew_cask_apps:
+  # ── Infrastruktura ────────────────────────────────────────────────────────
+  - docker               # Docker Desktop (nutné pro Kiwix a OpenClaw)
+
+  # ── Editory / IDE ─────────────────────────────────────────────────────────
+  - visual-studio-code   # VS Code – hlavní editor
+  - windsurf             # Codeium Windsurf – AI-first IDE
+  - sublime-text         # Sublime Text – rychlý editor
+
+  # ── Terminály ─────────────────────────────────────────────────────────────
+  - ghostty              # Ghostty – GPU-accelerated terminál (nový standard)
+  - iterm2               # iTerm2 – záložní terminál
+  # - warp              # Warp – AI terminál (alternativa)
+
+  # ── Prohlížeče ────────────────────────────────────────────────────────────
+  - brave-browser        # Brave – privacy-first prohlížeč (doporučeno)
+  - google-chrome        # Chrome – pro testování
+  - firefox              # Firefox – pro testování
+  # - arc               # Arc – alternativní prohlížeč
+
+  # ── Produktivita / Systém ─────────────────────────────────────────────────
+  - raycast              # Raycast – Spotlight replacement (AI, snippets, scripts)
+
+  # ── Komunikace ────────────────────────────────────────────────────────────
+  - slack                # Slack – teamová komunikace
+  - discord              # Discord – komunity a voice chat
+
+  # ── Správa souborů / DB ───────────────────────────────────────────────────
+  - transmit             # Transmit – SFTP / S3 / cloud storage
+  - sequel-ace           # Sequel Ace – GUI pro MySQL/MariaDB
+  - tableplus            # TablePlus – multi-DB GUI (Postgres, SQLite…)
+
+  # ── Vývojové nástroje ─────────────────────────────────────────────────────
+  - insomnia             # Insomnia – REST / GraphQL klient
+  # - postman            # Postman – alternativa k Insomnia
+  - balenaetcher         # balenaEtcher – zápis OS image na SD/USB
+  - licecap              # LiCEcap – záznam GIF screenshotů
+
+  # ── Bezpečnost / VPN ──────────────────────────────────────────────────────
+  - lastpass             # LastPass – správce hesel
+  - openvpn-connect      # OpenVPN Connect – VPN klient
+  # - 1password          # 1Password – alternativa k LastPass
+  # - mullvadvpn         # Mullvad – privacy VPN
+
+  # ── Media / Zábava ────────────────────────────────────────────────────────
+  - vlc                  # VLC – univerzální přehrávač médií
+  - spotify              # Spotify – hudba
+  - handbrake            # HandBrake – konverze video formátů
+  # - plex               # Plex – domácí media server
+
+  # ── Kreativní nástroje ────────────────────────────────────────────────────
+  - blender              # Blender – 3D modelování, animace, rendering
+  # - fl-studio            # FL Studio – není v Homebrew, instaluj manuálně z image-line.com
+  # - gimp               # GIMP – rastrová grafika (open-source PS)
+  # - inkscape           # Inkscape – vektorová grafika (open-source AI)
+  # - davinci-resolve    # DaVinci Resolve – video střih
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  - obsidian             # Obsidian – lokální .md knowledge base + kanban
+                         # ↳ Propojí se s ~/agents/log/ a Grafana
+
+  # ── Síť / přístup ─────────────────────────────────────────────────────────
+  - tailscale            # Tailscale – WireGuard mesh VPN (přístup ke všem službám odkudkoliv)
+
+  # ── Virtualizace ──────────────────────────────────────────────────────────
+  # - utm                # UTM – macOS/Linux VM na Apple Silicon (testování Ansible, OS images)
+
+  # ── Systémové utility ─────────────────────────────────────────────────────
+  # - dropbox              # Dropbox – cloud sync (odkomentuj v config.yml pokud chceš)
+  - jordanbaird-ice      # Ice – free Bartender (organizace menu baru)
+  - stats                # Stats – CPU/GPU/RAM/network v menu baru
+  # - rectangle          # Rectangle – window manager
+  # - alt-tab            # AltTab – Windows-like app switcher
+  # - bettertouchtool    # BetterTouchTool – trackpad/klávesnice customization
+
+# ==============================================================================
+# MAC APP STORE
+# ==============================================================================
+mas_installed_apps: []
+mas_email: ""
+mas_password: ""
+
+# ==============================================================================
+# NGINX
+# ==============================================================================
+
+nginx_worker_processes: "auto"
+nginx_worker_connections: 2048
+nginx_keepalive_timeout: 65
+nginx_client_max_body_size: "100m"
+nginx_gzip: true
+nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
+nginx_ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+
+# Nginx sites – aktivují se AUTOMATICKY podle install_* flagů.
+# Pro ruční override nastav nginx_sites_enabled v config.yml.
+# Pro přidání vlastních sites použij nginx_sites_extra:
+# nginx_sites_extra:
+#   - php-app.conf
+#   - python-proxy.conf
+  # - static-site.conf      # Statické soubory s cachováním
+
+# ==============================================================================
+# PHP
+# ==============================================================================
+
+php_version: "8.3"
+php_memory_limit: "256M"
+php_upload_max_filesize: "64M"
+php_post_max_size: "64M"
+php_max_execution_time: 300
+php_date_timezone: "Europe/Prague"
+
+php_extensions:
+  - "php@{{ php_version }}-redis"
+  - "php@{{ php_version }}-imagick"
+
+php_composer_packages:
+  []
+  # - name: laravel/installer
+  #   state: present
+  # - name: drush/drush
+  #   state: present
+
+# ==============================================================================
+# NODE.JS
+# ==============================================================================
+
+node_nvm_version: "lts/*"   # nebo konkrétní: "22", "20"
+
+node_global_packages:
+  - yarn
+  - pnpm
+  - typescript
+  - ts-node
+  - tsx
+  - nodemon
+  - pm2
+  - eslint
+  - prettier
+  - "@anthropic-ai/sdk"          # Claude API SDK
+  - "@anthropic-ai/claude-code"  # Claude Code CLI (tento nástroj)
+
+npm_packages: []
+# - name: webpack
+#   state: present
+#   version: "^5.0"
+
+# ==============================================================================
+# BUN
+# ==============================================================================
+
+bun_global_packages: []
+# - name: "@hono/hono"
+#   state: present
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+
+python_version: "3.13"   # pyenv install target
+
+pip_packages:
+  # ── Dev základ ──────────────────────────────────────────────────────────
+  - name: virtualenv
+  - name: black
+  - name: ruff
+  - name: mypy
+  - name: pytest
+  - name: httpx
+  - name: fastapi
+  - name: uvicorn
+  - name: rich
+  - name: ansible
+  - name: anthropic     # Claude API SDK
+  # ── Data Science / AI ────────────────────────────────────────────────────
+  - name: jupyterlab    # Jupyter notebooks (Ollama experimenty, data analýza)
+  - name: numpy
+  - name: pandas
+  - name: matplotlib
+  - name: transformers  # HuggingFace modely (lokální inference vedle Ollama)
+  - name: langchain     # LLM orchestrace + chains
+  - name: langchain-community
+  - name: openai        # OpenAI SDK (kompatibilní s Ollama API)
+  # ── Observability klient ─────────────────────────────────────────────────
+  - name: opentelemetry-sdk
+  - name: opentelemetry-exporter-otlp  # OTLP traces z Python projektů → Tempo
+
+# ==============================================================================
+# GO
+# ==============================================================================
+
+go_packages:
+  - "golang.org/x/tools/gopls@latest"
+  - "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+  - "github.com/go-task/task/v3/cmd/task@latest"
+  - "github.com/air-verse/air@latest"
+
+gem_packages: []
+# - name: bundler
+#   state: present
+
+composer_packages: []
+
+# ==============================================================================
+# .NET / C#
+# ==============================================================================
+
+dotnet_sdk_cask: "dotnet-sdk"   # Homebrew Cask název
+
+dotnet_global_tools:
+  - name: dotnet-ef             # Entity Framework CLI
+  - name: dotnet-script         # C# scripting
+
+# ==============================================================================
+# OPENCLAW – self-hosted AI agent (Ollama backend, žádný API klíč)
+# Dokumentace: https://github.com/openclaw/openclaw
+# Ollama integrace: https://ollama.com/blog/openclaw
+# ==============================================================================
+
+# Uživatel a domovský adresář pro agentické prostředí
+openclaw_user: "{{ ansible_facts['user_id'] }}"
+openclaw_base_dir: "{{ ansible_facts['env']['HOME'] }}"
+
+# Adresáře agentického systému
+openclaw_agents_dir: "{{ ansible_facts['env']['HOME'] }}/agents"         # instalace, konfigurace agentů
+openclaw_projects_dir: "{{ ansible_facts['env']['HOME'] }}/projects"     # projekty hostované přes nginx
+openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # strukturované .md logy
+
+# OpenClaw konfigurace (~/.openclaw/)
+openclaw_config_dir: "~/.openclaw"
+
+# Ollama model – doporučeno pro 36GB RAM: qwen3:14b
+# Alternativy: qwen3.5:14b (rychlejší), llama3.3:70b (silnější, pomalejší)
+openclaw_model: "qwen3:14b"
+ollama_max_loaded_models: 1    # Max modelů v RAM (1 = šetří SWAP na 36GB)
+ollama_num_parallel: 2         # Max paralelních inference requestů
+ollama_keep_alive: "5m"        # Uvolnit model z RAM po nečinnosti (default 5m, 0 = ihned)
+
+# Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
+openclaw_install_daemon: true
+openclaw_domain: "claw.dev.local"
+openclaw_gateway_port: 18789
+
+# Jméno agenta (persona)
+openclaw_agent_name: "Inspektor Klepítko"
+
+# Concurrent sub-agents
+openclaw_max_concurrent_agents: 4
+openclaw_max_concurrent_subagents: 8
+
+# ==============================================================================
+# PI AGENTS – coding agent framework (pi.dev / @mariozechner/pi-coding-agent)
+# Dokumentace: https://github.com/badlogic/pi-mono
+# Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
+# ==============================================================================
+
+# Adresář PI agenta
+pi_config_dir: "{{ ansible_facts['env']['HOME'] }}/.pi/agent"
+
+# Nainstalovat pi-autoresearch extension (optimalizační smyčka pro experimenty)
+pi_install_autoresearch: true
+
+# ==============================================================================
+# DOTFILES
+# ==============================================================================
 
 dotfiles_repo: https://github.com/geerlingguy/dotfiles.git
 dotfiles_repo_accept_hostkey: true
 dotfiles_repo_local_destination: ~/Development/GitHub/dotfiles
-dotfiles_repo_version: master # Replace with your default branch
+dotfiles_repo_version: master
 dotfiles_files:
   - .zshrc
   - .gitignore
@@ -33,79 +461,97 @@ dotfiles_files:
   - .osx
   - .vimrc
 
-homebrew_installed_packages:
-  # - ansible # Installed via Pip.
-  - autoconf
-  - bash-completion
-  - doxygen
-  - gettext
-  - gifsicle
-  - git
-  - gh
-  - go
-  - gpg
-  - httpie
-  - iperf
-  - libevent
-  - sqlite
-  - nmap
-  - node
-  - nvm
-  - php
-  - pngpaste
-  - ssh-copy-id
-  - readline
-  - openssl
-  - pv
-  - wget
-  - wrk
-  - zsh-history-substring-search
-
-homebrew_taps: []
-
-homebrew_cask_appdir: /Applications
-homebrew_cask_apps:
-  - chromedriver
-  - docker
-  - dropbox
-  - firefox
-  - google-chrome
-  - handbrake
-  - licecap
-  - sequel-ace
-  - slack
-  - sublime-text
-  - transmit
-
-# See `geerlingguy.mac.mas` role documentation for usage instructions.
-mas_installed_apps: []
-mas_email: ""
-mas_password: ""
+# ==============================================================================
+# macOS DEFAULTS (.osx script)
+# ==============================================================================
 
 osx_script: "~/.osx --no-restart"
 
-# Install packages from other package managers.
-# Note: You are responsible for making sure the required package managers are
-# installed, eg. through homebrew.
-composer_packages: []
-# - name: drush
-#   state: present # present/absent, default: present
-#   version: "^8.1" # default: N/A
-gem_packages: []
-# - name: bundler
-#   state: present # present/absent/latest, default: present
-#   version: "~> 1.15.1" # default: N/A
-npm_packages: []
-# - name: webpack
-#   state: present # present/absent/latest, default: present
-#   version: "^2.6" # default: N/A
-pip_packages: []
-# - name: mkdocs
-#   state: present # present/absent/latest, default: present
-#   version: "0.16.3" # default: N/A
+sudoers_custom_config: ""
+# sudoers_custom_config: |
+#   %admin ALL=(ALL) NOPASSWD: ALL
 
-# Set to 'true' to configure Sublime Text.
-configure_sublime: false
+# ==============================================================================
+# macOS ROZŠÍŘENÁ NASTAVENÍ (configure_macos_defaults)
+# Automatizuje vše z "Manual settings to automate someday" + developer defaults
+# ==============================================================================
+
+# ── Finder ────────────────────────────────────────────────────────────────────
+macos_finder_show_hidden_files: true          # Zobrazit skryté soubory (Cmd+Shift+.)
+macos_finder_show_extensions: true           # Zobrazit přípony souborů
+macos_finder_show_path_bar: true             # Zobrazit path bar dole
+macos_finder_show_status_bar: true           # Zobrazit status bar dole
+macos_finder_disable_desktop_click: true     # Zakázat klik na plochu (Stage Manager)
+macos_finder_default_search_scope: "SCcf"   # Hledat v aktuální složce (SCcf) / počítači (SCev)
+macos_finder_show_posix_path_title: false    # Zobrazit POSIX path v title baru
+
+# ── Klávesnice ────────────────────────────────────────────────────────────────
+macos_keyboard_repeat_rate: 2        # 0=fastest … 120=slowest (2 = Fast)
+macos_keyboard_repeat_delay: 15      # 0=shortest … 120=longest (15 = Short)
+macos_keyboard_press_hold: false     # false = key repeat (ne accent menu)
+# Caps Lock → Esc: NELZE plně automatizovat (HW-specific IOKit), viz README
+
+# ── Accessibility ─────────────────────────────────────────────────────────────
+macos_reduce_transparency: true      # Snížit průhlednost (výkon)
+macos_reduce_motion: false           # Snížit pohyb animací
+
+# ── Screenshot ────────────────────────────────────────────────────────────────
+macos_screenshot_location: "~/Desktop"   # Kam ukládat screenshoty
+macos_screenshot_format: "png"           # png | jpg | pdf | tiff
+
+# ── Dock ──────────────────────────────────────────────────────────────────────
+macos_dock_autohide: true            # Automaticky skrýt Dock
+macos_dock_show_recents: false       # Nezobrazovat nedávné aplikace
+macos_dock_tilesize: 48              # Velikost ikon (pixels)
+macos_dock_minimize_effect: "scale"  # genie | scale
+
+# ── Safari (vývojářské) ───────────────────────────────────────────────────────
+macos_safari_show_status_bar: true        # Zobrazit status bar
+macos_safari_show_full_url: true          # Zobrazit plnou URL
+macos_safari_developer_menu: true         # Zapnout Developer menu
+# Poznámka: Userscripts (Return YouTube Dislike) je třeba instalovat manuálně
+
+# ── Terminal ──────────────────────────────────────────────────────────────────
+macos_terminal_secure_keyboard: true  # Secure keyboard entry
+
+# ── Systém ────────────────────────────────────────────────────────────────────
+macos_computer_name: ""               # NetBIOS název počítače; prázdné = použij ansible_hostname
+macos_disable_gatekeeper: false       # NEDOPORUČENO – nechej false pro bezpečnost
+# Full Disk Access pro Terminal: NELZE automatizovat (SIP protected)
+# Installer sám o to požádá při prvním spuštění
+
+# ==============================================================================
+# SYSTÉMOVÉ SLUŽBY
+# ==============================================================================
+
+# SSH
+ssh_port: 22
+ssh_allow_groups: "admin staff"   # Skupiny s SSH přístupem
+ssh_password_auth: false          # false = pouze klíče (bezpečnější)
+
+# Samba / SMB
+samba_workgroup: "WORKGROUP"
+samba_shares:
+  - name: "projects"
+    path: "{{ ansible_facts['env']['HOME'] }}/projects"
+    comment: "{{ ansible_facts['user_id'] }} projects"
+    browseable: true
+    writable: true
+
+# VNC
+vnc_password: ""   # PŘEPIŠ! Prázdné = VNC se nespustí bezpečně
+
+# ==============================================================================
+# DOCK
+# ==============================================================================
+
+dockitems_remove: []
+dockitems_persist: []
+
+# ==============================================================================
+# SUBLIME TEXT
+# ==============================================================================
+
 sublime_base_path: "~/Library/Application Support/Sublime Text"
 sublime_config_path: "Packages/User"
 sublime_package_control:
@@ -122,5 +568,612 @@ sublime_package_control:
   - "TrailingSpaces"
   - "WordingStatus"
 
-# Glob pattern to ansible task files to run after all other tasks are finished.
+# ==============================================================================
+# IIAB – MARIADB
+# ==============================================================================
+
+mariadb_root_password: "changeme_pw_mariadb"   # PŘEPIŠ v credentials.yml!
+mariadb_version: "lts"                  # lts / 11 / 10.11 – Docker image tag
+mariadb_port: 3306
+mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persistence dat mimo kontejner
+
+# ==============================================================================
+# INFRA – POSTGRESQL (sdílená DB pro Mattermost, Outline, Metabase, Superset)
+# ==============================================================================
+
+install_postgresql: false
+postgresql_version: "16-alpine"
+postgresql_port: 5432
+postgresql_root_user: "postgres"
+postgresql_root_password: "changeme_pw_postgresql"
+postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
+
+# ==============================================================================
+# INFRA – REDIS (Docker, alternativa k Homebrew Redis)
+# Pokud redis_docker: true, Homebrew Redis se nepoužívá
+# ==============================================================================
+
+redis_docker: false                    # true = Redis v Docker (pro cross-stack přístup)
+redis_version: "7-alpine"
+redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
+
+# ==============================================================================
+# IIAB – MARIADB (pokračování)
+# ==============================================================================
+
+mariadb_databases:
+  - name: "wordpress"
+  - name: "nextcloud"
+  - name: "freescout"
+  - name: "erpnext"
+  - name: "asterisk"
+
+mariadb_users:
+  - name: "wordpress"
+    password: "{{ wordpress_db_password }}"
+    priv: "wordpress.*:ALL"
+  - name: "nextcloud"
+    password: "{{ nextcloud_db_password }}"
+    priv: "nextcloud.*:ALL"
+  - name: "freescout"
+    password: "{{ freescout_db_password | default('changeme_pw_freescout') }}"
+    priv: "freescout.*:ALL"
+  - name: "erpnext"
+    password: "{{ erpnext_admin_password | default('changeme_pw_erpnext') }}"
+    priv: "erpnext.*:ALL"
+  - name: "asterisk"
+    password: "{{ freepbx_db_password | default('changeme_pw_freepbx') }}"
+    priv: "asterisk.*:ALL"
+
+# ==============================================================================
+# IIAB – WORDPRESS
+# ==============================================================================
+
+wordpress_domain: "wordpress.dev.local"
+wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
+wordpress_db_name: "wordpress"
+wordpress_db_user: "wordpress"
+wordpress_db_password: "changeme_pw_wordpress"
+wordpress_db_host: "127.0.0.1"          # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
+wordpress_table_prefix: "wp_"
+wordpress_version: "latest"             # Docker image tag
+wordpress_port: 8084                    # Lokální port kontejneru (nginx proxy)
+wordpress_admin_user: "admin"
+wordpress_admin_password: "changeme_pw_wordpress_admin"
+wordpress_admin_email: "admin@dev.local"
+
+# ==============================================================================
+# IIAB – NEXTCLOUD
+# ==============================================================================
+
+nextcloud_domain: "cloud.dev.local"
+nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
+nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
+nextcloud_db_name: "nextcloud"
+nextcloud_db_user: "nextcloud"
+nextcloud_db_password: "changeme_pw_nextcloud"
+nextcloud_db_host: "127.0.0.1"         # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
+nextcloud_admin_user: "admin"
+nextcloud_admin_password: "changeme_pw_nextcloud_admin"
+nextcloud_version: "stable"             # Docker image tag (stable / latest / 29)
+nextcloud_port: 8085                    # Lokální port kontejneru (nginx proxy)
+
+# ==============================================================================
+# IIAB – KIWIX (offline Wikipedia, Gutenberg, ZIM soubory)
+# Kiwix běží v Docker kontejneru (nejjednodušší na macOS)
+# ==============================================================================
+
+kiwix_domain: "kiwix.dev.local"
+kiwix_port: 8888                           # Lokální port kiwix-serve
+kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Sem ukládej .zim soubory
+
+# ZIM soubory ke stažení (prázdné = nestahovat automaticky)
+# Velikosti: Wikipedia CZ ~2GB, EN ~90GB, Gutenberg ~60GB
+# Viz: https://download.kiwix.org/zim/
+# Init ZIM – malý soubor stažený automaticky aby Kiwix nastartoval.
+# Větší ZIM soubory přidej do kiwix_zim_files nebo stáhni přes download-zim.sh.
+kiwix_init_zim_url: "https://download.kiwix.org/zim/zimit/based.cooking_en_all_2026-02.zim"
+kiwix_init_zim_dest: "based-cooking.zim"
+
+kiwix_zim_files: []
+# Příklady (přidej do config.yml):
+# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2026-03.zim"
+#   dest: "wikipedia_en_top_mini.zim"    # ~315 MB
+# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
+#   dest: "wikipedia_cs_mini.zim"        # ~500 MB
+
+# ==============================================================================
+# IIAB – OFFLINE MAPY (tileserver-gl + MBTiles)
+# ==============================================================================
+
+maps_domain: "maps.dev.local"
+maps_port: 8080
+maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"        # Sem ukládej .mbtiles soubory
+
+# MBTiles soubory ke stažení (prázdné = nestahovat automaticky)
+# Viz: https://data.maptiler.com/downloads/ nebo https://openmaptiles.org/
+maps_mbtiles_files: []
+# - url: "https://data.maptiler.com/downloads/europe/czech-republic/"
+#   dest: "czech-republic.mbtiles"
+#   # POZOR: Vyžaduje registraci na maptiler.com (free tier k dispozici)
+
+# ==============================================================================
+# SHELL EXTRAS – Starship + aliasy
+# ==============================================================================
+
+# Starship preset: plain-text | bracketed-segments | gruvbox-rainbow | tokyo-night
+starship_preset: "gruvbox-rainbow"
+
+# Aliasy přidané do ~/.zshrc
+shell_aliases:
+  - alias: ls
+    command: "eza --icons --group-directories-first"
+  - alias: ll
+    command: "eza -la --icons --git --group-directories-first"
+  - alias: lt
+    command: "eza --tree --icons --level=3"
+  - alias: cat
+    command: "bat --style=numbers,changes,header"
+  - alias: grep
+    command: "rg"
+  - alias: find
+    command: "fd"
+  - alias: du
+    command: "ncdu"
+  - alias: df
+    command: "duf"
+  - alias: lg
+    command: "lazygit"
+  - alias: nr
+    command: "npm run"
+  - alias: br
+    command: "bun run"
+
+# ==============================================================================
+# OBSERVABILITY – Grafana LGTM stack + Alloy
+# Architektura:
+#   Alloy (collector) → Prometheus (metrics) → Grafana (dashboards)
+#                    → Loki (logs)            →
+#                    → Tempo (traces)         →
+# ==============================================================================
+
+# ── Porty ─────────────────────────────────────────────────────────────────────
+grafana_port: 3000
+prometheus_port: 9090
+loki_port: 3100
+tempo_version: "2.10.0"           # github.com/grafana/tempo/releases – no Homebrew formula
+nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
+phpfpm_exporter_version: "2.2.0"         # github.com/hipages/php-fpm_exporter/releases – no Homebrew formula
+tempo_http_port: 3200
+tempo_otlp_grpc_port: 4327    # Tempo interní OTLP gRPC (Alloy → Tempo)
+tempo_otlp_http_port: 4328    # Tempo interní OTLP HTTP (Alloy → Tempo)
+alloy_ui_port: 12345
+alloy_otlp_grpc_port: 4317    # Alloy veřejný OTLP gRPC (apps → Alloy)
+alloy_otlp_http_port: 4318    # Alloy veřejný OTLP HTTP (apps → Alloy)
+
+# ── Domény ────────────────────────────────────────────────────────────────────
+grafana_domain: "grafana.dev.local"
+# Ostatní služby nejsou veřejně exponovány (localhost only), přes Grafana
+observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname v Grafana labelech
+
+# ── Docker image verze (observability + devops) ──────────────────────────────
+grafana_version: "latest"
+prometheus_version: "latest"
+loki_version: "latest"
+grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
+
+# Gitea Docker
+gitea_version: "latest"
+
+# ── Grafana ───────────────────────────────────────────────────────────────────
+grafana_admin_user: "admin"
+grafana_admin_password: "changeme_pw_grafana"
+grafana_allow_embedding: false
+grafana_analytics: false    # Vypnout telemetrii
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus_retention: "30d"
+prometheus_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/prometheus"
+
+# ── Loki ──────────────────────────────────────────────────────────────────────
+loki_retention: "744h"   # 31 dní
+loki_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/loki"
+
+# ── Tempo ─────────────────────────────────────────────────────────────────────
+tempo_retention: "168h"  # 7 dní (traces bývají objemnější)
+tempo_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/tempo"
+
+# ── Alloy – co sbírat ─────────────────────────────────────────────────────────
+alloy_scrape_nginx: true           # nginx stub_status → Prometheus
+alloy_scrape_phpfpm: true          # PHP-FPM status → Prometheus
+phpfpm_exporter_port: 9253         # Port php-fpm_exporteru
+alloy_scrape_mariadb: false        # MariaDB metriky (zapni pokud install_mariadb: true)
+alloy_scrape_redis: true           # Redis metriky → Prometheus
+redis_port: 6379                   # Redis port
+alloy_tail_nginx_logs: true        # Nginx access+error logy → Loki
+alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
+alloy_tail_php_logs: true          # PHP-FPM logy → Loki
+alloy_receive_otlp: true           # OTLP přijímač pro app traces/metrics/logs → Tempo
+
+# ── Grafana dashboardy ke stažení z grafana.com ───────────────────────────────
+# ID dashboardů z https://grafana.com/grafana/dashboards/
+grafana_dashboards:
+  - id: 1860    # Node Exporter Full (system metrics)
+    revision: 37
+  - id: 12708   # NGINX exporter
+    revision: 1
+
+# ==============================================================================
+# IIAB – N8N (workflow automation)
+# ==============================================================================
+
+n8n_domain: "n8n.dev.local"
+n8n_port: 5678
+n8n_version: "latest"      # nebo konkrétní: "1.40.0"
+n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
+n8n_timezone: "Europe/Prague"
+# n8n od v1.0 nemá env var pro admin heslo – první registrovaný uživatel = owner
+
+# ==============================================================================
+# IIAB – GITEA (self-hosted Git)
+# ==============================================================================
+
+gitea_domain: "git.dev.local"
+gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva → Gitea na 3003
+gitea_ssh_port: 2222
+gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"
+gitea_admin_user: "{{ ansible_facts['user_id'] }}"
+gitea_admin_password: "changeme_pw_gitea"
+gitea_admin_email: ""                          # VYPLŇ!
+gitea_secret_key: "changeme_pw_gitea_secret"
+gitea_disable_registration: false              # true = pouze admin může přidávat uživatele
+
+# ==============================================================================
+# IIAB – GITLAB CE (full DevOps platform)
+# Poznámka: GitLab Omnibus je těžká aplikace (~4 GB RAM v klidu, ~1 GB image).
+#           Doporučeno pouze pokud nepotřebuješ jen Git (na to stačí Gitea).
+#           Interní PostgreSQL, Redis, Sidekiq – vše v jednom kontejneru.
+# ==============================================================================
+
+gitlab_domain: "gitlab.dev.local"
+gitlab_http_port: 8929          # Interní HTTP port (nginx přebírá SSL, forwarduje sem)
+gitlab_ssh_port: 2224           # Git SSH (22=systém, 2222=Gitea → Gitlab na 2224)
+gitlab_version: "latest"        # nebo konkrétní: "17.9.1-ce.0"
+gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repozitáře, uploads, artefakty (velké!)
+gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + klíče (malé, ale důležité)
+gitlab_timezone: "Europe/Prague"
+gitlab_signup_enabled: false    # Zakáže registraci nových uživatelů
+gitlab_puma_workers: 2          # Worker procesy (min 2, pro 36 GB klidně 4)
+gitlab_sidekiq_concurrency: 10  # Background job vlákna
+
+# ==============================================================================
+# IIAB – OPEN WEBUI (chat UI pro Ollama)
+# Vyžaduje: install_openclaw: true (Ollama musí běžet na portu 11434)
+# ==============================================================================
+
+openwebui_domain: "ai.dev.local"
+openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
+openwebui_version: "main"        # nebo konkrétní: "0.5.20"
+openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
+openwebui_secret_key: "changeme_pw_openwebui"
+openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
+openwebui_admin_name: "Admin"
+openwebui_admin_email: "admin@dev.local"
+openwebui_admin_password: "changeme_pw_openwebui_admin"
+
+# ==============================================================================
+# IIAB – WOODPECKER CI (CI/CD napojen na Gitea)
+# Vyžaduje: install_gitea: true + manuální OAuth2 aplikace v Gitee
+# ==============================================================================
+
+woodpecker_domain: "ci.dev.local"
+woodpecker_port: 8060            # Web UI
+woodpecker_grpc_port: 9060       # gRPC pro agenty (interní)
+woodpecker_version: "v3"                # latest tag odstraněn, musí být semver (v3/v3.x/v3.x.y)
+woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
+woodpecker_agent_secret: "changeme_pw_woodpecker"
+woodpecker_gitea_client: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
+woodpecker_gitea_secret: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
+woodpecker_open_registration: false  # true = kdokoliv se může přihlásit přes Gitea
+woodpecker_max_workflows: 4      # Max paralelních pipeline runů na agenta
+
+# ==============================================================================
+# IIAB – PORTAINER CE (Docker management UI)
+# ==============================================================================
+
+portainer_domain: "portainer.dev.local"
+portainer_port: 9002                   # 9000/9001 rezervováno pro RustFS (S3 API + console)
+portainer_version: "latest"
+portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
+portainer_admin_password: "changeme_pw_portainer"
+
+# ==============================================================================
+# IIAB – JELLYFIN (media server)
+# ==============================================================================
+
+jellyfin_domain: "media.dev.local"
+jellyfin_port: 8096
+jellyfin_version: "latest"
+jellyfin_lan_access: true              # true = port dostupný z LAN (pro TV, mobilní klienty)
+jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
+jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
+jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Přepiš na svou knihovnu
+jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
+jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
+
+# ==============================================================================
+# IIAB – UPTIME KUMA (monitoring dashboard)
+# ==============================================================================
+
+uptime_kuma_domain: "uptime.dev.local"
+uptime_kuma_port: 3001
+uptime_kuma_version: "1"   # nebo konkrétní: "1.23.13"
+uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
+uptime_kuma_admin_user: "admin"
+uptime_kuma_admin_password: "changeme_pw_uptime_kuma"
+uptime_kuma_auto_monitors: true  # Automaticky vytvořit monitory pro všechny install_* služby
+
+# ==============================================================================
+# IIAB – CALIBRE-WEB (ebook server)
+# ==============================================================================
+
+calibreweb_domain: "books.dev.local"
+calibreweb_port: 8083
+calibreweb_version: "latest"   # nebo konkrétní: "0.6.21"
+calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"   # Calibre library
+calibreweb_timezone: "Europe/Prague"
+
+# ==============================================================================
+# TAILSCALE – WireGuard mesh VPN
+# Po instalaci: tailscale up (interaktivní login v prohlížeči)
+# Služby pak dostupné přes: http://mac-studio.<tailnet>.ts.net:<PORT>
+# ==============================================================================
+
+tailscale_accept_routes: false    # Přijímat subnet routes od jiných nodů
+tailscale_exit_node: false        # Používat tento Mac jako exit node
+# tailscale_auth_key: ""          # Pre-auth key pro neinteraktivní setup (z admin console)
+tailscale_hostname: ""            # Tailscale FQDN (např. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
+services_lan_access: false        # true = Docker služby na 0.0.0.0 (přístup přes Tailscale/LAN po portech)
+
+# ==============================================================================
+# POWER MANAGEMENT – pmset nastavení (pouze při napájení -c)
+# Cíl: displej spí, ale počítač zůstává dostupný na síti (Jellyfin, SSH, Grafana…)
+# ==============================================================================
+
+configure_power_management: true       # Nastavit pmset
+blank_stop_timeout: 30                # Sekundy čekání po docker compose down (blank reset)
+pmset_sleep: 0                         # Počítač nikdy nespí (0 = disabled)
+pmset_displaysleep: 20                 # Displej spí po 20 min
+pmset_disksleep: 0                     # Disk nikdy nespí
+pmset_womp: 1                          # Wake on LAN
+pmset_tcpkeepalive: 1                  # Udržovat TCP spojení při sleep
+pmset_powernap: 1                      # Power Nap (background updates)
+pmset_networkoversleep: 0              # Neuspávat síťovku při sleep displeje
+pmset_ttyskeepawake: 1                 # TTY session zabraňuje spánku
+
+# ==============================================================================
+# DNSMASQ – automatický *.dev.local DNS resolver
+# Odstraňuje nutnost ručně editovat /etc/hosts
+# ==============================================================================
+
+dnsmasq_dev_domain: "dev.local"           # Doména pro lokální vývoj
+dnsmasq_dev_address: "127.0.0.1"          # Cíl *.dev.local z localhostu
+dnsmasq_port: 53                          # DNS port (53 = výchozí)
+dnsmasq_lan_access: true                  # true = dnsmasq poslouchá i na LAN (pro TV, mobily, hosty)
+dnsmasq_additional_addresses: []          # Další vlastní DNS záznamy
+# dnsmasq_additional_addresses:
+#   - domain: "api.external.test"
+#     address: "192.168.1.100"
+
+# ==============================================================================
+# RESTIC – zálohy
+# Dokumentace: https://restic.readthedocs.io/
+# ==============================================================================
+
+restic_backup_paths:
+  - "{{ ansible_facts['env']['HOME'] }}"     # Domovský adresář uživatele
+
+# Restic repozitář – nakonfiguruj dle cíle:
+# restic_repo: "s3:s3.us-east-005.backblazeb2.com/bucket-name"
+# restic_repo: "sftp:user@nas:/backup/mac-studio"
+# restic_repo: "/Volumes/Backup/restic"
+
+# ==============================================================================
+# EXTERNÍ ÚLOŽIŠTĚ – přesun datových adresářů na sekundární SSD
+# Interní SSD (0.5 TB) = macOS, Homebrew, zdrojový kód, MariaDB (nízká latence)
+# Externí SSD (1 TB)   = Kiwix ZIM, Calibre, mapy, Docker, Ollama, observability
+#
+# Jak to funguje:
+#   1. Nastav configure_external_storage: true
+#   2. Připoj SSD na external_storage_root (např. /Volumes/SSD1TB)
+#   3. Spusť playbook – task přesměruje všechny data-heavy cesty na SSD
+#   4. Původní cesty v domovském adresáři se NEPOUŽIJÍ (set_fact override)
+#
+# Co zůstává na interním SSD (výkon):
+#   - macOS systém, Homebrew, zdrojový kód, MariaDB, Redis
+# ==============================================================================
+
+configure_external_storage: false       # true = přesměrovat data na externí SSD
+external_storage_root: "/Volumes/SSD1TB"
+
+# Volitelné přesuny (pouze pokud configure_external_storage: true)
+external_storage_docker: true           # Docker Desktop disk image (~20-100 GB)
+external_storage_docker_app: true      # Přesun Docker.app na SSD + symlink v /Applications
+external_storage_ollama: true           # Ollama modely (~10-150 GB)
+external_storage_caches: true           # npm, pip, Composer, Homebrew cache (~10-50 GB)
+
+# ==============================================================================
+# POST-PROVISION
+# ==============================================================================
+
 post_provision_tasks: []
+
+# ==============================================================================
+# TRAEFIK
+# ==============================================================================
+
+# ── Docker Stacks ────────────────────────────────────────────────────────────
+# Všechny Docker služby jsou organizovány do 4 stacků spravovaných přes Portainer.
+# Každý stack má vlastní docker-compose.yml v podadresáři stacks_dir.
+stacks_dir: "{{ ansible_facts['env']['HOME'] }}/stacks"
+stacks_shared_network: "shared_net"
+
+# Zpětná kompatibilita – starý monolitický compose dir (bude odstraněn po migraci)
+iiab_compose_dir: "{{ stacks_dir }}/iiab"
+
+# ── Traefik ────────────────────────────────────────────────────────────────────
+traefik_image_version: "latest"
+traefik_http_port: 80
+traefik_https_port: 443
+traefik_dashboard_port: 8080
+traefik_domain: "traefik.dev.local"
+traefik_log_level: "INFO"           # DEBUG / INFO / WARN / ERROR
+traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
+
+# ── Home Assistant ─────────────────────────────────────────────────────────────
+homeassistant_version: "stable"     # stable / latest / konkrétní tag (2025.1.0)
+homeassistant_port: 8123
+homeassistant_domain: "home.dev.local"
+homeassistant_timezone: "Europe/Prague"
+homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
+# true = privileged + network_mode: host → mDNS/Bonjour auto-discovery
+# Pozor (macOS): host mode sahá do Docker VM sítě, ne přímo na Mac fyzickou síť.
+# Pro plný Bonjour/mDNS na Mac je potřeba nativní instalace HA nebo host networking
+# přes --network host v Docker Desktop (experimentální funkce).
+homeassistant_privileged: false
+
+# ==============================================================================
+# RUSTFS – S3-compatible object storage
+# ==============================================================================
+
+rustfs_version: "latest"
+rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
+rustfs_console_port: 9001           # Web konzole
+rustfs_domain: "fs.dev.local"
+rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
+rustfs_access_key: "changeme_pw_rustfs_access"
+rustfs_secret_key: "changeme_pw_rustfs_secret"
+
+# ==============================================================================
+# B2B – ERPNEXT (CRM + ERP + HR + Accounting)
+# Vyžaduje: install_mariadb: true, redis_docker: true
+# ==============================================================================
+
+erpnext_domain: "erp.dev.local"
+erpnext_port: 8080
+erpnext_version: "v15"
+erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
+erpnext_admin_password: "changeme_pw_erpnext"
+
+# ==============================================================================
+# B2B – FREESCOUT (helpdesk / ticketing)
+# Vyžaduje: install_mariadb: true
+# ==============================================================================
+
+freescout_domain: "helpdesk.dev.local"
+freescout_port: 8090
+freescout_version: "latest"
+freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
+freescout_db_name: "freescout"
+freescout_db_user: "freescout"
+freescout_db_password: "changeme_pw_freescout"
+freescout_admin_email: "admin@dev.local"
+freescout_admin_password: "changeme_pw_freescout"
+freescout_timezone: "Europe/Prague"
+
+# ==============================================================================
+# B2B – MATTERMOST (team chat)
+# Vyžaduje: install_postgresql: true
+# ==============================================================================
+
+mattermost_domain: "chat.dev.local"
+mattermost_port: 8065
+mattermost_version: "latest"
+mattermost_data_dir: "{{ ansible_facts['env']['HOME'] }}/mattermost"
+mattermost_db_name: "mattermost"
+mattermost_db_user: "mattermost"
+mattermost_db_password: "changeme_pw_mattermost"
+mattermost_timezone: "Europe/Prague"
+
+# ==============================================================================
+# B2B – OUTLINE (team wiki / knowledge base)
+# Vyžaduje: install_postgresql: true, redis_docker: true
+# ==============================================================================
+
+outline_domain: "wiki.dev.local"
+outline_port: 3005
+outline_version: "latest"
+outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
+outline_db_name: "outline"
+outline_db_user: "outline"
+outline_db_password: "changeme_pw_outline"
+outline_secret_key: "changeme_pw_outline_secret"
+outline_utils_secret: "changeme_pw_outline_utils"
+
+# ==============================================================================
+# VOIP – FREEPBX + ASTERISK (PBX / call center)
+# Vyžaduje: install_mariadb: true
+# ==============================================================================
+
+freepbx_domain: "pbx.dev.local"
+freepbx_port: 8088                     # Web UI
+freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
+freepbx_iax_port: 4569                 # IAX2 protocol
+freepbx_rtp_start: 10000              # RTP media start port
+freepbx_rtp_end: 10100                # RTP media end port
+freepbx_version: "latest"
+freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
+freepbx_db_name: "asterisk"
+freepbx_db_user: "asterisk"
+freepbx_db_password: "changeme_pw_freepbx"
+freepbx_timezone: "Europe/Prague"
+
+# ==============================================================================
+# ENGINEERING – QGIS SERVER (GIS mapový server)
+# ==============================================================================
+
+qgis_domain: "gis.dev.local"
+qgis_port: 8071
+qgis_version: "3.36"
+qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
+
+# ==============================================================================
+# DATA – METABASE (BI dashboardy)
+# Vyžaduje: install_postgresql: true
+# ==============================================================================
+
+metabase_domain: "bi.dev.local"
+metabase_port: 3002
+metabase_version: "latest"
+metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
+metabase_db_name: "metabase"
+metabase_db_user: "metabase"
+metabase_db_password: "changeme_pw_metabase"
+metabase_timezone: "Europe/Prague"
+
+# ==============================================================================
+# DATA – APACHE SUPERSET (data vizualizace)
+# Vyžaduje: install_postgresql: true, redis_docker: true
+# ==============================================================================
+
+superset_domain: "superset.dev.local"
+superset_port: 8089
+superset_version: "latest"
+superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
+superset_db_name: "superset"
+superset_db_user: "superset"
+superset_db_password: "changeme_pw_superset"
+superset_secret_key: "changeme_pw_superset_secret"
+
+# ==============================================================================
+# INFRA – BLUESKY PDS (AT Protocol Personal Data Server)
+# Federovaná identita: @user.bsky.dev.local → SSO pro všechny služby
+# ==============================================================================
+
+bluesky_pds_hostname: "bsky.dev.local"
+bluesky_pds_port: 2583
+bluesky_pds_version: "latest"
+bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
+bluesky_pds_admin_password: "changeme_pw_bluesky"
+bluesky_pds_jwt_secret: "changeme_pw_bluesky_jwt"
+bluesky_pds_rotation_key: ""           # Generuj: openssl rand -hex 32

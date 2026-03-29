@@ -1,0 +1,86 @@
+---
+# ==============================================================================
+# MARIADB – post-start nastavení (spouštěno PO startu docker compose stacku)
+# Vytváří databáze a uživatele definované v mariadb_databases / mariadb_users
+# Compose --wait s healthcheckem zajistí, že MariaDB je ready před tímto taskem.
+# ==============================================================================
+
+- name: "[MariaDB] Verify MariaDB is accepting connections"
+  community.mysql.mysql_info:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+  register: mariadb_conn
+  retries: 5
+  delay: 10
+  until: mariadb_conn is not failed
+  ignore_errors: true  # noqa: ignore-errors – potřebujeme registrovat failed stav
+  when: not ansible_check_mode
+
+- name: "[MariaDB] Connection failed – diagnostics"
+  ansible.builtin.pause:
+    prompt: |-
+      ══════════════════════════════════════════════════════════════════════
+       MariaDB: root pristup odepren ({{ mariadb_conn.msg | default('neznama chyba') }})
+
+       Pravdepodobna pricina: DB byla inicializovana s jinym heslem nez je
+       v credentials.yml. Env var MARIADB_ROOT_PASSWORD se cte jen pri prvni
+       inicializaci.
+
+       Oprava (smazani dat a reinicializace):
+         docker compose -p iiab stop mariadb
+         rm -rf ~/mariadb/data/*
+         docker compose -p iiab up -d mariadb
+         sleep 15
+         # pak stiskni ENTER
+
+       Nebo rucni reset hesla:
+         docker compose -p iiab exec mariadb mariadbd-safe --skip-grant-tables &
+         docker compose -p iiab exec mariadb mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mariadb_root_password }}';"
+      ══════════════════════════════════════════════════════════════════════
+  when:
+    - mariadb_conn is failed
+    - not ansible_check_mode
+
+- name: "[MariaDB] Remove test database"
+  community.mysql.mysql_db:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: test
+    state: absent
+  failed_when: false
+  when: mariadb_conn is not failed
+
+- name: "[MariaDB] Create databases"
+  community.mysql.mysql_db:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+  loop: "{{ mariadb_databases | default([]) }}"
+  no_log: true
+  when: mariadb_conn is not failed
+
+# host: '%' – PHP-FPM a další klienti se připojují přes Docker port-forward;
+# uvnitř MariaDB kontejneru to nepřijde jako 127.0.0.1 ale jako gateway IP
+- name: "[MariaDB] Create database users"
+  community.mysql.mysql_user:
+    login_host: "127.0.0.1"
+    login_port: "{{ mariadb_port | default(3306) }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    priv: "{{ item.priv }}"
+    host: "{{ item.host | default('%') }}"
+    state: present
+  loop: "{{ mariadb_users | default([]) }}"
+  no_log: true
+  when: mariadb_conn is not failed

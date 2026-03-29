@@ -3,41 +3,86 @@ name: CI
 'on':
   pull_request:
     paths-ignore:
-      - '*.md' # Markdown docs need no linting/testing etc.
+      - '*.md'
   push:
     paths-ignore:
       - '*.md'
     branches:
       - master
+      - 'claude/**'
   schedule:
     - cron: "0 5 * * 4"
 
 jobs:
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # LINT – rychlý statický check (yamllint + ansible-lint), běží na Linux
+  # ──────────────────────────────────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install test dependencies.
+      - name: Install lint dependencies.
         run: pip3 install yamllint ansible ansible-lint
 
-      - name: Lint code.
-        run: |
-          yamllint .
-          ansible-lint
+      - name: yamllint – YAML syntax check.
+        run: yamllint .
 
+      - name: ansible-lint – Ansible best practices.
+        run: ansible-lint
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # SYNTAX CHECK – Ansible syntax-check bez spouštění (rychlé, na Linux)
+  # ──────────────────────────────────────────────────────────────────────────
+  syntax:
+    name: Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Ansible.
+        run: pip3 install ansible
+
+      - name: Install Ansible Galaxy requirements.
+        run: ansible-galaxy install -r requirements.yml
+
+      - name: Set up test inventory and config.
+        run: |
+          cp tests/ansible.cfg ./ansible.cfg
+          cp tests/inventory ./inventory
+          cp tests/config.yml ./config.yml
+
+      - name: Ansible syntax check.
+        run: ansible-playbook main.yml --syntax-check
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # INTEGRATION – plné spuštění na reálném macOS (pomalejší, drahé)
+  # Spouští se pouze na master/claude/** pushích, ne na každém PR commitu
+  # ──────────────────────────────────────────────────────────────────────────
   integration:
-    name: Integration
+    name: Integration (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Na feature branchích spouštěj integration jen při push, ne PR draft
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-15
@@ -45,7 +90,7 @@ jobs:
 
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Uninstall GitHub Actions' built-in Homebrew.
         run: tests/uninstall-homebrew.sh
@@ -79,7 +124,9 @@ jobs:
       - name: Idempotence check.
         run: |
           idempotence=$(mktemp)
-          ansible-playbook main.yml | tee -a ${idempotence}
-          tail ${idempotence} | grep -q 'changed=0.*failed=0' && (echo 'Idempotence test: pass' && exit 0) || (echo 'Idempotence test: fail' && exit 1)
+          ansible-playbook main.yml | tee -a "${idempotence}"
+          tail "${idempotence}" | grep -q 'changed=0.*failed=0' \
+            && (echo 'Idempotence test: pass' && exit 0) \
+            || (echo 'Idempotence test: fail' && exit 1)
         env:
           ANSIBLE_FORCE_COLOR: '1'

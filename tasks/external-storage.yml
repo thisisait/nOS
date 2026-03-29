@@ -1,0 +1,234 @@
+---
+# ==============================================================================
+# EXTERNÍ ÚLOŽIŠTĚ – validace, adresáře, set_fact override, shell env vars
+#
+# Tento task MUSÍ běžet PŘED IIAB, observability a openclaw tasky,
+# protože přes set_fact přepíše data-heavy proměnné na cesty k externímu SSD.
+# ==============================================================================
+
+# ── Validace mount pointu ────────────────────────────────────────────────────
+
+- name: "[External SSD] Verify mount point exists"
+  ansible.builtin.stat:
+    path: "{{ external_storage_root }}"
+  register: _ssd_mount
+
+- name: "[External SSD] Fail if SSD is not mounted"
+  ansible.builtin.fail:
+    msg: >
+      Externí SSD není připojeno na {{ external_storage_root }}.
+      Připoj disk a spusť playbook znovu, nebo nastav
+      configure_external_storage: false v config.yml.
+  when:
+    - not ansible_check_mode
+    - not _ssd_mount.stat.exists or not _ssd_mount.stat.isdir
+
+# ── Override datových cest přes set_fact ─────────────────────────────────────
+# set_fact má vyšší prioritu než vars_files → přepíše default.config.yml hodnoty
+
+- name: "[External SSD] Override IIAB data paths to external storage"
+  ansible.builtin.set_fact:
+    kiwix_data_dir: "{{ external_storage_root }}/kiwix"
+    maps_data_dir: "{{ external_storage_root }}/maps"
+    calibreweb_books_dir: "{{ external_storage_root }}/calibre"
+    n8n_data_dir: "{{ external_storage_root }}/n8n"
+    gitea_data_dir: "{{ external_storage_root }}/gitea"
+    gitlab_data_dir: "{{ external_storage_root }}/gitlab"
+    openwebui_data_dir: "{{ external_storage_root }}/openwebui"
+    woodpecker_data_dir: "{{ external_storage_root }}/woodpecker"
+    portainer_data_dir: "{{ external_storage_root }}/portainer"
+    jellyfin_config_dir: "{{ external_storage_root }}/jellyfin/config"
+    jellyfin_cache_dir: "{{ external_storage_root }}/jellyfin/cache"
+    jellyfin_movies_dir: "{{ external_storage_root }}/media/movies"
+    jellyfin_shows_dir: "{{ external_storage_root }}/media/shows"
+    jellyfin_music_dir: "{{ external_storage_root }}/media/music"
+    uptime_kuma_data_dir: "{{ external_storage_root }}/uptime-kuma"
+    nextcloud_data_dir: "{{ external_storage_root }}/nextcloud-data"
+    wordpress_dir: "{{ external_storage_root }}/wordpress"
+
+- name: "[External SSD] Override observability storage paths"
+  ansible.builtin.set_fact:
+    prometheus_storage_path: "{{ external_storage_root }}/observability/prometheus"
+    loki_storage_path: "{{ external_storage_root }}/observability/loki"
+    tempo_storage_path: "{{ external_storage_root }}/observability/tempo"
+
+# ── Vytvoření adresářové struktury na SSD ────────────────────────────────────
+
+- name: "[External SSD] Create data directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ external_storage_root }}/kiwix"
+    - "{{ external_storage_root }}/maps"
+    - "{{ external_storage_root }}/calibre"
+    - "{{ external_storage_root }}/n8n"
+    - "{{ external_storage_root }}/gitea"
+    - "{{ external_storage_root }}/gitlab"
+    - "{{ external_storage_root }}/openwebui"
+    - "{{ external_storage_root }}/woodpecker"
+    - "{{ external_storage_root }}/portainer"
+    - "{{ external_storage_root }}/jellyfin/config"
+    - "{{ external_storage_root }}/jellyfin/cache"
+    - "{{ external_storage_root }}/media/movies"
+    - "{{ external_storage_root }}/media/shows"
+    - "{{ external_storage_root }}/media/music"
+    - "{{ external_storage_root }}/uptime-kuma"
+    - "{{ external_storage_root }}/nextcloud-data"
+    - "{{ external_storage_root }}/wordpress"
+    - "{{ external_storage_root }}/observability/prometheus"
+    - "{{ external_storage_root }}/observability/loki"
+    - "{{ external_storage_root }}/observability/tempo"
+    - "{{ external_storage_root }}/observability/grafana"
+
+# ── Ollama modely ────────────────────────────────────────────────────────────
+
+- name: "[External SSD] Create Ollama models directory"
+  ansible.builtin.file:
+    path: "{{ external_storage_root }}/ollama/models"
+    state: directory
+    mode: '0755'
+  when: external_storage_ollama | default(true) | bool
+
+# ── Cache adresáře ───────────────────────────────────────────────────────────
+
+- name: "[External SSD] Create cache directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ external_storage_root }}/cache/npm"
+    - "{{ external_storage_root }}/cache/pip"
+    - "{{ external_storage_root }}/cache/composer"
+    - "{{ external_storage_root }}/cache/homebrew"
+  when: external_storage_caches | default(true) | bool
+
+# ── Docker Desktop ───────────────────────────────────────────────────────────
+
+- name: "[External SSD] Create Docker data directory"
+  ansible.builtin.file:
+    path: "{{ external_storage_root }}/docker"
+    state: directory
+    mode: '0755'
+  when: external_storage_docker | default(true) | bool
+
+- name: "[External SSD] Docker Desktop – display manual configuration steps"
+  ansible.builtin.debug:
+    msg: >
+      ╔═══════════════════════════════════════════════════════════════════╗
+      ║  DOCKER DESKTOP – MANUÁLNÍ KROK                                ║
+      ║                                                                 ║
+      ║  Docker Desktop → Settings → Resources → Advanced:             ║
+      ║  Disk image location: {{ external_storage_root }}/docker       ║
+      ║                                                                 ║
+      ║  Poté restartuj Docker Desktop.                                ║
+      ╚═══════════════════════════════════════════════════════════════════╝
+  when: external_storage_docker | default(true) | bool
+
+# ── Docker.app přesun na SSD ───────────────────────────────────────────────
+# Homebrew nainstaluje Docker.app do /Applications. Přesuneme na SSD a
+# vytvoříme symlink zpět, aby macOS i Launchpad stále viděly Docker.app.
+
+- name: "[External SSD] Check if Docker.app is real app in /Applications"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app
+  register: _docker_app_local
+  when: external_storage_docker_app | default(true) | bool
+
+- name: "[External SSD] Check if Docker.app already on SSD"
+  ansible.builtin.stat:
+    path: "{{ external_storage_root }}/Docker.app"
+  register: _docker_app_ssd
+  when: external_storage_docker_app | default(true) | bool
+
+- name: "[External SSD] Move Docker.app to SSD"
+  ansible.builtin.command:
+    cmd: mv /Applications/Docker.app "{{ external_storage_root }}/Docker.app"
+  when:
+    - external_storage_docker_app | default(true) | bool
+    - _docker_app_local.stat.exists | default(false)
+    - not (_docker_app_local.stat.islnk | default(false))
+    - not (_docker_app_ssd.stat.exists | default(false))
+
+- name: "[External SSD] Symlink /Applications/Docker.app → SSD"
+  ansible.builtin.file:
+    src: "{{ external_storage_root }}/Docker.app"
+    dest: /Applications/Docker.app
+    state: link
+    force: true
+  when:
+    - external_storage_docker_app | default(true) | bool
+    - not (_docker_app_local.stat.islnk | default(false)) or
+      (_docker_app_local.stat.lnk_target | default('')) != external_storage_root + '/Docker.app'
+
+# ── Shell env vars (.zshrc) ─────────────────────────────────────────────────
+
+- name: "[External SSD] Add storage environment exports to ~/.zshrc"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} EXTERNAL STORAGE (ansible managed)"
+    block: |
+      # ── External SSD: {{ external_storage_root }} ──
+      {% if external_storage_ollama | default(true) | bool %}
+      export OLLAMA_MODELS="{{ external_storage_root }}/ollama/models"
+      {% endif %}
+      {% if external_storage_caches | default(true) | bool %}
+      export HOMEBREW_CACHE="{{ external_storage_root }}/cache/homebrew"
+      export npm_config_cache="{{ external_storage_root }}/cache/npm"
+      export PIP_CACHE_DIR="{{ external_storage_root }}/cache/pip"
+      export COMPOSER_CACHE_DIR="{{ external_storage_root }}/cache/composer"
+      {% endif %}
+    create: true
+
+# ── Ollama launchd override (OLLAMA_MODELS pro daemon) ───────────────────────
+
+- name: "[External SSD] Configure Ollama launchd env (OLLAMA_MODELS)"
+  ansible.builtin.command: >
+    launchctl setenv OLLAMA_MODELS "{{ external_storage_root }}/ollama/models"
+  changed_when: false
+  failed_when: false
+  when: external_storage_ollama | default(true) | bool
+
+# ── Souhrn ───────────────────────────────────────────────────────────────────
+
+- name: "[External SSD] Summary of storage layout"
+  ansible.builtin.debug:
+    msg: |
+      ┌─────────────────────────────────────────────────────────────────┐
+      │  EXTERNAL SSD: {{ external_storage_root }}
+      ├─────────────────────────────────────────────────────────────────┤
+      │  IIAB data:                                                     │
+      │    kiwix       → {{ external_storage_root }}/kiwix
+      │    maps        → {{ external_storage_root }}/maps
+      │    calibre     → {{ external_storage_root }}/calibre
+      │    n8n         → {{ external_storage_root }}/n8n
+      │    gitea       → {{ external_storage_root }}/gitea
+      │    gitlab      → {{ external_storage_root }}/gitlab
+      │    openwebui   → {{ external_storage_root }}/openwebui
+      │    woodpecker  → {{ external_storage_root }}/woodpecker
+      │    portainer   → {{ external_storage_root }}/portainer
+      │    jellyfin    → {{ external_storage_root }}/jellyfin/{config,cache}
+      │    media       → {{ external_storage_root }}/media/{movies,shows,music}
+      │    uptime-kuma → {{ external_storage_root }}/uptime-kuma
+      │    nextcloud   → {{ external_storage_root }}/nextcloud-data
+      │    wordpress   → {{ external_storage_root }}/wordpress
+      │  Observability:                                                 │
+      │    prometheus  → {{ external_storage_root }}/observability/prometheus
+      │    loki        → {{ external_storage_root }}/observability/loki
+      │    tempo       → {{ external_storage_root }}/observability/tempo
+      {% if external_storage_ollama | default(true) | bool %}
+      │  Ollama:       → {{ external_storage_root }}/ollama/models
+      {% endif %}
+      {% if external_storage_caches | default(true) | bool %}
+      │  Caches:       → {{ external_storage_root }}/cache/{npm,pip,composer,homebrew}
+      {% endif %}
+      {% if external_storage_docker | default(true) | bool %}
+      │  Docker data:  → {{ external_storage_root }}/docker (MANUAL!)
+      {% endif %}
+      {% if external_storage_docker_app | default(true) | bool %}
+      │  Docker.app:   → {{ external_storage_root }}/Docker.app (auto)
+      {% endif %}
+      │  INTERNÍ SSD:  macOS, Homebrew, MariaDB, Redis, zdrojový kód   │
+      └─────────────────────────────────────────────────────────────────┘

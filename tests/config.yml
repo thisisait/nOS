@@ -1,15 +1,111 @@
 ---
+# ==============================================================================
+# CI TEST CONFIG – minimální konfigurace pro GitHub Actions
+# Vypíná všechny těžké/Docker/síťové komponenty, testuje základní dev stack.
+# ==============================================================================
+
+# ── INSTALLATION QUEUE ────────────────────────────────────────────────────────
+install_homebrew_packages: true
+install_cask_apps: true
+install_mas_apps: false
+
+install_nginx: true
+install_php: true
+install_node: true
+install_bun: true
+install_python: true
+install_golang: true
+install_dotnet: true
+
+install_openclaw: false     # Ollama 27GB model – nepraktické v CI
+install_shell_extras: true
+configure_macos_defaults: true
+configure_power_management: false  # pmset vyžaduje sudo – CI runner ho nemá
+
+enable_ssh: false
+enable_samba: false
+enable_vnc: false
+enable_remote_management: false
+
+install_observability: false  # Grafana stack – neblokuje CI, ale zpomaluje ~5min
+install_tailscale: false      # Vyžaduje interaktivní login
+services_lan_access: false    # CI nepotřebuje LAN/Tailscale přístup
+install_dnsmasq: true         # Testuje DNS resolver setup
+
+install_mariadb: false
+install_wordpress: false
+install_nextcloud: false
+install_kiwix: false
+install_offline_maps: false
+install_n8n: false
+install_gitea: false
+install_uptime_kuma: false
+install_calibreweb: false
+
+configure_dotfiles: false   # Geerlingguy dotfiles – zbytečné v CI
+configure_sublime: false
+
+# ── Minimální balíčky pro rychlé CI ──────────────────────────────────────────
 homebrew_installed_packages:
   - autoconf
   - bash-completion
-  - gettext
-  - sqlite
-  - ssh-copy-id
-  - readline
-  - pv
+  - git
+  - gh
   - wget
-  - wrk
+  - curl
+  - jq
+  - readline
+  - openssl
+  - sqlite
+  - gettext
+  - ssh-copy-id
+  - mkcert
+  - nss
+  - ripgrep
+  - bat
+  - eza
+  - fd
+  - zoxide
+  - starship
+  - fzf
 
 homebrew_cask_apps:
   - firefox
   - licecap
+
+# ── Jazyky – základní config ──────────────────────────────────────────────────
+php_version: "8.3"
+node_nvm_version: "lts/*"
+python_version: "3.13"
+
+node_global_packages:
+  - typescript
+
+pip_packages:
+  - name: virtualenv
+  - name: ansible
+
+go_packages: []
+
+# ── Shell extras ──────────────────────────────────────────────────────────────
+starship_preset: "gruvbox-rainbow"
+shell_aliases:
+  - alias: ll
+    command: "eza -la --icons"
+  - alias: cat
+    command: "bat --style=numbers"
+
+# ── dnsmasq ───────────────────────────────────────────────────────────────────
+dnsmasq_dev_domain: "dev.local"
+dnsmasq_dev_address: "127.0.0.1"
+
+# ── Nginx – auto-detekce z install_* flagů (v CI = jen default.conf) ─────────
+
+# ── Dummy hesla pro CI (nepoužívají se, install_* je false) ──────────────────
+mariadb_root_password: "ci-test-password"
+grafana_admin_password: "ci-test-password"
+wordpress_db_password: "ci-test-password"
+nextcloud_admin_password: "ci-test-password"
+gitea_secret_key: "ci-test-secret-key-32-characters"
+openclaw_user: "runner"
+openclaw_base_dir: "/Users/runner"

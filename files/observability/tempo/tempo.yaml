@@ -1,0 +1,53 @@
+# ==============================================================================
+# Tempo konfigurace (Docker stack)
+# ==============================================================================
+
+server:
+  http_listen_port: {{ tempo_http_port | default(3200) }}
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:{{ tempo_otlp_http_port | default(4328) }}
+        grpc:
+          endpoint: 0.0.0.0:{{ tempo_otlp_grpc_port | default(4327) }}
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h  # 7 dní
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      host: {{ observability_hostname | default(ansible_facts['hostname']) }}
+  storage:
+    path: /var/lib/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:{{ prometheus_port | default(9090) }}/api/v1/write
+        send_exemplars: true
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/lib/tempo/wal
+    local:
+      path: /var/lib/tempo/blocks
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
+    ingestion:
+      rate_limit_bytes: 15000000
+      burst_size_bytes: 20000000
+
+usage_report:
+  reporting_enabled: false

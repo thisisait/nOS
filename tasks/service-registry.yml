@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# SERVICE REGISTRY – generuje JSON katalog služeb a Grafana dashboard
+# JSON se servíruje přes Nginx na http://localhost/service-registry.json
+# Dashboard se provisuje do Grafany automaticky.
+# ==============================================================================
+
+- name: "[Service Registry] Ensure default project directory exists"
+  ansible.builtin.file:
+    path: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default"
+    state: directory
+    mode: '0755'
+
+- name: "[Service Registry] Generate service-registry.json"
+  ansible.builtin.template:
+    src: "service-registry.json.j2"
+    dest: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
+    mode: '0644'
+
+- name: "[Service Registry] Ensure dashboards directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
+    state: directory
+    mode: '0755'
+  when: install_observability | default(true)
+
+- name: "[Service Registry] Deploy Grafana dashboard"
+  ansible.builtin.template:
+    src: "grafana-service-registry-dashboard.json.j2"
+    dest: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/service-registry.json"
+    mode: '0644'
+  when: install_observability | default(true)

@@ -1,0 +1,65 @@
+---
+# ==============================================================================
+# NODE.JS – NVM, Node LTS, globální npm balíčky
+# ==============================================================================
+
+- name: Install NVM via Homebrew
+  community.general.homebrew:
+    name: nvm
+    state: present
+
+- name: Ensure NVM directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+    state: directory
+    mode: '0755'
+
+- name: Add NVM to shell profile (.zshrc)
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} NVM – ANSIBLE MANAGED"
+    block: |
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+      [ -s "{{ homebrew_prefix }}/opt/nvm/etc/bash_completion.d/nvm" ] && source "{{ homebrew_prefix }}/opt/nvm/etc/bash_completion.d/nvm"
+    create: true
+    mode: '0644'
+
+- name: Install Node.js LTS via NVM
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm install '{{ node_nvm_version | default('lts/*') }}'
+    nvm alias default '{{ node_nvm_version | default('lts/*') }}'
+    nvm use default
+  args:
+    executable: /bin/bash
+  changed_when: false
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+
+- name: Install global npm packages
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    npm install -g {{ item }}
+  args:
+    executable: /bin/bash
+  loop: "{{ node_global_packages | default([]) }}"
+  changed_when: false
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+
+- name: Install extra npm packages from config
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    npm install -g {% if item.version is defined %}{{ item.name }}@{{ item.version }}{% else %}{{ item.name }}{% endif %}
+  args:
+    executable: /bin/bash
+  loop: "{{ npm_packages | default([]) }}"
+  changed_when: false
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"

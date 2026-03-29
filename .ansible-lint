@@ -1,6 +1,7 @@
 ---
 exclude_paths:
   - roles/elliotweiser.osx-command-line-tools
+  - files/observability
 
 skip_list:
   - schema[meta]

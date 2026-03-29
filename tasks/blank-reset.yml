@@ -1,0 +1,265 @@
+---
+# ==============================================================================
+# BLANK RESET – čistá reinstalace všech služeb
+#
+# Spuštění: ansible-playbook main.yml -K -e blank=true
+#
+# Co se SMAŽE:
+#   - Docker kontejnery, volumes, compose soubory
+#   - Konfigurace služeb (nginx sites, SSL certy, dnsmasq, alloy)
+#   - Data adresáře služeb (DB, app data, observability data)
+#   - LaunchAgents (exportery, openclaw)
+#
+# Co se NEMAŽE:
+#   - ~/media/ (filmy, seriály, hudba) – uživatelská data
+#   - ~/calibre/ (knihovna) – uživatelská data
+#   - ~/.ollama/ (modely, desítky GB) – ruční smazání: rm -rf ~/.ollama
+#   - Homebrew balíčky – zůstávají, jen se restartují služby
+#   - Shell konfigurace (.zshrc bloky) – přepisuje se při reinstalaci
+# ==============================================================================
+
+# ── 1. Potvrzení ─────────────────────────────────────────────────────────
+- name: "[BLANK] Potvrzení destruktivní operace"
+  ansible.builtin.pause:
+    prompt: |-
+
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║  BLANK RESET – SMAZÁNÍ VŠECH DAT A KONFIGURACÍ                    ║
+      ║                                                                    ║
+      ║  Budou smazány:                                                    ║
+      ║    • Všechny Docker kontejnery a volumes                           ║
+      ║    • Databáze (MariaDB), app data (Nextcloud, Gitea, n8n...)       ║
+      ║    • Nginx konfigurace a SSL certifikáty                           ║
+      ║    • Observability data (Grafana, Prometheus, Loki, Tempo)         ║
+      ║    • Uptime Kuma monitory, Portainer nastavení                     ║
+      ║                                                                    ║
+      ║  Zůstanou:                                                         ║
+      ║    • ~/media/ (filmy, hudba), ~/calibre/ (knihy)                   ║
+      ║    • ~/.ollama/ (modely), Homebrew balíčky                         ║
+      ║                                                                    ║
+      ║  Po resetu playbook vše znovu nainstaluje s čistými daty.          ║
+      ╚══════════════════════════════════════════════════════════════════════╝
+
+       Stiskni ENTER pro pokračování nebo Ctrl+C → A pro zrušení
+
+# ── 2. Docker stacks – zastavit a smazat volumes ────────────────────────
+- name: "[BLANK] Stop Docker stacks and remove volumes"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p {{ item }} down -v --remove-orphans -t {{ blank_stop_timeout | default(30) }} 2>&1 || true
+  loop:
+    - iiab
+    - observability
+    - infra
+    - devops
+    - b2b
+    - voip
+    - engineering
+    - data
+  failed_when: false
+  changed_when: true
+
+- name: "[BLANK] Wait for containers to fully stop"
+  ansible.builtin.pause:
+    seconds: "{{ blank_stop_timeout | default(30) }}"
+    prompt: "Cekam {{ blank_stop_timeout | default(30) }}s na zastaveni kontejneru..."
+
+- name: "[BLANK] Remove shared Docker network"
+  ansible.builtin.shell: >
+    {{ docker_bin }} network rm {{ stacks_shared_network }} 2>/dev/null || true
+  failed_when: false
+  changed_when: false
+
+# ── 3. Homebrew služby – zastavit ───────────────────────────────────────
+- name: "[BLANK] Stop Homebrew services"
+  ansible.builtin.command: "brew services stop {{ item }}"
+  loop:
+    - nginx
+    - "php@{{ php_version | default('8.3') }}"
+    - dnsmasq
+    - grafana-alloy
+    - ollama
+  failed_when: false
+  changed_when: false
+
+# ── 4. LaunchAgents – unload a smazat ───────────────────────────────────
+- name: "[BLANK] Find playbook-managed LaunchAgents"
+  ansible.builtin.find:
+    paths: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents"
+    patterns:
+      - "com.nginx.nginx-prometheus-exporter.plist"
+      - "com.hipages.php-fpm-exporter.plist"
+      - "com.openclaw.agent.plist"
+  register: _blank_plists
+
+- name: "[BLANK] Unload LaunchAgents"
+  ansible.builtin.command: "launchctl unload {{ item.path }}"
+  loop: "{{ _blank_plists.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  failed_when: false
+  changed_when: false
+
+- name: "[BLANK] Remove LaunchAgent plists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _blank_plists.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+# ── 5. Nginx – reset konfigurace ────────────────────────────────────────
+- name: "[BLANK] Remove nginx sites-enabled symlinks"
+  ansible.builtin.shell: "rm -f {{ homebrew_prefix }}/etc/nginx/sites-enabled/*.conf"
+  failed_when: false
+  changed_when: true
+
+- name: "[BLANK] Remove nginx sites-available configs"
+  ansible.builtin.shell: "rm -f {{ homebrew_prefix }}/etc/nginx/sites-available/*.conf"
+  failed_when: false
+  changed_when: true
+
+- name: "[BLANK] Remove nginx SSL certificates"
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
+    state: absent
+
+- name: "[BLANK] Remove nginx logs"
+  ansible.builtin.shell: "rm -f {{ homebrew_prefix }}/var/log/nginx/*.log"
+  failed_when: false
+  changed_when: false
+
+# ── 6. dnsmasq – reset ──────────────────────────────────────────────────
+- name: "[BLANK] Remove dnsmasq dev.local config"
+  ansible.builtin.lineinfile:
+    path: "{{ homebrew_prefix }}/etc/dnsmasq.conf"
+    regexp: "dev\\.local"
+    state: absent
+  failed_when: false
+
+- name: "[BLANK] Remove macOS resolver for dev.local"
+  ansible.builtin.file:
+    path: "/etc/resolver/{{ dnsmasq_dev_domain | default('dev.local') }}"
+    state: absent
+  become: true
+  failed_when: false
+
+# ── 7. Data directories – smazat (jen pro povolené služby) ──────────────
+- name: "[BLANK] Build list of data directories to remove"
+  ansible.builtin.set_fact:
+    _blank_dirs: >-
+      {{
+        [stacks_dir]
+        +
+        (install_mariadb | default(false)) | ternary(
+          [mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data')], [])
+        +
+        (install_postgresql | default(false)) | ternary(
+          [postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data')], [])
+        +
+        (redis_docker | default(false)) | ternary(
+          [redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data')], [])
+        +
+        (install_wordpress | default(false)) | ternary(
+          [wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress')], [])
+        +
+        (install_nextcloud | default(false)) | ternary(
+          [nextcloud_dir | default(ansible_facts['env']['HOME'] + '/projects/nextcloud'),
+           nextcloud_data_dir | default(ansible_facts['env']['HOME'] + '/nextcloud-data')], [])
+        +
+        (install_n8n | default(false)) | ternary(
+          [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
+        +
+        (install_gitea | default(false)) | ternary(
+          [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')], [])
+        +
+        (install_gitlab | default(false)) | ternary(
+          [gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab'),
+           gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config')], [])
+        +
+        (install_jellyfin | default(false)) | ternary(
+          [jellyfin_config_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/config'),
+           jellyfin_cache_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/cache')], [])
+        +
+        (install_openwebui | default(false)) | ternary(
+          [openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui')], [])
+        +
+        (install_uptime_kuma | default(false)) | ternary(
+          [uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma')], [])
+        +
+        (install_portainer | default(false)) | ternary(
+          [portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer')], [])
+        +
+        (install_woodpecker | default(false)) | ternary(
+          [woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker')], [])
+        +
+        (install_calibreweb | default(false)) | ternary(
+          [ansible_facts['env']['HOME'] + '/calibre-web/config'], [])
+        +
+        (install_homeassistant | default(false)) | ternary(
+          [homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant')], [])
+        +
+        (install_rustfs | default(false)) | ternary(
+          [rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data')], [])
+        +
+        (install_observability | default(true)) | ternary(
+          [ansible_facts['env']['HOME'] + '/observability',
+           grafana_data_dir | default(stacks_dir + '/observability/grafana/data')], [])
+        +
+        (install_openclaw | default(false)) | ternary(
+          [ansible_facts['env']['HOME'] + '/.openclaw'], [])
+        +
+        (install_erpnext | default(false)) | ternary(
+          [erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites')], [])
+        +
+        (install_freescout | default(false)) | ternary(
+          [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
+        +
+        (install_mattermost | default(false)) | ternary(
+          [mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost')], [])
+        +
+        (install_outline | default(false)) | ternary(
+          [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
+        +
+        (install_freepbx | default(false)) | ternary(
+          [freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx')], [])
+        +
+        (install_qgis_server | default(false)) | ternary(
+          [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
+        +
+        (install_metabase | default(false)) | ternary(
+          [metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase')], [])
+        +
+        (install_superset | default(false)) | ternary(
+          [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')], [])
+        +
+        (install_bluesky_pds | default(false)) | ternary(
+          [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
+      }}
+
+- name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _blank_dirs }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+
+# ── 8. Generated files ──────────────────────────────────────────────────
+- name: "[BLANK] Remove service registry"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
+    state: absent
+  failed_when: false
+
+- name: "[BLANK] Reset complete"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       BLANK RESET DOKONČEN
+       Smazáno: {{ _blank_dirs | length }} datových adresářů, 4 Docker stacky,
+       nginx konfigurace, SSL certifikáty, dnsmasq, LaunchAgents.
+       Playbook nyní pokračuje s čistou instalací...
+      ══════════════════════════════════════════════════════════════════════

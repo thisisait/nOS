@@ -1,0 +1,46 @@
+# ==============================================================================
+# Prometheus konfigurace (Docker stack)
+# Vygenerováno Ansible – ruční úpravy budou přepsány
+# ==============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    host: {{ observability_hostname | default(ansible_facts['hostname']) }}
+
+rule_files: []
+
+scrape_configs:
+  # ── Intra-stack (Docker service names) ─────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:{{ prometheus_port | default(9090) }}']
+
+  - job_name: grafana
+    static_configs:
+      - targets: ['grafana:{{ grafana_port | default(3000) }}']
+
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:{{ loki_port | default(3100) }}']
+
+  - job_name: tempo
+    static_configs:
+      - targets: ['tempo:{{ tempo_http_port | default(3200) }}']
+
+  # ── Host-side služby (přes Docker VM gateway) ─────────────────────────────
+  - job_name: grafana-alloy
+    static_configs:
+      - targets: ['host.docker.internal:{{ alloy_ui_port | default(12345) }}']
+
+  # node-exporter odstraněn – metriky přicházejí z Alloy (prometheus.exporter.unix)
+  # ARM64-safe: cpu, diskstats, filesystem, loadavg, meminfo, netdev, netstat, vmstat
+
+  - job_name: nginx-exporter
+    static_configs:
+      - targets: ['host.docker.internal:{{ nginx_exporter_port | default(9113) }}']
+
+  - job_name: phpfpm-exporter
+    static_configs:
+      - targets: ['host.docker.internal:{{ phpfpm_exporter_port | default(9253) }}']

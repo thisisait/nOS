@@ -1,0 +1,19 @@
+---
+# ==============================================================================
+# POWER MANAGEMENT – pmset nastavení pro server-like provoz
+# Mac zůstane dostupný na síti i po uspání displeje (Jellyfin, Grafana, SSH…)
+# ==============================================================================
+
+- name: Nastavit power management (pmset) – displej spí, počítač ne
+  ansible.builtin.command: >
+    pmset -c
+    sleep {{ pmset_sleep | default(0) }}
+    displaysleep {{ pmset_displaysleep | default(20) }}
+    disksleep {{ pmset_disksleep | default(0) }}
+    womp {{ pmset_womp | default(1) }}
+    tcpkeepalive {{ pmset_tcpkeepalive | default(1) }}
+    powernap {{ pmset_powernap | default(1) }}
+    networkoversleep {{ pmset_networkoversleep | default(0) }}
+    ttyskeepawake {{ pmset_ttyskeepawake | default(1) }}
+  become: true
+  changed_when: false

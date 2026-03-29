@@ -1,0 +1,31 @@
+---
+# ==============================================================================
+# BUN – JavaScript runtime, bundler, package manager
+# ==============================================================================
+
+- name: Add Bun Homebrew tap
+  community.general.homebrew_tap:
+    name: oven-sh/bun
+    state: present
+
+- name: Install Bun via Homebrew
+  community.general.homebrew:
+    name: oven-sh/bun/bun
+    state: present
+
+- name: Add Bun completions to .zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} BUN – ANSIBLE MANAGED"
+    block: |
+      # Bun completions
+      [ -s "{{ ansible_facts['env']['HOME'] }}/.bun/_bun" ] && source "{{ ansible_facts['env']['HOME'] }}/.bun/_bun"
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+    create: true
+    mode: '0644'
+
+- name: Install global Bun packages
+  ansible.builtin.command: "bun install -g {{ item.name }}"
+  loop: "{{ bun_global_packages | default([]) }}"
+  changed_when: false

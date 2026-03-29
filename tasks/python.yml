@@ -1,0 +1,72 @@
+---
+# ==============================================================================
+# PYTHON – pyenv, Python, pip balíčky
+# ==============================================================================
+
+- name: Install pyenv and dependencies via Homebrew
+  community.general.homebrew:
+    name:
+      - pyenv
+      - pyenv-virtualenv
+      - xz
+      - zlib
+      - bzip2
+      - libffi
+    state: present
+
+- name: Add pyenv to shell profile (.zshrc)
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} PYENV – ANSIBLE MANAGED"
+    block: |
+      export PYENV_ROOT="$HOME/.pyenv"
+      [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init -)"
+      eval "$(pyenv virtualenv-init -)"
+    create: true
+    mode: '0644'
+
+- name: Install Python via pyenv
+  ansible.builtin.shell: |
+    eval "$({{ homebrew_prefix }}/bin/pyenv init -)"
+    pyenv install {{ python_version | default('3.13') }} --skip-existing
+  args:
+    executable: /bin/zsh
+  environment:
+    PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
+    PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  changed_when: false
+
+- name: Set Python global version via pyenv
+  ansible.builtin.shell: |
+    eval "$({{ homebrew_prefix }}/bin/pyenv init -)"
+    pyenv global {{ python_version | default('3.13') }}
+  args:
+    executable: /bin/zsh
+  environment:
+    PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
+    PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  changed_when: false
+
+- name: Upgrade pip
+  ansible.builtin.shell: |
+    eval "$({{ homebrew_prefix }}/bin/pyenv init -)"
+    pyenv exec pip install --upgrade pip
+  args:
+    executable: /bin/zsh
+  environment:
+    PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
+    PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  changed_when: false
+
+- name: Install pip packages
+  ansible.builtin.shell: |
+    eval "$({{ homebrew_prefix }}/bin/pyenv init -)"
+    pyenv exec pip install {% if item.version is defined %}"{{ item.name }}=={{ item.version }}"{% else %}{{ item.name }}{% endif %}
+  args:
+    executable: /bin/zsh
+  loop: "{{ pip_packages | default([]) }}"
+  environment:
+    PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
+    PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  changed_when: false

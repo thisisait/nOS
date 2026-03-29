@@ -1,0 +1,200 @@
+---
+# ==============================================================================
+# STACK VERIFY – verifikace služeb po docker compose up
+#
+# Dvě kategorie:
+#   1. Infrastrukturní (auto-retry) – čeká automaticky až naběhnou
+#   2. Onboarding (manuální)        – pausne jen pokud vyžadují user input
+# ==============================================================================
+
+# ── Nginx ──────────────────────────────────────────────────────────────────
+- name: "[Verify] Check Nginx HTTPS port"
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 443
+    timeout: 5
+    state: started
+  register: _nginx_443
+  failed_when: false
+
+- name: "[Verify] Nginx not listening on 443 – restarting"
+  ansible.builtin.command: brew services restart nginx
+  when: _nginx_443.failed | default(false)
+
+# ── Sestavení seznamu služeb ───────────────────────────────────────────────
+- name: "[Verify] Build service check list"
+  ansible.builtin.set_fact:
+    _svc_auto: >-
+      {{
+        (install_mariadb | default(false)) | ternary(
+          [{'name': 'MariaDB', 'port': mariadb_port | default(3306), 'proto': 'tcp',
+            'hint': 'docker compose -p iiab logs mariadb'}], [])
+        +
+        (install_gitea | default(false)) | ternary(
+          [{'name': 'Gitea', 'port': gitea_port | default(3003), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (gitea_port | default(3003)) ~ '/'}], [])
+        +
+        (install_n8n | default(false)) | ternary(
+          [{'name': 'N8N', 'port': n8n_port | default(5678), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (n8n_port | default(5678)) ~ '/healthz'}], [])
+        +
+        (install_observability | default(true)) | ternary(
+          [{'name': 'Grafana', 'port': grafana_port | default(3000), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (grafana_port | default(3000)) ~ '/api/health'},
+           {'name': 'Prometheus', 'port': prometheus_port | default(9090), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (prometheus_port | default(9090)) ~ '/-/ready'},
+           {'name': 'Loki', 'port': loki_port | default(3100), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (loki_port | default(3100)) ~ '/ready'},
+           {'name': 'Tempo', 'port': tempo_http_port | default(3200), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (tempo_http_port | default(3200)) ~ '/ready'}], [])
+        +
+        (install_homeassistant | default(false)) | ternary(
+          [{'name': 'Home Assistant', 'port': homeassistant_port | default(8123), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (homeassistant_port | default(8123)) ~ '/'}], [])
+        +
+        (install_nextcloud | default(false)) | ternary(
+          [{'name': 'Nextcloud', 'port': nextcloud_port | default(8085), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (nextcloud_port | default(8085)) ~ '/status.php'}], [])
+      }}
+    _svc_onboarding: >-
+      {{
+        (install_jellyfin | default(false)) | ternary(
+          [{'name': 'Jellyfin', 'port': jellyfin_port | default(8096), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (jellyfin_port | default(8096)) ~ '/health',
+            'hint': 'Otevri https://' ~ (jellyfin_domain | default('media.dev.local')) ~ ' a projdi pruvodce'}], [])
+        +
+        (install_portainer | default(false)) | ternary(
+          [{'name': 'Portainer', 'port': portainer_port | default(9002), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (portainer_port | default(9002)) ~ '/',
+            'hint': 'Otevri https://' ~ (portainer_domain | default('portainer.dev.local')) ~ ' a vytvor admin ucet (do 5 minut!)'}], [])
+        +
+        (install_openwebui | default(false)) | ternary(
+          [{'name': 'Open WebUI', 'port': openwebui_port | default(3004), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (openwebui_port | default(3004)) ~ '/',
+            'hint': 'Otevri https://' ~ (openwebui_domain | default('ai.dev.local')) ~ ' a vytvor ucet (prvni user = admin)'}], [])
+        +
+        (install_uptime_kuma | default(false)) | ternary(
+          [{'name': 'Uptime Kuma', 'port': uptime_kuma_port | default(3001), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (uptime_kuma_port | default(3001)) ~ '/',
+            'hint': 'Otevri https://' ~ (uptime_kuma_domain | default('uptime.dev.local')) ~ ' a vytvor admin ucet'}], [])
+        +
+        (install_wordpress | default(false)) | ternary(
+          [{'name': 'WordPress', 'port': wordpress_port | default(8084), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (wordpress_port | default(8084)) ~ '/',
+            'hint': 'Otevri https://' ~ (wordpress_domain | default('wp.dev.local')) ~ '/wp-admin/install.php'}], [])
+        +
+        (install_kiwix | default(false)) | ternary(
+          [{'name': 'Kiwix', 'port': kiwix_port | default(8888), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (kiwix_port | default(8888)) ~ '/',
+            'hint': 'Kiwix potrebuje ZIM soubory. Spust download-zim.sh a restartuj.'}], [])
+      }}
+
+# ══════════════════════════════════════════════════════════════════════════
+# FÁZE 1: Automatický retry infrastrukturních služeb (až 2 minuty)
+# ══════════════════════════════════════════════════════════════════════════
+
+- name: "[Verify] Auto-retry HTTP services"
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    method: GET
+    timeout: 5
+    status_code: [200, 301, 302, 303, 401, 403]
+    validate_certs: false
+  register: _auto_http
+  until: _auto_http.status | default(0) | int in [200, 301, 302, 303, 401, 403]
+  retries: 12
+  delay: 10
+  loop: "{{ _svc_auto | selectattr('proto', 'equalto', 'http') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  failed_when: false
+
+- name: "[Verify] Auto-retry TCP services"
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ item.port }}"
+    timeout: 120
+    state: started
+  loop: "{{ _svc_auto | selectattr('proto', 'equalto', 'tcp') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  failed_when: false
+  register: _auto_tcp
+
+# ── Vyhodnocení auto-retry ────────────────────────────────────────────
+- name: "[Verify] Evaluate auto-retry results"
+  ansible.builtin.set_fact:
+    _auto_failed: >-
+      {{
+        (_auto_http.results | default([])
+          | rejectattr('status', 'in', [200, 301, 302, 303, 401, 403])
+          | map(attribute='item')
+          | list)
+        +
+        (_auto_tcp.results | default([])
+          | selectattr('failed', 'equalto', true)
+          | map(attribute='item')
+          | list)
+      }}
+
+- name: "[Verify] Infrastructure services that failed after retries"
+  ansible.builtin.debug:
+    msg: |
+      VAROVANI: Tyto sluzby nenabehly ani po 2 minutach:
+      {% for svc in _auto_failed %}
+        - {{ svc.name }} (port {{ svc.port }}): {{ svc.hint | default('zkontroluj docker logs') }}
+      {% endfor %}
+  when: (_auto_failed | length) > 0
+
+# ══════════════════════════════════════════════════════════════════════════
+# FÁZE 2: Onboarding služby – kontrola + pause jen pokud je potřeba
+# ══════════════════════════════════════════════════════════════════════════
+
+- name: "[Verify] Check onboarding services"
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    method: GET
+    timeout: 10
+    status_code: [200, 301, 302, 303, 401, 403]
+    validate_certs: false
+  register: _onboarding_checks
+  loop: "{{ _svc_onboarding }}"
+  loop_control:
+    label: "{{ item.name }}"
+  failed_when: false
+  when: _svc_onboarding | length > 0
+
+- name: "[Verify] Identify onboarding services needing attention"
+  ansible.builtin.set_fact:
+    _onboarding_needed: >-
+      {{
+        _onboarding_checks.results | default([])
+          | rejectattr('skipped', 'defined')
+          | rejectattr('status', 'in', [200, 301, 302, 303, 401, 403])
+          | map(attribute='item')
+          | list
+      }}
+  when: _svc_onboarding | length > 0
+
+- name: "[Verify] Manual onboarding required"
+  ansible.builtin.pause:
+    prompt: |-
+      {% for svc in _onboarding_needed %}
+
+      ══════════════════════════════════════════════════════════════════════
+       {{ svc.name }} – VYZADUJE MANUALNI ONBOARDING (port {{ svc.port }})
+       {{ svc.hint }}
+      ══════════════════════════════════════════════════════════════════════
+      {% endfor %}
+
+       Proved manualni kroky a stiskni ENTER pro pokracovani
+  when:
+    - _onboarding_needed | default([]) | length > 0
+
+# ── Souhrn ──────────────────────────────────────────────────────────────
+- name: "[Verify] Summary"
+  ansible.builtin.debug:
+    msg: >-
+      Overeno {{ (_svc_auto | length) + (_svc_onboarding | length) }} sluzeb.
+      {{ (_auto_failed | default([]) | length) }} infrastrukturnich selhalo,
+      {{ (_onboarding_needed | default([]) | length) }} onboarding ceka.

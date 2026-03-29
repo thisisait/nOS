@@ -1,0 +1,466 @@
+{# =============================================================================
+   SERVICE REGISTRY – katalog všech služeb, jazyků a balíčků
+   Generováno Ansiblem – NEUPRAVUJ ručně
+   ============================================================================= #}
+{
+  "generated_at": "{{ ansible_date_time.iso8601 }}",
+  "hostname": "{{ ansible_facts['hostname'] }}",
+  "domain": "{{ dnsmasq_dev_domain | default('dev.local') }}",
+  "services": [
+{% set _services = [] %}
+{# ── Tier 1: Služby s doménou (HTTPS) ──────────────────────────────────── #}
+{% if install_observability | default(true) %}
+{% set _ = _services.append({
+  "name": "Grafana",
+  "category": "observability",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "domain": grafana_domain | default('grafana.dev.local'),
+  "port": grafana_port | default(3000),
+  "url": "https://" ~ (grafana_domain | default('grafana.dev.local')),
+  "type": "docker",
+  "stack": "observability",
+  "description": "Monitoring a dashboardy"
+}) %}
+{% endif %}
+{% if install_wordpress | default(false) %}
+{% set _ = _services.append({
+  "name": "WordPress",
+  "category": "web",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_wordpress",
+  "domain": wordpress_domain | default('wordpress.dev.local'),
+  "port": wordpress_port | default(8084),
+  "url": "https://" ~ (wordpress_domain | default('wordpress.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "CMS a blog"
+}) %}
+{% endif %}
+{% if install_nextcloud | default(false) %}
+{% set _ = _services.append({
+  "name": "Nextcloud",
+  "category": "cloud",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_nextcloud",
+  "domain": nextcloud_domain | default('cloud.dev.local'),
+  "port": nextcloud_port | default(8085),
+  "url": "https://" ~ (nextcloud_domain | default('cloud.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Cloudove uloziste a soubory"
+}) %}
+{% endif %}
+{% if install_n8n | default(false) %}
+{% set _ = _services.append({
+  "name": "n8n",
+  "category": "automation",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_n8n",
+  "domain": n8n_domain | default('n8n.dev.local'),
+  "port": n8n_port | default(5678),
+  "url": "https://" ~ (n8n_domain | default('n8n.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Workflow automatizace"
+}) %}
+{% endif %}
+{% if install_kiwix | default(false) %}
+{% set _ = _services.append({
+  "name": "Kiwix",
+  "category": "knowledge",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_kiwix",
+  "domain": kiwix_domain | default('kiwix.dev.local'),
+  "port": kiwix_port | default(8888),
+  "url": "https://" ~ (kiwix_domain | default('kiwix.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Offline Wikipedia a encyklopedie"
+}) %}
+{% endif %}
+{% if install_jellyfin | default(false) %}
+{% set _ = _services.append({
+  "name": "Jellyfin",
+  "category": "media",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_jellyfin",
+  "domain": jellyfin_domain | default('media.dev.local'),
+  "port": jellyfin_port | default(8096),
+  "url": "https://" ~ (jellyfin_domain | default('media.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Media server (filmy, serialy, hudba)"
+}) %}
+{% endif %}
+{% if install_gitea | default(false) %}
+{% set _ = _services.append({
+  "name": "Gitea",
+  "category": "devops",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_gitea",
+  "domain": gitea_domain | default('git.dev.local'),
+  "port": gitea_port | default(3003),
+  "url": "https://" ~ (gitea_domain | default('git.dev.local')),
+  "type": "docker",
+  "stack": "devops",
+  "description": "Self-hosted Git server"
+}) %}
+{% endif %}
+{% if install_gitlab | default(false) %}
+{% set _ = _services.append({
+  "name": "GitLab",
+  "category": "devops",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_gitlab",
+  "domain": gitlab_domain | default('gitlab.dev.local'),
+  "port": gitlab_http_port | default(8929),
+  "url": "https://" ~ (gitlab_domain | default('gitlab.dev.local')),
+  "type": "docker",
+  "stack": "devops",
+  "description": "DevOps platforma"
+}) %}
+{% endif %}
+{% if install_woodpecker | default(false) %}
+{% set _ = _services.append({
+  "name": "Woodpecker CI",
+  "category": "devops",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_woodpecker",
+  "domain": woodpecker_domain | default('ci.dev.local'),
+  "port": woodpecker_port | default(8060),
+  "url": "https://" ~ (woodpecker_domain | default('ci.dev.local')),
+  "type": "docker",
+  "stack": "devops",
+  "description": "CI/CD pipeline"
+}) %}
+{% endif %}
+{% if install_openwebui | default(false) %}
+{% set _ = _services.append({
+  "name": "Open WebUI",
+  "category": "ai",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_openwebui",
+  "domain": openwebui_domain | default('ai.dev.local'),
+  "port": openwebui_port | default(3004),
+  "url": "https://" ~ (openwebui_domain | default('ai.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Chat UI pro Ollama LLM"
+}) %}
+{% endif %}
+{% if install_portainer | default(false) %}
+{% set _ = _services.append({
+  "name": "Portainer",
+  "category": "infra",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_portainer",
+  "domain": portainer_domain | default('portainer.dev.local'),
+  "port": portainer_port | default(9002),
+  "url": "https://" ~ (portainer_domain | default('portainer.dev.local')),
+  "type": "docker",
+  "stack": "infra",
+  "description": "Docker management UI"
+}) %}
+{% endif %}
+{% if install_offline_maps | default(false) %}
+{% set _ = _services.append({
+  "name": "Tileserver GL",
+  "category": "maps",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_offline_maps",
+  "domain": maps_domain | default('maps.dev.local'),
+  "port": maps_port | default(8070),
+  "url": "https://" ~ (maps_domain | default('maps.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Offline mapy"
+}) %}
+{% endif %}
+{# ── Tier 2: Služby s portem (bez domény) ──────────────────────────────── #}
+{% if install_nginx | default(true) %}
+{% set _ = _services.append({
+  "name": "Nginx",
+  "category": "web",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_nginx",
+  "port": 443,
+  "type": "homebrew",
+  "description": "Reverse proxy + SSL"
+}) %}
+{% set _ = _services.append({
+  "name": "PHP-FPM",
+  "category": "web",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_php",
+  "port": 0,
+  "type": "homebrew",
+  "description": "PHP FastCGI (socket)"
+}) %}
+{% endif %}
+{% if install_dnsmasq | default(true) %}
+{% set _ = _services.append({
+  "name": "dnsmasq",
+  "category": "network",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_dnsmasq",
+  "port": dnsmasq_port | default(53),
+  "type": "homebrew",
+  "description": "DNS resolver (*.dev.local)"
+}) %}
+{% endif %}
+{% if install_mariadb | default(false) %}
+{% set _ = _services.append({
+  "name": "MariaDB",
+  "category": "database",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_mariadb",
+  "port": mariadb_port | default(3306),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Relacni databaze"
+}) %}
+{% endif %}
+{% if install_observability | default(true) %}
+{% set _ = _services.append({
+  "name": "Prometheus",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": prometheus_port | default(9090),
+  "type": "docker",
+  "stack": "observability",
+  "description": "Metriky a alerting"
+}) %}
+{% set _ = _services.append({
+  "name": "Loki",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": loki_port | default(3100),
+  "type": "docker",
+  "stack": "observability",
+  "description": "Agregace logu"
+}) %}
+{% set _ = _services.append({
+  "name": "Tempo",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": tempo_http_port | default(3200),
+  "type": "docker",
+  "stack": "observability",
+  "description": "Distribuovany tracing"
+}) %}
+{% set _ = _services.append({
+  "name": "Alloy",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": alloy_ui_port | default(12345),
+  "type": "homebrew",
+  "description": "Kolektor metrik a logu"
+}) %}
+{% set _ = _services.append({
+  "name": "node_exporter",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": 9100,
+  "type": "homebrew",
+  "description": "Systemove metriky macOS"
+}) %}
+{% set _ = _services.append({
+  "name": "nginx-exporter",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": 9113,
+  "type": "binary",
+  "description": "Nginx metriky"
+}) %}
+{% set _ = _services.append({
+  "name": "php-fpm_exporter",
+  "category": "observability",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_observability",
+  "port": phpfpm_exporter_port | default(9253),
+  "type": "binary",
+  "description": "PHP-FPM metriky"
+}) %}
+{% endif %}
+{% if install_php | default(true) %}
+{% set _ = _services.append({
+  "name": "Redis",
+  "category": "cache",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_php",
+  "port": redis_port | default(6379),
+  "type": "homebrew",
+  "description": "In-memory cache"
+}) %}
+{% endif %}
+{% if install_openclaw | default(true) %}
+{% set _ = _services.append({
+  "name": "Ollama",
+  "category": "ai",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_openclaw",
+  "port": 11434,
+  "type": "homebrew",
+  "description": "LLM inference engine"
+}) %}
+{% endif %}
+{% if install_uptime_kuma | default(false) %}
+{% set _ = _services.append({
+  "name": "Uptime Kuma",
+  "category": "monitoring",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_uptime_kuma",
+  "port": uptime_kuma_port | default(3001),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Monitoring dostupnosti"
+}) %}
+{% endif %}
+{% if install_calibreweb | default(false) %}
+{% set _ = _services.append({
+  "name": "Calibre-Web",
+  "category": "knowledge",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_calibreweb",
+  "port": calibreweb_port | default(8083),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "eBook server"
+}) %}
+{% endif %}
+{% if install_homeassistant | default(false) %}
+{% set _ = _services.append({
+  "name": "Home Assistant",
+  "category": "iot",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_homeassistant",
+  "port": homeassistant_port | default(8123),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Domaci automatizace"
+}) %}
+{% endif %}
+{% if install_rustfs | default(false) %}
+{% set _ = _services.append({
+  "name": "RustFS",
+  "category": "storage",
+  "tier": 2,
+  "enabled": true,
+  "toggle_var": "install_rustfs",
+  "port": rustfs_api_port | default(9010),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "S3-kompatibilni objektove uloziste"
+}) %}
+{% endif %}
+{# ── Výpis _services jako JSON pole ─────────────────────────────────────── #}
+{% for svc in _services %}
+    {{ svc | to_json }}{{ "," if not loop.last else "" }}
+{% endfor %}
+  ],
+  "languages": [
+{% set _langs = [] %}
+{% if install_php | default(true) %}
+{% set _ = _langs.append({
+  "name": "PHP",
+  "version": php_version | default('8.3'),
+  "enabled": true,
+  "toggle_var": "install_php",
+  "type": "homebrew",
+  "sub_packages": (php_extensions | default([])) | map('regex_replace', '^php@[^-]+-', '') | list
+}) %}
+{% endif %}
+{% if install_node | default(true) %}
+{% set _ = _langs.append({
+  "name": "Node.js",
+  "version": node_nvm_version | default('lts/*'),
+  "enabled": true,
+  "toggle_var": "install_node",
+  "type": "nvm",
+  "sub_packages": node_global_packages | default([])
+}) %}
+{% endif %}
+{% if install_bun | default(true) %}
+{% set _ = _langs.append({
+  "name": "Bun",
+  "version": "latest",
+  "enabled": true,
+  "toggle_var": "install_bun",
+  "type": "homebrew",
+  "sub_packages": []
+}) %}
+{% endif %}
+{% if install_python | default(true) %}
+{% set _ = _langs.append({
+  "name": "Python",
+  "version": python_version | default('3.13'),
+  "enabled": true,
+  "toggle_var": "install_python",
+  "type": "pyenv",
+  "sub_packages": (pip_packages | default([])) | map(attribute='name') | list
+}) %}
+{% endif %}
+{% if install_golang | default(true) %}
+{% set _ = _langs.append({
+  "name": "Go",
+  "version": "latest",
+  "enabled": true,
+  "toggle_var": "install_golang",
+  "type": "homebrew",
+  "sub_packages": (go_packages | default([])) | map('regex_replace', '.*/([^/@]+)(@.*)?$', '\\1') | list
+}) %}
+{% endif %}
+{% if install_dotnet | default(true) %}
+{% set _ = _langs.append({
+  "name": ".NET",
+  "version": "latest",
+  "enabled": true,
+  "toggle_var": "install_dotnet",
+  "type": "homebrew_cask",
+  "sub_packages": (dotnet_global_tools | default([])) | map(attribute='name') | list
+}) %}
+{% endif %}
+{% for lang in _langs %}
+    {{ lang | to_json }}{{ "," if not loop.last else "" }}
+{% endfor %}
+  ],
+  "packages": {
+    "homebrew": {{ (homebrew_installed_packages | default([])) | to_json }},
+    "homebrew_cask": {{ (homebrew_cask_apps | default([])) | to_json }}
+  }
+}

@@ -4,3 +4,5 @@
 *.retry
 roles*
 config.yml
+credentials.yml
+.venv

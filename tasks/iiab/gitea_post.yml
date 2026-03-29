@@ -1,0 +1,43 @@
+---
+# ==============================================================================
+# GITEA POST-START – vytvoření admin uživatele přes CLI
+# Gitea nepodporuje env var pro admin heslo, nutné přes `gitea admin user create`.
+# Běží PO docker compose up.
+# ==============================================================================
+
+- name: "[Gitea Post] Check if Gitea container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/devops/docker-compose.yml"
+    -p devops ps -q gitea 2>/dev/null
+  register: _gitea_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Gitea Post] Check if admin user exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops
+    exec -T gitea gitea admin user list
+    --admin 2>/dev/null | grep -q "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+  register: _gitea_admin_exists
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _gitea_container.stdout | default('') | length > 0
+
+- name: "[Gitea Post] Create admin user"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops
+    exec -T gitea gitea admin user create
+    --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+    --password "{{ gitea_admin_password | default('changeme_gitea') }}"
+    --email "{{ gitea_admin_email | default(gitea_admin_user | default(ansible_facts['user_id']) + '@localhost') }}"
+    --admin
+    --must-change-password=false
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - _gitea_admin_exists.rc | default(0) != 0
+  changed_when: true
+  failed_when: false
+  check_mode: false

@@ -1,0 +1,173 @@
+---
+# ==============================================================================
+# NGINX – instalace a konfigurace
+# ==============================================================================
+
+- name: Install nginx via Homebrew
+  community.general.homebrew:
+    name: nginx
+    state: present
+
+- name: Install mkcert for local SSL certificates
+  community.general.homebrew:
+    name:
+      - mkcert
+      - nss
+    state: present
+
+- name: Ensure nginx sites directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ homebrew_prefix }}/etc/nginx/sites-available"
+    - "{{ homebrew_prefix }}/etc/nginx/sites-enabled"
+    - "{{ homebrew_prefix }}/etc/nginx/conf.d"
+    - "{{ homebrew_prefix }}/var/log/nginx"
+
+- name: Deploy main nginx.conf
+  ansible.builtin.template:
+    src: nginx/nginx.conf
+    dest: "{{ homebrew_prefix }}/etc/nginx/nginx.conf"
+    backup: true
+    mode: '0644'
+  notify: Restart nginx
+
+- name: Deploy nginx virtual host templates
+  ansible.builtin.template:
+    src: "nginx/sites-available/{{ item }}"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
+    mode: '0644'
+  loop:
+    # ── Dev šablony ───────────────────────────────────────────────────────────
+    - default.conf
+    - php-app.conf
+    - node-proxy.conf
+    - python-proxy.conf
+    - go-proxy.conf
+    - static-site.conf
+    # ── IIAB šablony (nasazeny vždy, aktivovány pouze pokud je služba zapnutá)
+    - wordpress.conf
+    - nextcloud.conf
+    - kiwix.conf
+    - maps.conf
+    - grafana.conf
+    - n8n.conf
+    - gitea.conf
+    - gitlab.conf
+    - jellyfin.conf
+    - openwebui.conf
+    - portainer.conf
+    - woodpecker.conf
+    - uptime-kuma.conf
+    - calibreweb.conf
+    - homeassistant.conf
+    - rustfs.conf
+    - traefik.conf
+    - openclaw.conf
+    # ── B2B stack
+    - erpnext.conf
+    - freescout.conf
+    - mattermost.conf
+    - outline.conf
+    # ── VoIP / Engineering / Data stacks
+    - freepbx.conf
+    - qgis.conf
+    - metabase.conf
+    - superset.conf
+    # ── Identita
+    - bluesky-pds.conf
+  notify: Restart nginx
+
+- name: Build list of nginx sites to enable
+  ansible.builtin.set_fact:
+    _nginx_sites_auto: >-
+      {{ ['default.conf']
+         + ((install_wordpress | default(false)) | ternary(['wordpress.conf'], []))
+         + ((install_nextcloud | default(false)) | ternary(['nextcloud.conf'], []))
+         + ((install_kiwix | default(false)) | ternary(['kiwix.conf'], []))
+         + ((install_offline_maps | default(false)) | ternary(['maps.conf'], []))
+         + ((install_observability | default(true)) | ternary(['grafana.conf'], []))
+         + ((install_n8n | default(false)) | ternary(['n8n.conf'], []))
+         + ((install_gitea | default(false)) | ternary(['gitea.conf'], []))
+         + ((install_gitlab | default(false)) | ternary(['gitlab.conf'], []))
+         + ((install_jellyfin | default(false)) | ternary(['jellyfin.conf'], []))
+         + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
+         + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
+         + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
+         + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf'], []))
+         + ((install_calibreweb | default(false)) | ternary(['calibreweb.conf'], []))
+         + ((install_homeassistant | default(false)) | ternary(['homeassistant.conf'], []))
+         + ((install_rustfs | default(false)) | ternary(['rustfs.conf'], []))
+         + ((install_traefik | default(false)) | ternary(['traefik.conf'], []))
+         + ((install_openclaw | default(false)) | ternary(['openclaw.conf'], []))
+         + ((install_erpnext | default(false)) | ternary(['erpnext.conf'], []))
+         + ((install_freescout | default(false)) | ternary(['freescout.conf'], []))
+         + ((install_mattermost | default(false)) | ternary(['mattermost.conf'], []))
+         + ((install_outline | default(false)) | ternary(['outline.conf'], []))
+         + ((install_freepbx | default(false)) | ternary(['freepbx.conf'], []))
+         + ((install_qgis_server | default(false)) | ternary(['qgis.conf'], []))
+         + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
+         + ((install_superset | default(false)) | ternary(['superset.conf'], []))
+         + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
+         + (nginx_sites_extra | default([]))
+      }}
+
+- name: Enable nginx sites (symlink)
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/{{ item }}"
+    state: link
+    force: true
+  loop: "{{ nginx_sites_enabled | default(_nginx_sites_auto) }}"
+  notify: Reload nginx
+
+- name: Remove disabled nginx sites
+  ansible.builtin.shell: |
+    for f in {{ homebrew_prefix }}/etc/nginx/sites-enabled/*.conf; do
+      name=$(basename "$f")
+      found=false
+      for enabled in {{ (nginx_sites_enabled | default(_nginx_sites_auto)) | join(' ') }}; do
+        [ "$name" = "$enabled" ] && found=true && break
+      done
+      $found || rm -f "$f"
+    done
+  changed_when: false
+
+- name: Install mkcert CA into system trust store
+  ansible.builtin.command: mkcert -install
+  become: true
+  environment:
+    CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+  changed_when: false
+
+- name: Ensure nginx SSL directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
+    state: directory
+    mode: '0700'
+
+- name: Generate local dev wildcard certificate
+  ansible.builtin.command: >
+    mkcert
+    -cert-file {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt
+    -key-file  {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key
+    "localhost" "127.0.0.1" "::1" "*.localhost" "*.dev.local"
+  args:
+    creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
+
+- name: Start and enable nginx via brew services
+  ansible.builtin.command: brew services start nginx
+  register: nginx_svc
+  changed_when: >
+    'already started' not in (nginx_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
+  failed_when: >
+    nginx_svc.rc != 0 and
+    'already started' not in (nginx_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
+
+- name: Test nginx configuration
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
+  changed_when: false

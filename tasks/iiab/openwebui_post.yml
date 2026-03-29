@@ -1,0 +1,49 @@
+---
+# ==============================================================================
+# OPEN WEBUI POST-START – auto-registrace prvního admin uživatele
+# První registrovaný uživatel = admin (WEBUI_AUTH=true, ENABLE_SIGNUP=true)
+# ==============================================================================
+
+- name: "[Open WebUI Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/config"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _owui_ready
+  until: _owui_ready.status | default(0) == 200
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[Open WebUI Post] Check if any user exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signin"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ openwebui_admin_email | default('admin@dev.local') }}"
+      password: "{{ openwebui_admin_password | default('changeme_pw_openwebui_admin') }}"
+    status_code: [200, 400, 401, 403]
+    timeout: 10
+  register: _owui_login
+  failed_when: false
+  when: _owui_ready.status | default(0) == 200
+
+- name: "[Open WebUI Post] Register first admin user"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signup"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ openwebui_admin_name | default('Admin') }}"
+      email: "{{ openwebui_admin_email | default('admin@dev.local') }}"
+      password: "{{ openwebui_admin_password | default('changeme_pw_openwebui_admin') }}"
+    status_code: [200, 201]
+    timeout: 10
+  register: _owui_signup
+  when:
+    - _owui_ready.status | default(0) == 200
+    - _owui_login.status | default(0) != 200
+  changed_when: _owui_signup.status | default(0) in [200, 201]
+  failed_when: false

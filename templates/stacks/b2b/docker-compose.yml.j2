@@ -1,0 +1,230 @@
+# =============================================================================
+# B2B STACK – CRM/ERP, Helpdesk, Chat, Knowledge Base
+# Generováno Ansiblem – NEUPRAVUJ ručně
+#
+# Sdílené DB z infra stacku: MariaDB (shared_net:mariadb),
+# PostgreSQL (shared_net:postgresql), Redis (shared_net:redis)
+# =============================================================================
+
+services:
+
+{% if install_erpnext | default(false) %}
+  # ── ERPNext (Frappe framework) ─────────────────────────────────────────────
+  # ERPNext vyžaduje: MariaDB + Redis (oboje z infra stacku)
+  erpnext-backend:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    volumes:
+      - {{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      REDIS_CACHE: "redis://redis:6379/0"
+      REDIS_QUEUE: "redis://redis:6379/1"
+      REDIS_SOCKETIO: "redis://redis:6379/2"
+      SOCKETIO_PORT: "9000"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  erpnext-frontend:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: nginx-entrypoint.sh
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ erpnext_port | default(8080) }}:8080"
+{% else %}
+      - "127.0.0.1:{{ erpnext_port | default(8080) }}:8080"
+{% endif %}
+    volumes:
+      - {{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}:/home/frappe/frappe-bench/sites
+    environment:
+      BACKEND: erpnext-backend:8000
+      SOCKETIO: erpnext-backend:9000
+      UPSTREAM_REAL_IP_ADDRESS: "127.0.0.1"
+      UPSTREAM_REAL_IP_HEADER: "X-Forwarded-For"
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      FRAPPE_SITE_NAME_HEADER: "$$host"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  erpnext-queue-short:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench worker --queue short
+    volumes:
+      - {{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      REDIS_CACHE: "redis://redis:6379/0"
+      REDIS_QUEUE: "redis://redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  erpnext-queue-long:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench worker --queue long
+    volumes:
+      - {{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      REDIS_CACHE: "redis://redis:6379/0"
+      REDIS_QUEUE: "redis://redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  erpnext-scheduler:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench schedule
+    volumes:
+      - {{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      REDIS_CACHE: "redis://redis:6379/0"
+      REDIS_QUEUE: "redis://redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+{% if install_freescout | default(false) %}
+  # ── FreeScout (helpdesk/ticketing) ─────────────────────────────────────────
+  freescout:
+    image: tiredofit/freescout:{{ freescout_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ freescout_port | default(8090) }}:80"
+{% else %}
+      - "127.0.0.1:{{ freescout_port | default(8090) }}:80"
+{% endif %}
+    volumes:
+      - {{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}:/data
+    environment:
+      CONTAINER_NAME: freescout
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_NAME: "{{ freescout_db_name | default('freescout') }}"
+      DB_USER: "{{ freescout_db_user | default('freescout') }}"
+      DB_PASS: "{{ freescout_db_password | default('changeme_pw_freescout') }}"
+      SITE_URL: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
+      ADMIN_EMAIL: "{{ freescout_admin_email | default('admin@dev.local') }}"
+      ADMIN_PASS: "{{ freescout_admin_password | default('changeme_pw_freescout') }}"
+      TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
+      ENABLE_SSL_PROXY: "TRUE"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_mattermost | default(false) %}
+  # ── Mattermost (team chat) ────────────────────────────────────────────────
+  mattermost:
+    image: mattermost/mattermost-team-edition:{{ mattermost_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ mattermost_port | default(8065) }}:8065"
+{% else %}
+      - "127.0.0.1:{{ mattermost_port | default(8065) }}:8065"
+{% endif %}
+    volumes:
+      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/config:/mattermost/config
+      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/data:/mattermost/data
+      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/logs:/mattermost/logs
+      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/plugins:/mattermost/plugins
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: "postgres://{{ mattermost_db_user | default('mattermost') }}:{{ mattermost_db_password | default('changeme_pw_mattermost') }}@postgresql:5432/{{ mattermost_db_name | default('mattermost') }}?sslmode=disable&connect_timeout=10"
+      MM_SERVICESETTINGS_SITEURL: "https://{{ mattermost_domain | default('chat.dev.local') }}"
+      MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
+      TZ: "{{ mattermost_timezone | default('Europe/Prague') }}"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_outline | default(false) %}
+  # ── Outline (team wiki / knowledge base) ───────────────────────────────────
+  outline:
+    image: outlinewiki/outline:{{ outline_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ outline_port | default(3005) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ outline_port | default(3005) }}:3000"
+{% endif %}
+    volumes:
+      - {{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data') }}:/var/lib/outline/data
+    environment:
+      NODE_ENV: production
+      SECRET_KEY: "{{ outline_secret_key | default('changeme_pw_outline_secret') }}"
+      UTILS_SECRET: "{{ outline_utils_secret | default('changeme_pw_outline_utils') }}"
+      DATABASE_URL: "postgres://{{ outline_db_user | default('outline') }}:{{ outline_db_password | default('changeme_pw_outline') }}@postgresql:5432/{{ outline_db_name | default('outline') }}"
+      REDIS_URL: "redis://redis:6379"
+      URL: "https://{{ outline_domain | default('wiki.dev.local') }}"
+      PORT: "3000"
+      FORCE_HTTPS: "false"
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+
+networks:
+  b2b_net:
+    driver: bridge
+  {{ stacks_shared_network }}:
+    external: true

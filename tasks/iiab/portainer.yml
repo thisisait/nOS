@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# Portainer CE – Docker management UI (Docker)
+#
+# Připojuje se na lokální Docker socket → plná správa kontejnerů, imagí,
+# volumes, sítí a logů přes browser.
+# ==============================================================================
+
+- name: "[Portainer] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ portainer_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[Portainer] Create initial admin password file"
+  ansible.builtin.copy:
+    content: "{{ portainer_admin_password | default('changeme_pw_portainer') }}"
+    dest: "{{ portainer_data_dir }}/init_password"
+    mode: '0600'
+    force: false
+
+- name: "[Portainer] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/portainer.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/portainer.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

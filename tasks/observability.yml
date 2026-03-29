@@ -1,0 +1,264 @@
+---
+# ==============================================================================
+# OBSERVABILITY – LGTM Stack (Docker) + Host-side collectors
+#
+# Docker stack (Grafana, Prometheus, Loki, Tempo) se spouští přes stack-up.yml.
+# Tento soubor instaluje host-side služby (Alloy, exportery) a deployuje
+# konfigurační soubory pro Docker stack.
+# ==============================================================================
+
+# ── Host-side: Homebrew packages ─────────────────────────────────────────────
+
+- name: Add Grafana Homebrew tap
+  community.general.homebrew_tap:
+    name: grafana/grafana
+    state: present
+
+- name: Install host-side observability tools via Homebrew
+  community.general.homebrew:
+    name:
+      - grafana-alloy
+    state: present
+    # node_exporter odstraněn – Alloy's prometheus.exporter.unix ho nahrazuje
+    # (ARM64-safe collectory, bez thermal/powersupply/rapl chyb)
+
+# ── Host-side: Stop old Homebrew services (migrated to Docker) ───────────────
+
+- name: Stop old Homebrew observability services (replaced by Docker)
+  ansible.builtin.command: brew services stop {{ item }}
+  loop:
+    - grafana
+    - prometheus
+    - loki
+    - node_exporter
+  register: _brew_stop
+  changed_when: "'Stopping' in (_brew_stop.stdout | default(''))"
+  failed_when: false
+
+# ── Host-side: Binary exporters ──────────────────────────────────────────────
+
+- name: Check if nginx-prometheus-exporter binary is already installed
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/bin/nginx-prometheus-exporter"
+  register: nginx_exporter_binary_stat
+
+- name: Download nginx-prometheus-exporter binary archive
+  ansible.builtin.get_url:
+    url: "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v{{ nginx_prometheus_exporter_version }}/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin_{{ 'arm64' if ansible_facts['machine'] == 'arm64' else 'amd64' }}.tar.gz"
+    dest: "/tmp/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin.tar.gz"
+    mode: '0644'
+  when: not nginx_exporter_binary_stat.stat.exists
+
+- name: Extract nginx-prometheus-exporter binary  # noqa: command-instead-of-module
+  ansible.builtin.command: >-
+    tar -xzf /tmp/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin.tar.gz
+    -C {{ homebrew_prefix }}/bin nginx-prometheus-exporter
+  when:
+    - not nginx_exporter_binary_stat.stat.exists
+    - "'/tmp/nginx-prometheus-exporter_' ~ nginx_prometheus_exporter_version ~ '_darwin.tar.gz' is file"
+
+- name: Check if php-fpm_exporter binary is already installed
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/bin/php-fpm_exporter"
+  register: phpfpm_exporter_binary_stat
+  when: alloy_scrape_phpfpm | default(true)
+
+- name: Download php-fpm_exporter binary archive
+  ansible.builtin.get_url:
+    url: "https://github.com/hipages/php-fpm_exporter/releases/download/v{{ phpfpm_exporter_version }}/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin_{{ 'arm64' if ansible_facts['machine'] == 'arm64' else 'amd64' }}.tar.gz"
+    dest: "/tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz"
+    mode: '0644'
+  when:
+    - alloy_scrape_phpfpm | default(true)
+    - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
+
+- name: Extract php-fpm_exporter binary  # noqa: command-instead-of-module
+  ansible.builtin.command: >-
+    tar -xzf /tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz
+    -C {{ homebrew_prefix }}/bin php-fpm_exporter
+  when:
+    - alloy_scrape_phpfpm | default(true)
+    - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
+    - "'/tmp/php-fpm_exporter_' ~ phpfpm_exporter_version ~ '_darwin.tar.gz' is file"
+
+# ── Host-side: launchd plists pro exportery ──────────────────────────────────
+
+- name: Create nginx-prometheus-exporter launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.nginx.nginx-prometheus-exporter</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>{{ homebrew_prefix }}/bin/nginx-prometheus-exporter</string>
+          <string>--nginx.scrape-uri=http://127.0.0.1:{{ nginx_stub_status_port | default(8080) }}/nginx_status</string>
+          <string>--web.listen-address=:{{ nginx_exporter_port | default(9113) }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>{{ homebrew_prefix }}/var/log/nginx-prometheus-exporter.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ homebrew_prefix }}/var/log/nginx-prometheus-exporter.err</string>
+      </dict>
+      </plist>
+
+- name: Create php-fpm_exporter launchd plist
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.hipages.php-fpm-exporter</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>{{ homebrew_prefix }}/bin/php-fpm_exporter</string>
+          <string>server</string>
+          <string>--phpfpm.scrape-uri</string>
+          <string>tcp://127.0.0.1:9000/status</string>
+          <string>--web.listen-address</string>
+          <string>:{{ phpfpm_exporter_port | default(9253) }}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardOutPath</key>
+        <string>{{ homebrew_prefix }}/var/log/php-fpm_exporter.log</string>
+        <key>StandardErrorPath</key>
+        <string>{{ homebrew_prefix }}/var/log/php-fpm_exporter.err</string>
+      </dict>
+      </plist>
+  when: alloy_scrape_phpfpm | default(true)
+
+# ── Deploy Docker stack konfigurací ──────────────────────────────────────────
+
+- name: Deploy Prometheus configuration (for Docker stack)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/prometheus/prometheus.yml"
+    dest: "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
+    mode: '0644'
+  notify: Restart prometheus
+
+- name: "[Loki] Clean stale scratch dir (macOS VirtioFS workaround)"
+  ansible.builtin.file:
+    path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"
+    state: absent
+
+- name: Deploy Loki configuration (for Docker stack)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/loki/local-config.yaml"
+    dest: "{{ stacks_dir }}/observability/loki/local-config.yaml"
+    mode: '0644'
+
+- name: Deploy Tempo configuration (for Docker stack)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/tempo/tempo.yaml"
+    dest: "{{ stacks_dir }}/observability/tempo/tempo.yaml"
+    mode: '0644'
+
+- name: Deploy Grafana datasources provisioning (for Docker stack)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/datasources/all.yml.j2"
+    dest: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
+    mode: '0644'
+  notify: Restart grafana
+
+- name: Deploy Grafana dashboard provisioning config (for Docker stack)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards/all.yml.j2"
+    dest: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
+    mode: '0644'
+  notify: Restart grafana
+
+# ── Host-side: Grafana Alloy konfigurace ─────────────────────────────────────
+
+- name: Ensure Alloy config directory exists
+  ansible.builtin.file:
+    path: "{{ homebrew_prefix }}/etc/grafana-alloy"
+    state: directory
+    mode: '0755'
+
+- name: Deploy Grafana Alloy configuration
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/alloy/config.alloy.j2"
+    dest: "{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy"
+    mode: '0644'
+  notify: Restart alloy
+
+# ── Start host-side services ─────────────────────────────────────────────────
+
+- name: Start host-side observability services (Homebrew-managed)
+  ansible.builtin.command: brew services start {{ item }}
+  loop:
+    - grafana-alloy
+  register: svc_result
+  changed_when: >
+    'already started' not in (svc_result.stdout | default('')) and
+    'Bootstrap failed: 5' not in (svc_result.stderr | default(''))
+  failed_when: >
+    svc_result.rc != 0 and
+    'already started' not in (svc_result.stdout | default('')) and
+    'Bootstrap failed: 5' not in (svc_result.stderr | default(''))
+
+- name: Load nginx-prometheus-exporter launchd service
+  ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist
+  register: nginx_exporter_launchctl
+  changed_when: nginx_exporter_launchctl.rc == 0
+  failed_when: false
+
+- name: Load php-fpm_exporter launchd service
+  ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist
+  register: phpfpm_launchctl
+  changed_when: phpfpm_launchctl.rc == 0
+  failed_when: false
+  when: alloy_scrape_phpfpm | default(true)
+
+- name: Start Redis service (scraped by Alloy)
+  ansible.builtin.command: brew services start redis
+  register: redis_svc
+  changed_when: >
+    'already started' not in (redis_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (redis_svc.stderr | default(''))
+  failed_when: >
+    redis_svc.rc != 0 and
+    'already started' not in (redis_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (redis_svc.stderr | default(''))
+  when: alloy_scrape_redis | default(true)
+
+# ── Dashboardy (stažení + file-based provisioning) ──────────────────────────
+# Grafana Docker kontejner mountuje ~/observability/dashboards jako
+# /var/lib/grafana/dashboards (read-only). File-based provisioning
+# automaticky načte JSON soubory.
+
+- name: Download community Grafana dashboards
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.revision }}/download"
+    dest: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/dashboard-{{ item.id }}.json"
+    mode: '0644'
+    force: true
+  loop: "{{ grafana_dashboards | default([]) }}"
+  failed_when: false
+
+# ── Nginx vhost pro Grafana ──────────────────────────────────────────────────
+
+- name: Enable Grafana nginx vhost
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/grafana.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/grafana.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

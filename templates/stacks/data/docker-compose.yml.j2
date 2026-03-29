@@ -1,0 +1,75 @@
+# =============================================================================
+# DATA STACK – BI / analytika (Metabase, Superset)
+# Generováno Ansiblem – NEUPRAVUJ ručně
+# Sdílené DB z infra stacku: PostgreSQL + Redis
+# =============================================================================
+
+services:
+
+{% if install_metabase | default(false) %}
+  metabase:
+    image: metabase/metabase:{{ metabase_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ metabase_port | default(3002) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ metabase_port | default(3002) }}:3000"
+{% endif %}
+    volumes:
+      - {{ metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase') }}:/metabase-data
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: "{{ metabase_db_name | default('metabase') }}"
+      MB_DB_PORT: "5432"
+      MB_DB_USER: "{{ metabase_db_user | default('metabase') }}"
+      MB_DB_PASS: "{{ metabase_db_password | default('changeme_pw_metabase') }}"
+      MB_DB_HOST: postgresql
+      JAVA_TIMEZONE: "{{ metabase_timezone | default('Europe/Prague') }}"
+    networks:
+      - data_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+{% if install_superset | default(false) %}
+  superset:
+    image: apache/superset:{{ superset_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ superset_port | default(8089) }}:8088"
+{% else %}
+      - "127.0.0.1:{{ superset_port | default(8089) }}:8088"
+{% endif %}
+    volumes:
+      - {{ superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset') }}:/app/superset_home
+    environment:
+      SUPERSET_SECRET_KEY: "{{ superset_secret_key | default('changeme_pw_superset_secret') }}"
+      DATABASE_HOST: postgresql
+      DATABASE_PORT: "5432"
+      DATABASE_DB: "{{ superset_db_name | default('superset') }}"
+      DATABASE_USER: "{{ superset_db_user | default('superset') }}"
+      DATABASE_PASSWORD: "{{ superset_db_password | default('changeme_pw_superset') }}"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    networks:
+      - data_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+
+networks:
+  data_net:
+    driver: bridge
+  {{ stacks_shared_network }}:
+    external: true

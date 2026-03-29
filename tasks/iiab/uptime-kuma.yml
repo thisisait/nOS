@@ -1,0 +1,13 @@
+---
+# ==============================================================================
+# Uptime Kuma – self-hosted monitoring / status page (Docker)
+# ==============================================================================
+
+- name: Ensure Uptime Kuma data and log directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ uptime_kuma_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"

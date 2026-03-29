@@ -1,0 +1,30 @@
+---
+# ==============================================================================
+# RUSTFS – S3-compatible object storage (Rust, drop-in MinIO replacement)
+# S3 API:  http://localhost:{{ rustfs_api_port | default(9000) }}
+# Konzole: http://localhost:{{ rustfs_console_port | default(9001) }}
+# ==============================================================================
+
+- name: "[RustFS] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data') }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[RustFS] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       RustFS připraven (spouští se přes IIAB stack)
+      ══════════════════════════════════════════════════════
+       S3 API:    http://localhost:{{ rustfs_api_port | default(9000) }}
+       Konzole:   http://localhost:{{ rustfs_console_port | default(9001) }}
+       Data:      {{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data') }}
+
+       S3 endpoint pro klienty (aws-cli, rclone, restic…):
+         endpoint-url: http://localhost:{{ rustfs_api_port | default(9000) }}
+         access-key:   {{ rustfs_access_key }}
+      ══════════════════════════════════════════════════════

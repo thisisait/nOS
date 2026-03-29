@@ -1,0 +1,243 @@
+{# =============================================================================
+   GRAFANA DASHBOARD – Service Registry (devBoxNOS)
+   Generováno Ansiblem – NEUPRAVUJ ručně
+   Inline styly (Grafana sanitizuje <style> tagy).
+   ============================================================================= #}
+{# ── Definice stylů ─────────────────────────────────────────────────────── #}
+{% set S_dot = "display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#3fb950" %}
+{% set S_card = "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;display:inline-block;width:210px;vertical-align:top;margin:6px" %}
+{% set S_link = "color:#58a6ff;text-decoration:none;font-weight:600;font-size:14px" %}
+{% set S_desc = "color:rgba(230,237,243,0.6);font-size:12px;margin:4px 0 8px 0" %}
+{% set S_meta = "font-size:11px;color:rgba(230,237,243,0.4)" %}
+{% set S_badge = "background:rgba(88,166,255,0.15);color:#58a6ff;padding:2px 6px;border-radius:3px;margin-left:4px;font-size:10px" %}
+{% set S_th = "text-align:left;padding:8px 12px;border-bottom:2px solid rgba(255,255,255,0.1);color:rgba(230,237,243,0.6);font-weight:600;font-size:13px" %}
+{% set S_td = "padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px" %}
+{% set S_port = "font-family:monospace;color:#79c0ff" %}
+{% set S_docker = "color:#58a6ff" %}
+{% set S_brew = "color:#f0883e" %}
+{% set S_bin = "color:#d2a8ff" %}
+{% set S_name = "font-weight:600;font-size:14px;color:#e6edf3" %}
+{% set S_ver = "color:rgba(230,237,243,0.5);font-size:12px;margin-left:6px" %}
+{% set S_sub = "font-size:12px;color:rgba(230,237,243,0.5);padding:1px 0" %}
+{% set S_section = "font-size:12px;font-weight:600;color:rgba(230,237,243,0.8);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.1)" %}
+{% set S_pkg = "font-size:11px;font-family:monospace;color:rgba(230,237,243,0.6);background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:3px;display:inline-block;margin:2px 3px" %}
+{# ── Makro pro klikatelnou kartu (subdoména + Tailscale port) ──────────── #}
+{% set _ts = tailscale_hostname | default('') %}
+{% macro card(name, domain, port, desc, badge) %}
+<div style='{{ S_card }}'><span style='{{ S_dot }}'></span><a href='https://{{ domain }}' target='_blank' style='{{ S_link }}'>{{ name }}</a><div style='{{ S_desc }}'>{{ desc }}</div><div style='{{ S_meta }}'><a href='https://{{ domain }}' style='color:rgba(230,237,243,0.5);text-decoration:none'>{{ domain }}</a> · <a href='http://{{ _ts if _ts else "localhost" }}:{{ port }}' style='{{ S_port }};text-decoration:none'>:{{ port }}</a> <span style='{{ S_badge }}'>{{ badge }}</span></div></div>
+{% endmacro %}
+{# ── Panel 1: Tier 1 karty ──────────────────────────────────────────────── #}
+{% set _cards = [] %}
+{% if install_observability | default(true) %}
+{% set _ = _cards.append(card("Grafana", grafana_domain | default('grafana.dev.local'), grafana_port | default(3000), "Monitoring a dashboardy", "observability")) %}
+{% endif %}
+{% if install_wordpress | default(false) %}
+{% set _ = _cards.append(card("WordPress", wordpress_domain | default('wordpress.dev.local'), wordpress_port | default(8084), "CMS a blog", "iiab")) %}
+{% endif %}
+{% if install_nextcloud | default(false) %}
+{% set _ = _cards.append(card("Nextcloud", nextcloud_domain | default('cloud.dev.local'), nextcloud_port | default(8085), "Cloudove uloziste", "iiab")) %}
+{% endif %}
+{% if install_n8n | default(false) %}
+{% set _ = _cards.append(card("n8n", n8n_domain | default('n8n.dev.local'), n8n_port | default(5678), "Workflow automatizace", "iiab")) %}
+{% endif %}
+{% if install_kiwix | default(false) %}
+{% set _ = _cards.append(card("Kiwix", kiwix_domain | default('kiwix.dev.local'), kiwix_port | default(8888), "Offline Wikipedia", "iiab")) %}
+{% endif %}
+{% if install_jellyfin | default(false) %}
+{% set _ = _cards.append(card("Jellyfin", jellyfin_domain | default('media.dev.local'), jellyfin_port | default(8096), "Media server", "iiab")) %}
+{% endif %}
+{% if install_gitea | default(false) %}
+{% set _ = _cards.append(card("Gitea", gitea_domain | default('git.dev.local'), gitea_port | default(3003), "Self-hosted Git", "devops")) %}
+{% endif %}
+{% if install_gitlab | default(false) %}
+{% set _ = _cards.append(card("GitLab", gitlab_domain | default('gitlab.dev.local'), gitlab_http_port | default(8929), "DevOps platforma", "devops")) %}
+{% endif %}
+{% if install_woodpecker | default(false) %}
+{% set _ = _cards.append(card("Woodpecker CI", woodpecker_domain | default('ci.dev.local'), woodpecker_port | default(8060), "CI/CD pipeline", "devops")) %}
+{% endif %}
+{% if install_openwebui | default(false) %}
+{% set _ = _cards.append(card("Open WebUI", openwebui_domain | default('ai.dev.local'), openwebui_port | default(3004), "Chat UI pro Ollama", "iiab")) %}
+{% endif %}
+{% if install_portainer | default(false) %}
+{% set _ = _cards.append(card("Portainer", portainer_domain | default('portainer.dev.local'), portainer_port | default(9002), "Docker management", "infra")) %}
+{% endif %}
+{% if install_uptime_kuma | default(false) %}
+{% set _ = _cards.append(card("Uptime Kuma", uptime_kuma_domain | default('uptime.dev.local'), uptime_kuma_port | default(3001), "Monitoring dostupnosti", "iiab")) %}
+{% endif %}
+{% if install_calibreweb | default(false) %}
+{% set _ = _cards.append(card("Calibre-Web", calibreweb_domain | default('books.dev.local'), calibreweb_port | default(8083), "eBook server", "iiab")) %}
+{% endif %}
+{% if install_homeassistant | default(false) %}
+{% set _ = _cards.append(card("Home Assistant", homeassistant_domain | default('home.dev.local'), homeassistant_port | default(8123), "Domaci automatizace", "iiab")) %}
+{% endif %}
+{% if install_rustfs | default(false) %}
+{% set _ = _cards.append(card("RustFS", rustfs_domain | default('fs.dev.local'), rustfs_console_port | default(9001), "S3 objektove uloziste", "iiab")) %}
+{% endif %}
+{% if install_traefik | default(false) %}
+{% set _ = _cards.append(card("Traefik", traefik_domain | default('traefik.dev.local'), traefik_dashboard_port | default(8080), "Reverse proxy dashboard", "infra")) %}
+{% endif %}
+{% if install_openclaw | default(false) %}
+{% set _ = _cards.append(card("OpenClaw", openclaw_domain | default('claw.dev.local'), openclaw_gateway_port | default(18789), "AI Agent Gateway", "agent")) %}
+{% endif %}
+{% if install_offline_maps | default(false) %}
+{% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps.dev.local'), maps_port | default(8070), "Offline mapy", "iiab")) %}
+{% endif %}
+{# ── Panel 2: Tier 2 řádky tabulky ──────────────────────────────────────── #}
+{% set _rows = [] %}
+{% macro trow(name, ports, ttype, tstyle, stack, desc) %}
+{% set _ = _rows.append("<tr><td style='" ~ S_td ~ "'><span style='" ~ S_dot ~ "'></span>" ~ name ~ "</td><td style='" ~ S_td ~ ";" ~ S_port ~ "'>" ~ ports ~ "</td><td style='" ~ S_td ~ ";" ~ tstyle ~ "'>" ~ ttype ~ "</td><td style='" ~ S_td ~ "'>" ~ stack ~ "</td><td style='" ~ S_td ~ "'>" ~ desc ~ "</td></tr>") %}
+{% endmacro %}
+{% if install_nginx | default(true) %}
+{{ trow("Nginx", "80, 443", "homebrew", S_brew, "host", "Reverse proxy + SSL") }}
+{{ trow("PHP-FPM", "socket", "homebrew", S_brew, "host", "PHP FastCGI") }}
+{% endif %}
+{% if install_dnsmasq | default(true) %}
+{{ trow("dnsmasq", dnsmasq_port | default(53) | string, "homebrew", S_brew, "host", "DNS resolver (*.dev.local)") }}
+{% endif %}
+{% if install_mariadb | default(false) %}
+{{ trow("MariaDB", mariadb_port | default(3306) | string, "docker", S_docker, "iiab", "Relacni databaze") }}
+{% endif %}
+{% if install_php | default(true) %}
+{{ trow("Redis", redis_port | default(6379) | string, "homebrew", S_brew, "host", "In-memory cache") }}
+{% endif %}
+{% if install_observability | default(true) %}
+{{ trow("Prometheus", prometheus_port | default(9090) | string, "docker", S_docker, "observability", "Metriky a alerting") }}
+{{ trow("Loki", loki_port | default(3100) | string, "docker", S_docker, "observability", "Agregace logu") }}
+{{ trow("Tempo", (tempo_http_port | default(3200) | string) ~ ", " ~ (tempo_otlp_grpc_port | default(4327) | string) ~ ", " ~ (tempo_otlp_http_port | default(4328) | string), "docker", S_docker, "observability", "Distribuovany tracing") }}
+{{ trow("Alloy", (alloy_ui_port | default(12345) | string) ~ ", " ~ (alloy_otlp_grpc_port | default(4317) | string) ~ ", " ~ (alloy_otlp_http_port | default(4318) | string), "homebrew", S_brew, "host", "Kolektor metrik a logu") }}
+{{ trow("node_exporter", "9100", "homebrew", S_brew, "host", "Systemove metriky macOS") }}
+{{ trow("nginx-exporter", "9113", "binary", S_bin, "host", "Nginx metriky") }}
+{{ trow("php-fpm_exporter", phpfpm_exporter_port | default(9253) | string, "binary", S_bin, "host", "PHP-FPM metriky") }}
+{% endif %}
+{% if install_openclaw | default(true) %}
+{{ trow("Ollama", "11434", "homebrew", S_brew, "host", "LLM inference engine") }}
+{% endif %}
+{% if install_uptime_kuma | default(false) %}
+{{ trow("Uptime Kuma", uptime_kuma_port | default(3001) | string, "docker", S_docker, "iiab", "Monitoring dostupnosti") }}
+{% endif %}
+{% if install_calibreweb | default(false) %}
+{{ trow("Calibre-Web", calibreweb_port | default(8083) | string, "docker", S_docker, "iiab", "eBook server") }}
+{% endif %}
+{% if install_homeassistant | default(false) %}
+{{ trow("Home Assistant", homeassistant_port | default(8123) | string, "docker", S_docker, "iiab", "Domaci automatizace") }}
+{% endif %}
+{% if install_rustfs | default(false) %}
+{{ trow("RustFS", (rustfs_api_port | default(9010) | string) ~ ", " ~ (rustfs_console_port | default(9001) | string), "docker", S_docker, "iiab", "S3 objektove uloziste") }}
+{% endif %}
+{% if install_traefik | default(false) %}
+{{ trow("Traefik", traefik_dashboard_port | default(8080) | string, "docker", S_docker, "infra", "Reverse proxy (dashboard)") }}
+{% endif %}
+{# ── Panel 3: Jazyky ────────────────────────────────────────────────────── #}
+{% set _lang_items = [] %}
+{% if install_php | default(true) %}
+{% set _subs = [] %}
+{% for ext in php_extensions | default([]) %}
+{% set _ = _subs.append("<li style='" ~ S_sub ~ "'>&#10003; " ~ ext.split('-')[-1] ~ "</li>") %}
+{% endfor %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>PHP</span><span style='" ~ S_ver ~ "'>" ~ (php_version | default('8.3')) ~ "</span><ul style='list-style:none;padding-left:20px;margin-top:4px'>" ~ _subs | join('') ~ "</ul></li>") %}
+{% endif %}
+{% if install_node | default(true) %}
+{% set _subs = [] %}
+{% for pkg in node_global_packages | default([]) %}
+{% set _ = _subs.append("<li style='" ~ S_sub ~ "'>&#10003; " ~ pkg ~ "</li>") %}
+{% endfor %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>Node.js</span><span style='" ~ S_ver ~ "'>" ~ (node_nvm_version | default('lts/*')) ~ "</span><ul style='list-style:none;padding-left:20px;margin-top:4px'>" ~ _subs | join('') ~ "</ul></li>") %}
+{% endif %}
+{% if install_bun | default(true) %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>Bun</span><span style='" ~ S_ver ~ "'>latest</span></li>") %}
+{% endif %}
+{% if install_python | default(true) %}
+{% set _subs = [] %}
+{% for pkg in pip_packages | default([]) %}
+{% set _ = _subs.append("<li style='" ~ S_sub ~ "'>&#10003; " ~ pkg.name ~ "</li>") %}
+{% endfor %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>Python</span><span style='" ~ S_ver ~ "'>" ~ (python_version | default('3.13')) ~ "</span><ul style='list-style:none;padding-left:20px;margin-top:4px'>" ~ _subs | join('') ~ "</ul></li>") %}
+{% endif %}
+{% if install_golang | default(true) %}
+{% set _subs = [] %}
+{% for pkg in go_packages | default([]) %}
+{% set _ = _subs.append("<li style='" ~ S_sub ~ "'>&#10003; " ~ pkg.split('/')[-1].split('@')[0] ~ "</li>") %}
+{% endfor %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>Go</span><span style='" ~ S_ver ~ "'>latest</span><ul style='list-style:none;padding-left:20px;margin-top:4px'>" ~ _subs | join('') ~ "</ul></li>") %}
+{% endif %}
+{% if install_dotnet | default(true) %}
+{% set _subs = [] %}
+{% for tool in dotnet_global_tools | default([]) %}
+{% set _ = _subs.append("<li style='" ~ S_sub ~ "'>&#10003; " ~ tool.name ~ "</li>") %}
+{% endfor %}
+{% set _ = _lang_items.append("<li style='margin-bottom:12px'><span style='" ~ S_dot ~ "'></span><span style='" ~ S_name ~ "'>.NET</span><span style='" ~ S_ver ~ "'>latest</span><ul style='list-style:none;padding-left:20px;margin-top:4px'>" ~ _subs | join('') ~ "</ul></li>") %}
+{% endif %}
+{# ── Panel 4: Homebrew balíčky ───────────────────────────────────────────── #}
+{% set _brew_cli = [] %}
+{% for pkg in homebrew_installed_packages | default([]) %}
+{% set _ = _brew_cli.append("<span style='" ~ S_pkg ~ "'>" ~ pkg ~ "</span>") %}
+{% endfor %}
+{% set _brew_cask = [] %}
+{% for app in homebrew_cask_apps | default([]) %}
+{% set _ = _brew_cask.append("<span style='" ~ S_pkg ~ "'>" ~ app ~ "</span>") %}
+{% endfor %}
+{# ── JSON výstup ─────────────────────────────────────────────────────────── #}
+{
+  "uid": "service-registry",
+  "title": "Service Registry",
+  "tags": ["devboxnos", "registry"],
+  "timezone": "browser",
+  "editable": false,
+  "refresh": "",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Sluzby (HTTPS)",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "html",
+        "content": {{ ("<div style='display:flex;flex-wrap:wrap;gap:12px;padding:8px'>" ~ _cards | join('') ~ "</div>") | to_json }}
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "Interni sluzby a hostitelske procesy",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 12 },
+      "options": {
+        "mode": "html",
+        "content": {{ ("<table style='width:100%;border-collapse:collapse'><thead><tr><th style='" ~ S_th ~ "'>Sluzba</th><th style='" ~ S_th ~ "'>Port(y)</th><th style='" ~ S_th ~ "'>Typ</th><th style='" ~ S_th ~ "'>Stack</th><th style='" ~ S_th ~ "'>Popis</th></tr></thead><tbody>" ~ _rows | join('') ~ "</tbody></table>") | to_json }}
+      }
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "title": "Jazyky a balicky",
+      "gridPos": { "h": 16, "w": 12, "x": 0, "y": 26 },
+      "options": {
+        "mode": "html",
+        "content": {{ ("<ul style='list-style:none;padding:0;margin:0'>" ~ _lang_items | join('') ~ "</ul>") | to_json }}
+      }
+    },
+    {
+      "id": 4,
+      "type": "text",
+      "title": "Homebrew balicky",
+      "gridPos": { "h": 16, "w": 12, "x": 12, "y": 26 },
+      "options": {
+        "mode": "html",
+        "content": {{ ("<div style='" ~ S_section ~ "'>CLI balicky (" ~ (homebrew_installed_packages | default([]) | length) ~ ")</div><div style='padding:4px'>" ~ _brew_cli | join('') ~ "</div><div style='" ~ S_section ~ "'>Aplikace (" ~ (homebrew_cask_apps | default([]) | length) ~ ")</div><div style='padding:4px'>" ~ _brew_cask | join('') ~ "</div>") | to_json }}
+      }
+    },
+    {
+      "id": 5,
+      "type": "text",
+      "title": "",
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 42 },
+      "transparent": true,
+      "options": {
+        "mode": "html",
+        "content": {{ ("<div style='text-align:center;font-size:11px;color:rgba(230,237,243,0.3)'>Generovano " ~ ansible_date_time.iso8601 ~ " | ansible-playbook main.yml --tags service-registry</div>") | to_json }}
+      }
+    }
+  ]
+}

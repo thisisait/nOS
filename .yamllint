@@ -8,3 +8,6 @@ rules:
 
 ignore: |
   .github/workflows/stale.yml
+  .venv
+  roles
+  files/observability

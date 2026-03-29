@@ -1,0 +1,185 @@
+---
+# ==============================================================================
+# DOCKER STACKS – deploy compose souborů a spuštění všech stacků
+# Nahrazuje starý monolitický tasks/iiab/stack.yml
+# ==============================================================================
+
+# Flush pending handlers (Nginx restart, Alloy restart apod.) PŘED spuštěním stacků.
+# Nginx musí poslouchat na 443 než se ověřují HTTPS služby.
+- name: "[Stacks] Flush handlers before stack deployment"
+  ansible.builtin.meta: flush_handlers
+
+# ── Deploy compose souborů z šablon ──────────────────────────────────────────
+
+- name: "[Stacks] Deploy infra compose"
+  ansible.builtin.template:
+    src: "stacks/infra/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/infra/docker-compose.yml"
+    mode: '0644'
+  when: >
+    install_portainer | default(false) or install_traefik | default(false) or
+    install_mariadb | default(false) or install_postgresql | default(false) or
+    redis_docker | default(false) or install_bluesky_pds | default(false)
+
+- name: "[Stacks] Deploy observability compose"
+  ansible.builtin.template:
+    src: "stacks/observability/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/observability/docker-compose.yml"
+    mode: '0644'
+  when: install_observability | default(true)
+
+- name: "[Stacks] Deploy iiab compose"
+  ansible.builtin.template:
+    src: "stacks/iiab/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/iiab/docker-compose.yml"
+    mode: '0644'
+
+- name: "[Stacks] Deploy devops compose"
+  ansible.builtin.template:
+    src: "stacks/devops/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/devops/docker-compose.yml"
+    mode: '0644'
+  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)
+
+- name: "[Stacks] Deploy b2b compose"
+  ansible.builtin.template:
+    src: "stacks/b2b/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
+    mode: '0644'
+  when: install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)
+
+- name: "[Stacks] Deploy voip compose"
+  ansible.builtin.template:
+    src: "stacks/voip/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/voip/docker-compose.yml"
+    mode: '0644'
+  when: install_freepbx | default(false)
+
+- name: "[Stacks] Deploy engineering compose"
+  ansible.builtin.template:
+    src: "stacks/engineering/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/engineering/docker-compose.yml"
+    mode: '0644'
+  when: install_qgis_server | default(false)
+
+- name: "[Stacks] Deploy data compose"
+  ansible.builtin.template:
+    src: "stacks/data/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/data/docker-compose.yml"
+    mode: '0644'
+  when: install_metabase | default(false) or install_superset | default(false)
+
+# ── Sestavení seznamu aktivních stacků ───────────────────────────────────────
+
+- name: "[Stacks] Build list of active stacks"
+  ansible.builtin.set_fact:
+    _active_stacks: >-
+      {{
+        ((install_portainer | default(false) or install_traefik | default(false) or install_mariadb | default(false) or install_postgresql | default(false) or redis_docker | default(false) or install_bluesky_pds | default(false)) | ternary(['infra'], []))
+        +
+        ((install_observability | default(true)) | ternary(['observability'], []))
+        +
+        ['iiab']
+        +
+        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
+        +
+        ((install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
+        +
+        ((install_freepbx | default(false)) | ternary(['voip'], []))
+        +
+        ((install_qgis_server | default(false)) | ternary(['engineering'], []))
+        +
+        ((install_metabase | default(false) or install_superset | default(false)) | ternary(['data'], []))
+      }}
+
+# ── Pre-check: Docker daemon musí být ready ─────────────────────────────────
+
+- name: "[Stacks] Wait for Docker daemon to be ready"
+  ansible.builtin.shell: >
+    {{ docker_bin }} info >/dev/null 2>&1
+  register: docker_ready
+  retries: 10
+  delay: 5
+  until: docker_ready.rc == 0
+  changed_when: false
+  check_mode: false
+
+# ── Spuštění stacků ─────────────────────────────────────────────────────────
+
+- name: "[Stacks] Start all active stacks (docker compose up)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p "{{ item }}"
+    up -d --remove-orphans 2>&1
+  loop: "{{ _active_stacks }}"
+  register: _stack_results
+  changed_when: "'Started' in (item_result.stdout | default('')) or 'Created' in (item_result.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  loop_control:
+    loop_var: item
+    label: "{{ item }}"
+  vars:
+    item_result: "{{ _stack_results.results | default([{}]) | last }}"
+
+# ── Výsledky ─────────────────────────────────────────────────────────────────
+
+- name: "[Stacks] Show stack results"
+  ansible.builtin.debug:
+    msg: "{{ item.item }}: rc={{ item.rc | default('?') }} {{ (item.stdout_lines | default([]))[-3:] | join(' | ') }}"
+  loop: "{{ _stack_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+# ── Selhání → pause pro manuální opravu ──────────────────────────────────────
+
+- name: "[Stacks] Build list of failed stacks"
+  ansible.builtin.set_fact:
+    _failed_stacks: >-
+      {{ _stack_results.results | default([])
+         | selectattr('rc', 'defined')
+         | rejectattr('rc', 'equalto', 0)
+         | map(attribute='item')
+         | list }}
+
+- name: "[Stacks] Failed stacks – waiting for manual fix"
+  ansible.builtin.pause:
+    prompt: |-
+      {% for stack in _failed_stacks %}
+
+      ══════════════════════════════════════════════════════════════════════
+       STACK "{{ stack }}" SELHAL
+
+       Diagnóza:
+         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
+
+       Oprava:
+         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} up -d
+
+       Stiskni ENTER po opravě
+      ══════════════════════════════════════════════════════════════════════
+      {% endfor %}
+  when: (_failed_stacks | length) > 0
+
+# ── Container status všech stacků ────────────────────────────────────────────
+
+- name: "[Stacks] Show running containers across all stacks"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p "{{ item }}"
+    ps --format "table {{'{{'}}.Name{{'}}'}}\t{{'{{'}}.Status{{'}}'}}" 2>&1
+  loop: "{{ _active_stacks }}"
+  register: _stacks_ps
+  changed_when: false
+  check_mode: false
+  loop_control:
+    label: "{{ item }}"
+
+- name: "[Stacks] Container status"
+  ansible.builtin.debug:
+    msg: "{{ item.stdout_lines | default(['No containers']) }}"
+  loop: "{{ _stacks_ps.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"

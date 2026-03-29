@@ -1,0 +1,109 @@
+# =============================================================================
+# OBSERVABILITY STACK – Grafana + Prometheus + Loki + Tempo
+# Generováno Ansiblem – NEUPRAVUJ ručně
+#
+# Host-side služby (Alloy, node_exporter, nginx/phpfpm exportery) zůstávají
+# na hostu a jsou z kontejnerů dostupné přes host.docker.internal.
+# =============================================================================
+
+services:
+
+  grafana:
+    image: grafana/grafana:{{ grafana_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ grafana_port | default(3000) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ grafana_port | default(3000) }}:3000"
+{% endif %}
+    volumes:
+      - {{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}:/var/lib/grafana
+      - {{ stacks_dir }}/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - {{ ansible_facts['env']['HOME'] }}/observability/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('changeme_grafana') }}"
+      GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana.dev.local') }}"
+      GF_SERVER_ROOT_URL: "https://{{ grafana_domain | default('grafana.dev.local') }}"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  prometheus:
+    image: prom/prometheus:{{ prometheus_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ prometheus_port | default(9090) }}:9090"
+    volumes:
+      - {{ stacks_dir }}/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - {{ prometheus_storage_path | default(stacks_dir + '/observability/prometheus/data') }}:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time={{ prometheus_retention | default('30d') }}"
+      - "--web.enable-remote-write-receiver"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  loki:
+    image: grafana/loki:{{ loki_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ loki_port | default(3100) }}:3100"
+    volumes:
+      - {{ stacks_dir }}/observability/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - {{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}:/loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  tempo:
+    image: grafana/tempo:{{ tempo_version | default('2.10.0') }}
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "127.0.0.1:{{ tempo_http_port | default(3200) }}:{{ tempo_http_port | default(3200) }}"
+      - "127.0.0.1:{{ tempo_otlp_grpc_port | default(4327) }}:{{ tempo_otlp_grpc_port | default(4327) }}"
+      - "127.0.0.1:{{ tempo_otlp_http_port | default(4328) }}:{{ tempo_otlp_http_port | default(4328) }}"
+    volumes:
+      - {{ stacks_dir }}/observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - {{ tempo_storage_path | default(stacks_dir + '/observability/tempo/data') }}:/var/lib/tempo
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  observability_net:
+    driver: bridge
+  {{ stacks_shared_network }}:
+    external: true

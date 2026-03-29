@@ -1,0 +1,133 @@
+---
+# ==============================================================================
+# DOCKER PREREQS – spuštění Docker Desktop + Python SDK pro community.docker.*
+#
+# Flow:
+#   1. Ověří docker binary → pokud chybí, vytvoří symlinky z Docker.app
+#   2. Spustí Docker Desktop (open -a Docker)
+#   3. Čeká na daemon (docker info) → při selhání pause pro manuální opravu
+#   4. Nainstaluje Python PyMySQL pro community.mysql.* moduly
+# ==============================================================================
+
+# ── 1. Docker binary ────────────────────────────────────────────────────────
+
+- name: "[Docker] Verify docker binary exists"
+  ansible.builtin.stat:
+    path: "{{ docker_bin }}"
+  register: _docker_bin_stat
+  check_mode: false
+
+# Docker Desktop ukládá binárky v Docker.app/Contents/Resources/bin/.
+# Při instalaci přes Homebrew vytváří symlinky do /usr/local/bin/ automaticky,
+# ale po přesunu .app na SSD (external-storage) mohou zůstat mrtvé.
+- name: "[Docker] Locate Docker.app binary directory"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app/Contents/Resources/bin/docker
+  register: _docker_app_bin
+  check_mode: false
+  when: not (_docker_bin_stat.stat.exists | default(false))
+
+- name: "[Docker] Create CLI symlinks from Docker.app"
+  ansible.builtin.file:
+    src: "/Applications/Docker.app/Contents/Resources/{{ item.src }}"
+    dest: "/usr/local/bin/{{ item.dest }}"
+    state: link
+    force: true
+  loop:
+    - { src: "bin/docker", dest: "docker" }
+    - { src: "bin/docker-credential-desktop", dest: "docker-credential-desktop" }
+    - { src: "bin/docker-credential-osxkeychain", dest: "docker-credential-osxkeychain" }
+    - { src: "cli-plugins/docker-compose", dest: "docker-compose" }
+  become: true
+  when:
+    - not (_docker_bin_stat.stat.exists | default(false))
+    - _docker_app_bin.stat.exists | default(false)
+
+- name: "[Docker] Re-verify docker binary after symlink creation"
+  ansible.builtin.stat:
+    path: "{{ docker_bin }}"
+  register: _docker_bin_recheck
+  check_mode: false
+  when: not (_docker_bin_stat.stat.exists | default(false))
+
+- name: "[Docker] Docker binary not found – waiting for manual fix"
+  ansible.builtin.pause:
+    prompt: |-
+
+      ══════════════════════════════════════════════════════════════════════
+       Docker binary nenalezen: {{ docker_bin }}
+
+       Docker.app nebyl nalezen v /Applications/Docker.app.
+
+       Nainstaluj Docker Desktop:
+         brew install --cask docker
+
+       Nebo oprav symlink (pokud Docker.app je na SSD):
+         ls -la /Applications/Docker.app
+
+       Až bude docker dostupný, stiskni ENTER
+      ══════════════════════════════════════════════════════════════════════
+  when:
+    - not (_docker_bin_stat.stat.exists | default(false))
+    - not (_docker_bin_recheck.stat.exists | default(false))
+    - not ansible_check_mode
+
+# ── 2. Spuštění Docker daemon ───────────────────────────────────────────────
+
+- name: "[Docker] Check if Docker daemon is responding"
+  ansible.builtin.command: "{{ docker_bin }} info"
+  register: docker_info
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Docker] Start Docker Desktop if not running"
+  ansible.builtin.command: open -a Docker
+  when: docker_info.rc != 0
+  changed_when: true
+  check_mode: false
+
+- name: "[Docker] Wait for Docker daemon to be ready (up to 90 s)"
+  ansible.builtin.shell: |
+    for i in $(seq 1 30); do
+      {{ docker_bin }} info >/dev/null 2>&1 && exit 0
+      sleep 3
+    done
+    exit 1
+  register: docker_wait
+  when: docker_info.rc != 0
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Docker] Docker daemon not responding – waiting for manual fix"
+  ansible.builtin.pause:
+    prompt: |-
+
+      ══════════════════════════════════════════════════════════════════════
+       Docker daemon neodpovídá ani po 90 s.
+
+       Ověř:
+         {{ docker_bin }} info
+
+       Spusť Docker Desktop manuálně a stiskni ENTER
+      ══════════════════════════════════════════════════════════════════════
+  when:
+    - docker_info.rc != 0
+    - docker_wait is not skipped
+    - docker_wait.rc != 0
+    - not ansible_check_mode
+
+# ── 3. Python dependencies ──────────────────────────────────────────────────
+
+- name: "[Docker] Install Python docker SDK + dependencies"
+  ansible.builtin.command: >-
+    {{ homebrew_prefix }}/bin/python3 -m pip install
+    --break-system-packages
+    PyMySQL
+  register: docker_sdk_result
+  changed_when: "'Successfully installed' in docker_sdk_result.stdout"
+  failed_when:
+    - docker_sdk_result.rc != 0
+    - "'already satisfied' not in docker_sdk_result.stdout"
+  check_mode: false

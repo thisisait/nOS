@@ -1,0 +1,19 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "ollama/{{ openclaw_model }}",
+        "fallbacks": []
+      },
+      "maxConcurrent": {{ openclaw_max_concurrent_agents | default(4) }}
+    }
+  },
+
+  "gateway": {
+    "mode": "local"
+  },
+
+  "tools": {
+    "exec": {}
+  }
+}

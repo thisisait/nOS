@@ -1,6 +1,19 @@
 ---
 - name: Configure host.
   hosts: all
+  gather_facts: true
+
+  # Sudo heslo – nahrazuje -K flag. vars_prompt zajistí, že heslo je dostupné
+  # jako Jinja2 proměnná (ansible_become_password z -K není přístupné v tasku).
+  # Spuštění: ansible-playbook main.yml (heslo se zeptá automaticky)
+  vars_prompt:
+    - name: sudo_password
+      prompt: "Sudo heslo (Enter pro přeskočení sudo tasků)"
+      private: true
+      default: ""
+
+  vars:
+    ansible_become_password: "{{ sudo_password }}"
 
   vars_files:
     - default.config.yml
@@ -12,40 +25,392 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    - name: Include credentials.
+      include_vars: "{{ item }}"
+      with_fileglob:
+        - "{{ playbook_dir }}/credentials.yml"
+      tags: ['always']
+
+    # sudo askpass helper – Homebrew cask installer (a další) interně volá
+    # sudo, ale nezná Ansible become password. Tento skript ho předá přes
+    # SUDO_ASKPASS env var, aby cask install nepadal na "sudo: a password is required".
+    - name: Create sudo askpass helper script.
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          echo "{{ sudo_password }}"
+        dest: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
+        mode: '0700'
+      no_log: true
+      changed_when: false
+      tags: ['always']
+      when: sudo_password | default('') | length > 0
+
+  environment:
+    SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if (sudo_password | default('') | length > 0) else '' }}"
+
+  # ============================================================================
+  # HANDLERS – centralizované, volatelné přes notify: z libovolného task souboru
+  # ============================================================================
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.command: brew services restart nginx
+
+    - name: Reload nginx
+      ansible.builtin.command: >
+        {{ homebrew_prefix }}/bin/nginx -s reload
+      register: nginx_reload
+      failed_when: false
+      # Pokud reload selže (nginx neběží), spustí se restart
+      changed_when: nginx_reload.rc != 0
+      notify: Restart nginx
+
+    - name: Restart php-fpm
+      ansible.builtin.command: brew services restart "php@{{ php_version | default('8.3') }}"
+
+    - name: Restart mariadb
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart mariadb
+      failed_when: false
+
+    - name: Restart traefik
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart traefik
+      failed_when: false
+
+    - name: Restart homeassistant
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart homeassistant
+      failed_when: false
+
+    - name: Restart openclaw
+      ansible.builtin.command: >
+        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.openclaw.agent"
+      failed_when: false
+
+    - name: Restart grafana
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+        restart grafana
+      failed_when: false
+
+    - name: Restart alloy
+      ansible.builtin.command: brew services restart grafana-alloy
+      failed_when: false
+
+    - name: Restart prometheus
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+        restart prometheus
+      failed_when: false
+
+    - name: Restart dnsmasq
+      ansible.builtin.command: brew services restart dnsmasq
+      failed_when: false
+
+    - name: Restart ssh
+      ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
+      become: true
+      changed_when: false
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
+
     - role: geerlingguy.mac.homebrew
+      when: install_homebrew_packages | default(true)
       tags: ['homebrew']
+
     - role: geerlingguy.dotfiles
-      when: configure_dotfiles
+      when: configure_dotfiles | default(true)
       tags: ['dotfiles']
+
     - role: geerlingguy.mac.mas
-      when: (mas_installed_apps | length > 0) or (mas_installed_app_ids | length > 0)
+      when: |
+        (install_mas_apps | default(false)) and
+        ((mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0))
       tags: ['mas']
+
     - role: geerlingguy.mac.dock
-      when: configure_dock
+      when: configure_dock | default(false)
       tags: ['dock']
 
   tasks:
+    # ──────────────────────────────────────────────────────────────────────────
+    # Blank reset – čistá reinstalace (ansible-playbook main.yml -K -e blank=true)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/blank-reset.yml
+      when: blank | default(false) | bool
+      tags: ['blank', 'reset']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # macOS systémová nastavení
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sudoers.yml
-      when: configure_sudoers
+      when: configure_sudoers | default(false)
       tags: ['sudoers']
 
     - import_tasks: tasks/terminal.yml
-      when: configure_terminal
+      when: configure_terminal | default(true)
       tags: ['terminal']
 
     - import_tasks: tasks/osx.yml
-      when: configure_osx
+      when: configure_osx | default(true)
       tags: ['osx']
 
+    - import_tasks: tasks/macos-defaults.yml
+      when: configure_macos_defaults | default(true)
+      tags: ['macos-defaults', 'osx']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Power management – pmset (server-like provoz: displej spí, síť běží)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/power-management.yml
+      when: configure_power_management | default(true)
+      tags: ['power', 'pmset', 'power-management']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Systémové služby (SSH, Samba, VNC)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/system-services.yml
+      when: >
+        not ansible_check_mode and
+        ((enable_ssh | default(false)) or
+        (enable_samba | default(false)) or
+        (enable_vnc | default(false)) or
+        (enable_remote_management | default(false)))
+      tags: ['system-services', 'ssh', 'samba', 'vnc']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Jazyky a runtime prostředí
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/php.yml
+      when: install_php | default(true)
+      tags: ['php']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Web server (až po PHP, aby socket existoval před nginx -t)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/nginx.yml
+      when: install_nginx | default(true)
+      tags: ['nginx', 'webserver']
+
+    - import_tasks: tasks/node.yml
+      when: install_node | default(true)
+      tags: ['node', 'nodejs']
+
+    - import_tasks: tasks/bun.yml
+      when: install_bun | default(true)
+      tags: ['bun']
+
+    - import_tasks: tasks/python.yml
+      when: install_python | default(true)
+      tags: ['python']
+
+    - import_tasks: tasks/golang.yml
+      when: install_golang | default(true)
+      tags: ['go', 'golang']
+
+    - import_tasks: tasks/dotnet.yml
+      when: install_dotnet | default(true)
+      tags: ['dotnet', 'csharp']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Extra balíčky (composer, gem, npm, pip)
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/extra-packages.yml
       tags: ['extra-packages']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Editory
+    # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sublime-text.yml
-      when: configure_sublime
+      when: configure_sublime | default(false)
       tags: ['sublime-text']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Externí úložiště – přesměrování dat na SSD (MUSÍ běžet před IIAB/observ.)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/external-storage.yml
+      when: configure_external_storage | default(false)
+      tags: ['external-storage', 'storage']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Docker stacks – sdílená síť a prerekvizity
+    # ──────────────────────────────────────────────────────────────────────────
+
+    # Python docker SDK + PyMySQL – prerekvizita pro všechny community.docker.*
+    # a community.mysql.* moduly; rychlé no-op pokud jsou už nainstalovány
+    - import_tasks: tasks/iiab/docker-prereqs.yml
+      tags: ['iiab', 'docker', 'stacks']
+
+    # Shared Docker network + adresářová struktura pro všechny stacky
+    - import_tasks: tasks/stacks/shared-network.yml
+      tags: ['iiab', 'docker', 'stacks']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # IIAB – self-hosted knowledge services
+    # ──────────────────────────────────────────────────────────────────────────
+
+    - include_tasks: tasks/iiab/mariadb.yml
+      when: install_mariadb | default(false)
+      tags: ['iiab', 'mariadb', 'database']
+
+    - import_tasks: tasks/iiab/wordpress.yml
+      when: install_wordpress | default(false)
+      tags: ['iiab', 'wordpress']
+
+    - import_tasks: tasks/iiab/nextcloud.yml
+      when: install_nextcloud | default(false)
+      tags: ['iiab', 'nextcloud']
+
+    - import_tasks: tasks/iiab/kiwix.yml
+      when: install_kiwix | default(false)
+      tags: ['iiab', 'kiwix', 'zim']
+
+    - import_tasks: tasks/iiab/maps.yml
+      when: install_offline_maps | default(false)
+      tags: ['iiab', 'maps']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Síť – Tailscale + dnsmasq
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/tailscale.yml
+      when: install_tailscale | default(true)
+      tags: ['tailscale', 'network', 'vpn']
+
+    - import_tasks: tasks/dnsmasq.yml
+      when: install_dnsmasq | default(true)
+      tags: ['dnsmasq', 'dns', 'network']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Shell extras – starship prompt + aliases
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/shell-extras.yml
+      when: install_shell_extras | default(true)
+      tags: ['shell', 'shell-extras', 'starship']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/openclaw.yml
+      when: install_openclaw | default(false)
+      tags: ['openclaw', 'ai', 'agent']
+
+    - import_tasks: tasks/pi-agents.yml
+      when: install_pi_agents | default(false)
+      tags: ['pi', 'pi-agents', 'ai', 'agent']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Observability – Grafana + Prometheus + Loki + Tempo + Alloy
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/observability.yml
+      when: install_observability | default(true)
+      tags: ['observability', 'grafana', 'prometheus', 'loki', 'tempo', 'alloy']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # IIAB extra – n8n, Gitea, Uptime Kuma, Calibre-Web
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/iiab/n8n.yml
+      when: install_n8n | default(false)
+      tags: ['iiab', 'n8n', 'automation']
+
+    - import_tasks: tasks/iiab/gitea.yml
+      when: install_gitea | default(false)
+      tags: ['iiab', 'gitea', 'git']
+
+    - import_tasks: tasks/iiab/gitlab.yml
+      when: install_gitlab | default(false)
+      tags: ['iiab', 'gitlab', 'git']
+
+    - import_tasks: tasks/iiab/woodpecker.yml
+      when: install_woodpecker | default(false)
+      tags: ['iiab', 'woodpecker', 'ci', 'cicd']
+
+    - import_tasks: tasks/iiab/openwebui.yml
+      when: install_openwebui | default(false)
+      tags: ['iiab', 'openwebui', 'ai']
+
+    - import_tasks: tasks/iiab/portainer.yml
+      when: install_portainer | default(false)
+      tags: ['iiab', 'portainer', 'docker']
+
+    - import_tasks: tasks/iiab/jellyfin.yml
+      when: install_jellyfin | default(false)
+      tags: ['iiab', 'jellyfin', 'media']
+
+    - import_tasks: tasks/iiab/uptime-kuma.yml
+      when: install_uptime_kuma | default(false)
+      tags: ['iiab', 'uptime-kuma', 'monitoring']
+
+    - import_tasks: tasks/iiab/calibreweb.yml
+      when: install_calibreweb | default(false)
+      tags: ['iiab', 'calibre', 'ebooks']
+
+    - import_tasks: tasks/iiab/traefik.yml
+      when: install_traefik | default(false)
+      tags: ['iiab', 'traefik', 'proxy']
+
+    - import_tasks: tasks/iiab/homeassistant.yml
+      when: install_homeassistant | default(false)
+      tags: ['iiab', 'homeassistant', 'iot']
+
+    - import_tasks: tasks/iiab/rustfs.yml
+      when: install_rustfs | default(false)
+      tags: ['iiab', 'rustfs', 's3', 'storage']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Docker stacks – deploy compose souborů a spuštění všech stacků
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/stacks/stack-up.yml
+      tags: ['iiab', 'stack', 'docker', 'stacks']
+
+    # MariaDB post-start: vytvoří DB a uživatele (MUSÍ běžet před verify/onboarding!)
+    - import_tasks: tasks/iiab/mariadb_setup.yml
+      when: install_mariadb | default(false)
+      tags: ['iiab', 'mariadb', 'database']
+
+    # Nextcloud post-start: sync DB hesla a trusted_domains
+    - import_tasks: tasks/iiab/nextcloud_post.yml
+      when: install_nextcloud | default(false)
+      tags: ['iiab', 'nextcloud']
+
+    # Gitea post-start: vytvoření admin uživatele
+    - import_tasks: tasks/iiab/gitea_post.yml
+      when: install_gitea | default(false)
+      tags: ['iiab', 'gitea']
+
+    # WordPress post-start: wp-cli auto-install (admin účet + site title)
+    - import_tasks: tasks/iiab/wordpress_post.yml
+      when: install_wordpress | default(false)
+      tags: ['iiab', 'wordpress']
+
+    # Open WebUI post-start: auto-registrace prvního admin uživatele
+    - import_tasks: tasks/iiab/openwebui_post.yml
+      when: install_openwebui | default(false)
+      tags: ['iiab', 'openwebui']
+
+    # Uptime Kuma post-start: automatická konfigurace monitorů
+    - import_tasks: tasks/iiab/uptime-kuma-monitors.yml
+      when: install_uptime_kuma | default(false)
+      tags: ['iiab', 'uptime-kuma', 'monitoring']
+
+    # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
+    - import_tasks: tasks/iiab/stack_verify.yml
+      tags: ['iiab', 'stack', 'verify', 'stacks']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Service Registry – JSON katalog + Grafana dashboard
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/service-registry.yml
+      tags: ['service-registry', 'registry']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Post-provision háky
+    # ──────────────────────────────────────────────────────────────────────────
     - name: Run post-provision task files in a block.
       tags: ['post']
       block:
@@ -54,3 +419,11 @@
           loop_control:
             loop_var: outer_item
           with_fileglob: "{{ post_provision_tasks | default(omit) }}"
+
+  post_tasks:
+    - name: Remove sudo askpass helper script.
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
+        state: absent
+      changed_when: false
+      tags: ['always']
