@@ -603,6 +603,7 @@ mariadb_databases:
   - name: "nextcloud"
   - name: "freescout"
   - name: "erpnext"
+  - name: "asterisk"
 
 mariadb_users:
   - name: "wordpress"
@@ -617,6 +618,9 @@ mariadb_users:
   - name: "erpnext"
     password: "{{ erpnext_admin_password | default('changeme_pw_erpnext') }}"
     priv: "erpnext.*:ALL"
+  - name: "asterisk"
+    password: "{{ freepbx_db_password | default('changeme_pw_freepbx') }}"
+    priv: "asterisk.*:ALL"
 
 # ==============================================================================
 # IIAB – WORDPRESS
@@ -1102,3 +1106,58 @@ outline_db_user: "outline"
 outline_db_password: "changeme_pw_outline"
 outline_secret_key: "changeme_pw_outline_secret"
 outline_utils_secret: "changeme_pw_outline_utils"
+
+# ==============================================================================
+# VOIP – FREEPBX + ASTERISK (PBX / call center)
+# Vyžaduje: install_mariadb: true
+# ==============================================================================
+
+freepbx_domain: "pbx.dev.local"
+freepbx_port: 8088                     # Web UI
+freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
+freepbx_iax_port: 4569                 # IAX2 protocol
+freepbx_rtp_start: 10000              # RTP media start port
+freepbx_rtp_end: 10100                # RTP media end port
+freepbx_version: "latest"
+freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
+freepbx_db_name: "asterisk"
+freepbx_db_user: "asterisk"
+freepbx_db_password: "changeme_pw_freepbx"
+freepbx_timezone: "Europe/Prague"
+
+# ==============================================================================
+# ENGINEERING – QGIS SERVER (GIS mapový server)
+# ==============================================================================
+
+qgis_domain: "gis.dev.local"
+qgis_port: 8071
+qgis_version: "3.36"
+qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
+
+# ==============================================================================
+# DATA – METABASE (BI dashboardy)
+# Vyžaduje: install_postgresql: true
+# ==============================================================================
+
+metabase_domain: "bi.dev.local"
+metabase_port: 3002
+metabase_version: "latest"
+metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
+metabase_db_name: "metabase"
+metabase_db_user: "metabase"
+metabase_db_password: "changeme_pw_metabase"
+metabase_timezone: "Europe/Prague"
+
+# ==============================================================================
+# DATA – APACHE SUPERSET (data vizualizace)
+# Vyžaduje: install_postgresql: true, redis_docker: true
+# ==============================================================================
+
+superset_domain: "superset.dev.local"
+superset_port: 8089
+superset_version: "latest"
+superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
+superset_db_name: "superset"
+superset_db_user: "superset"
+superset_db_password: "changeme_pw_superset"
+superset_secret_key: "changeme_pw_superset_secret"

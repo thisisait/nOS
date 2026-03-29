@@ -71,6 +71,11 @@
     - freescout.conf
     - mattermost.conf
     - outline.conf
+    # ── VoIP / Engineering / Data stacks
+    - freepbx.conf
+    - qgis.conf
+    - metabase.conf
+    - superset.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -99,6 +104,10 @@
          + ((install_freescout | default(false)) | ternary(['freescout.conf'], []))
          + ((install_mattermost | default(false)) | ternary(['mattermost.conf'], []))
          + ((install_outline | default(false)) | ternary(['outline.conf'], []))
+         + ((install_freepbx | default(false)) | ternary(['freepbx.conf'], []))
+         + ((install_qgis_server | default(false)) | ternary(['qgis.conf'], []))
+         + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
+         + ((install_superset | default(false)) | ternary(['superset.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

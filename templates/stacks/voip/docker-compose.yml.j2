@@ -1,0 +1,48 @@
+# =============================================================================
+# VOIP STACK – FreePBX + Asterisk (PBX / call center)
+# Generováno Ansiblem – NEUPRAVUJ ručně
+# =============================================================================
+
+services:
+
+{% if install_freepbx | default(false) %}
+  freepbx:
+    image: tiredofit/freepbx:{{ freepbx_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ freepbx_port | default(8088) }}:80"
+      - "{{ freepbx_sip_port | default(5060) }}:5060/udp"
+      - "{{ freepbx_sip_port | default(5060) }}:5060/tcp"
+      - "{{ freepbx_iax_port | default(4569) }}:4569/udp"
+      - "{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}/udp"
+    volumes:
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/certs:/certs
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/data:/data
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/logs:/var/log
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/custom:/assets/custom
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_NAME: "{{ freepbx_db_name | default('asterisk') }}"
+      DB_USER: "{{ freepbx_db_user | default('asterisk') }}"
+      DB_PASS: "{{ freepbx_db_password | default('changeme_pw_freepbx') }}"
+      ENABLE_FAIL2BAN: "TRUE"
+      RTP_START: "{{ freepbx_rtp_start | default(10000) }}"
+      RTP_FINISH: "{{ freepbx_rtp_end | default(10100) }}"
+      TZ: "{{ freepbx_timezone | default('Europe/Prague') }}"
+    networks:
+      - voip_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
+
+networks:
+  voip_net:
+    driver: bridge
+  {{ stacks_shared_network }}:
+    external: true

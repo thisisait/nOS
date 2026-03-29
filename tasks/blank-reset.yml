@@ -54,6 +54,9 @@
     - infra
     - devops
     - b2b
+    - voip
+    - engineering
+    - data
   failed_when: false
   changed_when: true
 
@@ -218,6 +221,18 @@
         +
         (install_outline | default(false)) | ternary(
           [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
+        +
+        (install_freepbx | default(false)) | ternary(
+          [freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx')], [])
+        +
+        (install_qgis_server | default(false)) | ternary(
+          [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
+        +
+        (install_metabase | default(false)) | ternary(
+          [metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase')], [])
+        +
+        (install_superset | default(false)) | ternary(
+          [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"

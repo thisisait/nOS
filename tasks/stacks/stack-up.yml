@@ -48,6 +48,27 @@
     mode: '0644'
   when: install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)
 
+- name: "[Stacks] Deploy voip compose"
+  ansible.builtin.template:
+    src: "stacks/voip/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/voip/docker-compose.yml"
+    mode: '0644'
+  when: install_freepbx | default(false)
+
+- name: "[Stacks] Deploy engineering compose"
+  ansible.builtin.template:
+    src: "stacks/engineering/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/engineering/docker-compose.yml"
+    mode: '0644'
+  when: install_qgis_server | default(false)
+
+- name: "[Stacks] Deploy data compose"
+  ansible.builtin.template:
+    src: "stacks/data/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/data/docker-compose.yml"
+    mode: '0644'
+  when: install_metabase | default(false) or install_superset | default(false)
+
 # ── Sestavení seznamu aktivních stacků ───────────────────────────────────────
 
 - name: "[Stacks] Build list of active stacks"
@@ -63,6 +84,12 @@
         ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
         +
         ((install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
+        +
+        ((install_freepbx | default(false)) | ternary(['voip'], []))
+        +
+        ((install_qgis_server | default(false)) | ternary(['engineering'], []))
+        +
+        ((install_metabase | default(false) or install_superset | default(false)) | ternary(['data'], []))
       }}
 
 # ── Pre-check: Docker daemon musí být ready ─────────────────────────────────

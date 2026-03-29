@@ -1,0 +1,35 @@
+# =============================================================================
+# ENGINEERING STACK – GIS server (Docker-based tools)
+# Desktop apps (KiCad, FreeCAD, Arduino) se instalují přes Homebrew Cask
+# Generováno Ansiblem – NEUPRAVUJ ručně
+# =============================================================================
+
+services:
+
+{% if install_qgis_server | default(false) %}
+  qgis-server:
+    image: kartoza/qgis-server:{{ qgis_version | default('3.36') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ qgis_port | default(8071) }}:80"
+    volumes:
+      - {{ qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis') }}/projects:/io/data
+    environment:
+      QGIS_SERVER_LOG_LEVEL: "2"
+      QGIS_SERVER_MAX_THREADS: "4"
+      QGIS_SERVER_PARALLEL_RENDERING: "true"
+    networks:
+      - engineering_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+{% endif %}
+
+networks:
+  engineering_net:
+    driver: bridge
+  {{ stacks_shared_network }}:
+    external: true
