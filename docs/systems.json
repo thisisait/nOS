@@ -1,0 +1,1644 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "name": "devBoxNOS",
+    "domain": "dev.local",
+    "description": "Agentic Home Lab — all-in-one self-hosted FOSS platform"
+  },
+  "stacks": [
+    {
+      "id": "infra",
+      "name": "Infrastructure",
+      "description": "Shared databases, cache, reverse proxy, identity",
+      "color": "#6366f1"
+    },
+    {
+      "id": "observability",
+      "name": "Observability",
+      "description": "Monitoring, metrics, logs, traces (LGTM stack)",
+      "color": "#3fb950"
+    },
+    {
+      "id": "iiab",
+      "name": "Internet in a Box",
+      "description": "Self-hosted knowledge, productivity, media",
+      "color": "#58a6ff"
+    },
+    {
+      "id": "devops",
+      "name": "DevOps",
+      "description": "Git hosting, CI/CD pipelines",
+      "color": "#f0883e"
+    },
+    {
+      "id": "b2b",
+      "name": "B2B",
+      "description": "CRM, ERP, helpdesk, team wiki",
+      "color": "#bc8cff"
+    },
+    {
+      "id": "voip",
+      "name": "VoIP",
+      "description": "Telephony and call center",
+      "color": "#d29922"
+    },
+    {
+      "id": "engineering",
+      "name": "Engineering",
+      "description": "GIS, CAD, scientific tools",
+      "color": "#79c0ff"
+    },
+    {
+      "id": "data",
+      "name": "Data & BI",
+      "description": "Business intelligence and data visualization",
+      "color": "#f778ba"
+    }
+  ],
+  "services": [
+    {
+      "id": "mariadb",
+      "name": "MariaDB",
+      "description": "Relational database for WordPress, Nextcloud, ERPNext, FreeScout, FreePBX",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_mariadb",
+      "default_enabled": false,
+      "tier": 2,
+      "port": 3306,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "mariadb_root_password",
+          "label": "MariaDB root password",
+          "type": "password",
+          "default_pattern": "changeme_pw_mariadb"
+        }
+      ],
+      "notes": "Root login: root / <password>. Databases auto-created for dependent services."
+    },
+    {
+      "id": "postgresql",
+      "name": "PostgreSQL",
+      "description": "Relational database for Mattermost, Outline, Metabase, Superset",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_postgresql",
+      "default_enabled": false,
+      "tier": 2,
+      "port": 5432,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "postgresql_root_password",
+          "label": "PostgreSQL root password",
+          "type": "password",
+          "default_pattern": "changeme_pw_postgresql"
+        }
+      ],
+      "notes": "Root login: postgres / <password>"
+    },
+    {
+      "id": "redis_docker",
+      "name": "Redis Docker",
+      "description": "In-memory cache and pub/sub for cross-stack access (ERPNext, Outline, Superset)",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "redis_docker",
+      "default_enabled": false,
+      "tier": 2,
+      "port": 6379,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "No authentication by default. Alternative to Homebrew Redis for Docker services."
+    },
+    {
+      "id": "portainer",
+      "name": "Portainer",
+      "description": "Docker management web UI",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_portainer",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 9002,
+      "domain": "portainer.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "portainer_admin_password",
+          "label": "Portainer admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_portainer"
+        }
+      ],
+      "notes": "Login: admin / <password>. Admin account must be created within 5 minutes of first start."
+    },
+    {
+      "id": "traefik",
+      "name": "Traefik",
+      "description": "Reverse proxy and ingress controller for local development",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_traefik",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8080,
+      "domain": "traefik.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Dashboard on port 8080. HTTP/HTTPS on ports 80/443."
+    },
+    {
+      "id": "bluesky_pds",
+      "name": "Bluesky PDS",
+      "description": "AT Protocol Personal Data Server for federated identity and SSO",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_bluesky_pds",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 2583,
+      "domain": "bsky.dev.local",
+      "onboarding": "manual",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "bluesky_pds_admin_password",
+          "label": "Bluesky PDS admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_bluesky"
+        },
+        {
+          "var": "bluesky_pds_jwt_secret",
+          "label": "Bluesky PDS JWT secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_bluesky_jwt"
+        },
+        {
+          "var": "bluesky_pds_rotation_key",
+          "label": "Bluesky PDS rotation key",
+          "type": "secret",
+          "default_pattern": ""
+        }
+      ],
+      "notes": "Admin via pdsadmin CLI: pdsadmin account create. Federated identity: @user.bsky.dev.local"
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "description": "Monitoring dashboards and visualization",
+      "stack": "observability",
+      "type": "docker",
+      "toggle_var": "install_observability",
+      "default_enabled": true,
+      "tier": 1,
+      "port": 3000,
+      "domain": "grafana.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "grafana_admin_password",
+          "label": "Grafana admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_grafana"
+        }
+      ],
+      "notes": "Login: admin / <password>"
+    },
+    {
+      "id": "prometheus",
+      "name": "Prometheus",
+      "description": "Time-series metrics database and alerting",
+      "stack": "observability",
+      "type": "docker",
+      "toggle_var": "install_observability",
+      "default_enabled": true,
+      "tier": 2,
+      "port": 9090,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Localhost only, accessed via Grafana. Retention: 30d."
+    },
+    {
+      "id": "loki",
+      "name": "Loki",
+      "description": "Log aggregation system (Grafana Loki)",
+      "stack": "observability",
+      "type": "docker",
+      "toggle_var": "install_observability",
+      "default_enabled": true,
+      "tier": 2,
+      "port": 3100,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Localhost only, accessed via Grafana. Retention: 31d."
+    },
+    {
+      "id": "tempo",
+      "name": "Tempo",
+      "description": "Distributed tracing backend (Grafana Tempo)",
+      "stack": "observability",
+      "type": "docker",
+      "toggle_var": "install_observability",
+      "default_enabled": true,
+      "tier": 2,
+      "port": 3200,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Localhost only, accessed via Grafana. Retention: 7d. OTLP gRPC :4327, HTTP :4328."
+    },
+    {
+      "id": "alloy",
+      "name": "Grafana Alloy",
+      "description": "Telemetry collector — metrics, logs, traces (replaces node_exporter on ARM64)",
+      "stack": "observability",
+      "type": "homebrew",
+      "toggle_var": "install_observability",
+      "default_enabled": true,
+      "tier": 2,
+      "port": 12345,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "UI on port 12345. Public OTLP gRPC :4317, HTTP :4318. ARM64-safe collectors only."
+    },
+    {
+      "id": "wordpress",
+      "name": "WordPress",
+      "description": "Content management system (CMS)",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_wordpress",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8084,
+      "domain": "wordpress.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [
+        "install_mariadb"
+      ],
+      "dependencies": [
+        "install_mariadb",
+        "install_php",
+        "install_nginx"
+      ],
+      "credential_vars": [
+        {
+          "var": "wordpress_db_password",
+          "label": "WordPress DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_wordpress"
+        },
+        {
+          "var": "wordpress_admin_password",
+          "label": "WordPress admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_wordpress_admin"
+        }
+      ],
+      "notes": "Login: admin / <password>. Auto-install via wp-cli."
+    },
+    {
+      "id": "nextcloud",
+      "name": "Nextcloud",
+      "description": "Self-hosted cloud storage, calendar, contacts",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_nextcloud",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8085,
+      "domain": "cloud.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [
+        "install_mariadb"
+      ],
+      "dependencies": [
+        "install_mariadb",
+        "install_php",
+        "install_nginx"
+      ],
+      "credential_vars": [
+        {
+          "var": "nextcloud_db_password",
+          "label": "Nextcloud DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_nextcloud"
+        },
+        {
+          "var": "nextcloud_admin_password",
+          "label": "Nextcloud admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_nextcloud_admin"
+        }
+      ],
+      "notes": "Login: admin / <password>"
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "description": "Workflow automation platform",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_n8n",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 5678,
+      "domain": "n8n.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "First registration = owner. No default password. For Ollama AI: Settings > Credentials > Ollama, Base URL: http://host.docker.internal:11434"
+    },
+    {
+      "id": "kiwix",
+      "name": "Kiwix",
+      "description": "Offline Wikipedia, Gutenberg, ZIM content server",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_kiwix",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8888,
+      "domain": "kiwix.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "No authentication. Add .zim files to kiwix data dir or use kiwix_zim_files config."
+    },
+    {
+      "id": "tileserver",
+      "name": "Tileserver GL",
+      "description": "Offline map tile server with MBTiles support",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_offline_maps",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8070,
+      "domain": "maps.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [
+        "install_node"
+      ],
+      "credential_vars": [],
+      "notes": "No authentication. Add .mbtiles files to maps data dir."
+    },
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "description": "Media server for movies, TV shows, music",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_jellyfin",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8096,
+      "domain": "media.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Setup wizard on first launch. No automated admin account creation."
+    },
+    {
+      "id": "openwebui",
+      "name": "Open WebUI",
+      "description": "Chat UI for Ollama local LLM inference",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_openwebui",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3004,
+      "domain": "ai.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [
+        "install_openclaw"
+      ],
+      "credential_vars": [
+        {
+          "var": "openwebui_secret_key",
+          "label": "Open WebUI secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_openwebui"
+        },
+        {
+          "var": "openwebui_admin_password",
+          "label": "Open WebUI admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_openwebui_admin"
+        }
+      ],
+      "notes": "Login: admin@dev.local / <password>. Auto-registered first admin via API."
+    },
+    {
+      "id": "uptime_kuma",
+      "name": "Uptime Kuma",
+      "description": "Uptime monitoring dashboard with notifications",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_uptime_kuma",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3001,
+      "domain": "uptime.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "uptime_kuma_admin_password",
+          "label": "Uptime Kuma admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_uptime_kuma"
+        }
+      ],
+      "notes": "Login: admin / <password>. Auto-created via Python script on first run."
+    },
+    {
+      "id": "calibreweb",
+      "name": "Calibre-Web",
+      "description": "Ebook server and web reader",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_calibreweb",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8083,
+      "domain": "books.dev.local",
+      "onboarding": "manual",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Login: admin / admin123 (linuxserver image default). Change immediately in Admin > Edit Users."
+    },
+    {
+      "id": "homeassistant",
+      "name": "Home Assistant",
+      "description": "Home automation and IoT platform",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_homeassistant",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8123,
+      "domain": "home.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Onboarding wizard on first launch. No automated admin account creation."
+    },
+    {
+      "id": "rustfs",
+      "name": "RustFS",
+      "description": "S3-compatible object storage (MinIO drop-in replacement)",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_rustfs",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 9001,
+      "domain": "fs.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "rustfs_access_key",
+          "label": "RustFS S3 access key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_rustfs_access"
+        },
+        {
+          "var": "rustfs_secret_key",
+          "label": "RustFS S3 secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_rustfs_secret"
+        }
+      ],
+      "notes": "Web console on port 9001. S3 API on port 9010."
+    },
+    {
+      "id": "gitea",
+      "name": "Gitea",
+      "description": "Self-hosted lightweight Git server",
+      "stack": "devops",
+      "type": "docker",
+      "toggle_var": "install_gitea",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3003,
+      "domain": "git.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {
+          "var": "gitea_admin_password",
+          "label": "Gitea admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_gitea"
+        },
+        {
+          "var": "gitea_admin_email",
+          "label": "Gitea admin email",
+          "type": "email",
+          "default_pattern": ""
+        },
+        {
+          "var": "gitea_secret_key",
+          "label": "Gitea secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_gitea_secret"
+        }
+      ],
+      "notes": "Login: <system user> / <password>. SSH on port 2222."
+    },
+    {
+      "id": "woodpecker",
+      "name": "Woodpecker CI",
+      "description": "Lightweight CI/CD pipeline engine for Gitea",
+      "stack": "devops",
+      "type": "docker",
+      "toggle_var": "install_woodpecker",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8060,
+      "domain": "ci.dev.local",
+      "onboarding": "manual",
+      "auto_enables": [],
+      "dependencies": [
+        "install_gitea"
+      ],
+      "credential_vars": [
+        {
+          "var": "woodpecker_agent_secret",
+          "label": "Woodpecker agent secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_woodpecker"
+        },
+        {
+          "var": "woodpecker_gitea_client",
+          "label": "Woodpecker Gitea OAuth2 client ID",
+          "type": "text",
+          "default_pattern": ""
+        },
+        {
+          "var": "woodpecker_gitea_secret",
+          "label": "Woodpecker Gitea OAuth2 secret",
+          "type": "secret",
+          "default_pattern": ""
+        }
+      ],
+      "notes": "Login via Gitea OAuth2. Requires OAuth2 app in Gitea: Settings > Applications > OAuth2."
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "description": "Full DevOps platform with built-in CI/CD, registry, and project management",
+      "stack": "devops",
+      "type": "docker",
+      "toggle_var": "install_gitlab",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8929,
+      "domain": "gitlab.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Heavy (~4 GB RAM). Internal PostgreSQL, Redis, Sidekiq. SSH on port 2224. First login uses root password from initial_root_password file."
+    },
+    {
+      "id": "erpnext",
+      "name": "ERPNext",
+      "description": "CRM, ERP, HR, and accounting platform",
+      "stack": "b2b",
+      "type": "docker",
+      "toggle_var": "install_erpnext",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8082,
+      "domain": "erp.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [
+        "install_mariadb",
+        "redis_docker"
+      ],
+      "dependencies": [
+        "install_mariadb",
+        "redis_docker"
+      ],
+      "credential_vars": [
+        {
+          "var": "erpnext_admin_password",
+          "label": "ERPNext admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_erpnext"
+        }
+      ],
+      "notes": "Login: Administrator / <password>"
+    },
+    {
+      "id": "freescout",
+      "name": "FreeScout",
+      "description": "Helpdesk and ticketing system (HelpScout alternative)",
+      "stack": "b2b",
+      "type": "docker",
+      "toggle_var": "install_freescout",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8090,
+      "domain": "helpdesk.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [
+        "install_mariadb"
+      ],
+      "dependencies": [
+        "install_mariadb"
+      ],
+      "credential_vars": [
+        {
+          "var": "freescout_db_password",
+          "label": "FreeScout DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freescout"
+        },
+        {
+          "var": "freescout_admin_password",
+          "label": "FreeScout admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freescout"
+        }
+      ],
+      "notes": "Login: admin@dev.local / <password>. Auto-setup via ADMIN_EMAIL/ADMIN_PASS env vars."
+    },
+    {
+      "id": "mattermost",
+      "name": "Mattermost",
+      "description": "Team chat and collaboration platform (Slack alternative)",
+      "stack": "b2b",
+      "type": "docker",
+      "toggle_var": "install_mattermost",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8065,
+      "domain": "chat.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [
+        "install_postgresql"
+      ],
+      "dependencies": [
+        "install_postgresql"
+      ],
+      "credential_vars": [
+        {
+          "var": "mattermost_db_password",
+          "label": "Mattermost DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_mattermost"
+        }
+      ],
+      "notes": "First registration = admin."
+    },
+    {
+      "id": "outline",
+      "name": "Outline",
+      "description": "Team wiki and knowledge base",
+      "stack": "b2b",
+      "type": "docker",
+      "toggle_var": "install_outline",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3005,
+      "domain": "wiki.dev.local",
+      "onboarding": "manual",
+      "auto_enables": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "dependencies": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "credential_vars": [
+        {
+          "var": "outline_db_password",
+          "label": "Outline DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_outline"
+        },
+        {
+          "var": "outline_secret_key",
+          "label": "Outline secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_outline_secret"
+        },
+        {
+          "var": "outline_utils_secret",
+          "label": "Outline utils secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_outline_utils"
+        }
+      ],
+      "notes": "Requires SSO/OAuth provider (Bluesky PDS, OIDC, etc.)."
+    },
+    {
+      "id": "freepbx",
+      "name": "FreePBX",
+      "description": "PBX and call center (Asterisk-based)",
+      "stack": "voip",
+      "type": "docker",
+      "toggle_var": "install_freepbx",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8088,
+      "domain": "pbx.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [
+        "install_mariadb"
+      ],
+      "dependencies": [
+        "install_mariadb"
+      ],
+      "credential_vars": [
+        {
+          "var": "freepbx_db_password",
+          "label": "FreePBX DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freepbx"
+        }
+      ],
+      "notes": "Admin login set during wizard. SIP :5060, IAX :4569, RTP :10000-10100."
+    },
+    {
+      "id": "qgis_server",
+      "name": "QGIS Server",
+      "description": "GIS map server for geospatial data",
+      "stack": "engineering",
+      "type": "docker",
+      "toggle_var": "install_qgis_server",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8071,
+      "domain": "gis.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "No authentication. Serves WMS/WFS/WMTS from QGIS project files."
+    },
+    {
+      "id": "metabase",
+      "name": "Metabase",
+      "description": "Business intelligence dashboards and SQL analytics",
+      "stack": "data",
+      "type": "docker",
+      "toggle_var": "install_metabase",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3002,
+      "domain": "bi.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [
+        "install_postgresql"
+      ],
+      "dependencies": [
+        "install_postgresql"
+      ],
+      "credential_vars": [
+        {
+          "var": "metabase_db_password",
+          "label": "Metabase DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_metabase"
+        }
+      ],
+      "notes": "First registration = admin."
+    },
+    {
+      "id": "superset",
+      "name": "Apache Superset",
+      "description": "Data visualization and exploration platform",
+      "stack": "data",
+      "type": "docker",
+      "toggle_var": "install_superset",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8089,
+      "domain": "superset.dev.local",
+      "onboarding": "manual",
+      "auto_enables": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "dependencies": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "credential_vars": [
+        {
+          "var": "superset_db_password",
+          "label": "Superset DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_superset"
+        },
+        {
+          "var": "superset_secret_key",
+          "label": "Superset secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_superset_secret"
+        }
+      ],
+      "notes": "Login: admin / admin (after docker exec superset init)."
+    },
+    {
+      "id": "nginx",
+      "name": "Nginx",
+      "description": "Web server, reverse proxy, PHP-FPM, SSL termination with 24 vhost templates",
+      "stack": null,
+      "type": "homebrew",
+      "toggle_var": "install_nginx",
+      "default_enabled": true,
+      "tier": 1,
+      "port": 443,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Vhosts auto-activate based on install_* flags. 24 vhost templates in templates/nginx/sites-available/."
+    },
+    {
+      "id": "dnsmasq",
+      "name": "dnsmasq",
+      "description": "Automatic *.dev.local DNS resolver (no /etc/hosts editing)",
+      "stack": null,
+      "type": "homebrew",
+      "toggle_var": "install_dnsmasq",
+      "default_enabled": true,
+      "tier": 2,
+      "port": 53,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Resolves *.dev.local to 127.0.0.1. LAN access enabled by default."
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "description": "Local LLM inference engine (no API key required)",
+      "stack": null,
+      "type": "homebrew",
+      "toggle_var": "install_openclaw",
+      "default_enabled": true,
+      "tier": 1,
+      "port": 11434,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Default model: qwen3:14b. Max 1 model in RAM (36GB). API at http://localhost:11434."
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw Gateway",
+      "description": "Autonomous DevOps AI agent (Inspektor Klepitko) with Ollama backend",
+      "stack": null,
+      "type": "homebrew",
+      "toggle_var": "install_openclaw",
+      "default_enabled": true,
+      "tier": 1,
+      "port": 18789,
+      "domain": "claw.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "Runs as launchd daemon. Agent persona: Inspektor Klepitko. Max 4 concurrent agents, 8 sub-agents."
+    }
+  ],
+  "languages": [
+    {
+      "id": "php",
+      "name": "PHP",
+      "version": "8.3",
+      "toggle_var": "install_php",
+      "default_enabled": true,
+      "extensions": [
+        "redis",
+        "imagick"
+      ],
+      "global_packages": [],
+      "notes": "PHP-FPM + Composer. Memory limit: 256M, upload max: 64M, timezone: Europe/Prague."
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "version": "lts/*",
+      "toggle_var": "install_node",
+      "default_enabled": true,
+      "extensions": [],
+      "global_packages": [
+        "yarn",
+        "pnpm",
+        "typescript",
+        "ts-node",
+        "tsx",
+        "nodemon",
+        "pm2",
+        "eslint",
+        "prettier",
+        "@anthropic-ai/sdk",
+        "@anthropic-ai/claude-code"
+      ],
+      "notes": "Managed via NVM."
+    },
+    {
+      "id": "bun",
+      "name": "Bun",
+      "version": "latest",
+      "toggle_var": "install_bun",
+      "default_enabled": true,
+      "extensions": [],
+      "global_packages": [],
+      "notes": "JavaScript runtime, bundler, and package manager."
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "version": "3.13",
+      "toggle_var": "install_python",
+      "default_enabled": true,
+      "extensions": [],
+      "global_packages": [
+        "virtualenv",
+        "black",
+        "ruff",
+        "mypy",
+        "pytest",
+        "httpx",
+        "fastapi",
+        "uvicorn",
+        "rich",
+        "ansible",
+        "anthropic",
+        "jupyterlab",
+        "numpy",
+        "pandas",
+        "matplotlib",
+        "transformers",
+        "langchain",
+        "langchain-community",
+        "openai",
+        "opentelemetry-sdk",
+        "opentelemetry-exporter-otlp"
+      ],
+      "notes": "Managed via pyenv. Includes AI/ML and observability packages."
+    },
+    {
+      "id": "golang",
+      "name": "Go",
+      "version": "latest",
+      "toggle_var": "install_golang",
+      "default_enabled": true,
+      "extensions": [],
+      "global_packages": [
+        "gopls",
+        "golangci-lint",
+        "task",
+        "air"
+      ],
+      "notes": "Go tools installed via go install."
+    },
+    {
+      "id": "dotnet",
+      "name": ".NET",
+      "version": "latest",
+      "toggle_var": "install_dotnet",
+      "default_enabled": true,
+      "extensions": [],
+      "global_packages": [
+        "dotnet-ef",
+        "dotnet-script"
+      ],
+      "notes": "C# and F# support. Installed via Homebrew Cask (dotnet-sdk)."
+    }
+  ],
+  "homebrew_packages": [
+    { "name": "autoconf", "category": "basic" },
+    { "name": "bash-completion", "category": "basic" },
+    { "name": "git", "category": "basic" },
+    { "name": "gh", "category": "basic" },
+    { "name": "gpg", "category": "basic" },
+    { "name": "wget", "category": "basic" },
+    { "name": "curl", "category": "basic" },
+    { "name": "jq", "category": "basic" },
+    { "name": "yq", "category": "basic" },
+    { "name": "htop", "category": "basic" },
+    { "name": "tmux", "category": "basic" },
+    { "name": "tree", "category": "basic" },
+    { "name": "pv", "category": "basic" },
+    { "name": "watch", "category": "basic" },
+    { "name": "readline", "category": "basic" },
+    { "name": "openssl", "category": "basic" },
+    { "name": "libevent", "category": "basic" },
+    { "name": "sqlite", "category": "basic" },
+    { "name": "gettext", "category": "basic" },
+    { "name": "ssh-copy-id", "category": "basic" },
+    { "name": "zsh-history-substring-search", "category": "basic" },
+    { "name": "nmap", "category": "network" },
+    { "name": "httpie", "category": "network" },
+    { "name": "iperf", "category": "network" },
+    { "name": "wrk", "category": "network" },
+    { "name": "mkcert", "category": "ssl" },
+    { "name": "nss", "category": "ssl" },
+    { "name": "gifsicle", "category": "media" },
+    { "name": "pngpaste", "category": "media" },
+    { "name": "ffmpeg", "category": "media" },
+    { "name": "imagemagick", "category": "media" },
+    { "name": "yt-dlp", "category": "media" },
+    { "name": "exiftool", "category": "media" },
+    { "name": "git-lfs", "category": "dev-tools" },
+    { "name": "pre-commit", "category": "dev-tools" },
+    { "name": "act", "category": "dev-tools" },
+    { "name": "ripgrep", "category": "modern-cli" },
+    { "name": "fd", "category": "modern-cli" },
+    { "name": "bat", "category": "modern-cli" },
+    { "name": "eza", "category": "modern-cli" },
+    { "name": "fzf", "category": "modern-cli" },
+    { "name": "zoxide", "category": "modern-cli" },
+    { "name": "starship", "category": "modern-cli" },
+    { "name": "lazygit", "category": "modern-cli" },
+    { "name": "ncdu", "category": "modern-cli" },
+    { "name": "duf", "category": "modern-cli" },
+    { "name": "tldr", "category": "modern-cli" },
+    { "name": "hyperfine", "category": "modern-cli" },
+    { "name": "redis", "category": "database" },
+    { "name": "restic", "category": "backup" },
+    { "name": "mac-cleanup-go", "category": "backup" },
+    { "name": "cmake", "category": "build-tools" },
+    { "name": "ninja", "category": "build-tools" },
+    { "name": "llvm", "category": "build-tools" },
+    { "name": "ccache", "category": "build-tools" },
+    { "name": "pkg-config", "category": "build-tools" },
+    { "name": "libomp", "category": "build-tools" },
+    { "name": "openblas", "category": "build-tools" },
+    { "name": "protobuf", "category": "build-tools" },
+    { "name": "meson", "category": "build-tools" },
+    { "name": "doxygen", "category": "build-tools" }
+  ],
+  "cask_apps": [
+    { "name": "docker", "category": "infra" },
+    { "name": "visual-studio-code", "category": "editors" },
+    { "name": "windsurf", "category": "editors" },
+    { "name": "sublime-text", "category": "editors" },
+    { "name": "ghostty", "category": "terminals" },
+    { "name": "iterm2", "category": "terminals" },
+    { "name": "brave-browser", "category": "browsers" },
+    { "name": "google-chrome", "category": "browsers" },
+    { "name": "firefox", "category": "browsers" },
+    { "name": "raycast", "category": "productivity" },
+    { "name": "slack", "category": "communication" },
+    { "name": "discord", "category": "communication" },
+    { "name": "transmit", "category": "db-tools" },
+    { "name": "sequel-ace", "category": "db-tools" },
+    { "name": "tableplus", "category": "db-tools" },
+    { "name": "insomnia", "category": "dev-tools" },
+    { "name": "balenaetcher", "category": "dev-tools" },
+    { "name": "licecap", "category": "dev-tools" },
+    { "name": "lastpass", "category": "security" },
+    { "name": "openvpn-connect", "category": "security" },
+    { "name": "vlc", "category": "media" },
+    { "name": "spotify", "category": "media" },
+    { "name": "handbrake", "category": "media" },
+    { "name": "blender", "category": "creative" },
+    { "name": "obsidian", "category": "knowledge" },
+    { "name": "tailscale", "category": "network" },
+    { "name": "jordanbaird-ice", "category": "system" },
+    { "name": "stats", "category": "system" }
+  ],
+  "macos_settings": [
+    {
+      "id": "configure_osx",
+      "name": "macOS system preferences",
+      "toggle_var": "configure_osx",
+      "default_enabled": true,
+      "description": "Basic macOS defaults via .osx script"
+    },
+    {
+      "id": "configure_macos_defaults",
+      "name": "Extended macOS defaults",
+      "toggle_var": "configure_macos_defaults",
+      "default_enabled": true,
+      "description": "Finder, keyboard, dock, Safari, accessibility, screenshot settings"
+    },
+    {
+      "id": "configure_terminal",
+      "name": "Terminal configuration",
+      "toggle_var": "configure_terminal",
+      "default_enabled": true,
+      "description": "Terminal theme and secure keyboard entry"
+    },
+    {
+      "id": "configure_dock",
+      "name": "Dock layout",
+      "toggle_var": "configure_dock",
+      "default_enabled": false,
+      "description": "Dock app layout (requires dockutil)"
+    },
+    {
+      "id": "configure_dotfiles",
+      "name": "Dotfiles",
+      "toggle_var": "configure_dotfiles",
+      "default_enabled": false,
+      "description": "Dotfiles from Git repo (.zshrc, .gitignore, .vimrc, etc.)"
+    },
+    {
+      "id": "configure_power_management",
+      "name": "Power management",
+      "toggle_var": "configure_power_management",
+      "default_enabled": true,
+      "description": "pmset: display sleeps, computer stays awake for network services (SSH, Jellyfin, Grafana)"
+    },
+    {
+      "id": "configure_external_storage",
+      "name": "External SSD data migration",
+      "toggle_var": "configure_external_storage",
+      "default_enabled": false,
+      "description": "Redirect data-heavy paths (Docker, Ollama, caches) to external SSD"
+    },
+    {
+      "id": "install_shell_extras",
+      "name": "Shell extras",
+      "toggle_var": "install_shell_extras",
+      "default_enabled": true,
+      "description": "Starship prompt, shell aliases (bat, eza, fzf, zoxide, lazygit)"
+    }
+  ],
+  "system_services": [
+    {
+      "id": "ssh",
+      "name": "SSH Remote Login",
+      "toggle_var": "enable_ssh",
+      "default_enabled": false,
+      "port": 22,
+      "description": "Remote Login / SSH server. Key-only auth by default (ssh_password_auth: false)."
+    },
+    {
+      "id": "samba",
+      "name": "Samba file sharing",
+      "toggle_var": "enable_samba",
+      "default_enabled": false,
+      "port": 445,
+      "description": "SMB file sharing for Windows/Linux clients."
+    },
+    {
+      "id": "vnc",
+      "name": "VNC screen sharing",
+      "toggle_var": "enable_vnc",
+      "default_enabled": false,
+      "port": 5900,
+      "description": "Screen sharing via VNC / Apple Remote Desktop."
+    },
+    {
+      "id": "remote_management",
+      "name": "Apple Remote Desktop",
+      "toggle_var": "enable_remote_management",
+      "default_enabled": false,
+      "port": 3283,
+      "description": "Full Apple Remote Desktop (ARD) management."
+    }
+  ],
+  "credentials": [
+    {
+      "id": "global",
+      "service_id": null,
+      "label": "Global password prefix",
+      "always_show": true,
+      "fields": [
+        {
+          "var": "global_password_prefix",
+          "label": "Default password prefix for all services",
+          "type": "info",
+          "default_pattern": "changeme_pw_*"
+        }
+      ]
+    },
+    {
+      "id": "tailscale",
+      "service_id": null,
+      "label": "Tailscale",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "tailscale_auth_key",
+          "label": "Tailscale pre-auth key (optional, interactive login without it)",
+          "type": "secret",
+          "default_pattern": ""
+        }
+      ]
+    },
+    {
+      "id": "mariadb_creds",
+      "service_id": "mariadb",
+      "label": "MariaDB",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "mariadb_root_password",
+          "label": "MariaDB root password",
+          "type": "password",
+          "default_pattern": "changeme_pw_mariadb"
+        }
+      ]
+    },
+    {
+      "id": "postgresql_creds",
+      "service_id": "postgresql",
+      "label": "PostgreSQL",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "postgresql_root_password",
+          "label": "PostgreSQL root password",
+          "type": "password",
+          "default_pattern": "changeme_pw_postgresql"
+        }
+      ]
+    },
+    {
+      "id": "wordpress_creds",
+      "service_id": "wordpress",
+      "label": "WordPress",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "wordpress_db_password",
+          "label": "WordPress DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_wordpress"
+        },
+        {
+          "var": "wordpress_admin_password",
+          "label": "WordPress admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_wordpress_admin"
+        }
+      ]
+    },
+    {
+      "id": "nextcloud_creds",
+      "service_id": "nextcloud",
+      "label": "Nextcloud",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "nextcloud_db_password",
+          "label": "Nextcloud DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_nextcloud"
+        },
+        {
+          "var": "nextcloud_admin_password",
+          "label": "Nextcloud admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_nextcloud_admin"
+        }
+      ]
+    },
+    {
+      "id": "grafana_creds",
+      "service_id": "grafana",
+      "label": "Grafana",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "grafana_admin_password",
+          "label": "Grafana admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_grafana"
+        }
+      ]
+    },
+    {
+      "id": "gitea_creds",
+      "service_id": "gitea",
+      "label": "Gitea",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "gitea_admin_password",
+          "label": "Gitea admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_gitea"
+        },
+        {
+          "var": "gitea_admin_email",
+          "label": "Gitea admin email",
+          "type": "email",
+          "default_pattern": ""
+        },
+        {
+          "var": "gitea_secret_key",
+          "label": "Gitea secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_gitea_secret"
+        }
+      ]
+    },
+    {
+      "id": "openwebui_creds",
+      "service_id": "openwebui",
+      "label": "Open WebUI",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "openwebui_secret_key",
+          "label": "Open WebUI secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_openwebui"
+        },
+        {
+          "var": "openwebui_admin_password",
+          "label": "Open WebUI admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_openwebui_admin"
+        }
+      ]
+    },
+    {
+      "id": "portainer_creds",
+      "service_id": "portainer",
+      "label": "Portainer",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "portainer_admin_password",
+          "label": "Portainer admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_portainer"
+        }
+      ]
+    },
+    {
+      "id": "uptime_kuma_creds",
+      "service_id": "uptime_kuma",
+      "label": "Uptime Kuma",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "uptime_kuma_admin_password",
+          "label": "Uptime Kuma admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_uptime_kuma"
+        }
+      ]
+    },
+    {
+      "id": "rustfs_creds",
+      "service_id": "rustfs",
+      "label": "RustFS",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "rustfs_access_key",
+          "label": "RustFS S3 access key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_rustfs_access"
+        },
+        {
+          "var": "rustfs_secret_key",
+          "label": "RustFS S3 secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_rustfs_secret"
+        }
+      ]
+    },
+    {
+      "id": "woodpecker_creds",
+      "service_id": "woodpecker",
+      "label": "Woodpecker CI",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "woodpecker_agent_secret",
+          "label": "Woodpecker agent secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_woodpecker"
+        },
+        {
+          "var": "woodpecker_gitea_client",
+          "label": "Woodpecker Gitea OAuth2 client ID",
+          "type": "text",
+          "default_pattern": ""
+        },
+        {
+          "var": "woodpecker_gitea_secret",
+          "label": "Woodpecker Gitea OAuth2 secret",
+          "type": "secret",
+          "default_pattern": ""
+        }
+      ]
+    },
+    {
+      "id": "erpnext_creds",
+      "service_id": "erpnext",
+      "label": "ERPNext",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "erpnext_admin_password",
+          "label": "ERPNext admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_erpnext"
+        }
+      ]
+    },
+    {
+      "id": "freescout_creds",
+      "service_id": "freescout",
+      "label": "FreeScout",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "freescout_db_password",
+          "label": "FreeScout DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freescout"
+        },
+        {
+          "var": "freescout_admin_password",
+          "label": "FreeScout admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freescout"
+        }
+      ]
+    },
+    {
+      "id": "mattermost_creds",
+      "service_id": "mattermost",
+      "label": "Mattermost",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "mattermost_db_password",
+          "label": "Mattermost DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_mattermost"
+        }
+      ]
+    },
+    {
+      "id": "outline_creds",
+      "service_id": "outline",
+      "label": "Outline",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "outline_db_password",
+          "label": "Outline DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_outline"
+        },
+        {
+          "var": "outline_secret_key",
+          "label": "Outline secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_outline_secret"
+        },
+        {
+          "var": "outline_utils_secret",
+          "label": "Outline utils secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_outline_utils"
+        }
+      ]
+    },
+    {
+      "id": "freepbx_creds",
+      "service_id": "freepbx",
+      "label": "FreePBX",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "freepbx_db_password",
+          "label": "FreePBX DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_freepbx"
+        }
+      ]
+    },
+    {
+      "id": "metabase_creds",
+      "service_id": "metabase",
+      "label": "Metabase",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "metabase_db_password",
+          "label": "Metabase DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_metabase"
+        }
+      ]
+    },
+    {
+      "id": "superset_creds",
+      "service_id": "superset",
+      "label": "Apache Superset",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "superset_db_password",
+          "label": "Superset DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_superset"
+        },
+        {
+          "var": "superset_secret_key",
+          "label": "Superset secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_superset_secret"
+        }
+      ]
+    },
+    {
+      "id": "bluesky_pds_creds",
+      "service_id": "bluesky_pds",
+      "label": "Bluesky PDS",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "bluesky_pds_admin_password",
+          "label": "Bluesky PDS admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_bluesky"
+        },
+        {
+          "var": "bluesky_pds_jwt_secret",
+          "label": "Bluesky PDS JWT secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_bluesky_jwt"
+        },
+        {
+          "var": "bluesky_pds_rotation_key",
+          "label": "Bluesky PDS rotation key",
+          "type": "secret",
+          "default_pattern": ""
+        }
+      ]
+    },
+    {
+      "id": "vnc_creds",
+      "service_id": "vnc",
+      "label": "VNC",
+      "always_show": false,
+      "fields": [
+        {
+          "var": "vnc_password",
+          "label": "VNC password",
+          "type": "password",
+          "default_pattern": ""
+        }
+      ]
+    }
+  ]
+}
