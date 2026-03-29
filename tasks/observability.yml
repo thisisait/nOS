@@ -226,7 +226,7 @@
   failed_when: false
   when: alloy_scrape_phpfpm | default(true)
 
-- name: Start Redis service (scraped by Alloy)
+- name: Start Redis service (scraped by Alloy) – only if NOT using Docker Redis
   ansible.builtin.command: brew services start redis
   register: redis_svc
   changed_when: >
@@ -236,7 +236,9 @@
     redis_svc.rc != 0 and
     'already started' not in (redis_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (redis_svc.stderr | default(''))
-  when: alloy_scrape_redis | default(true)
+  when:
+    - alloy_scrape_redis | default(true)
+    - not (redis_docker | default(false) | bool)
 
 # ── Dashboardy (stažení + file-based provisioning) ──────────────────────────
 # Grafana Docker kontejner mountuje ~/observability/dashboards jako

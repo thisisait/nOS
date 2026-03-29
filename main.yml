@@ -179,6 +179,15 @@
         (install_superset | default(false))
       tags: ['always']
 
+    - name: Auto-generate Outline secrets (must be 64 hex chars)
+      ansible.builtin.set_fact:
+        outline_secret_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+      when:
+        - install_outline | default(false)
+        - (outline_secret_key | default('')) is match('^.*changeme.*$') or (outline_secret_key | default('')) | length != 64
+      tags: ['always']
+
     - name: Auto-generate Bluesky PDS rotation key if empty
       ansible.builtin.set_fact:
         bluesky_pds_rotation_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
