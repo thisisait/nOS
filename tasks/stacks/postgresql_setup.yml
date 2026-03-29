@@ -67,6 +67,7 @@
     - "ALTER DATABASE superset OWNER TO {{ superset_db_user | default('superset') }};"
   loop_control:
     label: "SQL"
+  no_log: true
   changed_when: false
   failed_when: false
   when:
