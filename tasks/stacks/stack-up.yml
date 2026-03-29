@@ -19,7 +19,7 @@
   when: >
     install_portainer | default(false) or install_traefik | default(false) or
     install_mariadb | default(false) or install_postgresql | default(false) or
-    redis_docker | default(false)
+    redis_docker | default(false) or install_bluesky_pds | default(false)
 
 - name: "[Stacks] Deploy observability compose"
   ansible.builtin.template:
@@ -75,7 +75,7 @@
   ansible.builtin.set_fact:
     _active_stacks: >-
       {{
-        ((install_portainer | default(false) or install_traefik | default(false) or install_mariadb | default(false) or install_postgresql | default(false) or redis_docker | default(false)) | ternary(['infra'], []))
+        ((install_portainer | default(false) or install_traefik | default(false) or install_mariadb | default(false) or install_postgresql | default(false) or redis_docker | default(false) or install_bluesky_pds | default(false)) | ternary(['infra'], []))
         +
         ((install_observability | default(true)) | ternary(['observability'], []))
         +

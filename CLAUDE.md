@@ -62,14 +62,18 @@ All default passwords follow pattern `changeme_pw_[service]`.
 
 **Ordering matters**: PHP before Nginx (socket), external-storage before IIAB (data paths), mariadb_setup before stack_verify (DB must exist for Nextcloud onboarding).
 
-### Docker Stacks (4 compose files in `~/stacks/`)
+### Docker Stacks (8 compose files in `~/stacks/`)
 
 | Stack | Services |
 |-------|----------|
-| **iiab** | MariaDB, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS |
+| **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS |
 | **observability** | Grafana, Prometheus, Loki, Tempo |
-| **infra** | Portainer, Traefik |
+| **iiab** | Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS |
 | **devops** | Gitea, Woodpecker CI, GitLab |
+| **b2b** | ERPNext, FreeScout, Mattermost, Outline |
+| **voip** | FreePBX (Asterisk) |
+| **engineering** | QGIS Server |
+| **data** | Metabase, Apache Superset |
 
 ### Observability (Apple Silicon optimized)
 

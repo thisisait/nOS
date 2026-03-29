@@ -76,6 +76,8 @@
     - qgis.conf
     - metabase.conf
     - superset.conf
+    # ── Identita
+    - bluesky-pds.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -108,6 +110,7 @@
          + ((install_qgis_server | default(false)) | ternary(['qgis.conf'], []))
          + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
          + ((install_superset | default(false)) | ternary(['superset.conf'], []))
+         + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

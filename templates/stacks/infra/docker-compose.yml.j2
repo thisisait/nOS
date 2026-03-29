@@ -133,6 +133,43 @@ services:
         max-file: "5"
 
 {% endif %}
+{% if install_bluesky_pds | default(false) %}
+  # ── Bluesky PDS (Personal Data Server) – AT Protocol federace ──────────────
+  bluesky-pds:
+    image: ghcr.io/bluesky-social/pds:{{ bluesky_pds_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ bluesky_pds_port | default(2583) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ bluesky_pds_port | default(2583) }}:3000"
+{% endif %}
+    volumes:
+      - {{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}:/pds
+    environment:
+      PDS_HOSTNAME: "{{ bluesky_pds_hostname | default('bsky.dev.local') }}"
+      PDS_JWT_SECRET: "{{ bluesky_pds_jwt_secret | default('changeme_pw_bluesky_jwt') }}"
+      PDS_ADMIN_PASSWORD: "{{ bluesky_pds_admin_password | default('changeme_pw_bluesky') }}"
+      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: "{{ bluesky_pds_rotation_key | default('') }}"
+      PDS_DATA_DIRECTORY: /pds
+      PDS_BLOBSTORE_DISK_LOCATION: /pds/blocks
+      PDS_DID_PLC_URL: "https://plc.directory"
+      PDS_BSKY_APP_VIEW_URL: "https://api.bsky.app"
+      PDS_BSKY_APP_VIEW_DID: "did:web:api.bsky.app"
+      PDS_REPORT_SERVICE_URL: "https://mod.bsky.app"
+      PDS_REPORT_SERVICE_DID: "did:plc:ar7c4by46qjdydhdevvrndac"
+      PDS_CRAWLERS: "https://bsky.network"
+      LOG_ENABLED: "true"
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
 
 networks:
   infra_net:

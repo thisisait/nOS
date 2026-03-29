@@ -233,6 +233,9 @@
         +
         (install_superset | default(false)) | ternary(
           [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')], [])
+        +
+        (install_bluesky_pds | default(false)) | ternary(
+          [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"
