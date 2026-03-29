@@ -15,6 +15,13 @@
     - "{{ portainer_data_dir }}"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
+- name: "[Portainer] Create initial admin password file"
+  ansible.builtin.copy:
+    content: "{{ portainer_admin_password | default('changeme_pw_portainer') }}"
+    dest: "{{ portainer_data_dir }}/init_password"
+    mode: '0600'
+    force: false
+
 - name: "[Portainer] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/portainer.conf"

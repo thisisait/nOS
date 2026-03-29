@@ -581,6 +581,9 @@ wordpress_db_host: "127.0.0.1"          # ignorováno pokud install_mariadb=true
 wordpress_table_prefix: "wp_"
 wordpress_version: "latest"             # Docker image tag
 wordpress_port: 8084                    # Lokální port kontejneru (nginx proxy)
+wordpress_admin_user: "admin"
+wordpress_admin_password: "changeme_pw_wordpress_admin"
+wordpress_admin_email: "admin@dev.local"
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
@@ -797,6 +800,9 @@ openwebui_version: "main"        # nebo konkrétní: "0.5.20"
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "changeme_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
+openwebui_admin_name: "Admin"
+openwebui_admin_email: "admin@dev.local"
+openwebui_admin_password: "changeme_pw_openwebui_admin"
 
 # ==============================================================================
 # IIAB – WOODPECKER CI (CI/CD napojen na Gitea)

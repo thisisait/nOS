@@ -383,6 +383,16 @@
       when: install_gitea | default(false)
       tags: ['iiab', 'gitea']
 
+    # WordPress post-start: wp-cli auto-install (admin účet + site title)
+    - import_tasks: tasks/iiab/wordpress_post.yml
+      when: install_wordpress | default(false)
+      tags: ['iiab', 'wordpress']
+
+    # Open WebUI post-start: auto-registrace prvního admin uživatele
+    - import_tasks: tasks/iiab/openwebui_post.yml
+      when: install_openwebui | default(false)
+      tags: ['iiab', 'openwebui']
+
     # Uptime Kuma post-start: automatická konfigurace monitorů
     - import_tasks: tasks/iiab/uptime-kuma-monitors.yml
       when: install_uptime_kuma | default(false)
