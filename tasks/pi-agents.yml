@@ -49,46 +49,52 @@
     - "{{ pi_config_dir }}/themes"
     - "{{ pi_config_dir }}/prompts"
 
-# ── 3. PI Autoresearch extension ───────────────────────────────────────────────
+# ── 3. Ollama provider pro PI ─────────────────────────────────────────────────
 
-- name: "[PI] Check if pi-autoresearch extension is installed"
+- name: "[PI] Configure Ollama provider (OLLAMA_API_KEY in .zshrc)"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} PI-AGENTS – ANSIBLE MANAGED"
+    block: |
+      export OLLAMA_API_KEY="ollama-local"
+    create: true
+
+# ── 4. PI Autoresearch extension (přes pi install, ne ruční kopie) ────────────
+
+- name: "[PI] Check if pi-autoresearch is installed via pi install"
   ansible.builtin.stat:
-    path: "{{ pi_config_dir }}/extensions/pi-autoresearch"
-  register: pi_autoresearch_stat
+    path: "{{ pi_config_dir }}/git/github.com/davebcn87/pi-autoresearch"
+  register: _pi_autoresearch_git
   when: pi_install_autoresearch | default(true)
 
-- name: "[PI] Clone pi-autoresearch repository"
-  ansible.builtin.git:
-    repo: "https://github.com/davebcn87/pi-autoresearch.git"
-    dest: "{{ ansible_facts['env']['HOME'] }}/.pi/pi-autoresearch-src"
-    version: main
-    force: false
-  when:
-    - pi_install_autoresearch | default(true)
-    - not pi_autoresearch_stat.stat.exists
-  register: pi_autoresearch_clone
+- name: "[PI] Remove old manual extension copy (conflict fix)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ pi_config_dir }}/extensions/pi-autoresearch"
+    - "{{ pi_config_dir }}/skills/autoresearch-create"
+    - "{{ pi_config_dir }}/skills/autoresearch-finalize"
+  when: pi_install_autoresearch | default(true)
 
-- name: "[PI] Install pi-autoresearch extension files"
-  ansible.builtin.shell: >
-    cp -r "{{ ansible_facts['env']['HOME'] }}/.pi/pi-autoresearch-src/extensions/pi-autoresearch"
-    "{{ pi_config_dir }}/extensions/"
+- name: "[PI] Install pi-autoresearch via pi install"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    export OLLAMA_API_KEY="ollama-local"
+    pi install https://github.com/davebcn87/pi-autoresearch
   args:
-    creates: "{{ pi_config_dir }}/extensions/pi-autoresearch"
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   when:
     - pi_install_autoresearch | default(true)
-    - not pi_autoresearch_stat.stat.exists
+    - not (_pi_autoresearch_git.stat.exists | default(false))
+  changed_when: true
+  failed_when: false
 
-- name: "[PI] Install pi-autoresearch skill files"
-  ansible.builtin.shell: >
-    cp -r "{{ ansible_facts['env']['HOME'] }}/.pi/pi-autoresearch-src/skills/autoresearch-create"
-    "{{ pi_config_dir }}/skills/"
-  args:
-    creates: "{{ pi_config_dir }}/skills/autoresearch-create"
-  when:
-    - pi_install_autoresearch | default(true)
-    - not pi_autoresearch_stat.stat.exists
-
-# ── 4. Finální výpis ──────────────────────────────────────────────────────────
+# ── 5. Finální výpis ──────────────────────────────────────────────────────────
 
 - name: "[PI] Print setup summary"
   ansible.builtin.debug:
