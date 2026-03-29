@@ -64,6 +64,23 @@ install_traefik: false            # Traefik – reverse proxy / ingress pro lok�
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
 install_rustfs: false             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
+# ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
+install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting              [vyžaduje: MariaDB, Redis Docker]
+install_freescout: false          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
+install_mattermost: false         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
+install_outline: false            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
+
+# ── VoIP stack (telekomunikace) ──────────────────────────────────────────────
+install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
+
+# ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
+install_qgis_server: false        # QGIS Server – GIS mapový server                     [Docker]
+install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                          [Homebrew Cask]
+
+# ── Data stack (analytika/BI) ────────────────────────────────────────────────
+install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
+install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
+
 # ── Síť / přístup ─────────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
 install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (bez /etc/hosts editace)
@@ -584,6 +601,8 @@ redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 mariadb_databases:
   - name: "wordpress"
   - name: "nextcloud"
+  - name: "freescout"
+  - name: "erpnext"
 
 mariadb_users:
   - name: "wordpress"
@@ -592,6 +611,12 @@ mariadb_users:
   - name: "nextcloud"
     password: "{{ nextcloud_db_password }}"
     priv: "nextcloud.*:ALL"
+  - name: "freescout"
+    password: "{{ freescout_db_password | default('changeme_pw_freescout') }}"
+    priv: "freescout.*:ALL"
+  - name: "erpnext"
+    password: "{{ erpnext_admin_password | default('changeme_pw_erpnext') }}"
+    priv: "erpnext.*:ALL"
 
 # ==============================================================================
 # IIAB – WORDPRESS
@@ -1021,3 +1046,59 @@ rustfs_domain: "fs.dev.local"
 rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
 rustfs_access_key: "changeme_pw_rustfs_access"
 rustfs_secret_key: "changeme_pw_rustfs_secret"
+
+# ==============================================================================
+# B2B – ERPNEXT (CRM + ERP + HR + Accounting)
+# Vyžaduje: install_mariadb: true, redis_docker: true
+# ==============================================================================
+
+erpnext_domain: "erp.dev.local"
+erpnext_port: 8080
+erpnext_version: "v15"
+erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
+erpnext_admin_password: "changeme_pw_erpnext"
+
+# ==============================================================================
+# B2B – FREESCOUT (helpdesk / ticketing)
+# Vyžaduje: install_mariadb: true
+# ==============================================================================
+
+freescout_domain: "helpdesk.dev.local"
+freescout_port: 8090
+freescout_version: "latest"
+freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
+freescout_db_name: "freescout"
+freescout_db_user: "freescout"
+freescout_db_password: "changeme_pw_freescout"
+freescout_admin_email: "admin@dev.local"
+freescout_admin_password: "changeme_pw_freescout"
+freescout_timezone: "Europe/Prague"
+
+# ==============================================================================
+# B2B – MATTERMOST (team chat)
+# Vyžaduje: install_postgresql: true
+# ==============================================================================
+
+mattermost_domain: "chat.dev.local"
+mattermost_port: 8065
+mattermost_version: "latest"
+mattermost_data_dir: "{{ ansible_facts['env']['HOME'] }}/mattermost"
+mattermost_db_name: "mattermost"
+mattermost_db_user: "mattermost"
+mattermost_db_password: "changeme_pw_mattermost"
+mattermost_timezone: "Europe/Prague"
+
+# ==============================================================================
+# B2B – OUTLINE (team wiki / knowledge base)
+# Vyžaduje: install_postgresql: true, redis_docker: true
+# ==============================================================================
+
+outline_domain: "wiki.dev.local"
+outline_port: 3005
+outline_version: "latest"
+outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
+outline_db_name: "outline"
+outline_db_user: "outline"
+outline_db_password: "changeme_pw_outline"
+outline_secret_key: "changeme_pw_outline_secret"
+outline_utils_secret: "changeme_pw_outline_utils"

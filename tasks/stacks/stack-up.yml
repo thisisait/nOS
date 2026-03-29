@@ -41,6 +41,13 @@
     mode: '0644'
   when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)
 
+- name: "[Stacks] Deploy b2b compose"
+  ansible.builtin.template:
+    src: "stacks/b2b/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
+    mode: '0644'
+  when: install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)
+
 # ── Sestavení seznamu aktivních stacků ───────────────────────────────────────
 
 - name: "[Stacks] Build list of active stacks"
@@ -54,6 +61,8 @@
         ['iiab']
         +
         ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
+        +
+        ((install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
       }}
 
 # ── Pre-check: Docker daemon musí být ready ─────────────────────────────────

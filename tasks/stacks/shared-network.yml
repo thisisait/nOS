@@ -32,5 +32,6 @@
     - "{{ stacks_dir }}/iiab"
     - "{{ stacks_dir }}/devops"
     - "{{ stacks_dir }}/devops/gitea"
+    - "{{ stacks_dir }}/b2b"
     - "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"

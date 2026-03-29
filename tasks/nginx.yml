@@ -66,6 +66,11 @@
     - rustfs.conf
     - traefik.conf
     - openclaw.conf
+    # ── B2B stack
+    - erpnext.conf
+    - freescout.conf
+    - mattermost.conf
+    - outline.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -90,6 +95,10 @@
          + ((install_rustfs | default(false)) | ternary(['rustfs.conf'], []))
          + ((install_traefik | default(false)) | ternary(['traefik.conf'], []))
          + ((install_openclaw | default(false)) | ternary(['openclaw.conf'], []))
+         + ((install_erpnext | default(false)) | ternary(['erpnext.conf'], []))
+         + ((install_freescout | default(false)) | ternary(['freescout.conf'], []))
+         + ((install_mattermost | default(false)) | ternary(['mattermost.conf'], []))
+         + ((install_outline | default(false)) | ternary(['outline.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

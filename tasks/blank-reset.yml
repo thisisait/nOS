@@ -53,6 +53,7 @@
     - observability
     - infra
     - devops
+    - b2b
   failed_when: false
   changed_when: true
 
@@ -205,6 +206,18 @@
         +
         (install_openclaw | default(false)) | ternary(
           [ansible_facts['env']['HOME'] + '/.openclaw'], [])
+        +
+        (install_erpnext | default(false)) | ternary(
+          [erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites')], [])
+        +
+        (install_freescout | default(false)) | ternary(
+          [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
+        +
+        (install_mattermost | default(false)) | ternary(
+          [mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost')], [])
+        +
+        (install_outline | default(false)) | ternary(
+          [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"
