@@ -12,8 +12,8 @@
     login_user: root
     login_password: "{{ mariadb_root_password }}"
   register: mariadb_conn
-  retries: 5
-  delay: 10
+  retries: 18
+  delay: 5
   until: mariadb_conn is not failed
   ignore_errors: true  # noqa: ignore-errors – potřebujeme registrovat failed stav
   when: not ansible_check_mode

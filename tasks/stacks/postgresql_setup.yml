@@ -18,7 +18,7 @@
     {{ docker_bin }} compose -p infra
     exec -T postgresql pg_isready -U {{ postgresql_root_user | default('postgres') }}
   register: _pg_ready
-  retries: 10
+  retries: 18
   delay: 5
   until: _pg_ready.rc == 0
   changed_when: false

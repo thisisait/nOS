@@ -106,12 +106,12 @@
 
 # ── Spuštění stacků ─────────────────────────────────────────────────────────
 
-- name: "[Stacks] Start all active stacks (docker compose up)"
+- name: "[Stacks] Start all active stacks (docker compose up --wait)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     -p "{{ item }}"
-    up -d --remove-orphans 2>&1
+    up -d --remove-orphans --wait --wait-timeout 120 2>&1
   loop: "{{ _active_stacks }}"
   register: _stack_results
   changed_when: "'Started' in (item_result.stdout | default('')) or 'Created' in (item_result.stdout | default(''))"

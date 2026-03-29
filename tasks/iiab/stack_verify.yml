@@ -55,6 +55,29 @@
         (install_nextcloud | default(false)) | ternary(
           [{'name': 'Nextcloud', 'port': nextcloud_port | default(8085), 'proto': 'http',
             'url': 'http://127.0.0.1:' ~ (nextcloud_port | default(8085)) ~ '/status.php'}], [])
+        +
+        (install_postgresql | default(false)) | ternary(
+          [{'name': 'PostgreSQL', 'port': postgresql_port | default(5432), 'proto': 'tcp'}], [])
+        +
+        (install_erpnext | default(false)) | ternary(
+          [{'name': 'ERPNext', 'port': erpnext_port | default(8082), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (erpnext_port | default(8082)) ~ '/'}], [])
+        +
+        (install_freescout | default(false)) | ternary(
+          [{'name': 'FreeScout', 'port': freescout_port | default(8090), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (freescout_port | default(8090)) ~ '/'}], [])
+        +
+        (install_metabase | default(false)) | ternary(
+          [{'name': 'Metabase', 'port': metabase_port | default(3002), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (metabase_port | default(3002)) ~ '/'}], [])
+        +
+        (install_superset | default(false)) | ternary(
+          [{'name': 'Superset', 'port': superset_port | default(8089), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (superset_port | default(8089)) ~ '/health'}], [])
+        +
+        (install_bluesky_pds | default(false)) | ternary(
+          [{'name': 'Bluesky PDS', 'port': bluesky_pds_port | default(2583), 'proto': 'http',
+            'url': 'http://127.0.0.1:' ~ (bluesky_pds_port | default(2583)) ~ '/xrpc/_health'}], [])
       }}
     _svc_onboarding: >-
       {{
@@ -62,11 +85,6 @@
           [{'name': 'Jellyfin', 'port': jellyfin_port | default(8096), 'proto': 'http',
             'url': 'http://127.0.0.1:' ~ (jellyfin_port | default(8096)) ~ '/health',
             'hint': 'Otevri https://' ~ (jellyfin_domain | default('media.dev.local')) ~ ' a projdi pruvodce'}], [])
-        +
-        (install_portainer | default(false)) | ternary(
-          [{'name': 'Portainer', 'port': portainer_port | default(9002), 'proto': 'http',
-            'url': 'http://127.0.0.1:' ~ (portainer_port | default(9002)) ~ '/',
-            'hint': 'Otevri https://' ~ (portainer_domain | default('portainer.dev.local')) ~ ' a vytvor admin ucet (do 5 minut!)'}], [])
         +
         (install_openwebui | default(false)) | ternary(
           [{'name': 'Open WebUI', 'port': openwebui_port | default(3004), 'proto': 'http',

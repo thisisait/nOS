@@ -92,6 +92,12 @@ services:
   portainer:
     image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9000/api/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
     ports:
 {% if services_lan_access | default(false) %}
       - "{{ portainer_port | default(9002) }}:9000"
