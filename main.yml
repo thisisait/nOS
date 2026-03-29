@@ -190,8 +190,11 @@
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
       ansible.builtin.shell: |
         brew services stop redis 2>/dev/null || true
-        pkill -f "redis-server.*6379" 2>/dev/null || true
-        sleep 1
+        launchctl bootout gui/$(id -u)/homebrew.mxcl.redis 2>/dev/null || true
+        launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
+        pkill -9 -f "redis-server" 2>/dev/null || true
+        sleep 2
+        rm -f ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
       when: redis_docker | default(false) | bool
       failed_when: false
       changed_when: false
