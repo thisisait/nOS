@@ -156,38 +156,7 @@ services:
         max-file: "5"
 
 {% endif %}
-{% if install_mattermost | default(false) %}
-  # ── Mattermost (team chat) ────────────────────────────────────────────────
-  mattermost:
-    image: mattermost/mattermost-team-edition:{{ mattermost_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ mattermost_port | default(8065) }}:8065"
-{% else %}
-      - "127.0.0.1:{{ mattermost_port | default(8065) }}:8065"
-{% endif %}
-    volumes:
-      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/config:/mattermost/config
-      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/data:/mattermost/data
-      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/logs:/mattermost/logs
-      - {{ mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost') }}/plugins:/mattermost/plugins
-    environment:
-      MM_SQLSETTINGS_DRIVERNAME: postgres
-      MM_SQLSETTINGS_DATASOURCE: "postgres://{{ mattermost_db_user | default('mattermost') }}:{{ mattermost_db_password | default('changeme_pw_mattermost') }}@postgresql:5432/{{ mattermost_db_name | default('mattermost') }}?sslmode=disable&connect_timeout=10"
-      MM_SERVICESETTINGS_SITEURL: "https://{{ mattermost_domain | default('chat.dev.local') }}"
-      MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
-      TZ: "{{ mattermost_timezone | default('Europe/Prague') }}"
-    networks:
-      - b2b_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-
-{% endif %}
+{# Mattermost odstraněn – nemá ARM64 FOSS image. Chat přes Bluesky PDS nebo Nextcloud Talk. #}
 {% if install_outline | default(false) %}
   # ── Outline (team wiki / knowledge base) ───────────────────────────────────
   outline:

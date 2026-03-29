@@ -69,7 +69,7 @@
     # ── B2B stack
     - erpnext.conf
     - freescout.conf
-    - mattermost.conf
+
     - outline.conf
     # ── VoIP / Engineering / Data stacks
     - freepbx.conf
@@ -104,7 +104,7 @@
          + ((install_openclaw | default(false)) | ternary(['openclaw.conf'], []))
          + ((install_erpnext | default(false)) | ternary(['erpnext.conf'], []))
          + ((install_freescout | default(false)) | ternary(['freescout.conf'], []))
-         + ((install_mattermost | default(false)) | ternary(['mattermost.conf'], []))
+
          + ((install_outline | default(false)) | ternary(['outline.conf'], []))
          + ((install_freepbx | default(false)) | ternary(['freepbx.conf'], []))
          + ((install_qgis_server | default(false)) | ternary(['qgis.conf'], []))

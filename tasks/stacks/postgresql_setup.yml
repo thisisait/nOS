@@ -45,11 +45,6 @@
     {{ docker_bin }} compose -p infra
     exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }} -c "{{ item }}"
   loop:
-    # ── Mattermost
-    - "SELECT 'CREATE DATABASE mattermost' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mattermost')\\gexec"
-    - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ mattermost_db_user | default('mattermost') }}') THEN CREATE USER {{ mattermost_db_user | default('mattermost') }} WITH PASSWORD '{{ mattermost_db_password | default('changeme_pw_mattermost') }}'; END IF; END $$;"
-    - "GRANT ALL PRIVILEGES ON DATABASE mattermost TO {{ mattermost_db_user | default('mattermost') }};"
-    - "ALTER DATABASE mattermost OWNER TO {{ mattermost_db_user | default('mattermost') }};"
     # ── Outline
     - "SELECT 'CREATE DATABASE outline' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'outline')\\gexec"
     - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ outline_db_user | default('outline') }}') THEN CREATE USER {{ outline_db_user | default('outline') }} WITH PASSWORD '{{ outline_db_password | default('changeme_pw_outline') }}'; END IF; END $$;"

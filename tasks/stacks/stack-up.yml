@@ -46,7 +46,7 @@
     src: "stacks/b2b/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
     mode: '0644'
-  when: install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)
+  when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)
 
 - name: "[Stacks] Deploy voip compose"
   ansible.builtin.template:
@@ -83,7 +83,7 @@
         +
         ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
         +
-        ((install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
+        ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
         +
         ((install_freepbx | default(false)) | ternary(['voip'], []))
         +

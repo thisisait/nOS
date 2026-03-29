@@ -164,7 +164,7 @@
       ansible.builtin.set_fact:
         install_postgresql: true
       when: >
-        (install_mattermost | default(false)) or
+
         (install_outline | default(false)) or
         (install_metabase | default(false)) or
         (install_superset | default(false))
@@ -180,7 +180,10 @@
       tags: ['always']
 
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
-      ansible.builtin.command: brew services stop redis
+      ansible.builtin.shell: |
+        brew services stop redis 2>/dev/null || true
+        pkill -f "redis-server.*6379" 2>/dev/null || true
+        sleep 1
       when: redis_docker | default(false) | bool
       failed_when: false
       changed_when: false
