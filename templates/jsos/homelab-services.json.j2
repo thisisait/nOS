@@ -1,0 +1,243 @@
+[
+{% if install_observability | default(false) %}
+  {
+    "id": "grafana",
+    "name": "Grafana",
+    "description": "Metriky, logy, traces",
+    "url": "https://{{ grafana_domain | default('grafana.dev.local') }}",
+    "port": {{ grafana_port | default(3000) }},
+    "category": "observability"
+  },
+{% endif %}
+{% if install_nextcloud | default(false) %}
+  {
+    "id": "nextcloud",
+    "name": "Nextcloud",
+    "description": "Self-hosted cloud",
+    "url": "https://{{ nextcloud_domain | default('cloud.dev.local') }}",
+    "port": {{ nextcloud_port | default(8085) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_gitea | default(false) %}
+  {
+    "id": "gitea",
+    "name": "Gitea",
+    "description": "Git server",
+    "url": "https://{{ gitea_domain | default('git.dev.local') }}",
+    "port": {{ gitea_port | default(3003) }},
+    "category": "devops"
+  },
+{% endif %}
+{% if install_gitlab | default(false) %}
+  {
+    "id": "gitlab",
+    "name": "GitLab",
+    "description": "Full DevOps platform",
+    "url": "https://{{ gitlab_domain | default('gitlab.dev.local') }}",
+    "port": {{ gitlab_http_port | default(8929) }},
+    "category": "devops"
+  },
+{% endif %}
+{% if install_n8n | default(false) %}
+  {
+    "id": "n8n",
+    "name": "n8n",
+    "description": "Workflow automation",
+    "url": "https://{{ n8n_domain | default('n8n.dev.local') }}",
+    "port": {{ n8n_port | default(5678) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_openwebui | default(false) %}
+  {
+    "id": "openwebui",
+    "name": "Open WebUI",
+    "description": "AI chat (Ollama)",
+    "url": "https://{{ openwebui_domain | default('ai.dev.local') }}",
+    "port": {{ openwebui_port | default(3004) }},
+    "category": "ai"
+  },
+{% endif %}
+{% if install_portainer | default(false) %}
+  {
+    "id": "portainer",
+    "name": "Portainer",
+    "description": "Docker management",
+    "url": "https://{{ portainer_domain | default('portainer.dev.local') }}",
+    "port": {{ portainer_port | default(9002) }},
+    "category": "infra"
+  },
+{% endif %}
+{% if install_jellyfin | default(false) %}
+  {
+    "id": "jellyfin",
+    "name": "Jellyfin",
+    "description": "Media server",
+    "url": "https://{{ jellyfin_domain | default('media.dev.local') }}",
+    "port": {{ jellyfin_port | default(8096) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_uptime_kuma | default(false) %}
+  {
+    "id": "uptime_kuma",
+    "name": "Uptime Kuma",
+    "description": "Monitoring",
+    "url": "https://{{ uptime_kuma_domain | default('uptime.dev.local') }}",
+    "port": {{ uptime_kuma_port | default(3001) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_calibreweb | default(false) %}
+  {
+    "id": "calibreweb",
+    "name": "Calibre-Web",
+    "description": "E-book server",
+    "url": "https://{{ calibreweb_domain | default('books.dev.local') }}",
+    "port": {{ calibreweb_port | default(8083) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_kiwix | default(false) %}
+  {
+    "id": "kiwix",
+    "name": "Kiwix",
+    "description": "Offline Wikipedia",
+    "url": "https://{{ kiwix_domain | default('kiwix.dev.local') }}",
+    "port": {{ kiwix_port | default(8888) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_offline_maps | default(false) %}
+  {
+    "id": "maps",
+    "name": "Offline mapy",
+    "description": "Tileserver GL",
+    "url": "https://{{ maps_domain | default('maps.dev.local') }}",
+    "port": {{ maps_port | default(8080) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_wordpress | default(false) %}
+  {
+    "id": "wordpress",
+    "name": "WordPress",
+    "description": "CMS",
+    "url": "https://{{ wordpress_domain | default('wordpress.dev.local') }}",
+    "port": {{ wordpress_port | default(8084) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_homeassistant | default(false) %}
+  {
+    "id": "homeassistant",
+    "name": "Home Assistant",
+    "description": "Dom\u00e1c\u00ed automatizace",
+    "url": "https://{{ homeassistant_domain | default('home.dev.local') }}",
+    "port": {{ homeassistant_port | default(8123) }},
+    "category": "iiab"
+  },
+{% endif %}
+{% if install_rustfs | default(false) %}
+  {
+    "id": "rustfs",
+    "name": "RustFS",
+    "description": "S3 storage konzole",
+    "url": "https://{{ rustfs_domain | default('fs.dev.local') }}",
+    "port": {{ rustfs_console_port | default(9001) }},
+    "category": "infra"
+  },
+{% endif %}
+{% if install_erpnext | default(false) %}
+  {
+    "id": "erpnext",
+    "name": "ERPNext",
+    "description": "CRM + ERP",
+    "url": "https://{{ erpnext_domain | default('erp.dev.local') }}",
+    "port": {{ erpnext_port | default(8082) }},
+    "category": "b2b"
+  },
+{% endif %}
+{% if install_freescout | default(false) %}
+  {
+    "id": "freescout",
+    "name": "FreeScout",
+    "description": "Helpdesk",
+    "url": "https://{{ freescout_domain | default('helpdesk.dev.local') }}",
+    "port": {{ freescout_port | default(8090) }},
+    "category": "b2b"
+  },
+{% endif %}
+{% if install_mattermost | default(false) %}
+  {
+    "id": "mattermost",
+    "name": "Mattermost",
+    "description": "Team chat",
+    "url": "https://{{ mattermost_domain | default('chat.dev.local') }}",
+    "port": {{ mattermost_port | default(8065) }},
+    "category": "b2b"
+  },
+{% endif %}
+{% if install_outline | default(false) %}
+  {
+    "id": "outline",
+    "name": "Outline",
+    "description": "Team wiki",
+    "url": "https://{{ outline_domain | default('wiki.dev.local') }}",
+    "port": {{ outline_port | default(3005) }},
+    "category": "b2b"
+  },
+{% endif %}
+{% if install_metabase | default(false) %}
+  {
+    "id": "metabase",
+    "name": "Metabase",
+    "description": "BI dashboardy",
+    "url": "https://{{ metabase_domain | default('bi.dev.local') }}",
+    "port": {{ metabase_port | default(3002) }},
+    "category": "data"
+  },
+{% endif %}
+{% if install_superset | default(false) %}
+  {
+    "id": "superset",
+    "name": "Apache Superset",
+    "description": "Data vizualizace",
+    "url": "https://{{ superset_domain | default('superset.dev.local') }}",
+    "port": {{ superset_port | default(8089) }},
+    "category": "data"
+  },
+{% endif %}
+{% if install_woodpecker | default(false) %}
+  {
+    "id": "woodpecker",
+    "name": "Woodpecker CI",
+    "description": "CI/CD",
+    "url": "https://{{ woodpecker_domain | default('ci.dev.local') }}",
+    "port": {{ woodpecker_port | default(8060) }},
+    "category": "devops"
+  },
+{% endif %}
+{% if install_freepbx | default(false) %}
+  {
+    "id": "freepbx",
+    "name": "FreePBX",
+    "description": "PBX / VoIP",
+    "url": "https://{{ freepbx_domain | default('pbx.dev.local') }}",
+    "port": {{ freepbx_port | default(8088) }},
+    "category": "voip"
+  },
+{% endif %}
+{% if install_qgis_server | default(false) %}
+  {
+    "id": "qgis",
+    "name": "QGIS Server",
+    "description": "GIS mapy",
+    "url": "https://{{ qgis_domain | default('gis.dev.local') }}",
+    "port": {{ qgis_port | default(8071) }},
+    "category": "engineering"
+  },
+{% endif %}
+  {}
+]

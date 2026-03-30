@@ -78,6 +78,8 @@
     - superset.conf
     # ── Identita
     - bluesky-pds.conf
+    # ── Webový desktop
+    - jsos.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -111,6 +113,7 @@
          + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
          + ((install_superset | default(false)) | ternary(['superset.conf'], []))
          + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
+         + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

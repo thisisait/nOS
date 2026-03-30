@@ -259,6 +259,9 @@
         +
         (install_bluesky_pds | default(false)) | ternary(
           [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
+        +
+        (install_jsos | default(false)) | ternary(
+          [jsos_dir | default(ansible_facts['env']['HOME'] + '/projects/jsOs')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"

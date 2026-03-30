@@ -8,6 +8,10 @@ Ansible playbook for automated macOS development environment setup (Apple Silico
 
 Fork of geerlingguy/mac-dev-playbook.
 
+## Git Workflow
+
+**Veškerý vývoj probíhá ve větvi `dev`.** Branch `master` je release branch — merge do masteru provádí výhradně uživatel ručně, až bude repo a CI stabilní. NIKDY necommituj, nepushuj, nevytvářej PR ani worktree z `master`. Všechny operace (commity, worktrees, feature branches) MUSÍ vycházet z `dev`.
+
 ## Vision
 
 OS-agnostic "All-in-One PC" — entire logic and data layer runs on replicable self-hosted FOSS technologies. The Ansible playbook is the single source of truth. OpenClaw (Inspektor Klepítko) acts as the autonomous DevOps agent managing the system.

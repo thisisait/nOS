@@ -83,6 +83,10 @@
         (install_calibreweb | default(false)) | ternary(
           [{'name': 'Calibre-Web', 'type': 'http',
             'url': 'http://127.0.0.1:' ~ (calibreweb_port | default(8083)) ~ '/'}], [])
+        +
+        (install_jsos | default(false)) | ternary(
+          [{'name': 'jsOS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (jsos_port | default(8070)) ~ '/'}], [])
       }}
 
 - name: "[Uptime Kuma] Deploy monitor setup script"

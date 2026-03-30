@@ -95,6 +95,9 @@ install_engineering_apps: false    # KiCad, FreeCAD, Arduino       [Homebrew Cas
 install_metabase: false            # BI dashboardy                 [→ auto: PostgreSQL]
 install_superset: false            # Data vizualizace              [→ auto: PostgreSQL + Redis]
 
+# ── Webový desktop ────────────────────────────────────────────────────────────
+install_jsos: false                # jsOS – webový desktop s Bluesky auth  [→ auto: PostgreSQL + Redis]
+
 # ── Identita / federace ──────────────────────────────────────────────────────
 install_bluesky_pds: false         # AT Protocol PDS (SSO @user.dev.local)
 

@@ -89,6 +89,9 @@ install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                 
 install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
 install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
 
+# ── Webový desktop ────────────────────────────────────────────────────────────
+install_jsos: false               # jsOS – webový desktop s homelab integrací [vyžaduje: PostgreSQL, Redis Docker, Node.js]
+
 # ── Identita / federace ───────────────────────────────────────────────────────
 install_bluesky_pds: false        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
 
@@ -1186,3 +1189,24 @@ bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generuj: openssl rand -hex 32
+
+# ==============================================================================
+# JSOS – webový desktop (OS.js v3 + Bluesky AT Protocol auth)
+# Vyžaduje: install_postgresql: true, redis_docker: true, install_node: true
+# Volitelně: install_rustfs: true (per-user S3 buckety)
+# ==============================================================================
+
+jsos_domain: "jsos.dev.local"
+jsos_port: 8070
+jsos_dir: "{{ ansible_facts['env']['HOME'] }}/projects/jsOs"
+jsos_session_secret: "{{ global_password_prefix }}_pw_jsos_session"
+jsos_db_name: "jsos"
+jsos_db_user: "jsos"
+jsos_db_password: "{{ global_password_prefix }}_pw_jsos"
+jsos_bluesky_pds_url: "https://bsky.social"     # Výchozí PDS pro autentizaci
+jsos_admin_handles: []                           # Bluesky handles s admin oprávněním
+# jsos_admin_handles:
+#   - "user.bsky.social"
+jsos_provision_s3_buckets: true                  # Vytvořit per-user S3 bucket v RustFS
+jsos_provision_databases: true                   # Vytvořit per-user PostgreSQL databázi
+jsos_provision_redis_namespace: true             # Přidělit per-user Redis key prefix

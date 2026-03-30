@@ -1,0 +1,10 @@
+{
+  "name": "osjs-homelab-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Homelab services dashboard for jsOS",
+  "keywords": ["osjs"],
+  "osjs": {
+    "type": "package"
+  }
+}

@@ -294,6 +294,21 @@
   "description": "AT Protocol Personal Data Server"
 }) %}
 {% endif %}
+{% if install_jsos | default(false) %}
+{% set _ = _services.append({
+  "name": "jsOS",
+  "category": "desktop",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_jsos",
+  "domain": jsos_domain | default('jsos.dev.local'),
+  "port": jsos_port | default(8070),
+  "url": "https://" ~ (jsos_domain | default('jsos.dev.local')),
+  "type": "node",
+  "stack": "native",
+  "description": "Webovy desktop s Bluesky auth"
+}) %}
+{% endif %}
 {% if install_offline_maps | default(false) %}
 {% set _ = _services.append({
   "name": "Tileserver GL",

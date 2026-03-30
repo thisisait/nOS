@@ -117,6 +117,16 @@
       changed_when: false
       failed_when: false
 
+    - name: Restart jsos
+      ansible.builtin.shell: |
+        source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh && \
+        pm2 restart jsos 2>/dev/null || \
+        pm2 start {{ jsos_dir | default('~/projects/jsOs') }}/ecosystem.config.js
+        pm2 save --force
+      args:
+        executable: /bin/bash
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
@@ -164,7 +174,7 @@
       ansible.builtin.set_fact:
         install_postgresql: true
       when: >
-
+        (install_jsos | default(false)) or
         (install_outline | default(false)) or
         (install_metabase | default(false)) or
         (install_superset | default(false))
@@ -174,6 +184,7 @@
       ansible.builtin.set_fact:
         redis_docker: true
       when: >
+        (install_jsos | default(false)) or
         (install_erpnext | default(false)) or
         (install_outline | default(false)) or
         (install_superset | default(false))
@@ -454,6 +465,13 @@
     # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
     - import_tasks: tasks/iiab/stack_verify.yml
       tags: ['iiab', 'stack', 'verify', 'stacks']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # jsOS – webový desktop (OS.js v3 + Bluesky auth + homelab integrace)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/jsos.yml
+      when: install_jsos | default(false)
+      tags: ['jsos', 'desktop']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Service Registry – JSON katalog + Grafana dashboard

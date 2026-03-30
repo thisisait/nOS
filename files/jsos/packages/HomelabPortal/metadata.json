@@ -1,0 +1,19 @@
+{
+  "type": "application",
+  "name": "HomelabPortal",
+  "category": "utilities",
+  "singleton": true,
+  "autostart": false,
+  "title": {
+    "en_EN": "Homelab Portal",
+    "cs_CZ": "Homelab Port\u00e1l"
+  },
+  "description": {
+    "en_EN": "Dashboard for all homelab services — open any service in a window",
+    "cs_CZ": "P\u0159ehled v\u0161ech homelab slu\u017eeb \u2014 otev\u0159i libovolnou slu\u017ebu v okn\u011b"
+  },
+  "files": [
+    "main.js",
+    "main.css"
+  ]
+}
