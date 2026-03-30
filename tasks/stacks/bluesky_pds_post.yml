@@ -1,0 +1,48 @@
+---
+# ==============================================================================
+# Bluesky PDS post-start: vytvoření admin účtu přes goat CLI
+# goat nahradil starý pdsadmin bash script v oficiálním PDS image
+# ==============================================================================
+
+- name: "[Bluesky PDS] Wait for PDS to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ bluesky_pds_port | default(2583) }}/xrpc/_health"
+    status_code: 200
+    timeout: 5
+  register: _pds_health
+  retries: 20
+  delay: 3
+  until: _pds_health.status | default(0) == 200
+  failed_when: false
+
+- name: "[Bluesky PDS] Check if admin account exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-bluesky-pds-1
+    goat pds admin account list
+    --pds-host http://localhost:3000
+    --admin-password "{{ bluesky_pds_admin_password }}" 2>&1
+  register: _pds_accounts
+  changed_when: false
+  failed_when: false
+
+- name: "[Bluesky PDS] Create admin account"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-bluesky-pds-1
+    goat pds admin account create
+    --pds-host http://localhost:3000
+    --admin-password "{{ bluesky_pds_admin_password }}"
+    --handle "admin.{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
+    --email "admin@{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
+    --password "{{ bluesky_pds_admin_password }}" 2>&1
+  register: _pds_create
+  when:
+    - _pds_health.status | default(0) == 200
+    - "'admin.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) not in (_pds_accounts.stdout | default(''))"
+  failed_when: false
+  changed_when: "'did:' in (_pds_create.stdout | default(''))"
+
+- name: "[Bluesky PDS] Account creation result"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _pds_create.stdout | default('Preskoceno (ucet jiz existuje nebo PDS nedostupny)') }}
+  when: _pds_create is defined

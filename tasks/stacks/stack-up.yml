@@ -157,6 +157,18 @@
 
 # ── App-level setup – MUSÍ běžet PO startu stacků ────────────────────────────
 
+- name: "[Stacks] ERPNext post-start: retry configurator if failed"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/erpnext_post.yml"
+  when:
+    - install_erpnext | default(false)
+    - "'b2b' in _active_stacks"
+
+- name: "[Stacks] Bluesky PDS post-start: create admin account (goat CLI)"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/bluesky_pds_post.yml"
+  when:
+    - install_bluesky_pds | default(false)
+    - "'infra' in _active_stacks"
+
 - name: "[Stacks] Superset post-start: db upgrade + init + admin"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/superset_setup.yml"
   when:

@@ -1,0 +1,78 @@
+---
+# ==============================================================================
+# ERPNext post-start: retry configurator pokud selhal při prvním spuštění
+# Configurator (bench new-site) může selhat pokud MariaDB nebyla ready
+# ==============================================================================
+
+- name: "[ERPNext] Check configurator exit code"
+  ansible.builtin.shell: >
+    {{ docker_bin }} inspect b2b-erpnext-configurator-1
+    --format '{{ '{{' }}.State.ExitCode{{ '}}' }}' 2>/dev/null || echo "999"
+  register: _erpnext_cfg_exit
+  changed_when: false
+  failed_when: false
+
+- name: "[ERPNext] Check if site already configured"
+  ansible.builtin.stat:
+    path: "{{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}/{{ erpnext_site_name | default('erp.dev.local') }}/site_config.json"
+  register: _erpnext_site_config
+
+- name: "[ERPNext] Retry configurator (MariaDB race condition fix)"
+  when:
+    - _erpnext_cfg_exit.stdout | default('0') | int != 0
+    - not _erpnext_site_config.stat.exists
+  block:
+    - name: "[ERPNext] Wait for MariaDB to accept connections"
+      ansible.builtin.shell: >
+        {{ docker_bin }} exec infra-mariadb-1
+        mariadb -u root -p{{ mariadb_root_password }} -e "SELECT 1" 2>&1
+      register: _mariadb_check
+      retries: 15
+      delay: 4
+      until: _mariadb_check.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: "[ERPNext] Remove stale configurator container"
+      ansible.builtin.shell: >
+        {{ docker_bin }} rm -f b2b-erpnext-configurator-1 2>/dev/null || true
+      changed_when: false
+
+    - name: "[ERPNext] Re-run configurator"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/b2b/docker-compose.yml"
+        -p b2b
+        run --rm erpnext-configurator 2>&1
+      register: _erpnext_cfg_retry
+      failed_when: false
+
+    - name: "[ERPNext] Configurator retry result"
+      ansible.builtin.debug:
+        msg: "rc={{ _erpnext_cfg_retry.rc | default('?') }} {{ (_erpnext_cfg_retry.stdout_lines | default([]))[-5:] | join(' | ') }}"
+
+    - name: "[ERPNext] Restart frontend + backend after site creation"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/b2b/docker-compose.yml"
+        -p b2b
+        restart erpnext-frontend erpnext-backend 2>&1
+      when: _erpnext_cfg_retry.rc | default(1) == 0
+      failed_when: false
+
+- name: "[ERPNext] Verify site is accessible"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}"
+    status_code: [200, 302, 303]
+    timeout: 10
+  register: _erpnext_health
+  retries: 10
+  delay: 5
+  until: _erpnext_health.status | default(0) in [200, 302, 303]
+  failed_when: false
+
+- name: "[ERPNext] Status"
+  ansible.builtin.debug:
+    msg: >-
+      ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) in [200, 302, 303]
+      else 'NEDOSTUPNY – zkontroluj: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs erpnext-configurator' }}
