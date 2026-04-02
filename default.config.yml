@@ -714,7 +714,7 @@ kiwix_zim_files: []
 # ==============================================================================
 
 maps_domain: "maps.dev.local"
-maps_port: 8080
+maps_port: 8081                               # 8080 obsazen Traefik dashboard
 maps_tileserver_version: "latest"                  # Docker image tag (maptiler/tileserver-gl)
 maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"        # Sem ukládej .mbtiles soubory
 
