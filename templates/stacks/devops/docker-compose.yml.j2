@@ -129,11 +129,11 @@ services:
     volumes:
       - {{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}:/paperclip
     environment:
-      HOST: "{{ '0.0.0.0' if (paperclip_deployment_mode | default('local_trusted')) != 'local_trusted' else '127.0.0.1' }}"
+      HOST: "0.0.0.0"
       PORT: "3100"
       DATABASE_URL: "postgresql://{{ paperclip_db_user | default('paperclip') }}:{{ paperclip_db_password | default('changeme_pw_paperclip') }}@postgresql:5432/{{ paperclip_db_name | default('paperclip') }}"
       PAPERCLIP_HOME: "/paperclip"
-      PAPERCLIP_DEPLOYMENT_MODE: "{{ paperclip_deployment_mode | default('local_trusted') }}"
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
     networks:
       - devops_net
       - {{ stacks_shared_network }}
