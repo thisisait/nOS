@@ -1,0 +1,104 @@
+---
+# ==============================================================================
+# IIAB Terminal — veřejný SSH TUI hub pro homelab
+# Vytvoří uživatele "home", nainstaluje TUI app, nastaví SSH ForceCommand
+# ==============================================================================
+
+# ── 1. Python deps ────────────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Install textual (TUI framework)"
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.pyenv/versions/{{ python_version | default('3.13') }}/bin/activate 2>/dev/null || true
+    pip3 install textual rich 2>&1
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+# ── 2. Deploy TUI app ────────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Create app directory"
+  ansible.builtin.file:
+    path: /usr/local/etc/iiab-terminal
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: "[IIAB Terminal] Deploy TUI application"
+  ansible.builtin.copy:
+    src: iiab-terminal/iiab_terminal.py
+    dest: /usr/local/etc/iiab-terminal/iiab_terminal.py
+    mode: '0755'
+  become: true
+
+- name: "[IIAB Terminal] Generate config from service registry"
+  ansible.builtin.template:
+    src: iiab-terminal/config.json.j2
+    dest: /usr/local/etc/iiab-terminal/config.json
+    mode: '0644'
+  become: true
+
+- name: "[IIAB Terminal] Create launcher script"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      export IIAB_CONFIG=/usr/local/etc/iiab-terminal/config.json
+      export TERM="${TERM:-xterm-256color}"
+      exec {{ homebrew_prefix }}/bin/python3 /usr/local/etc/iiab-terminal/iiab_terminal.py
+    dest: /usr/local/bin/iiab-terminal
+    mode: '0755'
+  become: true
+
+# ── 3. Create "home" user ────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Check if home user exists"
+  ansible.builtin.command: id -u {{ iiab_terminal_user | default('home') }}
+  register: _iiab_user_check
+  changed_when: false
+  failed_when: false
+
+- name: "[IIAB Terminal] Create home user"
+  ansible.builtin.command: >
+    sysadminctl -addUser {{ iiab_terminal_user | default('home') }}
+    -fullName "IIAB Terminal"
+    -shell /bin/bash
+    -password "{{ iiab_terminal_password | default('') }}"
+  become: true
+  when: _iiab_user_check.rc != 0
+
+- name: "[IIAB Terminal] Ensure home user .ssh directory"
+  ansible.builtin.file:
+    path: "/Users/{{ iiab_terminal_user | default('home') }}/.ssh"
+    state: directory
+    owner: "{{ iiab_terminal_user | default('home') }}"
+    mode: '0700'
+  become: true
+
+# ── 4. SSH config — ForceCommand + optional passwordless ─────────────────────
+
+- name: "[IIAB Terminal] Configure SSH ForceCommand for home user"
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED – iiab-terminal"
+    insertafter: EOF
+    block: |
+      Match User {{ iiab_terminal_user | default('home') }}
+          ForceCommand /usr/local/bin/iiab-terminal
+          PasswordAuthentication {{ 'yes' if (iiab_terminal_password_auth | default(true)) else 'no' }}
+          X11Forwarding no
+          AllowTcpForwarding no
+          PermitTunnel no
+    backup: true
+  become: true
+  notify: Restart ssh
+
+- name: "[IIAB Terminal] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       IIAB Terminal připraven
+      ══════════════════════════════════════════════════════
+       SSH přístup:  ssh {{ iiab_terminal_user | default('home') }}@{{ ansible_facts['default_ipv4']['address'] | default('localhost') }}
+       Uživatel:     {{ iiab_terminal_user | default('home') }}
+       Služby:       Kiwix, Knihovna, AI Chat, Přehled systémů
+       ForceCommand: /usr/local/bin/iiab-terminal
+      ══════════════════════════════════════════════════════

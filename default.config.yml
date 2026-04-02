@@ -89,6 +89,9 @@ install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                 
 install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
 install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
 
+# ── IIAB Terminal (veřejný SSH TUI hub) ───────────────────────────────────────
+install_iiab_terminal: false      # TUI přístup přes SSH pro kohokoli na LAN [vyžaduje: SSH]
+
 # ── Webový desktop ────────────────────────────────────────────────────────────
 install_jsos: false               # jsOS – webový desktop s homelab integrací [vyžaduje: PostgreSQL, Redis Docker, Node.js]
 
@@ -1234,3 +1237,13 @@ paperclip_db_user: "paperclip"
 paperclip_db_password: "{{ global_password_prefix }}_pw_paperclip"
 paperclip_deployment_mode: "local_trusted"        # local_trusted / production
 paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
+
+# ==============================================================================
+# IIAB TERMINAL – veřejný SSH TUI hub pro LAN uživatele
+# ssh home@<ip> → TUI s Kiwix, AI chatem, přehledem služeb
+# Vyžaduje: enable_ssh: true
+# ==============================================================================
+
+iiab_terminal_user: "home"                         # macOS uživatel pro SSH přístup
+iiab_terminal_password: ""                         # Heslo (prázdné = vyžaduje ssh-copy-id)
+iiab_terminal_password_auth: true                  # true = login heslem povolený

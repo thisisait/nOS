@@ -269,6 +269,15 @@
       tags: ['system-services', 'ssh', 'samba', 'vnc']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # IIAB Terminal – veřejný SSH TUI hub (vyžaduje SSH)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/iiab-terminal.yml
+      when:
+        - install_iiab_terminal | default(false)
+        - enable_ssh | default(false)
+      tags: ['iiab-terminal', 'ssh']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Jazyky a runtime prostředí
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/php.yml
