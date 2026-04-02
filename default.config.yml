@@ -93,7 +93,8 @@ install_superset: false           # Apache Superset – data vizualizace        
 install_iiab_terminal: false      # TUI přístup přes SSH pro kohokoli na LAN [vyžaduje: SSH]
 
 # ── Webový desktop ────────────────────────────────────────────────────────────
-install_jsos: false               # jsOS – webový desktop s homelab integrací [vyžaduje: PostgreSQL, Redis Docker, Node.js]
+install_puter: false              # Puter – cloud OS webový desktop (multi-user, AI, iframe apps) [Docker]
+install_jsos: false               # jsOS – starší alternativa (OS.js v3) [vyžaduje: PostgreSQL, Redis Docker, Node.js]
 
 # ── AI orchestrace ────────────────────────────────────────────────────────────
 install_paperclip: false          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
@@ -1200,6 +1201,19 @@ bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generuj: openssl rand -hex 32
+
+# ==============================================================================
+# PUTER – cloud OS webový desktop (multi-user, AI gateway, iframe apps)
+# Docker single container, Ollama auto-detect, per-user isolated storage
+# ==============================================================================
+
+puter_domain: "os.dev.local"
+puter_api_domain: "api.os.dev.local"
+puter_port: 5050                               # "05" jako "OS"
+puter_version: "latest"                        # ghcr.io/heyputer/puter
+puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
+puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
+puter_file_cache_mb: 512                       # File cache pro multi-user (MB)
 
 # ==============================================================================
 # JSOS – webový desktop (OS.js v3 + Bluesky AT Protocol auth)

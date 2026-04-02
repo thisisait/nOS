@@ -294,6 +294,21 @@
   "description": "AT Protocol Personal Data Server"
 }) %}
 {% endif %}
+{% if install_puter | default(false) %}
+{% set _ = _services.append({
+  "name": "Puter",
+  "category": "desktop",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_puter",
+  "domain": puter_domain | default('os.dev.local'),
+  "port": puter_port | default(5050),
+  "url": "https://" ~ (puter_domain | default('os.dev.local')),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Cloud OS webovy desktop (multi-user, AI)"
+}) %}
+{% endif %}
 {% if install_paperclip | default(false) %}
 {% set _ = _services.append({
   "name": "Paperclip",

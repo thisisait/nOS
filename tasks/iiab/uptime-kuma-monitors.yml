@@ -91,6 +91,10 @@
         (install_paperclip | default(false)) | ternary(
           [{'name': 'Paperclip', 'type': 'http',
             'url': 'http://127.0.0.1:' ~ (paperclip_port | default(3006)) ~ '/'}], [])
+        +
+        (install_puter | default(false)) | ternary(
+          [{'name': 'Puter', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (puter_port | default(5050)) ~ '/test'}], [])
       }}
 
 - name: "[Uptime Kuma] Deploy monitor setup script"

@@ -79,6 +79,7 @@
     # ── Identita
     - bluesky-pds.conf
     # ── Webový desktop
+    - puter.conf
     - jsos.conf
     # ── AI orchestrace
     - paperclip.conf
@@ -115,6 +116,7 @@
          + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
          + ((install_superset | default(false)) | ternary(['superset.conf'], []))
          + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
+         + ((install_puter | default(false)) | ternary(['puter.conf'], []))
          + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
          + ((install_paperclip | default(false)) | ternary(['paperclip.conf'], []))
          + (nginx_sites_extra | default([]))

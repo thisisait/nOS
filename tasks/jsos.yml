@@ -26,14 +26,18 @@
     path: "{{ jsos_dir }}/.git"
   register: _jsos_git_dir
 
+- name: "[jsOS] Clean non-git directory (blank-reset leaves empty dirs)"
+  ansible.builtin.file:
+    path: "{{ jsos_dir }}"
+    state: absent
+  when: not _jsos_git_dir.stat.exists
+
 - name: "[jsOS] Clone OS.js v3 boilerplate"
   ansible.builtin.git:
     repo: "https://github.com/os-js/OS.js.git"
     dest: "{{ jsos_dir }}"
     version: master
     depth: 1
-    force: false
-    update: false
   register: jsos_clone
   when: not _jsos_git_dir.stat.exists
 

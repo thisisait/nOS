@@ -265,6 +265,9 @@
         +
         (install_paperclip | default(false)) | ternary(
           [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
+        +
+        (install_puter | default(false)) | ternary(
+          [puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"

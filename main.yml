@@ -478,6 +478,10 @@
       when: install_rustfs | default(false)
       tags: ['iiab', 'rustfs', 's3', 'storage']
 
+    - import_tasks: tasks/iiab/puter.yml
+      when: install_puter | default(false)
+      tags: ['iiab', 'puter', 'desktop']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks – deploy compose souborů a spuštění všech stacků
     # ──────────────────────────────────────────────────────────────────────────

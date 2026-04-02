@@ -1,0 +1,19 @@
+{
+  "domain": "{{ puter_domain | default('os.dev.local') }}",
+  "http_port": 4100,
+  "pub_port": 443,
+  "protocol": "https",
+  "nginx_mode": true,
+  "services": {
+    "database": {
+      "engine": "sqlite",
+      "path": "puter-database.sqlite"
+    },
+    "file-cache": {
+      "disk_limit": {{ (puter_file_cache_mb | default(512)) * 1024 }},
+      "disk_max_size": {{ (puter_file_cache_mb | default(512)) * 1024 }},
+      "precache_size": {{ (puter_file_cache_mb | default(512)) * 1024 }},
+      "path": "./file-cache"
+    }
+  }
+}

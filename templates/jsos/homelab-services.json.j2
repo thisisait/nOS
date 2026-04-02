@@ -239,6 +239,16 @@
     "category": "engineering"
   },
 {% endif %}
+{% if install_puter | default(false) %}
+  {
+    "id": "puter",
+    "name": "Puter",
+    "description": "Cloud OS desktop",
+    "url": "https://{{ puter_domain | default('os.dev.local') }}",
+    "port": {{ puter_port | default(5050) }},
+    "category": "desktop"
+  },
+{% endif %}
 {% if install_paperclip | default(false) %}
   {
     "id": "paperclip",
