@@ -115,6 +115,35 @@ services:
         max-file: "5"
 
 {% endif %}
+{% if install_paperclip | default(false) %}
+  # ── Paperclip – multi-agent orchestration platform ────────────────────────
+  paperclip:
+    image: ghcr.io/paperclipai/paperclip:{{ paperclip_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ paperclip_port | default(3006) }}:3100"
+{% else %}
+      - "127.0.0.1:{{ paperclip_port | default(3006) }}:3100"
+{% endif %}
+    volumes:
+      - {{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}:/paperclip
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3100"
+      DATABASE_URL: "postgresql://{{ paperclip_db_user | default('paperclip') }}:{{ paperclip_db_password | default('changeme_pw_paperclip') }}@postgresql:5432/{{ paperclip_db_name | default('paperclip') }}"
+      PAPERCLIP_HOME: "/paperclip"
+      PAPERCLIP_DEPLOYMENT_MODE: "{{ paperclip_deployment_mode | default('local_trusted') }}"
+    networks:
+      - devops_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+{% endif %}
 
 networks:
   devops_net:

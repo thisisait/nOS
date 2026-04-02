@@ -157,30 +157,7 @@
   async: 120
   poll: 5
 
-# ── 9. PostgreSQL – jsOS databáze a uživatel ─────────────────────────────────
-
-- name: "[jsOS] Create PostgreSQL database"
-  ansible.builtin.shell: |
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -tc \
-      "SELECT 1 FROM pg_database WHERE datname='{{ jsos_db_name }}'" | grep -q 1 || \
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -c \
-      "CREATE DATABASE {{ jsos_db_name }};"
-  register: jsos_db_create
-  changed_when: "'CREATE DATABASE' in jsos_db_create.stdout"
-  failed_when: false
-
-- name: "[jsOS] Create PostgreSQL user"
-  ansible.builtin.shell: |
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -tc \
-      "SELECT 1 FROM pg_roles WHERE rolname='{{ jsos_db_user }}'" | grep -q 1 || \
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -c \
-      "CREATE USER {{ jsos_db_user }} WITH PASSWORD '{{ jsos_db_password }}';"
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -c \
-      "GRANT ALL PRIVILEGES ON DATABASE {{ jsos_db_name }} TO {{ jsos_db_user }};"
-    {{ docker_bin }} exec -i postgres psql -U {{ postgresql_root_user }} -c \
-      "ALTER DATABASE {{ jsos_db_name }} OWNER TO {{ jsos_db_user }};"
-  changed_when: false
-  failed_when: false
+# ── 9. PostgreSQL – jsOS DB řeší centrálně tasks/stacks/postgresql_setup.yml ──
 
 # ── 10. Start via PM2 ────────────────────────────────────────────────────────
 

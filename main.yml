@@ -175,6 +175,7 @@
         install_postgresql: true
       when: >
         (install_jsos | default(false)) or
+        (install_paperclip | default(false)) or
         (install_outline | default(false)) or
         (install_metabase | default(false)) or
         (install_superset | default(false))

@@ -98,6 +98,9 @@ install_superset: false            # Data vizualizace              [→ auto: Po
 # ── Webový desktop ────────────────────────────────────────────────────────────
 install_jsos: false                # jsOS – webový desktop s Bluesky auth  [→ auto: PostgreSQL + Redis]
 
+# ── AI orchestrace ───────────────────────────────────────────────────────────
+install_paperclip: false           # Paperclip – multi-agent orchestrace   [→ auto: PostgreSQL]
+
 # ── Identita / federace ──────────────────────────────────────────────────────
 install_bluesky_pds: false         # AT Protocol PDS (SSO @user.dev.local)
 

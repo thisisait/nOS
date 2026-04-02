@@ -6,10 +6,10 @@
 
 # ── 1. Ollama (lokální LLM inference) ─────────────────────────────────────────
 
-- name: "[Ollama] Install Ollama via Homebrew"
+- name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend na Apple Silicon)"
   community.general.homebrew:
     name: ollama
-    state: present
+    state: latest
 
 - name: "[Ollama] Set memory optimization env vars"
   ansible.builtin.command: "launchctl setenv {{ item.key }} {{ item.value }}"
@@ -17,6 +17,7 @@
     - { key: "OLLAMA_MAX_LOADED_MODELS", value: "{{ ollama_max_loaded_models | default(1) }}" }
     - { key: "OLLAMA_NUM_PARALLEL", value: "{{ ollama_num_parallel | default(2) }}" }
     - { key: "OLLAMA_KEEP_ALIVE", value: "{{ ollama_keep_alive | default('5m') }}" }
+    - { key: "OLLAMA_FLASH_ATTENTION", value: "{{ ollama_flash_attention | default(1) }}" }
   loop_control:
     label: "{{ item.key }}={{ item.value }}"
   changed_when: false

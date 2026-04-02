@@ -92,6 +92,9 @@ install_superset: false           # Apache Superset – data vizualizace        
 # ── Webový desktop ────────────────────────────────────────────────────────────
 install_jsos: false               # jsOS – webový desktop s homelab integrací [vyžaduje: PostgreSQL, Redis Docker, Node.js]
 
+# ── AI orchestrace ────────────────────────────────────────────────────────────
+install_paperclip: false          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
+
 # ── Identita / federace ───────────────────────────────────────────────────────
 install_bluesky_pds: false        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
 
@@ -428,10 +431,13 @@ openclaw_config_dir: "~/.openclaw"
 
 # Ollama model – doporučeno pro 36GB RAM: qwen3:14b
 # Alternativy: qwen3.5:14b (rychlejší), llama3.3:70b (silnější, pomalejší)
+# Od Ollama 0.19 se na Apple Silicon automaticky používá MLX backend
+# (57% rychlejší prefill, 93% rychlejší decode vs llama.cpp)
 openclaw_model: "qwen3:14b"
 ollama_max_loaded_models: 1    # Max modelů v RAM (1 = šetří SWAP na 36GB)
 ollama_num_parallel: 2         # Max paralelních inference requestů
 ollama_keep_alive: "5m"        # Uvolnit model z RAM po nečinnosti (default 5m, 0 = ihned)
+ollama_flash_attention: 1      # Flash attention pro MLX (rychlejší, méně paměti)
 
 # Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
 openclaw_install_daemon: true
@@ -1210,3 +1216,19 @@ jsos_admin_handles: []                           # Bluesky handles s admin oprá
 jsos_provision_s3_buckets: true                  # Vytvořit per-user S3 bucket v RustFS
 jsos_provision_databases: true                   # Vytvořit per-user PostgreSQL databázi
 jsos_provision_redis_namespace: true             # Přidělit per-user Redis key prefix
+
+# ==============================================================================
+# PAPERCLIP – multi-agent orchestration platform
+# Vyžaduje: install_postgresql: true
+# Koordinuje AI agenty (OpenClaw, Claude Code, Codex) přes org-chart strukturu
+# ==============================================================================
+
+paperclip_domain: "paperclip.dev.local"
+paperclip_port: 3006                              # 3100 koliduje s Loki
+paperclip_version: "latest"
+paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
+paperclip_db_name: "paperclip"
+paperclip_db_user: "paperclip"
+paperclip_db_password: "{{ global_password_prefix }}_pw_paperclip"
+paperclip_deployment_mode: "local_trusted"        # local_trusted / production
+paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"

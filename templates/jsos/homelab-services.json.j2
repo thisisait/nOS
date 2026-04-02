@@ -239,5 +239,15 @@
     "category": "engineering"
   },
 {% endif %}
+{% if install_paperclip | default(false) %}
+  {
+    "id": "paperclip",
+    "name": "Paperclip",
+    "description": "Multi-agent orchestrace",
+    "url": "https://{{ paperclip_domain | default('paperclip.dev.local') }}",
+    "port": {{ paperclip_port | default(3006) }},
+    "category": "ai"
+  },
+{% endif %}
   {}
 ]

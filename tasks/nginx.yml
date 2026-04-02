@@ -80,6 +80,8 @@
     - bluesky-pds.conf
     # ── Webový desktop
     - jsos.conf
+    # ── AI orchestrace
+    - paperclip.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -114,6 +116,7 @@
          + ((install_superset | default(false)) | ternary(['superset.conf'], []))
          + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
          + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
+         + ((install_paperclip | default(false)) | ternary(['paperclip.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

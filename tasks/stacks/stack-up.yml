@@ -39,7 +39,7 @@
     src: "stacks/devops/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/devops/docker-compose.yml"
     mode: '0644'
-  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)
+  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)
 
 - name: "[Stacks] Deploy b2b compose"
   ansible.builtin.template:
@@ -81,7 +81,7 @@
         +
         ['iiab']
         +
-        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
+        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)) | ternary(['devops'], []))
         +
         ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
         +

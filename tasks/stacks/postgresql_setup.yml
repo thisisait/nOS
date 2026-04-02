@@ -21,10 +21,11 @@
     {{ docker_bin }} compose -p infra
     exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
     -c "CREATE DATABASE {{ item }};"
-  loop:
-    - outline
-    - metabase
-    - superset
+  loop: >-
+    {{ ['outline', 'metabase', 'superset']
+       + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
+       + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+    }}
   loop_control:
     label: "DB: {{ item }}"
   register: _pg_db
@@ -39,10 +40,17 @@
     {{ docker_bin }} compose -p infra
     exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
     -c "CREATE USER {{ item.user }} WITH PASSWORD '{{ item.pass }}';"
-  loop:
-    - { user: "{{ outline_db_user | default('outline') }}", pass: "{{ outline_db_password | default(global_password_prefix + '_pw_outline') }}" }
-    - { user: "{{ metabase_db_user | default('metabase') }}", pass: "{{ metabase_db_password | default(global_password_prefix + '_pw_metabase') }}" }
-    - { user: "{{ superset_db_user | default('superset') }}", pass: "{{ superset_db_password | default(global_password_prefix + '_pw_superset') }}" }
+  loop: >-
+    {{ [
+         {'user': outline_db_user | default('outline'), 'pass': outline_db_password | default(global_password_prefix + '_pw_outline')},
+         {'user': metabase_db_user | default('metabase'), 'pass': metabase_db_password | default(global_password_prefix + '_pw_metabase')},
+         {'user': superset_db_user | default('superset'), 'pass': superset_db_password | default(global_password_prefix + '_pw_superset')}
+       ]
+       + ((install_paperclip | default(false)) | ternary(
+         [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(global_password_prefix + '_pw_paperclip')}], []))
+       + ((install_jsos | default(false)) | ternary(
+         [{'user': jsos_db_user | default('jsos'), 'pass': jsos_db_password | default(global_password_prefix + '_pw_jsos')}], []))
+    }}
   loop_control:
     label: "USER: {{ item.user }}"
   no_log: true
@@ -57,10 +65,17 @@
     {{ docker_bin }} compose -p infra
     exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
     -c "GRANT ALL PRIVILEGES ON DATABASE {{ item.db }} TO {{ item.user }}; ALTER DATABASE {{ item.db }} OWNER TO {{ item.user }};"
-  loop:
-    - { db: "outline", user: "{{ outline_db_user | default('outline') }}" }
-    - { db: "metabase", user: "{{ metabase_db_user | default('metabase') }}" }
-    - { db: "superset", user: "{{ superset_db_user | default('superset') }}" }
+  loop: >-
+    {{ [
+         {'db': 'outline', 'user': outline_db_user | default('outline')},
+         {'db': 'metabase', 'user': metabase_db_user | default('metabase')},
+         {'db': 'superset', 'user': superset_db_user | default('superset')}
+       ]
+       + ((install_paperclip | default(false)) | ternary(
+         [{'db': 'paperclip', 'user': paperclip_db_user | default('paperclip')}], []))
+       + ((install_jsos | default(false)) | ternary(
+         [{'db': jsos_db_name | default('jsos'), 'user': jsos_db_user | default('jsos')}], []))
+    }}
   loop_control:
     label: "GRANT: {{ item.db }}"
   changed_when: false

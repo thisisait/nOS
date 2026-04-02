@@ -294,6 +294,21 @@
   "description": "AT Protocol Personal Data Server"
 }) %}
 {% endif %}
+{% if install_paperclip | default(false) %}
+{% set _ = _services.append({
+  "name": "Paperclip",
+  "category": "ai",
+  "tier": 1,
+  "enabled": true,
+  "toggle_var": "install_paperclip",
+  "domain": paperclip_domain | default('paperclip.dev.local'),
+  "port": paperclip_port | default(3006),
+  "url": "https://" ~ (paperclip_domain | default('paperclip.dev.local')),
+  "type": "docker",
+  "stack": "devops",
+  "description": "Multi-agent orchestrace (OpenClaw, Claude Code)"
+}) %}
+{% endif %}
 {% if install_jsos | default(false) %}
 {% set _ = _services.append({
   "name": "jsOS",
