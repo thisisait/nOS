@@ -162,10 +162,8 @@
 
     - name: "[Blank] Set password prefix from prompt"
       ansible.builtin.set_fact:
-        global_password_prefix: "{{ _prefix_prompt.user_input | default('changeme', true) }}"
-      when:
-        - blank | default(false) | bool
-        - _prefix_prompt.user_input | default('') | length > 0
+        global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else 'changeme' }}"
+      when: blank | default(false) | bool
       tags: ['blank', 'reset']
 
     - import_tasks: tasks/blank-reset.yml

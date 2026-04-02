@@ -74,34 +74,49 @@
   failed_when: false
   when: install_nextcloud | default(false)
 
-- name: "[Authentik→Nextcloud] Install and configure user_oidc"
-  ansible.builtin.shell: |
-    # Install user_oidc app
-    {{ docker_bin }} exec -u www-data iiab-nextcloud-1 \
-      php occ app:install user_oidc 2>/dev/null || true
-    {{ docker_bin }} exec -u www-data iiab-nextcloud-1 \
-      php occ app:enable user_oidc 2>/dev/null || true
-
-    # Check if provider already registered
-    EXISTING=$({{ docker_bin }} exec -u www-data iiab-nextcloud-1 \
-      php occ user_oidc:provider 2>/dev/null | grep -c 'authentik' || true)
-
-    if [ "$EXISTING" = "0" ]; then
-      {{ docker_bin }} exec -u www-data iiab-nextcloud-1 \
-        php occ user_oidc:provider authentik \
-        --clientid="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_id }}" \
-        --clientsecret="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}" \
-        --discoveryuri="https://{{ authentik_domain | default('auth.dev.local') }}/application/o/nextcloud/.well-known/openid-configuration" \
-        --mapping-uid="preferred_username" \
-        --mapping-email="email" \
-        --mapping-displayname="name" 2>/dev/null
-      echo "CREATED"
-    else
-      echo "EXISTS"
-    fi
-  register: _nc_oidc_result
+- name: "[Authentik→Nextcloud] Install user_oidc app"
+  ansible.builtin.command: >
+    {{ docker_bin }} exec -u www-data iiab-nextcloud-1
+    php occ app:install user_oidc
   when:
     - install_nextcloud | default(false)
     - _nc_running.stdout | default('') | trim == 'true'
-  changed_when: "'CREATED' in _nc_oidc_result.stdout | default('')"
+  failed_when: false
+  changed_when: false
+
+- name: "[Authentik→Nextcloud] Enable user_oidc app"
+  ansible.builtin.command: >
+    {{ docker_bin }} exec -u www-data iiab-nextcloud-1
+    php occ app:enable user_oidc
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: false
+
+- name: "[Authentik→Nextcloud] Check if OIDC provider registered"
+  ansible.builtin.command: >
+    {{ docker_bin }} exec -u www-data iiab-nextcloud-1
+    php occ user_oidc:provider
+  register: _nc_oidc_check
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: false
+
+- name: "[Authentik→Nextcloud] Register OIDC provider"
+  ansible.builtin.command: >
+    {{ docker_bin }} exec -u www-data iiab-nextcloud-1
+    php occ user_oidc:provider authentik
+    --clientid="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_id }}"
+    --clientsecret="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
+    --discoveryuri="https://{{ authentik_domain | default('auth.dev.local') }}/application/o/nextcloud/.well-known/openid-configuration"
+    --mapping-uid="preferred_username"
+    --mapping-email="email"
+    --mapping-displayname="name"
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+    - "'authentik' not in (_nc_oidc_check.stdout | default(''))"
   failed_when: false
