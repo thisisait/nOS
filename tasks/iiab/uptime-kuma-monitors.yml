@@ -96,9 +96,49 @@
           [{'name': 'Puter', 'type': 'http',
             'url': 'http://127.0.0.1:' ~ (puter_port | default(5050)) ~ '/test'}], [])
         +
+        (install_erpnext | default(false)) | ternary(
+          [{'name': 'ERPNext', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (erpnext_port | default(8082)) ~ '/'}], [])
+        +
+        (install_freescout | default(false)) | ternary(
+          [{'name': 'FreeScout', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (freescout_port | default(8090)) ~ '/'}], [])
+        +
+        (install_outline | default(false)) | ternary(
+          [{'name': 'Outline', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (outline_port | default(3005)) ~ '/'}], [])
+        +
+        (install_metabase | default(false)) | ternary(
+          [{'name': 'Metabase', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (metabase_port | default(3002)) ~ '/'}], [])
+        +
+        (install_superset | default(false)) | ternary(
+          [{'name': 'Superset', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (superset_port | default(8089)) ~ '/health'}], [])
+        +
+        (install_woodpecker | default(false)) | ternary(
+          [{'name': 'Woodpecker CI', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (woodpecker_port | default(8060)) ~ '/'}], [])
+        +
+        (install_rustfs | default(false)) | ternary(
+          [{'name': 'RustFS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (rustfs_console_port | default(9001)) ~ '/'}], [])
+        +
+        (install_bluesky_pds | default(false)) | ternary(
+          [{'name': 'Bluesky PDS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (bluesky_pds_port | default(2583)) ~ '/xrpc/_health'}], [])
+        +
+        (install_freepbx | default(false)) | ternary(
+          [{'name': 'FreePBX', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (freepbx_port | default(8088)) ~ '/'}], [])
+        +
+        (install_qgis_server | default(false)) | ternary(
+          [{'name': 'QGIS Server', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (qgis_port | default(8071)) ~ '/'}], [])
+        +
         (install_authentik | default(false)) | ternary(
           [{'name': 'Authentik', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (authentik_port | default(9000)) ~ '/-/health/ready/'}], [])
+            'url': 'http://127.0.0.1:' ~ (authentik_port | default(9003)) ~ '/-/health/ready/'}], [])
         +
         (install_infisical | default(false)) | ternary(
           [{'name': 'Infisical', 'type': 'http',

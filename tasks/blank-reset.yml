@@ -194,6 +194,18 @@
         (install_n8n | default(false)) | ternary(
           [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
         +
+        (install_kiwix | default(false)) | ternary(
+          [kiwix_data_dir | default(ansible_facts['env']['HOME'] + '/kiwix')], [])
+        +
+        (install_offline_maps | default(false)) | ternary(
+          [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
+        +
+        (install_traefik | default(false)) | ternary(
+          [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
+        +
+        (install_pi_agents | default(false)) | ternary(
+          [pi_config_dir | default(ansible_facts['env']['HOME'] + '/.pi/agent')], [])
+        +
         (install_gitea | default(false)) | ternary(
           [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')], [])
         +
