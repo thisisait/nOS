@@ -87,7 +87,7 @@ services:
       N8N_AUTH_OIDC_ENABLED: "true"
       N8N_AUTH_OIDC_CLIENT_ID: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_id }}"
       N8N_AUTH_OIDC_CLIENT_SECRET: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_secret }}"
-      N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/n8n/"
+      N8N_AUTH_OIDC_ISSUER: "http://infra-authentik-server-1:9000/application/o/n8n/"
       N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
 {% endif %}
     networks:
@@ -214,7 +214,7 @@ services:
       OAUTH_PROVIDER_NAME: "Authentik"
       OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
       OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
-      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/open-webui/.well-known/openid-configuration"
+      OPENID_PROVIDER_URL: "http://infra-authentik-server-1:9000/application/o/open-webui/.well-known/openid-configuration"
       OAUTH_SCOPES: "openid profile email"
 {% endif %}
     extra_hosts:
