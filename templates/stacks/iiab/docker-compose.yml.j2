@@ -215,6 +215,7 @@ services:
       OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
       OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
       OPENID_PROVIDER_URL: "http://infra-authentik-server-1:9000/application/o/open-webui/.well-known/openid-configuration"
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
       OAUTH_SCOPES: "openid profile email"
 {% endif %}
     extra_hosts:
