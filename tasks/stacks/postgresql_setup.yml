@@ -38,6 +38,25 @@
     - _pg_ready.rc | default(1) == 0
     - not ansible_check_mode
 
+- name: "[PostgreSQL] Restart DB-dependent infra services after DROP (blank reset)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart authentik-server authentik-worker infisical 2>&1 || true
+  when:
+    - blank | default(false) | bool
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+    - install_authentik | default(false) or install_infisical | default(false)
+  changed_when: false
+  failed_when: false
+
+- name: "[PostgreSQL] Wait for services to restart after DB reset"
+  ansible.builtin.pause:
+    seconds: 10
+  when:
+    - blank | default(false) | bool
+    - install_authentik | default(false) or install_infisical | default(false)
+
 - name: "[PostgreSQL] Drop existing roles on blank reset"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p infra
