@@ -1,7 +1,8 @@
 ---
 # ==============================================================================
-# Authentik post-start: health check + OIDC provider setup
-# Bootstrap admin se vytvoří automaticky přes AUTHENTIK_BOOTSTRAP_* env vars
+# Authentik post-start: health check + admin password + OIDC provider setup
+# AUTHENTIK_BOOTSTRAP_* env vars nefungují spolehlivě po DB DROP/recreate —
+# proto nastavujeme heslo explicitně přes Django shell.
 # ==============================================================================
 
 - name: "[Authentik] Wait for server to be ready"
@@ -15,13 +16,33 @@
   until: _authentik_health.status | default(0) in [200, 204]
   failed_when: false
 
-- name: "[Authentik] Server status"
+# ── Ensure admin password is set (bootstrap env vars are unreliable) ─────────
+
+- name: "[Authentik] Set akadmin password + email via Django shell"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-authentik-server-1
+    ak shell -c
+    "from authentik.core.models import User;
+    u=User.objects.filter(username='akadmin').first();
+    u.set_password('{{ authentik_bootstrap_password }}');
+    u.email='{{ authentik_bootstrap_email | default('admin@dev.local') }}';
+    u.save();
+    print('OK' if u.check_password('{{ authentik_bootstrap_password }}') else 'FAIL')"
+    2>/dev/null | tail -1
+  register: _ak_pw_set
+  when: _authentik_health.status | default(0) in [200, 204]
+  changed_when: false
+  failed_when: false
+
+- name: "[Authentik] Admin password status"
   ansible.builtin.debug:
     msg: >-
-      Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204]
-      else 'NEDOSTUPNY' }}
+      Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204] else 'NEDOSTUPNY' }}
+      | Password: {{ 'set' if (_ak_pw_set.stdout | default('')) == 'OK' else 'FAILED' }}
       | Admin: https://{{ authentik_domain | default('auth.dev.local') }}/if/admin/
       | Login: akadmin / {{ authentik_bootstrap_password }}
+
+# ── OIDC provider setup ─────────────────────────────────────────────────────
 
 - name: "[Authentik] Run OIDC provider setup"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_oidc_setup.yml"
