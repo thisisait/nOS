@@ -953,6 +953,119 @@
       "dependencies": [],
       "credential_vars": [],
       "notes": "Runs as launchd daemon. Agent persona: Inspektor Klepitko. Max 4 concurrent agents, 8 sub-agents."
+    },
+    {
+      "id": "authentik",
+      "name": "Authentik",
+      "description": "SSO / Identity Provider (OIDC, SAML, LDAP) for all services",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_authentik",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 9003,
+      "domain": "auth.dev.local",
+      "onboarding": "auto",
+      "auto_enables": ["install_postgresql", "redis_docker"],
+      "dependencies": ["install_postgresql", "redis_docker"],
+      "credential_vars": [
+        {"var": "authentik_secret_key", "label": "Authentik secret key", "type": "secret", "default_pattern": "changeme_pw_authentik_secret"},
+        {"var": "authentik_bootstrap_password", "label": "Authentik admin password", "type": "password", "default_pattern": "changeme_pw_authentik_admin"}
+      ],
+      "notes": "Login: akadmin / <bootstrap_password>. OIDC providers created automatically via authentik_oidc_apps registry."
+    },
+    {
+      "id": "infisical",
+      "name": "Infisical",
+      "description": "Centralized secrets vault with REST API, CLI, and SDK (E2EE)",
+      "stack": "infra",
+      "type": "docker",
+      "toggle_var": "install_infisical",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8075,
+      "domain": "vault.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": ["install_postgresql", "redis_docker"],
+      "dependencies": ["install_postgresql", "redis_docker"],
+      "credential_vars": [
+        {"var": "infisical_encryption_key", "label": "Infisical encryption key", "type": "secret", "default_pattern": "changeme_pw_infisical_enc"},
+        {"var": "infisical_auth_secret", "label": "Infisical auth secret", "type": "secret", "default_pattern": "changeme_pw_infisical_auth"}
+      ],
+      "notes": "First user = admin. Organization: devboxnos. Encryption key is crown jewel — back up offline."
+    },
+    {
+      "id": "vaultwarden",
+      "name": "Vaultwarden",
+      "description": "Bitwarden-compatible personal password vault for tenants",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_vaultwarden",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 8062,
+      "domain": "pass.dev.local",
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [
+        {"var": "vaultwarden_admin_token", "label": "Vaultwarden admin token", "type": "secret", "default_pattern": "changeme_pw_vaultwarden_admin"}
+      ],
+      "notes": "Admin panel: https://pass.dev.local/admin. Signups disabled by default."
+    },
+    {
+      "id": "puter",
+      "name": "Puter",
+      "description": "Cloud OS web desktop — multi-user, AI gateway, iframe apps",
+      "stack": "iiab",
+      "type": "docker",
+      "toggle_var": "install_puter",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 5050,
+      "domain": "os.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": [],
+      "dependencies": [],
+      "credential_vars": [],
+      "notes": "First user = admin (password in docker logs). Ollama auto-detected at localhost:11434."
+    },
+    {
+      "id": "paperclip",
+      "name": "Paperclip",
+      "description": "Multi-agent orchestration platform for AI agents (OpenClaw, Claude Code)",
+      "stack": "devops",
+      "type": "docker",
+      "toggle_var": "install_paperclip",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 3006,
+      "domain": "paperclip.dev.local",
+      "onboarding": "wizard",
+      "auto_enables": ["install_postgresql"],
+      "dependencies": ["install_postgresql"],
+      "credential_vars": [
+        {"var": "paperclip_db_password", "label": "Paperclip DB password", "type": "password", "default_pattern": "changeme_pw_paperclip"},
+        {"var": "paperclip_auth_secret", "label": "Paperclip auth secret", "type": "secret", "default_pattern": "changeme_pw_paperclip_auth"}
+      ],
+      "notes": "Authenticated mode (0.0.0.0 bind). PostgreSQL + Redis from infra stack."
+    },
+    {
+      "id": "iiab-terminal",
+      "name": "IIAB Terminal",
+      "description": "Public SSH TUI hub — Kiwix, AI chat, service directory for LAN users",
+      "stack": null,
+      "type": "native",
+      "toggle_var": "install_iiab_terminal",
+      "default_enabled": false,
+      "tier": 1,
+      "port": 22,
+      "domain": null,
+      "onboarding": "auto",
+      "auto_enables": [],
+      "dependencies": ["enable_ssh"],
+      "credential_vars": [],
+      "notes": "SSH access: ssh home@<ip>. ForceCommand TUI, no shell escape. Python Textual framework."
     }
   ],
   "languages": [
