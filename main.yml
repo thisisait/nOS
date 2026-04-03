@@ -155,14 +155,14 @@
     # ──────────────────────────────────────────────────────────────────────────
     - name: "[Blank] Prompt for password prefix"
       ansible.builtin.pause:
-        prompt: "Prefix pro všechna hesla (formát: PREFIX_pw_SLUŽBA, Enter = changeme)"
+        prompt: "Prefix pro všechna hesla (formát: PREFIX_pw_SLUŽBA, Enter = {{ global_password_prefix }})"
       register: _prefix_prompt
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
 
     - name: "[Blank] Set password prefix from prompt"
       ansible.builtin.set_fact:
-        global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else 'changeme' }}"
+        global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else global_password_prefix }}"
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
 
