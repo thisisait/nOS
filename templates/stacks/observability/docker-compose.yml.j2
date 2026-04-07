@@ -105,11 +105,11 @@ services:
       - {{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}:/loki
     command: ["-config.file=/etc/loki/local-config.yaml"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      test: ["CMD", "/usr/bin/loki", "-target=all", "-config.file=/etc/loki/local-config.yaml", "-verify-config"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
     networks:
       - observability_net
       - {{ stacks_shared_network }}
@@ -131,11 +131,11 @@ services:
       - {{ stacks_dir }}/observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
       - {{ tempo_storage_path | default(stacks_dir + '/observability/tempo/data') }}:/var/lib/tempo
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:{{ tempo_http_port | default(3200) }}/ready || exit 1"]
+      test: ["CMD", "/tempo", "-config.file=/etc/tempo.yaml", "-config.verify"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
     networks:
       - observability_net
       - {{ stacks_shared_network }}

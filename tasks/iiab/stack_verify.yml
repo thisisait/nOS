@@ -113,10 +113,6 @@
       }}
     _svc_onboarding: >-
       {{
-        (false) | ternary([], [])  {# Jellyfin moved to _svc_auto (auto-setup by jellyfin_post.yml) #}
-        +
-        (false) | ternary([], [])  {# Open WebUI moved to _svc_auto (admin auto-created by openwebui_post.yml) #}
-        +
         (install_uptime_kuma | default(false)) | ternary(
           [{'name': 'Uptime Kuma', 'port': uptime_kuma_port | default(3001), 'proto': 'http',
             'url': 'http://127.0.0.1:' ~ (uptime_kuma_port | default(3001)) ~ '/',
@@ -131,8 +127,6 @@
           [{'name': 'Kiwix', 'port': kiwix_port | default(8888), 'proto': 'http',
             'url': 'http://127.0.0.1:' ~ (kiwix_port | default(8888)) ~ '/',
             'hint': 'Kiwix potrebuje ZIM soubory. Spust download-zim.sh a restartuj.'}], [])
-        +
-        (false) | ternary([], [])  {# Portainer moved to _svc_auto (admin auto-created by portainer_post.yml) #}
         +
         (install_outline | default(false)) | ternary(
           [{'name': 'Outline', 'port': outline_port | default(3005), 'proto': 'http',
