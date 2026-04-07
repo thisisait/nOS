@@ -304,7 +304,39 @@
   register: _ak_created_proxy_apps
   failed_when: false
 
-# ── 9. Summary ───────────────────────────────────────────────────────────────
+# ── 9. Assign proxy providers to embedded outpost ───────────────────────────
+
+- name: "[Authentik OIDC] Get embedded outpost"
+  ansible.builtin.uri:
+    url: "{{ _ak_base }}/api/v3/outposts/instances/?managed=goauthentik.io/outposts/embedded"
+    headers:
+      Authorization: "Bearer {{ _ak_token }}"
+    status_code: 200
+  register: _ak_outpost_resp
+  when: _ak_token | length >= 10
+  failed_when: false
+
+- name: "[Authentik OIDC] Assign proxy providers to embedded outpost"
+  ansible.builtin.uri:
+    url: "{{ _ak_base }}/api/v3/outposts/instances/{{ (_ak_outpost_resp.json.results | first).pk }}/"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ _ak_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      providers: "{{ _ak_all_proxy.json.results | default([]) | map(attribute='pk') | list }}"
+      config:
+        authentik_host: "http://localhost:9000"
+        authentik_host_browser: "https://{{ authentik_domain | default('auth.dev.local') }}"
+    status_code: [200]
+  when:
+    - _ak_token | length >= 10
+    - _ak_outpost_resp.json.results | default([]) | length > 0
+    - _ak_all_proxy.json.results | default([]) | length > 0
+  failed_when: false
+
+# ── 10. Summary ──────────────────────────────────────────────────────────────
 
 - name: "[Authentik OIDC] Summary"
   ansible.builtin.debug:

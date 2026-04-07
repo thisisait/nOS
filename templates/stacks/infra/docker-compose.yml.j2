@@ -204,6 +204,8 @@ services:
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
       AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
       AUTHENTIK_COOKIE_DOMAIN: ".{{ instance_tld | default('dev.local') }}"
+      AUTHENTIK_HOST: "http://localhost:9000"
+      AUTHENTIK_HOST_BROWSER: "https://{{ authentik_domain | default('auth.dev.local') }}"
     networks:
       - infra_net
       - {{ stacks_shared_network }}
