@@ -241,23 +241,14 @@
          | map(attribute='item')
          | list }}
 
-- name: "[Stacks] Failed stacks – waiting for manual fix"
-  ansible.builtin.pause:
-    prompt: |-
+- name: "[Stacks] Warning: stacks with non-zero exit (may include init containers or unhealthy checks)"
+  ansible.builtin.debug:
+    msg: |
+      VAROVANI: Tyto stacky vratily non-zero exit code (casto false positive):
       {% for stack in _failed_stacks %}
-
-      ══════════════════════════════════════════════════════════════════════
-       STACK "{{ stack }}" SELHAL
-
-       Diagnóza:
-         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
-
-       Oprava:
-         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} up -d
-
-       Stiskni ENTER po opravě
-      ══════════════════════════════════════════════════════════════════════
+        - {{ stack }} → {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
       {% endfor %}
+      Pozn: ERPNext configurator (exit 0) a distroless healthchecky jsou ocekavane.
   when: (_failed_stacks | length) > 0
 
 # ── Container status všech stacků ────────────────────────────────────────────
