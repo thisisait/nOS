@@ -46,6 +46,40 @@ RUN node -e " \
   console.log('Cookie domain patched'); \
 "
 
+# Replace recommended apps list with devBoxNOS services (original has cloud-only games)
+RUN node -e " \
+  const fs = require('fs'); \
+  const f = '/opt/puter/app/src/backend/src/modules/apps/RecommendedAppsService.js'; \
+  let c = fs.readFileSync(f, 'utf8'); \
+  const oldList = c.match(/static APP_NAMES = \[[\s\S]*?\];/); \
+  if (oldList) { \
+    c = c.replace(oldList[0], \
+      \"static APP_NAMES = [\\n\" + \
+      \"        'terminal',\\n\" + \
+      \"        'dev-center',\\n\" + \
+      \"        'grafana',\\n\" + \
+      \"        'gitea',\\n\" + \
+      \"        'nextcloud',\\n\" + \
+      \"        'openwebui',\\n\" + \
+      \"        'n8n',\\n\" + \
+      \"        'portainer',\\n\" + \
+      \"        'outline',\\n\" + \
+      \"        'metabase',\\n\" + \
+      \"        'jellyfin',\\n\" + \
+      \"        'authentik',\\n\" + \
+      \"        'uptime-kuma',\\n\" + \
+      \"        'wordpress',\\n\" + \
+      \"        'home-assistant',\\n\" + \
+      \"        'puter-linux',\\n\" + \
+      \"    ];\" \
+    ); \
+    fs.writeFileSync(f, c); \
+    console.log('Recommended apps replaced with devBoxNOS services'); \
+  } else { \
+    console.log('WARNING: APP_NAMES pattern not found'); \
+  } \
+"
+
 # Disable Camera/Recorder auto-launch (cloud-only apps, not available in self-hosted)
 RUN sed -i 's/app-5584fbf7-ed69-41fc-99cd-85da21b1ef51/disabled-camera/g' \
     /opt/puter/app/src/gui/dist/bundle.min.js && \
