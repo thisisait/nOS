@@ -1418,6 +1418,7 @@ authentik_oidc_apps:
     client_secret: "{{ global_password_prefix }}_pw_oidc_metabase"
     redirect_uris: "https://{{ metabase_domain | default('bi.dev.local') }}/auth/sso/oidc"
     launch_url: "https://{{ metabase_domain | default('bi.dev.local') }}"
+    external_host: "https://{{ metabase_domain | default('bi.dev.local') }}"
     type: "proxy"
   # ── Proxy-auth služby (nginx forward auth, žádný nativní OIDC) ──────────
   - name: "Uptime Kuma"
