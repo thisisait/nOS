@@ -5,6 +5,10 @@
 # Uses better-sqlite3 (bundled in Puter container) + bcrypt.
 # ==============================================================================
 
+# CORS patche jsou v custom Dockerfile (files/puter/Dockerfile)
+# - Access-Control-Allow-Credentials: true (Puter 2.5.x bug — commented out)
+# - Socket.IO credentials: true
+
 - name: "[Puter Post] Wait for API"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"

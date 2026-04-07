@@ -315,7 +315,10 @@ services:
 {% if install_puter | default(false) %}
   # ── Puter – cloud OS webový desktop ───────────────────────────────────────
   puter:
-    image: ghcr.io/heyputer/puter:{{ puter_version | default('latest') }}
+    build:
+      context: {{ playbook_dir }}/files/puter
+      dockerfile: Dockerfile
+    image: devboxnos/puter:{{ puter_version | default('latest') }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}
