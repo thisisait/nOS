@@ -554,6 +554,11 @@
       when: install_n8n | default(false)
       tags: ['iiab', 'n8n', 'stacks']
 
+    # Puter post-start: auto-create admin user
+    - import_tasks: tasks/iiab/puter_post.yml
+      when: install_puter | default(false)
+      tags: ['iiab', 'puter', 'stacks']
+
     # Portainer post-start: admin init + OIDC settings
     - import_tasks: tasks/iiab/portainer_post.yml
       when: install_portainer | default(false)

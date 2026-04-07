@@ -1274,6 +1274,8 @@ puter_version: "latest"                        # ghcr.io/heyputer/puter
 puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
 puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache pro multi-user (MB)
+puter_admin_email: "admin@dev.local"
+puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 # ==============================================================================
 # JSOS – webový desktop (OS.js v3 + Bluesky AT Protocol auth)

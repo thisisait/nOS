@@ -1,0 +1,79 @@
+---
+# ==============================================================================
+# PUTER POST-START – auto-create admin user via SQLite
+# Puter self-hosted: first user = admin. Password from global_password_prefix.
+# Uses better-sqlite3 (bundled in Puter container) + bcrypt.
+# ==============================================================================
+
+- name: "[Puter Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"
+    method: GET
+    timeout: 5
+    headers:
+      Host: "{{ puter_domain | default('os.dev.local') }}"
+    status_code: [200]
+  register: _puter_ready
+  until: _puter_ready.status | default(0) == 200
+  retries: 15
+  delay: 10
+  failed_when: false
+
+- name: "[Puter Post] Check if admin user exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const user = db.prepare('SELECT username FROM user WHERE username = ?').get('admin');
+    console.log(user ? 'EXISTS' : 'MISSING');
+    "
+  register: _puter_admin_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _puter_ready.status | default(0) == 200
+
+- name: "[Puter Post] Create admin user with password"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const bcrypt = require('bcrypt');
+    const crypto = require('crypto');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const hash = bcrypt.hashSync('{{ puter_admin_password | default(global_password_prefix + '_pw_puter') }}', 8);
+    const uuid = crypto.randomUUID();
+    db.prepare('INSERT INTO user (uuid, username, email, password, free_storage) VALUES (?, ?, ?, ?, ?)').run(
+      uuid, 'admin', '{{ puter_admin_email | default('admin@dev.local') }}', hash, 1073741824
+    );
+    console.log('CREATED');
+    "
+  register: _puter_admin_create
+  when:
+    - _puter_ready.status | default(0) == 200
+    - _puter_admin_check.stdout | default('') | trim == 'MISSING'
+  changed_when: "'CREATED' in (_puter_admin_create.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[Puter Post] Reset admin password (blank run)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const bcrypt = require('bcrypt');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const hash = bcrypt.hashSync('{{ puter_admin_password | default(global_password_prefix + '_pw_puter') }}', 8);
+    db.prepare('UPDATE user SET password = ?, email = ? WHERE username = ?').run(
+      hash, '{{ puter_admin_email | default('admin@dev.local') }}', 'admin'
+    );
+    console.log('RESET');
+    "
+  when:
+    - _puter_ready.status | default(0) == 200
+    - _puter_admin_check.stdout | default('') | trim == 'EXISTS'
+    - blank | default(false) | bool
+  changed_when: true
+  failed_when: false
+  check_mode: false
