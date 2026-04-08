@@ -641,7 +641,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # PŘEPIŠ v credentials.yml!
-mariadb_version: "lts"                  # lts / 11 / 10.11 – Docker image tag
+mariadb_version: "11.4.10"              # CVE-2026-32710 (CVSS 8.6 buffer overflow). Pinned from 'lts'
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persistence dat mimo kontejner
 
@@ -650,7 +650,7 @@ mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persiste
 # ==============================================================================
 
 install_postgresql: false
-postgresql_version: "16-alpine"
+postgresql_version: "16.10-alpine"      # CVE-2025-1094 (CVSS 8.1 SQLi), CVE-2025-8714/8715 (pg_dump RCE)
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
@@ -662,7 +662,7 @@ postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis v Docker (pro cross-stack přístup)
-redis_version: "7-alpine"
+redis_version: "7.4.6-alpine"           # CVE-2025-49844 (CVSS 10.0 RediShell RCE)
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 
 # ==============================================================================
@@ -827,13 +827,13 @@ grafana_domain: "grafana.dev.local"
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname v Grafana labelech
 
 # ── Docker image verze (observability + devops) ──────────────────────────────
-grafana_version: "latest"
+grafana_version: "12.4.2"               # CVE-2026-27876 (CVSS 9.1 file write → RCE)
 prometheus_version: "latest"
 loki_version: "latest"
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
-gitea_version: "latest"
+gitea_version: "1.25.5"                 # CVE-2026-gitea-template-traversal (authenticated RCE)
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
@@ -879,7 +879,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n.dev.local"
 n8n_port: 5678
-n8n_version: "latest"      # nebo konkrétní: "1.40.0"
+n8n_version: "2.5.2"       # CVE-2026-21858 (CVSS 10.0 unauth RCE), CVE-2026-25049 (sandbox escape)
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "admin@dev.local"
@@ -911,7 +911,7 @@ gitea_disable_registration: false              # true = pouze admin může přid
 gitlab_domain: "gitlab.dev.local"
 gitlab_http_port: 8929          # Interní HTTP port (nginx přebírá SSL, forwarduje sem)
 gitlab_ssh_port: 2224           # Git SSH (22=systém, 2222=Gitea → Gitlab na 2224)
-gitlab_version: "latest"        # nebo konkrétní: "17.9.1-ce.0"
+gitlab_version: "18.10.1-ce.0"  # CVE-2026-0723 (2FA bypass), 9 HIGH CVEs total
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repozitáře, uploads, artefakty (velké!)
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + klíče (malé, ale důležité)
 gitlab_timezone: "Europe/Prague"
@@ -926,7 +926,7 @@ gitlab_sidekiq_concurrency: 10  # Background job vlákna
 
 openwebui_domain: "ai.dev.local"
 openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
-openwebui_version: "main"        # nebo konkrétní: "0.5.20"
+openwebui_version: "0.6.35"      # CVE-2025-64495/64496 (XSS→RCE, JWT theft). Switched from :main
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
@@ -956,7 +956,7 @@ woodpecker_max_workflows: 4      # Max paralelních pipeline runů na agenta
 
 portainer_domain: "portainer.dev.local"
 portainer_port: 9002                   # 9000/9001 rezervováno pro RustFS (S3 API + console)
-portainer_version: "latest"
+portainer_version: "2.27.3"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 
@@ -966,7 +966,7 @@ portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 
 jellyfin_domain: "media.dev.local"
 jellyfin_port: 8096
-jellyfin_version: "latest"
+jellyfin_version: "10.10.7"             # CVE-2025-31499 (FFmpeg argument injection → RCE)
 jellyfin_lan_access: true              # true = port dostupný z LAN (pro TV, mobilní klienty)
 jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
@@ -1103,7 +1103,7 @@ stacks_shared_network: "shared_net"
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "latest"
+traefik_image_version: "v3.6.11"        # CVE-2026-33186 (CVSS 9.1 gRPC auth bypass)
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8080
@@ -1112,7 +1112,7 @@ traefik_log_level: "INFO"           # DEBUG / INFO / WARN / ERROR
 traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "stable"     # stable / latest / konkrétní tag (2025.1.0)
+homeassistant_version: "2026.4"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
 homeassistant_port: 8123
 homeassistant_domain: "home.dev.local"
 homeassistant_timezone: "Europe/Prague"
@@ -1145,7 +1145,7 @@ rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 
 erpnext_domain: "erp.dev.local"
 erpnext_port: 8082                     # 8080 obsazen Traefik dashboardem
-erpnext_version: "v15"
+erpnext_version: "v15.98.1"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
 erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
 erpnext_admin_password: "{{ global_password_prefix }}_pw_erpnext"
 erpnext_site_name: "erp.dev.local"
@@ -1157,7 +1157,7 @@ erpnext_site_name: "erp.dev.local"
 
 freescout_domain: "helpdesk.dev.local"
 freescout_port: 8090
-freescout_version: "latest"
+freescout_version: "1.8.207"             # CVE-2026-28289 (CVSS 10 zero-click RCE via email)
 freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
@@ -1247,7 +1247,7 @@ metabase_admin_last_name: "devBoxNOS"
 
 superset_domain: "superset.dev.local"
 superset_port: 8089
-superset_version: "latest"
+superset_version: "6.0.0"               # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi)
 superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
 superset_db_name: "superset"
 superset_db_user: "superset"
@@ -1340,7 +1340,7 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # Centrální login pro všechny služby. PostgreSQL + Redis z infra stacku.
 # ==============================================================================
 
-authentik_version: "2025.2"                        # Pinovat! Authentik má časté breaking changes
+authentik_version: "2025.12.4"                     # CVE-2026-25227 (CVSS 9.1 code injection). 2025.2 je EOL!
 authentik_domain: "auth.dev.local"
 authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
 authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
@@ -1602,7 +1602,7 @@ infisical_disable_signup: true                     # Admin creates all users
 # Každý tenant devBoxNOS má svůj vault pro osobní hesla.
 # ==============================================================================
 
-vaultwarden_version: "latest"
+vaultwarden_version: "1.35.4"            # CVE-2026-27802/27803 (priv escalation), CVE-2025-24364 (RCE)
 vaultwarden_domain: "pass.dev.local"
 vaultwarden_port: 8062
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"

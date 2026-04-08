@@ -72,9 +72,9 @@ services:
       - "127.0.0.1:{{ redis_port | default(6379) }}:6379"
     volumes:
       - {{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass {{ redis_password | default('changeme_pw_redis') }}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "{{ redis_password | default('changeme_pw_redis') }}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -207,6 +207,7 @@ services:
     environment:
       AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key }}"
       AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default('changeme_pw_redis') }}"
       AUTHENTIK_POSTGRESQL__HOST: postgresql
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
@@ -238,6 +239,7 @@ services:
     environment:
       AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key }}"
       AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default('changeme_pw_redis') }}"
       AUTHENTIK_POSTGRESQL__HOST: postgresql
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
@@ -269,7 +271,7 @@ services:
       ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
       AUTH_SECRET: "{{ infisical_auth_secret }}"
       DB_CONNECTION_URI: "postgresql://{{ infisical_db_user | default('infisical') }}:{{ infisical_db_password }}@postgresql:5432/{{ infisical_db_name | default('infisical') }}"
-      REDIS_URL: "redis://redis:6379"
+      REDIS_URL: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379"
       SITE_URL: "https://{{ infisical_domain | default('vault.dev.local') }}"
       TELEMETRY_ENABLED: "false"
     networks:

@@ -11,10 +11,17 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ freepbx_port | default(8088) }}:80"
+{% if freepbx_lan_access | default(false) or services_lan_access | default(false) %}
       - "{{ freepbx_sip_port | default(5060) }}:5060/udp"
       - "{{ freepbx_sip_port | default(5060) }}:5060/tcp"
       - "{{ freepbx_iax_port | default(4569) }}:4569/udp"
       - "{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}/udp"
+{% else %}
+      - "127.0.0.1:{{ freepbx_sip_port | default(5060) }}:5060/udp"
+      - "127.0.0.1:{{ freepbx_sip_port | default(5060) }}:5060/tcp"
+      - "127.0.0.1:{{ freepbx_iax_port | default(4569) }}:4569/udp"
+      - "127.0.0.1:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}/udp"
+{% endif %}
     volumes:
       - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/certs:/certs
       - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/data:/data

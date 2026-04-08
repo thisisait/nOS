@@ -24,9 +24,9 @@ services:
         echo 'frappe' > apps.txt &&
         bench set-config -g db_host mariadb &&
         bench set-config -g db_port 3306 &&
-        bench set-config -g redis_cache redis://redis:6379/0 &&
-        bench set-config -g redis_queue redis://redis:6379/1 &&
-        bench set-config -g redis_socketio redis://redis:6379/2 &&
+        bench set-config -g redis_cache redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0 &&
+        bench set-config -g redis_queue redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1 &&
+        bench set-config -g redis_socketio redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/2 &&
         bench new-site {{ erpnext_site_name | default('erp.dev.local') }}
         --no-mariadb-socket
         --db-root-username=root
@@ -41,8 +41,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://redis:6379/0"
-      REDIS_QUEUE: "redis://redis:6379/1"
+      REDIS_CACHE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -57,9 +57,9 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://redis:6379/0"
-      REDIS_QUEUE: "redis://redis:6379/1"
-      REDIS_SOCKETIO: "redis://redis:6379/2"
+      REDIS_CACHE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1"
+      REDIS_SOCKETIO: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/2"
       SOCKETIO_PORT: "9000"
     networks:
       - b2b_net
@@ -109,8 +109,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://redis:6379/0"
-      REDIS_QUEUE: "redis://redis:6379/1"
+      REDIS_CACHE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -131,8 +131,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://redis:6379/0"
-      REDIS_QUEUE: "redis://redis:6379/1"
+      REDIS_CACHE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -153,8 +153,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://redis:6379/0"
-      REDIS_QUEUE: "redis://redis:6379/1"
+      REDIS_CACHE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -223,7 +223,7 @@ services:
       UTILS_SECRET: "{{ outline_utils_secret | default('changeme_pw_outline_utils') }}"
       DATABASE_URL: "postgres://{{ outline_db_user | default('outline') }}:{{ outline_db_password | default('changeme_pw_outline') }}@postgresql:5432/{{ outline_db_name | default('outline') }}"
       PGSSLMODE: "disable"
-      REDIS_URL: "redis://redis:6379"
+      REDIS_URL: "redis://:{{ redis_password | default('changeme_pw_redis') }}@redis:6379"
       URL: "https://{{ outline_domain | default('wiki.dev.local') }}"
       PORT: "3000"
       FORCE_HTTPS: "false"

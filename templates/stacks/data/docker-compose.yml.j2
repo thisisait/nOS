@@ -58,6 +58,7 @@ services:
       DATABASE_PASSWORD: "{{ superset_db_password | default('changeme_pw_superset') }}"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      REDIS_PASSWORD: "{{ redis_password | default('changeme_pw_redis') }}"
     networks:
       - data_net
       - {{ stacks_shared_network }}
