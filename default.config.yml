@@ -889,7 +889,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n.dev.local"
 n8n_port: 5678
-n8n_version: "2.5.2"       # CVE-2026-21858 (CVSS 10.0 unauth RCE), CVE-2026-25049 (sandbox escape)
+n8n_version: "2.10.1"      # CVE-2026-27493+27577 (CVSS 9.5 RCE chain), CISA KEV. Was 2.5.2
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "admin@dev.local"
@@ -1140,7 +1140,7 @@ homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "latest"
+rustfs_version: "1.0.0-alpha.90"         # CVE-2025-68926 (CVSS 9.8 hardcoded gRPC token) + 3 more CVEs
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
 rustfs_console_port: 9001           # Web konzole
 rustfs_domain: "fs.dev.local"
