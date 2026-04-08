@@ -633,6 +633,13 @@
       tags: ['backup']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Vulnerability Scanner – NOS Security Auditor (2x daily scheduled scan)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/vulnerability-scan.yml
+      when: configure_vulnerability_scan | default(false)
+      tags: ['vulnscan']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Export/Import – hardware migration (run only with --tags)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/export-state.yml

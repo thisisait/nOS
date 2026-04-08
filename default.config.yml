@@ -44,6 +44,11 @@ restic_keep_weekly: 4
 restic_keep_monthly: 6
 restic_backup_schedule_hour: 3            # Hodina denni zalohy (0-23)
 
+# ── Vulnerability Scanner (NOS Security Auditor) ─────────────────────────────
+configure_vulnerability_scan: false
+vulnscan_schedule_hours: [6, 18]          # 2x denně: 06:00 a 18:00
+vulnscan_batch_size: 5                    # Počet komponent per scan run
+
 # ==============================================================================
 # INSTALLATION QUEUE
 # Zakomentuj (#) libovolný řádek pro PŘESKOČENÍ dané komponenty.
@@ -1261,6 +1266,9 @@ bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generuj: openssl rand -hex 32
+bluesky_pds_invite_required: true      # Invite-only registrace (true = uzavřený PDS)
+bluesky_pds_email_smtp_url: ""         # SMTP URL pro PDS notifikace (prázdné = vypnuto)
+bluesky_pds_email_from: ""             # Odesílatel emailů (default: noreply@bsky.dev.lan)
 
 # ==============================================================================
 # PUTER – cloud OS webový desktop (multi-user, AI gateway, iframe apps)
@@ -1355,6 +1363,52 @@ authentik_default_groups:
     description: "Standard employees"
   - name: "devboxnos-guests"
     description: "Guest access (IIAB terminal only)"
+
+# ── Authentik RBAC tiers (group → application access) ──────────────────────────
+# Tier 1 = admin only, Tier 4 = guest/public. Higher tier = broader access.
+# Policies auto-created in authentik_oidc_setup.yml, bound to applications.
+authentik_rbac_tiers:
+  - tier: 1
+    name: "tier-admin"
+    description: "Admin-only services (infrastructure, secrets, monitoring)"
+    groups: ["devboxnos-providers", "devboxnos-admins"]
+  - tier: 2
+    name: "tier-manager"
+    description: "Manager+ services (dev tools, analytics, automation)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers"]
+  - tier: 3
+    name: "tier-user"
+    description: "Standard employee services (productivity, collaboration)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers", "devboxnos-users"]
+  - tier: 4
+    name: "tier-guest"
+    description: "Guest/public access (content, media)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers", "devboxnos-users", "devboxnos-guests"]
+
+# Mapování slug → tier. Služby bez záznamu = tier 3 (výchozí = user+).
+authentik_app_tiers:
+  portainer: 1
+  infisical: 1
+  grafana: 1
+  gitea: 2
+  gitlab: 2
+  n8n: 2
+  superset: 2
+  metabase: 2
+  paperclip: 2
+  erpnext: 2
+  freescout: 2
+  nextcloud: 3
+  outline: 3
+  open-webui: 3
+  puter: 3
+  vaultwarden: 3
+  uptime-kuma: 3
+  calibre-web: 3
+  home-assistant: 3
+  kiwix: 4
+  jellyfin: 4
+  wordpress: 4
 
 # ── OIDC Service Registry (single source of truth) ──────────────────────────
 # Authentik post-start automaticky vytvoří OIDC providery + aplikace.
@@ -1487,9 +1541,10 @@ authentik_oidc_apps:
   - name: "Vaultwarden"
     slug: "vaultwarden"
     enabled: "{{ install_vaultwarden | default(false) }}"
+    client_id: "devboxnos-vaultwarden"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
+    redirect_uris: "https://{{ vaultwarden_domain | default('pass.dev.local') }}/identity/connect/oidc-signin"
     launch_url: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
-    external_host: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
-    type: "proxy"
   - name: "Paperclip"
     slug: "paperclip"
     enabled: "{{ install_paperclip | default(false) }}"
