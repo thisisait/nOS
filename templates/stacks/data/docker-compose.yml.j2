@@ -35,6 +35,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ metabase_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_superset | default(false) %}
@@ -67,6 +69,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ superset_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 

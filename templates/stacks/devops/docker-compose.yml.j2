@@ -45,6 +45,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ gitea_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_woodpecker | default(false) %}
@@ -64,6 +66,7 @@ services:
       WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default('changeme_woodpecker') }}"
       WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci.dev.local') }}"
       WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
+      WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
     extra_hosts:
       - "{{ gitea_domain | default('git.dev.local') }}:host-gateway"
 {% if install_authentik | default(false) %}
@@ -77,6 +80,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ woodpecker_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
   woodpecker-agent:
     image: woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}
@@ -97,6 +102,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ woodpecker_agent_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_gitlab | default(false) %}
@@ -137,6 +144,8 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
+    mem_limit: {{ gitlab_mem_limit | default(docker_mem_limit_heavy) }}
+    cpus: {{ docker_cpus_heavy | default('2.0') }}
 
 {% endif %}
 {% if install_paperclip | default(false) %}
@@ -168,6 +177,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ paperclip_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 

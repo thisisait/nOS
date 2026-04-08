@@ -28,6 +28,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ wordpress_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_nextcloud | default(false) %}
@@ -61,6 +63,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ nextcloud_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_n8n | default(false) %}
@@ -110,6 +114,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ n8n_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_kiwix | default(false) %}
@@ -132,6 +138,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ kiwix_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_jellyfin | default(false) %}
@@ -157,6 +165,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ jellyfin_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_uptime_kuma | default(false) %}
@@ -174,6 +184,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ uptime_kuma_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_calibreweb | default(false) %}
@@ -197,6 +209,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ calibreweb_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_openwebui | default(false) %}
@@ -251,6 +265,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ openwebui_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_homeassistant | default(false) %}
@@ -278,6 +294,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ homeassistant_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_rustfs | default(false) %}
@@ -300,6 +318,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ rustfs_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_offline_maps | default(false) %}
@@ -317,6 +337,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ tileserver_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_puter | default(false) %}
@@ -354,6 +376,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ puter_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_vaultwarden | default(false) %}
@@ -399,6 +423,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ vaultwarden_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 

@@ -33,6 +33,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ mariadb_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_postgresql | default(false) %}
@@ -61,6 +63,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ postgresql_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if redis_docker | default(false) %}
@@ -86,12 +90,63 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ redis_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+
+{% endif %}
+{% if install_portainer | default(false) or install_traefik | default(false) %}
+  # ── Docker Socket Proxy – bezpečnostní vrstva mezi kontejnery a Docker API ──
+  # Eliminuje přímý přístup k docker.sock (container escape vektor)
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Read-only API access for Traefik service discovery + Portainer monitoring
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      SERVICES: 1
+      TASKS: 1
+      INFO: 1
+      EVENTS: 1
+      VERSION: 1
+      # Portainer needs write access for container management
+{% if install_portainer | default(false) %}
+      POST: 1
+      BUILD: 1
+      EXEC: 1
+      DISTRIBUTION: 1
+      NODES: 1
+      PLUGINS: 1
+      SECRETS: 1
+      CONFIGS: 1
+      SWARM: 1
+      SYSTEM: 1
+{% else %}
+      POST: 0
+{% endif %}
+    networks:
+      - infra_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 128m
+    cpus: "0.25"
 
 {% endif %}
 {% if install_portainer | default(false) %}
   portainer:
     image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
     restart: unless-stopped
+    command: --host tcp://docker-socket-proxy:2375
+    depends_on:
+      - docker-socket-proxy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/status || exit 1"]
       interval: 15s
@@ -105,7 +160,6 @@ services:
       - "127.0.0.1:{{ portainer_port | default(9002) }}:9000"
 {% endif %}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - {{ portainer_data_dir }}:/data
     networks:
       - infra_net
@@ -115,12 +169,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ portainer_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_traefik | default(false) %}
   traefik:
     image: traefik:{{ traefik_image_version | default('latest') }}
     restart: unless-stopped
+    depends_on:
+      - docker-socket-proxy
     ports:
 {% if not (install_nginx | default(true)) %}
       - "{{ traefik_http_port | default(80) }}:80"
@@ -129,7 +187,8 @@ services:
       - "127.0.0.1:{{ traefik_dashboard_port | default(8080) }}:8080"
     volumes:
       - {{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}:/etc/traefik:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOCKER_HOST: "tcp://docker-socket-proxy:2375"
     networks:
       - infra_net
       - {{ stacks_shared_network }}
@@ -138,6 +197,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ traefik_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_bluesky_pds | default(false) %}
@@ -187,6 +248,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ bluesky_pds_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {% if install_authentik | default(false) %}
@@ -227,6 +290,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ authentik_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   authentik-worker:
     image: ghcr.io/goauthentik/server:{{ authentik_version | default('2025.2') }}
@@ -252,6 +317,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ authentik_worker_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_infisical | default(false) %}
@@ -282,6 +349,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ infisical_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 

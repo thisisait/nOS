@@ -72,6 +72,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ grafana_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   prometheus:
     image: prom/prometheus:{{ prometheus_version | default('latest') }}
@@ -102,6 +104,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ prometheus_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   loki:
     image: grafana/loki:{{ loki_version | default('latest') }}
@@ -126,6 +130,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ loki_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   tempo:
     image: grafana/tempo:{{ tempo_version | default('2.10.0') }}
@@ -152,6 +158,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ tempo_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 networks:
   observability_net:

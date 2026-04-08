@@ -49,6 +49,16 @@ configure_vulnerability_scan: false
 vulnscan_schedule_hours: [6, 18]          # 2x denně: 06:00 a 18:00
 vulnscan_batch_size: 5                    # Počet komponent per scan run
 
+# ── Docker Resource Limits ────────────────────────────────────────────────────
+# mem_limit per service tier. Override per service: {service}_mem_limit
+docker_mem_limit_heavy: "4g"             # GitLab
+docker_mem_limit_critical: "2g"          # Authentik, ERPNext, Nextcloud, Grafana
+docker_mem_limit_standard: "1g"          # většina služeb
+docker_mem_limit_light: "512m"           # Redis, Kiwix, Tileserver, exporters
+docker_cpus_heavy: "2.0"
+docker_cpus_standard: "1.0"
+docker_cpus_light: "0.5"
+
 # ==============================================================================
 # INSTALLATION QUEUE
 # Zakomentuj (#) libovolný řádek pro PŘESKOČENÍ dané komponenty.

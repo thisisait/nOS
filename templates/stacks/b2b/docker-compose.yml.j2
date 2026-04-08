@@ -46,6 +46,8 @@ services:
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-backend:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
@@ -69,6 +71,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-frontend:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
@@ -97,6 +101,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-queue-short:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
@@ -119,6 +125,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-queue-long:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
@@ -141,6 +149,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-scheduler:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
@@ -163,6 +173,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 {% if install_freescout | default(false) %}
@@ -198,6 +210,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ freescout_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 {# Mattermost odstraněn – nemá ARM64 FOSS image. Chat přes Bluesky PDS nebo Nextcloud Talk. #}
@@ -253,6 +267,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    mem_limit: {{ outline_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
 
 {% endif %}
 

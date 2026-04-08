@@ -26,6 +26,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: {{ qgis_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
 
