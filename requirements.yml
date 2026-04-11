@@ -14,3 +14,9 @@ collections:
   # MariaDB/MySQL management (wordpress, nextcloud databases)
   - name: community.mysql
     version: ">=3.0.0"
+  # PostgreSQL query module (idempotence refactor — Metabase/n8n admin pw fallback)
+  - name: community.postgresql
+    version: ">=3.0.0"
+  # Nextcloud admin (run_occ wrapper, user/group modules)
+  - name: nextcloud.admin
+    version: ">=1.0.0"
