@@ -1398,7 +1398,7 @@ authentik_default_groups:
 
 # ── Authentik RBAC tiers (group → application access) ──────────────────────────
 # Tier 1 = admin only, Tier 4 = guest/public. Higher tier = broader access.
-# Policies auto-created in authentik_oidc_setup.yml, bound to applications.
+# Policies auto-created by Authentik Blueprints (templates/authentik/blueprints/20-rbac-policies.yaml.j2).
 authentik_rbac_tiers:
   - tier: 1
     name: "tier-admin"
