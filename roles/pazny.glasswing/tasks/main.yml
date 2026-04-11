@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# GLASSWING — Security Research Dashboard (Nette PHP + SQLite)
+# pazny.glasswing — Security Research Dashboard (Nette PHP + SQLite)
 # ==============================================================================
 
 - name: "[Glasswing] Ensure glasswing directories exist"
