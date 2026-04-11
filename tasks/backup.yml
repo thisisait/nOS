@@ -102,7 +102,10 @@
       {{ docker_bin }} compose -p infra exec -T postgresql pg_dumpall -U postgres > "${BACKUP_DIR}/pg_dump.sql" || true
       {% endif %}
       {% if install_mariadb | default(false) %}
-      {{ docker_bin }} compose -p infra exec -T mariadb mysqldump --all-databases -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }} > "${BACKUP_DIR}/maria_dump.sql" 2>/dev/null || true
+      {{ docker_bin }} compose -p infra exec -T mariadb \
+        mysqldump --all-databases \
+        -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }} \
+        > "${BACKUP_DIR}/maria_dump.sql" 2>/dev/null || true
       {% endif %}
       restic backup \
         --exclude-file="{{ restic_excludefile }}" \
