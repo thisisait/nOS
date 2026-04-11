@@ -47,7 +47,8 @@
     }}
   loop_control:
     label: "DROP: {{ item }}"
-  changed_when: false
+  register: _pg_drop_db
+  changed_when: "'DROP DATABASE' in (_pg_drop_db.stdout | default(''))"
   failed_when: false
   when:
     - blank | default(false) | bool
@@ -88,7 +89,8 @@
     }}
   loop_control:
     label: "DROP ROLE: {{ item }}"
-  changed_when: false
+  register: _pg_drop_role
+  changed_when: "'DROP ROLE' in (_pg_drop_role.stdout | default(''))"
   failed_when: false
   when:
     - blank | default(false) | bool

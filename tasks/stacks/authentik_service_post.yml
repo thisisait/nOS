@@ -114,21 +114,23 @@
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ app:install user_oidc
+  register: _nc_user_oidc_install
   when:
     - install_nextcloud | default(false)
     - _nc_running.stdout | default('') | trim == 'true'
   failed_when: false
-  changed_when: false
+  changed_when: "'already installed' not in (_nc_user_oidc_install.stdout | default(''))"
 
 - name: "[Authentik→Nextcloud] Enable user_oidc app"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ app:enable user_oidc
+  register: _nc_user_oidc_enable
   when:
     - install_nextcloud | default(false)
     - _nc_running.stdout | default('') | trim == 'true'
   failed_when: false
-  changed_when: false
+  changed_when: "'already enabled' not in (_nc_user_oidc_enable.stdout | default(''))"
 
 - name: "[Authentik→Nextcloud] Check if OIDC provider registered"
   ansible.builtin.command: >
