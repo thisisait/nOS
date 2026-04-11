@@ -5,38 +5,10 @@
 
 services:
 
-{% if install_mariadb | default(false) %}
-  mariadb:
-    image: mariadb:{{ mariadb_version | default('lts') }}
-    hostname: mariadb
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
-    volumes:
-      - {{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}:/var/lib/mysql
-    environment:
-      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      MARIADB_ROOT_HOST: "%"
-      MARIADB_CHARACTER_SET_SERVER: utf8mb4
-      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ mariadb_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
+{# mariadb service byl extrahovany do role pazny.mariadb (Wave 2.1) a
+   renderuje se do {{ stacks_dir }}/infra/overrides/mariadb.yml. core-up.yml
+   ho merguje pres `docker compose -f base.yml -f overrides/mariadb.yml up`. #}
 
-{% endif %}
 {% if install_postgresql | default(false) %}
   postgresql:
     image: postgres:{{ postgresql_version | default('16-alpine') }}

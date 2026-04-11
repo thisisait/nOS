@@ -1,0 +1,12 @@
+---
+# pazny.mariadb — handlers
+# Restart mariadb je definovany i na play-level v main.yml pro zpetnou
+# kompatibilitu s notify: z tasku mimo tuto roli. Play-level handler
+# prebira prednost, takze tenhle role-lokalni je prakticky unreachable,
+# ale definovany zustava kvuli samostatnosti role.
+
+- name: Restart mariadb
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart mariadb
+  failed_when: false

@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: mariadb
+  namespace: pazny
+  author: Pázny
+  description: MariaDB in Docker compose override (devBoxNOS infra stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — tato role je sdileny datovy zaklad pro
+# wordpress/nextcloud/erpnext/freescout/freepbx. Orchestrace (compose
+# up sequencing, post-start sekvence) je v tasks/stacks/core-up.yml.
+dependencies: []
+
+collections:
+  - community.mysql  # mysql_info, mysql_db, mysql_user v post.yml

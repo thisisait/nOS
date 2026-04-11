@@ -149,6 +149,20 @@
     mode: '0644'
   when: install_observability | default(true)
 
+# ── Wave 2.1 per-role compose overrides ─────────────────────────────────────
+# Role pazny.mariadb rendereruje svuj compose fragment do
+# {{ stacks_dir }}/infra/overrides/mariadb.yml. Musi bezet PRED enumerate +
+# compose up, aby find task nize fragment videl. Post-start setup
+# (tasks/post.yml) je volany az po `docker compose up infra --wait`.
+
+- name: "[Core] Render pazny.mariadb compose override + data dir"
+  ansible.builtin.include_role:
+    name: pazny.mariadb
+    apply:
+      tags: ['mariadb', 'database']
+  when: install_mariadb | default(false)
+  tags: ['mariadb', 'database']
+
 # ── Deploy observability config files (MUSÍ být před docker compose up!) ─────
 # Pokud Docker najde neexistující bind mount source, vytvoří ho jako ADRESÁŘ
 # a kontejner pak crashne v konfigurační fázi. Render těchto souborů zde
@@ -269,11 +283,16 @@
 # Grafana v observability stacku může používat PostgreSQL jako backend –
 # DB user/DB musí existovat před grafana compose up.
 
-- name: "[Core] MariaDB post-start: create databases and users"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/iiab/mariadb_setup.yml"
+- name: "[Core] MariaDB post-start (pazny.mariadb role → tasks/post.yml)"
+  ansible.builtin.include_role:
+    name: pazny.mariadb
+    tasks_from: post.yml
+    apply:
+      tags: ['mariadb', 'database']
   when:
     - install_mariadb | default(false)
     - _core_infra_enabled | bool
+  tags: ['mariadb', 'database']
 
 - name: "[Core] PostgreSQL post-start: create databases and users"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/postgresql_setup.yml"

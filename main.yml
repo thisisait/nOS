@@ -542,10 +542,9 @@
     # IIAB – self-hosted knowledge services
     # ──────────────────────────────────────────────────────────────────────────
 
-    - include_tasks: tasks/iiab/mariadb.yml
-      when: install_mariadb | default(false)
-      tags: ['iiab', 'mariadb', 'database']
-
+    # MariaDB byl vytazen do role pazny.mariadb (Wave 2.1). Role je volana
+    # z tasks/stacks/core-up.yml — render compose override PRED `docker
+    # compose up infra`, post-start DB/user setup PO compose up.
     - import_tasks: tasks/iiab/wordpress.yml
       when: install_wordpress | default(false)
       tags: ['iiab', 'wordpress']

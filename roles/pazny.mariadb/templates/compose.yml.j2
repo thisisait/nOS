@@ -1,0 +1,41 @@
+# =============================================================================
+# pazny.mariadb — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+# Docker compose merge semantics umoznuje referencovat vnejsi networky
+# dokud je kterykoli z merge-ovanych souboru definuje.
+# =============================================================================
+
+services:
+  mariadb:
+    image: mariadb:{{ mariadb_version | default('lts') }}
+    hostname: mariadb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
+    volumes:
+      - {{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      MARIADB_ROOT_HOST: "%"
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ mariadb_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
