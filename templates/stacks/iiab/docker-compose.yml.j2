@@ -229,7 +229,7 @@ services:
     environment:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
-      WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default('changeme_openwebui_secret') }}"
+      WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default(global_password_prefix + '_pw_openwebui') }}"
       ENABLE_SIGNUP: "{{ openwebui_enable_signup | default(true) | string | lower }}"
       DEFAULT_USER_ROLE: "user"
       SCARF_NO_ANALYTICS: "true"

@@ -716,13 +716,13 @@ mariadb_users:
     password: "{{ nextcloud_db_password }}"
     priv: "nextcloud.*:ALL"
   - name: "freescout"
-    password: "{{ freescout_db_password | default('changeme_pw_freescout') }}"
+    password: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
     priv: "freescout.*:ALL"
   - name: "erpnext"
-    password: "{{ erpnext_admin_password | default('changeme_pw_erpnext') }}"
+    password: "{{ erpnext_admin_password | default(global_password_prefix + '_pw_erpnext') }}"
     priv: "erpnext.*:ALL"
   - name: "asterisk"
-    password: "{{ freepbx_db_password | default('changeme_pw_freepbx') }}"
+    password: "{{ freepbx_db_password | default(global_password_prefix + '_pw_freepbx') }}"
     priv: "asterisk.*:ALL"
 
 # ==============================================================================

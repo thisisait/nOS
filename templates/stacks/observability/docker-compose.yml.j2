@@ -26,7 +26,7 @@ services:
 {% endif %}
     environment:
       GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"
-      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('changeme_grafana') }}"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana') }}"
       GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana.dev.local') }}"
       GF_SERVER_ROOT_URL: "https://{{ grafana_domain | default('grafana.dev.local') }}"
       GF_ANALYTICS_REPORTING_ENABLED: "false"

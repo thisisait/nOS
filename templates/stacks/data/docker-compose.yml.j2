@@ -23,7 +23,7 @@ services:
       MB_DB_DBNAME: "{{ metabase_db_name | default('metabase') }}"
       MB_DB_PORT: "5432"
       MB_DB_USER: "{{ metabase_db_user | default('metabase') }}"
-      MB_DB_PASS: "{{ metabase_db_password | default('changeme_pw_metabase') }}"
+      MB_DB_PASS: "{{ metabase_db_password | default(global_password_prefix + '_pw_metabase') }}"
       MB_DB_HOST: postgresql
       MB_EMBEDDING_APP_ORIGIN: "https://{{ puter_domain | default('os.dev.local') }}"
       JAVA_TIMEZONE: "{{ metabase_timezone | default('Europe/Prague') }}"
@@ -52,15 +52,15 @@ services:
     volumes:
       - {{ superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset') }}:/app/superset_home
     environment:
-      SUPERSET_SECRET_KEY: "{{ superset_secret_key | default('changeme_pw_superset_secret') }}"
+      SUPERSET_SECRET_KEY: "{{ superset_secret_key | default(global_password_prefix + '_pw_superset_secret') }}"
       DATABASE_HOST: postgresql
       DATABASE_PORT: "5432"
       DATABASE_DB: "{{ superset_db_name | default('superset') }}"
       DATABASE_USER: "{{ superset_db_user | default('superset') }}"
-      DATABASE_PASSWORD: "{{ superset_db_password | default('changeme_pw_superset') }}"
+      DATABASE_PASSWORD: "{{ superset_db_password | default(global_password_prefix + '_pw_superset') }}"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: "{{ redis_password | default('changeme_pw_redis') }}"
+      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
     networks:
       - data_net
       - {{ stacks_shared_network }}
