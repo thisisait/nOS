@@ -64,7 +64,9 @@
     mode: '0755'
   loop:
     - "{{ stacks_dir }}/infra"
+    - "{{ stacks_dir }}/infra/overrides"
     - "{{ stacks_dir }}/observability"
+    - "{{ stacks_dir }}/observability/overrides"
     - "{{ stacks_dir }}/observability/prometheus"
     - "{{ stacks_dir }}/observability/loki"
     - "{{ stacks_dir }}/observability/tempo"
@@ -220,12 +222,36 @@
          (install_authentik | default(false)) or (install_infisical | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
 
+# ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
+# Každá pazny.<svc> role rendereruje svůj compose fragment do
+# {{ stacks_dir }}/<stack>/overrides/<svc>.yml. Tento find task sebere vsechny
+# existujici overrides a expanduje je jako dodatecne -f flagy v `docker compose
+# up` prikazu nize. Prazdny adresar = fallback na base compose file (backward
+# compatible s pre-Wave2 stavem).
+
+- name: "[Core] Enumerate infra compose overrides"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/infra/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _infra_overrides
+  check_mode: false
+
+- name: "[Core] Enumerate observability compose overrides"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/observability/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _observability_overrides
+  check_mode: false
+
 # ── Start INFRA stack first (DB must be ready before anything else) ─────────
 
 - name: "[Core] Start INFRA stack (docker compose up --wait)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/infra/docker-compose.yml"
+    {% for f in _infra_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p infra
     up -d --remove-orphans --wait --wait-timeout 120
     {{ _docker_compose_pull | default('') }} 2>&1
@@ -261,6 +287,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/observability/docker-compose.yml"
+    {% for f in _observability_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p observability
     up -d --remove-orphans --wait --wait-timeout 120
     {{ _docker_compose_pull | default('') }} 2>&1
