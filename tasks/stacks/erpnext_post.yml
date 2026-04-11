@@ -54,8 +54,11 @@
         msg: "rc={{ _erpnext_cfg_retry.rc | default('?') }} {{ (_erpnext_cfg_retry.stdout_lines | default([]))[-5:] | join(' | ') }}"
 
 # ── Případ 2: site existuje ale migrace nedokončila → bench migrate ───────────
-# VirtioFS I/O chyba (macOS bind mount) muze shodit filelock.__exit__ →
-# retry s cleanupem stale .lock souboru. Runtime: 30-120s za pokus, 3 pokusy.
+# VirtioFS I/O chyba (macOS bind mount) shodi filelock.__exit__ s rc=1 i kdyz
+# migrace prakticky uspela (stdout obsahuje "Queued rebuilding of search index"
+# = finalni post-migrate krok). Retry cte bud rc=0, nebo ten finalni marker
+# ve stdoutu — acceptujeme oboje jako success. Mazeme stale lock soubory pred
+# kazdym pokusem.
 - name: "[ERPNext] Run migrations with lock cleanup (partial setup recovery)"
   ansible.builtin.shell: |
     {{ docker_bin }} exec b2b-erpnext-backend-1 bash -c '
@@ -65,7 +68,9 @@
   register: _erpnext_migrate
   retries: 3
   delay: 15
-  until: _erpnext_migrate.rc | default(1) == 0
+  until: >
+    (_erpnext_migrate.rc | default(1) == 0)
+    or ('Queued rebuilding of search index' in (_erpnext_migrate.stdout | default('')))
   when:
     - _erpnext_site_config.stat.exists
     - _erpnext_cfg_exit.stdout | default('0') | int != 0
@@ -103,24 +108,27 @@
   failed_when: false
 
 # ── Health check ──────────────────────────────────────────────────────────────
-# /api/method/frappe.ping vraci {"message": "pong"} bez autentizace, 200 OK.
-# Frappe site routing vyzaduje `Host:` header — nginx frontend vybere spravny
-# site podle FRAPPE_SITE_NAME_HEADER ($host). Bez headeru → 404.
+# Frappe site routing vyzaduje `Host:` header (nginx frontend vybere site
+# podle FRAPPE_SITE_NAME_HEADER=$host). ERPNext defaultne disabluje Guest
+# usera, takze /api/method/frappe.ping vraci 417 (ValidationError: "User
+# Guest is disabled"). To je validni "alive" signal — HTTP stack Frappe
+# odpovida. Akceptujeme 200 (ping povoleno) i 417 (Guest disabled, HTTP
+# stack zije) i 403 (obecny forbidden). 404 znamena chybejici routing.
 - name: "[ERPNext] Verify site is accessible"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
     headers:
       Host: "{{ erpnext_site_name | default('erp.dev.local') }}"
-    status_code: [200]
+    status_code: [200, 403, 417]
     timeout: 10
   register: _erpnext_health
   retries: 18
   delay: 10
-  until: _erpnext_health.status | default(0) == 200
+  until: _erpnext_health.status | default(0) in [200, 403, 417]
   failed_when: false
 
 - name: "[ERPNext] Status"
   ansible.builtin.debug:
     msg: >-
-      ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) == 200
+      ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) in [200, 403, 417]
       else 'NEDOSTUPNY – zkontroluj: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs' }}
