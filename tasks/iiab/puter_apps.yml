@@ -23,7 +23,7 @@
   ansible.builtin.set_fact:
     _puter_apps: >-
       {{
-        ((install_observability | default(false)) | ternary([
+        ((install_observability | default(true)) | ternary([
           {'name': 'grafana', 'title': 'Grafana', 'desc': 'Monitoring dashboards', 'url': 'https://' + (grafana_domain | default('grafana.dev.local')), 'icon': 'https://' + (grafana_domain | default('grafana.dev.local')) + '/public/img/fav32.png'}
         ], []))
         + ((install_gitea | default(false)) | ternary([

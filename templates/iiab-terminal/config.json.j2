@@ -14,7 +14,7 @@
 {% endif %}
   "services": [
 {% set _svc = [] %}
-{% if install_observability | default(false) %}
+{% if install_observability | default(true) %}
 {% set _ = _svc.append({"name": "Grafana", "url": "https://" ~ grafana_domain | default('grafana.dev.local'), "port": grafana_port | default(3000), "description": "Metriky a dashboardy"}) %}
 {% endif %}
 {% if install_kiwix | default(false) %}

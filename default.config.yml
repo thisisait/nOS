@@ -1454,7 +1454,7 @@ authentik_app_tiers:
 authentik_oidc_apps:
   - name: "Grafana"
     slug: "grafana"
-    enabled: "{{ install_observability | default(false) }}"
+    enabled: "{{ install_observability | default(true) }}"
     client_id: "devboxnos-grafana"
     client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
     redirect_uris: "https://{{ grafana_domain | default('grafana.dev.local') }}/login/generic_oauth"
