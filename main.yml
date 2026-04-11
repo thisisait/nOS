@@ -117,7 +117,7 @@
 
     - name: Restart mariadb
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
         restart mariadb
       failed_when: false
 
@@ -224,8 +224,13 @@
 
     - name: Restart portainer
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
         restart portainer
+      failed_when: false
+
+    - name: Restart boxapi
+      ansible.builtin.command: >
+        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.devboxnos.api"
       failed_when: false
 
     - name: Restart bluesky-pds
