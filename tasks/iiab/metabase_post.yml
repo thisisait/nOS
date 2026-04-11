@@ -41,7 +41,7 @@
     body:
       token: "{{ _mb_setup_token }}"
       user:
-        email: "{{ metabase_admin_email | default('admin@dev.local') }}"
+        email: "{{ metabase_admin_email | default(default_admin_email) }}"
         password: "{{ metabase_admin_password }}"
         first_name: "{{ metabase_admin_first_name | default('Admin') }}"
         last_name: "{{ metabase_admin_last_name | default('devBoxNOS') }}"
@@ -70,7 +70,7 @@
     method: POST
     body_format: json
     body:
-      username: "{{ metabase_admin_email | default('admin@dev.local') }}"
+      username: "{{ metabase_admin_email | default(default_admin_email) }}"
       password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_metabase_admin"
     status_code: [200, 401]
     timeout: 10
@@ -87,7 +87,7 @@
     method: POST
     body_format: json
     body:
-      username: "{{ metabase_admin_email | default('admin@dev.local') }}"
+      username: "{{ metabase_admin_email | default(default_admin_email) }}"
       password: "{{ metabase_admin_password }}"
     status_code: [200, 401]
     timeout: 10

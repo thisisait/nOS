@@ -32,7 +32,7 @@
     method: POST
     body_format: json
     body:
-      email: "{{ n8n_admin_email | default('admin@dev.local') }}"
+      email: "{{ n8n_admin_email | default(default_admin_email) }}"
       password: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
       firstName: "{{ n8n_admin_firstname | default('Admin') }}"
       lastName: "{{ n8n_admin_lastname | default('devBoxNOS') }}"
@@ -55,7 +55,7 @@
     method: POST
     body_format: json
     body:
-      emailOrLdapLoginId: "{{ n8n_admin_email | default('admin@dev.local') }}"
+      emailOrLdapLoginId: "{{ n8n_admin_email | default(default_admin_email) }}"
       password: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
     status_code: [200, 401]
     timeout: 10
@@ -72,7 +72,7 @@
     method: POST
     body_format: json
     body:
-      emailOrLdapLoginId: "{{ n8n_admin_email | default('admin@dev.local') }}"
+      emailOrLdapLoginId: "{{ n8n_admin_email | default(default_admin_email) }}"
       password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_n8n"
     status_code: [200, 401]
     timeout: 10

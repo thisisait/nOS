@@ -26,7 +26,7 @@
         WordPress        https://wordpress.dev.local          admin / {{ global_password_prefix }}_pw_wordpress_admin
       {% endif %}
       {% if install_freescout | default(false) %}
-        FreeScout        https://helpdesk.dev.local           admin@dev.local / {{ global_password_prefix }}_pw_freescout
+        FreeScout        https://helpdesk.dev.local           {{ freescout_admin_email | default(default_admin_email) }} / {{ global_password_prefix }}_pw_freescout
       {% endif %}
       {% if install_portainer | default(false) %}
         Portainer        https://portainer.dev.local          ⚠ Vytvor admin ucet do 5 minut!

@@ -42,7 +42,7 @@
     --title="Dev WordPress"
     --admin_user="{{ wordpress_admin_user | default('admin') }}"
     --admin_password="{{ wordpress_admin_password }}"
-    --admin_email="{{ wordpress_admin_email | default('admin@dev.local') }}"
+    --admin_email="{{ wordpress_admin_email | default(default_admin_email) }}"
     --skip-email
   when:
     - _wp_container.stdout | default('') | length > 0

@@ -33,7 +33,7 @@ entries:
       username: akadmin
     attrs:
       name: "devBoxNOS Admin"
-      email: "{{ authentik_bootstrap_email | default('admin@dev.local') }}"
+      email: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
       password: "{{ authentik_bootstrap_password }}"
       is_active: true
       path: "users"

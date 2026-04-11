@@ -20,7 +20,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
     exec -T freescout
-    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email | default('admin@dev.local') }}')->count();"
+    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->count();"
     2>/dev/null || echo "0"
   register: _fs_user_check
   changed_when: false
@@ -36,7 +36,7 @@
     --role=admin
     --firstName="{{ freescout_admin_first_name | default('Admin') }}"
     --lastName="{{ freescout_admin_last_name | default('devBoxNOS') }}"
-    --email="{{ freescout_admin_email | default('admin@dev.local') }}"
+    --email="{{ freescout_admin_email | default(default_admin_email) }}"
     --password="{{ freescout_admin_password }}"
     2>&1 || true
   when:
@@ -52,7 +52,7 @@
 - name: "[FreeScout Post] Reconverge admin password (tinker UPDATE)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout \
-      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default('admin@dev.local') }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
     - (_fs_user_check.stdout | default('0') | trim) != '0'

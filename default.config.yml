@@ -14,6 +14,7 @@ global_password_prefix: "changeme"
 
 instance_name: "devboxnos"                # Unikatni nazev instance (lowercase, bez mezer)
 instance_tld: "dev.local"                 # TLD pro vsechny sluzby (napr. grafana.<tld>)
+default_admin_email: "admin@{{ instance_tld | default('dev.local') }}"  # Fallback admin email pro vsechny sluzby
 instance_org: ""                          # Nazev organizace klienta
 instance_location: ""                     # Lokalita (napr. "Praha, CZ")
 instance_role: "standalone"               # standalone | headquarters | factory | office | division
@@ -740,7 +741,7 @@ wordpress_version: "latest"             # Docker image tag
 wordpress_port: 8084                    # Lokální port kontejneru (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
-wordpress_admin_email: "admin@dev.local"
+wordpress_admin_email: "{{ default_admin_email }}"
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
@@ -914,7 +915,7 @@ n8n_port: 5678
 n8n_version: "2.14.1"      # CVE-2026-33660+33696+33663+33713 (Merge RCE, GSuiteAdmin proto pollution). Was 2.10.1
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
-n8n_admin_email: "admin@dev.local"
+n8n_admin_email: "{{ default_admin_email }}"
 n8n_admin_password: "{{ global_password_prefix }}_pw_n8n"
 n8n_admin_firstname: "Admin"
 n8n_admin_lastname: "devBoxNOS"
@@ -963,7 +964,7 @@ openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
 openwebui_admin_name: "Admin"
-openwebui_admin_email: "admin@dev.local"
+openwebui_admin_email: "{{ default_admin_email }}"
 openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
 
 # ==============================================================================
@@ -1197,7 +1198,7 @@ freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
 freescout_db_password: "{{ global_password_prefix }}_pw_freescout"
-freescout_admin_email: "admin@dev.local"
+freescout_admin_email: "{{ default_admin_email }}"
 freescout_admin_password: "{{ global_password_prefix }}_pw_freescout"
 freescout_timezone: "Europe/Prague"
 
@@ -1270,7 +1271,7 @@ metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ global_password_prefix }}_pw_metabase"
 metabase_timezone: "Europe/Prague"
-metabase_admin_email: "admin@dev.local"
+metabase_admin_email: "{{ default_admin_email }}"
 metabase_admin_password: "{{ global_password_prefix }}_pw_metabase_admin"
 metabase_admin_first_name: "Admin"
 metabase_admin_last_name: "devBoxNOS"
@@ -1317,7 +1318,7 @@ puter_version: "latest"                        # ghcr.io/heyputer/puter
 puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
 puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache pro multi-user (MB)
-puter_admin_email: "admin@dev.local"
+puter_admin_email: "{{ default_admin_email }}"
 puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 # ==============================================================================
@@ -1384,7 +1385,7 @@ authentik_db_name: "authentik"
 authentik_db_user: "authentik"
 authentik_db_password: "{{ global_password_prefix }}_pw_authentik_db"
 authentik_bootstrap_password: "{{ global_password_prefix }}_pw_authentik_admin"
-authentik_bootstrap_email: "admin@dev.local"
+authentik_bootstrap_email: "{{ default_admin_email }}"
 
 # ── Authentik RBAC skupiny (vytvorene automaticky pri blank run) ──────────────
 authentik_default_groups:
