@@ -1178,7 +1178,10 @@ rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 erpnext_domain: "erp.dev.local"
 erpnext_port: 8082                     # 8080 obsazen Traefik dashboardem
 erpnext_version: "v15.98.1"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
-erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
+# erpnext_data_dir: DEPRECATED od P0.1 migrace na named volume. Sites data
+# zije v Docker named volume `b2b_erpnext_sites` (managovany blank-reset
+# via `compose down -v` + `volume prune -f -a`). Externi storage lze
+# nastavit presunutim cele Docker Desktop disk image na external SSD.
 erpnext_admin_password: "{{ global_password_prefix }}_pw_erpnext"
 erpnext_site_name: "erp.dev.local"
 

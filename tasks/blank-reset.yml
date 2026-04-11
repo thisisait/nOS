@@ -266,9 +266,9 @@
         (install_openclaw | default(false)) | ternary(
           [ansible_facts['env']['HOME'] + '/.openclaw'], [])
         +
-        (install_erpnext | default(false)) | ternary(
-          [erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites')], [])
-        +
+        {# ERPNext sites = Docker named volume (b2b_erpnext_sites), mazany
+           `docker compose down -v` + `docker volume prune -f -a` vyse v tomto
+           souboru. Zadny host-side adresar k mazani. #}
         (install_freescout | default(false)) | ternary(
           [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
         +

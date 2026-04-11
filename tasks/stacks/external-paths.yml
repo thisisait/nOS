@@ -61,9 +61,12 @@
     paperclip_data_dir: "{{ external_storage_root }}/paperclip"
 
 # ── B2B stack (ERP, helpdesk, wiki) ─────────────────────────────────────────
+# POZNAMKA: erpnext_data_dir byl deprecated po P0.1 — ERPNext sites zije v
+# Docker named volume `b2b_erpnext_sites` (VirtioFS I/O error workaround na
+# macOS). Pro externi storage ERPNext presmerujte Docker Desktop disk image
+# na external SSD v Settings → Resources → Disk image location.
 - name: "[External SSD] Override B2B data paths"
   ansible.builtin.set_fact:
-    erpnext_data_dir: "{{ external_storage_root }}/erpnext/sites"
     freescout_data_dir: "{{ external_storage_root }}/freescout/data"
     outline_data_dir: "{{ external_storage_root }}/outline/data"
 
