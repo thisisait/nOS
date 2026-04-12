@@ -1,0 +1,58 @@
+---
+# ==============================================================================
+# pazny.wordpress/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori data dir, nginx vhost, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/wordpress.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start wp-cli install + admin password reconverge je v tasks/post.yml —
+# volany z stack-up.yml az PO compose up (wordpress musi bezet, nez
+# zavolame `wp core install` a `wp user update`).
+# ==============================================================================
+
+- name: "[pazny.wordpress] Ensure WordPress directory exists"
+  ansible.builtin.file:
+    path: "{{ wordpress_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.wordpress] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/wordpress.yml"
+    mode: '0644'
+  notify: Restart wordpress
+
+- name: "[pazny.wordpress] Deploy nginx vhost"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/nginx/sites-available/wordpress.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/wordpress.conf"
+    mode: '0644'
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.wordpress] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/wordpress.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/wordpress.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.wordpress] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       WordPress (Docker) připraven
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ wordpress_domain }}
+       Kontejner: wordpress → 127.0.0.1:{{ wordpress_port | default(8084) }}
+       Data:      {{ wordpress_dir }}
+       DB:        {{ wordpress_db_name }} @ mariadb (iiab_net)
+
+       Dokončení: přejdi na https://{{ wordpress_domain }}/wp-admin/install.php
+       Přidej do /etc/hosts:   127.0.0.1 {{ wordpress_domain }}
+      ══════════════════════════════════════════════════════

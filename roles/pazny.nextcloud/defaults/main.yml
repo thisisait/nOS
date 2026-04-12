@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.nextcloud — Nextcloud in Docker (iiab compose override)
+#
+# Credentials (nextcloud_db_password, nextcloud_admin_password) a site
+# metadata (domain, admin email) zustavaji v top-level default.config.yml
+# + default.credentials.yml — stale centralizovane, role je jen cte pres
+# Ansible var precedence (vars_files > role defaults).
+# ==============================================================================
+
+nextcloud_version: "stable"
+nextcloud_port: 8085
+nextcloud_domain: "cloud.dev.local"
+nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
+nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
+nextcloud_db_name: "nextcloud"
+nextcloud_db_user: "nextcloud"
+nextcloud_db_host: "127.0.0.1"  # ignorovano pokud install_mariadb=true (pouzije se 'mariadb' z iiab_net)
+nextcloud_admin_user: "admin"
+nextcloud_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
+nextcloud_cpus: "{{ docker_cpus_standard | default('1.0') }}"

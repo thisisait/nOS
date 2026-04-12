@@ -1,0 +1,104 @@
+---
+# ==============================================================================
+# pazny.n8n/tasks/post.yml — auto-registrace owner uzivatele
+# n8n od v1.0 pouziva /api/v1/owner/setup pro prvni ucet (owner = admin).
+# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+#
+# Reconverge leg pro state-declarative idempotence: session-based password
+# change pres /rest/login + /rest/change-password s previous_password_prefix
+# pro OLD heslo (z .ansible-prefix-state).
+# ==============================================================================
+
+- name: "[pazny.n8n Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/healthz"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _n8n_ready
+  until: _n8n_ready.status | default(0) == 200
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.n8n Post] Check if owner already exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/api/v1/owner"
+    method: GET
+    timeout: 10
+    status_code: [200, 401, 403, 404]
+  register: _n8n_owner_check
+  failed_when: false
+  when: _n8n_ready.status | default(0) == 200
+
+- name: "[pazny.n8n Post] Setup owner account (first-run only)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/api/v1/owner/setup"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ n8n_admin_email | default(default_admin_email) }}"
+      password: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
+      firstName: "{{ n8n_admin_firstname | default('Admin') }}"
+      lastName: "{{ n8n_admin_lastname | default('devBoxNOS') }}"
+    status_code: [200, 201]
+    timeout: 10
+  register: _n8n_setup
+  when:
+    - _n8n_ready.status | default(0) == 200
+    - _n8n_owner_check.status | default(0) != 200
+  changed_when: _n8n_setup.status | default(0) in [200, 201]
+  failed_when: false
+
+# ── Admin password reconverge (state-declarative UPDATE) ──────────────
+- name: "[pazny.n8n Post] Login with current password (converged check)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
+    method: POST
+    body_format: json
+    body:
+      emailOrLdapLoginId: "{{ n8n_admin_email | default(default_admin_email) }}"
+      password: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _n8n_login_new
+  when:
+    - _n8n_ready.status | default(0) == 200
+    - _n8n_owner_check.status | default(0) == 200
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.n8n Post] Login with previous password (for reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
+    method: POST
+    body_format: json
+    body:
+      emailOrLdapLoginId: "{{ n8n_admin_email | default(default_admin_email) }}"
+      password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_n8n"
+    status_code: [200, 401]
+    timeout: 10
+  register: _n8n_login_old
+  when:
+    - _n8n_ready.status | default(0) == 200
+    - _n8n_login_new.status | default(0) != 200
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.n8n Post] Change password via /rest/change-password"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/change-password"
+    method: POST
+    body_format: json
+    headers:
+      Cookie: "{{ _n8n_login_old.cookies_string | default('') }}"
+    body:
+      currentPassword: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_n8n"
+      newPassword: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
+    status_code: [200, 204]
+    timeout: 10
+  register: _n8n_pw_reset
+  when:
+    - _n8n_login_old.status | default(0) == 200
+  changed_when: _n8n_pw_reset.status | default(0) in [200, 204]
+  failed_when: false

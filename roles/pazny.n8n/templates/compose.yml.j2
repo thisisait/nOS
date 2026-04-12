@@ -1,0 +1,58 @@
+# =============================================================================
+# pazny.n8n — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  n8n:
+    image: n8nio/n8n:{{ n8n_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ n8n_port | default(5678) }}:5678"
+{% else %}
+      - "127.0.0.1:{{ n8n_port | default(5678) }}:5678"
+{% endif %}
+    volumes:
+      - {{ n8n_data_dir }}:/home/node/.n8n
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+    environment:
+      N8N_HOST: "{{ n8n_domain | default('n8n.dev.local') }}"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: "https://{{ n8n_domain | default('n8n.dev.local') }}/"
+      GENERIC_TIMEZONE: "{{ n8n_timezone | default('Europe/Prague') }}"
+      TZ: "{{ n8n_timezone | default('Europe/Prague') }}"
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      N8N_AUTH_OIDC_ENABLED: "true"
+      N8N_AUTH_OIDC_CLIENT_ID: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_id }}"
+      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_secret }}"
+      N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/n8n/"
+      N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
+{% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ n8n_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

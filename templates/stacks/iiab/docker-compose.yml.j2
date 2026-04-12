@@ -6,118 +6,9 @@
 services:
 
 {# MariaDB přesunuta do infra stacku – služby se připojují přes shared_net #}
-{% if install_wordpress | default(false) %}
-  wordpress:
-    image: wordpress:{{ wordpress_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ wordpress_port | default(8084) }}:80"
-    volumes:
-      - {{ wordpress_dir }}:/var/www/html
-    environment:
-      WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
-      WORDPRESS_DB_USER: "{{ wordpress_db_user }}"
-      WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
-      WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
-      WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
-    networks:
-      - iiab_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ wordpress_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
-{% if install_nextcloud | default(false) %}
-  nextcloud:
-    image: nextcloud:{{ nextcloud_version | default('stable') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ nextcloud_port | default(8085) }}:80"
-{% else %}
-      - "127.0.0.1:{{ nextcloud_port | default(8085) }}:80"
-{% endif %}
-    volumes:
-      - {{ nextcloud_dir }}:/var/www/html
-      - {{ nextcloud_data_dir }}:/data
-    environment:
-      MYSQL_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ nextcloud_db_host | default('127.0.0.1') }}{% endif %}"
-      MYSQL_DATABASE: "{{ nextcloud_db_name }}"
-      MYSQL_USER: "{{ nextcloud_db_user }}"
-      MYSQL_PASSWORD: "{{ nextcloud_db_password }}"
-      NEXTCLOUD_ADMIN_USER: "{{ nextcloud_admin_user }}"
-      NEXTCLOUD_ADMIN_PASSWORD: "{{ nextcloud_admin_password }}"
-      NEXTCLOUD_DATA_DIR: "/data"
-      NEXTCLOUD_TRUSTED_DOMAINS: "{{ nextcloud_domain | default('cloud.dev.local') }} localhost 127.0.0.1"
-      OVERWRITEPROTOCOL: "https"
-    networks:
-      - iiab_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ nextcloud_mem_limit | default(docker_mem_limit_critical) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
-{% if install_n8n | default(false) %}
-  n8n:
-    image: n8nio/n8n:{{ n8n_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ n8n_port | default(5678) }}:5678"
-{% else %}
-      - "127.0.0.1:{{ n8n_port | default(5678) }}:5678"
-{% endif %}
-    volumes:
-      - {{ n8n_data_dir }}:/home/node/.n8n
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-    environment:
-      N8N_HOST: "{{ n8n_domain | default('n8n.dev.local') }}"
-      N8N_PORT: "5678"
-      N8N_PROTOCOL: https
-      WEBHOOK_URL: "https://{{ n8n_domain | default('n8n.dev.local') }}/"
-      GENERIC_TIMEZONE: "{{ n8n_timezone | default('Europe/Prague') }}"
-      TZ: "{{ n8n_timezone | default('Europe/Prague') }}"
-      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      N8N_AUTH_OIDC_ENABLED: "true"
-      N8N_AUTH_OIDC_CLIENT_ID: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_id }}"
-      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_secret }}"
-      N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/n8n/"
-      N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
-{% endif %}
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
-{% endif %}
-    networks:
-      - iiab_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ n8n_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
+{# wordpress: extrahovano do roles/pazny.wordpress/ (Wave 2.2 Unit 7) #}
+{# nextcloud: extrahovano do roles/pazny.nextcloud/ (Wave 2.2 Unit 7) #}
+{# n8n: extrahovano do roles/pazny.n8n/ (Wave 2.2 Unit 7) #}
 {% if install_kiwix | default(false) %}
   kiwix:
     image: ghcr.io/kiwix/kiwix-serve:{{ kiwix_version | default('latest') }}
@@ -341,45 +232,7 @@ services:
     cpus: {{ docker_cpus_light | default('0.5') }}
 
 {% endif %}
-{% if install_puter | default(false) %}
-  # ── Puter – cloud OS webový desktop ───────────────────────────────────────
-  puter:
-    build:
-      context: {{ playbook_dir }}/files/puter
-      dockerfile: Dockerfile
-    image: devboxnos/puter:{{ puter_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ puter_port | default(5050) }}:4100"
-{% else %}
-      - "127.0.0.1:{{ puter_port | default(5050) }}:4100"
-{% endif %}
-    environment:
-      PUID: "{{ ansible_facts['user_uid'] }}"
-      PGID: "{{ ansible_facts['user_gid'] }}"
-      TZ: "Europe/Prague"
-    volumes:
-      - {{ puter_config_dir | default(ansible_facts['env']['HOME'] + '/puter/config') }}:/etc/puter
-      - {{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data:/var/puter
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --header='Host: {{ puter_domain | default('os.dev.local') }}' http://127.0.0.1:4100/ || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    networks:
-      - iiab_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ puter_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
+{# puter: extrahovano do roles/pazny.puter/ (Wave 2.2 Unit 7) #}
 {% if install_vaultwarden | default(false) %}
   # ── Vaultwarden – Bitwarden-kompatibilní password vault ───────────────────
   vaultwarden:

@@ -1,0 +1,8 @@
+---
+# pazny.wordpress — handlers
+
+- name: Restart wordpress
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart wordpress
+  failed_when: false

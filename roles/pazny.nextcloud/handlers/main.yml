@@ -1,0 +1,10 @@
+---
+# pazny.nextcloud — handlers
+# Play-level "Restart nextcloud" v main.yml ma prednost; tento zustava
+# pro samostatne pouziti role mimo devBoxNOS playbook.
+
+- name: Restart nextcloud
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart nextcloud
+  failed_when: false

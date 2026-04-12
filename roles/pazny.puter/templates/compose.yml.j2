@@ -1,0 +1,49 @@
+# =============================================================================
+# pazny.puter — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# Build context odkazuje na playbook_dir/files/puter, ktery zustava na
+# miste (Dockerfile + CORS patche). Role kontextove neprebira files/.
+# =============================================================================
+
+services:
+  # ── Puter – cloud OS webový desktop ───────────────────────────────────────
+  puter:
+    build:
+      context: {{ playbook_dir }}/files/puter
+      dockerfile: Dockerfile
+    image: devboxnos/puter:{{ puter_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ puter_port | default(5050) }}:4100"
+{% else %}
+      - "127.0.0.1:{{ puter_port | default(5050) }}:4100"
+{% endif %}
+    environment:
+      PUID: "{{ ansible_facts['user_uid'] }}"
+      PGID: "{{ ansible_facts['user_gid'] }}"
+      TZ: "Europe/Prague"
+    volumes:
+      - {{ puter_config_dir | default(ansible_facts['env']['HOME'] + '/puter/config') }}:/etc/puter
+      - {{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data:/var/puter
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --header='Host: {{ puter_domain | default('os.dev.local') }}' http://127.0.0.1:4100/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ puter_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

@@ -1,0 +1,127 @@
+---
+# ==============================================================================
+# pazny.puter/tasks/apps.yml — devBoxNOS sluzby v Puter Start menu
+# Kazda sluzba se registruje do SQLite DB uvnitr Puter containeru jako
+# iframe app. Idempotentni: existujici app se preskoci.
+#
+# Volano pres include_tasks z tasks/main.yml (mirroring main.yml:705
+# import_tasks puter_apps.yml). Samotne tasky jsou pod `Wait for API`
+# gate, takze pre-compose spusteni proste skoci na failed_when: false.
+# ==============================================================================
+
+- name: "[pazny.puter Apps] Wait for Puter API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"
+    method: GET
+    timeout: 5
+    headers:
+      Host: "{{ puter_domain | default('os.dev.local') }}"
+    status_code: [200]
+  register: _puter_apps_ready
+  until: _puter_apps_ready.status | default(0) == 200
+  retries: 15
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.puter Apps] Build service app list"
+  ansible.builtin.set_fact:
+    _puter_apps: >-
+      {{
+        ((install_observability | default(true)) | ternary([
+          {'name': 'grafana', 'title': 'Grafana', 'desc': 'Monitoring dashboards', 'url': 'https://' + (grafana_domain | default('grafana.dev.local')), 'icon': 'https://' + (grafana_domain | default('grafana.dev.local')) + '/public/img/fav32.png'}
+        ], []))
+        + ((install_gitea | default(false)) | ternary([
+          {'name': 'gitea', 'title': 'Gitea', 'desc': 'Self-hosted Git server', 'url': 'https://' + (gitea_domain | default('git.dev.local')), 'icon': 'https://' + (gitea_domain | default('git.dev.local')) + '/assets/img/logo.svg'}
+        ], []))
+        + ((install_woodpecker | default(false)) | ternary([
+          {'name': 'woodpecker', 'title': 'Woodpecker CI', 'desc': 'Continuous integration', 'url': 'https://' + (woodpecker_domain | default('ci.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_portainer | default(false)) | ternary([
+          {'name': 'portainer', 'title': 'Portainer', 'desc': 'Docker management UI', 'url': 'https://' + (portainer_domain | default('portainer.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_nextcloud | default(false)) | ternary([
+          {'name': 'nextcloud', 'title': 'Nextcloud', 'desc': 'Self-hosted cloud storage', 'url': 'https://' + (nextcloud_domain | default('cloud.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_n8n | default(false)) | ternary([
+          {'name': 'n8n', 'title': 'n8n', 'desc': 'Workflow automation', 'url': 'https://' + (n8n_domain | default('n8n.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_openwebui | default(false)) | ternary([
+          {'name': 'openwebui', 'title': 'AI Chat', 'desc': 'Chat UI for Ollama', 'url': 'https://' + (openwebui_domain | default('ai.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_uptime_kuma | default(false)) | ternary([
+          {'name': 'uptime-kuma', 'title': 'Uptime Kuma', 'desc': 'Service monitoring dashboard', 'url': 'https://' + (uptime_kuma_domain | default('uptime.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_jellyfin | default(false)) | ternary([
+          {'name': 'jellyfin', 'title': 'Jellyfin', 'desc': 'Media server', 'url': 'https://' + (jellyfin_domain | default('media.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_wordpress | default(false)) | ternary([
+          {'name': 'wordpress', 'title': 'WordPress', 'desc': 'Content management system', 'url': 'https://' + (wordpress_domain | default('wp.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_kiwix | default(false)) | ternary([
+          {'name': 'kiwix', 'title': 'Wikipedia Offline', 'desc': 'Offline knowledge library', 'url': 'https://' + (kiwix_domain | default('kiwix.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_homeassistant | default(false)) | ternary([
+          {'name': 'homeassistant', 'title': 'Home Assistant', 'desc': 'Home automation', 'url': 'https://' + (homeassistant_domain | default('home.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_calibreweb | default(false)) | ternary([
+          {'name': 'calibreweb', 'title': 'Books', 'desc': 'Ebook library', 'url': 'https://' + (calibreweb_domain | default('books.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_erpnext | default(false)) | ternary([
+          {'name': 'erpnext', 'title': 'ERPNext', 'desc': 'ERP and accounting', 'url': 'https://' + (erpnext_domain | default('erp.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_outline | default(false)) | ternary([
+          {'name': 'outline', 'title': 'Wiki', 'desc': 'Team knowledge base', 'url': 'https://' + (outline_domain | default('wiki.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_freescout | default(false)) | ternary([
+          {'name': 'freescout', 'title': 'Helpdesk', 'desc': 'Customer support ticketing', 'url': 'https://' + (freescout_domain | default('helpdesk.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_metabase | default(false)) | ternary([
+          {'name': 'metabase', 'title': 'BI Dashboards', 'desc': 'Business intelligence', 'url': 'https://' + (metabase_domain | default('bi.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_superset | default(false)) | ternary([
+          {'name': 'superset', 'title': 'Superset', 'desc': 'Data visualization and exploration', 'url': 'https://' + (superset_domain | default('superset.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_authentik | default(false)) | ternary([
+          {'name': 'authentik', 'title': 'SSO Admin', 'desc': 'Identity provider and SSO', 'url': 'https://' + (authentik_domain | default('auth.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_infisical | default(false)) | ternary([
+          {'name': 'infisical', 'title': 'Secrets Vault', 'desc': 'Centralized secrets management', 'url': 'https://' + (infisical_domain | default('vault.dev.local')), 'icon': ''}
+        ], []))
+        + ((install_vaultwarden | default(false)) | ternary([
+          {'name': 'vaultwarden', 'title': 'Password Vault', 'desc': 'Bitwarden-compatible password manager', 'url': 'https://' + (vaultwarden_domain | default('pass.dev.local')), 'icon': ''}
+        ], []))
+      }}
+  when: _puter_apps_ready.status | default(0) == 200
+
+- name: "[pazny.puter Apps] Register apps in Puter DB"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const crypto = require('crypto');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const exists = db.prepare('SELECT name FROM apps WHERE name = ?').get('{{ item.name }}');
+    if (!exists) {
+      db.prepare('INSERT INTO apps (uid, name, title, description, icon, index_url, approved_for_listing, approved_for_opening_items) VALUES (?, ?, ?, ?, ?, ?, 1, 1)').run(
+        'app-' + crypto.randomUUID(), '{{ item.name }}', '{{ item.title }}', '{{ item.desc }}', '{{ item.icon }}', '{{ item.url }}'
+      );
+      console.log('REGISTERED');
+    } else {
+      console.log('EXISTS');
+    }
+    "
+  loop: "{{ _puter_apps }}"
+  loop_control:
+    label: "{{ item.title }}"
+  register: _puter_app_reg
+  changed_when: "'REGISTERED' in (_puter_app_reg.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when:
+    - _puter_apps_ready.status | default(0) == 200
+    - _puter_apps | default([]) | length > 0
+
+- name: "[pazny.puter Apps] Summary"
+  ansible.builtin.debug:
+    msg: "Registered {{ _puter_apps | default([]) | length }} app(s) in Puter Start menu"
+  when: _puter_apps_ready.status | default(0) == 200

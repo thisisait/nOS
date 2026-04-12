@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# pazny.n8n — n8n in Docker (iiab compose override)
+#
+# Credentials (n8n_admin_password) a site metadata zustavaji v top-level
+# default.config.yml + default.credentials.yml — stale centralizovane,
+# role je jen cte pres Ansible var precedence (vars_files > role defaults).
+# ==============================================================================
+
+n8n_version: "2.14.1"  # CVE-2026-33660/33696/33663/33713 pin
+n8n_port: 5678
+n8n_domain: "n8n.dev.local"
+n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
+n8n_timezone: "Europe/Prague"
+n8n_admin_firstname: "Admin"
+n8n_admin_lastname: "devBoxNOS"
+n8n_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+n8n_cpus: "{{ docker_cpus_standard | default('1.0') }}"
