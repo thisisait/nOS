@@ -1,0 +1,62 @@
+---
+# ==============================================================================
+# BOXAPI – Box Management API (FastAPI + uvicorn via launchd)
+# Poskytuje REST API pro správu devBoxNOS: health, services, status, run-tag
+# ==============================================================================
+
+- name: "[BoxAPI] Create application directory"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/boxapi"
+    state: directory
+    mode: '0755'
+
+- name: "[BoxAPI] Copy application files"
+  ansible.builtin.copy:
+    src: "boxapi/{{ item }}"
+    dest: "{{ ansible_facts['env']['HOME'] }}/boxapi/{{ item }}"
+    mode: '0644'
+  loop:
+    - main.py
+    - requirements.txt
+
+- name: "[BoxAPI] Create Python venv"
+  ansible.builtin.command:
+    cmd: python3 -m venv venv
+    chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
+    creates: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/python"
+
+- name: "[BoxAPI] Install Python dependencies"
+  ansible.builtin.command:
+    cmd: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/pip install --no-cache-dir -r requirements.txt"
+    chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
+  register: _boxapi_pip
+  changed_when: "'Successfully installed' in _boxapi_pip.stdout"
+
+- name: "[BoxAPI] Deploy launchd plist"
+  ansible.builtin.template:
+    src: boxapi-launchd.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.api.plist"
+    mode: '0644'
+  notify: Restart boxapi
+
+- name: "[BoxAPI] Load launchd service"
+  ansible.builtin.command: >
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.api.plist
+  register: _boxapi_load
+  changed_when: "'Bootstrap failed: 5' not in (_boxapi_load.stderr | default(''))"
+  failed_when: >
+    _boxapi_load.rc != 0 and
+    'Bootstrap failed: 5' not in (_boxapi_load.stderr | default('')) and
+    'service already loaded' not in (_boxapi_load.stderr | default(''))
+
+- name: "[BoxAPI] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ======================================================
+       Box Management API -- pripraven
+      ======================================================
+       URL:     https://{{ boxapi_domain | default('api.dev.local') }}
+       Port:    {{ boxapi_port | default(8099) }}
+       Health:  https://{{ boxapi_domain | default('api.dev.local') }}/api/health
+       Status:  https://{{ boxapi_domain | default('api.dev.local') }}/api/status
+      ======================================================

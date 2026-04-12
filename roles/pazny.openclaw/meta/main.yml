@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: openclaw
+  namespace: pazny
+  author: Pázny
+  description: OpenClaw (Inspektor Klepítko) — self-hosted AI agent s Ollama backendem (devBoxNOS)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Žádné role dependencies — Homebrew, Node.js (NVM) a nginx se řídí
+# mimo tuto roli v main.yml. Source file/openclaw/ a files/project-openclaw/
+# zůstávají v playbook repo.
+dependencies: []
+
+collections:
+  - community.general  # community.general.homebrew

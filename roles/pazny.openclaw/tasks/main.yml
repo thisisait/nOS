@@ -1,0 +1,285 @@
+---
+# ==============================================================================
+# OPENCLAW – Self-hosted AI agent s Ollama backendem
+# Žádný API klíč, vše lokálně na Mac Studio
+# ==============================================================================
+
+# ── 1. Ollama (lokální LLM inference) ─────────────────────────────────────────
+
+- name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend na Apple Silicon)"
+  community.general.homebrew:
+    name: ollama
+    state: latest
+
+- name: "[Ollama] Set memory optimization env vars"
+  ansible.builtin.command: "launchctl setenv {{ item.key }} {{ item.value }}"
+  loop:
+    - { key: "OLLAMA_MAX_LOADED_MODELS", value: "{{ ollama_max_loaded_models | default(1) }}" }
+    - { key: "OLLAMA_NUM_PARALLEL", value: "{{ ollama_num_parallel | default(2) }}" }
+    - { key: "OLLAMA_KEEP_ALIVE", value: "{{ ollama_keep_alive | default('5m') }}" }
+    - { key: "OLLAMA_FLASH_ATTENTION", value: "{{ ollama_flash_attention | default(1) }}" }
+  loop_control:
+    label: "{{ item.key }}={{ item.value }}"
+  changed_when: false
+
+- name: "[Ollama] Start Ollama as homebrew service"
+  ansible.builtin.command: brew services start ollama
+  register: ollama_svc
+  changed_when: >
+    'already started' not in (ollama_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
+  failed_when: >
+    ollama_svc.rc != 0 and
+    'already started' not in (ollama_svc.stdout | default('')) and
+    'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
+
+- name: "[Ollama] Wait for Ollama API to be ready"
+  ansible.builtin.uri:
+    url: http://127.0.0.1:11434/api/tags
+    method: GET
+    status_code: 200
+  register: ollama_ready
+  until: ollama_ready.status == 200
+  retries: 15
+  delay: 4
+
+- name: "[Ollama] Pull primary model ({{ openclaw_model }})"
+  ansible.builtin.command: ollama pull {{ openclaw_model }}
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  changed_when: false
+  # Stahování modelu může trvat déle (27B ~ 17GB)
+  async: 1800
+  poll: 30
+
+# ── 2. OpenClaw instalace ──────────────────────────────────────────────────────
+
+- name: "[OpenClaw] Check if OpenClaw is already installed"
+  ansible.builtin.command: which openclaw
+  register: openclaw_which
+  changed_when: false
+  failed_when: false
+
+- name: "[OpenClaw] Install OpenClaw via npm"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    npm install -g openclaw
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: openclaw_which.rc != 0
+  changed_when: true
+
+# ── 3. Adresářová struktura agentického systému ────────────────────────────────
+
+- name: "[OpenClaw] Create agentic directory structure"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ openclaw_agents_dir }}"
+    - "{{ openclaw_log_dir }}"
+    - "{{ openclaw_projects_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/.openclaw"
+    - "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace"
+
+# ── 4. Non-interactive onboarding (Ollama) ───────────────────────────────────
+
+- name: "[OpenClaw] Check if already onboarded"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/.openclaw/openclaw.json"
+  register: _oc_config
+
+- name: "[OpenClaw] Run non-interactive onboarding"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    export OLLAMA_API_KEY="ollama-local"
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice ollama \
+      --custom-base-url "http://127.0.0.1:11434" \
+      --custom-model-id "{{ openclaw_model }}" \
+      --accept-risk \
+      --workspace "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace" \
+      --gateway-port 18789 \
+      --gateway-bind loopback \
+      --install-daemon \
+      --skip-health \
+      --skip-skills
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    OLLAMA_API_KEY: "ollama-local"
+  when: not _oc_config.stat.exists
+  register: _oc_onboard
+  failed_when: false
+  changed_when: _oc_onboard.rc == 0
+
+- name: "[OpenClaw] Set maxConcurrent in config"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default
+    openclaw config set agents.defaults.maxConcurrent {{ openclaw_max_concurrent_agents | default(4) }} --strict-json
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  changed_when: false
+  failed_when: false
+
+# ── 5. Workspace bootstrap soubory ──────────────────────────────────────────
+
+- name: "[OpenClaw] Deploy SOUL.md (Inspektor Klepítko persona)"
+  ansible.builtin.copy:
+    src: openclaw/SOUL.md
+    dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/SOUL.md"
+    mode: '0644'
+
+- name: "[OpenClaw] Deploy AGENTS.md (sub-agents config)"
+  ansible.builtin.copy:
+    src: openclaw/AGENTS.md
+    dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/AGENTS.md"
+    mode: '0644'
+
+- name: "[OpenClaw] Deploy TOOLS.md (allowed tools)"
+  ansible.builtin.copy:
+    src: openclaw/TOOLS.md
+    dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/TOOLS.md"
+    mode: '0644'
+
+- name: "[OpenClaw] Ensure OLLAMA_API_KEY in shell profile"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} OPENCLAW – ANSIBLE MANAGED"
+    block: |
+      export OLLAMA_API_KEY="ollama-local"
+      export OLLAMA_MAX_LOADED_MODELS="{{ ollama_max_loaded_models | default(1) }}"
+      export OLLAMA_NUM_PARALLEL="{{ ollama_num_parallel | default(2) }}"
+      export OLLAMA_KEEP_ALIVE="{{ ollama_keep_alive | default('5m') }}"
+    create: true
+
+- name: "[OpenClaw] Secure openclaw config directory permissions"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.openclaw"
+    mode: '0700'
+    state: directory
+
+# ── 5. Log šablony a inicializační soubory ────────────────────────────────────
+
+- name: "[OpenClaw] Copy log template"
+  ansible.builtin.copy:
+    src: openclaw/log-template.md
+    dest: "{{ openclaw_log_dir }}/_TEMPLATE.md"
+    mode: '0644'
+
+- name: "[OpenClaw] Create initial README in log dir"
+  ansible.builtin.copy:
+    dest: "{{ openclaw_log_dir }}/README.md"
+    content: |
+      # Inspektor Klepítko – Log agentické práce
+
+      Tento adresář obsahuje strukturované záznamy (.md soubory) o práci agentů.
+
+      ## Konvence pojmenování
+      ```
+      YYYY-MM-DD_TASK-NNN_krátký-popis.md
+      ```
+
+      ## Stav úkolů
+      - `STATUS: PLANNED` – naplánováno, čeká na spuštění
+      - `STATUS: IN_PROGRESS` – probíhá
+      - `STATUS: COMPLETE` – dokončeno
+      - `STATUS: FAILED` – selhalo (viz sekce Výsledek)
+      - `STATUS: DELEGATED` – přiděleno sub-agentovi
+
+      ## Adresáře systému
+      | Cesta | Účel |
+      |-------|------|
+      | `{{ openclaw_agents_dir }}/` | Instalace a config agentů |
+      | `{{ openclaw_log_dir }}/` | Tento adresář – logy |
+      | `{{ openclaw_projects_dir }}/` | Projekty hostované přes nginx |
+      | `{{ homebrew_prefix }}/etc/nginx/sites-available/` | Nginx vhost konfigurace |
+    mode: '0644'
+    force: false
+
+- name: "[OpenClaw] Deploy onboard.sh script"
+  ansible.builtin.copy:
+    src: openclaw/onboard.sh
+    dest: "{{ openclaw_agents_dir }}/onboard.sh"
+    mode: '0755'
+
+# ── 6. Nginx – aktualizace webroot na ~/projects/ ──────────────────────
+
+- name: "[OpenClaw] Ensure nginx default project dir exists"
+  ansible.builtin.file:
+    path: "{{ openclaw_projects_dir }}/default"
+    state: directory
+    mode: '0755'
+
+- name: "[OpenClaw] Create default project landing page"
+  ansible.builtin.copy:
+    dest: "{{ openclaw_projects_dir }}/default/index.html"
+    content: |
+      <!DOCTYPE html>
+      <html lang="cs">
+      <head>
+        <meta charset="UTF-8">
+        <title>Inspektor Klepítko – Server</title>
+        <style>
+          body { font-family: monospace; background: #0d1117; color: #e6edf3;
+                 display: flex; justify-content: center; align-items: center;
+                 min-height: 100vh; margin: 0; }
+          .card { border: 1px solid #30363d; padding: 2rem; border-radius: 8px;
+                  max-width: 600px; }
+          h1 { color: #58a6ff; }
+          code { background: #161b22; padding: 2px 6px; border-radius: 4px;
+                 color: #79c0ff; }
+          .status { color: #3fb950; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>🦞 Inspektor Klepítko</h1>
+          <p class="status">● Server běží</p>
+          <p>Pro přidání projektu:</p>
+          <ol>
+            <li>Zkopíruj soubory do <code>{{ openclaw_projects_dir }}/&lt;projekt&gt;/</code></li>
+            <li>Zkopíruj a uprav nginx vhost z
+              <code>{{ homebrew_prefix }}/etc/nginx/sites-available/</code></li>
+            <li>Restartuj: <code>brew services restart nginx</code></li>
+          </ol>
+        </div>
+      </body>
+      </html>
+    mode: '0644'
+    force: false
+
+# ── 7. Finální výpis ─────────────────────────────────────────────────────────
+
+- name: "[OpenClaw] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Inspektor Klepitko – OpenClaw pripraven
+      ══════════════════════════════════════════════════════
+       Model:     {{ openclaw_model }} (Ollama, 100% lokalne)
+       Config:    ~/.openclaw/openclaw.json
+       Workspace: ~/.openclaw/workspace/
+       Persona:   ~/.openclaw/workspace/SOUL.md
+       Agenti:    {{ openclaw_agents_dir }}/
+       Projekty:  {{ openclaw_projects_dir }}/
+       Logy:      {{ openclaw_log_dir }}/
+
+       Gateway:   openclaw gateway run
+       TUI:       openclaw tui
+       Health:    openclaw health
+      ══════════════════════════════════════════════════════

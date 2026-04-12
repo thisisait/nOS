@@ -1,0 +1,16 @@
+---
+# pazny.jsos — handlers
+# Restart jsos je definovaný i na play-level v main.yml pro zpetnou
+# kompatibilitu s notify: z tasku mimo tuto roli. Play-level handler
+# prebira prednost, takze tenhle role-lokalni je prakticky unreachable,
+# ale definovany zustava kvuli samostatnosti role.
+
+- name: Restart jsos
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh && \
+    pm2 restart jsos 2>/dev/null || \
+    pm2 start {{ jsos_dir | default('~/projects/jsOs') }}/ecosystem.config.js
+    pm2 save --force
+  args:
+    executable: /bin/bash
+  failed_when: false

@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: jsos
+  namespace: pazny
+  author: Pázny
+  description: jsOS webový desktop (OS.js v3, Node.js, PM2) pro devBoxNOS
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Žádné role dependencies — Node.js (NVM), PostgreSQL a Redis se
+# instalují / spouští mimo tuto roli v main.yml a tasks/stacks/core-up.yml.
+# Zdrojové soubory (files/jsos/, files/project-jsOs/) a template soubory
+# zůstávají v playbook repo a role na ně odkazuje přes {{ playbook_dir }}.
+# Tasky používají jenom ansible.builtin, žádné extra collection.
+dependencies: []

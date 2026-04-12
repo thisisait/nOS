@@ -1,0 +1,12 @@
+---
+# ==============================================================================
+# pazny.boxapi — Box Management API (FastAPI + uvicorn via launchd)
+#
+# Secret (boxapi_secret) zůstává v top-level default.credentials.yml aby
+# prefix rotation přes global_password_prefix fungovala konzistentně.
+# App source files/boxapi/ a šablona boxapi-launchd.plist.j2 zůstávají
+# v playbook repo.
+# ==============================================================================
+
+boxapi_port: 8099
+boxapi_domain: "api.{{ instance_tld | default('dev.local') }}"

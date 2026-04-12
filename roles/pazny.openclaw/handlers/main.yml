@@ -1,0 +1,11 @@
+---
+# pazny.openclaw — handlers
+# Restart openclaw je definovany i na play-level v main.yml pro zpetnou
+# kompatibilitu s notify: z tasku mimo tuto roli. Play-level handler
+# prebira prednost, takze tenhle role-lokalni je prakticky unreachable,
+# ale definovany zustava kvuli samostatnosti role.
+
+- name: Restart openclaw
+  ansible.builtin.command: >
+    launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.openclaw.agent"
+  failed_when: false

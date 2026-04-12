@@ -1,0 +1,20 @@
+---
+# ==============================================================================
+# pazny.jsos — jsOS webový desktop (OS.js v3)
+#
+# Citlivé údaje (jsos_session_secret, jsos_db_password) zůstávají v top-level
+# default.credentials.yml aby prefix rotation přes global_password_prefix
+# fungovala konzistentně. App source files/jsos/ a files/project-jsOs/
+# zůstávají v playbook repo — role na ně odkazuje přes playbook_dir path.
+# ==============================================================================
+
+jsos_domain: "jsos.dev.local"
+jsos_port: 8070
+jsos_dir: "{{ ansible_facts['env']['HOME'] }}/projects/jsOs"
+jsos_db_name: "jsos"
+jsos_db_user: "jsos"
+jsos_bluesky_pds_url: "https://bsky.social"
+jsos_admin_handles: []
+jsos_provision_s3_buckets: true
+jsos_provision_databases: true
+jsos_provision_redis_namespace: true
