@@ -15,7 +15,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
    - Notifies `Restart portainer` if the override template changed
 
 2. **Post (`tasks/post.yml`)** — runs *after* `docker compose up infra --wait`:
-   - Waits for `/api/status` (12 × 10s)
+   - Waits for `/api/system/status` (12 × 10s)
    - Creates the admin user via `POST /api/users/admin/init` (fresh install)
    - **Password reconverge** — session-based `PUT /api/users/1/passwd` using `previous_password_prefix` as the OLD auth. **PARTIAL**: only rotates by one prefix at a time. Two+ steps drift → manual reset required.
    - When `install_authentik` is true: configures OAuth2/OIDC settings via `PUT /api/settings` using the Portainer Client ID/Secret from the centralized `authentik_oidc_apps` registry

@@ -12,3 +12,4 @@ credentials.yml
 vision.md
 _credentials.yml
 .ansible-prefix-state
+.claude/

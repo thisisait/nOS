@@ -12,7 +12,7 @@
 
 - name: "[pazny.portainer Post] Wait for API to be ready"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/status"
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
     method: GET
     timeout: 5
     status_code: [200]

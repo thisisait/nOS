@@ -18,7 +18,7 @@ services:
     depends_on:
       - docker-socket-proxy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/status || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10

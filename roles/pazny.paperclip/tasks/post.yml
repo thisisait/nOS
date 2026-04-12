@@ -11,14 +11,23 @@
 # na existujici hostname.
 # ==============================================================================
 
+- name: "[pazny.paperclip Post] Check if Paperclip is already onboarded"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    test -f /paperclip/instances/default/config.json && echo "exists"
+  register: _paperclip_config_check
+  changed_when: false
+  failed_when: false
+
 - name: "[pazny.paperclip Post] Initialize Paperclip instance (non-interactive onboard)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai onboard --yes --data-dir /paperclip 2>&1
   timeout: 120
   register: _paperclip_onboard
-  changed_when: "'created' in (_paperclip_onboard.stdout | default('') | lower) or 'saved' in (_paperclip_onboard.stdout | default('') | lower)"
+  changed_when: "'Configuration ready' in (_paperclip_onboard.stdout | default(''))"
   failed_when: false
+  when: "'exists' not in (_paperclip_config_check.stdout | default(''))"
 
 - name: "[pazny.paperclip Post] Wait for Paperclip API readiness"
   ansible.builtin.uri:
