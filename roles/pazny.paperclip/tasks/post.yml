@@ -22,8 +22,7 @@
 - name: "[pazny.paperclip Post] Initialize Paperclip instance (non-interactive onboard)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
-    pnpm paperclipai onboard --yes --data-dir /paperclip 2>&1
-  timeout: 120
+    timeout 120 pnpm paperclipai onboard --yes --data-dir /paperclip 2>&1 || true
   register: _paperclip_onboard
   changed_when: "'Configuration ready' in (_paperclip_onboard.stdout | default(''))"
   failed_when: false
