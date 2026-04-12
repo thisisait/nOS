@@ -5,8 +5,8 @@
 # Traefik poskytuje Docker service discovery + ingress pro lokalni vyvoj.
 # Pouzivame ho vedle nginx — nginx resi vhost routing pro nativni sluzby,
 # Traefik zachytava dynamicka Docker labely. Konfig soubory (traefik.yml
-# + conf.d/) renderuje tasks/iiab/traefik.yml pred compose up — role je
-# jen cte pres bind mount.
+# + conf.d/) renderuje tato role (templates/traefik.yml.j2) a Traefik
+# je cte pres bind mount.
 # ==============================================================================
 
 traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin

@@ -2,14 +2,9 @@
 # ==============================================================================
 # pazny.traefik/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori config dir a vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/traefik.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
-#
-# Samotny traefik.yml (Traefik static config) + conf.d/ renderuje
-# legacy tasks/iiab/traefik.yml pred volanim core-up — pro Wave 2.2
-# zustava dual-write, coordinator v Phase B rozhodne o migraci.
+# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`.
+# Renderuje Traefik static config (traefik.yml) do {{ traefik_config_dir }}
+# a compose override fragment do {{ stacks_dir }}/infra/overrides/.
 # ==============================================================================
 
 - name: "[pazny.traefik] Ensure config directory exists"
@@ -20,6 +15,13 @@
   loop:
     - "{{ traefik_config_dir }}"
     - "{{ traefik_config_dir }}/conf.d"
+
+- name: "[pazny.traefik] Render Traefik static configuration"
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_config_dir }}/traefik.yml"
+    mode: '0644'
+  notify: Restart traefik
 
 - name: "[pazny.traefik] Render compose override fragment"
   ansible.builtin.template:
