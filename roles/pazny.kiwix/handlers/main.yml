@@ -1,0 +1,10 @@
+---
+# pazny.kiwix — handlers
+# Kiwix nema play-level handler v main.yml (pred Wave 2.2). Tento role-lokalni
+# handler je notified z tasks/main.yml pri zmene compose override template.
+
+- name: Restart kiwix
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart kiwix
+  failed_when: false

@@ -1,0 +1,15 @@
+---
+# ==============================================================================
+# pazny.vaultwarden — Bitwarden-kompatibilni personal password vault
+#
+# Credentials (vaultwarden_admin_token) zustavaji v default.credentials.yml
+# a jsou prefix-rotovane. OIDC/SSO integrace je volitelna (install_authentik).
+# ==============================================================================
+
+vaultwarden_version: "1.35.4"                       # CVE-2026-27802/27803 + CVE-2025-24364
+vaultwarden_port: 8062
+vaultwarden_domain: "pass.dev.local"
+vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
+vaultwarden_signups_allowed: false                  # Admin creates accounts
+vaultwarden_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+vaultwarden_cpus: "{{ docker_cpus_light | default('0.5') }}"

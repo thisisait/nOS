@@ -1,0 +1,141 @@
+---
+# ==============================================================================
+# pazny.jellyfin/tasks/post.yml — auto-onboarding via Startup API
+#
+# Jellyfin exposes /Startup/* endpoints only before first configuration.
+# Flow: POST /Startup/Configuration -> /Startup/User -> /Startup/Complete.
+#
+# Po dokonceni startup wizardu vraci /Startup/* 403. Pro non-blank runy
+# reconverge heslo pres AuthenticateUserByName -> POST /Users/{id}/Password
+# s previous_password_prefix pro OLD heslo. Degrades gracefully at DRIFT.
+# ==============================================================================
+
+- name: "[pazny.jellyfin Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/health"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _jf_ready
+  until: _jf_ready.status | default(0) == 200
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] Check startup configuration state"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/Configuration"
+    method: GET
+    timeout: 10
+    status_code: [200, 403]
+  register: _jf_startup
+  failed_when: false
+  when: _jf_ready.status | default(0) == 200
+
+- name: "[pazny.jellyfin Post] Set initial configuration"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/Configuration"
+    method: POST
+    body_format: json
+    body:
+      UICulture: "{{ jellyfin_language | default('en-US') }}"
+      MetadataCountryCode: "{{ jellyfin_country | default('CZ') }}"
+      PreferredMetadataLanguage: "{{ jellyfin_language | default('en') }}"
+    status_code: [204, 200]
+    timeout: 10
+  when:
+    - _jf_startup.status | default(0) == 200
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] Create admin user"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/User"
+    method: POST
+    body_format: json
+    body:
+      Name: "{{ jellyfin_admin_user | default('admin') }}"
+      Password: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+    status_code: [204, 200]
+    timeout: 10
+  when:
+    - _jf_startup.status | default(0) == 200
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] Complete startup wizard"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/Complete"
+    method: POST
+    status_code: [204, 200]
+    timeout: 10
+  when:
+    - _jf_startup.status | default(0) == 200
+  failed_when: false
+
+# -- Post-wizard password reconverge (state-declarative UPDATE) ----------
+- name: "[pazny.jellyfin Post] Authenticate with current password (converged check)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Users/AuthenticateByName"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: 'MediaBrowser Client="devBoxNOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+    body:
+      Username: "{{ jellyfin_admin_user | default('admin') }}"
+      Pw: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _jf_auth_new
+  when:
+    - _jf_ready.status | default(0) == 200
+    - _jf_startup.status | default(0) == 403  # wizard already complete
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] Authenticate with previous password (for reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Users/AuthenticateByName"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: 'MediaBrowser Client="devBoxNOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+    body:
+      Username: "{{ jellyfin_admin_user | default('admin') }}"
+      Pw: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_jellyfin"
+    status_code: [200, 401]
+    timeout: 10
+  register: _jf_auth_old
+  when:
+    - _jf_ready.status | default(0) == 200
+    - _jf_auth_new.status | default(0) != 200
+    - _jf_startup.status | default(0) == 403
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] POST /Users/{id}/Password (reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Users/{{ _jf_auth_old.json.User.Id }}/Password"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: 'MediaBrowser Token="{{ _jf_auth_old.json.AccessToken }}"'
+    body:
+      CurrentPw: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_jellyfin"
+      NewPw: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+    status_code: [200, 204]
+    timeout: 10
+  register: _jf_pw_reset
+  when:
+    - _jf_auth_old.status | default(0) == 200
+    - _jf_auth_old.json.AccessToken is defined
+  changed_when: _jf_pw_reset.status | default(0) in [200, 204]
+  failed_when: false
+
+- name: "[pazny.jellyfin Post] Password reconverge status"
+  ansible.builtin.debug:
+    msg: >-
+      Jellyfin admin pw:
+      {{ 'already converged' if (_jf_auth_new.status | default(0) == 200)
+         else ('updated' if (_jf_pw_reset.status | default(0) in [200, 204])
+               else ('DRIFT — manual reset required' if (_jf_startup.status | default(0) == 403) else 'fresh install')) }}
+  when: _jf_ready.status | default(0) == 200

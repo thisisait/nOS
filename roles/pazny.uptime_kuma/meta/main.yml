@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: uptime_kuma
+  namespace: pazny
+  author: Pázny
+  description: Uptime Kuma monitoring / status page (devBoxNOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []
+
+collections: []

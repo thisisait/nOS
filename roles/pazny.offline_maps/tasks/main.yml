@@ -1,0 +1,126 @@
+---
+# ==============================================================================
+# pazny.offline_maps/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori data adresar, vyrenderuje tileserver-gl config.json, stahne
+# volitelne MBTiles, enabluje nginx vhost, vyhodi helper download-maps.sh
+# a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/tileserver.yml.
+#
+# Zadny post-start — tileserver slouzi MBTiles staticky.
+#
+# Pozn.: Legacy tasks/iiab/maps.yml obsahovalo npm install tileserver-gl +
+# launchd plist (host-side instalace). Ted bezi pres Docker kontejner
+# `tileserver` z compose override, takze host-side npm/launchd je vypusteno.
+# ==============================================================================
+
+- name: "[pazny.offline_maps] Ensure maps data directory exists"
+  ansible.builtin.file:
+    path: "{{ maps_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.offline_maps] Ensure fonts directory exists"
+  ansible.builtin.file:
+    path: "{{ maps_data_dir }}/fonts"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.offline_maps] Create tileserver-gl configuration"
+  ansible.builtin.copy:
+    dest: "{{ maps_data_dir }}/config.json"
+    content: |
+      {
+        "options": {
+          "paths": {
+            "root": "/data",
+            "fonts": "/data/fonts",
+            "styles": "/data/styles",
+            "mbtiles": "/data"
+          }
+        },
+        "styles": {},
+        "data": {
+          "v3": {
+            "mbtiles": "/data/*.mbtiles"
+          }
+        }
+      }
+    force: false
+    mode: '0644'
+
+- name: "[pazny.offline_maps] Download MBTiles files"
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ maps_data_dir }}/{{ item.dest }}"
+    mode: '0644'
+    timeout: 3600
+  loop: "{{ maps_mbtiles_files | default([]) }}"
+  when: (maps_mbtiles_files | default([])) | length > 0
+
+- name: "[pazny.offline_maps] Deploy nginx reverse proxy vhost"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/nginx/sites-available/maps.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/maps.conf"
+    mode: '0644'
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.offline_maps] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/maps.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/maps.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.offline_maps] Create MBTiles download helper script"
+  ansible.builtin.copy:
+    dest: "{{ maps_data_dir }}/download-maps.sh"
+    content: |
+      #!/usr/bin/env zsh
+      # Pomocny script pro stahovani mapovych dat
+      # Zdroje dat:
+      #   MapTiler Cloud (free tier):  https://cloud.maptiler.com/maps/
+      #   OpenMapTiles:                https://data.maptiler.com/downloads/
+      #   BBBike extracts:             https://download.bbbike.org/osm/
+      #   Geofabrik:                   https://download.geofabrik.de/
+      #
+      # Priklad – CR z BBBike (volne dostupne):
+      #   curl -L -o czech-republic.mbtiles \
+      #     "https://download.bbbike.org/osm/bbbike/Prague/Prague.osm.pbf"
+      #   # Potom konvertuj pomoci: tippecanoe nebo tilemaker
+
+      echo "Viz komentare v tomto souboru pro zdroje mapovych dat."
+      echo "MBTiles dir: {{ maps_data_dir }}"
+    mode: '0755'
+
+- name: "[pazny.offline_maps] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ======================================================
+       Tileserver-gl (offline mapy) nainstalovan
+      ======================================================
+       URL:       https://{{ maps_domain | default('maps.dev.local') }}
+       Port:      {{ maps_port | default(8070) }}
+       Data dir:  {{ maps_data_dir }}
+
+       Stazeni mapovych dat:
+         {{ maps_data_dir }}/download-maps.sh
+
+       Nebo pridej do default.config.yml:
+         maps_mbtiles_files:
+           - url: "https://..."
+             dest: "czech-republic.mbtiles"
+
+       Pridej do /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps.dev.local') }}
+      ======================================================
+
+- name: "[pazny.offline_maps] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/tileserver.yml"
+    mode: '0644'
+  notify: Restart offline_maps

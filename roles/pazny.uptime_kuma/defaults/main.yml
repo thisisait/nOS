@@ -1,0 +1,17 @@
+---
+# ==============================================================================
+# pazny.uptime_kuma — Uptime Kuma (self-hosted monitoring / status page)
+#
+# Credentials (uptime_kuma_admin_password) zustavaji v default.credentials.yml
+# a jsou prefix-rotovane. Auto-monitors se odvijeji od install_* flagu v
+# default.config.yml — role list monitoru je v tasks/monitors.yml.
+# ==============================================================================
+
+uptime_kuma_version: "1"                            # "1" = latest v1.x; pin "1.23.13" apod.
+uptime_kuma_port: 3001
+uptime_kuma_domain: "uptime.dev.local"
+uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
+uptime_kuma_admin_user: "admin"
+uptime_kuma_auto_monitors: true                     # Automaticky vytvorit monitory pro vsechny install_* sluzby
+uptime_kuma_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+uptime_kuma_cpus: "{{ docker_cpus_light | default('0.5') }}"

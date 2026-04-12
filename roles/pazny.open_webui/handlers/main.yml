@@ -1,0 +1,14 @@
+---
+# pazny.open_webui — handlers
+# Play-level "Restart openwebui" v main.yml zatim ma prednost; tento handler
+# zustava pro samostatne pouziti role mimo devBoxNOS playbook.
+#
+# Pozn: compose service name je `open-webui` (pomlcka), ale existujici
+# play-level handler pouziva `openwebui` bez pomlcky — zachovano pro
+# binarni kompatibilitu s notify: Restart openwebui volanim mimo roli.
+
+- name: Restart openwebui
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart open-webui
+  failed_when: false

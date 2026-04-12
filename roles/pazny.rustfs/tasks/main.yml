@@ -1,0 +1,42 @@
+---
+# ==============================================================================
+# pazny.rustfs/tasks/main.yml
+#
+# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/rustfs.yml, ktery pak stack-up.yml sesbira
+# pres `find` a prida jako dodatecny -f flag.
+#
+# RustFS nema post-start setup — single kontejner, lokalni access.
+# ==============================================================================
+
+- name: "[pazny.rustfs] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ rustfs_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.rustfs] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/rustfs.yml"
+    mode: '0644'
+  notify: Restart rustfs
+
+- name: "[pazny.rustfs] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       RustFS připraven (spouští se přes IIAB stack)
+      ══════════════════════════════════════════════════════
+       S3 API:    http://localhost:{{ rustfs_api_port }}
+       Konzole:   http://localhost:{{ rustfs_console_port }}
+       Data:      {{ rustfs_data_dir }}
+
+       S3 endpoint pro klienty (aws-cli, rclone, restic…):
+         endpoint-url: http://localhost:{{ rustfs_api_port }}
+         access-key:   {{ rustfs_access_key }}
+      ══════════════════════════════════════════════════════

@@ -1,0 +1,208 @@
+---
+# ==============================================================================
+# pazny.uptime_kuma/tasks/monitors.yml — auto-konfigurace monitoru po startu
+#
+# Vytvari HTTP/TCP monitory pro vsechny nainstalovane sluzby. Vyzaduje pip
+# balicek uptime-kuma-api. Helper skripty (setup-monitors.py, reset-password.py)
+# jsou soucasti role a deploy-ujeme je do {{ uptime_kuma_data_dir }} pres
+# {{ role_path }}/files/.
+# ==============================================================================
+
+- name: "[pazny.uptime_kuma] Install uptime-kuma-api Python package"
+  ansible.builtin.command: pip3 install uptime-kuma-api
+  register: _kuma_pip
+  changed_when: "'Successfully installed' in (_kuma_pip.stdout | default(''))"
+  ignore_errors: true
+
+- name: "[pazny.uptime_kuma] Wait for API to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}/"
+    method: GET
+    timeout: 5
+    status_code: [200, 301, 302]
+    validate_certs: false
+  register: _kuma_ready
+  until: _kuma_ready.status | default(0) | int in [200, 301, 302]
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.uptime_kuma] Build monitor list from enabled services"
+  ansible.builtin.set_fact:
+    _kuma_monitors: >-
+      {{
+        [{'name': 'Nginx HTTPS', 'type': 'http', 'url': 'https://127.0.0.1/'}]
+        +
+        (install_mariadb | default(false)) | ternary(
+          [{'name': 'MariaDB', 'type': 'tcp', 'hostname': '127.0.0.1',
+            'port': mariadb_port | default(3306)}], [])
+        +
+        (install_observability | default(true)) | ternary(
+          [{'name': 'Grafana', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (grafana_port | default(3000)) ~ '/api/health'},
+           {'name': 'Prometheus', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (prometheus_port | default(9090)) ~ '/-/ready'},
+           {'name': 'Loki', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (loki_port | default(3100)) ~ '/ready'},
+           {'name': 'Tempo', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (tempo_http_port | default(3200)) ~ '/ready'}], [])
+        +
+        (install_nextcloud | default(false)) | ternary(
+          [{'name': 'Nextcloud', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (nextcloud_port | default(8085)) ~ '/status.php'}], [])
+        +
+        (install_n8n | default(false)) | ternary(
+          [{'name': 'N8N', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (n8n_port | default(5678)) ~ '/healthz'}], [])
+        +
+        (install_gitea | default(false)) | ternary(
+          [{'name': 'Gitea', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (gitea_port | default(3003)) ~ '/'}], [])
+        +
+        (install_jellyfin | default(false)) | ternary(
+          [{'name': 'Jellyfin', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (jellyfin_port | default(8096)) ~ '/health'}], [])
+        +
+        (install_portainer | default(false)) | ternary(
+          [{'name': 'Portainer', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (portainer_port | default(9002)) ~ '/'}], [])
+        +
+        (install_openwebui | default(false)) | ternary(
+          [{'name': 'Open WebUI', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (openwebui_port | default(3004)) ~ '/'}], [])
+        +
+        (install_wordpress | default(false)) | ternary(
+          [{'name': 'WordPress', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (wordpress_port | default(8084)) ~ '/'}], [])
+        +
+        (install_kiwix | default(false)) | ternary(
+          [{'name': 'Kiwix', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (kiwix_port | default(8888)) ~ '/'}], [])
+        +
+        (install_homeassistant | default(false)) | ternary(
+          [{'name': 'Home Assistant', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (homeassistant_port | default(8123)) ~ '/'}], [])
+        +
+        (install_calibreweb | default(false)) | ternary(
+          [{'name': 'Calibre-Web', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (calibreweb_port | default(8083)) ~ '/'}], [])
+        +
+        (install_jsos | default(false)) | ternary(
+          [{'name': 'jsOS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (jsos_port | default(8070)) ~ '/'}], [])
+        +
+        (install_paperclip | default(false)) | ternary(
+          [{'name': 'Paperclip', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (paperclip_port | default(3006)) ~ '/'}], [])
+        +
+        (install_puter | default(false)) | ternary(
+          [{'name': 'Puter', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (puter_port | default(5050)) ~ '/test'}], [])
+        +
+        (install_erpnext | default(false)) | ternary(
+          [{'name': 'ERPNext', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (erpnext_port | default(8082)) ~ '/'}], [])
+        +
+        (install_freescout | default(false)) | ternary(
+          [{'name': 'FreeScout', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (freescout_port | default(8090)) ~ '/'}], [])
+        +
+        (install_outline | default(false)) | ternary(
+          [{'name': 'Outline', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (outline_port | default(3005)) ~ '/'}], [])
+        +
+        (install_metabase | default(false)) | ternary(
+          [{'name': 'Metabase', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (metabase_port | default(3002)) ~ '/'}], [])
+        +
+        (install_superset | default(false)) | ternary(
+          [{'name': 'Superset', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (superset_port | default(8089)) ~ '/health'}], [])
+        +
+        (install_woodpecker | default(false)) | ternary(
+          [{'name': 'Woodpecker CI', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (woodpecker_port | default(8060)) ~ '/'}], [])
+        +
+        (install_rustfs | default(false)) | ternary(
+          [{'name': 'RustFS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (rustfs_console_port | default(9001)) ~ '/'}], [])
+        +
+        (install_bluesky_pds | default(false)) | ternary(
+          [{'name': 'Bluesky PDS', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (bluesky_pds_port | default(2583)) ~ '/xrpc/_health'}], [])
+        +
+        (install_freepbx | default(false)) | ternary(
+          [{'name': 'FreePBX', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (freepbx_port | default(8088)) ~ '/'}], [])
+        +
+        (install_qgis_server | default(false)) | ternary(
+          [{'name': 'QGIS Server', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (qgis_port | default(8071)) ~ '/'}], [])
+        +
+        (install_authentik | default(false)) | ternary(
+          [{'name': 'Authentik', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (authentik_port | default(9003)) ~ '/-/health/ready/'}], [])
+        +
+        (install_infisical | default(false)) | ternary(
+          [{'name': 'Infisical', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (infisical_port | default(8075)) ~ '/api/status'}], [])
+        +
+        (install_vaultwarden | default(false)) | ternary(
+          [{'name': 'Vaultwarden', 'type': 'http',
+            'url': 'http://127.0.0.1:' ~ (vaultwarden_port | default(8062)) ~ '/alive'}], [])
+      }}
+
+- name: "[pazny.uptime_kuma] Deploy helper scripts from role"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ uptime_kuma_data_dir }}/{{ item }}"
+    mode: '0755'
+  loop:
+    - setup-monitors.py
+    - reset-password.py
+
+# ── Reconverge admin password BEFORE monitor setup ──────────────────────
+# Password reconverge musi probehnout pred setup-monitors.py, aby login()
+# v monitor skriptu pouzil aktualni prefix. Script tries new pw first
+# (converged) → falls back to previous prefix + change_password → DRIFT.
+- name: "[pazny.uptime_kuma] Reconverge admin password"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ uptime_kuma_data_dir }}/reset-password.py"
+      - "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}"
+      - "{{ uptime_kuma_admin_user | default('admin') }}"
+      - "{{ uptime_kuma_admin_password }}"
+      - "{{ previous_password_prefix | default(global_password_prefix) }}_pw_uptime_kuma"
+  register: _kuma_pw_reset
+  changed_when: "'UPDATED' in (_kuma_pw_reset.stdout | default(''))"
+  failed_when: false
+  when:
+    - not (_kuma_pip.failed | default(false))
+    - _kuma_ready.status | default(0) | int in [200, 301, 302]
+
+- name: "[pazny.uptime_kuma] Auto-create monitors"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ uptime_kuma_data_dir }}/setup-monitors.py"
+      - "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}"
+      - "{{ uptime_kuma_admin_user | default('admin') }}"
+      - "{{ uptime_kuma_admin_password }}"
+      - "{{ _kuma_monitors | to_json }}"
+  register: _kuma_result
+  changed_when: "'Created' in (_kuma_result.stdout | default(''))"
+  failed_when: false
+  when:
+    - not (_kuma_pip.failed | default(false))
+    - _kuma_ready.status | default(0) | int in [200, 301, 302]
+    - uptime_kuma_auto_monitors | default(true)
+
+- name: "[pazny.uptime_kuma] Monitor setup result"
+  ansible.builtin.debug:
+    msg: "{{ _kuma_result.stdout_lines | default(_kuma_result.stderr_lines | default(['Skipped'])) }}"
+
+- name: "[pazny.uptime_kuma] WARN: pip install failed"
+  ansible.builtin.debug:
+    msg: "uptime-kuma-api pip install selhalo: {{ _kuma_pip.msg | default('unknown') }}. Monitory nebyly vytvořeny."
+  when: _kuma_pip.failed | default(false)

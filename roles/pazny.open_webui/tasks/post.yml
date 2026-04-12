@@ -1,0 +1,77 @@
+---
+# ==============================================================================
+# pazny.open_webui/tasks/post.yml — admin user creation + password reconverge
+#
+# Prvni registrovany uzivatel = admin (WEBUI_AUTH=true, ENABLE_SIGNUP=true).
+# Pro non-blank runy (rotated prefix) provadime state-declarative UPDATE
+# pres in-container python (sqlite3 + passlib bcrypt).
+# ==============================================================================
+
+- name: "[pazny.open_webui Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/config"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _owui_ready
+  until: _owui_ready.status | default(0) == 200
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.open_webui Post] Check if any user exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signin"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ openwebui_admin_email | default(default_admin_email) }}"
+      password: "{{ openwebui_admin_password | default(global_password_prefix + '_pw_openwebui_admin') }}"
+    status_code: [200, 400, 401, 403]
+    timeout: 10
+  register: _owui_login
+  failed_when: false
+  when: _owui_ready.status | default(0) == 200
+
+- name: "[pazny.open_webui Post] Register first admin user (first-run only)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signup"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ openwebui_admin_name | default('Admin') }}"
+      email: "{{ openwebui_admin_email | default(default_admin_email) }}"
+      password: "{{ openwebui_admin_password }}"
+    status_code: [200, 201]
+    timeout: 10
+  register: _owui_signup
+  when:
+    - _owui_ready.status | default(0) == 200
+    - _owui_login.status | default(0) != 200
+  changed_when: _owui_signup.status | default(0) in [200, 201]
+  failed_when: false
+
+# ── Reconverge admin password every run (state-declarative UPDATE) ──────
+# Open WebUI pouziva SQLite + bcrypt (passlib). Primy UPDATE pres
+# in-container python beha idempotentne.
+- name: "[pazny.open_webui Post] Reconverge admin password (SQLite + bcrypt)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T open-webui python3 -c "
+    import sqlite3
+    from passlib.context import CryptContext
+    pwd_ctx = CryptContext(schemes=['bcrypt'], deprecated='auto')
+    hashed = pwd_ctx.hash('{{ openwebui_admin_password }}')
+    db = sqlite3.connect('/app/backend/data/webui.db')
+    cur = db.cursor()
+    cur.execute('UPDATE auth SET password=? WHERE email=?', (hashed, '{{ openwebui_admin_email | default(default_admin_email) }}'))
+    db.commit()
+    print('UPDATED' if cur.rowcount > 0 else 'NOTFOUND')
+    db.close()
+    "
+  register: _owui_pw_update
+  when:
+    - _owui_ready.status | default(0) == 200
+    - _owui_login.status | default(0) == 200
+  changed_when: "'UPDATED' in (_owui_pw_update.stdout | default(''))"
+  failed_when: false
+  check_mode: false

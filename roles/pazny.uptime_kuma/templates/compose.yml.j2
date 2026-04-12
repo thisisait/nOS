@@ -1,0 +1,26 @@
+# =============================================================================
+# pazny.uptime_kuma — compose override fragment
+# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net je definovan v base
+# templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ uptime_kuma_port | default(3001) }}:3001"
+    volumes:
+      - {{ uptime_kuma_data_dir }}:/app/data
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ uptime_kuma_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}

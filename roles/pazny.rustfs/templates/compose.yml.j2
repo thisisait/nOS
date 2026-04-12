@@ -1,0 +1,31 @@
+# =============================================================================
+# pazny.rustfs — compose override fragment
+# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  rustfs:
+    image: rustfs/rustfs:{{ rustfs_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ rustfs_api_port | default(9010) }}:9000"
+      - "127.0.0.1:{{ rustfs_console_port | default(9001) }}:9001"
+    volumes:
+      - {{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data') }}:/data
+    environment:
+      RUSTFS_ACCESS_KEY: "{{ rustfs_access_key }}"
+      RUSTFS_SECRET_KEY: "{{ rustfs_secret_key }}"
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ rustfs_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}

@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# pazny.kiwix/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori data dir, stahne init ZIM (pokud neni zadny pritomen), vyrenderuje
+# nginx vhost a compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/kiwix.yml.
+#
+# Dalsi ZIM soubory downloaduje operator pres {{ kiwix_data_dir }}/download-zim.sh
+# (helper script je vytvoren zde) — operator tooling, ne role-owned.
+# ==============================================================================
+
+- name: "[pazny.kiwix] Ensure Kiwix data directory exists"
+  ansible.builtin.file:
+    path: "{{ kiwix_data_dir }}"
+    state: directory
+    mode: '0755'
+
+# Init ZIM – maly soubor stazeny automaticky aby Kiwix mohl nastartovat.
+# Bez alespon jednoho .zim kontejner crashloopuje.
+- name: "[pazny.kiwix] Check if any ZIM files exist"
+  ansible.builtin.find:
+    paths: "{{ kiwix_data_dir }}"
+    patterns: "*.zim"
+  register: _kiwix_zims
+
+- name: "[pazny.kiwix] Download init ZIM ({{ kiwix_init_zim_dest }})"
+  ansible.builtin.get_url:
+    url: "{{ kiwix_init_zim_url }}"
+    dest: "{{ kiwix_data_dir }}/{{ kiwix_init_zim_dest }}"
+    mode: '0644'
+    timeout: 600
+  when:
+    - _kiwix_zims.matched == 0
+    - kiwix_init_zim_url | default('') | length > 0
+
+# Dalsi ZIM soubory (volitelne, z config.yml)
+- name: "[pazny.kiwix] Download configured ZIM files"
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ kiwix_data_dir }}/{{ item.dest }}"
+    mode: '0644'
+    timeout: 3600
+  loop: "{{ kiwix_zim_files | default([]) }}"
+  when: (kiwix_zim_files | default([])) | length > 0
+
+# Nginx vhost templates zustavaji v playbook-level templates/nginx/
+# sites-available/ kvuli auto-enable patternu — proto absolutni cesta pres
+# {{ playbook_dir }}, ne role-lokalni templates/.
+- name: "[pazny.kiwix] Deploy nginx reverse proxy vhost"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/nginx/sites-available/kiwix.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/kiwix.conf"
+    mode: '0644'
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.kiwix] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/kiwix.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/kiwix.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.kiwix] Create ZIM file download helper script"
+  ansible.builtin.copy:
+    dest: "{{ kiwix_data_dir }}/download-zim.sh"
+    content: |
+      #!/usr/bin/env zsh
+      # Pomocny script pro stahovani ZIM souboru
+      # Pouziti: ./download-zim.sh <url>
+      # Seznam ZIM souboru: https://download.kiwix.org/zim/
+      #
+      # Doporucene soubory:
+      #   Wikipedia EN (top):  https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2026-03.zim (~315MB)
+      #   Wikipedia CS (mini): https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim (~500MB)
+      #   Gutenberg CS:        https://download.kiwix.org/zim/gutenberg/gutenberg_cs_all_2023-06.zim (~300MB)
+
+      set -euo pipefail
+      DATA_DIR="{{ kiwix_data_dir }}"
+
+      if [ $# -eq 0 ]; then
+        echo "Pouziti: $0 <url-zim-souboru>"
+        exit 1
+      fi
+
+      URL="$1"
+      FILENAME=$(basename "$URL")
+      echo "Stahuji: $URL -> $DATA_DIR/$FILENAME"
+      curl -L --progress-bar -o "$DATA_DIR/$FILENAME" "$URL"
+      echo "Hotovo! Restartuj Kiwix: docker compose -p iiab restart kiwix"
+    mode: '0755'
+
+- name: "[pazny.kiwix] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/kiwix.yml"
+    mode: '0644'
+  notify: Restart kiwix

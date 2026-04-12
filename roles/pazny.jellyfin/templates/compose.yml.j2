@@ -1,0 +1,35 @@
+# =============================================================================
+# pazny.jellyfin — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net je definovana v base
+# templates/stacks/iiab/docker-compose.yml.j2. Jellyfin je lokalni, ne-
+# pripojuje se na {{ stacks_shared_network }}.
+# =============================================================================
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if jellyfin_lan_access | default(false) or services_lan_access | default(false) %}
+      - "{{ jellyfin_port | default(8096) }}:8096"
+{% else %}
+      - "127.0.0.1:{{ jellyfin_port | default(8096) }}:8096"
+{% endif %}
+    volumes:
+      - {{ jellyfin_config_dir }}:/config
+      - {{ jellyfin_cache_dir }}:/cache
+      - {{ jellyfin_movies_dir }}:/media/movies:ro
+      - {{ jellyfin_shows_dir }}:/media/shows:ro
+      - {{ jellyfin_music_dir }}:/media/music:ro
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ jellyfin_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ jellyfin_cpus | default(docker_cpus_standard) }}

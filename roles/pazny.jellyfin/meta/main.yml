@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: jellyfin
+  namespace: pazny
+  author: Pázny
+  description: Jellyfin media server in Docker compose override (devBoxNOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Jellyfin je samostatna Docker sluzba.
+# Orchestrace (compose up + post-start wizard) je v tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

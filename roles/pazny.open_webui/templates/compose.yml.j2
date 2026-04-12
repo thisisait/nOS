@@ -1,0 +1,63 @@
+# =============================================================================
+# pazny.open_webui — compose override fragment
+# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ openwebui_port | default(3004) }}:8080"
+{% else %}
+      - "127.0.0.1:{{ openwebui_port | default(3004) }}:8080"
+{% endif %}
+    volumes:
+      - {{ openwebui_data_dir }}:/app/backend/data
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+    environment:
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      WEBUI_AUTH: "true"
+      WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default(global_password_prefix + '_pw_openwebui') }}"
+      ENABLE_SIGNUP: "{{ openwebui_enable_signup | default(true) | string | lower }}"
+      DEFAULT_USER_ROLE: "user"
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+      REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      ENABLE_OAUTH_SIGNUP: "true"
+      OAUTH_PROVIDER_NAME: "Authentik"
+      OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
+      OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
+      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/open-webui/.well-known/openid-configuration"
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
+      OAUTH_SCOPES: "openid profile email"
+{% endif %}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/config"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% if install_authentik | default(false) %}
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ openwebui_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

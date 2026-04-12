@@ -1,0 +1,25 @@
+---
+# ==============================================================================
+# pazny.kiwix — Kiwix offline knowledge server (iiab compose stack)
+#
+# Kiwix slouzi offline Wikipedia, Gutenberg a dalsi ZIM soubory. Vice ZIM
+# souboru lze stahnout pres {{ kiwix_data_dir }}/download-zim.sh helper.
+#
+# Centralizovane promenne (kiwix_domain, kiwix_port, kiwix_data_dir,
+# kiwix_init_zim_url, kiwix_zim_files) zustavaji v top-level
+# default.config.yml kvuli externalim konzumentum (nginx vhost render,
+# blank-reset path resolver). Role defaults poskytuji fallback.
+# ==============================================================================
+
+kiwix_version: "latest"
+kiwix_port: 8888
+kiwix_domain: "kiwix.dev.local"
+kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"
+
+kiwix_init_zim_url: "https://download.kiwix.org/zim/zimit/based.cooking_en_all_2026-02.zim"
+kiwix_init_zim_dest: "based-cooking.zim"
+
+kiwix_zim_files: []
+
+kiwix_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+kiwix_cpus: "{{ docker_cpus_light | default('0.5') }}"

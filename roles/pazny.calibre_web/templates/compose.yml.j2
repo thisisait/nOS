@@ -1,0 +1,36 @@
+# =============================================================================
+# pazny.calibre_web — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net je definovana v base
+# templates/stacks/iiab/docker-compose.yml.j2. Calibre-Web je lokalni,
+# nepripojuje se na {{ stacks_shared_network }}.
+#
+# Service name pouziva pomlcku (`calibre-web`), zatimco role name pouziva
+# podtrzitko (`calibre_web`) kvuli Ansible Galaxy naming rules.
+# =============================================================================
+
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ calibreweb_port | default(8083) }}:8083"
+    volumes:
+      - {{ calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config') }}:/config
+      - {{ calibreweb_books_dir }}:/books
+    environment:
+      PUID: "{{ ansible_facts['user_uid'] }}"
+      PGID: "{{ ansible_facts['user_gid'] }}"
+      TZ: "{{ calibreweb_timezone | default('Europe/Prague') }}"
+      DOCKER_MODS: linuxserver/mods:universal-calibre
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ calibreweb_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ calibreweb_cpus | default(docker_cpus_light) }}

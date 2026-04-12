@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.infisical/tasks/post.yml — pockat na ready + info.
+# ==============================================================================
+
+- name: "[pazny.infisical Post] Wait for server to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ infisical_port | default(8075) }}/api/status"
+    status_code: [200]
+    timeout: 10
+  register: _infisical_health
+  retries: 20
+  delay: 5
+  until: _infisical_health.status | default(0) == 200
+  failed_when: false
+
+- name: "[pazny.infisical Post] Status"
+  ansible.builtin.debug:
+    msg: >-
+      Infisical {{ 'OK' if _infisical_health.status | default(0) == 200
+      else 'NEDOSTUPNY – docker logs infra-infisical-1' }}
+      | Dashboard: https://{{ infisical_domain | default('vault.dev.local') }}
+      | Signup: prvni uzivatel = admin

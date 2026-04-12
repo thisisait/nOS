@@ -1,0 +1,114 @@
+---
+# ==============================================================================
+# pazny.homeassistant/tasks/post.yml — auto-onboarding via /api/onboarding/*
+#
+# HA exposes onboarding endpoints only before first user is created.
+# Flow: POST /api/onboarding/users -> /api/onboarding/core_config
+#       -> /api/onboarding/analytics -> /api/onboarding/integration.
+#
+# Po prvnim runu je onboarding API zavrena. Reconverge admin hesla bezi
+# pres `hass --script auth change_password` CLI uvnitr kontejneru.
+# ==============================================================================
+
+- name: "[pazny.homeassistant Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/"
+    method: GET
+    timeout: 5
+    status_code: [200, 302]
+  register: _ha_ready
+  until: _ha_ready.status | default(0) in [200, 302]
+  retries: 20
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.homeassistant Post] Check onboarding status"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding"
+    method: GET
+    timeout: 10
+    status_code: [200]
+  register: _ha_onboarding
+  failed_when: false
+  when: _ha_ready.status | default(0) in [200, 302]
+
+- name: "[pazny.homeassistant Post] Create owner account (first-run only)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/users"
+    method: POST
+    body_format: json
+    body:
+      client_id: "https://{{ homeassistant_domain | default('home.dev.local') }}/"
+      name: "{{ homeassistant_admin_name | default('Admin') }}"
+      username: "{{ homeassistant_admin_user | default('admin') }}"
+      password: "{{ homeassistant_admin_password | default(global_password_prefix + '_pw_homeassistant') }}"
+      language: "en"
+    status_code: [200]
+    timeout: 10
+  register: _ha_user_create
+  when:
+    - _ha_onboarding.json is defined
+    - _ha_onboarding.json | selectattr('step', 'equalto', 'user') | selectattr('done', 'equalto', false) | list | length > 0
+  changed_when: _ha_user_create.status | default(0) == 200
+  failed_when: false
+
+# -- Reconverge admin password every run (state-declarative UPDATE) ------
+# Onboarding API zavrena po prvnim runu -> CLI script `hass --script auth`
+# funguje i pro existujici user. Bezi jen pokud uz byl user vytvoren.
+- name: "[pazny.homeassistant Post] Reconverge owner password (hass auth change_password CLI)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T homeassistant \
+      hass --script auth --config /config change_password \
+      {{ homeassistant_admin_user | default('admin') }} \
+      {{ (homeassistant_admin_password | default(global_password_prefix + '_pw_homeassistant')) | quote }} 2>&1
+  register: _ha_pw_update
+  when:
+    - _ha_onboarding.json is defined
+    - _ha_onboarding.json | selectattr('step', 'equalto', 'user') | selectattr('done', 'equalto', true) | list | length > 0
+  changed_when: _ha_pw_update.rc | default(1) == 0
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.homeassistant Post] Set core config (timezone, location)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/core_config"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _ha_user_create.json.auth_code | default('') }}"
+    body: {}
+    status_code: [200]
+    timeout: 10
+  when:
+    - _ha_user_create.json.auth_code is defined
+  failed_when: false
+
+- name: "[pazny.homeassistant Post] Skip analytics"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/analytics"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _ha_user_create.json.auth_code | default('') }}"
+    body: {}
+    status_code: [200]
+    timeout: 10
+  when:
+    - _ha_user_create.json.auth_code is defined
+  failed_when: false
+
+- name: "[pazny.homeassistant Post] Complete onboarding (skip integrations)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/integration"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _ha_user_create.json.auth_code | default('') }}"
+    body:
+      client_id: "https://{{ homeassistant_domain | default('home.dev.local') }}/"
+      redirect_uri: "https://{{ homeassistant_domain | default('home.dev.local') }}"
+    status_code: [200]
+    timeout: 10
+  when:
+    - _ha_user_create.json.auth_code is defined
+  failed_when: false

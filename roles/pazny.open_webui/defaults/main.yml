@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.open_webui — Open WebUI (chat UI pro Ollama)
+#
+# Pripojuje se na Ollama demona bezici na hostu (host.docker.internal:11434).
+# Credentials (openwebui_secret_key, openwebui_admin_password) zustavaji v
+# default.config.yml + default.credentials.yml a jsou prefix-rotovane.
+#
+# Pozn: nazev role pouziva podtrzitko (`open_webui`), compose service name
+# pouziva pomlcku (`open-webui`) — souhlasi s existujici konvenci.
+# ==============================================================================
+
+openwebui_version: "0.6.35"                         # CVE-2025-64495/64496 pin
+openwebui_port: 3004                                # Kontejner 8080 → host 3004
+openwebui_domain: "ai.dev.local"
+openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
+openwebui_enable_signup: true                       # false = admin rucne pridava uzivatele
+openwebui_admin_name: "Admin"
+openwebui_admin_email: "{{ default_admin_email }}"
+openwebui_mem_limit: "{{ docker_mem_limit_critical | default('4g') }}"
+openwebui_cpus: "{{ docker_cpus_standard | default('1.0') }}"

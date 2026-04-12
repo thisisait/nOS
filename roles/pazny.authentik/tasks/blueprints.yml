@@ -1,0 +1,40 @@
+---
+# ==============================================================================
+# Authentik Blueprints — deklarativni YAML state management
+#
+# Blueprinty v /blueprints/custom/ jsou auto-discovered Authentikem a
+# reconciled pri kazdem startu + na zmenu souboru (inotify). Blueprint engine
+# re-aplikuje `password` pole na `authentik_core.user` na kazdy reconcile
+# cycle → drift prefixu se projevi do existujiciho akadmin usera bez DB DROP.
+#
+# Volano z tasks/main.yml (ktera je volana z core-up.yml PRED `docker compose
+# up infra --wait`), aby bind source /blueprints/custom existoval driv nez
+# Docker vytvori mount point.
+# ==============================================================================
+
+- name: "[pazny.authentik Blueprints] Ensure directory"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/infra/authentik/blueprints"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.authentik Blueprints] Render admin + groups"
+  ansible.builtin.template:
+    src: "blueprints/00-admin-groups.yaml.j2"
+    dest: "{{ stacks_dir }}/infra/authentik/blueprints/00-admin-groups.yaml"
+    mode: '0640'
+  notify: Reapply authentik blueprints
+
+- name: "[pazny.authentik Blueprints] Render OAuth2 / proxy providers + applications"
+  ansible.builtin.template:
+    src: "blueprints/10-oidc-apps.yaml.j2"
+    dest: "{{ stacks_dir }}/infra/authentik/blueprints/10-oidc-apps.yaml"
+    mode: '0640'
+  notify: Reapply authentik blueprints
+
+- name: "[pazny.authentik Blueprints] Render RBAC expression policies + bindings"
+  ansible.builtin.template:
+    src: "blueprints/20-rbac-policies.yaml.j2"
+    dest: "{{ stacks_dir }}/infra/authentik/blueprints/20-rbac-policies.yaml"
+    mode: '0640'
+  notify: Reapply authentik blueprints

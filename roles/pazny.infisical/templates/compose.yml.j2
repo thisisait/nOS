@@ -1,0 +1,39 @@
+# =============================================================================
+# pazny.infisical — compose override fragment
+# Merged do `docker compose -p infra up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  # ── Infisical CE – Secrets Vault ─────────────────────────────────────────────
+  infisical:
+    image: infisical/infisical:{{ infisical_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ infisical_port | default(8075) }}:8080"
+{% else %}
+      - "127.0.0.1:{{ infisical_port | default(8075) }}:8080"
+{% endif %}
+    volumes:
+      - {{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}:/app/data
+    environment:
+      ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
+      AUTH_SECRET: "{{ infisical_auth_secret }}"
+      DB_CONNECTION_URI: "postgresql://{{ infisical_db_user | default('infisical') }}:{{ infisical_db_password }}@postgresql:5432/{{ infisical_db_name | default('infisical') }}"
+      REDIS_URL: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379"
+      SITE_URL: "https://{{ infisical_domain | default('vault.dev.local') }}"
+      TELEMETRY_ENABLED: "false"
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ infisical_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
