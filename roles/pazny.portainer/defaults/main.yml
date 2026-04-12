@@ -1,0 +1,15 @@
+---
+# ==============================================================================
+# pazny.portainer — Portainer CE (infra compose stack)
+#
+# Credentials (portainer_admin_password) zustavaji v default.credentials.yml
+# aby prefix rotation funkovala centralne. Portainer OIDC je nativni pres
+# Settings API — gate v post.yml je `install_authentik`.
+# ==============================================================================
+
+portainer_version: "2.27.3"                         # CVE-2025-68121 pin (transitive Go TLS)
+portainer_port: 9002                                # 9000/9001 rezervovano pro RustFS
+portainer_domain: "portainer.dev.local"
+portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
+portainer_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+portainer_cpus: "{{ docker_cpus_standard | default('1.0') }}"

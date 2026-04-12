@@ -1,0 +1,43 @@
+# =============================================================================
+# pazny.portainer — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+#
+# Portainer pouziva docker-socket-proxy jako secure Docker API gateway —
+# proxy zustava v base compose (sdilena s Traefikem).
+# =============================================================================
+
+services:
+  portainer:
+    image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
+    restart: unless-stopped
+    command: --host tcp://docker-socket-proxy:2375
+    depends_on:
+      - docker-socket-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ portainer_port | default(9002) }}:9000"
+{% else %}
+      - "127.0.0.1:{{ portainer_port | default(9002) }}:9000"
+{% endif %}
+    volumes:
+      - {{ portainer_data_dir }}:/data
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ portainer_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

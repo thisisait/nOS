@@ -1,0 +1,20 @@
+---
+# ==============================================================================
+# pazny.traefik — Traefik reverse proxy (infra compose stack)
+#
+# Traefik poskytuje Docker service discovery + ingress pro lokalni vyvoj.
+# Pouzivame ho vedle nginx — nginx resi vhost routing pro nativni sluzby,
+# Traefik zachytava dynamicka Docker labely. Konfig soubory (traefik.yml
+# + conf.d/) renderuje tasks/iiab/traefik.yml pred compose up — role je
+# jen cte pres bind mount.
+# ==============================================================================
+
+traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin
+traefik_http_port: 80
+traefik_https_port: 443
+traefik_dashboard_port: 8080
+traefik_domain: "traefik.dev.local"
+traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
+traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
+traefik_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+traefik_cpus: "{{ docker_cpus_standard | default('1.0') }}"

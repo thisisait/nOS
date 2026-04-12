@@ -1,0 +1,163 @@
+---
+# ==============================================================================
+# pazny.portainer/tasks/post.yml
+#
+# Post-start admin init + password reconverge + Authentik OAuth2 config.
+# Volano z tasks/stacks/core-up.yml PO `docker compose up infra --wait`.
+#
+# PARTIAL: password reconverge rotuje pouze o jeden prefix dopredu
+# (previous_password_prefix → global_password_prefix). Dva+ kroky DRIFT
+# → manualni reset. Viz Wave 1 commit 4c65ba7.
+# ==============================================================================
+
+- name: "[pazny.portainer Post] Wait for API to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/status"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _portainer_ready
+  until: _portainer_ready.status | default(0) == 200
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.portainer Post] Check if admin already exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/admin/check"
+    method: GET
+    status_code: [204, 404]
+    timeout: 5
+  register: _portainer_admin_check
+  failed_when: false
+  when: _portainer_ready.status | default(0) == 200
+
+- name: "[pazny.portainer Post] Create admin user via API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/admin/init"
+    method: POST
+    body_format: json
+    body:
+      Username: "admin"
+      Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+    status_code: [200]
+    timeout: 10
+  register: _portainer_admin_create
+  when:
+    - _portainer_ready.status | default(0) == 200
+    - _portainer_admin_check.status | default(0) == 404
+  changed_when: _portainer_admin_create.status | default(0) == 200
+  failed_when: false
+
+# ── Password reconverge (state-declarative UPDATE) ────────────────────
+# Portainer PUT /api/users/{id}/passwd vyzaduje OLD heslo v body. Stridame:
+# 1) Pokud login s NEW projde → converged, skip update.
+# 2) Pokud login s OLD (previous_password_prefix) projde → issue UPDATE.
+# 3) Jinak DRIFT — log warning.
+- name: "[pazny.portainer Post] Login attempt with current password"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
+    method: POST
+    body_format: json
+    body:
+      Username: "admin"
+      Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+    status_code: [200, 401, 422]
+    timeout: 10
+  register: _portainer_auth_new
+  when:
+    - _portainer_ready.status | default(0) == 200
+    - _portainer_admin_check.status | default(0) == 204  # admin already exists
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.portainer Post] Login attempt with previous password (for reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
+    method: POST
+    body_format: json
+    body:
+      Username: "admin"
+      Password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_portainer"
+    status_code: [200, 401, 422]
+    timeout: 10
+  register: _portainer_auth_old
+  when:
+    - _portainer_ready.status | default(0) == 200
+    - _portainer_auth_new.status | default(0) != 200
+    - _portainer_admin_check.status | default(0) == 204
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.portainer Post] PUT /api/users/1/passwd (password reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/1/passwd"
+    method: PUT
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _portainer_auth_old.json.jwt | default('') }}"
+    body:
+      password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_portainer"
+      newPassword: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+    status_code: [200, 204]
+    timeout: 10
+  register: _portainer_pw_reset
+  when:
+    - _portainer_auth_old.status | default(0) == 200
+  changed_when: _portainer_pw_reset.status | default(0) in [200, 204]
+  failed_when: false
+
+- name: "[pazny.portainer Post] Password reconverge status"
+  ansible.builtin.debug:
+    msg: >-
+      Portainer admin pw:
+      {{ 'already converged' if (_portainer_auth_new.status | default(0) == 200)
+         else ('updated' if (_portainer_pw_reset.status | default(0) in [200, 204])
+               else ('DRIFT — manual reset required' if (_portainer_admin_check.status | default(0) == 204) else 'fresh install')) }}
+  when: _portainer_ready.status | default(0) == 200
+
+- name: "[pazny.portainer Post] Get auth token for admin (for OAuth2 config)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
+    method: POST
+    body_format: json
+    body:
+      Username: "admin"
+      Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+    status_code: [200]
+    timeout: 10
+  register: _portainer_auth
+  when:
+    - _portainer_ready.status | default(0) == 200
+    - install_authentik | default(false)
+  failed_when: false
+
+- name: "[pazny.portainer Post] Configure OAuth2 settings (Authentik)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings"
+    method: PUT
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _portainer_auth.json.jwt | default('') }}"
+    body:
+      AuthenticationMethod: 3
+      OAuthSettings:
+        ClientID: "{{ authentik_oidc_portainer_client_id }}"
+        ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
+        AuthorizationURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
+        AccessTokenURI: "http://infra-authentik-server-1:9000/application/o/token/"
+        ResourceURI: "http://infra-authentik-server-1:9000/application/o/userinfo"
+        RedirectURI: "https://{{ portainer_domain | default('portainer.dev.local') }}"
+        UserIdentifier: "preferred_username"
+        Scopes: "openid profile email"
+        OAuthAutoCreateUsers: true
+        DefaultTeamID: 0
+        SSO: true
+        LogoutURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/portainer/end-session/"
+    status_code: [200]
+    timeout: 10
+  when:
+    - _portainer_auth.json.jwt is defined
+    - _portainer_auth.json.jwt | length > 0
+  changed_when: true
+  failed_when: false

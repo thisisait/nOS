@@ -1,0 +1,11 @@
+---
+# pazny.portainer — handlers
+# Play-level "Restart portainer" v main.yml ma prednost; tento zustava pro
+# samostatne pouziti role mimo devBoxNOS playbook. Wave 1 commit 73622b8
+# opravil stack path na infra (byl drive omylem iiab).
+
+- name: Restart portainer
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart portainer
+  failed_when: false

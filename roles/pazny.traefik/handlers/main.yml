@@ -1,0 +1,10 @@
+---
+# pazny.traefik — handlers
+# Play-level "Restart traefik" v main.yml ma prednost; tento zustava pro
+# samostatne pouziti role mimo devBoxNOS playbook.
+
+- name: Restart traefik
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart traefik
+  failed_when: false
