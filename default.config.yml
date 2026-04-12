@@ -123,29 +123,29 @@ install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
 
 # ── IIAB – self-hosted knowledge & productivity services ──────────────────────
 # Vyžaduje: install_nginx: true, install_php: true
-install_mariadb: false            # MariaDB databáze (nutná pro WordPress + Nextcloud)
+install_mariadb: true            # MariaDB databáze (nutná pro WordPress + Nextcloud)
 install_wordpress: false          # WordPress CMS            [vyžaduje: mariadb, php, nginx]
-install_nextcloud: false          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
-install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
+install_nextcloud: true          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
+install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
 install_offline_maps: false       # Offline mapy – tileserver-gl + MBTiles    [vyžaduje: node]
 install_n8n: false                # n8n – workflow automation                  [vyžaduje: Docker]
-install_gitea: false              # Gitea – self-hosted Git server             [Homebrew]
+install_gitea: true              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [vyžaduje: Docker, ~4 GB RAM]
 install_woodpecker: false         # Woodpecker CI – CI/CD pro Gitea            [vyžaduje: Docker, Gitea OAuth2]
 install_openwebui: false          # Open WebUI – chat UI pro Ollama            [vyžaduje: Docker, Ollama]
-install_portainer: false          # Portainer CE – Docker management UI        [vyžaduje: Docker]
+install_portainer: true          # Portainer CE – Docker management UI        [vyžaduje: Docker]
 install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
-install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
-install_traefik: false            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
+install_calibreweb: true         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
+install_traefik: true            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
-install_rustfs: false             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
+install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
 install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting              [vyžaduje: MariaDB, Redis Docker]
-install_freescout: false          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
-install_mattermost: false         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
-install_outline: false            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
+install_freescout: true          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
+install_mattermost: true         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
+install_outline: true            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
 
 # ── VoIP stack (telekomunikace) ──────────────────────────────────────────────
 install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
@@ -155,26 +155,26 @@ install_qgis_server: false        # QGIS Server – GIS mapový server          
 install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                          [Homebrew Cask]
 
 # ── Data stack (analytika/BI) ────────────────────────────────────────────────
-install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
-install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
+install_metabase: true           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
+install_superset: true           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
 
 # ── IIAB Terminal (veřejný SSH TUI hub) ───────────────────────────────────────
 install_iiab_terminal: false      # TUI přístup přes SSH pro kohokoli na LAN [vyžaduje: SSH]
 
 # ── Webový desktop ────────────────────────────────────────────────────────────
-install_puter: false              # Puter – cloud OS webový desktop (multi-user, AI, iframe apps) [Docker]
+install_puter: true              # Puter – cloud OS webový desktop (multi-user, AI, iframe apps) [Docker]
 install_jsos: false               # jsOS – starší alternativa (OS.js v3) [vyžaduje: PostgreSQL, Redis Docker, Node.js]
 
 # ── AI orchestrace ────────────────────────────────────────────────────────────
-install_paperclip: false          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
+install_paperclip: true          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
 
 # ── IAM & Secrets ─────────────────────────────────────────────────────────────
-install_authentik: false          # Authentik – SSO/IdP (OIDC/SAML/LDAP) pro všechny služby [vyžaduje: PostgreSQL, Redis]
-install_infisical: false          # Infisical CE – centrální secrets vault s REST API + CLI [vyžaduje: PostgreSQL, Redis]
-install_vaultwarden: false        # Vaultwarden – Bitwarden-kompatibilní personal password vault [Docker]
+install_authentik: true          # Authentik – SSO/IdP (OIDC/SAML/LDAP) pro všechny služby [vyžaduje: PostgreSQL, Redis]
+install_infisical: true          # Infisical CE – centrální secrets vault s REST API + CLI [vyžaduje: PostgreSQL, Redis]
+install_vaultwarden: true        # Vaultwarden – Bitwarden-kompatibilní personal password vault [Docker]
 
 # ── Identita / federace ───────────────────────────────────────────────────────
-install_bluesky_pds: false        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
+install_bluesky_pds: true        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
 
 # ── Síť / přístup ─────────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
