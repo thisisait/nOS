@@ -18,12 +18,20 @@ services:
 {% else %}
       - "127.0.0.1:{{ jellyfin_port | default(8096) }}:8096"
 {% endif %}
+    environment:
+      JELLYFIN_PublishedServerUrl: "https://{{ jellyfin_domain | default('media.dev.local') }}"
     volumes:
       - {{ jellyfin_config_dir }}:/config
       - {{ jellyfin_cache_dir }}:/cache
       - {{ jellyfin_movies_dir }}:/media/movies:ro
       - {{ jellyfin_shows_dir }}:/media/shows:ro
       - {{ jellyfin_music_dir }}:/media/music:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8096/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - iiab_net
     logging:
