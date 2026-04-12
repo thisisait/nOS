@@ -1,0 +1,28 @@
+---
+# ==============================================================================
+# pazny.paperclip/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p devops up`:
+# vytvori data dir a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/devops/overrides/paperclip.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Paperclip neni soucasti standardni task/iiab/ sady — pre-setup logika
+# byla minimalni, stacil render compose fragmentu + data dir.
+#
+# Post-start logika (allowed-hostname registration) je v tasks/post.yml —
+# volana PO `docker compose up devops --wait` z stack-up.yml.
+# ==============================================================================
+
+- name: "[pazny.paperclip] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.paperclip] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/devops/overrides/paperclip.yml"
+    mode: '0644'
+  notify: Restart paperclip

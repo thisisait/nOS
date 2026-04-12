@@ -1,0 +1,10 @@
+---
+# pazny.vaultwarden — handlers
+# Fallback handler pro samostatne pouziti role; coordinator Phase B
+# muze definovat play-level variantu.
+
+- name: Restart vaultwarden
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart vaultwarden
+  failed_when: false

@@ -1,0 +1,99 @@
+---
+# ==============================================================================
+# pazny.puter/tasks/post.yml — auto-create admin user via SQLite
+# Puter self-hosted: first user = admin. Password from global_password_prefix.
+# Uses better-sqlite3 (bundled in Puter container) + bcrypt.
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+# CORS patche jsou v custom Dockerfile (files/puter/Dockerfile).
+# ==============================================================================
+
+- name: "[pazny.puter Post] Remove cloud-only apps (camera, editor, player, recorder, viewer, pdf)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    ['camera','editor','player','recorder','viewer','pdf'].forEach(name => {
+      db.prepare('DELETE FROM apps WHERE name = ? AND index_url LIKE \"%puter.com%\"').run(name);
+    });
+    db.prepare('DELETE FROM app_opens').run();
+    console.log('CLEANED');
+    "
+  register: _puter_cleanup
+  changed_when: "'CLEANED' in (_puter_cleanup.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.puter Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"
+    method: GET
+    timeout: 5
+    headers:
+      Host: "{{ puter_domain | default('os.dev.local') }}"
+    status_code: [200]
+  register: _puter_ready
+  until: _puter_ready.status | default(0) == 200
+  retries: 15
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.puter Post] Check if admin user exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const user = db.prepare('SELECT username FROM user WHERE username = ?').get('admin');
+    console.log(user ? 'EXISTS' : 'MISSING');
+    "
+  register: _puter_admin_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _puter_ready.status | default(0) == 200
+
+- name: "[pazny.puter Post] Create admin user with password"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const bcrypt = require('bcrypt');
+    const crypto = require('crypto');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const hash = bcrypt.hashSync('{{ puter_admin_password | default(global_password_prefix + '_pw_puter') }}', 8);
+    const uuid = crypto.randomUUID();
+    db.prepare('INSERT INTO user (uuid, username, email, password, free_storage) VALUES (?, ?, ?, ?, ?)').run(
+      uuid, 'admin', '{{ puter_admin_email | default(default_admin_email) }}', hash, 1073741824
+    );
+    console.log('CREATED');
+    "
+  register: _puter_admin_create
+  when:
+    - _puter_ready.status | default(0) == 200
+    - _puter_admin_check.stdout | default('') | trim == 'MISSING'
+  changed_when: "'CREATED' in (_puter_admin_create.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.puter Post] Reconverge admin password (state-declarative UPDATE)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T puter
+    node -e "
+    const Database = require('better-sqlite3');
+    const bcrypt = require('bcrypt');
+    const db = new Database('/var/puter/puter-database.sqlite');
+    const hash = bcrypt.hashSync('{{ puter_admin_password | default(global_password_prefix + '_pw_puter') }}', 8);
+    db.prepare('UPDATE user SET password = ?, email = ? WHERE username = ?').run(
+      hash, '{{ puter_admin_email | default(default_admin_email) }}', 'admin'
+    );
+    console.log('RESET');
+    "
+  when:
+    - _puter_ready.status | default(0) == 200
+    - _puter_admin_check.stdout | default('') | trim == 'EXISTS'
+  register: _puter_reset
+  changed_when: "'RESET' in (_puter_reset.stdout | default(''))"
+  failed_when: false
+  check_mode: false

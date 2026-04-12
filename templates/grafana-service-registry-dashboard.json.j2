@@ -79,8 +79,53 @@
 {% if install_openclaw | default(false) %}
 {% set _ = _cards.append(card("OpenClaw", openclaw_domain | default('claw.dev.local'), openclaw_gateway_port | default(18789), "AI Agent Gateway", "agent")) %}
 {% endif %}
+{% if install_erpnext | default(false) %}
+{% set _ = _cards.append(card("ERPNext", erpnext_domain | default('erp.dev.local'), erpnext_port | default(8082), "CRM/ERP system", "b2b")) %}
+{% endif %}
+{% if install_freescout | default(false) %}
+{% set _ = _cards.append(card("FreeScout", freescout_domain | default('helpdesk.dev.local'), freescout_port | default(8090), "Helpdesk a ticketing", "b2b")) %}
+{% endif %}
+{% if install_outline | default(false) %}
+{% set _ = _cards.append(card("Outline", outline_domain | default('wiki.dev.local'), outline_port | default(3005), "Tymova wiki", "b2b")) %}
+{% endif %}
+{% if install_metabase | default(false) %}
+{% set _ = _cards.append(card("Metabase", metabase_domain | default('bi.dev.local'), metabase_port | default(3002), "BI dashboardy", "data")) %}
+{% endif %}
+{% if install_superset | default(false) %}
+{% set _ = _cards.append(card("Superset", superset_domain | default('superset.dev.local'), superset_port | default(8089), "Data vizualizace", "data")) %}
+{% endif %}
+{% if install_freepbx | default(false) %}
+{% set _ = _cards.append(card("FreePBX", freepbx_domain | default('pbx.dev.local'), freepbx_port | default(8088), "VoIP telefonni ustredna", "voip")) %}
+{% endif %}
+{% if install_qgis_server | default(false) %}
+{% set _ = _cards.append(card("QGIS Server", qgis_domain | default('gis.dev.local'), qgis_port | default(8071), "GIS mapovy server", "engineering")) %}
+{% endif %}
+{% if install_bluesky_pds | default(false) %}
+{% set _ = _cards.append(card("Bluesky PDS", bluesky_pds_hostname | default('bsky.dev.lan'), bluesky_pds_port | default(2583), "AT Protocol PDS", "infra")) %}
+{% endif %}
 {% if install_offline_maps | default(false) %}
-{% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps.dev.local'), maps_port | default(8070), "Offline mapy", "iiab")) %}
+{% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps.dev.local'), maps_port | default(8081), "Offline mapy", "iiab")) %}
+{% endif %}
+{% if install_glasswing | default(install_php | default(true)) %}
+{% set _ = _cards.append(card("Glasswing", glasswing_domain | default('glasswing.dev.local'), 443, "Security Research Dashboard", "security")) %}
+{% endif %}
+{% if install_authentik | default(false) %}
+{% set _ = _cards.append(card("Authentik", authentik_domain | default('auth.dev.local'), authentik_port | default(9003), "SSO / Identity Provider", "infra")) %}
+{% endif %}
+{% if install_infisical | default(false) %}
+{% set _ = _cards.append(card("Infisical", infisical_domain | default('vault.dev.local'), infisical_port | default(8075), "Secrets vault", "infra")) %}
+{% endif %}
+{% if install_vaultwarden | default(false) %}
+{% set _ = _cards.append(card("Vaultwarden", vaultwarden_domain | default('pass.dev.local'), vaultwarden_port | default(8062), "Password vault", "iiab")) %}
+{% endif %}
+{% if install_puter | default(false) %}
+{% set _ = _cards.append(card("Puter", puter_domain | default('os.dev.local'), puter_port | default(5050), "Cloud OS desktop", "iiab")) %}
+{% endif %}
+{% if install_paperclip | default(false) %}
+{% set _ = _cards.append(card("Paperclip", paperclip_domain | default('paperclip.dev.local'), paperclip_port | default(3006), "AI agent orchestrace", "devops")) %}
+{% endif %}
+{% if install_jsos | default(false) %}
+{% set _ = _cards.append(card("jsOS", jsos_domain | default('jsos.dev.local'), jsos_port | default(8070), "Webovy desktop (OS.js)", "desktop")) %}
 {% endif %}
 {# ── Panel 2: Tier 2 řádky tabulky ──────────────────────────────────────── #}
 {% set _rows = [] %}
@@ -95,7 +140,13 @@
 {{ trow("dnsmasq", dnsmasq_port | default(53) | string, "homebrew", S_brew, "host", "DNS resolver (*.dev.local)") }}
 {% endif %}
 {% if install_mariadb | default(false) %}
-{{ trow("MariaDB", mariadb_port | default(3306) | string, "docker", S_docker, "iiab", "Relacni databaze") }}
+{{ trow("MariaDB", mariadb_port | default(3306) | string, "docker", S_docker, "infra", "Relacni databaze") }}
+{% endif %}
+{% if install_postgresql | default(false) %}
+{{ trow("PostgreSQL", postgresql_port | default(5432) | string, "docker", S_docker, "infra", "Relacni databaze (Outline, Metabase, Superset)") }}
+{% endif %}
+{% if redis_docker | default(false) %}
+{{ trow("Redis (Docker)", redis_port | default(6379) | string, "docker", S_docker, "infra", "Sdileny cache mezi stacky") }}
 {% endif %}
 {% if install_php | default(true) %}
 {{ trow("Redis", redis_port | default(6379) | string, "homebrew", S_brew, "host", "In-memory cache") }}

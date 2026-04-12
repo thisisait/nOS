@@ -1,5 +1,81 @@
 ---
 # ==============================================================================
+# GLOBÁLNÍ NASTAVENÍ HESEL
+# Prefix pro všechna výchozí hesla. Formát: [prefix]_pw_[služba]
+# Při prvním spuštění přepiš prefix v credentials.yml nebo nastav vlastní hesla.
+# ==============================================================================
+
+global_password_prefix: "changeme"
+
+# ==============================================================================
+# INSTANCE IDENTITY & FLEET
+# Kazdy box ma unikatni identitu. Provider (Czechbot.eu) spravuje fleet.
+# ==============================================================================
+
+instance_name: "devboxnos"                # Unikatni nazev instance (lowercase, bez mezer)
+instance_tld: "dev.local"                 # TLD pro vsechny sluzby (napr. grafana.<tld>)
+default_admin_email: "admin@{{ instance_tld | default('dev.local') }}"  # Fallback admin email pro vsechny sluzby
+instance_org: ""                          # Nazev organizace klienta
+instance_location: ""                     # Lokalita (napr. "Praha, CZ")
+instance_role: "standalone"               # standalone | headquarters | factory | office | division
+instance_parent: ""                       # Slug nadrazeneho boxu (pro hierarchii)
+
+# ── Fleet / Heartbeat ────────────────────────────────────────────────────────
+configure_heartbeat: false                # Heartbeat daemon pro fleet reporting
+heartbeat_endpoint: ""                    # URL fleet management serveru
+heartbeat_interval: 300                   # Interval v sekundach (5 minut)
+heartbeat_api_key: "{{ global_password_prefix }}_pw_heartbeat"
+
+# ── Box Management API ───────────────────────────────────────────────────────
+install_boxapi: false                     # FastAPI management API
+boxapi_port: 8099
+boxapi_domain: "api.{{ instance_tld }}"
+boxapi_secret: "{{ global_password_prefix }}_pw_boxapi"
+
+# ── Provider Access ──────────────────────────────────────────────────────────
+provider_admin_email: ""                  # Email providera (Czechbot.eu) — same rights as CEO
+provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag pro providera
+
+# ── Backup (Restic) ──────────────────────────────────────────────────────────
+configure_backup: false
+restic_repo: ""                           # "/Volumes/Backup/restic" | "s3:endpoint/bucket" | "sftp:user@host:/path"
+restic_password: "{{ global_password_prefix }}_pw_restic"
+restic_keep_daily: 7
+restic_keep_weekly: 4
+restic_keep_monthly: 6
+restic_backup_schedule_hour: 3            # Hodina denni zalohy (0-23)
+
+# ── Vulnerability Scanner (NOS Security Auditor) ─────────────────────────────
+configure_vulnerability_scan: false
+vulnscan_schedule_hours: [6, 18]          # 2x denně: 06:00 a 18:00
+vulnscan_batch_size: 5                    # Počet komponent per scan run
+
+# ── Version Policy ────────────────────────────────────────────────────────────
+# "stable" = pinned CVE-patched versions (default, recommended for production)
+# "latest" = always pull newest available images/packages
+# "lts"    = LTS/stable release branches for databases and core infra;
+#            stable pins for services without LTS concept
+#
+# Per-service override: set individual *_version variables in config.yml
+#
+# Použití:
+#   ansible-playbook main.yml -K                          # stable (default)
+#   ansible-playbook main.yml -K -e version_policy=latest # latest
+#   ansible-playbook main.yml -K -e version_policy=lts    # lts
+#   ./security-update.sh                                  # security-only update
+version_policy: "stable"
+
+# ── Docker Resource Limits ────────────────────────────────────────────────────
+# mem_limit per service tier. Override per service: {service}_mem_limit
+docker_mem_limit_heavy: "4g"             # GitLab
+docker_mem_limit_critical: "2g"          # Authentik, ERPNext, Nextcloud, Grafana
+docker_mem_limit_standard: "1g"          # většina služeb
+docker_mem_limit_light: "512m"           # Redis, Kiwix, Tileserver, exporters
+docker_cpus_heavy: "2.0"
+docker_cpus_standard: "1.0"
+docker_cpus_light: "0.5"
+
+# ==============================================================================
 # INSTALLATION QUEUE
 # Zakomentuj (#) libovolný řádek pro PŘESKOČENÍ dané komponenty.
 # Comment out (#) any line to SKIP that component during provisioning.
@@ -24,6 +100,7 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepítko, Ollama, bez API klíče)
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
+install_glasswing: true           # Glasswing Security Dashboard (Nette PHP + SQLite) [vyžaduje: php, nginx]
 
 # ── macOS systémová konfigurace ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – vyžaduje vlastní repo! Nastav dotfiles_repo v credentials.yml
@@ -46,29 +123,29 @@ install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
 
 # ── IIAB – self-hosted knowledge & productivity services ──────────────────────
 # Vyžaduje: install_nginx: true, install_php: true
-install_mariadb: false            # MariaDB databáze (nutná pro WordPress + Nextcloud)
+install_mariadb: true            # MariaDB databáze (nutná pro WordPress + Nextcloud)
 install_wordpress: false          # WordPress CMS            [vyžaduje: mariadb, php, nginx]
-install_nextcloud: false          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
-install_kiwix: false              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
+install_nextcloud: true          # Nextcloud – self-hosted cloud  [vyžaduje: mariadb, php, nginx]
+install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [vyžaduje: Docker]
 install_offline_maps: false       # Offline mapy – tileserver-gl + MBTiles    [vyžaduje: node]
 install_n8n: false                # n8n – workflow automation                  [vyžaduje: Docker]
-install_gitea: false              # Gitea – self-hosted Git server             [Homebrew]
+install_gitea: true              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [vyžaduje: Docker, ~4 GB RAM]
 install_woodpecker: false         # Woodpecker CI – CI/CD pro Gitea            [vyžaduje: Docker, Gitea OAuth2]
 install_openwebui: false          # Open WebUI – chat UI pro Ollama            [vyžaduje: Docker, Ollama]
-install_portainer: false          # Portainer CE – Docker management UI        [vyžaduje: Docker]
+install_portainer: true          # Portainer CE – Docker management UI        [vyžaduje: Docker]
 install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
-install_calibreweb: false         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
-install_traefik: false            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
+install_calibreweb: true         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
+install_traefik: true            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
-install_rustfs: false             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
+install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
 install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting              [vyžaduje: MariaDB, Redis Docker]
-install_freescout: false          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
-install_mattermost: false         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
-install_outline: false            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
+install_freescout: true          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
+install_mattermost: true         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
+install_outline: true            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
 
 # ── VoIP stack (telekomunikace) ──────────────────────────────────────────────
 install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
@@ -78,11 +155,26 @@ install_qgis_server: false        # QGIS Server – GIS mapový server          
 install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                          [Homebrew Cask]
 
 # ── Data stack (analytika/BI) ────────────────────────────────────────────────
-install_metabase: false           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
-install_superset: false           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
+install_metabase: true           # Metabase – BI dashboardy                             [vyžaduje: PostgreSQL]
+install_superset: true           # Apache Superset – data vizualizace                   [vyžaduje: PostgreSQL, Redis Docker]
+
+# ── IIAB Terminal (veřejný SSH TUI hub) ───────────────────────────────────────
+install_iiab_terminal: false      # TUI přístup přes SSH pro kohokoli na LAN [vyžaduje: SSH]
+
+# ── Webový desktop ────────────────────────────────────────────────────────────
+install_puter: true              # Puter – cloud OS webový desktop (multi-user, AI, iframe apps) [Docker]
+install_jsos: false               # jsOS – starší alternativa (OS.js v3) [vyžaduje: PostgreSQL, Redis Docker, Node.js]
+
+# ── AI orchestrace ────────────────────────────────────────────────────────────
+install_paperclip: true          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
+
+# ── IAM & Secrets ─────────────────────────────────────────────────────────────
+install_authentik: true          # Authentik – SSO/IdP (OIDC/SAML/LDAP) pro všechny služby [vyžaduje: PostgreSQL, Redis]
+install_infisical: true          # Infisical CE – centrální secrets vault s REST API + CLI [vyžaduje: PostgreSQL, Redis]
+install_vaultwarden: true        # Vaultwarden – Bitwarden-kompatibilní personal password vault [Docker]
 
 # ── Identita / federace ───────────────────────────────────────────────────────
-install_bluesky_pds: false        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
+install_bluesky_pds: true        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
 
 # ── Síť / přístup ─────────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (vzdálený přístup ke všem službám)
@@ -307,6 +399,12 @@ php_composer_packages:
   # - name: drush/drush
   #   state: present
 
+# ── Glasswing Security Dashboard ─────────────────────────────────────────────
+glasswing_domain: "glasswing.dev.local"
+glasswing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
+glasswing_data_dir: "{{ glasswing_app_dir }}/data"
+glasswing_json_source: "{{ playbook_dir }}/docs/llm/security"
+
 # ==============================================================================
 # NODE.JS
 # ==============================================================================
@@ -417,10 +515,13 @@ openclaw_config_dir: "~/.openclaw"
 
 # Ollama model – doporučeno pro 36GB RAM: qwen3:14b
 # Alternativy: qwen3.5:14b (rychlejší), llama3.3:70b (silnější, pomalejší)
+# Od Ollama 0.19 se na Apple Silicon automaticky používá MLX backend
+# (57% rychlejší prefill, 93% rychlejší decode vs llama.cpp)
 openclaw_model: "qwen3:14b"
 ollama_max_loaded_models: 1    # Max modelů v RAM (1 = šetří SWAP na 36GB)
 ollama_num_parallel: 2         # Max paralelních inference requestů
 ollama_keep_alive: "5m"        # Uvolnit model z RAM po nečinnosti (default 5m, 0 = ihned)
+ollama_flash_attention: 1      # Flash attention pro MLX (rychlejší, méně paměti)
 
 # Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
 openclaw_install_daemon: true
@@ -527,7 +628,7 @@ macos_disable_gatekeeper: false       # NEDOPORUČENO – nechej false pro bezpe
 # SSH
 ssh_port: 22
 ssh_allow_groups: "admin staff"   # Skupiny s SSH přístupem
-ssh_password_auth: false          # false = pouze klíče (bezpečnější)
+ssh_password_auth: true           # true = heslo i klíče; false = pouze klíče (po ssh-copy-id)
 
 # Samba / SMB
 samba_workgroup: "WORKGROUP"
@@ -539,7 +640,7 @@ samba_shares:
     writable: true
 
 # VNC
-vnc_password: ""   # PŘEPIŠ! Prázdné = VNC se nespustí bezpečně
+vnc_password: "{{ global_password_prefix }}_pw_vnc"
 
 # ==============================================================================
 # DOCK
@@ -572,8 +673,8 @@ sublime_package_control:
 # IIAB – MARIADB
 # ==============================================================================
 
-mariadb_root_password: "changeme_pw_mariadb"   # PŘEPIŠ v credentials.yml!
-mariadb_version: "lts"                  # lts / 11 / 10.11 – Docker image tag
+mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # PŘEPIŠ v credentials.yml!
+mariadb_version: "11.4.10"              # CVE-2026-32710 (CVSS 8.6 buffer overflow). Pinned from 'lts'
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persistence dat mimo kontejner
 
@@ -582,10 +683,10 @@ mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # persiste
 # ==============================================================================
 
 install_postgresql: false
-postgresql_version: "16-alpine"
+postgresql_version: "16.13-alpine"      # CVE-2026-2005 (pgcrypto RCE), CVE-2026-2006 (multibyte RCE), CVE-2026-2004/2007 (buffer overflow). Was 16.10
 postgresql_port: 5432
 postgresql_root_user: "postgres"
-postgresql_root_password: "changeme_pw_postgresql"
+postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
 postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 
 # ==============================================================================
@@ -594,7 +695,7 @@ postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis v Docker (pro cross-stack přístup)
-redis_version: "7-alpine"
+redis_version: "7.4.6-alpine"           # CVE-2025-49844 (CVSS 10.0 RediShell RCE)
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 
 # ==============================================================================
@@ -616,13 +717,13 @@ mariadb_users:
     password: "{{ nextcloud_db_password }}"
     priv: "nextcloud.*:ALL"
   - name: "freescout"
-    password: "{{ freescout_db_password | default('changeme_pw_freescout') }}"
+    password: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
     priv: "freescout.*:ALL"
   - name: "erpnext"
-    password: "{{ erpnext_admin_password | default('changeme_pw_erpnext') }}"
+    password: "{{ erpnext_admin_password | default(global_password_prefix + '_pw_erpnext') }}"
     priv: "erpnext.*:ALL"
   - name: "asterisk"
-    password: "{{ freepbx_db_password | default('changeme_pw_freepbx') }}"
+    password: "{{ freepbx_db_password | default(global_password_prefix + '_pw_freepbx') }}"
     priv: "asterisk.*:ALL"
 
 # ==============================================================================
@@ -633,14 +734,14 @@ wordpress_domain: "wordpress.dev.local"
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
 wordpress_db_name: "wordpress"
 wordpress_db_user: "wordpress"
-wordpress_db_password: "changeme_pw_wordpress"
+wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
 wordpress_table_prefix: "wp_"
 wordpress_version: "latest"             # Docker image tag
 wordpress_port: 8084                    # Lokální port kontejneru (nginx proxy)
 wordpress_admin_user: "admin"
-wordpress_admin_password: "changeme_pw_wordpress_admin"
-wordpress_admin_email: "admin@dev.local"
+wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
+wordpress_admin_email: "{{ default_admin_email }}"
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
@@ -651,10 +752,10 @@ nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
 nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
-nextcloud_db_password: "changeme_pw_nextcloud"
+nextcloud_db_password: "{{ global_password_prefix }}_pw_nextcloud"
 nextcloud_db_host: "127.0.0.1"         # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
 nextcloud_admin_user: "admin"
-nextcloud_admin_password: "changeme_pw_nextcloud_admin"
+nextcloud_admin_password: "{{ global_password_prefix }}_pw_nextcloud_admin"
 nextcloud_version: "stable"             # Docker image tag (stable / latest / 29)
 nextcloud_port: 8085                    # Lokální port kontejneru (nginx proxy)
 
@@ -665,6 +766,7 @@ nextcloud_port: 8085                    # Lokální port kontejneru (nginx proxy
 
 kiwix_domain: "kiwix.dev.local"
 kiwix_port: 8888                           # Lokální port kiwix-serve
+kiwix_version: "latest"                            # Docker image tag
 kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Sem ukládej .zim soubory
 
 # ZIM soubory ke stažení (prázdné = nestahovat automaticky)
@@ -687,7 +789,8 @@ kiwix_zim_files: []
 # ==============================================================================
 
 maps_domain: "maps.dev.local"
-maps_port: 8080
+maps_port: 8081                               # 8080 obsazen Traefik dashboard
+maps_tileserver_version: "latest"                  # Docker image tag (maptiler/tileserver-gl)
 maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"        # Sem ukládej .mbtiles soubory
 
 # MBTiles soubory ke stažení (prázdné = nestahovat automaticky)
@@ -757,17 +860,17 @@ grafana_domain: "grafana.dev.local"
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname v Grafana labelech
 
 # ── Docker image verze (observability + devops) ──────────────────────────────
-grafana_version: "latest"
+grafana_version: "12.4.2"               # CVE-2026-27876 (CVSS 9.1 file write → RCE)
 prometheus_version: "latest"
 loki_version: "latest"
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
-gitea_version: "latest"
+gitea_version: "1.25.5"                 # CVE-2026-gitea-template-traversal (authenticated RCE)
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
-grafana_admin_password: "changeme_pw_grafana"
+grafana_admin_password: "{{ global_password_prefix }}_pw_grafana"
 grafana_allow_embedding: false
 grafana_analytics: false    # Vypnout telemetrii
 
@@ -809,10 +912,13 @@ grafana_dashboards:
 
 n8n_domain: "n8n.dev.local"
 n8n_port: 5678
-n8n_version: "latest"      # nebo konkrétní: "1.40.0"
+n8n_version: "2.14.1"      # CVE-2026-33660+33696+33663+33713 (Merge RCE, GSuiteAdmin proto pollution). Was 2.10.1
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
-# n8n od v1.0 nemá env var pro admin heslo – první registrovaný uživatel = owner
+n8n_admin_email: "{{ default_admin_email }}"
+n8n_admin_password: "{{ global_password_prefix }}_pw_n8n"
+n8n_admin_firstname: "Admin"
+n8n_admin_lastname: "devBoxNOS"
 
 # ==============================================================================
 # IIAB – GITEA (self-hosted Git)
@@ -823,9 +929,9 @@ gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva → Gite
 gitea_ssh_port: 2222
 gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"
 gitea_admin_user: "{{ ansible_facts['user_id'] }}"
-gitea_admin_password: "changeme_pw_gitea"
+gitea_admin_password: "{{ global_password_prefix }}_pw_gitea"
 gitea_admin_email: ""                          # VYPLŇ!
-gitea_secret_key: "changeme_pw_gitea_secret"
+gitea_secret_key: "{{ global_password_prefix }}_pw_gitea_secret"
 gitea_disable_registration: false              # true = pouze admin může přidávat uživatele
 
 # ==============================================================================
@@ -838,7 +944,7 @@ gitea_disable_registration: false              # true = pouze admin může přid
 gitlab_domain: "gitlab.dev.local"
 gitlab_http_port: 8929          # Interní HTTP port (nginx přebírá SSL, forwarduje sem)
 gitlab_ssh_port: 2224           # Git SSH (22=systém, 2222=Gitea → Gitlab na 2224)
-gitlab_version: "latest"        # nebo konkrétní: "17.9.1-ce.0"
+gitlab_version: "18.10.1-ce.0"  # CVE-2026-0723 (2FA bypass), 9 HIGH CVEs total
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repozitáře, uploads, artefakty (velké!)
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + klíče (malé, ale důležité)
 gitlab_timezone: "Europe/Prague"
@@ -853,13 +959,13 @@ gitlab_sidekiq_concurrency: 10  # Background job vlákna
 
 openwebui_domain: "ai.dev.local"
 openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
-openwebui_version: "main"        # nebo konkrétní: "0.5.20"
+openwebui_version: "0.6.35"      # CVE-2025-64495/64496 (XSS→RCE, JWT theft). Switched from :main
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
-openwebui_secret_key: "changeme_pw_openwebui"
+openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně
 openwebui_admin_name: "Admin"
-openwebui_admin_email: "admin@dev.local"
-openwebui_admin_password: "changeme_pw_openwebui_admin"
+openwebui_admin_email: "{{ default_admin_email }}"
+openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
 
 # ==============================================================================
 # IIAB – WOODPECKER CI (CI/CD napojen na Gitea)
@@ -871,7 +977,7 @@ woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC pro agenty (interní)
 woodpecker_version: "v3"                # latest tag odstraněn, musí být semver (v3/v3.x/v3.x.y)
 woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
-woodpecker_agent_secret: "changeme_pw_woodpecker"
+woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
 woodpecker_gitea_secret: ""      # VYPLŇ po vytvoření OAuth2 app v Gitee
 woodpecker_open_registration: false  # true = kdokoliv se může přihlásit přes Gitea
@@ -883,9 +989,9 @@ woodpecker_max_workflows: 4      # Max paralelních pipeline runů na agenta
 
 portainer_domain: "portainer.dev.local"
 portainer_port: 9002                   # 9000/9001 rezervováno pro RustFS (S3 API + console)
-portainer_version: "latest"
+portainer_version: "2.27.3"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
-portainer_admin_password: "changeme_pw_portainer"
+portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 
 # ==============================================================================
 # IIAB – JELLYFIN (media server)
@@ -893,7 +999,7 @@ portainer_admin_password: "changeme_pw_portainer"
 
 jellyfin_domain: "media.dev.local"
 jellyfin_port: 8096
-jellyfin_version: "latest"
+jellyfin_version: "10.10.7"             # CVE-2025-31499 (FFmpeg argument injection → RCE)
 jellyfin_lan_access: true              # true = port dostupný z LAN (pro TV, mobilní klienty)
 jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
@@ -910,7 +1016,7 @@ uptime_kuma_port: 3001
 uptime_kuma_version: "1"   # nebo konkrétní: "1.23.13"
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
-uptime_kuma_admin_password: "changeme_pw_uptime_kuma"
+uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automaticky vytvořit monitory pro všechny install_* služby
 
 # ==============================================================================
@@ -934,6 +1040,14 @@ tailscale_exit_node: false        # Používat tento Mac jako exit node
 # tailscale_auth_key: ""          # Pre-auth key pro neinteraktivní setup (z admin console)
 tailscale_hostname: ""            # Tailscale FQDN (např. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
 services_lan_access: false        # true = Docker služby na 0.0.0.0 (přístup přes Tailscale/LAN po portech)
+
+# Alternativní hosty pro přístup ke službám (LAN IP, Tailscale hostname/IP)
+# Automaticky se přidají do nginx server_name + Nextcloud trusted_domains
+service_extra_hosts: []
+# service_extra_hosts:
+#   - "192.168.1.64"
+#   - "studio.tail9f5625.ts.net"
+#   - "100.106.211.106"
 
 # ==============================================================================
 # POWER MANAGEMENT – pmset nastavení (pouze při napájení -c)
@@ -1022,7 +1136,7 @@ stacks_shared_network: "shared_net"
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "latest"
+traefik_image_version: "v3.6.12"        # CVE-2026-33186 (gRPC auth bypass) + CVE-2026-33433 (BasicAuth spoofing). Was v3.6.11
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8080
@@ -1031,7 +1145,7 @@ traefik_log_level: "INFO"           # DEBUG / INFO / WARN / ERROR
 traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "stable"     # stable / latest / konkrétní tag (2025.1.0)
+homeassistant_version: "2026.4"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
 homeassistant_port: 8123
 homeassistant_domain: "home.dev.local"
 homeassistant_timezone: "Europe/Prague"
@@ -1041,18 +1155,21 @@ homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 # Pro plný Bonjour/mDNS na Mac je potřeba nativní instalace HA nebo host networking
 # přes --network host v Docker Desktop (experimentální funkce).
 homeassistant_privileged: false
+homeassistant_admin_name: "Admin"
+homeassistant_admin_user: "admin"
+homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
 
 # ==============================================================================
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "latest"
+rustfs_version: "1.0.0-alpha.90"         # CVE-2025-68926 (CVSS 9.8 hardcoded gRPC token) + 3 more CVEs
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
 rustfs_console_port: 9001           # Web konzole
 rustfs_domain: "fs.dev.local"
 rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
-rustfs_access_key: "changeme_pw_rustfs_access"
-rustfs_secret_key: "changeme_pw_rustfs_secret"
+rustfs_access_key: "{{ global_password_prefix }}_pw_rustfs_access"
+rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 
 # ==============================================================================
 # B2B – ERPNEXT (CRM + ERP + HR + Accounting)
@@ -1060,10 +1177,14 @@ rustfs_secret_key: "changeme_pw_rustfs_secret"
 # ==============================================================================
 
 erpnext_domain: "erp.dev.local"
-erpnext_port: 8080
-erpnext_version: "v15"
-erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
-erpnext_admin_password: "changeme_pw_erpnext"
+erpnext_port: 8082                     # 8080 obsazen Traefik dashboardem
+erpnext_version: "v15.98.1"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
+# erpnext_data_dir: DEPRECATED od P0.1 migrace na named volume. Sites data
+# zije v Docker named volume `b2b_erpnext_sites` (managovany blank-reset
+# via `compose down -v` + `volume prune -f -a`). Externi storage lze
+# nastavit presunutim cele Docker Desktop disk image na external SSD.
+erpnext_admin_password: "{{ global_password_prefix }}_pw_erpnext"
+erpnext_site_name: "erp.dev.local"
 
 # ==============================================================================
 # B2B – FREESCOUT (helpdesk / ticketing)
@@ -1072,13 +1193,13 @@ erpnext_admin_password: "changeme_pw_erpnext"
 
 freescout_domain: "helpdesk.dev.local"
 freescout_port: 8090
-freescout_version: "latest"
+freescout_version: "php8.3-1.17.152"     # tiredofit image tag = PHP+upstream ver; past CVE-2026-28289 (fixed before 1.17.152)
 freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
-freescout_db_password: "changeme_pw_freescout"
-freescout_admin_email: "admin@dev.local"
-freescout_admin_password: "changeme_pw_freescout"
+freescout_db_password: "{{ global_password_prefix }}_pw_freescout"
+freescout_admin_email: "{{ default_admin_email }}"
+freescout_admin_password: "{{ global_password_prefix }}_pw_freescout"
 freescout_timezone: "Europe/Prague"
 
 # ==============================================================================
@@ -1092,7 +1213,7 @@ mattermost_version: "latest"
 mattermost_data_dir: "{{ ansible_facts['env']['HOME'] }}/mattermost"
 mattermost_db_name: "mattermost"
 mattermost_db_user: "mattermost"
-mattermost_db_password: "changeme_pw_mattermost"
+mattermost_db_password: "{{ global_password_prefix }}_pw_mattermost"
 mattermost_timezone: "Europe/Prague"
 
 # ==============================================================================
@@ -1106,9 +1227,9 @@ outline_version: "latest"
 outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"
 outline_db_user: "outline"
-outline_db_password: "changeme_pw_outline"
-outline_secret_key: "changeme_pw_outline_secret"
-outline_utils_secret: "changeme_pw_outline_utils"
+outline_db_password: "{{ global_password_prefix }}_pw_outline"
+outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
+outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
 
 # ==============================================================================
 # VOIP – FREEPBX + ASTERISK (PBX / call center)
@@ -1125,7 +1246,7 @@ freepbx_version: "latest"
 freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
-freepbx_db_password: "changeme_pw_freepbx"
+freepbx_db_password: "{{ global_password_prefix }}_pw_freepbx"
 freepbx_timezone: "Europe/Prague"
 
 # ==============================================================================
@@ -1134,7 +1255,7 @@ freepbx_timezone: "Europe/Prague"
 
 qgis_domain: "gis.dev.local"
 qgis_port: 8071
-qgis_version: "3.36"
+qgis_version: "latest"                 # POZOR: pouze amd64 (emulace přes Rosetta na ARM64)
 qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 
 # ==============================================================================
@@ -1148,8 +1269,12 @@ metabase_version: "latest"
 metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
-metabase_db_password: "changeme_pw_metabase"
+metabase_db_password: "{{ global_password_prefix }}_pw_metabase"
 metabase_timezone: "Europe/Prague"
+metabase_admin_email: "{{ default_admin_email }}"
+metabase_admin_password: "{{ global_password_prefix }}_pw_metabase_admin"
+metabase_admin_first_name: "Admin"
+metabase_admin_last_name: "devBoxNOS"
 
 # ==============================================================================
 # DATA – APACHE SUPERSET (data vizualizace)
@@ -1158,22 +1283,371 @@ metabase_timezone: "Europe/Prague"
 
 superset_domain: "superset.dev.local"
 superset_port: 8089
-superset_version: "latest"
+superset_version: "6.0.0"               # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi)
 superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
 superset_db_name: "superset"
 superset_db_user: "superset"
-superset_db_password: "changeme_pw_superset"
-superset_secret_key: "changeme_pw_superset_secret"
+superset_db_password: "{{ global_password_prefix }}_pw_superset"
+superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
 
 # ==============================================================================
 # INFRA – BLUESKY PDS (AT Protocol Personal Data Server)
 # Federovaná identita: @user.bsky.dev.local → SSO pro všechny služby
 # ==============================================================================
 
-bluesky_pds_hostname: "bsky.dev.local"
+bluesky_pds_hostname: "bsky.dev.lan"     # .local zakázán AT Protocol specifikací
 bluesky_pds_port: 2583
 bluesky_pds_version: "latest"
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
-bluesky_pds_admin_password: "changeme_pw_bluesky"
-bluesky_pds_jwt_secret: "changeme_pw_bluesky_jwt"
+bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
+bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generuj: openssl rand -hex 32
+bluesky_pds_invite_required: true      # Invite-only registrace (true = uzavřený PDS)
+bluesky_pds_email_smtp_url: ""         # SMTP URL pro PDS notifikace (prázdné = vypnuto)
+bluesky_pds_email_from: ""             # Odesílatel emailů (default: noreply@bsky.dev.lan)
+
+# ==============================================================================
+# PUTER – cloud OS webový desktop (multi-user, AI gateway, iframe apps)
+# Docker single container, Ollama auto-detect, per-user isolated storage
+# ==============================================================================
+
+puter_domain: "os.dev.local"
+puter_api_domain: "api.os.dev.local"
+puter_port: 5050                               # "05" jako "OS"
+puter_version: "latest"                        # ghcr.io/heyputer/puter
+puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
+puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
+puter_file_cache_mb: 512                       # File cache pro multi-user (MB)
+puter_admin_email: "{{ default_admin_email }}"
+puter_admin_password: "{{ global_password_prefix }}_pw_puter"
+
+# ==============================================================================
+# JSOS – webový desktop (OS.js v3 + Bluesky AT Protocol auth)
+# Vyžaduje: install_postgresql: true, redis_docker: true, install_node: true
+# Volitelně: install_rustfs: true (per-user S3 buckety)
+# ==============================================================================
+
+jsos_domain: "jsos.dev.local"
+jsos_port: 8070
+jsos_dir: "{{ ansible_facts['env']['HOME'] }}/projects/jsOs"
+jsos_session_secret: "{{ global_password_prefix }}_pw_jsos_session"
+jsos_db_name: "jsos"
+jsos_db_user: "jsos"
+jsos_db_password: "{{ global_password_prefix }}_pw_jsos"
+jsos_bluesky_pds_url: "https://bsky.social"     # Výchozí PDS pro autentizaci
+jsos_admin_handles: []                           # Bluesky handles s admin oprávněním
+# jsos_admin_handles:
+#   - "user.bsky.social"
+jsos_provision_s3_buckets: true                  # Vytvořit per-user S3 bucket v RustFS
+jsos_provision_databases: true                   # Vytvořit per-user PostgreSQL databázi
+jsos_provision_redis_namespace: true             # Přidělit per-user Redis key prefix
+
+# ==============================================================================
+# PAPERCLIP – multi-agent orchestration platform
+# Vyžaduje: install_postgresql: true
+# Koordinuje AI agenty (OpenClaw, Claude Code, Codex) přes org-chart strukturu
+# ==============================================================================
+
+paperclip_domain: "paperclip.dev.local"
+paperclip_port: 3006                              # 3100 koliduje s Loki
+paperclip_version: "latest"
+paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
+paperclip_db_name: "paperclip"
+paperclip_db_user: "paperclip"
+paperclip_db_password: "{{ global_password_prefix }}_pw_paperclip"
+paperclip_deployment_mode: "authenticated"         # Docker vyžaduje 0.0.0.0 → local_trusted nefunguje
+paperclip_auth_secret: "{{ global_password_prefix }}_pw_paperclip_auth"
+paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
+
+# ==============================================================================
+# IIAB TERMINAL – veřejný SSH TUI hub pro LAN uživatele
+# ssh home@<ip> → TUI s Kiwix, AI chatem, přehledem služeb
+# Vyžaduje: enable_ssh: true
+# ==============================================================================
+
+iiab_terminal_user: "home"                         # macOS uživatel pro SSH přístup
+iiab_terminal_password: ""                         # Prázdné = auto-generované náhodné heslo
+iiab_terminal_password_auth: true                  # true = login heslem povolený
+iiab_terminal_config_dir: "{{ homebrew_prefix }}/etc/iiab-terminal"
+iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
+
+# ==============================================================================
+# AUTHENTIK – SSO / Identity Provider (OIDC, SAML, LDAP, SCIM)
+# Centrální login pro všechny služby. PostgreSQL + Redis z infra stacku.
+# ==============================================================================
+
+authentik_version: "2025.12.4"                     # CVE-2026-25227 (CVSS 9.1 code injection). 2025.2 je EOL!
+authentik_domain: "auth.dev.local"
+authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
+authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
+authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
+authentik_db_name: "authentik"
+authentik_db_user: "authentik"
+authentik_db_password: "{{ global_password_prefix }}_pw_authentik_db"
+authentik_bootstrap_password: "{{ global_password_prefix }}_pw_authentik_admin"
+authentik_bootstrap_email: "{{ default_admin_email }}"
+
+# ── Authentik RBAC skupiny (vytvorene automaticky pri blank run) ──────────────
+authentik_default_groups:
+  - name: "devboxnos-providers"
+    description: "Provider admins (full remote access, same as CEO)"
+  - name: "devboxnos-admins"
+    description: "Client CEO/CTO (full local + remote access)"
+  - name: "devboxnos-managers"
+    description: "Division/department managers"
+  - name: "devboxnos-users"
+    description: "Standard employees"
+  - name: "devboxnos-guests"
+    description: "Guest access (IIAB terminal only)"
+
+# ── Authentik RBAC tiers (group → application access) ──────────────────────────
+# Tier 1 = admin only, Tier 4 = guest/public. Higher tier = broader access.
+# Policies auto-created by Authentik Blueprints (templates/authentik/blueprints/20-rbac-policies.yaml.j2).
+authentik_rbac_tiers:
+  - tier: 1
+    name: "tier-admin"
+    description: "Admin-only services (infrastructure, secrets, monitoring)"
+    groups: ["devboxnos-providers", "devboxnos-admins"]
+  - tier: 2
+    name: "tier-manager"
+    description: "Manager+ services (dev tools, analytics, automation)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers"]
+  - tier: 3
+    name: "tier-user"
+    description: "Standard employee services (productivity, collaboration)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers", "devboxnos-users"]
+  - tier: 4
+    name: "tier-guest"
+    description: "Guest/public access (content, media)"
+    groups: ["devboxnos-providers", "devboxnos-admins", "devboxnos-managers", "devboxnos-users", "devboxnos-guests"]
+
+# Mapování slug → tier. Služby bez záznamu = tier 3 (výchozí = user+).
+authentik_app_tiers:
+  portainer: 1
+  infisical: 1
+  grafana: 1
+  gitea: 2
+  gitlab: 2
+  n8n: 2
+  superset: 2
+  metabase: 2
+  paperclip: 2
+  erpnext: 2
+  freescout: 2
+  nextcloud: 3
+  outline: 3
+  open-webui: 3
+  puter: 3
+  vaultwarden: 3
+  uptime-kuma: 3
+  calibre-web: 3
+  home-assistant: 3
+  kiwix: 4
+  jellyfin: 4
+  glasswing: 1
+  wordpress: 4
+
+# ── OIDC Service Registry (single source of truth) ──────────────────────────
+# Authentik post-start automaticky vytvoří OIDC providery + aplikace.
+# Compose templates referencují {{ authentik_oidc_apps[N].client_id }} atd.
+# Pro přidání nové služby: přidej entry sem + OIDC env vars do compose.
+authentik_oidc_apps:
+  - name: "Grafana"
+    slug: "grafana"
+    enabled: "{{ install_observability | default(true) }}"
+    client_id: "devboxnos-grafana"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
+    redirect_uris: "https://{{ grafana_domain | default('grafana.dev.local') }}/login/generic_oauth"
+    launch_url: "https://{{ grafana_domain | default('grafana.dev.local') }}"
+  - name: "Gitea"
+    slug: "gitea"
+    enabled: "{{ install_gitea | default(false) }}"
+    client_id: "devboxnos-gitea"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
+    redirect_uris: "https://{{ gitea_domain | default('git.dev.local') }}/user/oauth2/authentik/callback"
+    launch_url: "https://{{ gitea_domain | default('git.dev.local') }}"
+    post_setup: "gitea_api"
+  - name: "Portainer"
+    slug: "portainer"
+    enabled: "{{ install_portainer | default(false) }}"
+    client_id: "devboxnos-portainer"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_portainer"
+    redirect_uris: "https://{{ portainer_domain | default('portainer.dev.local') }}"
+    launch_url: "https://{{ portainer_domain | default('portainer.dev.local') }}"
+    post_setup: "portainer_api"
+  - name: "Outline"
+    slug: "outline"
+    enabled: "{{ install_outline | default(false) }}"
+    client_id: "devboxnos-outline"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_outline"
+    redirect_uris: "https://{{ outline_domain | default('wiki.dev.local') }}/auth/oidc.callback"
+    launch_url: "https://{{ outline_domain | default('wiki.dev.local') }}"
+  - name: "Open WebUI"
+    slug: "open-webui"
+    enabled: "{{ install_openwebui | default(false) }}"
+    client_id: "devboxnos-openwebui"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_openwebui"
+    redirect_uris: "https://{{ openwebui_domain | default('ai.dev.local') }}/oauth/oidc/callback"
+    launch_url: "https://{{ openwebui_domain | default('ai.dev.local') }}"
+  - name: "Nextcloud"
+    slug: "nextcloud"
+    enabled: "{{ install_nextcloud | default(false) }}"
+    client_id: "devboxnos-nextcloud"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_nextcloud"
+    redirect_uris: "https://{{ nextcloud_domain | default('cloud.dev.local') }}/apps/user_oidc/code"
+    launch_url: "https://{{ nextcloud_domain | default('cloud.dev.local') }}"
+    post_setup: "nextcloud_occ"
+  - name: "n8n"
+    slug: "n8n"
+    enabled: "{{ install_n8n | default(false) }}"
+    client_id: "devboxnos-n8n"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_n8n"
+    redirect_uris: "https://{{ n8n_domain | default('n8n.dev.local') }}/rest/oauth2-credential/callback"
+    launch_url: "https://{{ n8n_domain | default('n8n.dev.local') }}"
+  - name: "Metabase"
+    slug: "metabase"
+    enabled: "{{ install_metabase | default(false) }}"
+    client_id: "devboxnos-metabase"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_metabase"
+    redirect_uris: "https://{{ metabase_domain | default('bi.dev.local') }}/auth/sso/oidc"
+    launch_url: "https://{{ metabase_domain | default('bi.dev.local') }}"
+    external_host: "https://{{ metabase_domain | default('bi.dev.local') }}"
+    type: "proxy"
+  - name: "GitLab"
+    slug: "gitlab"
+    enabled: "{{ install_gitlab | default(false) }}"
+    client_id: "devboxnos-gitlab"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_gitlab"
+    redirect_uris: "https://{{ gitlab_domain | default('gitlab.dev.local') }}/users/auth/openid_connect/callback"
+    launch_url: "https://{{ gitlab_domain | default('gitlab.dev.local') }}"
+  # ── Proxy-auth služby (nginx forward auth, žádný nativní OIDC) ──────────
+  - name: "Uptime Kuma"
+    slug: "uptime-kuma"
+    enabled: "{{ install_uptime_kuma | default(false) }}"
+    launch_url: "https://{{ uptime_kuma_domain | default('uptime.dev.local') }}"
+    external_host: "https://{{ uptime_kuma_domain | default('uptime.dev.local') }}"
+    type: "proxy"
+  - name: "Calibre-Web"
+    slug: "calibre-web"
+    enabled: "{{ install_calibreweb | default(false) }}"
+    launch_url: "https://{{ calibreweb_domain | default('books.dev.local') }}"
+    external_host: "https://{{ calibreweb_domain | default('books.dev.local') }}"
+    type: "proxy"
+  - name: "Home Assistant"
+    slug: "home-assistant"
+    enabled: "{{ install_homeassistant | default(false) }}"
+    launch_url: "https://{{ homeassistant_domain | default('home.dev.local') }}"
+    external_host: "https://{{ homeassistant_domain | default('home.dev.local') }}"
+    type: "proxy"
+  - name: "Jellyfin"
+    slug: "jellyfin"
+    enabled: "{{ install_jellyfin | default(false) }}"
+    launch_url: "https://{{ jellyfin_domain | default('media.dev.local') }}"
+    external_host: "https://{{ jellyfin_domain | default('media.dev.local') }}"
+    type: "proxy"
+  - name: "Kiwix"
+    slug: "kiwix"
+    enabled: "{{ install_kiwix | default(false) }}"
+    launch_url: "https://{{ kiwix_domain | default('kiwix.dev.local') }}"
+    external_host: "https://{{ kiwix_domain | default('kiwix.dev.local') }}"
+    type: "proxy"
+  - name: "WordPress"
+    slug: "wordpress"
+    enabled: "{{ install_wordpress | default(false) }}"
+    launch_url: "https://{{ wordpress_domain | default('wordpress.dev.local') }}"
+    external_host: "https://{{ wordpress_domain | default('wordpress.dev.local') }}"
+    type: "proxy"
+  - name: "ERPNext"
+    slug: "erpnext"
+    enabled: "{{ install_erpnext | default(false) }}"
+    launch_url: "https://{{ erpnext_domain | default('erp.dev.local') }}"
+    external_host: "https://{{ erpnext_domain | default('erp.dev.local') }}"
+    type: "proxy"
+  - name: "FreeScout"
+    slug: "freescout"
+    enabled: "{{ install_freescout | default(false) }}"
+    launch_url: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
+    external_host: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
+    type: "proxy"
+  - name: "Infisical"
+    slug: "infisical"
+    enabled: "{{ install_infisical | default(false) }}"
+    launch_url: "https://{{ infisical_domain | default('vault.dev.local') }}"
+    external_host: "https://{{ infisical_domain | default('vault.dev.local') }}"
+    type: "proxy"
+  - name: "Vaultwarden"
+    slug: "vaultwarden"
+    enabled: "{{ install_vaultwarden | default(false) }}"
+    client_id: "devboxnos-vaultwarden"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
+    redirect_uris: "https://{{ vaultwarden_domain | default('pass.dev.local') }}/identity/connect/oidc-signin"
+    launch_url: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
+  - name: "Paperclip"
+    slug: "paperclip"
+    enabled: "{{ install_paperclip | default(false) }}"
+    launch_url: "https://{{ paperclip_domain | default('paperclip.dev.local') }}"
+    external_host: "https://{{ paperclip_domain | default('paperclip.dev.local') }}"
+    type: "proxy"
+  - name: "Superset"
+    slug: "superset"
+    enabled: "{{ install_superset | default(false) }}"
+    launch_url: "https://{{ superset_domain | default('superset.dev.local') }}"
+    external_host: "https://{{ superset_domain | default('superset.dev.local') }}"
+    type: "proxy"
+  - name: "Puter"
+    slug: "puter"
+    enabled: "{{ install_puter | default(false) }}"
+    launch_url: "https://{{ puter_domain | default('os.dev.local') }}"
+    external_host: "https://{{ puter_domain | default('os.dev.local') }}"
+    type: "proxy"
+  - name: "Glasswing"
+    slug: "glasswing"
+    enabled: "{{ install_glasswing | default(install_php | default(true)) }}"
+    launch_url: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
+    external_host: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
+    type: "proxy"
+
+# Pomocné proměnné (odvozené z registru, pro compose templates)
+# Compose šablony je referencují přímo — nemusíš je měnit ručně.
+authentik_oidc_grafana_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'grafana') | first).client_id }}"
+authentik_oidc_grafana_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'grafana') | first).client_secret }}"
+authentik_oidc_outline_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'outline') | first).client_id }}"
+authentik_oidc_outline_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'outline') | first).client_secret }}"
+authentik_oidc_openwebui_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'open-webui') | first).client_id }}"
+authentik_oidc_openwebui_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'open-webui') | first).client_secret }}"
+authentik_oidc_gitea_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_id }}"
+authentik_oidc_gitea_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_secret }}"
+authentik_oidc_portainer_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'portainer') | first).client_id }}"
+authentik_oidc_portainer_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'portainer') | first).client_secret }}"
+authentik_oidc_nextcloud_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_id }}"
+authentik_oidc_nextcloud_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
+authentik_oidc_gitlab_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitlab') | first).client_id }}"
+authentik_oidc_gitlab_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitlab') | first).client_secret }}"
+
+# ==============================================================================
+# INFISICAL CE – Secrets Management (REST API, CLI, SDK)
+# Centrální vault pro DB hesla, API klíče, certifikáty. E2EE.
+# ==============================================================================
+
+infisical_version: "latest"
+infisical_domain: "vault.dev.local"
+infisical_port: 8075
+infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
+infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
+infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
+infisical_db_name: "infisical"
+infisical_db_user: "infisical"
+infisical_db_password: "{{ global_password_prefix }}_pw_infisical_db"
+infisical_disable_signup: true                     # Admin creates all users
+
+# ==============================================================================
+# VAULTWARDEN – Personal Password Vault (Bitwarden-kompatibilní)
+# Každý tenant devBoxNOS má svůj vault pro osobní hesla.
+# ==============================================================================
+
+vaultwarden_version: "1.35.4"            # CVE-2026-27802/27803 (priv escalation), CVE-2025-24364 (RCE)
+vaultwarden_domain: "pass.dev.local"
+vaultwarden_port: 8062
+vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
+vaultwarden_signups_allowed: false                 # Admin creates accounts
+vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"

@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.authentik — Authentik (server + worker) v Docker (infra compose stack)
+#
+# Credentials (authentik_secret_key, authentik_db_password,
+# authentik_bootstrap_password) a cely OIDC registry (authentik_oidc_apps,
+# authentik_rbac_tiers, authentik_app_tiers, authentik_default_groups)
+# zustavaji v top-level default.config.yml / default.credentials.yml —
+# centralni pro prefix rotation + sdilene s compose fragmenty ostatnich
+# sluzeb (kazda sluzba cte authentik_oidc_<svc>_client_id derived var).
+# ==============================================================================
+
+authentik_version: "2025.12.4"                      # CVE-2026-25227 pin (CVSS 9.1)
+authentik_port: 9003                                # 9000=PHP-FPM, 9001=RustFS, 9002=Portainer
+authentik_domain: "auth.dev.local"
+authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
+authentik_db_name: "authentik"
+authentik_db_user: "authentik"
+authentik_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
+authentik_worker_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+authentik_cpus: "{{ docker_cpus_standard | default('1.0') }}"

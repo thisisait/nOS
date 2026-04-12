@@ -1,0 +1,49 @@
+---
+# ==============================================================================
+# pazny.homeassistant/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori config adresar, zajisti base configuration.yaml, nastavi
+# trusted_proxies block a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/homeassistant.yml.
+#
+# Post-start auto-onboarding + password reconverge je v tasks/post.yml —
+# volany z stack-up.yml az PO compose up.
+# ==============================================================================
+
+- name: "[pazny.homeassistant] Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.homeassistant] Ensure configuration.yaml exists"
+  ansible.builtin.copy:
+    dest: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/configuration.yaml"
+    content: |
+      # Home Assistant – base config (managed by Ansible)
+      default_config:
+    mode: '0644'
+    force: false
+
+- name: "[pazny.homeassistant] Configure trusted_proxies for nginx reverse proxy"
+  ansible.builtin.blockinfile:
+    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/configuration.yaml"
+    marker: "# {mark} ANSIBLE MANAGED – trusted_proxies"
+    block: |
+      http:
+        use_x_forwarded_for: true
+        trusted_proxies:
+          - 127.0.0.1
+          - "::1"
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+    create: true
+  notify: Restart homeassistant
+
+- name: "[pazny.homeassistant] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/homeassistant.yml"
+    mode: '0644'
+  notify: Restart homeassistant

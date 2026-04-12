@@ -1,0 +1,9 @@
+---
+# pazny.loki — handlers
+# Role-local "Restart loki" — muze byt prebite play-level handlerem v main.yml.
+
+- name: Restart loki
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+    restart loki
+  failed_when: false

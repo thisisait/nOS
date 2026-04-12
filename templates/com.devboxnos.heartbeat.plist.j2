@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.devboxnos.heartbeat</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ ansible_facts['env']['HOME'] }}/.pyenv/shims/python3</string>
+    <string>{{ ansible_facts['env']['HOME'] }}/agents/heartbeat.py</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/agents/log/heartbeat.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/agents/log/heartbeat-error.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HEARTBEAT_ENDPOINT</key>
+    <string>{{ heartbeat_endpoint | default('') }}</string>
+    <key>HEARTBEAT_API_KEY</key>
+    <string>{{ heartbeat_api_key | default('') }}</string>
+    <key>HEARTBEAT_INTERVAL</key>
+    <string>{{ heartbeat_interval | default(300) }}</string>
+    <key>INSTANCE_NAME</key>
+    <string>{{ instance_name | default('devboxnos') }}</string>
+    <key>SERVICE_REGISTRY</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json</string>
+    <key>VERSION_FILE</key>
+    <string>{{ playbook_dir }}/VERSION</string>
+  </dict>
+</dict>
+</plist>

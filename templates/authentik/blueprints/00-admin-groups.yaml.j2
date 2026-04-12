@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── devBoxNOS admin user + RBAC groups ────────────────────────────────────────
+# Spravovano Ansible playbookem — NEEDITUJ rucne. Zmeny dej do
+# default.config.yml (authentik_default_groups, authentik_bootstrap_*) a
+# templates/authentik/blueprints/00-admin-groups.yaml.j2.
+#
+# Blueprint se reaplykuje pri startu containeru a na kazdou zmenu tohoto
+# souboru. `password` pole na authentik_core.user je re-aplikovano na kazdy
+# reconcile → prefix rotation se propise do akadmin usera automaticky.
+
+version: 1
+metadata:
+  name: devboxnos-admin-groups
+  labels:
+    managed-by: devboxnos
+    blueprint-version: "1"
+
+entries:
+  # ── RBAC skupiny ─────────────────────────────────────────────────────────
+{% for g in authentik_default_groups | default([]) %}
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "{{ g.name }}"
+    attrs:
+      is_superuser: {{ (g.name in ['devboxnos-providers', 'devboxnos-admins']) | lower }}
+{% endfor %}
+
+  # ── Admin user (heslo reconverged pri kazdem reconcile) ──────────────────
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: akadmin
+    attrs:
+      name: "devBoxNOS Admin"
+      email: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
+      password: "{{ authentik_bootstrap_password }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      groups:
+        - !Find [authentik_core.group, [name, devboxnos-admins]]

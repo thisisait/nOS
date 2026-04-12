@@ -1,0 +1,36 @@
+# =============================================================================
+# pazny.redis — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+# Docker compose merge semantics umoznuje referencovat vnejsi networky
+# dokud je kterykoli z merge-ovanych souboru definuje.
+# =============================================================================
+
+services:
+  redis:
+    image: redis:{{ redis_version | default('7-alpine') }}
+    hostname: redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ redis_port | default(6379) }}:6379"
+    volumes:
+      - {{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass {{ redis_password | default(global_password_prefix + '_pw_redis') }}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "{{ redis_password | default(global_password_prefix + '_pw_redis') }}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ redis_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}

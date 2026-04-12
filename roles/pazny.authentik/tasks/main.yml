@@ -1,0 +1,30 @@
+---
+# ==============================================================================
+# pazny.authentik/tasks/main.yml
+#
+# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/infra/overrides/authentik.yml a zavola blueprints.yml
+# pro render 3 blueprintu do {{ stacks_dir }}/infra/authentik/blueprints
+# (bind source pro /blueprints/custom v compose envu; blueprints.yml
+# zaroven vytvori tuto slozku).
+#
+# Post-start health-check je v tasks/post.yml — volany z core-up.yml az
+# PO `docker compose up infra --wait`.
+# ==============================================================================
+
+- name: "[pazny.authentik] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ authentik_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.authentik] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/authentik.yml"
+    mode: '0644'
+  notify: Restart authentik
+
+- name: "[pazny.authentik] Render blueprints (admin/groups, OIDC apps, RBAC)"
+  ansible.builtin.include_tasks: blueprints.yml

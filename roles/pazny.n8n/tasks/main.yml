@@ -1,0 +1,38 @@
+---
+# ==============================================================================
+# pazny.n8n/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori data dir, enabluje nginx vhost (template uz existuje v
+# {{ homebrew_prefix }}/etc/nginx/sites-available/), vyrenderuje compose
+# override fragment do {{ stacks_dir }}/iiab/overrides/n8n.yml, ktery
+# pak stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start owner setup + admin password reconverge je v tasks/post.yml
+# — volany z stack-up.yml az PO compose up.
+# ==============================================================================
+
+- name: "[pazny.n8n] Ensure n8n data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ n8n_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.n8n] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/n8n.yml"
+    mode: '0644'
+  notify: Restart n8n
+
+- name: "[pazny.n8n] Enable n8n nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/n8n.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/n8n.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

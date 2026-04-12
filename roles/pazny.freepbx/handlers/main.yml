@@ -1,0 +1,8 @@
+---
+# pazny.freepbx — handlers
+
+- name: Restart freepbx
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/voip/docker-compose.yml" -p voip
+    restart freepbx
+  failed_when: false

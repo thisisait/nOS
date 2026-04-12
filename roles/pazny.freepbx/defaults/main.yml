@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.freepbx — FreePBX + Asterisk v Docker (voip compose stack)
+#
+# Credentials (freepbx_db_password) zustavaji v top-level default.config.yml /
+# default.credentials.yml — stale centralizovane, role je jen cte pres
+# Ansible var precedence (vars_files > role defaults).
+# ==============================================================================
+
+freepbx_version: "latest"
+freepbx_port: 8088                       # Web UI
+freepbx_sip_port: 5060                   # SIP signaling (UDP+TCP)
+freepbx_iax_port: 4569                   # IAX2 protokol
+freepbx_rtp_start: 10000                 # RTP media start port
+freepbx_rtp_end: 10100                   # RTP media end port
+freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
+freepbx_db_name: "asterisk"
+freepbx_db_user: "asterisk"
+freepbx_timezone: "Europe/Prague"
+freepbx_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+freepbx_cpus: "{{ docker_cpus_standard | default('1.0') }}"

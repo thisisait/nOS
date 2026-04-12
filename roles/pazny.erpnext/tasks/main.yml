@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.erpnext/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
+# vyrenderuje compose override fragment do
+# {{ stacks_dir }}/b2b/overrides/erpnext.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start recovery (retry configurator, bench migrate lock cleanup,
+# admin password reconverge, site health check) je v tasks/post.yml —
+# volany z stack-up.yml az PO `docker compose up b2b --wait`.
+#
+# ERPNext data zije v Docker named volume `b2b_erpnext_sites` (P0.1 VirtioFS
+# workaround), zadny host-side data dir se nevytvari.
+# ==============================================================================
+
+- name: "[pazny.erpnext] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/b2b/overrides/erpnext.yml"
+    mode: '0644'
+  notify: Restart erpnext

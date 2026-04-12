@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: portainer
+  namespace: pazny
+  author: Pázny
+  description: Portainer CE in Docker compose override (devBoxNOS infra stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Portainer bezi jako soucast infra stacku.
+# Docker-socket-proxy zustava v base infra compose (sdileny s Traefikem).
+dependencies: []
+
+collections: []

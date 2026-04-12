@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# pazny.rustfs — RustFS (S3-compatible object storage, Rust drop-in MinIO)
+#
+# S3 API:  http://localhost:{{ rustfs_api_port }}
+# Konzole: http://localhost:{{ rustfs_console_port }}
+#
+# Credentials (rustfs_access_key / rustfs_secret_key) zustavaji v
+# default.config.yml a jsou prefix-rotovane pres global_password_prefix.
+# ==============================================================================
+
+rustfs_version: "1.0.0-alpha.90"                    # CVE-2025-68926 pin (+ 3 more CVEs)
+rustfs_api_port: 9010                               # S3 API
+rustfs_console_port: 9001                           # Web konzole
+rustfs_domain: "fs.dev.local"
+rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
+rustfs_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+rustfs_cpus: "{{ docker_cpus_light | default('0.5') }}"

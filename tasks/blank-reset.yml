@@ -18,6 +18,17 @@
 #   - Shell konfigurace (.zshrc bloky) – přepisuje se při reinstalaci
 # ==============================================================================
 
+# ── 0. External storage path overrides ──────────────────────────────────
+# KRITICKÉ: Musí běžet PŘED sestavením _blank_dirs. external-storage.yml
+# normálně běží až v main.yml tasks (po blank-reset), takže bez tohoto
+# includu by blank mazal neexistující ~/service adresáře a skutečná data
+# na /Volumes/SSD1TB/{jellyfin,openwebui,portainer,...} by přežila.
+- name: "[BLANK] Apply external storage path overrides (if external_storage_root set)"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/external-paths.yml"
+  when:
+    - external_storage_root is defined
+    - external_storage_root | default('') | length > 0
+
 # ── 1. Potvrzení ─────────────────────────────────────────────────────────
 - name: "[BLANK] Potvrzení destruktivní operace"
   ansible.builtin.pause:
@@ -70,6 +81,16 @@
     {{ docker_bin }} network rm {{ stacks_shared_network }} 2>/dev/null || true
   failed_when: false
   changed_when: false
+
+- name: "[BLANK] Prune all unused Docker volumes (-a = named + anonymous)"
+  ansible.builtin.shell: "{{ docker_bin }} volume prune -f -a 2>&1 || {{ docker_bin }} volume prune -f 2>&1"
+  failed_when: false
+  changed_when: true
+
+- name: "[BLANK] Prune all unused Docker networks"
+  ansible.builtin.shell: "{{ docker_bin }} network prune -f"
+  failed_when: false
+  changed_when: true
 
 # ── 3. Homebrew služby – zastavit ───────────────────────────────────────
 - name: "[BLANK] Stop Homebrew services"
@@ -145,7 +166,30 @@
   become: true
   failed_when: false
 
-# ── 7. Data directories – smazat (jen pro povolené služby) ──────────────
+# ── 7. Auto-dependency resolution (duplicace z main.yml) ───────────────
+# Služby jako ERPNext automaticky zapínají MariaDB/Redis, ale main.yml
+# auto-deps ještě neběžely. Musíme je vyřešit i zde, jinak se DB data nesmaže.
+- name: "[BLANK] Resolve auto-dependencies for cleanup"
+  ansible.builtin.set_fact:
+    install_mariadb: >-
+      {{ install_mariadb | default(false) or
+         install_wordpress | default(false) or
+         install_nextcloud | default(false) or
+         install_erpnext | default(false) or
+         install_freescout | default(false) or
+         install_freepbx | default(false) }}
+    install_postgresql: >-
+      {{ install_postgresql | default(false) or
+         install_outline | default(false) or
+         install_metabase | default(false) or
+         install_superset | default(false) }}
+    redis_docker: >-
+      {{ redis_docker | default(false) or
+         install_erpnext | default(false) or
+         install_outline | default(false) or
+         install_superset | default(false) }}
+
+# ── 8. Data directories – smazat (jen pro povolené služby) ──────────────
 - name: "[BLANK] Build list of data directories to remove"
   ansible.builtin.set_fact:
     _blank_dirs: >-
@@ -170,6 +214,18 @@
         +
         (install_n8n | default(false)) | ternary(
           [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
+        +
+        (install_kiwix | default(false)) | ternary(
+          [kiwix_data_dir | default(ansible_facts['env']['HOME'] + '/kiwix')], [])
+        +
+        (install_offline_maps | default(false)) | ternary(
+          [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
+        +
+        (install_traefik | default(false)) | ternary(
+          [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
+        +
+        (install_pi_agents | default(false)) | ternary(
+          [pi_config_dir | default(ansible_facts['env']['HOME'] + '/.pi/agent')], [])
         +
         (install_gitea | default(false)) | ternary(
           [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')], [])
@@ -210,9 +266,6 @@
         (install_openclaw | default(false)) | ternary(
           [ansible_facts['env']['HOME'] + '/.openclaw'], [])
         +
-        (install_erpnext | default(false)) | ternary(
-          [erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites')], [])
-        +
         (install_freescout | default(false)) | ternary(
           [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
         +
@@ -236,6 +289,27 @@
         +
         (install_bluesky_pds | default(false)) | ternary(
           [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
+        +
+        (install_jsos | default(false)) | ternary(
+          [jsos_dir | default(ansible_facts['env']['HOME'] + '/projects/jsOs')], [])
+        +
+        (install_paperclip | default(false)) | ternary(
+          [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
+        +
+        (install_puter | default(false)) | ternary(
+          [puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter')], [])
+        +
+        (install_authentik | default(false)) | ternary(
+          [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')], [])
+        +
+        (install_infisical | default(false)) | ternary(
+          [infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical')], [])
+        +
+        (install_vaultwarden | default(false)) | ternary(
+          [vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden')], [])
+        +
+        (install_glasswing | default(install_php | default(true))) | ternary(
+          [glasswing_app_dir | default(ansible_facts['env']['HOME'] + '/glasswing/app')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo – Docker creates files as www-data)"
@@ -247,7 +321,7 @@
     label: "{{ item }}"
   become: true
 
-# ── 8. Generated files ──────────────────────────────────────────────────
+# ── 9. Generated files ──────────────────────────────────────────────────
 - name: "[BLANK] Remove service registry"
   ansible.builtin.file:
     path: "{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"

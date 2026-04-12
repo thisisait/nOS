@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.offline_maps — tileserver-gl + MBTiles offline maps (iiab compose stack)
+#
+# Role name `offline_maps` odrazi celou offline-maps subsystemu:
+#   - Docker service `tileserver` (compose override)
+#   - MBTiles download (maps_mbtiles_files list)
+#   - tileserver-gl config.json render
+#
+# Centralizovane promenne zustavaji v default.config.yml (nginx vhost
+# render, blank-reset path resolver).
+# ==============================================================================
+
+maps_tileserver_version: "latest"                   # maptiler/tileserver-gl image tag
+maps_port: 8070                                     # Docker host port (compose template default)
+maps_domain: "maps.dev.local"
+maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"
+
+# MBTiles soubory ke stazeni (prazdne = nestahovat automaticky)
+maps_mbtiles_files: []
+
+tileserver_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+tileserver_cpus: "{{ docker_cpus_light | default('0.5') }}"

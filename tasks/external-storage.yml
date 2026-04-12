@@ -23,64 +23,72 @@
     - not ansible_check_mode
     - not _ssd_mount.stat.exists or not _ssd_mount.stat.isdir
 
-# ── Override datových cest přes set_fact ─────────────────────────────────────
-# set_fact má vyšší prioritu než vars_files → přepíše default.config.yml hodnoty
+# ── Override datových cest přes set_fact (single source of truth) ────────────
+# set_fact má vyšší prioritu než vars_files → přepíše default.config.yml hodnoty.
+# Stejný soubor se zahrnuje i z blank-reset.yml, aby blank věděl o externích
+# cestách a nemazal neexistující ~/service adresáře.
 
-- name: "[External SSD] Override IIAB data paths to external storage"
-  ansible.builtin.set_fact:
-    kiwix_data_dir: "{{ external_storage_root }}/kiwix"
-    maps_data_dir: "{{ external_storage_root }}/maps"
-    calibreweb_books_dir: "{{ external_storage_root }}/calibre"
-    n8n_data_dir: "{{ external_storage_root }}/n8n"
-    gitea_data_dir: "{{ external_storage_root }}/gitea"
-    gitlab_data_dir: "{{ external_storage_root }}/gitlab"
-    openwebui_data_dir: "{{ external_storage_root }}/openwebui"
-    woodpecker_data_dir: "{{ external_storage_root }}/woodpecker"
-    portainer_data_dir: "{{ external_storage_root }}/portainer"
-    jellyfin_config_dir: "{{ external_storage_root }}/jellyfin/config"
-    jellyfin_cache_dir: "{{ external_storage_root }}/jellyfin/cache"
-    jellyfin_movies_dir: "{{ external_storage_root }}/media/movies"
-    jellyfin_shows_dir: "{{ external_storage_root }}/media/shows"
-    jellyfin_music_dir: "{{ external_storage_root }}/media/music"
-    uptime_kuma_data_dir: "{{ external_storage_root }}/uptime-kuma"
-    nextcloud_data_dir: "{{ external_storage_root }}/nextcloud-data"
-    wordpress_dir: "{{ external_storage_root }}/wordpress"
-
-- name: "[External SSD] Override observability storage paths"
-  ansible.builtin.set_fact:
-    prometheus_storage_path: "{{ external_storage_root }}/observability/prometheus"
-    loki_storage_path: "{{ external_storage_root }}/observability/loki"
-    tempo_storage_path: "{{ external_storage_root }}/observability/tempo"
+- name: "[External SSD] Apply data path overrides"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/external-paths.yml"
 
 # ── Vytvoření adresářové struktury na SSD ────────────────────────────────────
+# Loop nad overridnutými proměnnými z external-paths.yml – žádný hard-coded
+# seznam, přidání nové služby = jen set_fact v external-paths.yml.
 
-- name: "[External SSD] Create data directories"
+- name: "[External SSD] Create data directories from override vars"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
-    - "{{ external_storage_root }}/kiwix"
-    - "{{ external_storage_root }}/maps"
-    - "{{ external_storage_root }}/calibre"
-    - "{{ external_storage_root }}/n8n"
-    - "{{ external_storage_root }}/gitea"
-    - "{{ external_storage_root }}/gitlab"
-    - "{{ external_storage_root }}/openwebui"
-    - "{{ external_storage_root }}/woodpecker"
-    - "{{ external_storage_root }}/portainer"
-    - "{{ external_storage_root }}/jellyfin/config"
-    - "{{ external_storage_root }}/jellyfin/cache"
-    - "{{ external_storage_root }}/media/movies"
-    - "{{ external_storage_root }}/media/shows"
-    - "{{ external_storage_root }}/media/music"
-    - "{{ external_storage_root }}/uptime-kuma"
-    - "{{ external_storage_root }}/nextcloud-data"
-    - "{{ external_storage_root }}/wordpress"
-    - "{{ external_storage_root }}/observability/prometheus"
-    - "{{ external_storage_root }}/observability/loki"
-    - "{{ external_storage_root }}/observability/tempo"
-    - "{{ external_storage_root }}/observability/grafana"
+    # Core infra
+    - "{{ mariadb_data_dir }}"
+    - "{{ postgresql_data_dir }}"
+    - "{{ redis_data_dir }}"
+    - "{{ authentik_data_dir }}"
+    - "{{ infisical_data_dir }}"
+    - "{{ vaultwarden_data_dir }}"
+    - "{{ bluesky_pds_data_dir }}"
+    - "{{ traefik_config_dir }}"
+    # IIAB
+    - "{{ wordpress_dir }}"
+    - "{{ nextcloud_dir }}"
+    - "{{ nextcloud_data_dir }}"
+    - "{{ kiwix_data_dir }}"
+    - "{{ maps_data_dir }}"
+    - "{{ calibreweb_books_dir }}"
+    - "{{ n8n_data_dir }}"
+    - "{{ openwebui_data_dir }}"
+    - "{{ portainer_data_dir }}"
+    - "{{ uptime_kuma_data_dir }}"
+    - "{{ homeassistant_config_dir }}"
+    - "{{ rustfs_data_dir }}"
+    - "{{ puter_data_dir }}"
+    - "{{ puter_config_dir }}"
+    - "{{ jellyfin_config_dir }}"
+    - "{{ jellyfin_cache_dir }}"
+    - "{{ jellyfin_movies_dir }}"
+    - "{{ jellyfin_shows_dir }}"
+    - "{{ jellyfin_music_dir }}"
+    # DevOps
+    - "{{ gitea_data_dir }}"
+    - "{{ gitlab_data_dir }}"
+    - "{{ gitlab_config_dir }}"
+    - "{{ woodpecker_data_dir }}"
+    - "{{ paperclip_data_dir }}"
+    # B2B (erpnext_data_dir deprecated — named volume, viz P0.1 commit 3b88162)
+    - "{{ freescout_data_dir }}"
+    - "{{ outline_data_dir }}"
+    # VoIP / Engineering / Data
+    - "{{ freepbx_data_dir }}"
+    - "{{ qgis_data_dir }}"
+    - "{{ metabase_data_dir }}"
+    - "{{ superset_data_dir }}"
+    # Observability TSDBs
+    - "{{ prometheus_storage_path }}"
+    - "{{ loki_storage_path }}"
+    - "{{ tempo_storage_path }}"
+    - "{{ grafana_data_dir }}"
 
 # ── Ollama modely ────────────────────────────────────────────────────────────
 

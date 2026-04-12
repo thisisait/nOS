@@ -1,0 +1,8 @@
+---
+# pazny.superset — handlers
+
+- name: Restart superset
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/data/docker-compose.yml" -p data
+    restart superset
+  failed_when: false

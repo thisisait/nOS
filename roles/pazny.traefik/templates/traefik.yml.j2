@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+# Traefik static configuration — rendered by pazny.traefik role
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: {{ stacks_shared_network | default('shared_net') }}
+    endpoint: "tcp://docker-socket-proxy:2375"
+  file:
+    directory: "/etc/traefik/conf.d"
+    watch: true
+
+log:
+  level: "{{ traefik_log_level | default('INFO') }}"
+
+accessLog: {}

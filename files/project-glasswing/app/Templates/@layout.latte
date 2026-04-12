@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{ifset title}{include title} | {/ifset}Glasswing — NOS Security Research Dashboard</title>
+	<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div class="header">
+	<div class="header-left">
+		<div>
+			<h1><a href="/" style="color:inherit">Glasswing</a> <span style="color:var(--text2); font-weight:400">NOS Security Research</span></h1>
+			<div class="subtitle">FOSS vulnerability monitoring, autonomous pentesting, upstream patch development</div>
+		</div>
+	</div>
+	<div class="header-right">
+		<span id="headerStatus"></span>
+		{if $isAuthenticated}
+			<span style="color:var(--text2);font-size:12px">{$authName ?? $authUser}</span>
+			<a href="https://auth.dev.local/application/o/glasswing/end-session/" style="font-size:12px;color:var(--text2);margin-left:4px">Odhlasit</a>
+		{/if}
+	</div>
+</div>
+
+<div class="tabs" id="tabs">
+	<a class="tab{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Overview <span class="tab-key">1</span></a>
+	<a class="tab{if $activeTab === 'timeline'} active{/if}" href="/dashboard#timeline" data-tab="timeline">Timeline <span class="tab-key">2</span></a>
+	<a class="tab{if $activeTab === 'components'} active{/if}" href="/dashboard#components" data-tab="components">Components <span class="tab-key">3</span></a>
+	<a class="tab{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">4</span></a>
+	<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">5</span></a>
+	<a class="tab{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">6</span></a>
+</div>
+
+<div class="container">
+	{include content}
+</div>
+
+<script src="/assets/dashboard.js"></script>
+</body>
+</html>

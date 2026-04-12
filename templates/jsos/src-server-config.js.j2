@@ -1,0 +1,135 @@
+// {{ ansible_managed | default('Ansible managed — nepřepisuj ručně') }}
+// ==============================================================================
+// jsOS – Server configuration
+// ==============================================================================
+
+const path = require('path');
+
+// ── Redis session store ─────────────────────────────────────────────────────
+const RedisStore = require('connect-redis').default;
+const { createClient } = require('redis');
+
+const redisClient = createClient({
+  url: 'redis://127.0.0.1:{{ redis_port | default(6379) }}',
+});
+redisClient.connect().catch((err) => {
+  console.error('[jsOS] Redis connection failed:', err.message);
+});
+
+// ── Auth adapter ─────────────────────────────────────────────────────────────
+const blueskyAuth = require('./adapters/bluesky-auth');
+
+// ── S3 VFS adapter ──────────────────────────────────────────────────────────
+{% if install_rustfs | default(false) %}
+const s3Vfs = require('./adapters/s3-vfs');
+{% endif %}
+
+module.exports = {
+  root: path.resolve(__dirname, '../../'),
+  port: {{ jsos_port }},
+  public: path.resolve(__dirname, '../../dist'),
+
+  // ── Express ─────────────────────────────────────────────────────────────
+  express: {
+    maxBodySize: '50mb',
+  },
+
+  // ── Session (Redis) ─────────────────────────────────────────────────────
+  session: {
+    options: {
+      secret: '{{ jsos_session_secret }}',
+      store: new RedisStore({
+        client: redisClient,
+        prefix: 'jsos:session:',
+        ttl: 86400,
+      }),
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    },
+  },
+
+  // ── Auth (Bluesky AT Protocol) ──────────────────────────────────────────
+  auth: {
+    adapter: blueskyAuth,
+    config: {
+      pdsUrl: '{{ jsos_bluesky_pds_url | default("https://bsky.social") }}',
+      adminHandles: {{ jsos_admin_handles | default([]) | to_json }},
+      db: {
+        host: '127.0.0.1',
+        port: {{ postgresql_port | default(5432) }},
+        user: '{{ jsos_db_user }}',
+        password: '{{ jsos_db_password }}',
+        database: '{{ jsos_db_name }}',
+      },
+      provision: {
+        vfsRoot: path.resolve(__dirname, '../../vfs'),
+{% if install_rustfs | default(false) %}
+        s3: {
+          enabled: true,
+          endpoint: 'http://127.0.0.1:{{ rustfs_api_port | default(9010) }}',
+          accessKey: '{{ rustfs_access_key }}',
+          secretKey: '{{ rustfs_secret_key }}',
+        },
+{% else %}
+        s3: { enabled: false },
+{% endif %}
+{% if jsos_provision_databases | default(true) %}
+        db: {
+          provisionPerUser: true,
+          host: '127.0.0.1',
+          port: {{ postgresql_port | default(5432) }},
+          adminUser: '{{ postgresql_root_user }}',
+          adminPassword: '{{ postgresql_root_password }}',
+          userPasswordPrefix: '{{ global_password_prefix }}_pw_jsos_user',
+        },
+{% else %}
+        db: { provisionPerUser: false },
+{% endif %}
+      },
+    },
+  },
+
+  // ── VFS ─────────────────────────────────────────────────────────────────
+  vfs: {
+    mountpoints: [
+      {
+        name: 'home',
+        adapter: 'system',
+        attributes: {
+          root: path.resolve(__dirname, '../../vfs/{username}'),
+        },
+      },
+{% if install_rustfs | default(false) %}
+      {
+        name: 'cloud',
+        label: 'Cloud Storage (S3)',
+        adapter: s3Vfs,
+        attributes: {
+          endpoint: 'http://127.0.0.1:{{ rustfs_api_port | default(9010) }}',
+          accessKey: '{{ rustfs_access_key }}',
+          secretKey: '{{ rustfs_secret_key }}',
+        },
+      },
+{% endif %}
+    ],
+  },
+
+  // ── Settings (PostgreSQL via TypeORM) ───────────────────────────────────
+  settings: {
+    adapter: require('@osjs/database-settings'),
+    config: {
+      connection: {
+        type: 'postgres',
+        host: '127.0.0.1',
+        port: {{ postgresql_port | default(5432) }},
+        username: '{{ jsos_db_user }}',
+        password: '{{ jsos_db_password }}',
+        database: '{{ jsos_db_name }}',
+        synchronize: true,
+      },
+    },
+  },
+};

@@ -1,0 +1,19 @@
+---
+# ==============================================================================
+# pazny.gitea — Gitea in Docker (devops compose stack)
+#
+# Credentials (gitea_admin_password, gitea_secret_key) zustavaji v top-level
+# default.credentials.yml — stale centralizovane, role je jen cte pres
+# Ansible var precedence (vars_files > role defaults).
+# ==============================================================================
+
+gitea_version: "1.25.5"                 # CVE-2026-gitea-template-traversal pin
+gitea_domain: "git.dev.local"
+gitea_port: 3003                        # 3000=Grafana, 3001=Uptime Kuma, 3002=rezerva
+gitea_ssh_port: 2222
+gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"
+gitea_admin_user: "{{ ansible_facts['user_id'] }}"
+gitea_admin_email: ""
+gitea_disable_registration: false       # true = pouze admin muze pridavat uzivatele
+gitea_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+gitea_cpus: "{{ docker_cpus_standard | default('1.0') }}"

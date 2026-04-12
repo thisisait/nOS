@@ -1,0 +1,9 @@
+---
+# pazny.freescout — handlers
+# Volano z notify: po re-renderu override sablony.
+
+- name: Restart freescout
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/b2b/docker-compose.yml" -p b2b
+    restart freescout
+  failed_when: false

@@ -1,0 +1,26 @@
+---
+# ==============================================================================
+# pazny.postgresql/tasks/main.yml
+#
+# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/infra/overrides/postgresql.yml, ktery pak core-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start DB/user/extension setup je v tasks/post.yml — volany z
+# core-up.yml az PO compose up (Postgres musi bezet, nez se vytvori
+# databaze, uzivatele a pgcrypto extension).
+# ==============================================================================
+
+- name: "[pazny.postgresql] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.postgresql] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/postgresql.yml"
+    mode: '0644'
+  notify: Restart postgresql

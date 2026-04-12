@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# pazny.calibre_web/tasks/post.yml — zmena vychoziho admin hesla
+#
+# Linuxserver image default creds: admin / admin123.
+# Zmeni heslo na `{{ global_password_prefix }}_pw_calibreweb` pres
+# in-container python + werkzeug + sqlite3 UPDATE.
+#
+# Pozn.: compose service name ma pomlcku (`calibre-web`). Legacy post.yml
+# pouzival `calibreweb` bez pomlcky (silent failure pres `failed_when: false`).
+# Tady pouzivame spravne `calibre-web`.
+# ==============================================================================
+
+- name: "[pazny.calibre_web Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ calibreweb_port | default(8083) }}/"
+    method: GET
+    timeout: 5
+    status_code: [200, 302]
+  register: _cw_ready
+  until: _cw_ready.status | default(0) in [200, 302]
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.calibre_web Post] Login with default credentials"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ calibreweb_port | default(8083) }}/login"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      username: "admin"
+      password: "admin123"
+      next: "/"
+    status_code: [200, 302]
+    follow_redirects: none
+    timeout: 10
+  register: _cw_login_default
+  failed_when: false
+  when: _cw_ready.status | default(0) in [200, 302]
+
+- name: "[pazny.calibre_web Post] Login with target password (already changed)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ calibreweb_port | default(8083) }}/login"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      username: "admin"
+      password: "{{ calibreweb_admin_password | default(global_password_prefix + '_pw_calibreweb') }}"
+      next: "/"
+    status_code: [200, 302]
+    follow_redirects: none
+    timeout: 10
+  register: _cw_login_target
+  failed_when: false
+  when:
+    - _cw_ready.status | default(0) in [200, 302]
+    - _cw_login_default.status | default(0) == 302
+
+- name: "[pazny.calibre_web Post] Reconverge admin password via SQLite + werkzeug"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T calibre-web python3 -c "
+    import sqlite3
+    from werkzeug.security import generate_password_hash
+    db = sqlite3.connect('/config/app.db')
+    pw = generate_password_hash('{{ calibreweb_admin_password | default(global_password_prefix + '_pw_calibreweb') }}')
+    db.execute('UPDATE user SET password=? WHERE role & 32 = 32 OR id=1', (pw,))
+    db.commit()
+    db.close()
+    print('UPDATED')
+    "
+  register: _cw_pw_update
+  when: _cw_ready.status | default(0) in [200, 302]
+  changed_when: "'UPDATED' in (_cw_pw_update.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Password reset status"
+  ansible.builtin.debug:
+    msg: >-
+      Calibre-Web admin pw: {{ 'updated' if ('UPDATED' in (_cw_pw_update.stdout | default(''))) else 'skipped (best-effort)' }}

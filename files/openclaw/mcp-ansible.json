@@ -1,0 +1,45 @@
+{
+  "name": "devboxnos-ansible",
+  "description": "Ansible playbook management for devBoxNOS",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "run_playbook_tag",
+      "description": "Run Ansible playbook with a specific tag (e.g., nginx, stacks, observability)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "Ansible tag to run (e.g., nginx, stacks, verify, backup)"
+          }
+        },
+        "required": ["tag"]
+      }
+    },
+    {
+      "name": "service_status",
+      "description": "Show running Docker services across all stacks",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "verify_services",
+      "description": "Run health checks on all enabled services",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "syntax_check",
+      "description": "Validate Ansible playbook syntax",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

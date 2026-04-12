@@ -1,0 +1,17 @@
+---
+# ==============================================================================
+# pazny.tempo — Tempo in Docker (observability compose override)
+#
+# Konfig soubor tempo.yaml zustava renderovany v tasks/stacks/core-up.yml
+# z files/observability/tempo/tempo.yaml — role vlastni jen compose
+# fragment + handler (stejna deliberate decision jako u grafana provisioning).
+# ==============================================================================
+
+tempo_version: "2.10.0"   # github.com/grafana/tempo/releases — no Homebrew formula
+tempo_http_port: 3200
+tempo_otlp_grpc_port: 4327   # Tempo interni OTLP gRPC (Alloy → Tempo)
+tempo_otlp_http_port: 4328   # Tempo interni OTLP HTTP (Alloy → Tempo)
+tempo_retention: "168h"   # 7 dni (traces byvaji objemnejsi)
+tempo_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/tempo"
+tempo_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+tempo_cpus: "{{ docker_cpus_light | default('0.5') }}"

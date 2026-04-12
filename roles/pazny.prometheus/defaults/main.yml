@@ -1,0 +1,15 @@
+---
+# ==============================================================================
+# pazny.prometheus — Prometheus in Docker (observability compose override)
+#
+# Konfig soubor prometheus.yml zustava renderovany v tasks/stacks/core-up.yml
+# z files/observability/prometheus/prometheus.yml — role vlastni jen compose
+# fragment + handler (stejna deliberate decision jako u grafana provisioning).
+# ==============================================================================
+
+prometheus_version: "latest"
+prometheus_port: 9090
+prometheus_retention: "30d"
+prometheus_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/prometheus"
+prometheus_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+prometheus_cpus: "{{ docker_cpus_standard | default('1.0') }}"

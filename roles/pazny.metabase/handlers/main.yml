@@ -1,0 +1,8 @@
+---
+# pazny.metabase — handlers
+
+- name: Restart metabase
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/data/docker-compose.yml" -p data
+    restart metabase
+  failed_when: false

@@ -1,0 +1,188 @@
+# =============================================================================
+# pazny.erpnext — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+#
+# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+# Declaruje vsak top-level volume `erpnext_sites` (named volume) —
+# Docker compose merge semantics slouci top-level `volumes:` napric -f soubory.
+#
+# P0.1 (commit 3b88162): sites data zije v named volume misto bind mountu,
+# protoze macOS Docker Desktop VirtioFS bind mount je nestabilni pro Frappe
+# filelock operace. Named volume se uklada uvnitr Docker VM (linuxkit),
+# mimo macOS host filesystem → native ext4, full speed a stability.
+# Blank reset vymaze volume via `docker compose down -v` + `docker volume
+# prune -f -a` v blank-reset.yml.
+#
+# ERPNext vyzaduje: MariaDB + Redis (oboje z infra stacku).
+# =============================================================================
+
+services:
+  erpnext-configurator:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: "no"
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        cd /home/frappe/frappe-bench/sites &&
+        [ -f common_site_config.json ] && echo "Already configured" && exit 0;
+        echo '{}' > common_site_config.json &&
+        echo 'frappe' > apps.txt &&
+        bench set-config -g db_host mariadb &&
+        bench set-config -g db_port 3306 &&
+        bench set-config -g redis_cache redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0 &&
+        bench set-config -g redis_queue redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1 &&
+        bench set-config -g redis_socketio redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2 &&
+        bench new-site {{ erpnext_site_name | default('erp.dev.local') }}
+        --no-mariadb-socket
+        --db-root-username=root
+        --db-root-password={{ mariadb_root_password }}
+        --admin-password={{ erpnext_admin_password | default(global_password_prefix + '_pw_erpnext') }}
+        --install-app erpnext
+        --set-default
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  erpnext-backend:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+      REDIS_SOCKETIO: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2"
+      SOCKETIO_PORT: "9000"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  erpnext-frontend:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: nginx-entrypoint.sh
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ erpnext_port | default(8082) }}:8080"
+{% else %}
+      - "127.0.0.1:{{ erpnext_port | default(8082) }}:8080"
+{% endif %}
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      BACKEND: erpnext-backend:8000
+      SOCKETIO: erpnext-backend:9000
+      UPSTREAM_REAL_IP_ADDRESS: "127.0.0.1"
+      UPSTREAM_REAL_IP_HEADER: "X-Forwarded-For"
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      FRAPPE_SITE_NAME_HEADER: "$$host"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  erpnext-queue-short:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench worker --queue short
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  erpnext-queue-long:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench worker --queue long
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  erpnext-scheduler:
+    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    restart: unless-stopped
+    command: bench schedule
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ erpnext_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+volumes:
+  erpnext_sites:
+    driver: local

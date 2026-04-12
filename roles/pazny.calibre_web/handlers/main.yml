@@ -1,0 +1,11 @@
+---
+# pazny.calibre_web — handlers
+# Pred Wave 2.2 nemel Calibre-Web dedicated handler v play-level main.yml.
+# Handler name pouziva hyphen form (`calibre-web`) konzistentne s compose
+# service name.
+
+- name: Restart calibre-web
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart calibre-web
+  failed_when: false

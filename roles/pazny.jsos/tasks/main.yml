@@ -1,0 +1,216 @@
+---
+# ==============================================================================
+# jsOS – webový desktop platform (OS.js v3)
+# Bluesky AT Protocol auth, S3 VFS (RustFS), PostgreSQL per-user DB
+# Vyžaduje: Node.js (NVM), PostgreSQL (Docker), Redis (Docker)
+# ==============================================================================
+
+# ── 1. Adresářová struktura ──────────────────────────────────────────────────
+
+- name: "[jsOS] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ jsos_dir }}"
+    - "{{ jsos_dir }}/vfs"
+    - "{{ jsos_dir }}/src/server/adapters"
+    - "{{ jsos_dir }}/src/packages"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+# ── 2. Clone OS.js v3 boilerplate ────────────────────────────────────────────
+
+- name: "[jsOS] Check if repo already cloned"
+  ansible.builtin.stat:
+    path: "{{ jsos_dir }}/.git"
+  register: _jsos_git_dir
+
+- name: "[jsOS] Clean non-git directory (blank-reset leaves empty dirs)"
+  ansible.builtin.file:
+    path: "{{ jsos_dir }}"
+    state: absent
+  when: not _jsos_git_dir.stat.exists
+
+- name: "[jsOS] Clone OS.js v3 boilerplate"
+  ansible.builtin.git:
+    repo: "https://github.com/os-js/OS.js.git"
+    dest: "{{ jsos_dir }}"
+    version: master
+    depth: 1
+  register: jsos_clone
+  when: not _jsos_git_dir.stat.exists
+
+# ── 3. Install npm dependencies ──────────────────────────────────────────────
+
+- name: "[jsOS] Check if node_modules exists"
+  ansible.builtin.stat:
+    path: "{{ jsos_dir }}/node_modules"
+  register: jsos_nm
+
+- name: "[jsOS] npm install (base + custom packages)"
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh
+    npm install
+    npm install --save \
+      @osjs/database-settings \
+      @atproto/api \
+      @aws-sdk/client-s3 \
+      connect-redis \
+      redis \
+      pg \
+      typeorm \
+      node-fetch
+  args:
+    chdir: "{{ jsos_dir }}"
+    executable: /bin/bash
+  when: jsos_clone.changed or not jsos_nm.stat.exists
+  register: jsos_npm
+
+# ── 4. Copy custom server adapters ───────────────────────────────────────────
+
+- name: "[jsOS] Copy Bluesky auth adapter"
+  ansible.builtin.copy:
+    src: jsos/adapters/bluesky-auth.js
+    dest: "{{ jsos_dir }}/src/server/adapters/bluesky-auth.js"
+    mode: '0644'
+  notify: Restart jsos
+
+- name: "[jsOS] Copy S3 VFS adapter"
+  ansible.builtin.copy:
+    src: jsos/adapters/s3-vfs.js
+    dest: "{{ jsos_dir }}/src/server/adapters/s3-vfs.js"
+    mode: '0644'
+  notify: Restart jsos
+
+- name: "[jsOS] Copy provisioning module"
+  ansible.builtin.copy:
+    src: jsos/adapters/provision.js
+    dest: "{{ jsos_dir }}/src/server/adapters/provision.js"
+    mode: '0644'
+  notify: Restart jsos
+
+# ── 5. Copy HomelabPortal application package ─────────────────────────────────
+
+- name: "[jsOS] Copy HomelabPortal package"
+  ansible.builtin.copy:
+    src: jsos/packages/HomelabPortal/
+    dest: "{{ jsos_dir }}/src/packages/HomelabPortal/"
+    mode: '0644'
+    directory_mode: '0755'
+  register: jsos_portal
+
+# ── 6. Template server + client files ────────────────────────────────────────
+
+- name: "[jsOS] Template server config.js"
+  ansible.builtin.template:
+    src: jsos/src-server-config.js.j2
+    dest: "{{ jsos_dir }}/src/server/config.js"
+    mode: '0644'
+  notify: Restart jsos
+
+- name: "[jsOS] Template server index.js"
+  ansible.builtin.template:
+    src: jsos/src-server-index.js.j2
+    dest: "{{ jsos_dir }}/src/server/index.js"
+    mode: '0644'
+  notify: Restart jsos
+
+- name: "[jsOS] Template client index.js"
+  ansible.builtin.template:
+    src: jsos/src-client-index.js.j2
+    dest: "{{ jsos_dir }}/src/client/index.js"
+    mode: '0644'
+  register: jsos_client_changed
+
+- name: "[jsOS] Template client index.scss"
+  ansible.builtin.template:
+    src: jsos/src-client-index.scss.j2
+    dest: "{{ jsos_dir }}/src/client/index.scss"
+    mode: '0644'
+  register: jsos_scss_changed
+
+- name: "[jsOS] Template PM2 ecosystem config"
+  ansible.builtin.template:
+    src: jsos/ecosystem.config.js.j2
+    dest: "{{ jsos_dir }}/ecosystem.config.js"
+    mode: '0644'
+  notify: Restart jsos
+
+- name: "[jsOS] Template homelab services config"
+  ansible.builtin.template:
+    src: jsos/homelab-services.json.j2
+    dest: "{{ jsos_dir }}/homelab-services.json"
+    mode: '0644'
+  notify: Restart jsos
+
+# ── 7. Nginx vhost — deploy + auto-enable řeší centrálně tasks/nginx.yml ─────
+
+# ── 8. Build client (webpack) ────────────────────────────────────────────────
+
+- name: "[jsOS] Discover packages + build client"
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh
+    npm run package:discover
+    NODE_ENV=production npm run build
+  args:
+    chdir: "{{ jsos_dir }}"
+    executable: /bin/bash
+  when: >
+    jsos_clone.changed or
+    (jsos_npm is defined and jsos_npm.changed) or
+    (jsos_portal is defined and jsos_portal.changed) or
+    (jsos_client_changed is defined and jsos_client_changed.changed) or
+    (jsos_scss_changed is defined and jsos_scss_changed.changed)
+  register: jsos_build
+  # Build může být pomalý (~30s), timeout 120s
+  async: 120
+  poll: 5
+
+# ── 9. PostgreSQL – jsOS DB řeší centrálně tasks/stacks/postgresql_setup.yml ──
+
+# ── 10. Start via PM2 ────────────────────────────────────────────────────────
+
+- name: "[jsOS] Start via PM2"
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh
+    pm2 describe jsos > /dev/null 2>&1 && pm2 restart jsos || \
+    pm2 start {{ jsos_dir }}/ecosystem.config.js
+    pm2 save --force
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+# ── 11. Info ──────────────────────────────────────────────────────────────────
+
+- name: "[jsOS] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       jsOS – webový desktop připraven
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ jsos_domain }}
+       Port:      {{ jsos_port }}
+       Auth:      Bluesky AT Protocol (handle + app password)
+       PDS:       {{ jsos_bluesky_pds_url | default('https://bsky.social') }}
+       DB:        PostgreSQL {{ jsos_db_name }} @ 127.0.0.1:{{ postgresql_port | default(5432) }}
+       Session:   Redis @ 127.0.0.1:{{ redis_port | default(6379) }} (prefix jsos:session:)
+       VFS:       {{ jsos_dir }}/vfs/{username}/
+      {% if install_rustfs | default(false) %}
+       S3:        RustFS per-user buckety (jsos-{handle})
+      {% endif %}
+       PM2:       pm2 logs jsos | pm2 restart jsos
+       Logs:      ~/agents/log/jsos-{out,error}.log
+      ══════════════════════════════════════════════════════
+       Per-user resources (auto-provisioned při prvním loginu):
+         • VFS složka:    vfs/{handle}/
+      {% if install_rustfs | default(false) %}
+         • S3 bucket:     jsos-{handle}
+      {% endif %}
+      {% if jsos_provision_databases | default(true) %}
+         • PostgreSQL DB: jsos_{handle}
+      {% endif %}
+      {% if jsos_provision_redis_namespace | default(true) %}
+         • Redis prefix:  jsos:user:{handle}:
+      {% endif %}
+      ══════════════════════════════════════════════════════

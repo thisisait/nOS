@@ -17,18 +17,65 @@
 
   vars_files:
     - default.config.yml
+    - default.credentials.yml
 
   pre_tasks:
-    - name: Include playbook configuration.
+    - name: Include playbook configuration overrides.
       include_vars: "{{ item }}"
       with_fileglob:
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
-    - name: Include credentials.
+    - name: Include credentials overrides.
       include_vars: "{{ item }}"
       with_fileglob:
         - "{{ playbook_dir }}/credentials.yml"
+      tags: ['always']
+
+    # ── Version Policy ─────────────────────────────────────────────────────────
+    # stable (default) = pinned CVE-patched versions from default.config.yml
+    # latest           = override all pinned Docker image tags to latest
+    # lts              = LTS/stable branches for databases + core infra
+    - name: "Override pinned versions to latest (version_policy={{ version_policy }})"
+      ansible.builtin.set_fact:
+        mariadb_version: "latest"
+        postgresql_version: "alpine"
+        redis_version: "alpine"
+        traefik_image_version: "latest"
+        homeassistant_version: "latest"
+        rustfs_version: "latest"
+        erpnext_version: "latest"
+        n8n_version: "latest"
+        gitea_version: "latest"
+        gitlab_version: "latest"
+        openwebui_version: "latest"
+        woodpecker_version: "latest"
+        portainer_version: "latest"
+        jellyfin_version: "latest"
+        uptime_kuma_version: "latest"
+        freescout_version: "latest"
+        grafana_version: "latest"
+        tempo_version: "latest"
+        authentik_version: "latest"
+        vaultwarden_version: "latest"
+        superset_version: "latest"
+        nextcloud_version: "latest"
+      when: version_policy | default('stable') == 'latest'
+      tags: ['always']
+
+    - name: "Override database/infra versions to LTS (version_policy={{ version_policy }})"
+      ansible.builtin.set_fact:
+        mariadb_version: "lts"
+        postgresql_version: "16-alpine"
+        redis_version: "7.2-alpine"
+        nextcloud_version: "stable"
+        traefik_image_version: "v3.6"
+      when: version_policy | default('stable') == 'lts'
+      tags: ['always']
+
+    - name: "Set docker compose pull flag for mutable tags"
+      ansible.builtin.set_fact:
+        _docker_compose_pull: "{{ '--pull always' if version_policy | default('stable') in ['latest', 'lts'] else '' }}"
       tags: ['always']
 
     # sudo askpass helper – Homebrew cask installer (a další) interně volá
@@ -70,7 +117,7 @@
 
     - name: Restart mariadb
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
         restart mariadb
       failed_when: false
 
@@ -117,24 +164,107 @@
       changed_when: false
       failed_when: false
 
+    - name: Restart jsos
+      ansible.builtin.shell: |
+        source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh && \
+        pm2 restart jsos 2>/dev/null || \
+        pm2 start {{ jsos_dir | default('~/projects/jsOs') }}/ecosystem.config.js
+        pm2 save --force
+      args:
+        executable: /bin/bash
+      failed_when: false
+
+    - name: Restart authentik
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart authentik-server authentik-worker
+      failed_when: false
+
+    - name: Restart infisical
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart infisical
+      failed_when: false
+
+    - name: Restart postgresql
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart postgresql
+      failed_when: false
+
+    - name: Restart redis
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart redis
+      failed_when: false
+
+    - name: Restart gitea
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+        restart gitea
+      failed_when: false
+
+    - name: Restart nextcloud
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart nextcloud
+      failed_when: false
+
+    - name: Restart n8n
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart n8n
+      failed_when: false
+
+    - name: Restart openwebui
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart openwebui
+      failed_when: false
+
+    - name: Restart portainer
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart portainer
+      failed_when: false
+
+    - name: Restart boxapi
+      ansible.builtin.command: >
+        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.devboxnos.api"
+      failed_when: false
+
+    - name: Restart bluesky-pds
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart bluesky-pds
+      failed_when: false
+
+    - name: Reapply authentik blueprints
+      ansible.builtin.shell: |
+        for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies; do
+          {{ docker_bin }} compose -p infra exec -T authentik-worker \
+            ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
+        done
+      failed_when: false
+
   roles:
     - role: elliotweiser.osx-command-line-tools
 
-    - role: geerlingguy.mac.homebrew
+    - role: pazny.mac.homebrew
       when: install_homebrew_packages | default(true)
       tags: ['homebrew']
 
-    - role: geerlingguy.dotfiles
+    - role: pazny.dotfiles
       when: configure_dotfiles | default(true)
       tags: ['dotfiles']
 
-    - role: geerlingguy.mac.mas
+    - role: pazny.mac.mas
       when: |
         (install_mas_apps | default(false)) and
         ((mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0))
       tags: ['mas']
 
-    - role: geerlingguy.mac.dock
+    - role: pazny.mac.dock
       when: configure_dock | default(false)
       tags: ['dock']
 
@@ -142,9 +272,146 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Blank reset – čistá reinstalace (ansible-playbook main.yml -K -e blank=true)
     # ──────────────────────────────────────────────────────────────────────────
+    - name: "[Blank] Prompt for password prefix"
+      ansible.builtin.pause:
+        prompt: "Prefix pro všechna hesla (formát: PREFIX_pw_SLUŽBA, Enter = {{ global_password_prefix }})"
+      register: _prefix_prompt
+      when: blank | default(false) | bool
+      tags: ['blank', 'reset']
+
+    - name: "[Blank] Set password prefix from prompt"
+      ansible.builtin.set_fact:
+        global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else global_password_prefix }}"
+      when: blank | default(false) | bool
+      tags: ['blank', 'reset']
+
+    - name: "[Blank] Persist prompted prefix to credentials.yml"
+      ansible.builtin.lineinfile:
+        path: "{{ playbook_dir }}/credentials.yml"
+        regexp: '^global_password_prefix:'
+        line: 'global_password_prefix: "{{ global_password_prefix }}"'
+        create: true
+        mode: '0600'
+      when:
+        - blank | default(false) | bool
+        - _prefix_prompt.user_input | default('') | length > 0
+      tags: ['blank', 'reset']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Previous-prefix state file — pro služby s "PUT needs old password" API
+    # (Portainer, Jellyfin, Metabase). Soubor je gitignored.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "[State] Read previous password prefix (if exists)"
+      ansible.builtin.slurp:
+        src: "{{ playbook_dir }}/.ansible-prefix-state"
+      register: _prev_prefix_raw
+      failed_when: false
+      changed_when: false
+      tags: ['always']
+
+    - name: "[State] Expose previous_password_prefix fact (fallback = current)"
+      ansible.builtin.set_fact:
+        previous_password_prefix: >-
+          {{ (_prev_prefix_raw.content | b64decode | trim)
+             if (_prev_prefix_raw.content is defined)
+             else global_password_prefix }}
+      tags: ['always']
+
     - import_tasks: tasks/blank-reset.yml
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Auto-enable dependencies (ERPNext → MariaDB+Redis, Mattermost → PostgreSQL, atd.)
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: Auto-enable MariaDB for services that require it
+      ansible.builtin.set_fact:
+        install_mariadb: true
+      when: >
+        (install_wordpress | default(false)) or
+        (install_nextcloud | default(false)) or
+        (install_erpnext | default(false)) or
+        (install_freescout | default(false)) or
+        (install_freepbx | default(false))
+      tags: ['always']
+
+    - name: Auto-enable PostgreSQL for services that require it
+      ansible.builtin.set_fact:
+        install_postgresql: true
+      when: >
+        (install_authentik | default(false)) or
+        (install_infisical | default(false)) or
+        (install_jsos | default(false)) or
+        (install_paperclip | default(false)) or
+        (install_mattermost | default(false)) or
+        (install_outline | default(false)) or
+        (install_metabase | default(false)) or
+        (install_superset | default(false))
+      tags: ['always']
+
+    - name: Auto-enable Redis Docker for services that require it
+      ansible.builtin.set_fact:
+        redis_docker: true
+      when: >
+        (install_authentik | default(false)) or
+        (install_infisical | default(false)) or
+        (install_jsos | default(false)) or
+        (install_erpnext | default(false)) or
+        (install_outline | default(false)) or
+        (install_superset | default(false))
+      tags: ['always']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Stateless secret regeneration — každý běh
+    #
+    # Safe group: krypto tajemství, která nešifrují perzistentní uživatelská data
+    # (sessions/tokens jsou znovu-vytvořitelné, blueprints/API reapplyují state).
+    # Destructive group: šifrují uživatelská data — regeneraci gatujeme přes
+    # blank=true nebo destroy_state=true a na non-blank runu ukážeme warning.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Auto-regenerate stateless secrets (every run — safe group)"
+      ansible.builtin.set_fact:
+        authentik_secret_key: "{{ lookup('pipe', 'openssl rand -hex 50') }}"
+        vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
+        paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        jsos_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        glasswing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+      tags: ['always']
+
+    - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"
+      ansible.builtin.set_fact:
+        infisical_encryption_key: "{{ lookup('pipe', 'openssl rand -hex 16') }}"
+        infisical_auth_secret: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
+        outline_secret_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        bluesky_pds_rotation_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+      when: (blank | default(false) | bool) or (destroy_state | default(false) | bool)
+      tags: ['always']
+
+    - name: "WARNING — destructive secrets preserved (use -e destroy_state=true to reset)"
+      ansible.builtin.debug:
+        msg: |
+          NEBEZPECI: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key
+          zachovany z predchoziho runu (nemaji lazy regeneraci v non-blank runech).
+          Pro reset pridej -e destroy_state=true — smaze Infisical vault, Outline sifrovana data,
+          Bluesky PLC rotaci.
+      when:
+        - not (blank | default(false) | bool)
+        - not (destroy_state | default(false) | bool)
+      tags: ['always']
+
+    - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
+      ansible.builtin.shell: |
+        brew services stop redis 2>/dev/null || true
+        launchctl bootout gui/$(id -u)/homebrew.mxcl.redis 2>/dev/null || true
+        launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
+        pkill -9 -f "redis-server" 2>/dev/null || true
+        sleep 2
+        rm -f ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
+      when: redis_docker | default(false) | bool
+      failed_when: false
+      changed_when: false
+      tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
     # macOS systémová nastavení
@@ -183,6 +450,17 @@
         (enable_vnc | default(false)) or
         (enable_remote_management | default(false)))
       tags: ['system-services', 'ssh', 'samba', 'vnc']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # IIAB Terminal – veřejný SSH TUI hub (vyžaduje SSH)
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "IIAB Terminal (pazny.iiab_terminal role)"
+      ansible.builtin.import_role:
+        name: pazny.iiab_terminal
+      when:
+        - install_iiab_terminal | default(false)
+        - enable_ssh | default(false)
+      tags: ['iiab-terminal', 'ssh']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Jazyky a runtime prostředí
@@ -252,28 +530,24 @@
       tags: ['iiab', 'docker', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # CORE STACKS – infra (DB/IAM/Vault) + observability VŽDY JAKO PRVNÍ
+    #
+    # Tyto dva stacky jsou backbone celého systému: ostatní role mohou
+    # předpokládat, že MariaDB / Postgres / Redis / Authentik / Infisical /
+    # Bluesky PDS / Grafana / Prometheus / Loki / Tempo běží a jen injectují
+    # své konfigy + notify handlery pro restart kontejnerů.
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/stacks/core-up.yml
+      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # IIAB – self-hosted knowledge services
     # ──────────────────────────────────────────────────────────────────────────
 
-    - include_tasks: tasks/iiab/mariadb.yml
-      when: install_mariadb | default(false)
-      tags: ['iiab', 'mariadb', 'database']
-
-    - import_tasks: tasks/iiab/wordpress.yml
-      when: install_wordpress | default(false)
-      tags: ['iiab', 'wordpress']
-
-    - import_tasks: tasks/iiab/nextcloud.yml
-      when: install_nextcloud | default(false)
-      tags: ['iiab', 'nextcloud']
-
-    - import_tasks: tasks/iiab/kiwix.yml
-      when: install_kiwix | default(false)
-      tags: ['iiab', 'kiwix', 'zim']
-
-    - import_tasks: tasks/iiab/maps.yml
-      when: install_offline_maps | default(false)
-      tags: ['iiab', 'maps']
+    # Wave 2.2: všechny IIAB/DevOps/B2B/VoIP/Data service tasky přesunuty do
+    # roles/pazny.*/. Role renders + post-start jsou volány z
+    # tasks/stacks/core-up.yml (infra/observability) a tasks/stacks/stack-up.yml
+    # (ostatní stacky). Nginx vhost renders jsou součástí role tasks/main.yml.
 
     # ──────────────────────────────────────────────────────────────────────────
     # Síť – Tailscale + dnsmasq
@@ -294,9 +568,18 @@
       tags: ['shell', 'shell-extras', 'starship']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Git globální konfigurace (user.name, user.email)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/git-config.yml
+      when: git_user_name | default('') | length > 0
+      tags: ['git']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/openclaw.yml
+    - name: "OpenClaw (pazny.openclaw role)"
+      ansible.builtin.import_role:
+        name: pazny.openclaw
       when: install_openclaw | default(false)
       tags: ['openclaw', 'ai', 'agent']
 
@@ -314,53 +597,8 @@
     # ──────────────────────────────────────────────────────────────────────────
     # IIAB extra – n8n, Gitea, Uptime Kuma, Calibre-Web
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/iiab/n8n.yml
-      when: install_n8n | default(false)
-      tags: ['iiab', 'n8n', 'automation']
-
-    - import_tasks: tasks/iiab/gitea.yml
-      when: install_gitea | default(false)
-      tags: ['iiab', 'gitea', 'git']
-
-    - import_tasks: tasks/iiab/gitlab.yml
-      when: install_gitlab | default(false)
-      tags: ['iiab', 'gitlab', 'git']
-
-    - import_tasks: tasks/iiab/woodpecker.yml
-      when: install_woodpecker | default(false)
-      tags: ['iiab', 'woodpecker', 'ci', 'cicd']
-
-    - import_tasks: tasks/iiab/openwebui.yml
-      when: install_openwebui | default(false)
-      tags: ['iiab', 'openwebui', 'ai']
-
-    - import_tasks: tasks/iiab/portainer.yml
-      when: install_portainer | default(false)
-      tags: ['iiab', 'portainer', 'docker']
-
-    - import_tasks: tasks/iiab/jellyfin.yml
-      when: install_jellyfin | default(false)
-      tags: ['iiab', 'jellyfin', 'media']
-
-    - import_tasks: tasks/iiab/uptime-kuma.yml
-      when: install_uptime_kuma | default(false)
-      tags: ['iiab', 'uptime-kuma', 'monitoring']
-
-    - import_tasks: tasks/iiab/calibreweb.yml
-      when: install_calibreweb | default(false)
-      tags: ['iiab', 'calibre', 'ebooks']
-
-    - import_tasks: tasks/iiab/traefik.yml
-      when: install_traefik | default(false)
-      tags: ['iiab', 'traefik', 'proxy']
-
-    - import_tasks: tasks/iiab/homeassistant.yml
-      when: install_homeassistant | default(false)
-      tags: ['iiab', 'homeassistant', 'iot']
-
-    - import_tasks: tasks/iiab/rustfs.yml
-      when: install_rustfs | default(false)
-      tags: ['iiab', 'rustfs', 's3', 'storage']
+    # (service-specific pre-stack tasks are now in roles/pazny.*/tasks/main.yml,
+    #  called from tasks/stacks/stack-up.yml before compose up)
 
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks – deploy compose souborů a spuštění všech stacků
@@ -368,45 +606,84 @@
     - import_tasks: tasks/stacks/stack-up.yml
       tags: ['iiab', 'stack', 'docker', 'stacks']
 
-    # MariaDB post-start: vytvoří DB a uživatele (MUSÍ běžet před verify/onboarding!)
-    - import_tasks: tasks/iiab/mariadb_setup.yml
-      when: install_mariadb | default(false)
-      tags: ['iiab', 'mariadb', 'database']
+    # DB setup nyní běží UVNITŘ stack-up.yml (infra → DB setup → remaining stacks)
 
-    # Nextcloud post-start: sync DB hesla a trusted_domains
-    - import_tasks: tasks/iiab/nextcloud_post.yml
-      when: install_nextcloud | default(false)
-      tags: ['iiab', 'nextcloud']
-
-    # Gitea post-start: vytvoření admin uživatele
-    - import_tasks: tasks/iiab/gitea_post.yml
-      when: install_gitea | default(false)
-      tags: ['iiab', 'gitea']
-
-    # WordPress post-start: wp-cli auto-install (admin účet + site title)
-    - import_tasks: tasks/iiab/wordpress_post.yml
-      when: install_wordpress | default(false)
-      tags: ['iiab', 'wordpress']
-
-    # Open WebUI post-start: auto-registrace prvního admin uživatele
-    - import_tasks: tasks/iiab/openwebui_post.yml
-      when: install_openwebui | default(false)
-      tags: ['iiab', 'openwebui']
-
-    # Uptime Kuma post-start: automatická konfigurace monitorů
-    - import_tasks: tasks/iiab/uptime-kuma-monitors.yml
-      when: install_uptime_kuma | default(false)
-      tags: ['iiab', 'uptime-kuma', 'monitoring']
+    # (all service post-start tasks are now called from tasks/stacks/stack-up.yml
+    #  and tasks/stacks/core-up.yml via include_role tasks_from=post.yml)
 
     # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
     - import_tasks: tasks/iiab/stack_verify.yml
       tags: ['iiab', 'stack', 'verify', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # jsOS – webový desktop (OS.js v3 + Bluesky auth + homelab integrace)
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "jsOS (pazny.jsos role)"
+      ansible.builtin.import_role:
+        name: pazny.jsos
+      when: install_jsos | default(false)
+      tags: ['jsos', 'desktop']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Service Registry – JSON katalog + Grafana dashboard
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/service-registry.yml
       tags: ['service-registry', 'registry']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Box Management API – FastAPI health/status/execution endpoint
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "BoxAPI (pazny.boxapi role)"
+      ansible.builtin.import_role:
+        name: pazny.boxapi
+      when: install_boxapi | default(false)
+      tags: ['boxapi', 'api']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Heartbeat – fleet reporting daemon
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/heartbeat.yml
+      when: configure_heartbeat | default(false)
+      tags: ['heartbeat', 'fleet']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Backup – Restic automated backups
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/backup.yml
+      when: configure_backup | default(false)
+      tags: ['backup']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Vulnerability Scanner – NOS Security Auditor (2x daily scheduled scan)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/vulnerability-scan.yml
+      when: configure_vulnerability_scan | default(false)
+      tags: ['vulnscan']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Glasswing — Security Research Dashboard (Nette PHP + SQLite)
+    # Wave 2.1 role extraction — viz docs/wave2-role-migration.md
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Glasswing (pazny.glasswing role)"
+      ansible.builtin.import_role:
+        name: pazny.glasswing
+      when: install_glasswing | default(install_php | default(true))
+      tags: ['glasswing', 'security']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Export/Import – hardware migration (run only with --tags)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/export-state.yml
+      tags: ['export', 'never']
+
+    - import_tasks: tasks/import-state.yml
+      tags: ['import', 'never']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Finální přehled služeb (vždy na konci)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/final-summary.yml
+      tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Post-provision háky
@@ -425,5 +702,13 @@
       ansible.builtin.file:
         path: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
         state: absent
+      changed_when: false
+      tags: ['always']
+
+    - name: "[State] Persist current prefix for next run"
+      ansible.builtin.copy:
+        content: "{{ global_password_prefix }}"
+        dest: "{{ playbook_dir }}/.ansible-prefix-state"
+        mode: '0600'
       changed_when: false
       tags: ['always']

@@ -1,0 +1,19 @@
+---
+# ==============================================================================
+# pazny.grafana — Grafana in Docker (observability compose override)
+#
+# Credentials (grafana_admin_password) zustavaji v default.credentials.yml
+# aby prefix rotation funkovala centralne. grafana_dashboards seed list
+# zustava v default.config.yml (konzumovan tasks/observability.yml pro
+# dashboard download + grafana provisioning render v core-up.yml).
+# ==============================================================================
+
+grafana_version: "12.4.2"                           # CVE-2026-27876 pin
+grafana_port: 3000
+grafana_domain: "grafana.dev.local"
+grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
+grafana_admin_user: "admin"
+grafana_allow_embedding: false
+grafana_analytics: false
+grafana_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+grafana_cpus: "{{ docker_cpus_standard | default('1.0') }}"

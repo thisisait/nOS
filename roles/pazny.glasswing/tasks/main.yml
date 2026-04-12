@@ -1,0 +1,104 @@
+---
+# ==============================================================================
+# pazny.glasswing — Security Research Dashboard (Nette PHP + SQLite)
+# ==============================================================================
+
+- name: "[Glasswing] Ensure glasswing directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ glasswing_app_dir }}"
+    - "{{ glasswing_app_dir }}/data"
+    - "{{ glasswing_app_dir }}/temp"
+    - "{{ glasswing_app_dir }}/log"
+    - "{{ ansible_facts['env']['HOME'] }}/glasswing/repos"
+    - "{{ ansible_facts['env']['HOME'] }}/glasswing/patches"
+
+- name: "[Glasswing] Rsync app files to deployment directory"
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/files/project-glasswing/"
+    dest: "{{ glasswing_app_dir }}/"
+    delete: true
+    rsync_opts:
+      - "--exclude=data/"
+      - "--exclude=temp/"
+      - "--exclude=log/"
+      - "--exclude=vendor/"
+      - "--exclude=*.bak"
+      - "--exclude=.git/"
+  delegate_to: "{{ inventory_hostname }}"
+  notify: Restart php-fpm
+
+- name: "[Glasswing] Run composer install"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/bin/composer install --no-dev --optimize-autoloader --no-interaction"
+    chdir: "{{ glasswing_app_dir }}"
+  environment:
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    COMPOSER_HOME: "{{ ansible_facts['env']['HOME'] }}/.composer"
+  register: glasswing_composer
+  changed_when: "'Nothing to install' not in (glasswing_composer.stderr | default(''))"
+
+- name: "[Glasswing] Initialize SQLite database schema"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/init-db.php --data-dir={{ glasswing_data_dir }}"
+    chdir: "{{ glasswing_app_dir }}"
+    creates: "{{ glasswing_data_dir }}/glasswing.db"
+
+- name: "[Glasswing] Check if migration needed (empty components table)"
+  ansible.builtin.command:
+    cmd: >
+      {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php -r
+      "echo (new SQLite3('{{ glasswing_data_dir }}/glasswing.db'))->querySingle('SELECT COUNT(*) FROM components');"
+  register: glasswing_component_count
+  changed_when: false
+
+- name: "[Glasswing] Run JSON to SQLite data migration"
+  ansible.builtin.command:
+    cmd: >
+      {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate.php
+      --json-dir={{ glasswing_json_source }}
+      --data-dir={{ glasswing_data_dir }}
+    chdir: "{{ glasswing_app_dir }}"
+  when: glasswing_component_count.stdout | int == 0
+  register: glasswing_migrate
+
+- name: "[Glasswing] Reconverge API token from credentials (state-declarative)"
+  ansible.builtin.shell: |
+    {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php {{ glasswing_app_dir }}/bin/provision-token.php \
+      --db={{ glasswing_data_dir }}/glasswing.db \
+      --token={{ glasswing_api_token }} \
+      --name=ansible-provisioned
+  register: glasswing_token_result
+  changed_when: "'Created' in (glasswing_token_result.stdout | default('')) or 'Updated' in (glasswing_token_result.stdout | default(''))"
+
+- name: "[Glasswing] Write .env with API token for scheduled tasks"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/glasswing/.env"
+    mode: '0600'
+    content: |
+      GLASSWING_API_TOKEN={{ glasswing_api_token }}
+      GLASSWING_URL=https://{{ glasswing_domain | default('glasswing.dev.local') }}
+
+- name: "[Glasswing] Set permissions on data directory"
+  ansible.builtin.file:
+    path: "{{ glasswing_data_dir }}"
+    mode: '0755'
+    recurse: true
+
+- name: "[Glasswing] Ensure temp and log are writable by PHP-FPM"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: '0777'
+    recurse: true
+  loop:
+    - "{{ glasswing_app_dir }}/temp"
+    - "{{ glasswing_app_dir }}/log"
+
+- name: "[Glasswing] Clear Nette cache after deploy"
+  ansible.builtin.file:
+    path: "{{ glasswing_app_dir }}/temp/cache"
+    state: absent
+  changed_when: false

@@ -1,0 +1,31 @@
+# {{ name }} — Skills
+
+> Callable actions for {{ name }}. Each skill is API-first using `openclaw-bot` service account.
+
+## Authentication
+
+- **Method:** {{ api_auth | default('Bearer token') }}
+- **Token:** `~/agents/tokens/{{ slug }}.token`
+- **Base URL:** `https://{{ domain }}`
+
+---
+
+{% for skill in skills | default([]) %}
+## {{ skill.name }}
+
+**Trigger:** {{ skill.trigger }}
+**Method:** {{ skill.method | default('API') }}
+**Endpoint:** `{{ skill.endpoint }}`
+**Input:** {{ skill.input | default('None') }}
+**Output:** {{ skill.output | default('JSON response') }}
+
+{% if skill.example is defined %}
+**Example:**
+```
+{{ skill.example }}
+```
+{% endif %}
+
+---
+
+{% endfor %}

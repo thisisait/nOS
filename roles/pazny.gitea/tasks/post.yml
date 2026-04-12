@@ -1,0 +1,71 @@
+---
+# ==============================================================================
+# pazny.gitea/tasks/post.yml — admin uzivatel + password reconverge
+#
+# Gitea nepodporuje env var pro admin heslo → musi jit pres CLI:
+#   • `gitea admin user create` pro prvni inicializaci
+#   • `gitea admin user change-password` pro state-declarative UPDATE
+#     (bezpecny idempotent call, overwritne heslo na kazdy run)
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose up devops --wait`.
+# ==============================================================================
+
+- name: "[pazny.gitea Post] Check if Gitea container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/devops/docker-compose.yml"
+    -p devops ps -q gitea 2>/dev/null
+  register: _gitea_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.gitea Post] Check if admin user exists"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ docker_bin }} compose -p devops \
+      exec -T gitea gitea admin user list --admin 2>/dev/null \
+      | grep -q "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+  args:
+    executable: /bin/bash
+  register: _gitea_admin_exists
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _gitea_container.stdout | default('') | length > 0
+
+- name: "[pazny.gitea Post] Create admin user (first-run only)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops
+    exec -T gitea gitea admin user create
+    --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+    --password "{{ gitea_admin_password }}"
+    --email "{{ gitea_admin_email | default(gitea_admin_user | default(ansible_facts['user_id']) + '@localhost') }}"
+    --admin
+    --must-change-password=false
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - _gitea_admin_exists.rc | default(0) != 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+# ── Reconverge admin password every run (idempotent UPDATE) ─────────────
+# `gitea admin user change-password` je safe volat na existing usera —
+# overwritne password nepodminene. Toto je UPDATE leg state-declarative
+# idempotence: blank+prefix rotation, non-blank edit credentials.yml,
+# obe cesty vezmou nove heslo na kazdy run.
+- name: "[pazny.gitea Post] Reconverge admin password (state-declarative UPDATE)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops
+    exec -T gitea gitea admin user change-password
+    --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+    --password "{{ gitea_admin_password }}"
+    --must-change-password=false
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - _gitea_admin_exists.rc | default(0) == 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+  notify: Restart gitea

@@ -1,0 +1,87 @@
+---
+# ==============================================================================
+# EXTERNAL STORAGE – path overrides (set_fact only)
+#
+# Tento soubor obsahuje POUZE set_fact override proměnných datových cest
+# na externí SSD. Žádná validace mount pointu ani vytváření adresářů.
+#
+# Používá se ze dvou míst:
+#   1) tasks/blank-reset.yml – PŘED vytvořením _blank_dirs, aby blank
+#      mazal skutečné adresáře na /Volumes/SSD1TB/ a ne neexistující ~/service.
+#   2) tasks/external-storage.yml – standardní provisioning flow (vytváření
+#      adresářů, shell env vars, Docker.app symlink).
+#
+# Single source of truth pro všechny data-heavy cesty – změna cest se
+# provádí pouze zde. Pokud se přidává nová služba do playbooku s persist
+# daty, ADD her here.
+# ==============================================================================
+
+# ── Core infra (DB, IAM, vaulty, Traefik, PDS) ──────────────────────────────
+- name: "[External SSD] Override core infra data paths"
+  ansible.builtin.set_fact:
+    mariadb_data_dir: "{{ external_storage_root }}/mariadb/data"
+    postgresql_data_dir: "{{ external_storage_root }}/postgresql/data"
+    redis_data_dir: "{{ external_storage_root }}/redis/data"
+    authentik_data_dir: "{{ external_storage_root }}/authentik"
+    infisical_data_dir: "{{ external_storage_root }}/infisical"
+    vaultwarden_data_dir: "{{ external_storage_root }}/vaultwarden"
+    bluesky_pds_data_dir: "{{ external_storage_root }}/bluesky-pds"
+    traefik_config_dir: "{{ external_storage_root }}/traefik"
+
+# ── IIAB stack (knowledge + media + automation) ─────────────────────────────
+- name: "[External SSD] Override IIAB data paths"
+  ansible.builtin.set_fact:
+    wordpress_dir: "{{ external_storage_root }}/wordpress"
+    nextcloud_dir: "{{ external_storage_root }}/nextcloud"
+    nextcloud_data_dir: "{{ external_storage_root }}/nextcloud-data"
+    kiwix_data_dir: "{{ external_storage_root }}/kiwix"
+    maps_data_dir: "{{ external_storage_root }}/maps"
+    calibreweb_books_dir: "{{ external_storage_root }}/calibre"
+    n8n_data_dir: "{{ external_storage_root }}/n8n"
+    openwebui_data_dir: "{{ external_storage_root }}/openwebui"
+    portainer_data_dir: "{{ external_storage_root }}/portainer"
+    uptime_kuma_data_dir: "{{ external_storage_root }}/uptime-kuma"
+    homeassistant_config_dir: "{{ external_storage_root }}/homeassistant"
+    rustfs_data_dir: "{{ external_storage_root }}/rustfs/data"
+    puter_data_dir: "{{ external_storage_root }}/puter"
+    puter_config_dir: "{{ external_storage_root }}/puter/config"
+    jellyfin_config_dir: "{{ external_storage_root }}/jellyfin/config"
+    jellyfin_cache_dir: "{{ external_storage_root }}/jellyfin/cache"
+    jellyfin_movies_dir: "{{ external_storage_root }}/media/movies"
+    jellyfin_shows_dir: "{{ external_storage_root }}/media/shows"
+    jellyfin_music_dir: "{{ external_storage_root }}/media/music"
+
+# ── DevOps stack (git, CI, paperclip) ───────────────────────────────────────
+- name: "[External SSD] Override DevOps data paths"
+  ansible.builtin.set_fact:
+    gitea_data_dir: "{{ external_storage_root }}/gitea"
+    gitlab_data_dir: "{{ external_storage_root }}/gitlab"
+    gitlab_config_dir: "{{ external_storage_root }}/gitlab-config"
+    woodpecker_data_dir: "{{ external_storage_root }}/woodpecker"
+    paperclip_data_dir: "{{ external_storage_root }}/paperclip"
+
+# ── B2B stack (ERP, helpdesk, wiki) ─────────────────────────────────────────
+# POZNAMKA: erpnext_data_dir byl deprecated po P0.1 — ERPNext sites zije v
+# Docker named volume `b2b_erpnext_sites` (VirtioFS I/O error workaround na
+# macOS). Pro externi storage ERPNext presmerujte Docker Desktop disk image
+# na external SSD v Settings → Resources → Disk image location.
+- name: "[External SSD] Override B2B data paths"
+  ansible.builtin.set_fact:
+    freescout_data_dir: "{{ external_storage_root }}/freescout/data"
+    outline_data_dir: "{{ external_storage_root }}/outline/data"
+
+# ── VoIP / Engineering / Data stack ─────────────────────────────────────────
+- name: "[External SSD] Override VoIP/Engineering/Data paths"
+  ansible.builtin.set_fact:
+    freepbx_data_dir: "{{ external_storage_root }}/freepbx"
+    qgis_data_dir: "{{ external_storage_root }}/qgis"
+    metabase_data_dir: "{{ external_storage_root }}/metabase"
+    superset_data_dir: "{{ external_storage_root }}/superset"
+
+# ── Observability storage (TSDBs) ───────────────────────────────────────────
+- name: "[External SSD] Override observability storage paths"
+  ansible.builtin.set_fact:
+    prometheus_storage_path: "{{ external_storage_root }}/observability/prometheus"
+    loki_storage_path: "{{ external_storage_root }}/observability/loki"
+    tempo_storage_path: "{{ external_storage_root }}/observability/tempo"
+    grafana_data_dir: "{{ external_storage_root }}/observability/grafana"

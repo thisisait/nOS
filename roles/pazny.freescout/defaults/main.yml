@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# pazny.freescout — FreeScout helpdesk in Docker (b2b compose stack)
+#
+# Credentials (freescout_db_password, freescout_admin_password) zustavaji v
+# default.credentials.yml — centralizovane pro prefix rotation.
+# ==============================================================================
+
+freescout_version: "php8.3-1.17.152"         # tiredofit image tag = PHP+upstream ver; past CVE-2026-28289
+freescout_domain: "helpdesk.dev.local"
+freescout_port: 8090
+freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
+freescout_db_name: "freescout"
+freescout_db_user: "freescout"
+freescout_admin_email: "{{ default_admin_email }}"
+freescout_timezone: "Europe/Prague"
+freescout_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+freescout_cpus: "{{ docker_cpus_light | default('0.5') }}"

@@ -19,7 +19,6 @@
   changed_when: false
   when: "'JJG-Term' not in terminal_theme.stdout"
 
-# TODO: This doesn't work in Yosemite. Consider a different solution?
 - name: Ensure custom Terminal profile is set as default.
   ansible.builtin.command: "{{ item }}"
   loop:

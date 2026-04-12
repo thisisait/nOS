@@ -1,0 +1,25 @@
+---
+# ==============================================================================
+# pazny.outline/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/b2b/overrides/outline.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Outline ma native OIDC (Authentik) pres env vary — zadny post-start setup
+# neni potreba (user se vytvori pri prvnim OIDC loginu).
+# ==============================================================================
+
+- name: "[pazny.outline] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.outline] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/b2b/overrides/outline.yml"
+    mode: '0644'
+  notify: Restart outline

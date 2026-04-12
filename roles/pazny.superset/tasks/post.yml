@@ -1,0 +1,46 @@
+---
+# ==============================================================================
+# pazny.superset/tasks/post.yml
+# SUPERSET – post-start: inicializace DB schématu a admin uživatele
+# Běží PO startu data stacku (stack-up.yml).
+# ==============================================================================
+
+- name: "[pazny.superset Post] Wait for Superset container to be ready"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p data
+    exec -T superset superset db upgrade
+  register: _superset_db
+  retries: 12
+  delay: 10
+  until: _superset_db.rc == 0
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: "[pazny.superset Post] Initialize roles and permissions"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p data
+    exec -T superset superset init
+  register: _superset_init
+  changed_when: _superset_init.rc == 0
+  failed_when: false
+  when:
+    - _superset_db.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[pazny.superset Post] Create admin user"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p data
+    exec -T superset superset fab create-admin
+    --username admin
+    --firstname Admin
+    --lastname User
+    --email "{{ superset_admin_email | default(default_admin_email) }}"
+    --password {{ superset_admin_password | default(global_password_prefix + '_pw_superset') }}
+  register: _superset_admin
+  changed_when: "'was created' in (_superset_admin.stdout | default(''))"
+  failed_when: false
+  no_log: true
+  when:
+    - _superset_db.rc | default(1) == 0
+    - not ansible_check_mode

@@ -1,0 +1,8 @@
+/vendor/
+/temp/*
+!/temp/.gitkeep
+/log/*
+!/log/.gitkeep
+/data/glasswing.db
+/data/glasswing.db-wal
+/data/glasswing.db-shm

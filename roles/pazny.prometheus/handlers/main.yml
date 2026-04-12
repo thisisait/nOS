@@ -1,0 +1,10 @@
+---
+# pazny.prometheus — handlers
+# Play-level "Restart prometheus" v main.yml ma prednost; tento zustava pro
+# samostatne pouziti role mimo devBoxNOS playbook.
+
+- name: Restart prometheus
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+    restart prometheus
+  failed_when: false

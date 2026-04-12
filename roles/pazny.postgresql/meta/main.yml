@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: postgresql
+  namespace: pazny
+  author: Pázny
+  description: PostgreSQL in Docker compose override (devBoxNOS infra stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — tato role je sdileny datovy zaklad pro
+# authentik/infisical/outline/metabase/superset/paperclip/jsos.
+# Orchestrace (compose up sequencing, post-start sekvence) je v
+# tasks/stacks/core-up.yml.
+dependencies: []
+
+collections:
+  - community.postgresql  # pg query modules (volitelne; post.yml aktualne vola psql pres docker compose exec)

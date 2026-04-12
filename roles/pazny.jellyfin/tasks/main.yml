@@ -1,0 +1,54 @@
+---
+# ==============================================================================
+# pazny.jellyfin/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori config/cache/media adresare, enabluje nginx vhost a vyrenderuje
+# compose override fragment do {{ stacks_dir }}/iiab/overrides/jellyfin.yml.
+#
+# Post-start auto-setup (Startup wizard + password reconverge) je v
+# tasks/post.yml — volany z stack-up.yml az PO compose up.
+# ==============================================================================
+
+- name: "[pazny.jellyfin] Ensure config, cache and media directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ jellyfin_config_dir }}"
+    - "{{ jellyfin_cache_dir }}"
+    - "{{ jellyfin_movies_dir }}"
+    - "{{ jellyfin_shows_dir }}"
+    - "{{ jellyfin_music_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.jellyfin] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/jellyfin.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/jellyfin.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.jellyfin] Display post-install note"
+  ansible.builtin.debug:
+    msg: |
+      ==========================================================================
+       JELLYFIN – PRVNI SPUSTENI
+       URL: https://{{ jellyfin_domain | default('media.dev.local') }}
+       Admin ucet + knihovny auto-setup pres Startup API (post.yml).
+       Medialni slozky v kontejneru:
+         /media/movies -> {{ jellyfin_movies_dir }}
+         /media/shows  -> {{ jellyfin_shows_dir }}
+         /media/music  -> {{ jellyfin_music_dir }}
+       Apple Silicon nema HW akceleraci v Dockeru — transcoding = software.
+      ==========================================================================
+
+- name: "[pazny.jellyfin] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/jellyfin.yml"
+    mode: '0644'
+  notify: Restart jellyfin

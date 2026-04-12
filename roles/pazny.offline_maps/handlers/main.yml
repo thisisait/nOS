@@ -1,0 +1,10 @@
+---
+# pazny.offline_maps — handlers
+# Handler name odrazi role name (`offline_maps`); target je compose
+# service `tileserver`. Volany z tasks/main.yml pri zmene compose override.
+
+- name: Restart offline_maps
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart tileserver
+  failed_when: false

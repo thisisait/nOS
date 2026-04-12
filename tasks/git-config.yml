@@ -1,0 +1,14 @@
+---
+# ==============================================================================
+# GIT – globální konfigurace (user.name, user.email)
+# ==============================================================================
+
+- name: "[Git] Configure user.name"
+  ansible.builtin.command: git config --global user.name "{{ git_user_name }}"
+  when: git_user_name | default('') | length > 0
+  changed_when: false
+
+- name: "[Git] Configure user.email"
+  ansible.builtin.command: git config --global user.email "{{ git_user_email }}"
+  when: git_user_email | default('') | length > 0
+  changed_when: false

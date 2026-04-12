@@ -1,0 +1,26 @@
+---
+# ==============================================================================
+# pazny.homeassistant — Home Assistant (iiab compose stack)
+#
+# Centralizovane promenne zustavaji v default.config.yml kvuli externalim
+# konzumentum (nginx vhost, blank-reset path resolver, RBAC tier mapping).
+# Role defaults poskytuji fallback hodnoty.
+# ==============================================================================
+
+homeassistant_version: "2026.4"                     # CVE-2026-34205 pin (Supervisor bypass)
+homeassistant_port: 8123
+homeassistant_domain: "home.dev.local"
+homeassistant_timezone: "Europe/Prague"
+homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
+
+# true = privileged + network_mode: host -> mDNS/Bonjour auto-discovery
+# Pozor (macOS): host mode saha do Docker VM site, ne na fyzicky Mac network.
+homeassistant_privileged: false
+
+homeassistant_admin_name: "Admin"
+homeassistant_admin_user: "admin"
+# homeassistant_admin_password se resolvne z top-level credentials
+# (`{{ global_password_prefix }}_pw_homeassistant`).
+
+homeassistant_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+homeassistant_cpus: "{{ docker_cpus_standard | default('1.0') }}"

@@ -1,0 +1,27 @@
+---
+- name: "[Heartbeat] Ensure agents directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/agents"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[Heartbeat] Copy heartbeat daemon"
+  ansible.builtin.copy:
+    src: heartbeat/heartbeat.py
+    dest: "{{ ansible_facts['env']['HOME'] }}/agents/heartbeat.py"
+    mode: '0755'
+
+- name: "[Heartbeat] Deploy launchd plist"
+  ansible.builtin.template:
+    src: com.devboxnos.heartbeat.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.heartbeat.plist"
+    mode: '0644'
+
+- name: "[Heartbeat] Load heartbeat daemon"
+  ansible.builtin.command: >
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.heartbeat.plist
+  changed_when: true
+  failed_when: false

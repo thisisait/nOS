@@ -1,0 +1,19 @@
+---
+# pazny.authentik — handlers
+# Play-level "Restart authentik" + "Reapply authentik blueprints" v main.yml
+# maji prednost; tyto role-lokalni zustavaji pro samostatne pouziti role
+# mimo devBoxNOS playbook.
+
+- name: Restart authentik
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart authentik-server authentik-worker
+  failed_when: false
+
+- name: Reapply authentik blueprints
+  ansible.builtin.shell: |
+    for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies; do
+      {{ docker_bin }} compose -p infra exec -T authentik-worker \
+        ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
+    done
+  failed_when: false

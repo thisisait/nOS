@@ -1,0 +1,41 @@
+# =============================================================================
+# pazny.superset — compose override fragment
+# Merged do `docker compose -p data up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/data/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — data_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/data/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  superset:
+    image: apache/superset:{{ superset_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ superset_port | default(8089) }}:8088"
+{% else %}
+      - "127.0.0.1:{{ superset_port | default(8089) }}:8088"
+{% endif %}
+    volumes:
+      - {{ superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset') }}:/app/superset_home
+    environment:
+      SUPERSET_SECRET_KEY: "{{ superset_secret_key | default(global_password_prefix + '_pw_superset_secret') }}"
+      DATABASE_HOST: postgresql
+      DATABASE_PORT: "5432"
+      DATABASE_DB: "{{ superset_db_name | default('superset') }}"
+      DATABASE_USER: "{{ superset_db_user | default('superset') }}"
+      DATABASE_PASSWORD: "{{ superset_db_password | default(global_password_prefix + '_pw_superset') }}"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+    networks:
+      - data_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ superset_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

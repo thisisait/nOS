@@ -1,0 +1,25 @@
+---
+# ==============================================================================
+# pazny.bluesky_pds/tasks/main.yml
+#
+# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
+# vytvori data dir a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/infra/overrides/bluesky-pds.yml, ktery pak core-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start account create + password reconverge je v tasks/post.yml —
+# volany z core-up.yml az PO `docker compose up infra --wait`.
+# ==============================================================================
+
+- name: "[pazny.bluesky_pds] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ bluesky_pds_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.bluesky_pds] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/bluesky-pds.yml"
+    mode: '0644'
+  notify: Restart bluesky-pds

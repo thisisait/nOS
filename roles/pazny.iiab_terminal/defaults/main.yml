@@ -1,0 +1,14 @@
+---
+# ==============================================================================
+# pazny.iiab_terminal — SSH TUI hub pro homelab (Python Textual)
+#
+# Zdrojové soubory files/iiab-terminal/ a šablona config.json.j2 zůstávají
+# v playbook repo a role na ně odkazuje relativní cestou (Ansible role
+# loader vyhledá files/ a templates/ i v playbook tree).
+# ==============================================================================
+
+iiab_terminal_user: "home"                         # macOS uživatel pro SSH přístup
+iiab_terminal_password: ""                         # Prázdné = auto-generované náhodné heslo
+iiab_terminal_password_auth: true                  # true = login heslem povolený
+iiab_terminal_config_dir: "{{ homebrew_prefix }}/etc/iiab-terminal"
+iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"

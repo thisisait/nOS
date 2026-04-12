@@ -1,0 +1,24 @@
+---
+# ==============================================================================
+# pazny.superset/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up data`:
+# vytvori data dir a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/data/overrides/superset.yml.
+#
+# Post-start setup (superset db upgrade + init + admin) je v tasks/post.yml
+# — volany z stack-up.yml az PO `docker compose up data --wait`.
+# ==============================================================================
+
+- name: "[pazny.superset] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ superset_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.superset] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/data/overrides/superset.yml"
+    mode: '0644'
+  notify: Restart superset

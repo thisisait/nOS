@@ -1,0 +1,66 @@
+# =============================================================================
+# pazny.outline — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+#
+# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+#
+# Outline vyzaduje: PostgreSQL + Redis (oboje z infra stacku).
+# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
+# v default.config.yml pres derivovane authentik_oidc_outline_* promenne.
+# =============================================================================
+
+services:
+  outline:
+    image: outlinewiki/outline:{{ outline_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ outline_port | default(3005) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ outline_port | default(3005) }}:3000"
+{% endif %}
+    volumes:
+      - {{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data') }}:/var/lib/outline/data
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      NODE_ENV: production
+      SECRET_KEY: "{{ outline_secret_key | default(global_password_prefix + '_pw_outline_secret') }}"
+      UTILS_SECRET: "{{ outline_utils_secret | default(global_password_prefix + '_pw_outline_utils') }}"
+      DATABASE_URL: "postgres://{{ outline_db_user | default('outline') }}:{{ outline_db_password | default(global_password_prefix + '_pw_outline') }}@postgresql:5432/{{ outline_db_name | default('outline') }}"
+      PGSSLMODE: "disable"
+      REDIS_URL: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379"
+      URL: "https://{{ outline_domain | default('wiki.dev.local') }}"
+      PORT: "3000"
+      FORCE_HTTPS: "false"
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      OIDC_CLIENT_ID: "{{ authentik_oidc_outline_client_id }}"
+      OIDC_CLIENT_SECRET: "{{ authentik_oidc_outline_client_secret }}"
+      OIDC_AUTH_URI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
+      OIDC_TOKEN_URI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
+      OIDC_USERINFO_URI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
+      OIDC_USERNAME_CLAIM: "preferred_username"
+      OIDC_DISPLAY_NAME: "Authentik"
+      OIDC_SCOPES: "openid profile email"
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ outline_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ outline_cpus | default(docker_cpus_standard | default('1.0')) }}

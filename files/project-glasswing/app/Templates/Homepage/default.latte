@@ -1,0 +1,54 @@
+{layout none}
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Glasswing — NOS Security Research Dashboard</title>
+	<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px;">
+
+	<div style="text-align: center; margin-bottom: 40px;">
+		<h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">
+			Glasswing
+		</h1>
+		<p style="color: var(--text2); font-size: 15px; max-width: 500px; margin: 0 auto;">
+			NOS Security Research Dashboard — FOSS vulnerability monitoring, autonomous pentesting, upstream patch development
+		</p>
+	</div>
+
+	<div class="stats" style="max-width: 720px; width: 100%; margin-bottom: 32px;">
+		<div class="stat">
+			<div class="label">Scan Cycle</div>
+			<div class="value">{$scanCycle}</div>
+			<div class="sub">{$schedule}</div>
+		</div>
+		<div class="stat">
+			<div class="label">Components</div>
+			<div class="value">{$componentCount}</div>
+			<div class="sub">monitored services</div>
+		</div>
+		<div class="stat">
+			<div class="label">Pending Issues</div>
+			<div class="value" style="color: var(--orange)">{$pendingCount}</div>
+			<div class="sub">{$resolvedCount} resolved</div>
+		</div>
+		<div class="stat">
+			<div class="label">Pentest Coverage</div>
+			<div class="value" style="color: var(--purple)">{$coveragePct}%</div>
+			<div class="sub">{$areasTested}/{$areasTotal} areas</div>
+		</div>
+	</div>
+
+	<a href="/dashboard" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; background: var(--accent); color: var(--bg); border-radius: 8px; font-weight: 600; font-size: 15px; text-decoration: none; transition: opacity 0.15s;">
+		Prihlasit se
+	</a>
+	<p style="color: var(--text2); font-size: 12px; margin-top: 12px;">SSO via Authentik</p>
+
+</div>
+
+</body>
+</html>

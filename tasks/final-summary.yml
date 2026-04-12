@@ -1,0 +1,100 @@
+---
+# ==============================================================================
+# FINAL SUMMARY – přehled všech běžících služeb po dokončení playbooku
+# ==============================================================================
+
+- name: "[Summary] Service overview"
+  ansible.builtin.debug:
+    msg: |
+
+      ╔══════════════════════════════════════════════════════════════════════════╗
+      ║                    PLAYBOOK DOKONČEN – PŘEHLED SLUŽEB                  ║
+      ╚══════════════════════════════════════════════════════════════════════════╝
+
+      ── AUTOMATICKY NASTAVENÉ (login: admin / {{ global_password_prefix }}_pw_[služba]) ──
+
+      {% if install_observability | default(true) %}
+        Grafana          https://grafana.dev.local          admin / {{ global_password_prefix }}_pw_grafana
+      {% endif %}
+      {% if install_nextcloud | default(false) %}
+        Nextcloud        https://cloud.dev.local             admin / {{ global_password_prefix }}_pw_nextcloud_admin
+      {% endif %}
+      {% if install_gitea | default(false) %}
+        Gitea            https://gitea.dev.local              {{ gitea_admin_user | default(ansible_facts['user_id']) }} / {{ global_password_prefix }}_pw_gitea
+      {% endif %}
+      {% if install_wordpress | default(false) %}
+        WordPress        https://wordpress.dev.local          admin / {{ global_password_prefix }}_pw_wordpress_admin
+      {% endif %}
+      {% if install_freescout | default(false) %}
+        FreeScout        https://helpdesk.dev.local           {{ freescout_admin_email | default(default_admin_email) }} / {{ global_password_prefix }}_pw_freescout
+      {% endif %}
+      {% if install_portainer | default(false) %}
+        Portainer        https://portainer.dev.local          ⚠ Vytvor admin ucet do 5 minut!
+      {% endif %}
+      {% if install_rustfs | default(false) %}
+        RustFS           https://fs.dev.local                 {{ global_password_prefix }}_pw_rustfs_access / _secret
+      {% endif %}
+
+      ── VYŽADUJÍ MANUÁLNÍ ONBOARDING ──────────────────────────────────────────
+
+      {% if install_jellyfin | default(false) %}
+        Jellyfin         https://media.dev.local              → Projdi setup wizard
+      {% endif %}
+      {% if install_homeassistant | default(false) %}
+        Home Assistant   https://home.dev.local               → Projdi onboarding wizard
+      {% endif %}
+      {% if install_n8n | default(false) %}
+        n8n              https://n8n.dev.local                 → Registruj se (první user = owner)
+                                                                 Ollama: Settings → Credentials → http://host.docker.internal:11434
+      {% endif %}
+      {% if install_openwebui | default(false) %}
+        Open WebUI       https://ai.dev.local                 → Registruj se (první user = admin)
+      {% endif %}
+      {% if install_uptime_kuma | default(false) %}
+        Uptime Kuma      https://uptime.dev.local              → Vytvor admin ucet
+      {% endif %}
+      {% if install_calibreweb | default(false) %}
+        Calibre-Web      https://books.dev.local               admin / admin123 (změn heslo!)
+      {% endif %}
+      {% if install_erpnext | default(false) %}
+        ERPNext          https://erp.dev.local                 Administrator / {{ global_password_prefix }}_pw_erpnext
+                                                                 ⚠ Inicializace trvá 2-5 minut po prvním startu
+      {% endif %}
+      {% if install_outline | default(false) %}
+        Outline          https://wiki.dev.local                → Vyžaduje SSO provider (Gitea OAuth / OIDC)
+      {% endif %}
+      {% if install_metabase | default(false) %}
+        Metabase         https://bi.dev.local                  → Registruj se (první user = admin)
+      {% endif %}
+      {% if install_superset | default(false) %}
+        Superset         https://superset.dev.local            → docker exec data-superset-1 superset fab create-admin
+      {% endif %}
+      {% if install_bluesky_pds | default(false) %}
+        Bluesky PDS      https://bsky.dev.lan                  → goat CLI (admin auto-provisioned)
+      {% endif %}
+      {% if install_freepbx | default(false) %}
+        FreePBX          https://pbx.dev.local                 → Projdi setup wizard
+      {% endif %}
+
+      ── INTERNÍ SLUŽBY (bez přímého loginu) ───────────────────────────────────
+
+      {% if install_observability | default(true) %}
+        Prometheus       http://127.0.0.1:{{ prometheus_port | default(9090) }}
+        Loki             http://127.0.0.1:{{ loki_port | default(3100) }}
+        Tempo            http://127.0.0.1:{{ tempo_http_port | default(3200) }}
+      {% endif %}
+      {% if install_mariadb | default(false) %}
+        MariaDB          127.0.0.1:{{ mariadb_port | default(3306) }}         root / {{ global_password_prefix }}_pw_mariadb
+      {% endif %}
+      {% if install_postgresql | default(false) %}
+        PostgreSQL       127.0.0.1:{{ postgresql_port | default(5432) }}         postgres / {{ global_password_prefix }}_pw_postgresql
+      {% endif %}
+
+      {% if tailscale_hostname | default('') | length > 0 %}
+      ── TAILSCALE VZDÁLENÝ PŘÍSTUP ────────────────────────────────────────────
+
+        Homepage (Grafana): https://{{ tailscale_hostname }}
+        Služby přes porty:  http://{{ tailscale_hostname }}:<port>
+      {% endif %}
+
+      ═══════════════════════════════════════════════════════════════════════════

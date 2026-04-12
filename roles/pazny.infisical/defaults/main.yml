@@ -1,0 +1,17 @@
+---
+# ==============================================================================
+# pazny.infisical — Infisical CE (secrets vault) v Docker (infra compose stack)
+#
+# Credentials (infisical_encryption_key, infisical_auth_secret,
+# infisical_db_password) zustavaji v top-level default.credentials.yml —
+# centralni pro prefix rotation.
+# ==============================================================================
+
+infisical_version: "latest"
+infisical_domain: "vault.dev.local"
+infisical_port: 8075
+infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
+infisical_db_name: "infisical"
+infisical_db_user: "infisical"
+infisical_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+infisical_cpus: "{{ docker_cpus_standard | default('1.0') }}"

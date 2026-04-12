@@ -1,0 +1,25 @@
+// {{ ansible_managed | default('Ansible managed') }}
+// PM2 ecosystem file pro jsOS
+
+module.exports = {
+  apps: [{
+    name: 'jsos',
+    cwd: '{{ jsos_dir }}',
+    script: 'src/server/index.js',
+    node_args: '--max-old-space-size=512',
+    env: {
+      NODE_ENV: 'production',
+      PORT: '{{ jsos_port }}',
+    },
+    instances: 1,
+    autorestart: true,
+    max_restarts: 10,
+    restart_delay: 3000,
+    watch: false,
+    max_memory_restart: '512M',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    error_file: '{{ ansible_facts["env"]["HOME"] }}/agents/log/jsos-error.log',
+    out_file: '{{ ansible_facts["env"]["HOME"] }}/agents/log/jsos-out.log',
+    merge_logs: true,
+  }],
+};

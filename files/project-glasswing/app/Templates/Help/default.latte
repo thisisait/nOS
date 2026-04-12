@@ -1,0 +1,52 @@
+{block title}Help{/block}
+
+{block content}
+<div class="help">
+	<h3>Glasswing Security Dashboard</h3>
+	<p style="color:var(--text2); margin-bottom: 16px">NOS Security Research infrastructure — vulnerability monitoring, autonomous pentesting, and upstream patch development for devBoxNOS platform.</p>
+
+	<h3>Architecture</h3>
+	<ul>
+		<li><strong>Backend:</strong> Nette PHP + SQLite — serves dashboard and REST API</li>
+		<li><strong>Agent interface:</strong> REST API at <code>/api/v1/*</code> — agents use curl to read/write data</li>
+		<li><strong>Database:</strong> SQLite with WAL mode at <code>~/glasswing/app/data/glasswing.db</code></li>
+		<li><strong>Schedule:</strong> NOS Security Monitor runs 2x daily (06:00, 18:00)</li>
+	</ul>
+</div>
+
+<div class="help">
+	<h3>Keyboard Shortcuts</h3>
+	<ul>
+		<li><code>1</code> — Overview tab</li>
+		<li><code>2</code> — Timeline tab</li>
+		<li><code>3</code> — Components tab</li>
+		<li><code>4</code> — Pentest tab</li>
+		<li><code>5</code> — Remediation tab</li>
+		<li><code>6</code> — Help tab</li>
+	</ul>
+</div>
+
+<div class="help">
+	<h3>API Quick Reference</h3>
+	<ul>
+		<li><code>GET /api/v1/dashboard/summary</code> — aggregated dashboard stats</li>
+		<li><code>GET /api/v1/components</code> — list all monitored components</li>
+		<li><code>GET /api/v1/scan/state</code> — current scan configuration and rotation</li>
+		<li><code>GET /api/v1/remediation?status=pending</code> — pending remediation items</li>
+		<li><code>GET /api/v1/pentest/targets</code> — pentest targets with coverage stats</li>
+		<li><code>GET /api/v1/advisories</code> — advisory reports</li>
+		<li><code>POST /api/v1/remediation</code> — create new remediation item</li>
+		<li><code>POST /api/v1/advisories</code> — create advisory report</li>
+	</ul>
+</div>
+
+<div class="help">
+	<h3>Scan Recency Indicators</h3>
+	<ul>
+		<li><span class="recency recency-fresh"></span> <strong>Green</strong> — scanned within 24 hours</li>
+		<li><span class="recency recency-recent"></span> <strong>Yellow</strong> — scanned 24-48 hours ago</li>
+		<li><span class="recency recency-stale"></span> <strong>Orange</strong> — scanned 48-72 hours ago</li>
+		<li><span class="recency recency-old"></span> <strong>Red</strong> — not scanned for 72+ hours</li>
+	</ul>
+</div>
+{/block}

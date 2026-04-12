@@ -1,0 +1,31 @@
+---
+# ==============================================================================
+# pazny.traefik/tasks/main.yml
+#
+# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`.
+# Renderuje Traefik static config (traefik.yml) do {{ traefik_config_dir }}
+# a compose override fragment do {{ stacks_dir }}/infra/overrides/.
+# ==============================================================================
+
+- name: "[pazny.traefik] Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ traefik_config_dir }}"
+    - "{{ traefik_config_dir }}/conf.d"
+
+- name: "[pazny.traefik] Render Traefik static configuration"
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_config_dir }}/traefik.yml"
+    mode: '0644'
+  notify: Restart traefik
+
+- name: "[pazny.traefik] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/traefik.yml"
+    mode: '0644'
+  notify: Restart traefik

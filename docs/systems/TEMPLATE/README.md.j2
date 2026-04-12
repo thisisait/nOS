@@ -1,0 +1,49 @@
+# {{ name }}
+
+> {{ description }}
+
+## Quick Reference
+
+| | |
+|---|---|
+| **URL** | `https://{{ domain }}` |
+| **Port** | `{{ port }}` |
+| **Stack** | `{{ stack }}` |
+| **Toggle** | `{{ toggle_var }}: true` |
+| **Compose** | `~/stacks/{{ stack }}/docker-compose.yml` |
+| **Data** | `{{ data_dir }}` |
+
+## Authentication
+
+- **Admin user:** `{{ admin_user | default('admin') }}`
+- **Admin password:** `{{ '{{ global_password_prefix }}' }}_pw_{{ slug }}`
+- **SSO:** {% if oidc %}Authentik OIDC (`{{ oidc_slug }}`){% else %}None{% endif %}
+
+## API Access
+
+- **Base URL:** `https://{{ domain }}/api/`
+- **Auth method:** {{ api_auth | default('Bearer token') }}
+- **Bot account:** `openclaw-bot` (auto-created by playbook)
+- **Token location:** `~/agents/tokens/{{ slug }}.token`
+
+## Health Check
+
+- **Endpoint:** `{{ health_endpoint | default('GET /') }}`
+- **Expected:** `{{ health_status | default('200 OK') }}`
+
+## Dependencies
+
+{% for dep in dependencies | default([]) %}
+- {{ dep }}
+{% endfor %}
+{% if not dependencies %}
+- None
+{% endif %}
+
+## Credentials
+
+| Variable | Description |
+|----------|-------------|
+{% for cred in credential_vars | default([]) %}
+| `{{ cred.var }}` | {{ cred.label }} |
+{% endfor %}

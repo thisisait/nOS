@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: offline_maps
+  namespace: pazny
+  author: Pázny
+  description: Tileserver-gl offline maps in Docker compose override (devBoxNOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — tileserver je samostatna Docker sluzba.
+# Orchestrace (compose up) je v tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

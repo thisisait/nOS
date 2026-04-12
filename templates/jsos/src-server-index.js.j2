@@ -1,0 +1,98 @@
+// {{ ansible_managed | default('Ansible managed — nepřepisuj ručně') }}
+// ==============================================================================
+// jsOS – Server entry point (OS.js v3)
+// ==============================================================================
+
+const {
+  Core,
+  CoreServiceProvider,
+  PackageServiceProvider,
+  VFSServiceProvider,
+  AuthServiceProvider,
+  SettingsServiceProvider,
+} = require('@osjs/server');
+
+const config = require('./config.js');
+
+const osjs = new Core(config, {});
+
+osjs.register(CoreServiceProvider);
+osjs.register(PackageServiceProvider);
+osjs.register(VFSServiceProvider);
+osjs.register(AuthServiceProvider);
+osjs.register(SettingsServiceProvider);
+
+// ── Graceful shutdown ────────────────────────────────────────────────────────
+const shutdown = (signal) => (error) => {
+  if (error instanceof Error) {
+    console.error(error);
+  }
+  osjs.destroy(() => process.exit(signal === 'SIGTERM' ? 0 : 1));
+};
+
+process.on('SIGTERM', shutdown('SIGTERM'));
+process.on('SIGINT', shutdown('SIGINT'));
+process.on('exit', shutdown('exit'));
+
+// ── Boot + custom routes ─────────────────────────────────────────────────────
+osjs.boot().then(() => {
+  const app = osjs.app;
+
+  // ── Homelab services API ─────────────────────────────────────────────────
+  let homelabServices = [];
+  try {
+    homelabServices = require('../../homelab-services.json');
+  } catch {
+    console.warn('[jsOS] homelab-services.json not found');
+  }
+
+  app.get('/api/homelab/services', (req, res) => {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    res.json(homelabServices.filter(function(s) { return s && s.id; }));
+  });
+
+  // ── User resources API ───────────────────────────────────────────────────
+  app.get('/api/user/resources', (req, res) => {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const username = req.session.user.username;
+    const safe = username.replace(/\./g, '_').replace(/[^a-z0-9_]/gi, '').toLowerCase().substring(0, 50);
+    const bucketSafe = username.replace(/\./g, '-').replace(/[^a-z0-9-]/gi, '').toLowerCase().substring(0, 50);
+
+    res.json({
+      username,
+      homeDir: 'home:/',
+{% if install_rustfs | default(false) %}
+      cloudDir: 'cloud:/',
+      s3: {
+        bucket: 'jsos-' + bucketSafe,
+        endpoint: 'http://127.0.0.1:{{ rustfs_api_port | default(9010) }}',
+      },
+{% endif %}
+{% if jsos_provision_databases | default(true) %}
+      database: {
+        name: 'jsos_' + safe,
+        host: '127.0.0.1',
+        port: {{ postgresql_port | default(5432) }},
+        user: 'jsos_' + safe,
+        password: '{{ global_password_prefix }}_pw_jsos_user_' + safe,
+      },
+{% endif %}
+{% if jsos_provision_redis_namespace | default(true) %}
+      redis: {
+        host: '127.0.0.1',
+        port: {{ redis_port | default(6379) }},
+        prefix: 'jsos:user:' + username + ':',
+      },
+{% endif %}
+    });
+  });
+
+  console.log('[jsOS] Server running on port {{ jsos_port }}');
+}).catch((err) => {
+  console.error('[jsOS] Boot failed:', err);
+  process.exit(1);
+});

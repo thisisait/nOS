@@ -1,0 +1,40 @@
+# =============================================================================
+# pazny.loki — compose override fragment
+# Merged do `docker compose -p observability up` v tasks/stacks/core-up.yml
+# pres ansible.builtin.find nad {{ stacks_dir }}/observability/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — observability_net a
+# {{ stacks_shared_network }} jsou definovane v base
+# templates/stacks/observability/docker-compose.yml.j2.
+#
+# local-config.yaml konfig zustava renderovany v core-up.yml do
+# {{ stacks_dir }}/observability/loki/local-config.yaml — bind mount
+# nize ho naveze do kontejneru read-only.
+# =============================================================================
+
+services:
+  loki:
+    image: grafana/loki:{{ loki_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ loki_port | default(3100) }}:3100"
+    volumes:
+      - {{ stacks_dir }}/observability/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - {{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}:/loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-target=all", "-config.file=/etc/loki/local-config.yaml", "-verify-config"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ loki_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ loki_cpus | default(docker_cpus_standard | default('1.0')) }}

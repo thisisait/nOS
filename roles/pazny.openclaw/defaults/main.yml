@@ -1,0 +1,41 @@
+---
+# ==============================================================================
+# pazny.openclaw — Self-hosted AI agent s Ollama MLX backendem (Inspektor Klepítko)
+#
+# Dokumentace: https://github.com/openclaw/openclaw
+# Ollama integrace: https://ollama.com/blog/openclaw
+# ==============================================================================
+
+# Uživatel a domovský adresář pro agentické prostředí
+openclaw_user: "{{ ansible_facts['user_id'] }}"
+openclaw_base_dir: "{{ ansible_facts['env']['HOME'] }}"
+
+# Adresáře agentického systému
+openclaw_agents_dir: "{{ ansible_facts['env']['HOME'] }}/agents"         # instalace, konfigurace agentů
+openclaw_projects_dir: "{{ ansible_facts['env']['HOME'] }}/projects"     # projekty hostované přes nginx
+openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # strukturované .md logy
+
+# OpenClaw konfigurace (~/.openclaw/)
+openclaw_config_dir: "~/.openclaw"
+
+# Ollama model – doporučeno pro 36GB RAM: qwen3:14b
+# Alternativy: qwen3.5:14b (rychlejší), llama3.3:70b (silnější, pomalejší)
+# Od Ollama 0.19 se na Apple Silicon automaticky používá MLX backend
+# (57% rychlejší prefill, 93% rychlejší decode vs llama.cpp)
+openclaw_model: "qwen3:14b"
+ollama_max_loaded_models: 1    # Max modelů v RAM (1 = šetří SWAP na 36GB)
+ollama_num_parallel: 2         # Max paralelních inference requestů
+ollama_keep_alive: "5m"        # Uvolnit model z RAM po nečinnosti (default 5m, 0 = ihned)
+ollama_flash_attention: 1      # Flash attention pro MLX (rychlejší, méně paměti)
+
+# Spustit openclaw jako launchd daemon (vždy běžící, autorestart)
+openclaw_install_daemon: true
+openclaw_domain: "claw.dev.local"
+openclaw_gateway_port: 18789
+
+# Jméno agenta (persona)
+openclaw_agent_name: "Inspektor Klepítko"
+
+# Concurrent sub-agents
+openclaw_max_concurrent_agents: 4
+openclaw_max_concurrent_subagents: 8

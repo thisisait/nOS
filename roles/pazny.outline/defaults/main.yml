@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# pazny.outline — Outline team wiki / knowledge base (b2b compose stack)
+#
+# Credentials (outline_db_password, outline_secret_key, outline_utils_secret)
+# zustavaji v default.credentials.yml — centralizovane pro prefix rotation
+# a auto-generated secrets v main.yml (outline_secret_key / outline_utils_secret
+# jsou pri blank=true regenerovane pres `openssl rand -hex 32`).
+# ==============================================================================
+
+outline_version: "latest"
+outline_domain: "wiki.dev.local"
+outline_port: 3005
+outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
+outline_db_name: "outline"
+outline_db_user: "outline"
+outline_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+outline_cpus: "{{ docker_cpus_standard | default('1.0') }}"

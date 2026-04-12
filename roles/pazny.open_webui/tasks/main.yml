@@ -1,0 +1,36 @@
+---
+# ==============================================================================
+# pazny.open_webui/tasks/main.yml
+#
+# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/open-webui.yml, a linkuje nginx vhost.
+#
+# Post-start admin user creation + password reconverge je v tasks/post.yml —
+# volany az po `docker compose up iiab --wait`.
+# ==============================================================================
+
+- name: "[pazny.open_webui] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ openwebui_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.open_webui] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/open-webui.yml"
+    mode: '0644'
+  notify: Restart openwebui
+
+- name: "[pazny.open_webui] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/openwebui.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/openwebui.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

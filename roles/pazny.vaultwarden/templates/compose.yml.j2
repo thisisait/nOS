@@ -1,0 +1,53 @@
+# =============================================================================
+# pazny.vaultwarden — compose override fragment
+# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:{{ vaultwarden_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ vaultwarden_port | default(8062) }}:80"
+{% else %}
+      - "127.0.0.1:{{ vaultwarden_port | default(8062) }}:80"
+{% endif %}
+    volumes:
+      - {{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}:/data
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      DOMAIN: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
+      SIGNUPS_ALLOWED: "{{ vaultwarden_signups_allowed | default(false) | string | lower }}"
+      ADMIN_TOKEN: "{{ vaultwarden_admin_token }}"
+      WEBSOCKET_ENABLED: "true"
+{% if install_authentik | default(false) %}
+      SSO_ENABLED: "true"
+      SSO_CLIENT_ID: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'vaultwarden') | first).client_id }}"
+      SSO_CLIENT_SECRET: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'vaultwarden') | first).client_secret }}"
+      SSO_AUTHORITY: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/vaultwarden/"
+      SSO_PKCE: "true"
+      SSO_ONLY: "false"
+{% endif %}
+{% if install_authentik | default(false) %}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["update-ca-certificates 2>/dev/null; exec /start.sh"]
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ vaultwarden_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}

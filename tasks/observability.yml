@@ -1,10 +1,19 @@
 ---
 # ==============================================================================
-# OBSERVABILITY – LGTM Stack (Docker) + Host-side collectors
+# OBSERVABILITY – host-side collectors (Alloy, binary exporters, dashboards)
 #
-# Docker stack (Grafana, Prometheus, Loki, Tempo) se spouští přes stack-up.yml.
-# Tento soubor instaluje host-side služby (Alloy, exportery) a deployuje
-# konfigurační soubory pro Docker stack.
+# Docker stack (Grafana, Prometheus, Loki, Tempo) se deployuje a startuje
+# VŽDY dopředu v tasks/stacks/core-up.yml spolu s infra stackem, takže
+# ostatní role mohou předpokládat, že LGTM je online.
+#
+# Tento soubor řeší pouze HOST-SIDE integraci:
+#   • Grafana Alloy instalace + config (brew service)
+#   • Nginx / php-fpm binary exporters (launchd)
+#   • Grafana community dashboards (download)
+#   • Grafana nginx vhost
+#
+# Config soubory pro Prometheus/Loki/Tempo/Grafana provisioning jsou
+# renderovány v core-up.yml – před `docker compose up`.
 # ==============================================================================
 
 # ── Host-side: Homebrew packages ─────────────────────────────────────────────
@@ -143,46 +152,6 @@
       </plist>
   when: alloy_scrape_phpfpm | default(true)
 
-# ── Deploy Docker stack konfigurací ──────────────────────────────────────────
-
-- name: Deploy Prometheus configuration (for Docker stack)
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/prometheus/prometheus.yml"
-    dest: "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
-    mode: '0644'
-  notify: Restart prometheus
-
-- name: "[Loki] Clean stale scratch dir (macOS VirtioFS workaround)"
-  ansible.builtin.file:
-    path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"
-    state: absent
-
-- name: Deploy Loki configuration (for Docker stack)
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/loki/local-config.yaml"
-    dest: "{{ stacks_dir }}/observability/loki/local-config.yaml"
-    mode: '0644'
-
-- name: Deploy Tempo configuration (for Docker stack)
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/tempo/tempo.yaml"
-    dest: "{{ stacks_dir }}/observability/tempo/tempo.yaml"
-    mode: '0644'
-
-- name: Deploy Grafana datasources provisioning (for Docker stack)
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/datasources/all.yml.j2"
-    dest: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
-    mode: '0644'
-  notify: Restart grafana
-
-- name: Deploy Grafana dashboard provisioning config (for Docker stack)
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards/all.yml.j2"
-    dest: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
-    mode: '0644'
-  notify: Restart grafana
-
 # ── Host-side: Grafana Alloy konfigurace ─────────────────────────────────────
 
 - name: Ensure Alloy config directory exists
@@ -226,7 +195,7 @@
   failed_when: false
   when: alloy_scrape_phpfpm | default(true)
 
-- name: Start Redis service (scraped by Alloy)
+- name: Start Redis service (scraped by Alloy) – only if NOT using Docker Redis
   ansible.builtin.command: brew services start redis
   register: redis_svc
   changed_when: >
@@ -236,7 +205,9 @@
     redis_svc.rc != 0 and
     'already started' not in (redis_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (redis_svc.stderr | default(''))
-  when: alloy_scrape_redis | default(true)
+  when:
+    - alloy_scrape_redis | default(true)
+    - not (redis_docker | default(false) | bool)
 
 # ── Dashboardy (stažení + file-based provisioning) ──────────────────────────
 # Grafana Docker kontejner mountuje ~/observability/dashboards jako

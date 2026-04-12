@@ -1,0 +1,225 @@
+{
+  "generated_at": "2026-04-08T12:00:00Z",
+  "generator": "NOS Vulnerability Scanner v1",
+  "rationale": "Pin all critical and high priority services to specific versions. Use semver tags (not :latest) for reproducibility and supply chain security. Versions below are recommended minimums — always check upstream release notes before applying.",
+  "proposals": [
+    {
+      "id": "grafana",
+      "current": "latest",
+      "proposed": "12.4.2",
+      "var": "grafana_version",
+      "reason": "CVE-2026-27876 (CVSS 9.1, RCE) + CVE-2025-4123 (XSS, actively exploited). Minimum safe version.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "prometheus",
+      "current": "latest",
+      "proposed": "v3.3.0",
+      "var": "prometheus_version",
+      "reason": "Pin to latest v3.x stable.",
+      "update_frequency": "quarterly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "loki",
+      "current": "latest",
+      "proposed": "3.5.0",
+      "var": "loki_version",
+      "reason": "Pin to match Grafana LGTM stack version compatibility.",
+      "update_frequency": "quarterly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "portainer",
+      "current": "latest",
+      "proposed": "2.27.3",
+      "var": "portainer_version",
+      "reason": "Critical service with Docker socket access. Pin for stability.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "traefik",
+      "current": "latest",
+      "proposed": "v3.6.11",
+      "var": "traefik_image_version",
+      "reason": "CVE-2026-33186 (CVSS 9.1, gRPC auth bypass) + CVE-2025-54386 (CVSS 9.8, path traversal). Minimum safe version.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "gitea",
+      "current": "latest",
+      "proposed": "1.23.7",
+      "var": "gitea_version",
+      "reason": "Code hosting with SSH access. Pin to latest stable.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "gitlab",
+      "current": "latest",
+      "proposed": "18.8.2-ce.0",
+      "var": "gitlab_version",
+      "reason": "9 HIGH CVEs: CVE-2026-0723 (2FA bypass), CVE-2025-25291/25292 (SAML auth bypass), CVE-2025-12716 (XSS). Minimum safe version.",
+      "update_frequency": "monthly (security releases more frequent)",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "n8n",
+      "current": "latest",
+      "proposed": "2.0.0",
+      "var": "n8n_version",
+      "reason": "URGENT: CVE-2026-21858 (CVSS 10.0, unauth RCE Ni8mare) + CVE-2026-21877 + CVE-2025-68613 + CVE-2025-68668. All fixed in 2.0.0.",
+      "update_frequency": "weekly (fast release cycle)",
+      "breaking_change_risk": "high (major version bump)"
+    },
+    {
+      "id": "wordpress",
+      "current": "latest",
+      "proposed": "6.8.1",
+      "var": "wordpress_version",
+      "reason": "Most targeted CMS. Pin to latest patch.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "nextcloud",
+      "current": "stable",
+      "proposed": "31.0.2",
+      "var": "nextcloud_version",
+      "reason": "File storage with user data. Pin to latest major.minor.patch.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "openwebui",
+      "current": "main",
+      "proposed": "0.6.35",
+      "var": "openwebui_version",
+      "reason": "CRITICAL: On :main (dev branch). CVE-2025-64495 (CVSS 8.7, XSS→RCE) + CVE-2025-64496 (CVSS 7.3, JWT theft). Minimum safe: 0.6.35.",
+      "update_frequency": "weekly",
+      "breaking_change_risk": "high (switching from main to release)"
+    },
+    {
+      "id": "vaultwarden",
+      "current": "latest",
+      "proposed": "1.35.4",
+      "var": "vaultwarden_version",
+      "reason": "5 HIGH CVEs: CVE-2026-27802/27803 (CVSS 8.3, priv escalation), CVE-2025-24364 (RCE), CVE-2025-24365 (org takeover). Minimum safe: 1.35.4.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "infisical",
+      "current": "latest",
+      "proposed": "0.115.0",
+      "var": "infisical_version",
+      "reason": "Secrets vault with encryption keys. Pin for stability.",
+      "update_frequency": "bi-weekly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "bluesky_pds",
+      "current": "latest",
+      "proposed": "0.4.86",
+      "var": "bluesky_pds_version",
+      "reason": "Identity federation. Pin to prevent protocol-breaking changes.",
+      "update_frequency": "weekly",
+      "breaking_change_risk": "high"
+    },
+    {
+      "id": "jellyfin",
+      "current": "latest",
+      "proposed": "10.10.7",
+      "var": "jellyfin_version",
+      "reason": "Media server with transcoding (ffmpeg attack surface).",
+      "update_frequency": "quarterly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "metabase",
+      "current": "latest",
+      "proposed": "v0.53.8",
+      "var": "metabase_version",
+      "reason": "BI tool with database credentials. Pin to latest patch.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "superset",
+      "current": "latest",
+      "proposed": "4.1.2",
+      "var": "superset_version",
+      "reason": "BI tool with SQL execution. Pin to stable release.",
+      "update_frequency": "quarterly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "freescout",
+      "current": "latest",
+      "proposed": "1.8.165",
+      "var": "freescout_version",
+      "reason": "Unofficial image (tiredofit/*). Pin to reduce supply chain risk.",
+      "update_frequency": "variable",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "freepbx",
+      "current": "latest",
+      "proposed": "16.0-latest",
+      "var": "freepbx_version",
+      "reason": "VoIP with exposed SIP ports. Pin to major version at minimum.",
+      "update_frequency": "quarterly",
+      "breaking_change_risk": "medium"
+    },
+    {
+      "id": "outline",
+      "current": "latest",
+      "proposed": "0.82.0",
+      "var": "outline_version",
+      "reason": "Wiki with internal docs. Pin to stable release.",
+      "update_frequency": "bi-weekly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "calibreweb",
+      "current": "latest",
+      "proposed": "0.6.24",
+      "var": "calibreweb_version",
+      "reason": "LinuxServer image with default credentials. Pin version.",
+      "update_frequency": "monthly",
+      "breaking_change_risk": "low"
+    },
+    {
+      "id": "rustfs",
+      "current": "latest",
+      "proposed": "0.2.0",
+      "var": "rustfs_version",
+      "reason": "Object storage with S3 API + access keys.",
+      "update_frequency": "variable (new project)",
+      "breaking_change_risk": "high"
+    },
+    {
+      "id": "paperclip",
+      "current": "latest",
+      "proposed": "0.1.0",
+      "var": "paperclip_version",
+      "reason": "Agent orchestration with code execution. Pin for safety.",
+      "update_frequency": "variable (new project)",
+      "breaking_change_risk": "high"
+    }
+  ],
+  "already_pinned": [
+    { "id": "authentik", "version": "2025.2", "status": "VULNERABLE — 2025.2 is EOL. CVE-2026-25227 (CVSS 9.1 code injection) has NO backport. MUST upgrade to 2025.12.4+" },
+    { "id": "mariadb", "version": "lts", "status": "OK — LTS tag provides stability" },
+    { "id": "postgresql", "version": "16-alpine", "status": "OK — pinned to major version" },
+    { "id": "redis", "version": "7-alpine", "status": "VULNERABLE — CVE-2025-49844 (CVSS 10.0 RCE). Must pin to 7.4.6-alpine + add requirepass" },
+    { "id": "tempo", "version": "2.10.0", "status": "OK — exact pin" },
+    { "id": "erpnext", "version": "v15", "status": "OK — pinned to major version" },
+    { "id": "woodpecker", "version": "v3", "status": "OK — pinned to major version" },
+    { "id": "uptime_kuma", "version": "1", "status": "OK — pinned to major version" }
+  ],
+  "note": "Proposed versions are recommendations based on latest stable releases as of 2026-04-08. Always verify ARM64/Apple Silicon compatibility before applying. Check upstream changelogs for breaking changes."
+}

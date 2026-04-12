@@ -1,0 +1,38 @@
+# =============================================================================
+# pazny.traefik — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+#
+# Traefik pouziva docker-socket-proxy jako secure Docker API gateway —
+# proxy stava v base compose (sdilena s Portainerem).
+# =============================================================================
+
+services:
+  traefik:
+    image: traefik:{{ traefik_image_version | default('latest') }}
+    restart: unless-stopped
+    depends_on:
+      - docker-socket-proxy
+    ports:
+{% if not (install_nginx | default(true)) %}
+      - "{{ traefik_http_port | default(80) }}:80"
+      - "{{ traefik_https_port | default(443) }}:443"
+{% endif %}
+      - "127.0.0.1:{{ traefik_dashboard_port | default(8080) }}:8080"
+    volumes:
+      - {{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}:/etc/traefik:ro
+    environment:
+      DOCKER_HOST: "tcp://docker-socket-proxy:2375"
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ traefik_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

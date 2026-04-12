@@ -1,0 +1,44 @@
+---
+# ==============================================================================
+# pazny.grafana/tasks/post.yml — admin password reconverge
+#
+# GF_SECURITY_ADMIN_PASSWORD env var se cte pouze pri prvni inicializaci DB.
+# Pro non-blank runy (edited credentials.yml) potrebujeme explicitni password
+# reset pres grafana-cli, ktery overwritne hash v sqlite DB na kazdy beh.
+# Blank run tuto task tez spousti — harmless, password uz je z env vary stejny.
+# ==============================================================================
+
+- name: "[pazny.grafana Post] Check if Grafana container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/observability/docker-compose.yml"
+    -p observability ps -q grafana 2>/dev/null
+  register: _grafana_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.grafana Post] Wait for Grafana HTTP API to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/health"
+    status_code: [200]
+    timeout: 5
+  register: _grafana_health
+  retries: 20
+  delay: 3
+  until: _grafana_health.status | default(0) == 200
+  when: _grafana_container.stdout | default('') | length > 0
+  failed_when: false
+
+- name: "[pazny.grafana Post] Reconverge admin password (grafana-cli reset-admin-password)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p observability exec -T grafana \
+      grafana-cli admin reset-admin-password {{ grafana_admin_password | quote }} 2>&1
+  register: _grafana_pw_reset
+  when:
+    - _grafana_container.stdout | default('') | length > 0
+    - _grafana_health.status | default(0) == 200
+  changed_when: "'Admin password changed successfully' in (_grafana_pw_reset.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  notify: Restart grafana

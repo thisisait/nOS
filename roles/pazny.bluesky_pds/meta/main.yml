@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: bluesky_pds
+  namespace: pazny
+  author: Pázny
+  description: Bluesky PDS (AT Protocol) in Docker compose override (devBoxNOS infra stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — PDS bezi jako soucast infra stacku. Identity
+# bridge na Authentik zustava v tasks/stacks/bluesky_pds_bridge.yml
+# (cross-service, neni role-owned).
+dependencies: []
+
+collections: []

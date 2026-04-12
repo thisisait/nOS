@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── devBoxNOS RBAC: expression policies + application bindings ───────────────
+# Tier-based access control. Zdroje:
+#   - authentik_rbac_tiers (seznam tier → groups)
+#   - authentik_app_tiers  (slug → tier index)
+#
+# Policies testuji clenstvi v tier groupach (is_superuser bypass).
+# Bindings spojuji policies s applications (idempotentni upsert).
+
+version: 1
+metadata:
+  name: devboxnos-rbac-policies
+  labels:
+    managed-by: devboxnos
+    blueprint-version: "1"
+
+entries:
+  # ── Expression policies per tier ─────────────────────────────────────────
+{% for tier in authentik_rbac_tiers | default([]) %}
+  - model: authentik_policies_expression.expressionpolicy
+    state: present
+    identifiers:
+      name: "devboxnos-{{ tier.name }}"
+    attrs:
+      expression: |
+        # Tier {{ tier.tier }}: {{ tier.description }}
+        # Povoleno: {{ tier.groups | join(', ') }}
+        if request.user.is_superuser:
+            return True
+        allowed_groups = {{ tier.groups | to_json }}
+        user_group_names = [g.name for g in request.user.ak_groups.all()]
+        return any(g in allowed_groups for g in user_group_names)
+      execution_logging: false
+{% endfor %}
+
+  # ── Policy bindings: app → tier policy ───────────────────────────────────
+{% for app in authentik_oidc_apps | default([]) %}
+{% if app.enabled | default(false) | bool %}
+{% set app_tier_num = authentik_app_tiers[app.slug] | default(3) %}
+{% set tier_entry = (authentik_rbac_tiers | selectattr('tier', 'equalto', app_tier_num | int) | list | first) | default({'name': 'tier-user'}) %}
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, "{{ app.slug }}"]]
+      order: 0
+    attrs:
+      policy: !Find [authentik_policies_expression.expressionpolicy, [name, "devboxnos-{{ tier_entry.name }}"]]
+      enabled: true
+      negate: false
+      timeout: 30
+{% endif %}
+{% endfor %}

@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: gitea
+  namespace: pazny
+  author: Pázny
+  description: Gitea in Docker compose override (devBoxNOS devops stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Gitea bezi jako soucast devops stacku vedle
+# Woodpecker / GitLab / Paperclip. Orchestrace (compose up sequencing)
+# je v tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

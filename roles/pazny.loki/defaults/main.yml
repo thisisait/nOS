@@ -1,0 +1,15 @@
+---
+# ==============================================================================
+# pazny.loki — Loki in Docker (observability compose override)
+#
+# Konfig soubor local-config.yaml zustava renderovany v tasks/stacks/core-up.yml
+# z files/observability/loki/local-config.yaml — role vlastni jen compose
+# fragment + handler (stejna deliberate decision jako u grafana provisioning).
+# ==============================================================================
+
+loki_version: "latest"
+loki_port: 3100
+loki_retention: "744h"   # 31 dni
+loki_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/loki"
+loki_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+loki_cpus: "{{ docker_cpus_standard | default('1.0') }}"

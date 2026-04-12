@@ -1,0 +1,135 @@
+---
+# ==============================================================================
+# BACKUP – automatické šifrované zálohy přes Restic
+# Vytvoří repo, provede dump databází, spustí zálohu, nastaví launchd schedule
+# ==============================================================================
+
+- name: "[Backup] Verify restic is installed"
+  ansible.builtin.command: which restic
+  register: restic_which
+  changed_when: false
+  failed_when: restic_which.rc != 0
+
+- name: "[Backup] Verify restic_repo is configured"
+  ansible.builtin.fail:
+    msg: "restic_repo is empty — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"
+  when: restic_repo | default('') | length == 0
+
+- name: "[Backup] Ensure backups directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/backups"
+    state: directory
+    mode: '0700'
+
+- name: "[Backup] Deploy resticignore exclusion patterns"
+  ansible.builtin.copy:
+    src: backup/resticignore
+    dest: "{{ restic_excludefile }}"
+    mode: '0644'
+
+- name: "[Backup] Check if restic repo is initialized"
+  ansible.builtin.command: restic -r {{ restic_repo }} snapshots
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  register: restic_repo_check
+  changed_when: false
+  failed_when: false
+
+- name: "[Backup] Initialize restic repo"
+  ansible.builtin.command: restic init -r {{ restic_repo }}
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: restic_repo_check.rc != 0
+
+# ── Pre-backup database dumps ────────────────────────────────────────────────
+
+- name: "[Backup] Dump PostgreSQL databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T postgresql
+    pg_dumpall -U postgres > {{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql
+  when: install_postgresql | default(false)
+  failed_when: false
+
+- name: "[Backup] Dump MariaDB databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T mariadb
+    mysqldump --all-databases -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}
+    > {{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql
+  when: install_mariadb | default(false)
+  failed_when: false
+  no_log: true
+
+# ── Restic backup ────────────────────────────────────────────────────────────
+
+- name: "[Backup] Run restic backup"
+  ansible.builtin.command: >
+    restic -r {{ restic_repo }} backup
+    --exclude-file={{ restic_excludefile }}
+    {{ restic_backup_paths | join(' ') }}
+    {{ ansible_facts['env']['HOME'] }}/backups
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  async: 3600
+  poll: 30
+
+- name: "[Backup] Prune old snapshots"
+  ansible.builtin.command: >
+    restic -r {{ restic_repo }} forget
+    --keep-daily {{ restic_keep_daily }}
+    --keep-weekly {{ restic_keep_weekly }}
+    --keep-monthly {{ restic_keep_monthly }}
+    --prune
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+
+# ── Scheduled backup via launchd ─────────────────────────────────────────────
+
+- name: "[Backup] Deploy backup-run.sh wrapper script"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # Automated Restic backup — managed by Ansible, do not edit
+      set -euo pipefail
+      export PATH="{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+      export RESTIC_PASSWORD="{{ restic_password }}"
+      export RESTIC_REPOSITORY="{{ restic_repo }}"
+      BACKUP_DIR="{{ ansible_facts['env']['HOME'] }}/backups"
+      LOG_FILE="${BACKUP_DIR}/backup.log"
+      mkdir -p "$BACKUP_DIR"
+      exec >> "$LOG_FILE" 2>&1
+      echo "=== Backup started: $(date -Iseconds) ==="
+      {% if install_postgresql | default(false) %}
+      {{ docker_bin }} compose -p infra exec -T postgresql pg_dumpall -U postgres > "${BACKUP_DIR}/pg_dump.sql" || true
+      {% endif %}
+      {% if install_mariadb | default(false) %}
+      {{ docker_bin }} compose -p infra exec -T mariadb \
+        mysqldump --all-databases \
+        -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }} \
+        > "${BACKUP_DIR}/maria_dump.sql" 2>/dev/null || true
+      {% endif %}
+      restic backup \
+        --exclude-file="{{ restic_excludefile }}" \
+        {{ restic_backup_paths | join(' ') }} \
+        "${BACKUP_DIR}"
+      restic forget \
+        --keep-daily {{ restic_keep_daily }} \
+        --keep-weekly {{ restic_keep_weekly }} \
+        --keep-monthly {{ restic_keep_monthly }} \
+        --prune
+      echo "=== Backup finished: $(date -Iseconds) ==="
+    dest: "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
+    mode: '0755'
+  no_log: true
+
+- name: "[Backup] Deploy launchd plist for daily backup"
+  ansible.builtin.template:
+    src: com.devboxnos.backup.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.backup.plist"
+    mode: '0644'
+  register: backup_plist
+
+- name: "[Backup] Load launchd backup schedule"
+  ansible.builtin.command: >
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.backup.plist
+  when: backup_plist.changed
+  failed_when: false

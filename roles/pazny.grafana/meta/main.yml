@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: grafana
+  namespace: pazny
+  author: Pázny
+  description: Grafana in Docker compose override (devBoxNOS observability stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Grafana se spousti jako soucast observability
+# stacku vedle Prometheus / Loki / Tempo, ktere zustavaji v base
+# templates/stacks/observability/docker-compose.yml.j2. Po jejich extrakci
+# do samostatnych roli (Wave 2.2+) pridame meta dependencies.
+dependencies: []
+
+collections: []

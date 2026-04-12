@@ -1,0 +1,40 @@
+# =============================================================================
+# pazny.metabase — compose override fragment
+# Merged do `docker compose -p data up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/data/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — data_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/data/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  metabase:
+    image: metabase/metabase:{{ metabase_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ metabase_port | default(3002) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ metabase_port | default(3002) }}:3000"
+{% endif %}
+    volumes:
+      - {{ metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase') }}:/metabase-data
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: "{{ metabase_db_name | default('metabase') }}"
+      MB_DB_PORT: "5432"
+      MB_DB_USER: "{{ metabase_db_user | default('metabase') }}"
+      MB_DB_PASS: "{{ metabase_db_password | default(global_password_prefix + '_pw_metabase') }}"
+      MB_DB_HOST: postgresql
+      MB_EMBEDDING_APP_ORIGIN: "https://{{ puter_domain | default('os.dev.local') }}"
+      JAVA_TIMEZONE: "{{ metabase_timezone | default('Europe/Prague') }}"
+    networks:
+      - data_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ metabase_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

@@ -1,0 +1,46 @@
+# =============================================================================
+# pazny.tempo — compose override fragment
+# Merged do `docker compose -p observability up` v tasks/stacks/core-up.yml
+# pres ansible.builtin.find nad {{ stacks_dir }}/observability/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — observability_net a
+# {{ stacks_shared_network }} jsou definovane v base
+# templates/stacks/observability/docker-compose.yml.j2.
+#
+# tempo.yaml konfig zustava renderovany v core-up.yml do
+# {{ stacks_dir }}/observability/tempo/tempo.yaml — bind mount
+# nize ho naveze do kontejneru read-only.
+#
+# Healthcheck je zamerne zakazany (healthcheck.disable: true) — distroless
+# image nema curl/wget a tempo CLI nema -config.verify flag. Readiness se
+# misto toho sleduje pres /ready HTTP endpoint na :3200 (Grafana datasource
+# + Alloy scrape detekuje vypadky).
+# =============================================================================
+
+services:
+  tempo:
+    image: grafana/tempo:{{ tempo_version | default('2.10.0') }}
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "127.0.0.1:{{ tempo_http_port | default(3200) }}:{{ tempo_http_port | default(3200) }}"
+      - "127.0.0.1:{{ tempo_otlp_grpc_port | default(4327) }}:{{ tempo_otlp_grpc_port | default(4327) }}"
+      - "127.0.0.1:{{ tempo_otlp_http_port | default(4328) }}:{{ tempo_otlp_http_port | default(4328) }}"
+    volumes:
+      - {{ stacks_dir }}/observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - {{ tempo_storage_path | default(stacks_dir + '/observability/tempo/data') }}:/var/lib/tempo
+    # Distroless image – no curl/wget; tempo CLI has no -config.verify flag.
+    # Disable healthcheck: Tempo readiness is observable via /ready HTTP endpoint
+    # on port 3200 (Grafana datasource + Alloy scrape detects failures).
+    healthcheck:
+      disable: true
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ tempo_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ tempo_cpus | default(docker_cpus_light | default('0.5')) }}

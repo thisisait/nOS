@@ -37,6 +37,11 @@
       # *.dev.local → {{ _dnsmasq_target }} (LAN IP)
       address=/.{{ dnsmasq_dev_domain | default('dev.local') }}/{{ _dnsmasq_target }}
 
+      {% if install_bluesky_pds | default(false) %}
+      # *.dev.lan → {{ _dnsmasq_target }} (Bluesky PDS – AT Protocol zakazuje .local)
+      address=/.dev.lan/{{ _dnsmasq_target }}
+      {% endif %}
+
       # Volitelné vlastní záznamy
       {% for entry in dnsmasq_additional_addresses | default([]) %}
       address=/{{ entry.domain }}/{{ entry.address }}
@@ -48,6 +53,9 @@
 
       # Nezasílat dotazy s .local na upstream DNS (mDNS/Bonjour doménou)
       local=/dev.local/
+      {% if install_bluesky_pds | default(false) %}
+      local=/dev.lan/
+      {% endif %}
 
       # Rychlejší cache
       cache-size=1000
@@ -73,6 +81,19 @@
     mode: '0644'
   become: true
   when: not ansible_check_mode
+
+- name: Create macOS resolver for dev.lan domain (Bluesky PDS)
+  ansible.builtin.copy:
+    dest: "/etc/resolver/dev.lan"
+    content: |
+      # Vygenerováno Ansible – *.dev.lan → dnsmasq (Bluesky PDS)
+      nameserver 127.0.0.1
+      port {{ dnsmasq_port | default(53) }}
+    mode: '0644'
+  become: true
+  when:
+    - install_bluesky_pds | default(false)
+    - not ansible_check_mode
 
 - name: Start dnsmasq via brew services (requires root for port 53)  # noqa: command-instead-of-shell
   ansible.builtin.shell: >-

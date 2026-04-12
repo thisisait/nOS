@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.devboxnos.vulnscan</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ ansible_facts['env']['HOME'] }}/agents/vulnscan-run.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <array>
+{% for hour in vulnscan_schedule_hours %}
+        <dict>
+            <key>Hour</key>
+            <integer>{{ hour }}</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+{% endfor %}
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/agents/vulnscan.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/agents/vulnscan.stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>{{ playbook_dir }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>VULNSCAN_BATCH_SIZE</key>
+        <string>{{ vulnscan_batch_size }}</string>
+        <key>VULNSCAN_REPO_DIR</key>
+        <string>{{ playbook_dir }}</string>
+        <key>VULNSCAN_SECURITY_DIR</key>
+        <string>{{ playbook_dir }}/docs/llm/security</string>
+    </dict>
+</dict>
+</plist>

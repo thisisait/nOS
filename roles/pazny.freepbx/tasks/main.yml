@@ -1,0 +1,27 @@
+---
+# ==============================================================================
+# pazny.freepbx/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up voip`:
+# vytvori data dir a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/voip/overrides/freepbx.yml, ktery stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+# ==============================================================================
+
+- name: "[pazny.freepbx] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ freepbx_data_dir }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - certs
+    - data
+    - logs
+    - custom
+
+- name: "[pazny.freepbx] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/voip/overrides/freepbx.yml"
+    mode: '0644'
+  notify: Restart freepbx

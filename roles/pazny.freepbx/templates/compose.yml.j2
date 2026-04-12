@@ -1,0 +1,51 @@
+# =============================================================================
+# pazny.freepbx — compose override fragment
+# Merged do `docker compose -p voip up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/voip/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — voip_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/voip/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  freepbx:
+    image: tiredofit/freepbx:{{ freepbx_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ freepbx_port | default(8088) }}:80"
+{% if freepbx_lan_access | default(false) or services_lan_access | default(false) %}
+      - "{{ freepbx_sip_port | default(5060) }}:5060/udp"
+      - "{{ freepbx_sip_port | default(5060) }}:5060/tcp"
+      - "{{ freepbx_iax_port | default(4569) }}:4569/udp"
+      - "{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}/udp"
+{% else %}
+      - "127.0.0.1:{{ freepbx_sip_port | default(5060) }}:5060/udp"
+      - "127.0.0.1:{{ freepbx_sip_port | default(5060) }}:5060/tcp"
+      - "127.0.0.1:{{ freepbx_iax_port | default(4569) }}:4569/udp"
+      - "127.0.0.1:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}:{{ freepbx_rtp_start | default(10000) }}-{{ freepbx_rtp_end | default(10100) }}/udp"
+{% endif %}
+    volumes:
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/certs:/certs
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/data:/data
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/logs:/var/log
+      - {{ freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx') }}/custom:/assets/custom
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_NAME: "{{ freepbx_db_name | default('asterisk') }}"
+      DB_USER: "{{ freepbx_db_user | default('asterisk') }}"
+      DB_PASS: "{{ freepbx_db_password | default(global_password_prefix + '_pw_freepbx') }}"
+      ENABLE_FAIL2BAN: "TRUE"
+      RTP_START: "{{ freepbx_rtp_start | default(10000) }}"
+      RTP_FINISH: "{{ freepbx_rtp_end | default(10100) }}"
+      TZ: "{{ freepbx_timezone | default('Europe/Prague') }}"
+    networks:
+      - voip_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ freepbx_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

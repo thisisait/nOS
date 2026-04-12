@@ -1,0 +1,33 @@
+# =============================================================================
+# pazny.wordpress — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  wordpress:
+    image: wordpress:{{ wordpress_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ wordpress_port | default(8084) }}:80"
+    volumes:
+      - {{ wordpress_dir }}:/var/www/html
+    environment:
+      WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
+      WORDPRESS_DB_USER: "{{ wordpress_db_user }}"
+      WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
+      WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
+      WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ wordpress_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

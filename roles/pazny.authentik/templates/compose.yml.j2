@@ -1,0 +1,84 @@
+# =============================================================================
+# pazny.authentik — compose override fragment (server + worker)
+# Merged do `docker compose -p infra up` v tasks/stacks/core-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+# Docker compose merge semantics umoznuje referencovat vnejsi networky
+# dokud je kterykoli z merge-ovanych souboru definuje.
+#
+# Blueprint bind mount: {{ stacks_dir }}/infra/authentik/blueprints → /blueprints/custom
+# je sdileny mezi server a worker. Render fragmentu zajistuje
+# roles/pazny.authentik/tasks/blueprints.yml (volana z tasks/main.yml).
+# =============================================================================
+
+services:
+  # ── Authentik – SSO / Identity Provider ──────────────────────────────────────
+  authentik-server:
+    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2025.2') }}
+    command: server
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ authentik_port | default(9000) }}:9000"
+{% else %}
+      - "127.0.0.1:{{ authentik_port | default(9000) }}:9000"
+{% endif %}
+    volumes:
+      - {{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}/media:/media
+      - {{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}/templates:/templates
+      - {{ stacks_dir }}/infra/authentik/blueprints:/blueprints/custom:ro
+    environment:
+      AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key }}"
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
+      AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "{{ authentik_bootstrap_password }}"
+      AUTHENTIK_BOOTSTRAP_EMAIL: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
+      AUTHENTIK_COOKIE_DOMAIN: ".{{ instance_tld | default('dev.local') }}"
+      AUTHENTIK_HOST: "https://{{ authentik_domain | default('auth.dev.local') }}"
+      AUTHENTIK_HOST_BROWSER: "https://{{ authentik_domain | default('auth.dev.local') }}"
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ authentik_mem_limit | default(docker_mem_limit_critical) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2025.2') }}
+    command: worker
+    restart: unless-stopped
+    volumes:
+      - {{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}/media:/media
+      - {{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}/templates:/templates
+      - {{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}/certs:/certs
+      - {{ stacks_dir }}/infra/authentik/blueprints:/blueprints/custom:ro
+    environment:
+      AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key }}"
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
+      AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ authentik_worker_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

@@ -1,0 +1,31 @@
+---
+homebrew_repo: https://github.com/Homebrew/brew
+
+homebrew_prefix: "{{ (ansible_facts.machine == 'arm64') | ternary('/opt/homebrew', '/usr/local') }}"
+homebrew_install_path: "{{ homebrew_prefix }}{{ '/Homebrew' if ansible_facts.machine != 'arm64' }}"
+homebrew_brew_bin_path: "{{ homebrew_prefix }}/bin"
+
+homebrew_installed_packages: []
+
+homebrew_uninstalled_packages: []
+
+homebrew_upgrade_all_packages: false
+
+homebrew_taps: []
+
+homebrew_cask_apps: []
+
+homebrew_cask_uninstalled_apps: []
+
+homebrew_cask_appdir: /Applications
+homebrew_cask_accept_external_apps: false
+
+# Set this to your account password if casks need elevated privileges.
+# ansible_become_password: ''
+
+homebrew_use_brewfile: true
+homebrew_brewfile_dir: '~'
+
+homebrew_clear_cache: false
+
+homebrew_folders_additional: []

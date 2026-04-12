@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.wordpress — WordPress in Docker (iiab compose override)
+#
+# Credentials (wordpress_db_password, wordpress_admin_password) a site
+# metadata (domain, admin email) zustavaji v top-level default.config.yml
+# + default.credentials.yml — stale centralizovane, role je jen cte pres
+# Ansible var precedence (vars_files > role defaults).
+# ==============================================================================
+
+wordpress_version: "latest"
+wordpress_port: 8084
+wordpress_domain: "wordpress.dev.local"
+wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
+wordpress_db_name: "wordpress"
+wordpress_db_user: "wordpress"
+wordpress_db_host: "127.0.0.1"  # ignorovano pokud install_mariadb=true (pouzije se 'mariadb' z iiab_net)
+wordpress_table_prefix: "wp_"
+wordpress_admin_user: "admin"
+wordpress_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+wordpress_cpus: "{{ docker_cpus_standard | default('1.0') }}"

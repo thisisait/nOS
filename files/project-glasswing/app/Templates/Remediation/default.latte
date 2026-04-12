@@ -1,0 +1,49 @@
+{block title}Remediation{/block}
+
+{block content}
+<h2 style="margin-bottom: 16px; font-size: 18px;">Remediation Queue</h2>
+
+<div class="filter-bar">
+	<button class="filter-btn active" data-filter="status" data-value="">All</button>
+	<button class="filter-btn" data-filter="status" data-value="pending">Pending</button>
+	<button class="filter-btn" data-filter="status" data-value="resolved">Resolved</button>
+	<div class="filter-sep"></div>
+	<button class="filter-btn" data-filter="severity" data-value="CRITICAL">Critical</button>
+	<button class="filter-btn" data-filter="severity" data-value="HIGH">High</button>
+	<button class="filter-btn" data-filter="severity" data-value="MEDIUM">Medium</button>
+	<button class="filter-btn" data-filter="severity" data-value="LOW">Low</button>
+	<div class="filter-sep"></div>
+	<input type="text" class="filter-search" id="remSearch" placeholder="Search remediation items...">
+</div>
+
+<table class="rem-table" id="remTable">
+	<thead>
+		<tr>
+			<th data-sort="id">ID <span class="sort-arrow"></span></th>
+			<th data-sort="component">Component <span class="sort-arrow"></span></th>
+			<th data-sort="severity">Severity <span class="sort-arrow"></span></th>
+			<th data-sort="finding_ref">Finding <span class="sort-arrow"></span></th>
+			<th data-sort="type">Type</th>
+			<th data-sort="status">Status</th>
+			<th data-sort="cycle">Cycle</th>
+		</tr>
+	</thead>
+	<tbody id="remBody">
+		{foreach $items['items'] as $item}
+			<tr class="{$item['status']}" data-status="{$item['status']}" data-severity="{$item['severity']}" data-search="{$item['id']|lower} {($item['component_id'] ?? '')|lower} {($item['finding_ref'] ?? '')|lower} {($item['remediation_detail'] ?? '')|lower}">
+				<td><strong>{$item['id']}</strong></td>
+				<td>{$item['component_id'] ?? 'N/A'}</td>
+				<td><span class="badge badge-{$item['severity']|lower}">{$item['severity']}</span></td>
+				<td style="font-size:12px">{$item['finding_ref'] ?? ''}</td>
+				<td style="font-size:12px">{$item['remediation_type'] ?? ''}</td>
+				<td><span class="badge badge-{$item['status']}">{$item['status']}</span></td>
+				<td style="font-size:12px; color:var(--text2)">{$item['scan_cycle'] ?? ''}</td>
+			</tr>
+		{/foreach}
+	</tbody>
+</table>
+
+{if !$items['items']}
+	<div class="empty">No remediation items</div>
+{/if}
+{/block}

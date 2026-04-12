@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: freescout
+  namespace: pazny
+  author: Pázny
+  description: FreeScout helpdesk in Docker compose override (devBoxNOS b2b stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — FreeScout je konzument MariaDB z infra stacku.
+dependencies: []
+
+collections: []

@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.bluesky_pds — Bluesky PDS (AT Protocol Personal Data Server)
+#
+# Secrets (bluesky_pds_jwt_secret, bluesky_pds_admin_password,
+# bluesky_pds_rotation_key) zustavaji v default.credentials.yml —
+# auto-generated pri blank runu v main.yml pre-tasks. Tato role je
+# jen konzumuje.
+#
+# Identity bridge (Authentik → PDS account auto-provision) zustava
+# v tasks/stacks/bluesky_pds_bridge.yml — cross-service orchestrace,
+# neni role-owned.
+# ==============================================================================
+
+bluesky_pds_version: "latest"
+bluesky_pds_hostname: "bsky.dev.lan"                # .local zakazan AT Protocol specifikaci
+bluesky_pds_port: 2583
+bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
+bluesky_pds_invite_required: true                   # Invite-only registrace
+bluesky_pds_email_smtp_url: ""                      # Prazdne = email notifikace vypnute
+bluesky_pds_email_from: ""                          # Default: noreply@bsky.dev.lan
+bluesky_pds_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"

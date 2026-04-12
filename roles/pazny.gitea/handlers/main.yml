@@ -1,0 +1,10 @@
+---
+# pazny.gitea — handlers
+# Duplikovany v main.yml na play-level; po Wave 2.2 coordinator integration
+# se z main.yml odstrani a role-lokalni se stane jedinym zdrojem.
+
+- name: Restart gitea
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+    restart gitea
+  failed_when: false

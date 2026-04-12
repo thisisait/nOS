@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeLab Manager — devBoxNOS</title>
+  <style>
+    /* ========================================================================
+       CSS VARIABLES & RESET
+       ======================================================================== */
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #bc8cff;
+      --radius: 8px;
+      --transition: 0.2s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ========================================================================
+       HEADER
+       ======================================================================== */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    header h1 .subtitle {
+      font-weight: 400;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-left: 8px;
+    }
+
+    nav { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    nav button {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    nav button:hover { background: var(--border); color: var(--text-primary); }
+    nav button.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+    /* ========================================================================
+       STATS BAR
+       ======================================================================== */
+    #stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .stat .num {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+
+    /* ========================================================================
+       MAIN LAYOUT
+       ======================================================================== */
+    main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    /* ========================================================================
+       STACK CARDS GRID
+       ======================================================================== */
+    #stacks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .stack-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color var(--transition);
+    }
+
+    .stack-card:hover { border-color: var(--text-secondary); }
+
+    .stack-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stack-color {
+      width: 4px;
+      height: 32px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .stack-header h3 { font-size: 0.95rem; font-weight: 600; }
+    .stack-header .stack-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    .stack-body { padding: 0; }
+
+    /* ========================================================================
+       SERVICE ROWS
+       ======================================================================== */
+    .service-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+
+    .service-row:last-child { border-bottom: none; }
+    .service-row:hover { background: var(--bg-tertiary); }
+
+    .service-row .svc-check {
+      display: none;
+      flex-shrink: 0;
+    }
+
+    body.edit-mode .service-row .svc-check { display: inline-block; }
+
+    .svc-info { flex: 1; min-width: 0; }
+    .svc-name { font-size: 0.85rem; font-weight: 500; }
+
+    .svc-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .svc-auto-label {
+      font-size: 0.7rem;
+      color: var(--accent-orange);
+      font-style: italic;
+    }
+
+    .svc-links { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .port-link {
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .domain-link {
+      font-size: 0.75rem;
+      color: var(--accent-green);
+    }
+
+    body.ghpages .domain-link { display: none; }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-auto { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+    .badge-wizard { background: rgba(210, 153, 34, 0.2); color: var(--accent-orange); }
+    .badge-manual { background: rgba(210, 153, 34, 0.15); color: #e3b341; }
+
+    /* ========================================================================
+       LANGUAGE CARDS
+       ======================================================================== */
+    #languages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .lang-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .lang-card:hover { border-color: var(--text-secondary); }
+
+    .lang-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .lang-header .lang-check { display: none; }
+    body.edit-mode .lang-header .lang-check { display: inline-block; }
+
+    .lang-name { font-weight: 600; font-size: 0.9rem; }
+    .lang-version {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-purple);
+      margin-left: auto;
+    }
+
+    .lang-packages {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .pkg-tag {
+      font-size: 0.7rem;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ========================================================================
+       PACKAGES SECTIONS (collapsible groups)
+       ======================================================================== */
+    .pkg-group {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+    }
+
+    .pkg-group-header {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .pkg-group-header:hover { background: var(--bg-tertiary); }
+
+    .pkg-group-header .arrow {
+      transition: transform var(--transition);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .pkg-group.collapsed .arrow { transform: rotate(-90deg); }
+    .pkg-group.collapsed .pkg-group-body { display: none; }
+
+    .pkg-group-header .group-name { font-weight: 600; font-size: 0.85rem; }
+    .pkg-group-header .group-count {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    .pkg-group-body { padding: 0 16px 12px; }
+
+    .pkg-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+      font-size: 0.8rem;
+    }
+
+    .pkg-item-name {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-blue);
+    }
+
+    .pkg-item-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    /* ========================================================================
+       SETTINGS / SYSTEM SERVICES
+       ======================================================================== */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .setting-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setting-item:hover { border-color: var(--text-secondary); }
+
+    .setting-item .setting-check { display: none; }
+    body.edit-mode .setting-item .setting-check { display: inline-block; }
+    .setting-name { font-size: 0.85rem; font-weight: 500; }
+
+    /* ========================================================================
+       CREDENTIALS DIALOG
+       ======================================================================== */
+    dialog {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      max-width: 640px;
+      width: 90vw;
+      max-height: 85vh;
+    }
+
+    dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+
+    .dialog-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dialog-header h2 { font-size: 1.1rem; }
+
+    .dialog-body {
+      padding: 16px 24px;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+
+    .cred-section {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cred-section:last-child { border-bottom: none; }
+    .cred-section h3 { font-size: 0.9rem; margin-bottom: 10px; color: var(--accent-blue); }
+
+    .cred-field { margin-bottom: 10px; }
+    .cred-field label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .cred-input-wrap {
+      display: flex;
+      gap: 4px;
+    }
+
+    .cred-input-wrap input {
+      flex: 1;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.82rem;
+    }
+
+    .cred-input-wrap input:focus { outline: none; border-color: var(--accent-blue); }
+
+    .cred-input-wrap button {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+
+    .cred-input-wrap button:hover { color: var(--text-primary); background: var(--border); }
+
+    .cred-hint {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .dialog-actions {
+      padding: 12px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .dialog-actions button {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.82rem;
+      border: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #fff;
+      border-color: var(--accent-blue) !important;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover { background: var(--border); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover { color: var(--text-primary); }
+
+    .btn-dialog-close {
+      font-size: 1.2rem;
+      border: none;
+      cursor: pointer;
+      background: none;
+      color: var(--text-secondary);
+    }
+
+    .btn-dialog-close:hover { color: var(--text-primary); }
+
+    /* ========================================================================
+       ERROR STATE
+       ======================================================================== */
+    .error-msg {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--accent-red);
+    }
+
+    .error-msg h2 { margin-bottom: 8px; }
+    .error-msg p { color: var(--text-secondary); }
+
+    /* ========================================================================
+       RESPONSIVE
+       ======================================================================== */
+    @media (max-width: 640px) {
+      header { padding: 12px 16px; }
+      main { padding: 16px; }
+      #stacks-grid { grid-template-columns: 1fr; }
+      #stats-bar { padding: 10px 16px; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HomeLab Manager <span class="subtitle">devBoxNOS</span></h1>
+    <nav>
+      <button id="btn-browse" class="active">Browse</button>
+      <button id="btn-edit">Edit</button>
+      <button id="btn-credentials">Credentials</button>
+      <button id="btn-export">Generate Config</button>
+    </nav>
+  </header>
+  <div id="stats-bar"></div>
+  <main id="app">
+    <div class="error-msg" id="loading-msg">
+      <h2>Loading...</h2>
+      <p>Fetching systems.json</p>
+    </div>
+  </main>
+  <dialog id="credentials-dialog">
+    <div class="dialog-header">
+      <h2>Credentials</h2>
+      <button id="btn-close-dialog-top" class="btn-dialog-close">&#x2715;</button>
+    </div>
+    <div class="dialog-body">
+      <form id="credentials-form"></form>
+    </div>
+    <div class="dialog-actions">
+      <button id="btn-gen-all" class="btn-secondary">Generate All Random</button>
+      <button id="btn-download-creds" class="btn-primary">Download credentials.yml</button>
+      <button id="btn-close-dialog" class="btn-ghost">Close</button>
+    </div>
+  </dialog>
+
+  <script>
+    /* ======================================================================
+       CONSTANTS
+       ====================================================================== */
+    const STORAGE_KEY = 'homelab-state';
+
+    const STACK_COLORS = {
+      infra: '#6366f1',
+      observability: '#3fb950',
+      iiab: '#58a6ff',
+      devops: '#f0883e',
+      b2b: '#bc8cff',
+      voip: '#d29922',
+      engineering: '#79c0ff',
+      data: '#f778ba'
+    };
+
+    const AUTO_DEPS = {
+      'install_wordpress': ['install_mariadb'],
+      'install_nextcloud': ['install_mariadb'],
+      'install_erpnext': ['install_mariadb', 'redis_docker'],
+      'install_freescout': ['install_mariadb'],
+      'install_freepbx': ['install_mariadb'],
+      'install_outline': ['install_postgresql', 'redis_docker'],
+      'install_metabase': ['install_postgresql'],
+      'install_superset': ['install_postgresql', 'redis_docker'],
+    };
+
+    const isGHPages = window.location.hostname.endsWith('.github.io');
+
+    /* ======================================================================
+       STATE
+       ====================================================================== */
+    let DATA = null;
+    let state = {};
+    let autoEnabled = {};
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) state = JSON.parse(raw);
+      } catch { /* ignore corrupt data */ }
+    }
+
+    function saveState() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+    }
+
+    function isChecked(toggleVar) {
+      if (toggleVar in state) return state[toggleVar];
+      return getDefault(toggleVar);
+    }
+
+    let defaultsMap = {};
+
+    function buildDefaultsMap() {
+      defaultsMap = {};
+      const sources = [
+        ...(DATA?.services ?? []),
+        ...(DATA?.languages ?? []),
+        ...(DATA?.macos_settings ?? []),
+        ...(DATA?.system_services ?? []),
+      ];
+      for (const item of sources) {
+        if (item.toggle_var) defaultsMap[item.toggle_var] = item.default_enabled ?? false;
+      }
+    }
+
+    function getDefault(toggleVar) {
+      return defaultsMap[toggleVar] ?? false;
+    }
+
+    /* ======================================================================
+       AUTO-DEPENDENCY ENGINE
+       ====================================================================== */
+    function computeAutoDeps() {
+      autoEnabled = {};
+      let stateChanged = false;
+      for (const [parent, deps] of Object.entries(AUTO_DEPS)) {
+        if (!isChecked(parent)) continue;
+        const parentSvc = DATA.services.find(s => s.toggle_var === parent);
+        const parentName = parentSvc?.name ?? parent;
+        for (const dep of deps) {
+          if (!isChecked(dep)) {
+            state[dep] = true;
+            stateChanged = true;
+          }
+          autoEnabled[dep] = autoEnabled[dep]
+            ? autoEnabled[dep] + ', ' + parentName
+            : parentName;
+        }
+      }
+      if (stateChanged) saveState();
+    }
+
+    /* ======================================================================
+       SAFE DOM HELPERS
+       ====================================================================== */
+    function el(tag, attrs, children) {
+      const node = document.createElement(tag);
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          if (k === 'className') node.className = v;
+          else if (k === 'textContent') node.textContent = v;
+          else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), v);
+          else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+          else node.setAttribute(k, v);
+        }
+      }
+      if (children) {
+        for (const child of Array.isArray(children) ? children : [children]) {
+          if (typeof child === 'string') node.appendChild(document.createTextNode(child));
+          else if (child) node.appendChild(child);
+        }
+      }
+      return node;
+    }
+
+    /* ======================================================================
+       RENDER: STATS BAR
+       ====================================================================== */
+    function renderStats() {
+      const bar = document.getElementById('stats-bar');
+      bar.replaceChildren();
+      const enabledServices = DATA.services.filter(s => isChecked(s.toggle_var)).length;
+      const dockerServices = DATA.services.filter(s => s.type === 'docker' && isChecked(s.toggle_var)).length;
+      const enabledLangs = DATA.languages.filter(l => isChecked(l.toggle_var)).length;
+      const stats = [
+        [enabledServices, 'services enabled'],
+        [dockerServices, 'Docker containers'],
+        [enabledLangs, 'languages'],
+        [DATA.homebrew_packages.length, 'CLI packages'],
+        [DATA.cask_apps.length, 'cask apps'],
+      ];
+      for (const [num, label] of stats) {
+        bar.appendChild(
+          el('div', { className: 'stat' }, [
+            el('span', { className: 'num', textContent: String(num) }),
+            document.createTextNode(' ' + label),
+          ])
+        );
+      }
+    }
+
+    /* ======================================================================
+       RENDER: BADGE
+       ====================================================================== */
+    function makeBadge(onboarding) {
+      if (!onboarding) return null;
+      const cls = onboarding === 'auto' ? 'badge-auto' : onboarding === 'wizard' ? 'badge-wizard' : 'badge-manual';
+      return el('span', { className: 'badge ' + cls, textContent: onboarding });
+    }
+
+    /* ======================================================================
+       RENDER: STACK CARDS
+       ====================================================================== */
+    function renderStacks() {
+      const grid = document.getElementById('stacks-grid');
+      grid.replaceChildren();
+
+      for (const stack of DATA.stacks) {
+        const services = DATA.services.filter(s => s.stack === stack.id);
+        if (!services.length) continue;
+
+        const color = stack.color || STACK_COLORS[stack.id] || '#8b949e';
+        const card = el('div', { className: 'stack-card' });
+
+        // Header
+        const header = el('div', { className: 'stack-header' }, [
+          el('div', { className: 'stack-color', style: { background: color } }),
+          el('h3', { textContent: stack.name }),
+          el('span', { className: 'stack-desc', textContent: stack.description || '' }),
+        ]);
+        card.appendChild(header);
+
+        // Body
+        const body = el('div', { className: 'stack-body' });
+        for (const svc of services) {
+          const checked = isChecked(svc.toggle_var);
+
+          // Checkbox
+          const cb = el('input', { type: 'checkbox', className: 'svc-check', 'data-toggle': svc.toggle_var });
+          cb.checked = checked;
+          cb.addEventListener('change', onCheckboxChange);
+
+          // Info
+          const nameChildren = [document.createTextNode(svc.name)];
+          if (autoEnabled[svc.toggle_var]) {
+            nameChildren.push(document.createTextNode(' '));
+            nameChildren.push(el('span', { className: 'svc-auto-label', textContent: '(auto: ' + autoEnabled[svc.toggle_var] + ')' }));
+          }
+          const info = el('div', { className: 'svc-info' }, [
+            el('div', { className: 'svc-name' }, nameChildren),
+            el('div', { className: 'svc-desc', textContent: svc.description || '' }),
+          ]);
+
+          // Links
+          const linkChildren = [];
+          if (svc.port) {
+            const portA = el('a', { className: 'port-link', href: 'http://localhost:' + svc.port, target: '_blank', textContent: ':' + svc.port });
+            linkChildren.push(portA);
+          }
+          if (svc.domain) {
+            const domA = el('a', { className: 'domain-link', href: 'https://' + svc.domain, target: '_blank', textContent: svc.domain });
+            linkChildren.push(domA);
+          }
+          const badge = makeBadge(svc.onboarding);
+          if (badge) linkChildren.push(badge);
+
+          const links = el('div', { className: 'svc-links' }, linkChildren);
+          const row = el('div', { className: 'service-row', 'data-toggle': svc.toggle_var }, [cb, info, links]);
+          body.appendChild(row);
+        }
+
+        card.appendChild(body);
+        grid.appendChild(card);
+      }
+    }
+
+    /* ======================================================================
+       RENDER: LANGUAGES
+       ====================================================================== */
+    function renderLanguages() {
+      const container = document.getElementById('languages-grid');
+      container.replaceChildren();
+
+      for (const lang of DATA.languages) {
+        const checked = isChecked(lang.toggle_var);
+        const cb = el('input', { type: 'checkbox', className: 'lang-check', 'data-toggle': lang.toggle_var });
+        cb.checked = checked;
+        cb.addEventListener('change', onCheckboxChange);
+
+        const pkgs = [...(lang.extensions || []), ...(lang.global_packages || [])];
+        const pkgTags = pkgs.map(p => {
+          const name = typeof p === 'string' ? p : (p.name || String(p));
+          return el('span', { className: 'pkg-tag', textContent: name });
+        });
+
+        const card = el('div', { className: 'lang-card' }, [
+          el('div', { className: 'lang-header' }, [
+            cb,
+            el('span', { className: 'lang-name', textContent: lang.name }),
+            el('span', { className: 'lang-version', textContent: lang.version || '' }),
+          ]),
+          el('div', { className: 'lang-packages' }, pkgTags),
+        ]);
+        container.appendChild(card);
+      }
+    }
+
+    /* ======================================================================
+       RENDER: HOMEBREW & CASK PACKAGES
+       ====================================================================== */
+    function categorize(items) {
+      const groups = {};
+      for (const item of items) {
+        const cat = item.category || 'other';
+        (groups[cat] ??= []).push(item);
+      }
+      return groups;
+    }
+
+    function formatCatName(cat) {
+      return cat.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function renderPackageGroup(container, items) {
+      container.replaceChildren();
+      const groups = categorize(items);
+      for (const [cat, pkgs] of Object.entries(groups)) {
+        const bodyItems = pkgs.map(p =>
+          el('div', { className: 'pkg-item' }, [
+            el('span', { className: 'pkg-item-name', textContent: p.name }),
+            el('span', { className: 'pkg-item-desc', textContent: p.description || '' }),
+          ])
+        );
+        const bodyDiv = el('div', { className: 'pkg-group-body' }, bodyItems);
+        const arrow = el('span', { className: 'arrow', textContent: '\u25BC' });
+        const headerDiv = el('div', { className: 'pkg-group-header' }, [
+          arrow,
+          el('span', { className: 'group-name', textContent: formatCatName(cat) }),
+          el('span', { className: 'group-count', textContent: String(pkgs.length) }),
+        ]);
+        const group = el('div', { className: 'pkg-group' }, [headerDiv, bodyDiv]);
+        headerDiv.addEventListener('click', () => group.classList.toggle('collapsed'));
+        container.appendChild(group);
+      }
+    }
+
+    /* ======================================================================
+       RENDER: SETTINGS
+       ====================================================================== */
+    function renderSettingsGrid(containerId, items) {
+      const grid = document.getElementById(containerId);
+      grid.replaceChildren();
+      for (const s of items) {
+        const cb = el('input', { type: 'checkbox', className: 'setting-check', 'data-toggle': s.toggle_var });
+        cb.checked = isChecked(s.toggle_var);
+        cb.addEventListener('change', onCheckboxChange);
+        grid.appendChild(el('div', { className: 'setting-item' }, [
+          cb, el('span', { className: 'setting-name', textContent: s.name }),
+        ]));
+      }
+    }
+
+    function renderSettings() {
+      renderSettingsGrid('macos-settings', DATA.macos_settings);
+      renderSettingsGrid('system-services', DATA.system_services);
+    }
+
+    /* ======================================================================
+       CHECKBOX HANDLER
+       ====================================================================== */
+    function onCheckboxChange(e) {
+      state[e.target.dataset.toggle] = e.target.checked;
+      saveState();
+      renderAll();
+    }
+
+    /* ======================================================================
+       RENDER ALL
+       ====================================================================== */
+    function renderAll() {
+      computeAutoDeps();
+      renderStats();
+      renderStacks();
+      renderLanguages();
+      renderPackageGroup(document.getElementById('brew-packages'), DATA.homebrew_packages);
+      renderPackageGroup(document.getElementById('cask-apps'), DATA.cask_apps);
+      renderSettings();
+    }
+
+    /* ======================================================================
+       SCAFFOLD DOM
+       ====================================================================== */
+    function scaffoldApp() {
+      const app = document.getElementById('app');
+      app.replaceChildren();
+      const sections = [
+        ['Docker Stacks', 'stacks-grid', null],
+        ['Jazyky & Runtime', 'languages-grid', null],
+        ['Homebrew CLI Packages', 'brew-packages', null],
+        ['Cask Applications', 'cask-apps', null],
+        ['macOS Settings', 'macos-settings', 'settings-grid'],
+        ['System Services', 'system-services', 'settings-grid'],
+      ];
+      for (const [title, id, extraClass] of sections) {
+        app.appendChild(el('h2', { className: 'section-title', textContent: title }));
+        const tag = extraClass ? 'div' : 'section';
+        app.appendChild(el(tag, { id: id, className: extraClass || '' }));
+      }
+    }
+
+    /* ======================================================================
+       MODE TOGGLE
+       ====================================================================== */
+    function setMode(mode) {
+      document.body.classList.toggle('edit-mode', mode === 'edit');
+      document.getElementById('btn-browse').classList.toggle('active', mode === 'browse');
+      document.getElementById('btn-edit').classList.toggle('active', mode === 'edit');
+    }
+
+    /* ======================================================================
+       CONFIG GENERATOR
+       ====================================================================== */
+    function generateConfig() {
+      if (!DATA) return;
+
+      const lines = [
+        '---',
+        '# config.yml — generated by HomeLab Manager',
+        '# https://github.com/PaznerA/mac-dev-playbook',
+        ''
+      ];
+
+      const sections = [
+        { header: 'Homebrew & Apps', items: [
+          { toggle_var: 'install_homebrew_packages', default_enabled: true },
+          { toggle_var: 'install_cask_apps', default_enabled: true },
+          { toggle_var: 'install_mas_apps', default_enabled: false },
+        ]},
+        { header: 'Web server', items: [
+          { toggle_var: 'install_nginx', default_enabled: true },
+        ]},
+        { header: 'Languages', items: DATA.languages },
+        { header: 'AI Agent', items: [
+          { toggle_var: 'install_openclaw', default_enabled: true },
+          { toggle_var: 'install_pi_agents', default_enabled: false },
+        ]},
+        { header: 'macOS Settings', items: DATA.macos_settings },
+        { header: 'System Services', items: DATA.system_services },
+        { header: 'Observability', items: [
+          { toggle_var: 'install_observability', default_enabled: true },
+        ]},
+        { header: 'Network', items: [
+          { toggle_var: 'install_tailscale', default_enabled: true },
+          { toggle_var: 'install_dnsmasq', default_enabled: true },
+        ]},
+        { header: 'Docker Services', items: DATA.services },
+      ];
+
+      let hasOutput = false;
+      for (const sec of sections) {
+        const diffs = [];
+        for (const item of sec.items) {
+          const tv = item.toggle_var;
+          if (!tv) continue;
+          const current = isChecked(tv);
+          const dflt = item.default_enabled ?? getDefault(tv);
+          if (current !== dflt) {
+            diffs.push(tv + ': ' + current);
+          }
+        }
+        if (diffs.length) {
+          lines.push('# \u2014 ' + sec.header + ' \u2014');
+          for (const d of diffs) lines.push(d);
+          lines.push('');
+          hasOutput = true;
+        }
+      }
+
+      if (!hasOutput) {
+        lines.push('# All settings match defaults \u2014 no overrides needed.');
+        lines.push('');
+      }
+
+      downloadBlob(new Blob([lines.join('\n')], { type: 'text/yaml' }), 'config.yml');
+    }
+
+    /* ======================================================================
+       CREDENTIALS DIALOG
+       ====================================================================== */
+    function openCredentials() {
+      const form = document.getElementById('credentials-form');
+      form.replaceChildren();
+
+      if (!DATA?.credentials) return;
+
+      for (const cred of DATA.credentials) {
+        const svc = DATA.services.find(s => s.id === cred.service_id);
+        if (!cred.always_show && svc && !isChecked(svc.toggle_var)) continue;
+        const sectionTitle = cred.service_id === 'global' ? 'Global' : (svc?.name ?? cred.service_id);
+
+        const section = el('div', { className: 'cred-section' });
+        section.appendChild(el('h3', { textContent: sectionTitle }));
+
+        // Merge fields from credential definition and service credential_vars
+        const allFields = [...(cred.fields || [])];
+        if (svc?.credential_vars) {
+          for (const cv of svc.credential_vars) {
+            if (!allFields.some(f => f.var === cv.var)) allFields.push(cv);
+          }
+        }
+
+        for (const f of allFields) {
+          const inputType = f.type === 'password' ? 'password' : 'text';
+          const placeholder = f.default_pattern || f.default || '';
+
+          const input = el('input', { type: inputType, 'data-var': f.var, placeholder: placeholder, value: placeholder });
+
+          const toggleBtn = el('button', { type: 'button', textContent: 'Show' });
+          toggleBtn.addEventListener('click', () => {
+            if (input.type === 'password') {
+              input.type = 'text';
+              toggleBtn.textContent = 'Hide';
+            } else {
+              input.type = 'password';
+              toggleBtn.textContent = 'Show';
+            }
+          });
+
+          const randomBtn = el('button', { type: 'button', textContent: 'Random', className: 'btn-gen-random-field' });
+          randomBtn.addEventListener('click', () => {
+            input.value = generateRandomPassword();
+            input.type = 'text';
+            toggleBtn.textContent = 'Hide';
+          });
+
+          const wrap = el('div', { className: 'cred-input-wrap' }, [input, toggleBtn, randomBtn]);
+          const field = el('div', { className: 'cred-field' }, [
+            el('label', { textContent: f.label }),
+            wrap,
+          ]);
+
+          if (f.hint) {
+            field.appendChild(el('div', { className: 'cred-hint', textContent: f.hint }));
+          }
+
+          section.appendChild(field);
+        }
+
+        form.appendChild(section);
+      }
+
+      document.getElementById('credentials-dialog').showModal();
+    }
+
+    function generateRandomPassword() {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function downloadCredentials() {
+      const form = document.getElementById('credentials-form');
+      const inputs = form.querySelectorAll('input[data-var]');
+      const lines = [
+        '---',
+        '# credentials.yml \u2014 generated by HomeLab Manager',
+        '# https://github.com/PaznerA/mac-dev-playbook',
+        ''
+      ];
+      for (const input of inputs) {
+        lines.push(input.dataset.var + ': "' + (input.value || input.placeholder) + '"');
+      }
+      lines.push('');
+      downloadBlob(new Blob([lines.join('\n')], { type: 'text/yaml' }), 'credentials.yml');
+    }
+
+    function generateAllRandom() {
+      const form = document.getElementById('credentials-form');
+      form.querySelectorAll('.btn-gen-random-field').forEach(btn => btn.click());
+    }
+
+    /* ======================================================================
+       DOWNLOAD HELPER
+       ====================================================================== */
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /* ======================================================================
+       INIT
+       ====================================================================== */
+    async function init() {
+      if (isGHPages) document.body.classList.add('ghpages');
+
+      loadState();
+
+      document.getElementById('btn-browse').addEventListener('click', () => setMode('browse'));
+      document.getElementById('btn-edit').addEventListener('click', () => setMode('edit'));
+      document.getElementById('btn-export').addEventListener('click', generateConfig);
+      document.getElementById('btn-credentials').addEventListener('click', openCredentials);
+      document.getElementById('btn-gen-all').addEventListener('click', generateAllRandom);
+      document.getElementById('btn-download-creds').addEventListener('click', downloadCredentials);
+
+      const closeDialog = () => document.getElementById('credentials-dialog').close();
+      document.getElementById('btn-close-dialog').addEventListener('click', closeDialog);
+      document.getElementById('btn-close-dialog-top').addEventListener('click', closeDialog);
+
+      try {
+        const resp = await fetch('./systems.json');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        DATA = await resp.json();
+      } catch (err) {
+        const app = document.getElementById('app');
+        app.replaceChildren();
+
+        const fileInput = el('input', { type: 'file', accept: '.json', id: 'json-upload', style: { display: 'none' } });
+        fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            DATA = JSON.parse(await file.text());
+            buildDefaultsMap();
+            scaffoldApp();
+            renderAll();
+          } catch (parseErr) {
+            alert('Invalid JSON: ' + parseErr.message);
+          }
+        });
+
+        const uploadBtn = el('button', {
+          textContent: 'Upload systems.json',
+          className: 'btn btn-primary',
+          style: { marginTop: '16px', cursor: 'pointer' },
+        });
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        const msg = el('div', { className: 'error-msg' }, [
+          el('h2', { textContent: 'systems.json not found' }),
+          el('p', { textContent: 'Opening from local file? Upload the JSON manually:' }),
+          fileInput,
+          uploadBtn,
+          el('p', { textContent: 'On a web server, place systems.json next to index.html.', style: { marginTop: '16px', fontSize: '0.8rem', color: 'var(--text-secondary)' } }),
+        ]);
+        app.appendChild(msg);
+        return;
+      }
+
+      buildDefaultsMap();
+      scaffoldApp();
+      renderAll();
+    }
+
+    init();
+  </script>
+</body>
+</html>

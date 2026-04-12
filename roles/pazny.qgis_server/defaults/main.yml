@@ -1,0 +1,13 @@
+---
+# ==============================================================================
+# pazny.qgis_server — QGIS Server v Docker (engineering compose stack)
+#
+# POZOR: image kartoza/qgis-server je pouze amd64 — na ARM64 Mac bezi pres
+# Rosetta emulaci (`platform: linux/amd64`).
+# ==============================================================================
+
+qgis_version: "latest"
+qgis_port: 8071
+qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
+qgis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+qgis_cpus: "{{ docker_cpus_light | default('0.5') }}"

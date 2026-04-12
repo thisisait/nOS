@@ -1,0 +1,25 @@
+---
+# ==============================================================================
+# pazny.jellyfin — Jellyfin media server (iiab compose stack)
+#
+# Centralizovane promenne (jellyfin_domain, port, media dirs) zustavaji v
+# default.config.yml kvuli externalim konzumentum (nginx vhost render,
+# blank-reset path resolver). Role defaults poskytuji fallback.
+# ==============================================================================
+
+jellyfin_version: "10.10.7"                         # CVE-2025-31499 pin
+jellyfin_port: 8096
+jellyfin_domain: "media.dev.local"
+jellyfin_lan_access: true                           # true = port dostupny z LAN
+jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
+jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
+jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"
+jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
+jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
+
+jellyfin_admin_user: "admin"
+jellyfin_language: "en-US"
+jellyfin_country: "CZ"
+
+jellyfin_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
+jellyfin_cpus: "{{ docker_cpus_standard | default('1.0') }}"

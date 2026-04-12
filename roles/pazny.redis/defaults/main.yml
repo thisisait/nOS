@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# pazny.redis — Redis in Docker (infra compose stack)
+#
+# POZOR: install toggle je `redis_docker` (nikoli `install_redis`) kvuli
+# koexistenci s Homebrew Redis — pokud `redis_docker: true`, pouziva se
+# tato role, jinak nativni brew service.
+#
+# Credentials (redis_password) zustavaji v top-level default.credentials.yml —
+# centralizovane, role je jen cte pres Ansible var precedence
+# (vars_files > role defaults).
+# ==============================================================================
+
+redis_version: "7.4.6-alpine"                        # CVE-2025-49844 pin (RediShell RCE)
+redis_port: 6379
+redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
+redis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+redis_cpus: "{{ docker_cpus_light | default('0.5') }}"

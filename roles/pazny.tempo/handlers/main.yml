@@ -1,0 +1,9 @@
+---
+# pazny.tempo — handlers
+# Role-local "Restart tempo" — muze byt prebite play-level handlerem v main.yml.
+
+- name: Restart tempo
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+    restart tempo
+  failed_when: false

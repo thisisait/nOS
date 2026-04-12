@@ -1,0 +1,46 @@
+# =============================================================================
+# pazny.freescout — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+#
+# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+#
+# FreeScout vyzaduje: MariaDB (z infra stacku, databaze + user vytvoreny
+# v default.config.yml mariadb_databases / mariadb_users seed listech).
+# =============================================================================
+
+services:
+  freescout:
+    image: tiredofit/freescout:{{ freescout_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ freescout_port | default(8090) }}:80"
+{% else %}
+      - "127.0.0.1:{{ freescout_port | default(8090) }}:80"
+{% endif %}
+    volumes:
+      - {{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}:/data
+    environment:
+      CONTAINER_NAME: freescout
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_NAME: "{{ freescout_db_name | default('freescout') }}"
+      DB_USER: "{{ freescout_db_user | default('freescout') }}"
+      DB_PASS: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
+      SITE_URL: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
+      ADMIN_EMAIL: "{{ freescout_admin_email | default(default_admin_email) }}"
+      ADMIN_PASS: "{{ freescout_admin_password | default(global_password_prefix + '_pw_freescout') }}"
+      TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
+      ENABLE_SSL_PROXY: "TRUE"
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ freescout_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ freescout_cpus | default(docker_cpus_light | default('0.5')) }}

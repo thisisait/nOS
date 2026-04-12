@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: erpnext
+  namespace: pazny
+  author: Pázny
+  description: ERPNext (Frappe framework) in Docker compose override (devBoxNOS b2b stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — ERPNext je konzument MariaDB + Redis z infra stacku.
+# Orchestrace (compose up sequencing, post-start recovery) je v tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

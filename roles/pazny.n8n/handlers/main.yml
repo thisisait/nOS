@@ -1,0 +1,10 @@
+---
+# pazny.n8n — handlers
+# Play-level "Restart n8n" v main.yml ma prednost; tento zustava pro
+# samostatne pouziti role mimo devBoxNOS playbook.
+
+- name: Restart n8n
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart n8n
+  failed_when: false

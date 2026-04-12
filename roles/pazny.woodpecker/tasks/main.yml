@@ -1,0 +1,59 @@
+---
+# ==============================================================================
+# pazny.woodpecker/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p devops up`:
+# vytvori data/log adresare, enabluje nginx vhost, vyrenderuje compose
+# override fragment (server + agent) do
+# {{ stacks_dir }}/devops/overrides/woodpecker.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start neni — Woodpecker resi config pres env vars + Gitea OAuth2
+# (manualne vytvoreny OAuth2 client v Gitee, vlozeny do config.yml).
+# ==============================================================================
+
+- name: "[pazny.woodpecker] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ woodpecker_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.woodpecker] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/woodpecker.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/woodpecker.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.woodpecker] Render compose override fragment (server + agent)"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/devops/overrides/woodpecker.yml"
+    mode: '0644'
+  notify: Restart woodpecker
+
+- name: "[pazny.woodpecker] Display Gitea OAuth2 setup instructions"
+  ansible.builtin.debug:
+    msg: |
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║  WOODPECKER CI – MANUALNI KROK (pouze pri prvni instalaci)          ║
+      ║                                                                      ║
+      ║  V Gitee vytvor OAuth2 aplikaci:                                     ║
+      ║    https://{{ gitea_domain | default('git.dev.local') }}/user/settings/applications
+      ║    Nazev: Woodpecker CI                                              ║
+      ║    Redirect URI: https://{{ woodpecker_domain | default('ci.dev.local') }}/authorize
+      ║                                                                      ║
+      ║  Zkopiruj Client ID + Secret do config.yml:                          ║
+      ║    woodpecker_gitea_client: "<client-id>"                            ║
+      ║    woodpecker_gitea_secret: "<client-secret>"                        ║
+      ║                                                                      ║
+      ║  Pak spust: ansible-playbook main.yml -K --tags woodpecker           ║
+      ╚══════════════════════════════════════════════════════════════════════╝
+  when: >
+    (woodpecker_gitea_client | default('')) == '' or
+    (woodpecker_gitea_secret | default('')) == ''

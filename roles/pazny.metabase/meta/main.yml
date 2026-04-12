@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: metabase
+  namespace: pazny
+  author: Pázny
+  description: Metabase BI in Docker compose override (devBoxNOS data stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []

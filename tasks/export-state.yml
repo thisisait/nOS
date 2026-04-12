@@ -1,0 +1,170 @@
+---
+# ==============================================================================
+# STATE EXPORT – záloha dat a databází pro hardware migraci
+#
+# Spuštění: ansible-playbook main.yml -K --tags export
+#
+# Exportuje:
+#   - PostgreSQL dump (pg_dumpall)
+#   - MariaDB dump (mysqldump --all-databases)
+#   - config.yml, credentials.yml (pokud existují)
+#   - service-registry.json
+#   - Datové adresáře služeb (gitea, nextcloud, n8n, grafana, agents, observability)
+#   - manifest.json s metadaty exportu
+#
+# Výstup: ~/exports/devboxnos-export-YYYY-MM-DD.tar.gz
+# ==============================================================================
+
+- name: "[Export] Create export base directory"
+  ansible.builtin.file:
+    path: "{{ export_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[Export] Set timestamped export dir"
+  ansible.builtin.set_fact:
+    _export_ts_dir: "{{ export_dir }}/devboxnos-{{ ansible_date_time.date }}"
+
+- name: "[Export] Create timestamped export directory"
+  ansible.builtin.file:
+    path: "{{ _export_ts_dir }}"
+    state: directory
+    mode: '0755'
+
+# ── Database dumps ───────────────────────────────────────────────────────────
+
+- name: "[Export] Check if PostgreSQL container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps --filter name=postgresql --filter status=running -q
+  register: _export_pg_running
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Export] Dump PostgreSQL databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T postgresql pg_dumpall -U postgres
+    > "{{ _export_ts_dir }}/postgresql.sql"
+  when: _export_pg_running.stdout | default('') | length > 0
+  check_mode: false
+
+- name: "[Export] Check if MariaDB container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps --filter name=mariadb --filter status=running -q
+  register: _export_maria_running
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Export] Dump MariaDB databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T mariadb mysqldump -u root
+    -p{{ mariadb_root_password }} --all-databases
+    > "{{ _export_ts_dir }}/mariadb.sql"
+  when: _export_maria_running.stdout | default('') | length > 0
+  check_mode: false
+  no_log: true
+
+# ── Config files ─────────────────────────────────────────────────────────────
+
+- name: "[Export] Copy config.yml (if exists)"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/config.yml"
+    dest: "{{ _export_ts_dir }}/config.yml"
+    mode: '0600'
+    remote_src: true
+  failed_when: false
+
+- name: "[Export] Copy credentials.yml (if exists)"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/credentials.yml"
+    dest: "{{ _export_ts_dir }}/credentials.yml"
+    mode: '0600'
+    remote_src: true
+  failed_when: false
+
+- name: "[Export] Copy service-registry.json (if exists)"
+  ansible.builtin.copy:
+    src: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
+    dest: "{{ _export_ts_dir }}/service-registry.json"
+    mode: '0644'
+    remote_src: true
+  failed_when: false
+
+# ── Service data directories ────────────────────────────────────────────────
+
+- name: "[Export] Build list of data directories to export"
+  ansible.builtin.set_fact:
+    _export_data_dirs:
+      - path: "{{ ansible_facts['env']['HOME'] }}/gitea"
+        name: gitea
+      - path: "{{ ansible_facts['env']['HOME'] }}/nextcloud"
+        name: nextcloud
+      - path: "{{ ansible_facts['env']['HOME'] }}/n8n"
+        name: n8n
+      - path: "{{ ansible_facts['env']['HOME'] }}/grafana"
+        name: grafana
+      - path: "{{ ansible_facts['env']['HOME'] }}/agents"
+        name: agents
+      - path: "{{ ansible_facts['env']['HOME'] }}/observability"
+        name: observability
+
+- name: "[Export] Check which data directories exist"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ _export_data_dirs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _export_dir_stats
+
+- name: "[Export] Archive existing data directories"
+  ansible.builtin.shell: >
+    tar czf "{{ _export_ts_dir }}/{{ item.item.name }}.tar.gz"
+    --exclude='node_modules' --exclude='.cache'
+    -C "{{ item.item.path | dirname }}" "{{ item.item.path | basename }}"
+  loop: "{{ _export_dir_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.stat.exists | default(false)
+  check_mode: false
+
+# ── Manifest ─────────────────────────────────────────────────────────────────
+
+- name: "[Export] List files in export directory"
+  ansible.builtin.find:
+    paths: "{{ _export_ts_dir }}"
+    file_type: file
+  register: _export_files
+
+- name: "[Export] Generate manifest.json"
+  ansible.builtin.copy:
+    content: |
+      {{ {
+        "date": ansible_date_time.iso8601,
+        "hostname": ansible_facts['hostname'],
+        "os": ansible_facts['distribution'] | default('macOS') + ' ' + (ansible_facts['distribution_version'] | default('')),
+        "architecture": ansible_facts['machine'] | default('arm64'),
+        "files": _export_files.files | map(attribute='path') | map('basename') | sort | list,
+        "file_sizes": dict(_export_files.files | map(attribute='path') | map('basename') | zip(_export_files.files | map(attribute='size')))
+      } | to_nice_json }}
+    dest: "{{ _export_ts_dir }}/manifest.json"
+    mode: '0644'
+
+# ── Final tarball ────────────────────────────────────────────────────────────
+
+- name: "[Export] Create final tarball"
+  ansible.builtin.shell: >
+    tar czf "{{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz"
+    -C "{{ export_dir }}" "devboxnos-{{ ansible_date_time.date }}"
+  check_mode: false
+
+- name: "[Export] Print export summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       EXPORT DOKONČEN
+       Tarball: {{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz
+       Obsah:  {{ _export_files.files | length + 1 }} souborů (+ manifest.json)
+       Import: ansible-playbook main.yml -K --tags import \
+               -e "import_tarball={{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz"
+      ══════════════════════════════════════════════════════════════════════

@@ -1,0 +1,291 @@
+{
+  "generated_at": "2026-04-08T12:00:00Z",
+  "generator": "NOS Vulnerability Scanner v1",
+  "scan_scope": {
+    "cve_lookback_months": 12,
+    "min_severity": "HIGH",
+    "data_sources": ["osv.dev", "github-advisory", "nvd"],
+    "scan_types": ["cve", "misconfiguration", "supply_chain", "attack_surface", "resource_leak"]
+  },
+  "priority_definitions": {
+    "critical": "Network-facing services with web UI — highest attack surface",
+    "high": "Databases, backing services, secrets vaults — data breach risk",
+    "medium": "Internal tools with web UI — lateral movement targets",
+    "low": "CLI tools, language runtimes, cask apps — local-only risk"
+  },
+  "components": [
+    {
+      "id": "traefik",
+      "priority": "critical",
+      "risk_factors": ["reverse_proxy", "tls_termination", "network_edge", "latest_tag"],
+      "attack_vectors": ["header_injection", "route_hijacking", "tls_downgrade", "dashboard_exposure"],
+      "last_checked": null
+    },
+    {
+      "id": "nginx",
+      "priority": "critical",
+      "risk_factors": ["reverse_proxy", "tls_termination", "network_edge", "php_fpm_proxy"],
+      "attack_vectors": ["header_injection", "path_traversal", "buffer_overflow", "misconfigured_vhosts"],
+      "last_checked": null
+    },
+    {
+      "id": "authentik",
+      "priority": "critical",
+      "risk_factors": ["identity_provider", "sso_gateway", "session_management", "cookie_domain_wide"],
+      "attack_vectors": ["auth_bypass", "session_hijacking", "oidc_redirect_abuse", "privilege_escalation"],
+      "last_checked": null
+    },
+    {
+      "id": "grafana",
+      "priority": "critical",
+      "risk_factors": ["dashboards", "data_source_access", "oidc_integration", "latest_tag"],
+      "attack_vectors": ["ssrf_via_datasource", "xss_in_dashboards", "auth_bypass", "api_key_leak"],
+      "last_checked": null
+    },
+    {
+      "id": "portainer",
+      "priority": "critical",
+      "risk_factors": ["docker_socket_mount", "container_management", "latest_tag"],
+      "attack_vectors": ["container_escape", "privilege_escalation", "rce_via_container_create", "api_auth_bypass"],
+      "last_checked": null
+    },
+    {
+      "id": "gitlab",
+      "priority": "critical",
+      "risk_factors": ["code_hosting", "ci_cd", "internal_services", "latest_tag", "heavy_footprint"],
+      "attack_vectors": ["rce_via_import", "ssrf", "pipeline_injection", "path_traversal"],
+      "last_checked": null
+    },
+    {
+      "id": "gitea",
+      "priority": "critical",
+      "risk_factors": ["code_hosting", "ssh_access", "api_tokens", "latest_tag"],
+      "attack_vectors": ["rce_via_hooks", "ssrf", "auth_bypass", "path_traversal"],
+      "last_checked": null
+    },
+    {
+      "id": "nextcloud",
+      "priority": "critical",
+      "risk_factors": ["file_storage", "user_data", "webdav", "stable_tag"],
+      "attack_vectors": ["ssrf", "xss", "path_traversal", "auth_bypass", "webdav_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "wordpress",
+      "priority": "critical",
+      "risk_factors": ["cms", "php_execution", "plugin_ecosystem", "latest_tag"],
+      "attack_vectors": ["sql_injection", "xss", "rce_via_plugins", "xmlrpc_abuse", "brute_force"],
+      "last_checked": null
+    },
+    {
+      "id": "n8n",
+      "priority": "critical",
+      "risk_factors": ["workflow_automation", "code_execution", "webhook_endpoints", "latest_tag"],
+      "attack_vectors": ["rce_via_code_node", "ssrf_via_http_node", "credential_theft", "webhook_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "openwebui",
+      "priority": "critical",
+      "risk_factors": ["ai_chat", "ollama_access", "user_data", "main_branch_tag"],
+      "attack_vectors": ["prompt_injection", "ssrf_via_ollama", "auth_bypass", "data_exfiltration"],
+      "last_checked": null
+    },
+    {
+      "id": "erpnext",
+      "priority": "critical",
+      "risk_factors": ["erp_system", "financial_data", "6_containers", "mariadb_root_access"],
+      "attack_vectors": ["rce_via_bench", "sql_injection", "privilege_escalation", "ssrf"],
+      "last_checked": null
+    },
+    {
+      "id": "vaultwarden",
+      "priority": "critical",
+      "risk_factors": ["password_vault", "all_credentials", "admin_panel", "latest_tag"],
+      "attack_vectors": ["auth_bypass", "admin_token_bruteforce", "vault_data_theft", "sso_redirect_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "freepbx",
+      "priority": "critical",
+      "risk_factors": ["voip", "sip_exposed", "rtp_exposed", "all_interfaces", "latest_tag"],
+      "attack_vectors": ["sip_brute_force", "toll_fraud", "rce", "call_interception"],
+      "last_checked": null
+    },
+    {
+      "id": "mariadb",
+      "priority": "high",
+      "risk_factors": ["database", "root_password", "cross_stack_access", "lts_tag"],
+      "attack_vectors": ["sql_injection_relay", "credential_bruteforce", "data_exfiltration", "privilege_escalation"],
+      "last_checked": null
+    },
+    {
+      "id": "postgresql",
+      "priority": "high",
+      "risk_factors": ["database", "root_password", "cross_stack_access", "pinned_16"],
+      "attack_vectors": ["sql_injection_relay", "credential_bruteforce", "data_exfiltration", "extension_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "redis",
+      "priority": "high",
+      "risk_factors": ["cache", "no_authentication", "cross_stack_access", "session_data"],
+      "attack_vectors": ["unauthenticated_access", "data_exfiltration", "lua_script_injection", "rce_via_modules"],
+      "last_checked": null
+    },
+    {
+      "id": "ollama",
+      "priority": "high",
+      "risk_factors": ["llm_inference", "model_access", "api_unauthenticated"],
+      "attack_vectors": ["prompt_injection", "model_theft", "resource_exhaustion", "api_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "infisical",
+      "priority": "high",
+      "risk_factors": ["secrets_vault", "encryption_keys", "api_access", "latest_tag"],
+      "attack_vectors": ["auth_bypass", "encryption_key_leak", "api_abuse", "privilege_escalation"],
+      "last_checked": null
+    },
+    {
+      "id": "metabase",
+      "priority": "medium",
+      "risk_factors": ["bi_tool", "database_credentials", "sql_execution", "latest_tag"],
+      "attack_vectors": ["ssrf", "sql_injection", "auth_bypass", "credential_exposure"],
+      "last_checked": null
+    },
+    {
+      "id": "superset",
+      "priority": "medium",
+      "risk_factors": ["bi_tool", "database_credentials", "python_execution", "latest_tag"],
+      "attack_vectors": ["ssrf", "rce_via_jinja", "sql_injection", "auth_bypass"],
+      "last_checked": null
+    },
+    {
+      "id": "outline",
+      "priority": "medium",
+      "risk_factors": ["wiki", "internal_docs", "oidc", "latest_tag"],
+      "attack_vectors": ["xss", "ssrf", "auth_bypass", "data_exfiltration"],
+      "last_checked": null
+    },
+    {
+      "id": "freescout",
+      "priority": "medium",
+      "risk_factors": ["helpdesk", "customer_data", "email_integration", "unofficial_image"],
+      "attack_vectors": ["xss", "email_injection", "auth_bypass", "file_upload"],
+      "last_checked": null
+    },
+    {
+      "id": "woodpecker",
+      "priority": "medium",
+      "risk_factors": ["ci_cd", "docker_socket_agent", "pipeline_execution"],
+      "attack_vectors": ["pipeline_injection", "container_escape", "credential_theft", "supply_chain"],
+      "last_checked": null
+    },
+    {
+      "id": "jellyfin",
+      "priority": "medium",
+      "risk_factors": ["media_server", "transcoding", "latest_tag"],
+      "attack_vectors": ["path_traversal", "ssrf", "xss", "rce_via_ffmpeg"],
+      "last_checked": null
+    },
+    {
+      "id": "homeassistant",
+      "priority": "medium",
+      "risk_factors": ["iot_hub", "privileged_container", "network_access"],
+      "attack_vectors": ["rce", "ssrf", "privilege_escalation", "iot_lateral_movement"],
+      "last_checked": null
+    },
+    {
+      "id": "uptime_kuma",
+      "priority": "medium",
+      "risk_factors": ["monitoring", "internal_network_probes", "notification_channels"],
+      "attack_vectors": ["ssrf_via_monitors", "xss", "notification_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "calibreweb",
+      "priority": "medium",
+      "risk_factors": ["ebook_server", "file_access", "default_credentials"],
+      "attack_vectors": ["path_traversal", "auth_bypass", "file_upload", "xss"],
+      "last_checked": null
+    },
+    {
+      "id": "kiwix",
+      "priority": "medium",
+      "risk_factors": ["content_server", "no_authentication"],
+      "attack_vectors": ["path_traversal", "xss_via_content"],
+      "last_checked": null
+    },
+    {
+      "id": "bluesky_pds",
+      "priority": "medium",
+      "risk_factors": ["identity_federation", "at_protocol", "jwt_secrets"],
+      "attack_vectors": ["identity_spoofing", "jwt_forgery", "api_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "puter",
+      "priority": "medium",
+      "risk_factors": ["web_desktop", "file_system_access", "multi_user"],
+      "attack_vectors": ["rce", "path_traversal", "xss", "iframe_escape"],
+      "last_checked": null
+    },
+    {
+      "id": "paperclip",
+      "priority": "medium",
+      "risk_factors": ["agent_orchestration", "code_execution", "postgresql_access"],
+      "attack_vectors": ["rce_via_agents", "prompt_injection", "credential_theft"],
+      "last_checked": null
+    },
+    {
+      "id": "rustfs",
+      "priority": "medium",
+      "risk_factors": ["object_storage", "s3_api", "access_keys"],
+      "attack_vectors": ["credential_bruteforce", "data_exfiltration", "bucket_misconfiguration"],
+      "last_checked": null
+    },
+    {
+      "id": "tileserver",
+      "priority": "medium",
+      "risk_factors": ["map_server", "no_authentication"],
+      "attack_vectors": ["path_traversal", "resource_exhaustion"],
+      "last_checked": null
+    },
+    {
+      "id": "loki",
+      "priority": "medium",
+      "risk_factors": ["log_aggregation", "sensitive_data_in_logs"],
+      "attack_vectors": ["log_injection", "data_exfiltration", "query_abuse"],
+      "last_checked": null
+    },
+    {
+      "id": "tempo",
+      "priority": "medium",
+      "risk_factors": ["tracing", "otlp_endpoints"],
+      "attack_vectors": ["trace_injection", "resource_exhaustion"],
+      "last_checked": null
+    },
+    {
+      "id": "alloy",
+      "priority": "medium",
+      "risk_factors": ["telemetry_collector", "otlp_public_ports"],
+      "attack_vectors": ["metric_injection", "resource_exhaustion"],
+      "last_checked": null
+    },
+    {
+      "id": "qgis_server",
+      "priority": "medium",
+      "risk_factors": ["gis_server", "rosetta_emulation", "no_authentication"],
+      "attack_vectors": ["path_traversal", "xxe", "resource_exhaustion"],
+      "last_checked": null
+    },
+    {
+      "id": "dnsmasq",
+      "priority": "medium",
+      "risk_factors": ["dns_resolver", "network_critical"],
+      "attack_vectors": ["dns_rebinding", "cache_poisoning", "amplification"],
+      "last_checked": null
+    }
+  ]
+}

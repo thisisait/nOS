@@ -1,0 +1,39 @@
+# =============================================================================
+# pazny.homeassistant — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# homeassistant_privileged: true prepne kontejner do network_mode: host
+# (mDNS/Bonjour auto-discovery). V tom pripade se networks blok vynecha.
+# =============================================================================
+
+services:
+  homeassistant:
+    image: homeassistant/home-assistant:{{ homeassistant_version | default('stable') }}
+    restart: unless-stopped
+{% if homeassistant_privileged | default(false) %}
+    privileged: true
+    network_mode: host
+{% else %}
+    ports:
+      - "127.0.0.1:{{ homeassistant_port | default(8123) }}:8123"
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+{% endif %}
+    volumes:
+      - {{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}:/config
+    tmpfs:
+      - /tmp
+    environment:
+      TZ: "{{ homeassistant_timezone | default('Europe/Prague') }}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ homeassistant_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ homeassistant_cpus | default(docker_cpus_standard) }}

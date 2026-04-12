@@ -1,0 +1,75 @@
+---
+# ==============================================================================
+# pazny.wordpress/tasks/post.yml
+#
+# Post-start wp-cli install + admin password reconverge. Volano z
+# tasks/stacks/stack-up.yml PO `docker compose -p iiab up` (kontejner musi
+# bezet, nez zavolame `wp core install` a `wp user update`).
+#
+# Reconverge leg pro state-declarative idempotence: `wp user update` bezi
+# pri kazdem behu a prepise hash na aktualni prefix. Blank i non-blank run.
+# ==============================================================================
+
+- name: "[pazny.wordpress Post] Check if WordPress container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/iiab/docker-compose.yml"
+    -p iiab ps -q wordpress 2>/dev/null
+  register: _wp_container
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.wordpress Post] Check if WordPress is already installed"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp core is-installed --allow-root 2>/dev/null
+  register: _wp_installed
+  changed_when: false
+  failed_when: false
+  when: _wp_container.stdout | default('') | length > 0
+
+- name: "[pazny.wordpress Post] Install wp-cli"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress bash -c
+    'curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp'
+  when:
+    - _wp_container.stdout | default('') | length > 0
+    - _wp_installed.rc | default(1) != 0
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.wordpress Post] Run WordPress auto-install (first-run only)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp core install --allow-root
+    --url="https://{{ wordpress_domain | default('wordpress.dev.local') }}"
+    --title="Dev WordPress"
+    --admin_user="{{ wordpress_admin_user | default('admin') }}"
+    --admin_password="{{ wordpress_admin_password }}"
+    --admin_email="{{ wordpress_admin_email | default(default_admin_email) }}"
+    --skip-email
+  when:
+    - _wp_container.stdout | default('') | length > 0
+    - _wp_installed.rc | default(1) != 0
+  register: _wp_install
+  changed_when: _wp_install.rc == 0
+  failed_when: false
+
+# ── Reconverge admin password every run (idempotent UPDATE) ────────────
+# `wp user update` is safe on existing users — always rewrites the password
+# field. This is the UPDATE leg pro state-declarative idempotence.
+- name: "[pazny.wordpress Post] Reconverge admin password (state-declarative UPDATE)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user update
+    {{ wordpress_admin_user | default('admin') }}
+    --user_pass={{ wordpress_admin_password | quote }}
+    --allow-root
+  when:
+    - _wp_container.stdout | default('') | length > 0
+    - _wp_installed.rc | default(1) == 0
+  register: _wp_pw_update
+  changed_when: "'Success' in (_wp_pw_update.stdout | default(''))"
+  failed_when: false

@@ -1,0 +1,114 @@
+---
+# ==============================================================================
+# IIAB Terminal — veřejný SSH TUI hub pro homelab
+# Vytvoří uživatele, nainstaluje TUI app, nastaví SSH ForceCommand
+# ==============================================================================
+
+# ── 1. Python deps ────────────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Install textual (TUI framework)"
+  ansible.builtin.shell: |
+    source {{ ansible_facts['env']['HOME'] }}/.pyenv/versions/{{ python_version | default('3.13') }}/bin/activate 2>/dev/null || true
+    pip3 install textual rich 2>&1
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+# ── 2. Deploy TUI app ────────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Create app directory"
+  ansible.builtin.file:
+    path: "{{ iiab_terminal_config_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: "[IIAB Terminal] Deploy TUI application"
+  ansible.builtin.copy:
+    src: iiab-terminal/iiab_terminal.py
+    dest: "{{ iiab_terminal_config_dir }}/iiab_terminal.py"
+    mode: '0755'
+  become: true
+
+- name: "[IIAB Terminal] Generate config from service registry"
+  ansible.builtin.template:
+    src: iiab-terminal/config.json.j2
+    dest: "{{ iiab_terminal_config_dir }}/config.json"
+    mode: '0644'
+  become: true
+
+- name: "[IIAB Terminal] Create launcher script"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      export IIAB_CONFIG="{{ iiab_terminal_config_dir }}/config.json"
+      export TERM="${TERM:-xterm-256color}"
+      exec {{ homebrew_prefix }}/bin/python3 "{{ iiab_terminal_config_dir }}/iiab_terminal.py"
+    dest: "{{ iiab_terminal_bin_path }}"
+    mode: '0755'
+  become: true
+
+# ── 3. Create user ───────────────────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Check if user exists"
+  ansible.builtin.command: id -u {{ iiab_terminal_user | default('home') }}
+  register: _iiab_user_check
+  changed_when: false
+  failed_when: false
+
+- name: "[IIAB Terminal] Generate random password if not set"
+  ansible.builtin.set_fact:
+    _iiab_terminal_pw: "{{ iiab_terminal_password if (iiab_terminal_password | default('') | length > 0) else lookup('pipe', 'openssl rand -base64 12') }}"
+  when: _iiab_user_check.rc != 0
+
+- name: "[IIAB Terminal] Create user"
+  ansible.builtin.command: >
+    sysadminctl -addUser {{ iiab_terminal_user | default('home') }}
+    -fullName "IIAB Terminal"
+    -shell /bin/bash
+    -password "{{ _iiab_terminal_pw }}"
+  become: true
+  when: _iiab_user_check.rc != 0
+  register: _iiab_user_create
+
+- name: "[IIAB Terminal] Ensure user home + .ssh directory"
+  ansible.builtin.file:
+    path: "/Users/{{ iiab_terminal_user | default('home') }}/{{ item }}"
+    state: directory
+    owner: "{{ iiab_terminal_user | default('home') }}"
+    mode: "{{ '0700' if item == '.ssh' else '0755' }}"
+  loop:
+    - ""
+    - ".ssh"
+  become: true
+  when: _iiab_user_check.rc == 0 or (_iiab_user_create is defined and _iiab_user_create.rc == 0)
+
+# ── 4. SSH config — ForceCommand ─────────────────────────────────────────────
+
+- name: "[IIAB Terminal] Configure SSH ForceCommand"
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED – iiab-terminal"
+    insertafter: EOF
+    block: |
+      Match User {{ iiab_terminal_user | default('home') }}
+          ForceCommand {{ iiab_terminal_bin_path }}
+          PasswordAuthentication {{ 'yes' if (iiab_terminal_password_auth | default(true)) else 'no' }}
+          X11Forwarding no
+          AllowTcpForwarding no
+          PermitTunnel no
+    backup: true
+  become: true
+  notify: Restart ssh
+
+- name: "[IIAB Terminal] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       IIAB Terminal připraven
+      ══════════════════════════════════════════════════════
+       SSH:       ssh {{ iiab_terminal_user | default('home') }}@{{ ansible_facts['default_ipv4']['address'] | default('localhost') }}
+       Heslo:     {{ _iiab_terminal_pw | default('(existující uživatel)') }}
+       Command:   {{ iiab_terminal_bin_path }}
+       Config:    {{ iiab_terminal_config_dir }}/config.json
+      ══════════════════════════════════════════════════════

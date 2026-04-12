@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: boxapi
+  namespace: pazny
+  author: Pázny
+  description: Box Management API (FastAPI + uvicorn via launchd) pro devBoxNOS
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Žádné role dependencies — Python3 a Homebrew se instalují mimo roli.
+# Source files/boxapi/ a templates/boxapi-launchd.plist.j2 zůstávají
+# v playbook repo.
+# Tasky používají jenom ansible.builtin, žádné extra collection.
+dependencies: []

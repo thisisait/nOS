@@ -1,0 +1,65 @@
+---
+# ==============================================================================
+# pazny.freescout/tasks/post.yml
+#
+# FreeScout post-start – vytvoreni admin uzivatele pres Artisan CLI.
+# FreeScout nema REST API pro onboarding – pouziva Laravel Artisan.
+# Volano z tasks/stacks/stack-up.yml az PO `docker compose up b2b --wait`.
+# ==============================================================================
+
+- name: "[pazny.freescout Post] Wait for service"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ freescout_port | default(8090) }}/"
+    method: GET
+    timeout: 5
+    status_code: [200, 302, 500]
+  register: _fs_ready
+  until: _fs_ready.status | default(0) in [200, 302, 500]
+  retries: 12
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.freescout Post] Check if admin user exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    exec -T freescout
+    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->count();"
+    2>/dev/null || echo "0"
+  register: _fs_user_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _fs_ready.status | default(0) in [200, 302, 500]
+
+- name: "[pazny.freescout Post] Create admin user via Artisan (first-run only)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    exec -T freescout
+    php artisan freescout:create-user
+    --role=admin
+    --firstName="{{ freescout_admin_first_name | default('Admin') }}"
+    --lastName="{{ freescout_admin_last_name | default('devBoxNOS') }}"
+    --email="{{ freescout_admin_email | default(default_admin_email) }}"
+    --password="{{ freescout_admin_password }}"
+    2>&1 || true
+  when:
+    - _fs_ready.status | default(0) in [200, 302, 500]
+    - (_fs_user_check.stdout | default('0') | trim) == '0'
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+# ── Reconverge admin password every run (state-declarative UPDATE) ──────
+# FreeScout nema dedicated change-password artisan command, pouzijeme tinker
+# s App\User::where->update aby fungovalo pro existujici usere.
+- name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p b2b exec -T freescout \
+      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+  when:
+    - _fs_ready.status | default(0) in [200, 302, 500]
+    - (_fs_user_check.stdout | default('0') | trim) != '0'
+  register: _fs_pw_update
+  changed_when: "'UPDATED' in (_fs_pw_update.stdout | default(''))"
+  failed_when: false
+  check_mode: false

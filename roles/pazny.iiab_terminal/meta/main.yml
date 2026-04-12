@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: iiab_terminal
+  namespace: pazny
+  author: Pázny
+  description: IIAB Terminal — SSH TUI hub (Python Textual) pro devBoxNOS
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Žádné role dependencies — Python/pyenv a SSH se řídí mimo tuto roli.
+# Handler "Restart ssh" zůstává play-level v main.yml (sdílený), role
+# ho jen notifikuje — handlery Ansible hleda globálně.
+# Tasky používají jenom ansible.builtin, žádné extra collection.
+dependencies: []

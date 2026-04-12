@@ -1,0 +1,157 @@
+{
+  "generated_at": "2026-04-08T12:00:00Z",
+  "generator": "NOS Vulnerability Scanner v1 — Attack Surface Analysis",
+  "analysis_type": "static_template_analysis",
+  "attack_surface_map": {
+    "network_edge": {
+      "description": "Services directly reachable from network (LAN/Tailscale)",
+      "entry_points": [
+        {
+          "service": "nginx",
+          "port": 443,
+          "protocol": "HTTPS",
+          "authentication": "per-vhost (Authentik proxy auth or none)",
+          "risk": "Primary attack surface — all 38 vhosts route through nginx"
+        },
+        {
+          "service": "freepbx",
+          "port": 5060,
+          "protocol": "SIP/UDP+TCP",
+          "authentication": "SIP credentials",
+          "risk": "Exposed on all interfaces — SIP brute-force, toll fraud"
+        },
+        {
+          "service": "freepbx",
+          "port": "10000-10100",
+          "protocol": "RTP/UDP",
+          "authentication": "none (media stream)",
+          "risk": "100 UDP ports exposed — call interception if SIP is compromised"
+        },
+        {
+          "service": "ssh",
+          "port": 22,
+          "protocol": "SSH",
+          "authentication": "key-only (when ssh_password_auth: false)",
+          "risk": "Minimal if key-only. IIAB Terminal user restricted to TUI."
+        },
+        {
+          "service": "dnsmasq",
+          "port": 53,
+          "protocol": "DNS/UDP",
+          "authentication": "none",
+          "risk": "DNS rebinding, cache poisoning (mitigated: resolves only *.dev.local)"
+        }
+      ]
+    },
+    "web_ui_unauthenticated_paths": {
+      "description": "Known paths that may respond without authentication",
+      "paths": [
+        { "service": "gitea", "path": "/api/v1/version", "risk": "Version disclosure", "auth": "none" },
+        { "service": "gitea", "path": "/user/login", "risk": "Login form (brute-force target)", "auth": "none" },
+        { "service": "wordpress", "path": "/xmlrpc.php", "risk": "XML-RPC abuse (brute-force, DDoS amplification)", "auth": "none" },
+        { "service": "wordpress", "path": "/wp-login.php", "risk": "Login form (brute-force target)", "auth": "none" },
+        { "service": "wordpress", "path": "/wp-json/wp/v2/users", "risk": "User enumeration", "auth": "none (if not disabled)" },
+        { "service": "nextcloud", "path": "/status.php", "risk": "Version and install status disclosure", "auth": "none" },
+        { "service": "nextcloud", "path": "/login", "risk": "Login form", "auth": "none" },
+        { "service": "grafana", "path": "/api/health", "risk": "Service status", "auth": "none" },
+        { "service": "grafana", "path": "/login", "risk": "Login form", "auth": "none" },
+        { "service": "portainer", "path": "/api/status", "risk": "Service status", "auth": "none" },
+        { "service": "n8n", "path": "/healthz", "risk": "Health check", "auth": "none" },
+        { "service": "openwebui", "path": "/api/config", "risk": "Configuration disclosure", "auth": "none" },
+        { "service": "kiwix", "path": "/", "risk": "Full content access (no auth by design)", "auth": "none" },
+        { "service": "tileserver", "path": "/", "risk": "Map tiles access (no auth by design)", "auth": "none" },
+        { "service": "bluesky_pds", "path": "/xrpc/_health", "risk": "Health check", "auth": "none" },
+        { "service": "vaultwarden", "path": "/alive", "risk": "Health check", "auth": "none" },
+        { "service": "vaultwarden", "path": "/admin", "risk": "Admin panel (token-protected)", "auth": "admin_token" },
+        { "service": "traefik", "path": ":8080/dashboard/", "risk": "Traefik dashboard (localhost only)", "auth": "none (localhost)" },
+        { "service": "prometheus", "path": ":9090/-/ready", "risk": "Health check (localhost only)", "auth": "none (localhost)" },
+        { "service": "calibreweb", "path": "/login", "risk": "Login with default admin/admin123", "auth": "default_creds" }
+      ]
+    },
+    "container_escape_vectors": {
+      "description": "Paths from compromised container to host control",
+      "vectors": [
+        {
+          "vector": "portainer_docker_socket",
+          "entry": "Portainer web UI (port 9002)",
+          "mechanism": "Docker socket mount → docker exec/create → host root",
+          "prerequisites": "Portainer auth bypass or admin credential theft",
+          "severity": "CRITICAL",
+          "mitigations": ["Tier 1 RBAC", "Authentik proxy auth"]
+        },
+        {
+          "vector": "woodpecker_docker_socket",
+          "entry": "Malicious pipeline in Gitea repo",
+          "mechanism": "Woodpecker agent docker socket → arbitrary container creation → host root",
+          "prerequisites": "Push access to any Gitea repo with Woodpecker enabled",
+          "severity": "CRITICAL",
+          "mitigations": ["Gitea repo permissions", "Woodpecker trusted repos feature"]
+        },
+        {
+          "vector": "traefik_socket_read",
+          "entry": "Traefik container compromise",
+          "mechanism": "Docker socket :ro → read container env vars (all passwords/secrets)",
+          "prerequisites": "Traefik RCE vulnerability",
+          "severity": "HIGH",
+          "mitigations": ["Read-only mount", "Latest Traefik version"]
+        },
+        {
+          "vector": "homeassistant_privileged",
+          "entry": "Home Assistant web UI (port 8123)",
+          "mechanism": "privileged: true + network_mode: host → full host access",
+          "prerequisites": "homeassistant_privileged=true (disabled by default) + HA RCE",
+          "severity": "HIGH",
+          "mitigations": ["Default: privileged=false", "Authentik proxy auth"]
+        }
+      ]
+    },
+    "lateral_movement_paths": {
+      "description": "How a compromised service can reach other services",
+      "paths": [
+        {
+          "from": "any container on shared_net",
+          "to": "redis (no auth)",
+          "method": "Direct TCP:6379 — read/write session data, cache, queue",
+          "impact": "Session hijacking for Authentik, ERPNext, Outline, Superset"
+        },
+        {
+          "from": "erpnext containers",
+          "to": "mariadb (root access)",
+          "method": "DB_ROOT_PASSWORD in env → full access to all MariaDB databases",
+          "impact": "WordPress, Nextcloud, FreeScout, FreePBX data access"
+        },
+        {
+          "from": "any container with host-gateway",
+          "to": "host services (Ollama, SSH, Nginx admin)",
+          "method": "extra_hosts: host.docker.internal:host-gateway → localhost access",
+          "impact": "Ollama API abuse, SSH from container, Nginx config read"
+        },
+        {
+          "from": "n8n (code_execution node)",
+          "to": "any internal service",
+          "method": "HTTP Request node → SSRF to internal Docker services",
+          "impact": "Full internal network scan, credential theft from service APIs"
+        },
+        {
+          "from": "metabase/superset",
+          "to": "all databases",
+          "method": "SQL query execution against connected data sources",
+          "impact": "Cross-database data exfiltration"
+        }
+      ]
+    },
+    "ssrf_capable_services": {
+      "description": "Services that can make outbound HTTP requests (SSRF potential)",
+      "services": [
+        { "id": "n8n", "mechanism": "HTTP Request node, Code node", "risk": "HIGH — user-controlled URLs" },
+        { "id": "metabase", "mechanism": "Native queries, data source connections", "risk": "HIGH — SQL + HTTP" },
+        { "id": "superset", "mechanism": "SQL Lab, Jinja templates, data source connections", "risk": "HIGH — RCE via Jinja" },
+        { "id": "grafana", "mechanism": "Data source proxy, alerting webhooks", "risk": "MEDIUM — admin-only" },
+        { "id": "uptime_kuma", "mechanism": "Monitor HTTP checks", "risk": "MEDIUM — admin-only URLs" },
+        { "id": "openwebui", "mechanism": "Ollama API proxy, web search", "risk": "MEDIUM — LLM-directed" },
+        { "id": "gitlab", "mechanism": "Webhooks, CI/CD, imports", "risk": "MEDIUM — multiple vectors" },
+        { "id": "nextcloud", "mechanism": "External storage, federation", "risk": "LOW — admin config only" }
+      ]
+    }
+  }
+}

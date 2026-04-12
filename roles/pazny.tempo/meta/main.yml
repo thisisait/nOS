@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: tempo
+  namespace: pazny
+  author: Pázny
+  description: Tempo in Docker compose override (devBoxNOS observability stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Tempo se spousti jako soucast observability
+# stacku vedle Grafana / Prometheus / Loki. Orchestrace (compose up
+# sequencing, post-start) je v tasks/stacks/core-up.yml.
+dependencies: []
+
+collections: []

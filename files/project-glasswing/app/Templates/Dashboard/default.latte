@@ -1,0 +1,102 @@
+{block title}Overview{/block}
+
+{block content}
+<div id="tab-overview" class="tab-content active">
+	<div class="stats" id="statsGrid">
+		<div class="stat">
+			<div class="label">Scan Cycle</div>
+			<div class="value" id="statCycle">{$state['latest_cycle'] ?? 0}</div>
+			<div class="sub">{$state['config']['schedule'] ?? '2x daily'}</div>
+		</div>
+		<div class="stat">
+			<div class="label">Components</div>
+			<div class="value">{count($components)}</div>
+			<div class="sub">monitored services</div>
+		</div>
+		<div class="stat">
+			<div class="label">Pending Issues</div>
+			<div class="value" style="color: var(--orange)">{$pendingCount}</div>
+			<div class="sub">{$resolvedCount} resolved</div>
+		</div>
+		<div class="stat">
+			<div class="label">Pentest Coverage</div>
+			<div class="value" style="color: var(--purple)">{$coveragePct}%</div>
+			<div class="sub">{$areasTested}/{$areasTotal} areas</div>
+		</div>
+	</div>
+
+	<div class="two-col">
+		<div class="chart-container">
+			<h3>Next Batch</h3>
+			<div class="next-batch" id="nextBatch">
+				{if isset($state['next_batch']) && $state['next_batch']}
+					{foreach $state['next_batch'] as $comp}
+						<span class="next-batch-item">{$comp}</span>
+					{/foreach}
+				{else}
+					<span style="color: var(--text2)">No batch scheduled</span>
+				{/if}
+			</div>
+		</div>
+		<div class="chart-container">
+			<h3>Pentest Targets</h3>
+			{foreach $targets as $target}
+				<div class="chart-bar-row">
+					<span class="chart-bar-label">{$target['id']}</span>
+					<div class="chart-bar-track">
+						{var $total = ($target['areas_tested_count'] ?? 0) + ($target['areas_planned_count'] ?? 0)}
+						{var $pct = $total > 0 ? round(($target['areas_tested_count'] ?? 0) / $total * 100) : 0}
+						<div class="chart-bar-segment" style="width:{$pct}%; background: var(--green)"></div>
+						<span class="chart-bar-value">{$pct}%</span>
+					</div>
+				</div>
+			{/foreach}
+		</div>
+	</div>
+</div>
+
+<div id="tab-timeline" class="tab-content">
+	<h2 style="margin-bottom: 16px; font-size: 18px;">Advisory Timeline</h2>
+	{foreach $advisories as $adv}
+		<div class="card">
+			<div class="card-header" onclick="this.nextElementSibling.classList.toggle('open')">
+				<span class="recency recency-fresh"></span>
+				<strong>{$adv['filename']}</strong>
+				{if $adv['has_critical']}<span class="badge badge-critical">CRITICAL</span>{/if}
+				{if $adv['has_pentest']}<span class="badge badge-pentest">PENTEST</span>{/if}
+				<span style="margin-left:auto; color:var(--text2); font-size:12px">{$adv['date']}</span>
+			</div>
+			<div class="card-body">
+				<pre>{$adv['title'] ?? 'Advisory report'}</pre>
+			</div>
+		</div>
+	{/foreach}
+	{if !$advisories}
+		<div class="empty">No advisories yet</div>
+	{/if}
+</div>
+
+<div id="tab-components" class="tab-content">
+	<h2 style="margin-bottom: 16px; font-size: 18px;">Monitored Components ({count($components)})</h2>
+	<div class="comp-grid">
+		{foreach $components as $comp}
+			<div class="comp-card">
+				<h4>
+					{$comp['name']}
+					<span class="version">{$comp['default_version'] ?? 'N/A'}</span>
+				</h4>
+				<div class="meta">
+					{$comp['stack'] ?? 'unknown'} &middot; {$comp['category']}
+					{if $comp['upstream_repo']} &middot; {$comp['upstream_repo']}{/if}
+				</div>
+				{if isset($comp['scan_state'])}
+					<div class="meta" style="margin-top: 4px">
+						Last scan: {$comp['scan_state']['last_cve_scan'] ?? 'never'}
+						&middot; Findings: {$comp['scan_state']['findings_count'] ?? 0}
+					</div>
+				{/if}
+			</div>
+		{/foreach}
+	</div>
+</div>
+{/block}

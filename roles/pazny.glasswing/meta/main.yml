@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: glasswing
+  namespace: pazny
+  author: Pázny
+  description: Nette PHP + SQLite security research dashboard (devBoxNOS)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Žádné role dependencies — PHP / nginx / composer se instalují v main.yml
+# pred glasswing rolí. Handler "Restart php-fpm" je definovaný play-level
+# v main.yml a globálně viditelný pro všechny role.
+dependencies: []
+
+collections:
+  - ansible.posix  # ansible.posix.synchronize

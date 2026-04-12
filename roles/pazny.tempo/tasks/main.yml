@@ -1,0 +1,26 @@
+---
+# ==============================================================================
+# pazny.tempo/tasks/main.yml
+#
+# Volano z tasks/stacks/core-up.yml PRED `docker compose -p observability up`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/observability/overrides/tempo.yml, ktery pak core-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Tempo konfig (tempo.yaml) zustava renderovany v core-up.yml
+# z files/observability/tempo/tempo.yaml — role vlastni jen compose
+# fragment + handler.
+# ==============================================================================
+
+- name: "[pazny.tempo] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ tempo_storage_path | default(stacks_dir + '/observability/tempo/data') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.tempo] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/observability/overrides/tempo.yml"
+    mode: '0644'
+  notify: Restart tempo

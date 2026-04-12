@@ -3,110 +3,201 @@
 Tento soubor definuje specializované sub-agenty, které **Inspektor Klepítko**
 (DevOps Lead) může aktivovat pro konkrétní úkoly.
 
----
+Každý agent komunikuje se systémy výhradně přes API jako `openclaw-bot`
+service account. CLI/sudo přístup jen když API neexistuje.
 
-## CodeAgent
-
-**Specializace:** Vývoj a refaktoring kódu
-
-**Kontext:**
-- Přístup ke zdrojovým kódům v `~/projects/`
-- Zná stacky: PHP, Node.js/TypeScript, Python, Go, C#
-- Výstup vždy commituje do gitu
-
-**Aktivace:**
-```
-Deleguj na CodeAgent: Implementuj [funkci] v projektu [název] – výstup ulož do logu
-```
+Detailní skills pro každý systém: `systems/<slug>/SKILLS.md` (symlink do `docs/systems/`)
 
 ---
 
-## InfraAgent
+## GrafanaAgent
 
-**Specializace:** Nginx, PHP-FPM, systémová konfigurace
+**Specializace:** Observability — metriky, logy, traces, alerty
+
+**Systémy:** Grafana, Prometheus, Loki, Tempo
 
 **Kontext:**
-- Nginx config: `/opt/homebrew/etc/nginx/`
-- Sites-available šablony: `php-app.conf`, `node-proxy.conf`, `python-proxy.conf`, `go-proxy.conf`
-- SSL certifikáty: mkcert → `/opt/homebrew/etc/nginx/ssl/`
-- PHP-FPM config: `/opt/homebrew/etc/php/8.3/`
-- Vždy spusť `nginx -t` před restartem
+- Grafana API: `https://grafana.dev.local/api/`
+- Auth: Service Account Bearer token (`~/agents/tokens/grafana.token`)
+- Datasources: Prometheus (PromQL), Loki (LogQL), Tempo (TraceQL)
+- Dashboardy: `~/observability/dashboards/`
+- Skills: [systems/grafana/SKILLS.md](systems/grafana/SKILLS.md)
 
 **Aktivace:**
 ```
-Deleguj na InfraAgent: Nastav nginx vhost pro projekt [název] na doméně [*.dev.local]
+Deleguj na GrafanaAgent: Zkontroluj nginx 5xx errory za poslední hodinu v Loki
 ```
 
 ---
 
-## DeployAgent
+## DevOpsAgent
 
-**Specializace:** Nasazování aplikací, build pipeline
+**Specializace:** Git repozitáře, CI/CD pipelines, kód
+
+**Systémy:** Gitea, Woodpecker CI
 
 **Kontext:**
-- Target directory: `~/projects/<projekt>/`
-- Composer (PHP), npm/bun (Node.js), pip (Python), go build, dotnet publish
-- pm2 pro Node.js procesy (produkční)
-- uvicorn/gunicorn pro Python (produkční)
+- Gitea API: `https://git.dev.local/api/v1/`
+- Auth: Bearer token (`~/agents/tokens/gitea.token`)
+- SSH: `git@localhost:2222`
+- CI: Woodpecker (Gitea OAuth trigger)
+- Skills: [systems/gitea/SKILLS.md](systems/gitea/SKILLS.md)
 
 **Aktivace:**
 ```
-Deleguj na DeployAgent: Nasaď novou verzi projektu [název] – branch main
+Deleguj na DevOpsAgent: Vytvoř repozitář pro projekt [název] a nastav webhook
 ```
 
 ---
 
-## SecurityAgent
+## HomeAgent
 
-**Specializace:** Bezpečnostní audit, permissions, SSL
+**Specializace:** Domácí automatizace — zařízení, scény, automatizace
+
+**Systémy:** Home Assistant
 
 **Kontext:**
-- Kontrola nginx security headers
-- Audit file permissions
-- SSL certifikáty a expiry
-- Firewall pravidla (pf na macOS)
-- Skenování závislostí (npm audit, pip-audit, composer audit)
+- HA API: `https://home.dev.local/api/`
+- Auth: Long-Lived Access Token (`~/agents/tokens/home-assistant.token`)
+- WebSocket: `wss://home.dev.local/api/websocket`
+- Skills: [systems/home-assistant/SKILLS.md](systems/home-assistant/SKILLS.md)
 
 **Aktivace:**
 ```
-Deleguj na SecurityAgent: Proveď bezpečnostní audit projektu [název]
+Deleguj na HomeAgent: Zapni osvětlení v obýváku a nastav jas na 80%
 ```
 
 ---
 
-## MonitorAgent
+## StorageAgent
 
-**Specializace:** Sledování logů, výkonu, uptime
+**Specializace:** Souborový management — cloud + S3 object storage
+
+**Systémy:** Nextcloud (WebDAV/OCS), RustFS (S3)
 
 **Kontext:**
-- Nginx logy: `/opt/homebrew/var/log/nginx/`
-- PHP-FPM logy: `/opt/homebrew/var/log/php-fpm.log`
-- Ollama stav: `ollama ps`
-- Systémové prostředky: `top`, `vm_stat`, `iostat`
-- Nginx status: `http://localhost/nginx-status`
-- PHP-FPM status: `http://localhost/fpm-status`
+- Nextcloud: `https://cloud.dev.local/remote.php/dav/` (WebDAV)
+- RustFS S3: `https://s3.dev.local` (AWS Signature V4)
+- Auth: App Password / AWS keys (`~/agents/tokens/`)
+- Skills: [systems/nextcloud/SKILLS.md](systems/nextcloud/SKILLS.md), [systems/rustfs/SKILLS.md](systems/rustfs/SKILLS.md)
 
 **Aktivace:**
 ```
-Deleguj na MonitorAgent: Zkontroluj nginx logy za poslední hodinu – hledej 5xx errory
+Deleguj na StorageAgent: Nahraj zálohu do S3 bucketu backups/
+```
+
+---
+
+## WorkflowAgent
+
+**Specializace:** Automatizace workflow — integrace, webhooky, orchestrace
+
+**Systémy:** n8n
+
+**Kontext:**
+- n8n API: `https://n8n.dev.local/api/v1/`
+- Auth: API Key header (`~/agents/tokens/n8n.token`)
+- Skills: [systems/n8n/SKILLS.md](systems/n8n/SKILLS.md)
+
+**Aktivace:**
+```
+Deleguj na WorkflowAgent: Spusť workflow "denní report" a vrať výsledky
 ```
 
 ---
 
 ## DataAgent
 
-**Specializace:** Databáze, migrace, zálohy
+**Specializace:** Business data, BI dotazy, databáze, zálohy
+
+**Systémy:** Metabase, Superset, ERPNext, PostgreSQL, MariaDB, Redis
 
 **Kontext:**
-- MySQL/MariaDB (pokud nainstalováno): `brew services info mysql`
-- PostgreSQL (pokud nainstalováno): `brew services info postgresql`
-- Redis (pokud nainstalováno): `brew services info redis`
-- SQLite pro vývojové projekty
-- Zálohy ukládej do `~/agents/backups/`
+- Metabase API: `https://bi.dev.local/api/` (Session token)
+- Superset API: `https://superset.dev.local/api/v1/` (JWT)
+- ERPNext API: `https://erp.dev.local/api/resource/` (API key)
+- DB přístup: `docker exec` pro psql/mysql jen jako fallback
+- Skills: [systems/metabase/SKILLS.md](systems/metabase/SKILLS.md), [systems/erpnext/SKILLS.md](systems/erpnext/SKILLS.md), [systems/superset/SKILLS.md](systems/superset/SKILLS.md)
 
 **Aktivace:**
 ```
-Deleguj na DataAgent: Proveď zálohu databáze projektu [název]
+Deleguj na DataAgent: Spusť SQL dotaz na počet objednávek za poslední měsíc
+```
+
+---
+
+## SecurityAgent
+
+**Specializace:** IAM, secrets, hesla, audit
+
+**Systémy:** Authentik (SSO), Infisical (secrets vault), Vaultwarden (password vault)
+
+**Kontext:**
+- Authentik API: `https://auth.dev.local/api/v3/` (Bearer token)
+- Infisical API: `https://vault.dev.local/api/v1/` (Service token)
+- Vaultwarden API: `https://pass.dev.local/api/` (Bearer token, read-only!)
+- Skills: [systems/authentik/SKILLS.md](systems/authentik/SKILLS.md), [systems/infisical/SKILLS.md](systems/infisical/SKILLS.md), [systems/vaultwarden/SKILLS.md](systems/vaultwarden/SKILLS.md)
+
+**Aktivace:**
+```
+Deleguj na SecurityAgent: Zkontroluj kdo se přihlásil za posledních 24 hodin v Authentiku
+```
+
+---
+
+## ContentAgent
+
+**Specializace:** Knowledge base, wiki, CMS, média, e-booky, offline obsah
+
+**Systémy:** Outline, WordPress, Jellyfin, Calibre-Web, Kiwix
+
+**Kontext:**
+- Outline API: `https://wiki.dev.local/api/` (Bearer token)
+- WordPress REST: `https://wp.dev.local/wp-json/wp/v2/` (Application Password)
+- Jellyfin API: `https://media.dev.local/` (API key)
+- Calibre-Web: CLI pouze (docker exec)
+- Kiwix: `https://kiwix.dev.local/search` (bez auth)
+- Skills: [systems/outline/SKILLS.md](systems/outline/SKILLS.md), [systems/wordpress/SKILLS.md](systems/wordpress/SKILLS.md), [systems/jellyfin/SKILLS.md](systems/jellyfin/SKILLS.md)
+
+**Aktivace:**
+```
+Deleguj na ContentAgent: Najdi v wiki dokumentaci k autentizaci a vrať obsah
+```
+
+---
+
+## CommAgent
+
+**Specializace:** Komunikace, sociální sítě, federace
+
+**Systémy:** Bluesky PDS (AT Protocol)
+
+**Kontext:**
+- Bluesky XRPC: `https://pds.dev.local/xrpc/` (Bearer JWT)
+- AT Protocol: decentralizovaná sociální síť
+- Skills: [systems/bluesky-pds/SKILLS.md](systems/bluesky-pds/SKILLS.md)
+
+**Aktivace:**
+```
+Deleguj na CommAgent: Publikuj status update na Bluesky
+```
+
+---
+
+## MonitorAgent
+
+**Specializace:** Uptime monitoring, incidenty, status page
+
+**Systémy:** Uptime Kuma, Portainer
+
+**Kontext:**
+- Uptime Kuma: `https://uptime.dev.local/` (WebSocket + REST API)
+- Portainer: `https://portainer.dev.local/api/` (JWT)
+- Skills: [systems/uptime-kuma/SKILLS.md](systems/uptime-kuma/SKILLS.md), [systems/portainer/SKILLS.md](systems/portainer/SKILLS.md)
+
+**Aktivace:**
+```
+Deleguj na MonitorAgent: Které služby jsou aktuálně down?
 ```
 
 ---
@@ -118,15 +209,20 @@ Inspektor Klepítko (DevOps Lead)
 │
 ├── Přijme úkol
 ├── Vytvoří log soubor v ~/agents/log/
-├── Rozdělí na sub-úkoly
+├── Rozdělí na sub-úkoly, vybere vhodného agenta
 │
-├──► CodeAgent    (kód)
-├──► InfraAgent   (infrastruktura)
-├──► DeployAgent  (nasazení)
-├──► SecurityAgent (bezpečnost)
-├──► MonitorAgent  (monitoring)
-└──► DataAgent    (data)
+├──► GrafanaAgent   (observability: metriky, logy, traces)
+├──► DevOpsAgent    (git, CI/CD, kód)
+├──► HomeAgent      (home automation, IoT)
+├──► StorageAgent   (soubory: cloud + S3)
+├──► WorkflowAgent  (automatizace: n8n)
+├──► DataAgent      (BI, ERP, databáze)
+├──► SecurityAgent  (SSO, secrets, audit)
+├──► ContentAgent   (wiki, CMS, média, knihy)
+├──► CommAgent      (sociální sítě, federace)
+└──► MonitorAgent   (uptime, kontejnery)
      │
-     └── Každý sub-agent aktualizuje log soubor
-         po dokončení své části
+     └── Každý agent komunikuje se systémy přes API
+         jako openclaw-bot service account
+         Tokeny: ~/agents/tokens/<system>.token
 ```

@@ -1,0 +1,16 @@
+---
+# ==============================================================================
+# pazny.postgresql — PostgreSQL in Docker (infra compose stack)
+#
+# Credentials (postgresql_root_password) + service DB/user matrix zustavaji
+# v top-level default.config.yml a default.credentials.yml — stale
+# centralizovane, role je jen cte pres Ansible var precedence
+# (vars_files > role defaults).
+# ==============================================================================
+
+postgresql_version: "16.13-alpine"                      # CVE-2026-2005/2006/2007 pin
+postgresql_port: 5432
+postgresql_root_user: "postgres"
+postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
+postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"

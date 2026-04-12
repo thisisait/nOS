@@ -1,0 +1,280 @@
+---
+# ==============================================================================
+# STATE IMPORT – obnova dat a databází z exportního tarballu
+#
+# Spuštění: ansible-playbook main.yml -K --tags import \
+#           -e "import_tarball=/cesta/k/devboxnos-export-YYYY-MM-DD.tar.gz"
+#
+# Obnoví:
+#   - config.yml, credentials.yml
+#   - PostgreSQL dump (pg_dumpall)
+#   - MariaDB dump (mysqldump)
+#   - Datové adresáře služeb (gitea, nextcloud, n8n, grafana, agents, observability)
+#   - service-registry.json
+# ==============================================================================
+
+# ── Validate input ───────────────────────────────────────────────────────────
+
+- name: "[Import] Validate import_tarball is provided"
+  ansible.builtin.assert:
+    that:
+      - import_tarball is defined
+      - import_tarball | length > 0
+    fail_msg: >
+      Chybí cesta k exportnímu tarballu. Spusť s:
+      ansible-playbook main.yml -K --tags import -e "import_tarball=/cesta/k/export.tar.gz"
+
+- name: "[Import] Check tarball exists"
+  ansible.builtin.stat:
+    path: "{{ import_tarball }}"
+  register: _import_tarball_stat
+
+- name: "[Import] Fail if tarball not found"
+  ansible.builtin.assert:
+    that: _import_tarball_stat.stat.exists
+    fail_msg: "Soubor {{ import_tarball }} neexistuje."
+
+# ── Extract ──────────────────────────────────────────────────────────────────
+
+- name: "[Import] Create temp extraction directory"
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: devboxnos-import-
+  register: _import_tmpdir
+
+- name: "[Import] Extract tarball"
+  ansible.builtin.shell: >
+    tar xzf "{{ import_tarball }}" -C "{{ _import_tmpdir.path }}"
+  check_mode: false
+
+- name: "[Import] Find extracted directory"
+  ansible.builtin.find:
+    paths: "{{ _import_tmpdir.path }}"
+    file_type: directory
+    recurse: false
+  register: _import_extracted_dirs
+
+- name: "[Import] Set import source directory"
+  ansible.builtin.set_fact:
+    _import_src: "{{ _import_extracted_dirs.files[0].path }}"
+
+# ── Read manifest ────────────────────────────────────────────────────────────
+
+- name: "[Import] Read manifest.json"
+  ansible.builtin.slurp:
+    src: "{{ _import_src }}/manifest.json"
+  register: _import_manifest_raw
+  failed_when: false
+
+- name: "[Import] Parse manifest"
+  ansible.builtin.set_fact:
+    _import_manifest: "{{ _import_manifest_raw.content | b64decode | from_json }}"
+  when: _import_manifest_raw is not failed
+
+- name: "[Import] Display source info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       IMPORT – zdrojový export
+       Datum:    {{ _import_manifest.date | default('neznámé') }}
+       Hostname: {{ _import_manifest.hostname | default('neznámý') }}
+       OS:       {{ _import_manifest.os | default('neznámý') }}
+       Soubory:  {{ _import_manifest.files | default([]) | join(', ') }}
+      ══════════════════════════════════════════════════════════════════════
+  when: _import_manifest is defined
+
+# ── Stop Docker stacks ───────────────────────────────────────────────────────
+
+- name: "[Import] Stop Docker stacks"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p {{ item }} down -t 30 2>&1 || true
+  loop:
+    - iiab
+    - observability
+    - infra
+    - devops
+    - b2b
+    - voip
+    - engineering
+    - data
+  failed_when: false
+  changed_when: true
+
+- name: "[Import] Wait for containers to stop"
+  ansible.builtin.pause:
+    seconds: 10
+    prompt: "Cekam 10s na zastaveni kontejneru..."
+
+# ── Restore config files ────────────────────────────────────────────────────
+
+- name: "[Import] Check for config.yml in export"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/config.yml"
+  register: _import_config_stat
+
+- name: "[Import] Restore config.yml"
+  ansible.builtin.copy:
+    src: "{{ _import_src }}/config.yml"
+    dest: "{{ playbook_dir }}/config.yml"
+    mode: '0600'
+    remote_src: true
+  when: _import_config_stat.stat.exists | default(false)
+
+- name: "[Import] Check for credentials.yml in export"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/credentials.yml"
+  register: _import_creds_stat
+
+- name: "[Import] Restore credentials.yml"
+  ansible.builtin.copy:
+    src: "{{ _import_src }}/credentials.yml"
+    dest: "{{ playbook_dir }}/credentials.yml"
+    mode: '0600'
+    remote_src: true
+  when: _import_creds_stat.stat.exists | default(false)
+
+- name: "[Import] Check for service-registry.json in export"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/service-registry.json"
+  register: _import_registry_stat
+
+- name: "[Import] Restore service-registry.json"
+  ansible.builtin.copy:
+    src: "{{ _import_src }}/service-registry.json"
+    dest: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
+    mode: '0644'
+    remote_src: true
+  when: _import_registry_stat.stat.exists | default(false)
+
+# ── Restore data directories ────────────────────────────────────────────────
+
+- name: "[Import] Define data archives to restore"
+  ansible.builtin.set_fact:
+    _import_archive_names:
+      - gitea
+      - nextcloud
+      - n8n
+      - grafana
+      - agents
+      - observability
+
+- name: "[Import] Check which data archives exist in export"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/{{ item }}.tar.gz"
+  loop: "{{ _import_archive_names }}"
+  register: _import_archive_stats
+
+- name: "[Import] Restore data archives"
+  ansible.builtin.shell: >
+    tar xzf "{{ _import_src }}/{{ item.item }}.tar.gz"
+    -C "{{ ansible_facts['env']['HOME'] }}"
+  loop: "{{ _import_archive_stats.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists | default(false)
+  check_mode: false
+
+# ── Restore databases ───────────────────────────────────────────────────────
+
+- name: "[Import] Start infra stack for database restore"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/infra/docker-compose.yml"
+    -p infra up -d 2>&1 || true
+  failed_when: false
+  check_mode: false
+
+- name: "[Import] Wait for database containers to be ready"
+  ansible.builtin.pause:
+    seconds: 15
+    prompt: "Cekam 15s na start databazovych kontejneru..."
+
+- name: "[Import] Check for PostgreSQL dump"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/postgresql.sql"
+  register: _import_pg_dump
+
+- name: "[Import] Check if PostgreSQL container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps --filter name=postgresql --filter status=running -q
+  register: _import_pg_running
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _import_pg_dump.stat.exists | default(false)
+
+- name: "[Import] Restore PostgreSQL from dump"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T postgresql psql -U postgres
+    < "{{ _import_src }}/postgresql.sql"
+  when:
+    - _import_pg_dump.stat.exists | default(false)
+    - _import_pg_running.stdout | default('') | length > 0
+  check_mode: false
+  failed_when: false
+
+- name: "[Import] Check for MariaDB dump"
+  ansible.builtin.stat:
+    path: "{{ _import_src }}/mariadb.sql"
+  register: _import_maria_dump
+
+- name: "[Import] Check if MariaDB container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps --filter name=mariadb --filter status=running -q
+  register: _import_maria_running
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _import_maria_dump.stat.exists | default(false)
+
+- name: "[Import] Restore MariaDB from dump"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T mariadb mariadb -u root
+    -p{{ mariadb_root_password }}
+    < "{{ _import_src }}/mariadb.sql"
+  when:
+    - _import_maria_dump.stat.exists | default(false)
+    - _import_maria_running.stdout | default('') | length > 0
+  check_mode: false
+  failed_when: false
+  no_log: true
+
+# ── Start all stacks ────────────────────────────────────────────────────────
+
+- name: "[Import] Start all Docker stacks"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p {{ item }} up -d 2>&1 || true
+  loop:
+    - infra
+    - observability
+    - iiab
+    - devops
+    - b2b
+    - voip
+    - engineering
+    - data
+  failed_when: false
+  check_mode: false
+
+# ── Cleanup ──────────────────────────────────────────────────────────────────
+
+- name: "[Import] Remove temp extraction directory"
+  ansible.builtin.file:
+    path: "{{ _import_tmpdir.path }}"
+    state: absent
+
+- name: "[Import] Print import summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       IMPORT DOKONČEN
+       Zdroj: {{ import_tarball }}
+       Obnoveno z: {{ _import_manifest.hostname | default('neznámý') }}
+             ({{ _import_manifest.date | default('neznámé datum') }})
+       Doporučení: Spusť plný playbook pro rekonfiguraci služeb:
+         ansible-playbook main.yml -K
+      ══════════════════════════════════════════════════════════════════════

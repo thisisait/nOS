@@ -1,0 +1,137 @@
+---
+# ==============================================================================
+# pazny.erpnext/tasks/post.yml
+#
+# ERPNext post-start: retry configurator / run migrations
+# Configurator (bench new-site) muze selhat pokud MariaDB nebyla ready,
+# nebo se site vytvoril ale migrace nedokoncila (I/O error, timeout).
+# Volano z tasks/stacks/stack-up.yml az PO `docker compose up b2b --wait`.
+# ==============================================================================
+
+- name: "[pazny.erpnext Post] Check configurator exit code"
+  ansible.builtin.shell: >
+    {{ docker_bin }} inspect b2b-erpnext-configurator-1
+    --format '{{ '{{' }}.State.ExitCode{{ '}}' }}' 2>/dev/null || echo "999"
+  register: _erpnext_cfg_exit
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.erpnext Post] Check if site already configured"
+  ansible.builtin.stat:
+    path: "{{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}/{{ erpnext_site_name | default('erp.dev.local') }}/site_config.json"
+  register: _erpnext_site_config
+
+# ── Pripad 1: site neexistuje → full retry ────────────────────────────────────
+- name: "[pazny.erpnext Post] Full retry – site not created"
+  when:
+    - _erpnext_cfg_exit.stdout | default('0') | int != 0
+    - not _erpnext_site_config.stat.exists
+  block:
+    - name: "[pazny.erpnext Post] Wait for MariaDB to accept connections"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -p infra exec -T mariadb
+        mariadb -u root -p{{ mariadb_root_password }} -e "SELECT 1" 2>&1
+      register: _mariadb_check
+      retries: 15
+      delay: 4
+      until: _mariadb_check.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: "[pazny.erpnext Post] Remove stale configurator container"
+      ansible.builtin.shell: >
+        {{ docker_bin }} rm -f b2b-erpnext-configurator-1 2>/dev/null || true
+      changed_when: false
+
+    - name: "[pazny.erpnext Post] Re-run configurator"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/b2b/docker-compose.yml"
+        -p b2b
+        run --rm erpnext-configurator 2>&1
+      register: _erpnext_cfg_retry
+      failed_when: false
+
+    - name: "[pazny.erpnext Post] Configurator retry result"
+      ansible.builtin.debug:
+        msg: "rc={{ _erpnext_cfg_retry.rc | default('?') }} {{ (_erpnext_cfg_retry.stdout_lines | default([]))[-5:] | join(' | ') }}"
+
+# ── Pripad 2: site existuje ale migrace nedokoncila → bench migrate ───────────
+# VirtioFS I/O chyba (macOS bind mount) shodi filelock.__exit__ s rc=1 i kdyz
+# migrace prakticky uspela (stdout obsahuje "Queued rebuilding of search index"
+# = finalni post-migrate krok). Retry cte bud rc=0, nebo ten finalni marker
+# ve stdoutu — acceptujeme oboje jako success. Mazeme stale lock soubory pred
+# kazdym pokusem.
+- name: "[pazny.erpnext Post] Run migrations with lock cleanup (partial setup recovery)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p b2b exec -T erpnext-backend bash -c '
+      find /home/frappe/frappe-bench/sites -name "*.lock" -delete 2>/dev/null || true
+      bench --site {{ erpnext_site_name | default("erp.dev.local") }} migrate 2>&1
+    '
+  register: _erpnext_migrate
+  retries: 3
+  delay: 15
+  until: >
+    (_erpnext_migrate.rc | default(1) == 0)
+    or ('Queued rebuilding of search index' in (_erpnext_migrate.stdout | default('')))
+  when:
+    - _erpnext_site_config.stat.exists
+    - _erpnext_cfg_exit.stdout | default('0') | int != 0
+  failed_when: false
+
+- name: "[pazny.erpnext Post] Migration result"
+  ansible.builtin.debug:
+    msg: "rc={{ _erpnext_migrate.rc | default('?') }} {{ (_erpnext_migrate.stdout_lines | default([]))[-5:] | join(' | ') }}"
+  when: _erpnext_migrate is defined and _erpnext_migrate.changed | default(false)
+
+# ── Restart po opravach ────────────────────────────────────────────────────────
+- name: "[pazny.erpnext Post] Restart frontend + backend"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/b2b/docker-compose.yml"
+    -p b2b
+    restart erpnext-frontend erpnext-backend 2>&1
+  when: >
+    (_erpnext_cfg_retry is defined and _erpnext_cfg_retry.rc | default(1) == 0) or
+    (_erpnext_migrate is defined and _erpnext_migrate.rc | default(1) == 0)
+  failed_when: false
+
+# ── Admin password reconverge (state-declarative UPDATE) ──────────────────
+# `bench set-admin-password` is idempotent-on-write — always overwrites the
+# Administrator password regardless of current value. Runs every playbook
+# execution once the site exists (after configurator has completed).
+- name: "[pazny.erpnext Post] Reconverge Administrator password"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b exec -T erpnext-backend
+    bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+    set-admin-password {{ erpnext_admin_password | quote }} 2>&1
+  register: _erpnext_pw_reset
+  when: _erpnext_site_config.stat.exists
+  changed_when: _erpnext_pw_reset.rc | default(1) == 0
+  failed_when: false
+
+# ── Health check ──────────────────────────────────────────────────────────────
+# Frappe site routing vyzaduje `Host:` header (nginx frontend vybere site
+# podle FRAPPE_SITE_NAME_HEADER=$host). ERPNext defaultne disabluje Guest
+# usera, takze /api/method/frappe.ping vraci 417 (ValidationError: "User
+# Guest is disabled"). To je validni "alive" signal — HTTP stack Frappe
+# odpovida. Akceptujeme 200 (ping povoleno) i 417 (Guest disabled, HTTP
+# stack zije) i 403 (obecny forbidden). 404 znamena chybejici routing.
+- name: "[pazny.erpnext Post] Verify site is accessible"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
+    headers:
+      Host: "{{ erpnext_site_name | default('erp.dev.local') }}"
+    status_code: [200, 403, 417]
+    timeout: 10
+  register: _erpnext_health
+  retries: 18
+  delay: 10
+  until: _erpnext_health.status | default(0) in [200, 403, 417]
+  failed_when: false
+
+- name: "[pazny.erpnext Post] Status"
+  ansible.builtin.debug:
+    msg: >-
+      ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) in [200, 403, 417]
+      else 'NEDOSTUPNY – zkontroluj: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs' }}

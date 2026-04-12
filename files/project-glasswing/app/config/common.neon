@@ -1,0 +1,26 @@
+parameters:
+	dataDir: %tempDir%/../data
+
+application:
+	errorPresenter: Error
+	mapping:
+		*: App\Presenters\*Presenter
+		Api: App\Presenters\Api\*Presenter
+
+session:
+	expiration: 14 days
+
+database:
+	dsn: 'sqlite:%dataDir%/glasswing.db'
+
+services:
+	router: App\Core\RouterFactory::createRouter()
+
+	# Repositories
+	- App\Model\ComponentRepository
+	- App\Model\ScanStateRepository
+	- App\Model\RemediationRepository
+	- App\Model\TokenRepository
+	- App\Model\PentestRepository
+	- App\Model\AdvisoryRepository
+	- App\Model\PatchRepository

@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: calibre_web
+  namespace: pazny
+  author: Pázny
+  description: Calibre-Web ebook server in Docker compose override (devBoxNOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — Calibre-Web je samostatna Docker sluzba.
+# Orchestrace (compose up + post-start password reset) je v tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

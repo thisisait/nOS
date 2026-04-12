@@ -1,0 +1,8 @@
+---
+# pazny.qgis_server — handlers
+
+- name: Restart qgis_server
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/engineering/docker-compose.yml" -p engineering
+    restart qgis-server
+  failed_when: false

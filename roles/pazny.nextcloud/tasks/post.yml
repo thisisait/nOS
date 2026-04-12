@@ -1,0 +1,139 @@
+---
+# ==============================================================================
+# pazny.nextcloud/tasks/post.yml — sync konfigurace po startu kontejneru
+# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+#
+# Resi:
+#   1. DB heslo v config.php – env var MYSQL_PASSWORD se cte jen pri prvni
+#      inicializaci, pri zmene credentials.yml je potreba sync pres occ
+#   2. Admin password reconverge pres occ user:resetpassword
+#   3. trusted_domains pro existujici instalace (config.php) pres occ
+#   4. OIDC direct login (pokud install_authentik)
+# ==============================================================================
+
+- name: "[pazny.nextcloud Post] Check if Nextcloud container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/iiab/docker-compose.yml"
+    -p iiab ps -q nextcloud 2>/dev/null
+  register: _nc_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# ── DB password sync ─────────────────────────────────────────────────────
+- name: "[pazny.nextcloud Post] Get current DB password from config.php"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:get dbpassword 2>/dev/null || echo "__NC_NOT_INSTALLED__"
+  register: _nc_current_dbpass
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _nc_container.stdout | default('') | length > 0
+
+- name: "[pazny.nextcloud Post] Update DB password in config.php"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set dbpassword
+    --value={{ nextcloud_db_password | quote }}
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+    - _nc_current_dbpass.stdout | default('') | trim != nextcloud_db_password
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+# ── Admin password reconverge ────────────────────────────────────────────
+# occ user:resetpassword cte OC_PASS z env, bezi pri kazdem behu ⇒ drift
+# prefixu se projevi do existujiciho admin usera.
+- name: "[pazny.nextcloud Post] Reconverge admin password (state-declarative UPDATE)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data
+    -e OC_PASS={{ nextcloud_admin_password | quote }}
+    nextcloud php occ user:resetpassword --password-from-env
+    {{ nextcloud_admin_user | default('admin') }}
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+  register: _nc_pw_reset
+  changed_when: "'Successfully reset password' in (_nc_pw_reset.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+# ── trusted_domains sync ─────────────────────────────────────────────────
+- name: "[pazny.nextcloud Post] Get current trusted_domains"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:get trusted_domains 2>/dev/null || true
+  register: _nc_trusted
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _nc_container.stdout | default('') | length > 0
+
+- name: "[pazny.nextcloud Post] Set trusted_domains via occ"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set trusted_domains {{ item.index }}
+    --value={{ item.domain | quote }}
+  loop:
+    - { index: 0, domain: "{{ nextcloud_domain | default('cloud.dev.local') }}" }
+    - { index: 1, domain: "localhost" }
+    - { index: 2, domain: "127.0.0.1" }
+  loop_control:
+    label: "trusted_domains[{{ item.index }}] = {{ item.domain }}"
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - item.domain not in (_nc_trusted.stdout | default(''))
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.nextcloud Post] Add extra trusted domains (LAN/Tailscale)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set trusted_domains {{ idx + 3 }}
+    --value={{ item | quote }}
+  loop: "{{ service_extra_hosts | default([]) }}"
+  loop_control:
+    index_var: idx
+    label: "trusted_domains[{{ idx + 3 }}] = {{ item }}"
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - service_extra_hosts | default([]) | length > 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+# ── OIDC: nastavení user_oidc jako výchozí login metody ─────────────────
+- name: "[pazny.nextcloud Post] Enable OIDC as direct login (skip Nextcloud login page)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:app:set user_oidc allow_multiple_user_backends --value=0
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - install_authentik | default(false)
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.nextcloud Post] Set OIDC provider as login redirect"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:app:set user_oidc login_redirect --value=authentik
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - install_authentik | default(false)
+  changed_when: false
+  failed_when: false
+  check_mode: false

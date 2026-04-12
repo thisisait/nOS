@@ -1,0 +1,24 @@
+---
+# ==============================================================================
+# pazny.calibre_web — Calibre-Web ebook server (iiab compose stack)
+#
+# Role name uses underscore (`calibre_web`) per Ansible Galaxy naming rules;
+# compose service name and image tag use hyphen (`calibre-web`). Tasks and
+# handlers reference the hyphen form for `docker compose ... calibre-web`.
+#
+# Centralizovane promenne zustavaji v default.config.yml (nginx vhost,
+# blank-reset path resolver, RBAC tier mapping).
+# ==============================================================================
+
+calibreweb_version: "latest"
+calibreweb_port: 8083
+calibreweb_domain: "books.dev.local"
+calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"
+calibreweb_config_dir: "{{ ansible_facts['env']['HOME'] }}/calibre-web/config"
+calibreweb_timezone: "Europe/Prague"
+
+# Default linuxserver image login = admin / admin123. Post.yml resetuje
+# na `{{ global_password_prefix }}_pw_calibreweb`.
+
+calibreweb_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+calibreweb_cpus: "{{ docker_cpus_light | default('0.5') }}"

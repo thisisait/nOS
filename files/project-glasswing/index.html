@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glasswing — NOS Security Research Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --text: #e6edf3; --text2: #8b949e; --accent: #58a6ff; --green: #3fb950;
+  --red: #f85149; --orange: #d29922; --purple: #bc8cff; --cyan: #39d2c0;
+  --yellow: #e3b341;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+a { color: var(--accent); text-decoration: none; }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header .subtitle { color: var(--text2); font-size: 13px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.status-pill .pulse { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; overflow-x: auto; }
+.tab { padding: 10px 16px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; font-size: 14px; white-space: nowrap; transition: all 0.15s; position: relative; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab .tab-key { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 10px; background: var(--surface2); border-radius: 3px; margin-left: 6px; color: var(--text2); }
+.tab-badge { position: absolute; top: 6px; right: 4px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 0 4px; }
+
+/* Container + upload */
+.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+.upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; margin-bottom: 24px; transition: all 0.2s; cursor: pointer; }
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: rgba(88,166,255,0.05); }
+.upload-zone h3 { margin-bottom: 6px; }
+.upload-zone p { color: var(--text2); font-size: 13px; margin-bottom: 4px; }
+.upload-zone input { display: none; }
+.upload-zone.mini { padding: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; border-width: 1px; }
+.upload-zone.mini h3, .upload-zone.mini p:last-child { display: none; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.stat .label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat .value { font-size: 26px; font-weight: 700; margin-top: 2px; }
+.stat .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* Cards, badges */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+.card-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.card-header:hover { background: var(--surface2); }
+.card-body { padding: 0 16px 16px; display: none; }
+.card-body.open { display: block; }
+.card-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 13px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge-critical { background: rgba(248,81,73,0.15); color: var(--red); }
+.badge-high { background: rgba(210,153,34,0.15); color: var(--orange); }
+.badge-medium { background: rgba(136,198,255,0.15); color: var(--accent); }
+.badge-low { background: rgba(57,210,192,0.15); color: var(--cyan); }
+.badge-pentest { background: rgba(188,140,255,0.15); color: var(--purple); }
+.badge-clean { background: rgba(63,185,80,0.15); color: var(--green); }
+.badge-resolved { background: rgba(63,185,80,0.1); color: var(--green); border: 1px solid rgba(63,185,80,0.2); }
+.badge-pending { background: rgba(210,153,34,0.1); color: var(--orange); border: 1px solid rgba(210,153,34,0.2); }
+
+/* Grids */
+.comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.comp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.comp-card h4 { font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+.version { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--cyan); }
+.meta { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.bar { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; }
+
+/* Charts */
+.chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.chart-container h3 { margin-bottom: 12px; font-size: 15px; }
+.chart-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.chart-bar-label { min-width: 110px; color: var(--text2); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-bar-track { flex: 1; height: 20px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; }
+.chart-bar-segment { height: 100%; float: left; }
+.chart-bar-value { position: absolute; right: 6px; top: 2px; font-size: 11px; color: var(--text); }
+
+/* Filters */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+.filter-btn { padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text2); transition: all 0.15s; }
+.filter-btn:hover { border-color: var(--accent); color: var(--text); }
+.filter-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.filter-search { padding: 6px 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; min-width: 200px; }
+.filter-search:focus { border-color: var(--accent); }
+.filter-search::placeholder { color: var(--text2); }
+.filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+/* Table */
+.rem-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rem-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; cursor: pointer; user-select: none; white-space: nowrap; }
+.rem-table th:hover { color: var(--text); }
+.rem-table th .sort-arrow { margin-left: 4px; font-size: 10px; }
+.rem-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.rem-table tr:hover { background: var(--surface2); }
+.rem-table tr.resolved { opacity: 0.5; }
+
+/* Pentest */
+.pentest-area { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pentest-area:last-child { border-bottom: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-tested { background: var(--green); }
+.dot-planned { background: var(--text2); }
+.dot-finding { background: var(--red); }
+
+/* Scan recency */
+.recency { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.recency-fresh { background: var(--green); }
+.recency-recent { background: var(--yellow); }
+.recency-stale { background: var(--orange); }
+.recency-old { background: var(--red); }
+
+/* Help */
+.help { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+.help h3 { margin-bottom: 8px; font-size: 15px; }
+.help code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.help ol, .help ul { padding-left: 20px; margin-top: 8px; }
+.help li { margin-bottom: 6px; font-size: 13px; color: var(--text2); }
+
+/* Two-column layout */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+.empty { text-align: center; padding: 60px; color: var(--text2); }
+
+/* Next batch indicator */
+.next-batch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.next-batch-item { padding: 3px 8px; border-radius: 4px; font-size: 12px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <h1>Glasswing <span style="color:var(--text2); font-weight:400">NOS Security Research</span></h1>
+      <div class="subtitle">FOSS vulnerability monitoring, autonomous pentesting, upstream patch development</div>
+    </div>
+  </div>
+  <div class="header-right" id="headerStatus"></div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="overview">Overview <span class="tab-key">1</span></div>
+  <div class="tab" data-tab="timeline">Timeline <span class="tab-key">2</span></div>
+  <div class="tab" data-tab="components">Components <span class="tab-key">3</span></div>
+  <div class="tab" data-tab="pentest">Pentest <span class="tab-key">4</span></div>
+  <div class="tab" data-tab="remediation">Remediation <span class="tab-key">5</span></div>
+  <div class="tab" data-tab="help">Help <span class="tab-key">6</span></div>
+</div>
+
+<div class="container">
+  <div class="upload-zone" id="uploadZone">
+    <h3>Upload security data files</h3>
+    <p>Drag and drop all files from <code>docs/llm/security/</code> here</p>
+    <p>Accepts: *.json, *.md (scan-state, versions, remediation-queue, pentest-journal, advisory reports)</p>
+    <input type="file" id="fileInput" multiple accept=".json,.md">
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+/* All data stays in-browser, no network requests. */
+
+const state = { files: {}, parsed: {}, filters: { remSev: 'ALL', remStatus: 'ALL', remSearch: '', remSort: 'severity', remSortDir: 1 } };
+
+// ── File handling ──────────────────────────────────────────────────────────
+const zone = document.getElementById('uploadZone');
+const input = document.getElementById('fileInput');
+zone.addEventListener('click', () => input.click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+input.addEventListener('change', e => handleFiles(e.target.files));
+
+async function handleFiles(fileList) {
+  for (const f of fileList) {
+    const text = await f.text();
+    state.files[f.name] = text;
+    if (f.name.endsWith('.json')) {
+      try { state.parsed[f.name] = JSON.parse(text); } catch(e) { /* skip */ }
+    } else if (f.name.endsWith('.md')) {
+      state.parsed[f.name] = { _type: 'markdown', _filename: f.name, _content: text };
+    }
+  }
+  zone.classList.add('mini');
+  zone.querySelector('h3').textContent = Object.keys(state.files).length + ' files loaded';
+  zone.querySelector('p').textContent = 'Drop more to update';
+  render();
+}
+
+// ── Tabs + keyboard nav ──────────────────────────────────────────────────
+let activeTab = location.hash.slice(1) || 'overview';
+const tabNames = ['overview','timeline','components','pentest','remediation','help'];
+
+function setTab(name) {
+  if (!tabNames.includes(name)) return;
+  activeTab = name;
+  location.hash = name;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
+  render();
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  if (e.target.dataset.tab) setTab(e.target.dataset.tab);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const n = parseInt(e.key);
+  if (n >= 1 && n <= 6) setTab(tabNames[n-1]);
+});
+
+window.addEventListener('hashchange', () => {
+  const h = location.hash.slice(1);
+  if (h && h !== activeTab) setTab(h);
+});
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function get(n) { return state.parsed[n]; }
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+function fmtDate(iso) {
+  if (!iso) return '\u2014';
+  try { return new Date(iso).toLocaleString('cs-CZ', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); }
+  catch { return iso; }
+}
+function hoursAgo(iso) {
+  if (!iso) return Infinity;
+  return (Date.now() - new Date(iso).getTime()) / 3600000;
+}
+function recencyClass(iso) {
+  const h = hoursAgo(iso);
+  if (h < 24) return 'recency-fresh';
+  if (h < 48) return 'recency-recent';
+  if (h < 72) return 'recency-stale';
+  return 'recency-old';
+}
+function recencyLabel(iso) {
+  const h = hoursAgo(iso);
+  if (h === Infinity) return 'never';
+  if (h < 1) return '<1h ago';
+  if (h < 24) return Math.round(h) + 'h ago';
+  return Math.round(h/24) + 'd ago';
+}
+
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k,v]) => {
+    if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  });
+  children.flat().forEach(c => {
+    if (c == null) return;
+    el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+
+function badgeEl(sev) {
+  const cls = { CRITICAL:'critical', HIGH:'high', MEDIUM:'medium', LOW:'low' }[sev] || 'clean';
+  return h('span', {class:'badge badge-' + cls}, sev);
+}
+
+// ── Header status ──────────────────────────────────────────────────────────
+function updateHeader() {
+  const el = document.getElementById('headerStatus');
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const rq = get('remediation-queue.json');
+  const ss = get('scan-state.json');
+  if (!rq && !ss) return;
+
+  const pending = rq?.items?.filter(i => i.status === 'pending') || [];
+  const crit = pending.filter(i => i.severity === 'CRITICAL').length;
+  const high = pending.filter(i => i.severity === 'HIGH').length;
+
+  if (crit > 0) {
+    el.appendChild(h('div', {class:'status-pill', style:{background:'rgba(248,81,73,0.15)',color:'var(--red)'}},
+      h('span', {class:'pulse', style:{background:'var(--red)'}}), crit + ' CRITICAL'));
+  }
+  if (high > 0) {
+    el.appendChild(h('div', {class:'status-pill', style:{background:'rgba(210,153,34,0.15)',color:'var(--orange)'}},
+      h('span', {class:'pulse', style:{background:'var(--orange)'}}), high + ' HIGH'));
+  }
+  if (ss) {
+    el.appendChild(h('div', {class:'status-pill', style:{background:'var(--surface2)',color:'var(--text2)'}},
+      'Cycle ' + (ss.scan_cycle || '?')));
+  }
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function render() {
+  updateHeader();
+  const el = document.getElementById('content');
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const renderers = { overview: buildOverview, timeline: buildTimeline, components: buildComponents, pentest: buildPentest, remediation: buildRemediation, help: buildHelp };
+  el.appendChild((renderers[activeTab] || buildOverview)());
+  // Update tab badges
+  const rq = get('remediation-queue.json');
+  if (rq) {
+    const pending = rq.items?.filter(i => i.status === 'pending').length || 0;
+    const remTab = document.querySelector('[data-tab="remediation"]');
+    let badge = remTab.querySelector('.tab-badge');
+    if (pending > 0) {
+      if (!badge) { badge = h('span', {class:'tab-badge badge-high'}); remTab.appendChild(badge); }
+      badge.textContent = pending;
+    } else if (badge) badge.remove();
+  }
+}
+
+// ── Overview ────────────────────────────────────────────────────────────────
+function buildOverview() {
+  const frag = document.createDocumentFragment();
+  const ss = get('scan-state.json');
+  const rq = get('remediation-queue.json');
+  const pj = get('pentest-journal.json');
+  const ver = get('versions.json');
+
+  if (!ss && !rq) {
+    frag.appendChild(h('div', {class:'empty'}, h('h3', null, 'No data loaded'), h('p', null, 'Upload files from docs/llm/security/ to get started')));
+    return frag;
+  }
+
+  // Stats row 1
+  const cycle = ss?.scan_cycle || 0;
+  const compCount = ss ? Object.keys(ss.components || {}).length : 0;
+  const items = rq?.items || [];
+  const remPending = items.filter(i => i.status === 'pending').length;
+  const remResolved = items.filter(i => i.status === 'resolved').length;
+  const remCrit = items.filter(i => i.severity === 'CRITICAL' && i.status === 'pending').length;
+  const remHigh = items.filter(i => i.severity === 'HIGH' && i.status === 'pending').length;
+
+  const allAreas = getAllPentestAreas(pj);
+  const ptTested = allAreas.filter(a => a.status === 'tested').length;
+  const ptTotal = allAreas.length;
+  const ptFindings = pj?.targets?.reduce((s,t) => s + (t.findings?.length||0), 0) || 0;
+  const covPct = ptTotal > 0 ? Math.round(ptTested / ptTotal * 100) : 0;
+
+  const stats = h('div', {class:'stats'},
+    h('div',{class:'stat'}, h('div',{class:'label'},'Scan Cycle'), h('div',{class:'value'},String(cycle)), h('div',{class:'sub'},'Last: '+fmtDate(ss?.last_advisory_check))),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Components'), h('div',{class:'value'},String(compCount)),
+      h('div',{class:'sub'}, (ver?.components?.filter(c=>c.pinned)?.length||0)+' pinned, '+(ver?.components?.filter(c=>!c.pinned)?.length||0)+' floating')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Pending Issues'),
+      h('div',{class:'value',style:{color:remCrit>0?'var(--red)':remPending>0?'var(--orange)':'var(--green)'}}, String(remPending)),
+      h('div',{class:'sub'}, remCrit+' crit, '+remHigh+' high | '+remResolved+' resolved')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Pentest Coverage'), h('div',{class:'value'}, covPct+'%'),
+      h('div',{class:'sub'}, ptTested+'/'+ptTotal+' areas, '+ptFindings+' findings')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Schedule'), h('div',{class:'value',style:{fontSize:'16px',marginTop:'6px'}}, ss?.config?.schedule || '?'),
+      h('div',{class:'sub'}, 'Batch: '+( ss?.config?.batch_size||5)+' | '+( ss?.config?.strategy||'oldest_first')))
+  );
+  frag.appendChild(stats);
+
+  // Two-column: severity bar + next batch
+  const twoCol = h('div', {class:'two-col'});
+
+  // Severity bar
+  if (items.length) {
+    const sev = {CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0};
+    items.forEach(i => { if (sev[i.severity] !== undefined) sev[i.severity]++; });
+    const total = items.length;
+    const chart = h('div',{class:'chart-container',style:{marginBottom:'0'}}, h('h3',null,'Findings by Severity'));
+    const row = h('div',{class:'chart-bar-row'},
+      h('div',{class:'chart-bar-label'},'Total '+total),
+      h('div',{class:'chart-bar-track'},
+        h('div',{class:'chart-bar-segment',style:{width:(sev.CRITICAL/total*100)+'%',background:'var(--red)'}}),
+        h('div',{class:'chart-bar-segment',style:{width:(sev.HIGH/total*100)+'%',background:'var(--orange)'}}),
+        h('div',{class:'chart-bar-segment',style:{width:(sev.MEDIUM/total*100)+'%',background:'var(--accent)'}}),
+        h('div',{class:'chart-bar-segment',style:{width:(sev.LOW/total*100)+'%',background:'var(--cyan)'}}),
+        h('div',{class:'chart-bar-value'},sev.CRITICAL+'C '+sev.HIGH+'H '+sev.MEDIUM+'M'+(sev.LOW?' '+sev.LOW+'L':''))
+      )
+    );
+    // Status bar
+    const pending = items.filter(i => i.status === 'pending').length;
+    const resolved = items.filter(i => i.status === 'resolved').length;
+    const row2 = h('div',{class:'chart-bar-row',style:{marginTop:'4px'}},
+      h('div',{class:'chart-bar-label'},'Status'),
+      h('div',{class:'chart-bar-track'},
+        h('div',{class:'chart-bar-segment',style:{width:(resolved/total*100)+'%',background:'var(--green)'}}),
+        h('div',{class:'chart-bar-segment',style:{width:(pending/total*100)+'%',background:'var(--orange)'}}),
+        h('div',{class:'chart-bar-value'},resolved+' resolved, '+pending+' pending')
+      )
+    );
+    chart.appendChild(row);
+    chart.appendChild(row2);
+    twoCol.appendChild(chart);
+  }
+
+  // Next batch + scan schedule
+  if (ss) {
+    const info = h('div',{class:'chart-container',style:{marginBottom:'0'}}, h('h3',null,'Next Scan Batch'));
+    const batch = ss.rotation?.next_batch || [];
+    const nb = h('div',{class:'next-batch'});
+    batch.forEach(name => {
+      const sd = ss.components?.[name];
+      const rc = recencyClass(sd?.last_cve_scan);
+      nb.appendChild(h('span',{class:'next-batch-item'},
+        h('span',{class:'recency '+rc}), ' ' + name + ' (' + recencyLabel(sd?.last_cve_scan) + ')'
+      ));
+    });
+    info.appendChild(nb);
+
+    // Attack probe schedule
+    const probes = ss.attack_probe_schedule || [];
+    const currentMod = cycle % probes.length;
+    info.appendChild(h('h3',{style:{marginTop:'16px',fontSize:'14px'}},'Attack Probe Rotation'));
+    const probeList = h('div',{style:{marginTop:'8px'}});
+    probes.forEach((p,i) => {
+      const isCurrent = i === currentMod;
+      const isCompleted = ss.attack_probes_completed?.includes(p.name);
+      probeList.appendChild(h('div',{style:{fontSize:'12px',padding:'3px 0',color:isCurrent?'var(--accent)':isCompleted?'var(--green)':'var(--text2)'}},
+        (isCurrent ? '\u25B6 ' : isCompleted ? '\u2713 ' : '  ') + p.name + (isCurrent ? ' (next)' : '')
+      ));
+    });
+    info.appendChild(probeList);
+    twoCol.appendChild(info);
+  }
+  frag.appendChild(twoCol);
+
+  // Pentest progress bars
+  if (pj?.targets?.length) {
+    const pc = h('div',{class:'chart-container'}, h('h3',null,'Pentest Progress by Target'));
+    pj.targets.forEach(t => {
+      const pl = t.areas_planned?.length || 0;
+      const te = t.areas_tested?.length || 0;
+      const total = pl + te;
+      const fi = t.findings?.length || 0;
+      const pct = total > 0 ? (te / total * 100) : 0;
+      pc.appendChild(h('div',{class:'chart-bar-row'},
+        h('div',{class:'chart-bar-label'}, t.component),
+        h('div',{class:'chart-bar-track'},
+          h('div',{class:'chart-bar-segment',style:{width:pct+'%',background:fi>0?'var(--orange)':'var(--green)'}}),
+          h('div',{class:'chart-bar-value'}, te+'/'+total + (fi ? ' \u26A0'+fi : ''))
+        )
+      ));
+    });
+    frag.appendChild(pc);
+  }
+
+  // Recent reports
+  const reports = Object.keys(state.parsed).filter(k => k.endsWith('.md') && k!=='pentest-task.md').sort().reverse();
+  if (reports.length) {
+    const tl = h('div',null, h('h2',{style:{fontSize:'16px',marginBottom:'12px'}},'Recent Advisory Reports'));
+    reports.slice(0,5).forEach(k => {
+      const md = state.parsed[k];
+      const title = md._content.split('\n').find(l => l.trim())?.replace(/^#+\s*/,'') || k;
+      const hasCrit = md._content.includes('CRITICAL');
+      const hasHigh = md._content.includes('HIGH');
+      const badgeType = hasCrit ? 'critical' : hasHigh ? 'high' : 'clean';
+      const card = h('div',{class:'card'});
+      const header = h('div',{class:'card-header'},
+        h('span',{style:{color:'var(--text2)',fontSize:'13px',minWidth:'180px'}}, k.replace('.md','')),
+        h('span',{style:{flex:'1',fontSize:'14px'}}, title),
+        h('span',{class:'badge badge-'+badgeType}, badgeType.toUpperCase())
+      );
+      const body = h('div',{class:'card-body'}, h('pre',null, md._content));
+      header.addEventListener('click', () => body.classList.toggle('open'));
+      card.appendChild(header); card.appendChild(body);
+      tl.appendChild(card);
+    });
+    frag.appendChild(tl);
+  }
+
+  return frag;
+}
+
+// ── Timeline ────────────────────────────────────────────────────────────────
+function buildTimeline() {
+  const frag = document.createDocumentFragment();
+  const reports = Object.keys(state.parsed).filter(k => k.endsWith('.md') && k!=='pentest-task.md').sort().reverse();
+  if (!reports.length) { frag.appendChild(h('div',{class:'empty'},'No advisory reports loaded. Upload *.md files from docs/llm/security/')); return frag; }
+
+  // Group by date
+  const groups = {};
+  reports.forEach(k => {
+    const date = k.match(/(\d{4}-\d{2}-\d{2})/)?.[1] || 'unknown';
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(k);
+  });
+
+  Object.entries(groups).forEach(([date, files]) => {
+    frag.appendChild(h('h3', {style:{fontSize:'14px',marginBottom:'8px',marginTop:'16px',color:'var(--text2)'}}, date + ' (' + files.length + ' runs)'));
+    files.forEach(k => {
+      const md = state.parsed[k];
+      const title = md._content.split('\n').find(l => l.trim())?.replace(/^#+\s*/,'') || k;
+      const hasCrit = md._content.includes('CRITICAL');
+      const hasPentest = md._content.includes('PENTEST-');
+      const badgeType = hasCrit ? 'critical' : md._content.includes('HIGH') ? 'high' : 'clean';
+      const card = h('div',{class:'card'});
+      const header = h('div',{class:'card-header'},
+        h('span',{style:{color:'var(--text2)',fontSize:'13px',minWidth:'180px'}}, k.replace('.md','')),
+        h('span',{style:{flex:'1',fontSize:'14px'}}, title),
+        hasPentest ? h('span',{class:'badge badge-pentest'},'PENTEST') : null,
+        h('span',{class:'badge badge-'+badgeType}, badgeType.toUpperCase())
+      );
+      const body = h('div',{class:'card-body'}, h('pre',null, md._content));
+      header.addEventListener('click', () => body.classList.toggle('open'));
+      card.appendChild(header); card.appendChild(body);
+      frag.appendChild(card);
+    });
+  });
+  return frag;
+}
+
+// ── Components ──────────────────────────────────────────────────────────────
+function buildComponents() {
+  const frag = document.createDocumentFragment();
+  const ver = get('versions.json');
+  const ss = get('scan-state.json');
+  if (!ver && !ss) { frag.appendChild(h('div',{class:'empty'},'Upload versions.json and/or scan-state.json')); return frag; }
+
+  // Scan recency legend
+  const legend = h('div',{style:{marginBottom:'16px',fontSize:'12px',color:'var(--text2)',display:'flex',gap:'16px'}},
+    h('span',null, h('span',{class:'recency recency-fresh'}), ' <24h'),
+    h('span',null, h('span',{class:'recency recency-recent'}), ' 24-48h'),
+    h('span',null, h('span',{class:'recency recency-stale'}), ' 48-72h'),
+    h('span',null, h('span',{class:'recency recency-old'}), ' >72h')
+  );
+  frag.appendChild(legend);
+
+  // Use versions.json if available, fall back to scan-state.json components
+  const components = ver?.components || Object.keys(ss?.components || {}).map(id => ({ id, name: id }));
+  const grid = h('div',{class:'comp-grid'});
+
+  components.forEach(c => {
+    const id = c.id || c.name;
+    const sd = ss?.components?.[id];
+    const findings = sd?.findings_count || 0;
+    const color = findings > 3 ? 'var(--red)' : findings > 0 ? 'var(--orange)' : 'var(--green)';
+    const rc = recencyClass(sd?.last_cve_scan);
+
+    const card = h('div',{class:'comp-card'},
+      h('h4', null,
+        h('span', null, h('span',{class:'recency '+rc}), ' ' + (c.name || id)),
+        h('span',{class:'version'}, c.default_version || '?')
+      ),
+      h('div',{class:'meta'}, [c.category, c.stack, c.priority ? c.priority + ' priority' : ''].filter(Boolean).join(' | ')),
+      h('div',{class:'meta'}, 'Findings: ' + findings + ' | CVE scan: ' + recencyLabel(sd?.last_cve_scan)),
+      sd?.last_attack_probe ? h('div',{class:'meta',style:{color:'var(--purple)'}}, 'Probe: ' + sd.last_attack_probe) : null,
+      h('div',{class:'meta'}, (c.image || 'native') + ' | ' + (c.pinned ? 'pinned' : 'floating')),
+      h('div',{class:'bar'}, h('div',{class:'bar-fill',style:{width:Math.min(findings*15,100)+'%',background:color}}))
+    );
+    grid.appendChild(card);
+  });
+  frag.appendChild(grid);
+  return frag;
+}
+
+// ── Pentest ─────────────────────────────────────────────────────────────────
+function getAllPentestAreas(pj) {
+  if (!pj?.targets) return [];
+  const areas = [];
+  pj.targets.forEach(t => {
+    const testedNames = new Set((t.areas_tested || []).map(a => a.area));
+    const findingClasses = new Set((t.findings || []).map(f => f.attack_class));
+    // Tested areas
+    (t.areas_tested || []).forEach(a => {
+      areas.push({
+        component: t.component, area: a.area, status: 'tested',
+        result: a.result, date: a.date, details: a.details,
+        hasFinding: a.result === 'potential_vuln' || a.result === 'confirmed_vuln',
+        target: t
+      });
+    });
+    // Planned (not yet tested)
+    (t.areas_planned || []).forEach(a => {
+      if (!testedNames.has(a.area)) {
+        areas.push({
+          component: t.component, area: a.area, status: 'planned',
+          priority: a.priority, attack_class: a.attack_class,
+          description: a.description, target: t
+        });
+      }
+    });
+  });
+  return areas;
+}
+
+function buildPentest() {
+  const frag = document.createDocumentFragment();
+  const pj = get('pentest-journal.json');
+  if (!pj) { frag.appendChild(h('div',{class:'empty'},'Upload pentest-journal.json')); return frag; }
+
+  // Stats
+  const allAreas = getAllPentestAreas(pj);
+  const tested = allAreas.filter(a => a.status === 'tested');
+  const planned = allAreas.filter(a => a.status === 'planned');
+  const withFindings = tested.filter(a => a.hasFinding);
+
+  const stats = h('div',{class:'stats',style:{marginBottom:'16px'}},
+    h('div',{class:'stat'}, h('div',{class:'label'},'Targets'), h('div',{class:'value'},String(pj.targets?.length||0)),
+      h('div',{class:'sub'}, pj.targets?.filter(t => t.status !== 'planned').length + ' active')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Areas Tested'), h('div',{class:'value',style:{color:'var(--green)'}},String(tested.length)),
+      h('div',{class:'sub'}, 'of ' + allAreas.length + ' total')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Areas Planned'), h('div',{class:'value'},String(planned.length)),
+      h('div',{class:'sub'}, planned.filter(a=>a.priority==='high'||a.priority==='critical').length + ' high priority')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Findings'), h('div',{class:'value',style:{color:withFindings.length>0?'var(--orange)':'var(--green)'}},String(pj.targets?.reduce((s,t)=>s+(t.findings?.length||0),0)||0)),
+      h('div',{class:'sub'}, withFindings.length + ' areas with issues')),
+    h('div',{class:'stat'}, h('div',{class:'label'},'Patches'), h('div',{class:'value'},String(pj.patch_development?.patches?.length||0)),
+      h('div',{class:'sub'}, 'upstream PRs'))
+  );
+  frag.appendChild(stats);
+
+  // Per-target cards
+  pj.targets.forEach(t => {
+    const tPlanned = t.areas_planned || [];
+    const tTested = t.areas_tested || [];
+    const findings = t.findings || [];
+    const testedNames = new Set(tTested.map(a => a.area));
+    const totalAreas = tPlanned.length + tTested.length;
+    const pct = totalAreas > 0 ? Math.round(tTested.length / totalAreas * 100) : 0;
+
+    const card = h('div',{class:'comp-card',style:{marginBottom:'16px'}},
+      h('h4', null,
+        h('span', null, t.component + ' '),
+        h('span',{class:'version'}, t.version_tested)
+      ),
+      h('div',{class:'meta'}, t.language + ' | ' + t.upstream_repo + ' | ' + t.status + ' | ' + pct + '% coverage')
+    );
+
+    const areasDiv = h('div',{style:{marginTop:'8px'}});
+
+    // Show TESTED areas first
+    tTested.forEach(a => {
+      const rc = a.result === 'confirmed_vuln' ? 'var(--red)' : a.result === 'potential_vuln' ? 'var(--orange)' : 'var(--green)';
+      const dotCls = a.result !== 'no_findings' ? 'dot-finding' : 'dot-tested';
+      const row = h('div',{class:'pentest-area'},
+        h('span',{class:'dot '+dotCls}),
+        h('span',{style:{flex:'1'}}, a.area),
+        h('span',{class:'badge badge-clean',style:{background: a.result === 'no_findings' ? '' : 'rgba(210,153,34,0.15)', color: a.result === 'no_findings' ? '' : 'var(--orange)'}}, a.result),
+        h('span',{style:{color:'var(--text2)',fontSize:'11px'}}, fmtDate(a.date))
+      );
+      // Click to expand details
+      if (a.details) {
+        const details = h('div',{style:{display:'none',padding:'8px 16px',fontSize:'12px',color:'var(--text2)',background:'var(--bg)',borderRadius:'4px',margin:'4px 0',whiteSpace:'pre-wrap'}}, a.details);
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+          details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        });
+        areasDiv.appendChild(row);
+        areasDiv.appendChild(details);
+      } else {
+        areasDiv.appendChild(row);
+      }
+    });
+
+    // Then PLANNED areas
+    tPlanned.forEach(a => {
+      if (testedNames.has(a.area)) return; // skip if already shown as tested
+      const priCls = a.priority === 'critical' ? 'critical' : a.priority === 'high' ? 'high' : 'medium';
+      areasDiv.appendChild(h('div',{class:'pentest-area'},
+        h('span',{class:'dot dot-planned'}),
+        h('span',{style:{flex:'1'}}, a.area),
+        h('span',{class:'badge badge-'+priCls}, a.priority),
+        h('span',{style:{color:'var(--text2)',fontSize:'11px'}}, a.attack_class || '')
+      ));
+    });
+
+    card.appendChild(areasDiv);
+
+    // Findings detail
+    if (findings.length) {
+      card.appendChild(h('div',{style:{marginTop:'12px',fontSize:'13px',fontWeight:'600'}},
+        h('span',{style:{color:'var(--orange)'}}, '\u26A0 ' + findings.length + ' finding' + (findings.length > 1 ? 's' : ''))));
+      findings.forEach(f => {
+        const fd = h('div',{style:{fontSize:'12px',padding:'8px',margin:'4px 0',background:'var(--bg)',borderRadius:'4px',border:'1px solid var(--border)',cursor:'pointer'}});
+        const summary = h('div',{style:{display:'flex',gap:'8px',alignItems:'center'}},
+          h('strong',null, f.id),
+          badgeEl(f.severity),
+          h('span',{style:{flex:'1'}}, f.title)
+        );
+        const detail = h('div',{style:{display:'none',marginTop:'8px',color:'var(--text2)',whiteSpace:'pre-wrap',fontSize:'11px'}},
+          'Exploitability: ' + f.exploitability + '\n' +
+          'Confidence: ' + f.confidence + '\n' +
+          'Disclosure: ' + (f.disclosure_status || 'N/A') + '\n' +
+          (f.devboxnos_mitigation ? 'Mitigation: ' + f.devboxnos_mitigation + '\n' : '') +
+          (f.remediation ? 'Remediation: ' + f.remediation : '')
+        );
+        fd.addEventListener('click', () => { detail.style.display = detail.style.display === 'none' ? 'block' : 'none'; });
+        fd.appendChild(summary);
+        fd.appendChild(detail);
+        card.appendChild(fd);
+      });
+    }
+    frag.appendChild(card);
+  });
+
+  // Patches section
+  const patches = pj.patch_development?.patches || [];
+  if (patches.length) {
+    const pc = h('div',{class:'chart-container'}, h('h3',null,'Developed Patches ('+patches.length+')'));
+    patches.forEach(p => {
+      pc.appendChild(h('div',{style:{padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:'13px'}},
+        h('strong',null,p.id), ' ('+p.component+') \u2014 '+p.description,
+        h('div',{style:{color:'var(--text2)',fontSize:'12px'}}, 'Status: '+p.status+' | PR: '+(p.upstream_pr||'not submitted'))
+      ));
+    });
+    frag.appendChild(pc);
+  }
+  return frag;
+}
+
+// ── Remediation ─────────────────────────────────────────────────────────────
+function buildRemediation() {
+  const frag = document.createDocumentFragment();
+  const rq = get('remediation-queue.json');
+  if (!rq) { frag.appendChild(h('div',{class:'empty'},'Upload remediation-queue.json')); return frag; }
+
+  // Filter bar
+  const filterBar = h('div',{class:'filter-bar'});
+
+  // Status filters
+  ['ALL','pending','resolved'].forEach(s => {
+    const btn = h('span', {class:'filter-btn' + (state.filters.remStatus === s ? ' active' : ''), onclick: () => {
+      state.filters.remStatus = s;
+      render();
+    }}, s === 'ALL' ? 'All Status' : s.charAt(0).toUpperCase() + s.slice(1));
+    filterBar.appendChild(btn);
+  });
+
+  filterBar.appendChild(h('span',{class:'filter-sep'}));
+
+  // Severity filters
+  ['ALL','CRITICAL','HIGH','MEDIUM','LOW'].forEach(s => {
+    const items = rq.items || [];
+    const count = s === 'ALL' ? items.length : items.filter(i => i.severity === s).length;
+    const btn = h('span', {class:'filter-btn' + (state.filters.remSev === s ? ' active' : ''), onclick: () => {
+      state.filters.remSev = s;
+      render();
+    }}, (s === 'ALL' ? 'All' : s) + ' (' + count + ')');
+    filterBar.appendChild(btn);
+  });
+
+  filterBar.appendChild(h('span',{class:'filter-sep'}));
+
+  // Search
+  const search = h('input', {
+    class: 'filter-search',
+    type: 'text',
+    placeholder: 'Search component, ID, detail...',
+    value: state.filters.remSearch,
+    oninput: function() { state.filters.remSearch = this.value; render(); this.focus(); }
+  });
+  filterBar.appendChild(search);
+
+  frag.appendChild(filterBar);
+
+  // Filter items
+  let items = (rq.items || []).slice();
+  if (state.filters.remStatus !== 'ALL') {
+    items = items.filter(i => i.status === state.filters.remStatus);
+  }
+  if (state.filters.remSev !== 'ALL') {
+    items = items.filter(i => i.severity === state.filters.remSev);
+  }
+  if (state.filters.remSearch) {
+    const q = state.filters.remSearch.toLowerCase();
+    items = items.filter(i =>
+      (i.id || '').toLowerCase().includes(q) ||
+      (i.component || '').toLowerCase().includes(q) ||
+      (i.finding_ref || '').toLowerCase().includes(q) ||
+      (i.remediation_detail || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  const sevOrder = {CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3};
+  const sortFns = {
+    severity: (a,b) => ((sevOrder[a.severity]??4) - (sevOrder[b.severity]??4)) * state.filters.remSortDir,
+    component: (a,b) => (a.component||'').localeCompare(b.component||'') * state.filters.remSortDir,
+    id: (a,b) => {
+      const na = parseInt((a.id||'').replace(/\D/g,'')) || 0;
+      const nb = parseInt((b.id||'').replace(/\D/g,'')) || 0;
+      return (na - nb) * state.filters.remSortDir;
+    },
+    cycle: (a,b) => ((a.scan_cycle||0) - (b.scan_cycle||0)) * state.filters.remSortDir,
+    status: (a,b) => (a.status||'').localeCompare(b.status||'') * state.filters.remSortDir,
+  };
+  items.sort(sortFns[state.filters.remSort] || sortFns.severity);
+
+  // Summary
+  frag.appendChild(h('div',{style:{marginBottom:'12px',fontSize:'13px',color:'var(--text2)'}},
+    'Showing ' + items.length + ' of ' + (rq.items||[]).length + ' items'));
+
+  // Table
+  const table = h('table',{class:'rem-table'});
+  const cols = [
+    {key:'id',label:'ID'},{key:'component',label:'Component'},{key:'severity',label:'Sev'},
+    {key:'status',label:'Status'},{key:'type',label:'Type'},{key:'detail',label:'Detail'},
+    {key:'fix',label:'Fix'},{key:'cycle',label:'Cyc'}
+  ];
+  const thead = h('thead',null, h('tr',null, ...cols.map(c => {
+    const isSorted = state.filters.remSort === c.key;
+    return h('th', {onclick: () => {
+      if (state.filters.remSort === c.key) state.filters.remSortDir *= -1;
+      else { state.filters.remSort = c.key; state.filters.remSortDir = 1; }
+      render();
+    }}, c.label + (isSorted ? (state.filters.remSortDir > 0 ? ' \u25B2' : ' \u25BC') : ''));
+  })));
+  table.appendChild(thead);
+
+  const tbody = h('tbody');
+  items.forEach(i => {
+    const detail = (i.remediation_detail || '').substring(0, 200) + ((i.remediation_detail || '').length > 200 ? '...' : '');
+    const statusBadge = h('span',{class:'badge badge-'+(i.status==='resolved'?'resolved':'pending')}, i.status);
+    const tr = h('tr', {class: i.status === 'resolved' ? 'resolved' : ''},
+      h('td',null, h('strong',null, i.id)),
+      h('td',null, i.component),
+      h('td',null, badgeEl(i.severity)),
+      h('td',null, statusBadge),
+      h('td',null, i.remediation_type || ''),
+      h('td',{style:{maxWidth:'400px',fontSize:'12px'}}, detail),
+      h('td',{class:'version'}, i.fix_version || '\u2014'),
+      h('td',null, String(i.scan_cycle ?? ''))
+    );
+    // Click to expand full detail
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', () => {
+      let expanded = tr.nextElementSibling;
+      if (expanded && expanded.classList.contains('rem-expanded')) {
+        expanded.remove();
+      } else {
+        const expRow = h('tr',{class:'rem-expanded'});
+        const expTd = h('td',{colspan:'8',style:{padding:'12px',background:'var(--bg)',fontSize:'12px',whiteSpace:'pre-wrap',color:'var(--text2)'}},
+          'ID: ' + (i.id||'') + '\n' +
+          'Ref: ' + (i.finding_ref||'') + '\n' +
+          'Component: ' + (i.component||'') + ' v' + (i.current_version||'?') + '\n' +
+          'Severity: ' + (i.severity||'') + '\n' +
+          'Status: ' + (i.status||'') + '\n' +
+          'Type: ' + (i.remediation_type||'') + '\n' +
+          'Auto-fixable: ' + (i.auto_fixable ? 'yes' : 'no') + '\n' +
+          'Fix version: ' + (i.fix_version||'N/A') + '\n' +
+          'Detail: ' + (i.remediation_detail||'') + '\n' +
+          'Source: ' + (i.source||'') + '\n' +
+          'Found: ' + fmtDate(i.found_at) + ' (cycle ' + (i.scan_cycle||'?') + ')'
+        );
+        expRow.appendChild(expTd);
+        tr.after(expRow);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  frag.appendChild(table);
+  return frag;
+}
+
+// ── Help ────────────────────────────────────────────────────────────────────
+function buildHelp() {
+  const frag = document.createDocumentFragment();
+  const help = h('div',{class:'help'});
+  help.appendChild(h('h3',null,'Project Glasswing \u2014 NOS FOSS Security Research'));
+  help.appendChild(h('p',null,'Glasswing is an autonomous security research pipeline for devBoxNOS \u2014 a self-hosted FOSS platform running 40+ Docker services on Apple Silicon.'));
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'How it works'));
+  const ol1 = h('ol');
+  ['Scheduled task "NOS Security Monitor" runs 2x daily in Claude Code',
+   'Phase 1: CVE advisory check \u2014 scans 5 oldest-checked components per run',
+   'Phase 2: Autonomous pentesting \u2014 deep code review of cloned upstream repos in ~/glasswing/repos/',
+   'Phase 2b: Patch development \u2014 develops fixes in ~/glasswing/patches/ (responsible disclosure)',
+   'Phase 3: Reporting + housekeeping \u2014 advisory .md + updated JSON state',
+   'Version freshness check \u2014 verifies local clones match pinned versions before pentesting'
+  ].forEach(t => ol1.appendChild(h('li',null,t)));
+  help.appendChild(ol1);
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'How to use this dashboard'));
+  const ol2 = h('ol');
+  ['Upload all files from ~/projects/mac-dev-playbook/docs/llm/security/',
+   'Use keyboard shortcuts 1-6 to switch between tabs',
+   'Click table rows and findings to expand details',
+   'Use filters on the Remediation tab to narrow down items',
+   'URL hash navigation: #overview, #pentest, #remediation, etc.',
+   'Re-upload after each task run to see new data'
+  ].forEach(t => ol2.appendChild(h('li',null,t)));
+  help.appendChild(ol2);
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'Security update pipeline'));
+  const ol3 = h('ol');
+  ['CVE scanner updates version pins in default.config.yml',
+   'Run ./security-update.sh to pull images and restart containers',
+   'version_policy: stable (pinned) | latest (newest) | lts (LTS branches)',
+   'Docker compose uses --pull always for mutable tags (latest/lts mode)'
+  ].forEach(t => ol3.appendChild(h('li',null,t)));
+  help.appendChild(ol3);
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'File naming convention'));
+  const ul1 = h('ul');
+  ['YYYY-MM-DD-NN-advisory.md \u2014 Numbered advisory per run (NN = 01, 02, ...)',
+   'scan-state.json \u2014 Per-component timestamps, cycle counter, rotation, probe schedule',
+   'remediation-queue.json \u2014 All findings with severity, fix, status',
+   'pentest-journal.json \u2014 Attack areas, test results, findings, patches',
+   'versions.json \u2014 Component inventory with pinned versions',
+   'pentest-task.md \u2014 The scheduled task prompt (not shown in timeline)'
+  ].forEach(t => ul1.appendChild(h('li',null,t)));
+  help.appendChild(ul1);
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'Keyboard shortcuts'));
+  const ul2 = h('ul');
+  ['1 \u2014 Overview', '2 \u2014 Timeline', '3 \u2014 Components', '4 \u2014 Pentest', '5 \u2014 Remediation', '6 \u2014 Help'].forEach(t => ul2.appendChild(h('li',null,t)));
+  help.appendChild(ul2);
+
+  help.appendChild(h('h3',{style:{marginTop:'16px'}},'Scan recency indicators'));
+  const ul3 = h('ul');
+  ['\u2588 Green \u2014 Scanned within 24 hours',
+   '\u2588 Yellow \u2014 24-48 hours since last scan',
+   '\u2588 Orange \u2014 48-72 hours since last scan',
+   '\u2588 Red \u2014 More than 72 hours since last scan'
+  ].forEach(t => ul3.appendChild(h('li',null,t)));
+  help.appendChild(ul3);
+
+  frag.appendChild(help);
+  return frag;
+}
+
+// Initial render + hash routing
+if (location.hash) setTab(location.hash.slice(1));
+else render();
+</script>
+</body>
+</html>

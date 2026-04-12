@@ -1,0 +1,11 @@
+---
+# pazny.jellyfin — handlers
+# Pred Wave 2.2 nemel Jellyfin dedicated handler v play-level main.yml.
+# Tento role-lokalni handler je notified z tasks/main.yml pri zmene
+# compose override templatu.
+
+- name: Restart jellyfin
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    restart jellyfin
+  failed_when: false

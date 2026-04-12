@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# RESTORE – obnova dat z Restic zálohy
+# Obnoví poslední snapshot do dočasného adresáře + importuje DB dumpy
+# ==============================================================================
+
+- name: "[Restore] Verify restic is installed"
+  ansible.builtin.command: which restic
+  register: restic_which
+  changed_when: false
+  failed_when: restic_which.rc != 0
+
+- name: "[Restore] Verify restic_repo is configured"
+  ansible.builtin.fail:
+    msg: "restic_repo is empty — set it in config.yml"
+  when: restic_repo | default('') | length == 0
+
+- name: "[Restore] List available snapshots"
+  ansible.builtin.command: restic -r {{ restic_repo }} snapshots
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  register: restic_snapshots
+  changed_when: false
+
+- name: "[Restore] Show available snapshots"
+  ansible.builtin.debug:
+    var: restic_snapshots.stdout_lines
+
+- name: "[Restore] Ensure restore-temp directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp"
+    state: directory
+    mode: '0700'
+
+- name: "[Restore] Restore latest snapshot"
+  ansible.builtin.command: >
+    restic -r {{ restic_repo }} restore latest
+    --target {{ ansible_facts['env']['HOME'] }}/restore-temp/
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  async: 3600
+  poll: 30
+
+# ── Database restore ─────────────────────────────────────────────────────────
+
+- name: "[Restore] Check if PostgreSQL dump exists"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql"
+  register: pg_dump_file
+
+- name: "[Restore] Restore PostgreSQL databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T postgresql
+    psql -U postgres < {{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql
+  when:
+    - install_postgresql | default(false)
+    - pg_dump_file.stat.exists | default(false)
+  failed_when: false
+
+- name: "[Restore] Check if MariaDB dump exists"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql"
+  register: maria_dump_file
+
+- name: "[Restore] Restore MariaDB databases"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T mariadb
+    mysql -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}
+    < {{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql
+  when:
+    - install_mariadb | default(false)
+    - maria_dump_file.stat.exists | default(false)
+  failed_when: false
+  no_log: true
+
+- name: "[Restore] Show restore summary"
+  ansible.builtin.debug:
+    msg: >-
+      Restore complete. Data extracted to ~/restore-temp/.
+      Review contents and move files to their target locations.
+      PostgreSQL restored: {{ pg_dump_file.stat.exists | default(false) }}
+      MariaDB restored: {{ maria_dump_file.stat.exists | default(false) }}

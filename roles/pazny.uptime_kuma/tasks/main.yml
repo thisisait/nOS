@@ -1,0 +1,27 @@
+---
+# ==============================================================================
+# pazny.uptime_kuma/tasks/main.yml
+#
+# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/uptime-kuma.yml.
+#
+# Post-start (monitors setup + password reconverge) je v tasks/monitors.yml —
+# volany az po `docker compose up iiab --wait`.
+# ==============================================================================
+
+- name: "[pazny.uptime_kuma] Ensure data and log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ uptime_kuma_data_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.uptime_kuma] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/uptime-kuma.yml"
+    mode: '0644'
+  notify: Restart uptime_kuma

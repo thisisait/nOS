@@ -1,0 +1,184 @@
+---
+# ==============================================================================
+# Authentik Service-Side OIDC Post-Setup
+# Konfigurace služeb, které nepodporují OIDC přes env vars
+# Spouští se po stack-up (provideri/aplikace už jsou v Authentiku — reconcile
+# přes blueprinty v tasks/stacks/authentik_blueprints.yml)
+# ==============================================================================
+
+# ── Gitea: registrace OAuth2 source přes Admin API ──────────────────────────
+
+- name: "[Authentik→Gitea] Check if OAuth2 source exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
+    method: GET
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [200]
+  register: _gitea_oauth_sources
+  when: install_gitea | default(false)
+  failed_when: false
+
+- name: "[Authentik→Gitea] Resolve existing auth source ID (for PATCH)"
+  ansible.builtin.set_fact:
+    _gitea_ak_source_id: >-
+      {{ (_gitea_oauth_sources.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | first | default({})).id | default(0) }}
+  when:
+    - install_gitea | default(false)
+    - _gitea_oauth_sources.status | default(0) == 200
+
+- name: "[Authentik→Gitea] Create OAuth2 authentication source (first-run)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
+    method: POST
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "oauth2"
+      name: "authentik"
+      oauth2_config:
+        provider: "openidConnect"
+        client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_id }}"
+        client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_secret }}"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitea/.well-known/openid-configuration"
+        scopes: ["openid", "profile", "email"]
+    status_code: [200, 201]
+  when:
+    - install_gitea | default(false)
+    - _gitea_oauth_sources.status | default(0) == 200
+    - _gitea_ak_source_id | int == 0
+  failed_when: false
+
+- name: "[Authentik→Gitea] PATCH existing auth source (client_secret rotation)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers/{{ _gitea_ak_source_id }}"
+    method: PATCH
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "oauth2"
+      name: "authentik"
+      oauth2_config:
+        provider: "openidConnect"
+        client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_id }}"
+        client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_secret }}"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitea/.well-known/openid-configuration"
+        scopes: ["openid", "profile", "email"]
+    status_code: [200, 204]
+  register: _gitea_source_patch
+  when:
+    - install_gitea | default(false)
+    - _gitea_oauth_sources.status | default(0) == 200
+    - _gitea_ak_source_id | int > 0
+  changed_when: _gitea_source_patch.status | default(0) in [200, 204]
+  failed_when: false
+  notify: Restart gitea
+
+# ── Portainer: OAuth2 konfigurace přes Settings API ─────────────────────────
+
+- name: "[Authentik→Portainer] Get current auth settings"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings"
+    method: GET
+    headers:
+      X-API-Key: "{{ portainer_admin_password | default('') }}"
+    status_code: [200]
+  register: _portainer_settings
+  when: install_portainer | default(false)
+  failed_when: false
+
+# Portainer OAuth vyžaduje inicializovaný admin účet — přeskočit pokud nepřihlášen
+- name: "[Authentik→Portainer] Info"
+  ansible.builtin.debug:
+    msg: >-
+      Portainer OIDC: Manuální konfigurace v Settings → Authentication → OAuth.
+      Client ID: {{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'portainer') | first).client_id }}
+      Auth URL: https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/
+  when: install_portainer | default(false)
+
+# ── Nextcloud: occ příkazy pro user_oidc app ────────────────────────────────
+
+- name: "[Authentik→Nextcloud] Check if Nextcloud container is running"
+  ansible.builtin.command: >
+    {{ docker_bin }} inspect iiab-nextcloud-1 --format '{{ '{{' }}.State.Running{{ '}}' }}'
+  register: _nc_running
+  changed_when: false
+  failed_when: false
+  when: install_nextcloud | default(false)
+
+- name: "[Authentik→Nextcloud] Install user_oidc app"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ app:install user_oidc
+  register: _nc_user_oidc_install
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: "'already installed' not in (_nc_user_oidc_install.stdout | default(''))"
+
+- name: "[Authentik→Nextcloud] Enable user_oidc app"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ app:enable user_oidc
+  register: _nc_user_oidc_enable
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: "'already enabled' not in (_nc_user_oidc_enable.stdout | default(''))"
+
+- name: "[Authentik→Nextcloud] Check if OIDC provider registered"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ user_oidc:provider
+  register: _nc_oidc_check
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: false
+
+# Two-step: CREATE pokud neexistuje, UPDATE pokud existuje. `occ user_oidc:provider`
+# bez update-if-exists flagu FAILUJE na duplicate, takze potrebujeme dve
+# samostatne tasky. Update flag se lisi podle verze — failed_when: false
+# pokryje verze bez subcommand.
+- name: "[Authentik→Nextcloud] Register OIDC provider (first-run)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ user_oidc:provider authentik
+    --clientid="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_id }}"
+    --clientsecret="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
+    --discoveryuri="https://{{ authentik_domain | default('auth.dev.local') }}/application/o/nextcloud/.well-known/openid-configuration"
+    --mapping-uid="preferred_username"
+    --mapping-email="email"
+    --mapping-displayname="name"
+  register: _nc_oidc_create
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+    - "'authentik' not in (_nc_oidc_check.stdout | default(''))"
+  changed_when: _nc_oidc_create.rc | default(1) == 0
+  failed_when: false
+  notify: Restart nextcloud
+
+# Reconverge client_secret na kazdy beh: user_oidc:provider podporuje
+# --update flag v recent versions. Pokud flag neni podporovany, command
+# failuje harmlessly (failed_when: false) a uzivatel vidi drift warning.
+- name: "[Authentik→Nextcloud] Update OIDC provider client_secret (reconverge)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ user_oidc:provider authentik
+    --clientsecret="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
+  register: _nc_oidc_update
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+    - "'authentik' in (_nc_oidc_check.stdout | default(''))"
+  changed_when: _nc_oidc_update.rc | default(1) == 0
+  failed_when: false
+  notify: Restart nextcloud

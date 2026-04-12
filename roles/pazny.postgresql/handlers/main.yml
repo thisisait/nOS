@@ -1,0 +1,12 @@
+---
+# pazny.postgresql — handlers
+# Restart postgresql je definovany i na play-level v main.yml pro zpetnou
+# kompatibilitu s notify: z tasku mimo tuto roli. Play-level handler
+# prebira prednost, takze tenhle role-lokalni je prakticky unreachable,
+# ale definovany zustava kvuli samostatnosti role.
+
+- name: Restart postgresql
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart postgresql
+  failed_when: false

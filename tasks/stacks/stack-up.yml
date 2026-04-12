@@ -1,32 +1,23 @@
 ---
 # ==============================================================================
-# DOCKER STACKS – deploy compose souborů a spuštění všech stacků
-# Nahrazuje starý monolitický tasks/iiab/stack.yml
+# REMAINING DOCKER STACKS – deploy compose šablon + up ostatních stacků
+#
+# Tento soubor spouští VŠE kromě core stacků (infra, observability). Core
+# stacks se bringují dopředu v tasks/stacks/core-up.yml – před service-side
+# tasky – aby MariaDB / Postgres / Authentik / Grafana / Prometheus / Loki
+# / Tempo byly online než začnou iiab/devops/b2b/voip/data/engineering
+# role renderovat své konfigy.
+#
+# Ostatní service tasky (nextcloud, gitea, kiwix...) zde běží POST factum –
+# buď už jen dorenderovaly své configy a notify handlers restartují dopředu
+# běžící kontejnery, nebo zde spustíme jejich stack poprvé.
 # ==============================================================================
 
-# Flush pending handlers (Nginx restart, Alloy restart apod.) PŘED spuštěním stacků.
-# Nginx musí poslouchat na 443 než se ověřují HTTPS služby.
-- name: "[Stacks] Flush handlers before stack deployment"
+# Flush handlers (další tasky mohly upravit nginx/alloy config mezitím).
+- name: "[Stacks] Flush handlers before remaining stack deployment"
   ansible.builtin.meta: flush_handlers
 
-# ── Deploy compose souborů z šablon ──────────────────────────────────────────
-
-- name: "[Stacks] Deploy infra compose"
-  ansible.builtin.template:
-    src: "stacks/infra/docker-compose.yml.j2"
-    dest: "{{ stacks_dir }}/infra/docker-compose.yml"
-    mode: '0644'
-  when: >
-    install_portainer | default(false) or install_traefik | default(false) or
-    install_mariadb | default(false) or install_postgresql | default(false) or
-    redis_docker | default(false) or install_bluesky_pds | default(false)
-
-- name: "[Stacks] Deploy observability compose"
-  ansible.builtin.template:
-    src: "stacks/observability/docker-compose.yml.j2"
-    dest: "{{ stacks_dir }}/observability/docker-compose.yml"
-    mode: '0644'
-  when: install_observability | default(true)
+# ── Deploy compose šablon pro zbývající stacky ───────────────────────────────
 
 - name: "[Stacks] Deploy iiab compose"
   ansible.builtin.template:
@@ -39,14 +30,14 @@
     src: "stacks/devops/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/devops/docker-compose.yml"
     mode: '0644'
-  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)
+  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)
 
 - name: "[Stacks] Deploy b2b compose"
   ansible.builtin.template:
     src: "stacks/b2b/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
     mode: '0644'
-  when: install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)
+  when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)
 
 - name: "[Stacks] Deploy voip compose"
   ansible.builtin.template:
@@ -69,21 +60,53 @@
     mode: '0644'
   when: install_metabase | default(false) or install_superset | default(false)
 
-# ── Sestavení seznamu aktivních stacků ───────────────────────────────────────
+# ── Wave 2.2 per-role compose override renders ──────────────────────────────
+# Kazda role renderuje svuj fragment do {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
+# Musi bezet PRED find+merge compose up loop nize.
 
-- name: "[Stacks] Build list of active stacks"
+# IIAB roles
+- { name: "[Stacks] pazny.wordpress render", ansible.builtin.include_role: { name: pazny.wordpress, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
+- { name: "[Stacks] pazny.nextcloud render", ansible.builtin.include_role: { name: pazny.nextcloud, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
+- { name: "[Stacks] pazny.n8n render", ansible.builtin.include_role: { name: pazny.n8n, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
+- { name: "[Stacks] pazny.kiwix render", ansible.builtin.include_role: { name: pazny.kiwix, apply: { tags: ['kiwix'] } }, when: "install_kiwix | default(false)", tags: ['kiwix'] }
+- { name: "[Stacks] pazny.jellyfin render", ansible.builtin.include_role: { name: pazny.jellyfin, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
+- { name: "[Stacks] pazny.uptime_kuma render", ansible.builtin.include_role: { name: pazny.uptime_kuma, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false)", tags: ['uptime-kuma'] }
+- { name: "[Stacks] pazny.calibre_web render", ansible.builtin.include_role: { name: pazny.calibre_web, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
+- { name: "[Stacks] pazny.open_webui render", ansible.builtin.include_role: { name: pazny.open_webui, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.homeassistant render", ansible.builtin.include_role: { name: pazny.homeassistant, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
+- { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
+- { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
+- { name: "[Stacks] pazny.puter render", ansible.builtin.include_role: { name: pazny.puter, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
+- { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
+
+# DevOps roles
+- { name: "[Stacks] pazny.gitea render", ansible.builtin.include_role: { name: pazny.gitea, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
+- { name: "[Stacks] pazny.gitlab render", ansible.builtin.include_role: { name: pazny.gitlab, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
+- { name: "[Stacks] pazny.woodpecker render", ansible.builtin.include_role: { name: pazny.woodpecker, apply: { tags: ['woodpecker'] } }, when: "install_woodpecker | default(false)", tags: ['woodpecker'] }
+- { name: "[Stacks] pazny.paperclip render", ansible.builtin.include_role: { name: pazny.paperclip, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false)", tags: ['paperclip'] }
+
+# B2B roles
+- { name: "[Stacks] pazny.erpnext render", ansible.builtin.include_role: { name: pazny.erpnext, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false)", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.freescout render", ansible.builtin.include_role: { name: pazny.freescout, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false)", tags: ['freescout'] }
+- { name: "[Stacks] pazny.outline render", ansible.builtin.include_role: { name: pazny.outline, apply: { tags: ['outline'] } }, when: "install_outline | default(false)", tags: ['outline'] }
+
+# VoIP / Engineering / Data roles
+- { name: "[Stacks] pazny.freepbx render", ansible.builtin.include_role: { name: pazny.freepbx, apply: { tags: ['freepbx'] } }, when: "install_freepbx | default(false)", tags: ['freepbx'] }
+- { name: "[Stacks] pazny.qgis_server render", ansible.builtin.include_role: { name: pazny.qgis_server, apply: { tags: ['qgis'] } }, when: "install_qgis_server | default(false)", tags: ['qgis'] }
+- { name: "[Stacks] pazny.metabase render", ansible.builtin.include_role: { name: pazny.metabase, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false)", tags: ['metabase'] }
+- { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
+
+# ── Sestavení seznamu REMAINING stacků (bez infra/observability) ─────────────
+
+- name: "[Stacks] Build list of remaining (non-core) active stacks"
   ansible.builtin.set_fact:
-    _active_stacks: >-
+    _remaining_stacks: >-
       {{
-        ((install_portainer | default(false) or install_traefik | default(false) or install_mariadb | default(false) or install_postgresql | default(false) or redis_docker | default(false) or install_bluesky_pds | default(false)) | ternary(['infra'], []))
-        +
-        ((install_observability | default(true)) | ternary(['observability'], []))
-        +
         ['iiab']
         +
-        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false)) | ternary(['devops'], []))
+        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)) | ternary(['devops'], []))
         +
-        ((install_erpnext | default(false) or install_freescout | default(false) or install_mattermost | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
+        ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
         +
         ((install_freepbx | default(false)) | ternary(['voip'], []))
         +
@@ -92,27 +115,45 @@
         ((install_metabase | default(false) or install_superset | default(false)) | ternary(['data'], []))
       }}
 
-# ── Pre-check: Docker daemon musí být ready ─────────────────────────────────
+# ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
+# Každá pazny.<svc> role rendereruje svůj fragment do
+# {{ stacks_dir }}/<stack>/overrides/<svc>.yml; tady se sezbírají a injectují
+# jako dodatečné -f flagy. Prázdný adresář = fallback na base compose only
+# (backward compatible s pre-Wave2 stavem).
 
-- name: "[Stacks] Wait for Docker daemon to be ready"
-  ansible.builtin.shell: >
-    {{ docker_bin }} info >/dev/null 2>&1
-  register: docker_ready
-  retries: 10
-  delay: 5
-  until: docker_ready.rc == 0
-  changed_when: false
+- name: "[Stacks] Enumerate compose overrides per remaining stack"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/{{ item }}/overrides"
+    patterns: "*.yml"
+    file_type: file
+  loop: "{{ _remaining_stacks }}"
+  register: _stack_overrides_find
   check_mode: false
+  loop_control:
+    label: "{{ item }}"
 
-# ── Spuštění stacků ─────────────────────────────────────────────────────────
+- name: "[Stacks] Build stack name → overrides list map"
+  ansible.builtin.set_fact:
+    _stack_overrides_map: >-
+      {{
+        dict(
+          _stack_overrides_find.results
+          | map(attribute='item')
+          | zip(_stack_overrides_find.results | map(attribute='files'))
+        )
+      }}
 
-- name: "[Stacks] Start all active stacks (docker compose up)"
+# ── Start remaining stacks ──────────────────────────────────────────────────
+
+- name: "[Stacks] Start remaining active stacks (docker compose up --wait)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    {% for f in _stack_overrides_map[item] | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p "{{ item }}"
-    up -d --remove-orphans 2>&1
-  loop: "{{ _active_stacks }}"
+    up -d --remove-orphans --wait --wait-timeout 120
+    {{ _docker_compose_pull | default('') }} 2>&1
+  loop: "{{ _remaining_stacks }}"
   register: _stack_results
   changed_when: "'Started' in (item_result.stdout | default('')) or 'Created' in (item_result.stdout | default(''))"
   failed_when: false
@@ -123,6 +164,43 @@
   vars:
     item_result: "{{ _stack_results.results | default([{}]) | last }}"
 
+# ── App-level setup – MUSÍ běžet PO startu stacků ───────────────────────────
+# Pozn: Authentik / Infisical / Bluesky PDS post-start už běží v core-up.yml,
+# takže se zde netouchují.
+
+# ── Wave 2.2 per-role post-start tasks (volane PO compose up) ────────────────
+- { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in _remaining_stacks", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in _remaining_stacks", tags: ['superset'] }
+- { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in _remaining_stacks", tags: ['paperclip'] }
+- { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in _remaining_stacks", tags: ['freescout'] }
+- { name: "[Stacks] pazny.metabase post", ansible.builtin.include_role: { name: pazny.metabase, tasks_from: post.yml, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false) and 'data' in _remaining_stacks", tags: ['metabase'] }
+
+# IIAB post-start (admin onboarding + password reconverge)
+- { name: "[Stacks] pazny.wordpress post", ansible.builtin.include_role: { name: pazny.wordpress, tasks_from: post.yml, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
+- { name: "[Stacks] pazny.nextcloud post", ansible.builtin.include_role: { name: pazny.nextcloud, tasks_from: post.yml, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
+- { name: "[Stacks] pazny.n8n post", ansible.builtin.include_role: { name: pazny.n8n, tasks_from: post.yml, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
+- { name: "[Stacks] pazny.open_webui post", ansible.builtin.include_role: { name: pazny.open_webui, tasks_from: post.yml, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.puter post", ansible.builtin.include_role: { name: pazny.puter, tasks_from: post.yml, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
+- { name: "[Stacks] pazny.jellyfin post", ansible.builtin.include_role: { name: pazny.jellyfin, tasks_from: post.yml, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
+- { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
+- { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
+# DevOps post-start
+- { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
+- { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
+
+# ── Authentik OIDC: service-side konfigurace (Gitea API, Nextcloud occ) ──────
+- name: "[Stacks] Authentik service-side OIDC post-setup"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_service_post.yml"
+  when:
+    - install_authentik | default(false)
+
+# ── Authentik → Bluesky PDS identity bridge ──────────────────────────────────
+- name: "[Stacks] Authentik→PDS identity bridge: provision Bluesky accounts"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/bluesky_pds_bridge.yml"
+  when:
+    - install_bluesky_pds | default(false)
+    - install_authentik | default(false)
+
 # ── Výsledky ─────────────────────────────────────────────────────────────────
 
 - name: "[Stacks] Show stack results"
@@ -132,7 +210,7 @@
   loop_control:
     label: "{{ item.item }}"
 
-# ── Selhání → pause pro manuální opravu ──────────────────────────────────────
+# ── Selhání → warning pro manuální kontrolu ──────────────────────────────────
 
 - name: "[Stacks] Build list of failed stacks"
   ansible.builtin.set_fact:
@@ -143,26 +221,28 @@
          | map(attribute='item')
          | list }}
 
-- name: "[Stacks] Failed stacks – waiting for manual fix"
-  ansible.builtin.pause:
-    prompt: |-
+- name: "[Stacks] Warning: stacks with non-zero exit (may include init containers or unhealthy checks)"
+  ansible.builtin.debug:
+    msg: |
+      VAROVANI: Tyto stacky vratily non-zero exit code (casto false positive):
       {% for stack in _failed_stacks %}
-
-      ══════════════════════════════════════════════════════════════════════
-       STACK "{{ stack }}" SELHAL
-
-       Diagnóza:
-         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
-
-       Oprava:
-         {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} up -d
-
-       Stiskni ENTER po opravě
-      ══════════════════════════════════════════════════════════════════════
+        - {{ stack }} → {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
       {% endfor %}
+      Pozn: ERPNext configurator (exit 0) a distroless healthchecky jsou ocekavane.
   when: (_failed_stacks | length) > 0
 
-# ── Container status všech stacků ────────────────────────────────────────────
+# ── Container status všech stacků (core + remaining) ────────────────────────
+
+- name: "[Stacks] Build list of all deployed stacks for status"
+  ansible.builtin.set_fact:
+    _all_deployed_stacks: >-
+      {{
+        ((_core_infra_enabled | default(false)) | ternary(['infra'], []))
+        +
+        ((_core_observability_enabled | default(true)) | ternary(['observability'], []))
+        +
+        _remaining_stacks
+      }}
 
 - name: "[Stacks] Show running containers across all stacks"
   ansible.builtin.shell: >
@@ -170,7 +250,7 @@
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     -p "{{ item }}"
     ps --format "table {{'{{'}}.Name{{'}}'}}\t{{'{{'}}.Status{{'}}'}}" 2>&1
-  loop: "{{ _active_stacks }}"
+  loop: "{{ _all_deployed_stacks }}"
   register: _stacks_ps
   changed_when: false
   check_mode: false

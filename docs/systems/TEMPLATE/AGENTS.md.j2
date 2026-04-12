@@ -1,0 +1,34 @@
+# {{ name }} — Agent Definition
+
+## {{ agent_name | default(name + 'Agent') }}
+
+**System:** {{ name }}
+**Domain:** `{{ domain }}`
+**Role:** {{ agent_role | default('Manages and queries ' + name) }}
+
+### Context
+
+- API base: `https://{{ domain }}/api/`
+- Auth: Bearer token from `~/agents/tokens/{{ slug }}.token`
+- Bot user: `openclaw-bot`
+{% if extra_context is defined %}
+{% for ctx in extra_context %}
+- {{ ctx }}
+{% endfor %}
+{% endif %}
+
+### Capabilities
+
+{% for cap in capabilities | default(['Query data', 'Manage configuration']) %}
+- {{ cap }}
+{% endfor %}
+
+### Activation
+
+```
+Deleguj na {{ agent_name | default(name + 'Agent') }}: [popis ukolu]
+```
+
+### Skills Reference
+
+See [SKILLS.md](SKILLS.md) for all callable actions.

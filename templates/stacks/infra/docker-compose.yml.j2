@@ -5,171 +5,84 @@
 
 services:
 
-{% if install_mariadb | default(false) %}
-  mariadb:
-    image: mariadb:{{ mariadb_version | default('lts') }}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
-    volumes:
-      - {{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}:/var/lib/mysql
-    environment:
-      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      MARIADB_ROOT_HOST: "%"
-      MARIADB_CHARACTER_SET_SERVER: utf8mb4
-      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
+{# mariadb service byl extrahovany do role pazny.mariadb (Wave 2.1) a
+   renderuje se do {{ stacks_dir }}/infra/overrides/mariadb.yml. core-up.yml
+   ho merguje pres `docker compose -f base.yml -f overrides/mariadb.yml up`. #}
 
-{% endif %}
-{% if install_postgresql | default(false) %}
-  postgresql:
-    image: postgres:{{ postgresql_version | default('16-alpine') }}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ postgresql_port | default(5432) }}:5432"
-    volumes:
-      - {{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: "{{ postgresql_root_password | default('changeme_pw_postgresql') }}"
-      POSTGRES_USER: "{{ postgresql_root_user | default('postgres') }}"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ postgresql_root_user | default('postgres') }}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
+{# postgresql service byl extrahovany do role pazny.postgresql (Wave 2.2) a
+   renderuje se do {{ stacks_dir }}/infra/overrides/postgresql.yml. core-up.yml
+   ho merguje stejnym zpusobem. Install gate: install_postgresql. #}
 
-{% endif %}
-{% if redis_docker | default(false) %}
-  redis:
-    image: redis:{{ redis_version | default('7-alpine') }}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ redis_port | default(6379) }}:6379"
-    volumes:
-      - {{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+{# redis service byl extrahovany do role pazny.redis (Wave 2.2) a renderuje
+   se do {{ stacks_dir }}/infra/overrides/redis.yml. core-up.yml ho merguje
+   stejnym zpusobem. Install gate: redis_docker (ne install_redis — kvuli
+   koexistenci s Homebrew Redis). #}
 
-{% endif %}
-{% if install_portainer | default(false) %}
-  portainer:
-    image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
+{% if install_portainer | default(false) or install_traefik | default(false) %}
+  # ── Docker Socket Proxy – bezpečnostní vrstva mezi kontejnery a Docker API ──
+  # Eliminuje přímý přístup k docker.sock (container escape vektor)
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
-    command: --admin-password-file /tmp/portainer_password
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ portainer_port | default(9002) }}:9000"
-{% else %}
-      - "127.0.0.1:{{ portainer_port | default(9002) }}:9000"
-{% endif %}
+    privileged: true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - {{ portainer_data_dir }}:/data
-      - {{ portainer_data_dir }}/init_password:/tmp/portainer_password:ro
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-{% endif %}
-{% if install_traefik | default(false) %}
-  traefik:
-    image: traefik:{{ traefik_image_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if not (install_nginx | default(true)) %}
-      - "{{ traefik_http_port | default(80) }}:80"
-      - "{{ traefik_https_port | default(443) }}:443"
-{% endif %}
-      - "127.0.0.1:{{ traefik_dashboard_port | default(8080) }}:8080"
-    volumes:
-      - {{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}:/etc/traefik:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - infra_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-
-{% endif %}
-{% if install_bluesky_pds | default(false) %}
-  # ── Bluesky PDS (Personal Data Server) – AT Protocol federace ──────────────
-  bluesky-pds:
-    image: ghcr.io/bluesky-social/pds:{{ bluesky_pds_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ bluesky_pds_port | default(2583) }}:3000"
-{% else %}
-      - "127.0.0.1:{{ bluesky_pds_port | default(2583) }}:3000"
-{% endif %}
-    volumes:
-      - {{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}:/pds
     environment:
-      PDS_HOSTNAME: "{{ bluesky_pds_hostname | default('bsky.dev.local') }}"
-      PDS_JWT_SECRET: "{{ bluesky_pds_jwt_secret | default('changeme_pw_bluesky_jwt') }}"
-      PDS_ADMIN_PASSWORD: "{{ bluesky_pds_admin_password | default('changeme_pw_bluesky') }}"
-      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: "{{ bluesky_pds_rotation_key | default('') }}"
-      PDS_DATA_DIRECTORY: /pds
-      PDS_BLOBSTORE_DISK_LOCATION: /pds/blocks
-      PDS_DID_PLC_URL: "https://plc.directory"
-      PDS_BSKY_APP_VIEW_URL: "https://api.bsky.app"
-      PDS_BSKY_APP_VIEW_DID: "did:web:api.bsky.app"
-      PDS_REPORT_SERVICE_URL: "https://mod.bsky.app"
-      PDS_REPORT_SERVICE_DID: "did:plc:ar7c4by46qjdydhdevvrndac"
-      PDS_CRAWLERS: "https://bsky.network"
-      LOG_ENABLED: "true"
+      # Read-only API access for Traefik service discovery + Portainer monitoring
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      SERVICES: 1
+      TASKS: 1
+      INFO: 1
+      EVENTS: 1
+      VERSION: 1
+      # Portainer needs write access for container management
+{% if install_portainer | default(false) %}
+      POST: 1
+      BUILD: 1
+      EXEC: 1
+      DISTRIBUTION: 1
+      NODES: 1
+      PLUGINS: 1
+      SECRETS: 1
+      CONFIGS: 1
+      SWARM: 1
+      SYSTEM: 1
+{% else %}
+      POST: 0
+{% endif %}
     networks:
       - infra_net
-      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:
-        max-size: "20m"
-        max-file: "5"
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 128m
+    cpus: "0.25"
 
 {% endif %}
+
+{# portainer service byl extrahovany do role pazny.portainer (Wave 2.2)
+   a renderuje se do {{ stacks_dir }}/infra/overrides/portainer.yml.
+   core-up.yml ho merguje pres `docker compose -f base.yml -f overrides/portainer.yml up`. #}
+
+{# traefik service byl extrahovany do role pazny.traefik (Wave 2.2)
+   a renderuje se do {{ stacks_dir }}/infra/overrides/traefik.yml. #}
+
+{# bluesky-pds service byl extrahovany do role pazny.bluesky_pds (Wave 2.2)
+   a renderuje se do {{ stacks_dir }}/infra/overrides/bluesky-pds.yml.
+   Identity bridge na Authentik zustava v tasks/stacks/bluesky_pds_bridge.yml
+   (cross-service, neni role-owned). #}
+
+{# authentik (server+worker) extrahovany do role pazny.authentik (Wave 2.2)
+   a renderuje se do {{ stacks_dir }}/infra/overrides/authentik.yml.
+   Blueprints: roles/pazny.authentik/templates/blueprints/ #}
+
+{# infisical extrahovany do role pazny.infisical (Wave 2.2)
+   a renderuje se do {{ stacks_dir }}/infra/overrides/infisical.yml. #}
 
 networks:
   infra_net:

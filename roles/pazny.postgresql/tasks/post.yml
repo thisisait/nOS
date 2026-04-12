@@ -1,0 +1,204 @@
+---
+# ==============================================================================
+# POSTGRESQL – post-start: vytvoří databáze a uživatele
+# Běží PO startu infra stacku (stack-up.yml --wait).
+# ==============================================================================
+
+- name: "[PostgreSQL] Verify PostgreSQL is accepting connections"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql pg_isready -U {{ postgresql_root_user | default('postgres') }}
+  register: _pg_ready
+  retries: 18
+  delay: 5
+  until: _pg_ready.rc == 0
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+# pgcrypto enabled in template1 (inherited by future DBs) + all service DBs
+# tak, aby byl `crypt(pw, gen_salt('bf', 10))` dostupny v psql UPDATE
+# reconverge dotazech. Bcrypt hash format je kompatibilni s Java
+# BCryptPasswordEncoder (Metabase, Superset) i Node bcrypt/bcryptjs (n8n).
+- name: "[PostgreSQL] Enable pgcrypto in template1 (inherited by new DBs)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -d template1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+  register: _pg_pgcrypto_tpl
+  changed_when: "'CREATE EXTENSION' in (_pg_pgcrypto_tpl.stdout | default(''))"
+  failed_when: false
+  when:
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Drop existing databases on blank reset"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "DROP DATABASE IF EXISTS {{ item }};"
+  loop: >-
+    {{ ['outline', 'metabase', 'superset']
+       + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
+       + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
+       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
+       + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
+       + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+    }}
+  loop_control:
+    label: "DROP: {{ item }}"
+  register: _pg_drop_db
+  changed_when: "'DROP DATABASE' in (_pg_drop_db.stdout | default(''))"
+  failed_when: false
+  when:
+    - blank | default(false) | bool
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Restart DB-dependent infra services after DROP (blank reset)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    restart authentik-server authentik-worker infisical 2>&1 || true
+  when:
+    - blank | default(false) | bool
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+    - install_authentik | default(false) or install_infisical | default(false)
+  changed_when: false
+  failed_when: false
+
+- name: "[PostgreSQL] Wait for services to restart after DB reset"
+  ansible.builtin.pause:
+    seconds: 10
+  when:
+    - blank | default(false) | bool
+    - install_authentik | default(false) or install_infisical | default(false)
+
+- name: "[PostgreSQL] Drop existing roles on blank reset"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "DROP ROLE IF EXISTS {{ item }};"
+  loop: >-
+    {{ ['outline', 'metabase', 'superset']
+       + ((install_authentik | default(false)) | ternary([authentik_db_user | default('authentik')], []))
+       + ((install_infisical | default(false)) | ternary([infisical_db_user | default('infisical')], []))
+       + ((install_mattermost | default(false)) | ternary([mattermost_db_user | default('mattermost')], []))
+       + ((install_paperclip | default(false)) | ternary([paperclip_db_user | default('paperclip')], []))
+       + ((install_jsos | default(false)) | ternary([jsos_db_user | default('jsos')], []))
+    }}
+  loop_control:
+    label: "DROP ROLE: {{ item }}"
+  register: _pg_drop_role
+  changed_when: "'DROP ROLE' in (_pg_drop_role.stdout | default(''))"
+  failed_when: false
+  when:
+    - blank | default(false) | bool
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Create databases"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "CREATE DATABASE {{ item }};"
+  loop: >-
+    {{ ['outline', 'metabase', 'superset']
+       + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
+       + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
+       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
+       + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
+       + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+    }}
+  loop_control:
+    label: "DB: {{ item }}"
+  register: _pg_db
+  changed_when: _pg_db.rc == 0
+  failed_when: false
+  when:
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Create users"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "CREATE USER {{ item.user }} WITH PASSWORD '{{ item.pass }}';"
+  loop: >-
+    {{ [
+         {'user': outline_db_user | default('outline'), 'pass': outline_db_password | default(global_password_prefix + '_pw_outline')},
+         {'user': metabase_db_user | default('metabase'), 'pass': metabase_db_password | default(global_password_prefix + '_pw_metabase')},
+         {'user': superset_db_user | default('superset'), 'pass': superset_db_password | default(global_password_prefix + '_pw_superset')}
+       ]
+       + ((install_authentik | default(false)) | ternary(
+         [{'user': authentik_db_user | default('authentik'), 'pass': authentik_db_password | default(global_password_prefix + '_pw_authentik_db')}], []))
+       + ((install_infisical | default(false)) | ternary(
+         [{'user': infisical_db_user | default('infisical'), 'pass': infisical_db_password | default(global_password_prefix + '_pw_infisical_db')}], []))
+       + ((install_mattermost | default(false)) | ternary(
+         [{'user': mattermost_db_user | default('mattermost'), 'pass': mattermost_db_password | default(global_password_prefix + '_pw_mattermost')}], []))
+       + ((install_paperclip | default(false)) | ternary(
+         [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(global_password_prefix + '_pw_paperclip')}], []))
+       + ((install_jsos | default(false)) | ternary(
+         [{'user': jsos_db_user | default('jsos'), 'pass': jsos_db_password | default(global_password_prefix + '_pw_jsos')}], []))
+    }}
+  loop_control:
+    label: "USER: {{ item.user }}"
+  no_log: true
+  changed_when: false
+  failed_when: false
+  when:
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Enable pgcrypto in each service database"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -d {{ item }}
+    -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+  loop: >-
+    {{ ['outline', 'metabase', 'superset']
+       + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
+       + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
+       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
+       + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
+       + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+    }}
+  loop_control:
+    label: "pgcrypto: {{ item }}"
+  register: _pg_pgcrypto_per_db
+  changed_when: "'CREATE EXTENSION' in (_pg_pgcrypto_per_db.stdout | default(''))"
+  failed_when: false
+  when:
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[PostgreSQL] Grant privileges"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "GRANT ALL PRIVILEGES ON DATABASE {{ item.db }} TO {{ item.user }}; ALTER DATABASE {{ item.db }} OWNER TO {{ item.user }};"
+  loop: >-
+    {{ [
+         {'db': 'outline', 'user': outline_db_user | default('outline')},
+         {'db': 'metabase', 'user': metabase_db_user | default('metabase')},
+         {'db': 'superset', 'user': superset_db_user | default('superset')}
+       ]
+       + ((install_authentik | default(false)) | ternary(
+         [{'db': authentik_db_name | default('authentik'), 'user': authentik_db_user | default('authentik')}], []))
+       + ((install_infisical | default(false)) | ternary(
+         [{'db': infisical_db_name | default('infisical'), 'user': infisical_db_user | default('infisical')}], []))
+       + ((install_mattermost | default(false)) | ternary(
+         [{'db': mattermost_db_name | default('mattermost'), 'user': mattermost_db_user | default('mattermost')}], []))
+       + ((install_paperclip | default(false)) | ternary(
+         [{'db': 'paperclip', 'user': paperclip_db_user | default('paperclip')}], []))
+       + ((install_jsos | default(false)) | ternary(
+         [{'db': jsos_db_name | default('jsos'), 'user': jsos_db_user | default('jsos')}], []))
+    }}
+  loop_control:
+    label: "GRANT: {{ item.db }}"
+  changed_when: false
+  failed_when: false
+  when:
+    - _pg_ready.rc | default(1) == 0
+    - not ansible_check_mode

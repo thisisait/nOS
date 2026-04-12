@@ -1,0 +1,28 @@
+---
+# ==============================================================================
+# pazny.calibre_web/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori config + books adresare a vyrenderuje compose override fragment
+# do {{ stacks_dir }}/iiab/overrides/calibre-web.yml.
+#
+# Post-start admin password reset (default admin/admin123 -> global_password_
+# prefix) je v tasks/post.yml — volany z stack-up.yml az PO compose up.
+# ==============================================================================
+
+- name: "[pazny.calibre_web] Ensure Calibre-Web directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config') }}"
+    - "{{ calibreweb_books_dir }}"
+    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+- name: "[pazny.calibre_web] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/calibre-web.yml"
+    mode: '0644'
+  notify: Restart calibre-web

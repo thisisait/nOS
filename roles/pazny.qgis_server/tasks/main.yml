@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.qgis_server/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up engineering`:
+# vytvori projekty dir a vyrenderuje compose override fragment do
+# {{ stacks_dir }}/engineering/overrides/qgis_server.yml.
+# ==============================================================================
+
+- name: "[pazny.qgis_server] Ensure projects directory exists"
+  ansible.builtin.file:
+    path: "{{ qgis_data_dir }}/projects"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.qgis_server] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/engineering/overrides/qgis_server.yml"
+    mode: '0644'
+  notify: Restart qgis_server

@@ -1,0 +1,440 @@
+---
+# ==============================================================================
+# CORE STACKS – INFRA + OBSERVABILITY (always-first, always-required)
+#
+# Tento soubor přináší ZÁKLAD devBoxNOS:
+#   • infra – MariaDB, Postgres, Redis, Authentik, Infisical, Traefik,
+#             Bluesky PDS, Portainer (gated flags)
+#   • observability – Grafana, Prometheus, Loki, Tempo
+#
+# Běží VŽDY jako první ze všech docker compose stacků – ještě než se spustí
+# jakýkoli iiab/devops/b2b/voip/data/engineering task. Všechny ostatní
+# role pak mohou předpokládat, že DB/IAM/Vault/observability poslouchají
+# a mohou jen injectovat své konfigy a notify handlers pro restart.
+#
+# Pořadí:
+#   1) Sdílené prerekvizity (mkcert CA, adresáře)
+#   2) Deploy compose šablon (infra + observability)
+#   3) Deploy config files PŘED compose up (kritické – jinak Docker vytvoří
+#      bind mount source jako adresář a služby spadnou)
+#   4) docker compose up infra --wait
+#   5) MariaDB / PostgreSQL post-start setup (DB users, grants)
+#   6) docker compose up observability --wait
+#   7) Authentik / Infisical / Bluesky PDS post-start
+# ==============================================================================
+
+# ── Flush handlers – nginx musí běžet na 443 než se ověřují HTTPS služby ─────
+- name: "[Core] Flush handlers before core stack deployment"
+  ansible.builtin.meta: flush_handlers
+
+# ── mkcert CA pro kontejnery (OIDC discovery potřebuje důvěřovat self-signed) ─
+
+- name: "[Core] Resolve mkcert CAROOT path"
+  ansible.builtin.command: mkcert -CAROOT
+  register: _mkcert_caroot
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: "[Core] Create shared certs directory for containers"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/shared-certs"
+    state: directory
+    mode: '0755'
+  when: _mkcert_caroot.rc | default(1) == 0
+
+- name: "[Core] Copy mkcert root CA to shared-certs"
+  ansible.builtin.copy:
+    src: "{{ _mkcert_caroot.stdout | trim }}/rootCA.pem"
+    dest: "{{ stacks_dir }}/shared-certs/rootCA.pem"
+    mode: '0644'
+    remote_src: true
+  when:
+    - _mkcert_caroot.rc | default(1) == 0
+    - _mkcert_caroot.stdout | default('') | trim | length > 0
+
+# ── Ensure stack subdirectories exist ───────────────────────────────────────
+# Idempotentní – bez toho template tasky mohou selhat nebo (hůř) uložit render
+# do adresáře, který Docker mezitím vytvoří jako bind mount source.
+
+- name: "[Core] Ensure infra and observability subdirectories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ stacks_dir }}/infra"
+    - "{{ stacks_dir }}/infra/overrides"
+    - "{{ stacks_dir }}/observability"
+    - "{{ stacks_dir }}/observability/overrides"
+    - "{{ stacks_dir }}/observability/prometheus"
+    - "{{ stacks_dir }}/observability/loki"
+    - "{{ stacks_dir }}/observability/tempo"
+    - "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
+    - "{{ stacks_dir }}/observability/grafana/provisioning/dashboards"
+    # Override adresáře pro non-core stacky (Wave 2 role fragments)
+    # Musí existovat PŘED stack-up.yml find taskem, jinak find task selže.
+    - "{{ stacks_dir }}/iiab/overrides"
+    - "{{ stacks_dir }}/devops/overrides"
+    - "{{ stacks_dir }}/b2b/overrides"
+    - "{{ stacks_dir }}/voip/overrides"
+    - "{{ stacks_dir }}/engineering/overrides"
+    - "{{ stacks_dir }}/data/overrides"
+
+# ── Ensure INFRA persistent data directories exist ──────────────────────────
+# Docker by je jinak vytvořil jako root:root 0755 což způsobí permission
+# problémy u služeb, které v kontejneru běží pod jiným UID (mariadb, postgres).
+# Používáme set_fact-overridené proměnné, aby externí SSD fungovala správně.
+
+- name: "[Core] Ensure infra service data directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - { path: "{{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}", enabled: "{{ install_mariadb | default(false) | bool }}" }
+    - { path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}", enabled: "{{ install_postgresql | default(false) | bool }}" }
+    - { path: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}", enabled: "{{ redis_docker | default(false) | bool }}" }
+    - { path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}", enabled: "{{ install_authentik | default(false) | bool }}" }
+    - { path: "{{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}", enabled: "{{ install_infisical | default(false) | bool }}" }
+    - { path: "{{ portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer') }}", enabled: "{{ install_portainer | default(false) | bool }}" }
+    - { path: "{{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}", enabled: "{{ install_traefik | default(false) | bool }}" }
+    - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) | bool }}" }
+    - { path: "{{ ansible_facts['env']['HOME'] }}/agents/log", enabled: true }
+  when: item.enabled | bool
+  loop_control:
+    label: "{{ item.path }}"
+
+# ── Guard proti predchozímu race stavu – smaž bind-mount artefakty ──────────
+# Pokud dřívější run nechal tempo.yaml (atd.) jako prázdnou složku (Docker
+# vytvořil mount source před renderem), odstraň ji aby template task uspěl.
+
+- name: "[Core] Stat observability config paths that must be files"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
+    - "{{ stacks_dir }}/observability/loki/local-config.yaml"
+    - "{{ stacks_dir }}/observability/tempo/tempo.yaml"
+    - "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
+    - "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
+  register: _obs_config_stats
+  loop_control:
+    label: "{{ item }}"
+
+- name: "[Core] Remove directory artifacts in place of config files (bind-mount race repair)"
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: absent
+  loop: "{{ _obs_config_stats.results }}"
+  when:
+    - item.stat.exists | default(false)
+    - item.stat.isdir | default(false)
+  loop_control:
+    label: "{{ item.item }}"
+
+# ── Deploy compose šablon (infra + observability) ───────────────────────────
+
+- name: "[Core] Deploy infra compose"
+  ansible.builtin.template:
+    src: "stacks/infra/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/infra/docker-compose.yml"
+    mode: '0644'
+  when: >
+    install_portainer | default(false) or install_traefik | default(false) or
+    install_mariadb | default(false) or install_postgresql | default(false) or
+    redis_docker | default(false) or install_bluesky_pds | default(false) or
+    install_authentik | default(false) or install_infisical | default(false)
+
+- name: "[Core] Deploy observability compose"
+  ansible.builtin.template:
+    src: "stacks/observability/docker-compose.yml.j2"
+    dest: "{{ stacks_dir }}/observability/docker-compose.yml"
+    mode: '0644'
+  when: install_observability | default(true)
+
+# ── Wave 2 per-role compose overrides (renderuji PRED enumerate + compose up) ─
+# Kazda role renderuje svuj compose fragment do {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
+# Find task nize je sesbira a docker compose je merguje pres -f flagy.
+# Post-start tasky (tasks_from=post.yml) bezi az PO compose up dole.
+
+# Infra roles
+- name: "[Core] pazny.mariadb render"
+  ansible.builtin.include_role: { name: pazny.mariadb, apply: { tags: ['mariadb', 'database'] } }
+  when: install_mariadb | default(false)
+  tags: ['mariadb', 'database']
+
+- name: "[Core] pazny.postgresql render"
+  ansible.builtin.include_role: { name: pazny.postgresql, apply: { tags: ['postgresql', 'database'] } }
+  when: install_postgresql | default(false)
+  tags: ['postgresql', 'database']
+
+- name: "[Core] pazny.redis render"
+  ansible.builtin.include_role: { name: pazny.redis, apply: { tags: ['redis', 'database'] } }
+  when: redis_docker | default(false)
+  tags: ['redis', 'database']
+
+- name: "[Core] pazny.authentik render + blueprints"
+  ansible.builtin.include_role: { name: pazny.authentik, apply: { tags: ['authentik', 'iam'] } }
+  when: install_authentik | default(false)
+  tags: ['authentik', 'iam']
+
+- name: "[Core] pazny.infisical render"
+  ansible.builtin.include_role: { name: pazny.infisical, apply: { tags: ['infisical', 'iam'] } }
+  when: install_infisical | default(false)
+  tags: ['infisical', 'iam']
+
+- name: "[Core] pazny.traefik render"
+  ansible.builtin.include_role: { name: pazny.traefik, apply: { tags: ['traefik', 'infra'] } }
+  when: install_traefik | default(false)
+  tags: ['traefik', 'infra']
+
+- name: "[Core] pazny.portainer render"
+  ansible.builtin.include_role: { name: pazny.portainer, apply: { tags: ['portainer', 'infra'] } }
+  when: install_portainer | default(false)
+  tags: ['portainer', 'infra']
+
+- name: "[Core] pazny.bluesky_pds render"
+  ansible.builtin.include_role: { name: pazny.bluesky_pds, apply: { tags: ['bluesky-pds', 'infra'] } }
+  when: install_bluesky_pds | default(false)
+  tags: ['bluesky-pds', 'infra']
+
+# Observability roles
+- name: "[Core] pazny.grafana render"
+  ansible.builtin.include_role: { name: pazny.grafana, apply: { tags: ['grafana', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['grafana', 'observability']
+
+- name: "[Core] pazny.prometheus render"
+  ansible.builtin.include_role: { name: pazny.prometheus, apply: { tags: ['prometheus', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['prometheus', 'observability']
+
+- name: "[Core] pazny.loki render"
+  ansible.builtin.include_role: { name: pazny.loki, apply: { tags: ['loki', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['loki', 'observability']
+
+- name: "[Core] pazny.tempo render"
+  ansible.builtin.include_role: { name: pazny.tempo, apply: { tags: ['tempo', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['tempo', 'observability']
+
+# ── Deploy observability config files (MUSÍ být před docker compose up!) ─────
+# Pokud Docker najde neexistující bind mount source, vytvoří ho jako ADRESÁŘ
+# a kontejner pak crashne v konfigurační fázi. Render těchto souborů zde
+# garantuje, že tempo/prometheus/loki/grafana startují s platným configem.
+
+- name: "[Core] [Loki] Clean stale scratch dir (macOS VirtioFS workaround)"
+  ansible.builtin.file:
+    path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"
+    state: absent
+
+- name: "[Core] Deploy Prometheus configuration"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/prometheus/prometheus.yml"
+    dest: "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+- name: "[Core] Deploy Loki configuration"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/loki/local-config.yaml"
+    dest: "{{ stacks_dir }}/observability/loki/local-config.yaml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+- name: "[Core] Deploy Tempo configuration"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/tempo/tempo.yaml"
+    dest: "{{ stacks_dir }}/observability/tempo/tempo.yaml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+- name: "[Core] Deploy Grafana datasources provisioning"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/datasources/all.yml.j2"
+    dest: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+- name: "[Core] Deploy Grafana dashboard provisioning config"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards/all.yml.j2"
+    dest: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+# ── Pre-check: Docker daemon musí být ready ─────────────────────────────────
+
+- name: "[Core] Wait for Docker daemon to be ready"
+  ansible.builtin.shell: >
+    {{ docker_bin }} info >/dev/null 2>&1
+  register: _core_docker_ready
+  retries: 10
+  delay: 5
+  until: _core_docker_ready.rc == 0
+  changed_when: false
+  check_mode: false
+
+# ── Build list of core stacks actually enabled ──────────────────────────────
+
+- name: "[Core] Resolve which core stacks to bring up"
+  ansible.builtin.set_fact:
+    _core_infra_enabled: >-
+      {{ (install_portainer | default(false)) or (install_traefik | default(false)) or
+         (install_mariadb | default(false)) or (install_postgresql | default(false)) or
+         (redis_docker | default(false)) or (install_bluesky_pds | default(false)) or
+         (install_authentik | default(false)) or (install_infisical | default(false)) }}
+    _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
+
+# ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
+# Každá pazny.<svc> role rendereruje svůj compose fragment do
+# {{ stacks_dir }}/<stack>/overrides/<svc>.yml. Tento find task sebere vsechny
+# existujici overrides a expanduje je jako dodatecne -f flagy v `docker compose
+# up` prikazu nize. Prazdny adresar = fallback na base compose file (backward
+# compatible s pre-Wave2 stavem).
+
+- name: "[Core] Enumerate infra compose overrides"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/infra/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _infra_overrides
+  check_mode: false
+
+- name: "[Core] Enumerate observability compose overrides"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/observability/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _observability_overrides
+  check_mode: false
+
+# ── Start INFRA stack first (DB must be ready before anything else) ─────────
+
+- name: "[Core] Start INFRA stack (docker compose up --wait)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/infra/docker-compose.yml"
+    {% for f in _infra_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+    -p infra
+    up -d --remove-orphans --wait --wait-timeout 120
+    {{ _docker_compose_pull | default('') }} 2>&1
+  register: _core_infra_result
+  failed_when: false
+  check_mode: false
+  when: _core_infra_enabled | bool
+
+- name: "[Core] Infra stack result"
+  ansible.builtin.debug:
+    msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
+  when: _core_infra_result is defined and _core_infra_result.rc is defined
+
+# ── DB post-start setup (MUSÍ běžet PO infra a PŘED observability) ──────────
+# Grafana v observability stacku může používat PostgreSQL jako backend –
+# DB user/DB musí existovat před grafana compose up.
+
+- name: "[Core] MariaDB post-start (pazny.mariadb role → tasks/post.yml)"
+  ansible.builtin.include_role:
+    name: pazny.mariadb
+    tasks_from: post.yml
+    apply:
+      tags: ['mariadb', 'database']
+  when:
+    - install_mariadb | default(false)
+    - _core_infra_enabled | bool
+  tags: ['mariadb', 'database']
+
+- name: "[Core] pazny.postgresql post-start"
+  ansible.builtin.include_role: { name: pazny.postgresql, tasks_from: post.yml, apply: { tags: ['postgresql', 'database'] } }
+  when:
+    - install_postgresql | default(false)
+    - _core_infra_enabled | bool
+  tags: ['postgresql', 'database']
+
+# ── Start OBSERVABILITY stack (DB a configy ready) ──────────────────────────
+
+- name: "[Core] Start OBSERVABILITY stack (docker compose up --wait)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/observability/docker-compose.yml"
+    {% for f in _observability_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+    -p observability
+    up -d --remove-orphans --wait --wait-timeout 120
+    {{ _docker_compose_pull | default('') }} 2>&1
+  register: _core_obs_result
+  failed_when: false
+  check_mode: false
+  when: _core_observability_enabled | bool
+
+- name: "[Core] Observability stack result"
+  ansible.builtin.debug:
+    msg: "observability: rc={{ _core_obs_result.rc | default('?') }} {{ (_core_obs_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
+  when: _core_obs_result is defined and _core_obs_result.rc is defined
+
+- name: "[Core] Grafana admin password reconverge (pazny.grafana → post.yml)"
+  ansible.builtin.include_role:
+    name: pazny.grafana
+    tasks_from: post.yml
+    apply:
+      tags: ['grafana', 'observability']
+  when:
+    - install_observability | default(true)
+    - _core_observability_enabled | bool
+  tags: ['grafana', 'observability']
+
+# ── Core service post-start (Authentik / Infisical / Bluesky PDS) ───────────
+# Ostatní tasky v main.yml mohou poté předpokládat, že IAM / Vault / PDS
+# jsou dostupné (health check čeká uvnitř těchto include_tasks).
+
+- name: "[Core] pazny.authentik post-start (health + blueprints reconcile)"
+  ansible.builtin.include_role: { name: pazny.authentik, tasks_from: post.yml, apply: { tags: ['authentik', 'iam'] } }
+  when:
+    - install_authentik | default(false)
+    - _core_infra_enabled | bool
+  tags: ['authentik', 'iam']
+
+- name: "[Core] pazny.infisical post-start"
+  ansible.builtin.include_role: { name: pazny.infisical, tasks_from: post.yml, apply: { tags: ['infisical', 'iam'] } }
+  when:
+    - install_infisical | default(false)
+    - _core_infra_enabled | bool
+  tags: ['infisical', 'iam']
+
+- name: "[Core] pazny.bluesky_pds post-start (goat CLI admin account)"
+  ansible.builtin.include_role: { name: pazny.bluesky_pds, tasks_from: post.yml, apply: { tags: ['bluesky-pds', 'infra'] } }
+  when:
+    - install_bluesky_pds | default(false)
+    - _core_infra_enabled | bool
+  tags: ['bluesky-pds', 'infra']
+
+- name: "[Core] pazny.portainer post-start (admin init + password reconverge)"
+  ansible.builtin.include_role: { name: pazny.portainer, tasks_from: post.yml, apply: { tags: ['portainer', 'infra'] } }
+  when:
+    - install_portainer | default(false)
+    - _core_infra_enabled | bool
+  tags: ['portainer', 'infra']
+
+# ── Výsledek ─────────────────────────────────────────────────────────────────
+
+- name: "[Core] Summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       CORE STACKS UP – infra + observability jsou online
+      ══════════════════════════════════════════════════════
+       Infra:         {{ 'OK' if (_core_infra_result.rc | default(1)) == 0 else ('SKIP' if not _core_infra_enabled else 'FAILED') }}
+       Observability: {{ 'OK' if (_core_obs_result.rc | default(1)) == 0 else ('SKIP' if not _core_observability_enabled else 'FAILED') }}
+       Authentik:     {{ 'configured' if (install_authentik | default(false)) else 'disabled' }}
+       Infisical:     {{ 'configured' if (install_infisical | default(false)) else 'disabled' }}
+       Bluesky PDS:   {{ 'configured' if (install_bluesky_pds | default(false)) else 'disabled' }}
+
+      Remaining stacks (iiab/devops/b2b/voip/data/engineering) will come up
+      later via tasks/stacks/stack-up.yml after service-side tasks have
+      injected their configs.

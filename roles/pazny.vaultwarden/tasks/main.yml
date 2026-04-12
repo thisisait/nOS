@@ -1,0 +1,36 @@
+---
+# ==============================================================================
+# pazny.vaultwarden/tasks/main.yml
+#
+# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# vytvori data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/vaultwarden.yml.
+#
+# Vaultwarden nema post-start setup — jen nginx vhost (sdilena role-less logika)
+# a debug banner s admin tokenem.
+# ==============================================================================
+
+- name: "[pazny.vaultwarden] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ vaultwarden_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.vaultwarden] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/vaultwarden.yml"
+    mode: '0644'
+  notify: Restart vaultwarden
+
+- name: "[pazny.vaultwarden] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Vaultwarden připraven (spouští se přes IIAB stack)
+      ══════════════════════════════════════════════════════
+       URL:     https://{{ vaultwarden_domain }}
+       Admin:   https://{{ vaultwarden_domain }}/admin
+       Token:   {{ vaultwarden_admin_token }}
+       Data:    {{ vaultwarden_data_dir }}
+      ══════════════════════════════════════════════════════

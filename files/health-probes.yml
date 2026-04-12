@@ -1,0 +1,298 @@
+---
+# ==============================================================================
+# HEALTH PROBE CATALOG — single source of truth pro stack verifikaci
+#
+# Konzumováno z tasks/iiab/stack_verify.yml. Přidání nové služby = přidej
+# entry zde a zapni příslušný install_* flag — žádná úprava stack_verify
+# logiky.
+#
+# Struktura entry:
+#   toggle:             Ansible install_* proměnná (bool)
+#   toggle_default:     Default hodnoty toggle (true = observability, false = vše ostatní)
+#   proto:              "http" | "tcp"
+#   port_var:           Název proměnné s portem na 127.0.0.1
+#   port_default:       Fallback pokud port_var není definovaný
+#   path:               (http only) URL path, default "/"
+#   status:             (http only) Akceptované HTTP status kódy. Default _default_status.
+#   host_header_var:    (http, optional) Název proměnné pro Host: header
+#   host_header_default:(http, optional) Fallback hostname
+#   onboarding:         true = vyžaduje ruční onboarding (pause prompt); default false
+#   hint:               Zpráva v summary při selhání probe
+# ==============================================================================
+
+# Akceptované HTTP statusy pro generické "alive" probe. Per-entry override.
+_default_status: [200, 301, 302, 303, 401, 403, 404]
+
+health_probes:
+
+  # ── Infra / datové služby (auto-retry) ─────────────────────────────────────
+  - slug: mariadb
+    name: "MariaDB"
+    toggle: install_mariadb
+    proto: tcp
+    port_var: mariadb_port
+    port_default: 3306
+    hint: "docker compose -p infra logs mariadb"
+
+  - slug: postgresql
+    name: "PostgreSQL"
+    toggle: install_postgresql
+    proto: tcp
+    port_var: postgresql_port
+    port_default: 5432
+    hint: "docker compose -p infra logs postgresql"
+
+  # ── Observability stack (default on) ───────────────────────────────────────
+  - slug: grafana
+    name: "Grafana"
+    toggle: install_observability
+    toggle_default: true
+    proto: http
+    port_var: grafana_port
+    port_default: 3000
+    path: "/api/health"
+    status: [200]
+    hint: "docker compose -p observability logs grafana"
+
+  - slug: prometheus
+    name: "Prometheus"
+    toggle: install_observability
+    toggle_default: true
+    proto: http
+    port_var: prometheus_port
+    port_default: 9090
+    path: "/-/ready"
+    status: [200]
+    hint: "docker compose -p observability logs prometheus"
+
+  - slug: loki
+    name: "Loki"
+    toggle: install_observability
+    toggle_default: true
+    proto: http
+    port_var: loki_port
+    port_default: 3100
+    path: "/ready"
+    status: [200]
+    hint: "docker compose -p observability logs loki"
+
+  - slug: tempo
+    name: "Tempo"
+    toggle: install_observability
+    toggle_default: true
+    proto: http
+    port_var: tempo_http_port
+    port_default: 3200
+    path: "/ready"
+    status: [200]
+    hint: "docker compose -p observability logs tempo"
+
+  # ── DevOps stack (Gitea/GitLab/Woodpecker) ──────────────────────────────────
+  - slug: gitea
+    name: "Gitea"
+    toggle: install_gitea
+    proto: http
+    port_var: gitea_port
+    port_default: 3003
+    hint: "docker compose -p devops logs gitea"
+
+  - slug: gitlab
+    name: "GitLab"
+    toggle: install_gitlab
+    proto: http
+    port_var: gitlab_http_port
+    port_default: 8929
+    hint: "docker compose -p devops logs gitlab (pomale nabiha ~3-5 min)"
+
+  - slug: woodpecker
+    name: "Woodpecker CI"
+    toggle: install_woodpecker
+    proto: http
+    port_var: woodpecker_port
+    port_default: 8060
+    hint: "docker compose -p devops logs woodpecker-server"
+
+  # ── IIAB content apps ──────────────────────────────────────────────────────
+  - slug: nextcloud
+    name: "Nextcloud"
+    toggle: install_nextcloud
+    proto: http
+    port_var: nextcloud_port
+    port_default: 8085
+    path: "/status.php"
+    status: [200]
+    hint: "docker compose -p iiab logs nextcloud"
+
+  - slug: n8n
+    name: "n8n"
+    toggle: install_n8n
+    proto: http
+    port_var: n8n_port
+    port_default: 5678
+    path: "/healthz"
+    status: [200]
+    hint: "docker compose -p iiab logs n8n"
+
+  - slug: openwebui
+    name: "Open WebUI"
+    toggle: install_openwebui
+    proto: http
+    port_var: openwebui_port
+    port_default: 3004
+    hint: "docker compose -p iiab logs openwebui"
+
+  - slug: calibreweb
+    name: "Calibre-Web"
+    toggle: install_calibreweb
+    proto: http
+    port_var: calibreweb_port
+    port_default: 8083
+    hint: "docker compose -p iiab logs calibre-web"
+
+  - slug: jellyfin
+    name: "Jellyfin"
+    toggle: install_jellyfin
+    proto: http
+    port_var: jellyfin_port
+    port_default: 8096
+    path: "/health"
+    status: [200]
+    hint: "docker compose -p iiab logs jellyfin"
+
+  - slug: homeassistant
+    name: "Home Assistant"
+    toggle: install_homeassistant
+    proto: http
+    port_var: homeassistant_port
+    port_default: 8123
+    hint: "docker compose -p iiab logs homeassistant"
+
+  - slug: portainer
+    name: "Portainer"
+    toggle: install_portainer
+    proto: http
+    port_var: portainer_port
+    port_default: 9002
+    path: "/api/status"
+    status: [200]
+    hint: "docker compose -p infra logs portainer"
+
+  - slug: rustfs
+    name: "RustFS"
+    toggle: install_rustfs
+    proto: http
+    port_var: rustfs_console_port
+    port_default: 9001
+    hint: "docker compose -p iiab logs rustfs"
+
+  - slug: bluesky_pds
+    name: "Bluesky PDS"
+    toggle: install_bluesky_pds
+    proto: http
+    port_var: bluesky_pds_port
+    port_default: 2583
+    path: "/xrpc/_health"
+    status: [200]
+    hint: "docker compose -p infra logs bluesky-pds"
+
+  # ── B2B stack (ERPNext, FreeScout) ──────────────────────────────────────────
+  - slug: erpnext
+    name: "ERPNext"
+    toggle: install_erpnext
+    proto: http
+    port_var: erpnext_port
+    port_default: 8082
+    path: "/api/method/frappe.ping"
+    # 200 = ping allowed, 403 = forbidden (still alive), 417 = Guest disabled
+    # (default Frappe hardening — HTTP stack is alive and answering).
+    status: [200, 403, 417]
+    host_header_var: erpnext_site_name
+    host_header_default: erp.dev.local
+    hint: "docker compose -p b2b logs erpnext-backend (VirtioFS filelock?)"
+
+  - slug: freescout
+    name: "FreeScout"
+    toggle: install_freescout
+    proto: http
+    port_var: freescout_port
+    port_default: 8090
+    hint: "docker compose -p b2b logs freescout"
+
+  # ── Data stack (Metabase, Superset) ─────────────────────────────────────────
+  - slug: metabase
+    name: "Metabase"
+    toggle: install_metabase
+    proto: http
+    port_var: metabase_port
+    port_default: 3002
+    path: "/api/health"
+    status: [200]
+    hint: "docker compose -p data logs metabase"
+
+  - slug: superset
+    name: "Superset"
+    toggle: install_superset
+    proto: http
+    port_var: superset_port
+    port_default: 8089
+    path: "/health"
+    status: [200]
+    hint: "docker compose -p data logs superset"
+
+  # ── Engineering (QGIS) ─────────────────────────────────────────────────────
+  - slug: qgis_server
+    name: "QGIS Server"
+    toggle: install_qgis_server
+    proto: http
+    port_var: qgis_port
+    port_default: 8071
+    hint: "docker compose -p engineering logs qgis"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Onboarding služby – vyžadují ruční setup (pause prompt)
+  # ══════════════════════════════════════════════════════════════════════════
+
+  - slug: uptime_kuma
+    name: "Uptime Kuma"
+    toggle: install_uptime_kuma
+    proto: http
+    port_var: uptime_kuma_port
+    port_default: 3001
+    onboarding: true
+    hint: "Otevri https://{{ uptime_kuma_domain | default('uptime.dev.local') }} a vytvor admin ucet"
+
+  - slug: wordpress
+    name: "WordPress"
+    toggle: install_wordpress
+    proto: http
+    port_var: wordpress_port
+    port_default: 8084
+    onboarding: true
+    hint: "Otevri https://{{ wordpress_domain | default('wp.dev.local') }}/wp-admin/install.php"
+
+  - slug: kiwix
+    name: "Kiwix"
+    toggle: install_kiwix
+    proto: http
+    port_var: kiwix_port
+    port_default: 8888
+    onboarding: true
+    hint: "Kiwix potrebuje ZIM soubory. Spust download-zim.sh a restartuj."
+
+  - slug: outline
+    name: "Outline"
+    toggle: install_outline
+    proto: http
+    port_var: outline_port
+    port_default: 3005
+    onboarding: true
+    hint: "Outline vyzaduje SSO provider (Authentik OIDC). Nastav v Settings → Authentication."
+
+  - slug: freepbx
+    name: "FreePBX"
+    toggle: install_freepbx
+    proto: http
+    port_var: freepbx_port
+    port_default: 8088
+    onboarding: true
+    hint: "Otevri https://{{ freepbx_domain | default('pbx.dev.local') }} a projdi setup wizard."

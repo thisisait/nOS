@@ -1,0 +1,132 @@
+---
+# ==============================================================================
+# pazny.metabase/tasks/post.yml — API-driven setup + admin password reconverge
+#
+# Metabase POST /api/setup creates admin + database config in one call.
+# Idempotent: returns 403 if already set up.
+#
+# Pro non-blank runy (edited credentials.yml) pouzivame /api/session +
+# PUT /api/user/1/password patern – previous_password_prefix drzi posledni
+# hash pro old_password.
+# ==============================================================================
+
+- name: "[pazny.metabase Post] Wait for API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/health"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _mb_ready
+  until: _mb_ready.status | default(0) == 200
+  retries: 20
+  delay: 10
+  failed_when: false
+
+- name: "[pazny.metabase Post] Check if setup already completed"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session/properties"
+    method: GET
+    timeout: 10
+    status_code: [200]
+  register: _mb_props
+  failed_when: false
+  when: _mb_ready.status | default(0) == 200
+
+- name: "[pazny.metabase Post] Get setup token"
+  ansible.builtin.set_fact:
+    _mb_setup_token: "{{ _mb_props.json['setup-token'] | default('') }}"
+  when:
+    - _mb_props.json is defined
+
+- name: "[pazny.metabase Post] Run initial setup (admin + db config) — first-run only"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/setup"
+    method: POST
+    body_format: json
+    body:
+      token: "{{ _mb_setup_token }}"
+      user:
+        email: "{{ metabase_admin_email | default(default_admin_email) }}"
+        password: "{{ metabase_admin_password }}"
+        first_name: "{{ metabase_admin_first_name | default('Admin') }}"
+        last_name: "{{ metabase_admin_last_name | default('devBoxNOS') }}"
+        site_name: "devBoxNOS BI"
+      prefs:
+        site_name: "devBoxNOS BI"
+        site_locale: "en"
+        allow_tracking: false
+    status_code: [200]
+    timeout: 30
+  register: _mb_setup
+  when:
+    - _mb_ready.status | default(0) == 200
+    - _mb_setup_token | default('') | length > 0
+  changed_when: _mb_setup.status | default(0) == 200
+  failed_when: false
+
+# ── Admin password reconverge (state-declarative UPDATE) ──────────────────
+# Metabase /api/user/{id}/password vyzaduje old_password v body. Stridani
+# prefix: previous_password_prefix z .ansible-prefix-state drzi posledni
+# prefix → vytvori "previous_metabase_password" a voluje POST /api/session
+# → PUT /api/user/{id}/password. Bezi jen kdyz setup uz probehl.
+- name: "[pazny.metabase Post] Login with previous password (for reconverge)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ metabase_admin_email | default(default_admin_email) }}"
+      password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_metabase_admin"
+    status_code: [200, 401]
+    timeout: 10
+  register: _mb_session_old
+  when:
+    - _mb_ready.status | default(0) == 200
+    - _mb_setup_token | default('') | length == 0  # setup already done
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.metabase Post] Login with current password (already converged?)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ metabase_admin_email | default(default_admin_email) }}"
+      password: "{{ metabase_admin_password }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _mb_session_new
+  when:
+    - _mb_ready.status | default(0) == 200
+    - _mb_setup_token | default('') | length == 0
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.metabase Post] Reconverge admin password via PUT /api/user/1/password"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/user/1/password"
+    method: PUT
+    body_format: json
+    headers:
+      X-Metabase-Session: "{{ _mb_session_old.json.id }}"
+    body:
+      old_password: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_metabase_admin"
+      password: "{{ metabase_admin_password }}"
+    status_code: [200, 204]
+    timeout: 10
+  register: _mb_pw_reset
+  when:
+    - _mb_session_old.status | default(0) == 200
+    - _mb_session_new.status | default(0) != 200
+  changed_when: _mb_pw_reset.status | default(0) in [200, 204]
+  failed_when: false
+
+- name: "[pazny.metabase Post] Password reconverge status"
+  ansible.builtin.debug:
+    msg: >-
+      Metabase admin pw:
+      {{ 'updated' if (_mb_pw_reset.status | default(0) in [200, 204])
+         else ('already converged' if (_mb_session_new.status | default(0) == 200)
+               else 'DRIFT — manual reset required (both old and new passwords rejected)') }}
+  when: _mb_ready.status | default(0) == 200 and _mb_setup_token | default('') | length == 0
