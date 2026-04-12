@@ -135,10 +135,6 @@
 
 # ── Deploy compose šablon (infra + observability) ───────────────────────────
 
-- name: "[Core] Render Authentik blueprints (admin user, groups, OIDC apps, RBAC)"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_blueprints.yml"
-  when: install_authentik | default(false)
-
 - name: "[Core] Deploy infra compose"
   ansible.builtin.template:
     src: "stacks/infra/docker-compose.yml.j2"
