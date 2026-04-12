@@ -42,12 +42,8 @@
       external_url 'https://{{ gitlab_domain | default("gitlab.dev.local") }}'
 
       # ── Interni nginx (reverzni proxy prebira SSL) ────────────────────────────
-      nginx['listen_port']  = {{ gitlab_http_port | default(8929) }}
+      nginx['listen_port']  = 80
       nginx['listen_https'] = false
-      nginx['proxy_set_headers'] = {
-        "X-Forwarded-Proto" => "https",
-        "X-Forwarded-Ssl"   => "on"
-      }
 
       # ── SSH pro Git operace ───────────────────────────────────────────────────
       gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
@@ -72,10 +68,7 @@
       postgres_exporter['enable'] = false
       gitlab_exporter['enable'] = false
 
-      # ── Grafana (vypnuto – mame vlastni) ──────────────────────────────────────
-      grafana['enable'] = false
-
-      # ── Loki (vypnuto – mame vlastni) ─────────────────────────────────────────
+      # ── Logging ────────────────────────────────────────────────────────────────
       logging['svlogd_size'] = 200 * 1024 * 1024
       logging['logrotate_frequency'] = "weekly"
       logging['logrotate_rotate'] = 4

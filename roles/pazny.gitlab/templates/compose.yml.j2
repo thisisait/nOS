@@ -29,6 +29,17 @@ services:
         gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
         nginx['listen_port'] = 80
         nginx['listen_https'] = false
+        puma['worker_processes'] = 2
+        sidekiq['concurrency'] = 10
+        postgresql['shared_buffers'] = '256MB'
+        prometheus['enable'] = false
+        alertmanager['enable'] = false
+        node_exporter['enable'] = false
+        redis_exporter['enable'] = false
+        postgres_exporter['enable'] = false
+        gitlab_exporter['enable'] = false
+        gitlab_rails['gitlab_signup_enabled'] = false
+        gitlab_rails['time_zone'] = 'Europe/Prague'
 {% if install_authentik | default(false) %}
         gitlab_rails['omniauth_enabled'] = true
         gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
