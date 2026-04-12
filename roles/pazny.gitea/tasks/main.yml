@@ -1,0 +1,41 @@
+---
+# ==============================================================================
+# pazny.gitea/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p devops up`:
+# vytvori data dir, enabluje nginx vhost, vyrenderuje compose override
+# fragment do {{ stacks_dir }}/devops/overrides/gitea.yml, ktery pak
+# stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# Post-start admin-user setup je v tasks/post.yml — volany az PO
+# `docker compose up devops --wait`.
+# ==============================================================================
+
+- name: "[pazny.gitea] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}"
+    state: directory
+    mode: '0755'
+
+# Zastavit starou Homebrew Gitea (pokud bezi z predchozi iterace projektu)
+- name: "[pazny.gitea] Stop old Homebrew Gitea service"
+  ansible.builtin.command: brew services stop gitea
+  register: _gitea_brew_stop
+  changed_when: "'Stopping' in (_gitea_brew_stop.stdout | default(''))"
+  failed_when: false
+
+- name: "[pazny.gitea] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/gitea.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/gitea.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.gitea] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/devops/overrides/gitea.yml"
+    mode: '0644'
+  notify: Restart gitea

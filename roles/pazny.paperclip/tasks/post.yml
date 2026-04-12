@@ -1,0 +1,28 @@
+---
+# ==============================================================================
+# pazny.paperclip/tasks/post.yml — allowed hostname registration
+#
+# Extrahovano z tasks/stacks/stack-up.yml (Wave 2.2 Unit 10). Paperclip
+# pouziva BETTER_AUTH_TRUSTED_ORIGINS env var pro CSRF/CORS, ale allowed
+# hostnames pro admin API musi byt registrovane pres pnpm CLI.
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose up devops --wait`.
+# Idempotent-on-write — pnpm paperclipai allowed-hostname je safe volat
+# na existujici hostname.
+# ==============================================================================
+
+- name: "[pazny.paperclip Post] Register primary allowed hostname"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    pnpm paperclipai allowed-hostname {{ paperclip_domain | default('paperclip.dev.local') }}
+  failed_when: false
+  changed_when: false
+
+- name: "[pazny.paperclip Post] Register extra allowed hostnames"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    pnpm paperclipai allowed-hostname {{ item }}
+  loop: "{{ service_extra_hosts | default([]) }}"
+  when: service_extra_hosts | default([]) | length > 0
+  failed_when: false
+  changed_when: false

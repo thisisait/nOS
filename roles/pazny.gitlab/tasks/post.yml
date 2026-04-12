@@ -1,0 +1,63 @@
+---
+# ==============================================================================
+# pazny.gitlab/tasks/post.yml — root password reconverge (state-declarative)
+#
+# GitLab Omnibus auto-generuje root password do /etc/gitlab/initial_root_password
+# (zmizi po 24h). Reconverge pouziva `gitlab-rails runner` pro overwrite root
+# hesla z credentials.yml. Bezi na kazdy playbook run; idempotent-on-write.
+# ==============================================================================
+
+- name: "[pazny.gitlab Post] Check if GitLab container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/devops/docker-compose.yml"
+    -p devops ps -q gitlab 2>/dev/null
+  register: _gitlab_container
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.gitlab Post] Wait for GitLab web API (/-/readiness)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+    status_code: [200]
+    timeout: 5
+  register: _gitlab_ready
+  retries: 60  # GitLab startup je 2-5 min, Omnibus init je pomaly
+  delay: 10
+  until: _gitlab_ready.status | default(0) == 200
+  when: _gitlab_container.stdout | default('') | length > 0
+  failed_when: false
+
+# Rails runner je nejsafe cesta — prime pise do User modelu bez rake promptu.
+# Idempotent: nastavi stejne heslo pri kazdem runu (bcrypt automaticky re-hash),
+# takze `password changed` hlasi vzdy → fixujeme changed_when na stdout marker.
+- name: "[pazny.gitlab Post] Reconverge root password via gitlab-rails runner"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p devops exec -T gitlab gitlab-rails runner '
+      user = User.find_by(username: "root")
+      if user.nil?
+        puts "ERROR: root user not found"
+        exit 1
+      end
+      user.password = {{ (gitlab_admin_password | default(global_password_prefix + "_pw_gitlab")) | to_json }}
+      user.password_confirmation = {{ (gitlab_admin_password | default(global_password_prefix + "_pw_gitlab")) | to_json }}
+      user.password_automatically_set = false
+      if user.save
+        puts "UPDATED"
+      else
+        puts "ERROR: #{user.errors.full_messages.join(\", \")}"
+      end
+    '
+  register: _gitlab_pw_reset
+  when: _gitlab_ready.status | default(0) == 200
+  changed_when: "'UPDATED' in (_gitlab_pw_reset.stdout | default(''))"
+  failed_when: false
+
+- name: "[pazny.gitlab Post] Password reconverge status"
+  ansible.builtin.debug:
+    msg: >-
+      GitLab root pw:
+      {{ 'updated' if ('UPDATED' in (_gitlab_pw_reset.stdout | default('')))
+         else ('skipped (not ready)' if (_gitlab_ready.status | default(0) != 200)
+               else 'FAILED — ' ~ (_gitlab_pw_reset.stdout | default('unknown'))) }}
+  when: _gitlab_container.stdout | default('') | length > 0

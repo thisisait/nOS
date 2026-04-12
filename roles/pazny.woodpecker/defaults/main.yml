@@ -1,0 +1,22 @@
+---
+# ==============================================================================
+# pazny.woodpecker — Woodpecker CI in Docker (devops compose stack)
+#
+# Lehky CI/CD napojen na Gitea pres OAuth2. Dve compose sluzby v jedne roli:
+#   • woodpecker-server — web UI + API + task queue
+#   • woodpecker-agent  — runner, provadi pipeline kroky
+#
+# Credentials (woodpecker_agent_secret) + OAuth2 (woodpecker_gitea_client,
+# woodpecker_gitea_secret) zustavaji v top-level default.credentials.yml /
+# default.config.yml.
+# ==============================================================================
+
+woodpecker_version: "v3"                # latest tag odstranen, musi byt semver
+woodpecker_domain: "ci.dev.local"
+woodpecker_port: 8060                   # Web UI
+woodpecker_grpc_port: 9060              # gRPC pro agenty (interni)
+woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
+woodpecker_open_registration: false
+woodpecker_max_workflows: 4             # Max paralelnich pipeline runu na agenta
+woodpecker_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+woodpecker_agent_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"

@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.gitlab — GitLab CE in Docker (devops compose stack)
+#
+# Tezky Omnibus stack (~4 GB RAM v klidu). Kompletni devops platforma
+# (Git, CI/CD, registry, wiki, issues). Credentials (gitlab_admin_password)
+# zustavaji v top-level default.credentials.yml.
+# ==============================================================================
+
+gitlab_version: "18.10.1-ce.0"          # CVE-2026-0723 (2FA bypass), 9 HIGH CVEs
+gitlab_domain: "gitlab.dev.local"
+gitlab_http_port: 8929                  # Interni HTTP port (nginx prebira SSL)
+gitlab_ssh_port: 2224                   # Git SSH (22=system, 2222=Gitea)
+gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"
+gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config"
+gitlab_timezone: "Europe/Prague"
+gitlab_signup_enabled: false
+gitlab_puma_workers: 2                  # Min 2, pro 36 GB klidne 4
+gitlab_sidekiq_concurrency: 10
+gitlab_mem_limit: "{{ docker_mem_limit_heavy | default('4g') }}"
+gitlab_cpus: "{{ docker_cpus_heavy | default('2.0') }}"

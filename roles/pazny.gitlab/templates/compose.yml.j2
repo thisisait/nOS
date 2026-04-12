@@ -1,0 +1,49 @@
+# =============================================================================
+# pazny.gitlab — compose override fragment
+# Merged do `docker compose -p devops up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/devops/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — devops_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/devops/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}
+    restart: unless-stopped
+    hostname: "{{ gitlab_domain | default('gitlab.dev.local') }}"
+    shm_size: 256m
+    ports:
+      - "127.0.0.1:{{ gitlab_http_port | default(8929) }}:80"
+      - "127.0.0.1:{{ gitlab_ssh_port | default(2224) }}:22"
+    volumes:
+      - {{ gitlab_config_dir }}:/etc/gitlab
+      - {{ ansible_facts['env']['HOME'] }}/gitlab-logs:/var/log/gitlab
+      - {{ gitlab_data_dir }}:/var/opt/gitlab
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/gitlab/trusted-certs/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://{{ gitlab_domain | default('gitlab.dev.local') }}'
+        gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
+{% if install_authentik | default(false) %}
+        gitlab_rails['omniauth_enabled'] = true
+        gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+        gitlab_rails['omniauth_block_auto_created_users'] = false
+        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab.dev.local') }}/users/auth/openid_connect/callback' } } }]
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - devops_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    mem_limit: {{ gitlab_mem_limit | default(docker_mem_limit_heavy) }}
+    cpus: {{ docker_cpus_heavy | default('2.0') }}

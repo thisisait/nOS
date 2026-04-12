@@ -1,0 +1,67 @@
+# =============================================================================
+# pazny.woodpecker — compose override fragment (server + agent)
+# Merged do `docker compose -p devops up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/devops/overrides/*.yml.
+#
+# Obe sluzby (woodpecker-server a woodpecker-agent) jsou jeden logicky celek
+# a zustavaji v jednom fragmentu — agent sam o sobe bez serveru nema smysl.
+#
+# Nedeklaruje top-level networks: — devops_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/devops/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ woodpecker_port | default(8060) }}:8000"
+      - "127.0.0.1:{{ woodpecker_grpc_port | default(9060) }}:9000"
+    volumes:
+      - {{ woodpecker_data_dir }}:/var/lib/woodpecker
+    environment:
+      WOODPECKER_GITEA: "true"
+      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
+      WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
+      WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
+      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci.dev.local') }}"
+      WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
+      WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
+    extra_hosts:
+      - "{{ gitea_domain | default('git.dev.local') }}:host-gateway"
+{% if install_authentik | default(false) %}
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - devops_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ woodpecker_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WOODPECKER_SERVER: "woodpecker-server:9000"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
+      WOODPECKER_MAX_WORKFLOWS: "{{ woodpecker_max_workflows | default(4) }}"
+      WOODPECKER_BACKEND: docker
+    networks:
+      - devops_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ woodpecker_agent_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_standard | default('1.0') }}

@@ -1,0 +1,10 @@
+---
+# pazny.gitlab — handlers
+# GitLab nemel dedikovany handler na play-level v main.yml, takze tato
+# role je jediny zdroj. Coordinator v Phase B nema co odstranovat.
+
+- name: Restart gitlab
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+    restart gitlab
+  failed_when: false

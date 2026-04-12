@@ -1,186 +1,23 @@
 # =============================================================================
-# DEVOPS STACK – Gitea, Woodpecker CI, GitLab
+# DEVOPS STACK – Gitea, Woodpecker CI, GitLab, Paperclip
 # Generováno Ansiblem – NEUPRAVUJ ručně
+#
+# Wave 2.2 Unit 10: všechny services byly extrahované do dedikovaných rolí.
+# Tento base soubor drží už jen networks: — actual service bloky přidávají
+# role-specific overrides v {{ stacks_dir }}/devops/overrides/*.yml, které
+# stack-up.yml sbírá přes `find + -f` merge loop.
+#
+# Mapa fragmentů:
+#   • gitea       → roles/pazny.gitea/templates/compose.yml.j2
+#   • woodpecker  → roles/pazny.woodpecker/templates/compose.yml.j2 (server + agent)
+#   • gitlab      → roles/pazny.gitlab/templates/compose.yml.j2
+#   • paperclip   → roles/pazny.paperclip/templates/compose.yml.j2
+#
+# Prázdný services: dict by docker compose odmítl, takže deklarujeme placeholder
+# přes explicit {} — overrides ho pak rozšíří o reálné services.
 # =============================================================================
 
-services:
-
-{% if install_gitea | default(false) %}
-  gitea:
-    image: gitea/gitea:{{ gitea_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ gitea_port | default(3003) }}:3000"
-{% else %}
-      - "127.0.0.1:{{ gitea_port | default(3003) }}:3000"
-{% endif %}
-      - "127.0.0.1:{{ gitea_ssh_port | default(2222) }}:22"
-    volumes:
-      - {{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}:/data
-    environment:
-      USER_UID: "{{ ansible_facts['user_uid'] }}"
-      USER_GID: "{{ ansible_facts['user_gid'] }}"
-      GITEA__server__DOMAIN: "{{ gitea_domain | default('git.dev.local') }}"
-      GITEA__server__ROOT_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
-      GITEA__server__SSH_PORT: "{{ gitea_ssh_port | default(2222) }}"
-      GITEA__server__OFFLINE_MODE: "true"
-      GITEA__database__DB_TYPE: "sqlite3"
-      GITEA__security__INSTALL_LOCK: "true"
-      GITEA__security__SECRET_KEY: "{{ gitea_secret_key | default(global_password_prefix + '_pw_gitea_secret') }}"
-      GITEA__service__DISABLE_REGISTRATION: "{{ gitea_disable_registration | default(false) | string | lower }}"
-      GITEA__log__LEVEL: "Warn"
-      TZ: "Europe/Prague"
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/v1/version"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    networks:
-      - devops_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ gitea_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
-{% if install_woodpecker | default(false) %}
-  woodpecker-server:
-    image: woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:{{ woodpecker_port | default(8060) }}:8000"
-      - "127.0.0.1:{{ woodpecker_grpc_port | default(9060) }}:9000"
-    volumes:
-      - {{ woodpecker_data_dir }}:/var/lib/woodpecker
-    environment:
-      WOODPECKER_GITEA: "true"
-      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
-      WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
-      WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
-      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
-      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci.dev.local') }}"
-      WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
-      WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
-    extra_hosts:
-      - "{{ gitea_domain | default('git.dev.local') }}:host-gateway"
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
-{% endif %}
-    networks:
-      - devops_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ woodpecker_mem_limit | default(docker_mem_limit_light) }}
-    cpus: {{ docker_cpus_light | default('0.5') }}
-
-  woodpecker-agent:
-    image: woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}
-    restart: unless-stopped
-    depends_on:
-      - woodpecker-server
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      WOODPECKER_SERVER: "woodpecker-server:9000"
-      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
-      WOODPECKER_MAX_WORKFLOWS: "{{ woodpecker_max_workflows | default(4) }}"
-      WOODPECKER_BACKEND: docker
-    networks:
-      - devops_net
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ woodpecker_agent_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
-{% if install_gitlab | default(false) %}
-  gitlab:
-    image: gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}
-    restart: unless-stopped
-    hostname: "{{ gitlab_domain | default('gitlab.dev.local') }}"
-    shm_size: 256m
-    ports:
-      - "127.0.0.1:{{ gitlab_http_port | default(8929) }}:80"
-      - "127.0.0.1:{{ gitlab_ssh_port | default(2224) }}:22"
-    volumes:
-      - {{ gitlab_config_dir }}:/etc/gitlab
-      - {{ ansible_facts['env']['HOME'] }}/gitlab-logs:/var/log/gitlab
-      - {{ gitlab_data_dir }}:/var/opt/gitlab
-{% if install_authentik | default(false) %}
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/gitlab/trusted-certs/mkcert-ca.crt:ro
-{% endif %}
-    environment:
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://{{ gitlab_domain | default('gitlab.dev.local') }}'
-        gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
-{% if install_authentik | default(false) %}
-        gitlab_rails['omniauth_enabled'] = true
-        gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
-        gitlab_rails['omniauth_block_auto_created_users'] = false
-        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab.dev.local') }}/users/auth/openid_connect/callback' } } }]
-{% endif %}
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
-{% endif %}
-    networks:
-      - devops_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "5"
-    mem_limit: {{ gitlab_mem_limit | default(docker_mem_limit_heavy) }}
-    cpus: {{ docker_cpus_heavy | default('2.0') }}
-
-{% endif %}
-{% if install_paperclip | default(false) %}
-  # ── Paperclip – multi-agent orchestration platform ────────────────────────
-  paperclip:
-    image: ghcr.io/paperclipai/paperclip:{{ paperclip_version | default('latest') }}
-    restart: unless-stopped
-    ports:
-{% if services_lan_access | default(false) %}
-      - "{{ paperclip_port | default(3006) }}:3100"
-{% else %}
-      - "127.0.0.1:{{ paperclip_port | default(3006) }}:3100"
-{% endif %}
-    volumes:
-      - {{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}:/paperclip
-    environment:
-      HOST: "0.0.0.0"
-      PORT: "3100"
-      DATABASE_URL: "postgresql://{{ paperclip_db_user | default('paperclip') }}:{{ paperclip_db_password | default(global_password_prefix + '_pw_paperclip') }}@postgresql:5432/{{ paperclip_db_name | default('paperclip') }}"
-      PAPERCLIP_HOME: "/paperclip"
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
-      BETTER_AUTH_SECRET: "{{ paperclip_auth_secret | default(lookup('pipe', 'openssl rand -hex 32')) }}"
-      BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain | default('paperclip.dev.local') }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
-    networks:
-      - devops_net
-      - {{ stacks_shared_network }}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-    mem_limit: {{ paperclip_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
-
-{% endif %}
+services: {}
 
 networks:
   devops_net:
