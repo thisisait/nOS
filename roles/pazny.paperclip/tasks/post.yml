@@ -34,3 +34,19 @@
   when: service_extra_hosts | default([]) | length > 0
   failed_when: false
   changed_when: false
+
+- name: "[pazny.paperclip Post] Bootstrap CEO admin invite (first-run)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    pnpm paperclipai auth bootstrap-ceo
+    --data-dir /paperclip
+    --base-url "https://{{ paperclip_domain | default('paperclip.dev.local') }}"
+    --force 2>&1
+  register: _paperclip_bootstrap
+  changed_when: "'Created bootstrap' in (_paperclip_bootstrap.stdout | default(''))"
+  failed_when: false
+
+- name: "[pazny.paperclip Post] Bootstrap CEO invite URL"
+  ansible.builtin.debug:
+    msg: "{{ _paperclip_bootstrap.stdout_lines | default(['No invite generated']) | select('search', 'Invite URL') | list | first | default('Check paperclip logs for invite URL') }}"
+  when: _paperclip_bootstrap.changed | default(false)

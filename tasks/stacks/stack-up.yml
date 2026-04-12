@@ -175,6 +175,19 @@
 - { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in _remaining_stacks", tags: ['freescout'] }
 - { name: "[Stacks] pazny.metabase post", ansible.builtin.include_role: { name: pazny.metabase, tasks_from: post.yml, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false) and 'data' in _remaining_stacks", tags: ['metabase'] }
 
+# IIAB post-start (admin onboarding + password reconverge)
+- { name: "[Stacks] pazny.wordpress post", ansible.builtin.include_role: { name: pazny.wordpress, tasks_from: post.yml, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
+- { name: "[Stacks] pazny.nextcloud post", ansible.builtin.include_role: { name: pazny.nextcloud, tasks_from: post.yml, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
+- { name: "[Stacks] pazny.n8n post", ansible.builtin.include_role: { name: pazny.n8n, tasks_from: post.yml, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
+- { name: "[Stacks] pazny.open_webui post", ansible.builtin.include_role: { name: pazny.open_webui, tasks_from: post.yml, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.puter post", ansible.builtin.include_role: { name: pazny.puter, tasks_from: post.yml, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
+- { name: "[Stacks] pazny.jellyfin post", ansible.builtin.include_role: { name: pazny.jellyfin, tasks_from: post.yml, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
+- { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
+- { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
+# DevOps post-start
+- { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
+- { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
+
 # ── Authentik OIDC: service-side konfigurace (Gitea API, Nextcloud occ) ──────
 - name: "[Stacks] Authentik service-side OIDC post-setup"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_service_post.yml"
