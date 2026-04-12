@@ -40,3 +40,16 @@ entries:
       type: "internal"
       groups:
         - !Find [authentik_core.group, [name, devboxnos-admins]]
+
+  # ── API token pro PDS bridge a dalsi automatizace ──────────────────────────
+  # Bridge script (bluesky_pds_bridge.yml) hleda token s identifier
+  # 'devboxnos-api'. Bez nej PDS bridge preskoci s "token=chybi".
+  - model: authentik_core.token
+    state: present
+    identifiers:
+      identifier: devboxnos-api
+    attrs:
+      user: !Find [authentik_core.user, [username, akadmin]]
+      intent: api
+      expiring: false
+      description: "devBoxNOS automation (PDS bridge, service provisioning)"
