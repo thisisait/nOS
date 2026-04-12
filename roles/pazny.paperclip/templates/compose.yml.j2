@@ -27,6 +27,12 @@ services:
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       BETTER_AUTH_SECRET: "{{ paperclip_auth_secret | default(lookup('pipe', 'openssl rand -hex 32')) }}"
       BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain | default('paperclip.dev.local') }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3100/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - devops_net
       - {{ stacks_shared_network }}

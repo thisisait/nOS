@@ -15,16 +15,35 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai onboard --yes --data-dir /paperclip 2>&1
+  timeout: 120
   register: _paperclip_onboard
   changed_when: "'created' in (_paperclip_onboard.stdout | default('') | lower) or 'saved' in (_paperclip_onboard.stdout | default('') | lower)"
+  failed_when: false
+
+- name: "[pazny.paperclip Post] Wait for Paperclip API readiness"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ paperclip_port | default(3006) }}/"
+    method: GET
+    timeout: 5
+    status_code: [200, 301, 302, 401, 403]
+  register: _paperclip_ready
+  until: _paperclip_ready.status | default(0) in [200, 301, 302, 401, 403]
+  retries: 18
+  delay: 10
   failed_when: false
 
 - name: "[pazny.paperclip Post] Register primary allowed hostname"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai allowed-hostname {{ paperclip_domain | default('paperclip.dev.local') }}
+  register: _paperclip_hostname
+  changed_when: _paperclip_hostname.rc | default(1) == 0
   failed_when: false
-  changed_when: false
+
+- name: "[pazny.paperclip Post] Hostname registration result"
+  ansible.builtin.debug:
+    msg: "{{ _paperclip_hostname.stdout_lines | default(['no output']) }}"
+  when: _paperclip_hostname is defined
 
 - name: "[pazny.paperclip Post] Register extra allowed hostnames"
   ansible.builtin.shell: >
