@@ -60,6 +60,42 @@
     mode: '0644'
   when: install_metabase | default(false) or install_superset | default(false)
 
+# ── Wave 2.2 per-role compose override renders ──────────────────────────────
+# Kazda role renderuje svuj fragment do {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
+# Musi bezet PRED find+merge compose up loop nize.
+
+# IIAB roles
+- { name: "[Stacks] pazny.wordpress render", ansible.builtin.include_role: { name: pazny.wordpress, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
+- { name: "[Stacks] pazny.nextcloud render", ansible.builtin.include_role: { name: pazny.nextcloud, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
+- { name: "[Stacks] pazny.n8n render", ansible.builtin.include_role: { name: pazny.n8n, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
+- { name: "[Stacks] pazny.kiwix render", ansible.builtin.include_role: { name: pazny.kiwix, apply: { tags: ['kiwix'] } }, when: "install_kiwix | default(false)", tags: ['kiwix'] }
+- { name: "[Stacks] pazny.jellyfin render", ansible.builtin.include_role: { name: pazny.jellyfin, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
+- { name: "[Stacks] pazny.uptime_kuma render", ansible.builtin.include_role: { name: pazny.uptime_kuma, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false)", tags: ['uptime-kuma'] }
+- { name: "[Stacks] pazny.calibre_web render", ansible.builtin.include_role: { name: pazny.calibre_web, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
+- { name: "[Stacks] pazny.open_webui render", ansible.builtin.include_role: { name: pazny.open_webui, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.homeassistant render", ansible.builtin.include_role: { name: pazny.homeassistant, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
+- { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
+- { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
+- { name: "[Stacks] pazny.puter render", ansible.builtin.include_role: { name: pazny.puter, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
+- { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
+
+# DevOps roles
+- { name: "[Stacks] pazny.gitea render", ansible.builtin.include_role: { name: pazny.gitea, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
+- { name: "[Stacks] pazny.gitlab render", ansible.builtin.include_role: { name: pazny.gitlab, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
+- { name: "[Stacks] pazny.woodpecker render", ansible.builtin.include_role: { name: pazny.woodpecker, apply: { tags: ['woodpecker'] } }, when: "install_woodpecker | default(false)", tags: ['woodpecker'] }
+- { name: "[Stacks] pazny.paperclip render", ansible.builtin.include_role: { name: pazny.paperclip, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false)", tags: ['paperclip'] }
+
+# B2B roles
+- { name: "[Stacks] pazny.erpnext render", ansible.builtin.include_role: { name: pazny.erpnext, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false)", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.freescout render", ansible.builtin.include_role: { name: pazny.freescout, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false)", tags: ['freescout'] }
+- { name: "[Stacks] pazny.outline render", ansible.builtin.include_role: { name: pazny.outline, apply: { tags: ['outline'] } }, when: "install_outline | default(false)", tags: ['outline'] }
+
+# VoIP / Engineering / Data roles
+- { name: "[Stacks] pazny.freepbx render", ansible.builtin.include_role: { name: pazny.freepbx, apply: { tags: ['freepbx'] } }, when: "install_freepbx | default(false)", tags: ['freepbx'] }
+- { name: "[Stacks] pazny.qgis_server render", ansible.builtin.include_role: { name: pazny.qgis_server, apply: { tags: ['qgis'] } }, when: "install_qgis_server | default(false)", tags: ['qgis'] }
+- { name: "[Stacks] pazny.metabase render", ansible.builtin.include_role: { name: pazny.metabase, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false)", tags: ['metabase'] }
+- { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
+
 # ── Sestavení seznamu REMAINING stacků (bez infra/observability) ─────────────
 
 - name: "[Stacks] Build list of remaining (non-core) active stacks"
@@ -132,40 +168,12 @@
 # Pozn: Authentik / Infisical / Bluesky PDS post-start už běží v core-up.yml,
 # takže se zde netouchují.
 
-- name: "[Stacks] ERPNext post-start: retry configurator if failed"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/erpnext_post.yml"
-  when:
-    - install_erpnext | default(false)
-    - "'b2b' in _remaining_stacks"
-
-- name: "[Stacks] Superset post-start: db upgrade + init + admin"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/superset_setup.yml"
-  when:
-    - install_superset | default(false)
-    - "'data' in _remaining_stacks"
-
-# ── Paperclip: register allowed hostname(s) ─────────────────────────────────
-- name: "[Stacks] Paperclip post-start: register allowed hostname"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p devops exec -T paperclip
-    pnpm paperclipai allowed-hostname {{ paperclip_domain | default('paperclip.dev.local') }}
-  when:
-    - install_paperclip | default(false)
-    - "'devops' in _remaining_stacks"
-  failed_when: false
-  changed_when: false
-
-- name: "[Stacks] Paperclip post-start: register extra hostnames"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p devops exec -T paperclip
-    pnpm paperclipai allowed-hostname {{ item }}
-  loop: "{{ service_extra_hosts | default([]) }}"
-  when:
-    - install_paperclip | default(false)
-    - "'devops' in _remaining_stacks"
-    - service_extra_hosts | default([]) | length > 0
-  failed_when: false
-  changed_when: false
+# ── Wave 2.2 per-role post-start tasks (volane PO compose up) ────────────────
+- { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in _remaining_stacks", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in _remaining_stacks", tags: ['superset'] }
+- { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in _remaining_stacks", tags: ['paperclip'] }
+- { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in _remaining_stacks", tags: ['freescout'] }
+- { name: "[Stacks] pazny.metabase post", ansible.builtin.include_role: { name: pazny.metabase, tasks_from: post.yml, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false) and 'data' in _remaining_stacks", tags: ['metabase'] }
 
 # ── Authentik OIDC: service-side konfigurace (Gitea API, Nextcloud occ) ──────
 - name: "[Stacks] Authentik service-side OIDC post-setup"

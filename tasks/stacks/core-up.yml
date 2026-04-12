@@ -157,27 +157,72 @@
     mode: '0644'
   when: install_observability | default(true)
 
-# ── Wave 2.1 per-role compose overrides ─────────────────────────────────────
-# Role pazny.mariadb rendereruje svuj compose fragment do
-# {{ stacks_dir }}/infra/overrides/mariadb.yml. Musi bezet PRED enumerate +
-# compose up, aby find task nize fragment videl. Post-start setup
-# (tasks/post.yml) je volany az po `docker compose up infra --wait`.
+# ── Wave 2 per-role compose overrides (renderuji PRED enumerate + compose up) ─
+# Kazda role renderuje svuj compose fragment do {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
+# Find task nize je sesbira a docker compose je merguje pres -f flagy.
+# Post-start tasky (tasks_from=post.yml) bezi az PO compose up dole.
 
-- name: "[Core] Render pazny.mariadb compose override + data dir"
-  ansible.builtin.include_role:
-    name: pazny.mariadb
-    apply:
-      tags: ['mariadb', 'database']
+# Infra roles
+- name: "[Core] pazny.mariadb render"
+  ansible.builtin.include_role: { name: pazny.mariadb, apply: { tags: ['mariadb', 'database'] } }
   when: install_mariadb | default(false)
   tags: ['mariadb', 'database']
 
-- name: "[Core] Render pazny.grafana compose override + data dir"
-  ansible.builtin.include_role:
-    name: pazny.grafana
-    apply:
-      tags: ['grafana', 'observability']
+- name: "[Core] pazny.postgresql render"
+  ansible.builtin.include_role: { name: pazny.postgresql, apply: { tags: ['postgresql', 'database'] } }
+  when: install_postgresql | default(false)
+  tags: ['postgresql', 'database']
+
+- name: "[Core] pazny.redis render"
+  ansible.builtin.include_role: { name: pazny.redis, apply: { tags: ['redis', 'database'] } }
+  when: redis_docker | default(false)
+  tags: ['redis', 'database']
+
+- name: "[Core] pazny.authentik render + blueprints"
+  ansible.builtin.include_role: { name: pazny.authentik, apply: { tags: ['authentik', 'iam'] } }
+  when: install_authentik | default(false)
+  tags: ['authentik', 'iam']
+
+- name: "[Core] pazny.infisical render"
+  ansible.builtin.include_role: { name: pazny.infisical, apply: { tags: ['infisical', 'iam'] } }
+  when: install_infisical | default(false)
+  tags: ['infisical', 'iam']
+
+- name: "[Core] pazny.traefik render"
+  ansible.builtin.include_role: { name: pazny.traefik, apply: { tags: ['traefik', 'infra'] } }
+  when: install_traefik | default(false)
+  tags: ['traefik', 'infra']
+
+- name: "[Core] pazny.portainer render"
+  ansible.builtin.include_role: { name: pazny.portainer, apply: { tags: ['portainer', 'infra'] } }
+  when: install_portainer | default(false)
+  tags: ['portainer', 'infra']
+
+- name: "[Core] pazny.bluesky_pds render"
+  ansible.builtin.include_role: { name: pazny.bluesky_pds, apply: { tags: ['bluesky-pds', 'infra'] } }
+  when: install_bluesky_pds | default(false)
+  tags: ['bluesky-pds', 'infra']
+
+# Observability roles
+- name: "[Core] pazny.grafana render"
+  ansible.builtin.include_role: { name: pazny.grafana, apply: { tags: ['grafana', 'observability'] } }
   when: install_observability | default(true)
   tags: ['grafana', 'observability']
+
+- name: "[Core] pazny.prometheus render"
+  ansible.builtin.include_role: { name: pazny.prometheus, apply: { tags: ['prometheus', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['prometheus', 'observability']
+
+- name: "[Core] pazny.loki render"
+  ansible.builtin.include_role: { name: pazny.loki, apply: { tags: ['loki', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['loki', 'observability']
+
+- name: "[Core] pazny.tempo render"
+  ansible.builtin.include_role: { name: pazny.tempo, apply: { tags: ['tempo', 'observability'] } }
+  when: install_observability | default(true)
+  tags: ['tempo', 'observability']
 
 # ── Deploy observability config files (MUSÍ být před docker compose up!) ─────
 # Pokud Docker najde neexistující bind mount source, vytvoří ho jako ADRESÁŘ
@@ -310,11 +355,12 @@
     - _core_infra_enabled | bool
   tags: ['mariadb', 'database']
 
-- name: "[Core] PostgreSQL post-start: create databases and users"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/postgresql_setup.yml"
+- name: "[Core] pazny.postgresql post-start"
+  ansible.builtin.include_role: { name: pazny.postgresql, tasks_from: post.yml, apply: { tags: ['postgresql', 'database'] } }
   when:
     - install_postgresql | default(false)
     - _core_infra_enabled | bool
+  tags: ['postgresql', 'database']
 
 # ── Start OBSERVABILITY stack (DB a configy ready) ──────────────────────────
 
@@ -351,23 +397,33 @@
 # Ostatní tasky v main.yml mohou poté předpokládat, že IAM / Vault / PDS
 # jsou dostupné (health check čeká uvnitř těchto include_tasks).
 
-- name: "[Core] Authentik post-start: wait for ready + OIDC provider setup"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_post.yml"
+- name: "[Core] pazny.authentik post-start (health + blueprints reconcile)"
+  ansible.builtin.include_role: { name: pazny.authentik, tasks_from: post.yml, apply: { tags: ['authentik', 'iam'] } }
   when:
     - install_authentik | default(false)
     - _core_infra_enabled | bool
+  tags: ['authentik', 'iam']
 
-- name: "[Core] Infisical post-start: wait for ready"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/infisical_post.yml"
+- name: "[Core] pazny.infisical post-start"
+  ansible.builtin.include_role: { name: pazny.infisical, tasks_from: post.yml, apply: { tags: ['infisical', 'iam'] } }
   when:
     - install_infisical | default(false)
     - _core_infra_enabled | bool
+  tags: ['infisical', 'iam']
 
-- name: "[Core] Bluesky PDS post-start: create admin account (goat CLI)"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/bluesky_pds_post.yml"
+- name: "[Core] pazny.bluesky_pds post-start (goat CLI admin account)"
+  ansible.builtin.include_role: { name: pazny.bluesky_pds, tasks_from: post.yml, apply: { tags: ['bluesky-pds', 'infra'] } }
   when:
     - install_bluesky_pds | default(false)
     - _core_infra_enabled | bool
+  tags: ['bluesky-pds', 'infra']
+
+- name: "[Core] pazny.portainer post-start (admin init + password reconverge)"
+  ansible.builtin.include_role: { name: pazny.portainer, tasks_from: post.yml, apply: { tags: ['portainer', 'infra'] } }
+  when:
+    - install_portainer | default(false)
+    - _core_infra_enabled | bool
+  tags: ['portainer', 'infra']
 
 # ── Výsledek ─────────────────────────────────────────────────────────────────
 

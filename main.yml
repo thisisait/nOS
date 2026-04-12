@@ -454,7 +454,9 @@
     # ──────────────────────────────────────────────────────────────────────────
     # IIAB Terminal – veřejný SSH TUI hub (vyžaduje SSH)
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/iiab-terminal.yml
+    - name: "IIAB Terminal (pazny.iiab_terminal role)"
+      ansible.builtin.import_role:
+        name: pazny.iiab_terminal
       when:
         - install_iiab_terminal | default(false)
         - enable_ssh | default(false)
@@ -542,24 +544,10 @@
     # IIAB – self-hosted knowledge services
     # ──────────────────────────────────────────────────────────────────────────
 
-    # MariaDB byl vytazen do role pazny.mariadb (Wave 2.1). Role je volana
-    # z tasks/stacks/core-up.yml — render compose override PRED `docker
-    # compose up infra`, post-start DB/user setup PO compose up.
-    - import_tasks: tasks/iiab/wordpress.yml
-      when: install_wordpress | default(false)
-      tags: ['iiab', 'wordpress']
-
-    - import_tasks: tasks/iiab/nextcloud.yml
-      when: install_nextcloud | default(false)
-      tags: ['iiab', 'nextcloud']
-
-    - import_tasks: tasks/iiab/kiwix.yml
-      when: install_kiwix | default(false)
-      tags: ['iiab', 'kiwix', 'zim']
-
-    - import_tasks: tasks/iiab/maps.yml
-      when: install_offline_maps | default(false)
-      tags: ['iiab', 'maps']
+    # Wave 2.2: všechny IIAB/DevOps/B2B/VoIP/Data service tasky přesunuty do
+    # roles/pazny.*/. Role renders + post-start jsou volány z
+    # tasks/stacks/core-up.yml (infra/observability) a tasks/stacks/stack-up.yml
+    # (ostatní stacky). Nginx vhost renders jsou součástí role tasks/main.yml.
 
     # ──────────────────────────────────────────────────────────────────────────
     # Síť – Tailscale + dnsmasq
@@ -589,7 +577,9 @@
     # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/openclaw.yml
+    - name: "OpenClaw (pazny.openclaw role)"
+      ansible.builtin.import_role:
+        name: pazny.openclaw
       when: install_openclaw | default(false)
       tags: ['openclaw', 'ai', 'agent']
 
@@ -607,61 +597,8 @@
     # ──────────────────────────────────────────────────────────────────────────
     # IIAB extra – n8n, Gitea, Uptime Kuma, Calibre-Web
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/iiab/n8n.yml
-      when: install_n8n | default(false)
-      tags: ['iiab', 'n8n', 'automation']
-
-    - import_tasks: tasks/iiab/gitea.yml
-      when: install_gitea | default(false)
-      tags: ['iiab', 'gitea', 'git']
-
-    - import_tasks: tasks/iiab/gitlab.yml
-      when: install_gitlab | default(false)
-      tags: ['iiab', 'gitlab', 'git']
-
-    - import_tasks: tasks/iiab/woodpecker.yml
-      when: install_woodpecker | default(false)
-      tags: ['iiab', 'woodpecker', 'ci', 'cicd']
-
-    - import_tasks: tasks/iiab/openwebui.yml
-      when: install_openwebui | default(false)
-      tags: ['iiab', 'openwebui', 'ai']
-
-    - import_tasks: tasks/iiab/portainer.yml
-      when: install_portainer | default(false)
-      tags: ['iiab', 'portainer', 'docker']
-
-    - import_tasks: tasks/iiab/jellyfin.yml
-      when: install_jellyfin | default(false)
-      tags: ['iiab', 'jellyfin', 'media']
-
-    - import_tasks: tasks/iiab/uptime-kuma.yml
-      when: install_uptime_kuma | default(false)
-      tags: ['iiab', 'uptime-kuma', 'monitoring']
-
-    - import_tasks: tasks/iiab/calibreweb.yml
-      when: install_calibreweb | default(false)
-      tags: ['iiab', 'calibre', 'ebooks']
-
-    - import_tasks: tasks/iiab/traefik.yml
-      when: install_traefik | default(false)
-      tags: ['iiab', 'traefik', 'proxy']
-
-    - import_tasks: tasks/iiab/homeassistant.yml
-      when: install_homeassistant | default(false)
-      tags: ['iiab', 'homeassistant', 'iot']
-
-    - import_tasks: tasks/iiab/rustfs.yml
-      when: install_rustfs | default(false)
-      tags: ['iiab', 'rustfs', 's3', 'storage']
-
-    - import_tasks: tasks/iiab/puter.yml
-      when: install_puter | default(false)
-      tags: ['iiab', 'puter', 'desktop']
-
-    - import_tasks: tasks/iiab/vaultwarden.yml
-      when: install_vaultwarden | default(false)
-      tags: ['iiab', 'vaultwarden', 'iam']
+    # (service-specific pre-stack tasks are now in roles/pazny.*/tasks/main.yml,
+    #  called from tasks/stacks/stack-up.yml before compose up)
 
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks – deploy compose souborů a spuštění všech stacků
@@ -671,75 +608,8 @@
 
     # DB setup nyní běží UVNITŘ stack-up.yml (infra → DB setup → remaining stacks)
 
-    # Nextcloud post-start: sync DB hesla a trusted_domains
-    - import_tasks: tasks/iiab/nextcloud_post.yml
-      when: install_nextcloud | default(false)
-      tags: ['iiab', 'nextcloud', 'stacks']
-
-    # Gitea post-start: vytvoření admin uživatele
-    - import_tasks: tasks/iiab/gitea_post.yml
-      when: install_gitea | default(false)
-      tags: ['iiab', 'gitea', 'stacks']
-
-    # WordPress post-start: wp-cli auto-install (admin účet + site title)
-    - import_tasks: tasks/iiab/wordpress_post.yml
-      when: install_wordpress | default(false)
-      tags: ['iiab', 'wordpress', 'stacks']
-
-    # Open WebUI post-start: auto-registrace prvního admin uživatele
-    - import_tasks: tasks/iiab/openwebui_post.yml
-      when: install_openwebui | default(false)
-      tags: ['iiab', 'openwebui', 'stacks']
-
-    # n8n post-start: owner setup (první uživatel = admin)
-    - import_tasks: tasks/iiab/n8n_post.yml
-      when: install_n8n | default(false)
-      tags: ['iiab', 'n8n', 'stacks']
-
-    # Puter post-start: auto-create admin user
-    - import_tasks: tasks/iiab/puter_post.yml
-      when: install_puter | default(false)
-      tags: ['iiab', 'puter', 'stacks']
-
-    # Puter apps: register devBoxNOS services as iframe apps
-    - import_tasks: tasks/iiab/puter_apps.yml
-      when: install_puter | default(false)
-      tags: ['iiab', 'puter', 'puter-apps', 'stacks']
-
-    # Portainer post-start: admin init + OIDC settings
-    - import_tasks: tasks/iiab/portainer_post.yml
-      when: install_portainer | default(false)
-      tags: ['iiab', 'portainer', 'stacks']
-
-    # Metabase post-start: auto-setup admin via /api/setup
-    - import_tasks: tasks/iiab/metabase_post.yml
-      when: install_metabase | default(false)
-      tags: ['iiab', 'metabase', 'stacks']
-
-    # Home Assistant post-start: auto-onboarding via API
-    - import_tasks: tasks/iiab/homeassistant_post.yml
-      when: install_homeassistant | default(false)
-      tags: ['iiab', 'homeassistant', 'stacks']
-
-    # Jellyfin post-start: auto-setup via Startup API
-    - import_tasks: tasks/iiab/jellyfin_post.yml
-      when: install_jellyfin | default(false)
-      tags: ['iiab', 'jellyfin', 'stacks']
-
-    # Calibre-Web post-start: change default admin password
-    - import_tasks: tasks/iiab/calibreweb_post.yml
-      when: install_calibreweb | default(false)
-      tags: ['iiab', 'calibreweb', 'stacks']
-
-    # FreeScout post-start: create admin via Artisan CLI
-    - import_tasks: tasks/iiab/freescout_post.yml
-      when: install_freescout | default(false)
-      tags: ['iiab', 'freescout', 'stacks']
-
-    # GitLab post-start: admin password reconverge via gitlab-rails runner
-    - import_tasks: tasks/iiab/gitlab_post.yml
-      when: install_gitlab | default(false)
-      tags: ['iiab', 'gitlab', 'stacks']
+    # (all service post-start tasks are now called from tasks/stacks/stack-up.yml
+    #  and tasks/stacks/core-up.yml via include_role tasks_from=post.yml)
 
     # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
     - import_tasks: tasks/iiab/stack_verify.yml
@@ -748,7 +618,9 @@
     # ──────────────────────────────────────────────────────────────────────────
     # jsOS – webový desktop (OS.js v3 + Bluesky auth + homelab integrace)
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/jsos.yml
+    - name: "jsOS (pazny.jsos role)"
+      ansible.builtin.import_role:
+        name: pazny.jsos
       when: install_jsos | default(false)
       tags: ['jsos', 'desktop']
 
@@ -761,7 +633,9 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Box Management API – FastAPI health/status/execution endpoint
     # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/boxapi.yml
+    - name: "BoxAPI (pazny.boxapi role)"
+      ansible.builtin.import_role:
+        name: pazny.boxapi
       when: install_boxapi | default(false)
       tags: ['boxapi', 'api']
 
