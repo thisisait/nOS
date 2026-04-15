@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.hedgedoc — HedgeDoc real-time collaborative markdown editor (b2b stack)
+#
+# Credentials (hedgedoc_db_password, hedgedoc_session_secret) zustavaji
+# v default.credentials.yml — centralizovane pro prefix rotation.
+# hedgedoc_session_secret je pri blank=true regenerovan pres
+# `openssl rand -hex 32` v main.yml (safe stateless group — session cookies
+# jsou znovu-vytvořitelné, noty v DB neztrácíme).
+# ==============================================================================
+
+hedgedoc_version: "1.10.7"
+hedgedoc_domain: "hedgedoc.{{ instance_tld | default('dev.local') }}"
+hedgedoc_port: 3012
+hedgedoc_data_dir: "{{ ansible_facts['env']['HOME'] }}/hedgedoc/uploads"
+hedgedoc_db_name: "hedgedoc"
+hedgedoc_db_user: "hedgedoc"
+hedgedoc_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+hedgedoc_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+# Pro `blank=true` vymaže při reset-fázi (tasks/stacks/external-paths.yml):
+hedgedoc_external_data_dir_override: ""

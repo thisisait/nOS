@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: hedgedoc
+  namespace: pazny
+  author: Pázny
+  description: HedgeDoc real-time collaborative markdown editor in Docker compose override (devBoxNOS b2b stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# Zadne role dependencies — HedgeDoc je konzument PostgreSQL z infra stacku.
+dependencies: []
+
+collections: []

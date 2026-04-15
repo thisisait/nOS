@@ -1,0 +1,25 @@
+---
+# ==============================================================================
+# pazny.hedgedoc/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
+# vytvori uploads data dir, vyrenderuje compose override fragment do
+# {{ stacks_dir }}/b2b/overrides/hedgedoc.yml, ktery pak stack-up.yml
+# sesbira pres `find` a prida jako dodatecny -f flag.
+#
+# HedgeDoc ma native OIDC (Authentik) pres env vary CMD_OAUTH2_* —
+# zadny post-start setup neni potreba (user se vytvori pri prvnim OIDC loginu).
+# ==============================================================================
+
+- name: "[pazny.hedgedoc] Ensure uploads directory exists"
+  ansible.builtin.file:
+    path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.hedgedoc] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/b2b/overrides/hedgedoc.yml"
+    mode: '0644'
+  notify: Restart hedgedoc
