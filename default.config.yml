@@ -250,6 +250,16 @@ homebrew_installed_packages:
   # ── Zálohy a údržba ──────────────────────────────────────────────────────
   - restic               # Restic – šifrované zálohy (Backblaze B2, SFTP, lokální disk)
   - mac-cleanup-go       # TUI macOS cleaner – cache, logy, Xcode, brew (github.com/2ykwang/mac-cleanup-go)
+  # ── Security research tools (SBOM, SAST, secrets, CVE scan) ──────────────
+  - trivy                # Trivy – vulnerability scanner (Docker images, FS, IaC, SBOM)
+  - grype                # Grype – CVE scanner proti SBOM / image
+  - syft                 # Syft – SBOM generátor (produkuje SPDX/CycloneDX pro grype)
+  - gitleaks             # Gitleaks – detekce secrets v git historii
+  - nuclei               # Nuclei – template-based vulnerability scanner (web/API)
+  - semgrep              # Semgrep CE – SAST / pattern-based static analysis
+  # ── Self-hosted CLI / agenty ─────────────────────────────────────────────
+  - ntfy                 # ntfy – CLI klient pro push notifications (server je Docker role)
+  - opencode             # OpenCode – AI-first terminal code agent (SST)
   # ── Build tools – NENÍ toggleable, vyžadují je další nástroje ────────────
   # cmake:      Ollama build, nativní Python/Node extensions (numpy, sharp…)
   # ninja:      Rychlý build systém (cmake backend, meson backend)
@@ -345,15 +355,36 @@ homebrew_cask_apps:
   # ── Systémové utility ─────────────────────────────────────────────────────
   # - dropbox              # Dropbox – cloud sync (odkomentuj v config.yml pokud chceš)
   - jordanbaird-ice      # Ice – free Bartender (organizace menu baru)
+  - hiddenbar            # Hidden Bar – schovávání ikon v menu baru (MAS alt.)
   - stats                # Stats – CPU/GPU/RAM/network v menu baru
+  - onyx                 # OnyX – údržba macOS, cache cleanup, hidden prefs
+  - cheatsheet           # CheatSheet – přehled klávesových zkratek (hold ⌘)
+  - shottr               # Shottr – pokročilé screenshoty + scrolling capture + OCR
+  - dockdoor             # DockDoor – Windows-like preview oken v Docku
+  - hyperkey             # Hyperkey – capslock jako hyper modifier (⌃⌥⇧⌘)
+  - linearmouse          # LinearMouse – customizace myši/trackpadu (scroll, cursor)
+  - syncthing-app        # Syncthing – P2P file sync mezi zařízeními
+  - imazing              # iMazing v3 – správa iOS/iPadOS zařízení, zálohy
   # - rectangle          # Rectangle – window manager
   # - alt-tab            # AltTab – Windows-like app switcher
   # - bettertouchtool    # BetterTouchTool – trackpad/klávesnice customization
+  # ── Volitelné produktivitní nástroje (default: opt-in v config.yml) ──────
+  # - antinote           # Antinote – rychlé poznámky, alternativa Apple Notes
+  # - cotypist           # Cotypist – AI text autocomplete (není v brew, manuální)
+  # - boring-notch       # boring.notch – customizace notche (GitHub, manuální)
+  # - flux-markdown      # flux-markdown – markdown editor (GitHub, manuální)
+  # - typewhisper        # TypeWhisper – dictation util (manuální install)
 
 # ==============================================================================
 # MAC APP STORE
+# Vyžaduje install_mas_apps: true + přihlášení k App Store (mas login).
+# Každá aplikace je [id, name] — ID najdeš v URL appstore.com/.../id<ID>.
 # ==============================================================================
 mas_installed_apps: []
+#  - { id: 1351639930, name: "Gifski" }             # GIF encoder (ffmpeg wrapper)
+#  - { id: 931571202,  name: "QuickShade" }         # Dimmer pro externí monitory
+#  - { id: 1355679052, name: "Dropover" }           # Drag & drop shelf buffer
+#  - { id: 1452453066, name: "Hidden Bar" }         # Alt: použij hiddenbar cask (výše)
 mas_email: ""
 mas_password: ""
 
