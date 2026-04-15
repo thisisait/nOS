@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.ntfy — ntfy (self-hosted push notifications server, iiab compose stack)
+#
+# Service neukl ada zadna secrets v default.credentials.yml — vsechna autorizace
+# jde pres Authentik forward auth (proxy type v authentik_oidc_apps). ntfy si
+# drzi vlastni ACL v cache.db, ale pro prochod na web UI rozhoduje Authentik.
+# ==============================================================================
+
+ntfy_version: "v2.21.0"                               # https://github.com/binwiederhier/ntfy/releases
+ntfy_domain: "ntfy.{{ instance_tld | default('dev.local') }}"
+ntfy_port: 2586                                        # unikatni host port (kolize-free)
+ntfy_data_dir: "{{ ansible_facts['env']['HOME'] }}/ntfy/data"
+ntfy_base_url: "https://{{ ntfy_domain }}"
+ntfy_cache_duration: "12h"
+ntfy_attachment_total_size_limit: "5G"
+ntfy_attachment_file_size_limit: "15M"
+ntfy_enable_signup: false
+ntfy_enable_login: true
+ntfy_auth_default_access: "deny-all"                   # Authentik forward-auth gate
+ntfy_behind_proxy: true
+ntfy_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+ntfy_cpus: "{{ docker_cpus_light | default('0.5') }}"

@@ -1,0 +1,22 @@
+# =============================================================================
+# pazny.ntfy — server.yml (renderovan do {{ ntfy_data_dir }}/server.yml)
+# Mount: /etc/ntfy/server.yml:ro v compose overridu.
+# Docs: https://docs.ntfy.sh/config/
+# =============================================================================
+
+base-url: "{{ ntfy_base_url | default('https://' + ntfy_domain) }}"
+listen-http: ":80"
+
+cache-file: "/var/cache/ntfy/cache.db"
+cache-duration: "{{ ntfy_cache_duration | default('12h') }}"
+
+attachment-cache-dir: "/var/cache/ntfy/attachments"
+attachment-total-size-limit: "{{ ntfy_attachment_total_size_limit | default('5G') }}"
+attachment-file-size-limit: "{{ ntfy_attachment_file_size_limit | default('15M') }}"
+
+behind-proxy: {{ ntfy_behind_proxy | default(true) | string | lower }}
+
+enable-signup: {{ ntfy_enable_signup | default(false) | string | lower }}
+enable-login: {{ ntfy_enable_login | default(true) | string | lower }}
+
+auth-default-access: "{{ ntfy_auth_default_access | default('deny-all') }}"

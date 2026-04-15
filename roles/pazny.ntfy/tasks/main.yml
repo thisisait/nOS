@@ -1,0 +1,35 @@
+---
+# ==============================================================================
+# pazny.ntfy/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# 1) vytvori data dir,
+# 2) vyrenderuje server.yml config do data diru (mount :ro),
+# 3) vyrenderuje compose override fragment.
+# ==============================================================================
+
+- name: "[pazny.ntfy] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ ntfy_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.ntfy] Ensure attachments directory exists"
+  ansible.builtin.file:
+    path: "{{ ntfy_data_dir }}/attachments"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.ntfy] Render ntfy server.yml config"
+  ansible.builtin.template:
+    src: server.yml.j2
+    dest: "{{ ntfy_data_dir }}/server.yml"
+    mode: '0644'
+  notify: Restart ntfy
+
+- name: "[pazny.ntfy] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/ntfy.yml"
+    mode: '0644'
+  notify: Restart ntfy
