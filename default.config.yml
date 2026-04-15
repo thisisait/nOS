@@ -120,6 +120,7 @@ enable_remote_management: false   # Apple Remote Desktop (ARD) – plná správa
 
 # ── Observability – Grafana LGTM stack ────────────────────────────────────────
 install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+install_influxdb: false           # InfluxDB 2.x – time-series DB [Docker]
 
 # ── IIAB – self-hosted knowledge & productivity services ──────────────────────
 # Vyžaduje: install_nginx: true, install_php: true
@@ -137,6 +138,9 @@ install_portainer: true          # Portainer CE – Docker management UI        
 install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]
 install_calibreweb: true         # Calibre-Web – ebook server                [vyžaduje: Docker, calibre]
+install_ntfy: false               # ntfy – push notifications server [Docker]
+install_miniflux: false           # Miniflux – RSS reader [Docker, vyžaduje: PostgreSQL]
+install_nodered: false            # Node-RED – flow automation [Docker]
 install_traefik: true            # Traefik – reverse proxy / ingress pro lokální vývoj  [Docker]
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
 install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
@@ -146,6 +150,10 @@ install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting     
 install_freescout: true          # FreeScout – helpdesk / ticketing                    [vyžaduje: MariaDB]
 install_mattermost: true         # Mattermost – team chat                              [vyžaduje: PostgreSQL]
 install_outline: true            # Outline – team wiki / knowledge base                [vyžaduje: PostgreSQL, Redis Docker]
+install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker, vyžaduje: PostgreSQL]
+install_bookstack: false          # BookStack – wiki platform [Docker, vyžaduje: MariaDB]
+install_firefly: false            # Firefly III – personal finance [Docker, vyžaduje: MariaDB, Redis]
+install_onlyoffice: false         # ONLYOFFICE Document Server [Docker]
 
 # ── VoIP stack (telekomunikace) ──────────────────────────────────────────────
 install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
@@ -167,6 +175,7 @@ install_jsos: false               # jsOS – starší alternativa (OS.js v3) [vy
 
 # ── AI orchestrace ────────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [vyžaduje: PostgreSQL]
+install_code_server: false        # code-server – VS Code v browseru [Docker]
 
 # ── IAM & Secrets ─────────────────────────────────────────────────────────────
 install_authentik: true          # Authentik – SSO/IdP (OIDC/SAML/LDAP) pro všechny služby [vyžaduje: PostgreSQL, Redis]
@@ -739,6 +748,8 @@ mariadb_databases:
   - name: "freescout"
   - name: "erpnext"
   - name: "asterisk"
+  - name: "bookstack"
+  - name: "firefly"
 
 mariadb_users:
   - name: "wordpress"
@@ -756,6 +767,12 @@ mariadb_users:
   - name: "asterisk"
     password: "{{ freepbx_db_password | default(global_password_prefix + '_pw_freepbx') }}"
     priv: "asterisk.*:ALL"
+  - name: "bookstack"
+    password: "{{ bookstack_db_password | default(global_password_prefix + '_pw_bookstack') }}"
+    priv: "bookstack.*:ALL"
+  - name: "firefly"
+    password: "{{ firefly_db_password | default(global_password_prefix + '_pw_firefly') }}"
+    priv: "firefly.*:ALL"
 
 # ==============================================================================
 # IIAB – WORDPRESS
@@ -1477,6 +1494,15 @@ authentik_app_tiers:
   jellyfin: 4
   glasswing: 1
   wordpress: 4
+  code-server: 1
+  influxdb: 1
+  ntfy: 2
+  nodered: 2
+  firefly: 2
+  miniflux: 3
+  hedgedoc: 3
+  bookstack: 3
+  onlyoffice: 3
 
 # ── OIDC Service Registry (single source of truth) ──────────────────────────
 # Authentik post-start automaticky vytvoří OIDC providery + aplikace.
@@ -1637,6 +1663,65 @@ authentik_oidc_apps:
     launch_url: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
     external_host: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
     type: "proxy"
+  # ── Wave A+B native OIDC services ──────────────────────────────────────
+  - name: "Miniflux"
+    slug: "miniflux"
+    enabled: "{{ install_miniflux | default(false) }}"
+    client_id: "devboxnos-miniflux"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_miniflux"
+    redirect_uris: "https://{{ miniflux_domain | default('rss.dev.local') }}/oauth2/oidc/callback"
+    launch_url: "https://{{ miniflux_domain | default('rss.dev.local') }}"
+  - name: "HedgeDoc"
+    slug: "hedgedoc"
+    enabled: "{{ install_hedgedoc | default(false) }}"
+    client_id: "devboxnos-hedgedoc"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_hedgedoc"
+    redirect_uris: "https://{{ hedgedoc_domain | default('hedgedoc.dev.local') }}/auth/oauth2/callback"
+    launch_url: "https://{{ hedgedoc_domain | default('hedgedoc.dev.local') }}"
+  - name: "BookStack"
+    slug: "bookstack"
+    enabled: "{{ install_bookstack | default(false) }}"
+    client_id: "devboxnos-bookstack"
+    client_secret: "{{ global_password_prefix }}_pw_oidc_bookstack"
+    redirect_uris: "https://{{ bookstack_domain | default('bookstack.dev.local') }}/oidc/callback"
+    launch_url: "https://{{ bookstack_domain | default('bookstack.dev.local') }}"
+  # ── Wave A+B proxy-auth services ───────────────────────────────────────
+  - name: "code-server"
+    slug: "code-server"
+    enabled: "{{ install_code_server | default(false) }}"
+    launch_url: "https://{{ code_server_domain | default('code.dev.local') }}"
+    external_host: "https://{{ code_server_domain | default('code.dev.local') }}"
+    type: "proxy"
+  - name: "ntfy"
+    slug: "ntfy"
+    enabled: "{{ install_ntfy | default(false) }}"
+    launch_url: "https://{{ ntfy_domain | default('ntfy.dev.local') }}"
+    external_host: "https://{{ ntfy_domain | default('ntfy.dev.local') }}"
+    type: "proxy"
+  - name: "Node-RED"
+    slug: "nodered"
+    enabled: "{{ install_nodered | default(false) }}"
+    launch_url: "https://{{ nodered_domain | default('nodered.dev.local') }}"
+    external_host: "https://{{ nodered_domain | default('nodered.dev.local') }}"
+    type: "proxy"
+  - name: "Firefly III"
+    slug: "firefly"
+    enabled: "{{ install_firefly | default(false) }}"
+    launch_url: "https://{{ firefly_domain | default('firefly.dev.local') }}"
+    external_host: "https://{{ firefly_domain | default('firefly.dev.local') }}"
+    type: "proxy"
+  - name: "InfluxDB"
+    slug: "influxdb"
+    enabled: "{{ install_influxdb | default(false) }}"
+    launch_url: "https://{{ influxdb_domain | default('influx.dev.local') }}"
+    external_host: "https://{{ influxdb_domain | default('influx.dev.local') }}"
+    type: "proxy"
+  - name: "ONLYOFFICE"
+    slug: "onlyoffice"
+    enabled: "{{ install_onlyoffice | default(false) }}"
+    launch_url: "https://{{ onlyoffice_domain | default('office.dev.local') }}"
+    external_host: "https://{{ onlyoffice_domain | default('office.dev.local') }}"
+    type: "proxy"
 
 # Pomocné proměnné (odvozené z registru, pro compose templates)
 # Compose šablony je referencují přímo — nemusíš je měnit ručně.
@@ -1654,6 +1739,12 @@ authentik_oidc_nextcloud_client_id: "{{ (authentik_oidc_apps | selectattr('slug'
 authentik_oidc_nextcloud_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
 authentik_oidc_gitlab_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitlab') | first).client_id }}"
 authentik_oidc_gitlab_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitlab') | first).client_secret }}"
+authentik_oidc_miniflux_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'miniflux') | first).client_id }}"
+authentik_oidc_miniflux_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'miniflux') | first).client_secret }}"
+authentik_oidc_hedgedoc_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'hedgedoc') | first).client_id }}"
+authentik_oidc_hedgedoc_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'hedgedoc') | first).client_secret }}"
+authentik_oidc_bookstack_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'bookstack') | first).client_id }}"
+authentik_oidc_bookstack_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'bookstack') | first).client_secret }}"
 
 # ==============================================================================
 # INFISICAL CE – Secrets Management (REST API, CLI, SDK)

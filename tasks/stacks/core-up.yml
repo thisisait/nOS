@@ -220,6 +220,13 @@
   when: install_observability | default(true)
   tags: ['tempo', 'observability']
 
+- name: "[Core] pazny.influxdb render"
+  ansible.builtin.include_role: { name: pazny.influxdb, apply: { tags: ['influxdb', 'observability'] } }
+  when:
+    - install_observability | default(true)
+    - install_influxdb | default(false)
+  tags: ['influxdb', 'observability']
+
 # ── Deploy observability config files (MUSÍ být před docker compose up!) ─────
 # Pokud Docker najde neexistující bind mount source, vytvoří ho jako ADRESÁŘ
 # a kontejner pak crashne v konfigurační fázi. Render těchto souborů zde

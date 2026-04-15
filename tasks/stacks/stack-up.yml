@@ -30,14 +30,14 @@
     src: "stacks/devops/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/devops/docker-compose.yml"
     mode: '0644'
-  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)
+  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false) or install_code_server | default(false)
 
 - name: "[Stacks] Deploy b2b compose"
   ansible.builtin.template:
     src: "stacks/b2b/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
     mode: '0644'
-  when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)
+  when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_onlyoffice | default(false)
 
 - name: "[Stacks] Deploy voip compose"
   ansible.builtin.template:
@@ -78,17 +78,25 @@
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
 - { name: "[Stacks] pazny.puter render", ansible.builtin.include_role: { name: pazny.puter, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
 - { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
+- { name: "[Stacks] pazny.ntfy render", ansible.builtin.include_role: { name: pazny.ntfy, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
+- { name: "[Stacks] pazny.miniflux render", ansible.builtin.include_role: { name: pazny.miniflux, apply: { tags: ['miniflux'] } }, when: "install_miniflux | default(false)", tags: ['miniflux'] }
+- { name: "[Stacks] pazny.nodered render", ansible.builtin.include_role: { name: pazny.nodered, apply: { tags: ['nodered'] } }, when: "install_nodered | default(false)", tags: ['nodered'] }
 
 # DevOps roles
 - { name: "[Stacks] pazny.gitea render", ansible.builtin.include_role: { name: pazny.gitea, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
 - { name: "[Stacks] pazny.gitlab render", ansible.builtin.include_role: { name: pazny.gitlab, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
 - { name: "[Stacks] pazny.woodpecker render", ansible.builtin.include_role: { name: pazny.woodpecker, apply: { tags: ['woodpecker'] } }, when: "install_woodpecker | default(false)", tags: ['woodpecker'] }
 - { name: "[Stacks] pazny.paperclip render", ansible.builtin.include_role: { name: pazny.paperclip, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false)", tags: ['paperclip'] }
+- { name: "[Stacks] pazny.code_server render", ansible.builtin.include_role: { name: pazny.code_server, apply: { tags: ['code-server'] } }, when: "install_code_server | default(false)", tags: ['code-server'] }
 
 # B2B roles
 - { name: "[Stacks] pazny.erpnext render", ansible.builtin.include_role: { name: pazny.erpnext, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false)", tags: ['erpnext'] }
 - { name: "[Stacks] pazny.freescout render", ansible.builtin.include_role: { name: pazny.freescout, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false)", tags: ['freescout'] }
 - { name: "[Stacks] pazny.outline render", ansible.builtin.include_role: { name: pazny.outline, apply: { tags: ['outline'] } }, when: "install_outline | default(false)", tags: ['outline'] }
+- { name: "[Stacks] pazny.hedgedoc render", ansible.builtin.include_role: { name: pazny.hedgedoc, apply: { tags: ['hedgedoc'] } }, when: "install_hedgedoc | default(false)", tags: ['hedgedoc'] }
+- { name: "[Stacks] pazny.bookstack render", ansible.builtin.include_role: { name: pazny.bookstack, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false)", tags: ['bookstack'] }
+- { name: "[Stacks] pazny.firefly render", ansible.builtin.include_role: { name: pazny.firefly, apply: { tags: ['firefly'] } }, when: "install_firefly | default(false)", tags: ['firefly'] }
+- { name: "[Stacks] pazny.onlyoffice render", ansible.builtin.include_role: { name: pazny.onlyoffice, apply: { tags: ['onlyoffice'] } }, when: "install_onlyoffice | default(false)", tags: ['onlyoffice'] }
 
 # VoIP / Engineering / Data roles
 - { name: "[Stacks] pazny.freepbx render", ansible.builtin.include_role: { name: pazny.freepbx, apply: { tags: ['freepbx'] } }, when: "install_freepbx | default(false)", tags: ['freepbx'] }
@@ -104,9 +112,9 @@
       {{
         ['iiab']
         +
-        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false)) | ternary(['devops'], []))
+        ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false) or install_code_server | default(false)) | ternary(['devops'], []))
         +
-        ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false)) | ternary(['b2b'], []))
+        ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_onlyoffice | default(false)) | ternary(['b2b'], []))
         +
         ((install_freepbx | default(false)) | ternary(['voip'], []))
         +

@@ -59,6 +59,8 @@
     gitlab_config_dir: "{{ external_storage_root }}/gitlab-config"
     woodpecker_data_dir: "{{ external_storage_root }}/woodpecker"
     paperclip_data_dir: "{{ external_storage_root }}/paperclip"
+    code_server_config_dir: "{{ external_storage_root }}/code-server/config"
+    code_server_workspace_dir: "{{ external_storage_root }}/code-server/workspace"
 
 # ── B2B stack (ERP, helpdesk, wiki) ─────────────────────────────────────────
 # POZNAMKA: erpnext_data_dir byl deprecated po P0.1 — ERPNext sites zije v
@@ -69,6 +71,21 @@
   ansible.builtin.set_fact:
     freescout_data_dir: "{{ external_storage_root }}/freescout/data"
     outline_data_dir: "{{ external_storage_root }}/outline/data"
+    hedgedoc_data_dir: "{{ external_storage_root }}/hedgedoc/uploads"
+    bookstack_config_dir: "{{ external_storage_root }}/bookstack/config"
+    firefly_upload_dir: "{{ external_storage_root }}/firefly/upload"
+    firefly_export_dir: "{{ external_storage_root }}/firefly/export"
+    onlyoffice_data_dir: "{{ external_storage_root }}/onlyoffice/data"
+    onlyoffice_logs_dir: "{{ external_storage_root }}/onlyoffice/logs"
+    onlyoffice_lib_dir: "{{ external_storage_root }}/onlyoffice/lib"
+    onlyoffice_db_dir: "{{ external_storage_root }}/onlyoffice/db"
+
+# ── IIAB/Wave A add-ons (ntfy, miniflux, nodered) ──────────────────────────
+- name: "[External SSD] Override Wave A IIAB add-on paths"
+  ansible.builtin.set_fact:
+    ntfy_data_dir: "{{ external_storage_root }}/ntfy/data"
+    miniflux_data_dir: "{{ external_storage_root }}/miniflux/data"
+    nodered_data_dir: "{{ external_storage_root }}/nodered/data"
 
 # ── VoIP / Engineering / Data stack ─────────────────────────────────────────
 - name: "[External SSD] Override VoIP/Engineering/Data paths"
@@ -85,3 +102,5 @@
     loki_storage_path: "{{ external_storage_root }}/observability/loki"
     tempo_storage_path: "{{ external_storage_root }}/observability/tempo"
     grafana_data_dir: "{{ external_storage_root }}/observability/grafana"
+    influxdb_data_dir: "{{ external_storage_root }}/observability/influxdb/data"
+    influxdb_config_dir: "{{ external_storage_root }}/observability/influxdb/config"

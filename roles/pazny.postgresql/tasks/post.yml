@@ -44,6 +44,8 @@
        + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+       + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
+       + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
     }}
   loop_control:
     label: "DROP: {{ item }}"
@@ -86,6 +88,8 @@
        + ((install_mattermost | default(false)) | ternary([mattermost_db_user | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary([paperclip_db_user | default('paperclip')], []))
        + ((install_jsos | default(false)) | ternary([jsos_db_user | default('jsos')], []))
+       + ((install_miniflux | default(false)) | ternary([miniflux_db_user | default('miniflux')], []))
+       + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_user | default('hedgedoc')], []))
     }}
   loop_control:
     label: "DROP ROLE: {{ item }}"
@@ -109,6 +113,8 @@
        + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+       + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
+       + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
     }}
   loop_control:
     label: "DB: {{ item }}"
@@ -140,6 +146,10 @@
          [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(global_password_prefix + '_pw_paperclip')}], []))
        + ((install_jsos | default(false)) | ternary(
          [{'user': jsos_db_user | default('jsos'), 'pass': jsos_db_password | default(global_password_prefix + '_pw_jsos')}], []))
+       + ((install_miniflux | default(false)) | ternary(
+         [{'user': miniflux_db_user | default('miniflux'), 'pass': miniflux_db_password | default(global_password_prefix + '_pw_miniflux')}], []))
+       + ((install_hedgedoc | default(false)) | ternary(
+         [{'user': hedgedoc_db_user | default('hedgedoc'), 'pass': hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc')}], []))
     }}
   loop_control:
     label: "USER: {{ item.user }}"
@@ -163,6 +173,8 @@
        + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_jsos | default(false)) | ternary([jsos_db_name | default('jsos')], []))
+       + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
+       + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
     }}
   loop_control:
     label: "pgcrypto: {{ item }}"
@@ -194,6 +206,10 @@
          [{'db': 'paperclip', 'user': paperclip_db_user | default('paperclip')}], []))
        + ((install_jsos | default(false)) | ternary(
          [{'db': jsos_db_name | default('jsos'), 'user': jsos_db_user | default('jsos')}], []))
+       + ((install_miniflux | default(false)) | ternary(
+         [{'db': miniflux_db_name | default('miniflux'), 'user': miniflux_db_user | default('miniflux')}], []))
+       + ((install_hedgedoc | default(false)) | ternary(
+         [{'db': hedgedoc_db_name | default('hedgedoc'), 'user': hedgedoc_db_user | default('hedgedoc')}], []))
     }}
   loop_control:
     label: "GRANT: {{ item.db }}"

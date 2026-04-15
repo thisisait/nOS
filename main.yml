@@ -332,7 +332,9 @@
         (install_nextcloud | default(false)) or
         (install_erpnext | default(false)) or
         (install_freescout | default(false)) or
-        (install_freepbx | default(false))
+        (install_freepbx | default(false)) or
+        (install_bookstack | default(false)) or
+        (install_firefly | default(false))
       tags: ['always']
 
     - name: Auto-enable PostgreSQL for services that require it
@@ -346,7 +348,9 @@
         (install_mattermost | default(false)) or
         (install_outline | default(false)) or
         (install_metabase | default(false)) or
-        (install_superset | default(false))
+        (install_superset | default(false)) or
+        (install_miniflux | default(false)) or
+        (install_hedgedoc | default(false))
       tags: ['always']
 
     - name: Auto-enable Redis Docker for services that require it
@@ -358,7 +362,10 @@
         (install_jsos | default(false)) or
         (install_erpnext | default(false)) or
         (install_outline | default(false)) or
-        (install_superset | default(false))
+        (install_superset | default(false)) or
+        (install_bookstack | default(false)) or
+        (install_firefly | default(false)) or
+        (install_onlyoffice | default(false))
       tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -377,6 +384,10 @@
         jsos_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         glasswing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        bookstack_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
+        onlyoffice_jwt_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        influxdb_admin_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"
@@ -385,16 +396,17 @@
         infisical_auth_secret: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
         outline_secret_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         bluesky_pds_rotation_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        firefly_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
       when: (blank | default(false) | bool) or (destroy_state | default(false) | bool)
       tags: ['always']
 
     - name: "WARNING — destructive secrets preserved (use -e destroy_state=true to reset)"
       ansible.builtin.debug:
         msg: |
-          NEBEZPECI: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key
-          zachovany z predchoziho runu (nemaji lazy regeneraci v non-blank runech).
+          NEBEZPECI: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key,
+          firefly_app_key zachovany z predchoziho runu (nemaji lazy regeneraci v non-blank runech).
           Pro reset pridej -e destroy_state=true — smaze Infisical vault, Outline sifrovana data,
-          Bluesky PLC rotaci.
+          Bluesky PLC rotaci, Firefly sifrovana data.
       when:
         - not (blank | default(false) | bool)
         - not (destroy_state | default(false) | bool)
