@@ -1,0 +1,24 @@
+---
+# ==============================================================================
+# pazny.code_server — code-server (VS Code v browseru, devops compose stack)
+#
+# Self-hosted VS Code prostredi za Authentik forward-auth proxy. Zadne DB,
+# data = filesystem. LinuxServer.io image uklada vse do /config (workspace,
+# extensions, user settings). SSO = proxy auth — code-server ma vlastni
+# PASSWORD env var, ale ten nechavame prazdny, protoze pristup gatuje
+# Authentik forward_auth v nginx vhostu.
+#
+# Tier 1 (admin-only): code-server = plny shell access k hostu.
+# ==============================================================================
+
+code_server_version: "4.115.0-ls332"                # LinuxServer pin (arm64v8 + amd64 multi-arch)
+code_server_port: 3009                              # Kontejner 8443 -> host 3009
+code_server_domain: "code.{{ instance_tld | default('dev.local') }}"
+code_server_data_dir: "{{ ansible_facts['env']['HOME'] }}/code-server/config"
+code_server_workspace_dir: "{{ ansible_facts['env']['HOME'] }}/code-server/workspace"
+code_server_puid: 1000
+code_server_pgid: 1000
+code_server_tz: "Europe/Prague"
+code_server_default_workspace: "/config/workspace"
+code_server_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
+code_server_cpus: "{{ docker_cpus_standard | default('1.0') }}"

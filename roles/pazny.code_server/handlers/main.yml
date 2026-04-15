@@ -1,0 +1,8 @@
+---
+# pazny.code_server — handlers
+
+- name: Restart code_server
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+    restart code-server
+  failed_when: false
