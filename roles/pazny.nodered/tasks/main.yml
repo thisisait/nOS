@@ -1,0 +1,46 @@
+---
+# ==============================================================================
+# pazny.nodered/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
+# vytvori data dir, vyrenderuje settings.js (disabluje built-in adminAuth,
+# spolehame se na Authentik forward_auth na nginx vrstve) a compose override
+# fragment do {{ stacks_dir }}/iiab/overrides/nodered.yml.
+#
+# Nginx vhost (templates/nginx/sites-available/nodered.conf) se renderuje
+# top-level nginx taskem a enabluje se symlinkem nize.
+# ==============================================================================
+
+- name: "[pazny.nodered] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ nodered_data_dir }}"
+    state: directory
+    mode: '0755'
+    # Docker nodered image beží jako UID 1000 — pokud má hostový user jiné
+    # UID, Docker Desktop for Mac to řeší přes osxfs/virtiofs user mapping.
+    # Owner specifikujeme, ale failed_when false — na macOS to často není
+    # nutné / možné bez `become: true`.
+  ignore_errors: true
+
+- name: "[pazny.nodered] Render settings.js (no adminAuth → gated by Authentik)"
+  ansible.builtin.template:
+    src: settings.js.j2
+    dest: "{{ nodered_data_dir }}/settings.js"
+    mode: '0644'
+  notify: Restart nodered
+
+- name: "[pazny.nodered] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/nodered.yml"
+    mode: '0644'
+  notify: Restart nodered
+
+- name: "[pazny.nodered] Enable nodered nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/nodered.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/nodered.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)

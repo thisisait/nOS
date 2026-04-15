@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.nodered — Node-RED low-code flow automation (iiab compose stack)
+#
+# Filesystem-only storage (/data obsahuje flows.json, credentials, installed
+# nodes). Bez DB. SSO přes Authentik forward_auth (proxy mode) — built-in
+# adminAuth je v settings.js vypnutý.
+# ==============================================================================
+
+nodered_version: "4.0.9"                              # stable multi-arch tag (nodered/node-red)
+nodered_domain: "nodered.{{ instance_tld | default('dev.local') }}"
+nodered_port: 1880                                    # Node-RED default
+nodered_data_dir: "{{ ansible_facts['env']['HOME'] }}/nodered/data"
+nodered_timezone: "Europe/Prague"
+nodered_uid: 1000                                     # default UID v nodered/node-red image
+nodered_gid: 1000
+nodered_enable_safe_mode: "false"
+nodered_enable_projects: "true"                       # git-backed projects
+nodered_flows_file: "flows.json"
+nodered_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+nodered_cpus: "{{ docker_cpus_standard | default('1.0') }}"

@@ -1,0 +1,56 @@
+# =============================================================================
+# pazny.nodered — compose override fragment
+# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# Image nodered/node-red je multi-arch (amd64 + arm64) — na M1 běží nativně.
+# Container běží jako UID 1000 (defaults/main.yml: nodered_uid).
+# =============================================================================
+
+services:
+  nodered:
+    image: nodered/node-red:{{ nodered_version | default('4.0.9') }}
+    restart: unless-stopped
+    user: "{{ nodered_uid | default(1000) }}:{{ nodered_gid | default(1000) }}"
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ nodered_port | default(1880) }}:1880"
+{% else %}
+      - "127.0.0.1:{{ nodered_port | default(1880) }}:1880"
+{% endif %}
+    volumes:
+      - {{ nodered_data_dir }}:/data
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      TZ: "{{ nodered_timezone | default('Europe/Prague') }}"
+      FLOWS: "{{ nodered_flows_file | default('flows.json') }}"
+      NODE_RED_ENABLE_SAFE_MODE: "{{ nodered_enable_safe_mode | default('false') }}"
+      NODE_RED_ENABLE_PROJECTS: "{{ nodered_enable_projects | default('true') }}"
+{% if install_authentik | default(false) %}
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:1880/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ nodered_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ nodered_cpus | default(docker_cpus_standard | default('1.0')) }}
