@@ -1,0 +1,74 @@
+# =============================================================================
+# pazny.hedgedoc — compose override fragment
+# Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+#
+# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+#
+# HedgeDoc vyzaduje: PostgreSQL (z infra stacku).
+# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
+# v default.config.yml pres derivovane authentik_oidc_hedgedoc_* promenne.
+# Config reference: https://docs.hedgedoc.org/configuration/
+# =============================================================================
+
+services:
+  hedgedoc:
+    image: quay.io/hedgedoc/hedgedoc:{{ hedgedoc_version | default('1.10.7') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ hedgedoc_port | default(3012) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ hedgedoc_port | default(3012) }}:3000"
+{% endif %}
+    volumes:
+      - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
+      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
+      # ── Public URL / protocol ──────────────────────────────────────────────
+      CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc.dev.local') }}"
+      CMD_URL_ADDPORT: "false"
+      CMD_PROTOCOL_USESSL: "true"
+      CMD_HOST: "0.0.0.0"
+      CMD_PORT: "3000"
+      # ── Session ─────────────────────────────────────────────────────────────
+      CMD_SESSION_SECRET: "{{ hedgedoc_session_secret | default(global_password_prefix + '_pw_hedgedoc_session') }}"
+      # ── Auth policy (OIDC only — no anonymous / email register) ───────────
+      CMD_ALLOW_ANONYMOUS: "false"
+      CMD_ALLOW_EMAIL_REGISTER: "false"
+      # ── CDN / uploads ──────────────────────────────────────────────────────
+      CMD_USECDN: "false"
+      CMD_UPLOADS_PATH: "/hedgedoc/public/uploads"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC via CMD_OAUTH2_*) ──────────────────────────────
+      CMD_OAUTH2_PROVIDERNAME: "Authentik"
+      CMD_OAUTH2_CLIENT_ID: "{{ authentik_oidc_hedgedoc_client_id }}"
+      CMD_OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_hedgedoc_client_secret }}"
+      CMD_OAUTH2_AUTHORIZATION_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
+      CMD_OAUTH2_TOKEN_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
+      CMD_OAUTH2_USER_PROFILE_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
+      CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: "preferred_username"
+      CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "name"
+      CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
+      CMD_OAUTH2_SCOPE: "openid profile email"
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ hedgedoc_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ hedgedoc_cpus | default(docker_cpus_standard | default('1.0')) }}

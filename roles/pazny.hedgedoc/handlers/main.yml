@@ -1,0 +1,9 @@
+---
+# pazny.hedgedoc — handlers
+# Volano z notify: po re-renderu override sablony.
+
+- name: Restart hedgedoc
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -f "{{ stacks_dir }}/b2b/docker-compose.yml" -p b2b
+    restart hedgedoc
+  failed_when: false
