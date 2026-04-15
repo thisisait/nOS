@@ -154,7 +154,7 @@ $statements = [
 		id              INTEGER PRIMARY KEY AUTOINCREMENT,
 		target_id       TEXT NOT NULL REFERENCES pentest_targets(id) ON DELETE CASCADE,
 		area            TEXT NOT NULL,
-		date            TEXT NOT NULL,
+		date            TEXT NOT NULL DEFAULT (datetime('now')),
 		technique       TEXT,
 		files_reviewed  TEXT,
 		result          TEXT NOT NULL CHECK (result IN ('no_findings','potential_vuln','confirmed_vuln')),

@@ -1163,7 +1163,7 @@ homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "1.0.0-alpha.90"         # CVE-2025-68926 (CVSS 9.8 hardcoded gRPC token) + 3 more CVEs
+rustfs_version: "1.0.0-alpha.93"         # CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386)
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK…) – 9000 obsazeno PHP-FPM
 rustfs_console_port: 9001           # Web konzole
 rustfs_domain: "fs.dev.local"

@@ -367,7 +367,7 @@
       "stack": "iiab",
       "image": "rustfs/rustfs",
       "version_var": "rustfs_version",
-      "default_version": "1.0.0-alpha.90",
+      "default_version": "1.0.0-alpha.93",
       "pinned": true,
       "network_exposed": false,
       "has_web_ui": true,

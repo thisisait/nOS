@@ -25,7 +25,7 @@ No post-start task — RustFS is a single container with local-only access.
 
 | Variable | Default | Description |
 |---|---|---|
-| `rustfs_version` | `1.0.0-alpha.90` | Pinned for CVE-2025-68926 (hardcoded gRPC token) + 3 more CVEs |
+| `rustfs_version` | `1.0.0-alpha.93` | CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386) |
 | `rustfs_api_port` | `9010` | S3 API port (aws-cli, rclone, restic, SDK) |
 | `rustfs_console_port` | `9001` | Web console port |
 | `rustfs_domain` | `fs.dev.local` | Nginx vhost hostname |

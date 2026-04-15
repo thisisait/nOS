@@ -9,7 +9,7 @@
 # default.config.yml a jsou prefix-rotovane pres global_password_prefix.
 # ==============================================================================
 
-rustfs_version: "1.0.0-alpha.90"                    # CVE-2025-68926 pin (+ 3 more CVEs)
+rustfs_version: "1.0.0-alpha.93"                    # CVE-2025-68926 pin + alpha.91 multipart auth hardening (#2411) + OIDC claim matching fix (#2386)
 rustfs_api_port: 9010                               # S3 API
 rustfs_console_port: 9001                           # Web konzole
 rustfs_domain: "fs.dev.local"
