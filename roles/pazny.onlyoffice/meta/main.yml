@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: onlyoffice
+  namespace: pazny
+  author: Pázny
+  description: ONLYOFFICE Document Server (document editor backend) in Docker compose override (devBoxNOS b2b stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []
+
+collections: []

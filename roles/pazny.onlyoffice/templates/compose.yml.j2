@@ -1,0 +1,59 @@
+# =============================================================================
+# pazny.onlyoffice — compose override fragment
+# Merged do `docker compose up b2b` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+#
+# Nedeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
+# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+#
+# ONLYOFFICE Document Server: dokumentovy editor backend. Embedded postgres
+# (CE image), Redis sdileny s infra stackem (volitelne). JWT secret sdileny
+# s hostitelskymi aplikacemi (Nextcloud, Outline, BookStack) — viz
+# authentik_oidc_apps + credentials.yml.
+# =============================================================================
+
+services:
+  onlyoffice:
+    image: onlyoffice/documentserver:{{ onlyoffice_version | default('9.3.1.2') }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ onlyoffice_port | default(3015) }}:80"
+{% else %}
+      - "127.0.0.1:{{ onlyoffice_port | default(3015) }}:80"
+{% endif %}
+    volumes:
+      - {{ onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data') }}:/var/www/onlyoffice/Data
+      - {{ onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs') }}:/var/log/onlyoffice
+      - {{ onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib') }}:/var/lib/onlyoffice
+      - {{ onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db') }}:/var/lib/postgresql
+    environment:
+      # ── JWT (API autentizace pro Nextcloud/Outline/BookStack) ─────────────
+      JWT_ENABLED: "{{ onlyoffice_jwt_enabled | default(true) | string | lower }}"
+      JWT_SECRET: "{{ onlyoffice_jwt_secret }}"
+      JWT_HEADER: "{{ onlyoffice_jwt_header | default('Authorization') }}"
+      JWT_IN_BODY: "{{ onlyoffice_jwt_in_body | default(true) | string | lower }}"
+      USE_UNAUTHORIZED_STORAGE: "false"
+      GENERATE_FONTS: "{{ onlyoffice_generate_fonts | default(true) | string | lower }}"
+{% if install_redis | default(false) %}
+      # ── Redis (sdileny s infra stackem; volitelne, zvysuje propustnost) ───
+      REDIS_SERVER_HOST: "redis"
+      REDIS_SERVER_PORT: "6379"
+      REDIS_SERVER_PWD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+{% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1/healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - b2b_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ onlyoffice_mem_limit | default(docker_mem_limit_critical | default('2g')) }}
+    cpus: {{ onlyoffice_cpus | default(docker_cpus_standard | default('1.0')) }}

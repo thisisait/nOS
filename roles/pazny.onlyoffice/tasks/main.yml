@@ -1,0 +1,47 @@
+---
+# ==============================================================================
+# pazny.onlyoffice/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
+#  - vytvori 4 data dirs (data, logs, lib, embedded postgres db)
+#  - vyrenderuje compose override fragment do
+#    {{ stacks_dir }}/b2b/overrides/onlyoffice.yml, ktery stack-up.yml sesbira
+#    pres `find` a prida jako dodatecny -f flag.
+#
+# ONLYOFFICE CE pouziva EMBEDDED postgres (uvnitr kontejneru) — nevyzaduje
+# externi DB. Redis je volitelne sdileny s infra stackem pres sit.
+# ==============================================================================
+
+- name: "[pazny.onlyoffice] Ensure data directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ onlyoffice_data_dir }}"
+    - "{{ onlyoffice_logs_dir }}"
+    - "{{ onlyoffice_lib_dir }}"
+    - "{{ onlyoffice_db_dir }}"
+
+- name: "[pazny.onlyoffice] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/b2b/overrides/onlyoffice.yml"
+    mode: '0644'
+  notify: Restart onlyoffice
+
+- name: "[pazny.onlyoffice] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       ONLYOFFICE Document Server (spousti se pres B2B stack)
+      ══════════════════════════════════════════════════════
+       URL:         https://{{ onlyoffice_domain }}
+       Healthcheck: https://{{ onlyoffice_domain }}/healthcheck
+       API:         https://{{ onlyoffice_domain }}/ConvertService.ashx
+       Data:        {{ onlyoffice_data_dir }}
+
+       Integrace s hostitelskymi aplikacemi (Nextcloud, Outline, BookStack):
+         Document Server URL: https://{{ onlyoffice_domain }}/
+         JWT secret:          <viz credentials.yml → onlyoffice_jwt_secret>
+      ══════════════════════════════════════════════════════
