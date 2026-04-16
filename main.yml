@@ -387,6 +387,21 @@
         hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
       tags: ['always']
 
+    - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
+      # UX: uzivatel muze prepnout install_firefly: true (nebo bookstack / onlyoffice /
+      # influxdb) v config.yml a spustit 'ansible-playbook main.yml -K' BEZ -e blank=true.
+      # Bez tohoto tasku by role assert (napr. roles/pazny.firefly/tasks/main.yml)
+      # failnul na placeholder hodnote z default.credentials.yml.
+      # Kazdy ternary: regeneruj JEN pokud je hodnota placeholder (nebo prazdna / moc kratka).
+      # Na druhem runu, kdyz uz uzivatel ma realnou hodnotu z predchozi blank generace,
+      # ternary short-circuit zachova puvodni secret.
+      ansible.builtin.set_fact:
+        firefly_app_key: "{% if 'placeholder' in (firefly_app_key | default('')) %}{{ 'base64:' ~ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ firefly_app_key }}{% endif %}"
+        onlyoffice_jwt_secret: "{% if 'placeholder' in (onlyoffice_jwt_secret | default('')) or (onlyoffice_jwt_secret | default('') | length) < 16 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ onlyoffice_jwt_secret }}{% endif %}"
+        influxdb_admin_token: "{% if 'placeholder' in (influxdb_admin_token | default('')) or (influxdb_admin_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ influxdb_admin_token }}{% endif %}"
+        bookstack_app_key: "{% if 'placeholder' in (bookstack_app_key | default('')) %}{{ 'base64:' ~ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ bookstack_app_key }}{% endif %}"
+      tags: ['always']
+
     - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"
       ansible.builtin.set_fact:
         infisical_encryption_key: "{{ lookup('pipe', 'openssl rand -hex 16') }}"

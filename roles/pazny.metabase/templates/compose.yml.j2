@@ -31,6 +31,15 @@ services:
     networks:
       - data_net
       - {{ stacks_shared_network }}
+    # Metabase first-boot (Flyway migrace + sample DB load) bezne trva 5-10 min.
+    # start_period: 300s da migracim grace, pak retries: 10 x 30s = dalsich 5 min
+    # toleranceflakiness nez Docker compose --wait flagne unhealthy.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
