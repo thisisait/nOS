@@ -239,6 +239,12 @@
   failed_when: false
 
 # ── SAFARI (developer settings) ───────────────────────────────────────────────
+# POZN: com.apple.Safari je od macOS 10.14 sandboxed container; zapis z
+# `defaults` vyzaduje aby mel Terminal (nebo proces spoustejici Ansible)
+# Full Disk Access v System Settings → Privacy & Security → Full Disk Access.
+# Bez nej hlasi `Could not write domain ...; exiting`. Misto failu playbooku
+# tady ignorujeme chybu — pokud Safari tweaky nevysly, muze je user zapnout
+# rucne v Safari → Settings → Advanced nebo dat Terminalu FDA.
 
 - name: "[Safari] Show full URL in address bar"
   community.general.osx_defaults:
@@ -246,6 +252,8 @@
     key: ShowFullURLInSmartSearchField
     type: bool
     value: "{{ macos_safari_show_full_url | default(true) }}"
+  register: _safari_full_url
+  failed_when: false
 
 - name: "[Safari] Enable Developer menu"
   community.general.osx_defaults:
@@ -253,6 +261,7 @@
     key: IncludeDebugMenu
     type: bool
     value: "{{ macos_safari_developer_menu | default(true) }}"
+  failed_when: false
 
 - name: "[Safari] Enable Web Inspector"
   community.general.osx_defaults:
@@ -260,6 +269,7 @@
     key: WebKitDeveloperExtrasEnabledPreferenceKey
     type: bool
     value: "{{ macos_safari_developer_menu | default(true) }}"
+  failed_when: false
 
 - name: "[Safari] Enable Web Inspector (new pref key)"
   community.general.osx_defaults:
@@ -267,6 +277,20 @@
     key: com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled
     type: bool
     value: "{{ macos_safari_developer_menu | default(true) }}"
+  failed_when: false
+
+- name: "[Safari] WARN if sandbox blocked defaults writes"
+  ansible.builtin.debug:
+    msg: |
+      VAROVANI: Safari defaults write selhalo (com.apple.Safari container je
+      sandboxed). Pro aplikaci Safari tweaku:
+        1) System Settings → Privacy & Security → Full Disk Access
+        2) Pridej Terminal (nebo iTerm/Ghostty) a zaskrtni
+        3) Restartuj Terminal a spust playbook znovu
+      Alternativa: zapni to rucne v Safari → Settings → Advanced / Developer.
+  when:
+    - _safari_full_url is defined
+    - _safari_full_url.failed | default(false) or (_safari_full_url.msg | default('') is match('.*Could not write domain.*'))
 
 # ── TERMINAL ──────────────────────────────────────────────────────────────────
 
@@ -276,6 +300,7 @@
     key: SecureKeyboardEntry
     type: bool
     value: "{{ macos_terminal_secure_keyboard | default(true) }}"
+  failed_when: false
 
 # ── SYSTÉM / VÝKON ────────────────────────────────────────────────────────────
 
