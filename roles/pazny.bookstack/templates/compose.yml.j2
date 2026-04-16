@@ -14,7 +14,7 @@
 
 services:
   bookstack:
-    image: lscr.io/linuxserver/bookstack:{{ bookstack_version | default('latest') }}
+    image: lscr.io/linuxserver/bookstack:{{ bookstack_version | default('v26.03.3-ls256') }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

@@ -54,6 +54,12 @@ services:
     extra_hosts:
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
 {% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/_health 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

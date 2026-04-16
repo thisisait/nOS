@@ -35,12 +35,3 @@
     dest: "{{ stacks_dir }}/iiab/overrides/nodered.yml"
     mode: '0644'
   notify: Restart nodered
-
-- name: "[pazny.nodered] Enable nodered nginx vhost"
-  ansible.builtin.file:
-    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/nodered.conf"
-    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/nodered.conf"
-    state: link
-    force: true
-  notify: Restart nginx
-  when: install_nginx | default(true)

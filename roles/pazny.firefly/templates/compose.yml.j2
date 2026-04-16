@@ -29,7 +29,7 @@ services:
       APP_DEBUG: "false"
       APP_KEY: "{{ firefly_app_key }}"
       SITE_OWNER: "{{ firefly_site_owner | default(default_admin_email) }}"
-      APP_URL: "https://{{ firefly_domain }}"
+      APP_URL: "https://{{ firefly_domain | default('firefly.dev.local') }}"
       TRUSTED_PROXIES: "**"
       TZ: "{{ firefly_tz | default('Europe/Prague') }}"
       DEFAULT_LANGUAGE: "{{ firefly_default_language | default('en_US') }}"
