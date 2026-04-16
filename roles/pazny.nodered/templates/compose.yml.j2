@@ -35,11 +35,11 @@ services:
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:1880/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:1880/ 2>&1 || exit 1"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 {% if install_authentik | default(false) %}
     extra_hosts:
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"

@@ -240,15 +240,39 @@
       Pozn: ERPNext configurator (exit 0) a distroless healthchecky jsou ocekavane.
   when: (_failed_stacks | length) > 0
 
-- name: "[Stacks] FAIL if any stack had non-zero exit (blocked bringup)"
+# ── Refine: rozliš "stack má 0 kontejneru" (real failure) vs. "některý container
+# je unhealthy" (false-positive — service běží, jen HC timing / špatně napsaný test)
+- name: "[Stacks] Count running containers per failed stack"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    -p "{{ item }}" ps -q 2>/dev/null | wc -l | tr -d ' '
+  loop: "{{ _failed_stacks | default([]) }}"
+  register: _failed_stacks_counts
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Stacks] Identify TRULY failed stacks (zero containers = real failure)"
+  ansible.builtin.set_fact:
+    _truly_failed_stacks: >-
+      {{
+        _failed_stacks_counts.results | default([])
+        | selectattr('stdout', 'defined')
+        | selectattr('stdout', 'equalto', '0')
+        | map(attribute='item')
+        | list
+      }}
+
+- name: "[Stacks] FAIL only if any stack has zero running containers (image pull / compose abort)"
   ansible.builtin.fail:
     msg: |
-      {{ _failed_stacks | length }} stack(s) failed to start: {{ _failed_stacks | join(', ') }}.
-      Check with: docker compose -p <stack> logs --tail 50 <service>
-      Most common causes: image pull failure (bad tag), port collision, DB dependency not ready.
+      {{ _truly_failed_stacks | length }} stack(s) have ZERO running containers: {{ _truly_failed_stacks | join(', ') }}.
+      This is a hard failure — docker compose up aborted (missing image, bad tag, port collision, missing mount).
+      Diagnose: docker compose -p <stack> up (re-run manuálně pro uvidění reálné chyby)
   when:
-    - (_failed_stacks | default([]) | length) > 0
-    - fail_on_stack_errors | default(true)  # opt-out flag
+    - (_truly_failed_stacks | default([]) | length) > 0
+    - fail_on_stack_errors | default(true)
   tags: ['always']
 
 # ── Container status všech stacků (core + remaining) ────────────────────────
