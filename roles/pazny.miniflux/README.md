@@ -11,9 +11,10 @@ Single `miniflux` service with native Authentik OIDC SSO (env-var based). No pos
 Single invocation from `tasks/stacks/stack-up.yml`:
 
 - **Main (`tasks/main.yml`)** — runs *before* `docker compose up iiab`:
-  - Creates `{{ miniflux_data_dir }}` on the host (used only for optional media attachments — PostgreSQL is single source of truth)
   - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/miniflux.yml`
   - Notifies `Restart miniflux` if the override changed
+
+Miniflux is fully stateless — all data lives in PostgreSQL (`miniflux` DB). No host bind-mount volume is declared.
 
 ## Requirements
 
@@ -29,7 +30,6 @@ Single invocation from `tasks/stacks/stack-up.yml`:
 | `miniflux_version` | `2.2.19` | `miniflux/miniflux` image tag |
 | `miniflux_domain` | `rss.{{ instance_tld }}` (fallback `rss.dev.local`) | Public hostname |
 | `miniflux_port` | `3011` | Exposed on `127.0.0.1` only (or LAN if `services_lan_access`) |
-| `miniflux_data_dir` | `~/miniflux/data` | Host bind mount for attachments/uploads |
 | `miniflux_db_name` | `miniflux` | PostgreSQL database name |
 | `miniflux_db_user` | `miniflux` | PostgreSQL user |
 | `miniflux_mem_limit` | `512m` | Container memory limit (lightweight Go binary) |
@@ -52,6 +52,15 @@ From `tasks/stacks/stack-up.yml`, gate on `install_miniflux`:
 ## SSO tier
 
 Tier 3 (user) — `devboxnos-users`, `devboxnos-managers`, `devboxnos-admins`.
+
+## Admin password rotation
+
+Miniflux CLI's `-reset-password` is interactive (`term.ReadPassword` only accepts `/dev/tty`), and the HTTP API requires an existing API key or Basic auth with the *current* password — so there's no clean idempotent reconverge path from Ansible. Behavior:
+
+- **Blank run** (`-e blank=true`): `CREATE_ADMIN=1` seeds the admin with the current `miniflux_admin_password` at first start. OK.
+- **Non-blank run, prefix rotation**: the admin password in Postgres does NOT drift to the new prefix. OIDC login keeps working (users are independent). If you need the fallback admin password reset, either do it in the UI (Settings → Change password) or bump with blank.
+
+OIDC users are always created on first login (`OAUTH2_USER_CREATION=1`).
 
 ## Rollback
 

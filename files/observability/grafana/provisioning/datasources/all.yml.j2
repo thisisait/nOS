@@ -56,3 +56,26 @@ datasources:
         spanEndTimeShift: '30m'
     version: 1
     editable: false
+
+{% if install_influxdb | default(false) %}
+  # ── InfluxDB 2.x – time-series data (Flux) ────────────────────────────────
+  # Token se čte z credentials.yml (influxdb_admin_token). Při blank run se
+  # propisuje do InfluxDB volumu přes DOCKER_INFLUXDB_INIT_ADMIN_TOKEN.
+  # Mimo blank run (persistent volume) musí Grafana token odpovídat tomu,
+  # který InfluxDB drží v /var/lib/influxdb2 — typicky shodné, protože
+  # influxdb_admin_token je v destructive group a mimo blank se netvoří.
+  - name: InfluxDB
+    type: influxdb
+    uid: influxdb
+    access: proxy
+    url: http://influxdb:{{ influxdb_port | default(8086) }}
+    jsonData:
+      version: Flux
+      organization: "{{ influxdb_org | default('devboxnos') }}"
+      defaultBucket: "{{ influxdb_bucket | default('default') }}"
+      tlsSkipVerify: true
+    secureJsonData:
+      token: "{{ influxdb_admin_token }}"
+    version: 1
+    editable: false
+{% endif %}

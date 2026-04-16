@@ -1,0 +1,96 @@
+---
+# ==============================================================================
+# pazny.influxdb/tasks/post.yml — admin password reconverge + health
+#
+# InfluxDB 2.x cte DOCKER_INFLUXDB_INIT_PASSWORD jen pri first-run setupu
+# (kdyz /var/lib/influxdb2 je prazdny). Pro non-blank runy pretoceni prefixu
+# potrebujeme update admin hesla explicitne pres InfluxDB API. Operace je
+# idempotent — 204 No Content pri uspechu.
+#
+# Token pouzity pro authorizaci je influxdb_admin_token (destructive group,
+# meni se jen pri blank/destroy_state). Po blank runu token matchuje ten,
+# ktery InfluxDB ulozil do volume → API call projde.
+#
+# Volano z tasks/stacks/core-up.yml PO `docker compose -p observability up`.
+# ==============================================================================
+
+- name: "[pazny.influxdb Post] Check if InfluxDB container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/observability/docker-compose.yml"
+    -p observability ps -q influxdb 2>/dev/null
+  register: _influxdb_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.influxdb Post] Wait for InfluxDB HTTP API to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ influxdb_port | default(8086) }}/health"
+    status_code: 200
+    timeout: 5
+  register: _influxdb_health
+  retries: 20
+  delay: 3
+  until: _influxdb_health.status | default(0) == 200
+  when: _influxdb_container.stdout | default('') | length > 0
+  failed_when: false
+
+- name: "[pazny.influxdb Post] Look up admin user ID"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ influxdb_port | default(8086) }}/api/v2/users?name={{ influxdb_admin_user | default('admin') }}"
+    method: GET
+    headers:
+      Authorization: "Token {{ influxdb_admin_token }}"
+    return_content: true
+    status_code: [200, 401, 403, 404]
+  register: _influx_users
+  when:
+    - _influxdb_container.stdout | default('') | length > 0
+    - _influxdb_health.status | default(0) == 200
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.influxdb Post] Reconverge admin password via API"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ influxdb_port | default(8086) }}/api/v2/users/{{ _admin_user_id }}/password"
+    method: POST
+    headers:
+      Authorization: "Token {{ influxdb_admin_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      password: "{{ influxdb_admin_password }}"
+    status_code: [204, 401, 403]
+  vars:
+    _admin_user_id: >-
+      {{
+        (_influx_users.json.users | default([])
+         | selectattr('name', 'equalto', influxdb_admin_user | default('admin'))
+         | list | first | default({})).id | default('')
+      }}
+  when:
+    - _influxdb_container.stdout | default('') | length > 0
+    - _influxdb_health.status | default(0) == 200
+    - _influx_users.status | default(0) == 200
+    - _admin_user_id | length > 0
+  register: _influx_pw_update
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.influxdb Post] Show access info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       InfluxDB 2.x (Docker) připraven
+      ══════════════════════════════════════════════════════
+       URL:         https://{{ influxdb_domain | default('influx.dev.local') }}
+       Kontejner:   influxdb → 127.0.0.1:{{ influxdb_port | default(8086) }}
+       Admin user:  {{ influxdb_admin_user | default('admin') }}
+       Org:         {{ influxdb_org | default('devboxnos') }}
+       Bucket:      {{ influxdb_bucket | default('default') }}
+       Token:       <v credentials.yml>  (destructive — regen jen pri blank)
+       SSO:         Authentik forward_auth (UI);  API klientum predej token
+       Datasource:  Auto-provisoned v Grafana (uid: influxdb)
+      ══════════════════════════════════════════════════════
+  when: _influxdb_container.stdout | default('') | length > 0

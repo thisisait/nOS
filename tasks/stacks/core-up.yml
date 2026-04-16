@@ -396,6 +396,18 @@
     - _core_observability_enabled | bool
   tags: ['grafana', 'observability']
 
+- name: "[Core] InfluxDB admin password reconverge + health (pazny.influxdb → post.yml)"
+  ansible.builtin.include_role:
+    name: pazny.influxdb
+    tasks_from: post.yml
+    apply:
+      tags: ['influxdb', 'observability']
+  when:
+    - install_observability | default(true)
+    - install_influxdb | default(false)
+    - _core_observability_enabled | bool
+  tags: ['influxdb', 'observability']
+
 # ── Core service post-start (Authentik / Infisical / Bluesky PDS) ───────────
 # Ostatní tasky v main.yml mohou poté předpokládat, že IAM / Vault / PDS
 # jsou dostupné (health check čeká uvnitř těchto include_tasks).
