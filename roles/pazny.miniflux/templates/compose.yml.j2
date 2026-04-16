@@ -21,9 +21,8 @@ services:
 {% else %}
       - "127.0.0.1:{{ miniflux_port | default(3011) }}:8080"
 {% endif %}
-    volumes:
-      - {{ miniflux_data_dir | default(ansible_facts['env']['HOME'] + '/miniflux/data') }}:/data
 {% if install_authentik | default(false) %}
+    volumes:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:

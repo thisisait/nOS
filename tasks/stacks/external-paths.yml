@@ -80,11 +80,10 @@
     onlyoffice_lib_dir: "{{ external_storage_root }}/onlyoffice/lib"
     onlyoffice_db_dir: "{{ external_storage_root }}/onlyoffice/db"
 
-# ── IIAB/Wave A add-ons (ntfy, miniflux, nodered) ──────────────────────────
+# ── IIAB/Wave A add-ons (ntfy, nodered; miniflux je stateless — vse v Postgres) ──
 - name: "[External SSD] Override Wave A IIAB add-on paths"
   ansible.builtin.set_fact:
     ntfy_data_dir: "{{ external_storage_root }}/ntfy/data"
-    miniflux_data_dir: "{{ external_storage_root }}/miniflux/data"
     nodered_data_dir: "{{ external_storage_root }}/nodered/data"
 
 # ── VoIP / Engineering / Data stack ─────────────────────────────────────────

@@ -9,8 +9,7 @@
 miniflux_version: "2.2.19"
 miniflux_domain: "rss.{{ instance_tld | default('dev.local') }}"
 miniflux_port: 3011
-miniflux_data_dir: "{{ ansible_facts['env']['HOME'] }}/miniflux/data"
 miniflux_db_name: "miniflux"
 miniflux_db_user: "miniflux"
-miniflux_mem_limit: "512m"
+miniflux_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 miniflux_cpus: "{{ docker_cpus_light | default('0.5') }}"

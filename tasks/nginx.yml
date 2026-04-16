@@ -100,6 +100,16 @@
     - paperclip.conf
     # ── Security dashboard
     - glasswing.conf
+    # ── Wave A+B (2026-04) nové služby
+    - ntfy.conf
+    - miniflux.conf
+    - nodered.conf
+    - code-server.conf
+    - hedgedoc.conf
+    - bookstack.conf
+    - firefly.conf
+    - onlyoffice.conf
+    - influxdb.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -140,6 +150,15 @@
          + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
          + ((install_paperclip | default(false)) | ternary(['paperclip.conf'], []))
          + ((install_glasswing | default(install_php | default(true))) | ternary(['glasswing.conf'], []))
+         + ((install_ntfy | default(false)) | ternary(['ntfy.conf'], []))
+         + ((install_miniflux | default(false)) | ternary(['miniflux.conf'], []))
+         + ((install_nodered | default(false)) | ternary(['nodered.conf'], []))
+         + ((install_code_server | default(false)) | ternary(['code-server.conf'], []))
+         + ((install_hedgedoc | default(false)) | ternary(['hedgedoc.conf'], []))
+         + ((install_bookstack | default(false)) | ternary(['bookstack.conf'], []))
+         + ((install_firefly | default(false)) | ternary(['firefly.conf'], []))
+         + ((install_onlyoffice | default(false)) | ternary(['onlyoffice.conf'], []))
+         + ((install_influxdb | default(false)) | ternary(['influxdb.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 

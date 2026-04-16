@@ -12,6 +12,21 @@
 # prihlaseni pres nginx auth_request.
 # ==============================================================================
 
+- name: "[pazny.firefly] Assert firefly_app_key is valid Laravel APP_KEY"
+  ansible.builtin.assert:
+    that:
+      - "'placeholder' not in firefly_app_key"
+      - "firefly_app_key is match('^base64:[A-Za-z0-9+/=]{43,44}$')"
+    fail_msg: |
+      firefly_app_key není validní Laravel APP_KEY (base64:<32-byte base64>).
+      Firefly III Laravel crashne při startu pokud APP_KEY není přesně 32 bytes.
+
+      Oprava — zvol jeden z:
+        1. První run s -e blank=true (main.yml vygeneruje platný key — destructive group)
+        2. Nastav vlastní v credentials.yml:
+             firefly_app_key: "base64:$(openssl rand -base64 32)"
+        3. Ručně spusť: openssl rand -base64 32 | sed 's|^|base64:|'
+
 - name: "[pazny.firefly] Ensure data directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
