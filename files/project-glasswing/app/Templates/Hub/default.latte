@@ -10,7 +10,7 @@
 	</div>
 	<div class="stat">
 		<div class="label">Base domain</div>
-		<div class="value" style="font-size:18px;font-family:'SF Mono','Fira Code',monospace;">{$baseDomain ?? 'dev.local'}</div>
+		<div class="value hub-mono" style="font-size:18px">{$baseDomain ?? 'dev.local'}</div>
 		<div class="sub">*.{$baseDomain ?? 'dev.local'}</div>
 	</div>
 	<div class="stat">
@@ -20,7 +20,7 @@
 	</div>
 	<div class="stat">
 		<div class="label">Snapshot</div>
-		<div class="value" style="font-size:14px;font-family:'SF Mono','Fira Code',monospace;">{($generatedAt ?? '—')|truncate:16:''}</div>
+		<div class="value hub-mono" style="font-size:14px">{substr($generatedAt ?? '—', 0, 16)}</div>
 		<div class="sub">Ansible render time</div>
 	</div>
 </div>
