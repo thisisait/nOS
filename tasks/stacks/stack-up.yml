@@ -192,6 +192,7 @@
 - { name: "[Stacks] pazny.jellyfin post", ansible.builtin.include_role: { name: pazny.jellyfin, tasks_from: post.yml, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
 - { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
+- { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 # DevOps post-start
 - { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }

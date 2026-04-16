@@ -1,0 +1,63 @@
+---
+# ==============================================================================
+# pazny.ntfy/tasks/post.yml — admin user provisioning po startu kontejneru
+#
+# ntfy ma `auth-default-access: deny-all` — bez vyslovneho admin usera je
+# server 100% nepouzitelny (cokoli 403). Tento task vytvori/reconverguje admin
+# usera pri kazdem behu (idempotentne — ntfy CLI prepise heslo pokud user
+# existuje).
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+# ==============================================================================
+
+- name: "[pazny.ntfy Post] Check if ntfy container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/iiab/docker-compose.yml"
+    -p iiab ps -q ntfy 2>/dev/null
+  register: _ntfy_container
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.ntfy Post] Wait for ntfy HTTP to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ ntfy_port | default(2586) }}/v1/health"
+    status_code: 200
+    timeout: 5
+  register: _ntfy_health
+  retries: 15
+  delay: 2
+  until: _ntfy_health.status | default(0) == 200
+  failed_when: false
+  when: _ntfy_container.stdout | default('') | length > 0
+
+- name: "[pazny.ntfy Post] Create/reconverge admin user (idempotent)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T
+    -e NTFY_PASSWORD={{ ntfy_admin_password | quote }}
+    ntfy sh -c 'ntfy user add --role=admin {{ ntfy_admin_user | default("admin") }} 2>/dev/null
+    || ntfy user change-pass {{ ntfy_admin_user | default("admin") }}'
+  register: _ntfy_user_add
+  changed_when: >
+    'added' in (_ntfy_user_add.stdout | default('')) or
+    'changed password' in (_ntfy_user_add.stdout | default(''))
+  failed_when: false
+  check_mode: false
+  when:
+    - _ntfy_container.stdout | default('') | length > 0
+    - _ntfy_health.status | default(0) == 200
+
+- name: "[pazny.ntfy Post] Show access info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       ntfy (Docker) pripraven
+      ══════════════════════════════════════════════════════
+       URL:         https://{{ ntfy_domain | default('ntfy.dev.local') }}
+       Kontejner:   ntfy → 127.0.0.1:{{ ntfy_port | default(2586) }}
+       Admin user:  {{ ntfy_admin_user | default('admin') }} / {{ ntfy_admin_password }}
+       CLI login:   ntfy login -u {{ ntfy_admin_user | default('admin') }} https://{{ ntfy_domain | default('ntfy.dev.local') }}
+       SSO:         Authentik forward_auth (UI); ntfy ACL pro publish/subscribe
+      ══════════════════════════════════════════════════════
+  when: _ntfy_container.stdout | default('') | length > 0
