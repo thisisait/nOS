@@ -149,3 +149,4 @@ a { color: var(--accent); text-decoration: none; }
 .hub-card-link { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--bg); text-decoration: none; transition: all 0.15s; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hub-card-link:hover { border-color: var(--accent); background: var(--surface2); }
 .hub-card-link.primary { border-color: rgba(88,166,255,0.3); }
+.hub-mono { font-family: 'SF Mono', 'Fira Code', monospace; }

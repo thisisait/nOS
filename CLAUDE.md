@@ -10,7 +10,7 @@ Fork of geerlingguy/mac-dev-playbook → přejmenované role pod `pazny.*` names
 
 ## Git Workflow
 
-**Veškerý vývoj probíhá ve větvi `dev`.** Branch `master` je release branch — merge do masteru provádí výhradně uživatel ručně. NIKDY necommituj, nepushuj, nevytvářej PR ani worktree z `master`. Všechny operace MUSÍ vycházet z `dev`.
+**Vývoj probíhá primárně ve větvi `master`.** Větev `dev` byla zrušena 2026-04-16. Nové krátkodobé větve (feat/*, fix/*) vycházejí z `master` a mergují se zpět přes fast-forward nebo PR. Worktrees zakládej nad `master`. Nikdy neoživuj `dev`.
 
 ## Commit Convention
 
