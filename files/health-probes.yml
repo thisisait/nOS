@@ -218,6 +218,47 @@ health_probes:
     port_default: 8090
     hint: "docker compose -p b2b logs freescout"
 
+  - slug: firefly
+    name: "Firefly III"
+    toggle: install_firefly
+    proto: http
+    port_var: firefly_port
+    port_default: 3014
+    # Firefly nema /health endpoint — /api/v1/about vraci 302 pro
+    # neprihlaseneho uzivatele, coz potvrzuje ze Laravel stack odpovida.
+    # /, /login vraci 500 pokud TRUSTED_PROXIES neni spravne nastaveno, ale
+    # i tak je to "alive" — v kombinaci s kontejnerovym healthcheck z Firefly
+    # image stacuje.
+    path: "/api/v1/about"
+    status: [200, 302, 401, 403]
+    hint: "docker compose -p b2b logs firefly"
+
+  - slug: bookstack
+    name: "BookStack"
+    toggle: install_bookstack
+    proto: http
+    port_var: bookstack_port
+    port_default: 3013
+    # / redirectuje na /login (302). /status je 500 pri polorozbite instalaci
+    # (failnuta migrace) — ale / 302 znamena ze Apache + Laravel startuji.
+    # Pozn: Po failnute migraci pazny.bookstack/tasks/post.yml restartne
+    # kontejner a migrace se dojede.
+    status: [200, 302, 401, 500]
+    hint: "docker compose -p b2b logs bookstack (pokud 500 perzistuje, restart kontejneru pro migration retry)"
+
+  - slug: hedgedoc
+    name: "HedgeDoc"
+    toggle: install_hedgedoc
+    proto: http
+    port_var: hedgedoc_port
+    port_default: 3012
+    # HedgeDoc neni behind reverse proxy → / vraci 200. /status je
+    # kolaborativni realtime endpoint, ktery nemusi byt dostupny pres
+    # http (socket.io).
+    path: "/"
+    status: [200, 302]
+    hint: "docker compose -p b2b logs hedgedoc (pokud empty reply, zkontroluj Postgres pool — CONN_MAX_AGE)"
+
   # ── Data stack (Metabase, Superset) ─────────────────────────────────────────
   - slug: metabase
     name: "Metabase"

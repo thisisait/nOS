@@ -14,3 +14,10 @@ postgresql_root_user: "postgres"
 postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# max_connections bump na 400 — Authentik 2025.x drzi ~60 spojeni i s
+# CONN_MAX_AGE=0 behem pikoveho provozu, plus Outline/Hedgedoc/Superset/
+# Metabase/Paperclip/Miniflux/Nextcloud paralelne. Default 100 vede k chybe
+# "remaining connection slots are reserved for SUPERUSER" pri soubeznem
+# startu. Jde dohromady s pazny.authentik pool tuning (authentik_pg_conn_max_age).
+postgresql_max_connections: 400

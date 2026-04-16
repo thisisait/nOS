@@ -37,6 +37,15 @@ services:
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"
+      # Zavirat DB spojeni po kazdem requestu misto persistentniho poolu —
+      # bez teto konfigurace drzi Authentik 2025.2 na sdilenem Postgresu
+      # ~290 idle spojeni, coz vycerpa max_connections=300 a zabije ostatni
+      # klienty (Outline, Hedgedoc, Firefly) chybou "remaining connection
+      # slots are reserved for SUPERUSER". 0 = close after each request.
+      AUTHENTIK_POSTGRESQL__CONN_MAX_AGE: "{{ authentik_pg_conn_max_age | default(0) }}"
+      AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: "true"
+      AUTHENTIK_WEB__WORKERS: "{{ authentik_web_workers | default(2) }}"
+      AUTHENTIK_WEB__THREADS: "{{ authentik_web_threads | default(4) }}"
       AUTHENTIK_BOOTSTRAP_PASSWORD: "{{ authentik_bootstrap_password }}"
       AUTHENTIK_BOOTSTRAP_EMAIL: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
@@ -72,6 +81,13 @@ services:
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"
+      # Viz server — zavirat DB spojeni po requestu, jinak worker drzi
+      # vlastni idle pool navrchu gunicorn poolu a spolecne zahltili
+      # max_connections.
+      AUTHENTIK_POSTGRESQL__CONN_MAX_AGE: "{{ authentik_pg_conn_max_age | default(0) }}"
+      AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: "true"
+      AUTHENTIK_WORKER__PROCESSES: "{{ authentik_worker_processes | default(1) }}"
+      AUTHENTIK_WORKER__THREADS: "{{ authentik_worker_threads | default(2) }}"
     networks:
       - infra_net
       - {{ stacks_shared_network }}

@@ -1,0 +1,53 @@
+---
+# ==============================================================================
+# pazny.bookstack/tasks/post.yml
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose up b2b`.
+#
+# Problem:
+#   Image `lscr.io/linuxserver/bookstack` pri prvnim startu spousti
+#   `artisan migrate`. Pokud MariaDB jeste nestihne dobehnout
+#   healthcheck k okamziku, kdy artisan otevre TCP spojeni, migrace
+#   selze uprostred FK aliasu s "[2002] Connection refused" a s6-overlay
+#   migration step se neopakuje — kontejner zustane bezet s prazdnou DB.
+#
+# Fix:
+#   Po compose up zkontroluj logy bookstack kontejneru na "FAIL" u
+#   migrace a pripadne restartuj kontejner. LinuxServer init pustí
+#   migrate znovu pri restartu; MariaDB uz je davno ready.
+# ==============================================================================
+
+- name: "[pazny.bookstack] Check migration status from container logs"
+  ansible.builtin.shell: >
+    {{ docker_bin }} logs b2b-bookstack-1 2>&1 | tail -200 | grep -c "migrations .* DONE.*All migrations" || true
+  register: _bookstack_migration_done
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.bookstack] Check for migration FAIL in logs"
+  ansible.builtin.shell: >
+    {{ docker_bin }} logs b2b-bookstack-1 2>&1 | tail -200 | grep -cE "migrations .* FAIL|Connection refused.*mysql" || true
+  register: _bookstack_migration_fail
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.bookstack] Restart container if migration FAILed (transient MariaDB connection refused)"
+  ansible.builtin.command: "{{ docker_bin }} restart b2b-bookstack-1"
+  when: (_bookstack_migration_fail.stdout | default('0') | int) > 0
+  changed_when: true
+  register: _bookstack_restart
+
+- name: "[pazny.bookstack] Wait for bookstack HTTP after migration retry"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/"
+    status_code: [200, 302, 401]
+    follow_redirects: none
+  register: _bookstack_http
+  retries: 30
+  delay: 5
+  until: _bookstack_http.status | default(0) in [200, 302, 401]
+  when: _bookstack_restart is changed
+  failed_when: false
+  check_mode: false
