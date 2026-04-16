@@ -367,7 +367,7 @@ homebrew_cask_apps:
   - hiddenbar            # Hidden Bar – schovávání ikon v menu baru (MAS alt.)
   - stats                # Stats – CPU/GPU/RAM/network v menu baru
   - onyx                 # OnyX – údržba macOS, cache cleanup, hidden prefs
-  - cheatsheet           # CheatSheet – přehled klávesových zkratek (hold ⌘)
+  # - cheatsheet         # DEPRECATED 2025-11-09 (upstream discontinued; download 404). Nahrada: keyboard-cheat-sheet (App Store) nebo Raycast keymap.
   - shottr               # Shottr – pokročilé screenshoty + scrolling capture + OCR
   - dockdoor             # DockDoor – Windows-like preview oken v Docku
   - hyperkey             # Hyperkey – capslock jako hyper modifier (⌃⌥⇧⌘)
