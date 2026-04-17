@@ -1,29 +1,40 @@
 /**
- * Glasswing Hub — client-side logic
- *   - Filter / search across service cards
- *   - Poll /api/v1/hub/health for live up/down indicators
+ * Glasswing Hub — systems dashboard client-side logic.
+ *   - Stack/search filtering
+ *   - Health probe polling via /api/v1/hub/health
  */
 (function () {
 	'use strict';
 
-	const grid = document.getElementById('hub-grid');
-	if (!grid) { return; }
-
 	const searchInput = document.getElementById('hub-search');
 	const filterBtns = document.querySelectorAll('.filter-btn[data-filter]');
-	const refreshBtn = document.getElementById('hub-refresh-health');
-	const cards = () => Array.from(grid.querySelectorAll('.hub-card'));
+	const probeBtn = document.getElementById('hub-probe-all');
+	const cards = () => Array.from(document.querySelectorAll('.sys-card'));
+	const stacks = () => Array.from(document.querySelectorAll('.hub-stack'));
 
-	let activeCategory = 'all';
+	let activeStack = 'all';
 	let query = '';
 
 	function applyFilter() {
 		cards().forEach(card => {
-			const cat = card.dataset.category || '';
+			const stack = card.dataset.stack || '';
 			const name = card.dataset.name || '';
-			const categoryOk = activeCategory === 'all' || cat === activeCategory;
-			const queryOk = !query || name.includes(query) || cat.includes(query);
-			card.classList.toggle('hidden', !(categoryOk && queryOk));
+			const cat = card.dataset.category || '';
+			const stackOk = activeStack === 'all' || stack === activeStack;
+			const queryOk = !query || name.includes(query) || cat.includes(query) || stack.includes(query);
+			card.classList.toggle('hidden', !(stackOk && queryOk));
+		});
+		stacks().forEach(section => {
+			const stackName = section.dataset.stack;
+			const stackOk = activeStack === 'all' || stackName === activeStack;
+			if (!stackOk) {
+				section.classList.add('hidden');
+			} else {
+				section.classList.remove('hidden');
+				// Hide section if all its cards are hidden
+				const visibleCards = section.querySelectorAll('.sys-card:not(.hidden)');
+				section.classList.toggle('hidden', visibleCards.length === 0);
+			}
 		});
 	}
 
@@ -31,7 +42,7 @@
 		btn.addEventListener('click', () => {
 			filterBtns.forEach(b => b.classList.remove('active'));
 			btn.classList.add('active');
-			activeCategory = btn.dataset.filter;
+			activeStack = btn.dataset.filter;
 			applyFilter();
 		});
 	});
@@ -44,41 +55,48 @@
 	}
 
 	// Health polling
-	async function fetchHealth() {
+	async function probeHealth() {
 		try {
 			const res = await fetch('/api/v1/hub/health', { headers: { Accept: 'application/json' } });
-			if (!res.ok) { return; }
+			if (!res.ok) return;
 			const data = await res.json();
-			const probes = (data && data.probes) || [];
-			const byUrl = Object.create(null);
-			probes.forEach(p => { byUrl[p.url] = p; });
+			const probes = data.probes || [];
+			const byId = Object.create(null);
+			probes.forEach(p => { byId[p.id] = p; });
+
 			cards().forEach(card => {
-				const url = card.dataset.url;
-				if (!url) { return; }
-				const probe = byUrl[url];
-				const healthEl = card.querySelector('.hub-card-health');
-				if (!healthEl) { return; }
-				healthEl.classList.remove('up', 'down', 'skipped');
-				if (!probe) {
-					healthEl.classList.add('skipped');
-					healthEl.title = 'Not probed';
-					return;
+				const id = card.dataset.id;
+				const probe = byId[id];
+				if (!probe) return;
+
+				card.dataset.health = probe.status;
+				const dot = card.querySelector('.sys-health-dot');
+				if (dot) {
+					dot.className = 'sys-health-dot sys-health-' + probe.status;
+					dot.title = probe.status + (probe.ms ? ' (' + probe.ms + 'ms)' : '');
 				}
-				healthEl.classList.add(probe.status);
-				healthEl.title = `HTTP ${probe.http_code} in ${probe.ms}ms`;
 			});
+
+			// Update stats
+			const upCount = probes.filter(p => p.status === 'up').length;
+			const downCount = probes.filter(p => p.status === 'down').length;
+			const statValues = document.querySelectorAll('.stat .value');
+			if (statValues[1]) statValues[1].textContent = upCount;
+			if (statValues[2]) statValues[2].textContent = downCount;
 		} catch (err) {
-			console.warn('[hub] health poll failed:', err);
+			console.warn('[hub] health probe failed:', err);
 		}
 	}
 
-	if (refreshBtn) {
-		refreshBtn.addEventListener('click', (ev) => {
+	if (probeBtn) {
+		probeBtn.addEventListener('click', (ev) => {
 			ev.preventDefault();
-			fetchHealth();
+			probeBtn.textContent = 'Probing...';
+			probeHealth().finally(() => { probeBtn.textContent = 'Probe All'; });
 		});
 	}
 
-	fetchHealth();
-	setInterval(fetchHealth, 30_000); // refresh every 30s
+	// Initial probe + 30s interval
+	probeHealth();
+	setInterval(probeHealth, 30_000);
 })();

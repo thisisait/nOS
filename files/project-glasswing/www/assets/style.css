@@ -129,24 +129,47 @@ a { color: var(--accent); text-decoration: none; }
 /* Loading spinner */
 .loading { text-align: center; padding: 40px; color: var(--text2); }
 
-/* Hub — self-hosted services grid */
-.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 24px; }
-.hub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.15s; }
-.hub-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.hub-card.hidden { display: none; }
-.hub-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.hub-card-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hub-card-name { font-size: 15px; font-weight: 600; color: var(--text); }
-.hub-card-health { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text2); }
-.hub-card-health .pulse { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.hub-card-health.up .pulse { background: var(--green); animation: pulse 2s infinite; }
-.hub-card-health.down .pulse { background: var(--red); }
-.hub-card-health.skipped .pulse { background: var(--text2); }
-.hub-card-meta { display: flex; flex-wrap: wrap; gap: 4px; }
-.hub-card-meta .badge { font-size: 10px; text-transform: lowercase; padding: 2px 8px; }
-.hub-card-desc { font-size: 12px; color: var(--text2); line-height: 1.4; margin: 0; }
-.hub-card-links { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-.hub-card-link { font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--bg); text-decoration: none; transition: all 0.15s; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hub-card-link:hover { border-color: var(--accent); background: var(--surface2); }
-.hub-card-link.primary { border-color: rgba(88,166,255,0.3); }
+/* Hub — Systems dashboard */
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.hub-stack { margin-bottom: 28px; }
+.hub-stack-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.hub-stack.hidden { display: none; }
 .hub-mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+
+/* System card */
+.sys-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; transition: border-color .15s; }
+.sys-card:hover { border-color: var(--accent); }
+.sys-card.hidden { display: none; }
+.sys-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.sys-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sys-name { font-size: 14px; font-weight: 600; }
+.sys-badges { display: flex; gap: 4px; flex-shrink: 0; }
+.sys-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; background: var(--surface2); color: var(--text2); }
+.sys-badge-type { color: var(--cyan); }
+.sys-badge-cat { color: var(--purple); }
+.sys-desc { font-size: 12px; color: var(--text2); line-height: 1.4; margin: 0; }
+
+/* Health dot */
+.sys-health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.sys-health-up { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.sys-health-down { background: var(--red); box-shadow: 0 0 4px var(--red); animation: pulse 1.5s infinite; }
+.sys-health-unknown { background: var(--text2); opacity: .5; }
+
+/* Scan overlay */
+.sys-scan { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text2); padding: 4px 8px; background: var(--bg); border-radius: 4px; }
+.sys-scan-label { font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.sys-scan-findings { font-weight: 600; }
+.sys-scan-findings.has-findings { color: var(--orange); }
+.sys-scan-date { margin-left: auto; }
+
+/* Links row */
+.sys-links { display: flex; gap: 6px; flex-wrap: wrap; }
+.sys-link { font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--accent); text-decoration: none; transition: all .12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.sys-link:hover { border-color: var(--accent); background: var(--surface2); }
+.sys-link-https { border-color: rgba(88,166,255,.3); }
+.sys-link-port { color: var(--text2); }
+.sys-link-repo { color: var(--purple); border-color: rgba(188,140,255,.2); }
+
+/* Children (sub-services) */
+.sys-children { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--bg); border-radius: 4px; margin-top: 2px; }
+.sys-child { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }

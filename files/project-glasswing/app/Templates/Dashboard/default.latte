@@ -77,26 +77,9 @@
 </div>
 
 <div id="tab-components" class="tab-content">
-	<h2 style="margin-bottom: 16px; font-size: 18px;">Monitored Components ({count($components)})</h2>
-	<div class="comp-grid">
-		{foreach $components as $comp}
-			<div class="comp-card">
-				<h4>
-					{$comp['name']}
-					<span class="version">{$comp['default_version'] ?? 'N/A'}</span>
-				</h4>
-				<div class="meta">
-					{$comp['stack'] ?? 'unknown'} &middot; {$comp['category']}
-					{if $comp['upstream_repo']} &middot; {$comp['upstream_repo']}{/if}
-				</div>
-				{if isset($comp['scan_state'])}
-					<div class="meta" style="margin-top: 4px">
-						Last scan: {$comp['scan_state']['last_cve_scan'] ?? 'never'}
-						&middot; Findings: {$comp['scan_state']['findings_count'] ?? 0}
-					</div>
-				{/if}
-			</div>
-		{/foreach}
+	<div class="empty" style="padding:40px">
+		<p style="font-size:15px;color:var(--text);margin-bottom:8px">Components moved to Hub</p>
+		<p style="color:var(--text2)">All systems and components are now managed in the <a href="/hub">Hub dashboard</a>.</p>
 	</div>
 </div>
 {/block}

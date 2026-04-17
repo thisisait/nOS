@@ -42,7 +42,7 @@
 	// ── Keyboard shortcuts ──
 	document.addEventListener('keydown', function (e) {
 		if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-		const routes = { '0': '/hub', '1': '/dashboard', '2': '/dashboard#timeline', '3': '/dashboard#components', '4': '/pentest', '5': '/remediation', '6': '/help' };
+		const routes = { '0': '/hub', '1': '/dashboard', '2': '/dashboard#timeline', '3': '/hub', '4': '/pentest', '5': '/remediation', '6': '/help' };
 		if (routes[e.key]) {
 			e.preventDefault();
 			location.href = routes[e.key];

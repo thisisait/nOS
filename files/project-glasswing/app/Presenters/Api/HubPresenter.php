@@ -4,31 +4,64 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
-use App\Model\ServiceRegistry;
+use App\Model\SystemRepository;
 
 /**
- * GET /api/v1/hub/services       — full registry (no auth required; same content
- *                                  as ~/projects/default/service-registry.json)
- * GET /api/v1/hub/health          — live probe of every registered service
- * GET /api/v1/hub/health?url=...  — probe a single URL
+ * GET /api/v1/hub/systems         — list all systems (flat, with filters)
+ * GET /api/v1/hub/systems?tree=1  — tree (hierarchy with children)
+ * GET /api/v1/hub/systems/{id}    — single system detail
+ * GET /api/v1/hub/health          — probe all systems with a URL
+ * POST /api/v1/hub/systems        — upsert a system
  *
- * Both routes are public (listed in publicActions) because the data they
- * expose is non-sensitive (service names, public hostnames, ports). Nginx
- * still gates access at the domain level via Authentik proxy auth, so outside
- * callers cannot hit these endpoints without first authenticating to the SSO.
+ * Public routes (no Bearer token) — data is non-sensitive service metadata.
+ * Nginx gates browser access via Authentik; API access is local-only.
  */
 final class HubPresenter extends BaseApiPresenter
 {
-	/** @var array<int,string> */
-	protected array $publicActions = ['services', 'health'];
+	protected array $publicActions = ['systems', 'health'];
 
 	/** @inject */
-	public ServiceRegistry $registry;
+	public SystemRepository $systems;
 
-	public function actionServices(): void
+	public function actionSystems(string $id = null): void
 	{
+		if ($id !== null) {
+			$this->requireMethod('GET');
+			$sys = $this->systems->get($id);
+			if (!$sys) {
+				$this->sendError('System not found', 404);
+			}
+			$this->sendSuccess($sys);
+		}
+
+		$method = $this->getMethod();
+		if ($method === 'POST') {
+			$body = $this->getJsonBody();
+			if (empty($body['id'])) {
+				$this->sendError('id is required');
+			}
+			$this->systems->upsert($body);
+			$this->sendSuccess(['ok' => true, 'id' => $body['id']]);
+		}
+
+		// GET — list or tree
 		$this->requireMethod('GET');
-		$data = $this->registry->read();
+		$req = $this->getHttpRequest();
+
+		if ($req->getQuery('tree')) {
+			$this->sendSuccess(['systems' => $this->systems->tree()]);
+		}
+
+		$filters = [];
+		foreach (['category', 'stack', 'priority', 'health', 'source', 'type'] as $key) {
+			$val = $req->getQuery($key);
+			if ($val !== null) {
+				$filters[$key] = $val;
+			}
+		}
+
+		$data = $this->systems->list($filters);
+		$data['stats'] = $this->systems->stats();
 		$this->sendSuccess($data);
 	}
 
@@ -38,21 +71,27 @@ final class HubPresenter extends BaseApiPresenter
 		$url = $this->getHttpRequest()->getQuery('url');
 
 		if (is_string($url) && $url !== '') {
-			// Only allow probing URLs that exist in the registry — prevents SSRF
-			// via this endpoint (attacker coercing glasswing to hit arbitrary
-			// internal IPs).
-			if (!$this->isRegisteredUrl($url)) {
-				$this->sendError('URL not in registry', 400);
+			// Single probe — validate URL is in DB to prevent SSRF
+			$found = false;
+			foreach ($this->systems->list()['systems'] as $sys) {
+				if (($sys['url'] ?? '') === $url || ($sys['ip_url'] ?? '') === $url || ($sys['domain_url'] ?? '') === $url) {
+					$found = true;
+					break;
+				}
 			}
-			$result = $this->registry->probe($url);
+			if (!$found) {
+				$this->sendError('URL not registered', 400);
+			}
+			$result = $this->systems->probe($url);
 			$this->sendSuccess(['url' => $url, 'health' => $result]);
 		}
 
-		$all = $this->registry->probeAll();
-		$out = [];
-		foreach ($all as $probedUrl => $result) {
-			$out[] = [
-				'url' => $probedUrl,
+		// Probe all + persist
+		$all = $this->systems->probeAll();
+		$probes = [];
+		foreach ($all as $sysId => $result) {
+			$probes[] = [
+				'id' => $sysId,
 				'status' => $result['status'],
 				'http_code' => $result['http_code'],
 				'ms' => $result['ms'],
@@ -60,19 +99,7 @@ final class HubPresenter extends BaseApiPresenter
 		}
 		$this->sendSuccess([
 			'generated_at' => gmdate('c'),
-			'probes' => $out,
+			'probes' => $probes,
 		]);
-	}
-
-	private function isRegisteredUrl(string $url): bool
-	{
-		foreach ($this->registry->read()['services'] as $svc) {
-			foreach (['url', 'ip_url', 'domain_url', 'primary_url'] as $key) {
-				if (isset($svc[$key]) && $svc[$key] === $url) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 }

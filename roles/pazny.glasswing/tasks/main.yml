@@ -49,17 +49,25 @@
   ansible.builtin.command:
     cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/init-db.php --data-dir={{ glasswing_data_dir }}"
     chdir: "{{ glasswing_app_dir }}"
-    creates: "{{ glasswing_data_dir }}/glasswing.db"
+  register: glasswing_initdb
+  changed_when: "'Created' in (glasswing_initdb.stdout | default(''))"
 
-- name: "[Glasswing] Check if migration needed (empty components table)"
+- name: "[Glasswing] Migrate components -> systems (idempotent)"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate-systems.php --data-dir={{ glasswing_data_dir }}"
+    chdir: "{{ glasswing_app_dir }}"
+  register: glasswing_migrate_sys
+  changed_when: "'Migrated' in (glasswing_migrate_sys.stdout | default('')) or 'Created' in (glasswing_migrate_sys.stdout | default(''))"
+
+- name: "[Glasswing] Check if legacy JSON migration needed"
   ansible.builtin.command:
     cmd: >
       {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php -r
-      "echo (new SQLite3('{{ glasswing_data_dir }}/glasswing.db'))->querySingle('SELECT COUNT(*) FROM components');"
+      "echo (new SQLite3('{{ glasswing_data_dir }}/glasswing.db'))->querySingle('SELECT COUNT(*) FROM systems WHERE source = ''components_db'' OR source = ''manual''');"
   register: glasswing_component_count
   changed_when: false
 
-- name: "[Glasswing] Run JSON to SQLite data migration"
+- name: "[Glasswing] Run JSON to SQLite data migration (legacy components)"
   ansible.builtin.command:
     cmd: >
       {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate.php
@@ -68,6 +76,17 @@
     chdir: "{{ glasswing_app_dir }}"
   when: glasswing_component_count.stdout | int == 0
   register: glasswing_migrate
+
+- name: "[Glasswing] Ingest service-registry.json into systems table"
+  ansible.builtin.command:
+    cmd: >
+      {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/ingest-registry.php
+      --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+    chdir: "{{ glasswing_app_dir }}"
+  environment:
+    PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  register: glasswing_ingest
+  changed_when: "'Ingested' in (glasswing_ingest.stdout | default('')) and 'Ingested 0' not in (glasswing_ingest.stdout | default(''))"
 
 - name: "[Glasswing] Reconverge API token from credentials (state-declarative)"
   ansible.builtin.shell: |

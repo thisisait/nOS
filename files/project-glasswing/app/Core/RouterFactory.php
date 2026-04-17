@@ -40,7 +40,7 @@ final class RouterFactory
 
 		// Hub API (public — service names/ports are non-sensitive, nginx still
 		// gates the /hub browser page behind Authentik proxy auth)
-		$api->addRoute('api/v1/hub/services', 'Hub:services');
+		$api->addRoute('api/v1/hub/systems[/<id>]', 'Hub:systems');
 		$api->addRoute('api/v1/hub/health', 'Hub:health');
 
 		// Public homepage (no auth — nginx exempts exact /)

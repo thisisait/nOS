@@ -28,25 +28,60 @@ $db->exec('PRAGMA journal_mode = WAL');
 $db->exec('PRAGMA foreign_keys = ON');
 
 $statements = [
-	// Components (from versions.json)
-	"CREATE TABLE IF NOT EXISTS components (
+	// Systems — unified entity for services, components, stacks, sub-services.
+	// Replaces the old `components` table with hierarchy support (parent_id),
+	// health tracking, and service-registry integration.
+	"CREATE TABLE IF NOT EXISTS systems (
 		id              TEXT PRIMARY KEY,
+		parent_id       TEXT REFERENCES systems(id) ON DELETE SET NULL,
 		name            TEXT NOT NULL,
-		category        TEXT NOT NULL DEFAULT 'docker',
+		description     TEXT,
+		type            TEXT NOT NULL DEFAULT 'docker',
+		category        TEXT NOT NULL DEFAULT 'service',
 		stack           TEXT,
 		image           TEXT,
+		version         TEXT,
 		version_var     TEXT,
-		default_version TEXT,
 		pinned          INTEGER NOT NULL DEFAULT 1,
+
+		-- Network
+		domain          TEXT,
+		port            INTEGER,
+		url             TEXT,
 		network_exposed INTEGER NOT NULL DEFAULT 0,
 		has_web_ui      INTEGER NOT NULL DEFAULT 0,
+
+		-- Ansible integration
+		toggle_var      TEXT,
+		enabled         INTEGER NOT NULL DEFAULT 1,
+
+		-- Security & scanning
 		priority        TEXT NOT NULL DEFAULT 'medium',
 		upstream_repo   TEXT,
-		port            INTEGER,
-		domain          TEXT,
+
+		-- Health (updated by probes)
+		health_status   TEXT NOT NULL DEFAULT 'unknown',
+		health_http_code INTEGER,
+		health_ms       INTEGER,
+		health_checked_at TEXT,
+
+		-- Provenance
+		source          TEXT NOT NULL DEFAULT 'manual',
+
 		created_at      TEXT NOT NULL DEFAULT (datetime('now')),
 		updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 	)",
+	"CREATE INDEX IF NOT EXISTS idx_sys_parent ON systems(parent_id)",
+	"CREATE INDEX IF NOT EXISTS idx_sys_stack ON systems(stack)",
+	"CREATE INDEX IF NOT EXISTS idx_sys_category ON systems(category)",
+	"CREATE INDEX IF NOT EXISTS idx_sys_health ON systems(health_status)",
+
+	// Backward-compat view — old code referencing `components` keeps working
+	"CREATE VIEW IF NOT EXISTS components AS
+		SELECT id, name, category, stack, image, version_var,
+			   version AS default_version, pinned, network_exposed, has_web_ui,
+			   priority, upstream_repo, port, domain, created_at, updated_at
+		FROM systems",
 
 	// Scan cycles
 	"CREATE TABLE IF NOT EXISTS scan_cycles (
@@ -58,9 +93,9 @@ $statements = [
 		notes               TEXT
 	)",
 
-	// Per-component scan state
+	// Per-system scan state (FK references systems, not old components table)
 	"CREATE TABLE IF NOT EXISTS component_scan_state (
-		component_id        TEXT NOT NULL PRIMARY KEY,
+		component_id        TEXT NOT NULL PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
 		last_checked        TEXT,
 		last_cve_scan       TEXT,
 		last_misconfig_scan TEXT,

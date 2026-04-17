@@ -4,90 +4,109 @@
 
 <div class="stats">
 	<div class="stat">
-		<div class="label">Total services</div>
-		<div class="value">{$totalCount}</div>
-		<div class="sub">registry snapshot</div>
+		<div class="label">Systems</div>
+		<div class="value">{$stats['total']}</div>
+		<div class="sub">{$stats['stacks']} stacks</div>
 	</div>
 	<div class="stat">
-		<div class="label">Base domain</div>
-		<div class="value hub-mono" style="font-size:18px">{$baseDomain ?? 'dev.local'}</div>
-		<div class="sub">*.{$baseDomain ?? 'dev.local'}</div>
+		<div class="label">Healthy</div>
+		<div class="value" style="color:var(--green)">{$stats['up']}</div>
+		<div class="sub">{$stats['unknown']} unchecked</div>
 	</div>
 	<div class="stat">
-		<div class="label">Categories</div>
-		<div class="value">{count($categories)}</div>
-		<div class="sub">{implode(', ', array_keys($categories))}</div>
+		<div class="label">Down</div>
+		<div class="value" style="color:{if $stats['down'] > 0}var(--red){else}var(--text2){/if}">{$stats['down']}</div>
+		<div class="sub">{if $stats['down'] > 0}needs attention{else}all clear{/if}</div>
 	</div>
 	<div class="stat">
-		<div class="label">Snapshot</div>
-		<div class="value hub-mono" style="font-size:14px">{substr($generatedAt ?? '—', 0, 16)}</div>
-		<div class="sub">Ansible render time</div>
+		<div class="label">Findings</div>
+		<div class="value" style="color:{if $stats['findings'] > 0}var(--orange){else}var(--text2){/if}">{$stats['findings']}</div>
+		<div class="sub">CVE + misconfig</div>
 	</div>
 </div>
 
-<div class="filter-bar" style="margin-bottom:20px;">
-	<input type="text" class="filter-search" id="hub-search" placeholder="Filter services (name, category, stack)…" autocomplete="off">
+<div class="filter-bar">
+	<input type="text" class="filter-search" id="hub-search" placeholder="Search systems..." autocomplete="off">
 	<span class="filter-sep"></span>
-	<button class="filter-btn active" data-filter="all">All</button>
-	{foreach $categories as $cat => $count}
-		<button class="filter-btn" data-filter="{$cat}">{$cat} <span style="opacity:0.6">({$count})</span></button>
+	<button class="filter-btn active" data-filter="all" data-group="stack">All</button>
+	{foreach $stacks as $s => $cnt}
+		<button class="filter-btn" data-filter="{$s}" data-group="stack">{$s} <span style="opacity:.5">{$cnt}</span></button>
 	{/foreach}
 	<span class="filter-sep"></span>
-	<button class="filter-btn" id="hub-refresh-health" title="Refresh health">↻ Health</button>
+	<button class="filter-btn" id="hub-probe-all" title="Probe all systems">Probe All</button>
 </div>
 
-<div class="hub-grid" id="hub-grid">
-	{foreach $services as $svc}
-		<article class="hub-card" data-category="{$svc['category'] ?? ''}" data-name="{($svc['name'] ?? '')|lower}" data-url="{$svc['primary_url'] ?? ''}">
-			<header class="hub-card-header">
-				<div class="hub-card-title">
-					<span class="hub-card-name">{$svc['name']}</span>
-					{if !empty($svc['version'])}
-						<span class="version" title="Pinned version">{$svc['version']}</span>
+{foreach $byStack as $stackName => $systems}
+	{continueIf $stackName === 'other' && count($systems) === 0}
+	<section class="hub-stack" data-stack="{$stackName}">
+		<h3 class="hub-stack-title">{$stackName|upper}</h3>
+		<div class="hub-grid">
+			{foreach $systems as $sys}
+				{continueIf $sys['category'] === 'stack'}
+				<article class="sys-card" data-id="{$sys['id']}" data-stack="{$sys['stack'] ?? ''}" data-category="{$sys['category'] ?? ''}" data-name="{$sys['name']|lower}" data-health="{$sys['health_status']}">
+					<div class="sys-header">
+						<div class="sys-title">
+							<span class="sys-health-dot sys-health-{$sys['health_status']}" title="{$sys['health_status']}{if $sys['health_ms']} ({$sys['health_ms']}ms){/if}"></span>
+							<strong class="sys-name">{$sys['name']}</strong>
+							{if $sys['version']}<span class="version">{$sys['version']}</span>{/if}
+						</div>
+						<div class="sys-badges">
+							<span class="sys-badge sys-badge-type">{$sys['type']}</span>
+							<span class="sys-badge sys-badge-cat">{$sys['category']}</span>
+						</div>
+					</div>
+
+					{if $sys['description']}
+						<p class="sys-desc">{$sys['description']}</p>
 					{/if}
-				</div>
-				<span class="hub-card-health" data-url="{$svc['primary_url'] ?? ''}" title="Checking…">
-					<span class="pulse" style="background:var(--text2)"></span>
-				</span>
-			</header>
-			<div class="hub-card-meta">
-				<span class="badge badge-{$svc['category'] ?? 'low'}" style="background:var(--surface2);color:var(--text2)">{$svc['category'] ?? 'other'}</span>
-				{if !empty($svc['stack'])}
-					<span class="badge" style="background:var(--surface2);color:var(--text2)">{$svc['stack']}</span>
-				{/if}
-				{if !empty($svc['type'])}
-					<span class="badge" style="background:var(--surface2);color:var(--text2)">{$svc['type']}</span>
-				{/if}
-			</div>
-			{if !empty($svc['description'])}
-				<p class="hub-card-desc">{$svc['description']}</p>
-			{/if}
-			<div class="hub-card-links">
-				{if !empty($svc['domain_url'])}
-					<a class="hub-card-link primary" href="{$svc['domain_url']}" target="_blank" rel="noopener" title="HTTPS via Authentik">
-						🔒 {$svc['domain']}
-					</a>
-				{/if}
-				{if !empty($svc['ip_url'])}
-					<a class="hub-card-link" href="{$svc['ip_url']}" target="_blank" rel="noopener" title="Direct (bypass proxy)">
-						🔌 127.0.0.1:{$svc['port']}
-					</a>
-				{elseif !empty($svc['port'])}
-					<span class="hub-card-link" style="color:var(--text2);cursor:default">port {$svc['port']}</span>
-				{/if}
-			</div>
-		</article>
-	{/foreach}
-</div>
 
-{if empty($services)}
+					{if $sys['scan_state']}
+						<div class="sys-scan">
+							<span class="sys-scan-label">Scan</span>
+							<span class="sys-scan-findings {if $sys['scan_state']['findings_count'] > 0}has-findings{/if}">
+								{$sys['scan_state']['findings_count']} findings
+							</span>
+							{if $sys['scan_state']['last_cve_scan']}
+								<span class="sys-scan-date">{substr($sys['scan_state']['last_cve_scan'], 0, 10)}</span>
+							{/if}
+						</div>
+					{/if}
+
+					<div class="sys-links">
+						{if $sys['domain_url']}
+							<a class="sys-link sys-link-https" href="{$sys['domain_url']}" target="_blank" rel="noopener">{$sys['domain']}</a>
+						{/if}
+						{if $sys['ip_url']}
+							<a class="sys-link sys-link-port" href="{$sys['ip_url']}" target="_blank" rel="noopener">:{$sys['port']}</a>
+						{elseif $sys['port']}
+							<span class="sys-link sys-link-port" style="cursor:default">:{$sys['port']}</span>
+						{/if}
+						{if $sys['upstream_repo']}
+							<a class="sys-link sys-link-repo" href="{$sys['upstream_repo']}" target="_blank" rel="noopener">repo</a>
+						{/if}
+					</div>
+
+					{if !empty($sys['children'])}
+						<div class="sys-children">
+							{foreach $sys['children'] as $child}
+								<div class="sys-child">
+									<span class="sys-health-dot sys-health-{$child['health_status']}"></span>
+									<span>{$child['name']}</span>
+									{if $child['version']}<span class="version">{$child['version']}</span>{/if}
+								</div>
+							{/foreach}
+						</div>
+					{/if}
+				</article>
+			{/foreach}
+		</div>
+	</section>
+{/foreach}
+
+{if empty($byStack)}
 	<div class="empty">
-		<p style="font-size:16px;color:var(--text);margin-bottom:8px">No services registered</p>
-		<p>The service registry is empty or not yet generated.</p>
-		<p style="margin-top:12px;font-family:'SF Mono','Fira Code',monospace;font-size:12px">
-			Expected at: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">~/projects/default/service-registry.json</code>
-		</p>
-		<p style="margin-top:12px">Run <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">ansible-playbook main.yml --tags service-registry</code> to generate it.</p>
+		<p style="font-size:16px;color:var(--text);margin-bottom:8px">No systems registered</p>
+		<p>Run <code>php bin/ingest-registry.php</code> to import from service-registry.json</p>
 	</div>
 {/if}
 
