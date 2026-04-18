@@ -191,15 +191,46 @@
         state: absent
       loop: "{{ homebrew_uninstalled_packages }}"
 
+    # homebrew Ansible modul pouziva brew Ruby API (60s+ na balicek v brew 4.x).
+    # Nahrazeno rychlym Cellar dir checkm — brew install jen pro chybejici.
     - name: Ensure configured homebrew packages are installed.
-      homebrew:
-        path: "{{ homebrew_brew_bin_path }}"
-        name: "{{ item.name | default(item) }}"
-        install_options: "{{ item.install_options | default(omit) }}"
-        state: "{{ item.state | default('present') }}"
+      ansible.builtin.shell: |
+        pkg_name="{{ item.name | default(item) }}"
+        pkg_state="{{ item.state | default('present') }}"
+        if [ "$pkg_state" = "absent" ]; then
+          if [ -d "{{ homebrew_prefix }}/Cellar/${pkg_name}" ]; then
+            brew uninstall "${pkg_name}" 2>&1
+          else
+            echo "ALREADY_ABSENT"
+          fi
+          exit $?
+        fi
+        if [ -d "{{ homebrew_prefix }}/Cellar/${pkg_name}" ] || [ -d "{{ homebrew_prefix }}/opt/${pkg_name}" ]; then
+          echo "ALREADY_INSTALLED"
+          exit 0
+        fi
+        echo "INSTALLING: ${pkg_name}..."
+        if command -v timeout &>/dev/null; then
+          timeout 120 brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
+        else
+          brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
+        fi
+        rc=$?
+        [ $rc -eq 124 ] && echo "TIMEOUT: ${pkg_name} — install manually: brew install ${pkg_name}" && exit 0
+        exit $rc
+      args:
+        executable: /bin/bash
+      register: _brew_result
+      changed_when: "'ALREADY_INSTALLED' not in _brew_result.stdout and 'ALREADY_ABSENT' not in _brew_result.stdout"
+      failed_when:
+        - _brew_result.rc != 0
+        - "'already installed' not in _brew_result.stderr"
       loop: "{{ homebrew_installed_packages }}"
+      loop_control:
+        label: "{{ item.name | default(item) }}"
       environment:
         HOMEBREW_NO_AUTO_UPDATE: "1"
+        HOMEBREW_NO_INSTALL_CLEANUP: "1"
       notify:
         - Clear homebrew cache
 
