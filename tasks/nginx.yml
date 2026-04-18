@@ -236,7 +236,7 @@
     creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
 
 - name: Start and enable nginx via brew services
-  ansible.builtin.command: brew services start nginx
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start nginx"
   register: nginx_svc
   changed_when: >
     'already started' not in (nginx_svc.stdout | default('')) and

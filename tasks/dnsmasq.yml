@@ -97,7 +97,7 @@
 
 - name: Start dnsmasq via brew services (requires root for port 53)  # noqa: command-instead-of-shell
   ansible.builtin.shell: >-
-    sudo -A {{ homebrew_prefix }}/bin/brew services start dnsmasq
+    {{ playbook_dir }}/files/brew-svc.sh start dnsmasq
   environment:
     SUDO_ASKPASS: "{{ lookup('env', 'HOME') }}/.ansible_askpass"
   register: dnsmasq_svc

@@ -34,7 +34,7 @@
 # ── Host-side: Stop old Homebrew services (migrated to Docker) ───────────────
 
 - name: Stop old Homebrew observability services (replaced by Docker)
-  ansible.builtin.command: brew services stop {{ item }}
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh stop {{ item }}"
   loop:
     - grafana
     - prometheus
@@ -170,7 +170,7 @@
 # ── Start host-side services ─────────────────────────────────────────────────
 
 - name: Start host-side observability services (Homebrew-managed)
-  ansible.builtin.command: brew services start {{ item }}
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start {{ item }}"
   loop:
     - grafana-alloy
   register: svc_result
@@ -196,7 +196,7 @@
   when: alloy_scrape_phpfpm | default(true)
 
 - name: Start Redis service (scraped by Alloy) – only if NOT using Docker Redis
-  ansible.builtin.command: brew services start redis
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start redis"
   register: redis_svc
   changed_when: >
     'already started' not in (redis_svc.stdout | default('')) and

@@ -116,20 +116,36 @@
   # HANDLERS – centralizované, volatelné přes notify: z libovolného task souboru
   # ============================================================================
   handlers:
+    # brew services je nespolehlivy na brew 4.x (Ruby API visí 30min+).
+    # Pouzivame primy launchctl unload/load — okamzity efekt.
     - name: Restart nginx
-      ansible.builtin.command: brew services restart nginx
+      ansible.builtin.shell: |
+        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.nginx.plist"
+        [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
+        sleep 1
+        [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
+      args:
+        executable: /bin/bash
+      failed_when: false
 
     - name: Reload nginx
       ansible.builtin.command: >
         {{ homebrew_prefix }}/bin/nginx -s reload
       register: nginx_reload
       failed_when: false
-      # Pokud reload selže (nginx neběží), spustí se restart
       changed_when: nginx_reload.rc != 0
       notify: Restart nginx
 
     - name: Restart php-fpm
-      ansible.builtin.command: brew services restart "php@{{ php_version | default('8.3') }}"
+      ansible.builtin.shell: |
+        svc="php@{{ php_version | default('8.3') }}"
+        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist"
+        [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
+        sleep 1
+        [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
+      args:
+        executable: /bin/bash
+      failed_when: false
 
     - name: Restart mariadb
       ansible.builtin.shell: >
@@ -161,7 +177,13 @@
       failed_when: false
 
     - name: Restart alloy
-      ansible.builtin.command: brew services restart grafana-alloy
+      ansible.builtin.shell: |
+        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist"
+        [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
+        sleep 1
+        [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
+      args:
+        executable: /bin/bash
       failed_when: false
 
     - name: Restart prometheus
@@ -171,7 +193,12 @@
       failed_when: false
 
     - name: Restart dnsmasq
-      ansible.builtin.command: brew services restart dnsmasq
+      ansible.builtin.shell: |
+        sudo launchctl unload /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist 2>/dev/null
+        sleep 1
+        sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist 2>/dev/null
+      args:
+        executable: /bin/bash
       failed_when: false
 
     - name: Restart ssh
@@ -474,7 +501,7 @@
 
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
       ansible.builtin.shell: |
-        brew services stop redis 2>/dev/null || true
+        {{ playbook_dir }}/files/brew-svc.sh stop redis 2>/dev/null || true
         launchctl bootout gui/$(id -u)/homebrew.mxcl.redis 2>/dev/null || true
         launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
         pkill -9 -f "redis-server" 2>/dev/null || true

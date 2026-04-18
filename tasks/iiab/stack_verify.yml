@@ -36,7 +36,7 @@
   failed_when: false
 
 - name: "[Verify] Nginx not listening on 443 – restarting"
-  ansible.builtin.command: brew services restart nginx
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh restart nginx"
   when: _nginx_443.failed | default(false)
 
 # ══════════════════════════════════════════════════════════════════════════

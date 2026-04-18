@@ -19,7 +19,7 @@
 
 # Zastavit starou Homebrew Gitea (pokud bezi z predchozi iterace projektu)
 - name: "[pazny.gitea] Stop old Homebrew Gitea service"
-  ansible.builtin.command: brew services stop gitea
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh stop gitea"
   register: _gitea_brew_stop
   changed_when: "'Stopping' in (_gitea_brew_stop.stdout | default(''))"
   failed_when: false

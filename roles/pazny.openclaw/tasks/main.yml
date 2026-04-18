@@ -35,7 +35,7 @@
   failed_when: false
 
 - name: "[Ollama] Stop existing Ollama service (clean slate)"
-  ansible.builtin.command: brew services stop ollama
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh stop ollama"
   changed_when: false
   failed_when: false
 
@@ -52,7 +52,7 @@
   failed_when: false
 
 - name: "[Ollama] Start Ollama as homebrew service"
-  ansible.builtin.command: brew services restart ollama
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh restart ollama"
   register: ollama_svc
   changed_when: true
   failed_when: >

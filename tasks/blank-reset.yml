@@ -93,14 +93,24 @@
   changed_when: true
 
 # ── 3. Homebrew služby – zastavit ───────────────────────────────────────
-- name: "[BLANK] Stop Homebrew services"
-  ansible.builtin.command: "brew services stop {{ item }}"
-  loop:
-    - nginx
-    - "php@{{ php_version | default('8.3') }}"
-    - dnsmasq
-    - grafana-alloy
-    - ollama
+# brew services stop je nespolehlivy (Ruby API visí 30min+ na brew 4.x).
+# Pouzivame primy launchctl unload + pkill — okamzity efekt.
+- name: "[BLANK] Stop Homebrew services (direct launchctl)"
+  ansible.builtin.shell: |
+    for svc in nginx "php@{{ php_version | default('8.3') }}" dnsmasq grafana-alloy ollama; do
+      plist="$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist"
+      [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
+      plist="/Library/LaunchDaemons/homebrew.mxcl.${svc}.plist"
+      [ -f "$plist" ] && sudo launchctl unload "$plist" 2>/dev/null
+    done
+    pkill -f "nginx: master" 2>/dev/null || true
+    pkill -f "php-fpm: master" 2>/dev/null || true
+    pkill -f "dnsmasq" 2>/dev/null || true
+    pkill -f "alloy" 2>/dev/null || true
+    pkill -f "ollama serve" 2>/dev/null || true
+    echo "DONE"
+  args:
+    executable: /bin/bash
   failed_when: false
   changed_when: false
 

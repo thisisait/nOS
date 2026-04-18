@@ -134,7 +134,7 @@
   notify: Restart php-fpm
 
 - name: Start PHP-FPM service
-  ansible.builtin.command: brew services start "php@{{ php_version }}"
+  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start php@{{ php_version }}"
   register: phpfpm_svc
   changed_when: >
     'already started' not in (phpfpm_svc.stdout | default('')) and
