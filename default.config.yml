@@ -795,7 +795,7 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignorováno pokud install_mariadb=true (použije se 'mariadb' z iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "latest"             # Docker image tag
+wordpress_version: "6.9.4"              # Docker image tag
 wordpress_port: 8084                    # Lokální port kontejneru (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
@@ -824,7 +824,7 @@ nextcloud_port: 8085                    # Lokální port kontejneru (nginx proxy
 
 kiwix_domain: "kiwix.dev.local"
 kiwix_port: 8888                           # Lokální port kiwix-serve
-kiwix_version: "latest"                            # Docker image tag
+kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/kiwix/kiwix-serve)
 kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Sem ukládej .zim soubory
 
 # ZIM soubory ke stažení (prázdné = nestahovat automaticky)
@@ -919,8 +919,8 @@ observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname v Grafana 
 
 # ── Docker image verze (observability + devops) ──────────────────────────────
 grafana_version: "12.4.2"               # CVE-2026-27876 (CVSS 9.1 file write → RCE)
-prometheus_version: "latest"
-loki_version: "latest"
+prometheus_version: "v3.11.2"
+loki_version: "3.7.1"
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
@@ -1083,7 +1083,7 @@ uptime_kuma_auto_monitors: true  # Automaticky vytvořit monitory pro všechny i
 
 calibreweb_domain: "books.dev.local"
 calibreweb_port: 8083
-calibreweb_version: "latest"   # nebo konkrétní: "0.6.21"
+calibreweb_version: "0.6.26"   # lscr.io/linuxserver/calibre-web
 calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"   # Calibre library
 calibreweb_timezone: "Europe/Prague"
 
@@ -1281,7 +1281,7 @@ mattermost_timezone: "Europe/Prague"
 
 outline_domain: "wiki.dev.local"
 outline_port: 3005
-outline_version: "latest"
+outline_version: "1.6.1"
 outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"
 outline_db_user: "outline"
@@ -1323,7 +1323,7 @@ qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 
 metabase_domain: "bi.dev.local"
 metabase_port: 3002
-metabase_version: "latest"
+metabase_version: "v0.60.1.4"
 metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
@@ -1355,7 +1355,7 @@ superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
 
 bluesky_pds_hostname: "bsky.dev.lan"     # .local zakázán AT Protocol specifikací
 bluesky_pds_port: 2583
-bluesky_pds_version: "latest"
+bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
@@ -1372,7 +1372,7 @@ bluesky_pds_email_from: ""             # Odesílatel emailů (default: noreply@b
 puter_domain: "os.dev.local"
 puter_api_domain: "api.os.dev.local"
 puter_port: 5050                               # "05" jako "OS"
-puter_version: "latest"                        # ghcr.io/heyputer/puter
+puter_version: "v2.5.1"                        # ghcr.io/heyputer/puter (local build tag; Dockerfile FROM pinned separately)
 puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
 puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache pro multi-user (MB)
@@ -1408,7 +1408,7 @@ jsos_provision_redis_namespace: true             # Přidělit per-user Redis key
 
 paperclip_domain: "paperclip.dev.local"
 paperclip_port: 3006                              # 3100 koliduje s Loki
-paperclip_version: "latest"
+paperclip_version: "sha-b9a80dc"         # ghcr.io/paperclipai/paperclip (no semver tags published)
 paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
 paperclip_db_name: "paperclip"
 paperclip_db_user: "paperclip"
@@ -1765,7 +1765,7 @@ authentik_oidc_vaultwarden_client_secret: "{{ (authentik_oidc_apps | selectattr(
 # Centrální vault pro DB hesla, API klíče, certifikáty. E2EE.
 # ==============================================================================
 
-infisical_version: "latest"
+infisical_version: "v0.159.16"
 infisical_domain: "vault.dev.local"
 infisical_port: 8075
 infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
