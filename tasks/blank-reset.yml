@@ -315,6 +315,39 @@
         (install_vaultwarden | default(false)) | ternary(
           [vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden')], [])
         +
+        (install_ntfy | default(false)) | ternary(
+          [ntfy_data_dir | default(ansible_facts['env']['HOME'] + '/ntfy/data')], [])
+        +
+        (install_nodered | default(false)) | ternary(
+          [nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data')], [])
+        +
+        (install_influxdb | default(false)) | ternary(
+          [influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb/data'),
+           influxdb_config_dir | default(ansible_facts['env']['HOME'] + '/influxdb/config')], [])
+        +
+        (install_code_server | default(false)) | ternary(
+          [code_server_data_dir | default(ansible_facts['env']['HOME'] + '/code-server/config'),
+           code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace')], [])
+        +
+        (install_bookstack | default(false)) | ternary(
+          [bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack/config')], [])
+        +
+        (install_firefly | default(false)) | ternary(
+          [firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload'),
+           firefly_export_dir | default(ansible_facts['env']['HOME'] + '/firefly/export')], [])
+        +
+        (install_hedgedoc | default(false)) | ternary(
+          [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads')], [])
+        +
+        (install_onlyoffice | default(false)) | ternary(
+          [onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data'),
+           onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs'),
+           onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib'),
+           onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db')], [])
+        +
+        (install_miniflux | default(false)) | ternary(
+          [], [])
+        +
         (install_glasswing | default(install_php | default(true))) | ternary(
           [glasswing_app_dir | default(ansible_facts['env']['HOME'] + '/glasswing/app')], [])
       }}
