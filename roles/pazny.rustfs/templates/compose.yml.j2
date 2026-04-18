@@ -19,6 +19,12 @@ services:
     environment:
       RUSTFS_ACCESS_KEY: "{{ rustfs_access_key }}"
       RUSTFS_SECRET_KEY: "{{ rustfs_secret_key }}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/minio/health/live 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

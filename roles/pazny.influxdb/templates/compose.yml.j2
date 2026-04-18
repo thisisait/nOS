@@ -34,7 +34,7 @@ services:
       DOCKER_INFLUXDB_INIT_RETENTION: "{{ influxdb_init_retention | default('90d') }}"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "{{ influxdb_admin_token }}"
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8086/health 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8086/health 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
