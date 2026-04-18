@@ -145,7 +145,7 @@
         sudo_password: "{{ ansible_become_password | default(omit) }}"
       loop: "{{ homebrew_cask_uninstalled_apps }}"
 
-    - name: "Install cask: {{ item.name | default(item) }}"
+    - name: Install configured cask applications.
       homebrew_cask:
         name: "{{ item.name | default(item) }}"
         state: present
