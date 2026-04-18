@@ -402,6 +402,8 @@
         bookstack_app_key: "{% if 'placeholder' in (bookstack_app_key | default('')) %}{{ 'base64:' ~ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ bookstack_app_key }}{% endif %}"
         infisical_encryption_key: "{% if '_pw_' in (infisical_encryption_key | default('')) or (infisical_encryption_key | default('') | length) != 32 %}{{ lookup('pipe', 'openssl rand -hex 16') }}{% else %}{{ infisical_encryption_key }}{% endif %}"
         infisical_auth_secret: "{% if '_pw_' in (infisical_auth_secret | default('')) or (infisical_auth_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ infisical_auth_secret }}{% endif %}"
+        bluesky_pds_jwt_secret: "{% if '_pw_' in (bluesky_pds_jwt_secret | default('')) or (bluesky_pds_jwt_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 16') }}{% else %}{{ bluesky_pds_jwt_secret }}{% endif %}"
+        bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"

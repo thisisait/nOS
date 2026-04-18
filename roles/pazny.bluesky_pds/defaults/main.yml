@@ -21,3 +21,9 @@ bluesky_pds_email_smtp_url: ""                      # Prazdne = email notifikace
 bluesky_pds_email_from: ""                          # Default: noreply@bsky.dev.lan
 bluesky_pds_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"
+
+# Admin account (provisioned in post.yml)
+# Handle NESMI byt reserved slovo (admin, root, pds, app, bsky, atproto, ...)
+# AT Protocol handles = <handle>.{{ bluesky_pds_hostname }}
+bluesky_pds_admin_handle: "pazny.{{ bluesky_pds_hostname }}"
+bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (instance_tld | default('dev.local'))) }}"

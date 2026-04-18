@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.bluesky_pds/tasks/post.yml
 #
-# Post-start admin account create + password reconverge via goat CLI.
-# goat nahradil stary pdsadmin bash script v oficialnim PDS image.
-# Volano z tasks/stacks/core-up.yml PO `docker compose up infra --wait`.
+# Post-start: admin account create + password reconverge via goat CLI.
+# Handle is configurable via bluesky_pds_admin_handle (default: pazny.bsky.dev.lan).
+# "pds", "admin", "root" etc. are reserved by AT Protocol — never use those.
 # ==============================================================================
 
 - name: "[pazny.bluesky_pds Post] Wait for PDS to be ready"
@@ -28,42 +28,54 @@
   changed_when: false
   failed_when: false
 
+- name: "[pazny.bluesky_pds Post] Generate invite code for admin"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T bluesky-pds
+    goat pds admin invite create
+    --pds-host http://localhost:3000
+    --admin-password "{{ bluesky_pds_admin_password }}" 2>&1
+  register: _pds_invite
+  when:
+    - _pds_health.status | default(0) == 200
+    - bluesky_pds_admin_handle not in (_pds_accounts.stdout | default(''))
+  changed_when: false
+  failed_when: false
+
 - name: "[pazny.bluesky_pds Post] Create admin account"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p infra exec -T bluesky-pds
     goat pds admin account create
     --pds-host http://localhost:3000
     --admin-password "{{ bluesky_pds_admin_password }}"
-    --handle "pds.{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
-    --email "pds@{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
-    --password "{{ bluesky_pds_admin_password }}" 2>&1
+    --handle "{{ bluesky_pds_admin_handle }}"
+    --email "{{ bluesky_pds_admin_email }}"
+    --password "{{ bluesky_pds_admin_password }}"
+    {{ ('--invite-code ' ~ _pds_invite.stdout | trim) if (_pds_invite.stdout | default('') | trim | length > 0) else '' }} 2>&1
   register: _pds_create
   when:
     - _pds_health.status | default(0) == 200
-    - "'pds.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) not in (_pds_accounts.stdout | default(''))"
+    - bluesky_pds_admin_handle not in (_pds_accounts.stdout | default(''))
   failed_when: false
   changed_when: "'did:' in (_pds_create.stdout | default(''))"
 
 - name: "[pazny.bluesky_pds Post] Account creation result"
   ansible.builtin.debug:
     msg: >-
-      {{ _pds_create.stdout | default('Preskoceno (ucet jiz existuje nebo PDS nedostupny)') }}
+      {{ _pds_create.stdout | default('Skipped (account already exists or PDS unavailable)') }}
   when: _pds_create is defined
 
-# ── Reconverge admin password every run (state-declarative UPDATE) ──────
-# goat pds admin account update-password funguje i na existujici ucet
-# a pouziva aktualni admin_password jako bearer token. Idempotentni.
+# ── Reconverge admin password (idempotent) ─────────────────────────────
 - name: "[pazny.bluesky_pds Post] Reconverge admin account password"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p infra exec -T bluesky-pds
     goat pds admin account update-password
     --pds-host http://localhost:3000
     --admin-password "{{ bluesky_pds_admin_password }}"
-    --handle "pds.{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
+    --handle "{{ bluesky_pds_admin_handle }}"
     --new-password "{{ bluesky_pds_admin_password }}" 2>&1
   register: _pds_pw_update
   when:
     - _pds_health.status | default(0) == 200
-    - "'pds.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) in (_pds_accounts.stdout | default(''))"
+    - bluesky_pds_admin_handle in (_pds_accounts.stdout | default(''))
   changed_when: _pds_pw_update.rc | default(1) == 0
   failed_when: false
