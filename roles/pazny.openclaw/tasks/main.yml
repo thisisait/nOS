@@ -38,10 +38,11 @@
     url: http://127.0.0.1:11434/api/tags
     method: GET
     status_code: 200
+    timeout: 60
   register: ollama_ready
   until: ollama_ready.status == 200
-  retries: 15
-  delay: 4
+  retries: 10
+  delay: 10
 
 - name: "[Ollama] Pull primary model ({{ openclaw_model }})"
   ansible.builtin.command: ollama pull {{ openclaw_model }}
