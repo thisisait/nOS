@@ -305,7 +305,8 @@ homebrew_cask_accept_external_apps: true
 
 homebrew_cask_apps:
   # ── Infrastruktura ────────────────────────────────────────────────────────
-  - docker-desktop       # Docker Desktop (přejmenováno z 'docker' v brew 4.x)
+  # Docker Desktop: nainstalován manuálně, spravován external-storage.yml
+  # (symlink /Applications/Docker.app → SSD). Nespravovat přes brew cask.
 
   # ── Editory / IDE ─────────────────────────────────────────────────────────
   - visual-studio-code   # VS Code – hlavní editor
