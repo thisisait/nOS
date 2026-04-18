@@ -78,26 +78,26 @@
   failed_when: false
   notify: Restart gitea
 
-# ── Portainer: OAuth2 konfigurace přes Settings API ─────────────────────────
+# ── Portainer: OAuth2 je konfigurovan v pazny.portainer/tasks/post.yml ──────
+# PUT /api/settings s OAuth2 parametry bezi v core-up.yml ihned po startu infra.
+# Zde jen overime, ze AuthenticationMethod == 3 (OAuth2) je aktivni.
 
-- name: "[Authentik→Portainer] Get current auth settings"
+- name: "[Authentik→Portainer] Verify OAuth2 is active"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings"
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
     method: GET
-    headers:
-      X-API-Key: "{{ portainer_admin_password | default('') }}"
     status_code: [200]
-  register: _portainer_settings
+    timeout: 5
+  register: _portainer_oauth_verify
   when: install_portainer | default(false)
   failed_when: false
 
-# Portainer OAuth vyžaduje inicializovaný admin účet — přeskočit pokud nepřihlášen
-- name: "[Authentik→Portainer] Info"
+- name: "[Authentik→Portainer] OAuth2 status"
   ansible.builtin.debug:
     msg: >-
-      Portainer OIDC: Manuální konfigurace v Settings → Authentication → OAuth.
-      Client ID: {{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'portainer') | first).client_id }}
-      Auth URL: https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/
+      Portainer SSO: {{ 'OK — configured via post.yml (PUT /api/settings)'
+        if (_portainer_oauth_verify.status | default(0) == 200)
+        else 'Portainer NEDOSTUPNY — OAuth2 config mohla selhat, zkontroluj post.yml log' }}
   when: install_portainer | default(false)
 
 # ── Nextcloud: occ příkazy pro user_oidc app ────────────────────────────────

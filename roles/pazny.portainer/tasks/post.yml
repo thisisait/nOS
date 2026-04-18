@@ -155,17 +155,20 @@
       OAuthSettings:
         ClientID: "{{ authentik_oidc_portainer_client_id }}"
         ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
+        # Browser-side URLs (HTTPS → nginx → Authentik): uzivatel se prihlasi v prohlizeci
         AuthorizationURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-        AccessTokenURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
-        ResourceURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo"
         RedirectURI: "https://{{ portainer_domain | default('portainer.dev.local') }}"
+        LogoutURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/portainer/end-session/"
+        # Server-side URLs (HTTP → Docker interni sit): Portainer backend ↔ Authentik.
+        # Pouzivame interni HTTP aby Portainer (Go) nemusel trustovat mkcert CA.
+        AccessTokenURI: "http://authentik-server:9000/application/o/token/"
+        ResourceURI: "http://authentik-server:9000/application/o/userinfo/"
         UserIdentifier: "preferred_username"
         Scopes: "openid profile email"
         OAuthAutoCreateUsers: true
         DefaultTeamID: 0
         SSO: true
-        LogoutURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/portainer/end-session/"
-    status_code: [200, 400, 403, 500]
+    status_code: [200]
     timeout: 10
   register: _portainer_oauth_put
   when:
@@ -173,16 +176,6 @@
     - _portainer_auth.json.jwt | length > 0
   changed_when: _portainer_oauth_put.status | default(0) == 200
   failed_when: false
-
-- name: "[pazny.portainer Post] OAuth2 configuration result"
-  ansible.builtin.debug:
-    msg: >-
-      Portainer OAuth2:
-      {{ 'configured successfully (AuthMethod=3, SSO enabled)'
-         if (_portainer_oauth_put.status | default(0) == 200)
-         else ('FAILED — HTTP ' ~ (_portainer_oauth_put.status | default('?')) ~ ' — '
-               ~ (_portainer_oauth_put.json.message | default(_portainer_oauth_put.json.details | default('unknown error')))) }}
-  when: _portainer_oauth_put is defined
 
 - name: "[pazny.portainer Post] Verify OAuth2 settings applied"
   ansible.builtin.uri:
@@ -197,9 +190,17 @@
     - _portainer_oauth_put.status | default(0) == 200
   failed_when: false
 
-- name: "[pazny.portainer Post] OAuth2 verification"
+- name: "[pazny.portainer Post] OAuth2 setup summary"
   ansible.builtin.debug:
     msg: >-
-      OAuth2 verify: AuthMethod={{ _portainer_settings_verify.json.AuthenticationMethod | default('?') }}
-      {{ 'OK — OAuth enabled' if (_portainer_settings_verify.json.AuthenticationMethod | default(0) | int == 3) else 'FAIL — NOT enabled — manual check required' }}
-  when: _portainer_settings_verify is defined and _portainer_settings_verify.status | default(0) == 200
+      Portainer OAuth2:
+      {% if _portainer_settings_verify.json.AuthenticationMethod | default(0) | int == 3 %}
+      OK — AuthMethod=3 (OAuth2), SSO enabled, token exchange via Docker internal HTTP
+      {% elif _portainer_oauth_put.status | default(0) == 200 %}
+      PUT accepted but verification shows AuthMethod={{ _portainer_settings_verify.json.AuthenticationMethod | default('?') }} — check manually
+      {% elif _portainer_auth.json.jwt is not defined or _portainer_auth.json.jwt | length == 0 %}
+      SKIPPED — failed to obtain admin JWT (check admin password)
+      {% else %}
+      FAILED — PUT /api/settings returned HTTP {{ _portainer_oauth_put.status | default('?') }}
+      {% endif %}
+  when: install_authentik | default(false)
