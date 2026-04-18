@@ -22,6 +22,11 @@
     label: "{{ item.key }}={{ item.value }}"
   changed_when: false
 
+- name: "[Ollama] Stop OpenClaw gateway (holds persistent Ollama connection)"
+  ansible.builtin.command: pkill -f 'openclaw-gateway'
+  changed_when: false
+  failed_when: false
+
 - name: "[Ollama] Stop existing Ollama service (clean slate)"
   ansible.builtin.command: brew services stop ollama
   changed_when: false
@@ -40,29 +45,32 @@
   failed_when: false
 
 - name: "[Ollama] Start Ollama as homebrew service"
-  ansible.builtin.command: brew services start ollama
+  ansible.builtin.command: brew services restart ollama
   register: ollama_svc
-  changed_when: >
-    'already started' not in (ollama_svc.stdout | default('')) and
-    'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
+  changed_when: true
   failed_when: >
     ollama_svc.rc != 0 and
-    'already started' not in (ollama_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
 
 - name: "[Ollama] Wait for port 11434 to accept connections"
   ansible.builtin.wait_for:
     port: 11434
     host: 127.0.0.1
-    timeout: 30
+    timeout: 60
 
-- name: "[Ollama] Wait for Ollama API to be ready"
-  ansible.builtin.command: curl -sS -m 30 --retry 10 --retry-delay 5 --retry-all-errors http://127.0.0.1:11434/api/tags
+- name: "[Ollama] Wait for Ollama API to respond"
+  ansible.builtin.command: curl -sS -m 60 http://127.0.0.1:11434/api/tags
   register: ollama_ready
   changed_when: false
-  retries: 3
-  delay: 10
+  retries: 5
+  delay: 15
   until: ollama_ready.rc == 0
+  failed_when: false
+
+- name: "[Ollama] WARN if Ollama API not responsive (model pull will retry)"
+  ansible.builtin.debug:
+    msg: "Ollama API did not respond in time — model pull task below will retry connection automatically."
+  when: ollama_ready.rc | default(1) != 0
 
 - name: "[Ollama] Pull primary model ({{ openclaw_model }})"
   ansible.builtin.command: ollama pull {{ openclaw_model }}
