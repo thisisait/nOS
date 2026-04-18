@@ -325,6 +325,12 @@
     state: absent
   failed_when: false
 
+- name: "[BLANK] Remove persisted runtime secrets (force-regenerate)"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+    state: absent
+  failed_when: false
+
 - name: "[BLANK] Reset complete"
   ansible.builtin.debug:
     msg: |

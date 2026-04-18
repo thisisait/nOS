@@ -32,6 +32,22 @@
         - "{{ playbook_dir }}/credentials.yml"
       tags: ['always']
 
+    # ── Persisted runtime secrets (encryption keys, APP_KEYs, JWT secrets) ──
+    # Soubor ~/.devboxnos/secrets.yml se vytvori pri prvnim runu (na konci
+    # generacni faze). Na dalsich runech ho nacitame PRED lazy-regen bloky,
+    # aby guardy videly realnou hodnotu a ne placeholder.
+    - name: "[Secrets] Check for persisted secrets file"
+      ansible.builtin.stat:
+        path: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+      register: _persisted_secrets_stat
+      tags: ['always']
+
+    - name: "[Secrets] Load persisted secrets (if exists)"
+      ansible.builtin.include_vars:
+        file: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+      when: _persisted_secrets_stat.stat.exists | default(false)
+      tags: ['always']
+
     # ── Version Policy ─────────────────────────────────────────────────────────
     # stable (default) = pinned CVE-patched versions from default.config.yml
     # latest           = override all pinned Docker image tags to latest
@@ -393,8 +409,7 @@
       # Bez tohoto tasku by role assert (napr. roles/pazny.firefly/tasks/main.yml)
       # failnul na placeholder hodnote z default.credentials.yml.
       # Kazdy ternary: regeneruj JEN pokud je hodnota placeholder (nebo prazdna / moc kratka).
-      # Na druhem runu, kdyz uz uzivatel ma realnou hodnotu z predchozi blank generace,
-      # ternary short-circuit zachova puvodni secret.
+      # Na druhem runu se realna hodnota nacte z ~/.devboxnos/secrets.yml a guard short-circuitne.
       ansible.builtin.set_fact:
         firefly_app_key: "{% if 'placeholder' in (firefly_app_key | default('')) %}{{ 'base64:' ~ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ firefly_app_key }}{% endif %}"
         onlyoffice_jwt_secret: "{% if 'placeholder' in (onlyoffice_jwt_secret | default('')) or (onlyoffice_jwt_secret | default('') | length) < 16 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ onlyoffice_jwt_secret }}{% endif %}"
@@ -404,6 +419,7 @@
         infisical_auth_secret: "{% if '_pw_' in (infisical_auth_secret | default('')) or (infisical_auth_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ infisical_auth_secret }}{% endif %}"
         bluesky_pds_jwt_secret: "{% if '_pw_' in (bluesky_pds_jwt_secret | default('')) or (bluesky_pds_jwt_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 16') }}{% else %}{{ bluesky_pds_jwt_secret }}{% endif %}"
         bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
+        outline_secret_key: "{% if '_pw_' in (outline_secret_key | default('')) or (outline_secret_key | default('') | length) != 64 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_secret_key }}{% endif %}"
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"
@@ -426,15 +442,32 @@
     - name: "WARNING — destructive secrets preserved (use -e destroy_state=true to reset)"
       ansible.builtin.debug:
         msg: |
-          NEBEZPECI: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key,
-          firefly_app_key, bookstack_app_key, onlyoffice_jwt_secret, influxdb_admin_token zachovany
-          z predchoziho runu (nemaji lazy regeneraci v non-blank runech). Pro reset pridej
-          -e destroy_state=true — smaze Infisical vault, Outline sifrovana data, Bluesky PLC
-          rotaci, Firefly sifrovana data, BookStack 2FA backup codes + API tokens,
-          ONLYOFFICE host-app integraci, InfluxDB tokeny.
+          Destruktivni secrets (infisical_encryption_key, outline_secret_key,
+          bluesky_pds_rotation_key, firefly_app_key, bookstack_app_key,
+          onlyoffice_jwt_secret, influxdb_admin_token) byly nacteny z
+          ~/.devboxnos/secrets.yml a zachovany. Pro reset pridej
+          -e destroy_state=true (smaze Infisical vault, Outline data, Bluesky PLC
+          rotaci, Firefly/BookStack sifrovana data, ONLYOFFICE/InfluxDB tokeny).
       when:
         - not (blank | default(false) | bool)
         - not (destroy_state | default(false) | bool)
+      tags: ['always']
+
+    # ── Persist runtime secrets to ~/.devboxnos/secrets.yml ─────────────────
+    # Runs unconditionally: normal run preserves existing keys, blank run
+    # overwrites with freshly-generated keys. Mode 0600 — only owner can read.
+    - name: "[Secrets] Ensure ~/.devboxnos directory exists"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.devboxnos"
+        state: directory
+        mode: '0700'
+      tags: ['always']
+
+    - name: "[Secrets] Persist runtime secrets to ~/.devboxnos/secrets.yml"
+      ansible.builtin.template:
+        src: "secrets.yml.j2"
+        dest: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+        mode: '0600'
       tags: ['always']
 
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
