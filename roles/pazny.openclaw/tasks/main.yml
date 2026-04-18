@@ -52,32 +52,25 @@
     ollama_svc.rc != 0 and
     'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
 
-- name: "[Ollama] Wait for port 11434 to accept connections"
-  ansible.builtin.wait_for:
-    port: 11434
-    host: 127.0.0.1
-    timeout: 60
-
-- name: "[Ollama] Wait for Ollama API to respond"
-  ansible.builtin.command: curl -sS -m 60 http://127.0.0.1:11434/api/tags
-  register: ollama_ready
+- name: "[Ollama] Wait for Ollama process to start"
+  ansible.builtin.shell: |
+    for i in $(seq 1 15); do
+      pgrep -f 'ollama serve' > /dev/null 2>&1 && exit 0
+      sleep 1
+    done
+    exit 1
   changed_when: false
-  retries: 5
-  delay: 15
-  until: ollama_ready.rc == 0
   failed_when: false
-
-- name: "[Ollama] WARN if Ollama API not responsive (model pull will retry)"
-  ansible.builtin.debug:
-    msg: "Ollama API did not respond in time — model pull task below will retry connection automatically."
-  when: ollama_ready.rc | default(1) != 0
 
 - name: "[Ollama] Pull primary model ({{ openclaw_model }})"
   ansible.builtin.command: ollama pull {{ openclaw_model }}
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
-  # Stahování modelu může trvat déle (27B ~ 17GB)
+  failed_when: false
+  # Stahování modelu může trvat déle (27B ~ 17GB).
+  # failed_when: false — pokud je Ollama API blokovaná jinou session
+  # (Claude Code chat), pull selže ale playbook pokračuje.
   async: 1800
   poll: 30
 
