@@ -43,13 +43,16 @@ ollama_flash_attention: 1        # Flash attention pro MLX (rychlejsi, mene pame
 # Vyzaduje flash_attention=1. Stay <= 256K ctx aby se vyhnuli crashi #11619.
 ollama_kv_cache_type: "q8_0"     # q8_0 = -50% RAM kontextu; q4_0 = -75% ale horsi reasoning
 
-# Dalsi modely (MoE + dense pair) — stahne se pres ollama pull v main.yml
-# Opt-out nastavenim na [] v config.yml pokud chces jen primary model.
+# Dalsi modely — stahne se pres ollama pull v main.yml.
+# Default = jen 1 dense pro heavy tasks (qwen3-coder:30b primary + qwen2.5-coder:32b = ~40GB).
+# Kompletni stack (4 dalsi modely, +90GB) pridej v config.yml pres:
+#   openclaw_additional_models:
+#     - "qwen3:30b-a3b"      # MoE generalist
+#     - "gpt-oss:20b"        # MoE lightweight fallback
+#     - "qwen2.5-coder:32b"  # Dense coder
+#     - "qwen3:32b"          # Dense reasoning
 openclaw_additional_models:
-  - "qwen3:30b-a3b"              # MoE generalist (18 GB, 3B aktivnich) — mixed reasoning/chat
-  - "gpt-oss:20b"                # MoE OpenAI open-weights (13 GB) — lightweight tool-calling fallback
   - "qwen2.5-coder:32b"          # Dense coder (20 GB) — GPT-4o-class code refactoring
-  - "qwen3:32b"                  # Dense reasoning (20 GB) — long-context analysis, RAG
 
 # Cesta ke stáhnutým modelům — persistent i při --blank.
 # Na externím SSD: {{ external_storage_root }}/llmModels (override přes external-paths.yml).

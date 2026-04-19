@@ -16,7 +16,7 @@
 #   - grafana     — Grafana dashboards/queries (SSE sibling container)
 # ==============================================================================
 
-mcpo_version: "v0.0.20"                                 # pinned stable
+mcpo_version: "main"                                    # ghcr nepublikuje semver, jen 'main' + 'latest'
 mcpo_domain: "mcp.dev.local"
 mcpo_port: 8765                                         # host port
 mcpo_api_key: "{{ global_password_prefix }}_pw_mcpo"    # bearer token for OpenWebUI
