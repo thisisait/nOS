@@ -123,6 +123,9 @@
       - "com.hipages.php-fpm-exporter.plist"
       - "com.openclaw.agent.plist"
       - "com.hermes.agent.plist"
+      - "com.ollama.agent.plist"
+      - "com.ollama.agent.plist.disabled"
+      - "homebrew.mxcl.ollama.plist.disabled"
   register: _blank_plists
 
 - name: "[BLANK] Unload LaunchAgents"

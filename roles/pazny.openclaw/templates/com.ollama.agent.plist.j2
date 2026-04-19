@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ollama.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ homebrew_prefix }}/bin/ollama</string>
+        <string>serve</string>
+    </array>
+
+    <!-- Persistent env: brew-managed plist NEMA tyto hodnoty, takze by Ollama
+         po rebootu vetsila ~/.ollama/models (prazdne). Timto wrapperem se zajisti,
+         ze modely na externim SSD jsou vzdy dostupne. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>OLLAMA_MODELS</key>
+        <string>{{ ollama_models_dir }}</string>
+        <key>OLLAMA_MAX_LOADED_MODELS</key>
+        <string>{{ ollama_max_loaded_models | default(1) | string }}</string>
+        <key>OLLAMA_NUM_PARALLEL</key>
+        <string>{{ ollama_num_parallel | default(2) | string }}</string>
+        <key>OLLAMA_KEEP_ALIVE</key>
+        <string>{{ ollama_keep_alive | default('5m') }}</string>
+        <key>OLLAMA_FLASH_ATTENTION</key>
+        <string>{{ ollama_flash_attention | default(1) | string }}</string>
+        <key>OLLAMA_KV_CACHE_TYPE</key>
+        <string>{{ ollama_kv_cache_type | default('q8_0') }}</string>
+        <key>OLLAMA_HOST</key>
+        <string>127.0.0.1:11434</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>{{ ansible_facts['env']['HOME'] }}</string>
+
+    <key>StandardOutPath</key>
+    <string>{{ openclaw_log_dir | default(ansible_facts['env']['HOME'] + '/agents/log') }}/ollama.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ openclaw_log_dir | default(ansible_facts['env']['HOME'] + '/agents/log') }}/ollama.stderr.log</string>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>ProcessType</key>
+    <string>Interactive</string>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

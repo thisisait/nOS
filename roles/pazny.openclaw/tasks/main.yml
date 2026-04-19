@@ -35,13 +35,27 @@
   changed_when: false
   failed_when: false
 
-- name: "[Ollama] Stop existing Ollama service (clean slate)"
-  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh stop ollama"
-  changed_when: false
-  failed_when: false
+# ── Ollama persistent LaunchAgent (replaces brew-managed plist) ─────────────
+# Brew's homebrew.mxcl.ollama.plist NEMA env vars, takze OLLAMA_MODELS se
+# ztratil po reboot/logout. Nas wrapper plist ma EnvironmentVariables
+# primo v dict, ktere launchd inject-ne pri kazdem spusteni.
 
-- name: "[Ollama] Kill any lingering Ollama processes"
-  ansible.builtin.command: pkill -f 'ollama serve'
+- name: "[Ollama] Disable brew-managed Ollama service (replaced by user LaunchAgent)"
+  ansible.builtin.shell: |
+    # Stop brew service (gracefully via launchctl, ne `brew services stop`)
+    plist="$HOME/Library/LaunchAgents/homebrew.mxcl.ollama.plist"
+    if [ -f "$plist" ]; then
+      launchctl unload "$plist" 2>/dev/null || true
+      # Presun do backup (kdyby user chtel vratit)
+      mv "$plist" "$plist.disabled" 2>/dev/null || true
+    fi
+    # Kill jakyekoliv bezici instance (brew nebo uz nas wrapper)
+    launchctl unload "$HOME/Library/LaunchAgents/com.ollama.agent.plist" 2>/dev/null || true
+    pkill -f 'ollama serve' 2>/dev/null || true
+    sleep 1
+    echo "DONE"
+  args:
+    executable: /bin/bash
   changed_when: false
   failed_when: false
 
@@ -52,13 +66,20 @@
     timeout: 15
   failed_when: false
 
-- name: "[Ollama] Start Ollama as homebrew service"
-  ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh restart ollama"
+- name: "[Ollama] Deploy persistent user LaunchAgent (com.ollama.agent)"
+  ansible.builtin.template:
+    src: com.ollama.agent.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    mode: '0644'
+
+- name: "[Ollama] Load user LaunchAgent (com.ollama.agent)"
+  ansible.builtin.command: >
+    launchctl load "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
   register: ollama_svc
   changed_when: true
   failed_when: >
     ollama_svc.rc != 0 and
-    'Bootstrap failed: 5' not in (ollama_svc.stderr | default(''))
+    'already loaded' not in (ollama_svc.stderr | default(''))
 
 - name: "[Ollama] Wait for Ollama process to start"
   ansible.builtin.shell: |
@@ -68,6 +89,17 @@
     done
     exit 1
   changed_when: false
+  failed_when: false
+
+- name: "[Ollama] Wait for API to respond"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:11434/api/version"
+    status_code: [200]
+    timeout: 5
+  register: _ollama_api
+  retries: 10
+  delay: 2
+  until: _ollama_api.status | default(0) == 200
   failed_when: false
 
 - name: "[Ollama] Pull primary model ({{ openclaw_model }})"

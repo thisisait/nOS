@@ -76,7 +76,27 @@
     - "'ALL_OK' not in (_container_restart_check.stdout | default(''))"
     - "':' in (_container_restart_check.stdout | default(''))"
 
-# ── 4. Summary ────────────────────────────────────────────────────────────────
+# ── 4. Ollama persistent LaunchAgent check ──────────────────────────────────
+# Brew plist NEMA env vars (OLLAMA_MODELS, OLLAMA_KV_CACHE_TYPE, ...). Po reboot
+# by Ollama startovala s default ~/.ollama/models (prazdne). Nas custom
+# com.ollama.agent.plist ma env primo v LaunchAgent dict.
+
+- name: "[Auto-start] Check Ollama persistent LaunchAgent"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+  register: _ollama_plist_check
+  when: install_openclaw | default(false) | bool
+
+- name: "[Auto-start] WARN if Ollama persistent plist missing"
+  ansible.builtin.debug:
+    msg: |
+      ⚠ Ollama persistent LaunchAgent chybi — po reboot Ollama nebude vidi SSD modely.
+      Fix: ansible-playbook main.yml -K --tags openclaw
+  when:
+    - install_openclaw | default(false) | bool
+    - not (_ollama_plist_check.stat.exists | default(false))
+
+# ── 5. Summary ────────────────────────────────────────────────────────────────
 
 - name: "[Auto-start] Summary"
   ansible.builtin.debug:
@@ -86,7 +106,10 @@
       ═══════════════════════════════════════════════════════════════════
        Docker Desktop:     {{ 'login item OK' if _docker_login_check.rc == 0 else 'pridano do login items' }}
        Docker containers:  {{ 'vse restart=unless-stopped' if 'ALL_OK' in (_container_restart_check.stdout | default('')) else 'viz warning vyse' }}
-       Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy/ollama)
+       Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy)
+      {% if install_openclaw | default(false) | bool %}
+       Ollama:             {{ 'custom LaunchAgent (env vars pro SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else '⚠ brew plist (env vars se ztrati po reboot)' }}
+      {% endif %}
       {% if install_jsos | default(false) | bool %}
        jsOS (PM2):         {{ 'resurrect list ulozena' if (_pm2_save.rc | default(1)) == 0 else 'PM2 neaktivni' }}
       {% endif %}
