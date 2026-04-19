@@ -65,8 +65,10 @@
 
 - name: "[mcp_gateway Post] Extract Grafana SA ID"
   ansible.builtin.set_fact:
-    _grafana_sa_id: "{{ _grafana_sa.json.id | default(
-      (_grafana_sa_search.json.serviceAccounts | default([]) | selectattr('name', 'equalto', 'mcp-gateway') | list | first).id | default('')) }}"
+    # Grafana API vraci `id` jako integer. Castujeme pres `| int` pro consistent type.
+    # Fallback 0 = "neni SA" (check pres `> 0`).
+    _grafana_sa_id: "{{ (_grafana_sa.json.id | default(
+      (_grafana_sa_search.json.serviceAccounts | default([]) | selectattr('name', 'equalto', 'mcp-gateway') | list | first).id | default(0))) | int }}"
   when: mcp_enable_grafana | default(true)
 
 - name: "[mcp_gateway Post] Create Grafana SA token for mcpo"
@@ -86,7 +88,7 @@
   failed_when: false
   when:
     - mcp_enable_grafana | default(true)
-    - _grafana_sa_id | default('') | length > 0
+    - (_grafana_sa_id | default(0) | int) > 0
 
 - name: "[mcp_gateway Post] Persist Grafana SA token to file (pro compose restart)"
   ansible.builtin.copy:
