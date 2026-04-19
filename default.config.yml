@@ -1017,7 +1017,7 @@ gitlab_sidekiq_concurrency: 10  # Background job vlákna
 
 openwebui_domain: "ai.dev.local"
 openwebui_port: 3004             # Interní port kontejneru 8080 → host 3004
-openwebui_version: "0.6.35"      # CVE-2025-64495/64496 (XSS→RCE, JWT theft). Switched from :main
+openwebui_version: "0.8.12"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: true    # false = admin musí přidávat uživatele ručně

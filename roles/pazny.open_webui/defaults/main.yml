@@ -10,7 +10,7 @@
 # pouziva pomlcku (`open-webui`) — souhlasi s existujici konvenci.
 # ==============================================================================
 
-openwebui_version: "0.6.35"                         # CVE-2025-64495/64496 pin
+openwebui_version: "0.8.12"                         # Native MCP + function calling + code exec (0.8.x)
 openwebui_port: 3004                                # Kontejner 8080 → host 3004
 openwebui_domain: "ai.dev.local"
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"

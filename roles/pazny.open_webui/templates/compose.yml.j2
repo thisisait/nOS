@@ -31,6 +31,15 @@ services:
       ANONYMIZED_TELEMETRY: "false"
       REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
       SSL_CERT_FILE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+      # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
+      # Umoznuje per-user auth a attribution pri volani MCP toolu (napr. OpenClaw).
+      ENABLE_FORWARD_USER_INFO_HEADERS: "true"
+      # ── MCP: akceptovat self-signed certy (mkcert) pri volani MCP serveru ──
+      AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+      # ── Anthropic Claude konektor (pridej ANTHROPIC_API_KEY v Admin UI) ────
+      # Pres built-in OpenAI connector: Admin → Connections → api.anthropic.com
+      # Pro advanced features (prompt caching, extended thinking) pouzij
+      # community pipe function: f/justinrahb/anthropic (Admin → Functions)
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       ENABLE_OAUTH_SIGNUP: "true"
