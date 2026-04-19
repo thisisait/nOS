@@ -21,15 +21,27 @@
     state: directory
     mode: '0755'
 
-- name: "[pazny.offline_maps] Ensure fonts directory exists"
+- name: "[pazny.offline_maps] Ensure fonts and styles directories exist"
   ansible.builtin.file:
-    path: "{{ maps_data_dir }}/fonts"
+    path: "{{ maps_data_dir }}/{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - fonts
+    - styles
+
+- name: "[pazny.offline_maps] Check for MBTiles files"
+  ansible.builtin.find:
+    paths: "{{ maps_data_dir }}"
+    patterns: "*.mbtiles"
+  register: _mbtiles_found
 
 - name: "[pazny.offline_maps] Create tileserver-gl configuration"
   ansible.builtin.copy:
     dest: "{{ maps_data_dir }}/config.json"
+    # Dynamic config: pridej data entry jen pokud existuji MBTiles.
+    # Bez MBTiles tileserver spadne s "Not valid input file: /data/*.mbtiles".
+    # Staz MBTiles pres download-maps.sh a znovu spust playbook.
     content: |
       {
         "options": {
@@ -40,14 +52,14 @@
             "mbtiles": "/data"
           }
         },
-        "styles": {},
+        "styles": {}{% if _mbtiles_found.matched | default(0) > 0 %},
         "data": {
           "v3": {
             "mbtiles": "/data/*.mbtiles"
           }
-        }
+        }{% endif %}
       }
-    force: false
+    force: true
     mode: '0644'
 
 - name: "[pazny.offline_maps] Download MBTiles files"
