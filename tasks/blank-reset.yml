@@ -348,6 +348,9 @@
         (install_miniflux | default(false)) | ternary(
           [], [])
         +
+        (install_mcp_gateway | default(false)) | ternary(
+          [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
+        +
         (install_glasswing | default(install_php | default(true))) | ternary(
           [glasswing_app_dir | default(ansible_facts['env']['HOME'] + '/glasswing/app')], [])
       }}

@@ -143,6 +143,7 @@ install_gitea: true              # Gitea – self-hosted Git server             
 install_gitlab: false             # GitLab CE – full DevOps platform           [vyžaduje: Docker, ~4 GB RAM]
 install_woodpecker: false         # Woodpecker CI – CI/CD pro Gitea            [vyžaduje: Docker, Gitea OAuth2]
 install_openwebui: false          # Open WebUI – chat UI pro Ollama            [vyžaduje: Docker, Ollama]
+install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy pro OpenWebUI  [Docker, vyžaduje: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [vyžaduje: Docker]
 install_jellyfin: false           # Jellyfin – media server                    [vyžaduje: Docker]
 install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [vyžaduje: Docker]

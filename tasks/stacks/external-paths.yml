@@ -108,3 +108,8 @@
 - name: "[External SSD] Override Ollama models path"
   ansible.builtin.set_fact:
     ollama_models_dir: "{{ external_storage_root }}/llmModels"
+
+# ── MCP Gateway (mcpo config + memory file) ────────────────────────────────
+- name: "[External SSD] Override MCP gateway data path"
+  ansible.builtin.set_fact:
+    mcpo_data_dir: "{{ external_storage_root }}/mcpo"

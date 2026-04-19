@@ -73,6 +73,7 @@
 - { name: "[Stacks] pazny.uptime_kuma render", ansible.builtin.include_role: { name: pazny.uptime_kuma, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false)", tags: ['uptime-kuma'] }
 - { name: "[Stacks] pazny.calibre_web render", ansible.builtin.include_role: { name: pazny.calibre_web, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
 - { name: "[Stacks] pazny.open_webui render", ansible.builtin.include_role: { name: pazny.open_webui, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.mcp_gateway render", ansible.builtin.include_role: { name: pazny.mcp_gateway, apply: { tags: ['mcp', 'mcp_gateway'] } }, when: "install_mcp_gateway | default(false)", tags: ['mcp', 'mcp_gateway'] }
 - { name: "[Stacks] pazny.homeassistant render", ansible.builtin.include_role: { name: pazny.homeassistant, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
@@ -189,6 +190,7 @@
 - { name: "[Stacks] pazny.nextcloud post", ansible.builtin.include_role: { name: pazny.nextcloud, tasks_from: post.yml, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
 - { name: "[Stacks] pazny.n8n post", ansible.builtin.include_role: { name: pazny.n8n, tasks_from: post.yml, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
 - { name: "[Stacks] pazny.open_webui post", ansible.builtin.include_role: { name: pazny.open_webui, tasks_from: post.yml, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
+- { name: "[Stacks] pazny.mcp_gateway post", ansible.builtin.include_role: { name: pazny.mcp_gateway, tasks_from: post.yml, apply: { tags: ['mcp', 'mcp_gateway'] } }, when: "install_mcp_gateway | default(false)", tags: ['mcp', 'mcp_gateway'] }
 - { name: "[Stacks] pazny.puter post", ansible.builtin.include_role: { name: pazny.puter, tasks_from: post.yml, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
 - { name: "[Stacks] pazny.jellyfin post", ansible.builtin.include_role: { name: pazny.jellyfin, tasks_from: post.yml, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
 - { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }

@@ -1,0 +1,61 @@
+---
+# ==============================================================================
+# pazny.mcp_gateway — MCP-to-OpenAPI proxy for OpenWebUI
+#
+# Deploys `mcpo` (https://github.com/open-webui/mcpo) as a single container
+# that wraps multiple MCP servers and exposes them as OpenAPI endpoints.
+# OpenWebUI 0.8.x consumes mcpo as a tool server via TOOL_SERVER_CONNECTIONS.
+#
+# MCP servers included by default (configurable in mcp_servers_enabled):
+#   - time        — timezone-aware datetime (uvx mcp-server-time)
+#   - memory      — persistent notes (npx @modelcontextprotocol/server-memory)
+#   - fetch       — HTTP fetching (uvx mcp-server-fetch)
+#   - filesystem  — read /data/readonly (npx @modelcontextprotocol/server-filesystem)
+#   - git         — local git repos (uvx mcp-server-git)
+#   - postgres    — read-only DB queries (npx server-postgres)
+#   - grafana     — Grafana dashboards/queries (SSE sibling container)
+# ==============================================================================
+
+mcpo_version: "v0.0.20"                                 # pinned stable
+mcpo_domain: "mcp.dev.local"
+mcpo_port: 8765                                         # host port
+mcpo_api_key: "{{ global_password_prefix }}_pw_mcpo"    # bearer token for OpenWebUI
+mcpo_data_dir: "{{ ansible_facts['env']['HOME'] }}/mcpo"
+mcpo_image: "ghcr.io/open-webui/mcpo"
+
+# ── Per-server toggles ────────────────────────────────────────────────────────
+# Vypnes konkretni MCP server nastavenim false
+mcp_enable_time: true
+mcp_enable_memory: true
+mcp_enable_fetch: true
+mcp_enable_filesystem: true
+mcp_enable_git: true
+mcp_enable_postgres: true
+mcp_enable_grafana: true
+
+# ── Filesystem MCP ────────────────────────────────────────────────────────────
+# Cesty, ktere MCP filesystem expose (read-only bind mount v kontejneru)
+mcp_filesystem_paths:
+  - "{{ ansible_facts['env']['HOME'] }}/projects"
+  - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+# ── Git MCP ───────────────────────────────────────────────────────────────────
+mcp_git_repo_path: "{{ ansible_facts['env']['HOME'] }}/projects"
+
+# ── PostgreSQL MCP ────────────────────────────────────────────────────────────
+# Read-only uzivatel pro MCP dotazy (vytvoreny v post.yml)
+mcp_postgres_user: "mcp_readonly"
+mcp_postgres_password: "{{ global_password_prefix }}_pw_mcp_postgres_ro"
+mcp_postgres_database: "postgres"                       # default DB s read-only roli
+
+# ── Grafana MCP ───────────────────────────────────────────────────────────────
+# Grafana service account token (created automatically in post.yml)
+mcp_grafana_url: "http://grafana:3000"                  # internal Docker service name
+mcp_grafana_image: "mcp/grafana"
+mcp_grafana_version: "latest"
+mcp_grafana_port: 8765                                  # internal SSE port
+
+# ── OpenWebUI Anthropic connector ─────────────────────────────────────────────
+# Pridej ANTHROPIC_API_KEY do config.yml / credentials.yml aby se aktivovala
+# Anthropic Claude v OpenWebUI admin UI (multi-provider via OpenAI-compat API)
+openwebui_anthropic_enable: "{{ anthropic_api_key is defined and (anthropic_api_key | length) > 0 }}"

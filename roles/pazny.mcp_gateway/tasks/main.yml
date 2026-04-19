@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# pazny.mcp_gateway/tasks/main.yml
+#
+# Volano z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
+# vytvori data adresare, vyrenderuje mcpo config + compose override fragment.
+# ==============================================================================
+
+- name: "[pazny.mcp_gateway] Ensure mcpo data directory exists"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ mcpo_data_dir }}"
+    - "{{ mcpo_data_dir }}/data"
+
+- name: "[pazny.mcp_gateway] Render mcpo config.json"
+  ansible.builtin.template:
+    src: mcpo-config.json.j2
+    dest: "{{ mcpo_data_dir }}/config.json"
+    mode: '0600'
+  notify: Restart mcpo
+
+- name: "[pazny.mcp_gateway] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml"
+    mode: '0600'
+  notify: Restart mcpo
+
+- name: "[pazny.mcp_gateway] Deploy nginx vhost"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/nginx/sites-available/mcpo.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/mcpo.conf"
+    mode: '0644'
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.mcp_gateway] Enable nginx vhost (symlink)"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/mcpo.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/mcpo.conf"
+    state: link
+    force: true
+  notify: Restart nginx
+  when: install_nginx | default(true)
+
+- name: "[pazny.mcp_gateway] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════
+       MCP Gateway (mcpo) pripraven
+      ══════════════════════════════════════════════════════════════════
+       URL:       https://{{ mcpo_domain }}
+       Endpoint:  http://127.0.0.1:{{ mcpo_port }}
+       API Key:   {{ mcpo_api_key }}
+       Config:    {{ mcpo_data_dir }}/config.json
+       Data:      {{ mcpo_data_dir }}/data
+
+       MCP servery (aktivni):
+      {% if mcp_enable_time | default(true) %}   ✓ time        → /time/openapi.json{% endif %}
+      {% if mcp_enable_memory | default(true) %}   ✓ memory      → /memory/openapi.json{% endif %}
+      {% if mcp_enable_fetch | default(true) %}   ✓ fetch       → /fetch/openapi.json{% endif %}
+      {% if mcp_enable_filesystem | default(true) %}   ✓ filesystem  → /filesystem/openapi.json{% endif %}
+      {% if mcp_enable_git | default(true) %}   ✓ git         → /git/openapi.json{% endif %}
+      {% if mcp_enable_postgres | default(true) %}   ✓ postgres    → /postgres/openapi.json{% endif %}
+      {% if mcp_enable_grafana | default(true) %}   ✓ grafana     → /grafana/openapi.json{% endif %}
+
+       Registruj v OpenWebUI:
+         Admin → Settings → Tools → Add Connection:
+           URL: http://mcpo:8000
+           Auth: Bearer {{ mcpo_api_key }}
+      ══════════════════════════════════════════════════════════════════

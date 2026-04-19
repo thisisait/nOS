@@ -1,0 +1,71 @@
+# =============================================================================
+# pazny.mcp_gateway — compose override fragment
+# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
+# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# mcpo wraps multiple MCP servers as OpenAPI endpoints pro OpenWebUI.
+# Grafana MCP bezi jako sibling kontejner (SSE transport).
+# =============================================================================
+
+services:
+  mcpo:
+    image: {{ mcpo_image }}:{{ mcpo_version | default('v0.0.20') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ mcpo_port | default(8765) }}:8000"
+    volumes:
+      - {{ mcpo_data_dir }}/config.json:/app/config.json:ro
+      - {{ mcpo_data_dir }}/data:/data
+{% for path in mcp_filesystem_paths | default([]) %}
+      - {{ path }}:/data/readonly/{{ loop.index }}:ro
+{% endfor %}
+{% if mcp_enable_git | default(true) %}
+      - {{ mcp_git_repo_path }}:/data/repos:ro
+{% endif %}
+    command:
+      - "--config"
+      - "/app/config.json"
+      - "--port"
+      - "8000"
+      - "--host"
+      - "0.0.0.0"
+      - "--api-key"
+      - "{{ mcpo_api_key }}"
+    environment:
+      # PostgreSQL read-only credentials (substituovane v configu)
+      PG_PW: "{{ mcp_postgres_password }}"
+      # Grafana MCP credentials (pokud je povolen)
+{% if mcp_enable_grafana | default(true) %}
+      GRAFANA_URL: "{{ mcp_grafana_url }}"
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('') }}"
+{% endif %}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ mcpo_mem_limit | default(docker_mem_limit_light | default('512m')) }}
+    cpus: {{ mcpo_cpus | default(docker_cpus_light | default('0.5')) }}
+
+{% if mcp_enable_grafana | default(true) %}
+  # Grafana MCP server (SSE transport) — sibling container for mcpo
+  mcp-grafana:
+    image: {{ mcp_grafana_image | default('mcp/grafana') }}:{{ mcp_grafana_version | default('latest') }}
+    restart: unless-stopped
+    environment:
+      GRAFANA_URL: "{{ mcp_grafana_url }}"
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('placeholder-set-in-post') }}"
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 256m
+    cpus: '0.25'
+{% endif %}

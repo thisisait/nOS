@@ -32,14 +32,26 @@ services:
       REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
       SSL_CERT_FILE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
       # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
-      # Umoznuje per-user auth a attribution pri volani MCP toolu (napr. OpenClaw).
+      # Umoznuje per-user auth a attribution pri volani MCP toolu.
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"
       # ── MCP: akceptovat self-signed certy (mkcert) pri volani MCP serveru ──
       AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-      # ── Anthropic Claude konektor (pridej ANTHROPIC_API_KEY v Admin UI) ────
-      # Pres built-in OpenAI connector: Admin → Connections → api.anthropic.com
-      # Pro advanced features (prompt caching, extended thinking) pouzij
-      # community pipe function: f/justinrahb/anthropic (Admin → Functions)
+{% if install_mcp_gateway | default(false) %}
+      # ── Auto-registrace mcpo MCP gateway jako tool server ──────────────────
+      # OpenWebUI 0.8.x: TOOL_SERVER_CONNECTIONS se nacte pri prvnim startu
+      # a ulozi do DB. Potom editovatelne v Admin → Settings → Tools.
+      TOOL_SERVER_CONNECTIONS: >-
+        [{"url":"http://mcpo:8000","path":"openapi.json","auth_type":"bearer","key":"{{ mcpo_api_key }}","config":{"enable":true}}]
+      USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS: "true"
+{% endif %}
+{% if anthropic_api_key is defined and (anthropic_api_key | length) > 0 %}
+      # ── Anthropic Claude konektor (OpenAI-compat endpoint) ─────────────────
+      # Pristup k claude-opus/sonnet pres native OpenAI-compatible API.
+      # Multi-provider: drzi puvodni OpenAI + pridava Anthropic vedle.
+      OPENAI_API_BASE_URLS: "https://api.openai.com/v1;https://api.anthropic.com/v1"
+      OPENAI_API_KEYS: "{{ openai_api_key | default('sk-placeholder') }};{{ anthropic_api_key }}"
+      ENABLE_OPENAI_API: "true"
+{% endif %}
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       ENABLE_OAUTH_SIGNUP: "true"

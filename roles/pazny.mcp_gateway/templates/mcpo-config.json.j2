@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+{% set servers = [] %}
+{% if mcp_enable_time | default(true) %}
+{%   set _ = servers.append('    "time": {\n      "command": "uvx",\n      "args": ["mcp-server-time", "--local-timezone=Europe/Prague"]\n    }') %}
+{% endif %}
+{% if mcp_enable_memory | default(true) %}
+{%   set _ = servers.append('    "memory": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-memory"],\n      "env": { "MEMORY_FILE_PATH": "/data/memory.json" }\n    }') %}
+{% endif %}
+{% if mcp_enable_fetch | default(true) %}
+{%   set _ = servers.append('    "fetch": {\n      "command": "uvx",\n      "args": ["mcp-server-fetch"]\n    }') %}
+{% endif %}
+{% if mcp_enable_filesystem | default(true) %}
+{%   set _ = servers.append('    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data/readonly"]\n    }') %}
+{% endif %}
+{% if mcp_enable_git | default(true) %}
+{%   set _ = servers.append('    "git": {\n      "command": "uvx",\n      "args": ["mcp-server-git", "--repository", "/data/repos"]\n    }') %}
+{% endif %}
+{% if mcp_enable_postgres | default(true) %}
+{%   set _ = servers.append('    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://' + mcp_postgres_user + ':' + mcp_postgres_password + '@postgresql:5432/' + mcp_postgres_database + '"]\n    }') %}
+{% endif %}
+{% if mcp_enable_grafana | default(true) %}
+{%   set _ = servers.append('    "grafana": {\n      "type": "sse",\n      "url": "http://mcp-grafana:8000/sse"\n    }') %}
+{% endif %}
+{{ servers | join(',\n') }}
+  }
+}

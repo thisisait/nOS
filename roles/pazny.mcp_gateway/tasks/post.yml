@@ -1,0 +1,154 @@
+---
+# ==============================================================================
+# pazny.mcp_gateway/tasks/post.yml
+#
+# Volano z tasks/stacks/stack-up.yml PO `docker compose up iiab`.
+# Vytvori PostgreSQL read-only uzivatele + Grafana service account token,
+# pak restartuje mcpo aby nacetl novy config s token substituci.
+# ==============================================================================
+
+# ── 1. PostgreSQL read-only uzivatel ─────────────────────────────────────────
+
+- name: "[mcp_gateway Post] Create PostgreSQL read-only role for MCP"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p infra
+    exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
+    -c "DO $$ BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ mcp_postgres_user }}') THEN
+        CREATE USER {{ mcp_postgres_user }} WITH PASSWORD '{{ mcp_postgres_password }}';
+      ELSE
+        ALTER USER {{ mcp_postgres_user }} WITH PASSWORD '{{ mcp_postgres_password }}';
+      END IF;
+    END $$;
+    GRANT CONNECT ON DATABASE postgres TO {{ mcp_postgres_user }};
+    GRANT USAGE ON SCHEMA public TO {{ mcp_postgres_user }};
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{ mcp_postgres_user }};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {{ mcp_postgres_user }};"
+  register: _mcp_pg_user
+  changed_when: _mcp_pg_user.rc == 0
+  failed_when: false
+  when: mcp_enable_postgres | default(true)
+
+# ── 2. Grafana service account + token ────────────────────────────────────────
+
+- name: "[mcp_gateway Post] Create Grafana service account for MCP (idempotent)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts"
+    method: POST
+    body_format: json
+    body:
+      name: "mcp-gateway"
+      role: "Viewer"                    # Pouze cteni dashboardu/query
+      isDisabled: false
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 201, 400, 409]   # 409 = already exists
+    timeout: 10
+  register: _grafana_sa
+  changed_when: _grafana_sa.status in [200, 201]
+  failed_when: false
+  when: mcp_enable_grafana | default(true)
+
+- name: "[mcp_gateway Post] Get Grafana service account ID (if existed)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts/search?query=mcp-gateway"
+    method: GET
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200]
+    timeout: 10
+  register: _grafana_sa_search
+  failed_when: false
+  when: mcp_enable_grafana | default(true)
+
+- name: "[mcp_gateway Post] Extract Grafana SA ID"
+  ansible.builtin.set_fact:
+    _grafana_sa_id: "{{ _grafana_sa.json.id | default(
+      (_grafana_sa_search.json.serviceAccounts | default([]) | selectattr('name', 'equalto', 'mcp-gateway') | list | first).id | default('')) }}"
+  when: mcp_enable_grafana | default(true)
+
+- name: "[mcp_gateway Post] Create Grafana SA token for mcpo"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts/{{ _grafana_sa_id }}/tokens"
+    method: POST
+    body_format: json
+    body:
+      name: "mcpo-token-{{ ansible_date_time.epoch | default(ansible_facts.date_time.epoch) }}"
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 201]
+    timeout: 10
+  register: _grafana_token
+  changed_when: _grafana_token.status in [200, 201]
+  failed_when: false
+  when:
+    - mcp_enable_grafana | default(true)
+    - _grafana_sa_id | default('') | length > 0
+
+- name: "[mcp_gateway Post] Persist Grafana SA token to file (pro compose restart)"
+  ansible.builtin.copy:
+    dest: "{{ mcpo_data_dir }}/.grafana_sa_token"
+    content: "{{ _grafana_token.json.key }}"
+    mode: '0600'
+  when:
+    - mcp_enable_grafana | default(true)
+    - _grafana_token.json.key is defined
+
+# ── 3. Update compose override s Grafana tokenem + restart ───────────────────
+
+- name: "[mcp_gateway Post] Update mcp-grafana env with real token"
+  ansible.builtin.shell: |
+    if [ -f "{{ mcpo_data_dir }}/.grafana_sa_token" ]; then
+      token=$(cat "{{ mcpo_data_dir }}/.grafana_sa_token")
+      sed -i.bak "s|GRAFANA_SERVICE_ACCOUNT_TOKEN: \".*\"|GRAFANA_SERVICE_ACCOUNT_TOKEN: \"${token}\"|g" \
+        "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml"
+      rm -f "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml.bak"
+      echo "UPDATED"
+    else
+      echo "NO_TOKEN"
+    fi
+  args:
+    executable: /bin/bash
+  register: _mcpo_token_update
+  changed_when: "'UPDATED' in _mcpo_token_update.stdout"
+  when: mcp_enable_grafana | default(true)
+
+- name: "[mcp_gateway Post] Restart mcp-grafana to pick up new token"
+  ansible.builtin.shell: |
+    cd {{ stacks_dir }}/iiab
+    {{ docker_bin }} compose -p iiab \
+      -f docker-compose.yml \
+      $(find overrides -name '*.yml' -exec echo '-f {}' \;) \
+      up -d mcp-grafana mcpo 2>&1
+  args:
+    executable: /bin/bash
+  register: _mcpo_restart
+  changed_when: "'Started' in (_mcpo_restart.stdout | default('')) or 'Recreated' in (_mcpo_restart.stdout | default(''))"
+  failed_when: false
+  when: _mcpo_token_update is changed
+
+# ── 4. Health check mcpo ──────────────────────────────────────────────────────
+
+- name: "[mcp_gateway Post] Wait for mcpo to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ mcpo_port | default(8765) }}/openapi.json"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ mcpo_api_key }}"
+    status_code: [200]
+    timeout: 5
+  register: _mcpo_health
+  retries: 12
+  delay: 5
+  until: _mcpo_health.status | default(0) == 200
+  failed_when: false
+
+- name: "[mcp_gateway Post] Status"
+  ansible.builtin.debug:
+    msg: >-
+      mcpo: {{ 'OK (' ~ (_mcpo_health.json.paths | default({}) | length) ~ ' MCP endpoints aktivnich)'
+        if _mcpo_health.status | default(0) == 200
+        else 'NEDOSTUPNY - zkontroluj docker logs iiab-mcpo-1' }}
