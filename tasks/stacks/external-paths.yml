@@ -114,9 +114,10 @@
   ansible.builtin.set_fact:
     mcpo_data_dir: "{{ external_storage_root }}/mcpo"
 
-# ── Hermes Agent (skills DB, memory, workspace) ────────────────────────────
+# ── Hermes Agent (workspace na SSD; config zustava v ~/.hermes — hardcoded) ─
+# Hermes hardcode hleda config v ~/.hermes/config.yaml, nejde prepnout.
+# Jen venv + zdroje na SSD pro rychle --blank (nestahovat hermes znovu).
 - name: "[External SSD] Override Hermes Agent paths"
   ansible.builtin.set_fact:
     hermes_home: "{{ external_storage_root }}/hermes"
-    hermes_config_dir: "{{ external_storage_root }}/hermes/config"
     hermes_venv: "{{ external_storage_root }}/hermes/.venv"

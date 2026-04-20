@@ -41,10 +41,12 @@ hermes_extras: "mcp,web"              # MCP client + FastAPI web UI (pro nginx v
 
 # ── Modely ────────────────────────────────────────────────────────────────────
 
-# Primary model — Hermes 4 14B (~10GB Q5_K_M)
-# NOT v oficialni ollama library → pull pres HF GGUF
-hermes_primary_model: "hf.co/NousResearch/Hermes-4-14B-GGUF:Q5_K_M"
-hermes_primary_model_shortname: "hermes-4-14b"     # alias pro config
+# Primary model — Hermes 3 8B (~4.7GB, officialní Ollama library)
+# Proč ne Hermes 4: GGUF verze vyžaduje HF auth, oficiální Ollama library
+# nemá Hermes 4 (jen hermes3 v 3b/8b/70b/405b). 8B je ideální pro orchestrator
+# role (rychlý, tool-call ready, nechává RAM pro delegate 32b).
+hermes_primary_model: "hermes3:8b"
+hermes_primary_model_shortname: "hermes3:8b"      # Ollama tag = zároveň Hermes model ID
 
 # Heavy-duty delegate — lokalni dense coder (sdilen s OpenClaw)
 hermes_heavy_model: "qwen2.5-coder:32b"

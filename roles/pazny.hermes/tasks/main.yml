@@ -90,16 +90,18 @@
     mode: '0600'
   notify: Restart hermes
 
-- name: "[Hermes] Render cli-config.yaml"
+# Hermes hleda ~/.hermes/config.yaml (NE cli-config.yaml — ta je jen v repu
+# jako .example). `hermes config path` vraci presne ~/.hermes/config.yaml.
+- name: "[Hermes] Render config.yaml"
   ansible.builtin.template:
     src: cli-config.yaml.j2
-    dest: "{{ hermes_config_dir }}/cli-config.yaml"
+    dest: "{{ hermes_config_dir }}/config.yaml"
     mode: '0600'
   notify: Restart hermes
 
-# ── 4. Model pull (Hermes 4 14B) ──────────────────────────────────────────────
+# ── 4. Model pull (Hermes 3 8B z oficialni Ollama library) ──────────────────
 
-- name: "[Hermes] Pull Hermes 4 14B model via Ollama"
+- name: "[Hermes] Pull Hermes 3 8B model via Ollama"
   ansible.builtin.command: ollama pull {{ hermes_primary_model }}
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
@@ -108,21 +110,6 @@
   changed_when: false
   failed_when: false
   timeout: 1800
-
-- name: "[Hermes] Create shortname alias for Hermes model"
-  ansible.builtin.shell: |
-    cat <<EOF | ollama create {{ hermes_primary_model_shortname }} -f -
-    FROM {{ hermes_primary_model }}
-    PARAMETER temperature {{ hermes_temperature | default(0.6) }}
-    PARAMETER top_p {{ hermes_top_p | default(0.95) }}
-    PARAMETER top_k {{ hermes_top_k | default(20) }}
-    EOF
-  environment:
-    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
-    OLLAMA_HOST: "http://127.0.0.1:11434"
-  register: _hermes_alias
-  changed_when: "'created' in (_hermes_alias.stdout | default(''))"
-  failed_when: false
 
 # ── 6. Doctor check (verify install) ─────────────────────────────────────────
 # Hermes nema persistent daemon mode (jen `gateway install` pro messaging +
