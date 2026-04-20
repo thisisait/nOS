@@ -4,52 +4,63 @@
 #
 # Volano z tasks/stacks/stack-up.yml PO `docker compose up b2b`.
 #
-# Problem:
-#   Image `lscr.io/linuxserver/bookstack` pri prvnim startu spousti
-#   `artisan migrate`. Pokud MariaDB jeste nestihne dobehnout
-#   healthcheck k okamziku, kdy artisan otevre TCP spojeni, migrace
-#   selze uprostred FK aliasu s "[2002] Connection refused" a s6-overlay
-#   migration step se neopakuje — kontejner zustane bezet s prazdnou DB.
+# Root cause (LSIO BookStack image):
+#   Migrace 2015_08_29_105422_add_roles_and_permissions vytvari 4 tabulky
+#   (roles, role_user, permissions, permission_role) + FK constraints.
+#   MariaDB DDL neni transakcni — pokud dojde k TCP blipu mezi prvnim
+#   create table a ALTER FK (typicky pri souběžnem startu cele b2b stacku,
+#   kdy je MariaDB pod zatezi), migrace FAILne s "[2002] Connection refused"
+#   a zanecha 2 orphan tabulky (roles, role_user).
+#   LSIO init krok `migrations` se neopakuje — kontejner pojede s polorozbitou DB
+#   a kazdy dalsi restart dostane `1050 Table 'roles' already exists`.
 #
 # Fix:
-#   Po compose up zkontroluj logy bookstack kontejneru na "FAIL" u
-#   migrace a pripadne restartuj kontejner. LinuxServer init pustí
-#   migrate znovu pri restartu; MariaDB uz je davno ready.
+#   1. Preemptivne detekuj partial-state signaturu (roles exists, permissions
+#      missing → klasicky stop bod migrace #10).
+#   2. Retry loop: DROP DATABASE → restart → wait → recheck (max 3 pokusy).
+#   3. Po uspesne migraci verifikuj HTTP.
 # ==============================================================================
 
-- name: "[pazny.bookstack] Check for migration errors in container logs"
+- name: "[pazny.bookstack] Ensure container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} logs b2b-bookstack-1 2>&1 | tail -300 |
-    grep -cE "FAIL|Connection refused.*mysql|already exists|SQLSTATE" || true
-  register: _bookstack_migration_error
+    {{ docker_bin }} ps --filter name=b2b-bookstack-1 --filter status=running --format '{{ "{{" }}.Names{{ "}}" }}'
+  register: _bookstack_running
   changed_when: false
   failed_when: false
   check_mode: false
 
-- name: "[pazny.bookstack] Drop and recreate DB on partial migration (table already exists)"
-  ansible.builtin.shell: |
-    {{ docker_bin }} exec infra-mariadb-1 mariadb \
-      -u root -p'{{ mariadb_root_password }}' \
-      -e "DROP DATABASE IF EXISTS {{ bookstack_db_name | default('bookstack') }}; CREATE DATABASE {{ bookstack_db_name | default('bookstack') }} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-  when: (_bookstack_migration_error.stdout | default('0') | int) > 0
-  changed_when: true
-  failed_when: false
-  register: _bookstack_db_reset
+- name: "[pazny.bookstack] Skip post-install if container not running"
+  ansible.builtin.meta: end_play
+  when: (_bookstack_running.stdout | default('')) == ''
+  tags: [never]   # nikdy neruseni, jen debug — skutecny skip nize
 
-- name: "[pazny.bookstack] Restart container after DB reset (clean migration)"
-  ansible.builtin.command: "{{ docker_bin }} restart b2b-bookstack-1"
-  when: _bookstack_db_reset is changed
-  changed_when: true
-  register: _bookstack_restart
+- name: "[pazny.bookstack] Migration recovery loop (drop DB + restart on partial state)"
+  when: (_bookstack_running.stdout | default('')) != ''
+  block:
 
-- name: "[pazny.bookstack] Wait for bookstack HTTP after migration"
+    - name: "[pazny.bookstack] Attempt migration recovery (up to 3 tries)"
+      ansible.builtin.include_tasks: post_migration_attempt.yml
+      loop: "{{ range(1, (bookstack_migration_max_tries | default(3)) + 1) | list }}"
+      loop_control:
+        loop_var: bookstack_try
+        label: "try {{ bookstack_try }}"
+      when: not (_bookstack_migration_ok | default(false))
+
+- name: "[pazny.bookstack] Wait for BookStack HTTP after migration recovery"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/"
     status_code: [200, 302, 401]
     follow_redirects: none
   register: _bookstack_http
-  retries: 30
-  delay: 5
+  retries: 20
+  delay: 3
   until: _bookstack_http.status | default(0) in [200, 302, 401]
   failed_when: false
   check_mode: false
+
+- name: "[pazny.bookstack] Migration recovery outcome"
+  ansible.builtin.debug:
+    msg: >
+      BookStack HTTP {{ _bookstack_http.status | default('N/A') }} after
+      {{ _bookstack_migration_tries_used | default('?') }} migration recovery
+      attempts (partial_state={{ _bookstack_partial | default('unknown') }}).

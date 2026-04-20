@@ -28,16 +28,30 @@
   failed_when: false
   when: "'exists' not in (_paperclip_config_check.stdout | default(''))"
 
-- name: "[pazny.paperclip Post] Wait for Paperclip API readiness"
+# Paperclip zavira TCP bez HTTP odpovedi, pokud Host header neni v
+# BETTER_AUTH_TRUSTED_ORIGINS / allowed hostnames. 127.0.0.1 v nich neni,
+# takze musime (a) cekat jen na TCP port (nejrychlejsi, spolehlivy signal
+# ze node server bezi), a (b) probovat HTTP s korektnim Host headerem.
+- name: "[pazny.paperclip Post] Wait for Paperclip TCP port ready"
+  ansible.builtin.wait_for:
+    host: "127.0.0.1"
+    port: "{{ paperclip_port | default(3006) }}"
+    state: started
+    timeout: 120
+    delay: 2
+
+- name: "[pazny.paperclip Post] Verify Paperclip HTTP (with correct Host header)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ paperclip_port | default(3006) }}/"
     method: GET
     timeout: 5
+    headers:
+      Host: "{{ paperclip_domain | default('paperclip.dev.local') }}"
     status_code: [200, 301, 302, 401, 403]
   register: _paperclip_ready
   until: _paperclip_ready.status | default(0) in [200, 301, 302, 401, 403]
-  retries: 18
-  delay: 10
+  retries: 10
+  delay: 3
   failed_when: false
 
 - name: "[pazny.paperclip Post] Register primary allowed hostname"

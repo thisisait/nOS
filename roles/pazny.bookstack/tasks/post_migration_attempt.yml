@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# pazny.bookstack/tasks/post_migration_attempt.yml
+#
+# Jedno kolo "recovery" pokusu. Volano z post.yml v loop { 1..3 }.
+# Pokud detekuje partial-state NEBO FAIL v recent logu → drop DB + restart.
+# Pokud detekuje healthy state (migrations count matches and 'permissions'
+# table exists) → nastavi _bookstack_migration_ok=true a dalsi iterace
+# se preskoci.
+# ==============================================================================
+
+# 1) Rychly check: existuje tabulka 'permissions'? Pokud ano → migrace
+#    #10 dobehla cela (je to posledni tabulka co vytvari). Hotovo.
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Check if 'permissions' table exists"
+  ansible.builtin.shell: |
+    {{ docker_bin }} exec infra-mariadb-1 mariadb \
+      -u root -p'{{ mariadb_root_password }}' \
+      -N -B -e "SELECT COUNT(*) FROM information_schema.tables \
+                WHERE table_schema='{{ bookstack_db_name | default('bookstack') }}' \
+                  AND table_name='permissions';"
+  register: _bookstack_perm_table
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Detect partial migration state"
+  ansible.builtin.shell: |
+    {{ docker_bin }} exec infra-mariadb-1 mariadb \
+      -u root -p'{{ mariadb_root_password }}' \
+      -N -B -e "SELECT COUNT(*) FROM information_schema.tables \
+                WHERE table_schema='{{ bookstack_db_name | default('bookstack') }}' \
+                  AND table_name IN ('roles','role_user');"
+  register: _bookstack_partial_tables
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Set partial-state flag"
+  ansible.builtin.set_fact:
+    _bookstack_partial: "{{ (_bookstack_perm_table.stdout | trim | int) == 0 and (_bookstack_partial_tables.stdout | trim | int) > 0 }}"
+    _bookstack_migration_ok: "{{ (_bookstack_perm_table.stdout | trim | int) > 0 }}"
+    _bookstack_migration_tries_used: "{{ bookstack_try }}"
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Migration looks healthy — skip recovery"
+  ansible.builtin.debug:
+    msg: "permissions table exists → migrace #10 dokoncena, preskakuji recovery"
+  when: _bookstack_migration_ok | default(false)
+
+# 2) Pokud partial — drop celou DB + restart kontejner
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) DROP + recreate DB (partial state detected)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} exec infra-mariadb-1 mariadb \
+      -u root -p'{{ mariadb_root_password }}' \
+      -e "DROP DATABASE IF EXISTS {{ bookstack_db_name | default('bookstack') }}; \
+          CREATE DATABASE {{ bookstack_db_name | default('bookstack') }} \
+            CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; \
+          GRANT ALL ON {{ bookstack_db_name | default('bookstack') }}.* \
+            TO '{{ bookstack_db_user | default('bookstack') }}'@'%'; \
+          FLUSH PRIVILEGES;"
+  when: not (_bookstack_migration_ok | default(false))
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Stop bookstack so it releases connections"
+  ansible.builtin.command: "{{ docker_bin }} stop -t 10 b2b-bookstack-1"
+  when: not (_bookstack_migration_ok | default(false))
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Start bookstack fresh (clean migration)"
+  ansible.builtin.command: "{{ docker_bin }} start b2b-bookstack-1"
+  when: not (_bookstack_migration_ok | default(false))
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Wait for migrations to complete"
+  ansible.builtin.shell: |
+    {{ docker_bin }} exec infra-mariadb-1 mariadb \
+      -u root -p'{{ mariadb_root_password }}' \
+      -N -B -e "SELECT COUNT(*) FROM information_schema.tables \
+                WHERE table_schema='{{ bookstack_db_name | default('bookstack') }}' \
+                  AND table_name='permissions';"
+  register: _bookstack_perm_after
+  retries: 24                       # 24 * 5s = 120s max na 1 pokus
+  delay: 5
+  until: (_bookstack_perm_after.stdout | trim | int) > 0
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: not (_bookstack_migration_ok | default(false))
+
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Update migration_ok flag after restart"
+  ansible.builtin.set_fact:
+    _bookstack_migration_ok: "{{ (_bookstack_perm_after.stdout | default('0') | trim | int) > 0 }}"
+  when: not (_bookstack_migration_ok | default(false))
