@@ -32,6 +32,11 @@
         <string>{{ ollama_flash_attention | default(1) | string }}</string>
         <key>OLLAMA_KV_CACHE_TYPE</key>
         <string>{{ ollama_kv_cache_type | default('q8_0') }}</string>
+        <!-- Context window limit — bez limitu Ollama zabere plnou context length
+             modelu (qwen3-coder:30b = 262K = 47GB RAM!). 32K je rozumny default;
+             pro specificky task override per-request -->
+        <key>OLLAMA_CONTEXT_LENGTH</key>
+        <string>{{ ollama_context_length | default('32768') }}</string>
         <key>OLLAMA_HOST</key>
         <string>127.0.0.1:11434</string>
     </dict>

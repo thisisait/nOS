@@ -43,6 +43,12 @@ ollama_flash_attention: 1        # Flash attention pro MLX (rychlejsi, mene pame
 # Vyzaduje flash_attention=1. Stay <= 256K ctx aby se vyhnuli crashi #11619.
 ollama_kv_cache_type: "q8_0"     # q8_0 = -50% RAM kontextu; q4_0 = -75% ale horsi reasoning
 
+# Context window limit — BEZ LIMITU Ollama rezervuje plny context modelu
+# (qwen3-coder:30b = 262K = ~47GB RAM jen na KV cache!).
+# 32K je rozumny default pro agentic use cases; pro specific large-context
+# task muzes override per-request via API.
+ollama_context_length: 32768
+
 # Dalsi modely — stahne se pres ollama pull v main.yml.
 # Default = jen 1 dense pro heavy tasks (qwen3-coder:30b primary + qwen2.5-coder:32b = ~40GB).
 # Kompletni stack (4 dalsi modely, +90GB) pridej v config.yml pres:

@@ -26,6 +26,7 @@
     - { key: "OLLAMA_KEEP_ALIVE", value: "{{ ollama_keep_alive | default('5m') }}" }
     - { key: "OLLAMA_FLASH_ATTENTION", value: "{{ ollama_flash_attention | default(1) }}" }
     - { key: "OLLAMA_KV_CACHE_TYPE", value: "{{ ollama_kv_cache_type | default('q8_0') }}" }
+    - { key: "OLLAMA_CONTEXT_LENGTH", value: "{{ ollama_context_length | default(32768) | string }}" }
   loop_control:
     label: "{{ item.key }}={{ item.value }}"
   changed_when: false
