@@ -1,394 +1,420 @@
-# Mac Dev Playbook – Pazny Edition
+# nOS — the engine behind AIT
 
-Ansible playbook pro automatizaci macOS vývojového prostředí na **Mac Studio (Apple Silicon, 36 GB RAM)**. Vychází z projektu [geerlingguy/mac-dev-playbook](https://github.com/geerlingguy/mac-dev-playbook) a rozšiřuje ho o self-hosted AI agenta, plný observability stack a offline knowledge services.
+> **One stack. Forty services. Zero SaaS bills.**
+>
+> `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
+> An Ansible playbook that orchestrates 45+ roles, wires 40+ FOSS services together through one SSO,
+> and turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud.
 
----
-
-## Obsah
-
-- [Co playbook nainstaluje](#co-playbook-nainstaluje)
-- [Rychlý start](#rychlý-start)
-- [Konfigurace – INSTALLATION QUEUE](#konfigurace--installation-queue)
-- [Přizpůsobení](#přizpůsobení)
-- [Adresářová struktura](#adresářová-struktura)
-- [Dostupné tagy](#dostupné-tagy)
-- [Manuální kroky po instalaci](#manuální-kroky-po-instalaci)
-- [Struktura repozitáře](#struktura-repozitáře)
-
----
-
-## Co playbook nainstaluje
-
-### Vývojová prostředí
-
-| Stack | Nástroj | Správce verzí |
-|-------|---------|---------------|
-| PHP 8.3 + FPM | Composer, rozšíření | Homebrew `php@8.3` |
-| Node.js LTS | yarn, pnpm, TypeScript, pm2 | NVM |
-| Bun | globální balíčky | curl installer |
-| Python 3.13 | FastAPI, LangChain, JupyterLab, numpy, … | pyenv |
-| Go (latest) | gopls, air, golangci-lint | Homebrew |
-| .NET (C#) | EF CLI, dotnet-script | Homebrew Cask |
-
-### Web server
-
-**Nginx** s plnou konfigurací:
-- Sites-available / sites-enabled vzor (symlinky)
-- Šablony vhostů pro PHP, Node.js, Python, Go, .NET, statické soubory
-- mkcert lokální SSL certifikáty (`*.dev.local`)
-- gzip, rate limiting, proxy cache
-
-### Moderní CLI nástroje
-
-| Nástroj | Nahrazuje | Popis |
-|---------|-----------|-------|
-| `ripgrep` (`rg`) | grep | Rychlejší grep, `.gitignore`-aware |
-| `fd` | find | Rychlejší a přehlednější find |
-| `bat` | cat | Syntax highlighting + git diff |
-| `eza` | ls | Ikonky, stromové zobrazení, git status |
-| `fzf` | — | Fuzzy finder (Ctrl+R, Ctrl+T) |
-| `zoxide` (`z`) | cd | Chytré cd s váhováním historie |
-| `lazygit` (`lg`) | git | TUI pro celý git workflow |
-| `starship` | prompt | GPU-fast cross-shell prompt |
-| `ncdu` | du | Interaktivní disk usage TUI |
-| `duf` | df | Přehledný diskový panel |
-
-### AI Agent – Inspektor Klepítko
-
-Self-hosted AI agent bez API klíče:
-
-- **Ollama** – lokální LLM inference (model `qwen3.5:27b`, optimální pro 36 GB RAM)
-- **OpenClaw** – agentic framework instalovaný přes `npm install -g openclaw`
-- Agent běží jako **launchd daemon** (vždy zapnutý, autorestart)
-- Persona: **DevOps Lead Engineer** s přehledem o celé konfiguraci serveru
-- 6 sub-agentů: CodeAgent, InfraAgent, DeployAgent, SecurityAgent, MonitorAgent, DataAgent
-
-Cesty:
-```
-~/agents/          # konfigurace agentů
-~/projects/        # projekty hostované přes nginx
-~/agents/log/      # strukturované .md logy agentické práce
-```
-
-### Observability – LGTM Stack
-
-Plně nakonfigurovaný monitoring stack (Grafana Alloy jako unified collector):
-
-```
-Alloy → Prometheus  (metriky: CPU, RAM, nginx, PHP-FPM, Redis)
-     → Loki        (logy: nginx access/error, agent logy)
-     → Tempo       (traces: OTLP gRPC :4317, HTTP :4318)
-           ↓
-        Grafana    (dashboardy, datasources auto-provisioned)
-```
-
-| Služba | URL | Port |
-|--------|-----|------|
-| Grafana | `https://grafana.dev.local` | 3000 |
-| Prometheus | `http://localhost:9090` | 9090 |
-| Loki | `http://localhost:3100` | 3100 |
-| Tempo | `http://localhost:3200` | 3200 |
-| Alloy UI | `http://localhost:12345` | 12345 |
-
-Community dashboardy se automaticky stáhnou a importují (Node Exporter Full, macOS Overview, Nginx, PHP-FPM, Loki, Tempo).
-
-### IIAB – Self-hosted Knowledge & Productivity Services
-
-Všechny služby jsou volitelné (`false` v INSTALLATION QUEUE), dostupné přes nginx na `.dev.local` doménách:
-
-| Služba | Doména | Stack | Popis |
-|--------|--------|-------|-------|
-| WordPress | `wordpress.dev.local` | PHP-FPM + MariaDB | CMS |
-| Nextcloud | `cloud.dev.local` | PHP-FPM + MariaDB | Self-hosted cloud |
-| Kiwix | `kiwix.dev.local` | Docker | Offline Wikipedia, Gutenberg, ZIM |
-| Offline Mapy | `maps.dev.local` | tileserver-gl | MBTiles offline mapy |
-| n8n | `n8n.dev.local` | Docker | Workflow automation |
-| Gitea | `gitea.dev.local` | Homebrew | Self-hosted Git |
-| Uptime Kuma | `uptime.dev.local` | Docker | Monitoring / status page |
-| Calibre-Web | `books.dev.local` | Docker | E-book knihovna |
-
-### GUI Aplikace (Homebrew Cask)
-
-Editory, terminály, prohlížeče, nástroje a kreativní software nainstalovaný přes Homebrew Cask:
-
-<details>
-<summary>Zobrazit kompletní seznam</summary>
-
-**Editory / IDE:** VS Code, Windsurf (Codeium AI IDE), Sublime Text
-**Terminály:** Ghostty (GPU-accelerated), iTerm2
-**Prohlížeče:** Brave, Chrome, Firefox
-**Produktivita:** Raycast (Spotlight replacement)
-**Komunikace:** Slack, Discord
-**Databáze:** Sequel Ace, TablePlus
-**API / Dev tools:** Insomnia, balenaEtcher, LiCEcap
-**Bezpečnost:** LastPass, OpenVPN Connect
-**Média:** VLC, Spotify, HandBrake
-**Kreativní:** Blender, FL Studio
-**Observability:** Obsidian (propojení s `~/agents/log/`)
-**Systém:** Dropbox, Ice (menu bar), Stats (systémové metriky v menu baru)
-
-</details>
+<p align="center">
+  <a href="https://thisisait.eu">thisisait.eu</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#the-stack">Stack</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#sso--rbac">SSO &amp; RBAC</a> ·
+  <a href="#configuration">Configuration</a>
+</p>
 
 ---
 
-## Rychlý start
+## What it is
 
-### 1. Bootstrap (automatický)
+`nOS` is the reference implementation of **AIT — Agentic IT**: a new category of self-hosted, agentic,
+open-source infrastructure that collapses the SaaS stack back onto a single machine on your desk.
+
+- **One command** wipes a Mac, installs 40+ services, integrates them, and secures them.
+- **One SSO** (Authentik) fronts every app — OIDC where possible, forward-auth where not.
+- **One vault** (Infisical) owns every secret. Per-tenant personal vaults via Vaultwarden.
+- **One agent** (OpenClaw + Ollama MLX) runs DevOps tasks locally, no API key required.
+- **One command** again brings everything back on a fresh box — `blank=true`, ~20 minutes.
+
+This is not a homelab hobby. It's what replaces Notion + GitHub + 1Password + Vercel +
+Grafana Cloud + Auth0 + Slack + Zoom for a developer or a small team.
+
+---
+
+## What it replaces
+
+| You're paying for | You could self-host | via nOS role |
+|---|---|---|
+| Notion / Confluence | Outline, HedgeDoc, BookStack | `pazny.outline`, `pazny.hedgedoc`, `pazny.bookstack` |
+| GitHub / GitLab.com | Gitea, GitLab CE + Woodpecker CI | `pazny.gitea`, `pazny.gitlab`, `pazny.woodpecker` |
+| 1Password / LastPass | Vaultwarden (personal) + Infisical (infra) | `pazny.vaultwarden`, `pazny.infisical` |
+| Auth0 / Okta | Authentik (OIDC + forward-auth + RBAC) | `pazny.authentik` |
+| Grafana Cloud / Datadog | Grafana + Prometheus + Loki + Tempo + Alloy | `pazny.grafana`, `pazny.prometheus`, `pazny.loki`, `pazny.tempo` |
+| ChatGPT / Claude.ai | Open WebUI + Ollama (MLX on Apple Silicon) | `pazny.open_webui`, `pazny.openclaw` |
+| Slack / Discord | Hermes cross-channel gateway (optional) | `pazny.hermes` |
+| Dropbox / Google Drive | Nextcloud + OnlyOffice | `pazny.nextcloud`, `pazny.onlyoffice` |
+| Zapier / Make | n8n + Node-RED | `pazny.n8n`, `pazny.nodered` |
+| Linear / Jira | ERPNext, FreeScout | `pazny.erpnext`, `pazny.freescout` |
+| QuickBooks | Firefly III | `pazny.firefly` |
+| Metabase Cloud | Metabase, Superset | `pazny.metabase`, `pazny.superset` |
+| Netflix / Plex Pass | Jellyfin | `pazny.jellyfin` |
+| Portainer Business | Portainer CE | `pazny.portainer` |
+
+Hardware and electricity not included. A Mac Mini M4 pays for itself in under a year for a typical power user.
+
+---
+
+## Quick start
+
+> **Target:** macOS on Apple Silicon (M1+). Intel Macs are not supported.
+> **Recommended:** 36 GB RAM, 1 TB external SSD (nOS tiers heavy data onto it automatically).
+
+### 1. Bootstrap
 
 ```bash
-git clone <tento-repozitar> ~/mac-dev-playbook
-cd ~/mac-dev-playbook
-bash bootstrap.sh       # Nainstaluje: Xcode CLT → Homebrew → Ansible → Galaxy role → config soubory
+git clone https://github.com/thisisait/nOS.git ~/nOS
+cd ~/nOS
+./bootstrap.sh      # Xcode CLT → Homebrew → Ansible → Galaxy roles → config scaffolding
 ```
 
-Nebo krok po kroku (jako Jupyter notebook):
+### 2. Configure
+
+Bootstrap creates two gitignored files — `config.yml` and `credentials.yml`. Edit both:
 
 ```bash
-bash bootstrap/01-xcode-clt.sh   # Xcode Command Line Tools
-bash bootstrap/02-homebrew.sh    # Homebrew
-bash bootstrap/03-ansible.sh     # Ansible
-bash bootstrap/04-galaxy.sh      # Ansible Galaxy role
-bash bootstrap/05-config.sh      # Vytvoří config.yml + credentials.yml ze šablon
+$EDITOR config.yml          # feature toggles: which services to install
+$EDITOR credentials.yml     # set global_password_prefix, override per-service secrets
 ```
 
-### 2. Přizpůsobení
+Passwords follow the pattern `{global_password_prefix}_pw_{service}`. Override any you care
+about in `credentials.yml`; the rest are derived. Generator: `openssl rand -hex 32`.
 
-Bootstrap vytvoří dva soubory (oba v `.gitignore`):
-
-| Soubor | Obsah | Jak často editovat |
-|--------|-------|-------------------|
-| `config.yml` | Feature toggles (`install_*: true/false`) | Jednou na začátku |
-| `credentials.yml` | Hesla, tokeny, API klíče | Jednou – vyplnit `changeme_*` |
+### 3. Run
 
 ```bash
-nano config.yml           # Zapni/vypni komponenty
-nano credentials.yml      # Vyplň hesla (POVINNÉ před spuštěním!)
-```
-
-> **Důležité:** Hesla v `credentials.yml` jsou výchozí placeholder hodnoty (`changeme_*`). Přepiš je všechna před spuštěním. Generátor: `openssl rand -hex 32`
-
-### 3. Spuštění
-
-```bash
-# Plná instalace
+# Full install (prompts for sudo)
 ansible-playbook main.yml -K
 
-# Pouze konkrétní část (např. jen observability)
-ansible-playbook main.yml -K --tags "observability"
+# Clean reinstall — wipes ALL data and secrets, prompts for a new prefix, rebuilds from scratch
+ansible-playbook main.yml -K -e blank=true
 
-# Suché spuštění (bez změn, jen výpis co by se stalo)
-ansible-playbook main.yml -K --check
+# Run a single stack
+ansible-playbook main.yml -K --tags "stacks,observability"
 ```
+
+A full first run takes **~20 minutes** on an M4 Pro with fast internet.
 
 ---
 
-## Konfigurace – INSTALLATION QUEUE
+## The stack
 
-Hlavní konfigurační soubor je **`default.config.yml`**. Začátek souboru obsahuje přehledný přepínač komponent:
+Every Docker service is owned by an Ansible role under `roles/pazny.*`. Services are
+grouped into **8 Docker Compose stacks** that boot in dependency order.
 
-```yaml
-# INSTALLATION QUEUE – zakomentuj řádek pro přeskočení komponenty
+| Stack | Role count | Services |
+|---|---|---|
+| **infra** (always on, always first) | 9 | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Authentik (server + worker), Infisical, Bluesky PDS |
+| **observability** (always on, always second) | 4 | Grafana, Prometheus, Loki, Tempo (+ Alloy as unified collector on the host) |
+| **iiab** — Internet-in-a-Box & productivity | 12 | WordPress, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden |
+| **devops** | 5 | Gitea, Woodpecker CI, GitLab CE, Paperclip, code-server |
+| **b2b** | 7 | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
+| **voip** | 1 | FreePBX (Asterisk) |
+| **engineering** | 1 | QGIS Server |
+| **data** | 2 | Metabase, Apache Superset |
 
-install_homebrew_packages: true   # CLI nástroje
-install_nginx: true               # Nginx
-install_php: true                 # PHP 8.x + FPM
-install_node: true                # Node.js + NVM
-install_bun: true                 # Bun runtime
-install_python: true              # Python + pyenv
-install_golang: true              # Go
-install_dotnet: true              # .NET / C#
-install_openclaw: true            # AI Agent (Ollama)
-install_shell_extras: true        # Starship prompt + aliasy
-configure_macos_defaults: true    # macOS nastavení (Finder, klávesnice, Dock…)
-
-enable_ssh: false                 # SSH server
-enable_samba: false               # SMB sdílení souborů
-enable_vnc: false                 # Sdílení obrazovky
-
-install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
-
-# IIAB – self-hosted services (vše false = výchozí)
-install_mariadb: false
-install_wordpress: false
-install_nextcloud: false
-install_kiwix: false
-install_offline_maps: false
-install_n8n: false
-install_gitea: false
-install_uptime_kuma: false
-install_calibreweb: false
-```
+Non-Docker services installed directly on the host: **OpenClaw** (launchd agent daemon),
+**jsOS** (Node.js webtop via PM2), **Glasswing** (Nette PHP security dashboard),
+**BoxAPI** (local management REST bridge), **IIAB Terminal** (Python Textual TUI over SSH).
 
 ---
 
-## Přizpůsobení
+## Architecture
 
-Konfigurace je rozdělena do 3 vrstev (pozdější přepisuje předchozí):
+### Compose-override pattern
 
-```
-default.config.yml   ← výchozí hodnoty (neupravuj)
-  ↓ override
-config.yml           ← feature toggles: co zapnout/vypnout (gitignored)
-  ↓ override
-credentials.yml      ← hesla, tokeny, API klíče (gitignored)
-```
-
-**config.yml** (ze šablony `config.example.yml`):
-```yaml
-install_openclaw: true
-install_observability: true
-install_wordpress: false     # zapni jen co potřebuješ
-```
-
-**credentials.yml** (ze šablony `credentials.example.yml`):
-```yaml
-mariadb_root_password: "silne-heslo"      # openssl rand -hex 32
-grafana_admin_password: "silne-heslo"
-nextcloud_admin_password: "silne-heslo"
-gitea_secret_key: "nahodny-64-char-hex"
-
-# Volitelné – cesty se odvodí automaticky z uživatelského jména
-# dotfiles_repo: "https://github.com/tvujuzivatel/dotfiles.git"
-# openclaw_model: "qwen3.5:14b"   # menší model pro méně RAM
-```
-
-> Výchozí cesty (`/Users/<tvuj-user>/agents/`, `/Users/<tvuj-user>/projects/` apod.) se nastavují automaticky z `ansible_user_id` – nemusíš je přepisovat.
-
----
-
-## Adresářová struktura
+Each role owns a single Docker Compose fragment that is merged into its stack at runtime:
 
 ```
-~/                          # /Users/<tvuj-uzivatel>/
-├── agents/
-│   ├── log/                # .md logy agentické práce (YYYY-MM-DD_TASK-NNN_popis.md)
-│   └── ...                 # OpenClaw konfigurace
-├── projects/               # Projekty hostované přes nginx
-│   └── default/            # Výchozí landing page
-├── observability/
-│   ├── dashboards/         # Stažené Grafana dashboardy (JSON)
-│   ├── prometheus/         # Prometheus data
-│   ├── loki/               # Loki data
-│   └── tempo/              # Tempo data
-├── kiwix/                  # ZIM soubory (offline Wikipedia, Gutenberg…)
-├── maps/                   # MBTiles soubory (offline mapy)
-├── gitea/                  # Gitea data + repozitáře
-├── n8n/                    # n8n data + workflow
-├── calibre-web/            # Calibre knihovna + config
-└── uptime-kuma/            # Uptime Kuma data
+roles/pazny.<service>/
+  defaults/main.yml          # version, port, data_dir, mem_limit
+  tasks/main.yml             # render override file into ~/stacks/<stack>/overrides/
+  tasks/post.yml             # (optional) API calls, DB init, admin bootstrap
+  templates/compose.yml.j2   # service definition — no top-level networks:
+  handlers/main.yml          # (optional) restart handler
 ```
 
----
-
-## Dostupné tagy
-
-Spusť pouze konkrétní část playbooku pomocí `--tags`:
+Stack orchestrators (`tasks/stacks/core-up.yml`, `stack-up.yml`) discover overrides with
+`ansible.builtin.find` and pass them as `-f` flags to `docker compose up`:
 
 ```bash
-ansible-playbook main.yml -K --tags "TAG"
+docker compose \
+  -f ~/stacks/iiab/docker-compose.yml \
+  -f ~/stacks/iiab/overrides/wordpress.yml \
+  -f ~/stacks/iiab/overrides/nextcloud.yml \
+  ... \
+  up iiab --wait
 ```
 
-| Tag | Co spustí |
-|-----|-----------|
-| `homebrew` | Homebrew balíčky a cask apps |
-| `nginx` | Nginx instalace a konfigurace |
-| `php` | PHP + PHP-FPM |
-| `node` | Node.js + NVM |
-| `python` | Python + pyenv |
-| `go` | Go jazyk |
-| `dotnet` | .NET SDK |
-| `openclaw` | AI Agent (Ollama + OpenClaw) |
-| `shell-extras` | Starship prompt + aliasy |
-| `observability` | Celý LGTM stack |
-| `grafana` | Pouze Grafana |
-| `macos-defaults` | macOS systémová nastavení |
-| `system-services` | SSH, Samba, VNC |
-| `tailscale` | Tailscale VPN |
-| `dnsmasq` | Lokální DNS pro *.dev.local |
-| `iiab` | Všechny IIAB služby |
-| `n8n` | n8n workflow automation |
-| `gitea` | Gitea Git server |
+**Result:** each service stays in its own role, but the stack sees one merged compose. Add a
+service by creating a role — no hand-edits to the base stack template.
+
+### Boot order
+
+1. **Password prefix prompt** (on `blank=true`)
+2. **Blank reset** — wipes Docker, data dirs, external SSD paths
+3. **Auto-enable dependencies** — flips on MariaDB/PostgreSQL/Redis based on which services are on
+4. **Auto-generate secrets** — Outline, Bluesky, Authentik bootstrap token, Infisical, Vaultwarden, Paperclip, jsOS
+5. **Host-level roles** — Xcode CLT → Homebrew → dotfiles → Mac App Store → Dock
+6. **Host tasks** — macOS defaults, SSH, language runtimes (PHP, Node, Python, Go, .NET, Bun), Nginx, external storage tiering
+7. **Core stacks up** — `infra` + `observability` (always required, always first)
+8. **Post-start core** — Authentik blueprints + OIDC app provisioning, Infisical init, PDS bootstrap, Portainer admin + OAuth
+9. **Remaining stacks up** — `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`
+10. **Post-start services** — admin users, DB migrations, OIDC wiring, onboarding
+11. **Post-provision** — stack health verification, jsOS desktop, service registry
+
+**Invariant:** post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical,
+Grafana, Loki, and Tempo are already online.
 
 ---
 
-## Manuální kroky po instalaci
+## SSO & RBAC
 
-Některé nastavení macOS nelze plně automatizovat (SIP, HW-specifické nastavení):
+Single sign-on is not optional in `nOS` — every service is fronted by Authentik at
+`auth.<tld>` (default `auth.dev.local`). The `authentik_oidc_apps` list in
+`default.config.yml` is the single source of truth; post-start tasks auto-provision
+OIDC providers and applications for every enabled service.
 
-1. **Caps Lock → Escape** – System Settings → Keyboard → Modifier Keys → nastavit pro každou klávesnici zvlášť
-2. **Full Disk Access pro Terminal** – System Settings → Privacy & Security → Full Disk Access → přidat Terminal / Ghostty
-3. **VNC heslo** – pokud `enable_vnc: true`, nastav `vnc_password` v `credentials.yml` před spuštěním
-4. **Tailscale login** – po instalaci otevři aplikaci Tailscale a přihlas se na https://login.tailscale.com
+### Integration modes
 
-> **mkcert a `.dev.local` DNS jsou automatizovány** – mkcert CA se nainstaluje do systému automaticky a dnsmasq zajistí přeložení všech `*.dev.local` domén na `127.0.0.1` bez zásahu do `/etc/hosts`.
+| Mode | Services | How |
+|---|---|---|
+| **Native OIDC (env)** | Grafana, Outline, Open WebUI, n8n, GitLab, Vaultwarden | OIDC env vars in the compose override |
+| **Native OIDC (API/CLI)** | Gitea, Nextcloud, Portainer | Admin API / `occ` / PUT `/api/settings` |
+| **Proxy auth** (forward-auth) | Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase | Nginx `auth_request` + Authentik embedded outpost |
+| **Identity bridge** | Bluesky PDS | Authentik → PDS auto-provisions `@user.bsky.<tld>` accounts |
+| **No SSO** | FreePBX, QGIS | Service owns its own auth |
+
+Proxy auth *gates access* but each service still renders its own login. Native OIDC gives
+you a real "Sign in with Authentik" button.
+
+### RBAC tiers
+
+Four access tiers, bound to Authentik groups via expression policies. Every app's tier is
+declared in `authentik_app_tiers`; users are added to the corresponding `devboxnos-*` group.
+
+| Tier | Role | Scope | Example services |
+|---|---|---|---|
+| 1 | **admin** | Infra, secrets, monitoring | Portainer, Infisical, Grafana, Glasswing, InfluxDB |
+| 2 | **manager** | Dev tools, analytics, automation | Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout |
+| 3 | **user** | Employee productivity | Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Home Assistant, Calibre-Web |
+| 4 | **guest** | Public/content | Kiwix, Jellyfin, WordPress |
 
 ---
 
-## Struktura repozitáře
+## Configuration
+
+### Layering
+
+Four files, later overrides earlier:
 
 ```
-mac-dev-playbook/
-├── main.yml                      # Hlavní playbook (handlers + task imports)
-├── default.config.yml            # Výchozí konfigurace – NEUPRAVUJ
-├── config.example.yml            # Šablona → config.yml (feature toggles)
-├── credentials.example.yml       # Šablona → credentials.yml (hesla, tokeny)
-├── bootstrap.sh                  # Bootstrap – spustí všechny kroky
-├── bootstrap/
-│   ├── 01-xcode-clt.sh           # Krok 1: Xcode CLT
-│   ├── 02-homebrew.sh            # Krok 2: Homebrew
-│   ├── 03-ansible.sh             # Krok 3: Ansible
-│   ├── 04-galaxy.sh              # Krok 4: Galaxy role
-│   └── 05-config.sh              # Krok 5: config.yml + credentials.yml
-├── requirements.yml              # Ansible Galaxy role závislosti
-├── inventory                     # Ansible inventory (localhost)
+default.config.yml        ← all variables with defaults                (committed)
+default.credentials.yml   ← all secrets as {{ prefix }}_pw_*  templates (committed)
+config.yml                ← your feature toggles                        (gitignored)
+credentials.yml           ← your secret overrides                       (gitignored)
+```
+
+### Installation queue
+
+The top of `default.config.yml` is a flat list of ~78 boolean toggles — comment out
+anything you don't want:
+
+```yaml
+install_nginx: true
+install_openclaw: true            # AI agent + Ollama MLX
+install_observability: true       # LGTM stack (required for audit trail)
+
+install_wordpress: false
+install_nextcloud: true
+install_gitea: true
+install_gitlab: false             # heavy (~4 GB RAM); only enable if you need CI at scale
+install_open_webui: true
+# ... 70 more
+```
+
+### Version policy
+
+```bash
+ansible-playbook main.yml -K                           # stable (default, CVE-patched)
+ansible-playbook main.yml -K -e version_policy=latest  # track upstream latest
+ansible-playbook main.yml -K -e version_policy=lts     # LTS branches where available
+./security-update.sh                                   # security-only pull
+```
+
+Per-service override: set `{service}_version` in `config.yml`.
+
+### Instance identity
+
+Every `nOS` box has a unique identity so a provider (e.g. Czechbot.eu) can manage a fleet:
+
+```yaml
+instance_name: "devboxnos"           # unique slug
+instance_tld: "dev.local"            # every service lives at <service>.<tld>
+instance_role: "standalone"          # standalone | headquarters | factory | office | division
+instance_parent: ""                  # slug of parent box for hierarchy
+```
+
+---
+
+## Tags & selective runs
+
+```bash
+ansible-playbook main.yml -K --tags "TAG[,TAG…]"
+```
+
+| Tag | What runs |
+|---|---|
+| `stacks` | All Docker stacks |
+| `core`, `infra`, `observability` | Core stacks only |
+| `nginx` | Nginx + vhosts + mkcert certs |
+| `php`, `node`, `python`, `go`, `dotnet`, `bun` | Single language runtime |
+| `openclaw`, `hermes`, `ai` | AI agents |
+| `glasswing`, `security` | Glasswing security dashboard |
+| `iiab-terminal`, `ssh` | SSH + ForceCommand TUI |
+| `jsos`, `desktop` | jsOS webtop |
+| `boxapi`, `api` | Management REST bridge |
+| `dnsmasq`, `dns`, `network` | `*.<tld>` resolver |
+| `tailscale` | VPN |
+| `external-storage`, `storage` | Tier data onto `/Volumes/*` |
+| `macos-defaults`, `osx` | Finder / Dock / keyboard / screenshot prefs |
+| `backup` | Restic backup config |
+| `heartbeat`, `fleet` | Fleet reporting daemon |
+| `blank`, `reset` | Blank-wipe tasks (requires `-e blank=true`) |
+
+Dry run: `--check`. Syntax only: `ansible-playbook main.yml --syntax-check`.
+
+---
+
+## External storage
+
+If `configure_external_storage: true` and an SSD is mounted at `external_storage_root`
+(default `/Volumes/SSD1TB`), heavy data directories are bind-mounted onto it — GitLab,
+Ollama models, observability databases, media libraries, Docker Desktop disk image location,
+language caches:
+
+```
+/Volumes/SSD1TB/
+├── cache/{npm,pip,composer,homebrew}/
+├── docker/                 # Docker Desktop disk image (manual move via Settings)
+├── gitea/  gitlab/  woodpecker/
+├── ollama/models/          # ~17 GB per LLM
+├── observability/{prometheus,loki,tempo}/
+├── media/  jellyfin/
+├── kiwix/  maps/           # ZIMs + MBTiles
+├── nextcloud-data/  wordpress/  calibre/
+└── n8n/  openwebui/  portainer/  uptime-kuma/
+```
+
+`blank=true` honors these paths — it wipes the real data, not just empty `~/service`
+fallback directories.
+
+---
+
+## Adding a new service
+
+1. Scaffold the role under `roles/pazny.<service>/` following the compose-override pattern.
+2. Wire it into the right stack orchestrator (`tasks/stacks/core-up.yml` or `stack-up.yml`) with
+   `include_role` — remember both `apply: { tags: […] }` **and** `tags: […]` on the task so
+   `--tags` filtering works.
+3. Add `install_<service>: false` to `default.config.yml`.
+4. (OIDC) Append an entry to `authentik_oidc_apps` and reference `{{ authentik_oidc_apps[N].client_id }}`
+   in the compose template. (Proxy auth) Add an nginx vhost template and set an `authentik_app_tiers` entry.
+5. (Nginx) Drop a vhost into `templates/nginx/sites-available/`.
+
+The role is discoverable by the orchestrator the moment it renders a file into `~/stacks/<stack>/overrides/`.
+
+---
+
+## Manual steps macOS can't automate
+
+| # | What | Why |
+|---|---|---|
+| 1 | `tailscale up` | Interactive browser login |
+| 2 | System Settings → Keyboard → Modifier Keys → Caps Lock → Escape | Per-keyboard, not scriptable |
+| 3 | System Settings → Privacy & Security → Full Disk Access → add Terminal / Ghostty | SIP-protected |
+| 4 | Docker Desktop → Settings → Resources → Disk image location → `/Volumes/SSD1TB/docker/` | GUI-only |
+
+mkcert CA install and `*.<tld>` DNS are automated via `dnsmasq` + `/etc/resolver/<tld>`.
+
+---
+
+## Project layout
+
+```
+nOS/
+├── main.yml                         # entry point: handlers + imports
+├── bootstrap.sh  bootstrap/         # Xcode CLT → Homebrew → Ansible → config scaffolding
+├── default.config.yml               # all variables (committed)
+├── default.credentials.yml          # secret templates (committed)
+├── config.yml  credentials.yml      # your overrides (gitignored)
+├── requirements.yml                 # Galaxy role dependencies
+├── inventory                        # Ansible inventory (localhost)
+├── security-update.sh               # security-only image pull
+│
+├── roles/pazny.<service>/           # 57 roles, one per service
+│   ├── defaults/  tasks/  handlers/  templates/  meta/
+│   └── templates/compose.yml.j2     # compose-override fragment
 │
 ├── tasks/
-│   ├── nginx.yml                 # Nginx + vhosts deployment
-│   ├── php.yml                   # PHP-FPM + konfigurace
-│   ├── node.yml                  # Node.js + NVM
-│   ├── bun.yml                   # Bun runtime
-│   ├── python.yml                # pyenv + pip
-│   ├── golang.yml                # Go toolchain
-│   ├── dotnet.yml                # .NET SDK
-│   ├── openclaw.yml              # Ollama + OpenClaw + agent setup
-│   ├── shell-extras.yml          # Starship + zoxide + fzf + aliasy
-│   ├── observability.yml         # Grafana LGTM stack
-│   ├── macos-defaults.yml        # macOS system preferences
-│   ├── system-services.yml       # SSH, Samba, VNC
-│   └── iiab/
-│       ├── mariadb.yml
-│       ├── wordpress.yml
-│       ├── nextcloud.yml
-│       ├── kiwix.yml
-│       ├── maps.yml
-│       ├── n8n.yml
-│       ├── gitea.yml
-│       ├── uptime-kuma.yml
-│       └── calibreweb.yml
+│   ├── stacks/
+│   │   ├── core-up.yml              # infra + observability (always first)
+│   │   ├── stack-up.yml             # iiab, devops, b2b, voip, engineering, data
+│   │   ├── authentik_service_post.yml
+│   │   ├── bluesky_pds_bridge.yml
+│   │   ├── external-paths.yml       # honor /Volumes/SSD1TB overrides
+│   │   └── shared-network.yml
+│   ├── blank-reset.yml              # wipes Docker, data, configs
+│   ├── nginx.yml  php.yml  node.yml  python.yml  golang.yml  dotnet.yml  bun.yml
+│   ├── observability.yml            # Alloy + scrape targets
+│   ├── macos-defaults.yml  osx.yml
+│   ├── backup.yml  heartbeat.yml  vulnerability-scan.yml
+│   ├── system-services.yml  tailscale.yml  dnsmasq.yml
+│   ├── external-storage.yml  power-management.yml
+│   └── service-registry.yml  export-state.yml  import-state.yml
 │
-├── files/
-│   ├── nginx/
-│   │   ├── nginx.conf            # Hlavní nginx config (kqueue, gzip, TLS, rate limiting)
-│   │   └── sites-available/      # Vhost šablony (php-app, node, python, go, grafana, n8n…)
-│   ├── observability/
-│   │   ├── alloy/config.alloy.j2     # Grafana Alloy pipeline (metrics+logs+traces)
-│   │   ├── grafana/provisioning/     # Auto-provisioning datasources + dashboards
-│   │   ├── prometheus/               # Prometheus scrape config
-│   │   ├── loki/                     # Loki storage config
-│   │   └── tempo/                    # Tempo tracing config
-│   ├── openclaw/
-│   │   ├── openclaw.json.j2          # OpenClaw config (Ollama backend)
-│   │   ├── SOUL.md                   # Inspektor Klepítko persona + znalost serveru
-│   │   ├── AGENTS.md                 # Sub-agenti a jejich role
-│   │   ├── TOOLS.md                  # Dostupné nástroje
-│   │   └── onboard.sh                # Onboarding skript agenta
-│   └── starship.toml.j2              # Starship prompt konfigurace
+├── templates/
+│   ├── stacks/{infra,observability,iiab,devops,b2b,voip,engineering,data}/
+│   │   └── docker-compose.yml.j2    # base stack (services: {} + networks)
+│   └── nginx/sites-available/       # 50 vhosts
 │
-└── full-mac-setup.md             # Průvodce instalací od nuly (Jeff Geerling)
+├── files/                           # static assets (configs, dashboards, icons)
+├── docs/                            # architecture notes, fleet-architecture.md
+└── tests/
 ```
 
 ---
 
-## Původ projektu
+## Known tech debt
 
-Tento playbook vznikl fork-em z [geerlingguy/mac-dev-playbook](https://github.com/geerlingguy/mac-dev-playbook) od [Jeffa Geerlinga](https://www.jeffgeerling.com/), autora knihy [Ansible for DevOps](https://www.ansiblefordevops.com/).
+- `ansible_env` → `ansible_facts.env` migration needed before Ansible-core 2.24
+- Bluesky PDS federation needs public DNS to be fully functional (account bridge works locally)
+- ERPNext first-run migration sometimes fails; `erpnext_post.yml` has an auto-retry
+- Jellyfin / Open WebUI may restart-loop on first DB init until data regenerates — expected
+- Mattermost removed (no ARM64 FOSS image); config retained for future
+
+---
+
+## Contributing
+
+The repo is public. The category isn't written yet. Help us define it.
+
+- Star the repo → it's how open source gets found
+- File issues with real traces — `docker compose logs`, `ansible-playbook -vv`
+- PRs follow Conventional Commits (`feat:`, `fix:`, `refactor:`…). No `Co-Authored-By`, no `--author`.
+- Primary branch is `master`. Short-lived `feat/*` / `fix/*` branches merge back via FF or PR.
+
+---
+
+## Origin & license
+
+Main inspiration: [IIAB - internet in a box](https://github.com/iiab/iiab)
+
+Forked from [geerlingguy/mac-dev-playbook](https://github.com/geerlingguy/mac-dev-playbook)
+by [Jeff Geerling](https://www.jeffgeerling.com/), author of
+[Ansible for DevOps](https://www.ansiblefordevops.com/).
+
+MIT Licensed. Sent from my Mac Studio. **Built by humans, maintained by agents.**
+
+Website: [thisisait.eu](https://thisisait.eu)
