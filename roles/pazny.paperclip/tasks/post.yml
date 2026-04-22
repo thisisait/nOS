@@ -1,8 +1,8 @@
 ---
 # ==============================================================================
-# pazny.paperclip/tasks/post.yml — allowed hostname registration
+# pazny.paperclip/tasks/post.yml — allowed hostname registration + CEO bootstrap
 #
-# Extrahovano z tasks/stacks/stack-up.yml (Wave 2.2 Unit 10). Paperclip
+# Extracted from tasks/stacks/stack-up.yml (Wave 2.2 Unit 10). Paperclip
 # uses the BETTER_AUTH_TRUSTED_ORIGINS env var for CSRF/CORS, but allowed
 # hostnames for the admin API must be registered via the pnpm CLI.
 #
@@ -76,18 +76,49 @@
   failed_when: false
   changed_when: false
 
-- name: "[pazny.paperclip Post] Bootstrap CEO admin invite (first-run)"
+# ── CEO bootstrap ─────────────────────────────────────────────────────────
+# Check whether any account rows already exist in the Paperclip DB before
+# calling `auth bootstrap-ceo --force`. The earlier implementation ran
+# --force on EVERY playbook run with `failed_when: false` — so (a) a real
+# bootstrap regression would be invisible, and (b) on every run the CLI's
+# side-effects depend on its internal idempotence (unverified).
+#
+# We check the DB directly; zero accounts means genuine first-run.
+
+- name: "[pazny.paperclip Post] Check if a CEO account already exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d
+    {{ paperclip_db_name | default('paperclip') }}
+    -tAc "SELECT COUNT(*) FROM account"
+  register: _paperclip_accounts
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.paperclip Post] Bootstrap CEO admin invite (first-run only)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai auth bootstrap-ceo
     --data-dir /paperclip
-    --base-url "https://{{ paperclip_domain | default('paperclip.dev.local') }}"
-    --force 2>&1
+    --base-url "https://{{ paperclip_domain | default('paperclip.dev.local') }}" 2>&1
   register: _paperclip_bootstrap
+  when:
+    # Only run when we're reasonably sure it's a first-run. The 'Count 0'
+    # check covers the happy path; the empty/failed output covers fresh DB
+    # before the account table exists (during initial migrations).
+    - (_paperclip_accounts.stdout | default('') | trim) in ['', '0']
   changed_when: "'Created bootstrap' in (_paperclip_bootstrap.stdout | default(''))"
-  failed_when: false
+  # Do NOT hide errors — a bootstrap failure in first-run means nobody can
+  # log in, which the operator must see.
+  failed_when:
+    - _paperclip_bootstrap is defined
+    - _paperclip_bootstrap.rc is defined
+    - _paperclip_bootstrap.rc != 0
+    - "'already exists' not in (_paperclip_bootstrap.stdout | default(''))"
 
 - name: "[pazny.paperclip Post] Bootstrap CEO invite URL"
   ansible.builtin.debug:
     msg: "{{ _paperclip_bootstrap.stdout_lines | default(['No invite generated']) | select('search', 'Invite URL') | list | first | default('Check paperclip logs for invite URL') }}"
-  when: _paperclip_bootstrap.changed | default(false)
+  when:
+    - _paperclip_bootstrap is defined
+    - _paperclip_bootstrap.changed | default(false)

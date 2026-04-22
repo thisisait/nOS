@@ -476,10 +476,17 @@ services:
     install_flag: install_paperclip
     version_var: paperclip_version
     version_source: docker_image
-    image: paperclip/paperclip
+    image: ghcr.io/paperclipai/paperclip           # real image path (was generic paperclip/paperclip)
     domain_var: paperclip_domain
     port_var: paperclip_port
     data_path_var: paperclip_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ paperclip_port }}/"
+      expect_status: 200
+      timeout_sec: 10
+    upgrade_recipe: upgrades/paperclip.yml
+    coexistence_supported: true                    # PostgreSQL-backed, /paperclip dir bind-mounted
     oidc: proxy
     rbac_tier: 2
 

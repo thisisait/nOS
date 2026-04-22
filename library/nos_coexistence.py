@@ -246,6 +246,7 @@ SUPPORTED_SERVICES = {
     "gitea",
     "nextcloud",
     "wordpress",
+    "paperclip",   # PostgreSQL-backed; /paperclip instance dir is bind-mounted (copy_recursive)
 }
 
 

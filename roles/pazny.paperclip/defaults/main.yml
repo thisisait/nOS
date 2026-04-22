@@ -3,18 +3,18 @@
 # pazny.paperclip — Paperclip multi-agent orchestration platform (devops stack)
 #
 # Coordinates AI agents (OpenClaw, Claude Code, Codex) through an org-chart structure.
-# Vyzaduje postgres backend (install_postgresql: true). Credentials
-# (paperclip_db_password, paperclip_auth_secret) staysji v top-level
+# Requires a Postgres backend (install_postgresql: true). Credentials
+# (paperclip_db_password, paperclip_auth_secret) live in top-level
 # default.credentials.yml.
 # ==============================================================================
 
 paperclip_version: "latest"
 paperclip_domain: "paperclip.dev.local"
-paperclip_port: 3006                              # 3100 koliduje s Loki
+paperclip_port: 3006                              # 3100 collides with Loki on the host
 paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
 paperclip_db_name: "paperclip"
 paperclip_db_user: "paperclip"
-paperclip_deployment_mode: "authenticated"       # Docker vyzaduje 0.0.0.0
+paperclip_deployment_mode: "authenticated"       # Docker binds 0.0.0.0 inside the container
 paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
 paperclip_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 paperclip_cpus: "{{ docker_cpus_standard | default('1.0') }}"
