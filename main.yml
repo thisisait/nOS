@@ -407,6 +407,46 @@
              else global_password_prefix }}
       tags: ['always']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Detect password-prefix change + auto-promote to destroy_state.
+    #
+    # When the prefix changes, every {{ prefix }}_pw_* template — DB passwords,
+    # OIDC client secrets, admin passwords across the whole fleet — resolves
+    # to a fresh value. Keeping the independent DESTRUCTIVE secrets (APP_KEYs,
+    # encryption keys, JWT secrets) stable across that boundary is a semantic
+    # mismatch: the user is saying "new identity" and we half-honor it.
+    #
+    # So: prefix change == destroy_state. Explicit rather than implicit via
+    # the blank gate, so any future destroy_state-gated feature (e.g. wiping
+    # ~/.nos/secrets.yml selectively) also triggers.
+    #
+    # Edge case: first run has no .ansible-prefix-state file; previous defaults
+    # to current, so `_prefix_changed` is False — no auto-promote, good.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "[State] Detect password prefix change"
+      ansible.builtin.set_fact:
+        _prefix_changed: "{{ (previous_password_prefix | default('')) != (global_password_prefix | default('')) }}"
+      tags: ['always']
+
+    - name: "[State] Auto-enable destroy_state when prefix changed"
+      ansible.builtin.set_fact:
+        destroy_state: true
+      when:
+        - _prefix_changed | bool
+        - not (destroy_state | default(false) | bool)
+      tags: ['always']
+
+    - name: "[State] Announce prefix change (auto-destroy_state engaged)"
+      ansible.builtin.debug:
+        msg: |
+          Password prefix changed: '{{ previous_password_prefix }}' -> '{{ global_password_prefix }}'.
+          Auto-promoted destroy_state=true so DESTRUCTIVE secrets (APP_KEYs,
+          encryption keys, JWT secrets) regenerate alongside the prefix-derived
+          passwords. The Bluesky PDS rotation key remains preserved regardless
+          (rotating it would orphan every DID — see main.yml line ~506).
+      when: _prefix_changed | bool
+      tags: ['always']
+
     - import_tasks: tasks/blank-reset.yml
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
@@ -498,7 +538,7 @@
         authentik_secret_key: "{% if '_pw_' in (authentik_secret_key | default('')) or (authentik_secret_key | default('') | length) < 50 %}{{ lookup('pipe', 'openssl rand -hex 50') }}{% else %}{{ authentik_secret_key }}{% endif %}"
       tags: ['always']
 
-    - name: "Regenerate DESTRUCTIVE stateless secrets (blank or destroy_state)"
+    - name: "Regenerate DESTRUCTIVE stateless secrets (prefix change, blank, or destroy_state)"
       ansible.builtin.set_fact:
         infisical_encryption_key: "{{ lookup('pipe', 'openssl rand -hex 16') }}"
         infisical_auth_secret: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
@@ -517,6 +557,11 @@
         # influxdb_admin_token: InfluxDB 2.x keeps the token in /var/lib/influxdb2 volume.
         # Regen would create a token mismatch for Grafana datasource (until we finish auto-provisioning).
         influxdb_admin_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+      # Trigger gates (any of):
+      #   - destroy_state=true  — explicit user intent (manual flag or auto-promoted by prefix change)
+      #   - blank=true          — full wipe; data is gone so stable keys are moot
+      # Prefix-change-without-blank no longer directly appears here because it
+      # already auto-promoted destroy_state above.
       when: (blank | default(false) | bool) or (destroy_state | default(false) | bool)
       tags: ['always']
 
@@ -526,10 +571,12 @@
           Destructive secrets (infisical_encryption_key, outline_secret_key,
           firefly_app_key, bookstack_app_key, onlyoffice_jwt_secret,
           influxdb_admin_token) were loaded from ~/.nos/secrets.yml and preserved.
-          To reset, add -e destroy_state=true (wipes Infisical vault, Outline data,
-          Firefly/BookStack encrypted data, ONLYOFFICE/InfluxDB tokens).
-          Bluesky PDS rotation key is PERMANENTLY preserved across blank runs
-          (regenerating it would orphan every DID on the PDS).
+          To reset: (a) change global_password_prefix in credentials.yml — the
+          next run auto-promotes destroy_state, OR (b) add -e destroy_state=true
+          explicitly. This wipes Infisical vault, Outline data, Firefly/BookStack
+          encrypted data, ONLYOFFICE/InfluxDB tokens.
+          Bluesky PDS rotation key is PERMANENTLY preserved across every run
+          (regenerating it would orphan every DID on the PDS — AT Protocol-safe).
       when:
         - not (blank | default(false) | bool)
         - not (destroy_state | default(false) | bool)
