@@ -1,14 +1,14 @@
 # =============================================================================
 # pazny.firefly — compose override fragment
-# Merged do `docker compose -p b2b up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+# Merged into `docker compose -p b2b up` by tasks/stacks/stack-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/b2b/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+# Does not declare top-level networks: — b2b_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/b2b/docker-compose.yml.j2.
 #
-# Firefly III vyzaduje: MariaDB + Redis (oboje z infra stacku).
-# SSO: remote_user_guard — Authentik proxy outpost pres nginx auth_request,
-# Firefly dostane REMOTE_USER + REMOTE_EMAIL hlavicky a auto-vytvari uzivatele.
+# Firefly III requires: MariaDB + Redis (both from the infra stack).
+# SSO: remote_user_guard — Authentik proxy outpost via nginx auth_request,
+# Firefly receives REMOTE_USER + REMOTE_EMAIL headers and auto-creates accounts.
 # =============================================================================
 
 services:

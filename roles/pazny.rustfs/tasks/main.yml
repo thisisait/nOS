@@ -4,7 +4,7 @@
 #
 # Called (in Phase B) from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
 # creates the data dir, renders the compose override fragment to
-# {{ stacks_dir }}/iiab/overrides/rustfs.yml, which stack-up.yml then sesbira
+# {{ stacks_dir }}/iiab/overrides/rustfs.yml, which stack-up.yml then collects
 # via `find` and passes as an additional -f flag.
 #
 # RustFS has no post-start setup — single container, local access.

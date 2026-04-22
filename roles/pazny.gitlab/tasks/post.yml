@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.gitlab/tasks/post.yml — root password reconverge (state-declarative)
 #
-# GitLab Omnibus auto-generuje root password do /etc/gitlab/initial_root_password
+# GitLab Omnibus auto-generates a root password into /etc/gitlab/initial_root_password
 # (disappears after 24h). Reconverge uses `gitlab-rails runner` to overwrite root
 # password from credentials.yml. Runs on every playbook run; idempotent-on-write.
 # ==============================================================================

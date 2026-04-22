@@ -1,15 +1,15 @@
 # =============================================================================
 # pazny.bookstack — compose override fragment
-# Merged do `docker compose up b2b` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+# Merged into `docker compose up b2b` by tasks/stacks/stack-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/b2b/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+# Does not declare top-level networks: — b2b_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/b2b/docker-compose.yml.j2.
 #
-# BookStack vyzaduje: MariaDB (z infra stacku pres shared_net) + volitelne
-# Redis pro cache/session/queue.
-# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
-# v default.config.yml pres derivovane authentik_oidc_bookstack_* promenne.
+# BookStack requires: MariaDB (from the infra stack via shared_net) +
+# optionally Redis for cache/session/queue.
+# OIDC client_id/secret is read from the central authentik_oidc_apps list
+# in default.config.yml via derived authentik_oidc_bookstack_* variables.
 # =============================================================================
 
 services:

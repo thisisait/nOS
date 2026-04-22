@@ -1,10 +1,10 @@
 # =============================================================================
 # pazny.gitlab — compose override fragment
-# Merged do `docker compose -p devops up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/devops/overrides/*.yml.
+# Merged into `docker compose -p devops up` by tasks/stacks/stack-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/devops/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — devops_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/devops/docker-compose.yml.j2.
+# Does not declare top-level networks: — devops_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/devops/docker-compose.yml.j2.
 # =============================================================================
 
 services:

@@ -3,17 +3,17 @@
 # pazny.bluesky_pds — Bluesky PDS (AT Protocol Personal Data Server)
 #
 # Secrets (bluesky_pds_jwt_secret, bluesky_pds_admin_password,
-# bluesky_pds_rotation_key) stay in default.credentials.yml —
-# auto-generated pri blank runu v main.yml pre-tasks. Tato role je
-# only consumes.
+# bluesky_pds_rotation_key) live in default.credentials.yml —
+# auto-generated on blank run by main.yml pre-tasks. This role is
+# consume-only.
 #
-# Identity bridge (Authentik → PDS account auto-provision) stays
-# v tasks/stacks/bluesky_pds_bridge.yml — cross-service orchestrace,
+# Identity bridge (Authentik → PDS account auto-provision) lives in
+# tasks/stacks/bluesky_pds_bridge.yml — cross-service orchestration,
 # not role-owned.
 # ==============================================================================
 
 bluesky_pds_version: "0.4"                          # aligned with default.config.yml; ghcr.io/bluesky-social/pds has no semver tags, 0.4 tracks current
-bluesky_pds_hostname: "bsky.dev.lan"                # .local zakazan AT Protocol specifikaci
+bluesky_pds_hostname: "bsky.dev.lan"                # .local is forbidden by AT Protocol spec
 bluesky_pds_port: 2583
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_invite_required: true                   # Invite-only registrace

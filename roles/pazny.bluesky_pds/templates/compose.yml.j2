@@ -1,13 +1,13 @@
 # =============================================================================
 # pazny.bluesky_pds — compose override fragment
-# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+# Merged into `docker compose up` by tasks/stacks/core-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/infra/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+# Does not declare top-level networks: — infra_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/infra/docker-compose.yml.j2.
 #
-# Bluesky PDS (AT Protocol federace) — identity bridge na Authentik
-# zustava v tasks/stacks/bluesky_pds_bridge.yml (cross-service).
+# Bluesky PDS (AT Protocol federation) — identity bridge to Authentik
+# lives in tasks/stacks/bluesky_pds_bridge.yml (cross-service).
 # =============================================================================
 
 services:

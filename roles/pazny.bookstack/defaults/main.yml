@@ -1,25 +1,25 @@
 ---
 # ==============================================================================
-# pazny.bookstack — BookStack wiki platform (knihovna/kniha/kapitola struktura)
+# pazny.bookstack — BookStack wiki platform (Shelf / Book / Chapter structure)
 #                   b2b compose stack
 #
 # LinuxServer.io image (lscr.io/linuxserver/bookstack) — PHP/Apache BookStack
 # with a library model (Shelf -> Book -> Chapter -> Page). Requires MariaDB
 # (shared from the infra stack) + optionally Redis for cache/session.
 #
-# Credentials (bookstack_db_password, bookstack_app_key) staysji
-# in default.credentials.yml — centralized for prefix rotation.
-# bookstack_app_key je Laravel APP_KEY (base64:<32-byte-base64>) a je
+# Credentials (bookstack_db_password, bookstack_app_key) live in
+# default.credentials.yml — centralized for prefix rotation.
+# bookstack_app_key is the Laravel APP_KEY (base64:<32-byte-base64>) and is
 # auto-generated in main.yml on first run / blank=true.
 # ==============================================================================
 
 bookstack_version: "v26.03.3-ls256"                    # LSIO pinned stable tag
 bookstack_domain: "bookstack.{{ instance_tld | default('dev.local') }}"
-bookstack_port: 3013                                    # unikatni — viz PORT REGISTRY
+bookstack_port: 3013                                    # unique — see PORT REGISTRY
 bookstack_data_dir: "{{ ansible_facts['env']['HOME'] }}/bookstack/config"
 bookstack_db_name: "bookstack"
 bookstack_db_user: "bookstack"
-bookstack_db_host: "127.0.0.1"                          # ignorovano pokud install_mariadb=true (pouzije se 'mariadb' z b2b_net)
+bookstack_db_host: "127.0.0.1"                          # ignored when install_mariadb=true (uses 'mariadb' on b2b_net instead)
 bookstack_puid: 1000
 bookstack_pgid: 1000
 bookstack_tz: "{{ timezone | default('Europe/Prague') }}"

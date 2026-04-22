@@ -2,10 +2,10 @@
 # ==============================================================================
 # pazny.firefly — Firefly III personal finance manager (b2b compose stack)
 #
-# Credentials (firefly_db_password, firefly_app_key) staysji v
+# Credentials (firefly_db_password, firefly_app_key) live in
 # default.credentials.yml — centralized for prefix rotation.
-# firefly_app_key je Laravel APP_KEY (base64:<32b>) — auto-generovany
-# v main.yml pri prvnim blank=true runu (viz INTEGRATION.md).
+# firefly_app_key is the Laravel APP_KEY (base64:<32b>) — auto-generated
+# by main.yml on the first blank=true run (see INTEGRATION.md).
 #
 # Firefly III uses the remote_user_guard pattern: Authentik handles authentication
 # proxy outpost via nginx auth_request, Firefly receives the REMOTE_USER header.
@@ -19,7 +19,7 @@ firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"
 firefly_export_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/export"
 firefly_db_name: "firefly"
 firefly_db_user: "firefly"
-firefly_db_host: "127.0.0.1"    # ignorovano pokud install_mariadb=true (pouzije se 'mariadb' z b2b_net)
+firefly_db_host: "127.0.0.1"    # ignored when install_mariadb=true (uses 'mariadb' on b2b_net instead)
 firefly_site_owner: "{{ default_admin_email }}"
 firefly_tz: "Europe/Prague"
 firefly_default_language: "en_US"

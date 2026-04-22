@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.gitlab — GitLab CE in Docker (devops compose stack)
 #
-# Tezky Omnibus stack (~4 GB RAM v klidu). Kompletni devops platforma
+# Heavy Omnibus stack (~4 GB RAM at rest). Full devops platform
 # (Git, CI/CD, registry, wiki, issues). Credentials (gitlab_admin_password)
-# staysji v top-level default.credentials.yml.
+# live in top-level default.credentials.yml.
 # ==============================================================================
 
 gitlab_version: "18.10.3-ce.0"          # aligned with default.config.yml (CVE-2026-5173, CVE-2026-1092, CVE-2025-12664)
@@ -15,7 +15,7 @@ gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config"
 gitlab_timezone: "Europe/Prague"
 gitlab_signup_enabled: false
-gitlab_puma_workers: 2                  # Min 2, pro 36 GB klidne 4
+gitlab_puma_workers: 2                  # Min 2; can bump to 4 on a 36 GB host
 gitlab_sidekiq_concurrency: 10
 gitlab_mem_limit: "{{ docker_mem_limit_heavy | default('4g') }}"
 gitlab_cpus: "{{ docker_cpus_heavy | default('2.0') }}"
