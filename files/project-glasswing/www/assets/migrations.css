@@ -1,0 +1,228 @@
+/* Glasswing — Migrations view
+ * Two-column card grid (pending / applied), severity badges, per-migration detail.
+ * Visual language: inherits tokens from style.css; severity tokens declared in :root here.
+ */
+
+:root {
+  --sev-patch:    #5FB37E;
+  --sev-minor:    #5B8FD9;
+  --sev-breaking: #E8A23B;
+  --sev-critical: #E05C5C;
+}
+
+/* Page header + summary */
+.mig-page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.mig-page-header h2 { font-size: 18px; font-weight: 600; }
+.mig-page-header .sub { color: var(--text2); font-size: 13px; }
+
+.mig-counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.mig-count {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 4px 10px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text2);
+}
+.mig-count strong { color: var(--text); font-size: 13px; }
+
+/* Two-column grid — pending left, applied right */
+.mig-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 900px) {
+  .mig-grid { grid-template-columns: 1fr; }
+}
+
+.mig-column {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px;
+  min-height: 200px;
+}
+.mig-column h3 {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text2); margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.mig-column h3 .count {
+  font-size: 11px; font-weight: 600;
+  background: var(--surface2); color: var(--text);
+  padding: 2px 8px; border-radius: 10px;
+}
+
+/* Migration card */
+.mig-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.mig-card:last-child { margin-bottom: 0; }
+.mig-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(88,166,255,.08); }
+.mig-card:focus-within { border-color: var(--accent); outline: 2px solid rgba(88,166,255,.3); outline-offset: -3px; }
+
+.mig-card-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.mig-card-header .mig-id {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px; color: var(--text2);
+}
+.mig-card-title {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  flex: 1; min-width: 0;
+}
+.mig-card-summary {
+  font-size: 13px; color: var(--text2); line-height: 1.5;
+}
+.mig-card-meta {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--text2);
+}
+.mig-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+.mig-card-actions {
+  display: flex; gap: 6px; margin-top: 2px;
+}
+
+/* Severity badge */
+.sev-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  border: 1px solid transparent;
+}
+.sev-patch    { background: rgba(95,179,126,0.14); color: var(--sev-patch);    border-color: rgba(95,179,126,0.3); }
+.sev-minor    { background: rgba(91,143,217,0.14); color: var(--sev-minor);    border-color: rgba(91,143,217,0.3); }
+.sev-breaking { background: rgba(232,162,59,0.14); color: var(--sev-breaking); border-color: rgba(232,162,59,0.3); }
+.sev-critical { background: rgba(224,92,92,0.14);  color: var(--sev-critical); border-color: rgba(224,92,92,0.3); }
+
+/* Success / failure status pill */
+.mig-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 8px; border-radius: 10px;
+}
+.mig-status-ok   { background: rgba(63,185,80,0.14);  color: var(--green); }
+.mig-status-fail { background: rgba(248,81,73,0.14);  color: var(--red); }
+.mig-status-rolled { background: rgba(210,153,34,0.14); color: var(--orange); }
+
+/* Buttons (shared, also used in upgrades/coexistence) */
+.mig-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 4px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  font-family: inherit;
+}
+.mig-btn:hover   { border-color: var(--accent); background: var(--surface); }
+.mig-btn:focus   { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mig-btn:disabled{ opacity: .5; cursor: not-allowed; }
+.mig-btn-primary { background: rgba(88,166,255,0.15); color: var(--accent); border-color: rgba(88,166,255,0.3); }
+.mig-btn-primary:hover { background: rgba(88,166,255,0.25); }
+.mig-btn-danger  { background: rgba(248,81,73,0.12); color: var(--red); border-color: rgba(248,81,73,0.3); }
+.mig-btn-danger:hover  { background: rgba(248,81,73,0.2); }
+
+/* ── Detail view ── */
+.mig-detail-hdr {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.mig-detail-hdr h2 { font-size: 20px; font-weight: 600; }
+.mig-detail-hdr .mig-id { font-family: 'SF Mono', monospace; font-size: 12px; color: var(--text2); }
+.mig-detail-hdr .mig-summary { color: var(--text2); font-size: 14px; line-height: 1.6; }
+.mig-detail-meta {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;
+  padding-top: 12px; border-top: 1px solid var(--border);
+}
+.mig-detail-meta .cell .k { font-size: 10px; text-transform: uppercase; color: var(--text2); letter-spacing: .5px; }
+.mig-detail-meta .cell .v { font-size: 13px; color: var(--text); font-weight: 500; margin-top: 2px; }
+
+.mig-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* Steps list */
+.mig-steps { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.mig-steps h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.mig-step {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.mig-step:last-child { border-bottom: none; }
+.mig-step-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.mig-step-icon-ok      { background: rgba(63,185,80,0.18);  color: var(--green); }
+.mig-step-icon-fail    { background: rgba(248,81,73,0.18);  color: var(--red); }
+.mig-step-icon-pending { background: var(--surface2);        color: var(--text2); }
+.mig-step-icon-skipped { background: var(--surface2);        color: var(--text2); opacity: .6; }
+.mig-step-icon-running { background: rgba(88,166,255,0.18); color: var(--accent); animation: pulse 1.5s infinite; }
+
+.mig-step-body .name { font-size: 13px; font-weight: 600; color: var(--text); }
+.mig-step-body .desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.mig-step-body .action-type {
+  display: inline-block; font-family: 'SF Mono', monospace;
+  font-size: 11px; color: var(--accent);
+  background: var(--bg); padding: 1px 6px; border-radius: 3px;
+  margin-top: 4px;
+}
+.mig-step-duration { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+/* Diff preview (for file operations) */
+.mig-diff {
+  margin-top: 8px; padding: 8px 10px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  font-family: 'SF Mono', monospace; font-size: 12px;
+  white-space: pre-wrap; overflow-x: auto; max-height: 240px; overflow-y: auto;
+}
+.mig-diff .add { color: var(--green); }
+.mig-diff .del { color: var(--red); }
+.mig-diff .hdr { color: var(--text2); }
+
+/* Events timeline (within detail) */
+.mig-events { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.mig-events h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.mig-event-row {
+  display: grid; grid-template-columns: auto auto 1fr auto; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+  align-items: center;
+}
+.mig-event-row:last-child { border-bottom: none; }
+.mig-event-ts { font-family: 'SF Mono', monospace; color: var(--text2); }
+.mig-event-type {
+  font-size: 10px; padding: 2px 6px; border-radius: 3px;
+  background: var(--surface2); color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px; font-weight: 600;
+}
+.mig-event-type-ok     { background: rgba(63,185,80,0.14); color: var(--green); }
+.mig-event-type-failed { background: rgba(248,81,73,0.14); color: var(--red); }
+.mig-event-type-start  { background: rgba(88,166,255,0.14); color: var(--accent); }
+.mig-event-msg { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Empty states */
+.mig-empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--text2); font-size: 13px;
+}
+.mig-empty .icon { font-size: 24px; margin-bottom: 8px; opacity: .5; }
+
+/* Preview modal content */
+.mig-preview-pane {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px;
+  font-family: 'SF Mono', monospace; font-size: 12px;
+  max-height: 400px; overflow: auto;
+}

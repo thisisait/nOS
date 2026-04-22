@@ -1,0 +1,81 @@
+{block title}Upgrades{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/upgrades.css?v={$basePath}">
+
+<div class="upg-page-header">
+	<div>
+		<h2>Upgrades</h2>
+		<div class="sub">Version matrix across services. Upstream = latest published; Latest = latest available in our pipeline; Stable = recommended; Installed = currently running.</div>
+	</div>
+</div>
+
+<div class="upg-legend" role="note" aria-label="Version severity legend">
+	<span class="upg-legend-item"><span class="upg-legend-swatch" style="background:rgba(63,185,80,0.14); border-color:rgba(63,185,80,0.3)"></span> Current / at target</span>
+	<span class="upg-legend-item"><span class="upg-legend-swatch" style="background:rgba(91,143,217,0.14); border-color:rgba(91,143,217,0.3)"></span> Patch / minor upgrade</span>
+	<span class="upg-legend-item"><span class="upg-legend-swatch" style="background:rgba(232,162,59,0.14); border-color:rgba(232,162,59,0.3)"></span> Breaking upgrade</span>
+	<span class="upg-legend-item"><span class="upg-legend-swatch" style="background:rgba(224,92,92,0.14); border-color:rgba(224,92,92,0.3)"></span> Security-critical</span>
+</div>
+
+{if empty($matrix)}
+	<div class="mig-empty">
+		<div>No services tracked. Check <code>state/manifest.yml</code>.</div>
+	</div>
+{else}
+<div style="overflow-x:auto">
+<table class="upg-matrix" aria-label="Service upgrade matrix">
+	<thead>
+		<tr>
+			<th scope="col">Service</th>
+			<th scope="col">Installed</th>
+			<th scope="col">Stable</th>
+			<th scope="col">Latest</th>
+			<th scope="col">Upstream</th>
+			<th scope="col" class="upg-action-col">Actions</th>
+		</tr>
+	</thead>
+	<tbody>
+		{foreach $matrix as $row}
+			<tr data-service="{$row['service']}">
+				<td>
+					<div class="upg-service-cell">
+						<div>
+							<div class="name">{$row['service']}</div>
+							{if !empty($row['category'])}
+								<div class="cat">{$row['category']}</div>
+							{/if}
+						</div>
+					</div>
+				</td>
+				<td>
+					<span class="upg-ver upg-ver-{$row['installed_class'] ?? 'unknown'}">
+						{$row['installed'] ?? '—'}
+					</span>
+				</td>
+				<td>
+					<span class="upg-ver upg-ver-{$row['stable_class'] ?? 'unknown'}">
+						{$row['stable'] ?? '—'}
+					</span>
+				</td>
+				<td>
+					<span class="upg-ver upg-ver-{$row['latest_class'] ?? 'unknown'}">
+						{$row['latest'] ?? '—'}
+					</span>
+				</td>
+				<td>
+					<span class="upg-ver upg-ver-{$row['upstream_class'] ?? 'unknown'}">
+						{$row['upstream'] ?? '—'}
+					</span>
+				</td>
+				<td class="upg-action-col">
+					<a class="mig-btn" href="/upgrades/{$row['service']}"
+					   aria-label="Open upgrades for {$row['service']}">Recipes</a>
+				</td>
+			</tr>
+		{/foreach}
+	</tbody>
+</table>
+</div>
+{/if}
+{/block}

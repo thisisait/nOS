@@ -1,0 +1,29 @@
+{*
+ * Dashboard widget: pending-migrations
+ * Usage: {include '@widgets/pending-migrations.latte', pending => $pending}
+ *}
+
+<section class="widget" aria-labelledby="wpm-title">
+	<header class="widget-hdr">
+		<h3 id="wpm-title">Pending migrations</h3>
+		<span class="count">{$pending|length}</span>
+		<span class="spacer"></span>
+		<a class="more" href="/migrations">View all &rarr;</a>
+	</header>
+
+	<div class="widget-body">
+		{if empty($pending)}
+			<div class="widget-empty">No pending migrations.</div>
+		{else}
+			{foreach array_slice($pending, 0, 5) as $m}
+				<div class="wpm-row">
+					<span class="sev-badge sev-{$m['severity']}">{$m['severity']}</span>
+					<span class="wpm-title">
+						<a href="/migrations/{$m['id']}">{$m['title']}</a>
+					</span>
+					<span class="wpm-id">{$m['id']}</span>
+				</div>
+			{/foreach}
+		{/if}
+	</div>
+</section>

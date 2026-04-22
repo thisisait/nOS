@@ -1,0 +1,47 @@
+{*
+ * Dashboard widget: version-health
+ * Usage: {include '@widgets/version-health.latte', services => $services}
+ * Shows top ~5 services needing version attention.
+ * widget-version-health.js polls /api/v1/state every 30s and re-renders into #wvh-body.
+ *}
+
+<section class="widget" aria-labelledby="wvh-title">
+	<header class="widget-hdr">
+		<h3 id="wvh-title">Version health</h3>
+		<span class="count" id="wvh-count">
+			{$services|length}
+		</span>
+		<span class="spacer"></span>
+		<span class="refresh-indicator" id="wvh-refresh" aria-hidden="true"></span>
+		<a class="more" href="/upgrades">View all &rarr;</a>
+	</header>
+
+	<div class="widget-body" id="wvh-body">
+		{if empty($services)}
+			<div class="widget-empty">All services at target version.</div>
+		{else}
+			{foreach array_slice($services, 0, 5) as $svc}
+				<div class="wvh-row"
+					 data-service="{$svc['id']}"
+					 data-severity="{$svc['upgrade_available']['severity'] ?? 'current'}">
+					<div>
+						<span class="wvh-svc">{$svc['id']}</span>
+						{if !empty($svc['category'])}<span class="wvh-cat">{$svc['category']}</span>{/if}
+					</div>
+					<div class="wvh-ver">
+						<span>{$svc['installed'] ?? '?'}</span>
+						{if !empty($svc['upgrade_available']['version'])}
+							<span class="arrow">&rarr;</span>
+							<span class="to">{$svc['upgrade_available']['version']}</span>
+						{/if}
+					</div>
+					<span class="sev-badge sev-{$svc['upgrade_available']['severity'] ?? 'patch'}">
+						{$svc['upgrade_available']['severity'] ?? 'ok'}
+					</span>
+				</div>
+			{/foreach}
+		{/if}
+	</div>
+</section>
+
+<script src="/assets/widget-version-health.js?v={$basePath}" defer></script>

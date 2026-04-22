@@ -1,0 +1,183 @@
+{block title}{$migration['id'] ?? 'Migration'}{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/timeline.css?v={$basePath}">
+
+{if empty($migration)}
+	<div class="mig-empty">
+		<div class="icon">?</div>
+		<div>Migration not found.</div>
+		<p style="margin-top:8px"><a href="/migrations">Back to migrations</a></p>
+	</div>
+{else}
+
+<div style="margin-bottom:12px">
+	<a href="/migrations" style="font-size:12px;color:var(--text2)">&larr; All migrations</a>
+</div>
+
+{* Header *}
+<div class="mig-detail-hdr">
+	<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+		<span class="sev-badge sev-{$migration['severity']}">{$migration['severity']}</span>
+		{if !empty($migration['applied_at'])}
+			{if !empty($migration['rolled_back_from'])}
+				<span class="mig-status mig-status-rolled">rolled back</span>
+			{elseif isset($migration['success']) && !$migration['success']}
+				<span class="mig-status mig-status-fail">failed</span>
+			{else}
+				<span class="mig-status mig-status-ok">applied</span>
+			{/if}
+		{else}
+			<span class="mig-status" style="background:var(--surface2);color:var(--text2)">pending</span>
+		{/if}
+		<span class="mig-id">{$migration['id']}</span>
+	</div>
+	<h2>{$migration['title']}</h2>
+	<div class="mig-summary">{$migration['summary'] ?? ''}</div>
+
+	<div class="mig-detail-meta">
+		{if !empty($migration['authors'])}
+			<div class="cell">
+				<div class="k">Authors</div>
+				<div class="v">{implode(', ', $migration['authors'])}</div>
+			</div>
+		{/if}
+		{if !empty($migration['created_at'])}
+			<div class="cell">
+				<div class="k">Created</div>
+				<div class="v">{$migration['created_at']}</div>
+			</div>
+		{/if}
+		{if !empty($migration['applied_at'])}
+			<div class="cell">
+				<div class="k">Applied at</div>
+				<div class="v">{$migration['applied_at']}</div>
+			</div>
+		{/if}
+		{if isset($migration['duration_sec'])}
+			<div class="cell">
+				<div class="k">Duration</div>
+				<div class="v">{$migration['duration_sec']}s</div>
+			</div>
+		{/if}
+		{if !empty($migration['downtime']['estimated_sec'])}
+			<div class="cell">
+				<div class="k">Est. downtime</div>
+				<div class="v">~{$migration['downtime']['estimated_sec']}s</div>
+			</div>
+		{/if}
+		{if !empty($migration['downtime']['services_affected'])}
+			<div class="cell">
+				<div class="k">Services affected</div>
+				<div class="v">{implode(', ', $migration['downtime']['services_affected'])}</div>
+			</div>
+		{/if}
+		{if !empty($migration['tags'])}
+			<div class="cell">
+				<div class="k">Tags</div>
+				<div class="v">{implode(', ', $migration['tags'])}</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class="mig-detail-actions">
+		{if empty($migration['applied_at'])}
+			<button type="button" class="mig-btn" data-action="preview" data-migration-id="{$migration['id']}">Preview</button>
+			<button type="button" class="mig-btn mig-btn-primary" data-action="apply" data-migration-id="{$migration['id']}" data-severity="{$migration['severity']}">Apply</button>
+		{else}
+			{if empty($migration['rolled_back_from']) && !empty($migration['success'])}
+				<button type="button" class="mig-btn mig-btn-danger" data-action="rollback" data-migration-id="{$migration['id']}">Rollback</button>
+			{/if}
+		{/if}
+		{if !empty($migration['references'])}
+			{foreach $migration['references'] as $ref}
+				<a class="mig-btn" href="{$ref}" target="_blank" rel="noopener">Reference</a>
+			{/foreach}
+		{/if}
+	</div>
+</div>
+
+{* Steps *}
+<div class="mig-steps">
+	<h3>Steps <span style="color:var(--text2);font-weight:400">({count($migration['steps'] ?? [])})</span></h3>
+
+	{if empty($migration['steps'])}
+		<div style="color:var(--text2);font-size:13px">No steps declared.</div>
+	{else}
+		{foreach $migration['steps'] as $step}
+			{var $status = $step['status'] ?? 'pending'}
+			<div class="mig-step" data-step-id="{$step['id']}">
+				<span class="mig-step-icon mig-step-icon-{$status}"
+				      title="{$status}"
+				      aria-label="Step status: {$status}">
+					{if $status === 'ok'}&check;
+					{elseif $status === 'fail'}&times;
+					{elseif $status === 'running'}&#9679;
+					{elseif $status === 'skipped'}&#8210;
+					{else}&bull;{/if}
+				</span>
+				<div class="mig-step-body">
+					<div class="name">{$step['id']}</div>
+					{if !empty($step['description'])}
+						<div class="desc">{$step['description']}</div>
+					{/if}
+					{if !empty($step['action']['type'])}
+						<span class="action-type">{$step['action']['type']}</span>
+					{/if}
+					{if !empty($step['diff'])}
+						<pre class="mig-diff">{$step['diff']}</pre>
+					{/if}
+					{if !empty($step['error'])}
+						<div style="color:var(--red);font-size:12px;margin-top:6px">{$step['error']}</div>
+					{/if}
+				</div>
+				{if !empty($step['duration_ms'])}
+					<span class="mig-step-duration">{$step['duration_ms']}ms</span>
+				{/if}
+			</div>
+		{/foreach}
+	{/if}
+</div>
+
+{* Events timeline *}
+<div class="mig-events">
+	<h3>Events <span style="color:var(--text2);font-weight:400">({count($events ?? [])})</span></h3>
+
+	{if empty($events)}
+		<div style="color:var(--text2);font-size:13px">No events recorded for this migration yet.</div>
+	{else}
+		{foreach $events as $ev}
+			{var $kind = 'ok'}
+			{if str_contains($ev['type'] ?? '', 'failed')}{var $kind = 'failed'}
+			{elseif str_contains($ev['type'] ?? '', 'start')}{var $kind = 'start'}
+			{/if}
+			<div class="mig-event-row">
+				<span class="mig-event-ts">{$ev['ts'] ?? ''}</span>
+				<span class="mig-event-type mig-event-type-{$kind}">{$ev['type']}</span>
+				<span class="mig-event-msg">{$ev['task'] ?? $ev['role'] ?? ''}</span>
+				{if !empty($ev['duration_ms'])}
+					<span style="color:var(--text2);font-size:11px">{$ev['duration_ms']}ms</span>
+				{/if}
+			</div>
+		{/foreach}
+	{/if}
+</div>
+
+{* Preview modal (shared with list view) *}
+<div class="coex-modal-backdrop" id="mig-preview-modal" hidden role="dialog" aria-modal="true" aria-labelledby="mig-preview-title">
+	<div class="coex-modal">
+		<h3 id="mig-preview-title">Migration preview</h3>
+		<p>Dry-run plan for this migration. No changes have been applied.</p>
+		<div class="mig-preview-pane" id="mig-preview-body" tabindex="0"></div>
+		<div class="coex-modal-actions">
+			<button type="button" class="mig-btn" data-action="close-preview">Close</button>
+			<button type="button" class="mig-btn mig-btn-primary" data-action="confirm-apply" id="mig-preview-apply">Apply</button>
+		</div>
+	</div>
+</div>
+
+<script src="/assets/migrations.js?v={$basePath}" defer></script>
+
+{/if}
+{/block}

@@ -1,0 +1,101 @@
+/* Glasswing — Upgrades matrix + per-service detail.
+ * Depends on :root severity tokens from migrations.css (loaded together on page).
+ */
+
+.upg-page-header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.upg-page-header h2 { font-size: 18px; font-weight: 600; }
+.upg-page-header .sub { color: var(--text2); font-size: 13px; }
+
+/* Legend */
+.upg-legend {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  padding: 10px 14px; margin-bottom: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 12px; color: var(--text2);
+}
+.upg-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.upg-legend-swatch {
+  display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+/* Matrix table */
+.upg-matrix {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+.upg-matrix thead th {
+  text-align: left; padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text2); font-weight: 600;
+  white-space: nowrap;
+}
+.upg-matrix tbody td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.upg-matrix tbody tr:last-child td { border-bottom: none; }
+.upg-matrix tbody tr:hover { background: var(--surface2); }
+
+.upg-service-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.upg-service-cell .name { font-weight: 600; }
+.upg-service-cell .cat  { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+
+.upg-ver {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  display: inline-block; padding: 3px 8px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.upg-ver-current   { color: var(--green);        border-color: rgba(63,185,80,0.3);  background: rgba(63,185,80,0.08); }
+.upg-ver-minor     { color: var(--sev-minor);    border-color: rgba(91,143,217,0.3); background: rgba(91,143,217,0.08); }
+.upg-ver-breaking  { color: var(--sev-breaking); border-color: rgba(232,162,59,0.3); background: rgba(232,162,59,0.08); }
+.upg-ver-critical  { color: var(--sev-critical); border-color: rgba(224,92,92,0.3);  background: rgba(224,92,92,0.08); }
+.upg-ver-unknown   { color: var(--text2); }
+
+/* Action column */
+.upg-action-col { text-align: right; white-space: nowrap; }
+
+/* Per-service detail */
+.upg-svc-hdr {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.upg-svc-hdr h2 { font-size: 20px; font-weight: 600; }
+.upg-svc-hdr .svc-meta { color: var(--text2); font-size: 13px; }
+.upg-svc-hdr a.docs { color: var(--accent); font-size: 12px; }
+
+.upg-recipe {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; margin-bottom: 12px;
+}
+.upg-recipe:last-child { margin-bottom: 0; }
+.upg-recipe-hdr { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.upg-recipe-id { font-family: 'SF Mono', monospace; font-size: 12px; color: var(--text2); }
+.upg-recipe-from-to {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'SF Mono', monospace; font-size: 13px;
+}
+.upg-recipe-arrow { color: var(--text2); }
+.upg-recipe-body .notes {
+  font-size: 13px; color: var(--text2); line-height: 1.6; margin: 8px 0;
+  white-space: pre-wrap;
+}
+.upg-recipe-body .changelog { font-size: 12px; }
+.upg-recipe-actions {
+  display: flex; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+}
+.upg-coex-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 2px 6px; border-radius: 3px;
+  background: rgba(57,210,192,0.14); color: var(--cyan);
+  font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+}

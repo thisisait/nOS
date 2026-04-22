@@ -1,0 +1,108 @@
+{block title}Timeline{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/timeline.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+
+<div class="tl-page-header">
+	<div>
+		<h2>Timeline</h2>
+		<div class="sub">Merged stream of playbook events, migrations, upgrades, and coexistence actions.</div>
+	</div>
+</div>
+
+<div class="tl-filters" role="toolbar" aria-label="Filter events by kind">
+	<button type="button" class="tl-chip active" data-filter="all">All
+		<span class="count" id="tl-count-all">{count($events ?? [])}</span>
+	</button>
+	<span class="tl-filters-sep" aria-hidden="true"></span>
+	<button type="button" class="tl-chip" data-filter="migration">Migrations
+		<span class="count" id="tl-count-migration">{$counts['migration'] ?? 0}</span>
+	</button>
+	<button type="button" class="tl-chip" data-filter="upgrade">Upgrades
+		<span class="count" id="tl-count-upgrade">{$counts['upgrade'] ?? 0}</span>
+	</button>
+	<button type="button" class="tl-chip" data-filter="coexistence">Coexistence
+		<span class="count" id="tl-count-coexistence">{$counts['coexistence'] ?? 0}</span>
+	</button>
+	<span class="tl-filters-sep" aria-hidden="true"></span>
+	<button type="button" class="tl-chip" data-filter="ok">OK
+		<span class="count" id="tl-count-ok">{$counts['ok'] ?? 0}</span>
+	</button>
+	<button type="button" class="tl-chip" data-filter="changed">Changed
+		<span class="count" id="tl-count-changed">{$counts['changed'] ?? 0}</span>
+	</button>
+	<button type="button" class="tl-chip" data-filter="failed">Failed
+		<span class="count" id="tl-count-failed">{$counts['failed'] ?? 0}</span>
+	</button>
+</div>
+
+<div class="tl-stream" id="tl-stream" data-cursor="{$cursor ?? ''}">
+	{if empty($events)}
+		<div class="tl-empty">No events recorded yet. Events arrive from the Ansible callback plugin.</div>
+	{else}
+		{var $lastRun = null}
+		{foreach $events as $ev}
+			{if !empty($ev['run_id']) && $ev['run_id'] !== $lastRun}
+				<div class="tl-run-header">
+					<span>Run</span>
+					<span class="run-id">{$ev['run_id']}</span>
+					{if !empty($ev['run_playbook'])}<span>&middot; {$ev['run_playbook']}</span>{/if}
+					{if !empty($ev['run_tag'])}<span>&middot; tag: {$ev['run_tag']}</span>{/if}
+				</div>
+				{var $lastRun = $ev['run_id']}
+			{/if}
+
+			{var $kind = 'ok'}
+			{if str_contains($ev['type'], 'migration')}
+				{var $kind = 'migration'}
+			{elseif str_contains($ev['type'], 'upgrade')}
+				{var $kind = 'upgrade'}
+			{elseif str_contains($ev['type'], 'coexistence')}
+				{var $kind = 'coexistence'}
+			{elseif str_contains($ev['type'], 'failed') || str_contains($ev['type'], 'unreachable')}
+				{var $kind = 'failed'}
+			{elseif str_contains($ev['type'], 'changed')}
+				{var $kind = 'changed'}
+			{elseif str_contains($ev['type'], 'start')}
+				{var $kind = 'start'}
+			{/if}
+
+			<div class="tl-event"
+				 data-kind="{$kind}"
+				 data-type="{$ev['type']}"
+				 data-run-id="{$ev['run_id'] ?? ''}">
+				<span class="tl-event-ts">{$ev['ts']}</span>
+				<div class="tl-event-body">
+					<div class="tl-event-head">
+						<span class="tl-event-type kind-{$kind}">{$ev['type']}</span>
+						{if !empty($ev['task'])}
+							<span class="tl-event-task">{$ev['task']}</span>
+						{elseif !empty($ev['migration_id'])}
+							<span class="tl-event-task">
+								<a href="/migrations/{$ev['migration_id']}">{$ev['migration_id']}</a>
+							</span>
+						{elseif !empty($ev['upgrade_id'])}
+							<span class="tl-event-task">{$ev['upgrade_id']}</span>
+						{/if}
+					</div>
+					<div class="tl-event-meta">
+						{if !empty($ev['role'])}<span>role: <code>{$ev['role']}</code></span>{/if}
+						{if !empty($ev['host'])}<span>host: <code>{$ev['host']}</code></span>{/if}
+						{if !empty($ev['duration_ms'])}<span>{$ev['duration_ms']}ms</span>{/if}
+						{if !empty($ev['coexistence_service'])}<span>svc: <code>{$ev['coexistence_service']}</code></span>{/if}
+					</div>
+				</div>
+			</div>
+		{/foreach}
+	{/if}
+</div>
+
+<div class="tl-loadmore-wrap" id="tl-loadmore-wrap" n:if="!empty($cursor) && !empty($events)">
+	<button type="button" class="tl-loadmore" id="tl-loadmore"
+			data-cursor="{$cursor}"
+			aria-label="Load more events">Load more</button>
+</div>
+
+<script src="/assets/widget-timeline.js?v={$basePath}" defer></script>
+{/block}

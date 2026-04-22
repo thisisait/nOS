@@ -1,0 +1,126 @@
+{block title}Coexistence{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/coexistence.css?v={$basePath}">
+
+<div class="coex-page-header">
+	<div>
+		<h2>Coexistence</h2>
+		<div class="sub">Dual-version tracks running side by side. Cutover flips the active track atomically. TTL determines when the legacy track is cleaned up.</div>
+	</div>
+</div>
+
+{if empty($services)}
+	<div class="coex-empty">
+		No coexistence tracks currently active.
+		<p style="margin-top:8px;font-size:12px;color:var(--text2)">
+			Provision a track with <code>ansible-playbook main.yml --tags coexist-provision</code>.
+		</p>
+	</div>
+{else}
+	{foreach $services as $service => $svc}
+		<section class="coex-service" data-service="{$service}">
+			<div class="coex-service-hdr">
+				<h3>{$service}</h3>
+				<span class="svc-meta">
+					Active track: <strong style="color:var(--green);font-family:'SF Mono',monospace">{$svc['active_track'] ?? '—'}</strong>
+					{if !empty($svc['category'])} &middot; {$svc['category']}{/if}
+				</span>
+			</div>
+
+			<div class="coex-tracks">
+				{foreach $svc['tracks'] as $track}
+					{var $isActive = ($svc['active_track'] ?? '') === $track['tag']}
+					<article class="coex-track" data-active="{$isActive ? '1' : '0'}" data-tag="{$track['tag']}">
+						<div class="coex-track-hdr">
+							<span class="coex-track-tag">{$track['tag']}</span>
+							<span class="coex-track-version">{$track['version']}</span>
+							{if !empty($track['read_only'])}
+								<span class="coex-ro" title="Read-only">RO</span>
+							{/if}
+						</div>
+
+						<div class="coex-track-meta">
+							{if !empty($track['port'])}
+								<span class="k">port</span><span class="v">{$track['port']}</span>
+							{/if}
+							{if !empty($track['data_path'])}
+								<span class="k">data</span><span class="v" title="{$track['data_path']}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">{$track['data_path']}</span>
+							{/if}
+							{if !empty($track['started_at'])}
+								<span class="k">started</span><span class="v">{$track['started_at']}</span>
+							{/if}
+							{if !empty($track['cutover_at'])}
+								<span class="k">cutover</span><span class="v">{$track['cutover_at']}</span>
+							{/if}
+						</div>
+
+						{if !empty($track['ttl_until'])}
+							<div class="coex-ttl"
+								 data-ttl-until="{$track['ttl_until']}"
+								 data-urgency="normal"
+								 role="timer"
+								 aria-label="Time until cleanup">
+								<span class="coex-ttl-icon" aria-hidden="true">&#9203;</span>
+								<span>TTL</span>
+								<span class="coex-ttl-value" data-role="ttl-value">{$track['ttl_until']}</span>
+							</div>
+						{/if}
+
+						<div class="coex-track-actions">
+							{if !$isActive}
+								<button type="button"
+										class="mig-btn mig-btn-primary"
+										data-action="cutover"
+										data-service="{$service}"
+										data-target-tag="{$track['tag']}"
+										aria-label="Cutover to track {$track['tag']}">Cutover</button>
+							{/if}
+							<button type="button"
+									class="mig-btn mig-btn-danger"
+									data-action="cleanup-track"
+									data-service="{$service}"
+									data-tag="{$track['tag']}"
+									{if $isActive}disabled title="Cannot clean up active track"{/if}
+									aria-label="Clean up track {$track['tag']}">Cleanup</button>
+						</div>
+					</article>
+				{/foreach}
+			</div>
+		</section>
+	{/foreach}
+{/if}
+
+{* Cutover confirm modal *}
+<div class="coex-modal-backdrop" id="coex-cutover-modal" hidden role="dialog" aria-modal="true" aria-labelledby="coex-cutover-title">
+	<div class="coex-modal">
+		<h3 id="coex-cutover-title"><span class="warn" aria-hidden="true">!</span> Confirm cutover</h3>
+		<p>
+			Cutover flips the active track for
+			<strong id="coex-cutover-svc"></strong>
+			to <strong id="coex-cutover-tag"></strong>.
+			Nginx upstream is updated atomically; the previous active track becomes read-only.
+		</p>
+		<div class="impact">
+			<strong>Impact:</strong> Users are routed to the new version on their next request.
+			The previous track remains available read-only until its TTL expires or you clean it up.
+		</div>
+		<label for="coex-cutover-input" style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">
+			Type <code style="color:var(--text);font-weight:700">CUTOVER</code> to proceed
+		</label>
+		<input type="text"
+			   class="coex-modal-confirm"
+			   id="coex-cutover-input"
+			   autocomplete="off"
+			   spellcheck="false"
+			   aria-describedby="coex-cutover-desc">
+		<div class="coex-modal-actions">
+			<button type="button" class="mig-btn" data-action="close-cutover">Cancel</button>
+			<button type="button" class="mig-btn mig-btn-danger" id="coex-cutover-submit" data-action="confirm-cutover" disabled>Confirm cutover</button>
+		</div>
+	</div>
+</div>
+
+<script src="/assets/widget-cutover-confirm.js?v={$basePath}" defer></script>
+{/block}

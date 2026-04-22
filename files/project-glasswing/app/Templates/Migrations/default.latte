@@ -1,0 +1,131 @@
+{block title}Migrations{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+
+<div class="mig-page-header">
+	<div>
+		<h2>Migrations</h2>
+		<div class="sub">Data-driven, replayable system migrations. Each record declares detect, action, verify, and rollback.</div>
+	</div>
+	<div class="mig-counts">
+		<span class="mig-count"><strong n:tag-if="true">{count($pending ?? [])}</strong> pending</span>
+		<span class="mig-count"><strong>{count($applied ?? [])}</strong> applied</span>
+	</div>
+</div>
+
+<div class="mig-grid">
+	{* ── PENDING (left) ── *}
+	<section class="mig-column" aria-labelledby="mig-col-pending">
+		<h3 id="mig-col-pending">
+			Pending
+			<span class="count">{count($pending ?? [])}</span>
+		</h3>
+
+		{if !empty($pending)}
+			{foreach $pending as $m}
+				<article class="mig-card" data-migration-id="{$m['id']}" tabindex="0">
+					<div class="mig-card-header">
+						<span class="sev-badge sev-{$m['severity']}">{$m['severity']}</span>
+						<div class="mig-card-title">{$m['title']}</div>
+					</div>
+					<div class="mig-card-summary">{$m['summary'] ?? ''}</div>
+					<div class="mig-card-meta">
+						<span class="mig-id">{$m['id']}</span>
+						<span>{count($m['steps'] ?? [])} step{if count($m['steps'] ?? []) !== 1}s{/if}</span>
+						{if !empty($m['downtime']['estimated_sec'])}
+							<span>~{$m['downtime']['estimated_sec']}s downtime</span>
+						{/if}
+						{if !empty($m['created_at'])}
+							<span>authored {$m['created_at']}</span>
+						{/if}
+					</div>
+					<div class="mig-card-actions">
+						<button type="button"
+								class="mig-btn"
+								data-action="preview"
+								data-migration-id="{$m['id']}"
+								aria-label="Preview migration {$m['id']}">Preview</button>
+						<button type="button"
+								class="mig-btn mig-btn-primary"
+								data-action="apply"
+								data-migration-id="{$m['id']}"
+								data-severity="{$m['severity']}"
+								aria-label="Apply migration {$m['id']}">Apply</button>
+						<a class="mig-btn" href="/migrations/{$m['id']}" aria-label="Open detail">Details</a>
+					</div>
+				</article>
+			{/foreach}
+		{else}
+			<div class="mig-empty">
+				<div class="icon">OK</div>
+				<div>No pending migrations. System is in the expected state.</div>
+			</div>
+		{/if}
+	</section>
+
+	{* ── APPLIED (right) ── *}
+	<section class="mig-column" aria-labelledby="mig-col-applied">
+		<h3 id="mig-col-applied">
+			Applied
+			<span class="count">{count($applied ?? [])}</span>
+		</h3>
+
+		{if !empty($applied)}
+			{foreach $applied as $m}
+				<article class="mig-card" data-migration-id="{$m['id']}" tabindex="0">
+					<div class="mig-card-header">
+						<span class="sev-badge sev-{$m['severity']}">{$m['severity']}</span>
+						<div class="mig-card-title">{$m['title']}</div>
+						{if !empty($m['rolled_back_from'])}
+							<span class="mig-status mig-status-rolled">rolled back</span>
+						{elseif isset($m['success']) && !$m['success']}
+							<span class="mig-status mig-status-fail">failed</span>
+						{else}
+							<span class="mig-status mig-status-ok">ok</span>
+						{/if}
+					</div>
+					<div class="mig-card-summary">{$m['summary'] ?? ''}</div>
+					<div class="mig-card-meta">
+						<span class="mig-id">{$m['id']}</span>
+						{if !empty($m['applied_at'])}<span>applied {$m['applied_at']}</span>{/if}
+						{if !empty($m['duration_sec'])}<span>{$m['duration_sec']}s</span>{/if}
+						{if isset($m['steps_applied']) && isset($m['steps_total'])}
+							<span>{$m['steps_applied']}/{$m['steps_total']} steps</span>
+						{/if}
+					</div>
+					<div class="mig-card-actions">
+						<a class="mig-btn" href="/migrations/{$m['id']}">Details</a>
+						{if empty($m['rolled_back_from']) && !empty($m['success'])}
+							<button type="button"
+									class="mig-btn mig-btn-danger"
+									data-action="rollback"
+									data-migration-id="{$m['id']}"
+									aria-label="Roll back {$m['id']}">Rollback</button>
+						{/if}
+					</div>
+				</article>
+			{/foreach}
+		{else}
+			<div class="mig-empty">
+				<div>No migrations applied yet.</div>
+			</div>
+		{/if}
+	</section>
+</div>
+
+{* Preview modal (inline, populated by migrations.js) *}
+<div class="coex-modal-backdrop" id="mig-preview-modal" hidden role="dialog" aria-modal="true" aria-labelledby="mig-preview-title">
+	<div class="coex-modal">
+		<h3 id="mig-preview-title">Migration preview</h3>
+		<p id="mig-preview-desc">Dry-run plan for the selected migration. No changes have been applied.</p>
+		<div class="mig-preview-pane" id="mig-preview-body" tabindex="0"></div>
+		<div class="coex-modal-actions">
+			<button type="button" class="mig-btn" data-action="close-preview">Close</button>
+			<button type="button" class="mig-btn mig-btn-primary" data-action="confirm-apply" id="mig-preview-apply">Apply</button>
+		</div>
+	</div>
+</div>
+
+<script src="/assets/migrations.js?v={$basePath}" defer></script>
+{/block}

@@ -1,0 +1,126 @@
+/* Glasswing — Coexistence: per-service dual-version tracks with cutover control */
+
+.coex-page-header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.coex-page-header h2 { font-size: 18px; font-weight: 600; }
+.coex-page-header .sub { color: var(--text2); font-size: 13px; }
+
+.coex-service {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; margin-bottom: 12px;
+}
+.coex-service-hdr {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.coex-service-hdr h3 { font-size: 15px; font-weight: 600; }
+.coex-service-hdr .svc-meta { font-size: 12px; color: var(--text2); margin-left: auto; }
+
+/* Tracks row */
+.coex-tracks {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;
+}
+.coex-track {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative;
+}
+.coex-track[data-active="1"] {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px rgba(63,185,80,0.2) inset;
+}
+.coex-track[data-active="1"]::after {
+  content: 'ACTIVE';
+  position: absolute; top: 8px; right: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: .5px;
+  color: var(--green);
+  background: rgba(63,185,80,0.15); padding: 2px 6px; border-radius: 3px;
+}
+
+.coex-track-hdr { display: flex; align-items: baseline; gap: 8px; }
+.coex-track-tag {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  font-family: 'SF Mono', monospace;
+  color: var(--text);
+}
+.coex-track-version {
+  font-family: 'SF Mono', monospace; font-size: 12px; color: var(--accent);
+}
+.coex-track-meta {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px;
+  font-size: 11px; color: var(--text2);
+}
+.coex-track-meta .k { text-transform: uppercase; letter-spacing: .5px; }
+.coex-track-meta .v { color: var(--text); font-family: 'SF Mono', monospace; }
+
+.coex-ro {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--surface2); color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* TTL countdown */
+.coex-ttl {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; border-radius: 4px;
+  background: var(--surface2);
+  font-size: 11px;
+}
+.coex-ttl-icon { opacity: .6; }
+.coex-ttl[data-urgency="soon"]    { background: rgba(210,153,34,0.12); color: var(--orange); }
+.coex-ttl[data-urgency="urgent"]  { background: rgba(248,81,73,0.12);  color: var(--red); }
+.coex-ttl[data-urgency="expired"] { background: rgba(248,81,73,0.2);   color: var(--red); font-weight: 700; }
+.coex-ttl-value { font-family: 'SF Mono', monospace; font-weight: 600; }
+
+.coex-track-actions { display: flex; gap: 6px; margin-top: 4px; }
+
+/* Cutover confirm modal */
+.coex-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.coex-modal-backdrop[hidden] { display: none; }
+.coex-modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 24px;
+  max-width: 480px; width: calc(100% - 32px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+.coex-modal h3 {
+  font-size: 16px; font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.coex-modal h3 .warn { color: var(--sev-breaking); }
+.coex-modal p { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+.coex-modal .impact {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 10px 12px; margin-bottom: 12px;
+  font-size: 12px; color: var(--text2);
+}
+.coex-modal .impact strong { color: var(--text); }
+.coex-modal-confirm {
+  display: block; width: 100%;
+  padding: 8px 12px; border-radius: 4px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px;
+  font-family: 'SF Mono', monospace;
+  outline: none; margin-bottom: 12px;
+}
+.coex-modal-confirm:focus { border-color: var(--accent); }
+.coex-modal-confirm[aria-invalid="true"] { border-color: var(--red); }
+.coex-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.coex-modal-actions .mig-btn-danger { margin-left: auto; }
+
+.coex-empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--text2); background: var(--surface);
+  border: 1px dashed var(--border); border-radius: 8px;
+  font-size: 14px;
+}

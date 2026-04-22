@@ -1,0 +1,36 @@
+{*
+ * Dashboard widget: event-stream
+ * Usage: {include '@widgets/event-stream.latte', events => $recentEvents}
+ * Shows the last ~10 events. Full Timeline at /timeline.
+ *}
+
+<section class="widget" aria-labelledby="wes-title">
+	<header class="widget-hdr">
+		<h3 id="wes-title">Recent events</h3>
+		<span class="count">{$events|length}</span>
+		<span class="spacer"></span>
+		<a class="more" href="/timeline">Full timeline &rarr;</a>
+	</header>
+
+	<div class="widget-body" id="wes-body">
+		{if empty($events)}
+			<div class="widget-empty">No events yet.</div>
+		{else}
+			{foreach array_slice($events, 0, 10) as $ev}
+				{var $kind = 'ok'}
+				{if str_contains($ev['type'], 'failed') || str_contains($ev['type'], 'unreachable')}
+					{var $kind = 'failed'}
+				{elseif str_contains($ev['type'], 'start')}
+					{var $kind = 'start'}
+				{elseif str_contains($ev['type'], 'changed')}
+					{var $kind = 'changed'}
+				{/if}
+				<div class="wes-row" data-kind="{$kind}">
+					<span class="wes-ts">{$ev['ts']|substr:11:8}</span>
+					<span class="wes-type kind-{$kind}">{$ev['type']}</span>
+					<span class="wes-msg">{$ev['task'] ?? $ev['migration_id'] ?? $ev['upgrade_id'] ?? ''}</span>
+				</div>
+			{/foreach}
+		{/if}
+	</div>
+</section>

@@ -1,0 +1,76 @@
+/* Glasswing — Dashboard widgets (version-health, pending-migrations, event-stream).
+ * Consolidated styles; widgets are embedded in Dashboard/default.latte via {include @widgets/...}.
+ */
+
+.widget {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex; flex-direction: column;
+}
+.widget-hdr {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.widget-hdr h3 { font-size: 13px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: .5px; }
+.widget-hdr .count {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  background: var(--surface2); color: var(--text2);
+}
+.widget-hdr .spacer { flex: 1; }
+.widget-hdr .more { font-size: 11px; color: var(--accent); }
+.widget-hdr .refresh-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); opacity: 0;
+  transition: opacity .2s;
+}
+.widget-hdr .refresh-indicator.active { opacity: 1; animation: pulse 1.5s infinite; }
+
+.widget-body { flex: 1; }
+
+.widget-empty {
+  text-align: center; padding: 20px 8px;
+  font-size: 12px; color: var(--text2);
+}
+
+/* ── Version-health widget ── */
+.wvh-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+  align-items: center; font-size: 12px;
+}
+.wvh-row:last-child { border-bottom: none; }
+.wvh-svc { font-weight: 600; color: var(--text); }
+.wvh-cat { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-left: 6px; }
+.wvh-ver { font-family: 'SF Mono', monospace; font-size: 11px; color: var(--text2); }
+.wvh-ver .arrow { color: var(--text2); margin: 0 4px; }
+.wvh-ver .to { color: var(--accent); }
+
+/* ── Pending-migrations widget ── */
+.wpm-row {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+  align-items: center; font-size: 12px;
+}
+.wpm-row:last-child { border-bottom: none; }
+.wpm-title { font-weight: 600; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wpm-id    { font-family: 'SF Mono', monospace; font-size: 10px; color: var(--text2); }
+
+/* ── Event-stream widget ── */
+.wes-row {
+  display: grid; grid-template-columns: auto auto 1fr; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+  font-size: 11px; align-items: center;
+}
+.wes-row:last-child { border-bottom: none; }
+.wes-ts   { font-family: 'SF Mono', monospace; color: var(--text2); font-size: 10px; }
+.wes-type {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  background: var(--surface2); color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
+}
+.wes-type.kind-ok     { background: rgba(63,185,80,0.14); color: var(--green); }
+.wes-type.kind-failed { background: rgba(248,81,73,0.14); color: var(--red); }
+.wes-type.kind-start  { background: rgba(88,166,255,0.14); color: var(--accent); }
+.wes-msg  { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

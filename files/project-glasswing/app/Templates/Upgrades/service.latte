@@ -1,0 +1,85 @@
+{block title}{$service ?? 'Service'} — Upgrades{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/upgrades.css?v={$basePath}">
+
+<div style="margin-bottom:12px">
+	<a href="/upgrades" style="font-size:12px;color:var(--text2)">&larr; All services</a>
+</div>
+
+<div class="upg-svc-hdr">
+	<div>
+		<h2>{$service}</h2>
+		<div class="svc-meta">
+			Installed: <span class="upg-ver upg-ver-{$installed_class ?? 'unknown'}">{$installed ?? '—'}</span>
+			{if !empty($category)} &middot; {$category}{/if}
+		</div>
+	</div>
+	{if !empty($docs_url)}
+		<a class="docs" href="{$docs_url}" target="_blank" rel="noopener">Upstream docs &rarr;</a>
+	{/if}
+</div>
+
+{if empty($recipes)}
+	<div class="mig-empty">
+		<div>No upgrade recipes defined for this service.</div>
+		<p style="margin-top:8px;font-size:12px">Add one at <code>upgrades/{$service}.yml</code>.</p>
+	</div>
+{else}
+	{foreach $recipes as $r}
+		<article class="upg-recipe" data-recipe-id="{$r['id']}">
+			<div class="upg-recipe-hdr">
+				<span class="sev-badge sev-{$r['severity']}">{$r['severity']}</span>
+				<span class="upg-recipe-from-to">
+					{$r['from_regex'] ?? $r['from'] ?? '?'}
+					<span class="upg-recipe-arrow">&rarr;</span>
+					{$r['to'] ?? '?'}
+				</span>
+				<span class="upg-recipe-id">{$r['id']}</span>
+				{if !empty($r['coexistence_supported'])}
+					<span class="upg-coex-tag" title="Supports running old + new side by side">Coexistence</span>
+				{/if}
+				{if !empty($r['applied']) && $r['applied']}
+					<span class="mig-status mig-status-ok" style="margin-left:auto">applied</span>
+				{/if}
+			</div>
+			<div class="upg-recipe-body">
+				{if !empty($r['notes'])}
+					<div class="notes">{$r['notes']}</div>
+				{/if}
+				{if !empty($r['changelog_url'])}
+					<div class="changelog">
+						<a href="{$r['changelog_url']}" target="_blank" rel="noopener">Changelog &rarr;</a>
+					</div>
+				{/if}
+				<div class="upg-recipe-actions">
+					<button type="button"
+							class="mig-btn"
+							data-action="plan"
+							data-service="{$service}"
+							data-recipe-id="{$r['id']}"
+							aria-label="Plan upgrade {$r['id']}">Plan</button>
+					<button type="button"
+							class="mig-btn mig-btn-primary"
+							data-action="apply-upgrade"
+							data-service="{$service}"
+							data-recipe-id="{$r['id']}"
+							data-severity="{$r['severity']}"
+							aria-label="Apply upgrade {$r['id']}">Apply</button>
+					{if !empty($r['applied'])}
+						<button type="button"
+								class="mig-btn mig-btn-danger"
+								data-action="rollback-upgrade"
+								data-service="{$service}"
+								data-recipe-id="{$r['id']}"
+								aria-label="Rollback upgrade {$r['id']}">Rollback</button>
+					{/if}
+				</div>
+			</div>
+		</article>
+	{/foreach}
+{/if}
+
+<script src="/assets/migrations.js?v={$basePath}" defer></script>
+{/block}
