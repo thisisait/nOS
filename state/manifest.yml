@@ -574,6 +574,13 @@ services:
     image: fireflyiii/core
     domain_var: firefly_domain
     port_var: firefly_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ firefly_port }}/health"
+      expect_status: 200
+      timeout_sec: 10
+    oidc: proxy                             # REMOTE_USER guard via Authentik proxy outpost (nginx auth_request)
+    rbac_tier: 2
 
   - id: onlyoffice
     category: collaboration

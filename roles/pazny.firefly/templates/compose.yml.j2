@@ -52,19 +52,23 @@ services:
       REDIS_PORT: "6379"
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (remote_user_guard via nginx auth_request) ─────────
-      # Firefly cte REMOTE_USER a REMOTE_EMAIL hlavicky nastavene nginxem po
-      # uspesne autentizaci pres Authentik proxy outpost. Auto-creates user
+      # Firefly reads REMOTE_USER and REMOTE_EMAIL headers set by nginx after a
+      # successful Authentik proxy-outpost authentication. Auto-creates user
       # on first login.
       AUTHENTICATION_GUARD: "remote_user_guard"
       AUTHENTICATION_GUARD_HEADER: "REMOTE_USER"
       AUTHENTICATION_GUARD_EMAIL: "REMOTE_EMAIL"
 {% endif %}
+    # /health is Firefly's own Laravel route and only returns 200 once schema
+    # is migrated AND redis is reachable. Print the HTTP status via curl -w so
+    # failing probes show the actual code in `docker inspect`'s Health.Log
+    # (the previous `-s -o /dev/null` hid the reason).
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/health -o /dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health | grep -q '^200$' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 90s
+      start_period: 180s      # up from 90s; first-boot migrations on a slow MariaDB can take 60-120s
 {% if install_authentik | default(false) %}
     extra_hosts:
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"

@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# pazny.firefly/tasks/post.yml
+#
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose up b2b`.
+#
+# Why this exists
+# ---------------
+# The fireflyiii/core image's entrypoint does wait-for-it on mariadb:3306 then
+# runs `php artisan migrate --force` exactly once. TCP reachability ≠ MariaDB
+# fully initialized: when the whole b2b stack spins up concurrently, MariaDB
+# has the listener open but is still creating the `firefly` database + user in
+# its post-start hooks. The entrypoint's migrate call hits "Connection refused"
+# on the authenticated session, prints the error, and continues to start nginx.
+# The container stays up (pid 1 healthy) but every request returns 500 because
+# Laravel can't open a connection.
+#
+# This task runs AFTER compose up --wait has returned healthy on the infra
+# stack, so MariaDB is genuinely ready. We probe `migrate:status`; if the
+# schema is missing we run the forward migrations with retries; and we run
+# Firefly's own upgrade-database/correct-database/report-integrity commands
+# which are idempotent and self-healing.
+#
+# Pattern borrowed from roles/pazny.erpnext/tasks/post.yml.
+# ==============================================================================
+
+- name: "[pazny.firefly Post] Wait for Firefly HTTP to respond"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ firefly_port | default(3014) }}/api/v1/about"
+    status_code: [200, 302, 401, 500]     # 500 is expected when schema missing; just need the listener up
+    timeout: 5
+  register: _firefly_ping
+  retries: 24
+  delay: 5
+  until: _firefly_ping.status is defined and _firefly_ping.status in [200, 302, 401, 500]
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.firefly Post] Probe Laravel schema presence"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} exec b2b-firefly-1 php artisan migrate:status --no-ansi"
+  register: _firefly_migrate_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.firefly Post] Run forward migrations if schema missing"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} exec b2b-firefly-1 php artisan migrate --force --no-interaction"
+  register: _firefly_migrate_run
+  when: "'Migration table not found' in _firefly_migrate_status.stdout
+         or 'Migration table not found' in _firefly_migrate_status.stderr"
+  changed_when: "'Migrated' in (_firefly_migrate_run.stdout | default(''))"
+  retries: 3
+  delay: 10
+  until: _firefly_migrate_run is not failed and _firefly_migrate_run.rc == 0
+  failed_when:
+    - _firefly_migrate_run is defined
+    - _firefly_migrate_run.rc is defined
+    - _firefly_migrate_run.rc != 0
+
+- name: "[pazny.firefly Post] Idempotent Firefly self-upgrade + correctness hooks"
+  ansible.builtin.shell: |
+    {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:upgrade-database --no-interaction || true
+    {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:correct-database --no-interaction || true
+    {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:report-integrity --no-interaction || true
+  register: _firefly_self_heal
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.firefly Post] Clear Laravel cache + restart container if migrations ran"
+  community.docker.docker_container:
+    name: b2b-firefly-1
+    restart: true
+  when: _firefly_migrate_run is defined and (_firefly_migrate_run.changed | default(false))
+
+- name: "[pazny.firefly Post] Final HTTP probe (/health)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ firefly_port | default(3014) }}/health"
+    status_code: [200, 302]
+    timeout: 10
+  register: _firefly_health
+  retries: 20
+  delay: 6
+  until: _firefly_health.status | default(0) in [200, 302]
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.firefly Post] Status summary"
+  ansible.builtin.debug:
+    msg: >
+      Firefly III /health -> {{ _firefly_health.status | default('N/A') }}
+      (migrate ran: {{ (_firefly_migrate_run is defined and (_firefly_migrate_run.changed | default(false))) }},
+      schema_before: {{ 'missing' if 'Migration table not found' in (_firefly_migrate_status.stdout | default('')) else 'present' }})
