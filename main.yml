@@ -71,7 +71,7 @@
     # nothing pending, the orchestrator is a no-op. See docs/framework-plan.md.
     - name: "[Framework] Pre-migrate (load state + apply pending migrations)"
       ansible.builtin.import_tasks: tasks/pre-migrate.yml
-      tags: ['always', 'migrate']
+      tags: ['migrate']
 
     - name: Include credentials overrides.
       include_vars: "{{ item }}"

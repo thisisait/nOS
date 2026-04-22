@@ -19,7 +19,7 @@
     state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
   register: _nos_state
   check_mode: false
-  tags: ['always', 'migrate']
+  tags: ['migrate']
 
 - name: "[pre-migrate] Introspect services against manifest"
   nos_state:
@@ -28,7 +28,7 @@
     manifest_path: "{{ playbook_dir }}/state/manifest.yml"
     role_vars: "{{ vars }}"
   register: _nos_introspect
-  tags: ['always', 'migrate']
+  tags: ['migrate']
 
 - name: "[pre-migrate] List pending migrations"
   nos_migrate:
@@ -43,7 +43,7 @@
     - _pending is failed
     - "'No module named' not in (_pending.msg | default(''))"
   ignore_errors: "{{ nos_pre_migrate_tolerant | default(false) }}"
-  tags: ['always', 'migrate']
+  tags: ['migrate']
 
 - name: "[pre-migrate] Announce pending migrations"
   ansible.builtin.debug:
@@ -58,7 +58,7 @@
       {% endfor %}
       {% endif %}
   when: _pending is defined and _pending is not failed
-  tags: ['always', 'migrate']
+  tags: ['migrate']
 
 - name: "[pre-migrate] Confirm breaking migrations"
   ansible.builtin.pause:
@@ -100,4 +100,4 @@
     state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
     merge: true
     state: {}
-  tags: ['always', 'migrate']
+  tags: ['migrate']

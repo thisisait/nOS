@@ -85,17 +85,50 @@ def list_migrations(migrations_dir):
     return out
 
 
-def list_pending(migrations_dir, state):
-    """Return migrations that are not in state.migrations_applied (successful)."""
+def list_pending(migrations_dir, state, evaluate_gate=True, ctx=None):
+    """
+    Return migrations that are not yet applied AND (by default) whose
+    ``applies_if`` predicate evaluates true against the current host.
+
+    ``evaluate_gate=False`` restores pre-1.1 behavior (file-level filter
+    only); kept for tests that inspect catalog order independently of the
+    host state. Orchestrators should leave the default on so the prompt
+    never fires for gate-false records like the retroactive rebrand
+    migration, which stays in the catalog for audit but is a no-op on
+    already-rebranded hosts.
+    """
     applied_ids = set()
     if isinstance(state, dict):
         for entry in state.get("migrations_applied") or []:
             if isinstance(entry, dict) and entry.get("success") and entry.get("id"):
                 applied_ids.add(entry["id"])
-    return [
+
+    candidates = [
         rec for (rec_id, _path, rec) in list_migrations(migrations_dir)
         if rec_id not in applied_ids
     ]
+
+    if not evaluate_gate:
+        return candidates
+
+    # Evaluate applies_if for each. Fail-soft: if the predicate raises, keep
+    # the record in the pending list (safer to over-notify than to silently
+    # hide an issue).
+    eval_ctx = _normalise_ctx(ctx or {}, dry_run=True)
+    applicable = []
+    for rec in candidates:
+        applies = rec.get("applies_if")
+        if applies is None:
+            applicable.append(rec)
+            continue
+        try:
+            if evaluate(applies, eval_ctx):
+                applicable.append(rec)
+        except PredicateError:
+            # Error during gate evaluation — keep in pending so the operator
+            # sees it and can decide. The engine will re-evaluate on apply.
+            applicable.append(rec)
+    return applicable
 
 
 # Minimal structural validator (works without schema file).  When
