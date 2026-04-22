@@ -1,68 +1,68 @@
 # AGENT BRIEF — pazny.* Docker role authoring
 
-Tento dokument je **závazný specifikační standard** pro všechny agenty píšící nové Ansible role pro devBoxNOS Docker služby. Čti pozorně, projekt má silné konvence.
+This document is a **binding specification standard** for all agents authoring new Ansible roles for nOS Docker services. Read carefully — the project has strong conventions.
 
-## 1. Kontext projektu
+## 1. Project context
 
-- **devBoxNOS** = Ansible playbook pro macOS Apple Silicon s 55+ Docker službami organizovanými do 8 compose stacků (`infra`, `observability`, `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`).
-- Každá Docker služba má **vlastní Ansible roli** pod namespace `pazny.*`, která renderuje **compose override fragment** do `{{ stacks_dir }}/<stack>/overrides/<service>.yml`. Orchestrátor (`tasks/stacks/stack-up.yml` nebo `core-up.yml`) sbírá overrides přes `ansible.builtin.find` a předává je jako `-f` flagy do `docker compose up`.
-- **Glasswing** (`files/project-glasswing/`) = Nette PHP control plane dashboard s unified `systems` tabulkou (SQLite). Každá služba = záznam v `systems` s parent_id hierarchií (stack → service → sub-service), health tracking, scan state, verzemi. Ansible role `pazny.glasswing` importuje `service-registry.json` do DB při deploy.
-- Root worktree path = `/Users/pazny/projects/mac-dev-playbook/.claude/worktrees/<tvoje-jmeno>` (branch based on `master`).
+- **nOS** = Ansible playbook for macOS Apple Silicon with 55+ Docker services organized into 8 compose stacks (`infra`, `observability`, `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`).
+- Each Docker service has **its own Ansible role** under the `pazny.*` namespace that renders a **compose override fragment** into `{{ stacks_dir }}/<stack>/overrides/<service>.yml`. The orchestrator (`tasks/stacks/stack-up.yml` or `core-up.yml`) collects overrides via `ansible.builtin.find` and passes them as `-f` flags to `docker compose up`.
+- **Glasswing** (`files/project-glasswing/`) = Nette PHP control plane dashboard with a unified `systems` table (SQLite). Each service = record in `systems` with parent_id hierarchy (stack → service → sub-service), health tracking, scan state, versions. The `pazny.glasswing` Ansible role imports `service-registry.json` into the DB on deploy.
+- Root worktree path = `/Users/pazny/projects/mac-dev-playbook/.claude/worktrees/<your-name>` (branch based on `master`).
 
-## 2. Git workflow (POVINNÉ)
+## 2. Git workflow (REQUIRED)
 
-- Primární branch = **`master`**. Větev `dev` neexistuje (zrušena 2026-04-16).
-- Pokud pracuješ v worktree, tvoje větev vychází z `master`. Pokud pracuješ přímo, commituj na `master`.
-- Každý commit = Conventional Commits (`feat:`, `fix:`, `chore:`), **bez Co-Authored-By, bez `--author` flagu**. Commit message anglicky, imperativně.
-- Na konci práce udělej atomické commity. **NEMERGUJ ani nepushuj** pokud nejsi hlavní orchestrator.
+- Primary branch = **`master`**. The `dev` branch does not exist (removed 2026-04-16).
+- If you work in a worktree, your branch starts from `master`. If you work directly, commit on `master`.
+- Each commit = Conventional Commits (`feat:`, `fix:`, `chore:`), **no Co-Authored-By, no `--author` flag**. Commit message in English, imperative.
+- At the end of work do atomic commits. **DO NOT MERGE or push** unless you are the main orchestrator.
 
-## 3. Závazná struktura role
+## 3. Required role structure
 
 ```
 roles/pazny.<service>/
-├── defaults/main.yml      # všechny proměnné s defaulty
+├── defaults/main.yml      # all variables with defaults
 ├── tasks/main.yml         # data dir + compose override render
 ├── tasks/post.yml         # (opt.) post-start API/DB setup
 ├── templates/compose.yml.j2
 ├── handlers/main.yml      # restart handler
 ├── meta/main.yml          # galaxy metadata
-└── README.md              # 2–10 řádků: co role dělá, závislosti
+└── README.md              # 2–10 lines: what the role does, dependencies
 ```
 
-### 3.1 `defaults/main.yml` — konvence
+### 3.1 `defaults/main.yml` — conventions
 
 ```yaml
 ---
 # ==============================================================================
-# pazny.<service> — <one-line popis> (<stack> compose stack)
+# pazny.<service> — <one-line description> (<stack> compose stack)
 #
-# Credentials (<service>_db_password, <service>_secret_key, ...) zustavaji
-# v default.credentials.yml — centralizovane pro prefix rotation.
+# Credentials (<service>_db_password, <service>_secret_key, ...) remain
+# in default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
-<service>_version: "<pinned-stable-tag>"        # viz version_policy (nikdy "latest" bez fallback)
+<service>_version: "<pinned-stable-tag>"        # see version_policy (never "latest" without fallback)
 <service>_domain: "<subdomain>.{{ instance_tld | default('dev.local') }}"
-<service>_port: <unique-port-3xxx>              # hostový port (viz PORT REGISTRY)
+<service>_port: <unique-port-3xxx>              # host port (see PORT REGISTRY)
 <service>_data_dir: "{{ ansible_facts['env']['HOME'] }}/<service>/data"
-<service>_db_name: "<service>"                  # pokud má DB
+<service>_db_name: "<service>"                  # if it has a DB
 <service>_db_user: "<service>"
 <service>_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 <service>_cpus: "{{ docker_cpus_standard | default('1.0') }}"
-# Pro `blank=true` vymaže při reset-fázi (tasks/reset/):
-<service>_external_data_dir_override: ""        # opt. alias pro /Volumes/SSD1TB/<service>
+# For `blank=true` wipe during the reset phase (tasks/reset/):
+<service>_external_data_dir_override: ""        # opt. alias for /Volumes/SSD1TB/<service>
 ```
 
-**Version pinning**: Najdi aktuální stable tag image (např. `docker inspect` nebo Docker Hub). Použij **konkrétní CVE-patched tag**, nikdy `latest`. Příklad: `linuxserver/code-server:4.105.1-ls290` místo `latest`.
+**Version pinning**: Find the current stable image tag (e.g. `docker inspect` or Docker Hub). Use a **specific CVE-patched tag**, never `latest`. Example: `linuxserver/code-server:4.105.1-ls290` instead of `latest`.
 
-### 3.2 `tasks/main.yml` — konvence
+### 3.2 `tasks/main.yml` — conventions
 
 ```yaml
 ---
 # ==============================================================================
 # pazny.<service>/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up <stack>`:
-# vytvori data dir, vyrenderuje compose override fragment.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up <stack>`:
+# creates the data dir, renders the compose override fragment.
 # ==============================================================================
 
 - name: "[pazny.<service>] Ensure data directory exists"
@@ -79,14 +79,14 @@ roles/pazny.<service>/
   notify: Restart <service>
 ```
 
-### 3.3 `templates/compose.yml.j2` — konvence
+### 3.3 `templates/compose.yml.j2` — conventions
 
-**NIKDY** nedeklaruj top-level `networks:` ani `volumes:` — jsou v base compose templateu stacku. Deklaruj jen `services:`.
+**NEVER** declare top-level `networks:` or `volumes:` — they are in the stack's base compose template. Declare only `services:`.
 
 ```jinja
 # =============================================================================
 # pazny.<service> — compose override fragment
-# Merged do `docker compose up` pres ansible.builtin.find nad
+# Merged into `docker compose up` via ansible.builtin.find over
 # {{ stacks_dir }}/<stack>/overrides/*.yml.
 # =============================================================================
 
@@ -111,7 +111,7 @@ services:
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       OIDC_CLIENT_ID: "{{ authentik_oidc_<service>_client_id }}"
       OIDC_CLIENT_SECRET: "{{ authentik_oidc_<service>_client_secret }}"
-      # ... (podle konkrétní app, viz sekce 4)
+      # ... (depends on the specific app, see section 4)
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
@@ -129,10 +129,10 @@ services:
     cpus: {{ <service>_cpus | default(docker_cpus_standard | default('1.0')) }}
 ```
 
-**Důležité**:
-- `<stack>_net` = jméno interní sítě (např. `iiab_net`, `b2b_net`, `devops_net`).
-- `stacks_shared_network` = sdílená síť (umožňuje cross-stack komunikaci s infra stackem — Postgres, Redis, Authentik).
-- Pokud připojuješ k Postgresu / MariaDB / Redis z infra stacku, `DATABASE_URL` = `postgres://user:pass@postgresql:5432/db` (jméno kontejneru = jméno sítě alias).
+**Important**:
+- `<stack>_net` = internal network name (e.g. `iiab_net`, `b2b_net`, `devops_net`).
+- `stacks_shared_network` = shared network (enables cross-stack communication with the infra stack — Postgres, Redis, Authentik).
+- If connecting to Postgres / MariaDB / Redis from the infra stack, `DATABASE_URL` = `postgres://user:pass@postgresql:5432/db` (container name = network alias).
 
 ### 3.4 `handlers/main.yml`
 
@@ -153,7 +153,7 @@ galaxy_info:
   role_name: <service>
   namespace: pazny
   author: Pázny
-  description: <service short description> in Docker compose override (devBoxNOS <stack> stack)
+  description: <service short description> in Docker compose override (nOS <stack> stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -164,91 +164,91 @@ dependencies: []
 collections: []
 ```
 
-## 4. SSO patterny
+## 4. SSO patterns
 
-### 4.1 Native OIDC (preferované, pokud service podporuje)
+### 4.1 Native OIDC (preferred, if the service supports it)
 
-1. Do compose templateu přidej OIDC env vars pod `{% if install_authentik %}`.
-2. Do INTEGRATION.md napiš:
-   - entry do `authentik_oidc_apps` v `default.config.yml`:
+1. Add OIDC env vars to the compose template under `{% if install_authentik %}`.
+2. Write in INTEGRATION.md:
+   - entry into `authentik_oidc_apps` in `default.config.yml`:
      ```yaml
      - name: "<ServiceName>"
        slug: "<service>"
        enabled: "{{ install_<service> | default(false) }}"
-       client_id: "devboxnos-<service>"
+       client_id: "nos-<service>"
        client_secret: "{{ global_password_prefix }}_pw_oidc_<service>"
        redirect_uris: "https://{{ <service>_domain | default('<sub>.dev.local') }}/<oidc-callback-path>"
        launch_url: "https://{{ <service>_domain | default('<sub>.dev.local') }}"
      ```
-   - helper vars (u konce `default.config.yml`):
+   - helper vars (near the end of `default.config.yml`):
      ```yaml
      authentik_oidc_<service>_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', '<service>') | first).client_id }}"
      authentik_oidc_<service>_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', '<service>') | first).client_secret }}"
      ```
-   - entry do `authentik_app_tiers` (tier 1 admin / 2 manager / 3 user / 4 guest).
+   - entry into `authentik_app_tiers` (tier 1 admin / 2 manager / 3 user / 4 guest).
 
-### 4.2 Proxy auth (fallback pokud service OIDC nepodporuje)
+### 4.2 Proxy auth (fallback if the service does not support OIDC)
 
-- V nginx vhostu přidej `include /etc/nginx/authentik-forward-auth.conf;` na vhost level (existující pattern — viz např. `templates/nginx/sites-available/uptime-kuma.conf`).
-- Do `authentik_oidc_apps` přidej entry s `type: "proxy"` + `external_host` (bez `client_id` / `redirect_uris`).
+- In the nginx vhost add `include /etc/nginx/authentik-forward-auth.conf;` at vhost level (existing pattern — see e.g. `templates/nginx/sites-available/uptime-kuma.conf`).
+- Add entry to `authentik_oidc_apps` with `type: "proxy"` + `external_host` (without `client_id` / `redirect_uris`).
 
-Referenční role pro OIDC native: **`pazny.outline`** (Postgres + OIDC).
-Referenční role pro proxy: **`pazny.uptime_kuma`**.
+Reference role for native OIDC: **`pazny.outline`** (Postgres + OIDC).
+Reference role for proxy: **`pazny.uptime_kuma`**.
 
-## 5. Nginx vhost (pokud service má web UI)
+## 5. Nginx vhost (if the service has a web UI)
 
-Vytvoř `templates/nginx/sites-available/<service>.conf` — zkopíruj strukturu nejbližšího podobného vhostu:
-- **Ports on 127.0.0.1 only** (container bindi na `127.0.0.1:<port>`, nginx proxy_pass na lokalhost).
+Create `templates/nginx/sites-available/<service>.conf` — copy the structure of the closest similar vhost:
+- **Ports on 127.0.0.1 only** (container binds on `127.0.0.1:<port>`, nginx proxy_pass to localhost).
 - `listen 80` + `listen 443 ssl` + HTTP→HTTPS redirect.
-- `ssl_certificate /opt/homebrew/etc/mkcert/<domain>.pem` (mkcert auto-vyrobí).
+- `ssl_certificate /opt/homebrew/etc/mkcert/<domain>.pem` (mkcert auto-generates).
 - `proxy_set_header Host $host; X-Forwarded-For ...; X-Real-IP ...; X-Forwarded-Proto ...`.
-- Pro proxy-auth služby: `include` Authentik forward auth snippetu.
+- For proxy-auth services: `include` the Authentik forward auth snippet.
 
-Vhost sám se aktivuje automaticky přes `tasks/nginx/` pokud jméno = `<service_slug>.conf` a jméno odpovídá `install_<service>` flagu (viz existing pattern).
+The vhost itself activates automatically via `tasks/nginx/` if the name = `<service_slug>.conf` and the name matches the `install_<service>` flag (see existing pattern).
 
-## 6. Port Registry (vyhni se konfliktu!)
+## 6. Port Registry (avoid conflicts!)
 
-Zkontroluj `grep -r "^<service>_port:" roles/` a `grep "ports:" templates/stacks/` pro kolize. Použij **unikátní port 3xxx–9xxx** mimo:
+Check `grep -r "^<service>_port:" roles/` and `grep "ports:" templates/stacks/` for collisions. Use a **unique port 3xxx–9xxx** outside of:
 - 80/443 (nginx), 5432 (postgres), 3306 (mariadb), 6379 (redis), 3000 (grafana), 9000 (portainer), 9090 (prometheus), 3100 (loki), 3200 (tempo), 8070 (jsos), 8099 (boxapi)
-- Obsazené: 3001 (gitea), 3005 (outline), 3006 (n8n), 3007 (paperclip), 3008 (freescout), 8000 (various), 8080/81/82, 8181 (calibre), 8123 (homeassistant), 9443 (portainer-ssl)
+- Taken: 3001 (gitea), 3005 (outline), 3006 (n8n), 3007 (paperclip), 3008 (freescout), 8000 (various), 8080/81/82, 8181 (calibre), 8123 (homeassistant), 9443 (portainer-ssl)
 
-## 7. Post-start setup (volitelné — jen pokud service vyžaduje API/DB init)
+## 7. Post-start setup (optional — only if the service requires API/DB init)
 
-Pokud service potřebuje něco jako: vytvoření admin usera, import dashboardů, DB migrace, apod. — udělej `tasks/post.yml`. Volá se PO `docker compose up` z `stack-up.yml`. Příklady: `roles/pazny.nextcloud/tasks/post.yml`, `roles/pazny.gitea/tasks/post.yml`. Jinak `post.yml` **nepotřebuješ**.
+If the service needs something like: creating an admin user, importing dashboards, DB migrations, etc. — make `tasks/post.yml`. It is called AFTER `docker compose up` from `stack-up.yml`. Examples: `roles/pazny.nextcloud/tasks/post.yml`, `roles/pazny.gitea/tasks/post.yml`. Otherwise you **do not need** `post.yml`.
 
-## 8. Deliverables — co MUSÍŠ vytvořit
+## 8. Deliverables — what you MUST create
 
-### V role dir `roles/pazny.<service>/`:
+### In role dir `roles/pazny.<service>/`:
 - [ ] `defaults/main.yml`
 - [ ] `tasks/main.yml`
 - [ ] `templates/compose.yml.j2`
 - [ ] `handlers/main.yml`
 - [ ] `meta/main.yml`
-- [ ] `README.md` (stručný)
+- [ ] `README.md` (brief)
 - [ ] (opt.) `tasks/post.yml`
-- [ ] **`INTEGRATION.md`** — MUSÍ být! Viz sekce 9.
+- [ ] **`INTEGRATION.md`** — MUST exist! See section 9.
 
-### Mimo role dir:
-- [ ] `templates/nginx/sites-available/<service>.conf` (pokud web UI)
+### Outside the role dir:
+- [ ] `templates/nginx/sites-available/<service>.conf` (if web UI)
 
-### NE-dotýkej se (parent agent to udělá po merge):
-- ❌ `default.config.yml` — pouze napiš patch do INTEGRATION.md
-- ❌ `default.credentials.yml` — jen patch do INTEGRATION.md
-- ❌ `tasks/stacks/stack-up.yml` / `core-up.yml` — patch do INTEGRATION.md
-- ❌ `tasks/reset/*.yml` — patch do INTEGRATION.md pokud služba má externí data path
-- ❌ `templates/stacks/<stack>/docker-compose.yml.j2` — jen pokud je stack **nový** (viz sekce 10)
+### DO NOT touch (the parent agent will handle these after merge):
+- NO `default.config.yml` — only write a patch into INTEGRATION.md
+- NO `default.credentials.yml` — only a patch into INTEGRATION.md
+- NO `tasks/stacks/stack-up.yml` / `core-up.yml` — patch into INTEGRATION.md
+- NO `tasks/reset/*.yml` — patch into INTEGRATION.md if the service has an external data path
+- NO `templates/stacks/<stack>/docker-compose.yml.j2` — only if the stack is **new** (see section 10)
 
-## 9. `INTEGRATION.md` — přesný formát (tohle parent agent mechanicky aplikuje)
+## 9. `INTEGRATION.md` — exact format (the parent agent applies this mechanically)
 
-Vytvoř `roles/pazny.<service>/INTEGRATION.md`:
+Create `roles/pazny.<service>/INTEGRATION.md`:
 
 ```markdown
 # INTEGRATION: pazny.<service>
 
 ## 1. `default.config.yml` — install toggle
-Insert after `install_<similar>: <bool>` line (~řádek 150):
+Insert after `install_<similar>: <bool>` line (~line 150):
 ​```yaml
-install_<service>: false              # <one-line popis> [Docker, vyžaduje: ...]
+install_<service>: false              # <one-line description> [Docker, requires: ...]
 ​```
 
 ## 2. `default.config.yml` — authentik_oidc_apps entry
@@ -257,14 +257,14 @@ Append to `authentik_oidc_apps:` list (before helper vars block):
   - name: "<ServiceName>"
     slug: "<service>"
     enabled: "{{ install_<service> | default(false) }}"
-    client_id: "devboxnos-<service>"
+    client_id: "nos-<service>"
     client_secret: "{{ global_password_prefix }}_pw_oidc_<service>"
     redirect_uris: "https://{{ <service>_domain | default('<sub>.dev.local') }}/<callback-path>"
     launch_url: "https://{{ <service>_domain | default('<sub>.dev.local') }}"
 ​```
-(Nebo `type: "proxy"` entry pro proxy-auth služby.)
+(Or a `type: "proxy"` entry for proxy-auth services.)
 
-## 3. `default.config.yml` — helper vars (jen pokud OIDC native)
+## 3. `default.config.yml` — helper vars (only if native OIDC)
 Insert near other `authentik_oidc_*_client_id` vars:
 ​```yaml
 authentik_oidc_<service>_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', '<service>') | first).client_id }}"
@@ -277,69 +277,69 @@ Add to `authentik_app_tiers:`:
 <service>: <1|2|3|4>
 ​```
 
-## 5. `default.credentials.yml` — pokud role zavádí nové secrets
-(DB password, session secret, API keys — pokud je v role compose template)
+## 5. `default.credentials.yml` — if the role introduces new secrets
+(DB password, session secret, API keys — if present in the role's compose template)
 ​```yaml
 <service>_db_password: "{{ global_password_prefix }}_pw_<service>"
 <service>_secret_key: "{{ global_password_prefix }}_pw_<service>_secret"
 ​```
 
 ## 6. `tasks/stacks/stack-up.yml` — role include
-Insert into appropriate "# <Stack> roles" block:
+Insert into the appropriate "# <Stack> roles" block:
 ​```yaml
 - { name: "[Stacks] pazny.<service> render", ansible.builtin.include_role: { name: pazny.<service>, apply: { tags: ['<service>'] } }, when: "install_<service> | default(false)", tags: ['<service>'] }
 ​```
 
-## 7. `tasks/stacks/stack-up.yml` — `_remaining_stacks` update (pokud přidává stack do active list)
-(Upravit jen pokud služba je V EXISTUJÍCÍM stacku který už není vždy aktivní. Pokud tvůj stack už je `iiab` nebo podobný "vždy aktivní" stack, přeskoč.)
+## 7. `tasks/stacks/stack-up.yml` — `_remaining_stacks` update (if adding a stack to the active list)
+(Edit only if the service is in an EXISTING stack that is not always active. If your stack is already `iiab` or a similar "always active" stack, skip.)
 
-## 8. `tasks/stacks/stack-up.yml` — post.yml include (jen pokud role má `post.yml`)
+## 8. `tasks/stacks/stack-up.yml` — post.yml include (only if the role has `post.yml`)
 ​```yaml
 - { name: "[Stacks] pazny.<service> post", ansible.builtin.include_role: { name: pazny.<service>, tasks_from: post.yml, apply: { tags: ['<service>'] } }, when: "install_<service> | default(false)", tags: ['<service>'] }
 ​```
 
-## 9. Database provisioning (pokud service používá DB)
+## 9. Database provisioning (if the service uses a DB)
 ### Postgres
-Insert into `tasks/stacks/core-up.yml` postgres provision block:
+Insert into the `tasks/stacks/core-up.yml` postgres provision block:
 ​```yaml
 - { name: "<service> DB", db: "<service>", owner: "<service>", password: "{{ <service>_db_password }}" }
 ​```
 ### MariaDB
-Obdobně pro MariaDB block.
+Same pattern for the MariaDB block.
 
-## 10. Nginx vhost (dokumentace)
-Uveď přesnou cestu + že se aktivuje automaticky přes `install_<service>` flag.
+## 10. Nginx vhost (documentation)
+State the exact path + that it activates automatically via the `install_<service>` flag.
 
 ## 11. Smoke test
-Po `ansible-playbook main.yml -K -e install_<service>=true --tags <service>` ověř:
+After `ansible-playbook main.yml -K -e install_<service>=true --tags <service>` verify:
 - `docker ps | grep <service>`  → Up
 - `curl -k https://<service>.dev.local` → 200
-- Authentik login redirect (pokud OIDC)
+- Authentik login redirect (if OIDC)
 ```
 
-## 10. Nový stack (jen pro agenty které ho zakládají)
+## 10. New stack (only for agents creating one)
 
-Pokud tvoje role zakládá nový stack (např. `mail`, `health`, `engineering` — parent ti to řekne explicitně v prompt), pak musíš VYTVOŘIT:
-- `templates/stacks/<stack>/docker-compose.yml.j2` — base s `services: {}` + `networks: { <stack>_net: driver: bridge }`
-- V INTEGRATION.md sekci 7 popiš úpravu `_remaining_stacks` + přidání `tasks/stacks/stack-up.yml` deploy bloku.
+If your role creates a new stack (e.g. `mail`, `health`, `engineering` — the parent will tell you explicitly in the prompt), you MUST CREATE:
+- `templates/stacks/<stack>/docker-compose.yml.j2` — base with `services: {}` + `networks: { <stack>_net: driver: bridge }`
+- In INTEGRATION.md section 7 describe the change to `_remaining_stacks` + the addition of a `tasks/stacks/stack-up.yml` deploy block.
 
-## 11. Kvalita — co parent zkontroluje
+## 11. Quality — what the parent will check
 
-- ✅ `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/defaults/main.yml'))"` → OK
-- ✅ `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/tasks/main.yml'))"` → OK
-- ✅ `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/meta/main.yml'))"` → OK
-- ✅ Compose template je validní Jinja2 + validní docker-compose YAML po renderu
-- ✅ Port unikátní (projekt grep)
-- ✅ Všechny secrets jdou přes `{{ global_password_prefix }}_pw_*` pattern
-- ✅ Žádný hardcoded `dev.local` — vždy `{{ instance_tld | default('dev.local') }}`
-- ✅ INTEGRATION.md je úplný a přesný
-- ✅ Čistý commit na své větvi, žádné nesouvisející soubory
+- `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/defaults/main.yml'))"` → OK
+- `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/tasks/main.yml'))"` → OK
+- `python3 -c "import yaml; yaml.safe_load(open('roles/pazny.<service>/meta/main.yml'))"` → OK
+- Compose template is valid Jinja2 + valid docker-compose YAML after render
+- Port is unique (project grep)
+- All secrets go through the `{{ global_password_prefix }}_pw_*` pattern
+- No hardcoded `dev.local` — always `{{ instance_tld | default('dev.local') }}`
+- INTEGRATION.md is complete and precise
+- Clean commit on your branch, no unrelated files
 
-## 12. Glasswing System Entity (nový systém → registrace)
+## 12. Glasswing System Entity (new system → registration)
 
-Každá služba se automaticky objeví v Glasswing Hub dashboardu díky pipeline:
+Every service automatically appears in the Glasswing Hub dashboard thanks to the pipeline:
 
-1. **Ansible service-registry.json.j2** — role přidá entry do `templates/service-registry.json.j2` (pod Wave A+B blok):
+1. **Ansible service-registry.json.j2** — the role adds an entry to `templates/service-registry.json.j2` (under the Wave A+B block):
    ```jinja
    {% if install_<service> | default(false) %}
    {% set _ = _services.append({
@@ -354,33 +354,33 @@ Každá služba se automaticky objeví v Glasswing Hub dashboardu díky pipeline
      "type": "docker",
      "stack": "<stack>",
      "version": <service>_version | default('<pinned>'),
-     "description": "<krátký popis>"
+     "description": "<short description>"
    }) %}
    {% endif %}
    ```
 
-2. **Glasswing ingest** — `bin/ingest-registry.php` (volaný Ansible role `pazny.glasswing`) importuje JSON do SQLite tabulky `systems`:
-   - `id` = toggle_var (např. `install_nextcloud`)
-   - `parent_id` = `stack-<stack>` (automaticky vytvořeno)
-   - Health probing, scan state, version tracking — vše v DB
+2. **Glasswing ingest** — `bin/ingest-registry.php` (called by the `pazny.glasswing` Ansible role) imports the JSON into the SQLite `systems` table:
+   - `id` = toggle_var (e.g. `install_nextcloud`)
+   - `parent_id` = `stack-<stack>` (created automatically)
+   - Health probing, scan state, version tracking — all in the DB
 
-3. **Systems table schema** (klíčové sloupce):
+3. **Systems table schema** (key columns):
    ```
    id, parent_id, name, description, type, category, stack, version,
    domain, port, url, toggle_var, enabled, health_status, health_http_code,
    health_ms, health_checked_at, priority, upstream_repo, source
    ```
 
-4. **API** — `GET /api/v1/hub/systems` (flat list + stats), `?tree=1` (hierarchie), `/health` (live probes)
+4. **API** — `GET /api/v1/hub/systems` (flat list + stats), `?tree=1` (hierarchy), `/health` (live probes)
 
-**Pozor**: V INTEGRATION.md sekci 10 přidej patch pro `service-registry.json.j2`.
+**Note**: In INTEGRATION.md section 10 add a patch for `service-registry.json.j2`.
 
-## 13. Shrnutí workflow agenta
+## 13. Agent workflow summary
 
-1. Přečti tento brief a TVŮJ service-specific prompt (od parent agenta).
-2. Přečti 1–2 referenční existující role (řekne ti je parent).
-3. Vytvoř všechny deliverables dle sekce 8.
-4. Přidej entry do `service-registry.json.j2` (sekce 12).
-5. Validuj YAML + checkuj porty.
-6. Commituj na své větvi (Conventional Commits, bez Co-Authored-By).
-7. Vrať parentu krátký report: co jsi udělal, branch name, případná rizika/nejasnosti.
+1. Read this brief and YOUR service-specific prompt (from the parent agent).
+2. Read 1–2 reference existing roles (the parent will name them).
+3. Create all deliverables per section 8.
+4. Add an entry to `service-registry.json.j2` (section 12).
+5. Validate YAML + check ports.
+6. Commit on your branch (Conventional Commits, no Co-Authored-By).
+7. Return a brief report to the parent: what you did, branch name, any risks/uncertainties.

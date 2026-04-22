@@ -12,5 +12,5 @@ credentials.yml
 vision.md
 _credentials.yml
 .ansible-prefix-state
-.devboxnos/
+.nos/
 .claude/

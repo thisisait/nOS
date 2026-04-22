@@ -1,10 +1,10 @@
 ---
 # ==============================================================================
-# CI TEST CONFIG – minimální konfigurace pro GitHub Actions
-# Vypíná všechny těžké/Docker/síťové komponenty, testuje základní dev stack.
+# CI TEST CONFIG - minimal configuration for GitHub Actions
+# Disables all heavy Docker / network components; exercises the base dev stack.
 # ==============================================================================
 
-# ── INSTALLATION QUEUE ────────────────────────────────────────────────────────
+# -- INSTALLATION QUEUE --------------------------------------------------------
 install_homebrew_packages: true
 install_cask_apps: true
 install_mas_apps: false
@@ -17,20 +17,20 @@ install_python: true
 install_golang: true
 install_dotnet: true
 
-install_openclaw: false     # Ollama 27GB model – nepraktické v CI
+install_openclaw: false     # Ollama 27GB model - impractical in CI
 install_shell_extras: true
 configure_macos_defaults: true
-configure_power_management: false  # pmset vyžaduje sudo – CI runner ho nemá
+configure_power_management: false  # pmset requires sudo - CI runner has none
 
 enable_ssh: false
 enable_samba: false
 enable_vnc: false
 enable_remote_management: false
 
-install_observability: false  # Grafana stack – neblokuje CI, ale zpomaluje ~5min
-install_tailscale: false      # Vyžaduje interaktivní login
-services_lan_access: false    # CI nepotřebuje LAN/Tailscale přístup
-install_dnsmasq: true         # Testuje DNS resolver setup
+install_observability: false  # Grafana stack - not blocking, but adds ~5min
+install_tailscale: false      # Requires interactive login
+services_lan_access: false    # CI does not need LAN / Tailscale access
+install_dnsmasq: true         # Exercises DNS resolver setup
 
 install_mariadb: false
 install_wordpress: false
@@ -61,17 +61,17 @@ install_engineering_apps: false
 install_metabase: false
 install_superset: false
 install_bluesky_pds: false
-install_jsos: false              # Vyžaduje PostgreSQL + Redis Docker
-install_paperclip: false         # Vyžaduje PostgreSQL Docker
-install_authentik: false         # Vyžaduje PostgreSQL + Redis Docker
-install_infisical: false         # Vyžaduje PostgreSQL + Redis Docker
+install_jsos: false              # Requires PostgreSQL + Redis Docker
+install_paperclip: false         # Requires PostgreSQL Docker
+install_authentik: false         # Requires PostgreSQL + Redis Docker
+install_infisical: false         # Requires PostgreSQL + Redis Docker
 install_vaultwarden: false       # Docker
 install_puter: false             # Docker
 
-configure_dotfiles: false   # Geerlingguy dotfiles – zbytečné v CI
+configure_dotfiles: false   # Geerlingguy dotfiles - unneeded in CI
 configure_sublime: false
 
-# ── Minimální balíčky pro rychlé CI ──────────────────────────────────────────
+# -- Minimal package set for fast CI -------------------------------------------
 homebrew_installed_packages:
   - autoconf
   - bash-completion
@@ -99,7 +99,7 @@ homebrew_cask_apps:
   - firefox
   - licecap
 
-# ── Jazyky – základní config ──────────────────────────────────────────────────
+# -- Languages - base config ---------------------------------------------------
 php_version: "8.3"
 node_nvm_version: "lts/*"
 python_version: "3.13"
@@ -113,7 +113,7 @@ pip_packages:
 
 go_packages: []
 
-# ── Shell extras ──────────────────────────────────────────────────────────────
+# -- Shell extras --------------------------------------------------------------
 starship_preset: "gruvbox-rainbow"
 shell_aliases:
   - alias: ll
@@ -121,13 +121,13 @@ shell_aliases:
   - alias: cat
     command: "bat --style=numbers"
 
-# ── dnsmasq ───────────────────────────────────────────────────────────────────
+# -- dnsmasq -------------------------------------------------------------------
 dnsmasq_dev_domain: "dev.local"
 dnsmasq_dev_address: "127.0.0.1"
 
-# ── Nginx – auto-detekce z install_* flagů (v CI = jen default.conf) ─────────
+# -- Nginx - auto-detected from install_* flags (CI renders default.conf only)--
 
-# ── Dummy hesla pro CI (nepoužívají se, install_* je false) ──────────────────
+# -- Dummy passwords for CI (unused because install_* flags are off) ----------
 mariadb_root_password: "ci-test-password"
 grafana_admin_password: "ci-test-password"
 wordpress_db_password: "ci-test-password"
