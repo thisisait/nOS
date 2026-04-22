@@ -65,6 +65,14 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # ── State & Migration Framework: orchestrator (runs before roles) ────────
+    # Reads ~/.nos/state.yml, evaluates migrations/*.yml, applies any that
+    # gate true and have not been recorded as applied. Idempotent — if
+    # nothing pending, the orchestrator is a no-op. See docs/framework-plan.md.
+    - name: "[Framework] Pre-migrate (load state + apply pending migrations)"
+      ansible.builtin.import_tasks: tasks/pre-migrate.yml
+      tags: ['always', 'migrate']
+
     - name: Include credentials overrides.
       include_vars: "{{ item }}"
       with_fileglob:
@@ -877,3 +885,10 @@
         mode: '0600'
       changed_when: false
       tags: ['always']
+
+    # ── State & Migration Framework: post-provision state report ─────────────
+    # Introspects running services + persists ~/.nos/state.yml with the result.
+    # Pushes a snapshot to Glasswing so the dashboard reflects the current run.
+    - name: "[Framework] State report (persist + push to Glasswing)"
+      ansible.builtin.import_tasks: tasks/state-report.yml
+      tags: ['always', 'state', 'report']
