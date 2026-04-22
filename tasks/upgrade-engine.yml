@@ -1,0 +1,193 @@
+---
+# ==============================================================================
+# UPGRADE ENGINE
+# ------------------------------------------------------------------------------
+# Applies eligible upgrade recipes against the running system.  Recipes live
+# in upgrades/<service>.yml and conform to state/schema/upgrade.schema.json.
+#
+# Execution modes:
+#
+#   1. Scan mode (default) — read ~/.nos/state.yml, iterate services, load
+#      matching recipes per from_regex, apply in alphabetic id order.
+#
+#         ansible-playbook main.yml -K --tags upgrade
+#
+#   2. Explicit mode — caller passes the service and/or recipe id.
+#
+#         ansible-playbook main.yml -K --tags upgrade \
+#           -e upgrade_service=grafana -e upgrade_recipe_id=grafana-11-to-12
+#
+#   3. Dry-run — no side effects.
+#
+#         ansible-playbook main.yml -K --tags upgrade -e upgrade_dry_run=true
+#
+# Flow per recipe:
+#
+#   preconditions -> pre[] -> apply[] -> post[]
+#                                        |
+#                                        +-- if any post step fails:
+#                                            rollback[] runs in order
+#
+# All step executions dispatch through the merged action table
+# (nos_migrate_actions + nos_upgrade_actions).  Results are recorded into
+# ~/.nos/state.yml under upgrades_applied[] by the state_manager role's
+# report phase.
+#
+# Spec reference: docs/framework-plan.md §7.2
+# ==============================================================================
+
+- name: "[Upgrade] Read current state"
+  nos_state:
+    action: read
+  register: _upgrade_state
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Locate upgrade recipe files"
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/upgrades"
+    patterns: "*.yml,*.yaml"
+    excludes: "_template.yml"
+  register: _upgrade_files
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Load recipe files"
+  ansible.builtin.set_fact:
+    _upgrade_catalog: >-
+      {{
+        _upgrade_catalog | default([]) +
+        [ (lookup('file', item.path) | from_yaml) | combine({'__path': item.path}) ]
+      }}
+  loop: "{{ _upgrade_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Filter catalog to eligible recipes"
+  vars:
+    _installed_map: "{{ _upgrade_state.state.services | default({}) }}"
+    _target_service: "{{ upgrade_service | default('') }}"
+    _target_recipe_id: "{{ upgrade_recipe_id | default('') }}"
+  ansible.builtin.set_fact:
+    _upgrade_plan: >-
+      {{
+        (_upgrade_catalog | default([]))
+        | selectattr('service', 'defined')
+        | selectattr('recipes', 'defined')
+        | list
+      }}
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Expand plan — one entry per matching (service, recipe)"
+  vars:
+    _installed_map: "{{ _upgrade_state.state.services | default({}) }}"
+    _target_service: "{{ upgrade_service | default('') }}"
+    _target_recipe_id: "{{ upgrade_recipe_id | default('') }}"
+  ansible.builtin.set_fact:
+    _upgrade_jobs: >-
+      {{
+        _upgrade_jobs | default([]) + [
+          {
+            'service':   item.0.service,
+            'recipe':    item.1,
+            'installed': (_installed_map[item.0.service].installed
+                          if item.0.service in _installed_map else ''),
+            'recipe_path': item.0.__path
+          }
+        ]
+      }}
+  loop: "{{ _upgrade_plan | subelements('recipes') }}"
+  loop_control:
+    label: "{{ item.0.service }}:{{ item.1.id }}"
+  when:
+    - (_target_service | length == 0) or (item.0.service == _target_service)
+    - (_target_recipe_id | length == 0) or (item.1.id == _target_recipe_id)
+    - item.0.service in _installed_map
+    - (_installed_map[item.0.service].installed | default('')) | regex_search(item.1.from_regex) is not none
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Sort eligible jobs by recipe id (stable ordering)"
+  ansible.builtin.set_fact:
+    _upgrade_jobs: "{{ (_upgrade_jobs | default([])) | sort(attribute='recipe.id') }}"
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Summary"
+  ansible.builtin.debug:
+    msg: |-
+      Upgrade engine: {{ _upgrade_jobs | length }} recipe(s) eligible.
+      {% for job in _upgrade_jobs %}
+        - [{{ job.recipe.severity }}] {{ job.service }}: {{ job.installed }} -> {{ job.recipe.to }} (recipe {{ job.recipe.id }})
+      {% endfor %}
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] No eligible recipes — exit"
+  ansible.builtin.meta: end_play
+  when: _upgrade_jobs | length == 0
+  tags: ['upgrade']
+
+- name: "[Upgrade] Confirm breaking upgrades"
+  ansible.builtin.pause:
+    prompt: |-
+      {{ _upgrade_jobs | length }} upgrade(s) eligible;
+      {{ _upgrade_jobs | selectattr('recipe.severity', 'in', ['breaking', 'security']) | list | length }} breaking/security.
+      Press ENTER to proceed, or Ctrl+C then A to cancel.
+  when:
+    - _upgrade_jobs | selectattr('recipe.severity', 'in', ['breaking', 'security']) | list | length > 0
+    - not (auto_upgrade | default(false) | bool)
+    - not (upgrade_dry_run | default(false) | bool)
+  tags: ['upgrade']
+
+- name: "[Upgrade] Compute run timestamp (used for unique backup labels)"
+  ansible.builtin.set_fact:
+    _upgrade_run_ts: "{{ ansible_date_time.iso8601_basic_short }}"
+  tags: ['always', 'upgrade']
+
+# ------------------------------------------------------------------------------
+# Per-job orchestration
+# ------------------------------------------------------------------------------
+#
+# nos_migrate exposes apply for migrations; the same module handles upgrade
+# dispatch via action=apply_upgrade. The Python layer consumes both action
+# tables (merged via module_utils/nos_upgrade_actions/merged_handlers()) so
+# a recipe's steps[*].type resolves uniformly.
+#
+# We delegate the pre/apply/post/rollback loop into nos_migrate itself to
+# keep Jinja complexity out of this file.  Each job gets its own call; the
+# module emits upgrade_start / upgrade_step_ok / upgrade_end events (see
+# event.schema.json) for the callback plugin.
+
+- name: "[Upgrade] Apply each eligible recipe"
+  nos_migrate:
+    action: apply_upgrade
+    upgrade:
+      service:      "{{ item.service }}"
+      recipe:       "{{ item.recipe }}"
+      installed:    "{{ item.installed }}"
+      recipe_path:  "{{ item.recipe_path }}"
+      run_ts:       "{{ _upgrade_run_ts }}"
+    dry_run: "{{ upgrade_dry_run | default(false) | bool }}"
+  loop: "{{ _upgrade_jobs }}"
+  loop_control:
+    label: "{{ item.service }}:{{ item.recipe.id }}"
+  register: _upgrade_results
+  failed_when:
+    - _upgrade_results is defined
+    - _upgrade_results.results is defined
+    - _upgrade_results.results | selectattr('failed', 'defined') | selectattr('failed', 'eq', true) | list | length > 0
+  tags: ['upgrade']
+
+- name: "[Upgrade] Persist updated state"
+  nos_state:
+    action: write
+    merge: true
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Final summary"
+  ansible.builtin.debug:
+    msg: |-
+      Upgrade run complete.
+      {% for r in (_upgrade_results.results | default([])) %}
+      {% set job = r.item %}
+        - {{ job.service }}:{{ job.recipe.id }} -> {{ 'ok' if r.success | default(false) else 'FAILED' }}
+        {% if r.rolled_back | default(false) %}(rolled back){% endif %}
+      {% endfor %}
+  tags: ['upgrade']

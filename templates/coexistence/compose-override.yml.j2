@@ -1,0 +1,59 @@
+{# =============================================================================
+   Per-track Docker-Compose override for a coexistence service.
+
+   Rendered to: {{ stacks_dir }}/{{ stack }}/overrides/{{ service }}-{{ tag }}.yml
+
+   The module library/nos_coexistence.py renders its own in-memory version
+   of this fragment (so it can operate without template lookups); this
+   Jinja template exists so operators can re-render overrides by hand
+   via:
+
+       - ansible.builtin.template:
+           src: coexistence/compose-override.yml.j2
+           dest: "{{ stacks_dir }}/{{ coexist_stack }}/overrides/{{ coexist_service }}-{{ coexist_tag }}.yml"
+
+   Required variables:
+     coexist_service        (e.g. grafana)
+     coexist_tag            (e.g. new / legacy)
+     coexist_version
+     coexist_port           (host port, 127.0.0.1-bound)
+     coexist_data_path      (host-side data dir)
+
+   Optional:
+     coexist_image          override (default: pazny canonical image for service)
+     coexist_internal_port  container-side port (default per service)
+     coexist_container_data_path
+     coexist_read_only      (default false)
+     coexist_stack          (default observability)
+   ============================================================================= #}
+{%- set _image_defaults = {
+      'grafana':    {'image': 'grafana/grafana',           'port': 3000, 'data': '/var/lib/grafana'},
+      'postgresql': {'image': 'postgres',                  'port': 5432, 'data': '/var/lib/postgresql/data'},
+      'mariadb':    {'image': 'mariadb',                   'port': 3306, 'data': '/var/lib/mysql'},
+      'authentik':  {'image': 'ghcr.io/goauthentik/server','port': 9000, 'data': '/media'},
+      'gitea':      {'image': 'gitea/gitea',               'port': 3000, 'data': '/data'},
+      'nextcloud':  {'image': 'nextcloud',                 'port': 80,   'data': '/var/www/html/data'},
+      'wordpress':  {'image': 'wordpress',                 'port': 80,   'data': '/var/www/html'},
+   } -%}
+{%- set _d = _image_defaults.get(coexist_service, {'image': coexist_service, 'port': 80, 'data': '/data'}) -%}
+# Auto-generated from templates/coexistence/compose-override.yml.j2
+# service: {{ coexist_service }}   tag: {{ coexist_tag }}   version: {{ coexist_version }}
+# port: {{ coexist_port }}   data: {{ coexist_data_path }}
+services:
+  {{ coexist_service }}-{{ coexist_tag }}:
+    image: "{{ coexist_image | default(_d.image) }}:{{ coexist_version }}"
+    container_name: "nos-{{ coexist_service }}-{{ coexist_tag }}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ coexist_port }}:{{ coexist_internal_port | default(_d.port) }}"
+    volumes:
+      - "{{ coexist_data_path }}:{{ coexist_container_data_path | default(_d.data) }}"
+    labels:
+      - "nos.coexistence.service={{ coexist_service }}"
+      - "nos.coexistence.tag={{ coexist_tag }}"
+      - "nos.coexistence.version={{ coexist_version }}"
+{% if coexist_read_only | default(false) %}
+    read_only: true
+{% endif %}
+    networks:
+      - {{ coexist_network | default((coexist_stack | default('observability')) + '_net') }}

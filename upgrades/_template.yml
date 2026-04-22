@@ -1,0 +1,77 @@
+---
+# nOS upgrade recipe — annotated template.
+#
+# Copy this file to upgrades/<service>.yml, replace <service> and the recipe
+# ids, and delete the lines you don't need. One file per service. Schema:
+# state/schema/upgrade.schema.json.
+
+service: example                      # REQUIRED. Must match state/manifest.yml id.
+docs_url: "https://example.com/docs"  # optional
+maintainers: ["pazny"]
+notes: |
+  Free-form human notes — shown at the top of the recipe in Glasswing.
+
+recipes:
+  # Each block is a single version transition. Multiple recipes can live in
+  # one file; the engine applies matching ones in alphabetic id order.
+  - id: "example-1-to-2"              # REQUIRED, globally unique. Convention: <svc>-<from>-to-<to>
+    from_regex: "^1\\."               # REQUIRED. Python regex vs. installed version. Anchor with ^.
+    to: "2.0.0"                       # REQUIRED. Target tag.
+    severity: breaking                # REQUIRED. patch | minor | breaking | security
+    changelog_url: "https://example.com/CHANGELOG#v2"
+    release_date: "2026-01-15"
+    notes: |
+      Explain what changes between 1.x and 2.0, what the user loses/gains,
+      and any manual steps the recipe cannot automate.
+
+    # Coexistence (optional — dual-version rollout via nos_coexistence).
+    # Only enable for stateful services where the coexistence module knows
+    # how to clone data (grafana, postgresql, mariadb, authentik, gitea,
+    # nextcloud, wordpress as of v1).
+    coexistence_supported: false
+    # coexistence_port_offset: 10    # new track listens on old port + 10
+
+    # Preconditions — engine refuses to start the recipe if any fail.
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+      # other_services_healthy: [postgresql, redis]
+
+    # PRE — run before the apply phase. Typical: backup + dump state.
+    # The backup label template {{ upgrade_id }} expands to the recipe id.
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ example_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    # APPLY — the actual version bump. Keep this short: one or two steps.
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: "{{ example_stack | default('iiab') }}"
+        service: example
+        tag: "{{ recipe.to }}"
+        wait: true                     # run `docker compose up <stack> --wait`
+
+    # POST — verify the new version is healthy. Failures here trigger rollback.
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ example_domain | default('example.dev.local') }}/health"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+
+    # ROLLBACK — only runs on post failure. Order matters: reverse of apply.
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: "{{ example_stack | default('iiab') }}"
+        service: example
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ example_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

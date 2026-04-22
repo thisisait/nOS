@@ -1,0 +1,176 @@
+---
+service: authentik
+docs_url: "https://docs.goauthentik.io/docs/install-config/upgrade"
+maintainers: ["pazny"]
+notes: |
+  Authentik ships one major + several minors per year. Migrations are
+  automatic on container start (Django makemigrations/migrate). nOS
+  additionally re-applies blueprints on every playbook run, which handles
+  schema drift for providers/applications/policies.
+
+  Authentik has two containers: server and worker. Both must be bumped
+  together. compose.set_image_tag accepts a list under `services:`.
+
+recipes:
+  - id: "authentik-2024-to-2025"
+    from_regex: "^2024\\."
+    to: "2025.2.1"
+    severity: breaking
+    changelog_url: "https://docs.goauthentik.io/docs/releases/2025.2"
+    release_date: "2025-02-20"
+    notes: |
+      2025.x tightens RBAC role binding API (breaking for custom blueprints
+      that reference `RoleBinding.target_user`), introduces the mTLS
+      provider, and renames some env variables under AUTHENTIK_BOOTSTRAP_*.
+      nos re-applies its blueprints after upgrade to re-converge state.
+
+    coexistence_supported: false       # shared postgres schema; dual-running breaks DB
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+      other_services_healthy: ["postgresql", "redis"]
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ authentik_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dump -U postgres -d authentik --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
+      - id: export_blueprints
+        type: http.get_all
+        url: "https://{{ authentik_domain | default('auth.dev.local') }}/api/v3/managed/blueprints/"
+        auth:
+          type: bearer
+          token_var: "authentik_bootstrap_token"
+        save_to: "~/.nos/backups/{{ upgrade_id }}/blueprints.json"
+        ignore_errors: true
+
+    apply:
+      - id: bump_image_tags
+        type: compose.set_image_tag
+        stack: infra
+        services: [authentik-server, authentik-worker]
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_server_healthy
+        type: http.wait
+        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/live/"
+        expect_status: 204
+        timeout_sec: 180
+        interval_sec: 4
+      - id: wait_ready
+        type: http.wait
+        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/ready/"
+        expect_status: 204
+        timeout_sec: 120
+        interval_sec: 3
+      - id: reapply_blueprints
+        type: custom.module
+        module: ansible.builtin.include_tasks
+        args:
+          file: "tasks/stacks/authentik-blueprints.yml"
+        ignore_errors: true
+
+    rollback:
+      - id: revert_image_tags
+        type: compose.set_image_tag
+        stack: infra
+        services: [authentik-server, authentik-worker]
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -d authentik
+          < {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ authentik_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restart_service
+        type: compose.restart_service
+        stack: infra
+        service: authentik-server
+        action: up
+        wait: true
+
+  - id: "authentik-2025-to-2026"
+    from_regex: "^2025\\."
+    to: "2026.1.0"
+    severity: minor
+    changelog_url: "https://docs.goauthentik.io/docs/releases/2026.1"
+    notes: |
+      Assumed-minor. If the upstream 2026.1 notes flip any field breaking,
+      bump this recipe's severity and add explicit DB migration guards.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+      other_services_healthy: ["postgresql", "redis"]
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ authentik_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dump -U postgres -d authentik --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
+
+    apply:
+      - id: bump_image_tags
+        type: compose.set_image_tag
+        stack: infra
+        services: [authentik-server, authentik-worker]
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_server_healthy
+        type: http.wait
+        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/live/"
+        expect_status: 204
+        timeout_sec: 180
+        interval_sec: 4
+      - id: reapply_blueprints
+        type: custom.module
+        module: ansible.builtin.include_tasks
+        args:
+          file: "tasks/stacks/authentik-blueprints.yml"
+        ignore_errors: true
+
+    rollback:
+      - id: revert_image_tags
+        type: compose.set_image_tag
+        stack: infra
+        services: [authentik-server, authentik-worker]
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -d authentik
+          < {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ authentik_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

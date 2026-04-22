@@ -1,0 +1,156 @@
+---
+service: infisical
+docs_url: "https://infisical.com/docs/self-hosting/overview"
+maintainers: ["pazny"]
+notes: |
+  Infisical CE is relatively stable but occasionally reshuffles env vars
+  between minor versions (ENCRYPTION_KEY, AUTH_SECRET, SITE_URL, JWT_*).
+  This recipe does not mutate env — the infisical role re-renders the
+  compose on every playbook run from default.config.yml, so operators
+  should bump `infisical_version` there AND add any new env vars before
+  running the upgrade.
+
+recipes:
+  - id: "infisical-0.60-to-0.70"
+    from_regex: "^0\\.60\\."
+    to: "0.70.0"
+    severity: minor
+    changelog_url: "https://github.com/Infisical/infisical/releases"
+    notes: |
+      The 0.60 -> 0.70 window introduced new environment variables for
+      SMTP and SSO config. If you have any SMTP relay configured for
+      secret-expiry notifications, check the role defaults and add missing
+      vars to credentials.yml before applying.
+
+    coexistence_supported: false       # shared postgres + encryption key
+
+    requires:
+      min_disk_free_gb: 1
+      service_healthy: true
+      other_services_healthy: ["postgresql"]
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dump -U postgres -d infisical --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/status"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+      - id: verify_api
+        type: custom.module
+        module: ansible.builtin.uri
+        args:
+          url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/v1/status"
+          return_content: true
+          status_code: [200]
+        ignore_errors: true
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -d infisical
+          < {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restart_service
+        type: compose.restart_service
+        stack: infra
+        service: infisical
+        action: up
+        wait: true
+
+  - id: "infisical-0.70-to-0.80"
+    from_regex: "^0\\.70\\."
+    to: "0.80.0"
+    severity: minor
+    changelog_url: "https://github.com/Infisical/infisical/releases"
+    notes: |
+      0.70 -> 0.80 renamed a few auth env vars and tightened CORS. Same
+      upgrade shape as the prior recipe.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 1
+      service_healthy: true
+      other_services_healthy: ["postgresql"]
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dump -U postgres -d infisical --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/status"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -d infisical
+          < {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

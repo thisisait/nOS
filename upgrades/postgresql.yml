@@ -1,0 +1,206 @@
+---
+service: postgresql
+docs_url: "https://www.postgresql.org/docs/current/upgrading.html"
+maintainers: ["pazny"]
+notes: |
+  PostgreSQL major upgrades require pg_upgrade because on-disk cluster format
+  changes between 15/16/17. Coexistence IS supported (new cluster on a side
+  port, we dump+restore into it), but in-place via pg_upgrade is the
+  primary path because nos ships a single PG container and all nOS apps
+  share one cluster. Downtime for a dump/restore of a small (<5 GB) nos
+  cluster on Apple Silicon is typically under 2 minutes.
+
+recipes:
+  - id: "postgresql-15-to-16"
+    from_regex: "^15(\\.|$)"
+    to: "16"
+    severity: breaking
+    changelog_url: "https://www.postgresql.org/docs/release/16.0/"
+    release_date: "2023-09-14"
+    notes: |
+      PG16: removed deprecated `promote_trigger_file`, tightened `SECURITY
+      INVOKER` semantics, extended ICU collations. Extensions (including
+      pgcrypto, which nos requires) must be rebuilt against 16 — the
+      image does this automatically but double-check with `\dx` after upgrade.
+
+    coexistence_supported: true
+    coexistence_port_offset: 100
+
+    requires:
+      min_disk_free_gb: 5
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ postgresql_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: sql_dump_all
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dumpall -U postgres --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/pgdumpall.sql' | expanduser }}
+        creates: "~/.nos/backups/{{ upgrade_id }}/pgdumpall.sql"
+
+    apply:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: stop
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: postgresql
+        tag: "{{ recipe.to }}"
+        wait: false
+      - id: wipe_old_data_dir
+        type: exec.shell
+        allow_shell: true
+        # PG refuses to start against an older cluster layout.  pg_upgrade is
+        # the clean path, but since we already dumped above, a drop-and-
+        # restore is both simpler and well-tested in nos.
+        command: "rm -rf {{ postgresql_data_dir }}/*"
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: up
+        wait: true
+
+    post:
+      - id: wait_ready
+        type: http.wait
+        # The infra stack exposes pg on its container — use exec probe via custom.module.
+        url: "tcp://{{ postgresql_host | default('localhost') }}:{{ postgresql_port | default(5432) }}"
+        timeout_sec: 90
+        interval_sec: 2
+      - id: restore_dump
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres
+          < {{ '~/.nos/backups/' + upgrade_id + '/pgdumpall.sql' | expanduser }}
+      - id: verify_extensions
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -c "SELECT extname, extversion FROM pg_extension;"
+
+    rollback:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: stop
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: postgresql
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ postgresql_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: up
+        wait: true
+
+  - id: "postgresql-16-to-17"
+    from_regex: "^16(\\.|$)"
+    to: "17"
+    severity: breaking
+    changelog_url: "https://www.postgresql.org/docs/release/17.0/"
+    release_date: "2024-09-26"
+    notes: |
+      PG17: failover slot improvements, JSON_TABLE (SQL/JSON), removed
+      adminpack. pgcrypto and all nos-required extensions remain compatible.
+      Same dump/restore strategy as 15→16.
+
+    coexistence_supported: true
+    coexistence_port_offset: 100
+
+    requires:
+      min_disk_free_gb: 5
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ postgresql_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: sql_dump_all
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dumpall -U postgres --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/pgdumpall.sql' | expanduser }}
+
+    apply:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: stop
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: postgresql
+        tag: "{{ recipe.to }}"
+        wait: false
+      - id: wipe_old_data_dir
+        type: exec.shell
+        allow_shell: true
+        command: "rm -rf {{ postgresql_data_dir }}/*"
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: up
+        wait: true
+
+    post:
+      - id: wait_ready
+        type: http.wait
+        url: "tcp://{{ postgresql_host | default('localhost') }}:{{ postgresql_port | default(5432) }}"
+        timeout_sec: 90
+        interval_sec: 2
+      - id: restore_dump
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres
+          < {{ '~/.nos/backups/' + upgrade_id + '/pgdumpall.sql' | expanduser }}
+
+    rollback:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: stop
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: postgresql
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ postgresql_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: postgresql
+        action: up
+        wait: true

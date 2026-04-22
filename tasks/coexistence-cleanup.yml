@@ -1,0 +1,59 @@
+---
+# =============================================================================
+# Coexistence — remove a track (safely).
+#
+# Refuses to remove the currently active track unless coexist_force=true.
+# Honors ttl_until by default; pass coexist_respect_ttl=false to bypass.
+#
+# Required extra-vars:
+#   coexist_service   -- service id
+#   coexist_tag       -- track tag to remove
+#
+# Optional:
+#   coexist_force         -- override active-track check (default false)
+#   coexist_respect_ttl   -- default true
+#   coexist_dry_run       -- default false
+#
+# Invoke::
+#
+#   ansible-playbook main.yml -K --tags coexist-cleanup \
+#     -e coexist_service=grafana -e coexist_tag=legacy
+# =============================================================================
+
+- name: "[coexistence_cleanup] Validate inputs"
+  ansible.builtin.assert:
+    that:
+      - coexist_service is defined
+      - coexist_tag is defined
+  tags: ['coexist-cleanup']
+
+- name: "[coexistence_cleanup] Remove track {{ coexist_service }}/{{ coexist_tag }}"
+  nos_coexistence:
+    action: cleanup_track
+    service: "{{ coexist_service }}"
+    tag: "{{ coexist_tag }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (nos_tld | default('dev.local'))) }}"
+    state_path: "{{ nos_state_path | default(ansible_env.HOME + '/.nos/state.yml') }}"
+    force: "{{ coexist_force | default(false) | bool }}"
+    respect_ttl: "{{ coexist_respect_ttl | default(true) | bool }}"
+    dry_run: "{{ coexist_dry_run | default(false) | bool }}"
+  register: _coexist_cleanup_result
+  tags: ['coexist-cleanup']
+
+- name: "[coexistence_cleanup] Summary"
+  ansible.builtin.debug:
+    msg: |
+      Removed {{ coexist_service }}/{{ coexist_tag }}
+      - compose override: {{ _coexist_cleanup_result.result.compose_override }}
+      - data backed up to: {{ _coexist_cleanup_result.result.backed_up_to | default('<n/a>') }}
+      - nginx vhost: {{ _coexist_cleanup_result.result.nginx_vhost | default('<removed>') }}
+  tags: ['coexist-cleanup']
+
+- name: "[coexistence_cleanup] Reload nginx"
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
+  changed_when: true
+  when: not (coexist_dry_run | default(false) | bool)
+  tags: ['coexist-cleanup']

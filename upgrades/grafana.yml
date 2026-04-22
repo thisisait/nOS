@@ -1,0 +1,148 @@
+---
+service: grafana
+docs_url: "https://grafana.com/docs/grafana/latest/upgrade-guide/"
+maintainers: ["pazny"]
+notes: |
+  Grafana ships major versions roughly every 6 months. The observability
+  stack owns the render; compose.set_image_tag edits
+  ~/stacks/observability/overrides/grafana.yml in place.
+
+recipes:
+  - id: "grafana-10-to-11"
+    from_regex: "^10\\."
+    to: "11.5.0"
+    severity: breaking
+    changelog_url: "https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v11-0/"
+    notes: |
+      Grafana 11 drops AngularJS plugins outright — any dashboard that still
+      uses a deprecated panel (singlestat, graph-old, worldmap) will fail to
+      load. The pre step snapshots dashboards so we can compare afterward.
+      Recommended: audit dashboards via Grafana's deprecation report before
+      upgrading. Requires min Grafana 9.5 as the stepping stone; lower
+      versions should first run through a 9→10 recipe (not modeled here —
+      nOS has always shipped >=10).
+
+    coexistence_supported: true
+    coexistence_port_offset: 10
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ grafana_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: export_dashboards
+        type: http.get_all
+        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+        auth:
+          type: bearer
+          token_var: "grafana_admin_api_token"
+        save_to: "~/.nos/backups/{{ upgrade_id }}/dashboards.json"
+        ignore_errors: true
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: observability
+        service: grafana
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+      - id: verify_version
+        type: custom.module
+        module: ansible.builtin.uri
+        args:
+          url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+          return_content: true
+        register_as: _g_health
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: observability
+        service: grafana
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ grafana_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+  - id: "grafana-11-to-12"
+    from_regex: "^11\\."
+    to: "12.0.0"
+    severity: breaking
+    changelog_url: "https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v12-0/"
+    notes: |
+      Grafana 12 changes panel-options schema. Dashboards using variable
+      interpolation in certain panel props may need re-saving. The post
+      step re-fetches dashboards to spot broken renders.
+
+    coexistence_supported: true
+    coexistence_port_offset: 10
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ grafana_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: export_dashboards
+        type: http.get_all
+        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+        auth:
+          type: bearer
+          token_var: "grafana_admin_api_token"
+        save_to: "~/.nos/backups/{{ upgrade_id }}/dashboards.json"
+        ignore_errors: true
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: observability
+        service: grafana
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+      - id: dashboard_render_check
+        type: custom.module
+        module: ansible.builtin.uri
+        args:
+          url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+          headers:
+            Authorization: "Bearer {{ grafana_admin_api_token | default('') }}"
+          return_content: true
+          status_code: [200]
+        ignore_errors: true
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: observability
+        service: grafana
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ grafana_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

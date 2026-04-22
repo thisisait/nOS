@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# Coexistence — flip the active track for a service.
+#
+# Required extra-vars:
+#   coexist_service      -- service id
+#   coexist_target_tag   -- tag to become the new active track
+#
+# Optional:
+#   coexist_ttl_seconds  -- TTL applied to the previously active track
+#                           (default: 7 days).  Advisory only; cleanup
+#                           honours it unless respect_ttl=false.
+#   coexist_dry_run      -- plan without writing (default: false)
+#
+# Does NOT stop the previous track: it stays running (read_only for
+# stateful services) until the operator runs ``coexist-cleanup``.
+#
+# Invoke::
+#
+#   ansible-playbook main.yml -K --tags coexist-cutover \
+#     -e coexist_service=grafana -e coexist_target_tag=new
+# =============================================================================
+
+- name: "[coexistence_cutover] Validate inputs"
+  ansible.builtin.assert:
+    that:
+      - coexist_service is defined
+      - coexist_target_tag is defined
+  tags: ['coexist-cutover']
+
+- name: "[coexistence_cutover] Flip active track for {{ coexist_service }} -> {{ coexist_target_tag }}"
+  nos_coexistence:
+    action: cutover
+    service: "{{ coexist_service }}"
+    target_tag: "{{ coexist_target_tag }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (nos_tld | default('dev.local'))) }}"
+    state_path: "{{ nos_state_path | default(ansible_env.HOME + '/.nos/state.yml') }}"
+    ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
+    dry_run: "{{ coexist_dry_run | default(false) | bool }}"
+  register: _coexist_cutover_result
+  tags: ['coexist-cutover']
+
+- name: "[coexistence_cutover] Summary"
+  ansible.builtin.debug:
+    msg: |
+      {{ coexist_service }}: {{ _coexist_cutover_result.result.previous_active | default('<none>') }}
+      -> {{ _coexist_cutover_result.result.new_active }}
+      (vhost: {{ _coexist_cutover_result.result.nginx_vhost }})
+  tags: ['coexist-cutover']
+
+- name: "[coexistence_cutover] Reload nginx (zero-downtime)"
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
+  changed_when: true
+  when: not (coexist_dry_run | default(false) | bool)
+  tags: ['coexist-cutover']

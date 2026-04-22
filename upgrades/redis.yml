@@ -1,0 +1,87 @@
+---
+service: redis
+docs_url: "https://redis.io/docs/latest/operate/oss_and_stack/management/"
+maintainers: ["pazny"]
+notes: |
+  Redis minor/major bumps are generally transparent: RDB/AOF on-disk format
+  is backward-compatible across 6.x/7.x/8.x. The standard procedure is
+  restart on the new image. nos uses Redis only as a cache for Authentik
+  and a transient queue for Node-RED / n8n, so data loss on restart is
+  acceptable — we still snapshot for safety.
+
+recipes:
+  - id: "redis-7-to-8"
+    from_regex: "^7\\."
+    to: "8.0"
+    severity: minor
+    changelog_url: "https://github.com/redis/redis/releases"
+    notes: |
+      Redis 8 promotes RESP3 as default, enables cluster-friendly defaults,
+      and ships Redis Stack modules built-in. For nos's usage pattern
+      (cache + queue) the upgrade is effectively a swap.
+
+    coexistence_supported: false       # shared cache — not worth dual-running
+
+    requires:
+      min_disk_free_gb: 1
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ redis_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: save_rdb
+        type: exec.shell
+        allow_shell: true
+        # Forces a synchronous RDB snapshot so the tar includes the freshest
+        # state.  BGSAVE would race with backup.volume above.
+        command: >-
+          docker exec {{ redis_container_name | default('nos-redis') }}
+          redis-cli SAVE
+        ignore_errors: true
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: redis
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_ready
+        type: http.wait
+        url: "tcp://{{ redis_host | default('localhost') }}:{{ redis_port | default(6379) }}"
+        timeout_sec: 60
+        interval_sec: 2
+      - id: ping
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ redis_container_name | default('nos-redis') }}
+          redis-cli PING
+      - id: verify_version
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ redis_container_name | default('nos-redis') }}
+          redis-cli INFO server
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: redis
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ redis_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restart_service
+        type: compose.restart_service
+        stack: infra
+        service: redis
+        action: up
+        wait: true

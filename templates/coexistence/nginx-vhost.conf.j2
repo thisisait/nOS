@@ -1,0 +1,80 @@
+{# =============================================================================
+   Per-service nginx vhost for a coexistence-enabled service.
+
+   Rendered to: {{ nginx_sites_dir }}/{{ coexist_service }}-coexist.conf
+
+   This file OVERRIDES the single-upstream vhost generated normally for
+   {{ coexist_service }}.  Nginx picks whichever vhost is loaded last, so
+   when coexistence is in play this file wins.  Operators who want to
+   return to the canonical single-upstream vhost must remove this
+   file (cleanup_track of the last remaining track does this).
+
+   Required variables:
+     coexist_service        (e.g. grafana)
+     coexist_domain         (e.g. grafana.dev.local)
+     coexist_tracks         list of dicts with keys {tag, port, version}
+     coexist_active_tag     current active track tag
+
+   Optional:
+     homebrew_prefix        (default /opt/homebrew)
+     nginx_log_dir
+   ============================================================================= #}
+# Auto-generated from templates/coexistence/nginx-vhost.conf.j2
+# service: {{ coexist_service }}   active track: {{ coexist_active_tag }}
+# tracks:
+{% for t in coexist_tracks %}
+#   - {{ t.tag }} @ 127.0.0.1:{{ t.port }} ({{ t.version }})
+{% endfor %}
+
+{% for t in coexist_tracks %}
+upstream {{ coexist_service | replace('-', '_') }}_{{ t.tag | replace('-', '_') }} {
+    server 127.0.0.1:{{ t.port }};
+}
+{% endfor %}
+
+server {
+    listen      80;
+    server_name {{ coexist_domain }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen      443 ssl http2;
+    server_name {{ coexist_domain }};
+
+    ssl_certificate     {{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/local-dev.crt;
+    ssl_certificate_key {{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/local-dev.key;
+
+    access_log  {{ nginx_log_dir | default(homebrew_prefix | default('/opt/homebrew') + '/var/log/nginx') }}/{{ coexist_service }}-coexist.access.log main;
+    error_log   {{ nginx_log_dir | default(homebrew_prefix | default('/opt/homebrew') + '/var/log/nginx') }}/{{ coexist_service }}-coexist.error.log warn;
+
+    # Active track (default upstream).
+    set $nos_upstream       {{ coexist_service | replace('-', '_') }}_{{ coexist_active_tag | replace('-', '_') }};
+    set $nos_track_label    "{{ coexist_active_tag }}";
+
+    # Per-track override: ?nos_track=<tag> or cookie nos_track=<tag>
+    # lets operators side-by-side compare without flipping the pointer.
+{% for t in coexist_tracks %}
+    if ($arg_nos_track = "{{ t.tag }}") {
+        set $nos_upstream    {{ coexist_service | replace('-', '_') }}_{{ t.tag | replace('-', '_') }};
+        set $nos_track_label "{{ t.tag }}";
+    }
+    if ($http_cookie ~* "nos_track={{ t.tag }}") {
+        set $nos_upstream    {{ coexist_service | replace('-', '_') }}_{{ t.tag | replace('-', '_') }};
+        set $nos_track_label "{{ t.tag }}";
+    }
+{% endfor %}
+
+    add_header X-nOS-Track $nos_track_label always;
+
+    location / {
+        proxy_pass         http://$nos_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-nOS-Track       $nos_track_label;
+        proxy_read_timeout 600;
+    }
+}

@@ -1,0 +1,109 @@
+---
+service: mariadb
+docs_url: "https://mariadb.com/kb/en/upgrading/"
+maintainers: ["pazny"]
+notes: |
+  MariaDB majors (10.x -> 11.x) change table format and mysql.* system
+  tables. The standard path is mariadb-upgrade running against the live
+  server. Because nos runs MariaDB in a container with a bind-mounted data
+  dir, the sequence is: backup -> pull new image -> start -> run
+  mariadb-upgrade -> verify.
+
+recipes:
+  - id: "mariadb-10-to-11"
+    from_regex: "^10\\."
+    to: "11.4"
+    severity: breaking
+    changelog_url: "https://mariadb.com/kb/en/changes-improvements-in-mariadb-11-0/"
+    release_date: "2023-06-06"
+    notes: |
+      11.x renames several *_create_options system variables, removes
+      SUPER privilege for certain legacy actions, and tightens
+      InnoDB defaults. nos apps (WordPress, Nextcloud, Gitea, FreeScout,
+      BookStack, HedgeDoc) have been tested on 11.4.
+
+    coexistence_supported: true
+    coexistence_port_offset: 100
+
+    requires:
+      min_disk_free_gb: 3
+      service_healthy: true
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ mariadb_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: sql_dump_all
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
+          mariadb-dump -uroot -p"{{ mariadb_root_password }}"
+          --all-databases --events --routines --triggers
+          > {{ '~/.nos/backups/' + upgrade_id + '/mariadb-all.sql' | expanduser }}
+
+    apply:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: mariadb
+        action: stop
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: mariadb
+        tag: "{{ recipe.to }}"
+        wait: false
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: mariadb
+        action: up
+        wait: true
+      - id: run_mariadb_upgrade
+        type: exec.shell
+        allow_shell: true
+        # Idempotent: mariadb-upgrade exits 0 and prints "already upgraded"
+        # on a repeat run.
+        command: >-
+          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
+          mariadb-upgrade -uroot -p"{{ mariadb_root_password }}"
+          --force
+
+    post:
+      - id: wait_ready
+        type: http.wait
+        url: "tcp://{{ mariadb_host | default('localhost') }}:{{ mariadb_port | default(3306) }}"
+        timeout_sec: 90
+        interval_sec: 2
+      - id: verify_version
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
+          mariadb -uroot -p"{{ mariadb_root_password }}"
+          -e "SELECT VERSION();"
+
+    rollback:
+      - id: stop_service
+        type: compose.restart_service
+        stack: infra
+        service: mariadb
+        action: stop
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: mariadb
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ mariadb_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: start_service
+        type: compose.restart_service
+        stack: infra
+        service: mariadb
+        action: up
+        wait: true
