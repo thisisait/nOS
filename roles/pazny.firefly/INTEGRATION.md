@@ -30,7 +30,7 @@ Append a service block (after the Outline section, before `# -- AI orchestration
 # Requires: MariaDB + Redis Docker
 # ==============================================================================
 
-firefly_version: "version-6.2.22"
+firefly_version: "version-6.2.21"
 firefly_domain: "firefly.{{ instance_tld | default('dev.local') }}"
 firefly_port: 3014
 firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"

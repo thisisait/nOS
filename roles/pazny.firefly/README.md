@@ -26,7 +26,7 @@ Single invocation from `tasks/stacks/stack-up.yml`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `firefly_version` | `version-6.2.22` | `fireflyiii/core` image tag (pin to a specific stable release) |
+| `firefly_version` | `version-6.2.21` | `fireflyiii/core` image tag (pin to a specific stable release) |
 | `firefly_domain` | `firefly.{{ instance_tld }}` | Public hostname |
 | `firefly_port` | `3014` | Exposed on `127.0.0.1` only (or LAN if `services_lan_access`) |
 | `firefly_upload_dir` | `~/firefly/upload` | Attachments bind mount |

@@ -12,7 +12,7 @@
 
 services:
   bluesky-pds:
-    image: ghcr.io/bluesky-social/pds:{{ bluesky_pds_version | default('latest') }}
+    image: ghcr.io/bluesky-social/pds:{{ bluesky_pds_version | default('0.4') }}
     hostname: bluesky-pds
     restart: unless-stopped
     ports:

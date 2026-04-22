@@ -33,7 +33,7 @@ The **Authentik → PDS identity bridge** (auto-provisions `@user.bsky.dev.lan` 
 
 | Variable | Default | Description |
 |---|---|---|
-| `bluesky_pds_version` | `latest` | Tag of `ghcr.io/bluesky-social/pds` |
+| `bluesky_pds_version` | `0.4` | Tag of `ghcr.io/bluesky-social/pds` (no semver tags; 0.4 tracks current) |
 | `bluesky_pds_hostname` | `bsky.dev.lan` | PDS hostname (`.local` is forbidden by AT Protocol spec) |
 | `bluesky_pds_port` | `2583` | Exposed on `127.0.0.1` by default |
 | `bluesky_pds_data_dir` | `~/bluesky-pds` | Host bind mount for `/pds` (SQLite + blobstore) |

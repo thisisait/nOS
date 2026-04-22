@@ -7,7 +7,7 @@
 # staysji v top-level default.credentials.yml.
 # ==============================================================================
 
-gitlab_version: "18.10.1-ce.0"          # CVE-2026-0723 (2FA bypass), 9 HIGH CVEs
+gitlab_version: "18.10.3-ce.0"          # aligned with default.config.yml (CVE-2026-5173, CVE-2026-1092, CVE-2025-12664)
 gitlab_domain: "gitlab.dev.local"
 gitlab_http_port: 8929                  # Internal HTTP port (nginx handles SSL)
 gitlab_ssh_port: 2224                   # Git SSH (22=system, 2222=Gitea)

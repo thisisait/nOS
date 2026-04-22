@@ -12,7 +12,7 @@
 # not role-owned.
 # ==============================================================================
 
-bluesky_pds_version: "latest"
+bluesky_pds_version: "0.4"                          # aligned with default.config.yml; ghcr.io/bluesky-social/pds has no semver tags, 0.4 tracks current
 bluesky_pds_hostname: "bsky.dev.lan"                # .local zakazan AT Protocol specifikaci
 bluesky_pds_port: 2583
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
