@@ -3,17 +3,14 @@
   hosts: all
   gather_facts: true
 
-  # Sudo password - replaces -K flag. vars_prompt ensures the password is available
-  # as a Jinja2 variable (ansible_become_password from -K is not accessible inside tasks).
-  # Run: ansible-playbook main.yml (password is prompted automatically)
-  vars_prompt:
-    - name: sudo_password
-      prompt: "Sudo password (Enter to skip sudo tasks)"
-      private: true
-      default: ""
-
-  vars:
-    ansible_become_password: "{{ sudo_password }}"
+  # Sudo password is prompted by Ansible's native -K / --ask-become-pass flag.
+  # The prompted value is accessible as `ansible_become_password` in templates,
+  # so no vars_prompt is needed. Run:
+  #   ansible-playbook main.yml -K                # full install with sudo
+  #   ansible-playbook main.yml -K -e blank=true  # clean reinstall
+  # Running without -K is fine for read-only / dry-run checks:
+  #   ansible-playbook main.yml --tags preflight --check
+  # but any sudo task (dnsmasq, /etc/resolver, system-services) will fail.
 
   vars_files:
     - default.config.yml
@@ -143,16 +140,16 @@
       ansible.builtin.copy:
         content: |
           #!/bin/bash
-          echo "{{ sudo_password }}"
+          echo "{{ ansible_become_password }}"
         dest: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
         mode: '0700'
       no_log: true
       changed_when: false
       tags: ['always']
-      when: sudo_password | default('') | length > 0
+      when: ansible_become_password | default('') | length > 0
 
   environment:
-    SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if (sudo_password | default('') | length > 0) else '' }}"
+    SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if (ansible_become_password | default('') | length > 0) else '' }}"
 
   # ============================================================================
   # HANDLERS - centralized, callable via notify: from any task file
