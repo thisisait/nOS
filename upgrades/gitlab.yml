@@ -1,0 +1,165 @@
+---
+service: gitlab
+docs_url: "https://docs.gitlab.com/ee/update/"
+maintainers: ["pazny"]
+notes: |
+  GitLab enforces STRICT stepping-stone upgrades across majors. You
+  cannot jump 15 -> 16 -> 17 -> 18 in one go; you must land on the
+  documented "required stops" so background migrations drain between
+  bumps. Reference:
+    https://docs.gitlab.com/ee/update/#upgrade-paths
+
+  Per the 18.x doc (as of 2026-04): 17.x -> 18.x requires landing on
+  17.11.z first, then 18.0.z, then 18.latest. Same rules applied to
+  15 -> 16 and 16 -> 17 in earlier recipes.
+
+  Background migration health must be verified between major bumps
+  via: Admin -> Monitoring -> Background Migrations -> "no stuck jobs".
+  The post step exercises gitlab-rake db:migrate:status which, while
+  not a full BG-migration check, fails loudly on schema gaps.
+
+  EVERY recipe here is severity: breaking and coexistence_supported:
+  false (Omnibus is stateful with internal Postgres+Redis; side-by-
+  side requires a second Omnibus stack which is out of scope here).
+
+recipes:
+  - id: "gitlab-17-to-17-11"
+    from_regex: "^17\\.(?!11)"
+    to: "17.11.7-ce.0"
+    severity: breaking
+    notes: "Land on 17.11.z, the final 17.x stop before 18.x."
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 10
+      service_healthy: true
+
+    pre:
+      - id: gitlab_backup
+        type: exec.shell
+        command: >-
+          docker exec devops-gitlab-1 gitlab-backup create STRATEGY=copy
+        allow_shell: true
+        timeout_sec: 1800
+      - id: backup_config
+        type: backup.volume
+        src: "{{ gitlab_config_dir }}"
+        label: "pre-{{ upgrade_id }}-config"
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_readiness
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 900
+        interval_sec: 15
+      - id: verify_migrations
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-rake db:migrate:status | tail -5"
+        allow_shell: true
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+
+  - id: "gitlab-17-11-to-18-0"
+    from_regex: "^17\\.11\\."
+    to: "18.0.5-ce.0"
+    severity: breaking
+    notes: "First 18.x hop. Background migrations MUST finish before the next bump."
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 10
+      service_healthy: true
+
+    pre:
+      - id: gitlab_backup
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-backup create STRATEGY=copy"
+        allow_shell: true
+        timeout_sec: 1800
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_readiness
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 900
+        interval_sec: 15
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+
+  - id: "gitlab-18-to-current"
+    from_regex: "^18\\.(0|[1-9])\\."
+    to: "18.10.3-ce.0"
+    severity: security
+    notes: |
+      Patch/minor bumps within 18.x. Security-flagged because 18.10.3
+      pins away from CVE-2026-5173 (websocket bypass CVSS 8.5),
+      CVE-2026-1092 (DoS), CVE-2025-12664 (GraphQL DoS).
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 5
+      service_healthy: true
+
+    pre:
+      - id: gitlab_backup
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-backup create STRATEGY=copy"
+        allow_shell: true
+        timeout_sec: 1800
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_readiness
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 900
+        interval_sec: 15
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true

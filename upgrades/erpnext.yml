@@ -1,0 +1,108 @@
+---
+service: erpnext
+docs_url: "https://frappeframework.com/docs/user/en/bench/resources/bench-commands-cheatsheet"
+maintainers: ["pazny"]
+notes: |
+  ERPNext (Frappe v15) runs 6 linked containers in the b2b stack —
+  backend, frontend, queue-short, queue-long, scheduler, configurator —
+  against a shared `erpnext_sites` named volume. Schema migrations and
+  asset compilation happen via `bench migrate` and `bench build` inside
+  the backend container.
+
+  Bench has its own patch framework: `bench update --patch` applies
+  Frappe/ERPNext-owned patches between releases. Forward-only; rollback
+  means image revert + DB restore.
+
+recipes:
+  - id: "erpnext-patch-or-minor"
+    from_regex: "^v15\\."
+    to: "v15.98.1"
+    severity: security
+    changelog_url: "https://github.com/frappe/erpnext/releases"
+    notes: |
+      Safe in-place bench migrate on the v15 line. Snapshot the sites
+      dir AND the MariaDB `erpnext` database before the image swap;
+      rollback restores both.
+
+    coexistence_supported: false   # 6-container topology + shared named volume is non-trivial
+
+    requires:
+      min_disk_free_gb: 5
+      service_healthy: true
+
+    pre:
+      - id: bench_backup
+        type: exec.shell
+        command: >-
+          docker compose -p b2b exec -T erpnext-backend
+          bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+          backup --with-files
+          --backup-path /home/frappe/frappe-bench/sites/_backups/pre-{{ upgrade_id }}
+        allow_shell: true
+        timeout_sec: 1800
+      - id: backup_mariadb
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump
+          -u root -p"{{ mariadb_root_password }}"
+          --single-transaction --routines erpnext
+          > ~/.nos/backups/{{ upgrade_id }}/erpnext.sql
+        allow_shell: true
+
+    apply:
+      - id: pull_image
+        type: exec.shell
+        command: "docker compose -p b2b pull"
+        allow_shell: true
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: erpnext-backend       # every erpnext-* service uses the same image tag
+        tag: "{{ recipe.to }}"
+        wait: true
+      - id: recreate_b2b
+        type: exec.shell
+        command: >-
+          docker compose -p b2b up -d --force-recreate --wait --wait-timeout 300
+          erpnext-configurator erpnext-backend erpnext-frontend
+          erpnext-queue-short erpnext-queue-long erpnext-scheduler
+        allow_shell: true
+
+    post:
+      - id: bench_migrate
+        type: exec.shell
+        command: >-
+          docker compose -p b2b exec -T erpnext-backend
+          bench --site {{ erpnext_site_name | default('erp.dev.local') }} migrate
+        allow_shell: true
+        # Accept 'Queued rebuilding of search index' as success marker — bench
+        # queues async work after DDL and returns non-zero on the worker hand-off.
+      - id: bench_clear_cache
+        type: exec.shell
+        command: >-
+          docker compose -p b2b exec -T erpnext-backend
+          bench --site {{ erpnext_site_name | default('erp.dev.local') }} clear-cache
+        allow_shell: true
+      - id: wait_api
+        type: http.wait
+        url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
+        host_header: "{{ erpnext_site_name | default('erp.dev.local') }}"
+        expect_status: [200, 403, 417]
+        timeout_sec: 180
+        interval_sec: 5
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: erpnext-backend
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: bench_restore
+        type: exec.shell
+        command: >-
+          docker compose -p b2b exec -T erpnext-backend
+          bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+          restore
+          /home/frappe/frappe-bench/sites/_backups/pre-{{ upgrade_id }}/database.sql.gz
+        allow_shell: true

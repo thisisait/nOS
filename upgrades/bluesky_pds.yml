@@ -1,0 +1,89 @@
+---
+service: bluesky_pds
+docs_url: "https://github.com/bluesky-social/pds/blob/main/README.md"
+maintainers: ["pazny"]
+notes: |
+  Bluesky PDS has no semver tags upstream — the image is published as
+  ghcr.io/bluesky-social/pds:0.4 (and :latest), with rolling updates on
+  the same tag. For nOS we pin to a specific digest via bluesky_pds_version
+  when we need reproducibility.
+
+  CRITICAL: the PLC rotation key (bluesky_pds_rotation_key) MUST NOT
+  rotate across upgrades — if it does, every DID on this PDS is orphaned
+  and AT Protocol federation for this instance is permanently broken.
+  main.yml moved it out of the DESTRUCTIVE secret regen group; this
+  recipe must never regenerate it either.
+
+recipes:
+  - id: "bluesky_pds-rolling-0-4"
+    from_regex: "^(0\\.4|latest)$"
+    to: "0.4"
+    severity: minor
+    notes: |
+      Pull-latest rolling update. The PDS supports in-place restarts
+      without schema migrations in the 0.4 series. Data lives at
+      {{ bluesky_pds_data_dir }}; a tar snapshot before apply is cheap
+      insurance.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: snapshot_pds_data
+        type: backup.volume
+        src: "{{ bluesky_pds_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: list_dids_before
+        type: exec.shell
+        command: >-
+          docker compose -p infra exec -T bluesky-pds
+          goat pds admin account list
+          --pds-host http://localhost:3000
+          --admin-password "{{ bluesky_pds_admin_password }}"
+          > ~/.nos/backups/{{ upgrade_id }}/dids-before.txt
+        allow_shell: true
+
+    apply:
+      - id: pull_image
+        type: exec.shell
+        command: "docker compose -p infra pull bluesky-pds"
+        allow_shell: true
+      - id: recreate_container
+        type: exec.shell
+        command: >-
+          docker compose -p infra up -d --force-recreate --no-deps bluesky-pds
+        allow_shell: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ bluesky_pds_port | default(2583) }}/xrpc/_health"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+      - id: verify_dids_intact
+        type: exec.shell
+        command: >-
+          docker compose -p infra exec -T bluesky-pds
+          goat pds admin account list
+          --pds-host http://localhost:3000
+          --admin-password "{{ bluesky_pds_admin_password }}"
+          > ~/.nos/backups/{{ upgrade_id }}/dids-after.txt
+          && diff -q
+          ~/.nos/backups/{{ upgrade_id }}/dids-before.txt
+          ~/.nos/backups/{{ upgrade_id }}/dids-after.txt
+        allow_shell: true
+
+    rollback:
+      - id: restore_snapshot
+        type: backup.restore
+        dst: "{{ bluesky_pds_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: recreate_container
+        type: exec.shell
+        command: >-
+          docker compose -p infra up -d --force-recreate --no-deps bluesky-pds
+        allow_shell: true

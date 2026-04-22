@@ -169,6 +169,7 @@ services:
       type: http
       url_template: "http://localhost:{{ bluesky_pds_port }}/xrpc/_health"
       expect_status: 200
+    upgrade_recipe: upgrades/bluesky_pds.yml
 
   # ------------------------------------------------------- observability stack
   - id: grafana
@@ -381,6 +382,12 @@ services:
     domain_var: rustfs_domain
     port_var: rustfs_console_port
     data_path_var: rustfs_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ rustfs_api_port }}/health"
+      expect_status: 200
+      timeout_sec: 10
+    upgrade_recipe: upgrades/rustfs.yml
 
   - id: puter
     category: desktop
@@ -453,6 +460,13 @@ services:
     domain_var: gitlab_domain
     port_var: gitlab_http_port
     data_path_var: gitlab_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ gitlab_http_port }}/-/readiness"
+      expect_status: 200
+      timeout_sec: 15
+    upgrade_recipe: upgrades/gitlab.yml
+    breaking_boundaries: ["17->17.11", "17.11->18.0", "18.x->18.latest"]
     oidc: native
     rbac_tier: 2
 
@@ -520,6 +534,12 @@ services:
       - b2b-erpnext-configurator-1
     domain_var: erpnext_domain
     port_var: erpnext_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ erpnext_port }}/api/method/frappe.ping"
+      expect_status: 200
+      timeout_sec: 10
+    upgrade_recipe: upgrades/erpnext.yml
     oidc: proxy
     rbac_tier: 2
 
@@ -570,7 +590,14 @@ services:
     domain_var: bookstack_domain
     port_var: bookstack_port
     data_path_var: bookstack_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ bookstack_port }}/login"
+      expect_status: 200
+      timeout_sec: 10
+    upgrade_recipe: upgrades/bookstack.yml
     oidc: native                            # BookStack reads OIDC_* env vars from /config/www/.env (rendered by role)
+    rbac_tier: 3
 
   - id: firefly
     category: finance
@@ -586,6 +613,7 @@ services:
       url_template: "http://localhost:{{ firefly_port }}/health"
       expect_status: 200
       timeout_sec: 10
+    upgrade_recipe: upgrades/firefly.yml
     oidc: proxy                             # REMOTE_USER guard via Authentik proxy outpost (nginx auth_request)
     rbac_tier: 2
 

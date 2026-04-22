@@ -1,0 +1,86 @@
+---
+service: bookstack
+docs_url: "https://www.bookstackapp.com/docs/admin/updates/"
+maintainers: ["pazny"]
+notes: |
+  BookStack ships through the LSIO (linuxserver.io) image pipeline, so the
+  tag format is `vX.Y.Z-lsNNN`. Laravel migrations run on container boot
+  from the LSIO init scripts; the role's `/config/www/.env` (rendered from
+  templates/env.j2) is the authoritative config. Data lives in MariaDB
+  (shared from the infra stack) + the /config volume for uploaded media.
+
+  Breaking boundary: v25 -> v26 dropped PHP 8.1 support. Make sure the
+  LSIO image you target has PHP 8.2+ (every `vXX.*-lsNNN` after the base
+  image bump already does).
+
+recipes:
+  - id: "bookstack-minor-or-patch"
+    from_regex: "^v(2[6-9]|3[0-9])\\."
+    to: "v26.04.0-ls260"
+    severity: patch
+    release_date: "2026-04-01"
+    notes: |
+      Safe in-place bump across minor/patch tags on the 26.x line. Migrations
+      are forward-only. Rollback path: old image tag + restore DB + restore
+      /config. Note that LSIO may ship several -lsNNN respins per upstream
+      release — bumping across them is low-risk.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump
+          -u root -p"{{ mariadb_root_password }}"
+          --single-transaction --routines bookstack
+          > ~/.nos/backups/{{ upgrade_id }}/bookstack.sql
+        allow_shell: true
+      - id: backup_config
+        type: backup.volume
+        src: "{{ bookstack_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: bookstack
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/login"
+        expect_status: 200
+        timeout_sec: 180
+        interval_sec: 5
+      - id: verify_no_pending_migrations
+        type: exec.shell
+        command: "docker exec b2b-bookstack-1 php /app/www/artisan migrate:status"
+        allow_shell: true
+        expect_stdout_not_contains: "Pending"
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: bookstack
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          docker exec -i infra-mariadb-1 mariadb
+          -u root -p"{{ mariadb_root_password }}" bookstack
+          < ~/.nos/backups/{{ upgrade_id }}/bookstack.sql
+        allow_shell: true
+      - id: restore_config
+        type: backup.restore
+        dst: "{{ bookstack_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

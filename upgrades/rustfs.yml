@@ -1,0 +1,91 @@
+---
+service: rustfs
+docs_url: "https://github.com/rustfs/rustfs"
+maintainers: ["pazny"]
+notes: |
+  RustFS is still in alpha (1.0.0-alpha.x); every image bump may change
+  wire format / on-disk layout. Buckets and objects live at
+  {{ rustfs_data_dir }}. Access keys come from role defaults.
+  Rolling-release: pin the tag tightly and verify bucket listing after.
+
+recipes:
+  - id: "rustfs-alpha-bump"
+    from_regex: "^1\\.0\\.0-alpha\\."
+    to: "1.0.0-alpha.93"
+    severity: security
+    notes: |
+      Alpha ->alpha bump. Pin reason for 1.0.0-alpha.93 specifically:
+      - CVE-2025-68926 patched
+      - alpha.91 tightened multipart auth (#2411)
+      - alpha.x OIDC claim matching fix (#2386)
+
+      Data is in a bind-mount; a tar snapshot is enough safety.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 3
+      service_healthy: true
+
+    pre:
+      - id: snapshot_data
+        type: exec.shell
+        command: >-
+          cp -al {{ rustfs_data_dir }}
+          {{ rustfs_data_dir }}.pre-{{ upgrade_id }}
+        allow_shell: true
+      - id: list_buckets_before
+        type: exec.shell
+        command: >-
+          AWS_ACCESS_KEY_ID="{{ rustfs_access_key }}"
+          AWS_SECRET_ACCESS_KEY="{{ rustfs_secret_key }}"
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3api list-buckets --query 'Buckets[].Name' --output json
+          > ~/.nos/backups/{{ upgrade_id }}/buckets-before.json
+        allow_shell: true
+
+    apply:
+      - id: pull_image
+        type: exec.shell
+        command: "docker compose -p iiab pull rustfs"
+        allow_shell: true
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_health
+        type: http.wait
+        url: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}/health"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+      - id: verify_buckets
+        type: exec.shell
+        command: >-
+          AWS_ACCESS_KEY_ID="{{ rustfs_access_key }}"
+          AWS_SECRET_ACCESS_KEY="{{ rustfs_secret_key }}"
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3api list-buckets --query 'Buckets[].Name' --output json
+          > ~/.nos/backups/{{ upgrade_id }}/buckets-after.json
+          && diff -q
+          ~/.nos/backups/{{ upgrade_id }}/buckets-before.json
+          ~/.nos/backups/{{ upgrade_id }}/buckets-after.json
+        allow_shell: true
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_snapshot
+        type: exec.shell
+        command: |
+          rm -rf {{ rustfs_data_dir }}
+          mv {{ rustfs_data_dir }}.pre-{{ upgrade_id }} {{ rustfs_data_dir }}
+        allow_shell: true

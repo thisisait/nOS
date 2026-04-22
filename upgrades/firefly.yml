@@ -1,0 +1,113 @@
+---
+service: firefly
+docs_url: "https://docs.firefly-iii.org/how-to/firefly-iii/upgrade/upgrade/"
+maintainers: ["pazny"]
+notes: |
+  Firefly III ships rolling `version-X.Y.Z` tags on fireflyiii/core.
+  Laravel migrations run on container start. The role's post.yml covers
+  the startup race against a still-bootstrapping MariaDB (see
+  roles/pazny.firefly/tasks/post.yml); this recipe assumes the post.yml
+  path is also invoked after apply.
+
+  IMPORTANT: firefly_app_key encrypts 2FA seeds and OAuth client secrets.
+  Rotating the APP_KEY is a one-way trip — encrypted fields become
+  unrecoverable (firefly-iii:decrypt-all before the rotation is required).
+  This recipe does NOT touch APP_KEY.
+
+recipes:
+  - id: "firefly-minor-or-patch"
+    from_regex: "^version-6\\."
+    to: "version-6.2.21"
+    severity: patch
+    notes: |
+      In-place bump within the 6.x line. Backup the DB + upload/export
+      dirs; pull new image; recreate container; run bench's own
+      upgrade-database and correct-database to self-heal any schema
+      drift; verify /health.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump
+          -u root -p"{{ mariadb_root_password }}"
+          --single-transaction --routines firefly
+          > ~/.nos/backups/{{ upgrade_id }}/firefly.sql
+        allow_shell: true
+      - id: backup_uploads
+        type: backup.volume
+        src: "{{ firefly_upload_dir }}"
+        label: "pre-{{ upgrade_id }}-uploads"
+      - id: backup_exports
+        type: backup.volume
+        src: "{{ firefly_export_dir }}"
+        label: "pre-{{ upgrade_id }}-exports"
+      - id: snapshot_app_key
+        type: exec.shell
+        command: >-
+          echo "{{ firefly_app_key }}"
+          > ~/.nos/backups/{{ upgrade_id }}/APP_KEY
+          && chmod 0400 ~/.nos/backups/{{ upgrade_id }}/APP_KEY
+        allow_shell: true
+
+    apply:
+      - id: pull_image
+        type: exec.shell
+        command: "docker compose -p b2b pull firefly"
+        allow_shell: true
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: firefly
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: force_migrations
+        type: exec.shell
+        command: >-
+          docker exec b2b-firefly-1
+          php artisan migrate --force --no-interaction
+        allow_shell: true
+      - id: firefly_self_heal
+        type: exec.shell
+        command: |
+          docker exec b2b-firefly-1 php artisan firefly-iii:upgrade-database --no-interaction
+          docker exec b2b-firefly-1 php artisan firefly-iii:correct-database --no-interaction
+          docker exec b2b-firefly-1 php artisan firefly-iii:report-integrity --no-interaction
+        allow_shell: true
+      - id: wait_health
+        type: http.wait
+        url: "http://127.0.0.1:{{ firefly_port | default(3014) }}/health"
+        expect_status: [200, 302]
+        timeout_sec: 180
+        interval_sec: 5
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: firefly
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          docker exec -i infra-mariadb-1 mariadb
+          -u root -p"{{ mariadb_root_password }}" firefly
+          < ~/.nos/backups/{{ upgrade_id }}/firefly.sql
+        allow_shell: true
+      - id: restore_uploads
+        type: backup.restore
+        dst: "{{ firefly_upload_dir }}"
+        label: "pre-{{ upgrade_id }}-uploads"
+      - id: restore_exports
+        type: backup.restore
+        dst: "{{ firefly_export_dir }}"
+        label: "pre-{{ upgrade_id }}-exports"

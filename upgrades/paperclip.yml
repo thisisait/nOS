@@ -1,0 +1,88 @@
+---
+service: paperclip
+docs_url: "https://github.com/paperclipai/paperclip"
+maintainers: ["pazny"]
+notes: |
+  Paperclip publishes commit-sha-tagged images (sha-<short>). No semver.
+  Data lives in PostgreSQL (shared infra stack) + /paperclip bind mount
+  for per-instance config. BetterAuth sessions are signed with
+  paperclip_auth_secret — keep it stable across upgrades or every user
+  gets logged out.
+
+recipes:
+  - id: "paperclip-sha-bump"
+    from_regex: "^(sha-|v|latest).*"
+    to: "sha-b9a80dc"
+    severity: minor
+    notes: |
+      Rolling sha-bump. Paperclip self-migrates its PG schema on boot
+      (BetterAuth + app migrations are app-owned, not Laravel-style
+      CLI artisan). Backup DB + /paperclip, pull new image, recreate,
+      smoke-test the admin page.
+
+    coexistence_supported: true
+    coexistence_port_offset: 10
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-postgresql-1
+          pg_dump -U postgres -Fc paperclip
+          > ~/.nos/backups/{{ upgrade_id }}/paperclip.dump
+        allow_shell: true
+      - id: backup_instance_dir
+        type: backup.volume
+        src: "{{ paperclip_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    apply:
+      - id: pull_image
+        type: exec.shell
+        command: "docker compose -p devops pull paperclip"
+        allow_shell: true
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: paperclip
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_http
+        type: http.wait
+        url: "http://127.0.0.1:{{ paperclip_port | default(3006) }}/"
+        host_header: "{{ paperclip_domain | default('paperclip.dev.local') }}"
+        expect_status: [200, 302, 401, 403]
+        timeout_sec: 120
+        interval_sec: 3
+      - id: verify_schema
+        type: exec.shell
+        command: >-
+          docker exec infra-postgresql-1 psql -U postgres -d paperclip
+          -tAc "SELECT COUNT(*) >= 20 FROM pg_tables WHERE schemaname='public'"
+        allow_shell: true
+        expect_stdout_contains: "t"
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: paperclip
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          docker exec -i infra-postgresql-1
+          pg_restore -U postgres -d paperclip --clean --if-exists
+          < ~/.nos/backups/{{ upgrade_id }}/paperclip.dump
+        allow_shell: true
+      - id: restore_instance_dir
+        type: backup.restore
+        dst: "{{ paperclip_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
