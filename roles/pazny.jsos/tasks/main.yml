@@ -1,11 +1,11 @@
 ---
 # ==============================================================================
-# jsOS – webový desktop platform (OS.js v3)
+# jsOS - web desktop platform (OS.js v3)
 # Bluesky AT Protocol auth, S3 VFS (RustFS), PostgreSQL per-user DB
-# Vyžaduje: Node.js (NVM), PostgreSQL (Docker), Redis (Docker)
+# Requires: Node.js (NVM), PostgreSQL (Docker), Redis (Docker)
 # ==============================================================================
 
-# ── 1. Adresářová struktura ──────────────────────────────────────────────────
+# -- 1. Directory structure ------------------------------------------------
 
 - name: "[jsOS] Ensure data and log directories exist"
   ansible.builtin.file:
@@ -144,7 +144,7 @@
     mode: '0644'
   notify: Restart jsos
 
-# ── 7. Nginx vhost — deploy + auto-enable řeší centrálně tasks/nginx.yml ─────
+# -- 7. Nginx vhost — deploy + auto-enable is handled centrally by tasks/nginx.yml --
 
 # ── 8. Build client (webpack) ────────────────────────────────────────────────
 
@@ -163,11 +163,11 @@
     (jsos_client_changed is defined and jsos_client_changed.changed) or
     (jsos_scss_changed is defined and jsos_scss_changed.changed)
   register: jsos_build
-  # Build může být pomalý (~30s), timeout 120s
+  # Build may be slow (~30s), timeout 120s
   async: 120
   poll: 5
 
-# ── 9. PostgreSQL – jsOS DB řeší centrálně tasks/stacks/postgresql_setup.yml ──
+# -- 9. PostgreSQL - jsOS DB handled centrally by tasks/stacks/postgresql_setup.yml --
 
 # ── 10. Start via PM2 ────────────────────────────────────────────────────────
 
@@ -187,7 +187,7 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       jsOS – webový desktop připraven
+       jsOS - web desktop ready
       ══════════════════════════════════════════════════════
        URL:       https://{{ jsos_domain }}
        Port:      {{ jsos_port }}
@@ -202,8 +202,8 @@
        PM2:       pm2 logs jsos | pm2 restart jsos
        Logs:      ~/agents/log/jsos-{out,error}.log
       ══════════════════════════════════════════════════════
-       Per-user resources (auto-provisioned při prvním loginu):
-         • VFS složka:    vfs/{handle}/
+       Per-user resources (auto-provisioned on first login):
+         • VFS folder:    vfs/{handle}/
       {% if install_rustfs | default(false) %}
          • S3 bucket:     jsos-{handle}
       {% endif %}

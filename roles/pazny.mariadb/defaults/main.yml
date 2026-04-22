@@ -3,8 +3,8 @@
 # pazny.mariadb — MariaDB in Docker (infra compose stack)
 #
 # Credentials (mariadb_root_password) a seed data (mariadb_databases,
-# mariadb_users) zustavaji v top-level default.config.yml a
-# default.credentials.yml — stale centralizovane, role je jen cte pres
+# mariadb_users) stay in top-level default.config.yml a
+# default.credentials.yml — still centralized, the role only reads them via
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
@@ -15,6 +15,6 @@ mariadb_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 mariadb_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
 # Seed databaze / users se cte z top-level default.config.yml. Role defaults
-# poskytuji prazdny fallback pro extern. konzumenty.
+# provide an empty fallback for external consumers.
 mariadb_databases: []
 mariadb_users: []

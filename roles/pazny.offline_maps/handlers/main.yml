@@ -1,7 +1,7 @@
 ---
 # pazny.offline_maps — handlers
 # Handler name odrazi role name (`offline_maps`); target je compose
-# service `tileserver`. Volany z tasks/main.yml pri zmene compose override.
+# service `tileserver`. Called from tasks/main.yml on change of the compose override.
 
 - name: Restart offline_maps
   ansible.builtin.shell: >

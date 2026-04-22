@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.grafana — Grafana in Docker (observability compose override)
 #
-# Credentials (grafana_admin_password) zustavaji v default.credentials.yml
-# aby prefix rotation funkovala centralne. grafana_dashboards seed list
-# zustava v default.config.yml (konzumovan tasks/observability.yml pro
+# Credentials (grafana_admin_password) stay in default.credentials.yml
+# so prefix rotation works centrally. grafana_dashboards seed list
+# stays v default.config.yml (konzumovan tasks/observability.yml pro
 # dashboard download + grafana provisioning render v core-up.yml).
 # ==============================================================================
 

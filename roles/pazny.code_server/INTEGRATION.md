@@ -1,20 +1,20 @@
 # INTEGRATION: pazny.code_server
 
-Mechanicky aplikovatelny patch. Sluzba bezi v `devops` compose stacku. SSO =
-proxy auth (Authentik forward_auth). Bez DB, bez post-start hooku.
+Mechanically applicable patch. The service runs inside the `devops` compose
+stack. SSO = proxy auth (Authentik forward_auth). No DB, no post-start hook.
 
 ## 1. `default.config.yml` — install toggle
 
-Insert after `install_paperclip: ...` line (~řádek 169):
+Insert after `install_paperclip: ...` line (~line 169):
 
 ```yaml
-install_code_server: false       # code-server – VS Code v browseru [Docker, vyžaduje: Authentik pro SSO]
+install_code_server: false       # code-server - VS Code in the browser [Docker, requires: Authentik for SSO]
 ```
 
 ## 2. `default.config.yml` — `authentik_oidc_apps` entry (proxy type)
 
-Append to `authentik_oidc_apps:` list v bloku "Proxy-auth služby" (pred
-pomocnymi `authentik_oidc_*` helper vars, ~řádek 1608):
+Append to the `authentik_oidc_apps:` list in the "Proxy-auth services" block
+(before the `authentik_oidc_*` helper vars, ~line 1608):
 
 ```yaml
   - name: "code-server"
@@ -27,28 +27,29 @@ pomocnymi `authentik_oidc_*` helper vars, ~řádek 1608):
 
 ## 3. `default.config.yml` — helper vars
 
-**Neaplikuje se** — code-server pouziva proxy auth, zadne `client_id` /
-`client_secret` neni potreba.
+**Not applicable** — code-server uses proxy auth, no `client_id` /
+`client_secret` is required.
 
 ## 4. `default.config.yml` — `authentik_app_tiers` entry
 
-Add to `authentik_app_tiers:` (~řádek 1425):
+Add to `authentik_app_tiers:` (~line 1425):
 
 ```yaml
   code-server: 1
 ```
 
-Tier 1 (admin) — code-server poskytuje plny shell pristup k hostu, nesmi byt
-dostupny ne-admin uzivatelum.
+Tier 1 (admin) — code-server grants full shell access to the host; it must
+not be reachable by non-admin users.
 
 ## 5. `default.credentials.yml` — new secrets
 
-**Neaplikuje se** — PASSWORD / HASHED_PASSWORD / SUDO_PASSWORD jsou zamerne
-prazdne (autentikace resi Authentik forward_auth). Zadna DB, zadne secrets.
+**Not applicable** — PASSWORD / HASHED_PASSWORD / SUDO_PASSWORD are
+intentionally empty (authentication is handled by Authentik forward_auth). No
+DB, no secrets.
 
 ## 6. `tasks/stacks/stack-up.yml` — role include
 
-Insert do bloku "# DevOps roles" (~řádek 82-86), za `pazny.paperclip render`:
+Insert into the "# DevOps roles" block (~line 82-86), after `pazny.paperclip render`:
 
 ```yaml
 - { name: "[Stacks] pazny.code_server render", ansible.builtin.include_role: { name: pazny.code_server, apply: { tags: ['code-server'] } }, when: "install_code_server | default(false)", tags: ['code-server'] }
@@ -56,31 +57,31 @@ Insert do bloku "# DevOps roles" (~řádek 82-86), za `pazny.paperclip render`:
 
 ## 7. `tasks/stacks/stack-up.yml` — `_remaining_stacks` update
 
-**Neaplikuje se** — `devops` stack uz je v `_remaining_stacks` kvuli `gitea`
-/ `paperclip` / `gitlab`.
+**Not applicable** — the `devops` stack is already in `_remaining_stacks` via
+`gitea` / `paperclip` / `gitlab`.
 
 ## 8. `tasks/stacks/stack-up.yml` — post.yml include
 
-**Neaplikuje se** — role nema `post.yml`.
+**Not applicable** — the role has no `post.yml`.
 
 ## 9. Database provisioning
 
-**Neaplikuje se** — code-server je filesystem-only, zadna DB.
+**Not applicable** — code-server is filesystem-only, no DB.
 
 ## 10. Nginx vhost
 
-Cesta: `templates/nginx/sites-available/code-server.conf`.
+Path: `templates/nginx/sites-available/code-server.conf`.
 
-Vhost se aktivuje automaticky pres `pazny.code_server/tasks/main.yml`
-(symlink `sites-available` → `sites-enabled` kdyz `install_code_server=true`
-a `install_nginx=true`). Klic:
-- `listen 443 ssl` + redirect z `:80`
-- WebSocket upgrade mapping (`$http_upgrade` → `$connection_upgrade`) — povinne
-  pro integrovany terminal + LSP
-- `proxy_read_timeout 86400` — long-running terminal session
+The vhost activates automatically via `pazny.code_server/tasks/main.yml`
+(symlinks `sites-available` -> `sites-enabled` when `install_code_server=true`
+and `install_nginx=true`). Key points:
+- `listen 443 ssl` + redirect from `:80`
+- WebSocket upgrade mapping (`$http_upgrade` -> `$connection_upgrade`) — required
+  for the integrated terminal + LSP
+- `proxy_read_timeout 86400` — long-running terminal sessions
 - `proxy_buffering off` — realtime output
-- `include authentik-proxy-auth.conf` na location level
-- `include authentik-proxy-locations.conf` na server level (outpost paths)
+- `include authentik-proxy-auth.conf` at location level
+- `include authentik-proxy-locations.conf` at server level (outpost paths)
 
 ## 11. Smoke test
 
@@ -88,16 +89,16 @@ a `install_nginx=true`). Klic:
 ansible-playbook main.yml -K -e install_code_server=true --tags code-server
 
 docker ps | grep code-server                      # Up, healthy
-curl -k -I https://code.dev.local                 # 200 nebo 302 na auth.dev.local
+curl -k -I https://code.dev.local                 # 200 or 302 to auth.dev.local
 ```
 
-Overeni SSO:
-1. Otevri `https://code.dev.local` v browseru
-2. Authentik forward_auth presmeruje na `https://auth.dev.local/...`
-3. Po loginu (admin tier) se otevre code-server UI bez vlastni login vyzvy
-4. Otevri integrovany terminal — WebSocket connect musi byt OK (jinak vhost
-   timeout / upgrade headers)
+SSO verification:
+1. Open `https://code.dev.local` in the browser
+2. Authentik forward_auth redirects to `https://auth.dev.local/...`
+3. After login (admin tier) the code-server UI opens without its own login prompt
+4. Open the integrated terminal — WebSocket connect must succeed (otherwise the vhost
+   has timeout / upgrade header issues)
 
-Overeni data persistence:
-- `ls ~/code-server/config` — User settings, extensions
-- `ls ~/code-server/workspace` — DEFAULT_WORKSPACE (projekt mount point)
+Data persistence verification:
+- `ls ~/code-server/config` — user settings, extensions
+- `ls ~/code-server/workspace` — DEFAULT_WORKSPACE (project mount point)

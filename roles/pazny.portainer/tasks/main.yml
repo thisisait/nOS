@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.portainer/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori data dir a vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/portainer.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+# creates the data dir and renders the compose override fragment to
+# {{ stacks_dir }}/infra/overrides/portainer.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Post-start admin user init + OAuth2/Authentik config je v tasks/post.yml —
-# volany z core-up.yml az PO `docker compose up infra --wait`.
+# Post-start admin user init + OAuth2/Authentik config lives in tasks/post.yml —
+# called from core-up.yml AFTER `docker compose up infra --wait`.
 # ==============================================================================
 
 - name: "[pazny.portainer] Ensure data directory exists"

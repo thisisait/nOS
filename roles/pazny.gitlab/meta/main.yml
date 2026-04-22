@@ -3,7 +3,7 @@ galaxy_info:
   role_name: gitlab
   namespace: pazny
   author: Pázny
-  description: GitLab CE in Docker compose override (devBoxNOS devops stack)
+  description: GitLab CE in Docker compose override (nOS devops stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — GitLab bezi jako soucast devops stacku, ma vlastni
-# Omnibus bundle (PostgreSQL, Redis, Sidekiq). Nepotrebuje tedy nase postgres
-# roli. Orchestrace je v tasks/stacks/stack-up.yml.
+# No role dependencies — GitLab runs as part of the devops stack and has its own
+# Omnibus bundle (PostgreSQL, Redis, Sidekiq). It therefore does not need our postgres
+# roli. Orchestrace lives in tasks/stacks/stack-up.yml.
 dependencies: []
 
 collections: []

@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.homeassistant — Home Assistant (iiab compose stack)
 #
-# Centralizovane promenne zustavaji v default.config.yml kvuli externalim
+# Centralized variables stay in default.config.yml due to external
 # konzumentum (nginx vhost, blank-reset path resolver, RBAC tier mapping).
 # Role defaults poskytuji fallback hodnoty.
 # ==============================================================================
@@ -14,7 +14,7 @@ homeassistant_timezone: "Europe/Prague"
 homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 
 # true = privileged + network_mode: host -> mDNS/Bonjour auto-discovery
-# Pozor (macOS): host mode saha do Docker VM site, ne na fyzicky Mac network.
+# Note (macOS): host mode reaches the Docker VM network, not the physical Mac network.
 homeassistant_privileged: false
 
 homeassistant_admin_name: "Admin"

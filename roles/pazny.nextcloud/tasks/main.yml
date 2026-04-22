@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.nextcloud/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data dir, nginx vhost, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/iiab/overrides/nextcloud.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, nginx vhost, renders the compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/nextcloud.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
 # Post-start DB password sync + admin reconverge + trusted_domains je
-# v tasks/post.yml — volany z stack-up.yml az PO compose up.
+# v tasks/post.yml — called from stack-up.yml az PO compose up.
 # ==============================================================================
 
 - name: "[pazny.nextcloud] Ensure directories exist"
@@ -48,12 +48,12 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Nextcloud (Docker) připraven
+       Nextcloud (Docker) ready
       ══════════════════════════════════════════════════════
        URL:       https://{{ nextcloud_domain }}
-       Kontejner: nextcloud → 127.0.0.1:{{ nextcloud_port | default(8085) }}
+       Container: nextcloud → 127.0.0.1:{{ nextcloud_port | default(8085) }}
        Data:      {{ nextcloud_data_dir }}
        DB:        {{ nextcloud_db_name }} @ mariadb (iiab_net)
 
-       Přidej do /etc/hosts:   127.0.0.1 {{ nextcloud_domain }}
+       Add to /etc/hosts:   127.0.0.1 {{ nextcloud_domain }}
       ══════════════════════════════════════════════════════

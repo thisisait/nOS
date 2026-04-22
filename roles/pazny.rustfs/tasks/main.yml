@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.rustfs/tasks/main.yml
 #
-# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/iiab/overrides/rustfs.yml, ktery pak stack-up.yml sesbira
-# pres `find` a prida jako dodatecny -f flag.
+# Called (in Phase B) from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/iiab/overrides/rustfs.yml, which stack-up.yml then sesbira
+# via `find` and passes as an additional -f flag.
 #
-# RustFS nema post-start setup — single kontejner, lokalni access.
+# RustFS has no post-start setup — single container, local access.
 # ==============================================================================
 
 - name: "[pazny.rustfs] Ensure data and log directories exist"
@@ -30,7 +30,7 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       RustFS připraven (spouští se přes IIAB stack)
+       RustFS ready (starts via the IIAB stack)
       ══════════════════════════════════════════════════════
        S3 API:    http://localhost:{{ rustfs_api_port }}
        Konzole:   http://localhost:{{ rustfs_console_port }}

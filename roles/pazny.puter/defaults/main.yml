@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.puter — Puter cloud OS in Docker (iiab compose override)
 #
-# Credentials (puter_admin_password) a site metadata zustavaji v top-level
+# Credentials (puter_admin_password) a site metadata staysji v top-level
 # default.config.yml + default.credentials.yml — stale centralizovane,
-# role je jen cte pres Ansible var precedence (vars_files > role defaults).
+# the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-puter_version: "latest"  # devboxnos/puter:latest (built z files/puter/Dockerfile)
+puter_version: "latest"  # nos/puter:latest (built z files/puter/Dockerfile)
 puter_port: 5050  # "05" jako "OS"
 puter_domain: "os.dev.local"
 puter_api_domain: "api.os.dev.local"

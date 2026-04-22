@@ -6,8 +6,8 @@
 # Flow: POST /Startup/Configuration -> /Startup/User -> /Startup/Complete.
 #
 # Po dokonceni startup wizardu vraci /Startup/* 403. Pro non-blank runy
-# reconverge heslo pres AuthenticateUserByName -> POST /Users/{id}/Password
-# s previous_password_prefix pro OLD heslo. Degrades gracefully at DRIFT.
+# reconverge password via AuthenticateUserByName -> POST /Users/{id}/Password
+# with previous_password_prefix for the OLD password. Degrades gracefully at DRIFT.
 # ==============================================================================
 
 - name: "[pazny.jellyfin Post] Wait for API"
@@ -90,7 +90,7 @@
     method: POST
     body_format: json
     headers:
-      Authorization: 'MediaBrowser Client="devBoxNOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+      Authorization: 'MediaBrowser Client="nOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
     body:
       Username: "{{ jellyfin_admin_user | default('admin') }}"
       Pw: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
@@ -109,7 +109,7 @@
     method: POST
     body_format: json
     headers:
-      Authorization: 'MediaBrowser Client="devBoxNOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+      Authorization: 'MediaBrowser Client="nOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
     body:
       Username: "{{ jellyfin_admin_user | default('admin') }}"
       Pw: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_jellyfin"

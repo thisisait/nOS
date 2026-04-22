@@ -3,10 +3,10 @@
 # pazny.hermes/tasks/main.yml
 #
 # Instaluje Hermes Agent framework jako pip venv + launchd daemon.
-# Volano pres import_role v main.yml po openclaw.
+# Called via import_role in main.yml after openclaw.
 # ==============================================================================
 
-# ── 1. Adresáre ───────────────────────────────────────────────────────────────
+# -- 1. Directories ---------------------------------------------------------
 
 - name: "[Hermes] Create directory structure"
   ansible.builtin.file:
@@ -21,7 +21,7 @@
     - "{{ hermes_log_dir }}"
 
 # ── 2. uv package manager + Python 3.11+ ─────────────────────────────────────
-# Hermes Agent NENI na PyPI — instaluje se pres git clone + `uv pip install -e .`
+# Hermes Agent is NOT on PyPI — installed via git clone + `uv pip install -e .`
 # (per official install.sh script). uv je rychlejsi nez pip, Python 3.11+ je
 # required.
 
@@ -90,7 +90,7 @@
     mode: '0600'
   notify: Restart hermes
 
-# Hermes hleda ~/.hermes/config.yaml (NE cli-config.yaml — ta je jen v repu
+# Hermes looks up ~/.hermes/config.yaml (NOT cli-config.yaml — that one is only in the repo
 # jako .example). `hermes config path` vraci presne ~/.hermes/config.yaml.
 - name: "[Hermes] Render config.yaml"
   ansible.builtin.template:
@@ -100,11 +100,11 @@
   notify: Restart hermes
 
 # ── 5.5. Persona + memory seed + custom skills ─────────────────────────────
-# SOUL.md je hlavni persona ("Inspektor Klepítko" + awareness devBoxNOS stacku).
-# MEMORY.md je seed perzistentni pameti s aktualnim stavem enabled_* služeb.
-# SKILL.md v skills/devboxnos/ poskytuje DevOps akcni patterns.
+# SOUL.md is the main persona ("Inspektor Klepitko" + nOS stack awareness).
+# MEMORY.md is the persistent memory seed with the current enabled_* service state.
+# SKILL.md under skills/nos/ provides DevOps action patterns.
 
-- name: "[Hermes] Deploy SOUL.md persona (Inspektor Klepítko)"
+- name: "[Hermes] Deploy SOUL.md persona (Inspektor Klepitko)"
   ansible.builtin.template:
     src: SOUL.md.j2
     dest: "{{ hermes_config_dir }}/SOUL.md"
@@ -122,23 +122,23 @@
     src: MEMORY.md.j2
     dest: "{{ hermes_config_dir }}/memories/MEMORY.md"
     mode: '0644'
-    force: "{{ hermes_force_memory_reset | default(false) }}"   # 2nd+ run zachova user memories
+    force: "{{ hermes_force_memory_reset | default(false) }}"   # 2nd+ run preserves user memories
 
 - name: "[Hermes] Ensure custom skills dir exists"
   ansible.builtin.file:
-    path: "{{ hermes_config_dir }}/skills/devboxnos"
+    path: "{{ hermes_config_dir }}/skills/nos"
     state: directory
     mode: '0755'
 
-- name: "[Hermes] Deploy devboxnos custom skill"
+- name: "[Hermes] Deploy nOS custom skill"
   ansible.builtin.template:
-    src: skills/devboxnos/SKILL.md.j2
-    dest: "{{ hermes_config_dir }}/skills/devboxnos/SKILL.md"
+    src: skills/nos/SKILL.md.j2
+    dest: "{{ hermes_config_dir }}/skills/nos/SKILL.md"
     mode: '0644'
 
 # ── Symlinks do Homebrew PATH ───────────────────────────────────────────────
-# Venv bin je pod ~/agents/hermes/.venv/bin — neni v globalnim PATH.
-# Symlink do /opt/homebrew/bin ho zpristupni ze vsech sheellu bez export PATH.
+# Venv bin is under ~/agents/hermes/.venv/bin — not in the global PATH.
+# A symlink into /opt/homebrew/bin makes it available from every shell without export PATH.
 
 - name: "[Hermes] Symlink hermes binary into Homebrew bin (global PATH)"
   ansible.builtin.file:
@@ -152,7 +152,7 @@
     - hermes-acp
   failed_when: false
 
-# ── 4. Model pull (Hermes 3 8B z oficialni Ollama library) ──────────────────
+# -- 4. Model pull (Hermes 3 8B from the official Ollama library) ──────────────────
 
 - name: "[Hermes] Pull Hermes 3 8B model via Ollama"
   ansible.builtin.command: ollama pull {{ hermes_primary_model }}
@@ -165,11 +165,11 @@
   timeout: 1800
 
 # ── 6. Doctor check (verify install) ─────────────────────────────────────────
-# Hermes nema persistent daemon mode (jen `gateway install` pro messaging +
-# `mcp serve` pro MCP expose). Daemon ponechavame na uzivatele — playbook
-# nainstaluje + nakonfiguruje, user ho spusti dle potreby:
-#   hermes chat                  — interaktivni rezim
-#   hermes gateway install       — launchd plist pro Telegram/Discord
+# Hermes has no persistent daemon mode (just `gateway install` for messaging +
+# `mcp serve` for MCP expose). We leave the daemon to the user — the playbook
+# installs + configures it; the user starts it on demand:
+#   hermes chat                  — interactive mode
+#   hermes gateway install       — launchd plist for Telegram/Discord
 #   hermes mcp serve             — expose Hermes conversations jako MCP server
 
 - name: "[Hermes] Run hermes doctor to verify install"
@@ -211,7 +211,7 @@
        MCP servery v configu: {{ hermes_mcp_servers | length }} (filesystem, git, fetch, memory, time)
 
        Prvni pouziti:
-         {{ hermes_venv }}/bin/hermes                      # interaktivni TUI
+         {{ hermes_venv }}/bin/hermes                      # interactive TUI
          {{ hermes_venv }}/bin/hermes chat                 # chat mode
          {{ hermes_venv }}/bin/hermes claw                 # OpenClaw integration
          {{ hermes_venv }}/bin/hermes gateway install      # launchd pro messaging

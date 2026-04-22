@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.opencode/tasks/main.yml
 #
-# Instaluje OpenCode + konfiguruje lokalni Ollama provider.
-# Volano z main.yml pres `import_role` (ne Docker).
+# Installs OpenCode + configures the local Ollama provider.
+# Called from main.yml via `import_role` (not Docker).
 # ==============================================================================
 
 # OpenCode install priority:
 #   1. Brew formula (preferred, brew-managed upgrades)
-#   2. Curl installer fallback (pokud brew nemá)
+#   2. Curl installer fallback (when brew does not have it)
 
 - name: "[OpenCode] Check for existing brew install"
   ansible.builtin.stat:
@@ -56,9 +56,9 @@
     dest: "{{ opencode_config_file }}"
     mode: '0600'
 
-# ── Symlink do Homebrew PATH (volitelne, bez nej je opencode jen z ~/.opencode/bin) ─
+# -- Symlink into Homebrew PATH (optional; without it opencode is only in ~/.opencode/bin) ─
 
-# Symlink jen pokud je curl install (brew uz je v PATH)
+# Symlink only if it is a curl install (brew is already in PATH)
 - name: "[OpenCode] Symlink binary into Homebrew bin (curl install only)"
   ansible.builtin.file:
     src: "{{ opencode_binary }}"
@@ -86,7 +86,7 @@
        OpenCode nainstalovan
       ══════════════════════════════════════════════════════════════════
        Binary:      {{ opencode_binary }}
-       Symlink:     {{ 'pazny.homebrew_prefix/bin/opencode' if opencode_symlink_to_homebrew else 'NE (pridej ~/.opencode/bin do PATH)' }}
+       Symlink:     {{ 'pazny.homebrew_prefix/bin/opencode' if opencode_symlink_to_homebrew else 'NO (add ~/.opencode/bin to PATH)' }}
        Config:      {{ opencode_config_file }}
        Version:     {{ _opencode_version.stdout | default('unknown') }}
 
@@ -102,7 +102,7 @@
        Default model: {{ opencode_default_model }}
 
        Spusteni:
-         opencode                      # v aktualnim adresari (projekt)
+         opencode                      # in the current directory (project)
          opencode --model ollama/hermes3:8b   # prepnout model
 
        Prepnout provider/model v TUI: /provider

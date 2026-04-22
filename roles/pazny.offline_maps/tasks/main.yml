@@ -2,17 +2,17 @@
 # ==============================================================================
 # pazny.offline_maps/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data adresar, vyrenderuje tileserver-gl config.json, stahne
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, renders tileserver-gl config.json, downloads
 # volitelne MBTiles, enabluje nginx vhost, vyhodi helper download-maps.sh
-# a vyrenderuje compose override fragment do
+# a renders the compose override fragment do
 # {{ stacks_dir }}/iiab/overrides/tileserver.yml.
 #
 # Zadny post-start — tileserver slouzi MBTiles staticky.
 #
 # Pozn.: Legacy tasks/iiab/maps.yml obsahovalo npm install tileserver-gl +
-# launchd plist (host-side instalace). Ted bezi pres Docker kontejner
-# `tileserver` z compose override, takze host-side npm/launchd je vypusteno.
+# launchd plist (host-side install). Now runs via the Docker container
+# `tileserver` from the compose override, so host-side npm/launchd is skipped.
 # ==============================================================================
 
 - name: "[pazny.offline_maps] Ensure maps data directory exists"
@@ -39,9 +39,9 @@
 - name: "[pazny.offline_maps] Create tileserver-gl configuration"
   ansible.builtin.copy:
     dest: "{{ maps_data_dir }}/config.json"
-    # Dynamic config: pridej data entry jen pokud existuji MBTiles.
+    # Dynamic config: add a data entry only if MBTiles exist.
     # Bez MBTiles tileserver spadne s "Not valid input file: /data/*.mbtiles".
-    # Staz MBTiles pres download-maps.sh a znovu spust playbook.
+    # Download MBTiles via download-maps.sh and re-run the playbook.
     content: |
       {
         "options": {
@@ -93,19 +93,19 @@
     dest: "{{ maps_data_dir }}/download-maps.sh"
     content: |
       #!/usr/bin/env zsh
-      # Pomocny script pro stahovani mapovych dat
+      # Helper script for downloading map data
       # Zdroje dat:
       #   MapTiler Cloud (free tier):  https://cloud.maptiler.com/maps/
       #   OpenMapTiles:                https://data.maptiler.com/downloads/
       #   BBBike extracts:             https://download.bbbike.org/osm/
       #   Geofabrik:                   https://download.geofabrik.de/
       #
-      # Priklad – CR z BBBike (volne dostupne):
+      # Example - CZ from BBBike (freely available):
       #   curl -L -o czech-republic.mbtiles \
       #     "https://download.bbbike.org/osm/bbbike/Prague/Prague.osm.pbf"
-      #   # Potom konvertuj pomoci: tippecanoe nebo tilemaker
+      #   # Then convert using: tippecanoe or tilemaker
 
-      echo "Viz komentare v tomto souboru pro zdroje mapovych dat."
+      echo "See the comments in this file for map data sources."
       echo "MBTiles dir: {{ maps_data_dir }}"
     mode: '0755'
 
@@ -122,12 +122,12 @@
        Stazeni mapovych dat:
          {{ maps_data_dir }}/download-maps.sh
 
-       Nebo pridej do default.config.yml:
+       Or add to default.config.yml:
          maps_mbtiles_files:
            - url: "https://..."
              dest: "czech-republic.mbtiles"
 
-       Pridej do /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps.dev.local') }}
+       Add to /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps.dev.local') }}
       ======================================================
 
 - name: "[pazny.offline_maps] Render compose override fragment"

@@ -3,7 +3,7 @@ galaxy_info:
   role_name: redis
   namespace: pazny
   author: Pázny
-  description: Redis in Docker compose override (devBoxNOS infra stack)
+  description: Redis in Docker compose override (nOS infra stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — tato role je sdileny cache/broker zaklad pro
-# Authentik, Infisical, n8n a dalsi. Orchestrace (compose up sequencing)
-# je v tasks/stacks/core-up.yml.
+# No role dependencies — this role is the shared cache/broker base for
+# Authentik, Infisical, n8n and others. Orchestration (compose up sequencing)
+# lives in tasks/stacks/core-up.yml.
 dependencies: []
 
 collections: []

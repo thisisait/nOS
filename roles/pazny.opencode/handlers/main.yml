@@ -1,6 +1,6 @@
 ---
-# Opencode nema daemon mode, config se nacte pri kazdem spusteni `opencode`.
-# Handler je stub — notifikace jen informuje.
+# Opencode has no daemon mode, the config is loaded on every `opencode` run.
+# Handler is a stub — the notification is informational only.
 - name: Restart opencode
   ansible.builtin.debug:
     msg: "OpenCode config updated. Zmeny se projevi pri dalsim spusteni `opencode`."

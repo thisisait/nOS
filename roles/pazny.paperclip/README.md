@@ -1,8 +1,8 @@
 # pazny.paperclip
 
-Ansible role for deploying **Paperclip** — a multi-agent orchestration platform that coordinates AI agents (OpenClaw, Claude Code, Codex) via an org-chart structure — as a compose override fragment in the devBoxNOS `devops` stack.
+Ansible role for deploying **Paperclip** — a multi-agent orchestration platform that coordinates AI agents (OpenClaw, Claude Code, Codex) via an org-chart structure — as a compose override fragment in the nOS `devops` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction batch.
+Part of [nOS](../../README.md) Wave 2.2 role extraction batch.
 
 ## What it does
 

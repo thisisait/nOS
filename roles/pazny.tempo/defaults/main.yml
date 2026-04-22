@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.tempo — Tempo in Docker (observability compose override)
 #
-# Konfig soubor tempo.yaml zustava renderovany v tasks/stacks/core-up.yml
-# z files/observability/tempo/tempo.yaml — role vlastni jen compose
-# fragment + handler (stejna deliberate decision jako u grafana provisioning).
+# Konfig soubor tempo.yaml stays rendered in tasks/stacks/core-up.yml
+# from files/observability/tempo/tempo.yaml — the role owns only the compose
+# fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================
 
 tempo_version: "2.10.0"   # github.com/grafana/tempo/releases — no Homebrew formula

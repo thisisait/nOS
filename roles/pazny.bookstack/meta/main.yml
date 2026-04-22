@@ -3,7 +3,7 @@ galaxy_info:
   role_name: bookstack
   namespace: pazny
   author: Pázny
-  description: BookStack wiki platform (Shelf/Book/Chapter/Page) in Docker compose override (devBoxNOS b2b stack)
+  description: BookStack wiki platform (Shelf/Book/Chapter/Page) in Docker compose override (nOS b2b stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:

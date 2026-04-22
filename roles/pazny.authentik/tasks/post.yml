@@ -2,15 +2,14 @@
 # ==============================================================================
 # pazny.authentik/tasks/post.yml — post-start health-check only.
 #
-# Admin user + skupiny + OIDC providery + aplikace + RBAC politiky spravuje
-# Authentik Blueprints engine (soubory v /blueprints/custom/, render v
-# tasks/blueprints.yml). Blueprint reconcile probiha pri startu containeru →
-# password, client_secret a ostatni state se propisuji deklarativne na
-# kazdy restart.
+# Admin user + groups + OIDC providers + applications + RBAC policies are
+# managed by the Authentik Blueprints engine (files in /blueprints/custom/,
+# rendered by tasks/blueprints.yml). Blueprint reconcile runs on container
+# startup, so password, client_secret and other state are applied declaratively
+# on every restart.
 #
-# Service-side OIDC napojeni (Gitea API, Nextcloud occ, Portainer UI)
-# zustava v tasks/stacks/authentik_service_post.yml a bezi pozdeji v
-# stack-up.yml.
+# Service-side OIDC wiring (Gitea API, Nextcloud occ, Portainer UI) stays in
+# tasks/stacks/authentik_service_post.yml and runs later in stack-up.yml.
 # ==============================================================================
 
 - name: "[pazny.authentik Post] Wait for server to be ready"
@@ -27,7 +26,7 @@
 - name: "[pazny.authentik Post] Health status"
   ansible.builtin.debug:
     msg: >-
-      Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204] else 'NEDOSTUPNY' }}
+      Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204] else 'UNAVAILABLE' }}
       | Admin: https://{{ authentik_domain | default('auth.dev.local') }}/if/admin/
       | Login: akadmin / {{ authentik_bootstrap_password }}
-      | (heslo se re-applyuje blueprintem pri kazdem startu containeru)
+      | (password is re-applied by the blueprint on every container start)

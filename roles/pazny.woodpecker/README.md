@@ -1,8 +1,8 @@
 # pazny.woodpecker
 
-Ansible role for deploying **Woodpecker CI** (server + agent) as a compose override fragment in the devBoxNOS `devops` stack. Lightweight CI/CD wired to Gitea via OAuth2.
+Ansible role for deploying **Woodpecker CI** (server + agent) as a compose override fragment in the nOS `devops` stack. Lightweight CI/CD wired to Gitea via OAuth2.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction batch.
+Part of [nOS](../../README.md) Wave 2.2 role extraction batch.
 
 ## What it does
 

@@ -1,18 +1,18 @@
 # =============================================================================
-# pazny.qgis_server — compose override fragment
-# Merged do `docker compose -p engineering up` v tasks/stacks/stack-up.yml
-# pres ansible.builtin.find nad {{ stacks_dir }}/engineering/overrides/*.yml.
+# pazny.qgis_server - compose override fragment
+# Merged into `docker compose -p engineering up` in tasks/stacks/stack-up.yml
+# via ansible.builtin.find over {{ stacks_dir }}/engineering/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — engineering_net je definovana v base
+# Does not declare top-level networks: - engineering_net is defined in the base
 # templates/stacks/engineering/docker-compose.yml.j2.
 #
-# QGIS Server je pouze amd64 — na ARM64 Mac bezi pres Rosetta emulaci.
+# QGIS Server is amd64-only - on ARM64 Mac it runs via Rosetta emulation.
 # =============================================================================
 
 services:
   qgis-server:
     image: kartoza/qgis-server:{{ qgis_version | default('latest') }}
-    platform: linux/amd64    # Pouze amd64 – Docker Desktop emuluje přes Rosetta
+    platform: linux/amd64    # amd64 only - Docker Desktop emulates via Rosetta
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ qgis_port | default(8071) }}:80"

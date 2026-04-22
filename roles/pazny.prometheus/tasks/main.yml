@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.prometheus/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose -p observability up`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/observability/overrides/prometheus.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose -p observability up`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/observability/overrides/prometheus.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Prometheus konfig (prometheus.yml) zustava renderovany v core-up.yml
-# z files/observability/prometheus/prometheus.yml — role vlastni jen compose
+# Prometheus konfig (prometheus.yml) stays rendered in core-up.yml
+# from files/observability/prometheus/prometheus.yml — the role owns only the compose
 # fragment + handler.
 # ==============================================================================
 

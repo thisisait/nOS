@@ -1,8 +1,8 @@
 # pazny.redis
 
-Ansible role for deploying **Redis** as a compose override fragment in the devBoxNOS `infra` stack. Shared cache / message broker for Authentik (sessions), Infisical (cache), and n8n (queue).
+Ansible role for deploying **Redis** as a compose override fragment in the nOS `infra` stack. Shared cache / message broker for Authentik (sessions), Infisical (cache), and n8n (queue).
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 infra-db-peers extraction (`pazny.mariadb`, `pazny.postgresql`, **`pazny.redis`**).
+Part of [nOS](../../README.md) Wave 2.2 infra-db-peers extraction (`pazny.mariadb`, `pazny.postgresql`, **`pazny.redis`**).
 
 ## What it does
 
@@ -23,7 +23,7 @@ There is **no `post.yml`** — Redis needs no post-start bootstrap. Authenticati
 
 ## Install toggle — `redis_docker`, not `install_redis`
 
-Because devBoxNOS can run Redis either as a Homebrew service or as a Docker container, the toggle is historically named **`redis_docker`**, not `install_redis`. Preserve that naming in `core-up.yml` wiring:
+Because nOS can run Redis either as a Homebrew service or as a Docker container, the toggle is historically named **`redis_docker`**, not `install_redis`. Preserve that naming in `core-up.yml` wiring:
 
 ```yaml
 - name: "[Core] Redis render + dirs (pazny.redis role)"

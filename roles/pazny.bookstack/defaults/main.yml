@@ -4,13 +4,13 @@
 #                   b2b compose stack
 #
 # LinuxServer.io image (lscr.io/linuxserver/bookstack) — PHP/Apache BookStack
-# s knihovním modelem (Shelf → Book → Chapter → Page). Vyžaduje MariaDB
-# (sdílená z infra stacku) + volitelně Redis pro cache/session.
+# with a library model (Shelf -> Book -> Chapter -> Page). Requires MariaDB
+# (shared from the infra stack) + optionally Redis for cache/session.
 #
-# Credentials (bookstack_db_password, bookstack_app_key) zustavaji
-# v default.credentials.yml — centralizovane pro prefix rotation.
+# Credentials (bookstack_db_password, bookstack_app_key) staysji
+# in default.credentials.yml — centralized for prefix rotation.
 # bookstack_app_key je Laravel APP_KEY (base64:<32-byte-base64>) a je
-# auto-generovan v main.yml pri prvnim runu / blank=true.
+# auto-generated in main.yml on first run / blank=true.
 # ==============================================================================
 
 bookstack_version: "v26.03.3-ls256"                    # LSIO pinned stable tag

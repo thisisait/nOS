@@ -1,6 +1,6 @@
 # pazny.influxdb
 
-Ansible role for deploying **InfluxDB 2.x** as a compose override fragment in the devBoxNOS `observability` stack. Co-deployed alongside Grafana / Prometheus / Loki / Tempo.
+Ansible role for deploying **InfluxDB 2.x** as a compose override fragment in the nOS `observability` stack. Co-deployed alongside Grafana / Prometheus / Loki / Tempo.
 
 ## What it does
 
@@ -9,7 +9,7 @@ Invoked from `tasks/stacks/core-up.yml` **before** `docker compose up observabil
 - Creates `{{ influxdb_data_dir }}` and `{{ influxdb_config_dir }}` on the host
 - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/observability/overrides/influxdb.yml`
 - The override is picked up by core-up's `find + -f` loop and merged into the observability compose project
-- On first run, InfluxDB container auto-provisions admin user, initial org (`devboxnos`), bucket (`default`), and admin token using `DOCKER_INFLUXDB_INIT_*` env vars
+- On first run, InfluxDB container auto-provisions admin user, initial org (`nos`), bucket (`default`), and admin token using `DOCKER_INFLUXDB_INIT_*` env vars
 - Notifies `Restart influxdb` if the override template changed
 
 ## SSO
@@ -32,7 +32,7 @@ InfluxDB OSS 2.x does not support native OIDC — UI access is gated by **Authen
 | `influxdb_data_dir` | `~/influxdb/data` | TSM storage bind mount |
 | `influxdb_config_dir` | `~/influxdb/config` | Config bind mount |
 | `influxdb_init_username` | `admin` | First-run admin user |
-| `influxdb_init_org` | `devboxnos` | First-run initial org |
+| `influxdb_init_org` | `nos` | First-run initial org |
 | `influxdb_init_bucket` | `default` | First-run initial bucket |
 | `influxdb_init_retention` | `90d` | First-run bucket retention |
 | `influxdb_mem_limit` | `1g` | Container mem limit |

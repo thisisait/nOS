@@ -3,11 +3,11 @@
 # pazny.portainer/tasks/post.yml
 #
 # Post-start admin init + password reconverge + Authentik OAuth2 config.
-# Volano z tasks/stacks/core-up.yml PO `docker compose up infra --wait`.
+# Called from tasks/stacks/core-up.yml AFTER `docker compose up infra --wait`.
 #
-# PARTIAL: password reconverge rotuje pouze o jeden prefix dopredu
+# PARTIAL: password reconverge only rotates one prefix forward
 # (previous_password_prefix → global_password_prefix). Dva+ kroky DRIFT
-# → manualni reset. Viz Wave 1 commit 4c65ba7.
+# -> manual reset. See Wave 1 commit 4c65ba7.
 # ==============================================================================
 
 - name: "[pazny.portainer Post] Wait for API to be ready"
@@ -50,10 +50,10 @@
   failed_when: false
 
 # ── Password reconverge (state-declarative UPDATE) ────────────────────
-# Portainer PUT /api/users/{id}/passwd vyzaduje OLD heslo v body. Stridame:
-# 1) Pokud login s NEW projde → converged, skip update.
-# 2) Pokud login s OLD (previous_password_prefix) projde → issue UPDATE.
-# 3) Jinak DRIFT — log warning.
+# Portainer PUT /api/users/{id}/passwd requires the OLD password in the body. We alternate:
+# 1) If login with NEW succeeds -> converged, skip update.
+# 2) If login with OLD (previous_password_prefix) succeeds -> issue UPDATE.
+# 3) Otherwise DRIFT — log warning.
 - name: "[pazny.portainer Post] Login attempt with current password"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
@@ -155,12 +155,12 @@
       OAuthSettings:
         ClientID: "{{ authentik_oidc_portainer_client_id }}"
         ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
-        # Browser-side URLs (HTTPS → nginx → Authentik): uzivatel se prihlasi v prohlizeci
+        # Browser-side URLs (HTTPS -> nginx -> Authentik): the user logs in via browser
         AuthorizationURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
         RedirectURI: "https://{{ portainer_domain | default('portainer.dev.local') }}"
         LogoutURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/portainer/end-session/"
         # Server-side URLs (HTTP → Docker interni sit): Portainer backend ↔ Authentik.
-        # Pouzivame interni HTTP aby Portainer (Go) nemusel trustovat mkcert CA.
+        # We use internal HTTP so Portainer (Go) does not have to trust the mkcert CA.
         AccessTokenURI: "http://authentik-server:9000/application/o/token/"
         ResourceURI: "http://authentik-server:9000/application/o/userinfo/"
         UserIdentifier: "preferred_username"

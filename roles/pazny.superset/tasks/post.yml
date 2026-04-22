@@ -1,8 +1,8 @@
 ---
 # ==============================================================================
 # pazny.superset/tasks/post.yml
-# SUPERSET – post-start: inicializace DB schématu a admin uživatele
-# Běží PO startu data stacku (stack-up.yml).
+# SUPERSET — post-start: DB schema init and admin user
+# Runs AFTER data stack startup (stack-up.yml).
 # ==============================================================================
 
 - name: "[pazny.superset Post] Wait for Superset container to be ready"

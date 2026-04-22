@@ -1,8 +1,8 @@
 # pazny.bluesky_pds
 
-Ansible role for deploying a **Bluesky PDS** (Personal Data Server, AT Protocol) as a compose override fragment in the devBoxNOS `infra` stack. Provides federated identity for devBoxNOS users in the atproto / Bluesky network.
+Ansible role for deploying a **Bluesky PDS** (Personal Data Server, AT Protocol) as a compose override fragment in the nOS `infra` stack. Provides federated identity for nOS users in the atproto / Bluesky network.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
 
 ## What it does
 
@@ -71,55 +71,55 @@ From `tasks/stacks/core-up.yml`, gate the role invocations on `install_bluesky_p
 
 ## Frontend / Web UI
 
-**PDS nemá vlastní web UI.** Je to **backend** AT Protocol server — pouze HTTP API pro
-Lexicon (repos, records, blobs). Access to data se dělá přes třetí-stranné klienty.
+**PDS has no built-in web UI.** It is a **backend** AT Protocol server — just an
+HTTP API for Lexicon (repos, records, blobs). Data access is done via third-party clients.
 
 ### Health / API check
 
 ```bash
-# PDS health (mělo by vrátit {"version":"..."})
+# PDS health (should return {"version":"..."})
 curl -sk https://{{ bluesky_pds_hostname | default('bsky.dev.lan') }}/xrpc/_health
 
-# Popis serveru (vypíše did:web, available user domains, invite policy)
+# Server description (prints did:web, available user domains, invite policy)
 curl -sk https://{{ bluesky_pds_hostname | default('bsky.dev.lan') }}/xrpc/com.atproto.server.describeServer
 ```
 
-### Jak se dostat k UI
+### How to reach a UI
 
-Uživatel se loguje přes existujícího AT Protocol klienta a tam nastaví custom PDS URL:
+Log in through an existing AT Protocol client and point it at your custom PDS URL:
 
-1. **Oficiální web client — https://bsky.app** (hostovaný Bluesky Inc.)
-   - Sign In → *"Hosting provider"* → vyplň `https://bsky.dev.lan` (nebo svůj hostname)
-   - Login handle ve formátu `<user>.bsky.dev.lan`, heslo z PDS account create
+1. **Official web client — https://bsky.app** (hosted by Bluesky Inc.)
+   - Sign In -> *"Hosting provider"* -> enter `https://bsky.dev.lan` (or your hostname)
+   - Login handle in the form `<user>.bsky.dev.lan`, password from PDS account create
 
-2. **Self-hosted webapp** — klonuj [bluesky-social/social-app](https://github.com/bluesky-social/social-app),
-   build s proměnnou `REACT_APP_PDS_URL=https://bsky.dev.lan` a nasadit jako separátní
-   Docker service. Zatím není součástí devBoxNOS (bude přidáno jako `pazny.bsky_webapp` role).
+2. **Self-hosted webapp** — clone [bluesky-social/social-app](https://github.com/bluesky-social/social-app),
+   build with `REACT_APP_PDS_URL=https://bsky.dev.lan` and deploy as a separate
+   Docker service. Not yet part of nOS (will be added as a `pazny.bsky_webapp` role).
 
-3. **Alternativní klienti** (všichni umí custom PDS):
+3. **Alternative clients** (all support custom PDS):
    - [Graysky](https://graysky.app/) — iOS/Android
    - [Deer.social](https://deer.social/) — web
-   - [Ozone](https://github.com/bluesky-social/ozone) — moderation dashboard (pro admina)
+   - [Ozone](https://github.com/bluesky-social/ozone) — moderation dashboard (for the admin)
 
 ### Account bootstrap
 
-Admin účet (`pds.{{ bluesky_pds_hostname | default('bsky.dev.lan') }}`) vytváří `tasks/post.yml` automaticky.
-Další účty přes Authentik → PDS bridge (`tasks/stacks/bluesky_pds_bridge.yml`) —
-každý Authentik user dostane `<username>.bsky.dev.lan` handle.
+The admin account (`pds.{{ bluesky_pds_hostname | default('bsky.dev.lan') }}`) is created automatically by `tasks/post.yml`.
+Additional accounts come via the Authentik -> PDS bridge (`tasks/stacks/bluesky_pds_bridge.yml`) —
+every Authentik user gets a `<username>.bsky.dev.lan` handle.
 
-Manuální account create:
+Manual account create:
 ```bash
 docker exec -it infra-bluesky-pds-1 goat pds admin account create \
   --email user@example.com --handle user.bsky.dev.lan
 ```
 
-### Známé limitace
+### Known limitations
 
-- **Federace není funkční** — AT Protocol federation vyžaduje veřejné DNS a TLS
-  certifikát pro `did:web:<hostname>`. Self-hosted PDS na `.dev.lan` hostname zůstává
-  ostrov (uživatelé na něm se navzájem vidí, ale s `bsky.app` uživateli ne).
-- **Invite required** — výchozí `bluesky_pds_invite_required: true`. Pro self-serve
-  registraci nastav `false` v config.yml.
+- **Federation is not functional** — AT Protocol federation requires public DNS and
+  a TLS certificate for `did:web:<hostname>`. A self-hosted PDS on a `.dev.lan`
+  hostname stays an island (users on it see each other, but not `bsky.app` users).
+- **Invite required** — default is `bluesky_pds_invite_required: true`. For self-serve
+  registration set `false` in config.yml.
 
 ## Rollback
 

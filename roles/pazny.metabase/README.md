@@ -1,8 +1,8 @@
 # pazny.metabase
 
-Ansible role for deploying **Metabase BI** as a compose override fragment in the devBoxNOS `data` stack. Uses PostgreSQL from the infra stack.
+Ansible role for deploying **Metabase BI** as a compose override fragment in the nOS `data` stack. Uses PostgreSQL from the infra stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
 
 ## What it does
 

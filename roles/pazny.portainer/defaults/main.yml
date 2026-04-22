@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.portainer — Portainer CE (infra compose stack)
 #
-# Credentials (portainer_admin_password) zustavaji v default.credentials.yml
-# aby prefix rotation funkovala centralne. Portainer OIDC je nativni pres
+# Credentials (portainer_admin_password) stay in default.credentials.yml
+# so prefix rotation works centrally. Portainer OIDC is native via
 # Settings API — gate v post.yml je `install_authentik`.
 # ==============================================================================
 

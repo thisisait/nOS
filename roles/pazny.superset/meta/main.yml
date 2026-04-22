@@ -3,7 +3,7 @@ galaxy_info:
   role_name: superset
   namespace: pazny
   author: Pázny
-  description: Apache Superset in Docker compose override (devBoxNOS data stack)
+  description: Apache Superset in Docker compose override (nOS data stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:

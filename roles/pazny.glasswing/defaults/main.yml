@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.glasswing — Nette PHP + SQLite security research dashboard
 #
-# Credentials (glasswing_api_token) zůstávají v top-level default.credentials.yml
-# aby prefix rotation přes global_password_prefix fungovala konzistentně.
-# App source file/project-glasswing/ zůstává v playbook repo — role ho jen
+# Credentials (glasswing_api_token) stay in top-level default.credentials.yml
+# so prefix rotation via global_password_prefix works consistently.
+# App source file/project-glasswing/ stays in the playbook repo — the role only
 # rsyncuje, neownuje.
 # ==============================================================================
 

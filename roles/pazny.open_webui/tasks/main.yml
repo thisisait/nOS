@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.open_webui/tasks/main.yml
 #
-# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
-# vytvori data dir, vyrenderuje compose override fragment do
+# Called (in Phase B) from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# creates the data dir, renders the compose override fragment to
 # {{ stacks_dir }}/iiab/overrides/open-webui.yml, a linkuje nginx vhost.
 #
 # Post-start admin user creation + password reconverge je v tasks/post.yml —
-# volany az po `docker compose up iiab --wait`.
+# called AFTER `docker compose up iiab --wait`.
 # ==============================================================================
 
 - name: "[pazny.open_webui] Ensure data and log directories exist"

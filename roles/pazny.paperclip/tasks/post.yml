@@ -3,12 +3,12 @@
 # pazny.paperclip/tasks/post.yml — allowed hostname registration
 #
 # Extrahovano z tasks/stacks/stack-up.yml (Wave 2.2 Unit 10). Paperclip
-# pouziva BETTER_AUTH_TRUSTED_ORIGINS env var pro CSRF/CORS, ale allowed
-# hostnames pro admin API musi byt registrovane pres pnpm CLI.
+# uses the BETTER_AUTH_TRUSTED_ORIGINS env var for CSRF/CORS, but allowed
+# hostnames for the admin API must be registered via the pnpm CLI.
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose up devops --wait`.
-# Idempotent-on-write — pnpm paperclipai allowed-hostname je safe volat
-# na existujici hostname.
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose up devops --wait`.
+# Idempotent-on-write — pnpm paperclipai allowed-hostname is safe to call
+# on an existing hostname.
 # ==============================================================================
 
 - name: "[pazny.paperclip Post] Check if Paperclip is already onboarded"
@@ -28,10 +28,10 @@
   failed_when: false
   when: "'exists' not in (_paperclip_config_check.stdout | default(''))"
 
-# Paperclip zavira TCP bez HTTP odpovedi, pokud Host header neni v
-# BETTER_AUTH_TRUSTED_ORIGINS / allowed hostnames. 127.0.0.1 v nich neni,
-# takze musime (a) cekat jen na TCP port (nejrychlejsi, spolehlivy signal
-# ze node server bezi), a (b) probovat HTTP s korektnim Host headerem.
+# Paperclip closes TCP without an HTTP response if the Host header is not in
+# BETTER_AUTH_TRUSTED_ORIGINS / allowed hostnames. 127.0.0.1 is not in them,
+# so we must (a) wait only for the TCP port (fastest, reliable signal
+# that the node server is running), and (b) try HTTP with the correct Host header.
 - name: "[pazny.paperclip Post] Wait for Paperclip TCP port ready"
   ansible.builtin.wait_for:
     host: "127.0.0.1"

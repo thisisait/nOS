@@ -1,6 +1,6 @@
 # pazny.onlyoffice
 
-Ansible role for deploying **ONLYOFFICE Document Server** (collaborative document editor backend) as a compose override fragment in the devBoxNOS `b2b` stack.
+Ansible role for deploying **ONLYOFFICE Document Server** (collaborative document editor backend) as a compose override fragment in the nOS `b2b` stack.
 
 ONLYOFFICE is a **backend service** — end users do not log in directly. It is embedded via iframe by host applications (Nextcloud, Outline, BookStack, ...) that sign API requests with a shared JWT secret.
 
@@ -51,23 +51,23 @@ From `tasks/stacks/stack-up.yml`, gated on `install_onlyoffice`:
   tags: ['onlyoffice']
 ```
 
-## Integrace s Nextcloud / Outline / BookStack
+## Integration with Nextcloud / Outline / BookStack
 
-ONLYOFFICE je **backend**, pripojuje se pres shared JWT secret. Postup pro kazdou hostitelskou aplikaci:
+ONLYOFFICE is a **backend**, connected via a shared JWT secret. Steps for each host application:
 
-1. Instaluj plugin / connector v hostitelske aplikaci:
-   - **Nextcloud** → app "ONLYOFFICE" ze sklepu → Settings → ONLYOFFICE
-   - **Outline** → neni oficialni plugin (Outline ma vlastni editor); ONLYOFFICE lze pouzit jen pres Nextcloud bridging
-   - **BookStack** → chapter/page → attached office doc pres ONLYOFFICE module
+1. Install the plugin / connector in the host application:
+   - **Nextcloud** -> "ONLYOFFICE" app from the app store -> Settings -> ONLYOFFICE
+   - **Outline** -> no official plugin (Outline has its own editor); ONLYOFFICE can be used only via Nextcloud bridging
+   - **BookStack** -> chapter/page -> attached office doc via the ONLYOFFICE module
 
-2. Nastav v hostitelske aplikaci:
-   - **Document Server URL**: `https://{{ onlyoffice_domain }}/` (napr. `https://office.dev.local/`)
-   - **JWT secret**: hodnota `onlyoffice_jwt_secret` z `credentials.yml`
+2. Configure in the host application:
+   - **Document Server URL**: `https://{{ onlyoffice_domain }}/` (e.g. `https://office.dev.local/`)
+   - **JWT secret**: value of `onlyoffice_jwt_secret` from `credentials.yml`
    - **JWT header**: `Authorization` (default)
 
-3. Host aplikace musi mit sitovy pristup k `https://office.dev.local/` (v devBoxNOS OK — vsechno na localhost).
+3. The host application must have network access to `https://office.dev.local/` (in nOS this is fine — everything is on localhost).
 
-4. Pokud se zobrazi "Error: The document security token is not correctly formed" — skontroluj ze obe strany pouzivaji stejny JWT secret a JWT je zapnuty na obou (na ONLYOFFICE: `JWT_ENABLED=true`).
+4. If you see "Error: The document security token is not correctly formed", verify that both sides use the same JWT secret and that JWT is enabled on both (on ONLYOFFICE: `JWT_ENABLED=true`).
 
 ## Rollback
 

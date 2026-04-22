@@ -1,6 +1,6 @@
 ---
 # pazny.loki — handlers
-# Role-local "Restart loki" — muze byt prebite play-level handlerem v main.yml.
+# Role-local "Restart loki" — may be overridden by a play-level handler in main.yml.
 
 - name: Restart loki
   ansible.builtin.shell: >

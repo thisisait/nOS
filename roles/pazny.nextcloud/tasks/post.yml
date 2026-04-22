@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
-# pazny.nextcloud/tasks/post.yml — sync konfigurace po startu kontejneru
-# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+# pazny.nextcloud/tasks/post.yml — sync configuration after container start
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
 #
-# Resi:
-#   1. DB heslo v config.php – env var MYSQL_PASSWORD se cte jen pri prvni
-#      inicializaci, pri zmene credentials.yml je potreba sync pres occ
-#   2. Admin password reconverge pres occ user:resetpassword
-#   3. trusted_domains pro existujici instalace (config.php) pres occ
-#   4. OIDC direct login (pokud install_authentik)
+# Handles:
+#   1. DB password in config.php — the MYSQL_PASSWORD env var is only read on the first
+#      initialization; when credentials.yml changes the sync happens via occ
+#   2. Admin password reconverge via occ user:resetpassword
+#   3. trusted_domains for existing installations (config.php) via occ
+#   4. OIDC direct login (when install_authentik)
 # ==============================================================================
 
 - name: "[pazny.nextcloud Post] Check if Nextcloud container is running"
@@ -48,8 +48,8 @@
   check_mode: false
 
 # ── Admin password reconverge ────────────────────────────────────────────
-# occ user:resetpassword cte OC_PASS z env, bezi pri kazdem behu ⇒ drift
-# prefixu se projevi do existujiciho admin usera.
+# occ user:resetpassword reads OC_PASS from env, runs on every run ⇒ drift
+# the prefix propagates to the existing admin user.
 - name: "[pazny.nextcloud Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
@@ -113,7 +113,7 @@
   failed_when: false
   check_mode: false
 
-# ── OIDC: nastavení user_oidc jako výchozí login metody ─────────────────
+# -- OIDC: set user_oidc as the default login method -------------------
 - name: "[pazny.nextcloud Post] Enable OIDC as direct login (skip Nextcloud login page)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab

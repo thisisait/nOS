@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.traefik/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`.
 # Renderuje Traefik static config (traefik.yml) do {{ traefik_config_dir }}
 # a compose override fragment do {{ stacks_dir }}/infra/overrides/.
 # ==============================================================================

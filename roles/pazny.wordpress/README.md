@@ -1,8 +1,8 @@
 # pazny.wordpress
 
-Ansible role for deploying **WordPress** as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **WordPress** as a compose override fragment in the nOS `iiab` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction.
+Part of [nOS](../../README.md) Wave 2.2 role extraction.
 
 ## What it does
 

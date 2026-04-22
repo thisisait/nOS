@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.miniflux/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/iiab/overrides/miniflux.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/iiab/overrides/miniflux.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Miniflux ma native OIDC (Authentik) pres env vary — zadny post-start setup
-# neni potreba (user se vytvori pri prvnim OIDC loginu diky OAUTH2_USER_CREATION=1).
-# Admin fallback ucet pro bootstrap se tvori pres CREATE_ADMIN=1 env var.
+# Miniflux has native OIDC (Authentik) via env vars — no post-start setup
+# is not required (user is created on the first OIDC login thanks to OAUTH2_USER_CREATION=1).
+# The admin fallback account for bootstrap is created via the CREATE_ADMIN=1 env var.
 # ==============================================================================
 
 - name: "[pazny.miniflux] Render compose override fragment"

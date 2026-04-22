@@ -6,7 +6,7 @@
 # compose service name and image tag use hyphen (`calibre-web`). Tasks and
 # handlers reference the hyphen form for `docker compose ... calibre-web`.
 #
-# Centralizovane promenne zustavaji v default.config.yml (nginx vhost,
+# Centralized variables staysji v default.config.yml (nginx vhost,
 # blank-reset path resolver, RBAC tier mapping).
 # ==============================================================================
 

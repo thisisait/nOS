@@ -1,8 +1,8 @@
 # pazny.miniflux
 
-Ansible role for deploying **Miniflux** (minimalistic RSS reader) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **Miniflux** (minimalistic RSS reader) as a compose override fragment in the nOS `iiab` stack.
 
-Part of devBoxNOS Wave 2.x role extraction.
+Part of nOS Wave 2.x role extraction.
 
 ## What it does
 
@@ -51,7 +51,7 @@ From `tasks/stacks/stack-up.yml`, gate on `install_miniflux`:
 
 ## SSO tier
 
-Tier 3 (user) — `devboxnos-users`, `devboxnos-managers`, `devboxnos-admins`.
+Tier 3 (user) — `nos-users`, `nos-managers`, `nos-admins`.
 
 ## Admin password rotation
 

@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.nodered/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data dir, vyrenderuje settings.js (disabluje built-in adminAuth,
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, renders settings.js (disables the built-in adminAuth,
 # spolehame se na Authentik forward_auth na nginx vrstve) a compose override
 # fragment do {{ stacks_dir }}/iiab/overrides/nodered.yml.
 #
@@ -16,10 +16,10 @@
     path: "{{ nodered_data_dir }}"
     state: directory
     mode: '0755'
-    # Docker nodered image beží jako UID 1000 — pokud má hostový user jiné
-    # UID, Docker Desktop for Mac to řeší přes osxfs/virtiofs user mapping.
-    # Owner specifikujeme, ale failed_when false — na macOS to často není
-    # nutné / možné bez `become: true`.
+    # The Docker nodered image runs as UID 1000 — if the host user has a different
+    # UID, Docker Desktop for Mac handles it via osxfs/virtiofs user mapping.
+    # We specify an owner, but failed_when is false — on macOS it is often not
+    # required / possible without `become: true`.
   ignore_errors: true
 
 - name: "[pazny.nodered] Render settings.js (no adminAuth → gated by Authentik)"

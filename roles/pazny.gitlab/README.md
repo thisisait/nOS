@@ -1,8 +1,8 @@
 # pazny.gitlab
 
-Ansible role for deploying **GitLab CE** as a compose override fragment in the devBoxNOS `devops` stack. Full self-hosted DevOps platform (Git, CI/CD, container registry, wiki, issues).
+Ansible role for deploying **GitLab CE** as a compose override fragment in the nOS `devops` stack. Full self-hosted DevOps platform (Git, CI/CD, container registry, wiki, issues).
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction batch.
+Part of [nOS](../../README.md) Wave 2.2 role extraction batch.
 
 ## What it does
 
@@ -23,7 +23,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 ## Requirements
 
 - Docker Desktop for Mac (ARM64)
-- At least **4 GB of RAM** free for the container — this is the single heaviest service in devBoxNOS
+- At least **4 GB of RAM** free for the container — this is the single heaviest service in nOS
 - `stacks_shared_network` defined at the play level
 - Nginx reverse-proxy vhost at `sites-available/gitlab.conf`
 - Mkcert root CA at `{{ stacks_dir }}/shared-certs/rootCA.pem` (for OIDC TLS trust when Authentik is enabled)

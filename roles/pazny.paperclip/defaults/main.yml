@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.paperclip — Paperclip multi-agent orchestration platform (devops stack)
 #
-# Koordinuje AI agenty (OpenClaw, Claude Code, Codex) pres org-chart strukturu.
+# Coordinates AI agents (OpenClaw, Claude Code, Codex) through an org-chart structure.
 # Vyzaduje postgres backend (install_postgresql: true). Credentials
-# (paperclip_db_password, paperclip_auth_secret) zustavaji v top-level
+# (paperclip_db_password, paperclip_auth_secret) staysji v top-level
 # default.credentials.yml.
 # ==============================================================================
 

@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.outline/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/b2b/overrides/outline.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up b2b`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/b2b/overrides/outline.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Outline ma native OIDC (Authentik) pres env vary — zadny post-start setup
-# neni potreba (user se vytvori pri prvnim OIDC loginu).
+# Outline has native OIDC (Authentik) via env vars — no post-start setup
+# is not required (user is created on the first OIDC login).
 # ==============================================================================
 
 - name: "[pazny.outline] Ensure data directory exists"

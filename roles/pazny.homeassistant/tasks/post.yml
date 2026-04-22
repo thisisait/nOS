@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.homeassistant/tasks/post.yml — auto-onboarding via /api/onboarding/*
 #
-# HA exposes onboarding endpoints only before first user is created.
+# HA exposes onboarding endpoints only before the first user is created.
 # Flow: POST /api/onboarding/users -> /api/onboarding/core_config
 #       -> /api/onboarding/analytics -> /api/onboarding/integration.
 #
-# Po prvnim runu je onboarding API zavrena. Reconverge admin hesla bezi
-# pres `hass --script auth change_password` CLI uvnitr kontejneru.
+# After the first run the onboarding API is closed. Admin password reconverge runs
+# via the `hass --script auth change_password` CLI inside the container.
 # ==============================================================================
 
 - name: "[pazny.homeassistant Post] Wait for API"
@@ -54,7 +54,7 @@
 
 # -- Reconverge admin password every run (state-declarative UPDATE) ------
 # Onboarding API zavrena po prvnim runu -> CLI script `hass --script auth`
-# funguje i pro existujici user. Bezi jen pokud uz byl user vytvoren.
+# works for an existing user too. Runs only if the user has already been created.
 - name: "[pazny.homeassistant Post] Reconverge owner password (hass auth change_password CLI)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p iiab exec -T homeassistant \

@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.redis/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/redis.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/infra/overrides/redis.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Redis nema post.yml — po startu neni potreba zadny setup
-# (authentication a persistence jsou nakonfigurovane v compose command:).
+# Redis has no post.yml — no setup is required after startup
+# (authentication and persistence are configured in the compose command:).
 # ==============================================================================
 
 - name: "[pazny.redis] Ensure data directory exists"

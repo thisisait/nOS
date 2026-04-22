@@ -2,11 +2,11 @@
 # ==============================================================================
 # pazny.traefik — Traefik reverse proxy (infra compose stack)
 #
-# Traefik poskytuje Docker service discovery + ingress pro lokalni vyvoj.
-# Pouzivame ho vedle nginx — nginx resi vhost routing pro nativni sluzby,
-# Traefik zachytava dynamicka Docker labely. Konfig soubory (traefik.yml
-# + conf.d/) renderuje tato role (templates/traefik.yml.j2) a Traefik
-# je cte pres bind mount.
+# Traefik provides Docker service discovery + ingress for local development.
+# We use it alongside nginx — nginx handles vhost routing for native services,
+# Traefik picks up dynamic Docker labels. Config files (traefik.yml
+# + conf.d/) are rendered by this role (templates/traefik.yml.j2) and
+# Traefik reads them via a bind mount.
 # ==============================================================================
 
 traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin

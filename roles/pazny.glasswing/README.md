@@ -2,7 +2,7 @@
 
 Ansible role for deploying **Glasswing** — a Nette PHP + SQLite security research dashboard — on a macOS host running Homebrew nginx + php-fpm.
 
-Part of [devBoxNOS](../../README.md) Wave 2 role extraction pilot. First of three base roles (`pazny.glasswing`, `pazny.mariadb`, `pazny.grafana`).
+Part of [nOS](../../README.md) Wave 2 role extraction pilot. First of three base roles (`pazny.glasswing`, `pazny.mariadb`, `pazny.grafana`).
 
 ## What it does
 
@@ -20,7 +20,7 @@ Changes to the app source or composer deps trigger a `Restart php-fpm` handler.
 ## Requirements
 
 - macOS with Homebrew
-- `php@{{ php_version }}`, `composer`, `rsync` installed (handled by the main devBoxNOS playbook)
+- `php@{{ php_version }}`, `composer`, `rsync` installed (handled by the main nOS playbook)
 - `ansible.posix` collection for the `synchronize` module
 - Play-level handler `Restart php-fpm` defined in the consuming playbook
 
@@ -34,7 +34,7 @@ Changes to the app source or composer deps trigger a `Restart php-fpm` handler.
 | `glasswing_json_source` | `{{ playbook_dir }}/docs/llm/security` | Source JSON advisories for first-run migration |
 | `glasswing_api_token` | *(from credentials)* | REST API bearer token, reconverged on every run |
 
-Secrets (`glasswing_api_token`) stay in the top-level `default.credentials.yml` so that `global_password_prefix` rotation propagates consistently across all devBoxNOS services.
+Secrets (`glasswing_api_token`) stay in the top-level `default.credentials.yml` so that `global_password_prefix` rotation propagates consistently across all nOS services.
 
 ## Usage
 

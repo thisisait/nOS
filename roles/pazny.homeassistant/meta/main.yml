@@ -3,7 +3,7 @@ galaxy_info:
   role_name: homeassistant
   namespace: pazny
   author: Pázny
-  description: Home Assistant home automation in Docker compose override (devBoxNOS iiab stack)
+  description: Home Assistant home automation in Docker compose override (nOS iiab stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,8 +11,8 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — HA je samostatna Docker sluzba.
-# Orchestrace (compose up + post-start onboarding) je v tasks/stacks/stack-up.yml.
+# No role dependencies — HA is a standalone Docker service.
+# Orchestration (compose up + post-start onboarding) lives in tasks/stacks/stack-up.yml.
 dependencies: []
 
 collections: []

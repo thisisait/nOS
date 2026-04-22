@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.firefly — Firefly III personal finance manager (b2b compose stack)
 #
-# Credentials (firefly_db_password, firefly_app_key) zustavaji v
-# default.credentials.yml — centralizovane pro prefix rotation.
+# Credentials (firefly_db_password, firefly_app_key) staysji v
+# default.credentials.yml — centralized for prefix rotation.
 # firefly_app_key je Laravel APP_KEY (base64:<32b>) — auto-generovany
 # v main.yml pri prvnim blank=true runu (viz INTEGRATION.md).
 #
-# Firefly III pouziva remote_user_guard pattern: autentizaci resi Authentik
-# proxy outpost pres nginx auth_request, Firefly dostane REMOTE_USER hlavicku.
-# Zadny native OIDC env vars — proto nejsou v authentik_oidc_*_client_* listu.
+# Firefly III uses the remote_user_guard pattern: Authentik handles authentication
+# proxy outpost via nginx auth_request, Firefly receives the REMOTE_USER header.
+# No native OIDC env vars — hence they are not in the authentik_oidc_*_client_* list.
 # ==============================================================================
 
 firefly_version: "version-6.2.21"

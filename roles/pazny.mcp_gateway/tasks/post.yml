@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.mcp_gateway/tasks/post.yml
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose up iiab`.
-# Vytvori PostgreSQL read-only uzivatele + Grafana service account token,
-# pak restartuje mcpo aby nacetl novy config s token substituci.
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose up iiab`.
+# Creates a PostgreSQL read-only user + Grafana service account token,
+# then restarts mcpo to reload the new config with token substitution.
 # ==============================================================================
 
-# ── 1. PostgreSQL read-only uzivatel ─────────────────────────────────────────
+# -- 1. PostgreSQL read-only user ─────────────────────────────────────────
 
 - name: "[mcp_gateway Post] Create PostgreSQL read-only role for MCP"
   ansible.builtin.command: >
@@ -65,8 +65,8 @@
 
 - name: "[mcp_gateway Post] Extract Grafana SA ID"
   ansible.builtin.set_fact:
-    # Grafana API vraci `id` jako integer. Castujeme pres `| int` pro consistent type.
-    # Fallback 0 = "neni SA" (check pres `> 0`).
+    # The Grafana API returns `id` as an integer. We cast via `| int` for a consistent type.
+    # Fallback 0 = "not SA" (check via `> 0`).
     _grafana_sa_id: "{{ (_grafana_sa.json.id | default(
       (_grafana_sa_search.json.serviceAccounts | default([]) | selectattr('name', 'equalto', 'mcp-gateway') | list | first).id | default(0))) | int }}"
   when: mcp_enable_grafana | default(true)
@@ -90,7 +90,7 @@
     - mcp_enable_grafana | default(true)
     - (_grafana_sa_id | default(0) | int) > 0
 
-- name: "[mcp_gateway Post] Persist Grafana SA token to file (pro compose restart)"
+- name: "[mcp_gateway Post] Persist Grafana SA token to file (for compose restart)"
   ansible.builtin.copy:
     dest: "{{ mcpo_data_dir }}/.grafana_sa_token"
     content: "{{ _grafana_token.json.key }}"
@@ -151,6 +151,6 @@
 - name: "[mcp_gateway Post] Status"
   ansible.builtin.debug:
     msg: >-
-      mcpo: {{ 'OK (' ~ (_mcpo_health.json.paths | default({}) | length) ~ ' MCP endpoints aktivnich)'
+      mcpo: {{ 'OK (' ~ (_mcpo_health.json.paths | default({}) | length) ~ ' MCP endpoints active)'
         if _mcpo_health.status | default(0) == 200
-        else 'NEDOSTUPNY - zkontroluj docker logs iiab-mcpo-1' }}
+        else 'UNAVAILABLE - zkontroluj docker logs iiab-mcpo-1' }}

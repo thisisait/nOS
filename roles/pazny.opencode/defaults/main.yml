@@ -5,7 +5,7 @@
 # Docs: https://opencode.ai/docs
 # Repo: https://github.com/sst/opencode
 #
-# Instaluje pres oficialni `curl | bash` installer do ~/.opencode/bin/opencode.
+# Installs via the official `curl | bash` installer into ~/.opencode/bin/opencode.
 # Konfiguruje lokalni Ollama provider (bez api key, OpenAI-compat /v1 endpoint).
 # ==============================================================================
 
@@ -17,10 +17,10 @@ opencode_config_file: "{{ ansible_facts['env']['HOME'] }}/.config/opencode/openc
 # Ollama endpoint (lokalni, OpenAI-compat /v1)
 opencode_ollama_base_url: "http://127.0.0.1:11434/v1"
 
-# Default model — prvni v seznamu se automaticky pouzije
+# Default model — the first in the list is used automatically
 opencode_default_model: "ollama/qwen3-coder:30b"
 
-# Modely dostupne pres OpenCode → Ollama
+# Models available via OpenCode -> Ollama
 # Formaty: 'tag' (Ollama tag) + 'display' (zobrazene jmeno)
 opencode_ollama_models:
   - tag: "qwen3-coder:30b"
@@ -32,9 +32,9 @@ opencode_ollama_models:
   - tag: "qwen3:14b"
     display: "Qwen3 14B (generalist)"
 
-# Volitelne: pridat dalsi providery (Anthropic, OpenAI) — nutno nastavit API key
+# Optional: add more providers (Anthropic, OpenAI) — must set an API key
 opencode_add_anthropic: "{{ anthropic_api_key is defined and (anthropic_api_key | length) > 0 }}"
 opencode_add_openai: "{{ openai_api_key is defined and (openai_api_key | length) > 0 }}"
 
-# Symlink do Homebrew PATH — opencode bude volatelne bez ~/.opencode/bin v PATH
+# Symlink into Homebrew PATH — opencode becomes callable without ~/.opencode/bin in PATH
 opencode_symlink_to_homebrew: true

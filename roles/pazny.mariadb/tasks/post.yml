@@ -2,10 +2,10 @@
 # ==============================================================================
 # pazny.mariadb/tasks/post.yml
 #
-# Post-start DB/user setup. Volano z tasks/stacks/core-up.yml PO
-# `docker compose up infra --wait` — kontejner bezi, compose healthcheck
-# potvrdil pripravenost, ale community.mysql muze stale narazit na race
-# (socket vs. TCP, auth plugin init), proto zde retry loop.
+# Post-start DB/user setup. Called from tasks/stacks/core-up.yml AFTER
+# `docker compose up infra --wait` — the container is running, compose healthcheck
+# confirmed readiness, but community.mysql can still hit a race
+# (socket vs. TCP, auth plugin init), hence the retry loop here.
 # ==============================================================================
 
 - name: "[pazny.mariadb Post] Verify MariaDB is accepting connections"
@@ -18,20 +18,20 @@
   retries: 18
   delay: 5
   until: mariadb_conn is not failed
-  ignore_errors: true  # noqa: ignore-errors – potrebujeme registrovat failed stav
+  ignore_errors: true  # noqa: ignore-errors - we need to register failed state
   when: not ansible_check_mode
 
-- name: "[pazny.mariadb Post] Connection failed – diagnostics"
+- name: "[pazny.mariadb Post] Connection failed - diagnostics"
   ansible.builtin.pause:
     prompt: |-
       ══════════════════════════════════════════════════════════════════════
-       MariaDB: root pristup odepren ({{ mariadb_conn.msg | default('neznama chyba') }})
+       MariaDB: root access denied ({{ mariadb_conn.msg | default('unknown error') }})
 
        Pravdepodobna pricina: DB byla inicializovana s jinym heslem nez je
        v credentials.yml. Env var MARIADB_ROOT_PASSWORD se cte jen pri prvni
        inicializaci.
 
-       Oprava (smazani dat a reinicializace):
+       Fix (wipe data and reinitialize):
          docker compose -p infra stop mariadb
          rm -rf ~/mariadb/data/*
          docker compose -p infra up -d mariadb
@@ -71,8 +71,8 @@
   no_log: true
   when: mariadb_conn is not failed
 
-# host: '%' – PHP-FPM a dalsi klienti se pripojuji pres Docker port-forward;
-# uvnitr MariaDB kontejneru to neprijde jako 127.0.0.1 ale jako gateway IP
+# host: '%' — PHP-FPM and other clients connect via Docker port-forward;
+# inside the MariaDB container it does not arrive as 127.0.0.1 but as the gateway IP
 - name: "[pazny.mariadb Post] Create database users"
   community.mysql.mysql_user:
     login_host: "127.0.0.1"

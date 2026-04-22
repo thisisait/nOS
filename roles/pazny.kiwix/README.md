@@ -1,8 +1,8 @@
 # pazny.kiwix
 
-Ansible role for deploying **Kiwix** (offline Wikipedia, Gutenberg, and other ZIM content) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **Kiwix** (offline Wikipedia, Gutenberg, and other ZIM content) as a compose override fragment in the nOS `iiab` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
 
 ## What it does
 

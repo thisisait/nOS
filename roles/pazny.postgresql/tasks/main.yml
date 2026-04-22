@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.postgresql/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/postgresql.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/infra/overrides/postgresql.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Post-start DB/user/extension setup je v tasks/post.yml — volany z
-# core-up.yml az PO compose up (Postgres musi bezet, nez se vytvori
-# databaze, uzivatele a pgcrypto extension).
+# Post-start DB/user/extension setup lives in tasks/post.yml — called from
+# core-up.yml AFTER compose up (Postgres must be running before we create
+# database, user and the pgcrypto extension).
 # ==============================================================================
 
 - name: "[pazny.postgresql] Ensure data directory exists"

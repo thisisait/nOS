@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# IIAB Terminal — veřejný SSH TUI hub pro homelab
-# Vytvoří uživatele, nainstaluje TUI app, nastaví SSH ForceCommand
+# IIAB Terminal — public SSH TUI hub for the homelab
+# Creates the user, installs the TUI app, configures SSH ForceCommand
 # ==============================================================================
 
 # ── 1. Python deps ────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@
 - name: "[IIAB Terminal] Configure SSH ForceCommand"
   ansible.builtin.blockinfile:
     path: /etc/ssh/sshd_config
-    marker: "# {mark} ANSIBLE MANAGED – iiab-terminal"
+    marker: "# {mark} ANSIBLE MANAGED - iiab-terminal"
     insertafter: EOF
     block: |
       Match User {{ iiab_terminal_user | default('home') }}
@@ -105,10 +105,10 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       IIAB Terminal připraven
+       IIAB Terminal ready
       ══════════════════════════════════════════════════════
        SSH:       ssh {{ iiab_terminal_user | default('home') }}@{{ ansible_facts['default_ipv4']['address'] | default('localhost') }}
-       Heslo:     {{ _iiab_terminal_pw | default('(existující uživatel)') }}
+       Password:  {{ _iiab_terminal_pw | default('(existing user)') }}
        Command:   {{ iiab_terminal_bin_path }}
        Config:    {{ iiab_terminal_config_dir }}/config.json
       ══════════════════════════════════════════════════════

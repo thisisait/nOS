@@ -1,14 +1,17 @@
 ---
 # ==============================================================================
-# BOXAPI – Box Management API (FastAPI + uvicorn via launchd)
-# Poskytuje REST API pro správu devBoxNOS: health, services, status, run-tag
+# BOXAPI - Box Management API (FastAPI + uvicorn via launchd)
+# Provides a REST API for managing nOS: health, services, status, run-tag
 # ==============================================================================
 
-- name: "[BoxAPI] Create application directory"
+- name: "[BoxAPI] Create application + log directories"
   ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/boxapi"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/boxapi"
+    - "{{ ansible_facts['env']['HOME'] }}/boxapi/log"
 
 - name: "[BoxAPI] Copy application files"
   ansible.builtin.copy:
@@ -35,13 +38,13 @@
 - name: "[BoxAPI] Deploy launchd plist"
   ansible.builtin.template:
     src: boxapi-launchd.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.api.plist"
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist"
     mode: '0644'
   notify: Restart boxapi
 
 - name: "[BoxAPI] Load launchd service"
   ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.api.plist
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist
   register: _boxapi_load
   changed_when: "'Bootstrap failed: 5' not in (_boxapi_load.stderr | default(''))"
   failed_when: >
@@ -53,7 +56,7 @@
   ansible.builtin.debug:
     msg: |
       ======================================================
-       Box Management API -- pripraven
+       Box Management API -- ready
       ======================================================
        URL:     https://{{ boxapi_domain | default('api.dev.local') }}
        Port:    {{ boxapi_port | default(8099) }}

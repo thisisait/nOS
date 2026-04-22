@@ -147,7 +147,7 @@
 
     # homebrew_cask Ansible modul je extremne pomaly (brew 4.x Ruby JSON API
     # parsing, 60s+ na cask). Nahrazeno rychlym Caskroom dir checkm.
-    # Casty bez Caskroom entry se instaluji s 90s timeoutem.
+    # Casks without a Caskroom entry install with a 90s timeout.
     - name: Install configured cask applications.
       ansible.builtin.shell: |
         cask_name="{{ item.name | default(item) }}"
@@ -191,8 +191,8 @@
         state: absent
       loop: "{{ homebrew_uninstalled_packages }}"
 
-    # homebrew Ansible modul pouziva brew Ruby API (60s+ na balicek v brew 4.x).
-    # Nahrazeno rychlym Cellar dir checkm — brew install jen pro chybejici.
+    # The homebrew Ansible module uses the brew Ruby API (60s+ per package in brew 4.x).
+    # Replaced with a quick Cellar dir check — brew install only for missing ones.
     - name: Ensure configured homebrew packages are installed.
       ansible.builtin.shell: |
         pkg_name="{{ item.name | default(item) }}"

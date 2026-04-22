@@ -1,8 +1,8 @@
 ---
 # pazny.authentik — handlers
 # Play-level "Restart authentik" + "Reapply authentik blueprints" v main.yml
-# maji prednost; tyto role-lokalni zustavaji pro samostatne pouziti role
-# mimo devBoxNOS playbook.
+# take priority; these role-local ones stay for standalone role use
+# mimo nOS playbook.
 
 - name: Restart authentik
   ansible.builtin.shell: >

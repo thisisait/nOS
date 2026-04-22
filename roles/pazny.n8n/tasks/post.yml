@@ -1,12 +1,12 @@
 ---
 # ==============================================================================
-# pazny.n8n/tasks/post.yml — auto-registrace owner uzivatele
-# n8n od v1.0 pouziva /api/v1/owner/setup pro prvni ucet (owner = admin).
-# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+# pazny.n8n/tasks/post.yml — auto-register owner user
+# Since v1.0, n8n uses /api/v1/owner/setup for the first account (owner = admin).
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
 #
-# Reconverge leg pro state-declarative idempotence: session-based password
-# change pres /rest/login + /rest/change-password s previous_password_prefix
-# pro OLD heslo (z .ansible-prefix-state).
+# Reconverge leg for state-declarative idempotence: session-based password
+# change via /rest/login + /rest/change-password with previous_password_prefix
+# for the OLD password (from .ansible-prefix-state).
 # ==============================================================================
 
 - name: "[pazny.n8n Post] Wait for API"
@@ -40,7 +40,7 @@
       email: "{{ n8n_admin_email | default(default_admin_email) }}"
       password: "{{ n8n_admin_password | default(global_password_prefix + '_pw_n8n') }}"
       firstName: "{{ n8n_admin_firstname | default('Admin') }}"
-      lastName: "{{ n8n_admin_lastname | default('devBoxNOS') }}"
+      lastName: "{{ n8n_admin_lastname | default('nOS') }}"
     status_code: [200, 201]
     timeout: 10
   register: _n8n_setup

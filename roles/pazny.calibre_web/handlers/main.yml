@@ -1,7 +1,7 @@
 ---
 # pazny.calibre_web — handlers
 # Pred Wave 2.2 nemel Calibre-Web dedicated handler v play-level main.yml.
-# Handler name pouziva hyphen form (`calibre-web`) konzistentne s compose
+# Handler name uses the hyphen form (`calibre-web`) consistent with compose
 # service name.
 
 - name: Restart calibre-web

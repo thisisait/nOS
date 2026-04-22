@@ -3,8 +3,8 @@
 # pazny.superset — Apache Superset v Docker (data compose stack)
 #
 # Credentials (superset_db_password, superset_admin_password, superset_secret_key)
-# zustavaji v top-level default.config.yml / default.credentials.yml — stale
-# centralizovane, role je jen cte pres Ansible var precedence.
+# stay in top-level default.config.yml / default.credentials.yml — still
+# centralized, the role only reads it via Ansible var precedence.
 # ==============================================================================
 
 superset_version: "6.0.0"                # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi)

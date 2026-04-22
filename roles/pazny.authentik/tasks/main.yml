@@ -2,15 +2,15 @@
 # ==============================================================================
 # pazny.authentik/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/authentik.yml a zavola blueprints.yml
-# pro render 3 blueprintu do {{ stacks_dir }}/infra/authentik/blueprints
-# (bind source pro /blueprints/custom v compose envu; blueprints.yml
-# zaroven vytvori tuto slozku).
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/infra/overrides/authentik.yml and calls blueprints.yml
+# to render 3 blueprints into {{ stacks_dir }}/infra/authentik/blueprints
+# (bind source for /blueprints/custom in the compose env; blueprints.yml
+# also creates this directory).
 #
-# Post-start health-check je v tasks/post.yml — volany z core-up.yml az
-# PO `docker compose up infra --wait`.
+# Post-start health-check lives in tasks/post.yml — called from core-up.yml
+# AFTER `docker compose up infra --wait`.
 # ==============================================================================
 
 - name: "[pazny.authentik] Ensure data directory exists"

@@ -1,7 +1,7 @@
 ---
 # pazny.onlyoffice — handlers
-# Fallback handler pro samostatne pouziti role; coordinator Phase B
-# muze definovat play-level variantu (nebo tuto pouzit primo).
+# Fallback handler for standalone role use; Phase B coordinator
+# can define a play-level variant (or use this one directly).
 
 - name: Restart onlyoffice
   ansible.builtin.shell: >

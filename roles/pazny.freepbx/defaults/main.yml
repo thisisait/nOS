@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.freepbx — FreePBX + Asterisk v Docker (voip compose stack)
 #
-# Credentials (freepbx_db_password) zustavaji v top-level default.config.yml /
-# default.credentials.yml — stale centralizovane, role je jen cte pres
+# Credentials (freepbx_db_password) stay in top-level default.config.yml /
+# default.credentials.yml — still centralized, the role only reads them via
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 

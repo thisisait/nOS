@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.wordpress/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data dir, nginx vhost, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/iiab/overrides/wordpress.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, nginx vhost, renders the compose override fragment do
+# {{ stacks_dir }}/iiab/overrides/wordpress.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Post-start wp-cli install + admin password reconverge je v tasks/post.yml —
-# volany z stack-up.yml az PO compose up (wordpress musi bezet, nez
-# zavolame `wp core install` a `wp user update`).
+# Post-start wp-cli install + admin password reconverge lives in tasks/post.yml —
+# called from stack-up.yml AFTER compose up (wordpress must be running before
+# call `wp core install` and `wp user update`).
 # ==============================================================================
 
 - name: "[pazny.wordpress] Ensure WordPress directory exists"
@@ -46,13 +46,13 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       WordPress (Docker) připraven
+       WordPress (Docker) ready
       ══════════════════════════════════════════════════════
        URL:       https://{{ wordpress_domain }}
-       Kontejner: wordpress → 127.0.0.1:{{ wordpress_port | default(8084) }}
+       Container: wordpress → 127.0.0.1:{{ wordpress_port | default(8084) }}
        Data:      {{ wordpress_dir }}
        DB:        {{ wordpress_db_name }} @ mariadb (iiab_net)
 
-       Dokončení: přejdi na https://{{ wordpress_domain }}/wp-admin/install.php
-       Přidej do /etc/hosts:   127.0.0.1 {{ wordpress_domain }}
+       Finish: go to https://{{ wordpress_domain }}/wp-admin/install.php
+       Add to /etc/hosts:   127.0.0.1 {{ wordpress_domain }}
       ══════════════════════════════════════════════════════

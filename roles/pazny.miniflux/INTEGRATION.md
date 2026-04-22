@@ -6,7 +6,7 @@ patches to the shared configuration + orchestrators.
 ## 1. `default.config.yml` — IIAB section (after `install_calibreweb`)
 
 ```yaml
-install_miniflux: false           # Miniflux – minimalistický RSS reader           [vyžaduje: PostgreSQL, Docker]
+install_miniflux: false           # Miniflux - minimalist RSS reader               [requires: PostgreSQL, Docker]
 ```
 
 ## 2. `default.config.yml` — `authentik_oidc_apps` (native OIDC entry)
@@ -17,7 +17,7 @@ Add to the native-OIDC block (near the Outline entry, NOT in the proxy block):
   - name: "Miniflux"
     slug: "miniflux"
     enabled: "{{ install_miniflux | default(false) }}"
-    client_id: "devboxnos-miniflux"
+    client_id: "nos-miniflux"
     client_secret: "{{ global_password_prefix }}_pw_oidc_miniflux"
     redirect_uris: "https://{{ miniflux_domain | default('rss.dev.local') }}/oauth2/oidc/callback"
     launch_url: "https://{{ miniflux_domain | default('rss.dev.local') }}"
@@ -44,9 +44,9 @@ authentik_app_tiers:
 
 ```yaml
 # ==============================================================================
-# MINIFLUX (pouze pokud install_miniflux: true)
-# Default login: admin / miniflux_admin_password (fallback) nebo Authentik SSO
-# Vyžaduje: PostgreSQL
+# MINIFLUX (only when install_miniflux: true)
+# Default login: admin / miniflux_admin_password (fallback) or Authentik SSO
+# Requires: PostgreSQL
 # ==============================================================================
 
 miniflux_db_password: "{{ global_password_prefix }}_pw_miniflux"
@@ -66,7 +66,7 @@ create-user, enable-pgcrypto, grant-privileges) with a conditional entry:
 
 (a logically equivalent `{'db': 'miniflux', 'user': 'miniflux'}` variant goes
 into the create-db / pgcrypto / grant loops). Equivalent to the brief's
-“Postgres DB provision entry”:
+"Postgres DB provision entry":
 
 ```yaml
 { name: "miniflux DB", db: "miniflux", owner: "miniflux", password: "{{ miniflux_db_password }}" }

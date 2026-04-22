@@ -2,17 +2,17 @@
 # ==============================================================================
 # pazny.puter/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data/config dir, vyrenderuje config.json a compose override
-# fragment do {{ stacks_dir }}/iiab/overrides/puter.yml, ktery pak
-# stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates data/config dir, renders config.json and the compose override
+# fragment to {{ stacks_dir }}/iiab/overrides/puter.yml which then
+# stack-up.yml collects via `find` and passes as an additional -f flag.
 #
-# Post-start admin user + bcrypt password reconverge je v tasks/post.yml
-# — volany z stack-up.yml az PO compose up.
+# Post-start admin user + bcrypt password reconverge lives in tasks/post.yml
+# — called from stack-up.yml az PO compose up.
 #
-# App registry (iframe apps v Puter Start menu) je v tasks/apps.yml —
-# zavisi na zdrave Puter API, takze bezi post-start. Role ho volame
-# pres include_tasks na konci, coz kopiruje tok z main.yml:705 (import_tasks
+# App registry (iframe apps in Puter Start menu) lives in tasks/apps.yml —
+# depends on a healthy Puter API, so it runs post-start. We call the role
+# via include_tasks at the end, which mirrors the flow from main.yml:705 (import_tasks
 # puter_apps.yml).
 # ==============================================================================
 
@@ -42,17 +42,17 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Puter cloud OS připraven (spouští se přes IIAB stack)
+       Puter cloud OS ready (starts via the IIAB stack)
       ══════════════════════════════════════════════════════
        URL:       https://{{ puter_domain | default('os.dev.local') }}
        API:       https://{{ puter_api_domain | default('api.os.dev.local') }}
        Port:      {{ puter_port | default(5050) }}
        Data:      {{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}
        Ollama:    auto-detect (localhost:11434)
-       Onboard:   První uživatel = admin (heslo v Docker logu)
+       Onboard:   First user = admin (password in Docker log)
       ══════════════════════════════════════════════════════
 
-# App registry – mirroring flow z main.yml:705 (import_tasks puter_apps.yml).
-# apps.yml ma vlastni healthcheck gate, takze bezi bezpecne i pre-compose.
+# App registry - mirroring flow from main.yml:705 (import_tasks puter_apps.yml).
+# apps.yml has its own healthcheck gate, so it runs safely even pre-compose.
 - name: "[pazny.puter] Include apps registry tasks"
   ansible.builtin.include_tasks: apps.yml

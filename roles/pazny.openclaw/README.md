@@ -1,8 +1,8 @@
 # pazny.openclaw
 
-Ansible role for deploying **OpenClaw** (Inspektor Klepítko) — a self-hosted AI agent running 100% locally on Apple Silicon with an [Ollama](https://ollama.com) MLX backend. Part of [devBoxNOS](../../README.md).
+Ansible role for deploying **OpenClaw** (Inspektor Klepítko) — a self-hosted AI agent running 100% locally on Apple Silicon with an [Ollama](https://ollama.com) MLX backend. Part of [nOS](../../README.md).
 
-OpenClaw is devBoxNOS' autonomous DevOps agent. This role installs Ollama, pulls the primary model, installs the `openclaw` npm package, performs non-interactive onboarding against the local Ollama endpoint, and deploys the agent workspace (persona, sub-agents, tools, logs).
+OpenClaw is nOS' autonomous DevOps agent. This role installs Ollama, pulls the primary model, installs the `openclaw` npm package, performs non-interactive onboarding against the local Ollama endpoint, and deploys the agent workspace (persona, sub-agents, tools, logs).
 
 ## What it does
 
@@ -22,7 +22,7 @@ Notified handler `Restart openclaw` kicks the launchd agent `com.openclaw.agent`
 ## Requirements
 
 - macOS with Homebrew on Apple Silicon (ARM64)
-- Node.js via NVM (handled by the main devBoxNOS playbook)
+- Node.js via NVM (handled by the main nOS playbook)
 - `community.general` collection for the `homebrew` module
 - The `files/openclaw/` and `files/project-openclaw/` trees staying inside the playbook repo
 - Play-level handler `Restart openclaw` defined in the consuming playbook (a role-local copy is also provided)

@@ -2,16 +2,17 @@
 # ==============================================================================
 # pazny.bookstack/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
-# vytvori data dir, deployne nginx vhost, vyrenderuje compose override
-# fragment do {{ stacks_dir }}/b2b/overrides/bookstack.yml, ktery pak
-# stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up b2b`:
+# creates the data dir, deploys the nginx vhost, renders the compose override
+# fragment to {{ stacks_dir }}/b2b/overrides/bookstack.yml which stack-up.yml
+# then collects via `find` and passes as an additional -f flag.
 #
-# BookStack ma native OIDC (Authentik) pres env vary — zadny post-start
-# setup neni potreba (user se vytvori pri prvnim OIDC loginu, pokud je
-# OIDC_USER_TO_GROUPS=true, automaticky do skupin z Authentiku).
-# DB user a databaze se vytvari v MariaDB post-start (pazny.mariadb/post.yml)
-# pres centralni mariadb_databases / mariadb_users list v default.config.yml.
+# BookStack has native OIDC (Authentik) via env vars — no post-start setup is
+# required (the user is created on the first OIDC login; if
+# OIDC_USER_TO_GROUPS=true they are auto-joined to Authentik groups).
+# The DB user and database are created in the MariaDB post-start
+# (pazny.mariadb/post.yml) via the central mariadb_databases / mariadb_users
+# list in default.config.yml.
 # ==============================================================================
 
 - name: "[pazny.bookstack] Ensure data directory exists"
@@ -47,14 +48,14 @@
 - name: "[pazny.bookstack] Print installation info"
   ansible.builtin.debug:
     msg: |
-      ══════════════════════════════════════════════════════
-       BookStack (Docker) připraven
-      ══════════════════════════════════════════════════════
+      ======================================================
+       BookStack (Docker) ready
+      ======================================================
        URL:       https://{{ bookstack_domain }}
-       Kontejner: bookstack → 127.0.0.1:{{ bookstack_port | default(3013) }}
+       Container: bookstack -> 127.0.0.1:{{ bookstack_port | default(3013) }}
        Data:      {{ bookstack_data_dir }}
-       DB:        {{ bookstack_db_name }} @ mariadb (b2b_net ↔ shared)
+       DB:        {{ bookstack_db_name }} @ mariadb (b2b_net <-> shared)
        SSO:       {{ 'Authentik OIDC' if install_authentik | default(false) else 'local' }}
 
-       Přidej do /etc/hosts:   127.0.0.1 {{ bookstack_domain }}
-      ══════════════════════════════════════════════════════
+       Add to /etc/hosts:   127.0.0.1 {{ bookstack_domain }}
+      ======================================================

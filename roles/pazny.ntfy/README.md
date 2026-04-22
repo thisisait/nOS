@@ -1,6 +1,6 @@
 # pazny.ntfy
 
-Ansible role for deploying **ntfy** (self-hosted push notifications server, `ntfy.sh` upstream) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **ntfy** (self-hosted push notifications server, `ntfy.sh` upstream) as a compose override fragment in the nOS `iiab` stack.
 
 ## What it does
 

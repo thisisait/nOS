@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# pazny.infisical/tasks/post.yml — pockat na ready + info.
+# pazny.infisical/tasks/post.yml — wait na ready + info.
 # ==============================================================================
 
 - name: "[pazny.infisical Post] Wait for server to be ready"
@@ -18,6 +18,6 @@
   ansible.builtin.debug:
     msg: >-
       Infisical {{ 'OK' if _infisical_health.status | default(0) == 200
-      else 'NEDOSTUPNY – docker logs infra-infisical-1' }}
+      else 'UNAVAILABLE - docker logs infra-infisical-1' }}
       | Dashboard: https://{{ infisical_domain | default('vault.dev.local') }}
-      | Signup: prvni uzivatel = admin
+      | Signup: first user = admin

@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
-# ── devBoxNOS RBAC: expression policies + application bindings ───────────────
+# ── nOS RBAC: expression policies + application bindings ───────────────
 # Tier-based access control. Zdroje:
 #   - authentik_rbac_tiers (seznam tier → groups)
 #   - authentik_app_tiers  (slug → tier index)
@@ -9,9 +9,9 @@
 
 version: 1
 metadata:
-  name: devboxnos-rbac-policies
+  name: nos-rbac-policies
   labels:
-    managed-by: devboxnos
+    managed-by: nos
     blueprint-version: "1"
 
 entries:
@@ -20,7 +20,7 @@ entries:
   - model: authentik_policies_expression.expressionpolicy
     state: present
     identifiers:
-      name: "devboxnos-{{ tier.name }}"
+      name: "nos-{{ tier.name }}"
     attrs:
       expression: |
         # Tier {{ tier.tier }}: {{ tier.description }}
@@ -44,7 +44,7 @@ entries:
       target: !Find [authentik_core.application, [slug, "{{ app.slug }}"]]
       order: 0
     attrs:
-      policy: !Find [authentik_policies_expression.expressionpolicy, [name, "devboxnos-{{ tier_entry.name }}"]]
+      policy: !Find [authentik_policies_expression.expressionpolicy, [name, "nos-{{ tier_entry.name }}"]]
       enabled: true
       negate: false
       timeout: 30

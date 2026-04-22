@@ -1,7 +1,7 @@
 ---
 # pazny.vaultwarden — handlers
-# Fallback handler pro samostatne pouziti role; coordinator Phase B
-# muze definovat play-level variantu.
+# Fallback handler for standalone role use; Phase B coordinator
+# may define a play-level variant.
 
 - name: Restart vaultwarden
   ansible.builtin.shell: >

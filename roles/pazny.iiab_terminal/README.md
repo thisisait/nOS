@@ -1,6 +1,6 @@
 # pazny.iiab_terminal
 
-Ansible role for deploying **IIAB Terminal** — a public SSH TUI hub for the devBoxNOS homelab — on macOS. Part of [devBoxNOS](../../README.md).
+Ansible role for deploying **IIAB Terminal** — a public SSH TUI hub for the nOS homelab — on macOS. Part of [nOS](../../README.md).
 
 IIAB Terminal is a Python [Textual](https://textual.textualize.io/) app that is launched through an SSH `ForceCommand` on a dedicated local user. Guests `ssh home@devbox` and land directly in the TUI with no shell access.
 

@@ -1,8 +1,8 @@
 ---
 # pazny.woodpecker — handlers
-# Restartuje obe compose sluzby (server + agent) jako jeden logicky celek.
-# Woodpecker nemel dedikovany handler na play-level v main.yml, takze tato
-# role je jediny zdroj. Coordinator v Phase B nema co odstranovat.
+# Restarts both compose services (server + agent) as a single logical unit.
+# Woodpecker had no dedicated play-level handler in main.yml, so this
+# the role is the only source. The coordinator in Phase B has nothing to remove.
 
 - name: Restart woodpecker
   ansible.builtin.shell: >

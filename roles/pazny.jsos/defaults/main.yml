@@ -1,11 +1,11 @@
 ---
 # ==============================================================================
-# pazny.jsos — jsOS webový desktop (OS.js v3)
+# pazny.jsos — jsOS web desktop (OS.js v3)
 #
-# Citlivé údaje (jsos_session_secret, jsos_db_password) zůstávají v top-level
-# default.credentials.yml aby prefix rotation přes global_password_prefix
-# fungovala konzistentně. App source files/jsos/ a files/project-jsOs/
-# zůstávají v playbook repo — role na ně odkazuje přes playbook_dir path.
+# Sensitive data (jsos_session_secret, jsos_db_password) stay in top-level
+# default.credentials.yml so prefix rotation via global_password_prefix
+# works consistently. App source files/jsos/ and files/project-jsOs/
+# stay in the playbook repo — the role references them via playbook_dir path.
 # ==============================================================================
 
 jsos_domain: "jsos.dev.local"

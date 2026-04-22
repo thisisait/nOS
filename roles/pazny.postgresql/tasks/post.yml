@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# POSTGRESQL – post-start: vytvoří databáze a uživatele
-# Běží PO startu infra stacku (stack-up.yml --wait).
+# POSTGRESQL - post-start: creates databases and users
+# Runs AFTER infra stack startup (stack-up.yml --wait).
 # ==============================================================================
 
 - name: "[PostgreSQL] Verify PostgreSQL is accepting connections"
@@ -17,7 +17,7 @@
   when: not ansible_check_mode
 
 # pgcrypto enabled in template1 (inherited by future DBs) + all service DBs
-# tak, aby byl `crypt(pw, gen_salt('bf', 10))` dostupny v psql UPDATE
+# so that `crypt(pw, gen_salt('bf', 10))` is available in the psql UPDATE
 # reconverge dotazech. Bcrypt hash format je kompatibilni s Java
 # BCryptPasswordEncoder (Metabase, Superset) i Node bcrypt/bcryptjs (n8n).
 - name: "[PostgreSQL] Enable pgcrypto in template1 (inherited by new DBs)"

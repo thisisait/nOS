@@ -1,6 +1,6 @@
 ---
 # pazny.outline — handlers
-# Volano z notify: po re-renderu override sablony.
+# Triggered via notify: after the override template is re-rendered.
 
 - name: Restart outline
   ansible.builtin.shell: >

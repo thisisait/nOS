@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>eu.thisisait.nos.api</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/uvicorn</string>
+    <string>main:app</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--port</string>
+    <string>{{ boxapi_port | default(8099) }}</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/boxapi</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/boxapi/log/boxapi.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/boxapi/log/boxapi-error.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>BOXAPI_SECRET</key>
+    <string>{{ boxapi_secret | default('') }}</string>
+    <key>SERVICE_REGISTRY_PATH</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json</string>
+    <key>PLAYBOOK_DIR</key>
+    <string>{{ playbook_dir }}</string>
+    <key>INSTANCE_NAME</key>
+    <string>{{ instance_name | default('nos') }}</string>
+  </dict>
+</dict>
+</plist>

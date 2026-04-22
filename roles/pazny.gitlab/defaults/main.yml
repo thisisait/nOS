@@ -4,12 +4,12 @@
 #
 # Tezky Omnibus stack (~4 GB RAM v klidu). Kompletni devops platforma
 # (Git, CI/CD, registry, wiki, issues). Credentials (gitlab_admin_password)
-# zustavaji v top-level default.credentials.yml.
+# staysji v top-level default.credentials.yml.
 # ==============================================================================
 
 gitlab_version: "18.10.1-ce.0"          # CVE-2026-0723 (2FA bypass), 9 HIGH CVEs
 gitlab_domain: "gitlab.dev.local"
-gitlab_http_port: 8929                  # Interni HTTP port (nginx prebira SSL)
+gitlab_http_port: 8929                  # Internal HTTP port (nginx handles SSL)
 gitlab_ssh_port: 2224                   # Git SSH (22=system, 2222=Gitea)
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config"

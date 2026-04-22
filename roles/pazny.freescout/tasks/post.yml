@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.freescout/tasks/post.yml
 #
-# FreeScout post-start – vytvoreni admin uzivatele pres Artisan CLI.
-# FreeScout nema REST API pro onboarding – pouziva Laravel Artisan.
-# Volano z tasks/stacks/stack-up.yml az PO `docker compose up b2b --wait`.
+# FreeScout post-start — create the admin user via Artisan CLI.
+# FreeScout has no REST API for onboarding — it uses Laravel Artisan.
+# Called from tasks/stacks/stack-up.yml only AFTER `docker compose up b2b --wait`.
 # ==============================================================================
 
 - name: "[pazny.freescout Post] Wait for service"
@@ -38,7 +38,7 @@
     php artisan freescout:create-user
     --role=admin
     --firstName="{{ freescout_admin_first_name | default('Admin') }}"
-    --lastName="{{ freescout_admin_last_name | default('devBoxNOS') }}"
+    --lastName="{{ freescout_admin_last_name | default('nOS') }}"
     --email="{{ freescout_admin_email | default(default_admin_email) }}"
     --password="{{ freescout_admin_password }}"
     2>&1 || true
@@ -50,8 +50,8 @@
   check_mode: false
 
 # ── Reconverge admin password every run (state-declarative UPDATE) ──────
-# FreeScout nema dedicated change-password artisan command, pouzijeme tinker
-# s App\User::where->update aby fungovalo pro existujici usere.
+# FreeScout has no dedicated change-password artisan command, we use tinker
+# with App\User::where->update to work for existing users.
 - name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout \

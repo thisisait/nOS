@@ -1,8 +1,8 @@
 # pazny.gitea
 
-Ansible role for deploying **Gitea** as a compose override fragment in the devBoxNOS `devops` stack. Self-hosted Git service with built-in Actions, wiki, issue tracker.
+Ansible role for deploying **Gitea** as a compose override fragment in the nOS `devops` stack. Self-hosted Git service with built-in Actions, wiki, issue tracker.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction batch.
+Part of [nOS](../../README.md) Wave 2.2 role extraction batch.
 
 ## What it does
 

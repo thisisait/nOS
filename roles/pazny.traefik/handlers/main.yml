@@ -1,7 +1,7 @@
 ---
 # pazny.traefik — handlers
-# Play-level "Restart traefik" v main.yml ma prednost; tento zustava pro
-# samostatne pouziti role mimo devBoxNOS playbook.
+# Play-level "Restart traefik" in main.yml takes priority; this one stays for
+# standalone use of the role outside the nOS playbook.
 
 - name: Restart traefik
   ansible.builtin.shell: >

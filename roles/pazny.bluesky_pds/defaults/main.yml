@@ -3,13 +3,13 @@
 # pazny.bluesky_pds — Bluesky PDS (AT Protocol Personal Data Server)
 #
 # Secrets (bluesky_pds_jwt_secret, bluesky_pds_admin_password,
-# bluesky_pds_rotation_key) zustavaji v default.credentials.yml —
+# bluesky_pds_rotation_key) stay in default.credentials.yml —
 # auto-generated pri blank runu v main.yml pre-tasks. Tato role je
-# jen konzumuje.
+# only consumes.
 #
-# Identity bridge (Authentik → PDS account auto-provision) zustava
+# Identity bridge (Authentik → PDS account auto-provision) stays
 # v tasks/stacks/bluesky_pds_bridge.yml — cross-service orchestrace,
-# neni role-owned.
+# not role-owned.
 # ==============================================================================
 
 bluesky_pds_version: "latest"
@@ -23,7 +23,7 @@ bluesky_pds_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"
 
 # Admin account (provisioned in post.yml)
-# Handle NESMI byt reserved slovo (admin, root, pds, app, bsky, atproto, ...)
+# Handle MUST NOT be a reserved word (admin, root, pds, app, bsky, atproto, ...)
 # AT Protocol handles = <handle>.{{ bluesky_pds_hostname }}
 bluesky_pds_admin_handle: "pazny.{{ bluesky_pds_hostname }}"
 bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (instance_tld | default('dev.local'))) }}"

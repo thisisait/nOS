@@ -1,6 +1,6 @@
 # pazny.firefly — Integration points
 
-Non-role files that must be edited to wire the role into the devBoxNOS playbook. Apply each patch below verbatim; the role is inert without them.
+Non-role files that must be edited to wire the role into the nOS playbook. Apply each patch below verbatim; the role is inert without them.
 
 ---
 
@@ -14,20 +14,20 @@ install_erpnext: false
 install_freescout: true
 install_mattermost: true
 install_outline: true
-install_firefly: false          # Firefly III – personal finance manager    [vyžaduje: MariaDB, Redis Docker]
+install_firefly: false          # Firefly III - personal finance manager    [requires: MariaDB, Redis Docker]
 ```
 
 ---
 
 ## 2) `default.config.yml` — Firefly service block
 
-Append a service block (after the Outline section, before `# ── AI orchestrace ──`):
+Append a service block (after the Outline section, before `# -- AI orchestration --`):
 
 ```yaml
 # ==============================================================================
-# FIREFLY III – Personal Finance Manager (b2b stack)
-# SSO: Authentik proxy outpost (remote_user_guard → REMOTE_USER header)
-# Vyžaduje: MariaDB + Redis Docker
+# FIREFLY III - Personal Finance Manager (b2b stack)
+# SSO: Authentik proxy outpost (remote_user_guard -> REMOTE_USER header)
+# Requires: MariaDB + Redis Docker
 # ==============================================================================
 
 firefly_version: "version-6.2.22"
@@ -67,7 +67,7 @@ mariadb_users:
 
 ## 4) `default.config.yml` — `authentik_oidc_apps` entry (proxy type)
 
-Append under the "Proxy-auth služby" section of `authentik_oidc_apps` (around line 1523+):
+Append under the "Proxy-auth services" section of `authentik_oidc_apps` (around line 1523+):
 
 ```yaml
   - name: "Firefly III"
@@ -78,7 +78,7 @@ Append under the "Proxy-auth služby" section of `authentik_oidc_apps` (around l
     type: "proxy"
 ```
 
-**Why proxy (not native OIDC):** Firefly III's native auth integrations require running Laravel Passport as its own OAuth2 *server* or configuring a fully custom OIDC guard — both fragile across upgrades. The supported reverse-proxy pattern (`AUTHENTICATION_GUARD=remote_user_guard`) drops the whole OIDC dance onto the Authentik proxy outpost, which is already wired for every other proxy-auth service in devBoxNOS.
+**Why proxy (not native OIDC):** Firefly III's native auth integrations require running Laravel Passport as its own OAuth2 *server* or configuring a fully custom OIDC guard — both fragile across upgrades. The supported reverse-proxy pattern (`AUTHENTICATION_GUARD=remote_user_guard`) drops the whole OIDC dance onto the Authentik proxy outpost, which is already wired for every other proxy-auth service in nOS.
 
 ---
 
@@ -89,7 +89,7 @@ Add to the `authentik_app_tiers:` map (around line 1425):
 ```yaml
 authentik_app_tiers:
   # ... existing entries ...
-  firefly: 2        # finance = manager tier (Tier 2, sensitivní)
+  firefly: 2        # finance = manager tier (Tier 2, sensitive)
 ```
 
 ---
@@ -100,15 +100,15 @@ Append after the OUTLINE block (around line 212):
 
 ```yaml
 # ==============================================================================
-# FIREFLY III (pouze pokud install_firefly: true)
-# Login: via Authentik proxy outpost (remote_user_guard) — žádné lokální heslo
-# Vyžaduje: MariaDB + Redis Docker
+# FIREFLY III (only when install_firefly: true)
+# Login: via Authentik proxy outpost (remote_user_guard) - no local password
+# Requires: MariaDB + Redis Docker
 # ==============================================================================
 
 firefly_db_password: "{{ global_password_prefix }}_pw_firefly"
 firefly_app_key: "base64:{{ global_password_prefix }}_pw_firefly_app_key_PLACEHOLDER_32B"
-# firefly_app_key je Laravel APP_KEY. Pri blank=true ho main.yml auto-generuje
-# pres `openssl rand -base64 32` s prefixem `base64:`. Zmena invaliduje data na disku.
+# firefly_app_key is the Laravel APP_KEY. When blank=true, main.yml auto-generates
+# it via `openssl rand -base64 32` with a `base64:` prefix. Changing it invalidates on-disk data.
 ```
 
 ---
@@ -135,8 +135,8 @@ Also update the warning message list on line 394:
 
 ```yaml
 msg: |
-  NEBEZPECI: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key,
-  firefly_app_key zachovany z predchoziho runu (nemaji lazy regeneraci v non-blank runech).
+  WARNING: infisical_encryption_key, outline_secret_key, bluesky_pds_rotation_key,
+  firefly_app_key preserved from the previous run (they have no lazy regeneration on non-blank runs).
 ```
 
 ---
@@ -223,7 +223,7 @@ docker compose -p b2b logs firefly | tail -40
 docker compose -p infra exec -T mariadb \
   mariadb -uroot -p"{{ mariadb_root_password }}" -e "SHOW DATABASES LIKE 'firefly';"
 
-# End-to-end: login in browser at https://firefly.dev.local → Authentik → Firefly
+# End-to-end: login in browser at https://firefly.dev.local -> Authentik -> Firefly
 # first request after SSO should create a local account keyed on REMOTE_EMAIL
 ```
 

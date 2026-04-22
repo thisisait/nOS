@@ -5,9 +5,9 @@
 # Metabase POST /api/setup creates admin + database config in one call.
 # Idempotent: returns 403 if already set up.
 #
-# Pro non-blank runy (edited credentials.yml) pouzivame /api/session +
-# PUT /api/user/1/password patern – previous_password_prefix drzi posledni
-# hash pro old_password.
+# For non-blank runs (edited credentials.yml) we use /api/session +
+# PUT /api/user/1/password pattern — previous_password_prefix holds the last
+# hash for old_password.
 # ==============================================================================
 
 - name: "[pazny.metabase Post] Wait for API"
@@ -49,10 +49,10 @@
         email: "{{ metabase_admin_email | default(default_admin_email) }}"
         password: "{{ metabase_admin_password }}"
         first_name: "{{ metabase_admin_first_name | default('Admin') }}"
-        last_name: "{{ metabase_admin_last_name | default('devBoxNOS') }}"
-        site_name: "devBoxNOS BI"
+        last_name: "{{ metabase_admin_last_name | default('nOS') }}"
+        site_name: "nOS BI"
       prefs:
-        site_name: "devBoxNOS BI"
+        site_name: "nOS BI"
         site_locale: "en"
         allow_tracking: false
     status_code: [200]
@@ -66,9 +66,9 @@
 
 # ── Admin password reconverge (state-declarative UPDATE) ──────────────────
 # Metabase /api/user/{id}/password vyzaduje old_password v body. Stridani
-# prefix: previous_password_prefix z .ansible-prefix-state drzi posledni
-# prefix → vytvori "previous_metabase_password" a voluje POST /api/session
-# → PUT /api/user/{id}/password. Bezi jen kdyz setup uz probehl.
+# prefix: previous_password_prefix from .ansible-prefix-state holds the last
+# prefix -> creates "previous_metabase_password" and calls POST /api/session
+# -> PUT /api/user/{id}/password. Runs only after setup has already completed.
 - name: "[pazny.metabase Post] Login with previous password (for reconverge)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session"

@@ -1,8 +1,8 @@
 # pazny.puter
 
-Ansible role for deploying **Puter** (cloud OS web desktop) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **Puter** (cloud OS web desktop) as a compose override fragment in the nOS `iiab` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction.
+Part of [nOS](../../README.md) Wave 2.2 role extraction.
 
 ## What it does
 
@@ -22,7 +22,7 @@ Three task entry points:
    - Creates the admin user on first run (bcrypt via bundled `bcryptjs`, random UUID)
    - On subsequent runs, reconverges the admin password via a bcrypt `UPDATE user` statement
 
-3. **Apps (`tasks/apps.yml`)** — registers every enabled devBoxNOS service as an iframe app in the Puter Start menu. Idempotent — existing app rows are skipped. Called via `include_tasks` from `main.yml`.
+3. **Apps (`tasks/apps.yml`)** — registers every enabled nOS service as an iframe app in the Puter Start menu. Idempotent — existing app rows are skipped. Called via `include_tasks` from `main.yml`.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ Three task entry points:
 
 | Variable | Default | Description |
 |---|---|---|
-| `puter_version` | `latest` | Docker image tag — built locally as `devboxnos/puter:<tag>` |
+| `puter_version` | `latest` | Docker image tag — built locally as `nos/puter:<tag>` |
 | `puter_port` | `5050` | Exposed on `127.0.0.1` only (maps to container `4100`) |
 | `puter_domain` | `os.dev.local` | Public URL |
 | `puter_api_domain` | `api.os.dev.local` | API subdomain |

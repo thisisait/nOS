@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.code_server/tasks/main.yml
 #
-# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up devops`:
-# vytvori data + workspace adresar, vyrenderuje compose override fragment do
+# Called (in Phase B) from tasks/stacks/stack-up.yml BEFORE `docker compose up devops`:
+# creates data + workspace dirs, renders the compose override fragment to
 # {{ stacks_dir }}/devops/overrides/code-server.yml a linkuje nginx vhost.
 #
-# Post-start setup neni potreba — code-server je stateless web editor,
-# autentizaci resi Authentik forward_auth v nginx.
+# No post-start setup required — code-server is a stateless web editor,
+# authentication is handled by Authentik forward_auth in nginx.
 # ==============================================================================
 
 - name: "[pazny.code_server] Ensure data and workspace directories exist"

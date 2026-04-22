@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.postgresql — PostgreSQL in Docker (infra compose stack)
 #
-# Credentials (postgresql_root_password) + service DB/user matrix zustavaji
+# Credentials (postgresql_root_password) + service DB/user matrix staysji
 # v top-level default.config.yml a default.credentials.yml — stale
-# centralizovane, role je jen cte pres Ansible var precedence
+# centralized, the role only reads it via Ansible var precedence
 # (vars_files > role defaults).
 # ==============================================================================
 
@@ -17,7 +17,7 @@ postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
 # max_connections bump na 400 — Authentik 2025.x drzi ~60 spojeni i s
 # CONN_MAX_AGE=0 behem pikoveho provozu, plus Outline/Hedgedoc/Superset/
-# Metabase/Paperclip/Miniflux/Nextcloud paralelne. Default 100 vede k chybe
-# "remaining connection slots are reserved for SUPERUSER" pri soubeznem
+# Metabase/Paperclip/Miniflux/Nextcloud in parallel. Default 100 leads to the error
+# "remaining connection slots are reserved for SUPERUSER" during concurrent
 # startu. Jde dohromady s pazny.authentik pool tuning (authentik_pg_conn_max_age).
 postgresql_max_connections: 400

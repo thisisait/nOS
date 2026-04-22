@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.freescout — FreeScout helpdesk in Docker (b2b compose stack)
 #
-# Credentials (freescout_db_password, freescout_admin_password) zustavaji v
-# default.credentials.yml — centralizovane pro prefix rotation.
+# Credentials (freescout_db_password, freescout_admin_password) staysji v
+# default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
 freescout_version: "php8.3-1.17.152"         # tiredofit image tag = PHP+upstream ver; past CVE-2026-28289

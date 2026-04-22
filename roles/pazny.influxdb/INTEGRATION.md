@@ -5,7 +5,7 @@
 Insert after `install_observability: true` line (~row 122) in the **Observability** section:
 
 ```yaml
-install_influxdb: false           # InfluxDB 2.x time-series DB  [vyžaduje: Docker, install_observability]
+install_influxdb: false           # InfluxDB 2.x time-series DB  [requires: Docker, install_observability]
 ```
 
 ## 2. `default.config.yml` — authentik_oidc_apps entry (proxy type)

@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.jellyfin/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori config/cache/media adresare, enabluje nginx vhost a vyrenderuje
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates config/cache/media dirs, enables the nginx vhost and renders
 # compose override fragment do {{ stacks_dir }}/iiab/overrides/jellyfin.yml.
 #
 # Post-start auto-setup (Startup wizard + password reconverge) je v
-# tasks/post.yml — volany z stack-up.yml az PO compose up.
+# tasks/post.yml — called from stack-up.yml az PO compose up.
 # ==============================================================================
 
 - name: "[pazny.jellyfin] Ensure config, cache and media directories exist"
@@ -36,14 +36,14 @@
   ansible.builtin.debug:
     msg: |
       ==========================================================================
-       JELLYFIN – PRVNI SPUSTENI
+       JELLYFIN - FIRST RUN
        URL: https://{{ jellyfin_domain | default('media.dev.local') }}
        Admin ucet + knihovny auto-setup pres Startup API (post.yml).
        Medialni slozky v kontejneru:
          /media/movies -> {{ jellyfin_movies_dir }}
          /media/shows  -> {{ jellyfin_shows_dir }}
          /media/music  -> {{ jellyfin_music_dir }}
-       Apple Silicon nema HW akceleraci v Dockeru — transcoding = software.
+       Apple Silicon has no HW acceleration in Docker — transcoding = software.
       ==========================================================================
 
 - name: "[pazny.jellyfin] Render compose override fragment"

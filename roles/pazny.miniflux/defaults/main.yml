@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.miniflux — Miniflux RSS reader (iiab compose stack)
 #
-# Credentials (miniflux_db_password, miniflux_admin_password) zustavaji v
-# default.credentials.yml — centralizovane pro prefix rotation.
+# Credentials (miniflux_db_password, miniflux_admin_password) staysji v
+# default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
 miniflux_version: "2.2.19"

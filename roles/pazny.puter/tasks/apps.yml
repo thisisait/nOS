@@ -1,12 +1,12 @@
 ---
 # ==============================================================================
-# pazny.puter/tasks/apps.yml — devBoxNOS sluzby v Puter Start menu
-# Kazda sluzba se registruje do SQLite DB uvnitr Puter containeru jako
-# iframe app. Idempotentni: existujici app se preskoci.
+# pazny.puter/tasks/apps.yml — nOS services in the Puter Start menu
+# Each service registers into the SQLite DB inside the Puter container as
+# iframe app. Idempotent: existing apps are skipped.
 #
-# Volano pres include_tasks z tasks/main.yml (mirroring main.yml:705
-# import_tasks puter_apps.yml). Samotne tasky jsou pod `Wait for API`
-# gate, takze pre-compose spusteni proste skoci na failed_when: false.
+# Called via include_tasks from tasks/main.yml (mirroring main.yml:705
+# import_tasks puter_apps.yml). The tasks themselves are under `Wait for API`
+# gate, so pre-compose runs simply fall through failed_when: false.
 # ==============================================================================
 
 - name: "[pazny.puter Apps] Wait for Puter API"

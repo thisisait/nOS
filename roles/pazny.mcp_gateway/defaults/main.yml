@@ -24,7 +24,7 @@ mcpo_data_dir: "{{ ansible_facts['env']['HOME'] }}/mcpo"
 mcpo_image: "ghcr.io/open-webui/mcpo"
 
 # ── Per-server toggles ────────────────────────────────────────────────────────
-# Vypnes konkretni MCP server nastavenim false
+# Disable a specific MCP server by setting it to false
 mcp_enable_time: true
 mcp_enable_memory: true
 mcp_enable_fetch: true
@@ -34,7 +34,7 @@ mcp_enable_postgres: true
 mcp_enable_grafana: true
 
 # ── Filesystem MCP ────────────────────────────────────────────────────────────
-# Cesty, ktere MCP filesystem expose (read-only bind mount v kontejneru)
+# Paths that MCP filesystem exposes (read-only bind mount in the container)
 mcp_filesystem_paths:
   - "{{ ansible_facts['env']['HOME'] }}/projects"
   - "{{ ansible_facts['env']['HOME'] }}/agents/log"
@@ -43,7 +43,7 @@ mcp_filesystem_paths:
 mcp_git_repo_path: "{{ ansible_facts['env']['HOME'] }}/projects"
 
 # ── PostgreSQL MCP ────────────────────────────────────────────────────────────
-# Read-only uzivatel pro MCP dotazy (vytvoreny v post.yml)
+# Read-only user for MCP queries (created in post.yml)
 mcp_postgres_user: "mcp_readonly"
 mcp_postgres_password: "{{ global_password_prefix }}_pw_mcp_postgres_ro"
 mcp_postgres_database: "postgres"                       # default DB s read-only roli
@@ -56,6 +56,6 @@ mcp_grafana_version: "latest"
 mcp_grafana_port: 8765                                  # internal SSE port
 
 # ── OpenWebUI Anthropic connector ─────────────────────────────────────────────
-# Pridej ANTHROPIC_API_KEY do config.yml / credentials.yml aby se aktivovala
+# Add ANTHROPIC_API_KEY to config.yml / credentials.yml to activate
 # Anthropic Claude v OpenWebUI admin UI (multi-provider via OpenAI-compat API)
 openwebui_anthropic_enable: "{{ anthropic_api_key is defined and (anthropic_api_key | length) > 0 }}"

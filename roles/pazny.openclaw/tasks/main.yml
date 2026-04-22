@@ -1,10 +1,10 @@
 ---
 # ==============================================================================
-# OPENCLAW – Self-hosted AI agent s Ollama backendem
-# Žádný API klíč, vše lokálně na Mac Studio
+# OPENCLAW — Self-hosted AI agent with Ollama backend
+# No API key, everything runs locally on Mac Studio
 # ==============================================================================
 
-# ── 1. Ollama (lokální LLM inference) ─────────────────────────────────────────
+# -- 1. Ollama (local LLM inference) ─────────────────────────────────────────
 
 - name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend na Apple Silicon)"
   community.general.homebrew:
@@ -36,21 +36,21 @@
   changed_when: false
   failed_when: false
 
-# ── Ollama persistent LaunchAgent (replaces brew-managed plist) ─────────────
-# Brew's homebrew.mxcl.ollama.plist NEMA env vars, takze OLLAMA_MODELS se
-# ztratil po reboot/logout. Nas wrapper plist ma EnvironmentVariables
-# primo v dict, ktere launchd inject-ne pri kazdem spusteni.
+# -- Ollama persistent LaunchAgent (replaces brew-managed plist) ─────────────
+# Brew's homebrew.mxcl.ollama.plist HAS NO env vars, so OLLAMA_MODELS
+# would be lost after reboot/logout. Our wrapper plist has EnvironmentVariables
+# directly in the dict that launchd injects on every start.
 
 - name: "[Ollama] Disable brew-managed Ollama service (replaced by user LaunchAgent)"
   ansible.builtin.shell: |
-    # Stop brew service (gracefully via launchctl, ne `brew services stop`)
+    # Stop brew service (gracefully via launchctl, not `brew services stop`)
     plist="$HOME/Library/LaunchAgents/homebrew.mxcl.ollama.plist"
     if [ -f "$plist" ]; then
       launchctl unload "$plist" 2>/dev/null || true
       # Presun do backup (kdyby user chtel vratit)
       mv "$plist" "$plist.disabled" 2>/dev/null || true
     fi
-    # Kill jakyekoliv bezici instance (brew nebo uz nas wrapper)
+    # Kill any running instance (brew or our own wrapper)
     launchctl unload "$HOME/Library/LaunchAgents/com.ollama.agent.plist" 2>/dev/null || true
     pkill -f 'ollama serve' 2>/dev/null || true
     sleep 1
@@ -127,7 +127,7 @@
   timeout: 1800
   when: (openclaw_pull_additional_models | default(true)) | bool
 
-# ── 2. OpenClaw instalace ──────────────────────────────────────────────────────
+# -- 2. OpenClaw installation ──────────────────────────────────────────────────────
 
 - name: "[OpenClaw] Check if OpenClaw is already installed"
   ansible.builtin.command: which openclaw
@@ -148,7 +148,7 @@
   when: openclaw_which.rc != 0
   changed_when: true
 
-# ── 3. Adresářová struktura agentického systému ────────────────────────────────
+# -- 3. Directory structure of the agentic system --------------------------
 
 - name: "[OpenClaw] Create agentic directory structure"
   ansible.builtin.file:
@@ -162,7 +162,7 @@
     - "{{ ansible_facts['env']['HOME'] }}/.openclaw"
     - "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace"
 
-# ── 4. Non-interactive onboarding (Ollama) ───────────────────────────────────
+# -- 4. Non-interactive onboarding (Ollama) ───────────────────────────────────
 
 - name: "[OpenClaw] Check if already onboarded"
   ansible.builtin.stat:
@@ -211,9 +211,9 @@
   changed_when: false
   failed_when: false
 
-# Idempotent model upgrade: onboarding skipuje pokud config existuje, ale uzivatel
-# mohl zmenit openclaw_model. Nasilne upraveni `agents.defaults.model.primary`
-# aby playbook mohl upgradnout/downgradnout model aniz by user musel wipe.
+# Idempotent model upgrade: onboarding is skipped if the config exists, but the user
+# could change openclaw_model. Forcibly updating `agents.defaults.model.primary`
+# so that the playbook can upgrade/downgrade the model without the user having to wipe.
 - name: "[OpenClaw] Force-update primary model in existing config"
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
@@ -231,7 +231,7 @@
 
 # ── 5. Workspace bootstrap soubory ──────────────────────────────────────────
 
-- name: "[OpenClaw] Deploy SOUL.md (Inspektor Klepítko persona)"
+- name: "[OpenClaw] Deploy SOUL.md (Inspektor Klepitko persona)"
   ansible.builtin.copy:
     src: openclaw/SOUL.md
     dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/SOUL.md"
@@ -252,7 +252,7 @@
 - name: "[OpenClaw] Ensure OLLAMA_API_KEY in shell profile"
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} OPENCLAW – ANSIBLE MANAGED"
+    marker: "# {mark} OPENCLAW - ANSIBLE MANAGED"
     block: |
       export OLLAMA_API_KEY="ollama-local"
       export OLLAMA_MODELS="{{ ollama_models_dir }}"
@@ -269,7 +269,7 @@
     mode: '0700'
     state: directory
 
-# ── 5. Log šablony a inicializační soubory ────────────────────────────────────
+# -- 5. Log templates and initialization files ------------------------------
 
 - name: "[OpenClaw] Copy log template"
   ansible.builtin.copy:
@@ -281,29 +281,29 @@
   ansible.builtin.copy:
     dest: "{{ openclaw_log_dir }}/README.md"
     content: |
-      # Inspektor Klepítko – Log agentické práce
+      # Inspektor Klepitko - Log of agentic work
 
-      Tento adresář obsahuje strukturované záznamy (.md soubory) o práci agentů.
+      This directory contains structured records (.md files) about the agents' work.
 
-      ## Konvence pojmenování
+      ## Naming convention
       ```
-      YYYY-MM-DD_TASK-NNN_krátký-popis.md
+      YYYY-MM-DD_TASK-NNN_short-description.md
       ```
 
-      ## Stav úkolů
-      - `STATUS: PLANNED` – naplánováno, čeká na spuštění
-      - `STATUS: IN_PROGRESS` – probíhá
-      - `STATUS: COMPLETE` – dokončeno
-      - `STATUS: FAILED` – selhalo (viz sekce Výsledek)
-      - `STATUS: DELEGATED` – přiděleno sub-agentovi
+      ## Task state
+      - `STATUS: PLANNED` - planned, waiting to start
+      - `STATUS: IN_PROGRESS` - in progress
+      - `STATUS: COMPLETE` - done
+      - `STATUS: FAILED` - failed (see the Result section)
+      - `STATUS: DELEGATED` - delegated to a sub-agent
 
-      ## Adresáře systému
-      | Cesta | Účel |
+      ## System directories
+      | Path | Purpose |
       |-------|------|
-      | `{{ openclaw_agents_dir }}/` | Instalace a config agentů |
-      | `{{ openclaw_log_dir }}/` | Tento adresář – logy |
-      | `{{ openclaw_projects_dir }}/` | Projekty hostované přes nginx |
-      | `{{ homebrew_prefix }}/etc/nginx/sites-available/` | Nginx vhost konfigurace |
+      | `{{ openclaw_agents_dir }}/` | Installation and agent config |
+      | `{{ openclaw_log_dir }}/` | This directory - logs |
+      | `{{ openclaw_projects_dir }}/` | Projects hosted via nginx |
+      | `{{ homebrew_prefix }}/etc/nginx/sites-available/` | Nginx vhost configuration |
     mode: '0644'
     force: false
 
@@ -313,7 +313,7 @@
     dest: "{{ openclaw_agents_dir }}/onboard.sh"
     mode: '0755'
 
-# ── 6. Nginx – aktualizace webroot na ~/projects/ ──────────────────────
+# -- 6. Nginx — update webroot to ~/projects/ ──────────────────────
 
 - name: "[OpenClaw] Ensure nginx default project dir exists"
   ansible.builtin.file:
@@ -329,7 +329,7 @@
       <html lang="cs">
       <head>
         <meta charset="UTF-8">
-        <title>Inspektor Klepítko – Server</title>
+        <title>Inspektor Klepitko - Server</title>
         <style>
           body { font-family: monospace; background: #0d1117; color: #e6edf3;
                  display: flex; justify-content: center; align-items: center;
@@ -344,12 +344,12 @@
       </head>
       <body>
         <div class="card">
-          <h1>🦞 Inspektor Klepítko</h1>
-          <p class="status">● Server běží</p>
-          <p>Pro přidání projektu:</p>
+          <h1>Inspektor Klepitko</h1>
+          <p class="status">Server running</p>
+          <p>To add a project:</p>
           <ol>
-            <li>Zkopíruj soubory do <code>{{ openclaw_projects_dir }}/&lt;projekt&gt;/</code></li>
-            <li>Zkopíruj a uprav nginx vhost z
+            <li>Copy files into <code>{{ openclaw_projects_dir }}/&lt;project&gt;/</code></li>
+            <li>Copy and adjust the nginx vhost from
               <code>{{ homebrew_prefix }}/etc/nginx/sites-available/</code></li>
             <li>Restartuj: <code>brew services restart nginx</code></li>
           </ol>
@@ -359,15 +359,15 @@
     mode: '0644'
     force: false
 
-# ── 7. Finální výpis ─────────────────────────────────────────────────────────
+# -- 7. Final summary ------------------------------------------------------
 
 - name: "[OpenClaw] Print setup summary"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Inspektor Klepitko – OpenClaw pripraven
+       Inspektor Klepitko — OpenClaw ready
       ══════════════════════════════════════════════════════
-       Model:     {{ openclaw_model }} (Ollama, 100% lokalne)
+       Model:     {{ openclaw_model }} (Ollama, 100% local)
        Config:    ~/.openclaw/openclaw.json
        Workspace: ~/.openclaw/workspace/
        Persona:   ~/.openclaw/workspace/SOUL.md

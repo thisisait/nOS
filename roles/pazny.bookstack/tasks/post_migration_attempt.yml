@@ -2,15 +2,15 @@
 # ==============================================================================
 # pazny.bookstack/tasks/post_migration_attempt.yml
 #
-# Jedno kolo "recovery" pokusu. Volano z post.yml v loop { 1..3 }.
-# Pokud detekuje partial-state NEBO FAIL v recent logu → drop DB + restart.
-# Pokud detekuje healthy state (migrations count matches and 'permissions'
-# table exists) → nastavi _bookstack_migration_ok=true a dalsi iterace
-# se preskoci.
+# One round of the "recovery" attempt. Called from post.yml in a loop { 1..3 }.
+# If it detects partial state OR a FAIL in recent logs -> drop DB + restart.
+# If it detects healthy state (migrations count matches and the 'permissions'
+# table exists) -> sets _bookstack_migration_ok=true and subsequent iterations
+# are skipped.
 # ==============================================================================
 
-# 1) Rychly check: existuje tabulka 'permissions'? Pokud ano → migrace
-#    #10 dobehla cela (je to posledni tabulka co vytvari). Hotovo.
+# 1) Quick check: does the 'permissions' table exist? If yes -> migration
+#    #10 finished (it is the last table it creates). Done.
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Check if 'permissions' table exists"
   ansible.builtin.shell: |
     {{ docker_bin }} exec infra-mariadb-1 mariadb \
@@ -43,10 +43,10 @@
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Migration looks healthy — skip recovery"
   ansible.builtin.debug:
-    msg: "permissions table exists → migrace #10 dokoncena, preskakuji recovery"
+    msg: "permissions table exists -> migration #10 complete, skipping recovery"
   when: _bookstack_migration_ok | default(false)
 
-# 2) Pokud partial — drop celou DB + restart kontejner
+# 2) If partial — drop the whole DB + restart the container
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) DROP + recreate DB (partial state detected)"
   ansible.builtin.shell: |
     {{ docker_bin }} exec infra-mariadb-1 mariadb \
@@ -81,7 +81,7 @@
                 WHERE table_schema='{{ bookstack_db_name | default('bookstack') }}' \
                   AND table_name='permissions';"
   register: _bookstack_perm_after
-  retries: 24                       # 24 * 5s = 120s max na 1 pokus
+  retries: 24                       # 24 * 5s = 120s max per attempt
   delay: 5
   until: (_bookstack_perm_after.stdout | trim | int) > 0
   changed_when: false

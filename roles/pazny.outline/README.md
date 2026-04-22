@@ -1,8 +1,8 @@
 # pazny.outline
 
-Ansible role for deploying **Outline** (team wiki / knowledge base) as a compose override fragment in the devBoxNOS `b2b` stack.
+Ansible role for deploying **Outline** (team wiki / knowledge base) as a compose override fragment in the nOS `b2b` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction.
+Part of [nOS](../../README.md) Wave 2.2 role extraction.
 
 ## What it does
 

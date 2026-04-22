@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.onlyoffice/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
-#  - vytvori 4 data dirs (data, logs, lib, embedded postgres db)
-#  - vyrenderuje compose override fragment do
-#    {{ stacks_dir }}/b2b/overrides/onlyoffice.yml, ktery stack-up.yml sesbira
-#    pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up b2b`:
+#  - creates 4 data dirs (data, logs, lib, embedded postgres db)
+#  - renders the compose override fragment do
+#    {{ stacks_dir }}/b2b/overrides/onlyoffice.yml, which stack-up.yml collects
+#    via `find` and passes as an additional -f flag.
 #
-# ONLYOFFICE CE pouziva EMBEDDED postgres (uvnitr kontejneru) — nevyzaduje
-# externi DB. Redis je volitelne sdileny s infra stackem pres sit.
+# ONLYOFFICE CE uses an EMBEDDED postgres (inside the container) — it does not require
+# external DB. Redis is optionally shared with the infra stack over the network.
 # ==============================================================================
 
 - name: "[pazny.onlyoffice] Ensure data directories exist"

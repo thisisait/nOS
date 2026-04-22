@@ -3,7 +3,7 @@ galaxy_info:
   role_name: influxdb
   namespace: pazny
   author: Pázny
-  description: InfluxDB 2.x time-series database in Docker compose override (devBoxNOS observability stack)
+  description: InfluxDB 2.x time-series database in Docker compose override (nOS observability stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Žádné role dependencies — InfluxDB se spouští jako součást observability
-# stacku vedle Grafana / Prometheus / Loki / Tempo. Orchestrace (compose up
-# sequencing) je v tasks/stacks/core-up.yml.
+# No role dependencies — InfluxDB is started as part of the observability
+# stack alongside Grafana / Prometheus / Loki / Tempo. Orchestration (compose up
+# sequencing) lives in tasks/stacks/core-up.yml.
 dependencies: []
 
 collections: []

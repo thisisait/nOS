@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.kiwix — Kiwix offline knowledge server (iiab compose stack)
 #
-# Kiwix slouzi offline Wikipedia, Gutenberg a dalsi ZIM soubory. Vice ZIM
-# souboru lze stahnout pres {{ kiwix_data_dir }}/download-zim.sh helper.
+# Kiwix serves offline Wikipedia, Gutenberg and other ZIM files. More ZIM
+# more files can be downloaded via the {{ kiwix_data_dir }}/download-zim.sh helper.
 #
-# Centralizovane promenne (kiwix_domain, kiwix_port, kiwix_data_dir,
-# kiwix_init_zim_url, kiwix_zim_files) zustavaji v top-level
-# default.config.yml kvuli externalim konzumentum (nginx vhost render,
+# Centralized variables (kiwix_domain, kiwix_port, kiwix_data_dir,
+# kiwix_init_zim_url, kiwix_zim_files) staysji v top-level
+# default.config.yml due to external consumers (nginx vhost render,
 # blank-reset path resolver). Role defaults poskytuji fallback.
 # ==============================================================================
 

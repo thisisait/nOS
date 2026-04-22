@@ -1,8 +1,8 @@
 # pazny.n8n
 
-Ansible role for deploying **n8n** (workflow automation) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **n8n** (workflow automation) as a compose override fragment in the nOS `iiab` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction.
+Part of [nOS](../../README.md) Wave 2.2 role extraction.
 
 ## What it does
 
@@ -37,7 +37,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 | `n8n_admin_email` | `{{ default_admin_email }}` | Owner email (from top-level config) |
 | `n8n_admin_password` | *(from credentials)* | Reconverged every run via `/rest/change-password` |
 | `n8n_admin_firstname` | `Admin` | Owner first name |
-| `n8n_admin_lastname` | `devBoxNOS` | Owner last name |
+| `n8n_admin_lastname` | `nOS` | Owner last name |
 | `n8n_mem_limit` | `{{ docker_mem_limit_standard }}` | Defaults to `1g` |
 
 Secrets stay in the top-level `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.

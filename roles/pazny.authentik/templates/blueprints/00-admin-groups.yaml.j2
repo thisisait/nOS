@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
-# ── devBoxNOS admin user + RBAC groups ────────────────────────────────────────
+# ── nOS admin user + RBAC groups ────────────────────────────────────────
 # Spravovano Ansible playbookem — NEEDITUJ rucne. Zmeny dej do
 # default.config.yml (authentik_default_groups, authentik_bootstrap_*) a
 # roles/pazny.authentik/templates/blueprints/00-admin-groups.yaml.j2.
@@ -10,9 +10,9 @@
 
 version: 1
 metadata:
-  name: devboxnos-admin-groups
+  name: nos-admin-groups
   labels:
-    managed-by: devboxnos
+    managed-by: nos
     blueprint-version: "1"
 
 entries:
@@ -23,7 +23,7 @@ entries:
     identifiers:
       name: "{{ g.name }}"
     attrs:
-      is_superuser: {{ (g.name in ['devboxnos-providers', 'devboxnos-admins']) | lower }}
+      is_superuser: {{ (g.name in ['nos-providers', 'nos-admins']) | lower }}
 {% endfor %}
 
   # ── Admin user (heslo reconverged pri kazdem reconcile) ──────────────────
@@ -32,24 +32,24 @@ entries:
     identifiers:
       username: akadmin
     attrs:
-      name: "devBoxNOS Admin"
+      name: "nOS Admin"
       email: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
       password: "{{ authentik_bootstrap_password }}"
       is_active: true
       path: "users"
       type: "internal"
       groups:
-        - !Find [authentik_core.group, [name, devboxnos-admins]]
+        - !Find [authentik_core.group, [name, nos-admins]]
 
   # ── API token pro PDS bridge a dalsi automatizace ──────────────────────────
   # Bridge script (bluesky_pds_bridge.yml) hleda token s identifier
-  # 'devboxnos-api'. Bez nej PDS bridge preskoci s "token=chybi".
+  # 'nos-api'. Bez nej PDS bridge preskoci s "token=chybi".
   - model: authentik_core.token
     state: present
     identifiers:
-      identifier: devboxnos-api
+      identifier: nos-api
     attrs:
       user: !Find [authentik_core.user, [username, akadmin]]
       intent: api
       expiring: false
-      description: "devBoxNOS automation (PDS bridge, service provisioning)"
+      description: "nOS automation (PDS bridge, service provisioning)"

@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.ntfy/tasks/post.yml — admin user provisioning po startu kontejneru
 #
-# ntfy ma `auth-default-access: deny-all` — bez vyslovneho admin usera je
-# server 100% nepouzitelny (cokoli 403). Tento task vytvori/reconverguje admin
-# usera pri kazdem behu (idempotentne — ntfy CLI prepise heslo pokud user
+# ntfy has `auth-default-access: deny-all` — without an explicit admin user it is
+# server is 100% unusable (anything returns 403). This task creates/reconverges the admin
+# user on every run (idempotent — the ntfy CLI overwrites the password if the user
 # existuje).
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
 # ==============================================================================
 
 - name: "[pazny.ntfy Post] Check if ntfy container is running"
@@ -52,10 +52,10 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       ntfy (Docker) pripraven
+       ntfy (Docker) ready
       ══════════════════════════════════════════════════════
        URL:         https://{{ ntfy_domain | default('ntfy.dev.local') }}
-       Kontejner:   ntfy → 127.0.0.1:{{ ntfy_port | default(2586) }}
+       Container:   ntfy → 127.0.0.1:{{ ntfy_port | default(2586) }}
        Admin user:  {{ ntfy_admin_user | default('admin') }} / {{ ntfy_admin_password }}
        CLI login:   ntfy login -u {{ ntfy_admin_user | default('admin') }} https://{{ ntfy_domain | default('ntfy.dev.local') }}
        SSO:         Authentik forward_auth (UI); ntfy ACL pro publish/subscribe

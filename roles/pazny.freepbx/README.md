@@ -1,8 +1,8 @@
 # pazny.freepbx
 
-Ansible role for deploying **FreePBX + Asterisk** as a compose override fragment in the devBoxNOS `voip` stack. Uses the `tiredofit/freepbx` image and shares MariaDB with the rest of the infra stack.
+Ansible role for deploying **FreePBX + Asterisk** as a compose override fragment in the nOS `voip` stack. Uses the `tiredofit/freepbx` image and shares MariaDB with the rest of the infra stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
 
 ## What it does
 

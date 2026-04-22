@@ -1,8 +1,8 @@
 ---
 # pazny.portainer — handlers
-# Play-level "Restart portainer" v main.yml ma prednost; tento zustava pro
-# samostatne pouziti role mimo devBoxNOS playbook. Wave 1 commit 73622b8
-# opravil stack path na infra (byl drive omylem iiab).
+# Play-level "Restart portainer" in main.yml takes priority; this one stays for
+# standalone use of the role outside the nOS playbook. Wave 1 commit 73622b8
+# fixed the stack path to infra (was previously mistakenly iiab).
 
 - name: Restart portainer
   ansible.builtin.shell: >

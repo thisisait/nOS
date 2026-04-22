@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.open_webui/tasks/post.yml — admin user creation + password reconverge
 #
-# Prvni registrovany uzivatel = admin (WEBUI_AUTH=true, ENABLE_SIGNUP=true).
+# The first registered user = admin (WEBUI_AUTH=true, ENABLE_SIGNUP=true).
 # Pro non-blank runy (rotated prefix) provadime state-declarative UPDATE
-# pres in-container python (sqlite3 + passlib bcrypt).
+# via in-container python (sqlite3 + passlib bcrypt).
 # ==============================================================================
 
 - name: "[pazny.open_webui Post] Wait for API"
@@ -52,7 +52,7 @@
   failed_when: false
 
 # ── Reconverge admin password every run (state-declarative UPDATE) ──────
-# Open WebUI pouziva SQLite + bcrypt (passlib). Primy UPDATE pres
+# Open WebUI uses SQLite + bcrypt (passlib). A direct UPDATE via
 # in-container python beha idempotentne.
 - name: "[pazny.open_webui Post] Reconverge admin password (SQLite + bcrypt)"
   ansible.builtin.shell: |

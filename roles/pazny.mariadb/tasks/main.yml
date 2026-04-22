@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.mariadb/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose up infra`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/infra/overrides/mariadb.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/infra/overrides/mariadb.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Post-start DB/user setup je v tasks/post.yml — volany z core-up.yml
-# az PO compose up (DB musi bezet, nez se vytvori uzivatele).
+# Post-start DB/user setup lives in tasks/post.yml — called from core-up.yml
+# only AFTER compose up (DB must be running before the users are created).
 # ==============================================================================
 
 - name: "[pazny.mariadb] Ensure data directory exists"

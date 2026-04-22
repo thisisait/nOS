@@ -2,16 +2,16 @@
 # ==============================================================================
 # pazny.woodpecker — Woodpecker CI in Docker (devops compose stack)
 #
-# Lehky CI/CD napojen na Gitea pres OAuth2. Dve compose sluzby v jedne roli:
+# Lightweight CI/CD hooked into Gitea via OAuth2. Two compose services in one role:
 #   • woodpecker-server — web UI + API + task queue
 #   • woodpecker-agent  — runner, provadi pipeline kroky
 #
 # Credentials (woodpecker_agent_secret) + OAuth2 (woodpecker_gitea_client,
-# woodpecker_gitea_secret) zustavaji v top-level default.credentials.yml /
+# woodpecker_gitea_secret) stay in top-level default.credentials.yml /
 # default.config.yml.
 # ==============================================================================
 
-woodpecker_version: "v3"                # latest tag odstranen, musi byt semver
+woodpecker_version: "v3"                # latest tag removed, must be semver
 woodpecker_domain: "ci.dev.local"
 woodpecker_port: 8060                   # Web UI
 woodpecker_grpc_port: 9060              # gRPC pro agenty (interni)

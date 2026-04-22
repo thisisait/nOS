@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.vaultwarden — Bitwarden-kompatibilni personal password vault
 #
-# Credentials (vaultwarden_admin_token) zustavaji v default.credentials.yml
-# a jsou prefix-rotovane. OIDC/SSO integrace je volitelna (install_authentik).
+# Credentials (vaultwarden_admin_token) stay in default.credentials.yml
+# and are prefix-rotated. OIDC/SSO integration is optional (install_authentik).
 # ==============================================================================
 
 vaultwarden_version: "1.35.4"                       # CVE-2026-27802/27803 + CVE-2025-24364

@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.qgis_server/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up engineering`:
-# vytvori projekty dir a vyrenderuje compose override fragment do
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up engineering`:
+# creates the projects dir and renders the compose override fragment to
 # {{ stacks_dir }}/engineering/overrides/qgis_server.yml.
 # ==============================================================================
 

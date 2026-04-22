@@ -5,8 +5,8 @@
 # S3 API:  http://localhost:{{ rustfs_api_port }}
 # Konzole: http://localhost:{{ rustfs_console_port }}
 #
-# Credentials (rustfs_access_key / rustfs_secret_key) zustavaji v
-# default.config.yml a jsou prefix-rotovane pres global_password_prefix.
+# Credentials (rustfs_access_key / rustfs_secret_key) staysji v
+# default.config.yml and are prefix-rotated via global_password_prefix.
 # ==============================================================================
 
 rustfs_version: "1.0.0-alpha.93"                    # CVE-2025-68926 pin + alpha.91 multipart auth hardening (#2411) + OIDC claim matching fix (#2386)

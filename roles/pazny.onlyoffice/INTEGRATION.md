@@ -154,5 +154,5 @@ Pro integraci s **Nextcloud**:
 Pro **BookStack**: ONLYOFFICE module → stejne 2 hodnoty.
 
 Pro **Outline**: neni oficialni ONLYOFFICE plugin; Outline pouziva vlastni
-prosemirror editor. ONLYOFFICE se v devBoxNOS hodi primarne pro
+prosemirror editor. ONLYOFFICE se v nOS hodi primarne pro
 Nextcloud-based document workflow.

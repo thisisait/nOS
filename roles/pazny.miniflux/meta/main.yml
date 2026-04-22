@@ -3,7 +3,7 @@ galaxy_info:
   role_name: miniflux
   namespace: pazny
   author: Pázny
-  description: Miniflux RSS reader in Docker compose override (devBoxNOS iiab stack)
+  description: Miniflux RSS reader in Docker compose override (nOS iiab stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,7 +11,7 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Miniflux je konzument PostgreSQL z infra stacku.
+# No role dependencies — Miniflux consumes PostgreSQL from the infra stack.
 dependencies: []
 
 collections: []

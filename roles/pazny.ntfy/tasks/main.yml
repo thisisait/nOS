@@ -2,10 +2,10 @@
 # ==============================================================================
 # pazny.ntfy/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
-# 1) vytvori data dir,
-# 2) vyrenderuje server.yml config do data diru (mount :ro),
-# 3) vyrenderuje compose override fragment.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# 1) creates the data dir,
+# 2) renders server.yml config into the data dir (mount :ro),
+# 3) renders the compose override fragment.
 # ==============================================================================
 
 - name: "[pazny.ntfy] Ensure data directory exists"

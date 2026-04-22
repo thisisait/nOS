@@ -2,23 +2,23 @@
 # ==============================================================================
 # pazny.bookstack/tasks/post.yml
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose up b2b`.
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose up b2b`.
 #
 # Root cause (LSIO BookStack image):
-#   Migrace 2015_08_29_105422_add_roles_and_permissions vytvari 4 tabulky
+#   Migration 2015_08_29_105422_add_roles_and_permissions creates 4 tables
 #   (roles, role_user, permissions, permission_role) + FK constraints.
-#   MariaDB DDL neni transakcni — pokud dojde k TCP blipu mezi prvnim
-#   create table a ALTER FK (typicky pri souběžnem startu cele b2b stacku,
-#   kdy je MariaDB pod zatezi), migrace FAILne s "[2002] Connection refused"
-#   a zanecha 2 orphan tabulky (roles, role_user).
-#   LSIO init krok `migrations` se neopakuje — kontejner pojede s polorozbitou DB
-#   a kazdy dalsi restart dostane `1050 Table 'roles' already exists`.
+#   MariaDB DDL is not transactional — if a TCP blip occurs between the first
+#   create table and the ALTER FK (typical when the whole b2b stack starts
+#   concurrently and MariaDB is under load), the migration FAILs with
+#   "[2002] Connection refused" and leaves 2 orphan tables (roles, role_user).
+#   The LSIO init step `migrations` does not repeat — the container runs with a
+#   half-broken DB and every subsequent restart gets `1050 Table 'roles' already exists`.
 #
 # Fix:
-#   1. Preemptivne detekuj partial-state signaturu (roles exists, permissions
-#      missing → klasicky stop bod migrace #10).
-#   2. Retry loop: DROP DATABASE → restart → wait → recheck (max 3 pokusy).
-#   3. Po uspesne migraci verifikuj HTTP.
+#   1. Pre-emptively detect the partial-state signature (roles exists, permissions
+#      missing -> classic migration #10 stop point).
+#   2. Retry loop: DROP DATABASE -> restart -> wait -> recheck (max 3 attempts).
+#   3. After a successful migration verify HTTP.
 # ==============================================================================
 
 - name: "[pazny.bookstack] Ensure container is running"
@@ -32,7 +32,7 @@
 - name: "[pazny.bookstack] Skip post-install if container not running"
   ansible.builtin.meta: end_play
   when: (_bookstack_running.stdout | default('')) == ''
-  tags: [never]   # nikdy neruseni, jen debug — skutecny skip nize
+  tags: [never]   # never triggered, debug only — real skip is below
 
 - name: "[pazny.bookstack] Migration recovery loop (drop DB + restart on partial state)"
   when: (_bookstack_running.stdout | default('')) != ''

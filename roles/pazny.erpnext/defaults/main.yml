@@ -3,12 +3,12 @@
 # pazny.erpnext — ERPNext (Frappe framework) in Docker (b2b compose stack)
 #
 # Credentials (erpnext_admin_password, mariadb_root_password, redis_password)
-# zustavaji v top-level default.config.yml a default.credentials.yml —
-# centralizovane pro prefix rotation. Role je jen cte pres Ansible var
+# stay in top-level default.config.yml and default.credentials.yml —
+# centralized for prefix rotation. The role only reads them via Ansible var
 # precedence (vars_files > role defaults).
 #
 # POZNAMKA: erpnext_data_dir je DEPRECATED od P0.1 migrace na named volume.
-# Sites data zije v Docker named volume `b2b_erpnext_sites` (VirtioFS I/O
+# Site data lives in the Docker named volume `b2b_erpnext_sites` (VirtioFS I/O
 # error workaround na macOS Docker Desktop). Pozname jej pres
 # `docker volume prune -f -a` v blank-reset.yml.
 # ==============================================================================

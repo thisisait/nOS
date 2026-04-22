@@ -1,6 +1,6 @@
 # pazny.firefly
 
-Ansible role for deploying **Firefly III** (personal / family finance manager) as a compose override fragment in the devBoxNOS `b2b` stack.
+Ansible role for deploying **Firefly III** (personal / family finance manager) as a compose override fragment in the nOS `b2b` stack.
 
 ## What it does
 

@@ -3,7 +3,7 @@ galaxy_info:
   role_name: loki
   namespace: pazny
   author: Pázny
-  description: Loki in Docker compose override (devBoxNOS observability stack)
+  description: Loki in Docker compose override (nOS observability stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Loki se spousti jako soucast observability
-# stacku vedle Grafana / Prometheus / Tempo. Orchestrace (compose up
-# sequencing, post-start) je v tasks/stacks/core-up.yml.
+# No role dependencies — Loki is started as part of the observability
+# stack alongside Grafana / Prometheus / Tempo. Orchestration (compose up
+# sequencing, post-start) lives in tasks/stacks/core-up.yml.
 dependencies: []
 
 collections: []

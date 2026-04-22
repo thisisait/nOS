@@ -3,7 +3,7 @@ galaxy_info:
   role_name: postgresql
   namespace: pazny
   author: Pázny
-  description: PostgreSQL in Docker compose override (devBoxNOS infra stack)
+  description: PostgreSQL in Docker compose override (nOS infra stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — tato role je sdileny datovy zaklad pro
+# No role dependencies — this role is the shared data base for
 # authentik/infisical/outline/metabase/superset/paperclip/jsos.
-# Orchestrace (compose up sequencing, post-start sekvence) je v
+# Orchestration (compose up sequencing, post-start sequence) lives in
 # tasks/stacks/core-up.yml.
 dependencies: []
 

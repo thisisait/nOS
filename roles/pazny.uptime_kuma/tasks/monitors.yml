@@ -1,10 +1,10 @@
 ---
 # ==============================================================================
-# pazny.uptime_kuma/tasks/monitors.yml — auto-konfigurace monitoru po startu
+# pazny.uptime_kuma/tasks/monitors.yml — auto-configure monitors after startup
 #
-# Vytvari HTTP/TCP monitory pro vsechny nainstalovane sluzby. Vyzaduje pip
+# Creates HTTP/TCP monitors for all installed services. Requires pip
 # balicek uptime-kuma-api. Helper skripty (setup-monitors.py, reset-password.py)
-# jsou soucasti role a deploy-ujeme je do {{ uptime_kuma_data_dir }} pres
+# are part of the role and we deploy them to {{ uptime_kuma_data_dir }} via
 # {{ role_path }}/files/.
 # ==============================================================================
 
@@ -162,8 +162,8 @@
     - reset-password.py
 
 # ── Reconverge admin password BEFORE monitor setup ──────────────────────
-# Password reconverge musi probehnout pred setup-monitors.py, aby login()
-# v monitor skriptu pouzil aktualni prefix. Script tries new pw first
+# Password reconverge must run before setup-monitors.py so that login()
+# in the monitor script used the current prefix. Script tries new pw first
 # (converged) → falls back to previous prefix + change_password → DRIFT.
 - name: "[pazny.uptime_kuma] Reconverge admin password"
   ansible.builtin.command:
@@ -204,5 +204,5 @@
 
 - name: "[pazny.uptime_kuma] WARN: pip install failed"
   ansible.builtin.debug:
-    msg: "uptime-kuma-api pip install selhalo: {{ _kuma_pip.msg | default('unknown') }}. Monitory nebyly vytvořeny."
+    msg: "uptime-kuma-api pip install failed: {{ _kuma_pip.msg | default('unknown') }}. Monitors were not created."
   when: _kuma_pip.failed | default(false)

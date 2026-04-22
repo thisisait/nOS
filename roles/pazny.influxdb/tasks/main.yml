@@ -2,10 +2,10 @@
 # ==============================================================================
 # pazny.influxdb/tasks/main.yml
 #
-# Voláno z tasks/stacks/core-up.yml PŘED `docker compose -p observability up`:
-# vytvoří data + config dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/observability/overrides/influxdb.yml, který pak core-up.yml
-# sesbírá přes `find` a přidá jako dodatečný -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose -p observability up`:
+# creates data + config dirs, renders the compose override fragment to
+# {{ stacks_dir }}/observability/overrides/influxdb.yml, which then core-up.yml
+# collects via `find` and passes as an additional -f flag.
 # ==============================================================================
 
 - name: "[pazny.influxdb] Ensure data directory exists"

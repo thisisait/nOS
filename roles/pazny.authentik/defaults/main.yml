@@ -1,13 +1,13 @@
 ---
 # ==============================================================================
-# pazny.authentik — Authentik (server + worker) v Docker (infra compose stack)
+# pazny.authentik — Authentik (server + worker) in Docker (infra compose stack)
 #
 # Credentials (authentik_secret_key, authentik_db_password,
-# authentik_bootstrap_password) a cely OIDC registry (authentik_oidc_apps,
-# authentik_rbac_tiers, authentik_app_tiers, authentik_default_groups)
-# zustavaji v top-level default.config.yml / default.credentials.yml —
-# centralni pro prefix rotation + sdilene s compose fragmenty ostatnich
-# sluzeb (kazda sluzba cte authentik_oidc_<svc>_client_id derived var).
+# authentik_bootstrap_password) and the whole OIDC registry (authentik_oidc_apps,
+# authentik_rbac_tiers, authentik_app_tiers, authentik_default_groups) stay in
+# top-level default.config.yml / default.credentials.yml — centralized for
+# prefix rotation and shared with the compose fragments of other services
+# (each service reads an authentik_oidc_<svc>_client_id derived var).
 # ==============================================================================
 
 authentik_version: "2025.12.4"                      # CVE-2026-25227 pin (CVSS 9.1)
@@ -20,9 +20,10 @@ authentik_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 authentik_worker_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 authentik_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
-# DB pool tuning — default 0 zavira spojeni po kazdem requestu, aby Authentik
-# nedrazl stovky idle spojeni, ktere by jinak zabraly cely Postgres pool na
-# sdilene infre (Outline / Hedgedoc / Firefly zavisi na volnych slotech).
+# DB pool tuning — default 0 closes the connection after every request so
+# Authentik does not hold hundreds of idle connections that would otherwise
+# exhaust the shared Postgres pool (Outline / Hedgedoc / Firefly depend on
+# free slots).
 authentik_pg_conn_max_age: 0
 authentik_web_workers: 2                              # gunicorn worker procs (min 2)
 authentik_web_threads: 4                              # gunicorn threads per worker

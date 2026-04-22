@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.wordpress/tasks/post.yml
 #
-# Post-start wp-cli install + admin password reconverge. Volano z
-# tasks/stacks/stack-up.yml PO `docker compose -p iiab up` (kontejner musi
-# bezet, nez zavolame `wp core install` a `wp user update`).
+# Post-start wp-cli install + admin password reconverge. Called from
+# tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up` (the container must
+# must be running before we call `wp core install` and `wp user update`).
 #
-# Reconverge leg pro state-declarative idempotence: `wp user update` bezi
-# pri kazdem behu a prepise hash na aktualni prefix. Blank i non-blank run.
+# Reconverge leg for state-declarative idempotence: `wp user update` runs
+# on every run and overwrites the hash with the current prefix. Blank and non-blank run.
 # ==============================================================================
 
 - name: "[pazny.wordpress Post] Check if WordPress container is running"
@@ -59,7 +59,7 @@
 
 # ── Reconverge admin password every run (idempotent UPDATE) ────────────
 # `wp user update` is safe on existing users — always rewrites the password
-# field. This is the UPDATE leg pro state-declarative idempotence.
+# field. This is the UPDATE leg for state-declarative idempotence.
 - name: "[pazny.wordpress Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab

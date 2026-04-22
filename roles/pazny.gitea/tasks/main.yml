@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.gitea/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p devops up`:
-# vytvori data dir, enabluje nginx vhost, vyrenderuje compose override
-# fragment do {{ stacks_dir }}/devops/overrides/gitea.yml, ktery pak
-# stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p devops up`:
+# creates the data dir, enables the nginx vhost, renders the compose override
+# fragment to {{ stacks_dir }}/devops/overrides/gitea.yml which then
+# stack-up.yml collects via `find` and passes as an additional -f flag.
 #
-# Post-start admin-user setup je v tasks/post.yml — volany az PO
+# Post-start admin-user setup lives in tasks/post.yml — called AFTER
 # `docker compose up devops --wait`.
 # ==============================================================================
 
@@ -17,7 +17,7 @@
     state: directory
     mode: '0755'
 
-# Zastavit starou Homebrew Gitea (pokud bezi z predchozi iterace projektu)
+# Stop the old Homebrew Gitea (if running from an earlier iteration of the project)
 - name: "[pazny.gitea] Stop old Homebrew Gitea service"
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh stop gitea"
   register: _gitea_brew_stop

@@ -3,8 +3,8 @@
 # pazny.infisical — Infisical CE (secrets vault) v Docker (infra compose stack)
 #
 # Credentials (infisical_encryption_key, infisical_auth_secret,
-# infisical_db_password) zustavaji v top-level default.credentials.yml —
-# centralni pro prefix rotation.
+# infisical_db_password) staysji v top-level default.credentials.yml —
+# centralized for prefix rotation.
 # ==============================================================================
 
 infisical_version: "latest"

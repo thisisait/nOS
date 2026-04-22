@@ -3,7 +3,7 @@ galaxy_info:
   role_name: kiwix
   namespace: pazny
   author: Pázny
-  description: Kiwix offline knowledge server in Docker compose override (devBoxNOS iiab stack)
+  description: Kiwix offline knowledge server in Docker compose override (nOS iiab stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,8 +11,8 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Kiwix je cista Docker sluzba bez DB zavislosti.
-# Orchestrace (compose up sequencing) je v tasks/stacks/stack-up.yml.
+# No role dependencies — Kiwix is a pure Docker service without DB dependencies.
+# Orchestration (compose up sequencing) lives in tasks/stacks/stack-up.yml.
 dependencies: []
 
 collections: []

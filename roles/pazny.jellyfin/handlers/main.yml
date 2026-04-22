@@ -1,7 +1,7 @@
 ---
 # pazny.jellyfin — handlers
 # Pred Wave 2.2 nemel Jellyfin dedicated handler v play-level main.yml.
-# Tento role-lokalni handler je notified z tasks/main.yml pri zmene
+# This role-local handler is notified from tasks/main.yml on change of
 # compose override templatu.
 
 - name: Restart jellyfin

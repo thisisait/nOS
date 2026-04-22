@@ -1,11 +1,11 @@
 # =============================================================================
-# pazny.kiwix — compose override fragment
-# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+# pazny.kiwix - compose override fragment
+# Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — iiab_net je definovana v base
-# templates/stacks/iiab/docker-compose.yml.j2. Kiwix je cistě lokalni,
-# nepripojuje se na {{ stacks_shared_network }}.
+# Does not declare top-level networks: - iiab_net is defined in the base
+# templates/stacks/iiab/docker-compose.yml.j2. Kiwix is purely local and does
+# not attach to {{ stacks_shared_network }}.
 # =============================================================================
 
 services:

@@ -12,17 +12,17 @@
 #   - MCP client (consumes our mcpo gateway's underlying MCP servers)
 #
 # Architektura:
-#   1) Hermes 4 14B (~10GB) — orchestrator + MCP caller + mensi tasky
+#   1) Hermes 4 14B (~10GB) — orchestrator + MCP caller + smaller tasks
 #   2) Delegace velkych ukolu:
 #      - Local dense: qwen2.5-coder:32b (20GB) — on-demand via Ollama
 #      - Claude Code CLI — user's Claude subscription (zero API cost)
-#      - Anthropic API — volitelne, rychle prototypovani
+#      - Anthropic API — optional, for quick prototyping
 #
-# RAM rozpočet na 36GB Mac Studio:
+# RAM budget on a 36GB Mac Studio:
 #   - Docker stack:        ~12 GB
 #   - Hermes 14B (x2):     ~20 GB (2 paralelni instance)
-#   - Zbývá:               ~4 GB pro OS + cache
-#   Pro heavy task: 1 Hermes + 1 dense 32B = ~30GB (krátkodobé)
+#   - Remaining:           ~4 GB for OS + cache
+#   For heavy tasks: 1 Hermes + 1 dense 32B = ~30GB (short-lived)
 # ==============================================================================
 
 hermes_user: "{{ ansible_facts['user_id'] }}"
@@ -31,8 +31,8 @@ hermes_venv: "{{ ansible_facts['env']['HOME'] }}/agents/hermes/.venv"
 hermes_config_dir: "{{ ansible_facts['env']['HOME'] }}/.hermes"
 hermes_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
-# Hermes Agent: NENI na PyPI — instaluje se z git clone + `uv pip install -e .`
-# Pin pres hermes_version_tag (git tag). Upstream releases: v2026.X.Y
+# Hermes Agent: NOT on PyPI — installed from git clone + `uv pip install -e .`
+# Pinned via hermes_version_tag (git tag). Upstream releases: v2026.X.Y
 hermes_repo_url: "https://github.com/NousResearch/hermes-agent.git"
 hermes_version_tag: "v2026.4.16"      # = Hermes Agent 0.10.0 (April 2026, beta)
 hermes_extras: "mcp,web"              # MCP client + FastAPI web UI (pro nginx vhost)
@@ -41,14 +41,14 @@ hermes_extras: "mcp,web"              # MCP client + FastAPI web UI (pro nginx v
 
 # ── Modely ────────────────────────────────────────────────────────────────────
 
-# Primary model — Hermes 3 8B (~4.7GB, officialní Ollama library)
-# Proč ne Hermes 4: GGUF verze vyžaduje HF auth, oficiální Ollama library
-# nemá Hermes 4 (jen hermes3 v 3b/8b/70b/405b). 8B je ideální pro orchestrator
-# role (rychlý, tool-call ready, nechává RAM pro delegate 32b).
+# Primary model — Hermes 3 8B (~4.7GB, official Ollama library)
+# Why not Hermes 4: the GGUF version requires HF auth, and the official Ollama library
+# has no Hermes 4 (only hermes3 in 3b/8b/70b/405b). 8B is ideal for the orchestrator
+# role (fast, tool-call ready, leaves RAM for delegate 32b).
 hermes_primary_model: "hermes3:8b"
-hermes_primary_model_shortname: "hermes3:8b"      # Ollama tag = zároveň Hermes model ID
+hermes_primary_model_shortname: "hermes3:8b"      # Ollama tag = also the Hermes model ID
 
-# Heavy-duty delegate — lokalni dense coder (sdilen s OpenClaw)
+# Heavy-duty delegate — local dense coder (shared with OpenClaw)
 hermes_heavy_model: "qwen2.5-coder:32b"
 
 # ── Backend endpoints ─────────────────────────────────────────────────────────
@@ -56,18 +56,18 @@ hermes_heavy_model: "qwen2.5-coder:32b"
 hermes_ollama_host: "http://127.0.0.1:11434"        # lokalni Ollama
 
 # Anthropic API key (z credentials.yml, volitelne)
-# Pokud set → Hermes muze volat Claude pres API pro rychle prototypy
+# If set -> Hermes can call Claude via API for quick prototypes
 hermes_anthropic_api_key: "{{ anthropic_api_key | default('') }}"
 
 # Claude Code CLI delegation (user's $20/mo subscription)
-# Hermes ho vola jako shell tool: `claude --print "..."`
+# Hermes calls it as a shell tool: `claude --print "..."`
 hermes_claude_code_enabled: true
 
 # ── MCP ───────────────────────────────────────────────────────────────────────
 
-# Hermes MCP client → napojit na nase MCP servery (pres mcpo gateway)
-# mcpo expose-ne jednotlive servery jako OpenAPI, ale Hermes mluvi raw MCP,
-# takze se pripojuji primo k MCP serverum (stdio/sse, bez mcpo vrstvy)
+# Hermes MCP client -> hook into our MCP servers (via mcpo gateway)
+# mcpo exposes individual servers as OpenAPI, but Hermes speaks raw MCP,
+# so they connect directly to MCP servers (stdio/sse, without the mcpo layer)
 hermes_mcp_servers:
   - name: "filesystem"
     command: "npx"
@@ -94,8 +94,8 @@ hermes_web_host: "127.0.0.1"
 hermes_web_port: 18790                              # vedle openclaw 18789
 hermes_domain: "hermes.dev.local"
 
-# ── Daemon mode (volitelne, manualni po deployu) ──────────────────────────────
-# Hermes nema generic daemon mode. Pokud chces persistent:
+# -- Daemon mode (optional, manual after deploy) ──────────────────────────────
+# Hermes has no generic daemon mode. If you want persistent:
 #   hermes gateway install   # launchd plist pro Telegram/Discord messaging
 #   hermes mcp serve &       # standalone MCP server background
 
@@ -104,7 +104,7 @@ hermes_domain: "hermes.dev.local"
 hermes_max_concurrent_subagents: 4                  # paralelni RPC workstreams
 hermes_max_parallel_tool_calls: 10
 
-# Sampling (doporuceny by Nous: temp=0.6, top_p=0.95, top_k=20 pro tool use)
+# Sampling (recommended by Nous: temp=0.6, top_p=0.95, top_k=20 for tool use)
 hermes_temperature: 0.6
 hermes_top_p: 0.95
 hermes_top_k: 20

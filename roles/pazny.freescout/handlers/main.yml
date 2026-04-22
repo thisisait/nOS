@@ -1,6 +1,6 @@
 ---
 # pazny.freescout — handlers
-# Volano z notify: po re-renderu override sablony.
+# Triggered via notify: after the override template is re-rendered.
 
 - name: Restart freescout
   ansible.builtin.shell: >

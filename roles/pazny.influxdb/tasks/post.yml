@@ -2,16 +2,16 @@
 # ==============================================================================
 # pazny.influxdb/tasks/post.yml — admin password reconverge + health
 #
-# InfluxDB 2.x cte DOCKER_INFLUXDB_INIT_PASSWORD jen pri first-run setupu
-# (kdyz /var/lib/influxdb2 je prazdny). Pro non-blank runy pretoceni prefixu
-# potrebujeme update admin hesla explicitne pres InfluxDB API. Operace je
+# InfluxDB 2.x reads DOCKER_INFLUXDB_INIT_PASSWORD only at first-run setup
+# (when /var/lib/influxdb2 is empty). For non-blank runs prefix rotation
+# we must update the admin password explicitly via the InfluxDB API. The operation is
 # idempotent — 204 No Content pri uspechu.
 #
-# Token pouzity pro authorizaci je influxdb_admin_token (destructive group,
-# meni se jen pri blank/destroy_state). Po blank runu token matchuje ten,
-# ktery InfluxDB ulozil do volume → API call projde.
+# The token used for authorization is influxdb_admin_token (destructive group,
+# only changes on blank/destroy_state). After a blank run the token matches the one
+# which InfluxDB saved into the volume -> the API call passes.
 #
-# Volano z tasks/stacks/core-up.yml PO `docker compose -p observability up`.
+# Called from tasks/stacks/core-up.yml AFTER `docker compose -p observability up`.
 # ==============================================================================
 
 - name: "[pazny.influxdb Post] Check if InfluxDB container is running"
@@ -82,15 +82,15 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       InfluxDB 2.x (Docker) připraven
+       InfluxDB 2.x (Docker) ready
       ══════════════════════════════════════════════════════
        URL:         https://{{ influxdb_domain | default('influx.dev.local') }}
-       Kontejner:   influxdb → 127.0.0.1:{{ influxdb_port | default(8086) }}
+       Container:   influxdb → 127.0.0.1:{{ influxdb_port | default(8086) }}
        Admin user:  {{ influxdb_admin_user | default('admin') }}
-       Org:         {{ influxdb_org | default('devboxnos') }}
+       Org:         {{ influxdb_org | default('nos') }}
        Bucket:      {{ influxdb_bucket | default('default') }}
        Token:       <v credentials.yml>  (destructive — regen jen pri blank)
-       SSO:         Authentik forward_auth (UI);  API klientum predej token
+       SSO:         Authentik forward_auth (UI);  pass API clients a token
        Datasource:  Auto-provisoned v Grafana (uid: influxdb)
       ══════════════════════════════════════════════════════
   when: _influxdb_container.stdout | default('') | length > 0

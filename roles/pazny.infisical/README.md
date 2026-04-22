@@ -1,8 +1,8 @@
 # pazny.infisical
 
-Ansible role for deploying **Infisical CE** (secrets vault) as a compose override fragment in the devBoxNOS `infra` stack. Foundation secrets store for infra bootstrap and cross-service secret distribution.
+Ansible role for deploying **Infisical CE** (secrets vault) as a compose override fragment in the nOS `infra` stack. Foundation secrets store for infra bootstrap and cross-service secret distribution.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (infra IAM unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (infra IAM unit).
 
 ## What it does
 

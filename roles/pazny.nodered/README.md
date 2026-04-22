@@ -1,6 +1,6 @@
 # pazny.nodered
 
-Ansible role for deploying **Node-RED** (low-code flow automation) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **Node-RED** (low-code flow automation) as a compose override fragment in the nOS `iiab` stack.
 
 ## What it does
 

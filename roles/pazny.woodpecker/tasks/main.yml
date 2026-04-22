@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.woodpecker/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p devops up`:
-# vytvori data/log adresare, enabluje nginx vhost, vyrenderuje compose
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p devops up`:
+# creates data/log dirs, enables the nginx vhost, renders the compose
 # override fragment (server + agent) do
-# {{ stacks_dir }}/devops/overrides/woodpecker.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# {{ stacks_dir }}/devops/overrides/woodpecker.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Post-start neni — Woodpecker resi config pres env vars + Gitea OAuth2
-# (manualne vytvoreny OAuth2 client v Gitee, vlozeny do config.yml).
+# No post-start — Woodpecker handles config via env vars + Gitea OAuth2
+# (an OAuth2 client manually created in Gitea, inserted into config.yml).
 # ==============================================================================
 
 - name: "[pazny.woodpecker] Ensure data and log directories exist"
@@ -41,7 +41,7 @@
   ansible.builtin.debug:
     msg: |
       ╔══════════════════════════════════════════════════════════════════════╗
-      ║  WOODPECKER CI – MANUALNI KROK (pouze pri prvni instalaci)          ║
+      ||  WOODPECKER CI — MANUAL STEP (only on first install)                 ||
       ║                                                                      ║
       ║  V Gitee vytvor OAuth2 aplikaci:                                     ║
       ║    https://{{ gitea_domain | default('git.dev.local') }}/user/settings/applications
@@ -53,7 +53,7 @@
       ║    woodpecker_gitea_secret: "<client-secret>"                        ║
       ║                                                                      ║
       ║  Pak spust: ansible-playbook main.yml -K --tags woodpecker           ║
-      ╚══════════════════════════════════════════════════════════════════════╝
+      ==========================================================================
   when: >
     (woodpecker_gitea_client | default('')) == '' or
     (woodpecker_gitea_secret | default('')) == ''

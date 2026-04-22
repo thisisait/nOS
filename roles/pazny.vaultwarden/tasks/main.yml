@@ -2,11 +2,11 @@
 # ==============================================================================
 # pazny.vaultwarden/tasks/main.yml
 #
-# Volano (v Phase B) z tasks/stacks/stack-up.yml PRED `docker compose up iiab`:
-# vytvori data dir, vyrenderuje compose override fragment do
+# Called (in Phase B) from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# creates the data dir, renders the compose override fragment to
 # {{ stacks_dir }}/iiab/overrides/vaultwarden.yml.
 #
-# Vaultwarden nema post-start setup — jen nginx vhost (sdilena role-less logika)
+# Vaultwarden has no post-start setup — only the nginx vhost (shared role-less logic)
 # a debug banner s admin tokenem.
 # ==============================================================================
 
@@ -27,7 +27,7 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Vaultwarden připraven (spouští se přes IIAB stack)
+       Vaultwarden ready (starts via the IIAB stack)
       ══════════════════════════════════════════════════════
        URL:     https://{{ vaultwarden_domain }}
        Admin:   https://{{ vaultwarden_domain }}/admin

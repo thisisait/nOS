@@ -3,7 +3,7 @@ galaxy_info:
   role_name: glasswing
   namespace: pazny
   author: Pázny
-  description: Nette PHP + SQLite security research dashboard (devBoxNOS)
+  description: Nette PHP + SQLite security research dashboard (nOS)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Žádné role dependencies — PHP / nginx / composer se instalují v main.yml
-# pred glasswing rolí. Handler "Restart php-fpm" je definovaný play-level
-# v main.yml a globálně viditelný pro všechny role.
+# No role dependencies — PHP / nginx / composer are installed in main.yml
+# before the glasswing role. The handler "Restart php-fpm" is defined play-level
+# in main.yml and globally visible to all roles.
 dependencies: []
 
 collections:

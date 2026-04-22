@@ -3,7 +3,7 @@ galaxy_info:
   role_name: boxapi
   namespace: pazny
   author: Pázny
-  description: Box Management API (FastAPI + uvicorn via launchd) pro devBoxNOS
+  description: Box Management API (FastAPI + uvicorn via launchd) pro nOS
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,8 +11,8 @@ galaxy_info:
       versions:
         - all
 
-# Žádné role dependencies — Python3 a Homebrew se instalují mimo roli.
-# Source files/boxapi/ a templates/boxapi-launchd.plist.j2 zůstávají
+# No role dependencies — Python3 and Homebrew are installed outside the role.
+# Source files/boxapi/ and templates/boxapi-launchd.plist.j2 stay
 # v playbook repo.
-# Tasky používají jenom ansible.builtin, žádné extra collection.
+# Tasks use only ansible.builtin, no extra collections.
 dependencies: []

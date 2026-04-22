@@ -1,8 +1,8 @@
 # pazny.loki
 
-Ansible role for deploying **Loki** as a compose override fragment in the devBoxNOS `observability` stack. Co-deployed alongside Grafana / Prometheus / Tempo.
+Ansible role for deploying **Loki** as a compose override fragment in the nOS `observability` stack. Co-deployed alongside Grafana / Prometheus / Tempo.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 observability-peers role extraction (sibling to `pazny.grafana`, `pazny.prometheus`, `pazny.tempo`).
+Part of [nOS](../../README.md) Wave 2.2 observability-peers role extraction (sibling to `pazny.grafana`, `pazny.prometheus`, `pazny.tempo`).
 
 ## What it does
 

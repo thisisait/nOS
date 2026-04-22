@@ -4,8 +4,8 @@
 # Puter self-hosted: first user = admin. Password from global_password_prefix.
 # Uses better-sqlite3 (bundled in Puter container) + bcrypt.
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose -p iiab up`.
-# CORS patche jsou v custom Dockerfile (files/puter/Dockerfile).
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
+# CORS patches live in a custom Dockerfile (files/puter/Dockerfile).
 # ==============================================================================
 
 - name: "[pazny.puter Post] Remove cloud-only apps (camera, editor, player, recorder, viewer, pdf)"

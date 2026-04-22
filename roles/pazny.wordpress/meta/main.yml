@@ -3,7 +3,7 @@ galaxy_info:
   role_name: wordpress
   namespace: pazny
   author: Pázny
-  description: WordPress in Docker compose override (devBoxNOS iiab stack)
+  description: WordPress in Docker compose override (nOS iiab stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,10 +11,10 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — role spada pod iiab stack, ktery je
+# No role dependencies — the role belongs to the iiab stack, which is
 # orchestrovan v tasks/stacks/stack-up.yml. Role zavisi na pazny.mariadb
-# ale orchestrace je resena na urovni stack-up.yml (infra nejdrive), ne
-# role meta dependencies (aby se zabranilo dvojimu include pri iiab runu).
+# but orchestration is handled at stack-up.yml level (infra first), not
+# role meta dependencies (to prevent double include during an iiab run).
 dependencies: []
 
 collections: []

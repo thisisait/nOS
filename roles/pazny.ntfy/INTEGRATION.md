@@ -9,12 +9,12 @@ Tier: **2** (manager — publishing notifications is operator-level).
 Insert **after** `install_uptime_kuma: false` (~line 138) in the IIAB section:
 
 ```yaml
-install_ntfy: false               # ntfy – self-hosted push notifications server   [Docker]
+install_ntfy: false               # ntfy - self-hosted push notifications server   [Docker]
 ```
 
 ## 2. `default.config.yml` — `authentik_oidc_apps` entry
 
-Append to the **Proxy-auth** block of `authentik_oidc_apps:` (near line ~1523, after the `# ── Proxy-auth služby …` comment, grouped with the other `type: "proxy"` entries):
+Append to the **Proxy-auth** block of `authentik_oidc_apps:` (near line ~1523, after the `# -- Proxy-auth services ...` comment, grouped with the other `type: "proxy"` entries):
 
 ```yaml
   - name: "ntfy"
@@ -78,15 +78,15 @@ docker ps --format '{{ "{{.Names}}\t{{.Status}}" }}' | grep ntfy
 
 # 2) Local API reachable
 curl -sS http://127.0.0.1:2586/v1/health
-# → {"healthy":true}
+# -> {"healthy":true}
 
 # 3) Public vhost returns Authentik login (anonymous) then topic push after auth
 curl -sk -o /dev/null -w '%{http_code}\n' https://ntfy.dev.local/
-# → 302 to auth.dev.local/outpost.goauthentik.io/start (Authentik forward-auth)
+# -> 302 to auth.dev.local/outpost.goauthentik.io/start (Authentik forward-auth)
 
 # 4) Publish a test notification (after logging in / creating an access token)
-curl -F "title=test" -d "hello from devBoxNOS" https://ntfy.dev.local/testtopic
-# → JSON event with "id", "time", "event":"message"
+curl -F "title=test" -d "hello from nOS" https://ntfy.dev.local/testtopic
+# -> JSON event with "id", "time", "event":"message"
 ```
 
 Subscribe with the mobile app (ntfy.sh iOS/Android) or web UI:

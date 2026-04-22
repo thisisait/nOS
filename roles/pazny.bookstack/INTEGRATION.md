@@ -1,27 +1,27 @@
 # INTEGRATION: pazny.bookstack
 
-Mechanicke patche, ktere musi parent agent aplikovat po merge role do `dev`.
-Zadny soubor mimo `roles/pazny.bookstack/` a `templates/nginx/sites-available/bookstack.conf` jsem nemenil.
+Mechanical patches that the parent agent must apply after merging this role into `dev`.
+No file outside `roles/pazny.bookstack/` and `templates/nginx/sites-available/bookstack.conf` was modified.
 
 ---
 
 ## 1. `default.config.yml` — install toggle
 
-Insert do B2B sekce (~radek 148, za `install_outline:`):
+Insert into the B2B section (~line 148, after `install_outline:`):
 
 ```yaml
-install_bookstack: false         # BookStack – wiki (Shelf/Book/Chapter/Page) [vyžaduje: MariaDB, Redis Docker]
+install_bookstack: false         # BookStack - wiki (Shelf/Book/Chapter/Page) [requires: MariaDB, Redis Docker]
 ```
 
 ## 2. `default.config.yml` — authentik_oidc_apps entry
 
-Append do `authentik_oidc_apps:` listu (pred helper-vars blok, viz `authentik_oidc_outline` entry jako vzor):
+Append to the `authentik_oidc_apps:` list (before the helper-vars block; see the `authentik_oidc_outline` entry as a template):
 
 ```yaml
   - name: "BookStack"
     slug: "bookstack"
     enabled: "{{ install_bookstack | default(false) }}"
-    client_id: "devboxnos-bookstack"
+    client_id: "nos-bookstack"
     client_secret: "{{ global_password_prefix }}_pw_oidc_bookstack"
     redirect_uris: "https://{{ bookstack_domain | default('bookstack.dev.local') }}/oidc/callback"
     launch_url: "https://{{ bookstack_domain | default('bookstack.dev.local') }}"
@@ -29,7 +29,7 @@ Append do `authentik_oidc_apps:` listu (pred helper-vars blok, viz `authentik_oi
 
 ## 3. `default.config.yml` — helper vars (OIDC native)
 
-Insert vedle ostatnich `authentik_oidc_*_client_id` promennych (za `authentik_oidc_gitlab_client_secret`, ~radek 1657):
+Insert alongside the other `authentik_oidc_*_client_id` variables (after `authentik_oidc_gitlab_client_secret`, ~line 1657):
 
 ```yaml
 authentik_oidc_bookstack_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'bookstack') | first).client_id }}"
@@ -38,41 +38,41 @@ authentik_oidc_bookstack_client_secret: "{{ (authentik_oidc_apps | selectattr('s
 
 ## 4. `default.config.yml` — authentik_app_tiers entry
 
-Add do `authentik_app_tiers:` mezi tier-3 sluzby (~radek 1475):
+Add to `authentik_app_tiers:` among the tier-3 services (~line 1475):
 
 ```yaml
   bookstack: 3
 ```
 
-## 5. `default.credentials.yml` — nove secrets
+## 5. `default.credentials.yml` — new secrets
 
-Insert po `outline_utils_secret:` (~radek 211):
+Insert after `outline_utils_secret:` (~line 211):
 
 ```yaml
 # ==============================================================================
-# BOOKSTACK (pouze pokud install_bookstack: true)
-# Default login: OIDC pres Authentik (nebo lokalni admin@admin.com / password pri prvni inicializaci)
-# Vyžaduje: MariaDB
+# BOOKSTACK (only when install_bookstack: true)
+# Default login: OIDC via Authentik (or local admin@admin.com / password on first init)
+# Requires: MariaDB
 # ==============================================================================
 
 bookstack_db_password: "{{ global_password_prefix }}_pw_bookstack"
-bookstack_app_key: "{{ global_password_prefix }}_pw_bookstack_app_key"   # prepsano v main.yml pres openssl rand
+bookstack_app_key: "{{ global_password_prefix }}_pw_bookstack_app_key"   # overwritten in main.yml via openssl rand
 ```
 
-## 6. `main.yml` — auto-generovani APP_KEY
+## 6. `main.yml` — auto-generate APP_KEY
 
-BookStack vyzaduje Laravel-style `APP_KEY` ve formatu `base64:<32-byte-base64>`.
-Pridej do bloku **"Auto-regenerate stateless secrets (every run — safe group)"** (~radek 372-380):
+BookStack requires a Laravel-style `APP_KEY` in the format `base64:<32-byte-base64>`.
+Add to the **"Auto-regenerate stateless secrets (every run — safe group)"** block (~line 372-380):
 
 ```yaml
         bookstack_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
 ```
 
-> Pozn.: Je v **safe group**, protoze APP_KEY sifruje jen sessions/remember-tokeny a reset vynuti relogin — nerozbije perzistentni data (stranky/knihy v DB zustavaji). Pokud by se v buducnu zacalo pouzivat app-level encryption jinych polozek, presun do destructive group.
+> Note: This belongs to the **safe group** because APP_KEY only encrypts sessions / remember tokens and a reset merely forces re-login — persistent data (pages/books in DB) stays intact. If application-level encryption of other items is introduced later, move it to the destructive group.
 
 ## 7. `main.yml` — Redis auto-enable
 
-Pridej `install_bookstack` do podminky `Auto-enable Redis Docker for services that require it` (~radek 352-362):
+Add `install_bookstack` to the `Auto-enable Redis Docker for services that require it` condition (~line 352-362):
 
 ```yaml
       when: >
@@ -87,25 +87,25 @@ Pridej `install_bookstack` do podminky `Auto-enable Redis Docker for services th
 
 ## 8. `default.config.yml` — MariaDB DB provision entries
 
-V **IIAB – MARIADB (pokracovani)** bloku (~radek 736-758):
+In the **IIAB - MARIADB (continued)** block (~line 736-758):
 
-`mariadb_databases:` — pridej:
+`mariadb_databases:` — add:
 ```yaml
   - name: "bookstack"
 ```
 
-`mariadb_users:` — pridej:
+`mariadb_users:` — add:
 ```yaml
   - name: "bookstack"
     password: "{{ bookstack_db_password }}"
     priv: "bookstack.*:ALL"
 ```
 
-Tim se DB + user automaticky vytvori v `pazny.mariadb` post-start kroku v `tasks/stacks/core-up.yml` (volano PRED spustenim b2b stacku).
+This causes DB + user to be created automatically in the `pazny.mariadb` post-start step in `tasks/stacks/core-up.yml` (invoked BEFORE the b2b stack starts).
 
 ## 9. `tasks/stacks/stack-up.yml` — role include
 
-Insert do **`# B2B roles`** bloku (~radek 88-91, za `pazny.outline render`):
+Insert into the **`# B2B roles`** block (~line 88-91, after `pazny.outline render`):
 
 ```yaml
 - { name: "[Stacks] pazny.bookstack render", ansible.builtin.include_role: { name: pazny.bookstack, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false)", tags: ['bookstack'] }
@@ -113,7 +113,7 @@ Insert do **`# B2B roles`** bloku (~radek 88-91, za `pazny.outline render`):
 
 ## 10. `tasks/stacks/stack-up.yml` — `_remaining_stacks` update
 
-V `Build list of remaining (non-core) active stacks` set_fact (~radek 109) rozsir b2b podminku:
+In the `Build list of remaining (non-core) active stacks` set_fact (~line 109) extend the b2b condition:
 
 ```yaml
         ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_bookstack | default(false)) | ternary(['b2b'], []))
@@ -121,7 +121,7 @@ V `Build list of remaining (non-core) active stacks` set_fact (~radek 109) rozsi
 
 ## 11. `tasks/stacks/stack-up.yml` — b2b compose deploy condition
 
-V tasku `[Stacks] Deploy b2b compose` (~radek 35-40) rozsir `when:`:
+In the `[Stacks] Deploy b2b compose` task (~line 35-40) extend `when:`:
 
 ```yaml
   when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_bookstack | default(false)
@@ -129,48 +129,48 @@ V tasku `[Stacks] Deploy b2b compose` (~radek 35-40) rozsir `when:`:
 
 ## 12. `tasks/nginx.yml` — auto-enable vhost
 
-V `_nginx_sites_auto` set_fact (~radek 107-144) pridej radek (napr. za `outline.conf`):
+In the `_nginx_sites_auto` set_fact (~line 107-144) add a line (e.g. after `outline.conf`):
 
 ```yaml
          + ((install_bookstack | default(false)) | ternary(['bookstack.conf'], []))
 ```
 
-A do seznamu template loop (~radek 80-84, za `freescout.conf`/`outline.conf`):
+And to the template loop list (~line 80-84, after `freescout.conf`/`outline.conf`):
 
 ```yaml
     - bookstack.conf
 ```
 
-## 13. Nginx vhost (dokumentace)
+## 13. Nginx vhost (documentation)
 
-Soubor: `templates/nginx/sites-available/bookstack.conf`
-Aktivuje se automaticky pres `install_bookstack: true` (viz sekce 12). Native OIDC — bez `forward_auth`, bez `authentik-proxy-auth` include. `client_max_body_size 50m` pro BookStack gallery/cover uploads.
+File: `templates/nginx/sites-available/bookstack.conf`
+Activates automatically via `install_bookstack: true` (see section 12). Native OIDC — no `forward_auth`, no `authentik-proxy-auth` include. `client_max_body_size 50m` for BookStack gallery/cover uploads.
 
 ## 14. Smoke test
 
-Po `ansible-playbook main.yml -K -e install_bookstack=true --tags bookstack,b2b,mariadb` ověř:
+After `ansible-playbook main.yml -K -e install_bookstack=true --tags bookstack,b2b,mariadb` verify:
 
 ```bash
-# kontejner bezi
+# container is running
 docker ps | grep bookstack                         # Up, healthy
 
-# HTTP 200/302 na login
-curl -k -I https://bookstack.dev.local             # 302 -> /login nebo 200
+# HTTP 200/302 on login
+curl -k -I https://bookstack.dev.local             # 302 -> /login or 200
 
-# DB je dostupna
+# DB is reachable
 docker compose -p infra exec mariadb \
   mariadb -u bookstack -p"${PREFIX}_pw_bookstack" -e 'SHOW DATABASES;' \
   | grep bookstack
 
-# Authentik OIDC discovery endpoint (pokud install_authentik=true)
+# Authentik OIDC discovery endpoint (when install_authentik=true)
 curl -k https://auth.dev.local/application/o/bookstack/.well-known/openid-configuration | jq .issuer
 
-# OIDC login redirect (prohlizec): https://bookstack.dev.local -> "Login with Authentik" tlacitko
+# OIDC login redirect (browser): https://bookstack.dev.local -> "Login with Authentik" button
 ```
 
-## 15. Poznamky
+## 15. Notes
 
-- **Image verze**: `lscr.io/linuxserver/bookstack:v26.03.3-ls256` (aktualni stable k datu vytvoreni role). Pro upgrade prepis `bookstack_version` v `defaults/main.yml` nebo v `config.yml`.
-- **Domena**: `bookstack.dev.local` — NE `wiki.dev.local` (kolize s Outline).
-- **Pri prvni inicializaci (bez OIDC)** BookStack ma default admin `admin@admin.com` / `password`. Pokud je `install_authentik=true`, prihlaseni jde pres Authentik (OIDC user se automaticky zaregistruje a pripoji k Authentik groups).
-- **OIDC scopes**: `openid profile email groups` — skupina `groups` vyzaduje Authentik `Group Membership Scope Mapping` (typicky uz soucasti `authentik_oidc_setup.yml` blueprintu; pokud ne, bez `groups` BookStack stale funguje, jen `OIDC_USER_TO_GROUPS` nebude mapovat role).
+- **Image version**: `lscr.io/linuxserver/bookstack:v26.03.3-ls256` (current stable at role creation time). To upgrade, override `bookstack_version` in `defaults/main.yml` or in `config.yml`.
+- **Domain**: `bookstack.dev.local` — NOT `wiki.dev.local` (collides with Outline).
+- **On first init (without OIDC)** BookStack ships with default admin `admin@admin.com` / `password`. When `install_authentik=true`, login goes through Authentik (OIDC users auto-register and are attached to Authentik groups).
+- **OIDC scopes**: `openid profile email groups` — the `groups` scope requires an Authentik `Group Membership Scope Mapping` (typically already part of the `authentik_oidc_setup.yml` blueprint; if not, BookStack still works without `groups`, but `OIDC_USER_TO_GROUPS` will not map roles).

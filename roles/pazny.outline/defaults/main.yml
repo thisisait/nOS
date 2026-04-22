@@ -3,9 +3,9 @@
 # pazny.outline — Outline team wiki / knowledge base (b2b compose stack)
 #
 # Credentials (outline_db_password, outline_secret_key, outline_utils_secret)
-# zustavaji v default.credentials.yml — centralizovane pro prefix rotation
+# stay in default.credentials.yml — centralized for prefix rotation
 # a auto-generated secrets v main.yml (outline_secret_key / outline_utils_secret
-# jsou pri blank=true regenerovane pres `openssl rand -hex 32`).
+# are regenerated on blank=true via `openssl rand -hex 32`).
 # ==============================================================================
 
 outline_version: "latest"

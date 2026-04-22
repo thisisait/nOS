@@ -3,7 +3,7 @@ galaxy_info:
   role_name: open_webui
   namespace: pazny
   author: Pázny
-  description: Open WebUI chat frontend pro Ollama (devBoxNOS iiab stack)
+  description: Open WebUI chat frontend pro Ollama (nOS iiab stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:

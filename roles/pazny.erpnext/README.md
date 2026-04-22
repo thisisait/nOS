@@ -1,8 +1,8 @@
 # pazny.erpnext
 
-Ansible role for deploying **ERPNext** (Frappe framework) as a compose override fragment in the devBoxNOS `b2b` stack. Provides CRM, ERP, HR, and Accounting capabilities.
+Ansible role for deploying **ERPNext** (Frappe framework) as a compose override fragment in the nOS `b2b` stack. Provides CRM, ERP, HR, and Accounting capabilities.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction.
+Part of [nOS](../../README.md) Wave 2.2 role extraction.
 
 ## What it does
 

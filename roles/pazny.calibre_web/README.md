@@ -1,8 +1,8 @@
 # pazny.calibre_web
 
-Ansible role for deploying **Calibre-Web** (ebook server UI) as a compose override fragment in the devBoxNOS `iiab` stack.
+Ansible role for deploying **Calibre-Web** (ebook server UI) as a compose override fragment in the nOS `iiab` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
 
 > **Naming note:** the role directory uses the underscore form `pazny.calibre_web` per Ansible Galaxy naming rules, but the Docker compose service is declared as `calibre-web` (with hyphen). The handler name and all `docker compose ... calibre-web` commands use the hyphen form for consistency with the compose service. A legacy bug in `tasks/iiab/calibreweb_post.yml` referenced `calibreweb` without the hyphen (silent failure via `failed_when: false`) — this role fixes it.
 

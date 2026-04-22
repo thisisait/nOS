@@ -2,15 +2,15 @@
 # ==============================================================================
 # pazny.influxdb — InfluxDB 2.x time-series database (observability stack)
 #
-# InfluxDB OSS 2.x nemá nativní OIDC — přístup do UI se gateuje přes Authentik
-# forward_auth v nginx vhostu (proxy auth). API klienti používají native
-# InfluxDB token (auto-generated při first-run setup).
+# InfluxDB OSS 2.x has no native OIDC — UI access is gated via Authentik
+# forward_auth in the nginx vhost (proxy auth). API clients use native
+# InfluxDB token (auto-generated at first-run setup).
 #
-# Credentials (influxdb_admin_password, influxdb_admin_token) zůstávají
+# Credentials (influxdb_admin_password, influxdb_admin_token) stay
 # v default.credentials.yml resp. main.yml auto-gen bloku.
 # ==============================================================================
 
-# InfluxDB 2.7 je stable OSS release (3.x je alpha, nepoužívat).
+# InfluxDB 2.7 is the stable OSS release (3.x is alpha, do not use).
 influxdb_version: "2.7.12"
 influxdb_domain: "influx.{{ instance_tld | default('dev.local') }}"
 influxdb_port: 8086
@@ -20,12 +20,12 @@ influxdb_config_dir: "{{ ansible_facts['env']['HOME'] }}/influxdb/config"
 # First-run auto-setup parametry (DOCKER_INFLUXDB_INIT_*).
 influxdb_init_mode: "setup"
 influxdb_init_username: "admin"
-influxdb_init_org: "devboxnos"
+influxdb_init_org: "nos"
 influxdb_init_bucket: "default"
 influxdb_init_retention: "90d"
 
 influxdb_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 influxdb_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
-# Pro `blank=true` vymaže při reset-fázi (tasks/reset/):
+# For `blank=true` it is wiped in the reset phase (tasks/reset/):
 influxdb_external_data_dir_override: ""

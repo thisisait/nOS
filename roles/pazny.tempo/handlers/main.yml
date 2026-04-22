@@ -1,6 +1,6 @@
 ---
 # pazny.tempo — handlers
-# Role-local "Restart tempo" — muze byt prebite play-level handlerem v main.yml.
+# Role-local "Restart tempo" — may be overridden by a play-level handler in main.yml.
 
 - name: Restart tempo
   ansible.builtin.shell: >

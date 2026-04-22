@@ -1,7 +1,7 @@
 ---
 # pazny.homeassistant — handlers
-# Play-level "Restart homeassistant" v main.yml ma prednost; tento zustava
-# pro samostatne pouziti role mimo devBoxNOS playbook.
+# Play-level "Restart homeassistant" in main.yml takes priority; this one stays
+# for standalone use of the role outside the nOS playbook.
 
 - name: Restart homeassistant
   ansible.builtin.shell: >

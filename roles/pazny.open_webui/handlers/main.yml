@@ -1,10 +1,10 @@
 ---
 # pazny.open_webui — handlers
-# Play-level "Restart openwebui" v main.yml zatim ma prednost; tento handler
-# zustava pro samostatne pouziti role mimo devBoxNOS playbook.
+# Play-level "Restart openwebui" in main.yml takes priority for now; this handler
+# stays for standalone use of the role outside the nOS playbook.
 #
-# Pozn: compose service name je `open-webui` (pomlcka), ale existujici
-# play-level handler pouziva `openwebui` bez pomlcky — zachovano pro
+# Note: the compose service name is `open-webui` (hyphen), but the existing
+# play-level handler uses `openwebui` without a hyphen — kept for
 # binarni kompatibilitu s notify: Restart openwebui volanim mimo roli.
 
 - name: Restart openwebui

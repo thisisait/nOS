@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.jellyfin — Jellyfin media server (iiab compose stack)
 #
-# Centralizovane promenne (jellyfin_domain, port, media dirs) zustavaji v
-# default.config.yml kvuli externalim konzumentum (nginx vhost render,
+# Centralized variables (jellyfin_domain, port, media dirs) staysji v
+# default.config.yml due to external consumers (nginx vhost render,
 # blank-reset path resolver). Role defaults poskytuji fallback.
 # ==============================================================================
 

@@ -2,9 +2,9 @@
 # ==============================================================================
 # pazny.metabase — Metabase BI v Docker (data compose stack)
 #
-# Credentials (metabase_db_password, metabase_admin_password) zustavaji v
+# Credentials (metabase_db_password, metabase_admin_password) staysji v
 # top-level default.config.yml / default.credentials.yml — stale centralizovane,
-# role je jen cte pres Ansible var precedence (vars_files > role defaults).
+# the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
 metabase_version: "latest"
@@ -14,7 +14,7 @@ metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_timezone: "Europe/Prague"
 metabase_admin_first_name: "Admin"
-metabase_admin_last_name: "devBoxNOS"
-metabase_mem_limit: "2g"  # JVM + Flyway migrace + sample DB — 1g zpusobuje OOM u vetsich schemat
+metabase_admin_last_name: "nOS"
+metabase_mem_limit: "2g"  # JVM + Flyway migrations + sample DB — 1g causes OOM on larger schemas
 
 metabase_cpus: "{{ docker_cpus_standard | default('1.0') }}"

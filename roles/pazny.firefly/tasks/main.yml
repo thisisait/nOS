@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.firefly/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p b2b up`:
-# vytvori data dirs, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/b2b/overrides/firefly.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p b2b up`:
+# creates the data dirs, renders the compose override fragment do
+# {{ stacks_dir }}/b2b/overrides/firefly.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Firefly pouziva remote_user_guard (REMOTE_USER header) pres Authentik
-# proxy outpost — zadny post-start OIDC setup. User se vytvori pri prvnim
-# prihlaseni pres nginx auth_request.
+# Firefly uses the remote_user_guard pattern (REMOTE_USER header) via Authentik
+# proxy outpost — no post-start OIDC setup. User is created on the first
+# login via nginx auth_request.
 # ==============================================================================
 
 - name: "[pazny.firefly] Assert firefly_app_key is valid Laravel APP_KEY"
@@ -18,14 +18,14 @@
       - "'placeholder' not in firefly_app_key"
       - "firefly_app_key is match('^base64:[A-Za-z0-9+/=]{43,44}$')"
     fail_msg: |
-      firefly_app_key není validní Laravel APP_KEY (base64:<32-byte base64>).
-      Firefly III Laravel crashne při startu pokud APP_KEY není přesně 32 bytes.
+      firefly_app_key is not a valid Laravel APP_KEY (base64:<32-byte base64>).
+      Firefly III Laravel crashes at startup if APP_KEY is not exactly 32 bytes.
 
       Oprava — zvol jeden z:
-        1. První run s -e blank=true (main.yml vygeneruje platný key — destructive group)
-        2. Nastav vlastní v credentials.yml:
+        1. First run with -e blank=true (main.yml generates a valid key — destructive group)
+        2. Set your own in credentials.yml:
              firefly_app_key: "base64:$(openssl rand -base64 32)"
-        3. Ručně spusť: openssl rand -base64 32 | sed 's|^|base64:|'
+        3. Manually run: openssl rand -base64 32 | sed 's|^|base64:|'
 
 - name: "[pazny.firefly] Ensure data directories exist"
   ansible.builtin.file:
@@ -64,14 +64,14 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Firefly III (Docker) připraven
+       Firefly III (Docker) ready
       ══════════════════════════════════════════════════════
        URL:       https://{{ firefly_domain }}
-       Kontejner: firefly → 127.0.0.1:{{ firefly_port | default(3014) }}
+       Container: firefly → 127.0.0.1:{{ firefly_port | default(3014) }}
        Upload:    {{ firefly_upload_dir }}
        Export:    {{ firefly_export_dir }}
        DB:        {{ firefly_db_name }} @ mariadb (b2b_net)
        SSO:       Authentik proxy outpost (REMOTE_USER)
 
-       Přidej do /etc/hosts:   127.0.0.1 {{ firefly_domain }}
+       Add to /etc/hosts:   127.0.0.1 {{ firefly_domain }}
       ══════════════════════════════════════════════════════

@@ -1,13 +1,13 @@
 ---
 # ==============================================================================
-# pazny.gitea/tasks/post.yml — admin uzivatel + password reconverge
+# pazny.gitea/tasks/post.yml — admin user + password reconverge
 #
-# Gitea nepodporuje env var pro admin heslo → musi jit pres CLI:
-#   • `gitea admin user create` pro prvni inicializaci
-#   • `gitea admin user change-password` pro state-declarative UPDATE
-#     (bezpecny idempotent call, overwritne heslo na kazdy run)
+# Gitea does not support an env var for the admin password -> must go via CLI:
+#   • `gitea admin user create` for the first initialization
+#   • `gitea admin user change-password` for state-declarative UPDATE
+#     (safe idempotent call, overwrites password on every run)
 #
-# Volano z tasks/stacks/stack-up.yml PO `docker compose up devops --wait`.
+# Called from tasks/stacks/stack-up.yml AFTER `docker compose up devops --wait`.
 # ==============================================================================
 
 - name: "[pazny.gitea Post] Check if Gitea container is running"
@@ -51,10 +51,10 @@
   check_mode: false
 
 # ── Reconverge admin password every run (idempotent UPDATE) ─────────────
-# `gitea admin user change-password` je safe volat na existing usera —
+# `gitea admin user change-password` is safe to call on an existing user —
 # overwritne password nepodminene. Toto je UPDATE leg state-declarative
 # idempotence: blank+prefix rotation, non-blank edit credentials.yml,
-# obe cesty vezmou nove heslo na kazdy run.
+# both paths pick up the new password on every run.
 - name: "[pazny.gitea Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops

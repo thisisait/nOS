@@ -1,14 +1,14 @@
 # =============================================================================
-# pazny.influxdb — compose override fragment
-# Merged do `docker compose -p observability up` v tasks/stacks/core-up.yml
-# přes ansible.builtin.find nad {{ stacks_dir }}/observability/overrides/*.yml.
+# pazny.influxdb - compose override fragment
+# Merged into `docker compose -p observability up` in tasks/stacks/core-up.yml
+# via ansible.builtin.find over {{ stacks_dir }}/observability/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — observability_net a
-# {{ stacks_shared_network }} jsou definované v base
+# Does not declare top-level networks: - observability_net and
+# {{ stacks_shared_network }} are defined in the base
 # templates/stacks/observability/docker-compose.yml.j2.
 #
-# First-run setup (DOCKER_INFLUXDB_INIT_MODE=setup) se provede jen při prvním
-# startu s prázdným /var/lib/influxdb2. Následné starty ignorují init env vars.
+# First-run setup (DOCKER_INFLUXDB_INIT_MODE=setup) runs only on the first
+# start with an empty /var/lib/influxdb2. Subsequent starts ignore the init env vars.
 # =============================================================================
 
 services:
@@ -25,11 +25,11 @@ services:
       - {{ influxdb_data_dir }}:/var/lib/influxdb2
       - {{ influxdb_config_dir }}:/etc/influxdb2
     environment:
-      # ── Auto-setup (first-run only; ignored if DB already initialized) ─────
+      # -- Auto-setup (first-run only; ignored if DB already initialized) ------
       DOCKER_INFLUXDB_INIT_MODE: "{{ influxdb_init_mode | default('setup') }}"
       DOCKER_INFLUXDB_INIT_USERNAME: "{{ influxdb_init_username | default('admin') }}"
       DOCKER_INFLUXDB_INIT_PASSWORD: "{{ influxdb_admin_password }}"
-      DOCKER_INFLUXDB_INIT_ORG: "{{ influxdb_init_org | default('devboxnos') }}"
+      DOCKER_INFLUXDB_INIT_ORG: "{{ influxdb_init_org | default('nos') }}"
       DOCKER_INFLUXDB_INIT_BUCKET: "{{ influxdb_init_bucket | default('default') }}"
       DOCKER_INFLUXDB_INIT_RETENTION: "{{ influxdb_init_retention | default('90d') }}"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "{{ influxdb_admin_token }}"

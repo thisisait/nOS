@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.qgis_server — QGIS Server v Docker (engineering compose stack)
 #
-# POZOR: image kartoza/qgis-server je pouze amd64 — na ARM64 Mac bezi pres
+# NOTE: the kartoza/qgis-server image is amd64-only — on ARM64 Mac it runs via
 # Rosetta emulaci (`platform: linux/amd64`).
 # ==============================================================================
 

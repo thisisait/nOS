@@ -1,7 +1,7 @@
 ---
 # pazny.nextcloud — handlers
-# Play-level "Restart nextcloud" v main.yml ma prednost; tento zustava
-# pro samostatne pouziti role mimo devBoxNOS playbook.
+# Play-level "Restart nextcloud" in main.yml takes priority; this one stays
+# for standalone use of the role outside the nOS playbook.
 
 - name: Restart nextcloud
   ansible.builtin.shell: >

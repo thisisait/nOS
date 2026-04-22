@@ -7,7 +7,7 @@ All patches are **declarative** — parent agent applies them to the listed file
 Insert in the **B2B stack** block (after `install_outline` ~line 148):
 
 ```yaml
-install_hedgedoc: false           # HedgeDoc – real-time collaborative markdown editor [vyžaduje: PostgreSQL]
+install_hedgedoc: false           # HedgeDoc - real-time collaborative markdown editor [requires: PostgreSQL]
 ```
 
 ## 2. `default.config.yml` — HedgeDoc variable block
@@ -16,8 +16,8 @@ Insert a new block (near the Outline block ~line 1220):
 
 ```yaml
 # ==============================================================================
-# B2B – HEDGEDOC (real-time collaborative markdown editor)
-# Vyžaduje: install_postgresql: true
+# B2B - HEDGEDOC (real-time collaborative markdown editor)
+# Requires: install_postgresql: true
 # ==============================================================================
 
 hedgedoc_domain: "hedgedoc.{{ instance_tld | default('dev.local') }}"
@@ -38,7 +38,7 @@ Append to `authentik_oidc_apps:` list (before helper vars block ~line 1614):
   - name: "HedgeDoc"
     slug: "hedgedoc"
     enabled: "{{ install_hedgedoc | default(false) }}"
-    client_id: "devboxnos-hedgedoc"
+    client_id: "nos-hedgedoc"
     client_secret: "{{ global_password_prefix }}_pw_oidc_hedgedoc"
     redirect_uris: "https://{{ hedgedoc_domain | default('hedgedoc.dev.local') }}/auth/oauth2/callback"
     launch_url: "https://{{ hedgedoc_domain | default('hedgedoc.dev.local') }}"
@@ -66,7 +66,7 @@ Add to `authentik_app_tiers:` (near `outline: 3` ~line 1438):
 Insert after Outline credentials block (~line 211):
 
 ```yaml
-# HEDGEDOC (pouze pokud install_hedgedoc: true)
+# HEDGEDOC (only when install_hedgedoc: true)
 hedgedoc_db_password: "{{ global_password_prefix }}_pw_hedgedoc"
 hedgedoc_session_secret: "{{ global_password_prefix }}_pw_hedgedoc_session"
 ```

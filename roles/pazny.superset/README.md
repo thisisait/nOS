@@ -1,8 +1,8 @@
 # pazny.superset
 
-Ansible role for deploying **Apache Superset** as a compose override fragment in the devBoxNOS `data` stack. Uses PostgreSQL + Redis from the infra stack.
+Ansible role for deploying **Apache Superset** as a compose override fragment in the nOS `data` stack. Uses PostgreSQL + Redis from the infra stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
 
 > **Version pin:** `6.0.0` — addresses CVE-2026-23982 (auth bypass) and CVE-2025-48912 (RLS SQLi). Do not downgrade.
 

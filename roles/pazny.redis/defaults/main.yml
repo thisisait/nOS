@@ -3,11 +3,11 @@
 # pazny.redis — Redis in Docker (infra compose stack)
 #
 # POZOR: install toggle je `redis_docker` (nikoli `install_redis`) kvuli
-# koexistenci s Homebrew Redis — pokud `redis_docker: true`, pouziva se
+# coexistence with Homebrew Redis — if `redis_docker: true`, we use
 # tato role, jinak nativni brew service.
 #
-# Credentials (redis_password) zustavaji v top-level default.credentials.yml —
-# centralizovane, role je jen cte pres Ansible var precedence
+# Credentials (redis_password) staysji v top-level default.credentials.yml —
+# centralized, the role only reads it via Ansible var precedence
 # (vars_files > role defaults).
 # ==============================================================================
 

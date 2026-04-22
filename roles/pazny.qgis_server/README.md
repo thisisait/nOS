@@ -1,8 +1,8 @@
 # pazny.qgis_server
 
-Ansible role for deploying **QGIS Server** as a compose override fragment in the devBoxNOS `engineering` stack.
+Ansible role for deploying **QGIS Server** as a compose override fragment in the nOS `engineering` stack.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (voip-engineering-data worker).
 
 > **Apple Silicon note:** The upstream `kartoza/qgis-server` image is published only for `linux/amd64`. On ARM64 Macs it runs under Rosetta emulation via `platform: linux/amd64` — expect slower performance than native.
 

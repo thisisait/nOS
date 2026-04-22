@@ -3,7 +3,7 @@ galaxy_info:
   role_name: gitea
   namespace: pazny
   author: Pázny
-  description: Gitea in Docker compose override (devBoxNOS devops stack)
+  description: Gitea in Docker compose override (nOS devops stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,9 +11,9 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Gitea bezi jako soucast devops stacku vedle
+# No role dependencies — Gitea runs as part of the devops stack alongside
 # Woodpecker / GitLab / Paperclip. Orchestrace (compose up sequencing)
-# je v tasks/stacks/stack-up.yml.
+# lives in tasks/stacks/stack-up.yml.
 dependencies: []
 
 collections: []

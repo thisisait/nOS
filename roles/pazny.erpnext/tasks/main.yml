@@ -2,16 +2,16 @@
 # ==============================================================================
 # pazny.erpnext/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up b2b`:
-# vyrenderuje compose override fragment do
-# {{ stacks_dir }}/b2b/overrides/erpnext.yml, ktery pak stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up b2b`:
+# renders the compose override fragment do
+# {{ stacks_dir }}/b2b/overrides/erpnext.yml, which stack-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
 # Post-start recovery (retry configurator, bench migrate lock cleanup,
-# admin password reconverge, site health check) je v tasks/post.yml —
-# volany z stack-up.yml az PO `docker compose up b2b --wait`.
+# admin password reconverge, site health check) lives in tasks/post.yml —
+# called from stack-up.yml az PO `docker compose up b2b --wait`.
 #
-# ERPNext data zije v Docker named volume `b2b_erpnext_sites` (P0.1 VirtioFS
+# ERPNext data lives in the Docker named volume `b2b_erpnext_sites` (P0.1 VirtioFS
 # workaround), zadny host-side data dir se nevytvari.
 # ==============================================================================
 

@@ -1,8 +1,8 @@
 ---
-name: devboxnos
-description: DevOps skills pro devBoxNOS Ansible playbook — orchestrace Docker stacku, delegation na Claude Code / local dense model, logování agentické práce.
+name: nos
+description: DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work.
 version: 1.0.0
-author: Inspektor Klepítko
+author: Inspektor Klepitko
 license: MIT
 platforms: [macos]
 metadata:
@@ -12,27 +12,27 @@ prerequisites:
   commands: [docker, ansible-playbook, nginx, claude]
 ---
 
-# devBoxNOS DevOps Skill
+# nOS DevOps Skill
 
-Operuješ na Mac Studio M2 Ultra home lab se 47+ kontejnery orchestrovanými
-Ansible playbookem. Playbook = single source of truth.
+You operate on a Mac Studio M2 Ultra home lab with 47+ containers orchestrated
+by an Ansible playbook. The playbook = single source of truth.
 
-## Kdy použít
+## When to use
 
-- User žádá check/restart/debug Docker služby
-- Úprava nginx vhost, SSL cert
-- Změna v Ansible playbooku (`~/projects/mac-dev-playbook`)
-- Delegace velkého úkolu na Claude Code nebo dense model
-- Vytvoření logu v `~/agents/log/`
+- User asks to check/restart/debug a Docker service
+- Editing an nginx vhost or SSL cert
+- Changing the Ansible playbook (`~/projects/mac-dev-playbook`)
+- Delegating a large task to Claude Code or a dense model
+- Creating a log in `~/agents/log/`
 
-## Kdy NEpoužít
+## When NOT to use
 
-- Běžný chat, vysvětlování konceptů
-- Úkol který nezahrnuje infrastrukturu/Docker/Ansible
+- General chat, concept explanations
+- Tasks unrelated to infrastructure / Docker / Ansible
 
 ## Core patterns
 
-### 1. Health check všech stacků
+### 1. Health check all stacks
 
 ```bash
 for stack in infra observability iiab devops b2b data engineering voip; do
@@ -41,14 +41,14 @@ for stack in infra observability iiab devops b2b data engineering voip; do
 done
 ```
 
-### 2. Najdi službu co crashuje
+### 2. Find a crashing service
 
 ```bash
 docker ps -a --format '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}' | grep -i "restart\|exited\|unhealthy"
 docker logs <container> 2>&1 | tail -50
 ```
 
-### 3. Restart stacku (po změně compose)
+### 3. Restart a stack (after compose change)
 
 ```bash
 cd ~/stacks/<stack>
@@ -73,41 +73,41 @@ git add -A && git commit -m "feat(<service>): <change>"
 
 ## Delegation playbook
 
-### Claude Code (user má subscription, preferuj pro produkční úkoly)
+### Claude Code (user has a subscription, prefer for production tasks)
 
 ```bash
 # Non-interactive, print result
-claude --print "DevOps task: <detailní brief s file paths a acceptance criteria>"
+claude --print "DevOps task: <detailed brief with file paths and acceptance criteria>"
 
-# Když úkol vyžaduje file access (claude vidí soubory z cwd)
-cd ~/projects/nejaky-projekt && claude --print "..."
+# When the task needs file access (claude sees files from cwd)
+cd ~/projects/some-project && claude --print "..."
 ```
 
-### Local dense model (qwen2.5-coder:32b) — heavy refactor, long context
+### Local dense model (qwen2.5-coder:32b) - heavy refactor, long context
 
-Volej via Ollama OpenAI-compat:
+Call via Ollama OpenAI-compat:
 ```python
-# via Hermes delegation feature — set v config.yaml
+# via Hermes delegation feature - set in config.yaml
 delegation:
   model: "qwen2.5-coder:32b"
   provider: "custom"
 ```
 
-### Anthropic API (pokud máš ANTHROPIC_API_KEY)
+### Anthropic API (if you have ANTHROPIC_API_KEY)
 
-Přes Hermes "anthropic" provider — nastavuješ v config.yaml nebo per-call.
-Preferuj pro: prompt caching (velký kontext), extended thinking režim.
+Via Hermes "anthropic" provider - configure in config.yaml or per-call.
+Prefer for: prompt caching (large context), extended thinking mode.
 
-## Logování
+## Logging
 
-Každý netriviální task loguj do `~/agents/log/`:
+Log every non-trivial task into `~/agents/log/`:
 
 ```
-# Filename: YYYY-MM-DD_TASK-NNN_popis.md
+# Filename: YYYY-MM-DD_TASK-NNN_description.md
 
 ---
 date: 2026-04-20 14:30
-agent: Inspektor Klepítko (Hermes)
+agent: Inspektor Klepitko (Hermes)
 task_id: TASK-042
 status: COMPLETE
 priority: HIGH
@@ -116,36 +116,36 @@ tags: [nginx, ssl, mkcert]
 
 # TASK-042: Deploy new vhost for myapp.dev.local
 
-## Cíl
-Nasadit vhost pro novou aplikaci...
+## Goal
+Deploy a vhost for a new application...
 
-## Kroky
+## Steps
 1. ...
 
-## Výsledek
+## Result
 ...
 ```
 
-## MCP tools rychlá reference
+## MCP tools quick reference
 
-| Tool | Příklad |
+| Tool | Example |
 |------|---------|
-| `filesystem_read` | číst soubory v `~/projects` a `~/agents/log` |
-| `git_log` | historie lokálních repositářů |
-| `fetch` | HTTP request s user-agentem |
-| `memory_save` | persistovat fact pro budoucí sessions |
-| `time_now` | aktuální datum/čas v Europe/Prague |
+| `filesystem_read` | read files in `~/projects` and `~/agents/log` |
+| `git_log` | history of local repositories |
+| `fetch` | HTTP request with a user-agent |
+| `memory_save` | persist a fact for future sessions |
+| `time_now` | current date/time in Europe/Prague |
 
-Pokud je spuštěný mcpo (`install_mcp_gateway: true`), navíc:
+If mcpo is running (`install_mcp_gateway: true`), additionally:
 
-| Tool | Příklad |
+| Tool | Example |
 |------|---------|
-| `grafana_query` | PromQL/LogQL přes MCP |
-| `postgres_query` | read-only SQL dotaz (mcp_readonly user) |
+| `grafana_query` | PromQL/LogQL over MCP |
+| `postgres_query` | read-only SQL query (mcp_readonly user) |
 
-## Bezpečnost
+## Security
 
-- **NIKDY** nelog API klíče, hesla, tokens
-- **NIKDY** nepublikuj `~/.devboxnos/secrets.yml` ani `~/projects/mac-dev-playbook/credentials.yml`
-- Před `git add -A` vždy zkontroluj, že neletí něco citlivého
-- SSL certy přes mkcert jsou dev-only; nikdy je nepoužívej pro production
+- **NEVER** log API keys, passwords, or tokens
+- **NEVER** publish `~/.nos/secrets.yml` or `~/projects/mac-dev-playbook/credentials.yml`
+- Before `git add -A`, always check that nothing sensitive is being committed
+- mkcert SSL certs are dev-only; never use them for production

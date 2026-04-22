@@ -2,14 +2,14 @@
 # ==============================================================================
 # pazny.n8n/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data dir, enabluje nginx vhost (template uz existuje v
-# {{ homebrew_prefix }}/etc/nginx/sites-available/), vyrenderuje compose
-# override fragment do {{ stacks_dir }}/iiab/overrides/n8n.yml, ktery
-# pak stack-up.yml sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, enables the nginx vhost (template already exists in
+# {{ homebrew_prefix }}/etc/nginx/sites-available/), renders the compose
+# override fragment to {{ stacks_dir }}/iiab/overrides/n8n.yml which
+# pak stack-up.yml collects via `find` and passes as an additional -f flag.
 #
-# Post-start owner setup + admin password reconverge je v tasks/post.yml
-# — volany z stack-up.yml az PO compose up.
+# Post-start owner setup + admin password reconverge lives in tasks/post.yml
+# — called from stack-up.yml az PO compose up.
 # ==============================================================================
 
 - name: "[pazny.n8n] Ensure n8n data and log directories exist"

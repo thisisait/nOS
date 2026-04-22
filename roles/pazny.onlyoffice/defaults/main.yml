@@ -3,14 +3,14 @@
 # pazny.onlyoffice — ONLYOFFICE Document Server (b2b compose stack)
 #
 # Dokumentovy editor backend (iframe embed v Nextcloud, Outline, BookStack, ...).
-# End-user se sem neprihlasuje primo — integrace probiha pres JWT token
-# sdileny s hostitelskou aplikaci. Nginx vhost chrani pouze UI cast
+# End-users do not log in here directly — integration runs via JWT token
+# shared with the host application. The nginx vhost protects only the UI part
 # (/welcome, admin); API endpointy (/healthcheck, /ConvertService.ashx, ...)
-# jsou pristupne BEZ Authentik auth, zabezpecene JWT podpisem.
+# are accessible WITHOUT Authentik auth, secured by JWT signing.
 #
-# Credentials (onlyoffice_jwt_secret) zustavaji v default.credentials.yml
-# a jsou auto-generovane pri blank=true (viz main.yml). Sdilej tento secret
-# s kazdou hostitelskou aplikaci, ktera bude editor embedovat.
+# Credentials (onlyoffice_jwt_secret) stay in default.credentials.yml
+# and are auto-generated on blank=true (see main.yml). Share this secret
+# with every host application that will embed the editor.
 # ==============================================================================
 
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
@@ -23,10 +23,10 @@ onlyoffice_db_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/db"
 onlyoffice_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 onlyoffice_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
-# JWT konfigurace (sdilej stejny secret s hostitelskou aplikaci)
+# JWT configuration (share the same secret with the host application)
 onlyoffice_jwt_enabled: true
 onlyoffice_jwt_header: "Authorization"
 onlyoffice_jwt_in_body: true
 
-# Generovani fontu pri prvnim spusteni (potrebne pro PDF/DOCX conversion)
+# Font generation on first run (needed for PDF/DOCX conversion)
 onlyoffice_generate_fonts: true

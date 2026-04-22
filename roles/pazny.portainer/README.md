@@ -1,8 +1,8 @@
 # pazny.portainer
 
-Ansible role for deploying **Portainer CE** as a compose override fragment in the devBoxNOS `infra` stack. Docker management UI with Authentik OAuth2 (native via Settings API).
+Ansible role for deploying **Portainer CE** as a compose override fragment in the nOS `infra` stack. Docker management UI with Authentik OAuth2 (native via Settings API).
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
 
 ## What it does
 

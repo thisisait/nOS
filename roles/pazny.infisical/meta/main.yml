@@ -3,7 +3,7 @@ galaxy_info:
   role_name: infisical
   namespace: pazny
   author: Pázny
-  description: Infisical CE secrets vault in Docker compose override (devBoxNOS infra stack)
+  description: Infisical CE secrets vault in Docker compose override (nOS infra stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,8 +11,8 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Infisical zavisi na Postgres + Redis (infra
-# stack), ktere zatim zustavaji v base templates/stacks/infra/
+# No role dependencies — Infisical depends on Postgres + Redis (infra
+# stack) which currently stay in base templates/stacks/infra/
 # docker-compose.yml.j2 (Wave 2.2 Unit 4). Orchestrace sekvencovani je
 # v tasks/stacks/core-up.yml.
 dependencies: []

@@ -3,7 +3,7 @@ galaxy_info:
   role_name: outline
   namespace: pazny
   author: Pázny
-  description: Outline team wiki in Docker compose override (devBoxNOS b2b stack)
+  description: Outline team wiki in Docker compose override (nOS b2b stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -11,7 +11,7 @@ galaxy_info:
       versions:
         - all
 
-# Zadne role dependencies — Outline je konzument PostgreSQL + Redis z infra stacku.
+# No role dependencies — Outline consumes PostgreSQL + Redis from the infra stack.
 dependencies: []
 
 collections: []

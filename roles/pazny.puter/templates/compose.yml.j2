@@ -1,22 +1,22 @@
 # =============================================================================
-# pazny.puter — compose override fragment
-# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+# pazny.puter - compose override fragment
+# Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+# Does not declare top-level networks: - iiab_net and {{ stacks_shared_network }}
+# are defined in the base templates/stacks/iiab/docker-compose.yml.j2.
 #
-# Build context odkazuje na playbook_dir/files/puter, ktery zustava na
-# miste (Dockerfile + CORS patche). Role kontextove neprebira files/.
+# The build context points at playbook_dir/files/puter, which stays in place
+# (Dockerfile + CORS patches). The role does not take over files/ as its context.
 # =============================================================================
 
 services:
-  # ── Puter – cloud OS webový desktop ───────────────────────────────────────
+  # -- Puter - cloud OS web desktop -------------------------------------------
   puter:
     build:
       context: {{ playbook_dir }}/files/puter
       dockerfile: Dockerfile
-    image: devboxnos/puter:{{ puter_version | default('latest') }}
+    image: nos/puter:{{ puter_version | default('latest') }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

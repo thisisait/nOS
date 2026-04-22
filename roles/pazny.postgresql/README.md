@@ -1,8 +1,8 @@
 # pazny.postgresql
 
-Ansible role for deploying **PostgreSQL** as a compose override fragment in the devBoxNOS `infra` stack. Shared relational database for Authentik, Infisical, Outline, Metabase, Apache Superset, Paperclip, jsOS, and (historically) Mattermost.
+Ansible role for deploying **PostgreSQL** as a compose override fragment in the nOS `infra` stack. Shared relational database for Authentik, Infisical, Outline, Metabase, Apache Superset, Paperclip, jsOS, and (historically) Mattermost.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 infra-db-peers extraction (`pazny.mariadb`, **`pazny.postgresql`**, `pazny.redis`).
+Part of [nOS](../../README.md) Wave 2.2 infra-db-peers extraction (`pazny.mariadb`, **`pazny.postgresql`**, `pazny.redis`).
 
 ## What it does
 

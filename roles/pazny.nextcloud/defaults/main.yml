@@ -3,8 +3,8 @@
 # pazny.nextcloud — Nextcloud in Docker (iiab compose override)
 #
 # Credentials (nextcloud_db_password, nextcloud_admin_password) a site
-# metadata (domain, admin email) zustavaji v top-level default.config.yml
-# + default.credentials.yml — stale centralizovane, role je jen cte pres
+# metadata (domain, admin email) stay in top-level default.config.yml
+# + default.credentials.yml — still centralized, the role only reads them via
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 

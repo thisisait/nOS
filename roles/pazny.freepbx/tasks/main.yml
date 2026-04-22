@@ -2,10 +2,10 @@
 # ==============================================================================
 # pazny.freepbx/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose up voip`:
-# vytvori data dir a vyrenderuje compose override fragment do
-# {{ stacks_dir }}/voip/overrides/freepbx.yml, ktery stack-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up voip`:
+# creates the data dir and renders the compose override fragment to
+# {{ stacks_dir }}/voip/overrides/freepbx.yml, which stack-up.yml
+# collects via `find` and passes as an additional -f flag.
 # ==============================================================================
 
 - name: "[pazny.freepbx] Ensure data directory exists"

@@ -1,8 +1,8 @@
 # pazny.traefik
 
-Ansible role for deploying **Traefik** as a compose override fragment in the devBoxNOS `infra` stack. Reverse proxy / Docker ingress with dynamic service discovery via docker-socket-proxy.
+Ansible role for deploying **Traefik** as a compose override fragment in the nOS `infra` stack. Reverse proxy / Docker ingress with dynamic service discovery via docker-socket-proxy.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (infra-edge unit).
 
 ## What it does
 

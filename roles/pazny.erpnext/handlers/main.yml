@@ -1,8 +1,8 @@
 ---
 # pazny.erpnext — handlers
-# ERPNext ma 6 compose services. Restartujeme vsechny najednou pres
-# jeden `docker compose restart` volani — Docker tim spravne znovuspusti
-# celou sites-dependent skupinu. Volano z notify: po re-renderu override
+# ERPNext has 6 compose services. We restart all of them at once via
+# a single `docker compose restart` call — Docker properly restarts it that way
+# celou sites-dependent skupinu. Called from notify: po re-renderu override
 # sablony.
 
 - name: Restart erpnext

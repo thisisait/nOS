@@ -3,7 +3,7 @@ galaxy_info:
   role_name: code_server
   namespace: pazny
   author: Pázny
-  description: code-server (VS Code v browseru) in Docker compose override (devBoxNOS devops stack)
+  description: code-server (VS Code v browseru) in Docker compose override (nOS devops stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:

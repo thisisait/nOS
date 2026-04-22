@@ -2,16 +2,16 @@
 # ==============================================================================
 # pazny.grafana/tasks/main.yml
 #
-# Volano z tasks/stacks/core-up.yml PRED `docker compose -p observability up`:
-# vytvori data dir, vyrenderuje compose override fragment do
-# {{ stacks_dir }}/observability/overrides/grafana.yml, ktery pak core-up.yml
-# sesbira pres `find` a prida jako dodatecny -f flag.
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose -p observability up`:
+# creates the data dir, renders the compose override fragment to
+# {{ stacks_dir }}/observability/overrides/grafana.yml, which core-up.yml then
+# collects via `find` and passes as an additional -f flag.
 #
-# Provisioning renders (datasources/all.yml, dashboards/all.yml) zustavaji
+# Provisioning renders (datasources/all.yml, dashboards/all.yml) staysji
 # v core-up.yml — zavisi na authentik_oidc_* + service registry state a
-# vyhraly jen nenulovou hodnotu zde.
+# will only take a non-zero value here.
 #
-# Post-start admin password reconverge je v tasks/post.yml — volany z
+# Post-start admin password reconverge lives in tasks/post.yml — called from
 # core-up.yml az PO `docker compose up observability --wait`.
 # ==============================================================================
 

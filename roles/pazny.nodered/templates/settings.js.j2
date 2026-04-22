@@ -1,19 +1,19 @@
 /**
- * Node-RED settings.js — rendered by pazny.nodered role.
+ * Node-RED settings.js - rendered by the pazny.nodered role.
  *
- * adminAuth je ZÁMĚRNĚ VYPNUTÝ — přístup k editoru je gatovan Authentik
- * forward_auth snippetem v nginx vhostu (templates/nginx/sites-available/
- * nodered.conf). Všichni requesty procházejí přes https://{{ nodered_domain }}
- * → nginx → Authentik check → proxy_pass na 127.0.0.1:{{ nodered_port }}.
+ * adminAuth is INTENTIONALLY DISABLED - editor access is gated by the Authentik
+ * forward_auth snippet in the nginx vhost (templates/nginx/sites-available/
+ * nodered.conf). All requests flow through https://{{ nodered_domain }}
+ * -> nginx -> Authentik check -> proxy_pass to 127.0.0.1:{{ nodered_port }}.
  *
- * NEUPRAVUJ RUČNĚ — regeneruje se z settings.js.j2.
+ * DO NOT EDIT MANUALLY - regenerated from settings.js.j2.
  */
 module.exports = {
     uiPort: process.env.PORT || 1880,
     mqttReconnectTime: 15000,
     serialReconnectTime: 15000,
     debugMaxLength: 1000,
-    // NO adminAuth → gated by Authentik forward_auth at nginx layer
+    // NO adminAuth -> gated by Authentik forward_auth at nginx layer
     httpAdminRoot: '/',
     httpNodeRoot: '/',
     httpStatic: '/data/static/',

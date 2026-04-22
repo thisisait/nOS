@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
-# pazny.calibre_web/tasks/post.yml — zmena vychoziho admin hesla
+# pazny.calibre_web/tasks/post.yml — change default admin password
 #
 # Linuxserver image default creds: admin / admin123.
-# Zmeni heslo na `{{ global_password_prefix }}_pw_calibreweb` pres
+# Changes password to `{{ global_password_prefix }}_pw_calibreweb` via
 # in-container python + werkzeug + sqlite3 UPDATE.
 #
-# Pozn.: compose service name ma pomlcku (`calibre-web`). Legacy post.yml
-# pouzival `calibreweb` bez pomlcky (silent failure pres `failed_when: false`).
-# Tady pouzivame spravne `calibre-web`.
+# Note: the compose service name has a hyphen (`calibre-web`). Legacy post.yml
+# used `calibreweb` without a hyphen (silent failure via `failed_when: false`).
+# Here we correctly use `calibre-web`.
 # ==============================================================================
 
 - name: "[pazny.calibre_web Post] Wait for API"

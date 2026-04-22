@@ -1,7 +1,7 @@
 ---
 # pazny.kiwix — handlers
-# Kiwix nema play-level handler v main.yml (pred Wave 2.2). Tento role-lokalni
-# handler je notified z tasks/main.yml pri zmene compose override template.
+# Kiwix has no play-level handler in main.yml (before Wave 2.2). This role-local one
+# handler is notified from tasks/main.yml on change of the compose override template.
 
 - name: Restart kiwix
   ansible.builtin.shell: >

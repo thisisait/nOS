@@ -1,8 +1,8 @@
 # pazny.authentik
 
-Ansible role for deploying **Authentik** (SSO / Identity Provider) as a compose override fragment in the devBoxNOS `infra` stack. Renders both the `authentik-server` and `authentik-worker` services from a single fragment, plus the declarative blueprint YAML that drives admin user, RBAC groups, OAuth2 / proxy providers, applications, and tier-based policy bindings.
+Ansible role for deploying **Authentik** (SSO / Identity Provider) as a compose override fragment in the nOS `infra` stack. Renders both the `authentik-server` and `authentik-worker` services from a single fragment, plus the declarative blueprint YAML that drives admin user, RBAC groups, OAuth2 / proxy providers, applications, and tier-based policy bindings.
 
-Part of [devBoxNOS](../../README.md) Wave 2.2 role extraction (infra IAM unit).
+Part of [nOS](../../README.md) Wave 2.2 role extraction (infra IAM unit).
 
 ## What it does
 

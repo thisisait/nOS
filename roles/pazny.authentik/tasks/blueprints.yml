@@ -1,15 +1,15 @@
 ---
 # ==============================================================================
-# Authentik Blueprints — deklarativni YAML state management
+# Authentik Blueprints — declarative YAML state management
 #
-# Blueprinty v /blueprints/custom/ jsou auto-discovered Authentikem a
-# reconciled pri kazdem startu + na zmenu souboru (inotify). Blueprint engine
-# re-aplikuje `password` pole na `authentik_core.user` na kazdy reconcile
-# cycle → drift prefixu se projevi do existujiciho akadmin usera bez DB DROP.
+# Blueprints in /blueprints/custom/ are auto-discovered by Authentik and
+# reconciled on every startup + on file change (inotify). The blueprint engine
+# re-applies the `password` field on `authentik_core.user` on every reconcile
+# cycle, so prefix drift propagates to the existing akadmin user without a DB DROP.
 #
-# Volano z tasks/main.yml (ktera je volana z core-up.yml PRED `docker compose
-# up infra --wait`), aby bind source /blueprints/custom existoval driv nez
-# Docker vytvori mount point.
+# Called from tasks/main.yml (which runs from core-up.yml BEFORE `docker compose
+# up infra --wait`) so the /blueprints/custom bind source exists before Docker
+# creates the mount point.
 # ==============================================================================
 
 - name: "[pazny.authentik Blueprints] Ensure directory"

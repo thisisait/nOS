@@ -3,9 +3,9 @@
 # pazny.erpnext/tasks/post.yml
 #
 # ERPNext post-start: retry configurator / run migrations
-# Configurator (bench new-site) muze selhat pokud MariaDB nebyla ready,
-# nebo se site vytvoril ale migrace nedokoncila (I/O error, timeout).
-# Volano z tasks/stacks/stack-up.yml az PO `docker compose up b2b --wait`.
+# The configurator (bench new-site) can fail if MariaDB was not ready,
+# or the site was created but the migration did not finish (I/O error, timeout).
+# Called from tasks/stacks/stack-up.yml only AFTER `docker compose up b2b --wait`.
 # ==============================================================================
 
 - name: "[pazny.erpnext Post] Check configurator exit code"
@@ -22,7 +22,7 @@
   register: _erpnext_site_config
 
 # ── Pripad 1: site neexistuje → full retry ────────────────────────────────────
-- name: "[pazny.erpnext Post] Full retry – site not created"
+- name: "[pazny.erpnext Post] Full retry - site not created"
   when:
     - _erpnext_cfg_exit.stdout | default('0') | int != 0
     - not _erpnext_site_config.stat.exists
@@ -56,12 +56,12 @@
       ansible.builtin.debug:
         msg: "rc={{ _erpnext_cfg_retry.rc | default('?') }} {{ (_erpnext_cfg_retry.stdout_lines | default([]))[-5:] | join(' | ') }}"
 
-# ── Pripad 2: site existuje ale migrace nedokoncila → bench migrate ───────────
+# -- Case 2: site exists but migration did not finish -> bench migrate ───────────
 # VirtioFS I/O chyba (macOS bind mount) shodi filelock.__exit__ s rc=1 i kdyz
 # migrace prakticky uspela (stdout obsahuje "Queued rebuilding of search index"
-# = finalni post-migrate krok). Retry cte bud rc=0, nebo ten finalni marker
-# ve stdoutu — acceptujeme oboje jako success. Mazeme stale lock soubory pred
-# kazdym pokusem.
+# = the final post-migrate step). Retry reads either rc=0 or that final marker
+# in stdout — we accept both as success. We delete stale lock files before
+# on every attempt.
 - name: "[pazny.erpnext Post] Run migrations with lock cleanup (partial setup recovery)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T erpnext-backend bash -c '
@@ -113,10 +113,10 @@
 # ── Health check ──────────────────────────────────────────────────────────────
 # Frappe site routing vyzaduje `Host:` header (nginx frontend vybere site
 # podle FRAPPE_SITE_NAME_HEADER=$host). ERPNext defaultne disabluje Guest
-# usera, takze /api/method/frappe.ping vraci 417 (ValidationError: "User
-# Guest is disabled"). To je validni "alive" signal — HTTP stack Frappe
-# odpovida. Akceptujeme 200 (ping povoleno) i 417 (Guest disabled, HTTP
-# stack zije) i 403 (obecny forbidden). 404 znamena chybejici routing.
+# user, so /api/method/frappe.ping returns 417 (ValidationError: "User
+# Guest is disabled"). That is a valid "alive" signal — Frappe's HTTP stack
+# answers. We accept both 200 (ping allowed) and 417 (Guest disabled, HTTP
+# stack is alive) and 403 (generic forbidden). 404 means a missing route.
 - name: "[pazny.erpnext Post] Verify site is accessible"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
@@ -134,4 +134,4 @@
   ansible.builtin.debug:
     msg: >-
       ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) in [200, 403, 417]
-      else 'NEDOSTUPNY – zkontroluj: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs' }}
+      else 'UNAVAILABLE - check: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs' }}

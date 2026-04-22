@@ -1,7 +1,7 @@
 ---
 # pazny.influxdb — handlers
-# Play-level "Restart influxdb" v main.yml má přednost; tento zůstává pro
-# samostatné použití role mimo devBoxNOS playbook.
+# Play-level "Restart influxdb" in main.yml takes priority; this one stays for
+# standalone use of the role outside the nOS playbook.
 
 - name: Restart influxdb
   ansible.builtin.shell: >

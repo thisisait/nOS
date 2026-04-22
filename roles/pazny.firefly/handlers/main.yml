@@ -1,6 +1,6 @@
 ---
 # pazny.firefly — handlers
-# Volano z notify: po re-renderu override sablony.
+# Triggered via notify: after the override template is re-rendered.
 # (Restart nginx handler je definovany na play-level v main.yml.)
 
 - name: Restart firefly

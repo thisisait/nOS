@@ -2,13 +2,13 @@
 # ==============================================================================
 # pazny.kiwix/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori data dir, stahne init ZIM (pokud neni zadny pritomen), vyrenderuje
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates the data dir, downloads the init ZIM (if none is present), renders
 # nginx vhost a compose override fragment do
 # {{ stacks_dir }}/iiab/overrides/kiwix.yml.
 #
-# Dalsi ZIM soubory downloaduje operator pres {{ kiwix_data_dir }}/download-zim.sh
-# (helper script je vytvoren zde) — operator tooling, ne role-owned.
+# Additional ZIM files are downloaded by the operator via {{ kiwix_data_dir }}/download-zim.sh
+# (helper script is created here) — operator tooling, not role-owned.
 # ==============================================================================
 
 - name: "[pazny.kiwix] Ensure Kiwix data directory exists"
@@ -17,7 +17,7 @@
     state: directory
     mode: '0755'
 
-# Init ZIM – maly soubor stazeny automaticky aby Kiwix mohl nastartovat.
+# Init ZIM — small file downloaded automatically so Kiwix can start.
 # Bez alespon jednoho .zim kontejner crashloopuje.
 - name: "[pazny.kiwix] Check if any ZIM files exist"
   ansible.builtin.find:
@@ -45,9 +45,9 @@
   loop: "{{ kiwix_zim_files | default([]) }}"
   when: (kiwix_zim_files | default([])) | length > 0
 
-# Nginx vhost templates zustavaji v playbook-level templates/nginx/
-# sites-available/ kvuli auto-enable patternu — proto absolutni cesta pres
-# {{ playbook_dir }}, ne role-lokalni templates/.
+# Nginx vhost templates staysji v playbook-level templates/nginx/
+# sites-available/ because of the auto-enable pattern — hence the absolute path via
+# {{ playbook_dir }}, not role-local templates/.
 - name: "[pazny.kiwix] Deploy nginx reverse proxy vhost"
   ansible.builtin.template:
     src: "{{ playbook_dir }}/templates/nginx/sites-available/kiwix.conf"
@@ -70,11 +70,11 @@
     dest: "{{ kiwix_data_dir }}/download-zim.sh"
     content: |
       #!/usr/bin/env zsh
-      # Pomocny script pro stahovani ZIM souboru
-      # Pouziti: ./download-zim.sh <url>
+      # Helper script for downloading ZIM files
+      # Usage: ./download-zim.sh <url>
       # Seznam ZIM souboru: https://download.kiwix.org/zim/
       #
-      # Doporucene soubory:
+      # Recommended files:
       #   Wikipedia EN (top):  https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2026-03.zim (~315MB)
       #   Wikipedia CS (mini): https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim (~500MB)
       #   Gutenberg CS:        https://download.kiwix.org/zim/gutenberg/gutenberg_cs_all_2023-06.zim (~300MB)

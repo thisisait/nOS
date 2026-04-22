@@ -3,8 +3,8 @@
 # pazny.nodered — Node-RED low-code flow automation (iiab compose stack)
 #
 # Filesystem-only storage (/data obsahuje flows.json, credentials, installed
-# nodes). Bez DB. SSO přes Authentik forward_auth (proxy mode) — built-in
-# adminAuth je v settings.js vypnutý.
+# nodes). No DB. SSO via Authentik forward_auth (proxy mode) — built-in
+# adminAuth is disabled in settings.js.
 # ==============================================================================
 
 nodered_version: "4.0.9"                              # stable multi-arch tag (nodered/node-red)

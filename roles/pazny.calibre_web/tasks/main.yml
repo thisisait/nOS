@@ -2,12 +2,12 @@
 # ==============================================================================
 # pazny.calibre_web/tasks/main.yml
 #
-# Volano z tasks/stacks/stack-up.yml PRED `docker compose -p iiab up`:
-# vytvori config + books adresare a vyrenderuje compose override fragment
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# creates config + books dirs and renders the compose override fragment
 # do {{ stacks_dir }}/iiab/overrides/calibre-web.yml.
 #
 # Post-start admin password reset (default admin/admin123 -> global_password_
-# prefix) je v tasks/post.yml — volany z stack-up.yml az PO compose up.
+# prefix) lives in tasks/post.yml — called from stack-up.yml AFTER compose up.
 # ==============================================================================
 
 - name: "[pazny.calibre_web] Ensure Calibre-Web directories exist"
