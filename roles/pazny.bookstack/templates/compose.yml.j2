@@ -64,6 +64,16 @@ services:
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
+    # The authoritative config is /config/www/.env (rendered by the role into
+    # {{ bookstack_data_dir }}/www/.env). /login is the cheapest HTTP endpoint
+    # that exercises the Laravel boot path — if it answers 200 the app, DB,
+    # and .env are all wired correctly.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1/login | grep -q '^200$' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     logging:
       driver: "json-file"
       options:

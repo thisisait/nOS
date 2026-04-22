@@ -563,7 +563,7 @@ services:
     domain_var: bookstack_domain
     port_var: bookstack_port
     data_path_var: bookstack_data_dir
-    oidc: proxy
+    oidc: native                            # BookStack reads OIDC_* env vars from /config/www/.env (rendered by role)
 
   - id: firefly
     category: finance

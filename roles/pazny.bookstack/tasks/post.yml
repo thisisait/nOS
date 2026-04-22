@@ -29,10 +29,10 @@
   failed_when: false
   check_mode: false
 
-- name: "[pazny.bookstack] Skip post-install if container not running"
-  ansible.builtin.meta: end_play
-  when: (_bookstack_running.stdout | default('')) == ''
-  tags: [never]   # never triggered, debug only — real skip is below
+  # Landmine removed (was a `meta: end_play` gated by [never] — harmless today,
+  # but `end_play` aborts the ENTIRE play, not just this role, so leaving it in
+  # any form invites accidental discovery. The real skip is the `when:` on the
+  # recovery block below.
 
 - name: "[pazny.bookstack] Migration recovery loop (drop DB + restart on partial state)"
   when: (_bookstack_running.stdout | default('')) != ''

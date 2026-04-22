@@ -15,11 +15,32 @@
 # list in default.config.yml.
 # ==============================================================================
 
-- name: "[pazny.bookstack] Ensure data directory exists"
+- name: "[pazny.bookstack] Ensure data and www directories exist"
   ansible.builtin.file:
-    path: "{{ bookstack_data_dir }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ bookstack_data_dir }}"
+    - "{{ bookstack_data_dir }}/www"    # LSIO image mounts {{ bookstack_data_dir }}:/config -> /config/www/.env is the one Laravel actually reads
+
+- name: "[pazny.bookstack] Render Laravel .env (APP_KEY/APP_URL/DB/OIDC)"
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ bookstack_data_dir }}/www/.env"
+    # PUID/PGID 1000 inside the container must be able to read the file.
+    # The LSIO entrypoint chowns /config to PUID:PGID on boot, so 0640 is safe
+    # for a host-uid that owns the dir (owner-read) AND the container user
+    # (group-read once chowned to PGID).
+    mode: '0640'
+  notify: Restart bookstack
+  # Historical background: earlier versions of this role relied on Docker
+  # `environment:` vars reaching Laravel, but the LSIO init only seeds .env
+  # ONCE from .env.example and never regenerates it, so APP_URL stayed
+  # `https://example.com`, DB_HOST stayed `localhost`, and the app 500'd on
+  # every request. We now own .env on the host side. If an existing broken
+  # install fails migrations with "Table 'users' already exists", drop the
+  # bookstack DB (or re-run with `-e blank=true`) and re-apply.
 
 - name: "[pazny.bookstack] Render compose override fragment"
   ansible.builtin.template:
