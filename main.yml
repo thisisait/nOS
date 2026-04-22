@@ -20,6 +20,48 @@
     - default.credentials.yml
 
   pre_tasks:
+    # ── Preflight: fail fast on malformed YAML in any config file ──────────
+    # Catches syntax errors (stray markdown paste, missing ':', bad indent)
+    # before Ansible's own include_vars barfs with a cryptic scanner error.
+    # Missing user overrides (config.yml / credentials.yml) are skipped
+    # silently (FileNotFoundError -> exit 0). Run standalone with
+    # `--tags preflight` to sanity-check configs without a full playbook run.
+    - name: "[Preflight] Validate YAML config files are well-formed"
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "-c"
+          - |
+            import sys, yaml
+            path = sys.argv[1]
+            try:
+                with open(path) as f:
+                    yaml.safe_load(f)
+            except FileNotFoundError:
+                sys.exit(0)
+            except yaml.YAMLError as e:
+                mark = getattr(e, "problem_mark", None)
+                loc = f":{mark.line + 1}:{mark.column + 1}" if mark else ""
+                msg = f"{path}{loc}: {getattr(e, 'problem', e)}"
+                ctx = getattr(e, "context", None)
+                if ctx:
+                    # e.context already starts with "while ..." — don't double it
+                    msg += f" ({ctx})"
+                sys.stderr.write(msg + "\n")
+                sys.stderr.write(
+                    "Hint: ensure every non-comment line is 'key: value'. "
+                    "Raw markdown/prose must be prefixed with '# '.\n"
+                )
+                sys.exit(1)
+          - "{{ item }}"
+      loop:
+        - "{{ playbook_dir }}/default.config.yml"
+        - "{{ playbook_dir }}/default.credentials.yml"
+        - "{{ playbook_dir }}/config.yml"
+        - "{{ playbook_dir }}/credentials.yml"
+      changed_when: false
+      tags: ['always', 'preflight']
+
     - name: Include playbook configuration overrides.
       include_vars: "{{ item }}"
       with_fileglob:
