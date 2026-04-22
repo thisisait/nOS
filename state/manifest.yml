@@ -26,6 +26,11 @@ nos:
   launchd_prefix: "eu.thisisait.nos"
   rbac_group_prefix: "nos-"
   oidc_client_prefix: "nos-"
+  # Container name pattern. {stack} and {id} are substituted from each
+  # service entry. Services whose compose service-name differs from the
+  # manifest `id` (hyphens vs underscores, multi-container services)
+  # override with explicit `container_name` or `container_names:`.
+  container_pattern: "{stack}-{id}-1"
 
 services:
   # -------------------------------------------------------------- infra stack
@@ -36,12 +41,11 @@ services:
     version_var: postgresql_version
     version_source: docker_image
     image: postgres
-    container_name: nos-postgresql
     data_path_var: postgresql_data_dir
     port_var: postgresql_port
     health_check:
       type: exec
-      command: "docker exec nos-postgresql pg_isready -U postgres"
+      command: "docker exec infra-postgresql-1 pg_isready -U postgres"
       expect_rc: 0
       timeout_sec: 10
     upgrade_recipe: upgrades/postgresql.yml
@@ -55,12 +59,11 @@ services:
     version_var: mariadb_version
     version_source: docker_image
     image: mariadb
-    container_name: nos-mariadb
     data_path_var: mariadb_data_dir
     port_var: mariadb_port
     health_check:
       type: exec
-      command: "docker exec nos-mariadb healthcheck.sh --connect"
+      command: "docker exec infra-mariadb-1 healthcheck.sh --connect"
       expect_rc: 0
       timeout_sec: 10
     upgrade_recipe: upgrades/mariadb.yml
@@ -74,12 +77,11 @@ services:
     version_var: redis_version
     version_source: docker_image
     image: redis
-    container_name: nos-redis
     data_path_var: redis_data_dir
     port_var: redis_port
     health_check:
       type: exec
-      command: "docker exec nos-redis redis-cli ping"
+      command: "docker exec infra-redis-1 redis-cli ping"
       expect_rc: 0
     upgrade_recipe: upgrades/redis.yml
     breaking_boundaries: ["6->7", "7->8"]
@@ -91,7 +93,9 @@ services:
     version_var: authentik_version
     version_source: docker_image
     image: ghcr.io/goauthentik/server
-    container_name: nos-authentik-server
+    container_names:
+      - infra-authentik-server-1
+      - infra-authentik-worker-1
     domain_var: authentik_domain
     port_var: authentik_port
     data_path_var: authentik_data_dir
@@ -112,7 +116,6 @@ services:
     version_var: infisical_version
     version_source: docker_image
     image: infisical/infisical
-    container_name: nos-infisical
     domain_var: infisical_domain
     port_var: infisical_port
     data_path_var: infisical_data_dir
@@ -129,7 +132,6 @@ services:
     version_var: portainer_version
     version_source: docker_image
     image: portainer/portainer-ce
-    container_name: nos-portainer
     domain_var: portainer_domain
     port_var: portainer_port
     data_path_var: portainer_data_dir
@@ -146,7 +148,6 @@ services:
     version_var: traefik_image_version
     version_source: docker_image
     image: traefik
-    container_name: nos-traefik
     domain_var: traefik_domain
     port_var: traefik_dashboard_port
     health_check:
@@ -161,7 +162,7 @@ services:
     version_var: bluesky_pds_version
     version_source: docker_image
     image: ghcr.io/bluesky-social/pds
-    container_name: nos-bluesky-pds
+    container_name: infra-bluesky-pds-1     # id has underscore, compose service uses hyphen
     port_var: bluesky_pds_port
     data_path_var: bluesky_pds_data_dir
     health_check:
@@ -177,7 +178,6 @@ services:
     version_var: grafana_version
     version_source: docker_image
     image: grafana/grafana-oss
-    container_name: nos-grafana
     domain_var: grafana_domain
     port_var: grafana_port
     data_path_var: grafana_data_dir
@@ -198,7 +198,6 @@ services:
     version_var: prometheus_version
     version_source: docker_image
     image: prom/prometheus
-    container_name: nos-prometheus
     port_var: prometheus_port
     health_check:
       type: http
@@ -212,7 +211,6 @@ services:
     version_var: loki_version
     version_source: docker_image
     image: grafana/loki
-    container_name: nos-loki
     port_var: loki_port
     health_check:
       type: http
@@ -226,7 +224,6 @@ services:
     version_var: tempo_version
     version_source: docker_image
     image: grafana/tempo
-    container_name: nos-tempo
     port_var: tempo_http_port
     health_check:
       type: http
@@ -241,7 +238,6 @@ services:
     version_var: wordpress_version
     version_source: docker_image
     image: wordpress
-    container_name: nos-wordpress
     domain_var: wordpress_domain
     port_var: wordpress_port
     oidc: proxy
@@ -254,7 +250,6 @@ services:
     version_var: nextcloud_version
     version_source: docker_image
     image: nextcloud
-    container_name: nos-nextcloud
     domain_var: nextcloud_domain
     port_var: nextcloud_port
     data_path_var: nextcloud_data_dir
@@ -269,7 +264,6 @@ services:
     version_var: n8n_version
     version_source: docker_image
     image: n8nio/n8n
-    container_name: nos-n8n
     domain_var: n8n_domain
     port_var: n8n_port
     data_path_var: n8n_data_dir
@@ -283,7 +277,6 @@ services:
     version_var: nodered_version
     version_source: docker_image
     image: nodered/node-red
-    container_name: nos-nodered
     domain_var: nodered_domain
     port_var: nodered_port
     data_path_var: nodered_data_dir
@@ -295,7 +288,6 @@ services:
     version_var: kiwix_version
     version_source: docker_image
     image: ghcr.io/kiwix/kiwix-serve
-    container_name: nos-kiwix
     domain_var: kiwix_domain
     port_var: kiwix_port
     data_path_var: kiwix_data_dir
@@ -309,7 +301,7 @@ services:
     version_var: maps_tileserver_version
     version_source: docker_image
     image: maptiler/tileserver-gl
-    container_name: nos-offline-maps
+    container_name: iiab-tileserver-1       # compose service named 'tileserver', manifest id is 'offline_maps'
     domain_var: maps_domain
     port_var: maps_port
     data_path_var: maps_data_dir
@@ -321,7 +313,6 @@ services:
     version_var: jellyfin_version
     version_source: docker_image
     image: jellyfin/jellyfin
-    container_name: nos-jellyfin
     domain_var: jellyfin_domain
     port_var: jellyfin_port
     oidc: proxy
@@ -334,7 +325,7 @@ services:
     version_var: openwebui_version
     version_source: docker_image
     image: ghcr.io/open-webui/open-webui
-    container_name: nos-openwebui
+    container_name: iiab-open-webui-1       # id has underscore, compose service uses hyphen
     domain_var: openwebui_domain
     port_var: openwebui_port
     data_path_var: openwebui_data_dir
@@ -348,7 +339,7 @@ services:
     version_var: uptime_kuma_version
     version_source: docker_image
     image: louislam/uptime-kuma
-    container_name: nos-uptime-kuma
+    container_name: iiab-uptime-kuma-1      # id has underscore, compose service uses hyphen
     domain_var: uptime_kuma_domain
     port_var: uptime_kuma_port
     data_path_var: uptime_kuma_data_dir
@@ -362,7 +353,7 @@ services:
     version_var: calibreweb_version
     version_source: docker_image
     image: lscr.io/linuxserver/calibre-web
-    container_name: nos-calibre-web
+    container_name: iiab-calibre-web-1      # id has underscore, compose service uses hyphen
     domain_var: calibreweb_domain
     port_var: calibreweb_port
     oidc: proxy
@@ -375,7 +366,6 @@ services:
     version_var: homeassistant_version
     version_source: docker_image
     image: ghcr.io/home-assistant/home-assistant
-    container_name: nos-homeassistant
     domain_var: homeassistant_domain
     port_var: homeassistant_port
     oidc: proxy
@@ -388,7 +378,6 @@ services:
     version_var: rustfs_version
     version_source: docker_image
     image: rustfs/rustfs
-    container_name: nos-rustfs
     domain_var: rustfs_domain
     port_var: rustfs_console_port
     data_path_var: rustfs_data_dir
@@ -400,7 +389,6 @@ services:
     version_var: puter_version
     version_source: docker_image
     image: nos/puter
-    container_name: nos-puter
     domain_var: puter_domain
     port_var: puter_port
     data_path_var: puter_data_dir
@@ -414,7 +402,6 @@ services:
     version_var: vaultwarden_version
     version_source: docker_image
     image: vaultwarden/server
-    container_name: nos-vaultwarden
     domain_var: vaultwarden_domain
     port_var: vaultwarden_port
     data_path_var: vaultwarden_data_dir
@@ -428,7 +415,6 @@ services:
     version_var: ntfy_version
     version_source: docker_image
     image: binwiederhier/ntfy
-    container_name: nos-ntfy
     domain_var: ntfy_domain
     port_var: ntfy_port
     data_path_var: ntfy_data_dir
@@ -440,7 +426,6 @@ services:
     version_var: miniflux_version
     version_source: docker_image
     image: miniflux/miniflux
-    container_name: nos-miniflux
     domain_var: miniflux_domain
     port_var: miniflux_port
 
@@ -452,7 +437,6 @@ services:
     version_var: gitea_version
     version_source: docker_image
     image: gitea/gitea
-    container_name: nos-gitea
     domain_var: gitea_domain
     port_var: gitea_port
     data_path_var: gitea_data_dir
@@ -466,7 +450,6 @@ services:
     version_var: gitlab_version
     version_source: docker_image
     image: gitlab/gitlab-ce
-    container_name: nos-gitlab
     domain_var: gitlab_domain
     port_var: gitlab_http_port
     data_path_var: gitlab_data_dir
@@ -480,7 +463,9 @@ services:
     version_var: woodpecker_version
     version_source: docker_image
     image: woodpeckerci/woodpecker-server
-    container_name: nos-woodpecker
+    container_names:                        # multi-container: primary = server, secondary = agent
+      - devops-woodpecker-server-1
+      - devops-woodpecker-agent-1
     domain_var: woodpecker_domain
     port_var: woodpecker_port
     data_path_var: woodpecker_data_dir
@@ -492,7 +477,6 @@ services:
     version_var: paperclip_version
     version_source: docker_image
     image: paperclip/paperclip
-    container_name: nos-paperclip
     domain_var: paperclip_domain
     port_var: paperclip_port
     data_path_var: paperclip_data_dir
@@ -506,7 +490,7 @@ services:
     version_var: code_server_version
     version_source: docker_image
     image: lscr.io/linuxserver/code-server
-    container_name: nos-code-server
+    container_name: devops-code-server-1    # id has underscore, compose service uses hyphen
     domain_var: code_server_domain
     port_var: code_server_port
     data_path_var: code_server_data_dir
@@ -520,7 +504,13 @@ services:
     version_var: erpnext_version
     version_source: docker_image
     image: frappe/erpnext
-    container_name: nos-erpnext
+    container_names:                        # 6-container topology; primary = frontend (web entrypoint)
+      - b2b-erpnext-frontend-1
+      - b2b-erpnext-backend-1
+      - b2b-erpnext-queue-short-1
+      - b2b-erpnext-queue-long-1
+      - b2b-erpnext-scheduler-1
+      - b2b-erpnext-configurator-1
     domain_var: erpnext_domain
     port_var: erpnext_port
     oidc: proxy
@@ -533,7 +523,6 @@ services:
     version_var: freescout_version
     version_source: docker_image
     image: tiredofit/freescout
-    container_name: nos-freescout
     domain_var: freescout_domain
     port_var: freescout_port
     data_path_var: freescout_data_dir
@@ -547,7 +536,6 @@ services:
     version_var: outline_version
     version_source: docker_image
     image: outlinewiki/outline
-    container_name: nos-outline
     domain_var: outline_domain
     port_var: outline_port
     data_path_var: outline_data_dir
@@ -561,7 +549,6 @@ services:
     version_var: hedgedoc_version
     version_source: docker_image
     image: quay.io/hedgedoc/hedgedoc
-    container_name: nos-hedgedoc
     domain_var: hedgedoc_domain
     port_var: hedgedoc_port
     data_path_var: hedgedoc_data_dir
@@ -573,7 +560,6 @@ services:
     version_var: bookstack_version
     version_source: docker_image
     image: lscr.io/linuxserver/bookstack
-    container_name: nos-bookstack
     domain_var: bookstack_domain
     port_var: bookstack_port
     data_path_var: bookstack_data_dir
@@ -586,7 +572,6 @@ services:
     version_var: firefly_version
     version_source: docker_image
     image: fireflyiii/core
-    container_name: nos-firefly
     domain_var: firefly_domain
     port_var: firefly_port
 
@@ -597,7 +582,6 @@ services:
     version_var: onlyoffice_version
     version_source: docker_image
     image: onlyoffice/documentserver
-    container_name: nos-onlyoffice
     domain_var: onlyoffice_domain
     port_var: onlyoffice_port
     data_path_var: onlyoffice_data_dir
@@ -610,7 +594,6 @@ services:
     version_var: freepbx_version
     version_source: docker_image
     image: tiredofit/freepbx
-    container_name: nos-freepbx
     port_var: freepbx_port
     data_path_var: freepbx_data_dir
     oidc: none
@@ -623,7 +606,7 @@ services:
     version_var: qgis_version
     version_source: docker_image
     image: camptocamp/qgis-server
-    container_name: nos-qgis
+    container_name: engineering-qgis-server-1   # id has underscore, compose service uses hyphen
     port_var: qgis_port
     data_path_var: qgis_data_dir
     oidc: none
@@ -636,7 +619,6 @@ services:
     version_var: metabase_version
     version_source: docker_image
     image: metabase/metabase
-    container_name: nos-metabase
     port_var: metabase_port
     data_path_var: metabase_data_dir
     oidc: proxy
@@ -649,7 +631,6 @@ services:
     version_var: superset_version
     version_source: docker_image
     image: apache/superset
-    container_name: nos-superset
     port_var: superset_port
     data_path_var: superset_data_dir
     oidc: proxy
@@ -662,7 +643,6 @@ services:
     version_var: influxdb_version
     version_source: docker_image
     image: influxdb
-    container_name: nos-influxdb
     domain_var: influxdb_domain
     port_var: influxdb_port
     data_path_var: influxdb_data_dir
@@ -675,7 +655,7 @@ services:
     version_var: mcpo_version
     version_source: docker_image
     image: ghcr.io/open-webui/mcpo
-    container_name: nos-mcpo
+    container_name: iiab-mcpo-1             # compose service named 'mcpo', manifest id is 'mcp_gateway'
     domain_var: mcpo_domain
     port_var: mcpo_port
     data_path_var: mcpo_data_dir
