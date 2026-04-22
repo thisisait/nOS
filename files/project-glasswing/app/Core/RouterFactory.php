@@ -43,6 +43,27 @@ final class RouterFactory
 		$api->addRoute('api/v1/hub/systems[/<id>]', 'Hub:systems');
 		$api->addRoute('api/v1/hub/health', 'Hub:health');
 
+		// State & Migration Framework API (agent 7)
+		// Events: POST = ingestion (HMAC), GET = paginated query (bearer).
+		$api->addRoute('api/v1/events', 'Events:default');
+		$api->addRoute('api/v1/state/services[/<id>]', 'State:services');
+		$api->addRoute('api/v1/state/sync', 'State:sync');
+		$api->addRoute('api/v1/state', 'State:default');
+		$api->addRoute('api/v1/migrations/<id>/preview', 'Migrations:preview');
+		$api->addRoute('api/v1/migrations/<id>/apply', 'Migrations:apply');
+		$api->addRoute('api/v1/migrations/<id>/rollback', 'Migrations:rollback');
+		$api->addRoute('api/v1/migrations[/<id>]', 'Migrations:default');
+		$api->addRoute('api/v1/upgrades/history', 'Upgrades:history');
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan', 'Upgrades:plan');
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply', 'Upgrades:apply');
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
+		$api->addRoute('api/v1/upgrades/<service>', 'Upgrades:service');
+		$api->addRoute('api/v1/upgrades', 'Upgrades:default');
+		$api->addRoute('api/v1/coexistence/<service>/provision', 'Coexistence:provision');
+		$api->addRoute('api/v1/coexistence/<service>/cutover', 'Coexistence:cutover');
+		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');
+		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
+
 		// Public homepage (no auth — nginx exempts exact /)
 		$router->addRoute('', 'Homepage:default');
 
@@ -52,6 +73,14 @@ final class RouterFactory
 		$router->addRoute('pentest', 'Pentest:default');
 		$router->addRoute('remediation', 'Remediation:default');
 		$router->addRoute('help', 'Help:default');
+
+		// State & Migration Framework browser routes (agent 7)
+		$router->addRoute('migrations/<id>', 'Migrations:detail');
+		$router->addRoute('migrations', 'Migrations:default');
+		$router->addRoute('upgrades/<service>', 'Upgrades:service');
+		$router->addRoute('upgrades', 'Upgrades:default');
+		$router->addRoute('timeline', 'Timeline:default');
+		$router->addRoute('coexistence', 'Coexistence:default');
 
 		return $router;
 	}

@@ -21,6 +21,12 @@
   loop:
     - main.py
     - requirements.txt
+    # State & Migration Framework helpers (agent 7)
+    - state.py
+    - migrations.py
+    - upgrades.py
+    - coexistence.py
+    - events.py
 
 - name: "[BoxAPI] Create Python venv"
   ansible.builtin.command:

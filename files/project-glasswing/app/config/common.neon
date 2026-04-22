@@ -27,3 +27,10 @@ services:
 
 	# Hub — unified system entity (DB-backed, replaces ServiceRegistry)
 	- App\Model\SystemRepository
+
+	# State & Migration Framework
+	- App\Model\BoxApiClient
+	- App\Model\EventRepository
+	- App\Model\MigrationRepository
+	- App\Model\UpgradeRepository
+	- App\Model\CoexistenceRepository

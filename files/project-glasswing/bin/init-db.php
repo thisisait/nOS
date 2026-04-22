@@ -295,10 +295,21 @@ if ($count === 0) {
 	$db->exec('INSERT INTO scan_config (id) VALUES (1)');
 }
 
+// Apply schema extensions (State & Migration Framework tables).
+// File is idempotent — safe to run every time.
+$extPath = __DIR__ . '/../db/schema-extensions.sql';
+if (is_file($extPath)) {
+	$sql = file_get_contents($extPath);
+	if ($sql !== false && trim($sql) !== '') {
+		$db->exec($sql);
+	}
+}
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';
 echo "$status database schema at $dbPath\n";
 echo "Tables: components, scan_cycles, component_scan_state, scan_config, attack_probes,\n";
 echo "        remediation_items, advisories, pentest_targets, pentest_areas_tested,\n";
-echo "        pentest_areas_planned, pentest_findings, patches, report_types\n";
+echo "        pentest_areas_planned, pentest_findings, patches, report_types,\n";
+echo "        events, migrations_applied, upgrades_applied, coexistence_tracks\n";
