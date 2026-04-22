@@ -1,0 +1,123 @@
+---
+# tasks/authentik-migrate.yml
+# ----------------------------------------------------------------------------
+# Opinionated wrapper around the ``nos_authentik`` module for common migration
+# shapes.  Invoked from migrations via Agent 2's ``authentik_proxy`` dispatcher
+# (or directly with ``include_tasks`` + extra-vars) — NOT from main.yml.
+#
+# Required extra-vars:
+#   authentik_migrate_action         one of: rename_group_prefix,
+#                                    rename_oidc_client_prefix,
+#                                    rename_group, rename_oidc_client,
+#                                    wait_reachable
+#   authentik_migrate_from_prefix    (prefix actions only)
+#   authentik_migrate_to_prefix      (prefix actions only)
+#   authentik_migrate_from_name      (single-entity actions)
+#   authentik_migrate_to_name        (single-entity actions)
+#
+# Optional extra-vars (all fall back to defaults resolved by the module):
+#   authentik_api_url, authentik_api_token
+#   authentik_port           (defaults to 9003 — matches pazny.authentik)
+#   authentik_domain         (defaults to auth.dev.local)
+#   authentik_migrate_timeout_sec    reachability budget (default 30s)
+#   authentik_migrate_dry_run        if true, only pre-flight reachability
+#
+# This file intentionally contains NO include_role / import_role calls to
+# pazny.authentik — it must stay self-contained so migrations run even when
+# the role tree is mid-rebuild.
+# ----------------------------------------------------------------------------
+
+- name: "[Authentik Migrate] Pre-flight: API reachable"
+  nos_authentik:
+    action: wait_api_reachable
+    authentik_api_url: "{{ authentik_api_url | default(omit) }}"
+    authentik_port: "{{ authentik_port | default(9003) }}"
+    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_api_token: "{{ authentik_api_token | default(omit) }}"
+    secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
+    verify_tls: "{{ authentik_verify_tls | default(false) }}"
+    timeout_sec: "{{ authentik_migrate_timeout_sec | default(30) }}"
+    poll_interval: 1.0
+  register: _authentik_reach
+  failed_when: not _authentik_reach.reachable
+  tags: ['migrate', 'authentik']
+
+- name: "[Authentik Migrate] Rename all groups with prefix {{ authentik_migrate_from_prefix | default('(n/a)') }} -> {{ authentik_migrate_to_prefix | default('(n/a)') }}"
+  nos_authentik:
+    action: rename_group_prefix
+    authentik_api_url: "{{ authentik_api_url | default(omit) }}"
+    authentik_port: "{{ authentik_port | default(9003) }}"
+    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_api_token: "{{ authentik_api_token | default(omit) }}"
+    secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
+    verify_tls: "{{ authentik_verify_tls | default(false) }}"
+    from_prefix: "{{ authentik_migrate_from_prefix }}"
+    to_prefix: "{{ authentik_migrate_to_prefix }}"
+  register: _authentik_group_prefix
+  when:
+    - authentik_migrate_action == 'rename_group_prefix'
+    - not (authentik_migrate_dry_run | default(false))
+  tags: ['migrate', 'authentik']
+
+- name: "[Authentik Migrate] Rename all OIDC clients with prefix {{ authentik_migrate_from_prefix | default('(n/a)') }} -> {{ authentik_migrate_to_prefix | default('(n/a)') }}"
+  nos_authentik:
+    action: rename_oidc_client_prefix
+    authentik_api_url: "{{ authentik_api_url | default(omit) }}"
+    authentik_port: "{{ authentik_port | default(9003) }}"
+    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_api_token: "{{ authentik_api_token | default(omit) }}"
+    secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
+    verify_tls: "{{ authentik_verify_tls | default(false) }}"
+    from_prefix: "{{ authentik_migrate_from_prefix }}"
+    to_prefix: "{{ authentik_migrate_to_prefix }}"
+  register: _authentik_oidc_prefix
+  when:
+    - authentik_migrate_action == 'rename_oidc_client_prefix'
+    - not (authentik_migrate_dry_run | default(false))
+  tags: ['migrate', 'authentik']
+
+- name: "[Authentik Migrate] Rename a single group"
+  nos_authentik:
+    action: rename_group
+    authentik_api_url: "{{ authentik_api_url | default(omit) }}"
+    authentik_port: "{{ authentik_port | default(9003) }}"
+    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_api_token: "{{ authentik_api_token | default(omit) }}"
+    secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
+    verify_tls: "{{ authentik_verify_tls | default(false) }}"
+    from_name: "{{ authentik_migrate_from_name }}"
+    to_name: "{{ authentik_migrate_to_name }}"
+    preserve_policies: true
+  register: _authentik_group_single
+  when:
+    - authentik_migrate_action == 'rename_group'
+    - not (authentik_migrate_dry_run | default(false))
+  tags: ['migrate', 'authentik']
+
+- name: "[Authentik Migrate] Rename a single OIDC client (Application + Provider)"
+  nos_authentik:
+    action: rename_oidc_client
+    authentik_api_url: "{{ authentik_api_url | default(omit) }}"
+    authentik_port: "{{ authentik_port | default(9003) }}"
+    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_api_token: "{{ authentik_api_token | default(omit) }}"
+    secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
+    verify_tls: "{{ authentik_verify_tls | default(false) }}"
+    from_name: "{{ authentik_migrate_from_name }}"
+    to_name: "{{ authentik_migrate_to_name }}"
+  register: _authentik_oidc_single
+  when:
+    - authentik_migrate_action == 'rename_oidc_client'
+    - not (authentik_migrate_dry_run | default(false))
+  tags: ['migrate', 'authentik']
+
+- name: "[Authentik Migrate] Summary"
+  ansible.builtin.debug:
+    msg: >-
+      action={{ authentik_migrate_action }}
+      reachable={{ _authentik_reach.reachable | default('n/a') }}
+      group_prefix_renamed={{ (_authentik_group_prefix.renamed | default(0)) }}
+      oidc_prefix_renamed={{ (_authentik_oidc_prefix.renamed | default(0)) }}
+      group_single_renamed={{ (_authentik_group_single.renamed | default(0)) }}
+      oidc_single_renamed={{ (_authentik_oidc_single.renamed | default(0)) }}
+  tags: ['migrate', 'authentik']
