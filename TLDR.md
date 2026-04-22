@@ -26,6 +26,7 @@ One `ansible-playbook` run, ~20 minutes on an M4 Pro:
 | **Host-native** | jsOS webtop (PM2), Glasswing security dashboard, IIAB Terminal TUI, BoxAPI bridge |
 | **Network** | Tailscale VPN, dnsmasq, optional SSH/Samba/VNC |
 | **External SSD** | Tiers heavy data (Ollama models, observability DBs, media, caches, GitLab, Docker disk image) onto `/Volumes/SSD1TB` |
+| **State & Migrations** | Declarative state (`~/.nos/state.yml`), auto-applied migrations (`migrations/*.yml`), per-service upgrade recipes (`upgrades/*.yml` — pg_upgrade / mariadb-upgrade / Grafana dashboard-preserving), dual-version coexistence. Live in Glasswing at `/migrations`, `/upgrades`, `/timeline`, `/coexistence`. See [docs/framework-overview.md](docs/framework-overview.md). |
 
 ---
 

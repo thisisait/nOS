@@ -150,6 +150,19 @@ Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisi
 - **Logs:** Alloy tails Nginx / PHP / agent logs → Loki
 - **Traces:** OTLP receiver (gRPC `:4317`, HTTP `:4318`) → Tempo
 
+### State & Migration Framework
+
+Declarative state and safe transitions for long-lived installs. Four surfaces:
+
+- **State** — `state/manifest.yml` (committed, expected shape) vs. `~/.nos/state.yml` (runtime, generated per run by `pazny.state_manager`). Merged, never overwritten. `~/.nos/` is the runtime side-car — delete it and the next run regenerates.
+- **Migrations** — one-shot global transitions (rename `devboxnos-*` → `nos-*`, move state dirs, rewrite identifiers) in `migrations/<ISO-date>-<slug>.yml`. Ran automatically in `pre_tasks`. Idempotent: each step has `detect` / `action` / `verify` / `rollback`. Breaking migrations prompt for confirmation unless `-e auto_migrate=true`.
+- **Upgrade recipes** — per-service version transitions in `upgrades/<service>.yml`. `pre` / `apply` / `post` / `rollback` phases. Invoked explicitly (`--tags upgrade -e upgrade_service=<svc>`) or via Glasswing. Covers breaking patterns like `pg_upgrade`, `mariadb-upgrade`, Grafana dashboard-preserving bumps.
+- **Coexistence** — dual-version operation via `nos_coexistence` module. Provision a second track on a shifted port with cloned data, test, cut over via atomic Nginx reload, clean up after TTL. Supported: Grafana, Postgres, MariaDB, Authentik (special), Gitea, Nextcloud, WordPress.
+
+Observability: a callback plugin (`callback_plugins/glasswing_telemetry.py`) emits structured events for every task + framework action to BoxAPI → Glasswing SQLite (with `~/.nos/events.jsonl` fallback). Glasswing exposes `/migrations`, `/upgrades`, `/timeline`, `/coexistence` views. Custom Ansible modules: `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`.
+
+Authoring: see [docs/framework-overview.md](docs/framework-overview.md), [docs/migration-authoring.md](docs/migration-authoring.md), [docs/upgrade-recipes.md](docs/upgrade-recipes.md), [docs/coexistence-playbook.md](docs/coexistence-playbook.md), [docs/glasswing-integration.md](docs/glasswing-integration.md). Authoritative spec: [docs/framework-plan.md](docs/framework-plan.md).
+
 ### Nginx auto-enable
 
 50 vhost templates in `templates/nginx/sites-available/`. Activated automatically based on `install_*` flags. Override with `nginx_sites_enabled` or extend with `nginx_sites_extra`.

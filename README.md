@@ -167,6 +167,20 @@ service by creating a role — no hand-edits to the base stack template.
 **Invariant:** post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical,
 Grafana, Loki, and Tempo are already online.
 
+### State & Migration Framework
+
+Long-lived installs get a first-class answer to "what's running, how do I safely change
+it, and how do I roll back". Four surfaces: declarative state
+(`state/manifest.yml` + `~/.nos/state.yml`), global migrations
+(`migrations/*.yml`, auto-applied in `pre_tasks`), per-service upgrade recipes
+(`upgrades/*.yml`, including `pg_upgrade` / `mariadb-upgrade` / Grafana
+dashboard-preserving patterns), and dual-version coexistence for zero-downtime major
+upgrades. Every action emits structured events to Glasswing
+(`/migrations`, `/upgrades`, `/timeline`, `/coexistence` views).
+
+See [docs/framework-overview.md](docs/framework-overview.md) for the operator tour,
+and [docs/framework-plan.md](docs/framework-plan.md) for the authoritative spec.
+
 ---
 
 ## SSO & RBAC
