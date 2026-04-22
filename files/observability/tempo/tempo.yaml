@@ -1,5 +1,5 @@
 # ==============================================================================
-# Tempo konfigurace (Docker stack)
+# Tempo configuration (Docker stack)
 # ==============================================================================
 
 server:
@@ -20,7 +20,7 @@ ingester:
 
 compactor:
   compaction:
-    block_retention: 168h  # 7 dní
+    block_retention: 168h  # 7 days
 
 metrics_generator:
   registry:

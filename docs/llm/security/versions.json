@@ -399,7 +399,7 @@
       "name": "Puter",
       "category": "docker",
       "stack": "iiab",
-      "image": "devboxnos/puter",
+      "image": "nos/puter",
       "version_var": "puter_version",
       "default_version": "latest",
       "pinned": false,

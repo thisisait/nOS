@@ -1,8 +1,8 @@
 // ==============================================================================
 // jsOS – Bluesky AT Protocol auth adapter
 // Login: handle (e.g. user.bsky.social) + app password
-// Validace: XRPC com.atproto.server.createSession
-// Storage: PostgreSQL tabulka jsos_users (upsert při každém loginu)
+// Validation: XRPC com.atproto.server.createSession
+// Storage: PostgreSQL table jsos_users (upsert on every login)
 // ==============================================================================
 
 const { Client: PgClient } = require('pg');

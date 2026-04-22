@@ -1,5 +1,5 @@
 {
-  "config_name": "{{ instance_name | default('devboxnos') }}",
+  "config_name": "{{ instance_name | default('nos') }}",
   "domain": "{{ puter_domain | default('os.' + instance_tld | default('dev.local')) }}",
   "api_domain": "{{ puter_api_domain | default('api.' + puter_domain | default('api.os.' + instance_tld | default('dev.local'))) }}",
   "http_port": 4100,

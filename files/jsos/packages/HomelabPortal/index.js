@@ -1,6 +1,6 @@
 // ==============================================================================
-// HomelabPortal – Dashboard pro všechny homelab služby
-// Zobrazí grid karet, klik otevře službu v novém OS.js okně (iframe)
+// HomelabPortal – Dashboard for all homelab services
+// Shows a grid of cards; clicking opens the service in a new OS.js window (iframe)
 // ==============================================================================
 
 import osjs from 'osjs';
@@ -72,7 +72,7 @@ const buildGrid = (services) => {
   if (!services.length) {
     return el('div', {
       style: 'padding:2rem;text-align:center;color:#64748b;',
-      textContent: '\u017D\u00E1dn\u00E9 slu\u017Eby nejsou aktivn\u00ED. Zapni je v config.yml a p\u0159ehraj playbook.',
+      textContent: 'No services are active. Enable them in config.yml and re-run the playbook.',
     });
   }
 
@@ -136,7 +136,7 @@ osjs.register(applicationName, (core, args, options, metadata) => {
   win.render(($content) => {
     const loading = el('div', {
       style: 'padding:2rem;color:#64748b;',
-      textContent: 'Na\u010D\u00EDt\u00E1m slu\u017Eby\u2026',
+      textContent: 'Loading services\u2026',
     });
     $content.appendChild(loading);
 
@@ -161,7 +161,7 @@ osjs.register(applicationName, (core, args, options, metadata) => {
         });
       })
       .catch((err) => {
-        loading.textContent = 'Chyba: ' + err.message;
+        loading.textContent = 'Error: ' + err.message;
         loading.style.color = '#ef4444';
       });
   });

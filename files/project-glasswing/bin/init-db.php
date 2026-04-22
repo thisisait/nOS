@@ -230,7 +230,7 @@ $statements = [
 		disclosure_status       TEXT DEFAULT 'not_reported',
 		upstream_issue          TEXT,
 		patch_pr                TEXT,
-		devboxnos_mitigation    TEXT,
+		nos_mitigation    TEXT,
 		remediation             TEXT,
 		found_at                TEXT NOT NULL DEFAULT (datetime('now')),
 		created_at              TEXT NOT NULL DEFAULT (datetime('now'))

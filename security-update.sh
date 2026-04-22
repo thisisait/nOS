@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "devBoxNOS security update"
+echo "nOS security update"
 echo "========================="
 echo "version_policy: $(grep '^version_policy:' default.config.yml | awk '{print $2}' | tr -d '\"')"
 echo ""

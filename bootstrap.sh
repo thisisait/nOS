@@ -1,16 +1,16 @@
 #!/bin/bash
-# bootstrap.sh – spustí všechny kroky přípravy v pořadí
+# bootstrap.sh – runs all preparation steps in order
 # ─────────────────────────────────────────────────────────────────────────────
-# Ekvivalent "Run All Cells" v Jupyter notebooku.
-# Jednotlivé kroky lze spouštět samostatně:
+# Equivalent of "Run All Cells" in a Jupyter notebook.
+# Individual steps can be run separately:
 #
-#   bash bootstrap/01-xcode-clt.sh   # Krok 1: Xcode CLT
-#   bash bootstrap/02-homebrew.sh    # Krok 2: Homebrew
-#   bash bootstrap/03-ansible.sh     # Krok 3: Ansible
-#   bash bootstrap/04-galaxy.sh      # Krok 4: Galaxy role
-#   bash bootstrap/05-config.sh      # Krok 5: config.yml + credentials.yml
+#   bash bootstrap/01-xcode-clt.sh   # Step 1: Xcode CLT
+#   bash bootstrap/02-homebrew.sh    # Step 2: Homebrew
+#   bash bootstrap/03-ansible.sh     # Step 3: Ansible
+#   bash bootstrap/04-galaxy.sh      # Step 4: Galaxy roles
+#   bash bootstrap/05-config.sh      # Step 5: config.yml + credentials.yml
 #
-# Po úspěšném bootstrap:
+# After successful bootstrap:
 #   ansible-playbook main.yml -K
 # ─────────────────────────────────────────────────────────────────────────────
 set -e
@@ -25,9 +25,9 @@ bash "$DIR/05-config.sh"
 
 echo ""
 echo -e "\033[1;32m╔══════════════════════════════════════════════════════╗\033[0m"
-echo -e "\033[1;32m║  Bootstrap dokončen!                                 ║\033[0m"
+echo -e "\033[1;32m║  Bootstrap complete!                                 ║\033[0m"
 echo -e "\033[1;32m╚══════════════════════════════════════════════════════╝\033[0m"
 echo ""
-echo "  Spusť playbook:"
+echo "  Run the playbook:"
 echo "  ansible-playbook main.yml -K"
 echo ""

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Uptime Kuma – automatická konfigurace monitorů.
-Volá se z Ansible po startu Uptime Kuma kontejneru.
+Uptime Kuma – automatic monitor configuration.
+Invoked from Ansible after the Uptime Kuma container starts.
 
-Použití:
+Usage:
   python3 setup-monitors.py <URL> <USER> <PASS> '<MONITORS_JSON>'
 
-Příklad:
-  python3 setup-monitors.py http://127.0.0.1:3001 admin heslo '[{"name":"Grafana","type":"http","url":"http://127.0.0.1:3000/api/health"}]'
+Example:
+  python3 setup-monitors.py http://127.0.0.1:3001 admin password '[{"name":"Grafana","type":"http","url":"http://127.0.0.1:3000/api/health"}]'
 """
 
 import sys

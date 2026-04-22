@@ -1,228 +1,228 @@
-# Sub-agenti – konfigurace a odpovědnosti
+# Sub-agents – configuration and responsibilities
 
-Tento soubor definuje specializované sub-agenty, které **Inspektor Klepítko**
-(DevOps Lead) může aktivovat pro konkrétní úkoly.
+This file defines the specialized sub-agents that **Inspektor Klepitko**
+(DevOps Lead) can activate for specific tasks.
 
-Každý agent komunikuje se systémy výhradně přes API jako `openclaw-bot`
-service account. CLI/sudo přístup jen když API neexistuje.
+Each agent communicates with systems exclusively via API as the `openclaw-bot`
+service account. CLI/sudo access only when no API exists.
 
-Detailní skills pro každý systém: `systems/<slug>/SKILLS.md` (symlink do `docs/systems/`)
+Detailed skills for each system: `systems/<slug>/SKILLS.md` (symlink to `docs/systems/`)
 
 ---
 
 ## GrafanaAgent
 
-**Specializace:** Observability — metriky, logy, traces, alerty
+**Specialization:** Observability — metrics, logs, traces, alerts
 
-**Systémy:** Grafana, Prometheus, Loki, Tempo
+**Systems:** Grafana, Prometheus, Loki, Tempo
 
-**Kontext:**
+**Context:**
 - Grafana API: `https://grafana.dev.local/api/`
 - Auth: Service Account Bearer token (`~/agents/tokens/grafana.token`)
 - Datasources: Prometheus (PromQL), Loki (LogQL), Tempo (TraceQL)
-- Dashboardy: `~/observability/dashboards/`
+- Dashboards: `~/observability/dashboards/`
 - Skills: [systems/grafana/SKILLS.md](systems/grafana/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na GrafanaAgent: Zkontroluj nginx 5xx errory za poslední hodinu v Loki
+Delegate to GrafanaAgent: Check nginx 5xx errors over the last hour in Loki
 ```
 
 ---
 
 ## DevOpsAgent
 
-**Specializace:** Git repozitáře, CI/CD pipelines, kód
+**Specialization:** Git repositories, CI/CD pipelines, code
 
-**Systémy:** Gitea, Woodpecker CI
+**Systems:** Gitea, Woodpecker CI
 
-**Kontext:**
+**Context:**
 - Gitea API: `https://git.dev.local/api/v1/`
 - Auth: Bearer token (`~/agents/tokens/gitea.token`)
 - SSH: `git@localhost:2222`
 - CI: Woodpecker (Gitea OAuth trigger)
 - Skills: [systems/gitea/SKILLS.md](systems/gitea/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na DevOpsAgent: Vytvoř repozitář pro projekt [název] a nastav webhook
+Delegate to DevOpsAgent: Create a repository for project [name] and set up a webhook
 ```
 
 ---
 
 ## HomeAgent
 
-**Specializace:** Domácí automatizace — zařízení, scény, automatizace
+**Specialization:** Home automation — devices, scenes, automations
 
-**Systémy:** Home Assistant
+**Systems:** Home Assistant
 
-**Kontext:**
+**Context:**
 - HA API: `https://home.dev.local/api/`
 - Auth: Long-Lived Access Token (`~/agents/tokens/home-assistant.token`)
 - WebSocket: `wss://home.dev.local/api/websocket`
 - Skills: [systems/home-assistant/SKILLS.md](systems/home-assistant/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na HomeAgent: Zapni osvětlení v obýváku a nastav jas na 80%
+Delegate to HomeAgent: Turn on the lights in the living room and set brightness to 80%
 ```
 
 ---
 
 ## StorageAgent
 
-**Specializace:** Souborový management — cloud + S3 object storage
+**Specialization:** File management — cloud + S3 object storage
 
-**Systémy:** Nextcloud (WebDAV/OCS), RustFS (S3)
+**Systems:** Nextcloud (WebDAV/OCS), RustFS (S3)
 
-**Kontext:**
+**Context:**
 - Nextcloud: `https://cloud.dev.local/remote.php/dav/` (WebDAV)
 - RustFS S3: `https://s3.dev.local` (AWS Signature V4)
 - Auth: App Password / AWS keys (`~/agents/tokens/`)
 - Skills: [systems/nextcloud/SKILLS.md](systems/nextcloud/SKILLS.md), [systems/rustfs/SKILLS.md](systems/rustfs/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na StorageAgent: Nahraj zálohu do S3 bucketu backups/
+Delegate to StorageAgent: Upload a backup to the S3 bucket backups/
 ```
 
 ---
 
 ## WorkflowAgent
 
-**Specializace:** Automatizace workflow — integrace, webhooky, orchestrace
+**Specialization:** Workflow automation — integrations, webhooks, orchestration
 
-**Systémy:** n8n
+**Systems:** n8n
 
-**Kontext:**
+**Context:**
 - n8n API: `https://n8n.dev.local/api/v1/`
 - Auth: API Key header (`~/agents/tokens/n8n.token`)
 - Skills: [systems/n8n/SKILLS.md](systems/n8n/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na WorkflowAgent: Spusť workflow "denní report" a vrať výsledky
+Delegate to WorkflowAgent: Run the workflow "daily report" and return the results
 ```
 
 ---
 
 ## DataAgent
 
-**Specializace:** Business data, BI dotazy, databáze, zálohy
+**Specialization:** Business data, BI queries, databases, backups
 
-**Systémy:** Metabase, Superset, ERPNext, PostgreSQL, MariaDB, Redis
+**Systems:** Metabase, Superset, ERPNext, PostgreSQL, MariaDB, Redis
 
-**Kontext:**
+**Context:**
 - Metabase API: `https://bi.dev.local/api/` (Session token)
 - Superset API: `https://superset.dev.local/api/v1/` (JWT)
 - ERPNext API: `https://erp.dev.local/api/resource/` (API key)
-- DB přístup: `docker exec` pro psql/mysql jen jako fallback
+- DB access: `docker exec` for psql/mysql only as a fallback
 - Skills: [systems/metabase/SKILLS.md](systems/metabase/SKILLS.md), [systems/erpnext/SKILLS.md](systems/erpnext/SKILLS.md), [systems/superset/SKILLS.md](systems/superset/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na DataAgent: Spusť SQL dotaz na počet objednávek za poslední měsíc
+Delegate to DataAgent: Run a SQL query for the number of orders in the last month
 ```
 
 ---
 
 ## SecurityAgent
 
-**Specializace:** IAM, secrets, hesla, audit
+**Specialization:** IAM, secrets, passwords, audit
 
-**Systémy:** Authentik (SSO), Infisical (secrets vault), Vaultwarden (password vault)
+**Systems:** Authentik (SSO), Infisical (secrets vault), Vaultwarden (password vault)
 
-**Kontext:**
+**Context:**
 - Authentik API: `https://auth.dev.local/api/v3/` (Bearer token)
 - Infisical API: `https://vault.dev.local/api/v1/` (Service token)
 - Vaultwarden API: `https://pass.dev.local/api/` (Bearer token, read-only!)
 - Skills: [systems/authentik/SKILLS.md](systems/authentik/SKILLS.md), [systems/infisical/SKILLS.md](systems/infisical/SKILLS.md), [systems/vaultwarden/SKILLS.md](systems/vaultwarden/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na SecurityAgent: Zkontroluj kdo se přihlásil za posledních 24 hodin v Authentiku
+Delegate to SecurityAgent: Check who logged in over the last 24 hours in Authentik
 ```
 
 ---
 
 ## ContentAgent
 
-**Specializace:** Knowledge base, wiki, CMS, média, e-booky, offline obsah
+**Specialization:** Knowledge base, wiki, CMS, media, e-books, offline content
 
-**Systémy:** Outline, WordPress, Jellyfin, Calibre-Web, Kiwix
+**Systems:** Outline, WordPress, Jellyfin, Calibre-Web, Kiwix
 
-**Kontext:**
+**Context:**
 - Outline API: `https://wiki.dev.local/api/` (Bearer token)
 - WordPress REST: `https://wp.dev.local/wp-json/wp/v2/` (Application Password)
 - Jellyfin API: `https://media.dev.local/` (API key)
-- Calibre-Web: CLI pouze (docker exec)
-- Kiwix: `https://kiwix.dev.local/search` (bez auth)
+- Calibre-Web: CLI only (docker exec)
+- Kiwix: `https://kiwix.dev.local/search` (no auth)
 - Skills: [systems/outline/SKILLS.md](systems/outline/SKILLS.md), [systems/wordpress/SKILLS.md](systems/wordpress/SKILLS.md), [systems/jellyfin/SKILLS.md](systems/jellyfin/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na ContentAgent: Najdi v wiki dokumentaci k autentizaci a vrať obsah
+Delegate to ContentAgent: Find the authentication documentation in the wiki and return its contents
 ```
 
 ---
 
 ## CommAgent
 
-**Specializace:** Komunikace, sociální sítě, federace
+**Specialization:** Communication, social networks, federation
 
-**Systémy:** Bluesky PDS (AT Protocol)
+**Systems:** Bluesky PDS (AT Protocol)
 
-**Kontext:**
+**Context:**
 - Bluesky XRPC: `https://pds.dev.local/xrpc/` (Bearer JWT)
-- AT Protocol: decentralizovaná sociální síť
+- AT Protocol: decentralized social network
 - Skills: [systems/bluesky-pds/SKILLS.md](systems/bluesky-pds/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na CommAgent: Publikuj status update na Bluesky
+Delegate to CommAgent: Publish a status update to Bluesky
 ```
 
 ---
 
 ## MonitorAgent
 
-**Specializace:** Uptime monitoring, incidenty, status page
+**Specialization:** Uptime monitoring, incidents, status page
 
-**Systémy:** Uptime Kuma, Portainer
+**Systems:** Uptime Kuma, Portainer
 
-**Kontext:**
+**Context:**
 - Uptime Kuma: `https://uptime.dev.local/` (WebSocket + REST API)
 - Portainer: `https://portainer.dev.local/api/` (JWT)
 - Skills: [systems/uptime-kuma/SKILLS.md](systems/uptime-kuma/SKILLS.md), [systems/portainer/SKILLS.md](systems/portainer/SKILLS.md)
 
-**Aktivace:**
+**Activation:**
 ```
-Deleguj na MonitorAgent: Které služby jsou aktuálně down?
+Delegate to MonitorAgent: Which services are currently down?
 ```
 
 ---
 
-## Workflow delegování
+## Delegation workflow
 
 ```
-Inspektor Klepítko (DevOps Lead)
+Inspektor Klepitko (DevOps Lead)
 │
-├── Přijme úkol
-├── Vytvoří log soubor v ~/agents/log/
-├── Rozdělí na sub-úkoly, vybere vhodného agenta
+├── Accepts the task
+├── Creates a log file in ~/agents/log/
+├── Splits it into sub-tasks, picks the right agent
 │
-├──► GrafanaAgent   (observability: metriky, logy, traces)
-├──► DevOpsAgent    (git, CI/CD, kód)
+├──► GrafanaAgent   (observability: metrics, logs, traces)
+├──► DevOpsAgent    (git, CI/CD, code)
 ├──► HomeAgent      (home automation, IoT)
-├──► StorageAgent   (soubory: cloud + S3)
-├──► WorkflowAgent  (automatizace: n8n)
-├──► DataAgent      (BI, ERP, databáze)
+├──► StorageAgent   (files: cloud + S3)
+├──► WorkflowAgent  (automation: n8n)
+├──► DataAgent      (BI, ERP, databases)
 ├──► SecurityAgent  (SSO, secrets, audit)
-├──► ContentAgent   (wiki, CMS, média, knihy)
-├──► CommAgent      (sociální sítě, federace)
-└──► MonitorAgent   (uptime, kontejnery)
+├──► ContentAgent   (wiki, CMS, media, books)
+├──► CommAgent      (social networks, federation)
+└──► MonitorAgent   (uptime, containers)
      │
-     └── Každý agent komunikuje se systémy přes API
-         jako openclaw-bot service account
-         Tokeny: ~/agents/tokens/<system>.token
+     └── Each agent talks to systems via API
+         as the openclaw-bot service account
+         Tokens: ~/agents/tokens/<system>.token
 ```

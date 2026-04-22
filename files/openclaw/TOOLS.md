@@ -1,40 +1,40 @@
-# Nástroje – co smí Inspektor Klepítko používat
+# Tools – what Inspektor Klepitko is allowed to use
 
 ## Ansible Bridge
-- `ansible-bridge.sh run-tag <tag>` — Spustí playbook s tagem
-- `ansible-bridge.sh status` — Stav Docker služeb
-- `ansible-bridge.sh verify` — Zdravotní kontrola služeb
-- `ansible-bridge.sh syntax-check` — Validace syntaxe
-- `ansible-bridge.sh list-tags` — Seznam tagů
+- `ansible-bridge.sh run-tag <tag>` — Runs the playbook with a tag
+- `ansible-bridge.sh status` — Docker service status
+- `ansible-bridge.sh verify` — Service health check
+- `ansible-bridge.sh syntax-check` — Syntax validation
+- `ansible-bridge.sh list-tags` — List of tags
 
-## Povolené tagy
+## Allowed tags
 nginx, stacks, verify, observability, iiab, service-registry, backup, export
 
-## Povolené operace
+## Allowed operations
 
-### Soubory a systém
-- Čtení a zápis souborů v `~/` (projekty, logy, konfigurace)
-- Čtení nginx konfigurace z `/opt/homebrew/etc/nginx/`
-- Zápis nginx konfigurace (vhost soubory) – vždy s `nginx -t` po úpravě
-- Spouštění `brew services` příkazů (start/stop/restart)
+### Files and system
+- Reading and writing files under `~/` (projects, logs, configuration)
+- Reading nginx configuration from `/opt/homebrew/etc/nginx/`
+- Writing nginx configuration (vhost files) – always with `nginx -t` after edits
+- Running `brew services` commands (start/stop/restart)
 
-### Webové nástroje
-- Vyhledávání dokumentace a řešení problémů
-- Stahování public npm/pip/go/composer balíčků
-- Kontrola dostupnosti endpointů (curl/httpie)
+### Web tools
+- Searching documentation and troubleshooting resources
+- Downloading public npm/pip/go/composer packages
+- Checking endpoint availability (curl/httpie)
 
-### API přístup
-Všechny služby přes REST API jako `openclaw-bot`.
-Tokeny: `~/agents/tokens/<service>.token`
+### API access
+All services via REST API as `openclaw-bot`.
+Tokens: `~/agents/tokens/<service>.token`
 
-### MCP integrace
-Konfigurace: `mcp-ansible.json`
+### MCP integration
+Configuration: `mcp-ansible.json`
 
-## Blokované operace
-- `blank` — Nikdy nespouštěj blank reset automaticky
-- `rm -rf` — Nepovoleno bez explicitního potvrzení
-- `docker system prune` — Nepovoleno bez zálohy
-- Žádný přístup k souborům mimo `~/` bez explicitního souhlasu
-- Žádné mazání produkčních dat bez zálohy
-- Žádné změny systémových konfiguračních souborů mimo homebrew prefix
-- Žádné odesílání dat mimo localhost (vše lokálně)
+## Blocked operations
+- `blank` — Never run a blank reset automatically
+- `rm -rf` — Not allowed without explicit confirmation
+- `docker system prune` — Not allowed without a backup
+- No access to files outside `~/` without explicit consent
+- No deletion of production data without a backup
+- No changes to system configuration files outside the homebrew prefix
+- No sending of data outside localhost (everything stays local)

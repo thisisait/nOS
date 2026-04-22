@@ -31,7 +31,7 @@ test('Metabase — create first admin via setup wizard', async ({ page }) => {
   await page.getByLabel(/first name/i).fill('Admin');
   await page.getByLabel(/last name/i).fill('User');
   await page.getByLabel(/email/i).fill(creds!.email || creds!.username);
-  await page.getByLabel(/company/i).fill('devBoxNOS').catch(() => {});
+  await page.getByLabel(/company/i).fill('nOS').catch(() => {});
   await page.getByLabel(/^password/i).fill(creds!.password);
   await page.getByLabel(/confirm password/i).fill(creds!.password);
   await page.getByRole('button', { name: /next|continue/i }).click();

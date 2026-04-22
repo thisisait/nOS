@@ -1,31 +1,31 @@
 ---
 # ==============================================================================
-# HEALTH PROBE CATALOG — single source of truth pro stack verifikaci
+# HEALTH PROBE CATALOG — single source of truth for stack verification
 #
-# Konzumováno z tasks/iiab/stack_verify.yml. Přidání nové služby = přidej
-# entry zde a zapni příslušný install_* flag — žádná úprava stack_verify
-# logiky.
+# Consumed by tasks/iiab/stack_verify.yml. Adding a new service = add an
+# entry here and turn on the appropriate install_* flag — no edits to
+# stack_verify logic.
 #
-# Struktura entry:
-#   toggle:             Ansible install_* proměnná (bool)
-#   toggle_default:     Default hodnoty toggle (true = observability, false = vše ostatní)
+# Entry structure:
+#   toggle:             Ansible install_* variable (bool)
+#   toggle_default:     Default value of the toggle (true = observability, false = everything else)
 #   proto:              "http" | "tcp"
-#   port_var:           Název proměnné s portem na 127.0.0.1
-#   port_default:       Fallback pokud port_var není definovaný
+#   port_var:           Name of the variable holding the port on 127.0.0.1
+#   port_default:       Fallback if port_var is not defined
 #   path:               (http only) URL path, default "/"
-#   status:             (http only) Akceptované HTTP status kódy. Default _default_status.
-#   host_header_var:    (http, optional) Název proměnné pro Host: header
+#   status:             (http only) Accepted HTTP status codes. Default _default_status.
+#   host_header_var:    (http, optional) Name of the variable for the Host: header
 #   host_header_default:(http, optional) Fallback hostname
-#   onboarding:         true = vyžaduje ruční onboarding (pause prompt); default false
-#   hint:               Zpráva v summary při selhání probe
+#   onboarding:         true = requires manual onboarding (pause prompt); default false
+#   hint:               Message shown in the summary on probe failure
 # ==============================================================================
 
-# Akceptované HTTP statusy pro generické "alive" probe. Per-entry override.
+# Accepted HTTP statuses for the generic "alive" probe. Overridable per entry.
 _default_status: [200, 301, 302, 303, 401, 403, 404]
 
 health_probes:
 
-  # ── Infra / datové služby (auto-retry) ─────────────────────────────────────
+  # ── Infra / data services (auto-retry) ────────────────────────────────────
   - slug: mariadb
     name: "MariaDB"
     toggle: install_mariadb
@@ -102,7 +102,7 @@ health_probes:
     proto: http
     port_var: gitlab_http_port
     port_default: 8929
-    hint: "docker compose -p devops logs gitlab (pomale nabiha ~3-5 min)"
+    hint: "docker compose -p devops logs gitlab (slow to boot ~3-5 min)"
 
   - slug: woodpecker
     name: "Woodpecker CI"
@@ -224,11 +224,11 @@ health_probes:
     proto: http
     port_var: firefly_port
     port_default: 3014
-    # Firefly nema /health endpoint — /api/v1/about vraci 302 pro
-    # neprihlaseneho uzivatele, coz potvrzuje ze Laravel stack odpovida.
-    # /, /login vraci 500 pokud TRUSTED_PROXIES neni spravne nastaveno, ale
-    # i tak je to "alive" — v kombinaci s kontejnerovym healthcheck z Firefly
-    # image stacuje.
+    # Firefly has no /health endpoint — /api/v1/about returns 302 for an
+    # unauthenticated user, which confirms that the Laravel stack is responding.
+    # /, /login return 500 if TRUSTED_PROXIES is not configured correctly, but
+    # that still counts as "alive" — combined with the container healthcheck
+    # from the Firefly image, it suffices.
     path: "/api/v1/about"
     status: [200, 302, 401, 403]
     hint: "docker compose -p b2b logs firefly"
@@ -239,12 +239,12 @@ health_probes:
     proto: http
     port_var: bookstack_port
     port_default: 3013
-    # / redirectuje na /login (302). /status je 500 pri polorozbite instalaci
-    # (failnuta migrace) — ale / 302 znamena ze Apache + Laravel startuji.
-    # Pozn: Po failnute migraci pazny.bookstack/tasks/post.yml restartne
-    # kontejner a migrace se dojede.
+    # / redirects to /login (302). /status is 500 on a half-broken install
+    # (failed migration) — but a / 302 means Apache + Laravel have started.
+    # Note: After a failed migration, pazny.bookstack/tasks/post.yml restarts
+    # the container and the migration finishes.
     status: [200, 302, 401, 500]
-    hint: "docker compose -p b2b logs bookstack (pokud 500 perzistuje, restart kontejneru pro migration retry)"
+    hint: "docker compose -p b2b logs bookstack (if 500 persists, restart the container for migration retry)"
 
   - slug: hedgedoc
     name: "HedgeDoc"
@@ -252,12 +252,12 @@ health_probes:
     proto: http
     port_var: hedgedoc_port
     port_default: 3012
-    # HedgeDoc neni behind reverse proxy → / vraci 200. /status je
-    # kolaborativni realtime endpoint, ktery nemusi byt dostupny pres
-    # http (socket.io).
+    # HedgeDoc is not behind a reverse proxy → / returns 200. /status is a
+    # collaborative realtime endpoint that may not be reachable over
+    # plain HTTP (socket.io).
     path: "/"
     status: [200, 302]
-    hint: "docker compose -p b2b logs hedgedoc (pokud empty reply, zkontroluj Postgres pool — CONN_MAX_AGE)"
+    hint: "docker compose -p b2b logs hedgedoc (if empty reply, check the Postgres pool — CONN_MAX_AGE)"
 
   # ── Data stack (Metabase, Superset) ─────────────────────────────────────────
   - slug: metabase
@@ -290,7 +290,7 @@ health_probes:
     hint: "docker compose -p engineering logs qgis"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Onboarding služby – vyžadují ruční setup (pause prompt)
+  # Onboarding services – require manual setup (pause prompt)
   # ══════════════════════════════════════════════════════════════════════════
 
   - slug: uptime_kuma
@@ -300,7 +300,7 @@ health_probes:
     port_var: uptime_kuma_port
     port_default: 3001
     onboarding: true
-    hint: "Otevri https://{{ uptime_kuma_domain | default('uptime.dev.local') }} a vytvor admin ucet"
+    hint: "Open https://{{ uptime_kuma_domain | default('uptime.dev.local') }} and create an admin account"
 
   - slug: wordpress
     name: "WordPress"
@@ -309,7 +309,7 @@ health_probes:
     port_var: wordpress_port
     port_default: 8084
     onboarding: true
-    hint: "Otevri https://{{ wordpress_domain | default('wp.dev.local') }}/wp-admin/install.php"
+    hint: "Open https://{{ wordpress_domain | default('wp.dev.local') }}/wp-admin/install.php"
 
   - slug: kiwix
     name: "Kiwix"
@@ -318,7 +318,7 @@ health_probes:
     port_var: kiwix_port
     port_default: 8888
     onboarding: true
-    hint: "Kiwix potrebuje ZIM soubory. Spust download-zim.sh a restartuj."
+    hint: "Kiwix needs ZIM files. Run download-zim.sh and restart."
 
   - slug: outline
     name: "Outline"
@@ -327,7 +327,7 @@ health_probes:
     port_var: outline_port
     port_default: 3005
     onboarding: true
-    hint: "Outline vyzaduje SSO provider (Authentik OIDC). Nastav v Settings → Authentication."
+    hint: "Outline requires an SSO provider (Authentik OIDC). Configure under Settings → Authentication."
 
   - slug: freepbx
     name: "FreePBX"
@@ -336,4 +336,4 @@ health_probes:
     port_var: freepbx_port
     port_default: 8088
     onboarding: true
-    hint: "Otevri https://{{ freepbx_domain | default('pbx.dev.local') }} a projdi setup wizard."
+    hint: "Open https://{{ freepbx_domain | default('pbx.dev.local') }} and go through the setup wizard."

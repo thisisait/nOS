@@ -1,12 +1,12 @@
 // ==============================================================================
 // jsOS – Per-user resource provisioning (idempotent)
-// Spouští se při každém loginu, ale vytváří prostředky pouze jednou.
+// Runs on every login, but creates resources only once.
 //
 // Provisioned resources:
 //   1. VFS home directory:   {vfsRoot}/{handle}/
-//   2. S3 bucket:            jsos-{sanitized_handle}  (pokud RustFS enabled)
-//   3. PostgreSQL database:  jsos_{sanitized_handle}   (pokud enabled)
-//   4. Redis namespace:      jsos:user:{handle}:*      (informační, nepotřebuje setup)
+//   2. S3 bucket:            jsos-{sanitized_handle}  (if RustFS enabled)
+//   3. PostgreSQL database:  jsos_{sanitized_handle}   (if enabled)
+//   4. Redis namespace:      jsos:user:{handle}:*      (informational, no setup needed)
 // ==============================================================================
 
 const fs = require('fs');
@@ -130,7 +130,7 @@ module.exports = (core, config) => {
     }
 
     // ── 4. Redis namespace (informational only) ─────────────────────────────
-    // Redis nevyžaduje explicit provisioning — prefix jsos:user:{handle}:
-    // je pouze konvence. Client-side info se předává přes /api/user/resources.
+    // Redis does not require explicit provisioning — the jsos:user:{handle}:
+    // prefix is only a convention. Client-side info is passed via /api/user/resources.
   };
 };

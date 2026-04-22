@@ -2,7 +2,7 @@
 # ==============================================================================
 # NOS Vulnerability Scanner — Iterative Scan Runner
 # Managed by Ansible — do not edit manually
-# Schedule: 2x daily via launchd (com.devboxnos.vulnscan)
+# Schedule: 2x daily via launchd (eu.thisisait.nos.vulnscan)
 #
 # Logic:
 #   1. Read scan-state.json for component timestamps

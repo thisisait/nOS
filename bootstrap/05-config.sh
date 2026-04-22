@@ -1,13 +1,13 @@
 #!/bin/bash
 # ┌─────────────────────────────────────────────────────────────────────────────┐
-# │ Krok 5: Příprava konfiguračních souborů                                     │
+# │ Step 5: Prepare configuration files                                         │
 # │                                                                             │
-# │ Co dělá:  Vytvoří config.yml a credentials.yml ze šablon.                   │
-# │ Proč:     Oba soubory jsou v .gitignore – osobní nastavení mimo repozitář.  │
+# │ What it does: Creates config.yml and credentials.yml from templates.        │
+# │ Why:          Both files are in .gitignore – personal settings outside repo.│
 # │                                                                             │
-# │ Soubory:                                                                    │
-# │   config.yml       – feature toggles (co zapnout/vypnout)                  │
-# │   credentials.yml  – hesla a tokeny (NIKDY necommituj!)                     │
+# │ Files:                                                                      │
+# │   config.yml       – feature toggles (what to enable/disable)               │
+# │   credentials.yml  – passwords and tokens (NEVER commit!)                   │
 # └─────────────────────────────────────────────────────────────────────────────┘
 set -e
 BOLD='\033[1m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
@@ -21,26 +21,26 @@ PLAYBOOK_DIR="$(dirname "$SCRIPT_DIR")"
 # ── config.yml ────────────────────────────────────────────────────────────────
 step "config.yml (feature toggles)"
 if [[ -f "$PLAYBOOK_DIR/config.yml" ]]; then
-  ok "config.yml již existuje – přeskakuji"
+  ok "config.yml already exists – skipping"
 else
   cp "$PLAYBOOK_DIR/config.example.yml" "$PLAYBOOK_DIR/config.yml"
-  ok "Vytvořen config.yml ze šablony"
-  echo "  Uprav: nano $PLAYBOOK_DIR/config.yml"
+  ok "Created config.yml from template"
+  echo "  Edit: nano $PLAYBOOK_DIR/config.yml"
 fi
 
 # ── credentials.yml ───────────────────────────────────────────────────────────
-step "credentials.yml (hesla a tokeny)"
+step "credentials.yml (passwords and tokens)"
 if [[ -f "$PLAYBOOK_DIR/credentials.yml" ]]; then
-  ok "credentials.yml již existuje – přeskakuji"
+  ok "credentials.yml already exists – skipping"
 else
   cp "$PLAYBOOK_DIR/credentials.example.yml" "$PLAYBOOK_DIR/credentials.yml"
-  ok "Vytvořen credentials.yml ze šablony"
-  warn "DŮLEŽITÉ: Přepiš všechna 'changeme_*' hesla!"
-  echo "  Uprav: nano $PLAYBOOK_DIR/credentials.yml"
+  ok "Created credentials.yml from template"
+  warn "IMPORTANT: Replace all 'changeme_*' passwords!"
+  echo "  Edit: nano $PLAYBOOK_DIR/credentials.yml"
 fi
 
-# ── Validace YAML ─────────────────────────────────────────────────────────────
-step "Validace YAML"
+# ── YAML validation ───────────────────────────────────────────────────────────
+step "YAML validation"
 VALID=true
 
 for f in config.yml credentials.yml; do
@@ -48,7 +48,7 @@ for f in config.yml credentials.yml; do
     if python3 -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>/dev/null; then
       ok "$f – YAML OK"
     else
-      echo -e "\033[0;31m✗ $f – YAML chyba! Zkontroluj soubor.\033[0m" >&2
+      echo -e "\033[0;31m✗ $f – YAML error! Check the file.\033[0m" >&2
       python3 -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>&1 | head -5
       VALID=false
     fi
@@ -57,10 +57,10 @@ done
 
 if [[ "$VALID" != "true" ]]; then
   echo ""
-  warn "Oprav YAML chyby před spuštěním playbooku."
+  warn "Fix YAML errors before running the playbook."
   exit 1
 fi
 
 echo ""
-echo -e "${GREEN}${BOLD}Konfigurace připravena. Další krok:${NC}"
+echo -e "${GREEN}${BOLD}Configuration ready. Next step:${NC}"
 echo "  ansible-playbook main.yml -K"

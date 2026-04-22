@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""devBoxNOS Heartbeat — reports box status to central management."""
+"""nOS Heartbeat — reports box status to central management."""
 import json
 import os
 import platform
@@ -79,7 +79,7 @@ def build_report():
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "instance_name": os.environ.get("INSTANCE_NAME", "devboxnos"),
+        "instance_name": os.environ.get("INSTANCE_NAME", "nos"),
         "hostname": platform.node(),
         "version": get_version(),
         "uptime_seconds": get_uptime(),
@@ -111,7 +111,7 @@ def send_heartbeat(report):
 
 
 def main():
-    print(f"devBoxNOS Heartbeat starting (interval={HEARTBEAT_INTERVAL}s)")
+    print(f"nOS Heartbeat starting (interval={HEARTBEAT_INTERVAL}s)")
     while True:
         try:
             report = build_report()

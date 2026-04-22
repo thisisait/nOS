@@ -1,11 +1,11 @@
 #!/bin/bash
 # ┌─────────────────────────────────────────────────────────────────────────────┐
-# │ Krok 1: Xcode Command Line Tools                                            │
+# │ Step 1: Xcode Command Line Tools                                            │
 # │                                                                             │
-# │ Co dělá:  Nainstaluje Apple kompilátor (clang), git, make a dev tools.     │
-# │ Proč:     Homebrew i Ansible potřebují CLT pro build nativních balíčků.     │
-# │ Jak long: ~5-10 minut (stažení ~700 MB).                                   │
-# │ Co udělat: Potvrdit dialog macOS → kliknout "Install".                      │
+# │ What it does: Installs Apple compiler (clang), git, make and dev tools.     │
+# │ Why:          Homebrew and Ansible need CLT to build native packages.       │
+# │ Duration:     ~5-10 minutes (~700 MB download).                             │
+# │ Action:       Confirm macOS dialog -> click "Install".                      │
 # └─────────────────────────────────────────────────────────────────────────────┘
 set -e
 BOLD='\033[1m'; GREEN='\033[0;32m'; NC='\033[0m'
@@ -15,14 +15,14 @@ ok()   { echo -e "${GREEN}✓ $1${NC}"; }
 step "Xcode Command Line Tools"
 
 if xcode-select -p &>/dev/null; then
-  ok "Xcode CLT je nainstalováno ($(xcode-select -p))"
+  ok "Xcode CLT is installed ($(xcode-select -p))"
   exit 0
 fi
 
-echo "Spouštím installer — potvrď v dialogovém okně macOS..."
+echo "Launching installer — confirm in the macOS dialog..."
 xcode-select --install
 
-echo "Čekám na dokončení instalace Xcode CLT (může trvat 5-10 min)..."
+echo "Waiting for Xcode CLT installation to finish (may take 5-10 min)..."
 until xcode-select -p &>/dev/null; do sleep 5; done
 
-ok "Xcode CLT nainstalováno"
+ok "Xcode CLT installed"

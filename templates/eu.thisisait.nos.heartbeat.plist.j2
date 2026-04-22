@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.devboxnos.heartbeat</string>
+  <string>eu.thisisait.nos.heartbeat</string>
   <key>ProgramArguments</key>
   <array>
     <string>{{ ansible_facts['env']['HOME'] }}/.pyenv/shims/python3</string>
@@ -26,7 +26,7 @@
     <key>HEARTBEAT_INTERVAL</key>
     <string>{{ heartbeat_interval | default(300) }}</string>
     <key>INSTANCE_NAME</key>
-    <string>{{ instance_name | default('devboxnos') }}</string>
+    <string>{{ instance_name | default('nos') }}</string>
     <key>SERVICE_REGISTRY</key>
     <string>{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json</string>
     <key>VERSION_FILE</key>

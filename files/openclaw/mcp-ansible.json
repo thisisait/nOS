@@ -1,6 +1,6 @@
 {
-  "name": "devboxnos-ansible",
-  "description": "Ansible playbook management for devBoxNOS",
+  "name": "nos-ansible",
+  "description": "Ansible playbook management for nOS",
   "version": "1.0.0",
   "tools": [
     {

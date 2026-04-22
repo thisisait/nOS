@@ -1,4 +1,4 @@
-# devBoxNOS Vulnerability Report — 2026-04-08
+# nOS Vulnerability Report — 2026-04-08
 
 ## Executive Summary
 
@@ -24,7 +24,7 @@
 - **Component:** redis (infra stack, port 6379, **NO AUTHENTICATION**)
 - **Affected:** All Redis through 7.4.5
 - **Fix:** redis >= 7.4.6
-- **Impact:** Use-after-free in Lua scripting engine. 13-year-old bug discovered at Pwn2Own Berlin 2025. In devBoxNOS, Redis has NO requirepass — any container on shared_net can exploit without credentials. ~60,000 servers globally affected.
+- **Impact:** Use-after-free in Lua scripting engine. 13-year-old bug discovered at Pwn2Own Berlin 2025. In nOS, Redis has NO requirepass — any container on shared_net can exploit without credentials. ~60,000 servers globally affected.
 - **Remediation:** `redis_version: "7.4.6-alpine"` + add `--requirepass` to command
 - **Source:** https://redis.io/blog/security-advisory-cve-2025-49844/
 

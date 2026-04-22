@@ -1,4 +1,4 @@
-"""Box Management API for devBoxNOS."""
+"""Box Management API for nOS."""
 
 from __future__ import annotations
 
@@ -13,14 +13,14 @@ from pathlib import Path
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
 
-app = FastAPI(title="devBoxNOS Box API", version="0.1.0")
+app = FastAPI(title="nOS Box API", version="0.1.0")
 
 BOXAPI_SECRET = os.getenv("BOXAPI_SECRET", "")
 SERVICE_REGISTRY_PATH = os.getenv(
     "SERVICE_REGISTRY_PATH",
     os.path.expanduser("~/projects/default/service-registry.json"),
 )
-PLAYBOOK_DIR = os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/mac-dev-playbook"))
+PLAYBOOK_DIR = os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/nOS"))
 VERSION_FILE = os.path.join(PLAYBOOK_DIR, "VERSION")
 BOOT_TIME = time.time()
 
@@ -104,7 +104,7 @@ async def status():
     uptime_seconds = time.time() - BOOT_TIME
 
     return {
-        "instance_name": "devBoxNOS",
+        "instance_name": "nOS",
         "version": version,
         "uptime": round(uptime_seconds),
         "hostname": socket.gethostname(),

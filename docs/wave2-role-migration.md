@@ -2,7 +2,7 @@
 
 Status: Wave 2.1 pilot **complete**; Wave 2.2 parallel batch **in progress**. Target branch: `dev`. Pilot scope (done): three roles — `pazny.glasswing`, `pazny.mariadb`, `pazny.grafana`.
 
-This document describes how the devBoxNOS playbook migrates from inline `tasks/` files plus monolithic `templates/stacks/<stack>/docker-compose.yml.j2` files into per-service Ansible roles. It was originally the operational plan for the Wave 2.1 pilot; it has been revised post-pilot to capture the lessons learned and serve as the authoritative spec for the Wave 2.2 parallel batch and all future sprints.
+This document describes how the nOS playbook migrates from inline `tasks/` files plus monolithic `templates/stacks/<stack>/docker-compose.yml.j2` files into per-service Ansible roles. It was originally the operational plan for the Wave 2.1 pilot; it has been revised post-pilot to capture the lessons learned and serve as the authoritative spec for the Wave 2.2 parallel batch and all future sprints.
 
 ---
 
@@ -29,7 +29,7 @@ Wave 1 of the state-declarative refactor landed on `dev`, followed by the Wave 2
 
 The playbook is idempotent end to end, secrets reconverge declaratively from `global_password_prefix`, `stack_verify.yml` is data-driven via the P0.2 health-probes catalog, and the Wave 2.1 pilot proved the role-extraction pattern end to end. The **structural** refactor is now in progress: extract services into standalone roles so they can be:
 
-1. **Reused across client deployments.** Each Czechbot.eu client box wires together a different subset of the catalogue (HQ vs factory vs sales — see `docs/fleet-architecture.md`). A role-shaped service is something a client playbook can `include_role:` and skip the parts it does not need.
+1. **Reused across client deployments.** Each thisisait.eu client box wires together a different subset of the catalogue (HQ vs factory vs sales — see `docs/fleet-architecture.md`). A role-shaped service is something a client playbook can `include_role:` and skip the parts it does not need.
 2. **Extracted to per-service Galaxy repos in Wave 3.** When `pazny.mariadb` is a self-contained directory with `defaults/`, `tasks/`, `templates/`, `meta/`, and a README, lifting it into `github.com/pazny/ansible-role-mariadb` is a `git mv` plus a `requirements.yml` entry. The pilot proved this shape works end to end.
 3. **Cleaner separation between orchestration and service logic.** `main.yml`, `tasks/stacks/core-up.yml`, and `tasks/stacks/stack-up.yml` are the orchestration spine. They know about ordering, networks, and the always-first invariant — not about MariaDB users or Grafana provisioning paths.
 
@@ -46,9 +46,9 @@ The Wave 2.1 pilot surfaced several patterns that were either ambiguous in the o
 | **Compose include** | The find+merge pattern via `ansible.builtin.find` over `{{ stacks_dir }}/<stack>/overrides/*.yml` plus `{% for f in _overrides.files \| sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}` in the `docker compose` shell command works. `tasks/stacks/core-up.yml` lines 247–320 is the reference implementation. Backward compatible with an empty `overrides/` directory (empty list → no extra `-f` flags). | `tasks/stacks/stack-up.yml` needs the same plumbing for the six non-core stacks (`iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`). This is Wave 2.2 Unit 2's sole deliverable and **must** land before the coordinator wires role calls into stack-up. |
 | **Compose networks** | Override fragments do **not** redeclare top-level `networks:`. `infra_net`, `observability_net`, and `{{ stacks_shared_network }}` stay declared in the base compose. Compose merge semantics let overrides reference networks by name as long as some merged file declares them. The original Section 9 guidance (copy the networks stanza into every role fragment) was overly defensive — the pilot proved it unnecessary. | Worker compose templates have no top-level `networks:` key. Only `services.<svc>.networks: [infra_net, "{{ stacks_shared_network }}"]` as a service-scoped list. Any worker who copy-pastes the networks block is wrong. |
 | **Tag inheritance** | `--tags mariadb` does not propagate into `include_role` automatically. The pilot wires both `apply: { tags: ['mariadb', 'database'] }` **and** a top-level `tags: ['mariadb', 'database']` on the `include_role` task. Using only one of the two selects the wrong subset of tasks. | Coordinator (Phase B) uses both on every `include_role` in `core-up.yml` / `stack-up.yml`. Verify via `ansible-playbook main.yml --list-tags` before pushing. |
-| **Handler ownership** | Shared handlers (`Restart nginx`, `Restart php-fpm`, `Restart alloy`) stay play-level in `main.yml` — any role can `notify:` them. Service-specific handlers (`Restart mariadb`, `Restart grafana`) live in **both** places: play-level in `main.yml` **and** `roles/pazny.<svc>/handlers/main.yml`. The play-level wins when notified from outside the role; the role-local is there for standalone use outside the devBoxNOS playbook. Duplication is intentional and harmless. | Workers copy the service-specific handler into `roles/pazny.<svc>/handlers/main.yml` but do **not** remove the play-level version. Play-level handler pruning is a deliberate follow-up after Wave 2.2 Phase C smoke test passes. |
+| **Handler ownership** | Shared handlers (`Restart nginx`, `Restart php-fpm`, `Restart alloy`) stay play-level in `main.yml` — any role can `notify:` them. Service-specific handlers (`Restart mariadb`, `Restart grafana`) live in **both** places: play-level in `main.yml` **and** `roles/pazny.<svc>/handlers/main.yml`. The play-level wins when notified from outside the role; the role-local is there for standalone use outside the nOS playbook. Duplication is intentional and harmless. | Workers copy the service-specific handler into `roles/pazny.<svc>/handlers/main.yml` but do **not** remove the play-level version. Play-level handler pruning is a deliberate follow-up after Wave 2.2 Phase C smoke test passes. |
 | **Credentials centralization** | `*_password` entries stay in the top-level `default.credentials.yml` so `global_password_prefix` reconverge works centrally. Role `defaults/main.yml` does **not** redeclare credentials — only neutral config (`*_version`, `*_port`, `*_data_dir`, seed lists with `[]` fallback, mem/cpu limits). | Workers copy only neutral config to role defaults. Do not move `mariadb_root_password` / `grafana_admin_password` / `authentik_postgres_password` / etc. into role defaults. |
-| **Role defaults mirror config** | Role `defaults/main.yml` mirrors the `<svc>_*` vars from `default.config.yml` with empty-list fallbacks (`mariadb_databases: []`, `mariadb_users: []`) so the role is self-sufficient when consumed from outside the playbook. The central `default.config.yml` stays single source of truth — Ansible's `vars_files > role defaults` precedence ensures runtime uses the centralized value. | Pattern from `roles/pazny.mariadb/defaults/main.yml` is the template. Role runs cleanly both inside devBoxNOS (uses central vars) and standalone (uses empty-list defaults). |
+| **Role defaults mirror config** | Role `defaults/main.yml` mirrors the `<svc>_*` vars from `default.config.yml` with empty-list fallbacks (`mariadb_databases: []`, `mariadb_users: []`) so the role is self-sufficient when consumed from outside the playbook. The central `default.config.yml` stays single source of truth — Ansible's `vars_files > role defaults` precedence ensures runtime uses the centralized value. | Pattern from `roles/pazny.mariadb/defaults/main.yml` is the template. Role runs cleanly both inside nOS (uses central vars) and standalone (uses empty-list defaults). |
 | **Provisioning / host configs** | Provisioning files that depend on play-level state (`authentik_oidc_*`, service registry, cross-service facts) **stay in `core-up.yml` / `stack-up.yml`**. The role owns only its compose fragment and post-start script. Grafana's `files/observability/grafana/provisioning/*.yml.j2` is the pilot's precedent — those renders are still in `core-up.yml` even though the grafana compose block moved into the role. | Worker migrates per-service code only. Cross-service provisioning (Authentik blueprints, ERPNext bench migrate inside `erpnext_post.yml`, Superset init, Bluesky PDS bridge) stays in `tasks/stacks/` for Wave 2.2. |
 | **Override file placement convention** | Every role renders its compose fragment to `{{ stacks_dir }}/<stack>/overrides/<svc>.yml`. The filename is the **service name**, not the role name (e.g. `mariadb.yml`, not `pazny.mariadb.yml`). The `overrides/` directory is created up-front by `core-up.yml` (for infra/observability) and, after Wave 2.2 Unit 2 lands, by `stack-up.yml` (for the six non-core stacks). | Hardcoded convention — workers never invent their own path. Render target string is mechanical: `{{ stacks_dir }}/<owning-stack>/overrides/<svc-name>.yml`. |
 | **Role location** | `roles/pazny.*/` in-repo, **not** `galaxy_roles/` or an external Galaxy repo. Wave 3 extraction to `pazny/ansible-role-<svc>` repos via `git filter-repo` is deferred until after Wave 2.2 Phase C smoke test passes. Reason: client boxes still share one playbook; early extraction triples operational overhead (version pinning, per-role CI, requirements.yml churn). | **Lock in**: every Wave 2.2 role lands in `roles/pazny.<svc>/` in this repo. Do not create a `galaxy_roles/` tree or any sibling layout. |
@@ -417,7 +417,7 @@ galaxy_info:
   role_name: mariadb
   namespace: pazny
   author: Pázny
-  description: MariaDB in Docker compose override (devBoxNOS infra stack)
+  description: MariaDB in Docker compose override (nOS infra stack)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -460,7 +460,7 @@ Two rollback boundaries:
 
 **Rule:** do not attempt partial reverts of the Phase B commit. It is intentionally one big mechanical change so that rollback is one command.
 
-Regressions found during Phase C smoke are fixed with follow-up commits on `dev`, not by reverting Wave 2.2. The user has explicitly opted out of rollback ("cesty zpět není") — fix forward.
+Regressions found during Phase C smoke are fixed with follow-up commits on `dev`, not by reverting Wave 2.2. The user has explicitly opted out of rollback ("no path back") — fix forward.
 
 ---
 
@@ -480,7 +480,7 @@ Ansible runs the play's `roles:` section *before* its `tasks:` section. If `pazn
 
 **Pilot resolution:**
 - Shared handlers (`Restart nginx`, `Reload nginx`, `Restart php-fpm`, `Restart alloy`) stay **play-level only** in `main.yml`. Any role can notify them.
-- Service-specific handlers (`Restart mariadb`, `Restart grafana`, `Restart authentik`…) live in **both** places: play-level in `main.yml` AND `roles/pazny.<svc>/handlers/main.yml`. The play-level handler wins at runtime; the role-local copy is there so the role is standalone-usable outside devBoxNOS. Duplication is harmless.
+- Service-specific handlers (`Restart mariadb`, `Restart grafana`, `Restart authentik`…) live in **both** places: play-level in `main.yml` AND `roles/pazny.<svc>/handlers/main.yml`. The play-level handler wins at runtime; the role-local copy is there so the role is standalone-usable outside nOS. Duplication is harmless.
 - Play-level handler pruning (the eventual removal of duplicates) is deferred until after Wave 2.2 Phase C smoke passes.
 
 ### Tag inheritance — CONFIRMED (apply + tags both required)
@@ -532,7 +532,7 @@ services:
 
 Wave 1's state-declarative password reconverge depends on every `*_password` variable resolving via the same `global_password_prefix`. Role `defaults/main.yml` must **not** redeclare credentials — they stay in `default.credentials.yml` where `global_password_prefix` reconverge works centrally.
 
-**Rule:** role defaults contain only neutral config (version, port, data_dir, mem/cpu, empty seed lists). Every `*_password` stays in the top-level credentials file. If a role is consumed standalone outside devBoxNOS, the consumer passes credentials via `vars:` on the `include_role` call — not via role defaults.
+**Rule:** role defaults contain only neutral config (version, port, data_dir, mem/cpu, empty seed lists). Every `*_password` stays in the top-level credentials file. If a role is consumed standalone outside nOS, the consumer passes credentials via `vars:` on the `include_role` call — not via role defaults.
 
 ### Compose `services:` map merging — CONFIRMED (delete the stub, don't leave it)
 

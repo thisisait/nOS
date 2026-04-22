@@ -1,9 +1,9 @@
 #!/usr/bin/env zsh
 # ==============================================================================
-# Inspektor Klepítko – Onboarding Script
-# Spusť po dokončení Ansible playbooku pro inicializaci agentického prostředí
+# Inspektor Klepitko – Onboarding Script
+# Run after the Ansible playbook finishes to initialize the agentic environment
 #
-# Použití: ~/agents/onboard.sh
+# Usage: ~/agents/onboard.sh
 # ==============================================================================
 
 set -euo pipefail
@@ -29,28 +29,28 @@ fail() { echo -e "${RED}[FAIL]${RESET}  $*"; }
 sep()  { echo -e "${BOLD}══════════════════════════════════════════════════${RESET}"; }
 
 sep
-echo -e "${BOLD}🦞 Inspektor Klepítko – Onboarding${RESET}"
+echo -e "${BOLD}🦞 Inspektor Klepitko – Onboarding${RESET}"
 sep
 
-# ── 1. Adresářová struktura ────────────────────────────────────────────────────
+# ── 1. Directory structure ────────────────────────────────────────────────────
 
-log "Vytvářím adresářovou strukturu..."
+log "Creating directory structure..."
 mkdir -p "${AGENTS_DIR}"
 mkdir -p "${PROJECTS_DIR}/default"
 mkdir -p "${LOG_DIR}"
 mkdir -p "${OPENCLAW_CONFIG}/memory"
-ok "Adresáře připraveny"
+ok "Directories ready"
 
-# ── 2. Kontrola závislostí ────────────────────────────────────────────────────
+# ── 2. Dependency check ───────────────────────────────────────────────────────
 
 sep
-log "Kontrola závislostí..."
+log "Checking dependencies..."
 
 check_cmd() {
   if command -v "$1" &>/dev/null; then
     ok "$1 → $(command -v $1)"
   else
-    warn "$1 → NENALEZENO (zkontroluj instalaci)"
+    warn "$1 → NOT FOUND (check the installation)"
   fi
 }
 
@@ -67,70 +67,70 @@ check_cmd openclaw
 # ── 3. Ollama model ───────────────────────────────────────────────────────────
 
 sep
-log "Kontrola Ollama modelu..."
+log "Checking Ollama model..."
 
 OLLAMA_MODEL="${OPENCLAW_MODEL:-qwen3.5:27b}"
 
 if ollama list 2>/dev/null | grep -q "${OLLAMA_MODEL%%:*}"; then
-  ok "Model ${OLLAMA_MODEL} je k dispozici"
+  ok "Model ${OLLAMA_MODEL} is available"
 else
-  warn "Model ${OLLAMA_MODEL} není stažen. Stahuji..."
-  ollama pull "${OLLAMA_MODEL}" && ok "Model stažen" || fail "Stahování selhalo"
+  warn "Model ${OLLAMA_MODEL} is not downloaded. Pulling..."
+  ollama pull "${OLLAMA_MODEL}" && ok "Model pulled" || fail "Pull failed"
 fi
 
-# ── 4. Nginx kontrola ─────────────────────────────────────────────────────────
+# ── 4. Nginx check ────────────────────────────────────────────────────────────
 
 sep
-log "Kontrola nginx..."
+log "Checking nginx..."
 
 if "${HOMEBREW_PREFIX}/bin/nginx" -t 2>/dev/null; then
-  ok "Nginx konfigurace je validní"
+  ok "Nginx configuration is valid"
 else
-  fail "Nginx konfigurace má chyby! Spusť: nginx -t"
+  fail "Nginx configuration has errors! Run: nginx -t"
 fi
 
 if brew services list | grep nginx | grep -q started; then
-  ok "Nginx běží"
+  ok "Nginx is running"
 else
-  warn "Nginx neběží. Spouštím..."
-  brew services start nginx && ok "Nginx spuštěn" || fail "Nginx se nepodařilo spustit"
+  warn "Nginx is not running. Starting..."
+  brew services start nginx && ok "Nginx started" || fail "Failed to start Nginx"
 fi
 
-# ── 5. PHP-FPM kontrola ───────────────────────────────────────────────────────
+# ── 5. PHP-FPM check ──────────────────────────────────────────────────────────
 
 sep
-log "Kontrola PHP-FPM..."
+log "Checking PHP-FPM..."
 
 if brew services list | grep php | grep -q started; then
-  ok "PHP-FPM běží"
+  ok "PHP-FPM is running"
   PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "?")
-  ok "PHP verze: ${PHP_VERSION}"
+  ok "PHP version: ${PHP_VERSION}"
 else
-  warn "PHP-FPM neběží. Spouštím..."
-  brew services start php 2>/dev/null || warn "Nedaří se spustit PHP-FPM"
+  warn "PHP-FPM is not running. Starting..."
+  brew services start php 2>/dev/null || warn "Failed to start PHP-FPM"
 fi
 
-# ── 6. OpenClaw konfigurace ───────────────────────────────────────────────────
+# ── 6. OpenClaw configuration ─────────────────────────────────────────────────
 
 sep
-log "Kontrola OpenClaw konfigurace..."
+log "Checking OpenClaw configuration..."
 
 if [[ -f "${OPENCLAW_CONFIG}/openclaw.json" ]]; then
-  ok "openclaw.json nalezen"
+  ok "openclaw.json found"
 else
-  warn "openclaw.json nenalezen v ${OPENCLAW_CONFIG}"
+  warn "openclaw.json not found in ${OPENCLAW_CONFIG}"
 fi
 
 if [[ -f "${OPENCLAW_CONFIG}/SOUL.md" ]]; then
-  ok "SOUL.md (Inspektor Klepítko persona) nalezen"
+  ok "SOUL.md (Inspektor Klepitko persona) found"
 else
-  warn "SOUL.md nenalezen – agent nebude mít kontext"
+  warn "SOUL.md not found – the agent will lack context"
 fi
 
-# ── 7. Vytvoření inicializačního logu ─────────────────────────────────────────
+# ── 7. Create initialization log ──────────────────────────────────────────────
 
 sep
-log "Vytvářím inicializační log..."
+log "Creating initialization log..."
 
 INIT_DATE=$(date '+%Y-%m-%d')
 INIT_TIME=$(date '+%H:%M')
@@ -140,26 +140,26 @@ if [[ ! -f "${INIT_LOG}" ]]; then
   cat > "${INIT_LOG}" << EOF
 ---
 date: ${INIT_DATE} ${INIT_TIME}
-agent: Inspektor Klepítko
+agent: Inspektor Klepitko
 task_id: TASK-000
 status: COMPLETE
 priority: HIGH
 tags: [onboarding, system, init]
 ---
 
-# TASK-000: Inicializace agentického prostředí
+# TASK-000: Initialize the agentic environment
 
-## Cíl
-Spustit a ověřit veškerou infrastrukturu Mac Studio serveru.
-Připravit prostředí pro agentic DevOps operace.
+## Goal
+Start and verify the entire Mac Studio server infrastructure.
+Prepare the environment for agentic DevOps operations.
 
-## Sub-agenti
-- [x] **OnboardScript:** Automatická verifikace systému
+## Sub-agents
+- [x] **OnboardScript:** Automatic system verification
 
-## Konfigurace serveru
+## Server configuration
 
-| Parametr | Hodnota |
-|----------|---------|
+| Parameter | Value |
+|-----------|-------|
 | OS | $(sw_vers -productName 2>/dev/null || echo macOS) $(sw_vers -productVersion 2>/dev/null || echo ?) |
 | Arch | $(uname -m) |
 | Homebrew | ${HOMEBREW_PREFIX} |
@@ -169,61 +169,61 @@ Připravit prostředí pro agentic DevOps operace.
 | Go | $(go version 2>/dev/null | awk '{print \$3}' || echo ?) |
 | Ollama model | ${OLLAMA_MODEL} |
 
-## Adresáře
+## Directories
 
 \`\`\`
 ~/
-├── agents/          ← OpenClaw, konfigurace agentů
-│   ├── log/         ← Strukturované logy agentické práce
-│   └── onboard.sh   ← Tento script
-└── projects/        ← Webové projekty (nginx webroot)
-    └── default/     ← Výchozí landing page
+├── agents/          ← OpenClaw, agent configuration
+│   ├── log/         ← Structured logs of agentic work
+│   └── onboard.sh   ← This script
+└── projects/        ← Web projects (nginx webroot)
+    └── default/     ← Default landing page
 \`\`\`
 
-## Nginx vhost šablony
+## Nginx vhost templates
 
 \`\`\`
 ${NGINX_CONF}/sites-available/
-├── default.conf        ← Aktivní – catch-all localhost
-├── php-app.conf        ← Šablona pro PHP projekty
-├── node-proxy.conf     ← Šablona pro Node.js
-├── python-proxy.conf   ← Šablona pro Python/FastAPI
-├── go-proxy.conf       ← Šablona pro Go
-└── static-site.conf    ← Šablona pro statické stránky
+├── default.conf        ← Active – catch-all localhost
+├── php-app.conf        ← Template for PHP projects
+├── node-proxy.conf     ← Template for Node.js
+├── python-proxy.conf   ← Template for Python/FastAPI
+├── go-proxy.conf       ← Template for Go
+└── static-site.conf    ← Template for static sites
 \`\`\`
 
-## Výsledek
-Systém inicializován. Inspektor Klepítko je připraven přijímat úkoly.
+## Result
+System initialized. Inspektor Klepitko is ready to accept tasks.
 
-## Poznámky
-- Přidej projekt: zkopíruj do ~/projects/<název>/ + nastav nginx vhost
+## Notes
+- Add a project: copy into ~/projects/<name>/ + configure an nginx vhost
 - SSL: \`mkcert -cert-file ... -key-file ... "*.dev.local"\`
-- Spuštění agenta: \`openclaw start\`
+- Start the agent: \`openclaw start\`
 EOF
-  ok "Inicializační log uložen: ${INIT_LOG}"
+  ok "Initialization log saved: ${INIT_LOG}"
 else
-  ok "Inicializační log již existuje: ${INIT_LOG}"
+  ok "Initialization log already exists: ${INIT_LOG}"
 fi
 
-# ── 8. Souhrn ─────────────────────────────────────────────────────────────────
+# ── 8. Summary ────────────────────────────────────────────────────────────────
 
 sep
-echo -e "${BOLD}🦞 Inspektor Klepítko je připraven!${RESET}"
+echo -e "${BOLD}🦞 Inspektor Klepitko is ready!${RESET}"
 sep
 echo ""
-echo -e "  ${BOLD}Spuštění agenta:${RESET}"
+echo -e "  ${BOLD}Start the agent:${RESET}"
 echo -e "    openclaw start"
 echo ""
-echo -e "  ${BOLD}Nový projekt (příklad):${RESET}"
-echo -e "    mkdir -p ~/projects/muj-projekt"
+echo -e "  ${BOLD}New project (example):${RESET}"
+echo -e "    mkdir -p ~/projects/my-project"
 echo -e "    cp ${NGINX_CONF}/sites-available/php-app.conf \\"
-echo -e "       ${NGINX_CONF}/sites-available/muj-projekt.conf"
-echo -e "    # uprav server_name a root v muj-projekt.conf"
-echo -e "    ln -sf ${NGINX_CONF}/sites-available/muj-projekt.conf \\"
+echo -e "       ${NGINX_CONF}/sites-available/my-project.conf"
+echo -e "    # edit server_name and root in my-project.conf"
+echo -e "    ln -sf ${NGINX_CONF}/sites-available/my-project.conf \\"
 echo -e "           ${NGINX_CONF}/sites-enabled/"
 echo -e "    nginx -t && brew services restart nginx"
 echo ""
-echo -e "  ${BOLD}Logy agenta:${RESET}"
+echo -e "  ${BOLD}Agent logs:${RESET}"
 echo -e "    ls -la ${LOG_DIR}/"
 echo ""
 sep

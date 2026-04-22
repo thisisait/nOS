@@ -219,7 +219,7 @@ try {
 			'INSERT OR IGNORE INTO pentest_findings
 			(id, target_id, severity, title, description, affected_versions, proof_of_concept, files,
 			attack_class, exploitability, confidence, disclosure_status, upstream_issue, patch_pr,
-			devboxnos_mitigation, remediation, found_at)
+			nos_mitigation, remediation, found_at)
 			VALUES (:id, :tid, :sev, :title, :desc, :av, :poc, :files, :ac, :exp, :conf, :ds, :ui, :pr, :dm, :rem, :fa)'
 		);
 
@@ -279,7 +279,7 @@ try {
 				$fStmt->bindValue(':ds', $f['disclosure_status'] ?? 'not_reported');
 				$fStmt->bindValue(':ui', $f['upstream_issue'] ?? null);
 				$fStmt->bindValue(':pr', $f['patch_pr'] ?? null);
-				$fStmt->bindValue(':dm', $f['devboxnos_mitigation'] ?? null);
+				$fStmt->bindValue(':dm', $f['nos_mitigation'] ?? null);
 				$fStmt->bindValue(':rem', $f['remediation'] ?? null);
 				$fStmt->bindValue(':fa', $f['found_at'] ?? date('c'));
 				$fStmt->execute();

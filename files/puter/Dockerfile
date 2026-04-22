@@ -46,7 +46,7 @@ RUN node -e " \
   console.log('Cookie domain patched'); \
 "
 
-# Replace recommended apps list with devBoxNOS services (original has cloud-only games)
+# Replace recommended apps list with nOS services (original has cloud-only games)
 RUN node -e " \
   const fs = require('fs'); \
   const f = '/opt/puter/app/src/backend/src/modules/apps/RecommendedAppsService.js'; \
@@ -74,7 +74,7 @@ RUN node -e " \
       \"    ];\" \
     ); \
     fs.writeFileSync(f, c); \
-    console.log('Recommended apps replaced with devBoxNOS services'); \
+    console.log('Recommended apps replaced with nOS services'); \
   } else { \
     console.log('WARNING: APP_NAMES pattern not found'); \
   } \

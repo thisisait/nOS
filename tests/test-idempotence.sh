@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# devBoxNOS idempotence smoke test
+# nOS idempotence smoke test
 #
-# Overuje ze state-declarative refactor funguje — prefix rotation propisuje
-# nove heslo do vsech klicovych sluzeb jak pri blank=true tak pri non-blank runu.
+# Verifies that the state-declarative refactor works — prefix rotation
+# propagates the new password into all key services both on blank=true and
+# non-blank runs.
 #
-# POZOR: Tento skript JE destruktivni — spusti blank reset a obnovi stacky.
-# Spoustej jen v dev prostredi nebo pripravene VM.
+# WARNING: This script IS destructive — it runs a blank reset and rebuilds
+# the stacks. Run only in a dev environment or a prepared VM.
 #
 # Usage: ./tests/test-idempotence.sh [prefix1] [prefix2] [prefix3]
 # ==============================================================================
@@ -82,8 +83,8 @@ check_gitea "${PREFIX2}_pw_gitea" 200
 # ── Test B: non-blank + credentials.yml edit ────────────────────────────────
 info "TEST B — non-blank run with edited credentials.yml"
 info "3/3 Append 'global_password_prefix: \"${PREFIX3}\"' to credentials.yml"
-# Aware: Fáze 5a persistuje prefix do credentials.yml automaticky, tenhle krok
-# emuluje ruční edit uživatelem.
+# Note: Phase 5a persists the prefix into credentials.yml automatically;
+# this step emulates a manual edit by the user.
 grep -q '^global_password_prefix:' credentials.yml 2>/dev/null || \
   echo "global_password_prefix: \"${PREFIX3}\"" >> credentials.yml
 sed -i.bak "s/^global_password_prefix:.*/global_password_prefix: \"${PREFIX3}\"/" credentials.yml
@@ -102,14 +103,14 @@ info "(manual inspection — expect minimal changes, handlers not fired)"
 # ── Test D: destructive gate ────────────────────────────────────────────────
 info "TEST D — destructive secrets preservation"
 info "Non-blank run should emit WARNING for Infisical/Outline"
-ansible-playbook main.yml -K 2>&1 | grep -E "NEBEZPECI|destroy_state" || true
-info "(grep for 'NEBEZPECI' confirms gate works)"
+ansible-playbook main.yml -K 2>&1 | grep -E "DANGER|destroy_state" || true
+info "(grep for 'DANGER' confirms gate works)"
 
 # ── Blueprint status ────────────────────────────────────────────────────────
 info "TEST E — Authentik blueprint reconcile status"
 docker exec infra-authentik-worker-1 ak shell -c "
 from authentik.blueprints.models import BlueprintInstance
-for b in BlueprintInstance.objects.filter(name__startswith='devboxnos'):
+for b in BlueprintInstance.objects.filter(name__startswith='nos'):
     print(f'{b.name}: {b.status} (last_applied={b.last_applied})')
 " 2>&1 || fail "Blueprint instance query failed"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# IIAB Terminal — veřejný TUI hub pro SSH přístup k homelab službám
-# Spouští se jako ForceCommand pro uživatele "home"
+# IIAB Terminal — public TUI hub for SSH access to homelab services
+# Runs as ForceCommand for the "home" user
 # ==============================================================================
 
 import asyncio
@@ -65,14 +65,14 @@ BANNER = r"""
 
 
 class MainMenu(Screen):
-    """Hlavní menu s přehledem dostupných služeb."""
+    """Main menu with an overview of available services."""
 
     BINDINGS = [
         Binding("1", "push_screen('kiwix')", "Kiwix"),
-        Binding("2", "push_screen('books')", "Knihovna"),
+        Binding("2", "push_screen('books')", "Library"),
         Binding("3", "push_screen('chat')", "AI Chat"),
-        Binding("4", "push_screen('services')", "Služby"),
-        Binding("q", "quit", "Odejít"),
+        Binding("4", "push_screen('services')", "Services"),
+        Binding("q", "quit", "Quit"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -80,15 +80,15 @@ class MainMenu(Screen):
         yield Container(
             Static(BANNER, classes="banner"),
             Static(
-                f"Vítejte na [bold]{CFG.get('hostname', 'homelab')}[/bold]! "
-                "Vyberte službu:",
+                f"Welcome to [bold]{CFG.get('hostname', 'homelab')}[/bold]! "
+                "Select a service:",
                 classes="welcome",
             ),
             ListView(
                 ListItem(Label("[bold]1[/bold]  Kiwix — Offline Wikipedia, Gutenberg"), id="menu-kiwix"),
-                ListItem(Label("[bold]2[/bold]  Knihovna — E-book katalog"), id="menu-books"),
-                ListItem(Label("[bold]3[/bold]  AI Chat — Lokální LLM"), id="menu-chat"),
-                ListItem(Label("[bold]4[/bold]  Služby — Přehled systémů"), id="menu-services"),
+                ListItem(Label("[bold]2[/bold]  Library — E-book catalog"), id="menu-books"),
+                ListItem(Label("[bold]3[/bold]  AI Chat — Local LLM"), id="menu-chat"),
+                ListItem(Label("[bold]4[/bold]  Services — System overview"), id="menu-services"),
                 id="main-list",
             ),
             id="main-container",
@@ -109,15 +109,15 @@ class MainMenu(Screen):
 
 
 class KiwixScreen(Screen):
-    """Vyhledávání a čtení Kiwix článků."""
+    """Search and read Kiwix articles."""
 
-    BINDINGS = [Binding("escape", "pop_screen", "Zpět")]
+    BINDINGS = [Binding("escape", "pop_screen", "Back")]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Container(
             Static("[bold]Kiwix — Offline Wikipedia[/bold]", classes="title"),
-            Input(placeholder="Hledej článek...", id="kiwix-search"),
+            Input(placeholder="Search for an article...", id="kiwix-search"),
             VerticalScroll(RichLog(id="kiwix-results", wrap=True, markup=True)),
             id="kiwix-container",
         )
@@ -130,7 +130,7 @@ class KiwixScreen(Screen):
             return
         log = self.query_one("#kiwix-results", RichLog)
         log.clear()
-        log.write(f"Hledám: [bold]{query}[/bold]...")
+        log.write(f"Searching: [bold]{query}[/bold]...")
         self._search(query)
 
     @work(thread=True)
@@ -147,7 +147,7 @@ class KiwixScreen(Screen):
                     data = json.loads(text)
                     results = data if isinstance(data, list) else data.get("results", [])
                     if not results:
-                        log.write("[dim]Žádné výsledky.[/dim]")
+                        log.write("[dim]No results.[/dim]")
                         return
                     for i, r in enumerate(results[:10], 1):
                         title = r.get("title", r.get("name", "?"))
@@ -160,21 +160,21 @@ class KiwixScreen(Screen):
                             log.write(f"   [dim]{base}{path}[/dim]")
                 except json.JSONDecodeError:
                     # HTML response — show as plain text summary
-                    log.write(f"[dim]Kiwix vrátil HTML. Otevři v prohlížeči: {base}[/dim]")
+                    log.write(f"[dim]Kiwix returned HTML. Open in a browser: {base}[/dim]")
         except Exception as e:
-            log.write(f"[red]Chyba: {e}[/red]")
+            log.write(f"[red]Error: {e}[/red]")
 
 
 class BooksScreen(Screen):
-    """Procházení Calibre-Web katalogu."""
+    """Browse the Calibre-Web catalog."""
 
-    BINDINGS = [Binding("escape", "pop_screen", "Zpět")]
+    BINDINGS = [Binding("escape", "pop_screen", "Back")]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Container(
-            Static("[bold]Knihovna — Calibre-Web[/bold]", classes="title"),
-            Input(placeholder="Hledej knihu nebo autora...", id="books-search"),
+            Static("[bold]Library — Calibre-Web[/bold]", classes="title"),
+            Input(placeholder="Search for a book or author...", id="books-search"),
             VerticalScroll(RichLog(id="books-results", wrap=True, markup=True)),
             id="books-container",
         )
@@ -187,22 +187,22 @@ class BooksScreen(Screen):
             return
         log = self.query_one("#books-results", RichLog)
         log.clear()
-        log.write(f"Hledám: [bold]{query}[/bold]...")
+        log.write(f"Searching: [bold]{query}[/bold]...")
         self._search(query)
 
     @work(thread=True)
     def _search(self, query: str) -> None:
         log = self.query_one("#books-results", RichLog)
         books_url = CFG.get("calibreweb_url", "http://127.0.0.1:8083")
-        log.write(f"\n[dim]Calibre-Web katalog: {books_url}[/dim]")
-        log.write("[dim]Pro stahování otevři URL v prohlížeči nebo použij curl.[/dim]")
-        log.write(f"\n  curl -o kniha.epub '{books_url}/download/<id>/epub'")
+        log.write(f"\n[dim]Calibre-Web catalog: {books_url}[/dim]")
+        log.write("[dim]To download, open the URL in a browser or use curl.[/dim]")
+        log.write(f"\n  curl -o book.epub '{books_url}/download/<id>/epub'")
 
 
 class ChatScreen(Screen):
-    """Interaktivní chat s lokálním LLM (Ollama)."""
+    """Interactive chat with the local LLM (Ollama)."""
 
-    BINDINGS = [Binding("escape", "pop_screen", "Zpět")]
+    BINDINGS = [Binding("escape", "pop_screen", "Back")]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -212,14 +212,14 @@ class ChatScreen(Screen):
                 classes="title",
             ),
             VerticalScroll(RichLog(id="chat-log", wrap=True, markup=True)),
-            Input(placeholder="Napiš zprávu... (Esc = zpět)", id="chat-input"),
+            Input(placeholder="Type a message... (Esc = back)", id="chat-input"),
             id="chat-container",
         )
         yield Footer()
 
     def on_mount(self) -> None:
         log = self.query_one("#chat-log", RichLog)
-        log.write("[dim]Ahoj! Jsem lokální AI asistent. Ptej se na cokoliv.[/dim]\n")
+        log.write("[dim]Hi! I'm your local AI assistant. Ask me anything.[/dim]\n")
 
     @on(Input.Submitted, "#chat-input")
     def on_message(self, event: Input.Submitted) -> None:
@@ -228,7 +228,7 @@ class ChatScreen(Screen):
             return
         event.input.value = ""
         log = self.query_one("#chat-log", RichLog)
-        log.write(f"\n[bold green]Ty:[/bold green] {msg}")
+        log.write(f"\n[bold green]You:[/bold green] {msg}")
         log.write(f"[bold blue]AI:[/bold blue] ", end="")
         self._stream_response(msg)
 
@@ -269,18 +269,18 @@ class ChatScreen(Screen):
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            log.write(f"\n[red]Chyba: {e}[/red]")
+            log.write(f"\n[red]Error: {e}[/red]")
 
 
 class ServicesScreen(Screen):
-    """Přehled dostupných homelab služeb."""
+    """Overview of available homelab services."""
 
-    BINDINGS = [Binding("escape", "pop_screen", "Zpět")]
+    BINDINGS = [Binding("escape", "pop_screen", "Back")]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Container(
-            Static("[bold]Homelab služby[/bold]", classes="title"),
+            Static("[bold]Homelab services[/bold]", classes="title"),
             VerticalScroll(RichLog(id="svc-list", wrap=True, markup=True)),
             id="services-container",
         )
@@ -290,7 +290,7 @@ class ServicesScreen(Screen):
         log = self.query_one("#svc-list", RichLog)
         services = CFG.get("services", [])
         if not services:
-            log.write("[dim]Žádné služby nakonfigurované.[/dim]")
+            log.write("[dim]No services configured.[/dim]")
             return
 
         for svc in services:
@@ -307,7 +307,7 @@ class ServicesScreen(Screen):
                 log.write(f"  {'':20s} curl http://127.0.0.1:{port}/")
 
         log.write(
-            "\n[dim]Pro přístup z terminálu: "
+            "\n[dim]For access from the terminal: "
             "curl -s http://127.0.0.1:<port>/ | head[/dim]"
         )
 
@@ -318,7 +318,7 @@ class ServicesScreen(Screen):
 
 
 class IIABTerminal(App):
-    """IIAB Terminal — veřejný SSH hub pro homelab."""
+    """IIAB Terminal — public SSH hub for the homelab."""
 
     CSS = """
     .banner {
@@ -357,7 +357,7 @@ class IIABTerminal(App):
     """
 
     TITLE = f"IIAB Terminal — {CFG.get('hostname', 'homelab')}"
-    BINDINGS = [Binding("q", "quit", "Odejít")]
+    BINDINGS = [Binding("q", "quit", "Quit")]
 
     SCREENS = {
         "main": MainMenu,

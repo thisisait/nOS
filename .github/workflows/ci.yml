@@ -16,7 +16,7 @@ name: CI
 jobs:
 
   # ──────────────────────────────────────────────────────────────────────────
-  # LINT – rychlý statický check (yamllint + ansible-lint), běží na Linux
+  # LINT – fast static check (yamllint + ansible-lint), runs on Linux
   # ──────────────────────────────────────────────────────────────────────────
   lint:
     name: Lint
@@ -40,7 +40,7 @@ jobs:
         run: ansible-lint
 
   # ──────────────────────────────────────────────────────────────────────────
-  # SYNTAX CHECK – Ansible syntax-check bez spouštění (rychlé, na Linux)
+  # SYNTAX CHECK – Ansible syntax-check without execution (fast, on Linux)
   # ──────────────────────────────────────────────────────────────────────────
   syntax:
     name: Syntax Check
@@ -70,13 +70,13 @@ jobs:
         run: ansible-playbook main.yml --syntax-check
 
   # ──────────────────────────────────────────────────────────────────────────
-  # INTEGRATION – plné spuštění na reálném macOS (pomalejší, drahé)
-  # Spouští se pouze na master/claude/** pushích, ne na každém PR commitu
+  # INTEGRATION – full run on real macOS (slower, expensive)
+  # Runs only on master/claude/** pushes, not on every PR commit
   # ──────────────────────────────────────────────────────────────────────────
   integration:
     name: Integration (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # Na feature branchích spouštěj integration jen při push, ne PR draft
+    # On feature branches run integration only on push, not on draft PRs
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'push' ||

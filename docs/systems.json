@@ -1,7 +1,7 @@
 {
   "meta": {
     "version": "1.0.0",
-    "name": "devBoxNOS",
+    "name": "nOS",
     "domain": "dev.local",
     "description": "Agentic Home Lab — all-in-one self-hosted FOSS platform"
   },
@@ -992,7 +992,7 @@
         {"var": "infisical_encryption_key", "label": "Infisical encryption key", "type": "secret", "default_pattern": "changeme_pw_infisical_enc"},
         {"var": "infisical_auth_secret", "label": "Infisical auth secret", "type": "secret", "default_pattern": "changeme_pw_infisical_auth"}
       ],
-      "notes": "First user = admin. Organization: devboxnos. Encryption key is crown jewel — back up offline."
+      "notes": "First user = admin. Organization: nos. Encryption key is crown jewel — back up offline."
     },
     {
       "id": "vaultwarden",

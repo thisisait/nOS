@@ -1,4 +1,4 @@
-# devBoxNOS Security Advisory — Cycle 1 (2026-04-08)
+# nOS Security Advisory — Cycle 1 (2026-04-08)
 
 **Inspektor Klepitko — Security Module**
 **Scan type:** Web advisory check (CVE refresh for 14 components)
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Initial baseline scan + first advisory refresh. **27 remediation items** tracked (13 CRITICAL, 11 HIGH, 3 MEDIUM). This cycle added **7 new findings** including a critical Authentik proxy auth bypass directly affecting devBoxNOS architecture and version corrections for n8n and GitLab.
+Initial baseline scan + first advisory refresh. **27 remediation items** tracked (13 CRITICAL, 11 HIGH, 3 MEDIUM). This cycle added **7 new findings** including a critical Authentik proxy auth bypass directly affecting nOS architecture and version corrections for n8n and GitLab.
 
 **Stav:** Zatim zadna remediace nebyla provedena. Vsechny nalezi jsou v `pending` statu.
 
@@ -17,7 +17,7 @@ Initial baseline scan + first advisory refresh. **27 remediation items** tracked
 ## Nove nalezy tento cyklus
 
 ### [CVE-2026-25748] Authentik — Proxy Auth Bypass via Malformed Cookie (CVSS 8.6)
-- **Dopad na devBoxNOS: KRITICKE** — devBoxNOS pouziva proxy auth (nginx forward_auth) pro 13 sluzeb: Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase
+- **Dopad na nOS: KRITICKE** — nOS pouziva proxy auth (nginx forward_auth) pro 13 sluzeb: Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase
 - Utocnik vytvori malformovany cookie → Authentik ticho zahodi X-Authentik-* headery → zadost projde bez autentizace
 - **Fix:** Soucasti upgradu na `authentik_version: "2025.12.4"` (uz trackovan jako REM-013)
 - **Zdroj:** [TheHackerWire — Authentik Auth Bypass](https://www.thehackerwire.com/authentik-auth-bypass-via-malformed-cookie-cve-2026-25748/)
@@ -67,7 +67,7 @@ Initial baseline scan + first advisory refresh. **27 remediation items** tracked
 | Komponenta | Posledni advisory | Stav |
 |---|---|---|
 | WordPress core | April 2026 | Zadne CVE v core. Plugin CVEs (Perfmatters, Smart Slider 3) — relevantni jen pokud pouzivate tyto pluginy |
-| Nextcloud | CVE-2026-33580 | Talk webhook brute force — low priority pro devBoxNOS (Talk neni primarni) |
+| Nextcloud | CVE-2026-33580 | Talk webhook brute force — low priority pro nOS (Talk neni primarni) |
 | Redis | - | Zadne nove CVE od CVE-2025-49844 (uz v reportu) |
 | Vaultwarden | - | Existujici CVE potvrzeny, zadne nove. Fix 1.35.4 platny |
 | PostgreSQL | - | Existujici CVE potvrzeny, zadne nove. Fix 16.10-alpine platny |

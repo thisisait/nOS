@@ -1,40 +1,40 @@
 ---
 date: YYYY-MM-DD HH:MM
-agent: Inspektor Klepítko
+agent: Inspektor Klepitko
 task_id: TASK-NNN
 status: IN_PROGRESS
 priority: HIGH
 tags: [nginx, php, deploy, …]
 ---
 
-# TASK-NNN: Název úkolu
+# TASK-NNN: Task title
 
-## Cíl
-Stručný popis co je potřeba udělat a proč.
+## Goal
+Short description of what needs to be done and why.
 
-## Sub-agenti
+## Sub-agents
 
-- [ ] **CodeAgent:** popis delegované práce
-- [ ] **InfraAgent:** popis delegované práce
-- [ ] **DeployAgent:** popis delegované práce
+- [ ] **CodeAgent:** description of delegated work
+- [ ] **InfraAgent:** description of delegated work
+- [ ] **DeployAgent:** description of delegated work
 
-## Kroky
+## Steps
 
-1. První krok
-2. Druhý krok
-3. Třetí krok
+1. First step
+2. Second step
+3. Third step
 
-## Výsledek
+## Result
 
-<!-- Vyplnit po dokončení -->
-Co bylo dosaženo / proč selhalo.
+<!-- Fill in after completion -->
+What was achieved / why it failed.
 
-## Poznámky
+## Notes
 
-<!-- Cokoliv důležitého pro budoucí referenci -->
-- Conf soubor záloha: ...
+<!-- Anything important for future reference -->
+- Config file backup: ...
 - Port: ...
 - URL: ...
 
 ---
-*Aktualizováno: YYYY-MM-DD HH:MM – Inspektor Klepítko*
+*Updated: YYYY-MM-DD HH:MM – Inspektor Klepitko*

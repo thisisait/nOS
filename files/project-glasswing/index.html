@@ -681,7 +681,7 @@ function buildPentest() {
           'Exploitability: ' + f.exploitability + '\n' +
           'Confidence: ' + f.confidence + '\n' +
           'Disclosure: ' + (f.disclosure_status || 'N/A') + '\n' +
-          (f.devboxnos_mitigation ? 'Mitigation: ' + f.devboxnos_mitigation + '\n' : '') +
+          (f.nos_mitigation ? 'Mitigation: ' + f.nos_mitigation + '\n' : '') +
           (f.remediation ? 'Remediation: ' + f.remediation : '')
         );
         fd.addEventListener('click', () => { detail.style.display = detail.style.display === 'none' ? 'block' : 'none'; });
@@ -858,7 +858,7 @@ function buildHelp() {
   const frag = document.createDocumentFragment();
   const help = h('div',{class:'help'});
   help.appendChild(h('h3',null,'Project Glasswing \u2014 NOS FOSS Security Research'));
-  help.appendChild(h('p',null,'Glasswing is an autonomous security research pipeline for devBoxNOS \u2014 a self-hosted FOSS platform running 40+ Docker services on Apple Silicon.'));
+  help.appendChild(h('p',null,'Glasswing is an autonomous security research pipeline for nOS \u2014 a self-hosted FOSS platform running 40+ Docker services on Apple Silicon.'));
 
   help.appendChild(h('h3',{style:{marginTop:'16px'}},'How it works'));
   const ol1 = h('ol');

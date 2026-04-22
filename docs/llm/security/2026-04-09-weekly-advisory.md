@@ -1,4 +1,4 @@
-# devBoxNOS Security Advisory — Cycle 2 (2026-04-09)
+# nOS Security Advisory — Cycle 2 (2026-04-09)
 
 **Inspektor Klepitko — Security Module**
 **Scan type:** Web advisory check (CVE refresh for 18 newly scanned components)
@@ -17,14 +17,14 @@ Cycle 2 rozsiril pokryti na 32 z 37 komponent. **10 novych nalezu** (2 CRITICAL,
 ## Nove nalezy tento cyklus
 
 ### [CVE-2026-template-traversal] Gitea — Directory Traversal → RCE (CRITICAL)
-- **Dopad na devBoxNOS:** Gitea pouziva `latest` tag — pokud resolvuje na <= 1.24.6, je zranitelny
+- **Dopad na nOS:** Gitea pouziva `latest` tag — pokud resolvuje na <= 1.24.6, je zranitelny
 - Authenticated utocnik vytvori malicious template repo → symlink na `.ssh/authorized_keys` → injekce SSH klice → RCE na Docker hostu
 - **Verejne dostupny exploit** na GitHubu
 - **Fix:** `gitea_version: "1.25.5"` (latest stable)
 - **Zdroj:** [ClemaX/Gitea-Forgejo-CVE-2026](https://github.com/ClemaX/Gitea-Forgejo-CVE-2026)
 
 ### [CVE-2026-28289] FreeScout — Zero-Click RCE via Email (CRITICAL, CVSS 10/10)
-- **Dopad na devBoxNOS: KRITICKE** — FreeScout zpracovava prichozi emaily, utok nevyzaduje autentizaci ani interakci
+- **Dopad na nOS: KRITICKE** — FreeScout zpracovava prichozi emaily, utok nevyzaduje autentizaci ani interakci
 - Utocnik posle crafted email → bypass .htaccess restrikce pres zero-width space character → upload PHP webshell → RCE
 - CVE-2026-28289 je bypass opravy pro CVE-2026-27636 (fixnuto v 1.8.206)
 - **Aktivne exploitovano** v health, finance, tech sektorech
@@ -40,7 +40,7 @@ Cycle 2 rozsiril pokryti na 32 z 37 komponent. **10 novych nalezu** (2 CRITICAL,
 ### [CVE-2026-32710] MariaDB — Heap Buffer Overflow (HIGH, CVSS 8.6)
 - Buffer overflow v `JSON_SCHEMA_VALID()` funkci → crash nebo code execution
 - Plus CVE-2025-13699 (mariadb-dump RCE, CVSS 7.0)
-- devBoxNOS pouziva `mariadb_version: "lts"` — nutno overit ze resolvuje na >= 11.4.10
+- nOS pouziva `mariadb_version: "lts"` — nutno overit ze resolvuje na >= 11.4.10
 - **Fix:** Pin `mariadb_version: "11.4.10"`
 - **Zdroj:** [SecurityOnline](https://securityonline.info/mariadb-json-schema-validation-buffer-overflow-vulnerability-cve-2026-32710/)
 
@@ -67,13 +67,13 @@ Cycle 2 rozsiril pokryti na 32 z 37 komponent. **10 novych nalezu** (2 CRITICAL,
 
 ### [CVE-2026-1642] Nginx — SSL Upstream Injection (MEDIUM)
 - SSL upstream injection + ngx_mail buffer overread + TLS session reuse bypass
-- Nginx na devBoxNOS je edge proxy — relevantni pro HTTPS terminaci
+- Nginx na nOS je edge proxy — relevantni pro HTTPS terminaci
 - **Fix:** `brew upgrade nginx`
 - **Zdroj:** [Nginx Security Advisories](https://nginx.org/en/security_advisories.html)
 
 ### [CVE-2026-28377] Grafana Tempo — S3 Key Exposure (MEDIUM)
 - S3 SSE-C encryption key exposed v plaintext na /status/config
-- devBoxNOS pouziva lokalni storage (ne S3), takze nizke riziko, ale endpoint by mel byt chraneny
+- nOS pouziva lokalni storage (ne S3), takze nizke riziko, ale endpoint by mel byt chraneny
 - **Fix:** Upgrade Tempo; omezit pristup k /status/* endpointum
 - **Zdroj:** [ThreatINT](https://cve.threatint.eu/CVE/CVE-2026-28377)
 
