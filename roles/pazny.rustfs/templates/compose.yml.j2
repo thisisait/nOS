@@ -19,8 +19,12 @@ services:
     environment:
       RUSTFS_ACCESS_KEY: "{{ rustfs_access_key }}"
       RUSTFS_SECRET_KEY: "{{ rustfs_secret_key }}"
+    # RustFS 1.0.0-alpha.x does NOT implement the MinIO-style
+    # /minio/health/live endpoint (unlike what the earlier README claimed);
+    # the real liveness probe is the native /health route, which returns
+    # {"status":"ok","ready":true} once IAM + storage subsystems load.
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/minio/health/live 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/health 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
