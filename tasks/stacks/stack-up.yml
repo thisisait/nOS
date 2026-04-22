@@ -178,12 +178,12 @@
 # so they are not touched here.
 
 # ── Wave 2.2 per-role post-start tasks (called AFTER compose up) ─────────────
-- { name: "[Stacks] pazny.bookstack post (migration retry)", ansible.builtin.include_role: { name: pazny.bookstack, tasks_from: post.yml, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false) and 'b2b' in _remaining_stacks", tags: ['bookstack'] }
-- { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in _remaining_stacks", tags: ['erpnext'] }
-- { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in _remaining_stacks", tags: ['superset'] }
-- { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in _remaining_stacks", tags: ['paperclip'] }
-- { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in _remaining_stacks", tags: ['freescout'] }
-- { name: "[Stacks] pazny.metabase post", ansible.builtin.include_role: { name: pazny.metabase, tasks_from: post.yml, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false) and 'data' in _remaining_stacks", tags: ['metabase'] }
+- { name: "[Stacks] pazny.bookstack post (migration retry)", ansible.builtin.include_role: { name: pazny.bookstack, tasks_from: post.yml, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['bookstack'] }
+- { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in (_remaining_stacks | default([]))", tags: ['superset'] }
+- { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in (_remaining_stacks | default([]))", tags: ['paperclip'] }
+- { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['freescout'] }
+- { name: "[Stacks] pazny.metabase post", ansible.builtin.include_role: { name: pazny.metabase, tasks_from: post.yml, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false) and 'data' in (_remaining_stacks | default([]))", tags: ['metabase'] }
 
 # IIAB post-start (admin onboarding + password reconverge)
 - { name: "[Stacks] pazny.wordpress post", ansible.builtin.include_role: { name: pazny.wordpress, tasks_from: post.yml, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
