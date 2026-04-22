@@ -4,23 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**devBoxNOS** — Ansible playbook pro automatizované macOS development environment (Apple Silicon M1+). Kompletní self-hosted **Agentic Home Lab** s 40+ Docker službami organizovanými do 45 Ansible rolí, SSO (Authentik), secrets vault (Infisical), webovým desktopem (Puter), AI agentem (OpenClaw + Ollama MLX), observability (LGTM stack), a Tailscale remote access. Všechny služby jsou FOSS, data zůstávají lokálně. Replikovatelné — `blank=true` smaže vše a nainstaluje znovu.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with 40+ Docker services organized into 57 Ansible roles, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), an AI agent (OpenClaw + Ollama MLX), observability (LGTM stack), and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
 
-Fork of geerlingguy/mac-dev-playbook → přejmenované role pod `pazny.*` namespace.
+`nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
 ## Git Workflow
 
-**Vývoj probíhá primárně ve větvi `master`.** Větev `dev` byla zrušena 2026-04-16. Nové krátkodobé větve (feat/*, fix/*) vycházejí z `master` a mergují se zpět přes fast-forward nebo PR. Worktrees zakládej nad `master`. Nikdy neoživuj `dev`.
+**Development happens on `master`.** The `dev` branch was retired 2026-04-16. Short-lived `feat/*` / `fix/*` branches branch off `master` and merge back via fast-forward or PR. Create worktrees on top of `master`. Never resurrect `dev`.
 
 ## Commit Convention
 
-- Formát: **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:` atd.)
-- **Žádný Co-Authored-By, žádný --author flag, žádné jméno autora.** Git autor se vyplní automaticky z git configu.
-- Commit message: stručný, anglicky, imperativ. Tělo volitelné.
+- Format: **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.)
+- **No Co-Authored-By, no `--author` flag, no author-name override.** Git populates the author from `git config` automatically.
+- Commit messages: concise, English, imperative. Body optional.
 
 ## Vision
 
-OS-agnostic "All-in-One PC" pod pracovním názvem **devBoxNOS / Czechbot.eu**. Celá logika a data běží na replikovatelných self-hosted FOSS technologiích. Ansible playbook je single source of truth. OpenClaw (Inspektor Klepítko) je autonomní DevOps agent.
+An OS-agnostic "all-in-one PC" under the brand **This is AIT** (working engine name **nOS**, website [thisisait.eu](https://thisisait.eu)). All logic and data run on replicable self-hosted FOSS technologies. The Ansible playbook is the single source of truth. OpenClaw is the autonomous DevOps agent.
 
 ## Key Commands
 
@@ -28,10 +28,10 @@ OS-agnostic "All-in-One PC" pod pracovním názvem **devBoxNOS / Czechbot.eu**. 
 # Full playbook run (prompts for sudo + password prefix)
 ansible-playbook main.yml -K
 
-# Clean reinstall (wipes data, resets all services, prompts for password prefix)
+# Clean reinstall (wipes data, resets all services, prompts for a new password prefix)
 ansible-playbook main.yml -K -e blank=true
 
-# Run specific component by tag
+# Run a specific component by tag
 ansible-playbook main.yml -K --tags "stacks,nginx"
 ansible-playbook main.yml -K --tags "observability"
 ansible-playbook main.yml -K --tags "ssh,iiab-terminal"
@@ -42,145 +42,150 @@ ansible-playbook main.yml --syntax-check
 
 ## Architecture
 
-### Role-Based Service Delivery (45 roles under `pazny.*`)
+### Role-based service delivery (57 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
 ```
 roles/pazny.<service>/
-  defaults/main.yml      # version, port, data_dir, mem_limit defaults
-  tasks/main.yml         # data dir creation + compose override render
-  tasks/post.yml         # (optional) post-start API calls, DB setup, admin init
+  defaults/main.yml         # version, port, data_dir, mem_limit defaults
+  tasks/main.yml            # data dir + compose-override render
+  tasks/post.yml            # (optional) post-start API calls, DB setup, admin init
   templates/compose.yml.j2  # Docker Compose service fragment (no top-level networks:)
-  handlers/main.yml      # (optional) service-specific restart handler
-  meta/main.yml          # role metadata
+  handlers/main.yml         # (optional) service-specific restart handler
+  meta/main.yml             # role metadata
 ```
 
-**Compose-override merge**: Each role renders its `templates/compose.yml.j2` → `{{ stacks_dir }}/<stack>/overrides/<service>.yml`. Orchestrators (`core-up.yml`, `stack-up.yml`) use `ansible.builtin.find` to discover override files and pass them as `-f` flags to `docker compose up`. Base stack templates declare only `services: {}` + networks — actual service definitions come from role overrides.
+**Compose-override merge:** each role renders `templates/compose.yml.j2` into `{{ stacks_dir }}/<stack>/overrides/<service>.yml`. Orchestrators (`core-up.yml`, `stack-up.yml`) use `ansible.builtin.find` to discover override files and pass them as `-f` flags to `docker compose up`. Base stack templates declare only `services: {}` + networks — the real service definitions come from role overrides.
 
-**Role invocation with tag inheritance**: `include_role` needs both `apply: { tags: [...] }` AND `tags: [...]` on the task itself for `--tags` CLI filtering to work.
+**Role invocation with tag inheritance:** `include_role` needs both `apply: { tags: [...] }` **and** `tags: [...]` on the task itself so CLI `--tags` filtering actually reaches the inner role tasks.
 
-**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, boxapi): Wired via `import_role` in `main.yml` — these install directly on the host, not via Docker compose.
+**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, boxapi, hermes, opencode): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
 
-### Configuration Layering (later overrides earlier)
+### Configuration layering (later overrides earlier)
 
-1. **`default.config.yml`** — all variables with defaults (committed)
-2. **`default.credentials.yml`** — all secrets with `{{ global_password_prefix }}_pw_*` templates (committed)
-3. **`config.yml`** — feature toggles override (gitignored)
-4. **`credentials.yml`** — secrets override (gitignored)
+1. **`default.config.yml`** — every variable with a default (committed)
+2. **`default.credentials.yml`** — every secret as a `{{ global_password_prefix }}_pw_*` template (committed)
+3. **`config.yml`** — your feature-toggle overrides (gitignored)
+4. **`credentials.yml`** — your secret overrides (gitignored)
 
-Passwords follow pattern `{global_password_prefix}_pw_{service}`. Blank run prompts for prefix. Ansible `vars_files` precedence > role `defaults/main.yml`.
+Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank run prompts for the prefix. Ansible `vars_files` precedence outranks role `defaults/main.yml`.
 
-### Playbook Execution Flow (`main.yml`)
+### Playbook execution flow (`main.yml`)
 
-1. **Password prefix prompt** (if `blank=true`)
-2. **Blank reset** — wipes Docker, data, configs. Honors external storage overrides via `tasks/stacks/external-paths.yml` so data on `/Volumes/SSD1TB/` gets wiped, not just empty `~/service` fallbacks.
-3. **Auto-enable dependencies** — PostgreSQL, Redis, MariaDB based on `install_*` flags
-4. **Auto-generate secrets** — Outline, Bluesky, Authentik, Infisical, Vaultwarden, Paperclip, jsOS
-5. **Host roles**: osx-command-line-tools → pazny.mac.homebrew → pazny.dotfiles → pazny.mac.mas → pazny.mac.dock
-6. **Host tasks**: macOS system → SSH/IIAB Terminal → languages/runtimes → nginx → external storage
-7. **`tasks/stacks/core-up.yml`** — infra + observability stacks (always first):
-   - Role renders (12 `include_role` calls: compose override templates)
+1. **Password-prefix prompt** (when `blank=true`)
+2. **Blank reset** — wipes Docker state, data dirs, and configs. Honors external-storage overrides via `tasks/stacks/external-paths.yml`, so data on `/Volumes/SSD1TB/` gets wiped rather than the empty `~/service` fallbacks.
+3. **Auto-enable dependencies** — flips on PostgreSQL, Redis, MariaDB based on which `install_*` flags are set.
+4. **Auto-generate secrets** — Outline, Bluesky, Authentik, Infisical, Vaultwarden, Paperclip, jsOS.
+5. **Host roles:** `osx-command-line-tools` → `pazny.mac.homebrew` → `pazny.dotfiles` → `pazny.mac.mas` → `pazny.mac.dock`.
+6. **Host tasks:** macOS system prefs → SSH / IIAB Terminal → language runtimes → Nginx → external storage.
+7. **`tasks/stacks/core-up.yml`** — `infra` + `observability` stacks (always first):
+   - Role renders (compose-override templates)
    - `docker compose up infra --wait` + `docker compose up observability --wait`
-   - DB setup (MariaDB databases, PostgreSQL databases + pgcrypto)
-   - Post-start roles (7 calls): Authentik blueprints/OIDC, Infisical, Bluesky PDS, Portainer admin+OAuth
-8. **Service configs**: nginx vhosts, data dirs, Alloy scrape targets, observability dashboards
-9. **`tasks/stacks/stack-up.yml`** — remaining 6 stacks (iiab, devops, b2b, voip, engineering, data):
-   - Role renders (26 `include_role` calls)
+   - DB setup (MariaDB databases, PostgreSQL databases + `pgcrypto`)
+   - Post-start roles: Authentik blueprints + OIDC, Infisical init, Bluesky PDS, Portainer admin + OAuth.
+8. **Service configs:** Nginx vhosts, data dirs, Alloy scrape targets, observability dashboards.
+9. **`tasks/stacks/stack-up.yml`** — the remaining stacks (`iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`):
+   - Role renders
    - Loop: `docker compose up <stack> --wait` per stack
-   - Post-start roles (15 calls): admin init, OIDC config, DB migrations, onboarding
-   - Authentik service-side OIDC setup, Bluesky PDS bridge
-10. **Post-provision**: stack health verification → jsOS → service registry
+   - Post-start roles: admin init, OIDC configuration, DB migrations, onboarding
+   - Authentik service-side OIDC setup, Bluesky PDS bridge.
+10. **Post-provision:** stack-health verification → jsOS → service registry.
 
-**Key invariant**: Infra + Observability are **always required, always first**. Post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki, Tempo are online.
+**Key invariant:** infra + observability are **always required, always first**. Post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki, and Tempo are online.
 
-### Docker Stacks (8 compose projects in `~/stacks/`)
+### Docker stacks (8 compose projects in `~/stacks/`)
 
 | Stack | Services (each owned by a `pazny.*` role) |
-|-------|----------|
-| **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server+worker), Infisical |
+|-------|------|
+| **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo |
-| **iiab** | WordPress, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden |
-| **devops** | Gitea, Woodpecker CI, GitLab, Paperclip |
-| **b2b** | ERPNext, FreeScout, Outline |
+| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
+| **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
+| **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **voip** | FreePBX (Asterisk) |
 | **engineering** | QGIS Server |
-| **data** | Metabase, Apache Superset |
+| **data** | Metabase, Apache Superset, InfluxDB |
 
-### Non-Docker Applications
+### Non-Docker applications
 
-- **jsOS** — webový desktop (OS.js v3), Node.js via PM2 (port 8070)
-- **OpenClaw** — AI agent daemon via launchd, Ollama 0.19+ s MLX backendem
-- **IIAB Terminal** — Python Textual TUI, SSH ForceCommand pro `home` user
-- **Glasswing** — Security research dashboard, PHP via Homebrew
+- **jsOS** — web desktop (OS.js v3), Node.js via PM2 (port 8070)
+- **OpenClaw** — AI agent daemon via launchd, Ollama 0.19+ with the MLX backend
+- **Hermes** — cross-channel messaging gateway
+- **OpenCode** — agentic coding helper
+- **IIAB Terminal** — Python Textual TUI, SSH `ForceCommand` for the `home` user
+- **Glasswing** — security-research dashboard, PHP via Homebrew
 - **BoxAPI** — local REST API bridge
 
 ### IAM & SSO (Authentik)
 
-Centrální SSO přes Authentik (auth.dev.local). OIDC auto-setup vytváří providery + aplikace pro každou službu automaticky. Single source of truth: `authentik_oidc_apps` list v `default.config.yml`.
+Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC auto-setup creates providers + applications for every enabled service. Single source of truth: the `authentik_oidc_apps` list in `default.config.yml`.
 
 **Native OIDC (env vars):** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth), Vaultwarden (SSO)
-**Native OIDC (API/CLI):** Gitea (Admin API), Nextcloud (occ), Portainer (PUT /api/settings)
-**Proxy auth (nginx forward_auth — access control only):** Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase
+**Native OIDC (API / CLI):** Gitea (Admin API), Nextcloud (`occ`), Portainer (`PUT /api/settings`)
+**Proxy auth (Nginx forward_auth — access control only):** Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase
 **No SSO:** FreePBX, QGIS
-**AT Protocol identity:** Bluesky PDS (Authentik→PDS bridge auto-provisions @user.bsky.dev.lan accounts)
+**AT Protocol identity:** Bluesky PDS (the Authentik→PDS bridge auto-provisions `@user.bsky.<tld>` accounts)
 
-Proxy auth = gates access (Authentik login required), but service shows its own login form. Native OIDC = true SSO ("Login with Authentik" button). Embedded outpost auto-assigned to proxy providers in `authentik_oidc_setup.yml`. Cookie domain `.dev.local` enables cross-subdomain session sharing. Nginx `proxy_redirect` rewrites outpost Location header to public `auth.dev.local` URL.
+Proxy auth gates access (Authentik login required) but the service still renders its own login. Native OIDC is true SSO (a "Sign in with Authentik" button). The embedded outpost is auto-assigned to proxy providers in `authentik_oidc_setup.yml`. Cookie domain `.dev.local` enables cross-subdomain session sharing. Nginx `proxy_redirect` rewrites the outpost `Location` header to the public `auth.dev.local` URL.
 
-### RBAC (Role-Based Access Control)
+### RBAC (role-based access control)
 
-4 access tiers bound to Authentik groups via expression policies (`authentik_rbac_tiers` + `authentik_app_tiers` in `default.config.yml`):
-- **Tier 1 (admin):** Portainer, Infisical, Grafana — `devboxnos-providers`, `devboxnos-admins`
-- **Tier 2 (manager):** Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout — + `devboxnos-managers`
-- **Tier 3 (user):** Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `devboxnos-users`
-- **Tier 4 (guest):** Kiwix, Jellyfin, WordPress — + `devboxnos-guests`
+Four access tiers bound to Authentik groups via expression policies (`authentik_rbac_tiers` + `authentik_app_tiers` in `default.config.yml`):
+- **Tier 1 (admin):** Portainer, Infisical, Grafana — `nos-providers`, `nos-admins`
+- **Tier 2 (manager):** Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout — + `nos-managers`
+- **Tier 3 (user):** Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `nos-users`
+- **Tier 4 (guest):** Kiwix, Jellyfin, WordPress — + `nos-guests`
 
-### Secrets Management
+Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisioned before 2026-04-22 carry the old `devboxnos-*` prefix — migrate by updating group names in Authentik, or run `blank=true` to regenerate.
 
-- **Infisical CE** (vault.dev.local) — centrální vault pro infra secrets, REST API + CLI
-- **Vaultwarden** (pass.dev.local) — Bitwarden-kompatibilní personal vault pro tenants
+### Secrets management
+
+- **Infisical CE** (`vault.dev.local`) — central vault for infra secrets, REST API + CLI
+- **Vaultwarden** (`pass.dev.local`) — Bitwarden-compatible personal vault for tenants
 
 ### Observability (Apple Silicon optimized)
 
-- **Metrics**: Grafana Alloy (`prometheus.exporter.unix` ARM64-safe) → Prometheus
-- **Logs**: Alloy tails nginx/php/agent logs → Loki
-- **Traces**: OTLP receiver (gRPC :4317, HTTP :4318) → Tempo
+- **Metrics:** Grafana Alloy (`prometheus.exporter.unix`, ARM64-safe) → Prometheus
+- **Logs:** Alloy tails Nginx / PHP / agent logs → Loki
+- **Traces:** OTLP receiver (gRPC `:4317`, HTTP `:4318`) → Tempo
 
-### Nginx Auto-Enable
+### Nginx auto-enable
 
-38 vhost templates in `templates/nginx/sites-available/`. Activate automatically based on `install_*` flags. Override with `nginx_sites_enabled` or extend with `nginx_sites_extra`.
+50 vhost templates in `templates/nginx/sites-available/`. Activated automatically based on `install_*` flags. Override with `nginx_sites_enabled` or extend with `nginx_sites_extra`.
 
-### Adding a New Docker Service
+### Adding a new Docker service
 
-1. Create role `roles/pazny.<service>/` following the compose-override pattern above
-2. Add `include_role` call in the appropriate orchestrator (`core-up.yml` or `stack-up.yml`)
-3. Add `install_<service>` toggle in `default.config.yml`
-4. (Optional) Add OIDC entry in `authentik_oidc_apps` list + env vars in compose template
-5. (Optional) Add nginx vhost template in `templates/nginx/sites-available/`
+1. Create a role `roles/pazny.<service>/` following the compose-override pattern above.
+2. Add an `include_role` call in the right orchestrator (`core-up.yml` or `stack-up.yml`) — remember both `apply: { tags: [...] }` **and** `tags: [...]` so `--tags` filtering works.
+3. Add an `install_<service>` toggle in `default.config.yml`.
+4. (Optional) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template.
+5. (Optional) Add an Nginx vhost template in `templates/nginx/sites-available/`.
 
-### Feature Toggle Pattern
+### Feature-toggle pattern
 
-51 `install_*` / `configure_*` boolean proměnných. `when:` condition + Tags pro CLI filtering.
+~78 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering.
 
 ## Linting Rules
 
-- **yamllint**: max line length 180 (warning)
-- **ansible-lint**: skips `schema[meta]`, `role-name`, `fqcn`, `name[missing]`, `no-changed-when`, `risky-file-permissions`, `yaml`
+- **yamllint:** max line length 180 (warning)
+- **ansible-lint:** skips `schema[meta]`, `role-name`, `fqcn`, `name[missing]`, `no-changed-when`, `risky-file-permissions`, `yaml`
 
 ## Documentation Language
 
-README.md, TLDR.md, inline comments, and task names are in **Czech**.
+`README.md`, `TLDR.md`, inline comments, and task names are in **English**. The Czech-language legacy has been retired as part of the `nOS` rebrand. If you find residual Czech strings, translate them.
 
 ## Apple Silicon Constraints
 
-- Target: ARM64 only (M1+). `homebrew_prefix: /opt/homebrew`
-- Ollama 0.19+: nativní MLX backend (57% faster prefill, 93% faster decode)
-- Docker Desktop for Mac (not Colima/Lima)
+- Target: ARM64 only (M1+). `homebrew_prefix: /opt/homebrew`.
+- Ollama 0.19+: native MLX backend (57% faster prefill, 93% faster decode).
+- Docker Desktop for Mac (not Colima / Lima).
 
 ## Known Tech Debt
 
-- `ansible_env` needs migration to `ansible_facts` before Ansible-core 2.24
-- Mattermost removed (no ARM64 FOSS image), config retained for future
-- ERPNext migration sometimes fails on first blank run (auto-retry implemented in `erpnext_post.yml`)
-- Jellyfin / Open WebUI: known upstream bugs on fresh DB init — first run may restart-loop until data regenerates
-- Bluesky PDS federation not yet functional (identity bridge creates accounts but AT Protocol federation requires public DNS)
+- `ansible_env` needs migration to `ansible_facts` before Ansible-core 2.24.
+- Mattermost removed (no ARM64 FOSS image); config retained for the future.
+- ERPNext migration occasionally fails on the first blank run (auto-retry implemented in `erpnext_post.yml`).
+- Jellyfin / Open WebUI: known upstream bugs on fresh DB init — first run may restart-loop until data regenerates.
+- Bluesky PDS federation not yet functional (the identity bridge creates accounts, but AT Protocol federation requires public DNS).
+- Pre-2026-04-22 installs carry legacy `devboxnos-*` Authentik group names, `com.devboxnos.*` launchd bundle IDs, and the `~/.devboxnos/` state directory. Rebrand complete in-repo; migration on existing hosts needs a blank reset (or manual rename of the Authentik groups + `launchctl bootout` of the old plists).

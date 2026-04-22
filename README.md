@@ -192,7 +192,8 @@ you a real "Sign in with Authentik" button.
 ### RBAC tiers
 
 Four access tiers, bound to Authentik groups via expression policies. Every app's tier is
-declared in `authentik_app_tiers`; users are added to the corresponding `devboxnos-*` group.
+declared in `authentik_app_tiers`; users are added to the corresponding `nos-*` group
+(installs provisioned before 2026-04-22 use the legacy `devboxnos-*` prefix — rename the groups in Authentik or run `blank=true` to regenerate).
 
 | Tier | Role | Scope | Example services |
 |---|---|---|---|
@@ -247,10 +248,10 @@ Per-service override: set `{service}_version` in `config.yml`.
 
 ### Instance identity
 
-Every `nOS` box has a unique identity so a provider (e.g. Czechbot.eu) can manage a fleet:
+Every `nOS` box has a unique identity so a provider (e.g. [thisisait.eu](https://thisisait.eu)) can manage a fleet:
 
 ```yaml
-instance_name: "devboxnos"           # unique slug
+instance_name: "nos"                 # unique slug
 instance_tld: "dev.local"            # every service lives at <service>.<tld>
 instance_role: "standalone"          # standalone | headquarters | factory | office | division
 instance_parent: ""                  # slug of parent box for hierarchy
