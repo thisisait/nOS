@@ -111,7 +111,47 @@
       {{ new_list }}
   when: _pds_bridge_to_create | default([]) | length > 0
 
-# ── 5. Provision PDS accounts ──────────────────────────────────────────────
+# ── 5a. Issue invite codes (invite-only PDS) ────────────────────────────────
+# When bluesky_pds_invite_required is true (the default), `account create` is
+# rejected without --invite-code. Mint one per user right before creation so
+# the bridge works on locked-down PDS deployments without flipping the flag.
+
+- name: "[PDS Bridge] Mint invite code per user"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p infra exec -T bluesky-pds
+    goat pds admin invite create
+    --pds-host http://localhost:3000
+    --admin-password "{{ bluesky_pds_admin_password }}"
+    --uses 1 2>&1 | tr -d '[:space:]'
+  register: _pds_bridge_invites
+  loop: "{{ _pds_bridge_new_users | default([]) }}"
+  loop_control:
+    label: "{{ item.username }}.{{ _pds_hostname }}"
+  when:
+    - _pds_bridge_new_users | default([]) | length > 0
+    - bluesky_pds_invite_required | default(true) | bool
+  changed_when: "'pds-' in (_pds_bridge_invites.stdout | default(''))"
+  # Invite creation is cheap and safe; if it fails for a user, the create
+  # step below will surface the real error in a dedicated fail task.
+  failed_when: false
+
+- name: "[PDS Bridge] Build username -> invite code map"
+  ansible.builtin.set_fact:
+    _pds_bridge_invite_map: >-
+      {{ dict(
+           (_pds_bridge_invites.results | default([])
+             | map(attribute='item')
+             | map(attribute='username')
+           ) | zip(
+           (_pds_bridge_invites.results | default([])
+             | map(attribute='stdout'))
+           )
+         ) }}
+  when:
+    - _pds_bridge_new_users | default([]) | length > 0
+    - bluesky_pds_invite_required | default(true) | bool
+
+# ── 5b. Provision PDS accounts ──────────────────────────────────────────────
 
 - name: "[PDS Bridge] Create PDS account"
   ansible.builtin.shell: >
@@ -121,14 +161,22 @@
     --admin-password "{{ bluesky_pds_admin_password }}"
     --handle "{{ item.username }}.{{ _pds_hostname }}"
     --email "{{ item.email | default(item.username ~ '@' ~ _pds_hostname) }}"
-    --password "{{ global_password_prefix }}_pw_bsky_{{ item.username }}" 2>&1
+    --password "{{ global_password_prefix }}_pw_bsky_{{ item.username }}"
+    {% if bluesky_pds_invite_required | default(true) | bool %}--invite-code "{{ _pds_bridge_invite_map[item.username] | default('') }}"{% endif %} 2>&1
   register: _pds_bridge_created
   loop: "{{ _pds_bridge_new_users | default([]) }}"
   loop_control:
     label: "{{ item.username }}.{{ _pds_hostname }}"
   when: _pds_bridge_new_users | default([]) | length > 0
-  failed_when: false
   changed_when: "'did:' in (_pds_bridge_created.stdout | default(''))"
+  # Real error guard: treat output as failure UNLESS either (a) a DID was
+  # returned (success), or (b) the handle is already taken (idempotent).
+  failed_when:
+    - _pds_bridge_created is defined
+    - _pds_bridge_created.rc is defined
+    - _pds_bridge_created.rc != 0
+    - "'did:' not in (_pds_bridge_created.stdout | default(''))"
+    - "'already' not in (_pds_bridge_created.stdout | default('') | lower)"
 
 # ── 6. Summary ──────────────────────────────────────────────────────────────
 

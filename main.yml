@@ -503,7 +503,12 @@
         infisical_encryption_key: "{{ lookup('pipe', 'openssl rand -hex 16') }}"
         infisical_auth_secret: "{{ lookup('pipe', 'openssl rand -base64 32') }}"
         outline_secret_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        bluesky_pds_rotation_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        # bluesky_pds_rotation_key: DELIBERATELY NOT in the destructive group.
+        # Rotating this key invalidates every DID's signature chain on the PDS,
+        # orphaning every account and breaking AT Protocol federation. Survives
+        # `-e blank=true` so the post-blank PDS keeps its identity. Reset it
+        # explicitly with `-e destroy_bluesky_identity=true` (not wired yet —
+        # add a gate here if/when the federation story goes live).
         firefly_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
         bookstack_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
         # onlyoffice_jwt_secret: host apps (Nextcloud, BookStack...) store the JWT secret
@@ -519,11 +524,12 @@
       ansible.builtin.debug:
         msg: |
           Destructive secrets (infisical_encryption_key, outline_secret_key,
-          bluesky_pds_rotation_key, firefly_app_key, bookstack_app_key,
-          onlyoffice_jwt_secret, influxdb_admin_token) were loaded from
-          ~/.nos/secrets.yml and preserved. To reset, add
-          -e destroy_state=true (wipes Infisical vault, Outline data, Bluesky PLC
-          rotation, Firefly/BookStack encrypted data, ONLYOFFICE/InfluxDB tokens).
+          firefly_app_key, bookstack_app_key, onlyoffice_jwt_secret,
+          influxdb_admin_token) were loaded from ~/.nos/secrets.yml and preserved.
+          To reset, add -e destroy_state=true (wipes Infisical vault, Outline data,
+          Firefly/BookStack encrypted data, ONLYOFFICE/InfluxDB tokens).
+          Bluesky PDS rotation key is PERMANENTLY preserved across blank runs
+          (regenerating it would orphan every DID on the PDS).
       when:
         - not (blank | default(false) | bool)
         - not (destroy_state | default(false) | bool)
