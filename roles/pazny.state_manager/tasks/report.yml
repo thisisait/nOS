@@ -1,0 +1,30 @@
+---
+# Emit a concise summary of what was introspected. Optionally push the
+# state snapshot to BoxAPI so Glasswing's read cache stays fresh.
+
+- name: "[state] Summary"
+  ansible.builtin.debug:
+    msg: |
+      nOS state written to {{ nos_state_file }}
+      Services observed: {{ nos_observed_services | default({}) | length }}
+      {% set installed = nos_observed_services | default({}) | dict2items | selectattr('value.installed', 'defined') | selectattr('value.installed', 'truthy') | list %}
+      Services with installed version: {{ installed | length }}
+      {% for item in installed | sort(attribute='key') %}
+        - {{ item.key }}: {{ item.value.installed }}{% if item.value.desired and item.value.desired != item.value.installed %} (desired: {{ item.value.desired }}){% endif %}{% if item.value.healthy is sameas false %} [unhealthy]{% endif %}
+
+      {% endfor %}
+
+- name: "[state] Push state to BoxAPI"
+  ansible.builtin.uri:
+    url: "{{ nos_state_boxapi_url }}"
+    method: POST
+    body_format: json
+    body: "{{ nos_state_snapshot | default({}) }}"
+    status_code: [200, 201, 202, 204]
+    timeout: 5
+  when:
+    - nos_state_push_boxapi | bool
+    - nos_state_snapshot is defined
+  failed_when: false      # best-effort — never fail the playbook on a cache miss
+  changed_when: false
+  tags: ['state', 'report']

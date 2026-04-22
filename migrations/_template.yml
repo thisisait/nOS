@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# nOS migration record — annotated template
+#
+# File naming convention: migrations/YYYY-MM-DD-<slug>.yml
+# The id MUST match the filename (without the .yml extension).
+#
+# Full schema: state/schema/migration.schema.json
+# Engine:      library/nos_migrate.py (agent 2)
+# Authoring guide: migrations/README.md
+# ==============================================================================
+
+id: "YYYY-MM-DD-short-slug"         # REQUIRED, matches filename
+title: "Human-readable one-liner"    # REQUIRED
+summary: |                            # REQUIRED
+  1-2 sentence plain-English explanation of what this migration does and
+  WHY it needs to run. Surfaces in the Glasswing Migrations card.
+severity: patch                       # REQUIRED: patch | minor | breaking | security
+authors: ["you@example.com"]
+created_at: "YYYY-MM-DD"              # REQUIRED (ISO date)
+
+tags: [rebrand, rename]
+references:
+  - "https://github.com/thisisait/nOS/pull/XX"
+notes: |
+  Optional free-form multi-line notes. Useful for audit trails ("kept for
+  forks / pre-rebrand installs; no-op on already-migrated hosts").
+
+# Whether exec.shell step actions are permitted. Default false.
+allow_shell: false
+
+downtime:
+  estimated_sec: 30
+  services_affected: [authentik, boxapi]
+
+# GATE — this entire migration is eligible only when applies_if evaluates true.
+# If false, nos_migrate skips the migration and records nothing.
+applies_if:
+  any_of:
+    - fs_path_exists: "~/.devboxnos"
+    - launchagent_matches: "com.devboxnos.*"
+
+# Preconditions — must ALL pass before any step runs. Failure aborts.
+preconditions:
+  - { type: authentik_api_reachable, timeout_sec: 10 }
+  - { type: no_active_coexistence }
+
+# STEPS — ordered. Each has detect, action, verify, rollback.
+# - detect: OPTIONAL. If absent, the step always runs. If present and false,
+#   the step is skipped (idempotency).
+# - action: REQUIRED. Dispatched by nos_migrate on action.type.
+# - verify: OPTIONAL list of predicates that must ALL be true after action.
+# - rollback: OPTIONAL. Inverse action used when a later step fails or the
+#   operator invokes rollback explicitly.
+# - on_failure: abort | continue | rollback (default rollback)
+steps:
+  - id: "step_id_in_snake_case"
+    description: "What this step does, one line."
+    detect:
+      fs_path_exists: "~/.some-old-path"
+    action:
+      type: fs.mv
+      src: "~/.some-old-path"
+      dst: "~/.new-path"
+    verify:
+      - fs_path_exists: "~/.new-path"
+    rollback:
+      type: fs.mv
+      src: "~/.new-path"
+      dst: "~/.some-old-path"
+
+# Post-migration verification — run once after all steps succeed.
+post_verify:
+  - { type: fs_path_exists, path: "~/.new-path" }

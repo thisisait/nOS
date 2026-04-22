@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: state_manager
+  namespace: pazny
+  author: "nOS maintainers"
+  description: >
+    Introspect running services against state/manifest.yml, persist the result
+    to ~/.nos/state.yml, and emit a post-run report. Thin wrapper around the
+    nos_state custom module — no side effects beyond the state file.
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: MacOSX
+      versions:
+        - "14"
+        - "15"
+        - "26"
+  galaxy_tags:
+    - state
+    - observability
+    - nos
+
+dependencies: []

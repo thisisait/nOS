@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/state.schema.json",
+  "title": "nOS Runtime State (~/.nos/state.yml)",
+  "description": "Runtime state persisted by pazny.state_manager. Source of truth for the Glasswing read model. See docs/framework-plan.md §3.2.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "generator", "instance", "services"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Incremented by nos_migrate action type state.bump_schema_version when the state shape changes."
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "generator":    { "type": "string", "description": "e.g. 'pazny.state_manager v1.0'" },
+    "nos_version":  { "type": ["string", "null"], "description": "Playbook version string (git describe or tag)." },
+
+    "instance": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" },
+        "tld":  { "type": "string" },
+        "role": { "type": "string", "enum": ["standalone", "primary", "replica"], "default": "standalone" }
+      }
+    },
+
+    "identifiers": {
+      "type": "object",
+      "description": "Brand-level identifiers. Migration targets read these.",
+      "additionalProperties": true,
+      "properties": {
+        "state_dir":           { "type": "string" },
+        "launchd_prefix":      { "type": "string" },
+        "rbac_group_prefix":   { "type": "string" },
+        "oidc_client_prefix":  { "type": "string" }
+      }
+    },
+
+    "services": {
+      "type": "object",
+      "description": "Map keyed by service id (e.g. 'grafana'). Each entry is the observed state of one service.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "installed":      { "type": ["string", "null"], "description": "Version string as reported by the source (docker image tag, brew formula, etc.)." },
+          "desired":        { "type": ["string", "null"], "description": "Expected version from the manifest / role defaults." },
+          "data_path":      { "type": ["string", "null"] },
+          "healthy":        { "type": ["boolean", "null"] },
+          "last_restarted": { "type": ["string", "null"], "format": "date-time" },
+          "enabled":        { "type": ["boolean", "null"], "description": "Mirrors the install_<service> toggle at last run." },
+          "stack":           { "type": ["string", "null"] },
+          "category":        { "type": ["string", "null"] },
+          "upgrade_available": {
+            "type": ["object", "null"],
+            "additionalProperties": true,
+            "properties": {
+              "version":  { "type": "string" },
+              "severity": { "type": "string", "enum": ["patch", "minor", "breaking", "security"] },
+              "recipe":   { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "migrations_applied": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "at", "success"],
+        "additionalProperties": true,
+        "properties": {
+          "id":                { "type": "string" },
+          "at":                { "type": "string", "format": "date-time" },
+          "success":           { "type": "boolean" },
+          "duration_sec":      { "type": ["integer", "null"] },
+          "steps_applied":     { "type": ["integer", "null"] },
+          "steps_total":       { "type": ["integer", "null"] },
+          "rolled_back_from":  { "type": ["string", "null"] },
+          "event_run_id":      { "type": ["string", "null"] },
+          "error":             { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "upgrades_applied": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["service", "recipe_id", "at", "success"],
+        "additionalProperties": true,
+        "properties": {
+          "service":      { "type": "string" },
+          "recipe_id":    { "type": "string" },
+          "from_version": { "type": ["string", "null"] },
+          "to_version":   { "type": ["string", "null"] },
+          "severity":     { "type": ["string", "null"] },
+          "at":           { "type": "string", "format": "date-time" },
+          "success":      { "type": "boolean" },
+          "duration_sec": { "type": ["integer", "null"] },
+          "rolled_back":  { "type": ["boolean", "null"] },
+          "event_run_id": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "last_run": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "run_id": { "type": "string" },
+        "at":     { "type": "string", "format": "date-time" },
+        "tag":    { "type": ["string", "null"] },
+        "recap": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "ok":      { "type": "integer" },
+            "changed": { "type": "integer" },
+            "failed":  { "type": "integer" },
+            "skipped": { "type": "integer" }
+          }
+        }
+      }
+    },
+
+    "coexistence": {
+      "type": "object",
+      "description": "Map keyed by service id. Present only when a dual-version track is active.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["active_track", "tracks"],
+        "additionalProperties": true,
+        "properties": {
+          "active_track": { "type": "string" },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["tag"],
+              "additionalProperties": true,
+              "properties": {
+                "tag":         { "type": "string" },
+                "version":     { "type": ["string", "null"] },
+                "port":        { "type": ["integer", "null"] },
+                "data_path":   { "type": ["string", "null"] },
+                "started_at":  { "type": ["string", "null"], "format": "date-time" },
+                "cutover_at":  { "type": ["string", "null"], "format": "date-time" },
+                "ttl_until":   { "type": ["string", "null"], "format": "date-time" },
+                "read_only":   { "type": ["boolean", "null"] }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "secrets_hint": {
+      "type": "object",
+      "description": "Non-secret pointers — used by nos_authentik etc. to find bootstrap tokens. Actual secrets live in ~/.nos/secrets.yml (0600, gitignored).",
+      "additionalProperties": true,
+      "properties": {
+        "secrets_path": { "type": "string" }
+      }
+    }
+  }
+}

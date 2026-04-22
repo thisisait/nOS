@@ -1,0 +1,754 @@
+---
+# ==============================================================================
+# nOS State Manifest — source of truth for expected system shape.
+#
+# Consumed by:
+#   - nos_state (introspect)        — reports installed version per service
+#   - nos_migrate                   — detects coexistence support, reads identifiers
+#   - Glasswing Upgrades matrix     — list of services to poll
+#   - BoxAPI /api/state/services    — canonical list
+#
+# When you add a Docker service, append an entry here. Entries are validated
+# against state/schema/manifest.schema.json.
+#
+# `install_flag` maps directly to the `install_<service>` boolean in
+# default.config.yml — introspect skips services whose flag is false.
+# ==============================================================================
+
+schema_version: 1
+
+nos:
+  brand: "nOS"
+  engine_name: "nOS"
+  public_name: "This is AIT"
+  tagline: "the engine behind AIT"
+  state_dir: "~/.nos"
+  launchd_prefix: "eu.thisisait.nos"
+  rbac_group_prefix: "nos-"
+  oidc_client_prefix: "nos-"
+
+services:
+  # -------------------------------------------------------------- infra stack
+  - id: postgresql
+    category: database
+    stack: infra
+    install_flag: install_postgresql
+    version_var: postgresql_version
+    version_source: docker_image
+    image: postgres
+    container_name: nos-postgresql
+    data_path_var: postgresql_data_dir
+    port_var: postgresql_port
+    health_check:
+      type: exec
+      command: "docker exec nos-postgresql pg_isready -U postgres"
+      expect_rc: 0
+      timeout_sec: 10
+    upgrade_recipe: upgrades/postgresql.yml
+    breaking_boundaries: ["15->16", "16->17"]
+    coexistence_supported: true
+
+  - id: mariadb
+    category: database
+    stack: infra
+    install_flag: install_mariadb
+    version_var: mariadb_version
+    version_source: docker_image
+    image: mariadb
+    container_name: nos-mariadb
+    data_path_var: mariadb_data_dir
+    port_var: mariadb_port
+    health_check:
+      type: exec
+      command: "docker exec nos-mariadb healthcheck.sh --connect"
+      expect_rc: 0
+      timeout_sec: 10
+    upgrade_recipe: upgrades/mariadb.yml
+    breaking_boundaries: ["10->11", "11->12"]
+    coexistence_supported: true
+
+  - id: redis
+    category: cache
+    stack: infra
+    install_flag: install_redis
+    version_var: redis_version
+    version_source: docker_image
+    image: redis
+    container_name: nos-redis
+    data_path_var: redis_data_dir
+    port_var: redis_port
+    health_check:
+      type: exec
+      command: "docker exec nos-redis redis-cli ping"
+      expect_rc: 0
+    upgrade_recipe: upgrades/redis.yml
+    breaking_boundaries: ["6->7", "7->8"]
+
+  - id: authentik
+    category: identity
+    stack: infra
+    install_flag: install_authentik
+    version_var: authentik_version
+    version_source: docker_image
+    image: ghcr.io/goauthentik/server
+    container_name: nos-authentik-server
+    domain_var: authentik_domain
+    port_var: authentik_port
+    data_path_var: authentik_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ authentik_port }}/-/health/live/"
+      expect_status: 204
+      timeout_sec: 15
+    upgrade_recipe: upgrades/authentik.yml
+    breaking_boundaries: ["2024->2025", "2025->2026"]
+    coexistence_supported: true
+    oidc: native
+
+  - id: infisical
+    category: vault
+    stack: infra
+    install_flag: install_infisical
+    version_var: infisical_version
+    version_source: docker_image
+    image: infisical/infisical
+    container_name: nos-infisical
+    domain_var: infisical_domain
+    port_var: infisical_port
+    data_path_var: infisical_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ infisical_port }}/api/status"
+      expect_status: 200
+    upgrade_recipe: upgrades/infisical.yml
+
+  - id: portainer
+    category: devops
+    stack: infra
+    install_flag: install_portainer
+    version_var: portainer_version
+    version_source: docker_image
+    image: portainer/portainer-ce
+    container_name: nos-portainer
+    domain_var: portainer_domain
+    port_var: portainer_port
+    data_path_var: portainer_data_dir
+    health_check:
+      type: tcp
+      host: localhost
+      port_var: portainer_port
+    oidc: native
+
+  - id: traefik
+    category: proxy
+    stack: infra
+    install_flag: install_traefik
+    version_var: traefik_image_version
+    version_source: docker_image
+    image: traefik
+    container_name: nos-traefik
+    domain_var: traefik_domain
+    port_var: traefik_dashboard_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ traefik_dashboard_port }}/ping"
+      expect_status: 200
+
+  - id: bluesky_pds
+    category: identity
+    stack: infra
+    install_flag: install_bluesky_pds
+    version_var: bluesky_pds_version
+    version_source: docker_image
+    image: ghcr.io/bluesky-social/pds
+    container_name: nos-bluesky-pds
+    port_var: bluesky_pds_port
+    data_path_var: bluesky_pds_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ bluesky_pds_port }}/xrpc/_health"
+      expect_status: 200
+
+  # ------------------------------------------------------- observability stack
+  - id: grafana
+    category: observability
+    stack: observability
+    install_flag: install_observability
+    version_var: grafana_version
+    version_source: docker_image
+    image: grafana/grafana-oss
+    container_name: nos-grafana
+    domain_var: grafana_domain
+    port_var: grafana_port
+    data_path_var: grafana_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ grafana_port }}/api/health"
+      expect_status: 200
+      timeout_sec: 10
+    upgrade_recipe: upgrades/grafana.yml
+    breaking_boundaries: ["10->11", "11->12"]
+    coexistence_supported: true
+    oidc: native
+
+  - id: prometheus
+    category: observability
+    stack: observability
+    install_flag: install_observability
+    version_var: prometheus_version
+    version_source: docker_image
+    image: prom/prometheus
+    container_name: nos-prometheus
+    port_var: prometheus_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ prometheus_port }}/-/healthy"
+      expect_status: 200
+
+  - id: loki
+    category: observability
+    stack: observability
+    install_flag: install_observability
+    version_var: loki_version
+    version_source: docker_image
+    image: grafana/loki
+    container_name: nos-loki
+    port_var: loki_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ loki_port }}/ready"
+      expect_status: 200
+
+  - id: tempo
+    category: observability
+    stack: observability
+    install_flag: install_observability
+    version_var: tempo_version
+    version_source: docker_image
+    image: grafana/tempo
+    container_name: nos-tempo
+    port_var: tempo_http_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ tempo_http_port }}/ready"
+      expect_status: 200
+
+  # ------------------------------------------------------------- iiab stack
+  - id: wordpress
+    category: cms
+    stack: iiab
+    install_flag: install_wordpress
+    version_var: wordpress_version
+    version_source: docker_image
+    image: wordpress
+    container_name: nos-wordpress
+    domain_var: wordpress_domain
+    port_var: wordpress_port
+    oidc: proxy
+    rbac_tier: 4
+
+  - id: nextcloud
+    category: collaboration
+    stack: iiab
+    install_flag: install_nextcloud
+    version_var: nextcloud_version
+    version_source: docker_image
+    image: nextcloud
+    container_name: nos-nextcloud
+    domain_var: nextcloud_domain
+    port_var: nextcloud_port
+    data_path_var: nextcloud_data_dir
+    oidc: native
+    rbac_tier: 3
+    coexistence_supported: true
+
+  - id: n8n
+    category: automation
+    stack: iiab
+    install_flag: install_n8n
+    version_var: n8n_version
+    version_source: docker_image
+    image: n8nio/n8n
+    container_name: nos-n8n
+    domain_var: n8n_domain
+    port_var: n8n_port
+    data_path_var: n8n_data_dir
+    oidc: native
+    rbac_tier: 2
+
+  - id: nodered
+    category: automation
+    stack: iiab
+    install_flag: install_nodered
+    version_var: nodered_version
+    version_source: docker_image
+    image: nodered/node-red
+    container_name: nos-nodered
+    domain_var: nodered_domain
+    port_var: nodered_port
+    data_path_var: nodered_data_dir
+
+  - id: kiwix
+    category: iiab
+    stack: iiab
+    install_flag: install_kiwix
+    version_var: kiwix_version
+    version_source: docker_image
+    image: ghcr.io/kiwix/kiwix-serve
+    container_name: nos-kiwix
+    domain_var: kiwix_domain
+    port_var: kiwix_port
+    data_path_var: kiwix_data_dir
+    oidc: proxy
+    rbac_tier: 4
+
+  - id: offline_maps
+    category: gis
+    stack: iiab
+    install_flag: install_offline_maps
+    version_var: maps_tileserver_version
+    version_source: docker_image
+    image: maptiler/tileserver-gl
+    container_name: nos-offline-maps
+    domain_var: maps_domain
+    port_var: maps_port
+    data_path_var: maps_data_dir
+
+  - id: jellyfin
+    category: media
+    stack: iiab
+    install_flag: install_jellyfin
+    version_var: jellyfin_version
+    version_source: docker_image
+    image: jellyfin/jellyfin
+    container_name: nos-jellyfin
+    domain_var: jellyfin_domain
+    port_var: jellyfin_port
+    oidc: proxy
+    rbac_tier: 4
+
+  - id: open_webui
+    category: ai
+    stack: iiab
+    install_flag: install_openwebui
+    version_var: openwebui_version
+    version_source: docker_image
+    image: ghcr.io/open-webui/open-webui
+    container_name: nos-openwebui
+    domain_var: openwebui_domain
+    port_var: openwebui_port
+    data_path_var: openwebui_data_dir
+    oidc: native
+    rbac_tier: 3
+
+  - id: uptime_kuma
+    category: observability
+    stack: iiab
+    install_flag: install_uptime_kuma
+    version_var: uptime_kuma_version
+    version_source: docker_image
+    image: louislam/uptime-kuma
+    container_name: nos-uptime-kuma
+    domain_var: uptime_kuma_domain
+    port_var: uptime_kuma_port
+    data_path_var: uptime_kuma_data_dir
+    oidc: proxy
+    rbac_tier: 3
+
+  - id: calibre_web
+    category: media
+    stack: iiab
+    install_flag: install_calibreweb
+    version_var: calibreweb_version
+    version_source: docker_image
+    image: lscr.io/linuxserver/calibre-web
+    container_name: nos-calibre-web
+    domain_var: calibreweb_domain
+    port_var: calibreweb_port
+    oidc: proxy
+    rbac_tier: 3
+
+  - id: homeassistant
+    category: homeautomation
+    stack: iiab
+    install_flag: install_homeassistant
+    version_var: homeassistant_version
+    version_source: docker_image
+    image: ghcr.io/home-assistant/home-assistant
+    container_name: nos-homeassistant
+    domain_var: homeassistant_domain
+    port_var: homeassistant_port
+    oidc: proxy
+    rbac_tier: 3
+
+  - id: rustfs
+    category: storage
+    stack: iiab
+    install_flag: install_rustfs
+    version_var: rustfs_version
+    version_source: docker_image
+    image: rustfs/rustfs
+    container_name: nos-rustfs
+    domain_var: rustfs_domain
+    port_var: rustfs_console_port
+    data_path_var: rustfs_data_dir
+
+  - id: puter
+    category: desktop
+    stack: iiab
+    install_flag: install_puter
+    version_var: puter_version
+    version_source: docker_image
+    image: nos/puter
+    container_name: nos-puter
+    domain_var: puter_domain
+    port_var: puter_port
+    data_path_var: puter_data_dir
+    oidc: proxy
+    rbac_tier: 3
+
+  - id: vaultwarden
+    category: vault
+    stack: iiab
+    install_flag: install_vaultwarden
+    version_var: vaultwarden_version
+    version_source: docker_image
+    image: vaultwarden/server
+    container_name: nos-vaultwarden
+    domain_var: vaultwarden_domain
+    port_var: vaultwarden_port
+    data_path_var: vaultwarden_data_dir
+    oidc: native
+    rbac_tier: 3
+
+  - id: ntfy
+    category: notifications
+    stack: iiab
+    install_flag: install_ntfy
+    version_var: ntfy_version
+    version_source: docker_image
+    image: binwiederhier/ntfy
+    container_name: nos-ntfy
+    domain_var: ntfy_domain
+    port_var: ntfy_port
+    data_path_var: ntfy_data_dir
+
+  - id: miniflux
+    category: rss
+    stack: iiab
+    install_flag: install_miniflux
+    version_var: miniflux_version
+    version_source: docker_image
+    image: miniflux/miniflux
+    container_name: nos-miniflux
+    domain_var: miniflux_domain
+    port_var: miniflux_port
+
+  # ------------------------------------------------------------ devops stack
+  - id: gitea
+    category: devops
+    stack: devops
+    install_flag: install_gitea
+    version_var: gitea_version
+    version_source: docker_image
+    image: gitea/gitea
+    container_name: nos-gitea
+    domain_var: gitea_domain
+    port_var: gitea_port
+    data_path_var: gitea_data_dir
+    oidc: native
+    rbac_tier: 2
+
+  - id: gitlab
+    category: devops
+    stack: devops
+    install_flag: install_gitlab
+    version_var: gitlab_version
+    version_source: docker_image
+    image: gitlab/gitlab-ce
+    container_name: nos-gitlab
+    domain_var: gitlab_domain
+    port_var: gitlab_http_port
+    data_path_var: gitlab_data_dir
+    oidc: native
+    rbac_tier: 2
+
+  - id: woodpecker
+    category: devops
+    stack: devops
+    install_flag: install_woodpecker
+    version_var: woodpecker_version
+    version_source: docker_image
+    image: woodpeckerci/woodpecker-server
+    container_name: nos-woodpecker
+    domain_var: woodpecker_domain
+    port_var: woodpecker_port
+    data_path_var: woodpecker_data_dir
+
+  - id: paperclip
+    category: agent
+    stack: devops
+    install_flag: install_paperclip
+    version_var: paperclip_version
+    version_source: docker_image
+    image: paperclip/paperclip
+    container_name: nos-paperclip
+    domain_var: paperclip_domain
+    port_var: paperclip_port
+    data_path_var: paperclip_data_dir
+    oidc: proxy
+    rbac_tier: 2
+
+  - id: code_server
+    category: devops
+    stack: devops
+    install_flag: install_code_server
+    version_var: code_server_version
+    version_source: docker_image
+    image: lscr.io/linuxserver/code-server
+    container_name: nos-code-server
+    domain_var: code_server_domain
+    port_var: code_server_port
+    data_path_var: code_server_data_dir
+    rbac_tier: 2
+
+  # --------------------------------------------------------------- b2b stack
+  - id: erpnext
+    category: finance
+    stack: b2b
+    install_flag: install_erpnext
+    version_var: erpnext_version
+    version_source: docker_image
+    image: frappe/erpnext
+    container_name: nos-erpnext
+    domain_var: erpnext_domain
+    port_var: erpnext_port
+    oidc: proxy
+    rbac_tier: 2
+
+  - id: freescout
+    category: helpdesk
+    stack: b2b
+    install_flag: install_freescout
+    version_var: freescout_version
+    version_source: docker_image
+    image: tiredofit/freescout
+    container_name: nos-freescout
+    domain_var: freescout_domain
+    port_var: freescout_port
+    data_path_var: freescout_data_dir
+    oidc: proxy
+    rbac_tier: 2
+
+  - id: outline
+    category: wiki
+    stack: b2b
+    install_flag: install_outline
+    version_var: outline_version
+    version_source: docker_image
+    image: outlinewiki/outline
+    container_name: nos-outline
+    domain_var: outline_domain
+    port_var: outline_port
+    data_path_var: outline_data_dir
+    oidc: native
+    rbac_tier: 3
+
+  - id: hedgedoc
+    category: wiki
+    stack: b2b
+    install_flag: install_hedgedoc
+    version_var: hedgedoc_version
+    version_source: docker_image
+    image: quay.io/hedgedoc/hedgedoc
+    container_name: nos-hedgedoc
+    domain_var: hedgedoc_domain
+    port_var: hedgedoc_port
+    data_path_var: hedgedoc_data_dir
+
+  - id: bookstack
+    category: wiki
+    stack: b2b
+    install_flag: install_bookstack
+    version_var: bookstack_version
+    version_source: docker_image
+    image: lscr.io/linuxserver/bookstack
+    container_name: nos-bookstack
+    domain_var: bookstack_domain
+    port_var: bookstack_port
+    data_path_var: bookstack_data_dir
+    oidc: proxy
+
+  - id: firefly
+    category: finance
+    stack: b2b
+    install_flag: install_firefly
+    version_var: firefly_version
+    version_source: docker_image
+    image: fireflyiii/core
+    container_name: nos-firefly
+    domain_var: firefly_domain
+    port_var: firefly_port
+
+  - id: onlyoffice
+    category: collaboration
+    stack: b2b
+    install_flag: install_onlyoffice
+    version_var: onlyoffice_version
+    version_source: docker_image
+    image: onlyoffice/documentserver
+    container_name: nos-onlyoffice
+    domain_var: onlyoffice_domain
+    port_var: onlyoffice_port
+    data_path_var: onlyoffice_data_dir
+
+  # --------------------------------------------------------------- voip stack
+  - id: freepbx
+    category: pbx
+    stack: voip
+    install_flag: install_freepbx
+    version_var: freepbx_version
+    version_source: docker_image
+    image: tiredofit/freepbx
+    container_name: nos-freepbx
+    port_var: freepbx_port
+    data_path_var: freepbx_data_dir
+    oidc: none
+
+  # --------------------------------------------------------- engineering stack
+  - id: qgis_server
+    category: gis
+    stack: engineering
+    install_flag: install_qgis_server
+    version_var: qgis_version
+    version_source: docker_image
+    image: camptocamp/qgis-server
+    container_name: nos-qgis
+    port_var: qgis_port
+    data_path_var: qgis_data_dir
+    oidc: none
+
+  # --------------------------------------------------------------- data stack
+  - id: metabase
+    category: data
+    stack: data
+    install_flag: install_metabase
+    version_var: metabase_version
+    version_source: docker_image
+    image: metabase/metabase
+    container_name: nos-metabase
+    port_var: metabase_port
+    data_path_var: metabase_data_dir
+    oidc: proxy
+    rbac_tier: 2
+
+  - id: superset
+    category: data
+    stack: data
+    install_flag: install_superset
+    version_var: superset_version
+    version_source: docker_image
+    image: apache/superset
+    container_name: nos-superset
+    port_var: superset_port
+    data_path_var: superset_data_dir
+    oidc: proxy
+    rbac_tier: 2
+
+  - id: influxdb
+    category: data
+    stack: data
+    install_flag: install_influxdb
+    version_var: influxdb_version
+    version_source: docker_image
+    image: influxdb
+    container_name: nos-influxdb
+    domain_var: influxdb_domain
+    port_var: influxdb_port
+    data_path_var: influxdb_data_dir
+
+  # ------------------------------------------------------- ai / gateway addons
+  - id: mcp_gateway
+    category: ai
+    stack: iiab
+    install_flag: install_mcp_gateway
+    version_var: mcpo_version
+    version_source: docker_image
+    image: ghcr.io/open-webui/mcpo
+    container_name: nos-mcpo
+    domain_var: mcpo_domain
+    port_var: mcpo_port
+    data_path_var: mcpo_data_dir
+
+  # ----------------------------------------------- non-Docker / host-native
+  - id: jsos
+    category: desktop
+    stack: null
+    install_flag: install_jsos
+    version_source: pm2
+    domain_var: jsos_domain
+    port_var: jsos_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ jsos_port }}/"
+      expect_status: 200
+
+  - id: openclaw
+    category: agent
+    stack: null
+    install_flag: install_openclaw
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.openclaw"
+    domain_var: openclaw_domain
+    port_var: openclaw_gateway_port
+
+  - id: hermes
+    category: messaging
+    stack: null
+    install_flag: install_hermes
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.hermes"
+    domain_var: hermes_domain
+    port_var: hermes_web_port
+
+  - id: opencode
+    category: ai
+    stack: null
+    install_flag: install_opencode
+    version_source: homebrew
+    brew_formula: opencode
+
+  - id: glasswing
+    category: security
+    stack: null
+    install_flag: install_glasswing
+    version_source: git_tag
+    domain_var: glasswing_domain
+    data_path_var: glasswing_data_dir
+
+  - id: boxapi
+    category: api
+    stack: null
+    install_flag: install_boxapi
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.boxapi"
+    domain_var: boxapi_domain
+    port_var: boxapi_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ boxapi_port }}/api/health"
+      expect_status: 200
+
+  - id: iiab_terminal
+    category: iiab
+    stack: null
+    install_flag: install_iiab_terminal
+    version_source: none
+
+  # --------------------------------------------------------- host-only addons
+  - id: tailscale
+    category: vpn
+    stack: null
+    install_flag: install_tailscale
+    version_source: homebrew
+    brew_formula: tailscale

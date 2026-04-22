@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/event.schema.json",
+  "title": "nOS Ansible Event",
+  "description": "Structured event emitted by the glasswing_telemetry callback plugin. One event per lifecycle signal during an Ansible playbook run. Consumed by BoxAPI /api/v1/events (HMAC-authenticated) and mirrored into the Glasswing events table.",
+  "type": "object",
+  "required": ["ts", "type", "run_id"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp with Z suffix."
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^run_[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+      "description": "Stable per-playbook-invocation identifier. Prefix 'run_' + uuid4."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "playbook_start", "playbook_end",
+        "play_start", "play_end",
+        "task_start", "task_ok", "task_changed", "task_failed", "task_skipped", "task_unreachable",
+        "handler_start", "handler_ok",
+        "migration_start", "migration_step_ok", "migration_step_failed", "migration_end",
+        "upgrade_start", "upgrade_step_ok", "upgrade_end",
+        "coexistence_provision", "coexistence_cutover", "coexistence_cleanup"
+      ]
+    },
+    "playbook":    { "type": ["string", "null"] },
+    "play":        { "type": ["string", "null"] },
+    "task":        { "type": ["string", "null"] },
+    "role":        { "type": ["string", "null"] },
+    "host":        { "type": ["string", "null"] },
+    "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+    "changed":     { "type": ["boolean", "null"] },
+    "result":      { "type": ["object", "null"] },
+    "migration_id":        { "type": ["string", "null"] },
+    "upgrade_id":          { "type": ["string", "null"] },
+    "coexistence_service": { "type": ["string", "null"] },
+    "recap": {
+      "type": ["object", "null"],
+      "description": "Only present on playbook_end.",
+      "properties": {
+        "ok":          { "type": "integer", "minimum": 0 },
+        "changed":     { "type": "integer", "minimum": 0 },
+        "failed":      { "type": "integer", "minimum": 0 },
+        "skipped":     { "type": "integer", "minimum": 0 },
+        "unreachable": { "type": "integer", "minimum": 0 },
+        "rescued":     { "type": "integer", "minimum": 0 },
+        "ignored":     { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

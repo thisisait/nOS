@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/migration.schema.json",
+  "title": "nOS Migration Record (migrations/<date>-<slug>.yml)",
+  "description": "Declarative migration definition. Executed by nos_migrate (agent 2). See docs/framework-plan.md §3.3. This schema is the contract shared between agent 1 (author / retroactive migration) and agent 2 (engine).",
+  "type": "object",
+  "required": ["id", "title", "summary", "severity", "created_at", "applies_if", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "id":         { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*$", "description": "Must match the filename (without .yml)." },
+    "title":      { "type": "string", "minLength": 3 },
+    "summary":    { "type": "string" },
+    "severity":   { "type": "string", "enum": ["patch", "minor", "breaking", "security"] },
+    "authors":    { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string", "format": "date" },
+    "tags":       { "type": "array", "items": { "type": "string" } },
+    "references": { "type": "array", "items": { "type": "string", "format": "uri" } },
+    "notes":      { "type": ["string", "null"] },
+    "allow_shell": { "type": "boolean", "default": false, "description": "When true, steps may use action type exec.shell." },
+
+    "downtime": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "estimated_sec":     { "type": "integer", "minimum": 0 },
+        "services_affected": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "applies_if":    { "$ref": "#/definitions/predicate" },
+    "preconditions": { "type": "array", "items": { "$ref": "#/definitions/precondition" } },
+    "post_verify":   { "type": "array", "items": { "$ref": "#/definitions/precondition" } },
+
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/step" }
+    }
+  },
+
+  "definitions": {
+    "predicate": {
+      "description": "A detect predicate. Any predicate may also carry a 'negate: true' flag that inverts its result.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "negate":                     { "type": "boolean" },
+        "all_of":                     { "type": "array", "items": { "$ref": "#/definitions/predicate" } },
+        "any_of":                     { "type": "array", "items": { "$ref": "#/definitions/predicate" } },
+        "not":                        { "$ref": "#/definitions/predicate" },
+        "fs_path_exists":             { "type": "string" },
+        "launchagent_matches":        { "type": "string" },
+        "launchagents_matching":      { "type": "string" },
+        "launchagent_count":          { "type": "object", "properties": { "pattern": { "type": "string" }, "count": { "type": "integer" } } },
+        "authentik_group_exists":     { "type": "string" },
+        "authentik_oidc_client_exists": { "type": "string" },
+        "state_schema_version_lt":    { "type": "integer" },
+        "state_schema_version_gte":   { "type": "integer" },
+        "state_key_equals":           { "type": "object", "properties": { "path": { "type": "string" }, "value": {} } },
+        "compose_image_tag_is":       { "type": "object", "properties": { "service": { "type": "string" }, "tag": { "type": "string" } } }
+      }
+    },
+
+    "precondition": {
+      "description": "A precondition or post_verify entry. Same dispatcher as detect predicates, but allowed to include an explicit `type:` key for readability.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type":                     { "type": "string" },
+        "timeout_sec":              { "type": "integer", "minimum": 1 },
+        "path":                     { "type": "string" },
+        "name":                     { "type": "string" },
+        "pattern":                  { "type": "string" },
+        "count":                    { "type": "integer" },
+        "negate":                   { "type": "boolean" },
+        "fs_path_exists":           { "type": "string" },
+        "launchagents_matching":    { "type": "string" },
+        "authentik_group_exists":   { "type": "string" },
+        "authentik_api_reachable":  { "type": "boolean" },
+        "no_active_coexistence":    { "type": "boolean" }
+      }
+    },
+
+    "action": {
+      "description": "A step action. 'type' dispatches to a handler in nos_migrate.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "fs.mv",
+            "fs.cp",
+            "fs.rm",
+            "fs.ensure_dir",
+            "launchd.bootout_and_delete",
+            "launchd.kickstart",
+            "authentik.rename_group_prefix",
+            "authentik.rename_oidc_client_prefix",
+            "authentik.rename_group",
+            "authentik.rename_oidc_client",
+            "authentik.migrate_members",
+            "docker.compose_override_rename",
+            "docker.volume_clone",
+            "state.set",
+            "state.unset",
+            "state.bump_schema_version",
+            "exec.shell",
+            "noop"
+          ]
+        },
+        "src":              { "type": "string" },
+        "dst":              { "type": "string" },
+        "path":             { "type": "string" },
+        "pattern":          { "type": "string" },
+        "directory":        { "type": "string" },
+        "from":             { "type": ["string", "integer"] },
+        "to":               { "type": ["string", "integer"] },
+        "from_prefix":      { "type": "string" },
+        "to_prefix":        { "type": "string" },
+        "preserve_members": { "type": "boolean" },
+        "preserve_policies":{ "type": "boolean" },
+        "service":          { "type": "string" },
+        "tag":              { "type": "string" },
+        "reason":           { "type": "string" },
+        "command":          { "type": "string" },
+        "shell":            { "type": "string" },
+        "key":              { "type": "string" },
+        "value":            {}
+      }
+    },
+
+    "step": {
+      "type": "object",
+      "required": ["id", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "description": { "type": ["string", "null"] },
+        "detect":      { "$ref": "#/definitions/predicate" },
+        "action":      { "$ref": "#/definitions/action" },
+        "verify":      { "type": "array", "items": { "$ref": "#/definitions/predicate" } },
+        "rollback":    { "$ref": "#/definitions/action" },
+        "on_failure":  { "type": "string", "enum": ["abort", "continue", "rollback"], "default": "rollback" }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# pazny.state_manager — introspect, persist, and report the nOS runtime state.
+#
+# All paths default to per-user locations. Override via group_vars or
+# config.yml if you relocate the state directory.
+# ==============================================================================
+
+# Where ~/.nos/state.yml lives. The role creates the parent dir with mode 0700.
+nos_state_dir: "{{ ansible_env.HOME }}/.nos"
+nos_state_file: "{{ nos_state_dir }}/state.yml"
+
+# Absolute paths to framework artifacts.
+nos_state_manifest: "{{ playbook_dir }}/state/manifest.yml"
+nos_state_migrations_dir: "{{ playbook_dir }}/migrations"
+
+# Whether the role emits a compact summary to stdout after introspection.
+# Set false for quieter CI runs.
+nos_state_report_stdout: true
+
+# When set, state-report pushes the live state to BoxAPI so the Glasswing
+# read cache stays fresh. Safe no-op when BoxAPI is not installed.
+nos_state_push_boxapi: "{{ install_boxapi | default(false) }}"
+nos_state_boxapi_url: "http://localhost:{{ boxapi_port | default(8099) }}/api/state"
+
+# Generator tag — bumped when the role's on-disk layout changes. Mirrors
+# the GENERATOR_ID constant in module_utils/nos_state_lib.py.
+nos_state_generator: "pazny.state_manager v1.0"
+
+# Schema version that this role writes. Migrations can bump this via the
+# state.bump_schema_version action.
+nos_state_schema_version: 1

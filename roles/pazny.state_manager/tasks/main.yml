@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# pazny.state_manager — entrypoint.
+#
+# Three phases:
+#   1. introspect   — observe running services, compute desired-vs-installed
+#   2. persist      — write ~/.nos/state.yml atomically
+#   3. report       — optional debug + push to BoxAPI for Glasswing's cache
+#
+# All three phases honor --check (dry-run): nothing is written in check mode.
+# Safe to run on every playbook invocation.
+# ==============================================================================
+
+- name: Ensure state directory exists
+  ansible.builtin.file:
+    path: "{{ nos_state_dir }}"
+    state: directory
+    mode: "0700"
+  tags: ['always', 'state']
+
+- name: Introspect services against the manifest
+  ansible.builtin.import_tasks: introspect.yml
+  tags: ['always', 'state', 'introspect']
+
+- name: Persist runtime state
+  ansible.builtin.import_tasks: persist.yml
+  tags: ['always', 'state', 'persist']
+
+- name: Report state
+  ansible.builtin.import_tasks: report.yml
+  when: nos_state_report_stdout | bool
+  tags: ['always', 'state', 'report']

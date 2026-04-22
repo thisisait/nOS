@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/upgrade.schema.json",
+  "title": "nOS Upgrade Recipe File (upgrades/<service>.yml)",
+  "description": "Declarative upgrade recipes for a single service. One file per service. Multiple recipes may match the installed version; the engine applies them in alphabetic id order. See docs/framework-plan.md §3.4.",
+  "type": "object",
+  "required": ["service", "recipes"],
+  "additionalProperties": false,
+  "properties": {
+    "service": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Service id — matches an entry in state/manifest.yml services[].id."
+    },
+    "docs_url": { "type": "string", "format": "uri" },
+    "maintainers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "notes": { "type": "string" },
+
+    "recipes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/recipe" }
+    }
+  },
+
+  "definitions": {
+    "recipe": {
+      "type": "object",
+      "required": ["id", "from_regex", "to", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "description": "Globally unique recipe id. Convention: '<service>-<from>-to-<to>' e.g. 'grafana-11-to-12'."
+        },
+        "from_regex": {
+          "type": "string",
+          "description": "Python regex matched against the currently installed version string. Recipe applies when the regex matches."
+        },
+        "to": {
+          "type": "string",
+          "description": "Target version (exact tag written into the compose override)."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["patch", "minor", "breaking", "security"]
+        },
+        "changelog_url":  { "type": "string", "format": "uri" },
+        "release_date":   { "type": "string", "format": "date" },
+        "notes":          { "type": "string" },
+
+        "coexistence_supported": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, engine may route through nos_coexistence to run old+new side by side. If false, in-place upgrade only."
+        },
+        "coexistence_port_offset": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Port offset for the new track (e.g. grafana 3000 + 10 -> 3010) when coexistence_supported=true."
+        },
+
+        "requires": {
+          "type": "object",
+          "description": "Preconditions that must hold *before* the engine considers applying this recipe.",
+          "additionalProperties": false,
+          "properties": {
+            "min_disk_free_gb":   { "type": "number", "minimum": 0 },
+            "min_memory_free_gb": { "type": "number", "minimum": 0 },
+            "service_healthy":    { "type": "boolean" },
+            "other_services_healthy": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+
+        "pre":      { "type": "array", "items": { "$ref": "#/definitions/step" } },
+        "apply":    { "type": "array", "items": { "$ref": "#/definitions/step" } },
+        "post":     { "type": "array", "items": { "$ref": "#/definitions/step" } },
+        "rollback": { "type": "array", "items": { "$ref": "#/definitions/step" } }
+      }
+    },
+
+    "step": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "id":   { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "type": {
+          "type": "string",
+          "description": "Action type. Canonical set: backup.volume, backup.restore, http.wait, http.get_all, compose.set_image_tag, compose.restart_service, custom.module, plus any fs.* / exec.shell / noop from the core nos_migrate dispatcher.",
+          "enum": [
+            "backup.volume",
+            "backup.restore",
+            "http.wait",
+            "http.get_all",
+            "compose.set_image_tag",
+            "compose.restart_service",
+            "custom.module",
+            "fs.mv",
+            "fs.cp",
+            "fs.rm",
+            "fs.ensure_dir",
+            "exec.shell",
+            "noop"
+          ]
+        },
+        "description": { "type": "string" },
+        "when":        { "type": "string", "description": "Optional Jinja2 condition evaluated in the Ansible context." },
+        "ignore_errors": { "type": "boolean", "default": false },
+        "timeout_sec": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

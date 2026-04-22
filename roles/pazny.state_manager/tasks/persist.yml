@@ -1,0 +1,29 @@
+---
+# Write the state snapshot back to ~/.nos/state.yml with an updated
+# instance block + last_run recap. Deep-merge semantics mean the previous
+# migrations_applied / upgrades_applied history is preserved.
+
+- name: "[state] Compose identity payload"
+  ansible.builtin.set_fact:
+    _nos_identity_payload:
+      schema_version: "{{ nos_state_schema_version }}"
+      generator: "{{ nos_state_generator }}"
+      instance:
+        name: "{{ instance_name | default('nos') }}"
+        tld: "{{ instance_tld | default('dev.local') }}"
+        role: "{{ instance_role | default('standalone') }}"
+      identifiers:
+        state_dir: "{{ nos_state_dir }}"
+        launchd_prefix: "{{ nos_launchd_prefix | default('eu.thisisait.nos') }}"
+        rbac_group_prefix: "{{ nos_rbac_group_prefix | default('nos-') }}"
+        oidc_client_prefix: "{{ nos_oidc_client_prefix | default('nos-') }}"
+  tags: ['always', 'state']
+
+- name: "[state] Persist identity + introspected services"
+  nos_state:
+    action: write
+    state_path: "{{ nos_state_file }}"
+    merge: true
+    state: "{{ _nos_identity_payload }}"
+  register: _nos_write
+  tags: ['always', 'state']

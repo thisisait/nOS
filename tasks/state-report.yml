@@ -1,0 +1,38 @@
+---
+# ==============================================================================
+# tasks/state-report.yml — post_tasks hook run at the end of every playbook.
+#
+# Responsibilities (per spec §7.4):
+#   1. Run the pazny.state_manager role to refresh ~/.nos/state.yml.
+#   2. Record a last_run recap (run_id, timestamp, Ansible recap stats).
+#   3. Best-effort POST to BoxAPI so Glasswing's read cache stays fresh.
+#   4. Emit a playbook_end event (the callback plugin — agent 3 — handles
+#      the actual wire transmission; this task only sets the breadcrumb).
+#
+# Wire-up into main.yml is performed by the human operator after all
+# framework agents have finished.
+# ==============================================================================
+
+- name: "[state-report] Ensure a run_id exists for this invocation"
+  ansible.builtin.set_fact:
+    nos_run_id: "{{ nos_run_id | default('run_' ~ (ansible_date_time.iso8601_basic_short | default(ansible_date_time.epoch | default('unknown')))) }}"
+  tags: ['always', 'state']
+
+- name: "[state-report] Refresh runtime state via pazny.state_manager"
+  ansible.builtin.include_role:
+    name: pazny.state_manager
+    apply:
+      tags: ['always', 'state']
+  tags: ['always', 'state']
+
+- name: "[state-report] Record last_run recap"
+  nos_state:
+    action: write
+    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    merge: true
+    state:
+      last_run:
+        run_id: "{{ nos_run_id }}"
+        at: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
+        tag: "{{ ansible_run_tags | default(['all']) | join(',') }}"
+  tags: ['always', 'state']

@@ -1,0 +1,147 @@
+---
+# ==============================================================================
+# Retroactive migration: devBoxNOS -> nOS
+#
+# STATUS ON CURRENT MAIN:
+#   The rebrand was applied in-repo prior to this migration being authored
+#   (CLAUDE.md 2026-04-22: "Rebrand complete in-repo; migration on existing
+#   hosts needs a blank reset or manual rename"). On a freshly provisioned
+#   nOS host, ALL detect predicates below evaluate false and every step is
+#   a no-op — which is the desired idempotent behaviour.
+#
+#   This file is retained as the canonical record for:
+#     * audit trail of the 2026-04-22 rebrand
+#     * forks or pre-rebrand clones that still carry com.devboxnos.* /
+#       ~/.devboxnos / devboxnos-* identifiers
+#     * future reference when authoring similar identifier-rename migrations
+# ==============================================================================
+
+id: "2026-04-22-devboxnos-to-nos"
+title: "Rebrand devBoxNOS -> nOS"
+summary: |
+  Rename the user state directory, legacy launchd bundle IDs, Authentik RBAC
+  groups, and OIDC client prefixes from the 2025-era "devBoxNOS" branding to
+  the current "nOS" identity. Runs idempotently — no-op on hosts provisioned
+  after the in-repo rebrand.
+severity: breaking
+authors: ["pazny"]
+created_at: "2026-04-22"
+tags: [rebrand, identity, retroactive]
+references:
+  - "https://github.com/thisisait/nOS"
+notes: |
+  Retained for audit / reference + future forks and pre-rebrand clones.
+  On current nOS installs the `applies_if` gate is false (no ~/.devboxnos,
+  no com.devboxnos.* launch agents, no devboxnos-* Authentik groups), so
+  nos_migrate records nothing and every run is a true no-op.
+
+  If you recover a pre-rebrand host: run `ansible-playbook main.yml --tags
+  migrate` and this migration will execute the four renames below, then
+  persist a migrations_applied entry in ~/.nos/state.yml so it never runs
+  twice on the same host.
+
+# Authentik endpoints already sit under the new brand on fresh hosts, so the
+# authentik_api_reachable precondition is a soft check. If Authentik is not
+# yet online (e.g. during the very first bootstrap before infra comes up),
+# the engine skips this migration until a later run.
+preconditions:
+  - { type: authentik_api_reachable, timeout_sec: 10 }
+  - { type: no_active_coexistence }
+
+# GATE — this is the idempotency hinge. Any ONE of these being true means
+# there is legacy devboxnos state still on the box worth migrating.
+applies_if:
+  any_of:
+    - fs_path_exists: "~/.devboxnos"
+    - launchagent_matches: "com.devboxnos.*"
+    - authentik_group_exists: "devboxnos-admins"
+    - authentik_group_exists: "devboxnos-managers"
+    - authentik_group_exists: "devboxnos-users"
+    - authentik_group_exists: "devboxnos-guests"
+    - authentik_oidc_client_exists: "devboxnos-grafana"
+
+steps:
+  # --------------------------------------------------------------------- 1/4
+  - id: "move_state_dir"
+    description: "Rename the user state directory ~/.devboxnos -> ~/.nos."
+    detect:
+      fs_path_exists: "~/.devboxnos"
+    action:
+      type: fs.mv
+      src: "~/.devboxnos"
+      dst: "~/.nos"
+    verify:
+      - fs_path_exists: "~/.nos"
+    rollback:
+      type: fs.mv
+      src: "~/.nos"
+      dst: "~/.devboxnos"
+
+  # --------------------------------------------------------------------- 2/4
+  - id: "bootout_old_launchagents"
+    description: "Stop and delete legacy com.devboxnos.* launchagents."
+    detect:
+      launchagent_matches: "com.devboxnos.*"
+    action:
+      type: launchd.bootout_and_delete
+      pattern: "com.devboxnos.*.plist"
+      directory: "~/Library/LaunchAgents"
+    verify:
+      - negate: true
+        launchagent_matches: "com.devboxnos.*"
+    # Irreversible by design — new eu.thisisait.nos.* agents are deployed by
+    # the playbook on the next full run. Record the no-op so the rollback
+    # log is explicit.
+    rollback:
+      type: noop
+      reason: "New launchagents under eu.thisisait.nos.* are deployed by the playbook; legacy agents are not re-created."
+
+  # --------------------------------------------------------------------- 3/4
+  - id: "rename_authentik_groups"
+    description: "Rename devboxnos-* RBAC groups to nos-* (preserves members + policy bindings)."
+    detect:
+      any_of:
+        - authentik_group_exists: "devboxnos-admins"
+        - authentik_group_exists: "devboxnos-managers"
+        - authentik_group_exists: "devboxnos-users"
+        - authentik_group_exists: "devboxnos-guests"
+        - authentik_group_exists: "devboxnos-providers"
+    action:
+      type: authentik.rename_group_prefix
+      from_prefix: "devboxnos-"
+      to_prefix: "nos-"
+      preserve_members: true
+      preserve_policies: true
+    verify:
+      - authentik_group_exists: "nos-admins"
+      - negate: true
+        authentik_group_exists: "devboxnos-admins"
+    rollback:
+      type: authentik.rename_group_prefix
+      from_prefix: "nos-"
+      to_prefix: "devboxnos-"
+      preserve_members: true
+      preserve_policies: true
+
+  # --------------------------------------------------------------------- 4/4
+  - id: "rename_oidc_clients"
+    description: "Rename devboxnos-<svc> OIDC client IDs to nos-<svc>."
+    detect:
+      authentik_oidc_client_exists: "devboxnos-grafana"
+    action:
+      type: authentik.rename_oidc_client_prefix
+      from_prefix: "devboxnos-"
+      to_prefix: "nos-"
+    verify:
+      - authentik_oidc_client_exists: "nos-grafana"
+      - negate: true
+        authentik_oidc_client_exists: "devboxnos-grafana"
+    rollback:
+      type: authentik.rename_oidc_client_prefix
+      from_prefix: "nos-"
+      to_prefix: "devboxnos-"
+
+# Post-migration: confirm the new identity is in place.
+post_verify:
+  - { type: fs_path_exists, path: "~/.nos" }
+  - { type: authentik_group_exists, name: "nos-admins" }

@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/manifest.schema.json",
+  "title": "nOS Service Manifest (state/manifest.yml)",
+  "description": "Public, committed declaration of the expected shape of the system. Consumed by nos_state introspect. See docs/framework-plan.md §3.1.",
+  "type": "object",
+  "required": ["schema_version", "nos", "services"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+
+    "nos": {
+      "type": "object",
+      "required": ["brand", "engine_name", "state_dir"],
+      "additionalProperties": true,
+      "properties": {
+        "brand":               { "type": "string" },
+        "engine_name":         { "type": "string" },
+        "public_name":         { "type": "string" },
+        "tagline":             { "type": "string" },
+        "state_dir":           { "type": "string" },
+        "launchd_prefix":      { "type": "string" },
+        "rbac_group_prefix":   { "type": "string" },
+        "oidc_client_prefix":  { "type": "string" }
+      }
+    },
+
+    "services": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/service" }
+    }
+  },
+
+  "definitions": {
+    "service": {
+      "type": "object",
+      "required": ["id", "category", "version_source"],
+      "additionalProperties": false,
+      "properties": {
+        "id":             { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "category": {
+          "type": "string",
+          "enum": ["infra", "database", "cache", "identity", "observability", "storage", "proxy", "web", "collaboration", "media", "devops", "automation", "ai", "messaging", "pbx", "gis", "data", "finance", "cms", "helpdesk", "wiki", "iam", "vault", "notifications", "rss", "iiab", "agent", "desktop", "api", "security", "homeautomation", "vpn"]
+        },
+        "stack":          { "type": ["string", "null"], "description": "Docker compose stack (infra, observability, iiab, devops, b2b, voip, engineering, data) or null for host-native services." },
+        "install_flag":   { "type": "string", "description": "Name of install_<service> boolean in default.config.yml." },
+        "version_var":    { "type": ["string", "null"] },
+        "version_source": {
+          "type": "string",
+          "enum": ["docker_image", "homebrew", "launchd", "git_tag", "pm2", "pip", "npm", "custom", "none"]
+        },
+        "image":          { "type": ["string", "null"], "description": "Docker image name (without tag) — for version_source=docker_image." },
+        "container_name": { "type": ["string", "null"] },
+        "brew_formula":   { "type": ["string", "null"] },
+        "launchd_label":  { "type": ["string", "null"] },
+        "data_path_var":  { "type": ["string", "null"] },
+        "domain_var":     { "type": ["string", "null"] },
+        "port_var":       { "type": ["string", "null"] },
+        "health_check": {
+          "type": ["object", "null"],
+          "required": ["type"],
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["http", "exec", "tcp", "none"]
+            },
+            "url_template":  { "type": ["string", "null"] },
+            "expect_status": { "type": ["integer", "null"] },
+            "command":       { "type": ["string", "null"] },
+            "expect_rc":     { "type": ["integer", "null"] },
+            "host":          { "type": ["string", "null"] },
+            "port":          { "type": ["integer", "null"] },
+            "timeout_sec":   { "type": "integer", "minimum": 1, "default": 10 }
+          }
+        },
+        "upgrade_recipe":      { "type": ["string", "null"], "description": "Relative path to upgrades/<service>.yml." },
+        "breaking_boundaries": {
+          "type": "array",
+          "items": { "type": "string", "description": "e.g. '15->16'" }
+        },
+        "coexistence_supported": { "type": "boolean", "default": false },
+        "rbac_tier":     { "type": ["integer", "null"], "minimum": 1, "maximum": 4 },
+        "oidc":          { "type": ["string", "null"], "enum": ["native", "proxy", "none", null] },
+        "notes":         { "type": ["string", "null"] }
+      }
+    }
+  }
+}

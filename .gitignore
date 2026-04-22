@@ -14,3 +14,5 @@ _credentials.yml
 .ansible-prefix-state
 .nos/
 .claude/
+__pycache__/
+*.pyc

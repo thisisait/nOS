@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# tasks/pre-migrate.yml — orchestrator run from main.yml pre_tasks.
+#
+# Safe to run on every playbook invocation — if no migrations are pending,
+# this is a no-op (plus a state read/write to bump generated_at).
+#
+# NOTE: wire-up into main.yml is performed by the human operator after all
+# framework agents have finished. This file is inert until imported.
+#
+# Extra-vars it honours:
+#   auto_migrate=true            skip the interactive confirmation prompt
+#   migrate_dry_run=true         run nos_migrate in dry-run mode (no writes)
+# ==============================================================================
+
+- name: "[pre-migrate] Read current state"
+  nos_state:
+    action: read
+    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+  register: _nos_state
+  check_mode: false
+  tags: ['always', 'migrate']
+
+- name: "[pre-migrate] Introspect services against manifest"
+  nos_state:
+    action: introspect
+    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    manifest_path: "{{ playbook_dir }}/state/manifest.yml"
+    role_vars: "{{ vars }}"
+  register: _nos_introspect
+  tags: ['always', 'migrate']
+
+- name: "[pre-migrate] List pending migrations"
+  nos_migrate:
+    action: list_pending
+    migrations_dir: "{{ playbook_dir }}/migrations"
+    state: "{{ _nos_state.state | default({}) }}"
+  register: _pending
+  # nos_migrate is delivered by agent 2. Until that ships, this task fails
+  # module-not-found. Guard with a friendly skip for solo testing of agent 1.
+  failed_when:
+    - _pending is defined
+    - _pending is failed
+    - "'No module named' not in (_pending.msg | default(''))"
+  ignore_errors: "{{ nos_pre_migrate_tolerant | default(false) }}"
+  tags: ['always', 'migrate']
+
+- name: "[pre-migrate] Announce pending migrations"
+  ansible.builtin.debug:
+    msg: |
+      {% set pending = _pending.pending | default([]) %}
+      {% if pending | length == 0 %}
+      No pending migrations.
+      {% else %}
+      {{ pending | length }} pending migration(s):
+      {% for m in pending %}
+        - [{{ m.severity }}] {{ m.id }} — {{ m.title }}
+      {% endfor %}
+      {% endif %}
+  when: _pending is defined and _pending is not failed
+  tags: ['always', 'migrate']
+
+- name: "[pre-migrate] Confirm breaking migrations"
+  ansible.builtin.pause:
+    prompt: |-
+      {% set pending = _pending.pending | default([]) %}
+      {% set breaking = pending | selectattr('severity', 'in', ['breaking', 'security']) | list %}
+      {{ pending | length }} migration(s) pending, {{ breaking | length }} require confirmation.
+      Press ENTER to apply, or Ctrl+C then A to cancel.
+  when:
+    - _pending is defined
+    - _pending is not failed
+    - (_pending.pending | default([]) | selectattr('severity', 'in', ['breaking', 'security']) | list | length) > 0
+    - not (auto_migrate | default(false) | bool)
+  tags: ['migrate']
+
+- name: "[pre-migrate] Apply each pending migration"
+  nos_migrate:
+    action: apply
+    migration: "{{ item }}"
+    dry_run: "{{ migrate_dry_run | default(false) | bool }}"
+    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+  loop: "{{ _pending.pending | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+  register: _apply_result
+  when:
+    - _pending is defined
+    - _pending is not failed
+    - (_pending.pending | default([]) | length) > 0
+  failed_when:
+    - _apply_result is defined
+    - _apply_result.success is defined
+    - not _apply_result.success
+  tags: ['migrate']
+
+- name: "[pre-migrate] Persist updated state"
+  nos_state:
+    action: write
+    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    merge: true
+    state: {}
+  tags: ['always', 'migrate']

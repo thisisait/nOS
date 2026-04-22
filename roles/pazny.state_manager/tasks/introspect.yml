@@ -1,0 +1,27 @@
+---
+# Introspect services enumerated by state/manifest.yml and merge observed
+# state into ~/.nos/state.yml. Never fails on missing file — bootstrap is
+# a no-op empty state.
+
+- name: "[state] Load current state"
+  nos_state:
+    action: read
+    state_path: "{{ nos_state_file }}"
+  register: _nos_state_before
+  check_mode: false
+  tags: ['always', 'state']
+
+- name: "[state] Introspect services against manifest"
+  nos_state:
+    action: introspect
+    state_path: "{{ nos_state_file }}"
+    manifest_path: "{{ nos_state_manifest }}"
+    role_vars: "{{ vars }}"
+  register: _nos_introspect
+  tags: ['always', 'state']
+
+- name: "[state] Stash observed service state as a fact"
+  ansible.builtin.set_fact:
+    nos_observed_services: "{{ _nos_introspect.services | default({}) }}"
+    nos_state_snapshot: "{{ _nos_introspect.state | default({}) }}"
+  tags: ['always', 'state']
