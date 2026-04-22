@@ -1,12 +1,12 @@
 ---
 # ==============================================================================
-# EXTERNÍ ÚLOŽIŠTĚ – validace, adresáře, set_fact override, shell env vars
+# EXTERNAL STORAGE - validation, directories, set_fact override, shell env vars
 #
-# Tento task MUSÍ běžet PŘED IIAB, observability a openclaw tasky,
-# protože přes set_fact přepíše data-heavy proměnné na cesty k externímu SSD.
+# This task MUST run BEFORE IIAB, observability and openclaw tasks,
+# because via set_fact it overrides data-heavy variables to external SSD paths.
 # ==============================================================================
 
-# ── Validace mount pointu ────────────────────────────────────────────────────
+# ── Validate mount point ────────────────────────────────────────────────────
 
 - name: "[External SSD] Verify mount point exists"
   ansible.builtin.stat:
@@ -16,24 +16,24 @@
 - name: "[External SSD] Fail if SSD is not mounted"
   ansible.builtin.fail:
     msg: >
-      Externí SSD není připojeno na {{ external_storage_root }}.
-      Připoj disk a spusť playbook znovu, nebo nastav
-      configure_external_storage: false v config.yml.
+      External SSD is not mounted at {{ external_storage_root }}.
+      Attach the disk and run the playbook again, or set
+      configure_external_storage: false in config.yml.
   when:
     - not ansible_check_mode
     - not _ssd_mount.stat.exists or not _ssd_mount.stat.isdir
 
-# ── Override datových cest přes set_fact (single source of truth) ────────────
-# set_fact má vyšší prioritu než vars_files → přepíše default.config.yml hodnoty.
-# Stejný soubor se zahrnuje i z blank-reset.yml, aby blank věděl o externích
-# cestách a nemazal neexistující ~/service adresáře.
+# ── Override data paths via set_fact (single source of truth) ────────────
+# set_fact has higher priority than vars_files -> overrides default.config.yml values.
+# The same file is included from blank-reset.yml so blank knows about external
+# paths and does not delete non-existent ~/service directories.
 
 - name: "[External SSD] Apply data path overrides"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/external-paths.yml"
 
-# ── Vytvoření adresářové struktury na SSD ────────────────────────────────────
-# Loop nad overridnutými proměnnými z external-paths.yml – žádný hard-coded
-# seznam, přidání nové služby = jen set_fact v external-paths.yml.
+# ── Create directory structure on SSD ────────────────────────────────────
+# Loop over overridden variables from external-paths.yml - no hard-coded
+# list, adding a new service = only set_fact in external-paths.yml.
 
 - name: "[External SSD] Create data directories from override vars"
   ansible.builtin.file:
@@ -76,7 +76,7 @@
     - "{{ gitlab_config_dir }}"
     - "{{ woodpecker_data_dir }}"
     - "{{ paperclip_data_dir }}"
-    # B2B (erpnext_data_dir deprecated — named volume, viz P0.1 commit 3b88162)
+    # B2B (erpnext_data_dir deprecated - named volume, see P0.1 commit 3b88162)
     - "{{ freescout_data_dir }}"
     - "{{ outline_data_dir }}"
     # VoIP / Engineering / Data
@@ -101,7 +101,7 @@
     mode: '0755'
   when: external_storage_ollama | default(true) | bool
 
-# ── Cache adresáře ───────────────────────────────────────────────────────────
+# ── Cache directories ───────────────────────────────────────────────────────
 
 - name: "[External SSD] Create cache directories"
   ansible.builtin.file:
@@ -124,22 +124,22 @@
     mode: '0755'
   when: external_storage_docker | default(true) | bool
 
-- name: "[External SSD] Docker Desktop – display manual configuration steps"
+- name: "[External SSD] Docker Desktop - display manual configuration steps"
   ansible.builtin.debug:
     msg: >
       ╔═══════════════════════════════════════════════════════════════════╗
-      ║  DOCKER DESKTOP – MANUÁLNÍ KROK                                ║
+      ║  DOCKER DESKTOP - MANUAL STEP                                  ║
       ║                                                                 ║
-      ║  Docker Desktop → Settings → Resources → Advanced:             ║
+      ║  Docker Desktop -> Settings -> Resources -> Advanced:          ║
       ║  Disk image location: {{ external_storage_root }}/docker       ║
       ║                                                                 ║
-      ║  Poté restartuj Docker Desktop.                                ║
+      ║  Then restart Docker Desktop.                                  ║
       ╚═══════════════════════════════════════════════════════════════════╝
   when: external_storage_docker | default(true) | bool
 
-# ── Docker.app přesun na SSD ───────────────────────────────────────────────
-# Homebrew nainstaluje Docker.app do /Applications. Přesuneme na SSD a
-# vytvoříme symlink zpět, aby macOS i Launchpad stále viděly Docker.app.
+# ── Docker.app move to SSD ───────────────────────────────────────────────
+# Homebrew installs Docker.app into /Applications. We move it to the SSD and
+# create a symlink back so macOS and Launchpad still see Docker.app.
 
 - name: "[External SSD] Check if Docker.app is real app in /Applications"
   ansible.builtin.stat:
@@ -162,7 +162,7 @@
     - not (_docker_app_local.stat.islnk | default(false))
     - not (_docker_app_ssd.stat.exists | default(false))
 
-- name: "[External SSD] Symlink /Applications/Docker.app → SSD"
+- name: "[External SSD] Symlink /Applications/Docker.app -> SSD"
   ansible.builtin.file:
     src: "{{ external_storage_root }}/Docker.app"
     dest: /Applications/Docker.app
@@ -192,7 +192,7 @@
 
 # OLLAMA_MODELS launchd env is now managed by pazny.openclaw role
 
-# ── Souhrn ───────────────────────────────────────────────────────────────────
+# ── Summary ──────────────────────────────────────────────────────────────
 
 - name: "[External SSD] Summary of storage layout"
   ansible.builtin.debug:
@@ -231,5 +231,5 @@
       {% if external_storage_docker_app | default(true) | bool %}
       │  Docker.app:   → {{ external_storage_root }}/Docker.app (auto)
       {% endif %}
-      │  INTERNÍ SSD:  macOS, Homebrew, MariaDB, Redis, zdrojový kód   │
+      │  INTERNAL SSD: macOS, Homebrew, MariaDB, Redis, source code    │
       └─────────────────────────────────────────────────────────────────┘

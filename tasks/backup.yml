@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# BACKUP – automatické šifrované zálohy přes Restic
-# Vytvoří repo, provede dump databází, spustí zálohu, nastaví launchd schedule
+# BACKUP - automated encrypted backups via Restic
+# Creates the repo, dumps databases, runs the backup, sets up the launchd schedule
 # ==============================================================================
 
 - name: "[Backup] Verify restic is installed"
@@ -123,13 +123,13 @@
 
 - name: "[Backup] Deploy launchd plist for daily backup"
   ansible.builtin.template:
-    src: com.devboxnos.backup.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.backup.plist"
+    src: eu.thisisait.nos.backup.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist"
     mode: '0644'
   register: backup_plist
 
 - name: "[Backup] Load launchd backup schedule"
   ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.backup.plist
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist
   when: backup_plist.changed
   failed_when: false

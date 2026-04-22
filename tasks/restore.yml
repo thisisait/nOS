@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# RESTORE – obnova dat z Restic zálohy
-# Obnoví poslední snapshot do dočasného adresáře + importuje DB dumpy
+# RESTORE - restore data from Restic backup
+# Restores the latest snapshot into a temp directory + imports DB dumps
 # ==============================================================================
 
 - name: "[Restore] Verify restic is installed"

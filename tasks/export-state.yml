@@ -1,18 +1,18 @@
 ---
 # ==============================================================================
-# STATE EXPORT – záloha dat a databází pro hardware migraci
+# STATE EXPORT - backup data and databases for hardware migration
 #
-# Spuštění: ansible-playbook main.yml -K --tags export
+# Run: ansible-playbook main.yml -K --tags export
 #
-# Exportuje:
+# Exports:
 #   - PostgreSQL dump (pg_dumpall)
 #   - MariaDB dump (mysqldump --all-databases)
-#   - config.yml, credentials.yml (pokud existují)
+#   - config.yml, credentials.yml (if they exist)
 #   - service-registry.json
-#   - Datové adresáře služeb (gitea, nextcloud, n8n, grafana, agents, observability)
-#   - manifest.json s metadaty exportu
+#   - Service data directories (gitea, nextcloud, n8n, grafana, agents, observability)
+#   - manifest.json with export metadata
 #
-# Výstup: ~/exports/devboxnos-export-YYYY-MM-DD.tar.gz
+# Output: ~/exports/nos-export-YYYY-MM-DD.tar.gz
 # ==============================================================================
 
 - name: "[Export] Create export base directory"
@@ -23,7 +23,7 @@
 
 - name: "[Export] Set timestamped export dir"
   ansible.builtin.set_fact:
-    _export_ts_dir: "{{ export_dir }}/devboxnos-{{ ansible_date_time.date }}"
+    _export_ts_dir: "{{ export_dir }}/nos-{{ ansible_date_time.date }}"
 
 - name: "[Export] Create timestamped export directory"
   ansible.builtin.file:
@@ -154,17 +154,17 @@
 
 - name: "[Export] Create final tarball"
   ansible.builtin.shell: >
-    tar czf "{{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz"
-    -C "{{ export_dir }}" "devboxnos-{{ ansible_date_time.date }}"
+    tar czf "{{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz"
+    -C "{{ export_dir }}" "nos-{{ ansible_date_time.date }}"
   check_mode: false
 
 - name: "[Export] Print export summary"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════════════════
-       EXPORT DOKONČEN
-       Tarball: {{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz
-       Obsah:  {{ _export_files.files | length + 1 }} souborů (+ manifest.json)
+       EXPORT COMPLETE
+       Tarball: {{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz
+       Contents: {{ _export_files.files | length + 1 }} files (+ manifest.json)
        Import: ansible-playbook main.yml -K --tags import \
-               -e "import_tarball={{ export_dir }}/devboxnos-export-{{ ansible_date_time.date }}.tar.gz"
+               -e "import_tarball={{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz"
       ══════════════════════════════════════════════════════════════════════

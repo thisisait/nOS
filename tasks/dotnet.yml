@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# .NET SDK – C#, F# vývoj
+# .NET SDK - C#, F# development
 # ==============================================================================
 
 - name: Install .NET SDK via Homebrew Cask
@@ -11,11 +11,11 @@
 - name: Add .NET to shell profile (.zshrc)
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} DOTNET – ANSIBLE MANAGED"
+    marker: "# {mark} DOTNET - ANSIBLE MANAGED"
     block: |
       export DOTNET_ROOT="{{ homebrew_prefix }}/share/dotnet"
       export PATH="$PATH:{{ homebrew_prefix }}/share/dotnet:$HOME/.dotnet/tools"
-      # Vypnout telemetrii
+      # Disable telemetry
       export DOTNET_CLI_TELEMETRY_OPTOUT=1
     create: true
     mode: '0644'

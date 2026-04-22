@@ -1,23 +1,23 @@
 ---
 # ==============================================================================
-# REMAINING DOCKER STACKS – deploy compose šablon + up ostatních stacků
+# REMAINING DOCKER STACKS - deploy compose templates + up the remaining stacks
 #
-# Tento soubor spouští VŠE kromě core stacků (infra, observability). Core
-# stacks se bringují dopředu v tasks/stacks/core-up.yml – před service-side
-# tasky – aby MariaDB / Postgres / Authentik / Grafana / Prometheus / Loki
-# / Tempo byly online než začnou iiab/devops/b2b/voip/data/engineering
-# role renderovat své konfigy.
+# This file starts EVERYTHING except core stacks (infra, observability). Core
+# stacks are brought up up-front in tasks/stacks/core-up.yml - before service-side
+# tasks - so MariaDB / Postgres / Authentik / Grafana / Prometheus / Loki
+# / Tempo are online before iiab/devops/b2b/voip/data/engineering
+# roles start rendering their configs.
 #
-# Ostatní service tasky (nextcloud, gitea, kiwix...) zde běží POST factum –
-# buď už jen dorenderovaly své configy a notify handlers restartují dopředu
-# běžící kontejnery, nebo zde spustíme jejich stack poprvé.
+# Other service tasks (nextcloud, gitea, kiwix...) run here POST factum -
+# either they have already rendered their configs and notify handlers restart
+# already-running containers, or we start their stack here for the first time.
 # ==============================================================================
 
-# Flush handlers (další tasky mohly upravit nginx/alloy config mezitím).
+# Flush handlers (other tasks may have modified nginx/alloy config meanwhile).
 - name: "[Stacks] Flush handlers before remaining stack deployment"
   ansible.builtin.meta: flush_handlers
 
-# ── Deploy compose šablon pro zbývající stacky ───────────────────────────────
+# ── Deploy compose templates for remaining stacks ───────────────────────────
 
 - name: "[Stacks] Deploy iiab compose"
   ansible.builtin.template:
@@ -61,8 +61,8 @@
   when: install_metabase | default(false) or install_superset | default(false)
 
 # ── Wave 2.2 per-role compose override renders ──────────────────────────────
-# Kazda role renderuje svuj fragment do {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
-# Musi bezet PRED find+merge compose up loop nize.
+# Each role renders its fragment into {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
+# Must run BEFORE the find+merge compose up loop below.
 
 # IIAB roles
 - { name: "[Stacks] pazny.wordpress render", ansible.builtin.include_role: { name: pazny.wordpress, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
@@ -105,7 +105,7 @@
 - { name: "[Stacks] pazny.metabase render", ansible.builtin.include_role: { name: pazny.metabase, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false)", tags: ['metabase'] }
 - { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
 
-# ── Sestavení seznamu REMAINING stacků (bez infra/observability) ─────────────
+# ── Build list of REMAINING stacks (without infra/observability) ────────────
 
 - name: "[Stacks] Build list of remaining (non-core) active stacks"
   ansible.builtin.set_fact:
@@ -125,10 +125,10 @@
       }}
 
 # ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
-# Každá pazny.<svc> role rendereruje svůj fragment do
-# {{ stacks_dir }}/<stack>/overrides/<svc>.yml; tady se sezbírají a injectují
-# jako dodatečné -f flagy. Prázdný adresář = fallback na base compose only
-# (backward compatible s pre-Wave2 stavem).
+# Each pazny.<svc> role renders its fragment into
+# {{ stacks_dir }}/<stack>/overrides/<svc>.yml; they get collected here and injected
+# as additional -f flags. Empty directory = fallback to base compose only
+# (backward compatible with pre-Wave2 state).
 
 - name: "[Stacks] Enumerate compose overrides per remaining stack"
   ansible.builtin.find:
@@ -141,7 +141,7 @@
   loop_control:
     label: "{{ item }}"
 
-- name: "[Stacks] Build stack name → overrides list map"
+- name: "[Stacks] Build stack name -> overrides list map"
   ansible.builtin.set_fact:
     _stack_overrides_map: >-
       {{
@@ -173,11 +173,11 @@
   vars:
     item_result: "{{ _stack_results.results | default([{}]) | last }}"
 
-# ── App-level setup – MUSÍ běžet PO startu stacků ───────────────────────────
-# Pozn: Authentik / Infisical / Bluesky PDS post-start už běží v core-up.yml,
-# takže se zde netouchují.
+# ── App-level setup - MUST run AFTER stacks start ───────────────────────────
+# Note: Authentik / Infisical / Bluesky PDS post-start already run in core-up.yml,
+# so they are not touched here.
 
-# ── Wave 2.2 per-role post-start tasks (volane PO compose up) ────────────────
+# ── Wave 2.2 per-role post-start tasks (called AFTER compose up) ─────────────
 - { name: "[Stacks] pazny.bookstack post (migration retry)", ansible.builtin.include_role: { name: pazny.bookstack, tasks_from: post.yml, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false) and 'b2b' in _remaining_stacks", tags: ['bookstack'] }
 - { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in _remaining_stacks", tags: ['erpnext'] }
 - { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in _remaining_stacks", tags: ['superset'] }
@@ -200,20 +200,20 @@
 - { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
 
-# ── Authentik OIDC: service-side konfigurace (Gitea API, Nextcloud occ) ──────
+# ── Authentik OIDC: service-side configuration (Gitea API, Nextcloud occ) ───
 - name: "[Stacks] Authentik service-side OIDC post-setup"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_service_post.yml"
   when:
     - install_authentik | default(false)
 
-# ── Authentik → Bluesky PDS identity bridge ──────────────────────────────────
-- name: "[Stacks] Authentik→PDS identity bridge: provision Bluesky accounts"
+# ── Authentik -> Bluesky PDS identity bridge ────────────────────────────────
+- name: "[Stacks] Authentik->PDS identity bridge: provision Bluesky accounts"
   ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/bluesky_pds_bridge.yml"
   when:
     - install_bluesky_pds | default(false)
     - install_authentik | default(false)
 
-# ── Výsledky ─────────────────────────────────────────────────────────────────
+# ── Results ──────────────────────────────────────────────────────────────────
 
 - name: "[Stacks] Show stack results"
   ansible.builtin.debug:
@@ -222,7 +222,7 @@
   loop_control:
     label: "{{ item.item }}"
 
-# ── Selhání → warning pro manuální kontrolu ──────────────────────────────────
+# ── Failures -> warning for manual check ────────────────────────────────────
 
 - name: "[Stacks] Build list of failed stacks"
   ansible.builtin.set_fact:
@@ -236,15 +236,15 @@
 - name: "[Stacks] Warning: stacks with non-zero exit (may include init containers or unhealthy checks)"
   ansible.builtin.debug:
     msg: |
-      VAROVANI: Tyto stacky vratily non-zero exit code (casto false positive):
+      WARNING: These stacks returned a non-zero exit code (often false positive):
       {% for stack in _failed_stacks %}
-        - {{ stack }} → {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
+        - {{ stack }} -> {{ docker_bin }} compose -f {{ stacks_dir }}/{{ stack }}/docker-compose.yml -p {{ stack }} logs
       {% endfor %}
-      Pozn: ERPNext configurator (exit 0) a distroless healthchecky jsou ocekavane.
+      Note: ERPNext configurator (exit 0) and distroless healthchecks are expected.
   when: (_failed_stacks | length) > 0
 
-# ── Refine: rozliš "stack má 0 kontejneru" (real failure) vs. "některý container
-# je unhealthy" (false-positive — service běží, jen HC timing / špatně napsaný test)
+# ── Refine: distinguish "stack has 0 containers" (real failure) vs. "some container
+# is unhealthy" (false-positive - service is running, just HC timing / badly written test)
 - name: "[Stacks] Count running containers per failed stack"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
@@ -271,14 +271,14 @@
   ansible.builtin.fail:
     msg: |
       {{ _truly_failed_stacks | length }} stack(s) have ZERO running containers: {{ _truly_failed_stacks | join(', ') }}.
-      This is a hard failure — docker compose up aborted (missing image, bad tag, port collision, missing mount).
-      Diagnose: docker compose -p <stack> up (re-run manuálně pro uvidění reálné chyby)
+      This is a hard failure - docker compose up aborted (missing image, bad tag, port collision, missing mount).
+      Diagnose: docker compose -p <stack> up (re-run manually to see the actual error)
   when:
     - (_truly_failed_stacks | default([]) | length) > 0
     - fail_on_stack_errors | default(true)
   tags: ['always']
 
-# ── Container status všech stacků (core + remaining) ────────────────────────
+# ── Container status of all stacks (core + remaining) ───────────────────────
 
 - name: "[Stacks] Build list of all deployed stacks for status"
   ansible.builtin.set_fact:

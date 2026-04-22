@@ -1,19 +1,19 @@
 ---
 # ==============================================================================
-# OBSERVABILITY – host-side collectors (Alloy, binary exporters, dashboards)
+# OBSERVABILITY - host-side collectors (Alloy, binary exporters, dashboards)
 #
-# Docker stack (Grafana, Prometheus, Loki, Tempo) se deployuje a startuje
-# VŽDY dopředu v tasks/stacks/core-up.yml spolu s infra stackem, takže
-# ostatní role mohou předpokládat, že LGTM je online.
+# Docker stack (Grafana, Prometheus, Loki, Tempo) is deployed and started
+# ALWAYS up-front in tasks/stacks/core-up.yml along with the infra stack, so
+# other roles can assume LGTM is online.
 #
-# Tento soubor řeší pouze HOST-SIDE integraci:
-#   • Grafana Alloy instalace + config (brew service)
-#   • Nginx / php-fpm binary exporters (launchd)
-#   • Grafana community dashboards (download)
-#   • Grafana nginx vhost
+# This file handles only HOST-SIDE integration:
+#   - Grafana Alloy install + config (brew service)
+#   - Nginx / php-fpm binary exporters (launchd)
+#   - Grafana community dashboards (download)
+#   - Grafana nginx vhost
 #
-# Config soubory pro Prometheus/Loki/Tempo/Grafana provisioning jsou
-# renderovány v core-up.yml – před `docker compose up`.
+# Config files for Prometheus/Loki/Tempo/Grafana provisioning are
+# rendered in core-up.yml - before `docker compose up`.
 # ==============================================================================
 
 # ── Host-side: Homebrew packages ─────────────────────────────────────────────
@@ -28,8 +28,8 @@
     name:
       - grafana-alloy
     state: present
-    # node_exporter odstraněn – Alloy's prometheus.exporter.unix ho nahrazuje
-    # (ARM64-safe collectory, bez thermal/powersupply/rapl chyb)
+    # node_exporter removed - Alloy's prometheus.exporter.unix replaces it
+    # (ARM64-safe collectors, without thermal/powersupply/rapl errors)
 
 # ── Host-side: Stop old Homebrew services (migrated to Docker) ───────────────
 
@@ -90,7 +90,7 @@
     - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
     - "'/tmp/php-fpm_exporter_' ~ phpfpm_exporter_version ~ '_darwin.tar.gz' is file"
 
-# ── Host-side: launchd plists pro exportery ──────────────────────────────────
+# ── Host-side: launchd plists for exporters ──────────────────────────────────
 
 - name: Create nginx-prometheus-exporter launchd plist
   ansible.builtin.copy:
@@ -152,7 +152,7 @@
       </plist>
   when: alloy_scrape_phpfpm | default(true)
 
-# ── Host-side: Grafana Alloy konfigurace ─────────────────────────────────────
+# ── Host-side: Grafana Alloy configuration ───────────────────────────────────
 
 - name: Ensure Alloy config directory exists
   ansible.builtin.file:
@@ -195,7 +195,7 @@
   failed_when: false
   when: alloy_scrape_phpfpm | default(true)
 
-- name: Start Redis service (scraped by Alloy) – only if NOT using Docker Redis
+- name: Start Redis service (scraped by Alloy) - only if NOT using Docker Redis
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start redis"
   register: redis_svc
   changed_when: >
@@ -209,10 +209,10 @@
     - alloy_scrape_redis | default(true)
     - not (redis_docker | default(false) | bool)
 
-# ── Dashboardy (stažení + file-based provisioning) ──────────────────────────
-# Grafana Docker kontejner mountuje ~/observability/dashboards jako
+# ── Dashboards (download + file-based provisioning) ─────────────────────────
+# Grafana Docker container mounts ~/observability/dashboards as
 # /var/lib/grafana/dashboards (read-only). File-based provisioning
-# automaticky načte JSON soubory.
+# automatically loads JSON files.
 
 - name: Download community Grafana dashboards
   ansible.builtin.get_url:
@@ -223,7 +223,7 @@
   loop: "{{ grafana_dashboards | default([]) }}"
   failed_when: false
 
-# ── Nginx vhost pro Grafana ──────────────────────────────────────────────────
+# ── Nginx vhost for Grafana ──────────────────────────────────────────────────
 
 - name: Enable Grafana nginx vhost
   ansible.builtin.file:

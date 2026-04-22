@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# BUN – JavaScript runtime, bundler, package manager
+# BUN - JavaScript runtime, bundler, package manager
 # ==============================================================================
 
 - name: Add Bun Homebrew tap
@@ -16,7 +16,7 @@
 - name: Add Bun completions to .zshrc
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} BUN – ANSIBLE MANAGED"
+    marker: "# {mark} BUN - ANSIBLE MANAGED"
     block: |
       # Bun completions
       [ -s "{{ ansible_facts['env']['HOME'] }}/.bun/_bun" ] && source "{{ ansible_facts['env']['HOME'] }}/.bun/_bun"

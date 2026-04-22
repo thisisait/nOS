@@ -1,12 +1,12 @@
 ---
 # ==============================================================================
-# DOCKER PREREQS – spuštění Docker Desktop + Python SDK pro community.docker.*
+# DOCKER PREREQS - start Docker Desktop + Python SDK for community.docker.*
 #
 # Flow:
-#   1. Ověří docker binary → pokud chybí, vytvoří symlinky z Docker.app
-#   2. Spustí Docker Desktop (open -a Docker)
-#   3. Čeká na daemon (docker info) → při selhání pause pro manuální opravu
-#   4. Nainstaluje Python PyMySQL pro community.mysql.* moduly
+#   1. Verify docker binary -> if missing, create symlinks from Docker.app
+#   2. Start Docker Desktop (open -a Docker)
+#   3. Wait for daemon (docker info) -> on failure pause for manual fix
+#   4. Install Python PyMySQL for community.mysql.* modules
 # ==============================================================================
 
 # ── 1. Docker binary ────────────────────────────────────────────────────────
@@ -17,9 +17,9 @@
   register: _docker_bin_stat
   check_mode: false
 
-# Docker Desktop ukládá binárky v Docker.app/Contents/Resources/bin/.
-# Při instalaci přes Homebrew vytváří symlinky do /usr/local/bin/ automaticky,
-# ale po přesunu .app na SSD (external-storage) mohou zůstat mrtvé.
+# Docker Desktop stores binaries in Docker.app/Contents/Resources/bin/.
+# When installed via Homebrew, symlinks are created in /usr/local/bin/ automatically,
+# but after moving .app to SSD (external-storage) they may be left dangling.
 - name: "[Docker] Locate Docker.app binary directory"
   ansible.builtin.stat:
     path: /Applications/Docker.app/Contents/Resources/bin/docker
@@ -50,29 +50,29 @@
   check_mode: false
   when: not (_docker_bin_stat.stat.exists | default(false))
 
-- name: "[Docker] Docker binary not found – waiting for manual fix"
+- name: "[Docker] Docker binary not found - waiting for manual fix"
   ansible.builtin.pause:
     prompt: |-
 
       ══════════════════════════════════════════════════════════════════════
-       Docker binary nenalezen: {{ docker_bin }}
+       Docker binary not found: {{ docker_bin }}
 
-       Docker.app nebyl nalezen v /Applications/Docker.app.
+       Docker.app was not found at /Applications/Docker.app.
 
-       Nainstaluj Docker Desktop:
+       Install Docker Desktop:
          brew install --cask docker
 
-       Nebo oprav symlink (pokud Docker.app je na SSD):
+       Or fix the symlink (if Docker.app is on the SSD):
          ls -la /Applications/Docker.app
 
-       Až bude docker dostupný, stiskni ENTER
+       When docker is available, press ENTER
       ══════════════════════════════════════════════════════════════════════
   when:
     - not (_docker_bin_stat.stat.exists | default(false))
     - not (_docker_bin_recheck.stat.exists | default(false))
     - not ansible_check_mode
 
-# ── 2. Spuštění Docker daemon ───────────────────────────────────────────────
+# ── 2. Start Docker daemon ──────────────────────────────────────────────────
 
 - name: "[Docker] Check if Docker daemon is responding"
   ansible.builtin.command: "{{ docker_bin }} info"
@@ -100,17 +100,17 @@
   failed_when: false
   check_mode: false
 
-- name: "[Docker] Docker daemon not responding – waiting for manual fix"
+- name: "[Docker] Docker daemon not responding - waiting for manual fix"
   ansible.builtin.pause:
     prompt: |-
 
       ══════════════════════════════════════════════════════════════════════
-       Docker daemon neodpovídá ani po 90 s.
+       Docker daemon is not responding even after 90 s.
 
-       Ověř:
+       Verify:
          {{ docker_bin }} info
 
-       Spusť Docker Desktop manuálně a stiskni ENTER
+       Start Docker Desktop manually and press ENTER
       ══════════════════════════════════════════════════════════════════════
   when:
     - docker_info.rc != 0

@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# PHP – instalace, PHP-FPM a konfigurace
+# PHP - installation, PHP-FPM and configuration
 # ==============================================================================
 
 - name: Install PHP via Homebrew
@@ -121,7 +121,7 @@
     mode: '0644'
     marker: "; {mark} ANSIBLE MANAGED BLOCK"
     block: |
-      ; Výkonnostní nastavení pro Mac Studio 36GB
+      ; Performance settings for Mac Studio 36GB
       pm = dynamic
       pm.max_children = 20
       pm.start_servers = 4

@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# DOCKER SHARED NETWORK – cross-stack komunikace
-# Vytvoří externí Docker síť, kterou joinují všechny compose stacky.
+# DOCKER SHARED NETWORK - cross-stack communication
+# Creates an external Docker network that all compose stacks join.
 # ==============================================================================
 
 - name: "[Stacks] Ensure shared Docker network exists"

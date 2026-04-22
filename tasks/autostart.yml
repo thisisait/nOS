@@ -1,17 +1,17 @@
 ---
 # ==============================================================================
-# AUTO-START konfigurace — NOS automaticky naběhne po restartu PC
+# AUTO-START configuration - NOS starts automatically after PC restart
 #
-# Komponenty:
-#   1. Docker Desktop → macOS login items (jinak kontejnery nenaběhnou)
-#   2. Homebrew services → launchctl plists (nginx, php, dnsmasq, alloy, ollama)
-#   3. Docker containers → restart: unless-stopped (řeší compose šablony)
-#   4. OpenClaw daemon → launchd plist (install-daemon flag při onboard)
+# Components:
+#   1. Docker Desktop -> macOS login items (otherwise containers won't start)
+#   2. Homebrew services -> launchctl plists (nginx, php, dnsmasq, alloy, ollama)
+#   3. Docker containers -> restart: unless-stopped (handled by compose templates)
+#   4. OpenClaw daemon -> launchd plist (install-daemon flag during onboard)
 #
-# Volá se z main.yml ve finální fázi po všech službách.
+# Called from main.yml in the final phase after all services.
 # ==============================================================================
 
-# ── 1. Docker Desktop – login item ───────────────────────────────────────────
+# ── 1. Docker Desktop - login item ───────────────────────────────────────────
 
 - name: "[Auto-start] Check if Docker Desktop is in login items"
   ansible.builtin.shell: |
@@ -67,19 +67,19 @@
 - name: "[Auto-start] Warn about containers without restart policy"
   ansible.builtin.debug:
     msg: |
-      WARN: Nasledujici kontejnery NEMAJI restart policy (nenabehou po restartu PC):
+      WARN: The following containers DO NOT have a restart policy (will not start after PC restart):
       {{ _container_restart_check.stdout }}
 
-      Fix: pridej `restart: unless-stopped` do compose sablony daneho servicu.
+      Fix: add `restart: unless-stopped` to the compose template of that service.
   when:
     - _container_restart_check.stdout is defined
     - "'ALL_OK' not in (_container_restart_check.stdout | default(''))"
     - "':' in (_container_restart_check.stdout | default(''))"
 
 # ── 4. Ollama persistent LaunchAgent check ──────────────────────────────────
-# Brew plist NEMA env vars (OLLAMA_MODELS, OLLAMA_KV_CACHE_TYPE, ...). Po reboot
-# by Ollama startovala s default ~/.ollama/models (prazdne). Nas custom
-# com.ollama.agent.plist ma env primo v LaunchAgent dict.
+# Brew plist does NOT have env vars (OLLAMA_MODELS, OLLAMA_KV_CACHE_TYPE, ...). After reboot
+# Ollama would start with default ~/.ollama/models (empty). Our custom
+# com.ollama.agent.plist has env directly in the LaunchAgent dict.
 
 - name: "[Auto-start] Check Ollama persistent LaunchAgent"
   ansible.builtin.stat:
@@ -90,7 +90,7 @@
 - name: "[Auto-start] WARN if Ollama persistent plist missing"
   ansible.builtin.debug:
     msg: |
-      ⚠ Ollama persistent LaunchAgent chybi — po reboot Ollama nebude vidi SSD modely.
+      WARN: Ollama persistent LaunchAgent missing - after reboot Ollama won't see SSD models.
       Fix: ansible-playbook main.yml -K --tags openclaw
   when:
     - install_openclaw | default(false) | bool
@@ -102,15 +102,15 @@
   ansible.builtin.debug:
     msg: |
       ═══════════════════════════════════════════════════════════════════
-       AUTO-START STATUS (po restartu PC)
+       AUTO-START STATUS (after PC restart)
       ═══════════════════════════════════════════════════════════════════
-       Docker Desktop:     {{ 'login item OK' if _docker_login_check.rc == 0 else 'pridano do login items' }}
-       Docker containers:  {{ 'vse restart=unless-stopped' if 'ALL_OK' in (_container_restart_check.stdout | default('')) else 'viz warning vyse' }}
+       Docker Desktop:     {{ 'login item OK' if _docker_login_check.rc == 0 else 'added to login items' }}
+       Docker containers:  {{ 'all restart=unless-stopped' if 'ALL_OK' in (_container_restart_check.stdout | default('')) else 'see warning above' }}
        Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy)
       {% if install_openclaw | default(false) | bool %}
-       Ollama:             {{ 'custom LaunchAgent (env vars pro SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else '⚠ brew plist (env vars se ztrati po reboot)' }}
+       Ollama:             {{ 'custom LaunchAgent (env vars for SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else 'WARN brew plist (env vars lost after reboot)' }}
       {% endif %}
       {% if install_jsos | default(false) | bool %}
-       jsOS (PM2):         {{ 'resurrect list ulozena' if (_pm2_save.rc | default(1)) == 0 else 'PM2 neaktivni' }}
+       jsOS (PM2):         {{ 'resurrect list saved' if (_pm2_save.rc | default(1)) == 0 else 'PM2 inactive' }}
       {% endif %}
       ═══════════════════════════════════════════════════════════════════

@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# SHELL EXTRAS – starship prompt + moderní CLI aliasy
+# SHELL EXTRAS - starship prompt + modern CLI aliases
 # ==============================================================================
 
 - name: Install starship via Homebrew
@@ -8,7 +8,7 @@
     name: starship
     state: present
 
-# ── Starship konfigurace ───────────────────────────────────────────────────────
+# ── Starship configuration ────────────────────────────────────────────────────
 
 - name: Ensure starship config directory exists
   ansible.builtin.file:
@@ -23,7 +23,7 @@
     mode: '0644'
     backup: true
 
-# ── Zsh konfigurace – starship init + aliasy ──────────────────────────────────
+# ── Zsh configuration - starship init + aliases ──────────────────────────────
 
 - name: Ensure ~/.zshrc exists
   ansible.builtin.file:
@@ -45,7 +45,7 @@
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
     marker: "# {mark} ZOXIDE (ansible managed)"
     block: |
-      # Zoxide – smart cd
+      # Zoxide - smart cd
       eval "$(zoxide init zsh)"
     create: true
 
@@ -54,7 +54,7 @@
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
     marker: "# {mark} FZF (ansible managed)"
     block: |
-      # fzf – fuzzy finder
+      # fzf - fuzzy finder
       [ -f {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh
       [ -f {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh
     create: true
@@ -70,7 +70,7 @@
       {% endfor %}
     create: true
 
-# ── Bash konfigurace (fallback) ───────────────────────────────────────────────
+# ── Bash configuration (fallback) ─────────────────────────────────────────────
 
 - name: Add starship init to ~/.bash_profile
   ansible.builtin.blockinfile:

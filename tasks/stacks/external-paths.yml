@@ -1,22 +1,21 @@
 ---
 # ==============================================================================
-# EXTERNAL STORAGE – path overrides (set_fact only)
+# EXTERNAL STORAGE - path overrides (set_fact only)
 #
-# Tento soubor obsahuje POUZE set_fact override proměnných datových cest
-# na externí SSD. Žádná validace mount pointu ani vytváření adresářů.
+# This file contains ONLY set_fact overrides of data-path variables
+# to the external SSD. No mount point validation or directory creation.
 #
-# Používá se ze dvou míst:
-#   1) tasks/blank-reset.yml – PŘED vytvořením _blank_dirs, aby blank
-#      mazal skutečné adresáře na /Volumes/SSD1TB/ a ne neexistující ~/service.
-#   2) tasks/external-storage.yml – standardní provisioning flow (vytváření
-#      adresářů, shell env vars, Docker.app symlink).
+# Used from two places:
+#   1) tasks/blank-reset.yml - BEFORE _blank_dirs is built, so blank
+#      removes the real directories on /Volumes/SSD1TB/ and not non-existent ~/service.
+#   2) tasks/external-storage.yml - standard provisioning flow (directory
+#      creation, shell env vars, Docker.app symlink).
 #
-# Single source of truth pro všechny data-heavy cesty – změna cest se
-# provádí pouze zde. Pokud se přidává nová služba do playbooku s persist
-# daty, ADD her here.
+# Single source of truth for all data-heavy paths - changing paths is done
+# only here. When adding a new service with persistent data, ADD it here.
 # ==============================================================================
 
-# ── Core infra (DB, IAM, vaulty, Traefik, PDS) ──────────────────────────────
+# ── Core infra (DB, IAM, vaults, Traefik, PDS) ──────────────────────────────
 - name: "[External SSD] Override core infra data paths"
   ansible.builtin.set_fact:
     mariadb_data_dir: "{{ external_storage_root }}/mariadb/data"
@@ -63,10 +62,10 @@
     code_server_workspace_dir: "{{ external_storage_root }}/code-server/workspace"
 
 # ── B2B stack (ERP, helpdesk, wiki) ─────────────────────────────────────────
-# POZNAMKA: erpnext_data_dir byl deprecated po P0.1 — ERPNext sites zije v
-# Docker named volume `b2b_erpnext_sites` (VirtioFS I/O error workaround na
-# macOS). Pro externi storage ERPNext presmerujte Docker Desktop disk image
-# na external SSD v Settings → Resources → Disk image location.
+# NOTE: erpnext_data_dir was deprecated after P0.1 - ERPNext sites live in
+# Docker named volume `b2b_erpnext_sites` (VirtioFS I/O error workaround on
+# macOS). For external storage of ERPNext, redirect the Docker Desktop disk image
+# to the external SSD in Settings -> Resources -> Disk image location.
 - name: "[External SSD] Override B2B data paths"
   ansible.builtin.set_fact:
     freescout_data_dir: "{{ external_storage_root }}/freescout/data"
@@ -80,7 +79,7 @@
     onlyoffice_lib_dir: "{{ external_storage_root }}/onlyoffice/lib"
     onlyoffice_db_dir: "{{ external_storage_root }}/onlyoffice/db"
 
-# ── IIAB/Wave A add-ons (ntfy, nodered; miniflux je stateless — vse v Postgres) ──
+# ── IIAB/Wave A add-ons (ntfy, nodered; miniflux is stateless - all in Postgres) ──
 - name: "[External SSD] Override Wave A IIAB add-on paths"
   ansible.builtin.set_fact:
     ntfy_data_dir: "{{ external_storage_root }}/ntfy/data"
@@ -114,9 +113,9 @@
   ansible.builtin.set_fact:
     mcpo_data_dir: "{{ external_storage_root }}/mcpo"
 
-# ── Hermes Agent (workspace na SSD; config zustava v ~/.hermes — hardcoded) ─
-# Hermes hardcode hleda config v ~/.hermes/config.yaml, nejde prepnout.
-# Jen venv + zdroje na SSD pro rychle --blank (nestahovat hermes znovu).
+# ── Hermes Agent (workspace on SSD; config stays in ~/.hermes - hardcoded) ──
+# Hermes hardcodes the config path at ~/.hermes/config.yaml, cannot switch.
+# Only venv + sources on SSD for fast --blank (don't re-download hermes).
 - name: "[External SSD] Override Hermes Agent paths"
   ansible.builtin.set_fact:
     hermes_home: "{{ external_storage_root }}/hermes"

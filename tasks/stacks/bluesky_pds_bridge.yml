@@ -1,11 +1,11 @@
 ---
 # ==============================================================================
-# Authentik → Bluesky PDS Identity Bridge
-# Auto-provisionuje Bluesky účty pro Authentik uživatele
+# Authentik -> Bluesky PDS Identity Bridge
+# Auto-provisions Bluesky accounts for Authentik users
 # Handle format: @username.{{ bluesky_pds_hostname }} (e.g. @admin.bsky.dev.lan)
 # ==============================================================================
 
-# ── 1. Předpoklady: PDS + Authentik token ──────────────────────────────────────
+# ── 1. Prerequisites: PDS + Authentik token ───────────────────────────────────
 
 - name: "[PDS Bridge] Verify PDS is healthy"
   ansible.builtin.uri:
@@ -20,7 +20,7 @@
     {{ docker_bin }} compose -p infra exec -T authentik-server
     ak shell -c
     "from authentik.core.models import Token;
-    t=Token.objects.filter(identifier='devboxnos-api').first();
+    t=Token.objects.filter(identifier='nos-api').first();
     print(t.key if t else '')"
     2>/dev/null | tail -1
   register: _pds_bridge_token_raw
@@ -35,16 +35,16 @@
     _pds_hostname: "{{ bluesky_pds_hostname | default('bsky.dev.lan') }}"
   when: _pds_bridge_health.status | default(0) == 200
 
-- name: "[PDS Bridge] Skip — prerequisites not met"
+- name: "[PDS Bridge] Skip - prerequisites not met"
   ansible.builtin.debug:
     msg: >-
-      PDS bridge preskocen: PDS={{ _pds_bridge_health.status | default('nedostupny') }},
-      token={{ (_pds_bridge_token | default('') | length > 0) | ternary('OK', 'chybi') }}
+      PDS bridge skipped: PDS={{ _pds_bridge_health.status | default('unreachable') }},
+      token={{ (_pds_bridge_token | default('') | length > 0) | ternary('OK', 'missing') }}
   when: >-
     (_pds_bridge_health.status | default(0) != 200) or
     (_pds_bridge_token | default('') | length < 10)
 
-# ── 2. Získat uživatele z Authentik ───────────────────────────────────────────
+# ── 2. Fetch users from Authentik ─────────────────────────────────────────────
 
 - name: "[PDS Bridge] Fetch Authentik users"
   ansible.builtin.uri:
@@ -58,7 +58,7 @@
     - _pds_bridge_token | default('') | length >= 10
   failed_when: false
 
-# ── 3. Získat existující PDS účty ────────────────────────────────────────────
+# ── 3. Fetch existing PDS accounts ──────────────────────────────────────────
 
 - name: "[PDS Bridge] List existing PDS accounts"
   ansible.builtin.shell: >
@@ -73,7 +73,7 @@
     - _pds_bridge_health.status | default(0) == 200
     - _pds_bridge_token | default('') | length >= 10
 
-# ── 4. Filtrovat uživatele k provisioning ────────────────────────────────────
+# ── 4. Filter users to provision ────────────────────────────────────────────
 
 - name: "[PDS Bridge] Filter eligible Authentik users"
   ansible.builtin.set_fact:
@@ -111,7 +111,7 @@
       {{ new_list }}
   when: _pds_bridge_to_create | default([]) | length > 0
 
-# ── 5. Provisionovat PDS účty ──────────────────────────────────────────────
+# ── 5. Provision PDS accounts ──────────────────────────────────────────────
 
 - name: "[PDS Bridge] Create PDS account"
   ansible.builtin.shell: >
@@ -130,12 +130,12 @@
   failed_when: false
   changed_when: "'did:' in (_pds_bridge_created.stdout | default(''))"
 
-# ── 6. Souhrn ───────────────────────────────────────────────────────────────
+# ── 6. Summary ──────────────────────────────────────────────────────────────
 
 - name: "[PDS Bridge] Summary"
   ansible.builtin.debug:
     msg: >-
-      Authentik→PDS: {{ _pds_bridge_new_users | default([]) | length }} users to provision,
+      Authentik->PDS: {{ _pds_bridge_new_users | default([]) | length }} users to provision,
       {{ _pds_bridge_created.results | default([])
          | selectattr('stdout', 'defined')
          | selectattr('stdout', 'search', 'did:')

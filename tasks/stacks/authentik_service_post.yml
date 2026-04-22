@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
 # Authentik Service-Side OIDC Post-Setup
-# Konfigurace služeb, které nepodporují OIDC přes env vars
-# Spouští se po stack-up (provideri/aplikace už jsou v Authentiku — reconcile
-# přes blueprinty v tasks/stacks/authentik_blueprints.yml)
+# Configures services that do not support OIDC via env vars
+# Runs after stack-up (providers/applications already exist in Authentik - reconcile
+# via blueprints in tasks/stacks/authentik_blueprints.yml)
 # ==============================================================================
 
-# ── Gitea: registrace OAuth2 source přes Admin API ──────────────────────────
+# ── Gitea: register OAuth2 source via Admin API ─────────────────────────────
 
-- name: "[Authentik→Gitea] Check if OAuth2 source exists"
+- name: "[Authentik->Gitea] Check if OAuth2 source exists"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
     method: GET
@@ -19,7 +19,7 @@
   when: install_gitea | default(false)
   failed_when: false
 
-- name: "[Authentik→Gitea] Resolve existing auth source ID (for PATCH)"
+- name: "[Authentik->Gitea] Resolve existing auth source ID (for PATCH)"
   ansible.builtin.set_fact:
     _gitea_ak_source_id: >-
       {{ (_gitea_oauth_sources.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | first | default({})).id | default(0) }}
@@ -27,7 +27,7 @@
     - install_gitea | default(false)
     - _gitea_oauth_sources.status | default(0) == 200
 
-- name: "[Authentik→Gitea] Create OAuth2 authentication source (first-run)"
+- name: "[Authentik->Gitea] Create OAuth2 authentication source (first-run)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
     method: POST
@@ -51,7 +51,7 @@
     - _gitea_ak_source_id | int == 0
   failed_when: false
 
-- name: "[Authentik→Gitea] PATCH existing auth source (client_secret rotation)"
+- name: "[Authentik->Gitea] PATCH existing auth source (client_secret rotation)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers/{{ _gitea_ak_source_id }}"
     method: PATCH
@@ -78,11 +78,11 @@
   failed_when: false
   notify: Restart gitea
 
-# ── Portainer: OAuth2 je konfigurovan v pazny.portainer/tasks/post.yml ──────
-# PUT /api/settings s OAuth2 parametry bezi v core-up.yml ihned po startu infra.
-# Zde jen overime, ze AuthenticationMethod == 3 (OAuth2) je aktivni.
+# ── Portainer: OAuth2 is configured in pazny.portainer/tasks/post.yml ───────
+# PUT /api/settings with OAuth2 params runs in core-up.yml immediately after infra start.
+# Here we just verify that AuthenticationMethod == 3 (OAuth2) is active.
 
-- name: "[Authentik→Portainer] Verify OAuth2 is active"
+- name: "[Authentik->Portainer] Verify OAuth2 is active"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
     method: GET
@@ -92,17 +92,17 @@
   when: install_portainer | default(false)
   failed_when: false
 
-- name: "[Authentik→Portainer] OAuth2 status"
+- name: "[Authentik->Portainer] OAuth2 status"
   ansible.builtin.debug:
     msg: >-
-      Portainer SSO: {{ 'OK — configured via post.yml (PUT /api/settings)'
+      Portainer SSO: {{ 'OK - configured via post.yml (PUT /api/settings)'
         if (_portainer_oauth_verify.status | default(0) == 200)
-        else 'Portainer NEDOSTUPNY — OAuth2 config mohla selhat, zkontroluj post.yml log' }}
+        else 'Portainer UNREACHABLE - OAuth2 config may have failed, check post.yml log' }}
   when: install_portainer | default(false)
 
-# ── Nextcloud: occ příkazy pro user_oidc app ────────────────────────────────
+# ── Nextcloud: occ commands for user_oidc app ───────────────────────────────
 
-- name: "[Authentik→Nextcloud] Check if Nextcloud container is running"
+- name: "[Authentik->Nextcloud] Check if Nextcloud container is running"
   ansible.builtin.command: >
     {{ docker_bin }} inspect iiab-nextcloud-1 --format '{{ '{{' }}.State.Running{{ '}}' }}'
   register: _nc_running
@@ -110,7 +110,7 @@
   failed_when: false
   when: install_nextcloud | default(false)
 
-- name: "[Authentik→Nextcloud] Install user_oidc app"
+- name: "[Authentik->Nextcloud] Install user_oidc app"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ app:install user_oidc
@@ -121,7 +121,7 @@
   failed_when: false
   changed_when: "'already installed' not in (_nc_user_oidc_install.stdout | default(''))"
 
-- name: "[Authentik→Nextcloud] Enable user_oidc app"
+- name: "[Authentik->Nextcloud] Enable user_oidc app"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ app:enable user_oidc
@@ -132,7 +132,7 @@
   failed_when: false
   changed_when: "'already enabled' not in (_nc_user_oidc_enable.stdout | default(''))"
 
-- name: "[Authentik→Nextcloud] Check if OIDC provider registered"
+- name: "[Authentik->Nextcloud] Check if OIDC provider registered"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ user_oidc:provider
@@ -143,11 +143,11 @@
   failed_when: false
   changed_when: false
 
-# Two-step: CREATE pokud neexistuje, UPDATE pokud existuje. `occ user_oidc:provider`
-# bez update-if-exists flagu FAILUJE na duplicate, takze potrebujeme dve
-# samostatne tasky. Update flag se lisi podle verze — failed_when: false
-# pokryje verze bez subcommand.
-- name: "[Authentik→Nextcloud] Register OIDC provider (first-run)"
+# Two-step: CREATE if it does not exist, UPDATE if it does. `occ user_oidc:provider`
+# without update-if-exists flag FAILS on duplicate, so we need two
+# separate tasks. The update flag differs across versions - failed_when: false
+# covers versions without the subcommand.
+- name: "[Authentik->Nextcloud] Register OIDC provider (first-run)"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ user_oidc:provider authentik
@@ -166,10 +166,10 @@
   failed_when: false
   notify: Restart nextcloud
 
-# Reconverge client_secret na kazdy beh: user_oidc:provider podporuje
-# --update flag v recent versions. Pokud flag neni podporovany, command
-# failuje harmlessly (failed_when: false) a uzivatel vidi drift warning.
-- name: "[Authentik→Nextcloud] Update OIDC provider client_secret (reconverge)"
+# Reconverge client_secret on every run: user_oidc:provider supports the
+# --update flag in recent versions. If the flag is not supported, the command
+# fails harmlessly (failed_when: false) and the user sees a drift warning.
+- name: "[Authentik->Nextcloud] Update OIDC provider client_secret (reconverge)"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ user_oidc:provider authentik

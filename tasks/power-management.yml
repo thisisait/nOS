@@ -1,10 +1,10 @@
 ---
 # ==============================================================================
-# POWER MANAGEMENT – pmset nastavení pro server-like provoz
-# Mac zůstane dostupný na síti i po uspání displeje (Jellyfin, Grafana, SSH…)
+# POWER MANAGEMENT - pmset settings for server-like operation
+# Mac stays reachable on the network even when display sleeps (Jellyfin, Grafana, SSH...)
 # ==============================================================================
 
-- name: Nastavit power management (pmset) – displej spí, počítač ne
+- name: Configure power management (pmset) - display sleeps, computer does not
   ansible.builtin.command: >
     pmset -c
     sleep {{ pmset_sleep | default(0) }}

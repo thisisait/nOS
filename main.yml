@@ -3,12 +3,12 @@
   hosts: all
   gather_facts: true
 
-  # Sudo heslo – nahrazuje -K flag. vars_prompt zajistí, že heslo je dostupné
-  # jako Jinja2 proměnná (ansible_become_password z -K není přístupné v tasku).
-  # Spuštění: ansible-playbook main.yml (heslo se zeptá automaticky)
+  # Sudo password - replaces -K flag. vars_prompt ensures the password is available
+  # as a Jinja2 variable (ansible_become_password from -K is not accessible inside tasks).
+  # Run: ansible-playbook main.yml (password is prompted automatically)
   vars_prompt:
     - name: sudo_password
-      prompt: "Sudo heslo (Enter pro přeskočení sudo tasků)"
+      prompt: "Sudo password (Enter to skip sudo tasks)"
       private: true
       default: ""
 
@@ -33,18 +33,18 @@
       tags: ['always']
 
     # ── Persisted runtime secrets (encryption keys, APP_KEYs, JWT secrets) ──
-    # Soubor ~/.devboxnos/secrets.yml se vytvori pri prvnim runu (na konci
-    # generacni faze). Na dalsich runech ho nacitame PRED lazy-regen bloky,
-    # aby guardy videly realnou hodnotu a ne placeholder.
+    # File ~/.nos/secrets.yml is created on the first run (at the end of
+    # the generation phase). On subsequent runs we load it BEFORE lazy-regen blocks,
+    # so guards see the real value and not a placeholder.
     - name: "[Secrets] Check for persisted secrets file"
       ansible.builtin.stat:
-        path: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
       register: _persisted_secrets_stat
       tags: ['always']
 
     - name: "[Secrets] Load persisted secrets (if exists)"
       ansible.builtin.include_vars:
-        file: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+        file: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
       when: _persisted_secrets_stat.stat.exists | default(false)
       tags: ['always']
 
@@ -94,9 +94,9 @@
         _docker_compose_pull: "{{ '--pull always' if version_policy | default('stable') in ['latest', 'lts'] else '' }}"
       tags: ['always']
 
-    # sudo askpass helper – Homebrew cask installer (a další) interně volá
-    # sudo, ale nezná Ansible become password. Tento skript ho předá přes
-    # SUDO_ASKPASS env var, aby cask install nepadal na "sudo: a password is required".
+    # sudo askpass helper - Homebrew cask installer (and others) internally calls
+    # sudo but does not know the Ansible become password. This script hands it over via
+    # SUDO_ASKPASS env var so cask install does not fail on "sudo: a password is required".
     - name: Create sudo askpass helper script.
       ansible.builtin.copy:
         content: |
@@ -113,11 +113,11 @@
     SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if (sudo_password | default('') | length > 0) else '' }}"
 
   # ============================================================================
-  # HANDLERS – centralizované, volatelné přes notify: z libovolného task souboru
+  # HANDLERS - centralized, callable via notify: from any task file
   # ============================================================================
   handlers:
-    # brew services je nespolehlivy na brew 4.x (Ruby API visí 30min+).
-    # Pouzivame primy launchctl unload/load — okamzity efekt.
+    # brew services is unreliable on brew 4.x (Ruby API hangs 30min+).
+    # We use direct launchctl unload/load - immediate effect.
     - name: Restart nginx
       ansible.builtin.shell: |
         plist="$HOME/Library/LaunchAgents/homebrew.mxcl.nginx.plist"
@@ -273,7 +273,7 @@
 
     - name: Restart boxapi
       ansible.builtin.command: >
-        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.devboxnos.api"
+        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.api"
       failed_when: false
 
     - name: Restart bluesky-pds
@@ -313,11 +313,11 @@
 
   tasks:
     # ──────────────────────────────────────────────────────────────────────────
-    # Blank reset – čistá reinstalace (ansible-playbook main.yml -K -e blank=true)
+    # Blank reset - clean reinstall (ansible-playbook main.yml -K -e blank=true)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "[Blank] Prompt for password prefix"
       ansible.builtin.pause:
-        prompt: "Prefix pro všechna hesla (formát: PREFIX_pw_SLUŽBA, Enter = {{ global_password_prefix }})"
+        prompt: "Prefix for all passwords (format: PREFIX_pw_SERVICE, Enter = {{ global_password_prefix }})"
       register: _prefix_prompt
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
@@ -341,8 +341,8 @@
       tags: ['blank', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Previous-prefix state file — pro služby s "PUT needs old password" API
-    # (Portainer, Jellyfin, Metabase). Soubor je gitignored.
+    # Previous-prefix state file - for services with "PUT needs old password" API
+    # (Portainer, Jellyfin, Metabase). File is gitignored.
     # ──────────────────────────────────────────────────────────────────────────
     - name: "[State] Read previous password prefix (if exists)"
       ansible.builtin.slurp:
@@ -412,17 +412,17 @@
       tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Stateless secret regeneration — každý běh
+    # Stateless secret regeneration - every run
     #
-    # Safe group: krypto tajemství, která nešifrují perzistentní uživatelská data
-    # (sessions/tokens jsou znovu-vytvořitelné, blueprints/API reapplyují state).
-    # Destructive group: šifrují uživatelská data — regeneraci gatujeme přes
-    # blank=true nebo destroy_state=true a na non-blank runu ukážeme warning.
+    # Safe group: crypto secrets that do not encrypt persistent user data
+    # (sessions/tokens are re-creatable, blueprints/API reapply state).
+    # Destructive group: encrypt user data - regeneration gated via
+    # blank=true or destroy_state=true; on non-blank run we show a warning.
     # ──────────────────────────────────────────────────────────────────────────
     - name: "Auto-regenerate stateless secrets (every run — safe group)"
       ansible.builtin.set_fact:
-        # authentik_secret_key: presunuto do persisted secrets — regen kazdy run
-        # invalidoval vsechny SSO sessions (Django SECRET_KEY = CSRF + session signing)
+        # authentik_secret_key: moved to persisted secrets - regen on every run
+        # invalidated all SSO sessions (Django SECRET_KEY = CSRF + session signing)
         vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
         paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         jsos_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
@@ -432,12 +432,12 @@
       tags: ['always']
 
     - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
-      # UX: uzivatel muze prepnout install_firefly: true (nebo bookstack / onlyoffice /
-      # influxdb) v config.yml a spustit 'ansible-playbook main.yml -K' BEZ -e blank=true.
-      # Bez tohoto tasku by role assert (napr. roles/pazny.firefly/tasks/main.yml)
-      # failnul na placeholder hodnote z default.credentials.yml.
-      # Kazdy ternary: regeneruj JEN pokud je hodnota placeholder (nebo prazdna / moc kratka).
-      # Na druhem runu se realna hodnota nacte z ~/.devboxnos/secrets.yml a guard short-circuitne.
+      # UX: user can flip install_firefly: true (or bookstack / onlyoffice /
+      # influxdb) in config.yml and run 'ansible-playbook main.yml -K' WITHOUT -e blank=true.
+      # Without this task the role assert (e.g. roles/pazny.firefly/tasks/main.yml)
+      # would fail on the placeholder value from default.credentials.yml.
+      # Each ternary: regenerate ONLY if the value is a placeholder (or empty / too short).
+      # On the second run the real value is loaded from ~/.nos/secrets.yml and the guard short-circuits.
       ansible.builtin.set_fact:
         firefly_app_key: "{% if 'placeholder' in (firefly_app_key | default('')) %}{{ 'base64:' ~ lookup('pipe', 'openssl rand -base64 32') }}{% else %}{{ firefly_app_key }}{% endif %}"
         onlyoffice_jwt_secret: "{% if '_pw_' in (onlyoffice_jwt_secret | default('')) or 'placeholder' in (onlyoffice_jwt_secret | default('')) or (onlyoffice_jwt_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ onlyoffice_jwt_secret }}{% endif %}"
@@ -459,11 +459,11 @@
         bluesky_pds_rotation_key: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         firefly_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
         bookstack_app_key: "base64:{{ lookup('pipe', 'openssl rand -base64 32') }}"
-        # onlyoffice_jwt_secret: host apps (Nextcloud, BookStack...) ulozi JWT secret
-        # ve svem vlastnim configu. Regen na kazdem runu by rozbil integraci silently.
+        # onlyoffice_jwt_secret: host apps (Nextcloud, BookStack...) store the JWT secret
+        # in their own config. Regen on every run would silently break the integration.
         onlyoffice_jwt_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        # influxdb_admin_token: InfluxDB 2.x drzi token v /var/lib/influxdb2 volume.
-        # Regen by vytvoril token mismatch pro Grafana datasource (nez dokoncime auto-provisioning).
+        # influxdb_admin_token: InfluxDB 2.x keeps the token in /var/lib/influxdb2 volume.
+        # Regen would create a token mismatch for Grafana datasource (until we finish auto-provisioning).
         influxdb_admin_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
       when: (blank | default(false) | bool) or (destroy_state | default(false) | bool)
       tags: ['always']
@@ -471,31 +471,31 @@
     - name: "WARNING — destructive secrets preserved (use -e destroy_state=true to reset)"
       ansible.builtin.debug:
         msg: |
-          Destruktivni secrets (infisical_encryption_key, outline_secret_key,
+          Destructive secrets (infisical_encryption_key, outline_secret_key,
           bluesky_pds_rotation_key, firefly_app_key, bookstack_app_key,
-          onlyoffice_jwt_secret, influxdb_admin_token) byly nacteny z
-          ~/.devboxnos/secrets.yml a zachovany. Pro reset pridej
-          -e destroy_state=true (smaze Infisical vault, Outline data, Bluesky PLC
-          rotaci, Firefly/BookStack sifrovana data, ONLYOFFICE/InfluxDB tokeny).
+          onlyoffice_jwt_secret, influxdb_admin_token) were loaded from
+          ~/.nos/secrets.yml and preserved. To reset, add
+          -e destroy_state=true (wipes Infisical vault, Outline data, Bluesky PLC
+          rotation, Firefly/BookStack encrypted data, ONLYOFFICE/InfluxDB tokens).
       when:
         - not (blank | default(false) | bool)
         - not (destroy_state | default(false) | bool)
       tags: ['always']
 
-    # ── Persist runtime secrets to ~/.devboxnos/secrets.yml ─────────────────
+    # ── Persist runtime secrets to ~/.nos/secrets.yml ─────────────────
     # Runs unconditionally: normal run preserves existing keys, blank run
     # overwrites with freshly-generated keys. Mode 0600 — only owner can read.
-    - name: "[Secrets] Ensure ~/.devboxnos directory exists"
+    - name: "[Secrets] Ensure ~/.nos directory exists"
       ansible.builtin.file:
-        path: "{{ ansible_facts['env']['HOME'] }}/.devboxnos"
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos"
         state: directory
         mode: '0700'
       tags: ['always']
 
-    - name: "[Secrets] Persist runtime secrets to ~/.devboxnos/secrets.yml"
+    - name: "[Secrets] Persist runtime secrets to ~/.nos/secrets.yml"
       ansible.builtin.template:
         src: "secrets.yml.j2"
-        dest: "{{ ansible_facts['env']['HOME'] }}/.devboxnos/secrets.yml"
+        dest: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
         mode: '0600'
       tags: ['always']
 
@@ -513,7 +513,7 @@
       tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # macOS systémová nastavení
+    # macOS system settings
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sudoers.yml
       when: configure_sudoers | default(false)
@@ -532,14 +532,14 @@
       tags: ['macos-defaults', 'osx']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Power management – pmset (server-like provoz: displej spí, síť běží)
+    # Power management - pmset (server-like operation: display sleeps, network stays on)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/power-management.yml
       when: configure_power_management | default(true)
       tags: ['power', 'pmset', 'power-management']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Systémové služby (SSH, Samba, VNC)
+    # System services (SSH, Samba, VNC)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/system-services.yml
       when: >
@@ -551,7 +551,7 @@
       tags: ['system-services', 'ssh', 'samba', 'vnc']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # IIAB Terminal – veřejný SSH TUI hub (vyžaduje SSH)
+    # IIAB Terminal - public SSH TUI hub (requires SSH)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "IIAB Terminal (pazny.iiab_terminal role)"
       ansible.builtin.import_role:
@@ -562,14 +562,14 @@
       tags: ['iiab-terminal', 'ssh']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Jazyky a runtime prostředí
+    # Languages and runtime environments
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/php.yml
       when: install_php | default(true)
       tags: ['php']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Web server (až po PHP, aby socket existoval před nginx -t)
+    # Web server (after PHP so the socket exists before nginx -t)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/nginx.yml
       when: install_nginx | default(true)
@@ -596,45 +596,45 @@
       tags: ['dotnet', 'csharp']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Extra balíčky (composer, gem, npm, pip)
+    # Extra packages (composer, gem, npm, pip)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/extra-packages.yml
       tags: ['extra-packages']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Editory
+    # Editors
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/sublime-text.yml
       when: configure_sublime | default(false)
       tags: ['sublime-text']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Externí úložiště – přesměrování dat na SSD (MUSÍ běžet před IIAB/observ.)
+    # External storage - redirect data to SSD (MUST run before IIAB/observ.)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/external-storage.yml
       when: configure_external_storage | default(false)
       tags: ['external-storage', 'storage']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Docker stacks – sdílená síť a prerekvizity
+    # Docker stacks - shared network and prerequisites
     # ──────────────────────────────────────────────────────────────────────────
 
-    # Python docker SDK + PyMySQL – prerekvizita pro všechny community.docker.*
-    # a community.mysql.* moduly; rychlé no-op pokud jsou už nainstalovány
+    # Python docker SDK + PyMySQL - prerequisite for all community.docker.*
+    # and community.mysql.* modules; fast no-op if already installed
     - import_tasks: tasks/iiab/docker-prereqs.yml
       tags: ['iiab', 'docker', 'stacks']
 
-    # Shared Docker network + adresářová struktura pro všechny stacky
+    # Shared Docker network + directory structure for all stacks
     - import_tasks: tasks/stacks/shared-network.yml
       tags: ['iiab', 'docker', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # CORE STACKS – infra (DB/IAM/Vault) + observability VŽDY JAKO PRVNÍ
+    # CORE STACKS - infra (DB/IAM/Vault) + observability ALWAYS FIRST
     #
-    # Tyto dva stacky jsou backbone celého systému: ostatní role mohou
-    # předpokládat, že MariaDB / Postgres / Redis / Authentik / Infisical /
-    # Bluesky PDS / Grafana / Prometheus / Loki / Tempo běží a jen injectují
-    # své konfigy + notify handlery pro restart kontejnerů.
+    # These two stacks are the backbone of the whole system: other roles can
+    # assume MariaDB / Postgres / Redis / Authentik / Infisical /
+    # Bluesky PDS / Grafana / Prometheus / Loki / Tempo are running and just inject
+    # their configs + notify handlers to restart containers.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/core-up.yml
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
@@ -643,13 +643,13 @@
     # IIAB – self-hosted knowledge services
     # ──────────────────────────────────────────────────────────────────────────
 
-    # Wave 2.2: všechny IIAB/DevOps/B2B/VoIP/Data service tasky přesunuty do
-    # roles/pazny.*/. Role renders + post-start jsou volány z
-    # tasks/stacks/core-up.yml (infra/observability) a tasks/stacks/stack-up.yml
-    # (ostatní stacky). Nginx vhost renders jsou součástí role tasks/main.yml.
+    # Wave 2.2: all IIAB/DevOps/B2B/VoIP/Data service tasks moved to
+    # roles/pazny.*/. Role renders + post-start are called from
+    # tasks/stacks/core-up.yml (infra/observability) and tasks/stacks/stack-up.yml
+    # (other stacks). Nginx vhost renders are part of role tasks/main.yml.
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Síť – Tailscale + dnsmasq
+    # Network - Tailscale + dnsmasq
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/tailscale.yml
       when: install_tailscale | default(true)
@@ -667,14 +667,14 @@
       tags: ['shell', 'shell-extras', 'starship']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Git globální konfigurace (user.name, user.email)
+    # Git global configuration (user.name, user.email)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/git-config.yml
       when: git_user_name | default('') | length > 0
       tags: ['git']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # OpenClaw – self-hosted AI agent (Ollama, žádný API klíč)
+    # OpenClaw - self-hosted AI agent (Ollama, no API key)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "OpenClaw (pazny.openclaw role)"
       ansible.builtin.import_role:
@@ -694,8 +694,8 @@
       tags: ['hermes', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # OpenCode — AI coding TUI (sst.dev) s lokalnim Ollama providerem
-    # Alternativa k Claude Code / Cursor, ale open-source a lokalni.
+    # OpenCode - AI coding TUI (sst.dev) with local Ollama provider
+    # Alternative to Claude Code / Cursor, but open-source and local.
     # ──────────────────────────────────────────────────────────────────────────
     - name: "OpenCode AI TUI (pazny.opencode role)"
       ansible.builtin.import_role:
@@ -721,22 +721,22 @@
     #  called from tasks/stacks/stack-up.yml before compose up)
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Docker stacks – deploy compose souborů a spuštění všech stacků
+    # Docker stacks - deploy compose files and start all stacks
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/stack-up.yml
       tags: ['iiab', 'stack', 'docker', 'stacks']
 
-    # DB setup nyní běží UVNITŘ stack-up.yml (infra → DB setup → remaining stacks)
+    # DB setup now runs INSIDE stack-up.yml (infra → DB setup → remaining stacks)
 
     # (all service post-start tasks are now called from tasks/stacks/stack-up.yml
     #  and tasks/stacks/core-up.yml via include_role tasks_from=post.yml)
 
-    # Verifikace: ověří že všechny služby odpovídají (po post-start úlohách)
+    # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml
       tags: ['iiab', 'stack', 'verify', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # jsOS – webový desktop (OS.js v3 + Bluesky auth + homelab integrace)
+    # jsOS - web desktop (OS.js v3 + Bluesky auth + homelab integration)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "jsOS (pazny.jsos role)"
       ansible.builtin.import_role:
@@ -745,7 +745,7 @@
       tags: ['jsos', 'desktop']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Service Registry – JSON katalog + Grafana dashboard
+    # Service Registry - JSON catalog + Grafana dashboard
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/service-registry.yml
       tags: ['service-registry', 'registry']
@@ -781,8 +781,8 @@
       tags: ['vulnscan']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Glasswing — Security Research Dashboard (Nette PHP + SQLite)
-    # Wave 2.1 role extraction — viz docs/wave2-role-migration.md
+    # Glasswing - Security Research Dashboard (Nette PHP + SQLite)
+    # Wave 2.1 role extraction - see docs/wave2-role-migration.md
     # ──────────────────────────────────────────────────────────────────────────
     - name: "Glasswing (pazny.glasswing role)"
       ansible.builtin.import_role:
@@ -800,19 +800,19 @@
       tags: ['import', 'never']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Auto-start konfigurace (Docker Desktop login item, PM2 save, restart policies)
+    # Auto-start configuration (Docker Desktop login item, PM2 save, restart policies)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/autostart.yml
       tags: ['autostart', 'always']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Finální přehled služeb (vždy na konci)
+    # Final services overview (always at the end)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/final-summary.yml
       tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Post-provision háky
+    # Post-provision hooks
     # ──────────────────────────────────────────────────────────────────────────
     - name: Run post-provision task files in a block.
       tags: ['post']

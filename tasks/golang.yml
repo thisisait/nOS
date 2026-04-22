@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# GO – jazyk a vývojové nástroje
+# GO - language and development tools
 # ==============================================================================
 
 - name: Install Go via Homebrew
@@ -21,7 +21,7 @@
 - name: Add Go to shell profile (.zshrc)
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} GO – ANSIBLE MANAGED"
+    marker: "# {mark} GO - ANSIBLE MANAGED"
     block: |
       export GOPATH="$HOME/go"
       export GOROOT="{{ homebrew_prefix }}/opt/go/libexec"

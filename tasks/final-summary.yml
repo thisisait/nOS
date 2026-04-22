@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# FINAL SUMMARY – přehled všech běžících služeb po dokončení playbooku
+# FINAL SUMMARY - overview of all running services after the playbook finishes
 # ==============================================================================
 
 - name: "[Summary] Service overview"
@@ -8,10 +8,10 @@
     msg: |
 
       ╔══════════════════════════════════════════════════════════════════════════╗
-      ║                    PLAYBOOK DOKONČEN – PŘEHLED SLUŽEB                  ║
+      ║                    PLAYBOOK COMPLETE - SERVICE OVERVIEW                 ║
       ╚══════════════════════════════════════════════════════════════════════════╝
 
-      ── AUTOMATICKY NASTAVENÉ (login: admin / {{ global_password_prefix }}_pw_[služba]) ──
+      ── AUTOMATICALLY CONFIGURED (login: admin / {{ global_password_prefix }}_pw_[service]) ──
 
       {% if install_observability | default(true) %}
         Grafana          https://grafana.dev.local          admin / {{ global_password_prefix }}_pw_grafana
@@ -29,54 +29,54 @@
         FreeScout        https://helpdesk.dev.local           {{ freescout_admin_email | default(default_admin_email) }} / {{ global_password_prefix }}_pw_freescout
       {% endif %}
       {% if install_portainer | default(false) %}
-        Portainer        https://portainer.dev.local          ⚠ Vytvor admin ucet do 5 minut!
+        Portainer        https://portainer.dev.local          WARN: create admin account within 5 minutes!
       {% endif %}
       {% if install_rustfs | default(false) %}
         RustFS           https://fs.dev.local                 {{ global_password_prefix }}_pw_rustfs_access / _secret
       {% endif %}
 
-      ── VYŽADUJÍ MANUÁLNÍ ONBOARDING ──────────────────────────────────────────
+      ── REQUIRE MANUAL ONBOARDING ─────────────────────────────────────────────
 
       {% if install_jellyfin | default(false) %}
-        Jellyfin         https://media.dev.local              → Projdi setup wizard
+        Jellyfin         https://media.dev.local              -> Run setup wizard
       {% endif %}
       {% if install_homeassistant | default(false) %}
-        Home Assistant   https://home.dev.local               → Projdi onboarding wizard
+        Home Assistant   https://home.dev.local               -> Run onboarding wizard
       {% endif %}
       {% if install_n8n | default(false) %}
-        n8n              https://n8n.dev.local                 → Registruj se (první user = owner)
-                                                                 Ollama: Settings → Credentials → http://host.docker.internal:11434
+        n8n              https://n8n.dev.local                 -> Register (first user = owner)
+                                                                 Ollama: Settings -> Credentials -> http://host.docker.internal:11434
       {% endif %}
       {% if install_openwebui | default(false) %}
-        Open WebUI       https://ai.dev.local                 → Registruj se (první user = admin)
+        Open WebUI       https://ai.dev.local                 -> Register (first user = admin)
       {% endif %}
       {% if install_uptime_kuma | default(false) %}
-        Uptime Kuma      https://uptime.dev.local              → Vytvor admin ucet
+        Uptime Kuma      https://uptime.dev.local              -> Create admin account
       {% endif %}
       {% if install_calibreweb | default(false) %}
-        Calibre-Web      https://books.dev.local               admin / admin123 (změn heslo!)
+        Calibre-Web      https://books.dev.local               admin / admin123 (change password!)
       {% endif %}
       {% if install_erpnext | default(false) %}
         ERPNext          https://erp.dev.local                 Administrator / {{ global_password_prefix }}_pw_erpnext
-                                                                 ⚠ Inicializace trvá 2-5 minut po prvním startu
+                                                                 WARN: initialization takes 2-5 minutes after first start
       {% endif %}
       {% if install_outline | default(false) %}
-        Outline          https://wiki.dev.local                → Vyžaduje SSO provider (Gitea OAuth / OIDC)
+        Outline          https://wiki.dev.local                -> Requires SSO provider (Gitea OAuth / OIDC)
       {% endif %}
       {% if install_metabase | default(false) %}
-        Metabase         https://bi.dev.local                  → Registruj se (první user = admin)
+        Metabase         https://bi.dev.local                  -> Register (first user = admin)
       {% endif %}
       {% if install_superset | default(false) %}
-        Superset         https://superset.dev.local            → docker exec data-superset-1 superset fab create-admin
+        Superset         https://superset.dev.local            -> docker exec data-superset-1 superset fab create-admin
       {% endif %}
       {% if install_bluesky_pds | default(false) %}
-        Bluesky PDS      https://bsky.dev.lan                  → goat CLI (admin auto-provisioned)
+        Bluesky PDS      https://bsky.dev.lan                  -> goat CLI (admin auto-provisioned)
       {% endif %}
       {% if install_freepbx | default(false) %}
-        FreePBX          https://pbx.dev.local                 → Projdi setup wizard
+        FreePBX          https://pbx.dev.local                 -> Run setup wizard
       {% endif %}
 
-      ── INTERNÍ SLUŽBY (bez přímého loginu) ───────────────────────────────────
+      ── INTERNAL SERVICES (no direct login) ───────────────────────────────────
 
       {% if install_observability | default(true) %}
         Prometheus       http://127.0.0.1:{{ prometheus_port | default(9090) }}
@@ -91,10 +91,10 @@
       {% endif %}
 
       {% if tailscale_hostname | default('') | length > 0 %}
-      ── TAILSCALE VZDÁLENÝ PŘÍSTUP ────────────────────────────────────────────
+      ── TAILSCALE REMOTE ACCESS ───────────────────────────────────────────────
 
         Homepage (Grafana): https://{{ tailscale_hostname }}
-        Služby přes porty:  http://{{ tailscale_hostname }}:<port>
+        Services via ports: http://{{ tailscale_hostname }}:<port>
       {% endif %}
 
       ═══════════════════════════════════════════════════════════════════════════

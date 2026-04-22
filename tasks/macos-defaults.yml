@@ -1,8 +1,8 @@
 ---
 # ==============================================================================
-# macOS ROZŠÍŘENÁ NASTAVENÍ
-# Automatizuje většinu "Manual settings to automate someday" z full-mac-setup.md
-# + standardní developer defaults
+# macOS EXTENDED SETTINGS
+# Automates most of "Manual settings to automate someday" from full-mac-setup.md
+# + standard developer defaults
 # ==============================================================================
 
 # ── FINDER ────────────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@
   changed_when: false
   failed_when: false
 
-# ── KLÁVESNICE ────────────────────────────────────────────────────────────────
+# ── KEYBOARD ──────────────────────────────────────────────────────────────────
 
 - name: "[Keyboard] Set key repeat rate (fast)"
   community.general.osx_defaults:
@@ -239,12 +239,12 @@
   failed_when: false
 
 # ── SAFARI (developer settings) ───────────────────────────────────────────────
-# POZN: com.apple.Safari je od macOS 10.14 sandboxed container; zapis z
-# `defaults` vyzaduje aby mel Terminal (nebo proces spoustejici Ansible)
-# Full Disk Access v System Settings → Privacy & Security → Full Disk Access.
-# Bez nej hlasi `Could not write domain ...; exiting`. Misto failu playbooku
-# tady ignorujeme chybu — pokud Safari tweaky nevysly, muze je user zapnout
-# rucne v Safari → Settings → Advanced nebo dat Terminalu FDA.
+# NOTE: com.apple.Safari is a sandboxed container since macOS 10.14; writing via
+# `defaults` requires Terminal (or the process running Ansible) to have
+# Full Disk Access in System Settings -> Privacy & Security -> Full Disk Access.
+# Without it, it reports `Could not write domain ...; exiting`. Instead of failing the playbook
+# we ignore the error here - if Safari tweaks do not apply, the user can enable them
+# manually in Safari -> Settings -> Advanced, or grant Terminal FDA.
 
 - name: "[Safari] Show full URL in address bar"
   community.general.osx_defaults:
@@ -282,12 +282,12 @@
 - name: "[Safari] WARN if sandbox blocked defaults writes"
   ansible.builtin.debug:
     msg: |
-      VAROVANI: Safari defaults write selhalo (com.apple.Safari container je
-      sandboxed). Pro aplikaci Safari tweaku:
-        1) System Settings → Privacy & Security → Full Disk Access
-        2) Pridej Terminal (nebo iTerm/Ghostty) a zaskrtni
-        3) Restartuj Terminal a spust playbook znovu
-      Alternativa: zapni to rucne v Safari → Settings → Advanced / Developer.
+      WARNING: Safari defaults write failed (com.apple.Safari container is
+      sandboxed). To apply Safari tweaks:
+        1) System Settings -> Privacy & Security -> Full Disk Access
+        2) Add Terminal (or iTerm/Ghostty) and enable
+        3) Restart Terminal and run the playbook again
+      Alternative: enable manually in Safari -> Settings -> Advanced / Developer.
   when:
     - _safari_full_url is defined
     - _safari_full_url.failed | default(false) or (_safari_full_url.msg | default('') is match('.*Could not write domain.*'))
@@ -302,7 +302,7 @@
     value: "{{ macos_terminal_secure_keyboard | default(true) }}"
   failed_when: false
 
-# ── SYSTÉM / VÝKON ────────────────────────────────────────────────────────────
+# ── SYSTEM / PERFORMANCE ──────────────────────────────────────────────────────
 
 - name: "[System] Disable automatic termination of inactive apps"
   community.general.osx_defaults:
@@ -346,7 +346,7 @@
     type: bool
     value: true
 
-# ── SÍŤ / SDÍLENÍ ─────────────────────────────────────────────────────────────
+# ── NETWORK / SHARING ─────────────────────────────────────────────────────────
 
 - name: "[Network] Set computer name (ComputerName)"
   community.general.osx_defaults:
@@ -360,28 +360,28 @@
     - not ansible_check_mode
     - configure_computer_name | default(false)
 
-# ── POZNÁMKY – co nelze automatizovat ─────────────────────────────────────────
+# ── NOTES - what cannot be automated ──────────────────────────────────────────
 
 - name: "[Notice] Print manual steps reminder"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════
-       ⚠️  Kroky, které je TŘEBA provést MANUÁLNĚ:
+       WARNING: Steps that MUST be performed MANUALLY:
       ══════════════════════════════════════════════════════════
-       1. Caps Lock → Esc:
+       1. Caps Lock -> Esc:
           System Settings > Keyboard > Keyboard Shortcuts >
           Modifier Keys > Caps Lock = Escape
 
-       2. Full Disk Access pro Terminal:
+       2. Full Disk Access for Terminal:
           System Settings > Privacy & Security > Full Disk Access
           > + Terminal.app
 
-       3. Wireless Keyboard Shortcuts (Mission Control atd.):
+       3. Wireless Keyboard Shortcuts (Mission Control etc.):
           System Settings > Keyboard > Keyboard Shortcuts
 
-       4. Wireguard VPN konfigurace:
-          Manuální import .conf souborů
+       4. Wireguard VPN configuration:
+          Manual import of .conf files
 
-       5. Time Machine záloha:
-          Manuální výběr disku v System Settings > General
+       5. Time Machine backup:
+          Manual disk selection in System Settings > General
       ══════════════════════════════════════════════════════════

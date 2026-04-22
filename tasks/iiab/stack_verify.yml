@@ -1,22 +1,22 @@
 ---
 # ==============================================================================
-# STACK VERIFY – verifikace služeb po docker compose up
+# STACK VERIFY - verify services after docker compose up
 #
-# Data-driven: metadata (URL, status kody, porty, hinty) jsou v
-# files/health-probes.yml. Zde je jen orchestrace:
+# Data-driven: metadata (URL, status codes, ports, hints) live in
+# files/health-probes.yml. Here is just orchestration:
 #   1. Load catalog
-#   2. Nginx :443 quick check (restart pokud nebezi)
-#   3. Auto-retry HTTP + TCP probes (2 minuty)
-#   4. Pause prompt pro onboarding probes
+#   2. Nginx :443 quick check (restart if not running)
+#   3. Auto-retry HTTP + TCP probes (2 minutes)
+#   4. Pause prompt for onboarding probes
 #   5. Summary
 #
-# Pridani nove sluzby = 1 entry v files/health-probes.yml. Zadna uprava
-# tohoto souboru.
+# Adding a new service = 1 entry in files/health-probes.yml. No edits
+# to this file.
 #
-# Proc loopujeme katalog primo z uri/wait_for tasku (misto intermediate
-# _active_probes listu): Ansible nema jinja2_native aktivovany, takze
-# set_fact s multi-line Jinja by vracel string reprezentaci listu misto
-# native objectu. Inline resolve per-iteration je typove bezpeci.
+# Why we loop the catalog directly from uri/wait_for tasks (instead of an intermediate
+# _active_probes list): Ansible does not have jinja2_native enabled, so
+# set_fact with multi-line Jinja would return a string representation of the list
+# instead of a native object. Inline resolve per-iteration is type-safe.
 # ==============================================================================
 
 # ── 0. Load catalog ────────────────────────────────────────────────────────
@@ -35,12 +35,12 @@
   register: _nginx_443
   failed_when: false
 
-- name: "[Verify] Nginx not listening on 443 – restarting"
+- name: "[Verify] Nginx not listening on 443 - restarting"
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh restart nginx"
   when: _nginx_443.failed | default(false)
 
 # ══════════════════════════════════════════════════════════════════════════
-# FÁZE 1: Automatický retry infrastrukturních služeb
+# PHASE 1: Auto-retry infrastructure services
 # ══════════════════════════════════════════════════════════════════════════
 
 - name: "[Verify] Auto-retry HTTP probes"
@@ -84,11 +84,11 @@
   failed_when: false
   when: _enabled | bool
 
-# ── Vyhodnocení auto-retry ─────────────────────────────────────────────
-# Failure reporting: union vsech acceptable status codes z katalogu +
-# default_status. Imperecizni (417 pro ERPNext je globalni), ale per-task
-# `status_code:` nahore je per-item presny — tohle je jen summary hlaseni.
-# Single-expression Jinja = Ansible preservuje native list type.
+# ── Evaluate auto-retry ────────────────────────────────────────────────
+# Failure reporting: union of all acceptable status codes from the catalog +
+# default_status. Imprecise (417 for ERPNext is global), but per-task
+# `status_code:` above is per-item precise - this is just summary reporting.
+# Single-expression Jinja = Ansible preserves native list type.
 - name: "[Verify] Evaluate auto-retry results"
   ansible.builtin.set_fact:
     _auto_failed: >-
@@ -117,14 +117,14 @@
 - name: "[Verify] Infrastructure services that failed after retries"
   ansible.builtin.debug:
     msg: |
-      VAROVANI: Tyto sluzby nenabehly ani po 2 minutach:
+      WARNING: The following services did not come up even after 2 minutes:
       {% for svc in _auto_failed %}
-        - {{ svc.name }}: {{ svc.hint | default('zkontroluj docker logs') }}
+        - {{ svc.name }}: {{ svc.hint | default('check docker logs') }}
       {% endfor %}
   when: (_auto_failed | length) > 0
 
 # ══════════════════════════════════════════════════════════════════════════
-# FÁZE 2: Onboarding služby – kontrola + pause jen pokud je potřeba
+# PHASE 2: Onboarding services - check + pause only if needed
 # ══════════════════════════════════════════════════════════════════════════
 
 - name: "[Verify] Check onboarding probes"
@@ -169,19 +169,19 @@
       {% for svc in _onboarding_needed %}
 
       ══════════════════════════════════════════════════════════════════════
-       {{ svc.name }} – VYZADUJE MANUALNI ONBOARDING
+       {{ svc.name }} - REQUIRES MANUAL ONBOARDING
        {{ svc.hint }}
       ══════════════════════════════════════════════════════════════════════
       {% endfor %}
 
-       Proved manualni kroky a stiskni ENTER pro pokracovani
+       Perform the manual steps and press ENTER to continue
   when:
     - _onboarding_needed | default([]) | length > 0
 
-# ── Souhrn ──────────────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────────────
 - name: "[Verify] Summary"
   ansible.builtin.debug:
     msg: >-
-      Overeno {{ _probe_catalog.health_probes | length }} sluzeb v katalogu.
-      {{ (_auto_failed | default([]) | length) }} infrastrukturnich selhalo,
-      {{ (_onboarding_needed | default([]) | length) }} onboarding ceka.
+      Verified {{ _probe_catalog.health_probes | length }} services in the catalog.
+      {{ (_auto_failed | default([]) | length) }} infrastructure services failed,
+      {{ (_onboarding_needed | default([]) | length) }} onboarding pending.

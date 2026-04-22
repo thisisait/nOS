@@ -16,12 +16,12 @@
 
 - name: "[Heartbeat] Deploy launchd plist"
   ansible.builtin.template:
-    src: com.devboxnos.heartbeat.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.heartbeat.plist"
+    src: eu.thisisait.nos.heartbeat.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.heartbeat.plist"
     mode: '0644'
 
 - name: "[Heartbeat] Load heartbeat daemon"
   ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.devboxnos.heartbeat.plist
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.heartbeat.plist
   changed_when: true
   failed_when: false

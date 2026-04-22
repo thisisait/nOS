@@ -1,8 +1,8 @@
 ---
 # ==============================================================================
-# SERVICE REGISTRY – generuje JSON katalog služeb a Grafana dashboard
-# JSON se servíruje přes Nginx na http://localhost/service-registry.json
-# Dashboard se provisuje do Grafany automaticky.
+# SERVICE REGISTRY - generates JSON service catalog and Grafana dashboard
+# JSON is served via Nginx at http://localhost/service-registry.json
+# Dashboard is provisioned into Grafana automatically.
 # ==============================================================================
 
 - name: "[Service Registry] Ensure default project directory exists"

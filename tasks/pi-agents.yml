@@ -1,13 +1,13 @@
 ---
 # ==============================================================================
-# PI AGENTS – coding agent framework (pi.dev)
-# npm balíček: @mariozechner/pi-coding-agent
+# PI AGENTS - coding agent framework (pi.dev)
+# npm package: @mariozechner/pi-coding-agent
 # Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
 #
-# Požadavky: install_node: true (nvm + Node.js musí být nainstalováno)
+# Requirements: install_node: true (nvm + Node.js must be installed)
 # ==============================================================================
 
-# ── 1. Instalace PI CLI ────────────────────────────────────────────────────────
+# ── 1. Install PI CLI ──────────────────────────────────────────────────────────
 
 - name: "[PI] Check if pi CLI is already installed"
   ansible.builtin.shell: |
@@ -35,7 +35,7 @@
   when: pi_which.rc != 0
   changed_when: true
 
-# ── 2. Adresářová struktura ────────────────────────────────────────────────────
+# ── 2. Directory structure ─────────────────────────────────────────────────────
 
 - name: "[PI] Create PI agent directory structure"
   ansible.builtin.file:
@@ -49,17 +49,17 @@
     - "{{ pi_config_dir }}/themes"
     - "{{ pi_config_dir }}/prompts"
 
-# ── 3. Ollama provider pro PI ─────────────────────────────────────────────────
+# ── 3. Ollama provider for PI ─────────────────────────────────────────────────
 
 - name: "[PI] Configure Ollama provider (OLLAMA_API_KEY in .zshrc)"
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} PI-AGENTS – ANSIBLE MANAGED"
+    marker: "# {mark} PI-AGENTS - ANSIBLE MANAGED"
     block: |
       export OLLAMA_API_KEY="ollama-local"
     create: true
 
-# ── 4. PI Autoresearch extension (přes pi install, ne ruční kopie) ────────────
+# ── 4. PI Autoresearch extension (via pi install, not manual copy) ────────────
 
 - name: "[PI] Check if pi-autoresearch is installed via pi install"
   ansible.builtin.stat:
@@ -94,25 +94,25 @@
   changed_when: true
   failed_when: false
 
-# ── 5. Finální výpis ──────────────────────────────────────────────────────────
+# ── 5. Final summary ──────────────────────────────────────────────────────────
 
 - name: "[PI] Print setup summary"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       PI Agent Framework – připraven
+       PI Agent Framework - ready
       ══════════════════════════════════════════════════════
        CLI:        npm -g @mariozechner/pi-coding-agent
        Config:     {{ pi_config_dir }}/
        Extensions: {{ pi_config_dir }}/extensions/
        Skills:     {{ pi_config_dir }}/skills/
 
-       Použití:
-         pi                         # spustit interaktivní agent
-         pi "co chceš udělat"       # jednorázový příkaz
+       Usage:
+         pi                         # start interactive agent
+         pi "what you want to do"   # one-shot command
 
        Autoresearch extension:
-         /skill:autoresearch-create  # inicializace optimalizační smyčky
-         /autoresearch <text>        # vstoupit do autoresearch módu
-         Ctrl+X                     # přepnout dashboard
+         /skill:autoresearch-create  # initialize optimization loop
+         /autoresearch <text>        # enter autoresearch mode
+         Ctrl+X                     # toggle dashboard
       ══════════════════════════════════════════════════════

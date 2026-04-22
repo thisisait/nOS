@@ -1,15 +1,15 @@
 ---
 # ==============================================================================
-# STATE IMPORT – obnova dat a databází z exportního tarballu
+# STATE IMPORT - restore data and databases from export tarball
 #
-# Spuštění: ansible-playbook main.yml -K --tags import \
-#           -e "import_tarball=/cesta/k/devboxnos-export-YYYY-MM-DD.tar.gz"
+# Run: ansible-playbook main.yml -K --tags import \
+#      -e "import_tarball=/path/to/nos-export-YYYY-MM-DD.tar.gz"
 #
-# Obnoví:
+# Restores:
 #   - config.yml, credentials.yml
 #   - PostgreSQL dump (pg_dumpall)
 #   - MariaDB dump (mysqldump)
-#   - Datové adresáře služeb (gitea, nextcloud, n8n, grafana, agents, observability)
+#   - Service data directories (gitea, nextcloud, n8n, grafana, agents, observability)
 #   - service-registry.json
 # ==============================================================================
 
@@ -21,8 +21,8 @@
       - import_tarball is defined
       - import_tarball | length > 0
     fail_msg: >
-      Chybí cesta k exportnímu tarballu. Spusť s:
-      ansible-playbook main.yml -K --tags import -e "import_tarball=/cesta/k/export.tar.gz"
+      Missing path to export tarball. Run with:
+      ansible-playbook main.yml -K --tags import -e "import_tarball=/path/to/export.tar.gz"
 
 - name: "[Import] Check tarball exists"
   ansible.builtin.stat:
@@ -32,14 +32,14 @@
 - name: "[Import] Fail if tarball not found"
   ansible.builtin.assert:
     that: _import_tarball_stat.stat.exists
-    fail_msg: "Soubor {{ import_tarball }} neexistuje."
+    fail_msg: "File {{ import_tarball }} does not exist."
 
 # ── Extract ──────────────────────────────────────────────────────────────────
 
 - name: "[Import] Create temp extraction directory"
   ansible.builtin.tempfile:
     state: directory
-    prefix: devboxnos-import-
+    prefix: nos-import-
   register: _import_tmpdir
 
 - name: "[Import] Extract tarball"
@@ -75,11 +75,11 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════════════════
-       IMPORT – zdrojový export
-       Datum:    {{ _import_manifest.date | default('neznámé') }}
-       Hostname: {{ _import_manifest.hostname | default('neznámý') }}
-       OS:       {{ _import_manifest.os | default('neznámý') }}
-       Soubory:  {{ _import_manifest.files | default([]) | join(', ') }}
+       IMPORT - source export
+       Date:     {{ _import_manifest.date | default('unknown') }}
+       Hostname: {{ _import_manifest.hostname | default('unknown') }}
+       OS:       {{ _import_manifest.os | default('unknown') }}
+       Files:    {{ _import_manifest.files | default([]) | join(', ') }}
       ══════════════════════════════════════════════════════════════════════
   when: _import_manifest is defined
 
@@ -105,7 +105,7 @@
 - name: "[Import] Wait for containers to stop"
   ansible.builtin.pause:
     seconds: 10
-    prompt: "Cekam 10s na zastaveni kontejneru..."
+    prompt: "Waiting 10s for containers to stop..."
 
 # ── Restore config files ────────────────────────────────────────────────────
 
@@ -189,7 +189,7 @@
 - name: "[Import] Wait for database containers to be ready"
   ansible.builtin.pause:
     seconds: 15
-    prompt: "Cekam 15s na start databazovych kontejneru..."
+    prompt: "Waiting 15s for database containers to start..."
 
 - name: "[Import] Check for PostgreSQL dump"
   ansible.builtin.stat:
@@ -271,10 +271,10 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════════════════
-       IMPORT DOKONČEN
-       Zdroj: {{ import_tarball }}
-       Obnoveno z: {{ _import_manifest.hostname | default('neznámý') }}
-             ({{ _import_manifest.date | default('neznámé datum') }})
-       Doporučení: Spusť plný playbook pro rekonfiguraci služeb:
+       IMPORT COMPLETE
+       Source: {{ import_tarball }}
+       Restored from: {{ _import_manifest.hostname | default('unknown') }}
+             ({{ _import_manifest.date | default('unknown date') }})
+       Recommendation: run the full playbook to reconfigure services:
          ansible-playbook main.yml -K
       ══════════════════════════════════════════════════════════════════════

@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
-# SYSTÉMOVÉ SLUŽBY – SSH, Samba, VNC / Apple Remote Desktop
-# Vyžaduje: become: true (sudo)
+# SYSTEM SERVICES - SSH, Samba, VNC / Apple Remote Desktop
+# Requires: become: true (sudo)
 # ==============================================================================
 
 # ── SSH / Remote Login ────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@
 - name: "[SSH] Configure sshd_config"
   ansible.builtin.blockinfile:
     path: /etc/ssh/sshd_config
-    marker: "# {mark} ANSIBLE MANAGED – mac-dev-playbook"
+    marker: "# {mark} ANSIBLE MANAGED - mac-dev-playbook"
     block: |
       Port {{ ssh_port | default(22) }}
       PasswordAuthentication {{ 'yes' if (ssh_password_auth | default(false)) else 'no' }}
@@ -72,8 +72,8 @@
 - name: "[VNC] Check VNC password is set"
   ansible.builtin.fail:
     msg: >
-      'vnc_password' je prázdné! Nastav 'vnc_password' v config.yml pro
-      bezpečné spuštění VNC sdílení obrazovky.
+      'vnc_password' is empty! Set 'vnc_password' in config.yml to
+      safely enable VNC screen sharing.
   when:
     - enable_vnc | default(false)
     - (vnc_password | default('')) | length == 0
@@ -91,7 +91,7 @@
   when:
     - enable_vnc | default(false)
     - (vnc_password | default('')) | length > 0
-  no_log: true   # Skrýt heslo v logu
+  no_log: true   # Hide password from log
   register: vnc_enable
   changed_when: vnc_enable.rc == 0
 
@@ -107,7 +107,7 @@
   changed_when: vnc_daemon.rc == 0
   failed_when: false
 
-# ── Apple Remote Desktop (plná správa) ───────────────────────────────────────
+# ── Apple Remote Desktop (full management) ───────────────────────────────────
 
 - name: "[ARD] Enable Apple Remote Desktop full access"
   ansible.builtin.command: >
@@ -122,13 +122,13 @@
   register: ard_enable
   changed_when: ard_enable.rc == 0
 
-# ── Souhrn ────────────────────────────────────────────────────────────────────
+# ── Summary ───────────────────────────────────────────────────────────────────
 
 - name: "[Services] Print enabled system services"
   ansible.builtin.debug:
     msg: |
-      Systémové služby:
-        SSH:  {{ 'ZAPNUTO (port ' + (ssh_port | default(22) | string) + ')' if (enable_ssh | default(false)) else 'vypnuto' }}
-        SMB:  {{ 'ZAPNUTO (workgroup: ' + (samba_workgroup | default('WORKGROUP')) + ')' if (enable_samba | default(false)) else 'vypnuto' }}
-        VNC:  {{ 'ZAPNUTO' if (enable_vnc | default(false)) else 'vypnuto' }}
-        ARD:  {{ 'ZAPNUTO' if (enable_remote_management | default(false)) else 'vypnuto' }}
+      System services:
+        SSH:  {{ 'ENABLED (port ' + (ssh_port | default(22) | string) + ')' if (enable_ssh | default(false)) else 'disabled' }}
+        SMB:  {{ 'ENABLED (workgroup: ' + (samba_workgroup | default('WORKGROUP')) + ')' if (enable_samba | default(false)) else 'disabled' }}
+        VNC:  {{ 'ENABLED' if (enable_vnc | default(false)) else 'disabled' }}
+        ARD:  {{ 'ENABLED' if (enable_remote_management | default(false)) else 'disabled' }}

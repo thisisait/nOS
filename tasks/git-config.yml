@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# GIT – globální konfigurace (user.name, user.email)
+# GIT - global configuration (user.name, user.email)
 # ==============================================================================
 
 - name: "[Git] Configure user.name"

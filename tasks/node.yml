@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# NODE.JS – NVM, Node LTS, globální npm balíčky
+# NODE.JS - NVM, Node LTS, global npm packages
 # ==============================================================================
 
 - name: Install NVM via Homebrew
@@ -17,7 +17,7 @@
 - name: Add NVM to shell profile (.zshrc)
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} NVM – ANSIBLE MANAGED"
+    marker: "# {mark} NVM - ANSIBLE MANAGED"
     block: |
       export NVM_DIR="$HOME/.nvm"
       [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"

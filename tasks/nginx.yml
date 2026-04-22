@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# NGINX – instalace a konfigurace
+# NGINX - installation and configuration
 # ==============================================================================
 
 - name: Install nginx via Homebrew
@@ -51,14 +51,14 @@
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
     mode: '0644'
   loop:
-    # ── Dev šablony ───────────────────────────────────────────────────────────
+    # ── Dev templates ─────────────────────────────────────────────────────────
     - default.conf
     - php-app.conf
     - node-proxy.conf
     - python-proxy.conf
     - go-proxy.conf
     - static-site.conf
-    # ── IIAB šablony (nasazeny vždy, aktivovány pouze pokud je služba zapnutá)
+    # ── IIAB templates (always deployed, enabled only if the service is enabled)
     - wordpress.conf
     - nextcloud.conf
     - kiwix.conf
@@ -91,16 +91,16 @@
     - authentik.conf
     - infisical.conf
     - vaultwarden.conf
-    # ── Identita
+    # ── Identity
     - bluesky-pds.conf
-    # ── Webový desktop
+    # ── Web desktop
     - puter.conf
     - jsos.conf
-    # ── AI orchestrace
+    # ── AI orchestration
     - paperclip.conf
     # ── Security dashboard
     - glasswing.conf
-    # ── Wave A+B (2026-04) nové služby
+    # ── Wave A+B (2026-04) new services
     - ntfy.conf
     - miniflux.conf
     - nodered.conf

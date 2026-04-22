@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# PYTHON – pyenv, Python, pip balíčky
+# PYTHON - pyenv, Python, pip packages
 # ==============================================================================
 
 - name: Install pyenv and dependencies via Homebrew
@@ -17,7 +17,7 @@
 - name: Add pyenv to shell profile (.zshrc)
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    marker: "# {mark} PYENV – ANSIBLE MANAGED"
+    marker: "# {mark} PYENV - ANSIBLE MANAGED"
     block: |
       export PYENV_ROOT="$HOME/.pyenv"
       [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"

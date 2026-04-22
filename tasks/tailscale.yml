@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
-# TAILSCALE – WireGuard mesh VPN
-# Zpřístupní všechny self-hosted služby odkudkoliv bez portforwardingu
+# TAILSCALE - WireGuard mesh VPN
+# Exposes all self-hosted services from anywhere without port forwarding
 #
-# Po instalaci spusť ručně:
+# After install, run manually:
 #   tailscale up
-#   → otevře se prohlížeč pro login na https://login.tailscale.com
+#   -> opens browser to log in at https://login.tailscale.com
 #
-# Služby pak dostupné přes porty (vyžaduje services_lan_access: true):
-#   http://<hostname>.<tailnet>.ts.net:3000   (Grafana – homepage)
+# Services then available via ports (requires services_lan_access: true):
+#   http://<hostname>.<tailnet>.ts.net:3000   (Grafana - homepage)
 #   http://<hostname>.<tailnet>.ts.net:3003   (Gitea)
 #   http://<hostname>.<tailnet>.ts.net:5678   (n8n)
 #   http://<hostname>.<tailnet>.ts.net:8096   (Jellyfin)
@@ -17,7 +17,7 @@
 #   http://<hostname>.<tailnet>.ts.net:3004   (Open WebUI)
 #   http://<hostname>.<tailnet>.ts.net:9002   (Portainer)
 #
-# Homepage (https://<tailscale_hostname>/) → Grafana (nastav tailscale_hostname v config.yml)
+# Homepage (https://<tailscale_hostname>/) -> Grafana (set tailscale_hostname in config.yml)
 # ==============================================================================
 
 - name: Install Tailscale via Homebrew Cask
@@ -34,11 +34,11 @@
 - name: Start Tailscale system extension (GUI required for first run)
   ansible.builtin.debug:
     msg: |
-      Tailscale byl nainstalován. Dokončení nastavení:
-        1. Otevři Tailscale v Applications
-        2. Klikni "Log in" a přihlas se na https://login.tailscale.com
-        3. Po přihlášení bude Mac Studio dostupný jako node v tvé tailnet
+      Tailscale has been installed. To finish setup:
+        1. Open Tailscale in Applications
+        2. Click "Log in" and sign in at https://login.tailscale.com
+        3. After login, the Mac Studio will be available as a node in your tailnet
 
-      Pro SSH přes Tailscale: tailscale up --ssh
-      Pro subnet router (celá domácí síť): tailscale up --advertise-routes=192.168.1.0/24
+      For SSH over Tailscale: tailscale up --ssh
+      For subnet router (whole home network): tailscale up --advertise-routes=192.168.1.0/24
   when: tailscaled_check.rc != 0
