@@ -201,6 +201,72 @@ class IntrospectTest(unittest.TestCase):
         self.assertEqual(entry["stack"], "observability")
         self.assertIsNone(entry["installed"])
 
+    def test_resolve_container_name_explicit_single(self):
+        svc = {"id": "grafana", "stack": "observability", "container_name": "custom-grafana"}
+        self.assertEqual(lib.resolve_container_names(svc), ["custom-grafana"])
+        self.assertEqual(lib.resolve_primary_container_name(svc), "custom-grafana")
+
+    def test_resolve_container_name_list_takes_precedence(self):
+        svc = {
+            "id": "erpnext",
+            "stack": "b2b",
+            "container_name": "ignored",
+            "container_names": ["b2b-erpnext-frontend-1", "b2b-erpnext-backend-1"],
+        }
+        self.assertEqual(
+            lib.resolve_container_names(svc),
+            ["b2b-erpnext-frontend-1", "b2b-erpnext-backend-1"],
+        )
+        self.assertEqual(
+            lib.resolve_primary_container_name(svc),
+            "b2b-erpnext-frontend-1",
+        )
+
+    def test_resolve_container_name_pattern_default(self):
+        svc = {"id": "rustfs", "stack": "iiab"}
+        # Default pattern, no nos.container_pattern override.
+        self.assertEqual(lib.resolve_container_names(svc), ["iiab-rustfs-1"])
+
+    def test_resolve_container_name_pattern_custom(self):
+        svc = {"id": "rustfs", "stack": "iiab"}
+        nos = {"container_pattern": "{stack}_{id}"}
+        self.assertEqual(
+            lib.resolve_container_names(svc, manifest_nos=nos),
+            ["iiab_rustfs"],
+        )
+
+    def test_resolve_container_name_missing_stack_or_id(self):
+        self.assertEqual(lib.resolve_container_names({"id": "x"}), [])
+        self.assertEqual(lib.resolve_container_names({"stack": "s"}), [])
+        self.assertEqual(lib.resolve_container_names({}), [])
+
+    def test_introspect_service_uses_resolver(self):
+        svc = {
+            "id": "paperclip",
+            "category": "devops",
+            "stack": "devops",
+            "version_source": "docker_image",
+            "image": "ghcr.io/paperclipai/paperclip",
+        }
+        nos = {"container_pattern": "{stack}-{id}-1"}
+        seen = {}
+
+        def _fake_image(name):
+            seen["image_call"] = name
+            return "sha-abc123"
+
+        def _fake_running(name):
+            seen["running_call"] = name
+            return True
+
+        with mock.patch.object(lib, "introspect_docker_image", side_effect=_fake_image), \
+                mock.patch.object(lib, "introspect_docker_running", side_effect=_fake_running):
+            entry = lib.introspect_service(svc, role_vars={}, manifest_nos=nos)
+        self.assertEqual(seen["image_call"], "devops-paperclip-1")
+        self.assertEqual(seen["running_call"], "devops-paperclip-1")
+        self.assertEqual(entry["installed"], "sha-abc123")
+        self.assertTrue(entry["healthy"])
+
     def test_introspect_all_runs_over_manifest(self):
         m = lib.load_manifest(MANIFEST_PATH)
         with mock.patch.object(lib, "introspect_docker_image", return_value=None), \

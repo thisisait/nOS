@@ -240,6 +240,60 @@ def _run(cmd: List[str], timeout: int = 10) -> Tuple[int, str, str]:
         return 127, "", str(exc)
 
 
+def resolve_container_names(
+    svc: Dict[str, Any],
+    manifest_nos: Optional[Dict[str, Any]] = None,
+) -> List[str]:
+    """Return all container names for a manifest service entry.
+
+    Priority (first non-empty wins for the *primary* name, but the full
+    ``container_names`` list is returned as-is when provided):
+
+      1. ``svc["container_names"]`` — explicit list for multi-container
+         services (e.g. erpnext backend/frontend/queue-short/...).
+      2. ``svc["container_name"]`` — explicit single name override.
+      3. Pattern substitution using ``manifest.nos.container_pattern``
+         (default: ``"{stack}-{id}-1"``) with ``{stack}`` and ``{id}``
+         filled from the service entry.
+      4. Empty list — caller must handle (can't introspect).
+
+    The pattern default matches Docker Compose's project-prefixed naming
+    (``<project>-<service>-<replica>``) which is what nOS uses out of the
+    box. Services that need a non-default name (mismatched id vs. compose
+    service key, multi-container layouts) set ``container_name`` or
+    ``container_names`` explicitly.
+    """
+    names = svc.get("container_names")
+    if isinstance(names, list) and names:
+        return [str(n) for n in names if n]
+
+    explicit = svc.get("container_name")
+    if explicit:
+        return [str(explicit)]
+
+    pattern = (manifest_nos or {}).get("container_pattern") or "{stack}-{id}-1"
+    stack = svc.get("stack")
+    sid = svc.get("id")
+    if stack and sid:
+        try:
+            return [pattern.format(stack=stack, id=sid)]
+        except (KeyError, IndexError, ValueError):
+            return []
+    return []
+
+
+def resolve_primary_container_name(
+    svc: Dict[str, Any],
+    manifest_nos: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """Return the first container name from :func:`resolve_container_names`.
+
+    Used by single-target introspection (image tag, running state).
+    """
+    names = resolve_container_names(svc, manifest_nos)
+    return names[0] if names else None
+
+
 def introspect_docker_image(container_name: str) -> Optional[str]:
     """Return the image tag of a running (or stopped) container, or None.
 
@@ -303,6 +357,7 @@ def introspect_launchd_loaded(label: str) -> Optional[bool]:
 def introspect_service(
     svc: Dict[str, Any],
     role_vars: Optional[Dict[str, Any]] = None,
+    manifest_nos: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Return the state entry for one manifest service.
 
@@ -310,6 +365,10 @@ def introspect_service(
     "11.5.0"}) — used to populate 'desired' and resolve {{ var }} substitutions
     in lightweight template fields. The full Jinja pipeline is the Ansible
     task's job; this function only needs enough to report desired version.
+
+    manifest_nos: optional ``manifest["nos"]`` mapping — provides the
+    ``container_pattern`` default used when a service entry does not declare
+    ``container_name`` / ``container_names`` explicitly.
     """
     role_vars = role_vars or {}
     version_source = svc.get("version_source") or "none"
@@ -336,7 +395,7 @@ def introspect_service(
         entry["enabled"] = bool(role_vars[install_flag])
 
     if version_source == "docker_image":
-        container = svc.get("container_name")
+        container = resolve_primary_container_name(svc, manifest_nos)
         if container:
             installed = introspect_docker_image(container)
             entry["installed"] = installed
@@ -376,11 +435,16 @@ def introspect_all(
 ) -> Dict[str, Dict[str, Any]]:
     """Run introspect_service for every manifest service, keyed by id."""
     out: Dict[str, Dict[str, Any]] = {}
+    manifest_nos = manifest.get("nos") if isinstance(manifest, dict) else None
     for svc in manifest.get("services", []):
         sid = svc.get("id")
         if not sid:
             continue
-        out[sid] = introspect_service(svc, role_vars=role_vars)
+        out[sid] = introspect_service(
+            svc,
+            role_vars=role_vars,
+            manifest_nos=manifest_nos,
+        )
     return out
 
 
@@ -419,6 +483,8 @@ __all__ = [
     "introspect_launchd_loaded",
     "introspect_service",
     "load_manifest",
+    "resolve_container_names",
+    "resolve_primary_container_name",
     "load_state",
     "to_json_safe",
     "utcnow_iso",

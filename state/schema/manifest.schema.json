@@ -21,7 +21,8 @@
         "state_dir":           { "type": "string" },
         "launchd_prefix":      { "type": "string" },
         "rbac_group_prefix":   { "type": "string" },
-        "oidc_client_prefix":  { "type": "string" }
+        "oidc_client_prefix":  { "type": "string" },
+        "container_pattern":   { "type": "string", "description": "Default container name pattern for docker-image services. Supports {stack} and {id} placeholders. Default: '{stack}-{id}-1' (Docker Compose project-prefixed convention)." }
       }
     },
 
@@ -50,7 +51,12 @@
           "enum": ["docker_image", "homebrew", "launchd", "git_tag", "pm2", "pip", "npm", "custom", "none"]
         },
         "image":          { "type": ["string", "null"], "description": "Docker image name (without tag) — for version_source=docker_image." },
-        "container_name": { "type": ["string", "null"] },
+        "container_name": { "type": ["string", "null"], "description": "Explicit single-container override. Takes precedence over nos.container_pattern." },
+        "container_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Explicit list of container names for multi-container services (e.g. erpnext, authentik). The first entry is treated as the primary for introspection."
+        },
         "brew_formula":   { "type": ["string", "null"] },
         "launchd_label":  { "type": ["string", "null"] },
         "data_path_var":  { "type": ["string", "null"] },
