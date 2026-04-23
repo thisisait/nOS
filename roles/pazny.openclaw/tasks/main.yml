@@ -6,7 +6,7 @@
 
 # -- 1. Ollama (local LLM inference) ─────────────────────────────────────────
 
-- name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend na Apple Silicon)"
+- name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend on Apple Silicon)"
   community.general.homebrew:
     name: ollama
     state: latest

@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.prometheus — Prometheus in Docker (observability compose override)
 #
-# Konfig soubor prometheus.yml stays rendered in tasks/stacks/core-up.yml
+# Config file prometheus.yml stays rendered in tasks/stacks/core-up.yml
 # from files/observability/prometheus/prometheus.yml — the role owns only the compose
 # fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================

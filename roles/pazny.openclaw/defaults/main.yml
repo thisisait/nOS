@@ -21,7 +21,7 @@ openclaw_config_dir: "~/.openclaw"
 # ─────────────────────────────────────────────────────────────────────────────
 # OLLAMA + MLX (Apple Silicon native, Ollama 0.20+)
 # ─────────────────────────────────────────────────────────────────────────────
-# MLX backend je default na Apple Silicon od 0.20 (0.19 preview, 0.21 stable).
+# MLX backend is the default on Apple Silicon since 0.20 (0.19 preview, 0.21 stable).
 # On M2 Ultra: +40-60% tok/s, unified-memory zero-copy, better scheduler.
 # NPU speedups (M5+) do not work here, but MLX still beats llama.cpp.
 #
@@ -31,22 +31,22 @@ openclaw_config_dir: "~/.openclaw"
 #   - Leaves ~15 GB for the Docker stack
 openclaw_model: "qwen3-coder:30b"
 
-# Dalsi modely ke stazeni (oprava: ollama pull v main.yml loopu)
+# Additional models to pull (fix: ollama pull loop lives in main.yml)
 # See `openclaw_additional_models` for MoE fallback + dense heavy-duty
 ollama_max_loaded_models: 1      # 1 for MoE 30B (dense); 2 if you use 20B/14B
-ollama_num_parallel: 2           # Max paralelnich inference requestu
-ollama_keep_alive: "5m"          # Uvolnit model z RAM po necinnosti
-ollama_flash_attention: 1        # Flash attention pro MLX (rychlejsi, mene pameti)
+ollama_num_parallel: 2           # Max concurrent inference requests
+ollama_keep_alive: "5m"          # Release model from RAM after this much idle time
+ollama_flash_attention: 1        # Flash attention for MLX (faster, less RAM)
 
-# KV cache quantization — pulka pameti kontextu vs f16, zanedbatelna ztrata kvality
-# na Qwen3/Gemma/Llama-3.3 (command-r + vanilla llama3 nepodporovane → fallback f16).
+# KV cache quantization — halves context RAM vs f16, negligible quality loss
+# on Qwen3/Gemma/Llama-3.3 (command-r + vanilla llama3 unsupported → falls back to f16).
 # Requires flash_attention=1. Stay <= 256K ctx to avoid crash #11619.
-ollama_kv_cache_type: "q8_0"     # q8_0 = -50% RAM kontextu; q4_0 = -75% ale horsi reasoning
+ollama_kv_cache_type: "q8_0"     # q8_0 = -50% context RAM; q4_0 = -75% but worse reasoning
 
-# Context window limit — BEZ LIMITU Ollama rezervuje plny context modelu
+# Context window limit — WITHOUT A LIMIT Ollama reserves the model's full context
 # (qwen3-coder:30b = 262K = ~47GB RAM just for KV cache!).
-# 32K is a reasonable default for agentic use cases; for specific large-context
-# task muzes override per-request via API.
+# 32K is a reasonable default for agentic use cases; for a specific large-context
+# task override per-request via the API.
 ollama_context_length: 32768
 
 # Additional models — downloaded via ollama pull in main.yml.

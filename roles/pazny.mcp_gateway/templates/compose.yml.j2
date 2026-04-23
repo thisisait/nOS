@@ -32,9 +32,9 @@ services:
       - "--api-key"
       - "{{ mcpo_api_key }}"
     environment:
-      # PostgreSQL read-only credentials (substituovane v configu)
+      # PostgreSQL read-only credentials (substituted into the config)
       PG_PW: "{{ mcp_postgres_password }}"
-      # Grafana MCP credentials (pokud je povolen)
+      # Grafana MCP credentials (only if enabled)
 {% if mcp_enable_grafana | default(true) %}
       GRAFANA_URL: "{{ mcp_grafana_url }}"
       GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('') }}"
