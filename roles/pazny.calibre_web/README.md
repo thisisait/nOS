@@ -6,6 +6,19 @@ Part of [nOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
 
 > **Naming note:** the role directory uses the underscore form `pazny.calibre_web` per Ansible Galaxy naming rules, but the Docker compose service is declared as `calibre-web` (with hyphen). The handler name and all `docker compose ... calibre-web` commands use the hyphen form for consistency with the compose service. A legacy bug in `tasks/iiab/calibreweb_post.yml` referenced `calibreweb` without the hyphen (silent failure via `failed_when: false`) — this role fixes it.
 
+## SSO mode: proxy-auth (no native OIDC available)
+
+Calibre-Web is authenticated via **Authentik proxy-auth** (nginx forward-auth), *not* native OIDC. This is a deliberate constraint driven by upstream:
+
+- Upstream (`janeczku/calibre-web`) only supports **LDAP** and the hard-coded Google / GitHub OAuth providers. Generic OIDC (Authentik, Keycloak, Authelia, …) has been explicitly refused by the maintainer (see upstream issue [#2965](https://github.com/janeczku/calibre-web/issues/2965) and the closed PR chain behind it — quote: *"We will not extend Calibre-Web with any more login abilities"*).
+- There is **no** `CALIBRE_WEB_OIDC_*` environment variable honoured by the LSIO image `lscr.io/linuxserver/calibre-web:0.6.26`. Any such env vars would be silently ignored.
+- The community fork `crocodilestick/Calibre-Web-Automated` does ship generic OIDC, but switching to it means changing images, library-watch behaviour, and DB migrations — out of scope for this sprint.
+- Authentik's own integration guide for Calibre-Web recommends **LDAP**, not OIDC.
+
+**Conclusion:** proxy-auth stays. Access is gated by Authentik (cookie domain `.dev.local`, embedded outpost forward-auth), but users still see Calibre-Web's own login page after the Authentik gate. Admin password is converged to `{{ global_password_prefix }}_pw_calibreweb` by `tasks/post.yml`.
+
+Future migration path (not scheduled): swap image to `crocodilestick/calibre-web-automated` and switch to env-driven OIDC. Blocked on library-format parity verification and on `state/manifest.yml` `oidc: proxy` → `oidc: native` migration recipe.
+
 ## What it does
 
 Two invocation modes from `tasks/stacks/stack-up.yml`:
