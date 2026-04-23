@@ -80,6 +80,7 @@ _SENSITIVE_KEY_RE = re.compile(r"password|token|secret|key|credential",
                                re.IGNORECASE)
 _MIGRATION_TAG_RE = re.compile(r"^\s*\[\s*Migrate\s*\]", re.IGNORECASE)
 _UPGRADE_TAG_RE = re.compile(r"^\s*\[\s*Upgrade\s*\]", re.IGNORECASE)
+_PATCH_TAG_RE = re.compile(r"^\s*\[\s*Patch\s*\]", re.IGNORECASE)
 _COEXIST_TAG_RE = re.compile(r"^\s*\[\s*Coexist(?:ence)?\s*\]", re.IGNORECASE)
 
 
@@ -348,6 +349,7 @@ class CallbackModule(CallbackBase):
         self._task_role_name = {}   # task._uuid -> role name
         self._current_migration_id = None
         self._current_upgrade_id = None
+        self._current_patch_id = None
         self._current_coexistence_service = None
 
         self._debug = os.environ.get("GLASSWING_EVENTS_DEBUG", "") == "1"
@@ -444,6 +446,7 @@ class CallbackModule(CallbackBase):
             "result": None,
             "migration_id": self._current_migration_id,
             "upgrade_id": self._current_upgrade_id,
+            "patch_id": self._current_patch_id,
             "coexistence_service": self._current_coexistence_service,
         }
         ev.update({k: v for k, v in fields.items() if v is not None
@@ -508,11 +511,14 @@ class CallbackModule(CallbackBase):
     def _update_synthetic_context(self, task_name):
         mig = extract_tagged_id(task_name, _MIGRATION_TAG_RE)
         upg = extract_tagged_id(task_name, _UPGRADE_TAG_RE)
+        patch = extract_tagged_id(task_name, _PATCH_TAG_RE)
         cox = extract_tagged_id(task_name, _COEXIST_TAG_RE)
         if mig is not None:
             self._current_migration_id = mig
         if upg is not None:
             self._current_upgrade_id = upg
+        if patch is not None:
+            self._current_patch_id = patch
         if cox is not None:
             self._current_coexistence_service = cox
 
@@ -700,5 +706,6 @@ __all__ = [
     "utc_now_iso",
     "_MIGRATION_TAG_RE",
     "_UPGRADE_TAG_RE",
+    "_PATCH_TAG_RE",
     "_COEXIST_TAG_RE",
 ]
