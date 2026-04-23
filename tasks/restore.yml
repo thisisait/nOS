@@ -1,82 +1,387 @@
 ---
 # ==============================================================================
-# RESTORE - restore data from Restic backup
-# Restores the latest snapshot into a temp directory + imports DB dumps
+# RESTORE - pull backups from RustFS (S3) and replay into live services
+# ------------------------------------------------------------------------------
+# Contract with pazny.backup (Agent C1):
+#   Backups live at  s3://backups/<YYYY-MM-DD>/<source>.<ext>   via RustFS
+#   Endpoint:        http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+#   Sources:
+#     mariadb.sql.gz             mariadb-dump --all-databases
+#     postgres.sql.gz            pg_dumpall
+#     volume-<name>.tar.gz       Docker named volume tarball
+#     authentik-blueprints.json  Authentik export
+#
+# Invocation:
+#   ansible-playbook main.yml -K --tags restore \
+#       -e restore_date=2026-04-20 \
+#       [-e restore_sources=mariadb,postgres,volume-mariadb_data]
+#
+# If restore_sources is omitted, every source at that date is restored.
 # ==============================================================================
 
-- name: "[Restore] Verify restic is installed"
-  ansible.builtin.command: which restic
-  register: restic_which
-  changed_when: false
-  failed_when: restic_which.rc != 0
+# ── 0. Guardrails ─────────────────────────────────────────────────────────────
 
-- name: "[Restore] Verify restic_repo is configured"
+- name: "[Restore] Validate restore_date is provided"
   ansible.builtin.fail:
-    msg: "restic_repo is empty — set it in config.yml"
-  when: restic_repo | default('') | length == 0
+    msg: |
+      restore_date is not set. Pass the backup date on the CLI, e.g.:
+        ansible-playbook main.yml -K --tags restore -e restore_date=2026-04-20
+      List available dates with:
+        aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }} s3 ls backups/
+  when: restore_date is not defined or (restore_date | string | length) == 0
 
-- name: "[Restore] List available snapshots"
-  ansible.builtin.command: restic -r {{ restic_repo }} snapshots
-  environment:
-    RESTIC_PASSWORD: "{{ restic_password }}"
-  register: restic_snapshots
+- name: "[Restore] Validate restore_date format (YYYY-MM-DD)"
+  ansible.builtin.fail:
+    msg: "restore_date='{{ restore_date }}' — expected ISO date YYYY-MM-DD"
+  when: restore_date is not match('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+
+- name: "[Restore] Verify aws CLI is installed"
+  ansible.builtin.command: which aws
+  register: aws_which
   changed_when: false
+  failed_when: aws_which.rc != 0
 
-- name: "[Restore] Show available snapshots"
-  ansible.builtin.debug:
-    var: restic_snapshots.stdout_lines
+- name: "[Restore] Verify docker is available"
+  ansible.builtin.command: which docker
+  register: docker_which
+  changed_when: false
+  failed_when: docker_which.rc != 0
 
-- name: "[Restore] Ensure restore-temp directory exists"
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp"
-    state: directory
-    mode: '0700'
+# ── 1. Resolve configuration ──────────────────────────────────────────────────
 
-- name: "[Restore] Restore latest snapshot"
+- name: "[Restore] Set restore run-time facts"
+  ansible.builtin.set_fact:
+    restore_s3_endpoint: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}"
+    restore_s3_bucket: "backups"
+    restore_s3_prefix: "{{ restore_date }}/"
+    restore_workdir: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ restore_date }}"
+    restore_started_at: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -Iseconds')) }}"
+    restore_requested_sources: >-
+      {{ (restore_sources | default('') | string).split(',')
+         | map('trim') | reject('equalto', '') | list }}
+
+- name: "[Restore] Prepare AWS environment block"
+  ansible.builtin.set_fact:
+    restore_aws_env:
+      AWS_ACCESS_KEY_ID: "{{ rustfs_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ rustfs_secret_key }}"
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_DEFAULT_REGION: "us-east-1"
+  no_log: true
+
+# ── 2. List available objects at the requested date ──────────────────────────
+
+- name: "[Restore] List backup objects at s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}"
   ansible.builtin.command: >
-    restic -r {{ restic_repo }} restore latest
-    --target {{ ansible_facts['env']['HOME'] }}/restore-temp/
-  environment:
-    RESTIC_PASSWORD: "{{ restic_password }}"
-  async: 3600
-  poll: 30
-
-# ── Database restore ─────────────────────────────────────────────────────────
-
-- name: "[Restore] Check if PostgreSQL dump exists"
-  ansible.builtin.stat:
-    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql"
-  register: pg_dump_file
-
-- name: "[Restore] Restore PostgreSQL databases"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p infra exec -T postgresql
-    psql -U postgres < {{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql
-  when:
-    - install_postgresql | default(false)
-    - pg_dump_file.stat.exists | default(false)
-  failed_when: false
-
-- name: "[Restore] Check if MariaDB dump exists"
-  ansible.builtin.stat:
-    path: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql"
-  register: maria_dump_file
-
-- name: "[Restore] Restore MariaDB databases"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p infra exec -T mariadb
-    mysql -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}
-    < {{ ansible_facts['env']['HOME'] }}/restore-temp/{{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql
-  when:
-    - install_mariadb | default(false)
-    - maria_dump_file.stat.exists | default(false)
+    aws --endpoint-url {{ restore_s3_endpoint }}
+    s3 ls s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}
+  environment: "{{ restore_aws_env }}"
+  register: restore_ls
+  changed_when: false
   failed_when: false
   no_log: true
 
-- name: "[Restore] Show restore summary"
+- name: "[Restore] Bail if no backups exist at the requested date"
+  ansible.builtin.fail:
+    msg: |
+      No backups found at s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}
+      Endpoint: {{ restore_s3_endpoint }}
+      List available dates:
+        aws --endpoint-url {{ restore_s3_endpoint }} s3 ls {{ restore_s3_bucket }}/
+  when: restore_ls.rc != 0 or (restore_ls.stdout | default('') | trim | length) == 0
+
+- name: "[Restore] Parse available source filenames"
+  ansible.builtin.set_fact:
+    restore_available_files: >-
+      {{ restore_ls.stdout_lines
+         | map('regex_replace', '^.*\\s+([^\\s]+)$', '\\1')
+         | reject('equalto', '')
+         | list }}
+
+- name: "[Restore] Build list of sources to restore"
+  ansible.builtin.set_fact:
+    restore_plan: >-
+      {%- set plan = [] -%}
+      {%- for f in restore_available_files -%}
+        {%- set stem = f | regex_replace('\\.sql\\.gz$|\\.tar\\.gz$|\\.json$', '') -%}
+        {%- if (restore_requested_sources | length) == 0
+               or stem in restore_requested_sources
+               or f in restore_requested_sources -%}
+          {%- set _ = plan.append({'file': f, 'source': stem}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ plan }}
+
+- name: "[Restore] Bail if nothing matches restore_sources filter"
+  ansible.builtin.fail:
+    msg: |
+      No files at {{ restore_s3_prefix }} match restore_sources={{ restore_requested_sources }}.
+      Available: {{ restore_available_files }}
+  when: restore_plan | length == 0
+
+- name: "[Restore] Show restore plan"
   ansible.builtin.debug:
-    msg: >-
-      Restore complete. Data extracted to ~/restore-temp/.
-      Review contents and move files to their target locations.
-      PostgreSQL restored: {{ pg_dump_file.stat.exists | default(false) }}
-      MariaDB restored: {{ maria_dump_file.stat.exists | default(false) }}
+    msg: |
+      Restore plan for {{ restore_date }}:
+      Endpoint:  {{ restore_s3_endpoint }}
+      Bucket:    s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}
+      Files:     {{ restore_plan | map(attribute='file') | list | join(', ') }}
+      Target:    live services (infra stack must be running)
+      Work dir:  {{ restore_workdir }}
+
+# ── 3. Destructive-action safety prompt ───────────────────────────────────────
+
+- name: "[Restore] Interactive confirmation (operator must press ENTER)"
+  ansible.builtin.pause:
+    prompt: |
+
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║                  *** DESTRUCTIVE RESTORE AHEAD ***                   ║
+      ╠══════════════════════════════════════════════════════════════════════╣
+      ║ Date:       {{ restore_date }}
+      ║ Sources:    {{ restore_plan | map(attribute='source') | list | join(', ') }}
+      ║ Mode:       {{ 'CHECK (dry-run, no writes)' if ansible_check_mode else 'LIVE (will overwrite data)' }}
+      ║
+      ║ This will:
+      ║   * Drop-and-replace MariaDB / PostgreSQL databases from dumps
+      ║   * Stop containers using targeted Docker volumes and rewrite them
+      ║   * Re-apply Authentik blueprints via the API
+      ║
+      ║ There is NO undo. Take a fresh backup first if unsure.
+      ║ Press ENTER to continue, Ctrl-C to abort.
+      ╚══════════════════════════════════════════════════════════════════════╝
+  when: not ansible_check_mode and (restore_auto_confirm | default(false) | bool) == false
+
+- name: "[Restore] Ensure restore work-dir exists"
+  ansible.builtin.file:
+    path: "{{ restore_workdir }}"
+    state: directory
+    mode: '0700'
+
+# ── 4. Download every planned object ──────────────────────────────────────────
+
+- name: "[Restore] Download backups to {{ restore_workdir }}"
+  ansible.builtin.command: >
+    aws --endpoint-url {{ restore_s3_endpoint }}
+    s3 cp s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}{{ item.file }}
+    {{ restore_workdir }}/{{ item.file }}
+  environment: "{{ restore_aws_env }}"
+  loop: "{{ restore_plan }}"
+  loop_control:
+    label: "{{ item.file }}"
+  register: restore_downloads
+  changed_when: true
+  no_log: true
+
+- name: "[Restore] Stat downloaded files (for summary)"
+  ansible.builtin.stat:
+    path: "{{ restore_workdir }}/{{ item.file }}"
+  loop: "{{ restore_plan }}"
+  loop_control:
+    label: "{{ item.file }}"
+  register: restore_stats
+
+# ── 5. Per-source restore (idempotent per type) ───────────────────────────────
+
+- name: "[Restore] Initialise restore summary"
+  ansible.builtin.set_fact:
+    restore_summary: []
+
+# 5a. MariaDB ------------------------------------------------------------------
+
+- name: "[Restore][mariadb] Replay SQL dump into infra-mariadb-1"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'mariadb') | list | length > 0
+    - not ansible_check_mode
+  block:
+    - name: "[Restore][mariadb] Ensure MariaDB container is running"
+      ansible.builtin.command: docker ps --filter "name=infra-mariadb-1" --format "{% raw %}{{.Names}}{% endraw %}"
+      register: maria_ps
+      changed_when: false
+
+    - name: "[Restore][mariadb] Fail if MariaDB is not running"
+      ansible.builtin.fail:
+        msg: "infra-mariadb-1 is not running. Bring up the infra stack before restoring."
+      when: "'infra-mariadb-1' not in maria_ps.stdout"
+
+    - name: "[Restore][mariadb] Record start time"
+      ansible.builtin.set_fact:
+        maria_t0: "{{ lookup('pipe', 'date +%s') }}"
+
+    - name: "[Restore][mariadb] Pipe gunzip'd dump into mariadb client"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c {{ restore_workdir }}/mariadb.sql.gz \
+          | docker exec -i infra-mariadb-1 \
+              mariadb -uroot -p"{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}"
+      args:
+        executable: /bin/bash
+      register: maria_restore
+      no_log: true
+      changed_when: maria_restore.rc == 0
+
+    - name: "[Restore][mariadb] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'mariadb',
+          'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (maria_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','mariadb')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+
+# 5b. PostgreSQL ---------------------------------------------------------------
+
+- name: "[Restore][postgres] Replay pg_dumpall into infra-postgresql-1"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'postgres') | list | length > 0
+    - not ansible_check_mode
+  block:
+    - name: "[Restore][postgres] Ensure PostgreSQL container is running"
+      ansible.builtin.command: docker ps --filter "name=infra-postgresql-1" --format "{% raw %}{{.Names}}{% endraw %}"
+      register: pg_ps
+      changed_when: false
+
+    - name: "[Restore][postgres] Fail if PostgreSQL is not running"
+      ansible.builtin.fail:
+        msg: "infra-postgresql-1 is not running. Bring up the infra stack before restoring."
+      when: "'infra-postgresql-1' not in pg_ps.stdout"
+
+    - name: "[Restore][postgres] Record start time"
+      ansible.builtin.set_fact:
+        pg_t0: "{{ lookup('pipe', 'date +%s') }}"
+
+    - name: "[Restore][postgres] Pipe gunzip'd pg_dumpall into psql"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c {{ restore_workdir }}/postgres.sql.gz \
+          | docker exec -i infra-postgresql-1 psql -U postgres -v ON_ERROR_STOP=0
+      args:
+        executable: /bin/bash
+      register: pg_restore
+      no_log: true
+      changed_when: pg_restore.rc == 0
+
+    - name: "[Restore][postgres] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'postgres',
+          'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (pg_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','postgres')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+
+# 5c. Docker named volumes (volume-<name>.tar.gz) ------------------------------
+
+- name: "[Restore][volumes] Enumerate volume-* sources"
+  ansible.builtin.set_fact:
+    restore_volume_plan: >-
+      {{ restore_plan
+         | selectattr('source', 'match', '^volume-')
+         | list }}
+
+- name: "[Restore][volumes] Restore each Docker volume from tarball"
+  when:
+    - restore_volume_plan | length > 0
+    - not ansible_check_mode
+  loop: "{{ restore_volume_plan }}"
+  loop_control:
+    label: "{{ item.source }}"
+  ansible.builtin.include_tasks: _restore_volume.yml
+
+# 5d. Authentik blueprints ----------------------------------------------------
+
+- name: "[Restore][authentik] Re-apply blueprints JSON via API"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'authentik-blueprints') | list | length > 0
+    - not ansible_check_mode
+  block:
+    - name: "[Restore][authentik] Record start time"
+      ansible.builtin.set_fact:
+        ak_t0: "{{ lookup('pipe', 'date +%s') }}"
+
+    - name: "[Restore][authentik] Read blueprints file"
+      ansible.builtin.slurp:
+        src: "{{ restore_workdir }}/authentik-blueprints.json"
+      register: ak_slurp
+
+    - name: "[Restore][authentik] POST blueprints to Authentik API"
+      ansible.builtin.uri:
+        url: "https://{{ authentik_domain | default('auth.dev.local') }}/api/v3/managed/blueprints/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_bootstrap_token | default(authentik_api_token | default('')) }}"
+          Content-Type: "application/json"
+        body: "{{ ak_slurp.content | b64decode }}"
+        body_format: json
+        status_code: [200, 201, 202, 204]
+        validate_certs: false
+      register: ak_post
+      failed_when: false
+
+    - name: "[Restore][authentik] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'authentik-blueprints',
+          'status': ('ok' if ak_post.status in [200,201,202,204] else 'warn'),
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (ak_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','authentik-blueprints')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+
+# ── 6. Replay post.yml hooks for restored services ────────────────────────────
+# Best-effort: each role's post.yml is idempotent; re-running re-verifies
+# migrations, re-seeds admin users, re-applies OIDC wiring, etc.
+
+- name: "[Restore] Replay MariaDB role post.yml (service bootstrap)"
+  ansible.builtin.include_role:
+    name: pazny.mariadb
+    tasks_from: post.yml
+    apply:
+      tags: ['restore']
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'mariadb') | list | length > 0
+    - not ansible_check_mode
+  tags: ['restore']
+  ignore_errors: true
+
+- name: "[Restore] Replay PostgreSQL role post.yml"
+  ansible.builtin.include_role:
+    name: pazny.postgresql
+    tasks_from: post.yml
+    apply:
+      tags: ['restore']
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'postgres') | list | length > 0
+    - not ansible_check_mode
+  tags: ['restore']
+  ignore_errors: true
+
+# ── 7. Final summary ──────────────────────────────────────────────────────────
+
+- name: "[Restore] Show summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+      Restore complete — {{ restore_date }}
+      ══════════════════════════════════════════════════════════════════════
+      Started:  {{ restore_started_at }}
+      Finished: {{ lookup('pipe', 'date -Iseconds') }}
+      Work dir: {{ restore_workdir }}
+
+      Restored items:
+      {% for item in restore_summary %}
+        - {{ item.source }}: {{ item.status }}
+          size={{ (item.size_bytes | int) }} B,
+          duration={{ item.duration_s }}s
+      {% endfor %}
+
+      Next steps:
+        1. Verify the health probes:  ansible-playbook main.yml --tags health
+        2. Spot-check DB row counts and service UIs (see docs/restore-runbook.md).
+        3. When satisfied, remove the work dir:  rm -rf {{ restore_workdir }}
+      ══════════════════════════════════════════════════════════════════════

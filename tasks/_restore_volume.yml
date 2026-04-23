@@ -1,0 +1,93 @@
+---
+# ==============================================================================
+# _restore_volume.yml — included per-item from tasks/restore.yml
+# Expects loop var `item` = { file: 'volume-<name>.tar.gz', source: 'volume-<name>' }
+# Restores a Docker named volume from the downloaded tarball:
+#   1. Discover containers currently mounting the volume
+#   2. Stop those containers
+#   3. Wipe + re-extract the tarball into the volume via a throw-away alpine container
+#   4. Restart the stopped containers
+# ==============================================================================
+
+- name: "[Restore][volume] Set per-volume facts ({{ item.source }})"
+  ansible.builtin.set_fact:
+    vol_name: "{{ item.source | regex_replace('^volume-', '') }}"
+    vol_tarball: "{{ restore_workdir }}/{{ item.file }}"
+    vol_t0: "{{ lookup('pipe', 'date +%s') }}"
+
+- name: "[Restore][volume] Verify Docker volume '{{ vol_name }}' exists"
+  ansible.builtin.command: docker volume inspect {{ vol_name }}
+  register: vol_inspect
+  changed_when: false
+  failed_when: false
+
+- name: "[Restore][volume] Create volume '{{ vol_name }}' if missing"
+  ansible.builtin.command: docker volume create {{ vol_name }}
+  when: vol_inspect.rc != 0
+  changed_when: true
+
+- name: "[Restore][volume] Find containers mounting '{{ vol_name }}'"
+  ansible.builtin.shell: |
+    docker ps -a --format '{% raw %}{{.Names}}{% endraw %}' \
+      | while read c; do
+          if docker inspect -f '{% raw %}{{range .Mounts}}{{.Name}} {{end}}{% endraw %}' "$c" 2>/dev/null \
+             | tr ' ' '\n' | grep -qx "{{ vol_name }}"; then
+            echo "$c"
+          fi
+        done
+  args:
+    executable: /bin/bash
+  register: vol_consumers
+  changed_when: false
+
+- name: "[Restore][volume] Record consumer list"
+  ansible.builtin.set_fact:
+    vol_consumer_names: "{{ vol_consumers.stdout_lines | select | list }}"
+
+- name: "[Restore][volume] Stop consumer containers"
+  ansible.builtin.command: docker stop {{ item2 }}
+  loop: "{{ vol_consumer_names }}"
+  loop_control:
+    loop_var: item2
+  when: vol_consumer_names | length > 0
+  changed_when: true
+
+- name: "[Restore][volume] Wipe existing volume contents"
+  ansible.builtin.command: >
+    docker run --rm
+    -v {{ vol_name }}:/data
+    alpine:3.20
+    sh -c "rm -rf /data/..?* /data/.[!.]* /data/* || true"
+  changed_when: true
+
+- name: "[Restore][volume] Extract tarball into '{{ vol_name }}'"
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker run --rm -i \
+      -v {{ vol_name }}:/data \
+      alpine:3.20 \
+      sh -c "tar -xzf - -C /data" < {{ vol_tarball }}
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: "[Restore][volume] Restart consumer containers"
+  ansible.builtin.command: docker start {{ item2 }}
+  loop: "{{ vol_consumer_names }}"
+  loop_control:
+    loop_var: item2
+  when: vol_consumer_names | length > 0
+  changed_when: true
+  failed_when: false
+
+- name: "[Restore][volume] Append '{{ vol_name }}' to summary"
+  ansible.builtin.set_fact:
+    restore_summary: "{{ restore_summary + [{
+      'source': item.source,
+      'status': 'ok',
+      'duration_s': ((lookup('pipe', 'date +%s') | int) - (vol_t0 | int)),
+      'size_bytes': (restore_stats.results
+                      | selectattr('item.source','equalto', item.source)
+                      | map(attribute='stat.size') | list | first | default(0)),
+      'consumers_restarted': vol_consumer_names
+    }] }}"
