@@ -16,3 +16,4 @@ _credentials.yml
 .claude/
 __pycache__/
 *.pyc
+tools/social-poster/index.html
