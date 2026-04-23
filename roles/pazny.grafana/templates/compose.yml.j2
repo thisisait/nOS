@@ -80,3 +80,179 @@ services:
         max-file: "5"
     mem_limit: {{ grafana_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_standard | default('1.0') }}
+
+{# ───────────────────────────────────────────────────────────────────────────
+   Exporter fleet (Sprint 1 Wave 1 — observability expansion)
+   ───────────────────────────────────────────────────────────────────────────
+   All exporters join observability_net + {{ stacks_shared_network }}. The
+   shared network is the bridge to infra-stack services (postgres, mariadb,
+   redis), which also advertise themselves on stacks_shared_network. That
+   avoids the need to declare infra_net here (it's a per-project bridge and
+   isn't exposed externally).
+
+   Scrape configs for each target live in files/observability/alloy/config.alloy.j2
+   (one prometheus.scrape block per exporter, gated by alloy_scrape_*_exporter).
+   #}
+
+{% if install_postgresql | default(false) %}
+  # ── Postgres exporter ────────────────────────────────────────────────────
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:{{ postgres_exporter_version | default('v0.15.0') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ postgres_exporter_port | default(9187) }}:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}@postgresql:5432/postgres?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: ""
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ docker_mem_limit_light | default('512m') }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+{% endif %}
+
+{% if install_mariadb | default(false) %}
+  # ── MariaDB / MySQL exporter ─────────────────────────────────────────────
+  # Needs the `mysqld_exporter` user seeded in mariadb_users (priv:
+  # PROCESS, REPLICATION CLIENT, SELECT). Connection string uses the
+  # MySQL-compatible DSN (user:pass@(host:port)/).
+  mysqld-exporter:
+    image: prom/mysqld-exporter:{{ mysqld_exporter_version | default('v0.15.1') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ mysqld_exporter_port | default(9104) }}:9104"
+    command:
+      - "--mysqld.address=mariadb:3306"
+      - "--mysqld.username=mysqld_exporter"
+      - "--collect.info_schema.processlist"
+      - "--collect.info_schema.innodb_metrics"
+      - "--collect.global_status"
+      - "--collect.global_variables"
+      - "--collect.slave_status"
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: "{{ mysqld_exporter_password | default(global_password_prefix + '_pw_mysqld_exporter') }}"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9104/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ docker_mem_limit_light | default('512m') }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+{% endif %}
+
+{% if redis_docker | default(false) %}
+  # ── Redis exporter ───────────────────────────────────────────────────────
+  redis-exporter:
+    image: oliver006/redis_exporter:{{ redis_exporter_version | default('v1.58.0') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ redis_exporter_port | default(9121) }}:9121"
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ docker_mem_limit_light | default('512m') }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+{% endif %}
+
+  # ── cAdvisor — Docker container resource metrics ────────────────────────
+  # Mounts the Docker socket + host cgroup paths. On macOS Docker Desktop the
+  # root "/" bind is a passthrough to the VM; cAdvisor still reports per-
+  # container CPU/RAM/net/fs from /var/lib/docker.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version | default('v0.49.1') }}
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "127.0.0.1:{{ cadvisor_port | default(8080) }}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - "--housekeeping_interval=30s"
+      - "--docker_only=true"
+      - "--store_container_labels=false"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ cadvisor_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+
+  # ── Blackbox exporter — HTTP/TCP probes ─────────────────────────────────
+  # Module definitions (http_2xx, tcp_connect, …) live in
+  # files/observability/blackbox/config.yml. Prometheus scrape targets for
+  # individual URLs are owned by A2 in the prometheus rules/config dir.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:{{ blackbox_exporter_version | default('v0.25.0') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ blackbox_exporter_port | default(9115) }}:9115"
+    volumes:
+      - {{ stacks_dir }}/observability/blackbox/config.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9115/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - observability_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ docker_mem_limit_light | default('512m') }}
+    cpus: {{ docker_cpus_light | default('0.5') }}

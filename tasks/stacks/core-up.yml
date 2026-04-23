@@ -73,6 +73,7 @@
     - "{{ stacks_dir }}/observability/tempo"
     - "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
     - "{{ stacks_dir }}/observability/grafana/provisioning/dashboards"
+    - "{{ stacks_dir }}/observability/blackbox"
     # Override directories for non-core stacks (Wave 2 role fragments)
     # Must exist BEFORE the stack-up.yml find task, otherwise find task fails.
     - "{{ stacks_dir }}/iiab/overrides"
@@ -281,6 +282,14 @@
   ansible.builtin.template:
     src: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards/all.yml.j2"
     dest: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
+    mode: '0644'
+    force: true
+  when: install_observability | default(true)
+
+- name: "[Core] Deploy blackbox-exporter configuration"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/observability/blackbox/config.yml"
+    dest: "{{ stacks_dir }}/observability/blackbox/config.yml"
     mode: '0644'
     force: true
   when: install_observability | default(true)

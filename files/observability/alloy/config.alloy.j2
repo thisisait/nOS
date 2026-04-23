@@ -119,6 +119,72 @@ prometheus.scrape "alloy_self" {
   scrape_interval = "15s"
 }
 
+// ── Exporter fleet (Sprint 1 Wave 1 — observability expansion) ───────────────
+// Each exporter runs as a container in the observability stack and publishes
+// its /metrics endpoint on 127.0.0.1:<port> of the host. Alloy (host-side)
+// scrapes via localhost. Toggles and ports live in default.config.yml.
+
+{% if alloy_scrape_postgres_exporter | default(install_postgresql | default(false)) %}
+// PostgreSQL exporter (prometheuscommunity/postgres-exporter)
+prometheus.scrape "postgres_exporter" {
+  targets = [{
+    __address__ = "localhost:{{ postgres_exporter_port | default(9187) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "postgres-exporter"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_mysqld_exporter | default(install_mariadb | default(false)) %}
+// MariaDB / MySQL exporter (prom/mysqld-exporter)
+prometheus.scrape "mysqld_exporter" {
+  targets = [{
+    __address__ = "localhost:{{ mysqld_exporter_port | default(9104) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "mysqld-exporter"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_redis_exporter | default(redis_docker | default(false)) %}
+// Redis exporter container (oliver006/redis_exporter)
+prometheus.scrape "redis_exporter" {
+  targets = [{
+    __address__ = "localhost:{{ redis_exporter_port | default(9121) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "redis-exporter"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_cadvisor | default(true) %}
+// cAdvisor — per-container CPU / memory / network / fs metrics
+prometheus.scrape "cadvisor" {
+  targets = [{
+    __address__ = "localhost:{{ cadvisor_port | default(8080) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "cadvisor"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if alloy_scrape_blackbox_self | default(true) %}
+// Blackbox exporter self-metrics. Actual probe scrapes (http_2xx against a
+// service URL list) live in the Prometheus config, owned by agent A2.
+prometheus.scrape "blackbox_self" {
+  targets = [{
+    __address__ = "localhost:{{ blackbox_exporter_port | default(9115) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "blackbox-exporter"
+  scrape_interval = "30s"
+}
+{% endif %}
+
 // Remote write to Prometheus
 prometheus.remote_write "default" {
   endpoint {
@@ -218,6 +284,55 @@ loki.source.file "homebrew_services" {
   targets    = local.file_match.homebrew_services.targets
   forward_to = [loki.write.default.receiver]
 }
+
+{% if alloy_tail_docker_logs | default(true) %}
+// ── All Docker container stdout/stderr → Loki ────────────────────────────────
+// Sprint 1 Wave 1: ship every container's logs with discovery labels
+// (compose project, service, container name, image) so Grafana can filter
+// by stack (`project="observability"`) or service (`service="grafana"`).
+//
+// Requires Alloy to have access to /var/run/docker.sock. On macOS Docker
+// Desktop, the raw socket lives at ~/.docker/run/docker.sock — it's
+// symlinked to /var/run/docker.sock, so "unix:///var/run/docker.sock" works.
+discovery.docker "docker_targets" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "30s"
+}
+
+discovery.relabel "docker_targets" {
+  targets = discovery.docker.docker_targets.targets
+
+  // Compose project → "stack" label (infra / observability / iiab / …).
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "stack"
+  }
+  // Compose service name → "service" label (grafana, prometheus, mariadb …).
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+  // Container name (without leading "/") → "container".
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  // Image (repo:tag) → "image".
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+loki.source.docker "docker_logs" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.docker_targets.targets
+  forward_to    = [loki.write.default.receiver]
+  relabel_rules = discovery.relabel.docker_targets.rules
+  refresh_interval = "30s"
+}
+{% endif %}
 
 // Loki write endpoint
 loki.write "default" {

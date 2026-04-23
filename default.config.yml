@@ -785,6 +785,14 @@ mariadb_users:
   - name: "firefly"
     password: "{{ firefly_db_password | default(global_password_prefix + '_pw_firefly') }}"
     priv: "firefly.*:ALL"
+  # mysqld-exporter (observability stack) — scraped by Grafana Alloy on the
+  # observability_net via stacks_shared_network. Needs the three "slave"/monitoring
+  # privileges that Percona/MariaDB's stock exporter queries require. Host "%" so
+  # it works from any Docker network (exporter lives in the observability project).
+  - name: "mysqld_exporter"
+    password: "{{ mysqld_exporter_password | default(global_password_prefix + '_pw_mysqld_exporter') }}"
+    host: "%"
+    priv: "*.*:PROCESS,REPLICATION CLIENT,SELECT"
 
 # ==============================================================================
 # IIAB – WORDPRESS
@@ -956,7 +964,29 @@ redis_port: 6379                   # Redis port
 alloy_tail_nginx_logs: true        # Nginx access+error logs → Loki
 alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
 alloy_tail_php_logs: true          # PHP-FPM logs → Loki
+alloy_tail_docker_logs: true       # All Docker container stdout/stderr → Loki
 alloy_receive_otlp: true           # OTLP receiver for app traces/metrics/logs → Tempo
+
+# ── Exporter containers (observability stack) ─────────────────────────────────
+# Sprint 1 / Wave 1: expand metrics coverage with infra + container exporters.
+# Toggle individual exporters with alloy_scrape_* flags below.
+postgres_exporter_port: 9187       # prometheuscommunity/postgres-exporter
+mysqld_exporter_port: 9104         # prom/mysqld-exporter (requires `mysqld_exporter` MariaDB user)
+redis_exporter_port: 9121          # oliver006/redis_exporter
+cadvisor_port: 8080                # gcr.io/cadvisor/cadvisor — container resource metrics
+blackbox_exporter_port: 9115       # prom/blackbox-exporter — HTTP/TCP probes
+
+postgres_exporter_version: "v0.15.0"
+mysqld_exporter_version: "v0.15.1"
+redis_exporter_version: "v1.58.0"
+cadvisor_version: "v0.49.1"
+blackbox_exporter_version: "v0.25.0"
+
+alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
+alloy_scrape_mysqld_exporter:   "{{ install_mariadb   | default(false) }}"
+alloy_scrape_redis_exporter:    "{{ redis_docker      | default(false) }}"
+alloy_scrape_cadvisor: true
+alloy_scrape_blackbox_self: true   # scrape blackbox-exporter's own /metrics (probe results come from prometheus rules — A2)
 
 # ── Grafana dashboards to download from grafana.com ───────────────────────────
 # Dashboard IDs from https://grafana.com/grafana/dashboards/
@@ -1078,6 +1108,13 @@ uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
+uptime_kuma_status_page_slug: "nos"               # Slug for public status page (status.dev.local → /status/<slug>)
+uptime_kuma_status_page_title: "nOS Service Status"
+uptime_kuma_status_page_domain: "status.{{ instance_tld | default('dev.local') }}"
+uptime_kuma_ntfy_topic: "nos-alerts"              # ntfy topic used for alert notifications
+uptime_kuma_notify_webhook_url: "http://127.0.0.1:{{ boxapi_port | default(8099) }}/api/events"
+uptime_kuma_tls_expiry_monitors: true             # Create TLS cert-expiry monitors for HTTPS-exposed services
+uptime_kuma_docker_host_monitors: false           # Optional Docker healthcheck pass-through (needs socket proxy)
 
 # ==============================================================================
 # IIAB – CALIBRE-WEB (ebook server)
