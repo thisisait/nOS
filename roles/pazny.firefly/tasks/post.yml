@@ -60,10 +60,12 @@
   retries: 3
   delay: 10
   until: _firefly_migrate_run is not failed and _firefly_migrate_run.rc == 0
-  failed_when:
-    - _firefly_migrate_run is defined
-    - _firefly_migrate_run.rc is defined
-    - _firefly_migrate_run.rc != 0
+  # MUST stay lenient: a hard failure here aborts the entire playbook and
+  # blocks every subsequent service from coming up. Migration failures get
+  # surfaced through the final /health probe + the Status summary debug
+  # message at the end of this file. Real broken-firefly is investigable
+  # post-run via `docker logs b2b-firefly-1` and the manifest health_check.
+  failed_when: false
 
 - name: "[pazny.firefly Post] Idempotent Firefly self-upgrade + correctness hooks"
   ansible.builtin.shell: |
