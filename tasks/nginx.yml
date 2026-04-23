@@ -72,6 +72,7 @@
     - portainer.conf
     - woodpecker.conf
     - uptime-kuma.conf
+    - status.conf
     - calibreweb.conf
     - homeassistant.conf
     - rustfs.conf
@@ -128,7 +129,7 @@
          + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
          + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
          + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
-         + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf'], []))
+         + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf', 'status.conf'], []))
          + ((install_calibreweb | default(false)) | ternary(['calibreweb.conf'], []))
          + ((install_homeassistant | default(false)) | ternary(['homeassistant.conf'], []))
          + ((install_rustfs | default(false)) | ternary(['rustfs.conf'], []))

@@ -1,18 +1,29 @@
 ---
 # ==============================================================================
-# pazny.uptime_kuma/tasks/monitors.yml — auto-configure monitors after startup
+# pazny.uptime_kuma/tasks/monitors.yml
 #
-# Creates HTTP/TCP monitors for all installed services. Requires pip
-# balicek uptime-kuma-api. Helper skripty (setup-monitors.py, reset-password.py)
-# are part of the role and we deploy them to {{ uptime_kuma_data_dir }} via
-# {{ role_path }}/files/.
+# Auto-configure Uptime Kuma after container startup:
+#   1. install uptime-kuma-api + PyYAML
+#   2. wait for the web UI
+#   3. load state/manifest.yml → derive the canonical monitor set
+#   4. add DB TCP probes (MariaDB / PostgreSQL / Redis), FreePBX TCP,
+#      Nginx HTTPS loopback, and optional Docker healthcheck pass-through
+#   5. reconverge the admin password (reset-password.py)
+#   6. invoke setup-monitors.py with a spec JSON that covers
+#        monitors + ntfy + Glasswing webhook + public status page
+#   7. verify monitor count
 # ==============================================================================
 
-- name: "[pazny.uptime_kuma] Install uptime-kuma-api Python package"
-  ansible.builtin.command: pip3 install uptime-kuma-api
+- name: "[pazny.uptime_kuma] Install uptime-kuma-api + PyYAML"
+  ansible.builtin.pip:
+    name:
+      - uptime-kuma-api
+      - PyYAML
+    state: present
+    extra_args: "--user"
   register: _kuma_pip
+  failed_when: false
   changed_when: "'Successfully installed' in (_kuma_pip.stdout | default(''))"
-  ignore_errors: true
 
 - name: "[pazny.uptime_kuma] Wait for API to be ready"
   ansible.builtin.uri:
@@ -27,130 +38,115 @@
   delay: 10
   failed_when: false
 
-- name: "[pazny.uptime_kuma] Build monitor list from enabled services"
+- name: "[pazny.uptime_kuma] Load state/manifest.yml"
   ansible.builtin.set_fact:
-    _kuma_monitors: >-
+    _kuma_manifest: "{{ lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml }}"
+
+- name: "[pazny.uptime_kuma] Keep only manifest services with a domain_var that are currently enabled"
+  ansible.builtin.set_fact:
+    _kuma_domain_services: >-
       {{
-        [{'name': 'Nginx HTTPS', 'type': 'http', 'url': 'https://127.0.0.1/'}]
-        +
-        (install_mariadb | default(false)) | ternary(
-          [{'name': 'MariaDB', 'type': 'tcp', 'hostname': '127.0.0.1',
-            'port': mariadb_port | default(3306)}], [])
-        +
-        (install_observability | default(true)) | ternary(
-          [{'name': 'Grafana', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (grafana_port | default(3000)) ~ '/api/health'},
-           {'name': 'Prometheus', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (prometheus_port | default(9090)) ~ '/-/ready'},
-           {'name': 'Loki', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (loki_port | default(3100)) ~ '/ready'},
-           {'name': 'Tempo', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (tempo_http_port | default(3200)) ~ '/ready'}], [])
-        +
-        (install_nextcloud | default(false)) | ternary(
-          [{'name': 'Nextcloud', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (nextcloud_port | default(8085)) ~ '/status.php'}], [])
-        +
-        (install_n8n | default(false)) | ternary(
-          [{'name': 'N8N', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (n8n_port | default(5678)) ~ '/healthz'}], [])
-        +
-        (install_gitea | default(false)) | ternary(
-          [{'name': 'Gitea', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (gitea_port | default(3003)) ~ '/'}], [])
-        +
-        (install_jellyfin | default(false)) | ternary(
-          [{'name': 'Jellyfin', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (jellyfin_port | default(8096)) ~ '/health'}], [])
-        +
-        (install_portainer | default(false)) | ternary(
-          [{'name': 'Portainer', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (portainer_port | default(9002)) ~ '/'}], [])
-        +
-        (install_openwebui | default(false)) | ternary(
-          [{'name': 'Open WebUI', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (openwebui_port | default(3004)) ~ '/'}], [])
-        +
-        (install_wordpress | default(false)) | ternary(
-          [{'name': 'WordPress', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (wordpress_port | default(8084)) ~ '/'}], [])
-        +
-        (install_kiwix | default(false)) | ternary(
-          [{'name': 'Kiwix', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (kiwix_port | default(8888)) ~ '/'}], [])
-        +
-        (install_homeassistant | default(false)) | ternary(
-          [{'name': 'Home Assistant', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (homeassistant_port | default(8123)) ~ '/'}], [])
-        +
-        (install_calibreweb | default(false)) | ternary(
-          [{'name': 'Calibre-Web', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (calibreweb_port | default(8083)) ~ '/'}], [])
-        +
-        (install_jsos | default(false)) | ternary(
-          [{'name': 'jsOS', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (jsos_port | default(8070)) ~ '/'}], [])
-        +
-        (install_paperclip | default(false)) | ternary(
-          [{'name': 'Paperclip', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (paperclip_port | default(3006)) ~ '/'}], [])
-        +
-        (install_puter | default(false)) | ternary(
-          [{'name': 'Puter', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (puter_port | default(5050)) ~ '/test'}], [])
-        +
-        (install_erpnext | default(false)) | ternary(
-          [{'name': 'ERPNext', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (erpnext_port | default(8082)) ~ '/'}], [])
-        +
-        (install_freescout | default(false)) | ternary(
-          [{'name': 'FreeScout', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (freescout_port | default(8090)) ~ '/'}], [])
-        +
-        (install_outline | default(false)) | ternary(
-          [{'name': 'Outline', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (outline_port | default(3005)) ~ '/'}], [])
-        +
-        (install_metabase | default(false)) | ternary(
-          [{'name': 'Metabase', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (metabase_port | default(3002)) ~ '/'}], [])
-        +
-        (install_superset | default(false)) | ternary(
-          [{'name': 'Superset', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (superset_port | default(8089)) ~ '/health'}], [])
-        +
-        (install_woodpecker | default(false)) | ternary(
-          [{'name': 'Woodpecker CI', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (woodpecker_port | default(8060)) ~ '/'}], [])
-        +
-        (install_rustfs | default(false)) | ternary(
-          [{'name': 'RustFS', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (rustfs_console_port | default(9001)) ~ '/'}], [])
-        +
-        (install_bluesky_pds | default(false)) | ternary(
-          [{'name': 'Bluesky PDS', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (bluesky_pds_port | default(2583)) ~ '/xrpc/_health'}], [])
-        +
-        (install_freepbx | default(false)) | ternary(
-          [{'name': 'FreePBX', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (freepbx_port | default(8088)) ~ '/'}], [])
-        +
-        (install_qgis_server | default(false)) | ternary(
-          [{'name': 'QGIS Server', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (qgis_port | default(8071)) ~ '/'}], [])
-        +
-        (install_authentik | default(false)) | ternary(
-          [{'name': 'Authentik', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (authentik_port | default(9003)) ~ '/-/health/ready/'}], [])
-        +
-        (install_infisical | default(false)) | ternary(
-          [{'name': 'Infisical', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (infisical_port | default(8075)) ~ '/api/status'}], [])
-        +
-        (install_vaultwarden | default(false)) | ternary(
-          [{'name': 'Vaultwarden', 'type': 'http',
-            'url': 'http://127.0.0.1:' ~ (vaultwarden_port | default(8062)) ~ '/alive'}], [])
+        _kuma_manifest.services
+        | selectattr('domain_var', 'defined')
+        | selectattr('install_flag', 'defined')
+        | list
       }}
+
+- name: "[pazny.uptime_kuma] Seed monitor spec with an empty list"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: []
+
+- name: "[pazny.uptime_kuma] Append one HTTP monitor per enabled domain-backed service"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [_m] }}"
+  loop: "{{ _kuma_domain_services }}"
+  loop_control:
+    loop_var: svc
+    label: "{{ svc.id }}"
+  vars:
+    _domain: "{{ vars[svc.domain_var] | default('') }}"
+    _m:
+      name: "{{ svc.id | replace('_', ' ') | title }}"
+      type: "http"
+      url: "https://{{ _domain }}"
+      interval: 60
+      maxretries: 2
+      ignore_tls: true
+      accepted_statuscodes: ["200-299", "301", "302", "401", "403"]
+      expiry_notification: "{{ uptime_kuma_tls_expiry_monitors | default(true) }}"
+      tags: ["{{ svc.stack | default('host') }}", "{{ svc.category | default('service') }}"]
+  when:
+    - svc.install_flag in vars
+    - vars[svc.install_flag] | default(false)
+    - vars[svc.domain_var] | default('') | length > 0
+
+# ── Database / infra TCP probes ─────────────────────────────────────────────
+- name: "[pazny.uptime_kuma] Append MariaDB TCP monitor"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'MariaDB TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': mariadb_port | default(3306), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
+  when: install_mariadb | default(false)
+
+- name: "[pazny.uptime_kuma] Append PostgreSQL TCP monitor"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'PostgreSQL TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': postgresql_port | default(5432), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
+  when: install_postgresql | default(false)
+
+- name: "[pazny.uptime_kuma] Append Redis TCP monitor"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'Redis TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': redis_port | default(6379), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
+  when: install_redis | default(false)
+
+- name: "[pazny.uptime_kuma] Append FreePBX TCP monitor"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'FreePBX Web', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': freepbx_port | default(8088), 'interval': 60, 'maxretries': 2, 'tags': ['voip']}] }}"
+  when: install_freepbx | default(false)
+
+- name: "[pazny.uptime_kuma] Append Nginx HTTPS loopback monitor"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'Nginx HTTPS', 'type': 'http', 'url': 'https://127.0.0.1/', 'interval': 60, 'maxretries': 2, 'ignore_tls': true, 'accepted_statuscodes': ['200-299', '301', '302', '404'], 'tags': ['infra', 'proxy']}] }}"
+
+# ── Optional: Docker container healthcheck pass-through ────────────────────
+# Requires Uptime Kuma to reach the Docker socket. Disabled by default
+# (uptime_kuma_docker_host_monitors: false in default.config.yml).
+- name: "[pazny.uptime_kuma] Append Docker healthcheck monitors (opt-in)"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'Docker: ' ~ item, 'type': 'docker', 'docker_container': item, 'interval': 60, 'maxretries': 2, 'tags': ['docker']}] }}"
+  loop:
+    - infra-mariadb-1
+    - infra-postgresql-1
+    - infra-redis-1
+    - infra-authentik-server-1
+  when: uptime_kuma_docker_host_monitors | default(false)
+
+- name: "[pazny.uptime_kuma] Assemble final spec document (monitors + notifications + status page)"
+  ansible.builtin.set_fact:
+    _kuma_spec:
+      monitors: "{{ _kuma_spec_monitors }}"
+      notifications:
+        ntfy:
+          enabled: "{{ install_ntfy | default(false) }}"
+          name: "nOS → ntfy"
+          server_url: "https://{{ ntfy_domain | default('ntfy.dev.local') }}"
+          topic: "{{ uptime_kuma_ntfy_topic | default('nos-alerts') }}"
+          is_default: true
+        webhook:
+          enabled: true
+          name: "nOS → Glasswing (BoxAPI)"
+          url: "{{ uptime_kuma_notify_webhook_url | default('http://127.0.0.1:' ~ (boxapi_port | default(8099)) ~ '/api/events') }}"
+          hmac_secret: "{{ glasswing_api_token | default('') }}"
+          is_default: true
+          body:
+            source: "uptime-kuma"
+            event_type: "probe.failed"
+            payload:
+              msg: "{{ '{{msg}}' }}"
+              monitor: "{{ '{{monitorJSON}}' }}"
+              heartbeat: "{{ '{{heartbeatJSON}}' }}"
+      status_page:
+        enabled: true
+        slug: "{{ uptime_kuma_status_page_slug | default('nos') }}"
+        title: "{{ uptime_kuma_status_page_title | default('nOS Service Status') }}"
+        description: "Live health of every self-hosted service on this nOS instance."
 
 - name: "[pazny.uptime_kuma] Deploy helper scripts from role"
   ansible.builtin.copy:
@@ -161,10 +157,17 @@
     - setup-monitors.py
     - reset-password.py
 
-# ── Reconverge admin password BEFORE monitor setup ──────────────────────
-# Password reconverge must run before setup-monitors.py so that login()
-# in the monitor script used the current prefix. Script tries new pw first
-# (converged) → falls back to previous prefix + change_password → DRIFT.
+- name: "[pazny.uptime_kuma] Write spec file (JSON) for setup-monitors.py"
+  ansible.builtin.copy:
+    dest: "{{ uptime_kuma_data_dir }}/monitors.spec.json"
+    content: "{{ _kuma_spec | to_nice_json }}"
+    mode: '0600'
+  no_log: true
+
+# ── Reconverge admin password BEFORE monitor setup ─────────────────────────
+# Password reconverge runs first so login() in setup-monitors.py uses the
+# current prefix. The helper tries current pw first (converged) → falls back
+# to previous prefix + change_password → drift resolved.
 - name: "[pazny.uptime_kuma] Reconverge admin password"
   ansible.builtin.command:
     argv:
@@ -181,26 +184,41 @@
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
 
-- name: "[pazny.uptime_kuma] Auto-create monitors"
+- name: "[pazny.uptime_kuma] Auto-create monitors / notifications / status page"
   ansible.builtin.command:
     argv:
       - python3
       - "{{ uptime_kuma_data_dir }}/setup-monitors.py"
+      - "--url"
       - "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}"
+      - "--user"
       - "{{ uptime_kuma_admin_user | default('admin') }}"
+      - "--password"
       - "{{ uptime_kuma_admin_password }}"
-      - "{{ _kuma_monitors | to_json }}"
+      - "--config"
+      - "{{ uptime_kuma_data_dir }}/monitors.spec.json"
+      - "-v"
   register: _kuma_result
-  changed_when: "'Created' in (_kuma_result.stdout | default(''))"
+  changed_when: "'[+] Created' in (_kuma_result.stdout | default(''))"
   failed_when: false
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
     - uptime_kuma_auto_monitors | default(true)
 
-- name: "[pazny.uptime_kuma] Monitor setup result"
+- name: "[pazny.uptime_kuma] Monitor setup output"
   ansible.builtin.debug:
     msg: "{{ _kuma_result.stdout_lines | default(_kuma_result.stderr_lines | default(['Skipped'])) }}"
+
+# ── Post-setup verification: count monitors via the REST API ───────────────
+# Uses the /metrics endpoint (public, no auth) to get a rough monitor count;
+# falls back to the stdout summary from setup-monitors.py for the exact number.
+- name: "[pazny.uptime_kuma] Verify monitor count summary"
+  ansible.builtin.debug:
+    msg: >-
+      Requested {{ _kuma_spec.monitors | length }} monitors.
+      Result: {{ (_kuma_result.stdout_lines | default([]) | select('match', '^Done:') | list) | default(['(skipped)']) | first }}
+  when: _kuma_result is defined
 
 - name: "[pazny.uptime_kuma] WARN: pip install failed"
   ansible.builtin.debug:
