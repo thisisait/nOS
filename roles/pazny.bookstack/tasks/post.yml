@@ -46,6 +46,19 @@
         label: "try {{ bookstack_try }}"
       when: not (_bookstack_migration_ok | default(false))
 
+- name: "[pazny.bookstack] Force-run any remaining migrations (LSIO image only runs migrate once at boot)"
+  # The recovery loop above only detects/fixes migration #10 specifically.
+  # Newer BookStack releases ship dozens of additional migrations (post-2015)
+  # that the LSIO image's first-boot migrate may have left as Pending if the
+  # container was restarted mid-batch. Catch them here.
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} exec b2b-bookstack-1 php /app/www/artisan migrate --force --no-interaction"
+  register: _bookstack_final_migrate
+  changed_when: "'Migrated' in (_bookstack_final_migrate.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when: (_bookstack_running.stdout | default('')) != ''
+
 - name: "[pazny.bookstack] Wait for BookStack HTTP after migration recovery"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/"

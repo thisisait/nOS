@@ -10,7 +10,7 @@
       "stack": "infra",
       "image": "mariadb",
       "version_var": "mariadb_version",
-      "default_version": "11.4.10",
+      "default_version": "11.8.6",
       "pinned": true,
       "network_exposed": false,
       "has_web_ui": false,

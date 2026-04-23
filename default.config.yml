@@ -726,7 +726,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.4.10"              # CVE-2026-32710 (CVSS 8.6 buffer overflow). Pinned from 'lts'
+mariadb_version: "11.8.6"               # CVE-2026-32710 fixed; bumped from 11.4.10 which crashed on FK ALTER on Apple Silicon Docker Desktop (broke BookStack migration #10)
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data persistence outside the container
 

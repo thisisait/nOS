@@ -44,12 +44,18 @@
   failed_when: false
   check_mode: false
 
-- name: "[pazny.firefly Post] Run forward migrations if schema missing"
+- name: "[pazny.firefly Post] Run forward migrations if schema missing OR pending"
   ansible.builtin.command:
     cmd: "{{ docker_bin }} exec b2b-firefly-1 php artisan migrate --force --no-interaction"
   register: _firefly_migrate_run
+  # Fire when EITHER:
+  #   (a) migration table itself is missing (entrypoint never ran)
+  #   (b) migration table exists but has Pending rows (entrypoint ran but
+  #       MariaDB raced and aborted partway — the original symptom we
+  #       discovered during the 7-service audit)
   when: "'Migration table not found' in _firefly_migrate_status.stdout
-         or 'Migration table not found' in _firefly_migrate_status.stderr"
+         or 'Migration table not found' in _firefly_migrate_status.stderr
+         or 'Pending' in (_firefly_migrate_status.stdout | default(''))"
   changed_when: "'Migrated' in (_firefly_migrate_run.stdout | default(''))"
   retries: 3
   delay: 10

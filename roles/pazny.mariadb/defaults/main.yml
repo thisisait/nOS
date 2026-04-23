@@ -8,7 +8,7 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-mariadb_version: "11.4.10"                          # CVE-2026-32710 pin
+mariadb_version: "11.8.6"                           # aligned with default.config.yml; CVE-2026-32710 + CVE-2026-3494 patched
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"
 mariadb_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
