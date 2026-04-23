@@ -52,7 +52,7 @@
        Onboard:   First user = admin (password in Docker log)
       ══════════════════════════════════════════════════════
 
-# App registry - mirroring flow from main.yml:705 (import_tasks puter_apps.yml).
-# apps.yml has its own healthcheck gate, so it runs safely even pre-compose.
-- name: "[pazny.puter] Include apps registry tasks"
-  ansible.builtin.include_tasks: apps.yml
+# NOTE: The app registry (apps.yml) is now included from tasks/post.yml, which
+# runs AFTER `docker compose up iiab`. Calling it here in the render phase used
+# to waste 150 s per run (15 retries x 10 s) waiting for the Puter API that only
+# exists after compose up.

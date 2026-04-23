@@ -1,12 +1,12 @@
 ---
 # ==============================================================================
 # pazny.puter/tasks/apps.yml — nOS services in the Puter Start menu
-# Each service registers into the SQLite DB inside the Puter container as
+# Each service registers into the SQLite DB inside the Puter container as an
 # iframe app. Idempotent: existing apps are skipped.
 #
-# Called via include_tasks from tasks/main.yml (mirroring main.yml:705
-# import_tasks puter_apps.yml). The tasks themselves are under `Wait for API`
-# gate, so pre-compose runs simply fall through failed_when: false.
+# Called via include_tasks from tasks/post.yml AFTER `docker compose up iiab`.
+# The tasks still keep their own healthcheck gate (`_puter_apps_ready`) so the
+# file is safe to run standalone (e.g. via --tags puter).
 # ==============================================================================
 
 - name: "[pazny.puter Apps] Wait for Puter API"

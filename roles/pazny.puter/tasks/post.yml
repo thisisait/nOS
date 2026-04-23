@@ -97,3 +97,9 @@
   changed_when: "'RESET' in (_puter_reset.stdout | default(''))"
   failed_when: false
   check_mode: false
+
+# App registry — runs only if the API is up (gated in apps.yml itself, but we
+# also skip the include here to avoid the 150 s wait-loop when Puter is down).
+- name: "[pazny.puter Post] Register nOS services into the Start menu"
+  ansible.builtin.include_tasks: apps.yml
+  when: _puter_ready.status | default(0) == 200
