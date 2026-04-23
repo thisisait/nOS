@@ -68,6 +68,16 @@ From `tasks/stacks/stack-up.yml`, gated on `install_uptime_kuma`:
   tags: ['uptime-kuma', 'monitoring']
 ```
 
+## SSO
+
+Uptime Kuma v1.x has **no native OIDC support** — the feature has only been announced for v2.x (still pre-release as of 2026-04). While `install_uptime_kuma` is on, access control is enforced at the Nginx layer by the Authentik forward_auth outpost:
+
+- `templates/nginx/sites-available/uptime-kuma.conf` includes `authentik-proxy-locations.conf` + `authentik-proxy-auth.conf` when `install_authentik` is true.
+- The `Uptime Kuma` entry in `authentik_oidc_apps` (in `default.config.yml`) is flagged `type: "proxy"`, so the orchestrator provisions a proxy provider — no OIDC client.
+- Users still see the Uptime Kuma login screen after Authentik authenticates them; the shared admin password lives in `default.credentials.yml` (`uptime_kuma_admin_password`).
+
+**Migration path to native OIDC** (deferred — track upstream): bump `uptime_kuma_version` to a v2.x tag, add `UPTIME_KUMA_OIDC_*` env vars to `templates/compose.yml.j2`, switch the `authentik_oidc_apps` entry from `type: "proxy"` to a full OIDC client (with `client_id`, `client_secret`, `redirect_uris`), and drop the two `include` lines from the Nginx vhost.
+
 ## Rollback
 
 Revert the commit that introduced this role and:

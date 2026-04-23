@@ -1,10 +1,14 @@
 # =============================================================================
 # pazny.uptime_kuma — compose override fragment
-# Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+# Merged into `docker compose up iiab` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — iiab_net je definovan v base
+# Does not declare top-level networks: — iiab_net is defined in the base
 # templates/stacks/iiab/docker-compose.yml.j2.
+#
+# SSO: no OIDC env vars — Uptime Kuma v1.x doesn't support native OIDC.
+# Auth is gated at the Nginx layer via the Authentik forward_auth outpost.
+# Revisit when Uptime Kuma v2.x ships stable OIDC.
 # =============================================================================
 
 services:

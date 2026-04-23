@@ -4,10 +4,14 @@
 #
 # Credentials (uptime_kuma_admin_password) stay in default.credentials.yml
 # and are prefix-rotated. Auto-monitors derive from install_* flags in
-# default.config.yml — role list monitoru je v tasks/monitors.yml.
+# default.config.yml — the monitor list lives in tasks/monitors.yml.
+#
+# SSO: Uptime Kuma v1.x has no native OIDC support. Access is gated via
+# the Authentik Nginx forward_auth outpost (proxy auth). Native OIDC will
+# be revisited when Uptime Kuma v2.x ships stable OIDC.
 # ==============================================================================
 
-uptime_kuma_version: "1"                            # "1" = latest v1.x; pin "1.23.13" apod.
+uptime_kuma_version: "1"                            # "1" = latest v1.x; pin e.g. "1.23.13"
 uptime_kuma_port: 3001
 uptime_kuma_domain: "uptime.dev.local"
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
