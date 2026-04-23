@@ -19,8 +19,15 @@ prometheus.exporter.unix "local" {
   set_collectors = [
     "cpu", "diskstats", "filesystem", "loadavg",
     "meminfo", "netdev", "netstat", "os", "stat",
-    "time", "uname", "vmstat",
+    "textfile", "time", "uname", "vmstat",
   ]
+
+  // Textfile collector — picks up .prom files written by out-of-band exporters
+  // (e.g. files/observability/scripts/backup_status_exporter.py writing
+  // backup.prom). Agent C3 / Sprint 3.
+  textfile {
+    directory = "{{ node_exporter_textfile_dir | default('/var/lib/node_exporter/textfile') }}"
+  }
 }
 
 prometheus.scrape "unix_metrics" {

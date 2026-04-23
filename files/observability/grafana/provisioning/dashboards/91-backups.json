@@ -1,0 +1,304 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "nOS backup health. Reads gauges emitted by files/observability/scripts/backup_status_exporter.py from ~/.nos/backup-status.json, surfaces freshness, per-source success/size/duration trends, and firing backup-domain alerts.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "id": 1,
+      "title": "Time since last backup",
+      "description": "now() - nos_backup_last_run_timestamp_seconds. Red > 36h, orange > 26h.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {"refId": "A", "expr": "time() - nos_backup_last_run_timestamp_seconds", "legendFormat": "age"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "orange", "value": 93600},
+            {"color": "red", "value": 129600}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Last run duration",
+      "description": "Total wall-clock duration of the most recent backup run.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_duration_seconds", "legendFormat": "duration"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "orange", "value": 600},
+            {"color": "red", "value": 1800}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Success ratio",
+      "description": "Successful sources / total sources in the last run.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_source_success_count / nos_backup_source_count", "legendFormat": "ratio"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "orange", "value": 0.8},
+            {"color": "green", "value": 1}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Total backup size (latest run)",
+      "description": "Sum of size_bytes across all sources in the last run.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "targets": [
+        {"refId": "A", "expr": "sum(nos_backup_source_size_bytes)", "legendFormat": "total"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "bytes", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}},
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "timeseries",
+      "id": 5,
+      "title": "Backup size by source (30d)",
+      "description": "Per-source size over the last 30 days. A sudden drop relative to the 7-day max triggers NosWarningBackupShrunkSignificantly.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_source_size_bytes", "legendFormat": "{{source}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "palette-classic"}, "custom": {"lineInterpolation": "stepAfter", "fillOpacity": 10}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"]}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "Backup duration by source (30d)",
+      "description": "Per-source duration. A 3× spike over weekly baseline triggers NosWarningBackupDurationSpike.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_source_duration_seconds", "legendFormat": "{{source}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "palette-classic"}, "custom": {"lineInterpolation": "stepAfter", "fillOpacity": 10}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"]}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "table",
+      "id": 7,
+      "title": "Latest run — per-source breakdown",
+      "description": "Last reported size / duration / success per source, sorted by size (largest first).",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 10, "w": 14, "x": 0, "y": 14},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_source_size_bytes", "legendFormat": "{{source}}", "format": "table", "instant": true},
+        {"refId": "B", "expr": "nos_backup_source_duration_seconds", "legendFormat": "{{source}}", "format": "table", "instant": true},
+        {"refId": "C", "expr": "nos_backup_source_success", "legendFormat": "{{source}}", "format": "table", "instant": true}
+      ],
+      "transformations": [
+        {"id": "merge", "options": {}},
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true},
+            "indexByName": {"source": 0, "Value #A": 1, "Value #B": 2, "Value #C": 3},
+            "renameByName": {
+              "source": "Source",
+              "Value #A": "Size",
+              "Value #B": "Duration",
+              "Value #C": "Success"
+            }
+          }
+        },
+        {"id": "sortBy", "options": {"fields": {}, "sort": [{"field": "Size", "desc": true}]}}
+      ],
+      "fieldConfig": {
+        "defaults": {"custom": {"align": "left"}},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Size"}, "properties": [{"id": "unit", "value": "bytes"}]},
+          {"matcher": {"id": "byName", "options": "Duration"}, "properties": [{"id": "unit", "value": "s"}]},
+          {
+            "matcher": {"id": "byName", "options": "Success"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "mappings", "value": [
+                {"type": "value", "options": {"0": {"text": "FAIL", "color": "red"}, "1": {"text": "OK", "color": "green"}}}
+              ]},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]}}
+            ]
+          }
+        ]
+      },
+      "options": {"showHeader": true, "cellHeight": "sm", "footer": {"show": false}}
+    },
+    {
+      "type": "alertlist",
+      "id": 8,
+      "title": "Firing backup alerts",
+      "description": "Alertmanager view filtered to the `backup` domain.",
+      "gridPos": {"h": 10, "w": 10, "x": 14, "y": 14},
+      "options": {
+        "showOptions": "current",
+        "maxItems": 20,
+        "sortOrder": 3,
+        "dashboardAlerts": false,
+        "alertName": "",
+        "dashboardTitle": "",
+        "folderId": null,
+        "tags": [],
+        "stateFilter": {"firing": true, "pending": true, "noData": false, "normal": false, "error": true},
+        "alertInstanceLabelFilter": "{nos_domain=\"backup\"}"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 9,
+      "title": "Exporter heartbeat",
+      "description": "Seconds since backup_status_exporter.py last wrote the .prom file. If this climbs unbounded, the launchd/cron job is broken.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24},
+      "targets": [
+        {"refId": "A", "expr": "time() - nos_backup_exporter_last_run_timestamp_seconds", "legendFormat": "exporter lag"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "orange", "value": 300},
+            {"color": "red", "value": 900}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 10,
+      "title": "Status file present",
+      "description": "1 if ~/.nos/backup-status.json exists, 0 otherwise.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_status_file_present", "legendFormat": "present"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [{"type": "value", "options": {"0": {"text": "MISSING", "color": "red"}, "1": {"text": "OK", "color": "green"}}}],
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "green", "value": 1}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value", "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 11,
+      "title": "Sources in last run",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 24},
+      "targets": [
+        {"refId": "A", "expr": "nos_backup_source_count", "legendFormat": "total"},
+        {"refId": "B", "expr": "nos_backup_source_success_count", "legendFormat": "ok"}
+      ],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value_and_name", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "title": "Failed sources (latest run)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 24},
+      "targets": [
+        {"refId": "A", "expr": "count(nos_backup_source_success == 0) or vector(0)", "legendFormat": "failed"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "orange", "value": 1},
+            {"color": "red", "value": 2}
+          ]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "background", "graphMode": "none"}
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "backup", "data-protection"],
+  "templating": {"list": []},
+  "time": {"from": "now-7d", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Backups",
+  "uid": "nos-91-backups",
+  "version": 1,
+  "weekStart": ""
+}

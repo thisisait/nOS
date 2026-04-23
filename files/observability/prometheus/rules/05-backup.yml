@@ -1,0 +1,157 @@
+# ==============================================================================
+# nOS Prometheus Alert Rules — Backup
+#
+# Covers: backup freshness, per-source success, unexpected size drops.
+# Metrics are emitted by files/observability/scripts/backup_status_exporter.py
+# which reads ~/.nos/backup-status.json (written by the pazny.backup role) and
+# publishes textfile-format gauges scraped by prometheus.exporter.unix.
+#
+# Domain label: backup
+# Sprint 3 — Agent C3.
+# ==============================================================================
+
+groups:
+  - name: nos_backup
+    interval: 60s
+    rules:
+      # ── Freshness ───────────────────────────────────────────────────────────
+      - alert: NosCriticalBackupAge
+        expr: time() - nos_backup_last_run_timestamp_seconds > 36 * 3600
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: backup
+        annotations:
+          summary: "Backup last ran more than 36h ago"
+          description: |
+            The last successful backup run completed {{ $value | humanizeDuration }}
+            ago (> 36h). Daily backup schedule is broken; tonight's run most
+            likely failed silently. Check `launchctl list | grep nos.backup`,
+            review `~/agents/log/backup-*.md`, and trigger a manual run:
+              ansible-playbook main.yml -K --tags backup
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalBackupAge.md"
+
+      - alert: NosWarningBackupAge
+        expr: time() - nos_backup_last_run_timestamp_seconds > 26 * 3600
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: backup
+        annotations:
+          summary: "Backup last ran more than 26h ago"
+          description: |
+            The daily backup schedule normally completes every 24h; the last run
+            was {{ $value | humanizeDuration }} ago. If this persists past 36h,
+            `NosCriticalBackupAge` will fire.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupAge.md"
+
+      # ── Status file missing entirely ────────────────────────────────────────
+      - alert: NosCriticalBackupStatusFileMissing
+        expr: nos_backup_status_file_present == 0
+        for: 30m
+        labels:
+          severity: critical
+          nos_domain: backup
+        annotations:
+          summary: "Backup status file ~/.nos/backup-status.json missing"
+          description: |
+            The exporter cannot find the backup status file. Either the
+            pazny.backup role has never run, or its runtime sidecar (~/.nos)
+            was wiped. Re-run:
+              ansible-playbook main.yml -K --tags backup
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalBackupStatusFileMissing.md"
+
+      # ── Per-source failures ─────────────────────────────────────────────────
+      - alert: NosWarningBackupSourceFailed
+        expr: nos_backup_source_success == 0
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: backup
+        annotations:
+          summary: "Backup source {{ $labels.source }} failed in last run"
+          description: |
+            Source `{{ $labels.source }}` reported a failed backup in the last
+            run. Partial backups are worse than useless during a restore —
+            investigate immediately. Check `~/agents/log/backup-*.md` for the
+            per-source stderr, then rerun:
+              ansible-playbook main.yml -K --tags backup -e backup_only={{ $labels.source }}
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupSourceFailed.md"
+
+      - alert: NosCriticalBackupAllSourcesFailed
+        expr: |
+          nos_backup_source_success_count == 0
+          and nos_backup_source_count > 0
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: backup
+        annotations:
+          summary: "All backup sources failed in last run"
+          description: |
+            Every configured backup source failed in the last run
+            ({{ $value }} successful out of {{ with query "nos_backup_source_count" }}{{ . | first | value }}{{ end }}).
+            Likely a systemic issue (disk full, permissions, Docker daemon
+            down). Check host disk usage and `~/agents/log/backup-*.md`.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalBackupAllSourcesFailed.md"
+
+      # ── Size regressions (week-over-week) ───────────────────────────────────
+      # Unexpected ≥50% drop in a source's size vs. its weekly maximum is a
+      # classic "silent data loss" signal (e.g. dumped an empty schema because
+      # a credential rotated).
+      - alert: NosWarningBackupShrunkSignificantly
+        expr: |
+          (
+            nos_backup_source_size_bytes
+            /
+            max_over_time(nos_backup_source_size_bytes[7d:1h])
+          ) < 0.5
+          and nos_backup_source_size_bytes > 0
+        for: 1h
+        labels:
+          severity: warning
+          nos_domain: backup
+        annotations:
+          summary: "Backup {{ $labels.source }} dropped more than 50% week-over-week"
+          description: |
+            Source `{{ $labels.source }}` is {{ $value | humanizePercentage }}
+            of its 7-day maximum size. Possible silent data loss — confirm the
+            source still contains expected data before the next run overwrites
+            the previous snapshot.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupShrunkSignificantly.md"
+
+      # ── Suspiciously empty backup ───────────────────────────────────────────
+      - alert: NosWarningBackupSourceEmpty
+        expr: nos_backup_source_size_bytes == 0
+        for: 1h
+        labels:
+          severity: warning
+          nos_domain: backup
+        annotations:
+          summary: "Backup source {{ $labels.source }} is empty (0 bytes)"
+          description: |
+            Source `{{ $labels.source }}` produced a 0-byte archive. Even an
+            "empty" database usually dumps to at least a few KB of schema.
+            Inspect the source logs before trusting this snapshot.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupSourceEmpty.md"
+
+      # ── Duration regression ─────────────────────────────────────────────────
+      # 3× the weekly baseline usually signals a runaway source (e.g. unbounded
+      # log file ballooning in a Docker volume).
+      - alert: NosWarningBackupDurationSpike
+        expr: |
+          nos_backup_source_duration_seconds
+          >
+          3 * avg_over_time(nos_backup_source_duration_seconds[7d:1h])
+          and nos_backup_source_duration_seconds > 60
+        for: 30m
+        labels:
+          severity: warning
+          nos_domain: backup
+        annotations:
+          summary: "Backup duration for {{ $labels.source }} > 3× weekly baseline"
+          description: |
+            Source `{{ $labels.source }}` took {{ $value | humanizeDuration }},
+            more than 3× the weekly rolling average. Source data is likely
+            growing unbounded — investigate size trend on the backup dashboard.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupDurationSpike.md"
