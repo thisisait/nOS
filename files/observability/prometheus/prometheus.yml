@@ -9,6 +9,12 @@ global:
   external_labels:
     host: {{ observability_hostname | default(ansible_facts['hostname']) }}
 
+# Alert & recording rules loaded from /etc/prometheus/rules/:
+#   macos-compat.yml   — macOS -> Linux metric aliases (recording rules)
+#   01-infra.yml       — PostgreSQL, MariaDB, Redis, containers, host disk/memory
+#   02-network.yml     — Nginx 5xx/latency, blackbox probes, TLS cert expiry
+#   03-apps.yml        — Authentik, Outline, BookStack/Firefly migrations, stack health
+#   04-security.yml    — Glasswing CVE feed, Vaultwarden token age, auth/path scans
 rule_files:
   - /etc/prometheus/rules/*.yml
 

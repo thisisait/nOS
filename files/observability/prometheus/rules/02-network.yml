@@ -1,0 +1,103 @@
+# ==============================================================================
+# nOS Prometheus Alert Rules — Network & Edge
+#
+# Covers: Nginx error rates and latency, blackbox HTTP/DNS probes, TLS cert
+# expiry.
+# Domain label: network
+# ==============================================================================
+
+groups:
+  - name: nos_network_nginx
+    interval: 30s
+    rules:
+      - alert: NosWarningNginx5xxRate
+        expr: sum by (instance) (rate(nginx_http_requests_total{status=~"5.."}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: network
+        annotations:
+          summary: "Nginx 5xx error rate elevated on {{ $labels.instance }}"
+          description: |
+            Nginx is returning more than 5 5xx responses/second on {{ $labels.instance }}
+            ({{ $value | printf "%.2f" }} rps). An upstream service is failing — check
+            the Loki nginx access log panel and probe_success by target.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningNginx5xxRate.md"
+
+      - alert: NosWarningUpstreamLatency
+        expr: histogram_quantile(0.95, sum by (le, instance) (rate(nginx_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: network
+        annotations:
+          summary: "Nginx upstream p95 latency >2s on {{ $labels.instance }}"
+          description: |
+            95th-percentile request latency through Nginx is {{ $value | printf "%.2f" }}s
+            for 10 minutes. A backend is slow — cross-check container CPU, DB
+            connection pool, and Loki error logs.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningUpstreamLatency.md"
+
+  - name: nos_network_tls
+    interval: 1m
+    rules:
+      - alert: NosCriticalCertExpirySoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 86400
+        for: 10m
+        labels:
+          severity: critical
+          nos_domain: network
+        annotations:
+          summary: "TLS certificate for {{ $labels.instance }} expires in <7 days"
+          description: |
+            Certificate on {{ $labels.instance }} expires in
+            {{ $value | humanizeDuration }}. Renew immediately or browsers will
+            break the service. Check the Traefik ACME store / Nginx cert files.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCertExpirySoon.md"
+
+      - alert: NosWarningCertExpiry30d
+        expr: probe_ssl_earliest_cert_expiry - time() < 30 * 86400
+        for: 1h
+        labels:
+          severity: warning
+          nos_domain: network
+        annotations:
+          summary: "TLS certificate for {{ $labels.instance }} expires in <30 days"
+          description: |
+            Certificate on {{ $labels.instance }} expires in
+            {{ $value | humanizeDuration }}. Schedule renewal.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningCertExpiry30d.md"
+
+  - name: nos_network_probes
+    interval: 30s
+    rules:
+      - alert: NosCriticalProbeFail
+        expr: probe_success == 0
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: network
+        annotations:
+          summary: "Blackbox probe failing for {{ $labels.instance }}"
+          description: |
+            Blackbox probe for {{ $labels.instance }} (module {{ $labels.module }})
+            has been failing for 5 minutes. The endpoint is unreachable or
+            returning non-2xx. Check the upstream container and Nginx vhost.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalProbeFail.md"
+
+      # TODO: requires blackbox_exporter 'dns' module configured in its config file.
+      # Agent A1 is currently wiring only http_2xx / tcp_connect modules. If/when
+      # the dns module lands, this rule activates automatically.
+      - alert: NosWarningDnsResolutionFail
+        expr: probe_dns_lookup_time_seconds == 0
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: network
+        annotations:
+          summary: "DNS lookup failing for {{ $labels.instance }}"
+          description: |
+            Blackbox DNS module reports a zero lookup time for {{ $labels.instance }},
+            which indicates a resolution failure for 5 minutes. Check the upstream
+            resolver and any split-horizon DNS (Tailscale MagicDNS, Pi-hole).
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningDnsResolutionFail.md"

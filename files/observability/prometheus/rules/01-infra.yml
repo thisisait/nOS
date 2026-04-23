@@ -1,0 +1,165 @@
+# ==============================================================================
+# nOS Prometheus Alert Rules — Infrastructure
+#
+# Covers: PostgreSQL, MariaDB, Redis, container health, host disk/memory.
+# Domain label: infra
+# Generated as part of Sprint 1 / Wave 1 (Observability).
+# ==============================================================================
+
+groups:
+  - name: nos_infra_postgres
+    interval: 30s
+    rules:
+      - alert: NosCriticalPgConnectionExhaustion
+        expr: sum(pg_stat_activity_count) / on() max(pg_settings_max_connections) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          nos_domain: infra
+        annotations:
+          summary: "PostgreSQL connection pool nearly exhausted (>95%)"
+          description: |
+            PostgreSQL is using {{ $value | humanizePercentage }} of its max_connections.
+            New connections will start failing imminently; applications will error out.
+            Immediate action: identify leaking client, bump max_connections, or restart
+            the offending service.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalPgConnectionExhaustion.md"
+
+      - alert: NosWarningPgConnectionHigh
+        expr: sum(pg_stat_activity_count) / on() max(pg_settings_max_connections) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "PostgreSQL connection usage high (>80%)"
+          description: |
+            PostgreSQL is using {{ $value | humanizePercentage }} of its max_connections
+            for 5 minutes. Investigate which service is holding connections open.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningPgConnectionHigh.md"
+
+      # Specifically catches the 2026-04 Authentik idle-connection leak bug:
+      # the worker held hundreds of idle sessions without recycling them,
+      # exhausting PostgreSQL's max_connections.
+      - alert: NosCriticalPgAuthentikIdleLeak
+        expr: sum(pg_stat_activity_count{usename="authentik", state="idle"}) > 300
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: infra
+        annotations:
+          summary: "Authentik is leaking idle PostgreSQL connections"
+          description: |
+            Authentik has {{ $value }} idle PostgreSQL connections — the connection
+            pool is not recycling. Historical bug (2026-04-xx). Remediation:
+            restart the authentik-worker container; upgrade Authentik; verify
+            DB_POOL_* env vars in compose override.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalPgAuthentikIdleLeak.md"
+
+  - name: nos_infra_mariadb
+    interval: 30s
+    rules:
+      - alert: NosWarningMariadbConnectionHigh
+        expr: mysql_global_status_threads_connected / on() mysql_global_variables_max_connections > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "MariaDB connection usage high (>80%)"
+          description: |
+            MariaDB is using {{ $value | humanizePercentage }} of its max_connections
+            for 5 minutes. Investigate WordPress, Nextcloud, or BookStack workers.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningMariadbConnectionHigh.md"
+
+  - name: nos_infra_redis
+    interval: 30s
+    rules:
+      - alert: NosWarningRedisMemoryHigh
+        expr: redis_memory_used_bytes / on() redis_memory_max_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "Redis memory pressure (>90%)"
+          description: |
+            Redis is using {{ $value | humanizePercentage }} of its configured
+            maxmemory. Keys will start getting evicted based on policy.
+            Consider raising maxmemory or reviewing key TTLs.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningRedisMemoryHigh.md"
+
+  - name: nos_infra_containers
+    interval: 30s
+    rules:
+      - alert: NosWarningContainerRestartFlapping
+        expr: changes(container_start_time_seconds[10m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "Container {{ $labels.name }} is flapping"
+          description: |
+            Container {{ $labels.name }} restarted {{ $value }} times in the last
+            10 minutes. Likely crash-loop — inspect logs via Loki or
+            `docker logs {{ $labels.name }}`.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningContainerRestartFlapping.md"
+
+      - alert: NosCriticalContainerDown
+        expr: up{job=~"docker_.*"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: infra
+        annotations:
+          summary: "Scrape target {{ $labels.job }} / {{ $labels.instance }} is down"
+          description: |
+            Prometheus cannot scrape {{ $labels.instance }} (job {{ $labels.job }})
+            for 5 minutes. The container is either stopped, unresponsive, or its
+            metrics endpoint is misconfigured.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalContainerDown.md"
+
+  - name: nos_infra_host
+    interval: 30s
+    rules:
+      - alert: NosCriticalDiskFull
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|devtmpfs|squashfs|autofs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|devtmpfs|squashfs|autofs"} < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: infra
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} almost full (<5%)"
+          description: |
+            Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} has only
+            {{ $value | humanizePercentage }} free space. Services will fail to
+            write data shortly — free space or expand storage immediately.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalDiskFull.md"
+
+      - alert: NosWarningDiskLow
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|devtmpfs|squashfs|autofs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|devtmpfs|squashfs|autofs"} < 0.10
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} low (<10%)"
+          description: |
+            Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} has
+            {{ $value | humanizePercentage }} free space. Plan cleanup or expansion.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningDiskLow.md"
+
+      - alert: NosWarningMemoryHigh
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "Host memory availability low (<10%)"
+          description: |
+            Only {{ $value | humanizePercentage }} of host memory is available on
+            {{ $labels.instance }}. Docker services may start OOM-killing —
+            check Ollama (MLX), Authentik, GitLab first.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningMemoryHigh.md"

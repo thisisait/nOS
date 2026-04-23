@@ -1,0 +1,185 @@
+# ==============================================================================
+# nOS Prometheus Alert Rules — Applications
+#
+# Covers: Authentik login bursts, Outline DB connection issues (via Loki),
+# BookStack / Firefly migration hangs, stack health, service degradation,
+# placeholders for upgrade/migration integration (Wave 5).
+# Domain label: apps
+# ==============================================================================
+
+groups:
+  - name: nos_apps_authentik
+    interval: 30s
+    rules:
+      - alert: NosWarningAuthentikLoginFailureBurst
+        expr: rate(authentik_login_failure_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "Authentik login failure rate elevated"
+          description: |
+            Authentik is seeing {{ $value | printf "%.2f" }} failed logins/second
+            over the last 5 minutes. Could indicate credential stuffing, a misconfigured
+            OIDC client, or a legitimate user locked out.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningAuthentikLoginFailureBurst.md"
+
+  - name: nos_apps_logs
+    interval: 1m
+    rules:
+      # Loki -> Prometheus log-pattern bridge.
+      # Convention: Alloy (or the Loki ruler, whichever A1 picks) translates
+      # configured log patterns into the synthetic counter
+      # `log_pattern_matches_total{pattern="<slug>", source="<container>"}`.
+      # The equivalent LogQL is:
+      #   count_over_time({container_name="b2b-outline-1"} |= "remaining connection slots" [10m]) > 0
+      # TODO: confirm the exact metric name once A1 ships the log-metric bridge.
+      - alert: NosWarningOutlineDbConnFail
+        expr: sum(increase(log_pattern_matches_total{pattern="outline_db_conn_fail"}[10m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "Outline is hitting PostgreSQL connection ceiling"
+          description: |
+            Outline logs show "remaining connection slots are reserved" within the
+            last 10 minutes. Usually correlated with NosCriticalPgAuthentikIdleLeak —
+            Authentik is starving the pool. Check pg_stat_activity.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningOutlineDbConnFail.md"
+
+  - name: nos_apps_migrations
+    interval: 1m
+    rules:
+      - alert: NosWarningBookstackMigrationStuck
+        expr: probe_success{instance=~".*bookstack.*"} == 0
+        for: 1h
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "BookStack unreachable — migration likely stuck"
+          description: |
+            BookStack HTTP probe has failed for >1h. Historically this points at a
+            hung PHP-FPM migration during `php artisan migrate` on first boot.
+            Try `docker compose exec bookstack php artisan migrate --force` and
+            check for lock-wait on MariaDB.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBookstackMigrationStuck.md"
+
+      - alert: NosWarningFireflyPendingMigrations
+        expr: probe_success{instance=~".*firefly.*"} == 0
+        for: 1h
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "Firefly III unreachable — pending migrations suspected"
+          description: |
+            Firefly III HTTP probe has failed for >1h. Often caused by pending
+            Laravel migrations after a version bump. Run
+            `docker compose exec firefly_iii php artisan migrate`.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningFireflyPendingMigrations.md"
+
+      # TODO: Paperclip does not yet expose a queue-depth metric. A1 is tracking
+      # this in the exporter backlog. When the metric `paperclip_queue_depth`
+      # appears, replace this vector with a real expression (e.g. `> 1000 for 10m`).
+      # Kept as a never-firing placeholder to document intent.
+      - alert: NosWarningPaperclipQueueDepth
+        expr: absent(paperclip_queue_depth) and vector(0) > 1
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "Paperclip scan queue deep (placeholder)"
+          description: |
+            Placeholder — Paperclip does not currently expose a queue_depth metric.
+            Action: add an exporter in Paperclip role or scrape the admin API.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningPaperclipQueueDepth.md"
+
+  - name: nos_apps_health
+    interval: 30s
+    rules:
+      # If every probe in a "stack" label group is 0, we consider the stack down.
+      # Assumes blackbox targets carry a `stack` label (A1 to ensure during scrape config).
+      - alert: NosCriticalStackHealthFailure
+        expr: min by (stack) (probe_success) == 0
+        for: 5m
+        labels:
+          severity: critical
+          nos_domain: apps
+        annotations:
+          summary: "All probes in stack {{ $labels.stack }} failing"
+          description: |
+            Every monitored endpoint in the {{ $labels.stack }} stack has been
+            failing probes for 5 minutes. Likely the underlying Docker Compose
+            project is down or its shared network is broken.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalStackHealthFailure.md"
+
+      - alert: NosWarningHttpProbeSlow
+        expr: histogram_quantile(0.95, sum by (le, instance) (rate(probe_duration_seconds_bucket[5m]))) > 3
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "HTTP probe p95 duration >3s for {{ $labels.instance }}"
+          description: |
+            Probe 95th-percentile duration for {{ $labels.instance }} is
+            {{ $value | printf "%.2f" }}s for 10 minutes. Service is degraded but
+            still responding — investigate upstream load before it fails outright.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningHttpProbeSlow.md"
+
+      - alert: NosWarningServiceDegraded
+        expr: up == 0
+        for: 10m
+        labels:
+          severity: warning
+          nos_domain: apps
+        annotations:
+          summary: "Scrape target {{ $labels.job }} down"
+          description: |
+            Prometheus cannot scrape job {{ $labels.job }} on {{ $labels.instance }}
+            for 10 minutes. Could be transient (upgrade, restart) or a real outage —
+            escalate to critical if it persists past 30m.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningServiceDegraded.md"
+
+  - name: nos_apps_wave5_placeholders
+    interval: 5m
+    rules:
+      # Wave 5 integration: Glasswing will push a gauge per service indicating
+      # a newer upstream version is available. Until then, the metric is absent
+      # and this alert never fires.
+      # TODO: replace `absent(nos_upgrade_available)` wrapper once A5 ships the exporter.
+      - alert: NosInfoUpgradeAvailable
+        expr: nos_upgrade_available == 1
+        for: 1h
+        labels:
+          severity: info
+          nos_domain: apps
+        annotations:
+          summary: "Upgrade available for {{ $labels.service }}"
+          description: |
+            Glasswing has detected a newer upstream version for
+            {{ $labels.service }} (current {{ $labels.current_version }},
+            latest {{ $labels.latest_version }}). Run
+            `ansible-playbook main.yml -K --tags upgrade -e upgrade_service={{ $labels.service }}`.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosInfoUpgradeAvailable.md"
+
+      # Wave 5 integration: pazny.state_manager emits nos_migration_pending{slug=...}
+      # when a migration in migrations/ has not yet been applied on this host.
+      # TODO: confirm metric name once A5 merges the state_manager exporter hook.
+      - alert: NosInfoMigrationPending
+        expr: nos_migration_pending == 1
+        for: 30m
+        labels:
+          severity: info
+          nos_domain: apps
+        annotations:
+          summary: "Pending nOS migration: {{ $labels.slug }}"
+          description: |
+            Migration `{{ $labels.slug }}` has not been applied on this host.
+            Run `ansible-playbook main.yml -K` (migrations run automatically in
+            pre_tasks) or set `-e auto_migrate=true` for breaking migrations.
+          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosInfoMigrationPending.md"
