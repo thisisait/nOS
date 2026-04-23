@@ -14,21 +14,27 @@ services:
     image: mariadb:{{ mariadb_version | default('lts') }}
     hostname: mariadb
     restart: unless-stopped
-    # InnoDB DDL workaround for Apple Silicon Docker Desktop + VirtIOFS bind
-    # mount: the default --innodb-flush-method=O_DIRECT triggers a server
-    # crash mid-FK-ALTER (BookStack migration #10 is the canonical reproducer)
-    # when the data dir is bind-mounted from macOS (/Volumes/SSD1TB or ~/...).
-    # Switching to fsync routes writes through the kernel page cache, sidestepping
-    # the VirtIOFS / O_DIRECT sync race. --skip-innodb-doublewrite is safe in dev
-    # (Docker Desktop's volume layer already does its own write-ordering) and
-    # halves the I/O on every commit — major boost on the dev box.
+    # Performance tuning (safe to keep across volume backends).
     command:
-      - "--innodb-flush-method=fsync"
-      - "--skip-innodb-doublewrite"
+      - "--innodb-flush-method=fsync"     # see commit history for why
+      - "--skip-innodb-doublewrite"        # halves write I/O; Docker volume layer provides own ordering
     ports:
       - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
+    # IMPORTANT: data lives in a Docker NAMED VOLUME, not a bind mount.
+    # Apple Silicon Docker Desktop's VirtIOFS layer crashes the InnoDB engine
+    # mid-FK-ALTER (BookStack migration #10 is the canonical reproducer)
+    # when /var/lib/mysql is backed by a host bind-mount; the crash leaves
+    # orphan tablespace entries in the data dictionary. fsync + skip-doublewrite
+    # tuning did not help — the OS-level error is OS error 71 (EPROTO) on
+    # the .ibd file, which is a VirtIOFS protocol issue, not an InnoDB one.
+    # Using a named volume routes I/O through Docker's overlayfs inside the
+    # Linux VM and the bug disappears.
+    # Trade-off: data is no longer browsable at {{ mariadb_data_dir }} on
+    # the host. Backups must use mariadb-dump (see upgrades/mariadb.yml).
+    # `docker compose down --volumes` (used by blank-reset.yml) wipes both
+    # styles, so the blank-reset path keeps working.
     volumes:
-      - {{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     environment:
       MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
       MARIADB_ROOT_HOST: "%"
@@ -50,3 +56,10 @@ services:
         max-file: "5"
     mem_limit: {{ mariadb_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_standard | default('1.0') }}
+
+# Named volume declaration — Docker Compose merges per-file `volumes:` blocks,
+# so this shows up alongside any other top-level volumes from the base
+# infra/docker-compose.yml.j2 or other role overrides.
+volumes:
+  mariadb_data:
+    name: mariadb_data        # explicit name so it survives `compose -p infra down` without --volumes
