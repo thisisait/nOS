@@ -109,7 +109,7 @@ install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
-install_backup: false             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
+install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
 install_glasswing: true           # Glasswing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 install_playwright_tests: false   # Playwright e2e tests under glasswing/tests (smoke + first-admin provisioning)
 
@@ -140,15 +140,15 @@ install_wordpress: false          # WordPress CMS            [requires: mariadb,
 install_nextcloud: true          # Nextcloud – self-hosted cloud  [requires: mariadb, php, nginx]
 install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [requires: Docker]
 install_offline_maps: false       # Offline maps – tileserver-gl + MBTiles    [requires: node]
-install_n8n: false                # n8n – workflow automation                  [requires: Docker]
+install_n8n: true                # n8n – workflow automation                  [requires: Docker]
 install_gitea: true              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [requires: Docker, ~4 GB RAM]
 install_woodpecker: false         # Woodpecker CI – CI/CD for Gitea            [requires: Docker, Gitea OAuth2]
-install_openwebui: false          # Open WebUI – chat UI for Ollama            [requires: Docker, Ollama]
+install_openwebui: true          # Open WebUI – chat UI for Ollama            [requires: Docker, Ollama]
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
 install_jellyfin: false           # Jellyfin – media server                    [requires: Docker]
-install_uptime_kuma: false        # Uptime Kuma – monitoring dashboard         [requires: Docker]
+install_uptime_kuma: true        # Uptime Kuma – monitoring dashboard         [requires: Docker]
 install_calibreweb: true         # Calibre-Web – ebook server                [requires: Docker, calibre]
 install_ntfy: false               # ntfy – push notifications server [Docker]
 install_miniflux: false           # Miniflux – RSS reader [Docker, requires: PostgreSQL]
