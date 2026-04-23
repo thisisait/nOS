@@ -109,6 +109,7 @@ install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
+install_backup: false             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
 install_glasswing: true           # Glasswing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 install_playwright_tests: false   # Playwright e2e tests under glasswing/tests (smoke + first-admin provisioning)
 
@@ -1835,3 +1836,31 @@ vaultwarden_port: 8062
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
 vaultwarden_signups_allowed: false                 # Admin creates accounts
 vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
+
+# ==============================================================================
+# BACKUP — pazny.backup role (nightly DBs + volumes + Authentik blueprints)
+# Runs as a launchd agent on the host; writes to the RustFS S3 bucket.
+# See roles/pazny.backup/README.md + docs/restore-runbook.md.
+# ==============================================================================
+
+backup_schedule_hour: 3                          # local-time 03:00
+backup_schedule_minute: 0
+backup_target_bucket: "backups"
+backup_target_endpoint: "http://127.0.0.1:9010"  # RustFS S3 API
+backup_target_access_key: "{{ rustfs_access_key }}"
+backup_target_secret_key: "{{ rustfs_secret_key }}"
+backup_retention_daily: 7                        # last-N dailies
+backup_retention_weekly: 4                       # last-N Sundays
+backup_retention_monthly: 12                     # last-N month-firsts
+backup_volumes_to_dump:
+  - mariadb_data                                 # extend as more services migrate to named volumes
+backup_databases_mariadb: true
+backup_databases_postgresql: true
+backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
+backup_overwrite_same_day: true
+backup_run_now: false
+backup_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json"
+backup_log_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup.log"
+
+# Consumed by Alloy's textfile collector (Agent A1 + C3).
+node_exporter_textfile_dir: "/var/lib/node_exporter/textfile"

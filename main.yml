@@ -452,6 +452,17 @@
       tags: ['blank', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Restore — pull a dated backup from RustFS and replay it live.
+    # Usage:  ansible-playbook main.yml -K --tags restore -e restore_date=YYYY-MM-DD
+    # Tag 'never' so a regular playbook run with restore_date left over in
+    # config doesn't surprise-trigger the destructive replay.
+    # See docs/restore-runbook.md.
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/restore.yml
+      when: restore_date is defined
+      tags: ['restore', 'never']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Auto-enable dependencies (ERPNext → MariaDB+Redis, Mattermost → PostgreSQL, atd.)
     # ──────────────────────────────────────────────────────────────────────────
     - name: Auto-enable MariaDB for services that require it
@@ -802,6 +813,17 @@
         name: pazny.opencode
       when: install_opencode | default(false)
       tags: ['opencode', 'ai']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Nightly backup orchestrator (pazny.backup) — dumps DBs + volumes +
+    # Authentik blueprints to RustFS. Runs as a launchd agent on the host.
+    # See roles/pazny.backup/README.md + docs/restore-runbook.md.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Backup orchestrator (pazny.backup role)"
+      ansible.builtin.import_role:
+        name: pazny.backup
+      when: install_backup | default(false)
+      tags: ['backup', 'ops']
 
     - import_tasks: tasks/pi-agents.yml
       when: install_pi_agents | default(false)

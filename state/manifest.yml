@@ -768,6 +768,19 @@ services:
     install_flag: install_iiab_terminal
     version_source: none
 
+  - id: backup
+    category: security                         # 'ops' not in schema enum; security is the closest vault-adjacent category
+    stack: null
+    install_flag: install_backup
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.backup"
+    health_check:
+      type: exec
+      # Fail if status file is missing or last_run is older than 36h.
+      command: "test -f {{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json && python3 -c 'import json,time; s=json.load(open(\"{{ ansible_facts[\\\"env\\\"][\\\"HOME\\\"] }}/.nos/backup-status.json\")); assert time.time() - s[\"last_run\"] < 36*3600'"
+      expect_rc: 0
+      timeout_sec: 5
+
   # --------------------------------------------------------- host-only addons
   - id: tailscale
     category: vpn
