@@ -9,7 +9,15 @@
 
 services:
   superset:
-    image: apache/superset:{{ superset_version | default('latest') }}
+    # Build context is playbook_dir/files/superset — stays there so files/
+    # keeps being the source-of-truth for overrideable Dockerfiles. The BASE
+    # arg lets the role's superset_version default drive the upstream tag.
+    build:
+      context: {{ playbook_dir }}/files/superset
+      dockerfile: Dockerfile
+      args:
+        BASE: "apache/superset:{{ superset_version | default('6.0.0-dev') }}"
+    image: nos/superset:{{ superset_version | default('6.0.0-dev') }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}
