@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with 40+ Docker services organized into 57 Ansible roles, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), an AI agent (OpenClaw + Ollama MLX), observability (LGTM stack), and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~46 Docker services organized into 59 Ansible roles under the `pazny.*` namespace, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), an AI agent (OpenClaw + Ollama MLX), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -42,7 +42,7 @@ ansible-playbook main.yml --syntax-check
 
 ## Architecture
 
-### Role-based service delivery (57 roles under `pazny.*`)
+### Role-based service delivery (59 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
@@ -60,7 +60,7 @@ roles/pazny.<service>/
 
 **Role invocation with tag inheritance:** `include_role` needs both `apply: { tags: [...] }` **and** `tags: [...]` on the task itself so CLI `--tags` filtering actually reaches the inner role tasks.
 
-**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, boxapi, hermes, opencode): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
+**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, boxapi, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
 
 ### Configuration layering (later overrides earlier)
 
@@ -100,7 +100,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 |-------|------|
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo |
-| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
+| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **voip** | FreePBX (Asterisk) |

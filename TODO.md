@@ -39,32 +39,32 @@ roles/pazny.<service>/
 ```
 Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` toggle in `default.config.yml` + (optionally) nginx vhost + `authentik_oidc_apps` entry.
 
-### Priority 1 — Infra / DevOps (extend existing devops stack)
+### Priority 1 — Infra / DevOps (extend existing devops stack)  —  ✅ DONE (Wave A)
 
-| Role | Stack | DB | SSO | Priority | Note |
+| Role | Stack | DB | SSO | Priority | Status |
 |------|-------|----|----|-----------|----------|
-| `pazny.code_server` | devops | fs | proxy | **P1** | VS Code in the browser; heavy mem limit |
-| `pazny.ntfy` | iiab | sqlite | proxy | **P1** | Push notifications; dual use: server + Alloy alerting sink |
-| `pazny.miniflux` | iiab | postgres | **native OIDC** | **P1** | RSS reader; minimal, OIDC out-of-the-box |
+| `pazny.code_server` | devops | fs | proxy | **P1** | ✅ shipped |
+| `pazny.ntfy` | iiab | sqlite | proxy | **P1** | ✅ shipped |
+| `pazny.miniflux` | iiab | postgres | **native OIDC** | **P1** | ✅ shipped |
 
-### Priority 2 — Wiki / Edu / Docs
+### Priority 2 — Wiki / Edu / Docs  —  partially done (Wave B)
 
-| Role | Stack | DB | SSO | Priority | Note |
+| Role | Stack | DB | SSO | Priority | Status |
 |------|-------|----|----|-----------|----------|
-| `pazny.hedgedoc` | b2b | postgres | **native OIDC** | P2 | Collaborative markdown — complements Outline |
-| `pazny.bookstack` | b2b | mariadb | **native OIDC** | P2 | Wiki with books/chapters structure |
-| `pazny.onlyoffice` | b2b | – (redis) | proxy | P2 | Doc server for Nextcloud/Outline; iframe integration |
-| `pazny.moodle` | iiab | mariadb | OIDC plugin / proxy | P3 | LMS — large setup, first run 5–10 min migrations |
-| `pazny.kolibri` | iiab | sqlite/pg | proxy | P3 | Offline education; pair with Kiwix |
+| `pazny.hedgedoc` | b2b | postgres | **native OIDC** | P2 | ✅ shipped |
+| `pazny.bookstack` | b2b | mariadb | **native OIDC** | P2 | ✅ shipped |
+| `pazny.onlyoffice` | b2b | embedded pg | proxy | P2 | ✅ shipped |
+| `pazny.moodle` | iiab | mariadb | OIDC plugin / proxy | P3 | pending |
+| `pazny.kolibri` | iiab | sqlite/pg | proxy | P3 | pending |
 
-### Priority 3 — Finance / ERP
+### Priority 3 — Finance / ERP  —  partially done
 
-| Role | Stack | DB | SSO | Priority | Note |
+| Role | Stack | DB | SSO | Priority | Status |
 |------|-------|----|----|-----------|----------|
-| `pazny.firefly` | b2b | mariadb | **native OIDC** | P2 | Personal finance; OIDC via OAuth2 provider |
-| `pazny.wallos` | iiab | sqlite | proxy | P3 | Subscription tracker; lightweight |
-| `pazny.invoiceninja` | b2b | mariadb | proxy | P3 | Invoicing + CRM |
-| `pazny.dolibarr` | b2b | mariadb | proxy | P3 | ERP/CRM alt. to ERPNext |
+| `pazny.firefly` | b2b | mariadb | REMOTE_USER proxy | P2 | ✅ shipped (OAuth2-provider pending) |
+| `pazny.wallos` | iiab | sqlite | proxy | P3 | pending |
+| `pazny.invoiceninja` | b2b | mariadb | proxy | P3 | pending |
+| `pazny.dolibarr` | b2b | mariadb | proxy | P3 | pending |
 
 ### Priority 4 — Mail stack
 
@@ -73,14 +73,14 @@ Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` 
 | `pazny.stalwart` | **new `mail` stack** | rocksdb (native) | LDAP/OIDC | P2 | JMAP+IMAP+SMTP+AS in one binary; WebAdmin UI |
 | `pazny.snappymail` | mail | fs | proxy | P2 | Webmail frontend; connects to Stalwart via IMAP |
 
-### Priority 5 — IoT / Industrial / Time-series
+### Priority 5 — IoT / Industrial / Time-series  —  partially done (Wave B)
 
-| Role | Stack | DB | SSO | Priority | Note |
+| Role | Stack | DB | SSO | Priority | Status |
 |------|-------|----|----|-----------|----------|
-| `pazny.nodered` | iiab | fs | proxy | P2 | Flow automation; pairs with Home Assistant, InfluxDB |
-| `pazny.influxdb` | observability | native storage | proxy | P2 | Time-series DB; Grafana data source (alongside Prometheus) |
-| `pazny.openplc` | **new `engineering` stack** | sqlite | proxy | P3 | PLC runtime + editor |
-| `pazny.farmos` | engineering | postgres | proxy | P3 | Farm management |
+| `pazny.nodered` | iiab | fs | proxy | P2 | ✅ shipped |
+| `pazny.influxdb` | observability | native storage | proxy | P2 | ✅ shipped |
+| `pazny.openplc` | **new `engineering` stack** | sqlite | proxy | P3 | pending |
+| `pazny.farmos` | engineering | postgres | proxy | P3 | pending |
 
 ### Priority 6 — Healthcare / specialized
 
@@ -98,13 +98,13 @@ Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` 
 
 ## Recommended implementation order
 
-1. **Wave A** (P1, low-risk, immediately useful): `code_server`, `ntfy`, `miniflux`
-2. **Wave B** (P2, extensions to existing stacks): `hedgedoc`, `bookstack`, `firefly`, `nodered`, `influxdb`, `onlyoffice`
-3. **Wave C** (new stacks): `stalwart` + `snappymail` → new `mail` stack; `openplc` → engineering stack
-4. **Wave D** (large setups): `moodle`, `kolibri`, `openemr`, `invoiceninja`, `dolibarr`
-5. **Wave E** (low priority): `joomla`, `wallos`, `farmos`
+1. **Wave A** (P1, low-risk, immediately useful): `code_server`, `ntfy`, `miniflux`  —  ✅ DONE
+2. **Wave B** (P2, extensions to existing stacks): `hedgedoc`, `bookstack`, `firefly`, `nodered`, `influxdb`, `onlyoffice`  —  ✅ DONE
+3. **Wave C** (new stacks): `stalwart` + `snappymail` → new `mail` stack; `openplc` → engineering stack  —  pending
+4. **Wave D** (large setups): `moodle`, `kolibri`, `openemr`, `invoiceninja`, `dolibarr`  —  pending
+5. **Wave E** (low priority): `joomla`, `wallos`, `farmos`  —  pending
 
-Each Wave = 1 PR from `cc/*` worktree into `dev`. After Wave A merges into `dev`, the next worktree is opened from `dev`.
+Each Wave = 1 PR from a `cc/*` worktree onto `master` (the `dev` branch was retired 2026-04-16). Open the next worktree from fresh `master` after the previous wave merges.
 
 ---
 
