@@ -1,0 +1,70 @@
+---
+# nOS patch recipe — annotated template.
+#
+# Copy this file to patches/PATCH-NNN.yml. Each patch = one file. Schema is
+# intentionally small today; new step kinds land in tasks/apply-patches.yml
+# as they are needed. The on-disk YAML is the source of truth — the matching
+# row in Glasswing's `patches` table is a read mirror that developers keep
+# in sync.
+#
+# Lifecycle (tasks/apply-patches.yml):
+#
+#   load recipe
+#     -> preconditions (fail fast if any predicate trips)
+#     -> apply[]   (each step emits patch_step_ok / patch_step_failed)
+#     -> verify[]  (failures trigger rollback)
+#     -> on success: append ~/.nos/state.yml patches_applied[] entry
+#     -> on failure: rollback[] + record success=false
+#
+# The [Patch] prefix in task names is what the glasswing_telemetry callback
+# plugin uses to auto-tag emitted events with patch_id — keep the prefix in
+# every apply/verify/rollback step.
+
+id: PATCH-000                          # REQUIRED. Format: PATCH-NNN or PATCH-NNNN.
+component: example                     # REQUIRED. Matches systems.id (e.g. puter, superset).
+severity: MEDIUM                       # REQUIRED. CRITICAL | HIGH | MEDIUM | LOW.
+status: draft                          # REQUIRED. draft | ready | applied | superseded.
+title: "One-line summary of the fix"   # REQUIRED. Rendered as the card heading in Glasswing.
+
+# Optional cross-refs — surfaced in the UI if present.
+finding_ref: null                      # e.g. "PENTEST-017" (FK to pentest_findings.id).
+upstream_repo: null                    # e.g. "https://github.com/HeyPuter/puter".
+upstream_pr: null                      # e.g. "https://github.com/HeyPuter/puter/pull/123".
+maintainers: ["pazny"]
+
+notes: |
+  Free-form description of what this patch fixes, who reported it, and any
+  manual steps that are *not* automated here. Rendered as Markdown on the
+  patch detail page.
+
+# Engine refuses to start if any predicate here is unsatisfied. All keys optional.
+requires:
+  min_disk_free_gb: 1
+  # service_healthy: true            # future: checks systems.health_status
+
+# APPLY steps run in listed order. Each item MUST have `name` + exactly one
+# action field. Supported action fields (MVP):
+#
+#   shell:   "<bash cmd>"           -> ansible.builtin.shell, cwd = playbook_dir
+#   command: "<bin args>"           -> ansible.builtin.command (no shell meta)
+#
+# The step `name` is read by the callback plugin via the [Patch] prefix to
+# emit correlated patch_step_ok / patch_step_failed events.
+apply:
+  - name: "[Patch] PATCH-000 | apply: example shell step"
+    shell: |
+      echo "This is where the patch would mutate the tree"
+
+# VERIFY steps follow the same schema as apply[]. A non-zero exit triggers
+# rollback. Keep these checks cheap — they run on every apply.
+verify:
+  - name: "[Patch] PATCH-000 | verify: sanity check"
+    shell: |
+      true
+
+# ROLLBACK steps run only when verify fails. Same action schema as apply[].
+# The convention is reverse-order of apply[]: undo the last change first.
+rollback:
+  - name: "[Patch] PATCH-000 | rollback: revert"
+    shell: |
+      echo "This is where you'd undo the patch"

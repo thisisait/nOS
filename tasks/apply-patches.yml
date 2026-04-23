@@ -1,0 +1,249 @@
+---
+# ==============================================================================
+# APPLY-PATCHES ENGINE
+# ------------------------------------------------------------------------------
+# Applies a single patch recipe (patches/<patch_id>.yml) end-to-end. Mirrors
+# the upgrade-engine contract (preconditions -> apply -> verify -> on-failure
+# rollback) but stays pure-Ansible — no custom module. Step dispatch is a
+# conditional include based on which action field the step sets.
+#
+# Invocation:
+#
+#   ansible-playbook main.yml -K --tags apply-patches \
+#     -e patch_id=PATCH-001
+#
+#   ansible-playbook main.yml -K --tags apply-patches \
+#     -e patch_id=PATCH-001 -e patch_dry_run=true
+#
+# Telemetry:
+#
+#   The glasswing_telemetry callback plugin auto-extracts the patch id from
+#   the "[Patch] PATCH-NNN ..." task-name prefix and stamps every emitted
+#   event with patch_id. The recipe's apply/verify/rollback step names MUST
+#   keep that prefix (the _template.yml shows the shape).
+#
+# State:
+#
+#   On completion we append a record to ~/.nos/state.yml patches_applied[],
+#   which the state_manager role later pushes to BoxAPI, which mirrors it
+#   into Glasswing's patches_applied table. The record shape:
+#
+#     - patch_id:      "PATCH-001"
+#       component_id:  "puter"
+#       applied_at:    "2026-04-23T20:12:00Z"
+#       success:       true
+#       rolled_back:   false
+#       duration_sec:  14
+# ==============================================================================
+
+- name: "[Patch] Validate patch_id extra-var"
+  ansible.builtin.fail:
+    msg: "patch_id is required. Pass -e patch_id=PATCH-NNN."
+  when: patch_id is not defined or (patch_id | length) == 0
+  tags: ['always', 'apply-patches']
+
+- name: "[Patch] Locate recipe file"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/patches/{{ patch_id }}.yml"
+  register: _patch_stat
+  tags: ['always', 'apply-patches']
+
+- name: "[Patch] Fail fast if recipe missing"
+  ansible.builtin.fail:
+    msg: "Patch recipe not found at {{ playbook_dir }}/patches/{{ patch_id }}.yml"
+  when: not _patch_stat.stat.exists
+  tags: ['apply-patches']
+
+- name: "[Patch] Load recipe YAML"
+  ansible.builtin.set_fact:
+    _patch: "{{ lookup('file', playbook_dir + '/patches/' + patch_id + '.yml') | from_yaml }}"
+  tags: ['always', 'apply-patches']
+
+- name: "[Patch] Validate required fields"
+  ansible.builtin.fail:
+    msg: "Patch {{ patch_id }} missing required field: {{ item }}"
+  when: _patch[item] is not defined
+  loop: ['id', 'component', 'severity', 'status', 'title', 'apply']
+  tags: ['apply-patches']
+
+- name: "[Patch] Cross-check id field vs filename"
+  ansible.builtin.fail:
+    msg: "Patch id mismatch: file says {{ _patch.id }} but filename was {{ patch_id }}"
+  when: _patch.id != patch_id
+  tags: ['apply-patches']
+
+# ---- Preconditions ---------------------------------------------------------
+
+- name: "[Patch] Precondition — available disk space"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    df -g "{{ playbook_dir }}" | awk 'NR==2 {print $4}'
+  register: _patch_disk_free
+  changed_when: false
+  when: (_patch.requires | default({})).min_disk_free_gb is defined
+  tags: ['apply-patches']
+
+- name: "[Patch] Abort if disk free is below threshold"
+  ansible.builtin.fail:
+    msg: >-
+      Patch {{ _patch.id }} needs {{ _patch.requires.min_disk_free_gb }}GB free
+      on {{ playbook_dir }}, only {{ _patch_disk_free.stdout }}GB available.
+  when:
+    - (_patch.requires | default({})).min_disk_free_gb is defined
+    - (_patch_disk_free.stdout | int) < (_patch.requires.min_disk_free_gb | int)
+  tags: ['apply-patches']
+
+# ---- Run label + timing ----------------------------------------------------
+
+- name: "[Patch] Capture run start timestamp"
+  ansible.builtin.set_fact:
+    _patch_started_at: "{{ ansible_date_time.iso8601 }}"
+    _patch_dry: "{{ (patch_dry_run | default(false)) | bool }}"
+  tags: ['always', 'apply-patches']
+
+- name: "[Patch] Summary"
+  ansible.builtin.debug:
+    msg: |-
+      Patch engine: {{ _patch.id }} ({{ _patch.severity }}) against {{ _patch.component }}
+      Title:    {{ _patch.title }}
+      Dry-run:  {{ _patch_dry }}
+      Steps:    apply={{ _patch.apply | length }}  verify={{ _patch.verify | default([]) | length }}  rollback={{ _patch.rollback | default([]) | length }}
+  tags: ['apply-patches']
+
+# ---- APPLY phase -----------------------------------------------------------
+# Single loop; step dispatch via `when`. Callback plugin catches each
+# invocation and emits patch_step_ok / patch_step_failed events, tagged with
+# patch_id via the [Patch] prefix in the step name.
+
+- name: "{{ item.name }}"
+  ansible.builtin.shell: "{{ item.shell }}"
+  args:
+    chdir: "{{ item.chdir | default(playbook_dir) }}"
+    executable: /bin/bash
+  loop: "{{ _patch.apply }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _patch_apply_results
+  when:
+    - not _patch_dry
+    - item.shell is defined
+  failed_when: false
+  tags: ['apply-patches']
+
+- name: "{{ item.name }}"
+  ansible.builtin.command:
+    cmd: "{{ item.command }}"
+    chdir: "{{ item.chdir | default(playbook_dir) }}"
+  loop: "{{ _patch.apply }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _patch_apply_cmd_results
+  when:
+    - not _patch_dry
+    - item.command is defined
+  failed_when: false
+  tags: ['apply-patches']
+
+- name: "[Patch] Detect apply-phase failure"
+  ansible.builtin.set_fact:
+    _patch_apply_failed: >-
+      {{ (_patch_apply_results.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) +
+         (_patch_apply_cmd_results.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) > 0 }}
+  tags: ['apply-patches']
+
+# ---- VERIFY phase (skipped on apply failure; triggers rollback if it fails)
+
+- name: "{{ item.name }}"
+  ansible.builtin.shell: "{{ item.shell }}"
+  args:
+    chdir: "{{ item.chdir | default(playbook_dir) }}"
+    executable: /bin/bash
+  loop: "{{ _patch.verify | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _patch_verify_results
+  when:
+    - not _patch_dry
+    - not _patch_apply_failed
+    - item.shell is defined
+  failed_when: false
+  tags: ['apply-patches']
+
+- name: "[Patch] Detect verify-phase failure"
+  ansible.builtin.set_fact:
+    _patch_verify_failed: >-
+      {{ (_patch_verify_results.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) > 0 }}
+  tags: ['apply-patches']
+
+# ---- ROLLBACK phase (only runs when apply or verify failed) ----------------
+
+- name: "{{ item.name }}"
+  ansible.builtin.shell: "{{ item.shell }}"
+  args:
+    chdir: "{{ item.chdir | default(playbook_dir) }}"
+    executable: /bin/bash
+  loop: "{{ _patch.rollback | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - not _patch_dry
+    - _patch_apply_failed or _patch_verify_failed
+    - item.shell is defined
+  failed_when: false
+  tags: ['apply-patches']
+
+# ---- Persist record to ~/.nos/state.yml -----------------------------------
+
+- name: "[Patch] Read existing patches_applied list"
+  nos_state:
+    action: get
+    path: patches_applied
+    default: []
+  register: _patch_applied_list
+  when: not _patch_dry
+  tags: ['apply-patches']
+
+- name: "[Patch] Capture run end timestamp"
+  ansible.builtin.set_fact:
+    _patch_ended_at: "{{ ansible_date_time.iso8601 }}"
+    _patch_success: "{{ not (_patch_apply_failed or _patch_verify_failed) }}"
+    _patch_rolled_back: "{{ _patch_apply_failed or _patch_verify_failed }}"
+  when: not _patch_dry
+  tags: ['apply-patches']
+
+- name: "[Patch] Append record to state"
+  nos_state:
+    action: set
+    path: patches_applied
+    value: >-
+      {{ (_patch_applied_list.value | default([])) + [
+           {
+             'patch_id':     _patch.id,
+             'component_id': _patch.component,
+             'severity':     _patch.severity,
+             'applied_at':   _patch_started_at,
+             'ended_at':     _patch_ended_at,
+             'success':      _patch_success,
+             'rolled_back':  _patch_rolled_back,
+             'title':        _patch.title,
+           }
+         ] }}
+  when: not _patch_dry
+  tags: ['apply-patches']
+
+- name: "[Patch] Final summary"
+  ansible.builtin.debug:
+    msg: |-
+      Patch run complete: {{ _patch.id }}
+        result:      {{ 'OK' if _patch_success | default(true) else 'FAILED' }}
+        rolled_back: {{ _patch_rolled_back | default(false) }}
+        dry_run:     {{ _patch_dry }}
+  tags: ['apply-patches']
+
+- name: "[Patch] Fail the play if patch failed"
+  ansible.builtin.fail:
+    msg: "Patch {{ _patch.id }} failed; rollback {{ 'ran' if _patch_rolled_back else 'not triggered' }}."
+  when:
+    - not _patch_dry
+    - not _patch_success
+  tags: ['apply-patches']

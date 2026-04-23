@@ -73,6 +73,17 @@
       ansible.builtin.import_tasks: tasks/pre-migrate.yml
       tags: ['migrate']
 
+    # ── Apply a single patch recipe (explicit opt-in via --tags apply-patches)
+    # Skipped on a normal playbook run because of the 'never' tag — invoked
+    # either manually (ansible-playbook ... --tags apply-patches -e patch_id=PATCH-001)
+    # or from BoxAPI /api/patches/<id>/apply which subprocesses ansible-playbook
+    # with that tag. The when-guard prevents accidental runs if someone adds
+    # 'apply-patches' to a broader tag group.
+    - name: "[Framework] Apply a single patch recipe (opt-in)"
+      ansible.builtin.import_tasks: tasks/apply-patches.yml
+      when: patch_id is defined and (patch_id | length) > 0
+      tags: ['apply-patches', 'never']
+
     - name: Include credentials overrides.
       include_vars: "{{ item }}"
       with_fileglob:

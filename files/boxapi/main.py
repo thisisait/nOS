@@ -161,6 +161,7 @@ try:  # noqa: SIM105
     import state as _nos_state  # type: ignore
     import migrations as _nos_migrations  # type: ignore
     import upgrades as _nos_upgrades  # type: ignore
+    import patches as _nos_patches  # type: ignore
     import coexistence as _nos_coexistence  # type: ignore
     import events as _nos_events  # type: ignore
     _FRAMEWORK_READY = True
@@ -303,6 +304,44 @@ async def upgrades_plan(service: str, recipe_id: str, _: None = Depends(_verify_
 async def upgrades_apply(service: str, recipe_id: str, _: None = Depends(_verify_api_key)):
     _require_framework()
     payload = _nos_upgrades.apply(service, recipe_id)
+    status = _status_from_payload(payload)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=payload.get("error", "apply failed"))
+    return payload
+
+
+# ---- /api/patches ---------------------------------------------------------
+
+
+@app.get("/api/patches")
+async def patches_list(_: None = Depends(_verify_api_key)):
+    _require_framework()
+    return _nos_patches.list_all()
+
+
+@app.get("/api/patches/{patch_id}")
+async def patches_get(patch_id: str, _: None = Depends(_verify_api_key)):
+    _require_framework()
+    rec = _nos_patches.get_by_id(patch_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="patch not found")
+    return rec
+
+
+@app.post("/api/patches/{patch_id}/plan")
+async def patches_plan(patch_id: str, _: None = Depends(_verify_api_key)):
+    _require_framework()
+    payload = _nos_patches.plan(patch_id)
+    status = _status_from_payload(payload)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=payload.get("error", "plan failed"))
+    return payload
+
+
+@app.post("/api/patches/{patch_id}/apply")
+async def patches_apply(patch_id: str, _: None = Depends(_verify_api_key)):
+    _require_framework()
+    payload = _nos_patches.apply(patch_id)
     status = _status_from_payload(payload)
     if status >= 400:
         raise HTTPException(status_code=status, detail=payload.get("error", "apply failed"))
