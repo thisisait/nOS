@@ -63,6 +63,40 @@ From `tasks/stacks/stack-up.yml`, gate both invocations on `install_paperclip`:
   when: install_paperclip | default(false)
 ```
 
+## Authentication & Authentik integration
+
+**Current mode (2026-04-22):** **proxy auth + BetterAuth local accounts** (defense in depth).
+
+Paperclip ships with [BetterAuth](https://better-auth.com) and a CEO-invite bootstrap flow — no native OIDC is supported by the upstream image today. BetterAuth's generic OAuth/OIDC plugin has to be registered **in application code**; it is not env-driven. Until upstream (or an nOS fork) adds env-configurable OIDC, the access-control layer is the **Authentik forward_auth outpost** enforced at the Nginx vhost (`templates/nginx/sites-available/paperclip.conf`):
+
+- Nginx `authentik-proxy-auth.conf` gates access → Authentik group-based RBAC (tier 2, `nos-managers`) is applied via the `authentik_app_tiers` mapping.
+- Paperclip still renders its own BetterAuth login after the proxy-auth gate. Local account lifecycle (CEO bootstrap, invites) stays owned by the Paperclip CLI.
+- Data is sensitive (agent org-chart, task history) — the layered defense is intentional; even if the local login were bypassed, the outpost would reject the request first.
+
+**Forward path (staged, off by default):** the compose template already carries the expected env vars (`BETTER_AUTH_OIDC_*`) behind the `paperclip_native_oidc_enabled` flag. When upstream Paperclip adds env-driven OIDC support (or when the nOS fork wires BetterAuth's `genericOAuth` provider from env), flip:
+
+```yaml
+paperclip_native_oidc_enabled: true
+authentik_oidc_paperclip_client_id: "{{ (authentik_oidc_apps | selectattr('slug','equalto','paperclip') | first).client_id }}"
+authentik_oidc_paperclip_client_secret: "{{ (authentik_oidc_apps | selectattr('slug','equalto','paperclip') | first).client_secret }}"
+```
+
+and promote the Paperclip entry in `authentik_oidc_apps` from `type: proxy` to a native OIDC provider:
+
+```yaml
+- name: "Paperclip"
+  slug: "paperclip"
+  enabled: "{{ install_paperclip | default(false) }}"
+  client_id: "nos-paperclip"
+  client_secret: "{{ global_password_prefix }}_pw_oidc_paperclip"
+  redirect_uris: "https://{{ paperclip_domain | default('paperclip.dev.local') }}/api/auth/oauth/oidc/callback"
+  launch_url: "https://{{ paperclip_domain | default('paperclip.dev.local') }}"
+```
+
+`tasks/post.yml` has a staged verification block (env-var injection check + `.well-known/openid-configuration` reachability probe) gated on the same flag.
+
+The `extra_hosts: auth.dev.local:host-gateway` entry is rendered whenever `install_authentik` is true so Paperclip can reach the Authentik issuer regardless of whether OIDC is already wired.
+
 ## Rollback
 
 Revert the commit and:

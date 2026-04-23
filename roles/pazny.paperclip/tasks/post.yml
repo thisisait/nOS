@@ -122,3 +122,44 @@
   when:
     - _paperclip_bootstrap is defined
     - _paperclip_bootstrap.changed | default(false)
+
+# ── Native OIDC verification (staged) ─────────────────────────────────────
+# Sprint 2c, 2026-04-22. Runs only when the operator has flipped
+# `paperclip_native_oidc_enabled: true` AND Authentik is installed.
+# The upstream image does not yet consume BETTER_AUTH_OIDC_* vars, so we
+# only verify the env vars are wired and that the Authentik OIDC issuer
+# endpoint is reachable from inside the container. Actual sign-in continues
+# to go through the Nginx forward_auth outpost until upstream adds support.
+
+- name: "[pazny.paperclip Post] Native OIDC — verify env vars reached the container"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    sh -c 'echo "ISSUER=$BETTER_AUTH_OIDC_ISSUER"; echo "CLIENT_ID=$BETTER_AUTH_OIDC_CLIENT_ID"'
+  register: _paperclip_oidc_env
+  changed_when: false
+  failed_when: false
+  when:
+    - install_authentik | default(false)
+    - paperclip_native_oidc_enabled | default(false)
+
+- name: "[pazny.paperclip Post] Native OIDC — reachability check to Authentik issuer"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip
+    sh -c 'curl -sfk -o /dev/null -w "%{http_code}" https://{{ authentik_domain | default("auth.dev.local") }}/application/o/paperclip/.well-known/openid-configuration'
+  register: _paperclip_oidc_reach
+  changed_when: false
+  failed_when: false
+  when:
+    - install_authentik | default(false)
+    - paperclip_native_oidc_enabled | default(false)
+
+- name: "[pazny.paperclip Post] Native OIDC — verification summary"
+  ansible.builtin.debug:
+    msg:
+      - "ENV: {{ _paperclip_oidc_env.stdout_lines | default([]) }}"
+      - "Authentik discovery HTTP status: {{ _paperclip_oidc_reach.stdout | default('n/a') }}"
+      - "NOTE: Upstream Paperclip does not yet wire BetterAuth genericOAuth from env."
+      - "Access control remains enforced by the Nginx Authentik outpost (proxy auth)."
+  when:
+    - install_authentik | default(false)
+    - paperclip_native_oidc_enabled | default(false)
