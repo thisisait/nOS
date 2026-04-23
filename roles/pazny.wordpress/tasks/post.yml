@@ -8,6 +8,10 @@
 #
 # Reconverge leg for state-declarative idempotence: `wp user update` runs
 # on every run and overwrites the hash with the current prefix. Blank and non-blank run.
+#
+# Also installs + activates the `openid-connect-generic` plugin when Authentik
+# is enabled. The mu-plugin (oidc-bootstrap.php) then configures it from the
+# compose env vars — so WP has true native SSO, not proxy-auth.
 # ==============================================================================
 
 - name: "[pazny.wordpress Post] Check if WordPress container is running"
@@ -72,4 +76,32 @@
     - _wp_installed.rc | default(1) == 0
   register: _wp_pw_update
   changed_when: "'Success' in (_wp_pw_update.stdout | default(''))"
+  failed_when: false
+
+# ── Native OIDC — install + activate openid-connect-generic plugin ──────
+# Idempotent: `wp plugin install --activate` is a no-op when already present
+# and active. The mu-plugin oidc-bootstrap.php handles the actual config
+# (client_id, endpoints, secret) from the compose env vars.
+- name: "[pazny.wordpress Post] Check if openid-connect-generic plugin is active"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp plugin is-active daggerhart-openid-connect-generic --allow-root 2>/dev/null
+  register: _wp_oidc_active
+  changed_when: false
+  failed_when: false
+  when:
+    - install_authentik | default(false)
+    - _wp_container.stdout | default('') | length > 0
+
+- name: "[pazny.wordpress Post] Install + activate openid-connect-generic plugin (native OIDC)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp plugin install daggerhart-openid-connect-generic
+    --activate --allow-root
+  when:
+    - install_authentik | default(false)
+    - _wp_container.stdout | default('') | length > 0
+    - _wp_oidc_active.rc | default(1) != 0
+  register: _wp_oidc_install
+  changed_when: "'Plugin installed successfully' in (_wp_oidc_install.stdout | default(''))"
   failed_when: false

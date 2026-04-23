@@ -18,6 +18,22 @@
     state: directory
     mode: '0755'
 
+- name: "[pazny.wordpress] Ensure mu-plugins staging directory exists"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/iiab/wordpress/mu-plugins"
+    state: directory
+    mode: '0755'
+
+# Copy the OIDC auto-configurator as a must-use plugin. Mu-plugins load on
+# every request with no activation step, so the openid-connect-generic
+# settings get pushed as soon as the plugin itself is installed.
+- name: "[pazny.wordpress] Stage OIDC mu-plugin (auto-configures openid-connect-generic)"
+  ansible.builtin.copy:
+    src: oidc-mu-plugin.php
+    dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/oidc-bootstrap.php"
+    mode: '0644'
+  notify: Restart wordpress
+
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
@@ -52,6 +68,7 @@
        Container: wordpress → 127.0.0.1:{{ wordpress_port | default(8084) }}
        Data:      {{ wordpress_dir }}
        DB:        {{ wordpress_db_name }} @ mariadb (iiab_net)
+       SSO:       {% if install_authentik | default(false) %}Authentik native OIDC (openid-connect-generic){% else %}disabled{% endif %}
 
        Finish: go to https://{{ wordpress_domain }}/wp-admin/install.php
        Add to /etc/hosts:   127.0.0.1 {{ wordpress_domain }}
