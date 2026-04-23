@@ -15,18 +15,19 @@
 
 - name: "[BoxAPI] Copy application files"
   ansible.builtin.copy:
-    src: "boxapi/{{ item }}"
+    src: "bone/{{ item }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/boxapi/{{ item }}"
     mode: '0644'
   loop:
     - main.py
     - requirements.txt
-    # State & Migration Framework helpers (agent 7)
+    # State & Migration Framework helpers
     - state.py
     - migrations.py
     - upgrades.py
     - coexistence.py
     - events.py
+    - patches.py
 
 - name: "[BoxAPI] Create Python venv"
   ansible.builtin.command:
@@ -43,7 +44,7 @@
 
 - name: "[BoxAPI] Deploy launchd plist"
   ansible.builtin.template:
-    src: boxapi-launchd.plist.j2
+    src: bone-launchd.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist"
     mode: '0644'
   notify: Restart boxapi

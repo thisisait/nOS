@@ -884,13 +884,14 @@
       tags: ['service-registry', 'registry']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Box Management API – FastAPI health/status/execution endpoint
+    # Bone – local FastAPI service (structure / state / dispatcher).
+    # Former BoxAPI. See docs/anatomy.md for the organ metaphor.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "BoxAPI (pazny.boxapi role)"
+    - name: "Bone (pazny.bone role)"
       ansible.builtin.import_role:
-        name: pazny.boxapi
+        name: pazny.bone
       when: install_boxapi | default(false)
-      tags: ['boxapi', 'api']
+      tags: ['bone', 'api']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Heartbeat – fleet reporting daemon

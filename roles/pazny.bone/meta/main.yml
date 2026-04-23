@@ -1,9 +1,9 @@
 ---
 galaxy_info:
-  role_name: boxapi
+  role_name: bone
   namespace: pazny
   author: Pázny
-  description: Box Management API (FastAPI + uvicorn via launchd) pro nOS
+  description: Bone — local FastAPI (structure / state / dispatcher organ of nOS). Formerly BoxAPI.
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -12,7 +12,6 @@ galaxy_info:
         - all
 
 # No role dependencies — Python3 and Homebrew are installed outside the role.
-# Source files/boxapi/ and templates/boxapi-launchd.plist.j2 stay
-# v playbook repo.
+# Source files/bone/ and templates/bone-launchd.plist.j2 stay in playbook repo.
 # Tasks use only ansible.builtin, no extra collections.
 dependencies: []
