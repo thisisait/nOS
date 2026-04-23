@@ -1,10 +1,10 @@
 # =============================================================================
 # pazny.superset — compose override fragment
-# Merged do `docker compose -p data up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/data/overrides/*.yml.
+# Merged into `docker compose -p data up` by tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/data/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — data_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/data/docker-compose.yml.j2.
+# Does not declare top-level networks: — data_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/data/docker-compose.yml.j2.
 # =============================================================================
 
 services:
@@ -19,7 +19,10 @@ services:
 {% endif %}
     volumes:
       - {{ superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset') }}:/app/superset_home
+      - {{ stacks_dir }}/data/overrides/superset_config.py:/app/pythonpath/superset_config.py:ro
     environment:
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      PYTHONPATH: /app/pythonpath
       SUPERSET_SECRET_KEY: "{{ superset_secret_key | default(global_password_prefix + '_pw_superset_secret') }}"
       DATABASE_HOST: postgresql
       DATABASE_PORT: "5432"
@@ -29,6 +32,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
     networks:
       - data_net
       - {{ stacks_shared_network }}

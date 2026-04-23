@@ -16,6 +16,13 @@
     state: directory
     mode: '0755'
 
+- name: "[pazny.superset] Render superset_config.py (native OIDC via Authentik)"
+  ansible.builtin.template:
+    src: superset_config.py.j2
+    dest: "{{ stacks_dir }}/data/overrides/superset_config.py"
+    mode: '0644'
+  notify: Restart superset
+
 - name: "[pazny.superset] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

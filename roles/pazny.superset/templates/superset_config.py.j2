@@ -1,0 +1,71 @@
+# =============================================================================
+# pazny.superset — superset_config.py (rendered by Ansible)
+#
+# Bind-mounted into the container at /app/pythonpath/superset_config.py.
+# Superset autoloads everything in /app/pythonpath; we additionally set
+# SUPERSET_CONFIG_PATH to this exact file so it always wins.
+#
+# Flask-AppBuilder OIDC integration (Authlib) against Authentik.
+# Authentik group names are mapped to FAB roles via AUTH_ROLES_MAPPING.
+# =============================================================================
+
+import os
+from flask_appbuilder.security.manager import AUTH_OAUTH
+
+# -----------------------------------------------------------------------------
+# Core
+# -----------------------------------------------------------------------------
+SECRET_KEY = os.environ.get(
+    "SUPERSET_SECRET_KEY",
+    "{{ superset_secret_key | default(global_password_prefix + '_pw_superset_secret') }}",
+)
+
+# SQLAlchemy connection string to PostgreSQL (from infra stack)
+SQLALCHEMY_DATABASE_URI = (
+    "postgresql+psycopg2://"
+    "{{ superset_db_user | default('superset') }}:"
+    "{{ superset_db_password | default(global_password_prefix + '_pw_superset') }}"
+    "@postgresql:5432/"
+    "{{ superset_db_name | default('superset') }}"
+)
+
+# Behind Nginx TLS termination
+ENABLE_PROXY_FIX = True
+PROXY_FIX_CONFIG = {"x_for": 1, "x_proto": 1, "x_host": 1, "x_port": 1, "x_prefix": 1}
+
+# Allow iframe embedding from the Puter web desktop
+TALISMAN_ENABLED = False
+HTTP_HEADERS = {}
+WTF_CSRF_ENABLED = True
+WTF_CSRF_EXEMPT_LIST = ["superset.views.core.log"]
+
+# -----------------------------------------------------------------------------
+# Authentication — native OIDC via Authentik
+# -----------------------------------------------------------------------------
+AUTH_TYPE = AUTH_OAUTH
+AUTH_USER_REGISTRATION = True
+AUTH_USER_REGISTRATION_ROLE = "Gamma"
+AUTH_ROLES_SYNC_AT_LOGIN = True
+
+# Authentik group -> FAB role
+AUTH_ROLES_MAPPING = {
+    "{{ authentik_rbac_tiers.admin   | default('nos-admins') }}":   ["Admin"],
+    "{{ authentik_rbac_tiers.manager | default('nos-managers') }}": ["Alpha"],
+    "{{ authentik_rbac_tiers.user    | default('nos-users') }}":    ["Gamma"],
+    "{{ authentik_rbac_tiers.guest   | default('nos-guests') }}":   ["Public"],
+}
+
+OAUTH_PROVIDERS = [
+    {
+        "name": "authentik",
+        "icon": "fa-key",
+        "token_key": "access_token",
+        "remote_app": {
+            "client_id": "{{ authentik_oidc_superset_client_id | default('nos-superset') }}",
+            "client_secret": "{{ authentik_oidc_superset_client_secret | default(global_password_prefix + '_pw_oidc_superset') }}",
+            "client_kwargs": {"scope": "openid profile email groups"},
+            "server_metadata_url": "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/superset/.well-known/openid-configuration",
+            "api_base_url": "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/",
+        },
+    },
+]
