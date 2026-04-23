@@ -131,8 +131,8 @@
           is_default: true
         webhook:
           enabled: true
-          name: "nOS → Glasswing (BoxAPI)"
-          url: "{{ uptime_kuma_notify_webhook_url | default('http://127.0.0.1:' ~ (boxapi_port | default(8099)) ~ '/api/events') }}"
+          name: "nOS → Wing (Bone)"
+          url: "{{ uptime_kuma_notify_webhook_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/events') }}"
           hmac_secret: "{{ glasswing_api_token | default('') }}"
           is_default: true
           body:

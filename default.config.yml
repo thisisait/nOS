@@ -34,11 +34,12 @@ heartbeat_endpoint: ""                    # URL of the fleet management server
 heartbeat_interval: 300                   # Interval in seconds (5 minutes)
 heartbeat_api_key: "{{ global_password_prefix }}_pw_heartbeat"
 
-# ── Box Management API ───────────────────────────────────────────────────────
-install_boxapi: false                     # FastAPI management API
-boxapi_port: 8099
-boxapi_domain: "api.{{ instance_tld }}"
-boxapi_secret: "{{ global_password_prefix }}_pw_boxapi"
+# ── Bone (local FastAPI — structure/state/dispatcher organ) ──────────────────
+# Formerly BoxAPI. See docs/anatomy.md.
+install_bone: false                       # FastAPI management API
+bone_port: 8099
+bone_domain: "api.{{ instance_tld }}"
+bone_secret: "{{ global_password_prefix }}_pw_bone"
 
 # ── Provider Access ──────────────────────────────────────────────────────────
 provider_admin_email: ""                  # Provider (thisisait.eu) email — same rights as CEO
@@ -1113,7 +1114,7 @@ uptime_kuma_status_page_slug: "nos"               # Slug for public status page 
 uptime_kuma_status_page_title: "nOS Service Status"
 uptime_kuma_status_page_domain: "status.{{ instance_tld | default('dev.local') }}"
 uptime_kuma_ntfy_topic: "nos-alerts"              # ntfy topic used for alert notifications
-uptime_kuma_notify_webhook_url: "http://127.0.0.1:{{ boxapi_port | default(8099) }}/api/events"
+uptime_kuma_notify_webhook_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/events"
 uptime_kuma_tls_expiry_monitors: true             # Create TLS cert-expiry monitors for HTTPS-exposed services
 uptime_kuma_docker_host_monitors: false           # Optional Docker healthcheck pass-through (needs socket proxy)
 

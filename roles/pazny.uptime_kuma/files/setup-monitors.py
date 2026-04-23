@@ -7,7 +7,7 @@ Invoked by the ``pazny.uptime_kuma`` role after the container starts.
 This version (Sprint 1, Wave 3) is spec-driven: a single YAML/JSON config file
 describes:
   - monitors       (HTTP / TCP / keyword / docker / cert-expiry)
-  - notifications  (ntfy + webhook to BoxAPI / Glasswing with HMAC)
+  - notifications  (ntfy + webhook to Bone / Wing with HMAC)
   - status_page    (public read-only view + slug)
 
 Usage
@@ -278,13 +278,13 @@ class KumaClient:
             log("[-] uptime-kuma-api build has no WEBHOOK notification type")
             return None
 
-        # Uptime Kuma sends its own payload. We wrap it in a BoxAPI-compatible
+        # Uptime Kuma sends its own payload. We wrap it in a Bone-compatible
         # envelope using Kuma's custom body feature (contentType=json).
         body_json = json.dumps(body_template, separators=(",", ":"))
 
         # HMAC header: compute over the canonical body template bytes. Kuma
         # will substitute {{msg}}/{{monitorJSON}}/{{heartbeatJSON}} server-side;
-        # downstream BoxAPI recomputes and verifies over the received body.
+        # downstream Bone recomputes and verifies over the received body.
         extra_headers = {}
         if hmac_secret:
             sig = hmac_signature(hmac_secret, body_json.encode("utf-8"))

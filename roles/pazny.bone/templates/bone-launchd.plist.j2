@@ -11,7 +11,7 @@
     <string>--host</string>
     <string>127.0.0.1</string>
     <string>--port</string>
-    <string>{{ boxapi_port | default(8099) }}</string>
+    <string>{{ bone_port | default(8099) }}</string>
   </array>
   <key>WorkingDirectory</key>
   <string>{{ ansible_facts['env']['HOME'] }}/boxapi</string>
@@ -27,8 +27,8 @@
   <dict>
     <key>PATH</key>
     <string>{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    <key>BOXAPI_SECRET</key>
-    <string>{{ boxapi_secret | default('') }}</string>
+    <key>BONE_SECRET</key>
+    <string>{{ bone_secret | default('') }}</string>
     <key>SERVICE_REGISTRY_PATH</key>
     <string>{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json</string>
     <key>PLAYBOOK_DIR</key>

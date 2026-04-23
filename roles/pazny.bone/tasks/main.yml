@@ -1,10 +1,11 @@
 ---
 # ==============================================================================
-# BOXAPI - Box Management API (FastAPI + uvicorn via launchd)
-# Provides a REST API for managing nOS: health, services, status, run-tag
+# BONE — local FastAPI (structure / state / dispatcher organ of nOS).
+# Formerly BoxAPI. Provides the REST API every other organ talks to when it
+# needs on-disk truth or an ansible-playbook subprocess.
 # ==============================================================================
 
-- name: "[BoxAPI] Create application + log directories"
+- name: "[Bone] Create application + log directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -13,7 +14,7 @@
     - "{{ ansible_facts['env']['HOME'] }}/boxapi"
     - "{{ ansible_facts['env']['HOME'] }}/boxapi/log"
 
-- name: "[BoxAPI] Copy application files"
+- name: "[Bone] Copy application files"
   ansible.builtin.copy:
     src: "bone/{{ item }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/boxapi/{{ item }}"
@@ -29,44 +30,44 @@
     - events.py
     - patches.py
 
-- name: "[BoxAPI] Create Python venv"
+- name: "[Bone] Create Python venv"
   ansible.builtin.command:
     cmd: python3 -m venv venv
     chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
     creates: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/python"
 
-- name: "[BoxAPI] Install Python dependencies"
+- name: "[Bone] Install Python dependencies"
   ansible.builtin.command:
     cmd: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/pip install --no-cache-dir -r requirements.txt"
     chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
-  register: _boxapi_pip
-  changed_when: "'Successfully installed' in _boxapi_pip.stdout"
+  register: _bone_pip
+  changed_when: "'Successfully installed' in _bone_pip.stdout"
 
-- name: "[BoxAPI] Deploy launchd plist"
+- name: "[Bone] Deploy launchd plist"
   ansible.builtin.template:
     src: bone-launchd.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist"
     mode: '0644'
-  notify: Restart boxapi
+  notify: Restart bone
 
-- name: "[BoxAPI] Load launchd service"
+- name: "[Bone] Load launchd service"
   ansible.builtin.command: >
     launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist
-  register: _boxapi_load
-  changed_when: "'Bootstrap failed: 5' not in (_boxapi_load.stderr | default(''))"
+  register: _bone_load
+  changed_when: "'Bootstrap failed: 5' not in (_bone_load.stderr | default(''))"
   failed_when: >
-    _boxapi_load.rc != 0 and
-    'Bootstrap failed: 5' not in (_boxapi_load.stderr | default('')) and
-    'service already loaded' not in (_boxapi_load.stderr | default(''))
+    _bone_load.rc != 0 and
+    'Bootstrap failed: 5' not in (_bone_load.stderr | default('')) and
+    'service already loaded' not in (_bone_load.stderr | default(''))
 
-- name: "[BoxAPI] Print setup summary"
+- name: "[Bone] Print setup summary"
   ansible.builtin.debug:
     msg: |
       ======================================================
-       Box Management API -- ready
+       Bone — local FastAPI (formerly BoxAPI) -- ready
       ======================================================
-       URL:     https://{{ boxapi_domain | default('api.dev.local') }}
-       Port:    {{ boxapi_port | default(8099) }}
-       Health:  https://{{ boxapi_domain | default('api.dev.local') }}/api/health
-       Status:  https://{{ boxapi_domain | default('api.dev.local') }}/api/status
+       URL:     https://{{ bone_domain | default('api.dev.local') }}
+       Port:    {{ bone_port | default(8099) }}
+       Health:  https://{{ bone_domain | default('api.dev.local') }}/api/health
+       Status:  https://{{ bone_domain | default('api.dev.local') }}/api/status
       ======================================================

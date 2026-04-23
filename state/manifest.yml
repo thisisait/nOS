@@ -6,7 +6,7 @@
 #   - nos_state (introspect)        — reports installed version per service
 #   - nos_migrate                   — detects coexistence support, reads identifiers
 #   - Glasswing Upgrades matrix     — list of services to poll
-#   - BoxAPI /api/state/services    — canonical list
+#   - Bone /api/state/services      — canonical list
 #
 # When you add a Docker service, append an entry here. Entries are validated
 # against state/schema/manifest.schema.json.
@@ -749,17 +749,17 @@ services:
     domain_var: glasswing_domain
     data_path_var: glasswing_data_dir
 
-  - id: boxapi
+  - id: bone
     category: api
     stack: null
-    install_flag: install_boxapi
+    install_flag: install_bone
     version_source: launchd
-    launchd_label: "eu.thisisait.nos.boxapi"
-    domain_var: boxapi_domain
-    port_var: boxapi_port
+    launchd_label: "eu.thisisait.nos.api"
+    domain_var: bone_domain
+    port_var: bone_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ boxapi_port }}/api/health"
+      url_template: "http://localhost:{{ bone_port }}/api/health"
       expect_status: 200
 
   - id: iiab_terminal

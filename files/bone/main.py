@@ -13,9 +13,9 @@ from pathlib import Path
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
 
-app = FastAPI(title="nOS Box API", version="0.1.0")
+app = FastAPI(title="nOS Bone API", version="0.1.0")
 
-BOXAPI_SECRET = os.getenv("BOXAPI_SECRET", "")
+BONE_SECRET = os.getenv("BONE_SECRET", "")
 SERVICE_REGISTRY_PATH = os.getenv(
     "SERVICE_REGISTRY_PATH",
     os.path.expanduser("~/projects/default/service-registry.json"),
@@ -29,9 +29,9 @@ BOOT_TIME = time.time()
 
 
 def _verify_api_key(x_api_key: str = Header(default="")) -> None:
-    if not BOXAPI_SECRET:
-        raise HTTPException(status_code=500, detail="BOXAPI_SECRET not configured")
-    if x_api_key != BOXAPI_SECRET:
+    if not BONE_SECRET:
+        raise HTTPException(status_code=500, detail="BONE_SECRET not configured")
+    if x_api_key != BONE_SECRET:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
@@ -152,7 +152,8 @@ async def run_tag(
 # State & Migration Framework (agent 7) ------------------------------------
 # Additive routes. Helper logic lives in state.py / migrations.py /
 # upgrades.py / coexistence.py / events.py — all sibling modules in
-# ~/boxapi/. Do not restructure the original routes above.
+# ~/boxapi/ (install dir renames to ~/bone/ in L4). Do not restructure the
+# original routes above.
 # ============================================================================
 
 # Deferred imports so existing deployments without the new sibling modules
@@ -448,8 +449,8 @@ async def events_list(
     limit: int = 100,
     _: None = Depends(_verify_api_key),
 ):
-    """Paginated event query. Glasswing also serves its own /api/v1/events
-    directly from SQLite — this route is a BoxAPI-side convenience for CLI
+    """Paginated event query. Wing also serves its own /api/v1/events
+    directly from SQLite — this route is a Bone-side convenience for CLI
     users.
     """
     _require_framework()

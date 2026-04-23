@@ -1,6 +1,6 @@
 ---
 # Emit a concise summary of what was introspected. Optionally push the
-# state snapshot to BoxAPI so Glasswing's read cache stays fresh.
+# state snapshot to Bone so Wing's read cache stays fresh.
 
 - name: "[state] Summary"
   ansible.builtin.debug:
@@ -14,16 +14,16 @@
 
       {% endfor %}
 
-- name: "[state] Push state to BoxAPI"
+- name: "[state] Push state to Bone"
   ansible.builtin.uri:
-    url: "{{ nos_state_boxapi_url }}"
+    url: "{{ nos_state_bone_url }}"
     method: POST
     body_format: json
     body: "{{ nos_state_snapshot | default({}) }}"
     status_code: [200, 201, 202, 204]
     timeout: 5
   when:
-    - nos_state_push_boxapi | bool
+    - nos_state_push_bone | bool
     - nos_state_snapshot is defined
   failed_when: false      # best-effort — never fail the playbook on a cache miss
   changed_when: false

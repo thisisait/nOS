@@ -5,7 +5,7 @@
 # Responsibilities (per spec §7.4):
 #   1. Run the pazny.state_manager role to refresh ~/.nos/state.yml.
 #   2. Record a last_run recap (run_id, timestamp, Ansible recap stats).
-#   3. Best-effort POST to BoxAPI so Glasswing's read cache stays fresh.
+#   3. Best-effort POST to Bone so Wing's read cache stays fresh.
 #   4. Emit a playbook_end event (the callback plugin — agent 3 — handles
 #      the actual wire transmission; this task only sets the breadcrumb).
 #

@@ -18,10 +18,10 @@ nos_state_migrations_dir: "{{ playbook_dir }}/migrations"
 # Set false for quieter CI runs.
 nos_state_report_stdout: true
 
-# When set, state-report pushes the live state to BoxAPI so the Glasswing
-# read cache stays fresh. Safe no-op when BoxAPI is not installed.
-nos_state_push_boxapi: "{{ install_boxapi | default(false) }}"
-nos_state_boxapi_url: "http://localhost:{{ boxapi_port | default(8099) }}/api/state"
+# When set, state-report pushes the live state to Bone so the Wing read
+# cache stays fresh. Safe no-op when Bone is not installed.
+nos_state_push_bone: "{{ install_bone | default(false) }}"
+nos_state_bone_url: "http://localhost:{{ bone_port | default(8099) }}/api/state"
 
 # Generator tag — bumped when the role's on-disk layout changes. Mirrors
 # the GENERATOR_ID constant in module_utils/nos_state_lib.py.

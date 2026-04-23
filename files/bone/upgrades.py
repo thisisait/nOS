@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-import migrations as migrate_mod  # sibling module in ~/boxapi/
+import migrations as migrate_mod  # sibling module in ~/boxapi/ (renames to ~/bone/ in L4)
 import state as state_mod
 
 UPGRADES_DIR = Path(

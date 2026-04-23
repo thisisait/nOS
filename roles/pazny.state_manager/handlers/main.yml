@@ -1,7 +1,7 @@
 ---
 # Handlers are placeholders — nos_state is itself idempotent and writes
 # atomically, so there is nothing to "restart". Kept as an extension point
-# for future use (e.g. nudging BoxAPI to refresh its cache).
+# for future use (e.g. nudging Bone to refresh its cache).
 
 - name: state_manager refresh cache
   ansible.builtin.debug:

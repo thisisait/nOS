@@ -31,7 +31,7 @@ allow_shell: false
 
 downtime:
   estimated_sec: 30
-  services_affected: [authentik, boxapi]
+  services_affected: [authentik, bone]
 
 # GATE — this entire migration is eligible only when applies_if evaluates true.
 # If false, nos_migrate skips the migration and records nothing.

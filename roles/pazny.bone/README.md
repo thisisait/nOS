@@ -1,34 +1,38 @@
-# pazny.boxapi
+# pazny.bone
 
-Ansible role for deploying **BoxAPI** — a FastAPI + uvicorn Box Management API that exposes REST endpoints (`health`, `services`, `status`, `run-tag`) for managing nOS. Part of [nOS](../../README.md).
+Ansible role for deploying **Bone** — the local FastAPI + uvicorn service that is the *structure / state / dispatcher* organ of nOS. Part of [nOS](../../README.md).
 
-BoxAPI runs as a user-level launchd agent (`eu.thisisait.nos.api`), listens on a loopback port, and is fronted by nginx at `api.dev.local`.
+> **Formerly BoxAPI.** See [`docs/anatomy.md`](../../docs/anatomy.md) for the organ metaphor.
+
+Bone runs as a user-level launchd agent (`eu.thisisait.nos.api`), listens on a loopback port, and is fronted by nginx at `api.dev.local`. It is the only process in nOS allowed to shell out to `ansible-playbook`.
 
 ## What it does
 
-1. Creates `~/boxapi/` and copies `main.py` + `requirements.txt` from `files/boxapi/`
+1. Creates `~/boxapi/` and copies the Python modules from `files/bone/` (`main.py`, `state.py`, `migrations.py`, `upgrades.py`, `patches.py`, `coexistence.py`, `events.py`, `requirements.txt`)
 2. Creates a Python venv at `~/boxapi/venv/` if missing
 3. Installs Python dependencies into the venv via pip
-4. Renders the launchd plist `eu.thisisait.nos.api.plist` into `~/Library/LaunchAgents/` from `templates/boxapi-launchd.plist.j2`
+4. Renders the launchd plist `eu.thisisait.nos.api.plist` into `~/Library/LaunchAgents/` from `templates/bone-launchd.plist.j2`
 5. Loads the launchd service via `launchctl load -w` (idempotent — already loaded is OK)
 
-Changes to the plist template trigger a `Restart boxapi` handler that kicks the agent with `launchctl kickstart -k`.
+> Install dir `~/boxapi/` and launchd label `eu.thisisait.nos.api` stay on their pre-rebrand names in L2. They migrate to `~/bone/` and `eu.thisisait.nos.bone` in the L4 runtime rebrand commit along with the corresponding playbook migration record.
+
+Changes to the plist template trigger a `Restart bone` handler that kicks the agent with `launchctl kickstart -k`.
 
 ## Requirements
 
 - macOS with system Python 3 (shipped with Command Line Tools)
-- The `files/boxapi/` directory and `templates/boxapi-launchd.plist.j2` staying inside the playbook repo
-- Play-level handler `Restart boxapi` defined in the consuming playbook (a role-local copy is also provided)
+- The `files/bone/` directory and `templates/bone-launchd.plist.j2` staying inside the playbook repo
+- Play-level handler `Restart bone` defined in the consuming playbook (a role-local copy is also provided)
 
 ## Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `boxapi_port` | `8099` | Loopback port bound by uvicorn |
-| `boxapi_domain` | `api.{{ instance_tld }}` | Public hostname behind nginx vhost |
-| `boxapi_secret` | *(from credentials)* | Shared secret for privileged API calls, prefix-rotated |
+| `bone_port` | `8099` | Loopback port bound by uvicorn |
+| `bone_domain` | `api.{{ instance_tld }}` | Public hostname behind nginx vhost |
+| `bone_secret` | *(from default.config.yml)* | Shared secret for privileged API calls, prefix-rotated |
 
-Secrets (`boxapi_secret`) stay in the top-level `default.credentials.yml` so that `global_password_prefix` rotation propagates consistently across all nOS services.
+The secret `bone_secret` stays in the top-level `default.config.yml` so that `global_password_prefix` rotation propagates consistently across all nOS services. Exposed to the running uvicorn process as `BONE_SECRET` through the launchd plist's `EnvironmentVariables` block.
 
 ## Usage
 
@@ -36,14 +40,14 @@ In the consuming playbook:
 
 ```yaml
 - import_role:
-    name: pazny.boxapi
-  when: install_boxapi | default(false)
-  tags: ['boxapi', 'api']
+    name: pazny.bone
+  when: install_bone | default(false)
+  tags: ['bone', 'api']
 ```
 
 ## Rollback
 
-Revert the commit that introduced this role and restore `tasks/boxapi.yml` + the `import_tasks` call site in `main.yml`. To also stop and remove the launchd agent manually:
+Revert the rebrand commits that introduced this role. To also stop and remove the launchd agent manually:
 
 ```bash
 launchctl bootout gui/$(id -u)/eu.thisisait.nos.api 2>/dev/null || true

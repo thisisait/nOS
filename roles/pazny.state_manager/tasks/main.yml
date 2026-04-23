@@ -5,7 +5,7 @@
 # Three phases:
 #   1. introspect   — observe running services, compute desired-vs-installed
 #   2. persist      — write ~/.nos/state.yml atomically
-#   3. report       — optional debug + push to BoxAPI for Glasswing's cache
+#   3. report       — optional debug + push to Bone for Wing's cache
 #
 # All three phases honor --check (dry-run): nothing is written in check mode.
 # Safe to run on every playbook invocation.

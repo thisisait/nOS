@@ -1,12 +1,13 @@
 ---
 # ==============================================================================
-# pazny.boxapi — Box Management API (FastAPI + uvicorn via launchd)
+# pazny.bone — local FastAPI (structure / state / dispatcher organ).
+# Formerly BoxAPI. See docs/anatomy.md for the organ metaphor.
 #
-# The secret (boxapi_secret) stays in top-level default.credentials.yml so
-# prefix rotation via global_password_prefix works consistently.
-# App sources files/boxapi/ and the template boxapi-launchd.plist.j2 stay
-# v playbook repo.
+# The secret (bone_secret) stays in top-level default.config.yml so prefix
+# rotation via global_password_prefix works consistently.
+# App sources files/bone/ and the template bone-launchd.plist.j2 stay in
+# the playbook repo.
 # ==============================================================================
 
-boxapi_port: 8099
-boxapi_domain: "api.{{ instance_tld | default('dev.local') }}"
+bone_port: 8099
+bone_domain: "api.{{ instance_tld | default('dev.local') }}"

@@ -76,7 +76,7 @@
     # ── Apply a single patch recipe (explicit opt-in via --tags apply-patches)
     # Skipped on a normal playbook run because of the 'never' tag — invoked
     # either manually (ansible-playbook ... --tags apply-patches -e patch_id=PATCH-001)
-    # or from BoxAPI /api/patches/<id>/apply which subprocesses ansible-playbook
+    # or from Bone /api/patches/<id>/apply which subprocesses ansible-playbook
     # with that tag. The when-guard prevents accidental runs if someone adds
     # 'apply-patches' to a broader tag group.
     - name: "[Framework] Apply a single patch recipe (opt-in)"
@@ -329,7 +329,7 @@
         restart portainer
       failed_when: false
 
-    - name: Restart boxapi
+    - name: Restart bone
       ansible.builtin.command: >
         launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.api"
       failed_when: false
@@ -890,7 +890,7 @@
     - name: "Bone (pazny.bone role)"
       ansible.builtin.import_role:
         name: pazny.bone
-      when: install_boxapi | default(false)
+      when: install_bone | default(false)
       tags: ['bone', 'api']
 
     # ──────────────────────────────────────────────────────────────────────────

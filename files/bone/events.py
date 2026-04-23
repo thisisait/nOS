@@ -1,8 +1,8 @@
-"""Event ingestion — HMAC validator + direct write to Glasswing's events.db.
+"""Event ingestion — HMAC validator + direct write to Wing's events.db.
 
-BoxAPI offers this as a convenience for the callback plugin (which prefers
+Bone offers this as a convenience for the callback plugin (which prefers
 HTTP → SQLite fallback). The plugin signs each request so that even if
-BoxAPI is behind nginx and exposed on a socket, a rogue script can't inject
+Bone is behind nginx and exposed on a socket, a rogue script can't inject
 fake events.
 """
 
