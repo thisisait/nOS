@@ -19,7 +19,7 @@ final class MigrationRepository
 {
 	public function __construct(
 		private Explorer $db,
-		private BoxApiClient $box,
+		private BoneClient $box,
 		private EventRepository $events,
 	) {
 	}

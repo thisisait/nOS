@@ -29,7 +29,7 @@ services:
 	- App\Model\SystemRepository
 
 	# State & Migration Framework
-	- App\Model\BoxApiClient
+	- App\Model\BoneClient
 	- App\Model\EventRepository
 	- App\Model\MigrationRepository
 	- App\Model\UpgradeRepository

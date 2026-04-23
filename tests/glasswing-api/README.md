@@ -8,7 +8,7 @@ Prerequisites:
 
 - `php` >= 8.3 (matches composer.json constraint)
 - `ext-sqlite3` and `ext-pdo_sqlite`
-- `ext-curl` (BoxApiClient uses it, though these tests only hit its guards)
+- `ext-curl` (BoneClient uses it, though these tests only hit its guards)
 
 Run all tests:
 

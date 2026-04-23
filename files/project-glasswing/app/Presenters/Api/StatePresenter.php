@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
-use App\Model\BoxApiClient;
+use App\Model\BoneClient;
 use App\Model\CoexistenceRepository;
 use App\Model\MigrationRepository;
 use App\Model\PatchRepository;
@@ -21,7 +21,7 @@ use App\Model\PatchRepository;
 final class StatePresenter extends BaseApiPresenter
 {
 	public function __construct(
-		private BoxApiClient $box,
+		private BoneClient $box,
 		private MigrationRepository $migrations,
 		private CoexistenceRepository $coexistence,
 		private PatchRepository $patches,

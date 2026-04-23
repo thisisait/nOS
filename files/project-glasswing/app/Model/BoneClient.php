@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace App\Model;
 
 /**
- * Thin HTTP client for BoxAPI (files/boxapi/main.py).
+ * Thin HTTP client for Bone, the local FastAPI (files/bone/main.py).
+ * Formerly known as BoxApiClient. See docs/anatomy.md for the organ metaphor.
  *
- * Reads BOXAPI_URL (default http://127.0.0.1:8069) and BOXAPI_SECRET from
- * environment — both populated by the boxapi Ansible role and surfaced to
- * PHP via the nginx fastcgi_param block.
+ * Reads BONE_URL (default http://127.0.0.1:8069) and BONE_SECRET from
+ * environment — both populated by the pazny.bone Ansible role and surfaced
+ * to PHP via the nginx fastcgi_param block.
  *
  * All methods return decoded JSON. On non-2xx or network errors, returns
  * ['error' => string, 'status' => int] so presenters can proxy verbatim.
  */
-class BoxApiClient
+class BoneClient
 {
 	private string $baseUrl;
 	private string $secret;
@@ -22,8 +23,8 @@ class BoxApiClient
 
 	public function __construct(?string $baseUrl = null, ?string $secret = null, int $timeout = 30)
 	{
-		$this->baseUrl = rtrim($baseUrl ?? getenv('BOXAPI_URL') ?: 'http://127.0.0.1:8069', '/');
-		$this->secret  = $secret ?? (string) (getenv('BOXAPI_SECRET') ?: '');
+		$this->baseUrl = rtrim($baseUrl ?? getenv('BONE_URL') ?: 'http://127.0.0.1:8069', '/');
+		$this->secret  = $secret ?? (string) (getenv('BONE_SECRET') ?: '');
 		$this->timeout = $timeout;
 	}
 
@@ -73,7 +74,7 @@ class BoxApiClient
 		if ($raw === false || $status === 0) {
 			return [
 				'status' => 502,
-				'body'   => ['error' => 'BoxAPI unreachable', 'detail' => $err],
+				'body'   => ['error' => 'Bone unreachable', 'detail' => $err],
 			];
 		}
 

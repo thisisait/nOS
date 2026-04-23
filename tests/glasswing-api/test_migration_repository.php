@@ -7,12 +7,12 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
-use App\Model\BoxApiClient;
+use App\Model\BoneClient;
 use App\Model\EventRepository;
 use App\Model\MigrationRepository;
 
-/** Fake BoxApiClient that always returns 502 so repo falls back to SQLite. */
-final class DeadBox extends BoxApiClient
+/** Fake BoneClient that always returns 502 so repo falls back to SQLite. */
+final class DeadBox extends BoneClient
 {
 	public function __construct() { parent::__construct('http://127.0.0.1:1', 'x', 1); }
 	public function get(string $path, array $query = []): array
