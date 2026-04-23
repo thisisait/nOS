@@ -7,7 +7,7 @@
 # centralized, the role only reads it via Ansible var precedence.
 # ==============================================================================
 
-superset_version: "6.0.0"                # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi)
+superset_version: "6.0.0-dev"            # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi). The -dev tag is required because apache/superset:6.0.0 (non-dev) ships WITHOUT any PostgreSQL Python driver (known upstream regression) and crash-loops with ModuleNotFoundError: psycopg2. The -dev variant bundles psycopg2 2.9.6.
 superset_port: 8089
 superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
 superset_db_name: "superset"
