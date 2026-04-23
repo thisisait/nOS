@@ -1,12 +1,12 @@
 # =============================================================================
 # pazny.mariadb — compose override fragment
-# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+# Merged into `docker compose up` by tasks/stacks/core-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/infra/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
-# Docker compose merge semantics umoznuje referencovat vnejsi networky
-# dokud je kterykoli z merge-ovanych souboru definuje.
+# Does not declare top-level networks: — infra_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/infra/docker-compose.yml.j2.
+# Docker compose merge semantics allow referencing external networks as long
+# as any of the merged files defines them.
 # =============================================================================
 
 services:
@@ -14,6 +14,17 @@ services:
     image: mariadb:{{ mariadb_version | default('lts') }}
     hostname: mariadb
     restart: unless-stopped
+    # InnoDB DDL workaround for Apple Silicon Docker Desktop + VirtIOFS bind
+    # mount: the default --innodb-flush-method=O_DIRECT triggers a server
+    # crash mid-FK-ALTER (BookStack migration #10 is the canonical reproducer)
+    # when the data dir is bind-mounted from macOS (/Volumes/SSD1TB or ~/...).
+    # Switching to fsync routes writes through the kernel page cache, sidestepping
+    # the VirtIOFS / O_DIRECT sync race. --skip-innodb-doublewrite is safe in dev
+    # (Docker Desktop's volume layer already does its own write-ordering) and
+    # halves the I/O on every commit — major boost on the dev box.
+    command:
+      - "--innodb-flush-method=fsync"
+      - "--skip-innodb-doublewrite"
     ports:
       - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
     volumes:
