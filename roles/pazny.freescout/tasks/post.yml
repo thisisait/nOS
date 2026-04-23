@@ -2,8 +2,12 @@
 # ==============================================================================
 # pazny.freescout/tasks/post.yml
 #
-# FreeScout post-start — create the admin user via Artisan CLI.
-# FreeScout has no REST API for onboarding — it uses Laravel Artisan.
+# FreeScout post-start — two jobs:
+#   1. Admin user onboarding via Laravel Artisan (no REST API exists)
+#   2. Install + enable the `freescout-oauth` community module for native OIDC
+#      with Authentik, then persist OIDC settings into the module's DB rows so
+#      the end-user does NOT have to fill in the Admin UI form.
+#
 # Called from tasks/stacks/stack-up.yml only AFTER `docker compose up b2b --wait`.
 # ==============================================================================
 
@@ -63,3 +67,86 @@
   changed_when: "'UPDATED' in (_fs_pw_update.stdout | default(''))"
   failed_when: false
   check_mode: false
+
+# ──────────────────────────────────────────────────────────────────────────
+# Native OIDC wiring via the `freescout-oauth` community module
+# Source: https://github.com/freescout-help-desk/oauth
+# The module is dropped into /data/Modules/OAuth (persistent bind mount) and
+# enabled via Artisan. Config is persisted in the `oauth_module` options table
+# so it survives container restarts and does not require UI clicks.
+# ──────────────────────────────────────────────────────────────────────────
+
+- name: "[pazny.freescout Post][OIDC] Check if OAuth module directory exists"
+  ansible.builtin.stat:
+    path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}/Modules/OAuth/module.json"
+  register: _fs_oauth_stat
+  when: install_authentik | default(false)
+
+- name: "[pazny.freescout Post][OIDC] Clone freescout-oauth module (first-run only)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p b2b exec -T freescout bash -c '
+      set -e
+      cd /var/www/html/Modules 2>/dev/null || cd /data/Modules
+      if [ ! -d OAuth ]; then
+        git clone --depth 1 https://github.com/freescout-help-desk/oauth.git OAuth || \
+        git clone --depth 1 https://github.com/tiredofit/freescout-module-oauth.git OAuth
+      fi
+      chown -R www-data:www-data OAuth 2>/dev/null || true
+    '
+  register: _fs_oauth_clone
+  changed_when: "'Cloning' in (_fs_oauth_clone.stderr | default('')) or 'Cloning' in (_fs_oauth_clone.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when:
+    - install_authentik | default(false)
+    - _fs_ready.status | default(0) in [200, 302, 500]
+    - not (_fs_oauth_stat.stat.exists | default(false))
+
+- name: "[pazny.freescout Post][OIDC] Enable OAuth module + clear cache"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p b2b exec -T freescout bash -c '
+      php artisan module:enable OAuth 2>&1 || true
+      php artisan freescout:clear-cache 2>&1 || php artisan cache:clear 2>&1 || true
+    '
+  register: _fs_oauth_enable
+  changed_when: "'Module enabled' in (_fs_oauth_enable.stdout | default('')) or 'has been enabled' in (_fs_oauth_enable.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when:
+    - install_authentik | default(false)
+    - _fs_ready.status | default(0) in [200, 302, 500]
+
+# Persist OIDC settings into the options table. The freescout-oauth module
+# reads keys prefixed `oauth.*`; we upsert via tinker for idempotency so the
+# values always match the current authentik_oidc_apps + credentials state.
+- name: "[pazny.freescout Post][OIDC] Persist OIDC config (tinker UPSERT)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p b2b exec -T freescout \
+      php artisan tinker --execute="
+        \$cfg=[
+          'oauth.provider'=>'oidc',
+          'oauth.enabled'=>'1',
+          'oauth.client_id'=>'{{ authentik_oidc_freescout_client_id | default('nos-freescout') }}',
+          'oauth.client_secret'=>'{{ authentik_oidc_freescout_client_secret | default(global_password_prefix + '_pw_oidc_freescout') }}',
+          'oauth.authorize_url'=>'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/',
+          'oauth.token_url'=>'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/',
+          'oauth.userinfo_url'=>'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/',
+          'oauth.logout_url'=>'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/end-session/',
+          'oauth.discovery_url'=>'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/.well-known/openid-configuration',
+          'oauth.redirect_uri'=>'https://{{ freescout_domain | default('helpdesk.dev.local') }}/oauth/callback',
+          'oauth.scopes'=>'openid profile email',
+          'oauth.display_name'=>'Authentik',
+          'oauth.auto_create_user'=>'1',
+          'oauth.email_claim'=>'email',
+          'oauth.name_claim'=>'name',
+        ];
+        foreach(\$cfg as \$k=>\$v){ \\Option::set(\$k,\$v); }
+        echo 'OIDC_PERSISTED';
+      "
+  register: _fs_oidc_persist
+  changed_when: "'OIDC_PERSISTED' in (_fs_oidc_persist.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when:
+    - install_authentik | default(false)
+    - _fs_ready.status | default(0) in [200, 302, 500]

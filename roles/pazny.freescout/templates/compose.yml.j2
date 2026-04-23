@@ -1,13 +1,18 @@
 # =============================================================================
 # pazny.freescout — compose override fragment
-# Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
+# Merged into `docker compose up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/b2b/overrides/*.yml.
 #
-# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
+# Does NOT redeclare top-level networks: — b2b_net and {{ stacks_shared_network }}
+# are defined in the base templates/stacks/b2b/docker-compose.yml.j2.
 #
-# FreeScout vyzaduje: MariaDB (z infra stacku, databaze + user vytvoreny
-# v default.config.yml mariadb_databases / mariadb_users seed listech).
+# FreeScout requires: MariaDB (from the infra stack, database + user created
+# by default.config.yml mariadb_databases / mariadb_users seed lists).
+#
+# Native OIDC (Authentik) is wired via the `freescout-oauth` community module
+# that is installed + enabled in tasks/post.yml. The env vars below are read
+# by that module when present; they are also used by our post.yml to seed the
+# oauth_module DB rows so the end-user does not have to fill in the UI form.
 # =============================================================================
 
 services:
@@ -22,6 +27,9 @@ services:
 {% endif %}
     volumes:
       - {{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}:/data
+{% if install_authentik | default(false) %}
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
     environment:
       CONTAINER_NAME: freescout
       DB_HOST: mariadb
@@ -34,6 +42,27 @@ services:
       ADMIN_PASS: "{{ freescout_admin_password | default(global_password_prefix + '_pw_freescout') }}"
       TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
       ENABLE_SSL_PROXY: "TRUE"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC via freescout-oauth module) ───────────────────
+      # These are read by the freescout-oauth module on bootstrap; the post.yml
+      # also persists them into the module's DB settings for headless install.
+      FREESCOUT_OIDC_ENABLED: "true"
+      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/.well-known/openid-configuration"
+      FREESCOUT_OIDC_CLIENT_ID: "{{ authentik_oidc_freescout_client_id | default('nos-freescout') }}"
+      FREESCOUT_OIDC_CLIENT_SECRET: "{{ authentik_oidc_freescout_client_secret | default(global_password_prefix + '_pw_oidc_freescout') }}"
+      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain | default('helpdesk.dev.local') }}/oauth/callback"
+      FREESCOUT_OIDC_SCOPES: "openid profile email"
+      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
+      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
+      FREESCOUT_OIDC_USERINFO_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
+      FREESCOUT_OIDC_LOGOUT_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/end-session/"
+      FREESCOUT_OIDC_DISPLAY_NAME: "Authentik"
+      PHP_CURL_CAINFO: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
