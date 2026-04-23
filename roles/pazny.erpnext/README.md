@@ -29,6 +29,38 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
    - Restart frontend + backend after any repair
    - Reconverge Administrator password via `bench set-admin-password`
    - Verify site via `/api/method/frappe.ping` with `Host:` header (accepts 200, 403, 417)
+   - **Authentik native OIDC** (when `install_authentik`): creates a Frappe `Social Login Key` doctype record via `bench execute frappe.client.insert`. Idempotent — existence probed via `frappe.client.get_list` filtered on `provider_name=Authentik`, insert runs only if zero keys match.
+
+## Authentik SSO (native OIDC)
+
+ERPNext integrates with Authentik via **Frappe's built-in Social Login Key** (not Nginx proxy_auth). The `Social Login Key` doctype is a first-class Frappe construct — once configured, ERPNext's login page renders a "Login with Authentik" button that kicks off the OAuth2 authorization-code flow against the Authentik provider.
+
+**Endpoints (hard-coded in the payload):**
+
+| Frappe field | Value |
+|---|---|
+| `base_url` | `https://{{ authentik_domain }}` |
+| `authorize_url` | `/application/o/authorize/` |
+| `access_token_url` | `/application/o/token/` |
+| `api_endpoint` | `/application/o/userinfo/` |
+| `redirect_url` | `/api/method/frappe.integrations.oauth2_logins.custom` (built-in Frappe callback) |
+| `client_id_field_name` | `preferred_username` (Authentik's OIDC claim for usernames) |
+| `auth_url_data` | `{"scope":"openid profile email"}` |
+| `sign_ups` | `Allow` (auto-provision new ERPNext users from Authentik) |
+
+**Redirect URI registered in Authentik:** `https://{{ erpnext_domain }}/api/method/frappe.integrations.oauth2_logins.custom?provider=Authentik`
+
+**Variables consumed:**
+
+- `authentik_oidc_erpnext_client_id` (default `nos-erpnext`)
+- `authentik_oidc_erpnext_client_secret` (default `{{ global_password_prefix }}_pw_oidc_erpnext`)
+- `authentik_domain` (default `auth.dev.local`)
+
+Both are populated by the orchestrator via `authentik_oidc_apps` entry with `slug: erpnext`.
+
+**Idempotency:** `bench execute frappe.client.get_list --kwargs '{"doctype":"Social Login Key","filters":{"provider_name":"Authentik"}}'` precedes the insert; if the listing already contains `Authentik`, the insert is skipped. Rotating the client_secret currently requires manual update inside ERPNext (Social Login Key > Authentik) or deletion of the doctype record so the next run re-creates it.
+
+**Nginx:** the `erpnext.conf` vhost intentionally omits `authentik-proxy-auth.conf` / `authentik-proxy-locations.conf` — the forward-auth outpost is **not** used for ERPNext. All authentication happens inside Frappe.
 
 ## Why a named volume?
 

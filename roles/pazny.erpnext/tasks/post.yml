@@ -135,3 +135,71 @@
     msg: >-
       ERPNext {{ 'OK (' ~ _erpnext_health.status ~ ')' if _erpnext_health.status | default(0) in [200, 403, 417]
       else 'UNAVAILABLE - check: ' ~ docker_bin ~ ' compose -f ' ~ stacks_dir ~ '/b2b/docker-compose.yml -p b2b logs' }}
+
+# ── Authentik Social Login Key (native OIDC via Frappe doctype) ──────────────
+# Frappe's "Social Login Key" doctype wires an OIDC/OAuth2 provider into the
+# login page: it adds a "Login with Authentik" button that redirects to
+# Authentik's authorize endpoint and completes the flow at the Frappe-built-in
+# `/api/method/frappe.integrations.oauth2_logins.custom?provider=Authentik`
+# callback. Configured via `bench execute frappe.client.*` calls (the site's
+# Python API) against the running erpnext-backend container.
+#
+# Idempotent: we list existing keys first and only insert when none match
+# provider_name="Authentik".
+- name: "[pazny.erpnext Post] Authentik native OIDC setup"
+  when:
+    - install_authentik | default(false)
+    - _erpnext_site_config.stat.exists
+    - _erpnext_health.status | default(0) in [200, 403, 417]
+  block:
+    - name: "[pazny.erpnext Post] Check for existing Authentik Social Login Key"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -p b2b exec -T erpnext-backend
+        bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+        execute frappe.client.get_list
+        --kwargs '{"doctype":"Social Login Key","filters":{"provider_name":"Authentik"}}'
+        2>&1
+      register: _erpnext_slk_check
+      changed_when: false
+      failed_when: false
+
+    - name: "[pazny.erpnext Post] Create Authentik Social Login Key (first run only)"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -p b2b exec -T erpnext-backend
+        bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+        execute frappe.client.insert
+        --kwargs '{{ _erpnext_slk_payload | to_json }}'
+        2>&1
+      vars:
+        _erpnext_slk_payload:
+          doc:
+            doctype: "Social Login Key"
+            provider_name: "Authentik"
+            social_login_provider: "Custom"
+            client_id: "{{ authentik_oidc_erpnext_client_id | default('nos-erpnext') }}"
+            client_secret: "{{ authentik_oidc_erpnext_client_secret | default(global_password_prefix + '_pw_oidc_erpnext') }}"
+            base_url: "https://{{ authentik_domain | default('auth.dev.local') }}"
+            authorize_url: "/application/o/authorize/"
+            access_token_url: "/application/o/token/"
+            api_endpoint: "/application/o/userinfo/"
+            redirect_url: "/api/method/frappe.integrations.oauth2_logins.custom"
+            client_id_field_name: "preferred_username"
+            icon: "fa fa-key"
+            enable_social_login: 1
+            sign_ups: "Allow"
+            auth_url_data: '{"scope":"openid profile email"}'
+      when: >-
+        _erpnext_slk_check.rc | default(1) == 0
+        and ('Authentik' not in (_erpnext_slk_check.stdout | default('')))
+      register: _erpnext_slk_create
+      changed_when: _erpnext_slk_create.rc | default(1) == 0
+      failed_when: false
+
+    - name: "[pazny.erpnext Post] Authentik Social Login Key result"
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Authentik Social Login Key already present — skip.'
+             if ('Authentik' in (_erpnext_slk_check.stdout | default('')))
+             else ('Authentik Social Login Key created (rc=' ~ (_erpnext_slk_create.rc | default('?')) ~ ').'
+                   if (_erpnext_slk_create is defined and _erpnext_slk_create.changed | default(false))
+                   else 'Authentik Social Login Key setup skipped (check rc=' ~ (_erpnext_slk_check.rc | default('?')) ~ ').') }}
