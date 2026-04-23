@@ -1,0 +1,127 @@
+{
+  "annotations": {"list": [{"builtIn": 1, "datasource": {"type": "grafana", "uid": "-- Grafana --"}, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard"}]},
+  "description": "nOS / Docker per-container metrics via cAdvisor — CPU, memory, network, disk, restarts.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "panels": [], "title": "Selected container(s) — resource usage", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "id": 1,
+      "options": {"legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"$container\"}[1m]))", "legendFormat": "{{name}}", "refId": "A"}
+      ],
+      "title": "CPU usage (cores) — rate 1m",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "line"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1073741824}]}, "unit": "bytes"}, "overrides": [{"matcher": {"id": "byRegexp", "options": "limit.*"}, "properties": [{"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}, {"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}]},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "id": 2,
+      "options": {"legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "container_memory_usage_bytes{name=~\"$container\"}", "legendFormat": "{{name}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "container_spec_memory_limit_bytes{name=~\"$container\"} > 0", "legendFormat": "limit {{name}}", "refId": "B"}
+      ],
+      "title": "Memory usage (with limit)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "Bps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "id": 3,
+      "options": {"legend": {"calcs": ["mean", "last"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (name) (rate(container_network_receive_bytes_total{name=~\"$container\"}[5m]))", "legendFormat": "rx {{name}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (name) (rate(container_network_transmit_bytes_total{name=~\"$container\"}[5m]))", "legendFormat": "tx {{name}}", "refId": "B"}
+      ],
+      "title": "Network I/O (rx/tx)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "Bps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "id": 4,
+      "options": {"legend": {"calcs": ["mean", "last"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (name) (rate(container_fs_reads_bytes_total{name=~\"$container\"}[5m]))", "legendFormat": "read {{name}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (name) (rate(container_fs_writes_bytes_total{name=~\"$container\"}[5m]))", "legendFormat": "write {{name}}", "refId": "B"}
+      ],
+      "title": "Disk I/O (read/write)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 3}]}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+      "id": 5,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "restarts_24h"}]},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "sum by (name) (changes(container_start_time_seconds[24h]))", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+      ],
+      "title": "Restart count (last 24h)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true}, "indexByName": {}, "renameByName": {"Value": "restarts_24h", "name": "container"}}}],
+      "type": "table"
+    },
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25}, "id": 101, "panels": [], "title": "Fleet-wide top N", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "color-background"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 536870912}, {"color": "red", "value": 2147483648}]}, "unit": "bytes"}, "overrides": [{"matcher": {"id": "byName", "options": "container"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "auto"}}, {"id": "unit", "value": "string"}]}]},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 26},
+      "id": 10,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "memory"}]},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "topk(10, sum by (name) (container_memory_usage_bytes{name!=\"\"}))", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+      ],
+      "title": "Top 10 containers — memory",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true}, "indexByName": {}, "renameByName": {"Value": "memory", "name": "container"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "color-background"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 1}]}, "unit": "percentunit"}, "overrides": [{"matcher": {"id": "byName", "options": "container"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "auto"}}, {"id": "unit", "value": "string"}]}]},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 26},
+      "id": 11,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "cpu_cores"}]},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "topk(10, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])))", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+      ],
+      "title": "Top 10 containers — CPU (5m avg)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true}, "indexByName": {}, "renameByName": {"Value": "cpu_cores", "name": "container"}}}],
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nos", "auto-provisioned", "docker"],
+  "templating": {
+    "list": [
+      {"current": {"selected": false, "text": "Prometheus", "value": "prometheus"}, "hide": 0, "includeAll": false, "label": "Datasource", "multi": false, "name": "DS_PROMETHEUS", "options": [], "query": "prometheus", "refresh": 1, "regex": "", "skipUrlSync": false, "type": "datasource"},
+      {"allValue": ".*", "current": {"selected": false, "text": "All", "value": "$__all"}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "definition": "label_values(container_last_seen{name!=\"\"}, name)", "hide": 0, "includeAll": true, "label": "Container", "multi": true, "name": "container", "options": [], "query": {"qryType": 1, "query": "label_values(container_last_seen{name!=\"\"}, name)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "refresh": 2, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query"}
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "[nOS] Docker — Per-Container",
+  "uid": "nos-docker",
+  "version": 1,
+  "weekStart": ""
+}

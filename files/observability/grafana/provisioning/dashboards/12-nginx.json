@@ -1,0 +1,105 @@
+{
+  "annotations": {"list": [{"builtIn": 1, "datasource": {"type": "grafana", "uid": "-- Grafana --"}, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard"}]},
+  "description": "nOS / Nginx reverse proxy — requests, 5xx, latency, TLS cert expiry.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "panels": [], "title": "Nginx HTTP traffic", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "id": 1,
+      "options": {"legend": {"calcs": ["mean", "last"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (host) (rate(nginx_http_requests_total[5m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ],
+      "title": "Requests/sec by vhost",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 50, "gradientMode": "opacity", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false, "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.01}]}, "unit": "reqps"}, "overrides": [{"matcher": {"id": "byRegexp", "options": ".*"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}]},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "id": 2,
+      "options": {"legend": {"calcs": ["mean", "last", "max"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "sum by (host) (rate(nginx_http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ],
+      "title": "5xx rate by vhost",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "color-background"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 2}]}, "unit": "s"}, "overrides": [{"matcher": {"id": "byName", "options": "host"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "auto"}}, {"id": "unit", "value": "string"}]}]},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "id": 3,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "p95_seconds"}]},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "histogram_quantile(0.95, sum by (host, le) (rate(nginx_http_request_duration_seconds_bucket[5m])))", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+      ],
+      "title": "Top slow vhosts (p95 latency, 5m)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true}, "indexByName": {}, "renameByName": {"Value": "p95_seconds", "host": "vhost"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"fillOpacity": 70, "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineWidth": 0, "scaleDistribution": {"type": "linear"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "id": 4,
+      "options": {"calculate": false, "cellGap": 1, "color": {"exponent": 0.5, "fill": "dark-orange", "mode": "scheme", "reverse": false, "scale": "exponential", "scheme": "Oranges", "steps": 64}, "exemplars": {"color": "rgba(255,0,255,0.7)"}, "filterValues": {"le": 1e-9}, "legend": {"show": true}, "rowsFrame": {"layout": "auto"}, "tooltip": {"mode": "single", "showColorScale": false, "yHistogram": false}, "yAxis": {"axisPlacement": "left", "reverse": false, "unit": "s"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "sum by (le) (rate(nginx_http_request_duration_seconds_bucket[5m]))", "format": "heatmap", "legendFormat": "{{le}}", "refId": "A"}
+      ],
+      "title": "Request latency heatmap (fleet)",
+      "type": "heatmap"
+    },
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17}, "id": 101, "panels": [], "title": "TLS & availability", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"mode": "gradient", "type": "color-background"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 14}, {"color": "green", "value": 30}]}, "unit": "d"}, "overrides": [{"matcher": {"id": "byName", "options": "instance"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "auto"}}, {"id": "unit", "value": "string"}]}]},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 18},
+      "id": 10,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": false, "displayName": "days_left"}]},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "exemplar": false, "expr": "(probe_ssl_earliest_cert_expiry - time()) / 86400", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+      ],
+      "title": "TLS cert expiry per host (days)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true}, "indexByName": {}, "renameByName": {"Value": "days_left", "instance": "target"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"fillOpacity": 70, "lineWidth": 0, "spanNulls": false}, "mappings": [{"options": {"0": {"color": "red", "index": 0, "text": "DOWN"}, "1": {"color": "green", "index": 1, "text": "UP"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 18},
+      "id": 11,
+      "options": {"alignValue": "left", "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "mergeValues": true, "rowHeight": 0.9, "showValue": "auto", "tooltip": {"mode": "single", "sort": "none"}},
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "probe_success", "legendFormat": "{{instance}}", "refId": "A"}
+      ],
+      "title": "Probe success matrix",
+      "type": "state-timeline"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nos", "auto-provisioned", "nginx"],
+  "templating": {"list": [{"current": {"selected": false, "text": "Prometheus", "value": "prometheus"}, "hide": 0, "includeAll": false, "label": "Datasource", "multi": false, "name": "DS_PROMETHEUS", "options": [], "query": "prometheus", "refresh": 1, "regex": "", "skipUrlSync": false, "type": "datasource"}]},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "[nOS] Nginx — Reverse Proxy & TLS",
+  "uid": "nos-nginx",
+  "version": 1,
+  "weekStart": ""
+}

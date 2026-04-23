@@ -223,6 +223,26 @@
   loop: "{{ grafana_dashboards | default([]) }}"
   failed_when: false
 
+# Deploy the nOS in-repo dashboards (authored in files/observability/grafana/
+# provisioning/dashboards/ — numbered 00-99.json — shipped on every playbook
+# run so Grafana auto-loads them via file-based provisioning).
+- name: "Enumerate in-repo dashboards"
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards"
+    patterns: "*.json"
+    file_type: file
+  register: _nos_dashboards
+  check_mode: false
+
+- name: "Deploy nOS in-repo dashboards to runtime dir"
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/{{ item.path | basename }}"
+    mode: '0644'
+  loop: "{{ _nos_dashboards.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
 # ── Nginx vhost for Grafana ──────────────────────────────────────────────────
 
 - name: Enable Grafana nginx vhost
