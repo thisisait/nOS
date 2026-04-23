@@ -34,7 +34,9 @@ services:
       DOCKER_INFLUXDB_INIT_RETENTION: "{{ influxdb_init_retention | default('90d') }}"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "{{ influxdb_admin_token }}"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8086/health 2>&1 || exit 1"]
+      # InfluxDB 2.7 official image has curl + bash (no wget). The /health
+      # endpoint returns 200 once the node is ready to serve queries.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:8086/health"]
       interval: 30s
       timeout: 10s
       retries: 5
