@@ -43,6 +43,45 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
 
 Secrets stay in the top-level `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.
 
+## SSO (Authentik — native OIDC)
+
+Since Sprint 2a (2026-04-22) Infisical uses **native OIDC** via Authentik, not Nginx forward_auth.
+Rendered only when `install_authentik` is true. Env vars consumed by Infisical CE 0.60+:
+
+| Env var | Value |
+|---|---|
+| `OIDC_CLIENT_ID` | `{{ authentik_oidc_infisical_client_id }}` (default `nos-infisical`) |
+| `OIDC_CLIENT_SECRET` | `{{ authentik_oidc_infisical_client_secret }}` (default `{{ global_password_prefix }}_pw_oidc_infisical`) |
+| `OIDC_DISCOVERY_URL` | `https://{{ authentik_domain }}/application/o/infisical/.well-known/openid-configuration` |
+| `OIDC_ISSUER` | `https://{{ authentik_domain }}/application/o/infisical/` |
+| `OIDC_REDIRECT_URI` | `https://{{ infisical_domain }}/api/v1/sso/oidc/callback` |
+| `SITE_URL` | `https://{{ infisical_domain }}` |
+
+`extra_hosts: [{{ authentik_domain }}:host-gateway]` routes the container's OIDC discovery call through the host Nginx so
+`auth.dev.local` resolves the same way it does from a browser.
+
+### Required companion changes (owned by the orchestrator, not this role)
+
+1. **`authentik_oidc_apps`** entry in `default.config.yml`:
+
+   ```yaml
+   - name: "Infisical"
+     slug: "infisical"
+     enabled: "{{ install_infisical | default(false) }}"
+     client_id: "nos-infisical"
+     client_secret: "{{ global_password_prefix }}_pw_oidc_infisical"
+     redirect_uris: "https://{{ infisical_domain | default('vault.dev.local') }}/api/v1/sso/oidc/callback"
+     launch_url: "https://{{ infisical_domain | default('vault.dev.local') }}"
+   ```
+
+2. **RBAC tier** — Infisical is Tier 1 (admin) in `authentik_app_tiers`; the proxy-auth entry for `infisical` should be removed.
+
+3. **Post-start API setup (partial — stub planned).** Infisical CE does not fully wire an organization-scoped OIDC config from env vars alone:
+   the env vars seed defaults, but the org's OIDC config row still needs `isActive=true` and the discovery URL attached via the admin API.
+   A follow-up `tasks/post.yml` block should POST to `/api/v1/sso/config` (or `PATCH` an existing row) after the first admin bootstraps.
+   Until that lands, operators either (a) toggle "Enable OIDC" once in the org Security → SSO UI, or (b) accept that the env vars alone
+   suffice for a default install where admins log in via email+password first and OIDC is offered alongside.
+
 ## Usage
 
 From `tasks/stacks/core-up.yml`, gate the role invocations on `install_infisical`:
