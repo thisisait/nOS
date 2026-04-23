@@ -9,20 +9,27 @@
 # are skipped.
 # ==============================================================================
 
-# 1) Quick check: does the 'permissions' table exist? If yes -> migration
-#    #10 finished (it is the last table it creates). Done.
-- name: "[pazny.bookstack] (try {{ bookstack_try }}) Check if 'permissions' table exists"
+# 1) Success marker: migrations table has >= 30 rows.
+#    The original check looked for a 'permissions' table but modern BookStack
+#    (v26+) refactored permissions into entity_permissions / joint_permissions /
+#    role_permissions / permission_role — a plain 'permissions' table never
+#    gets created, so the old check always reported "partial state" on a
+#    perfectly healthy install. Counting completed migrations is the robust
+#    signal: any successful migrate run records > 30 rows (v26.03 has 101).
+- name: "[pazny.bookstack] (try {{ bookstack_try }}) Count completed migrations"
   ansible.builtin.shell: |
     {{ docker_bin }} exec infra-mariadb-1 mariadb \
       -u root -p'{{ mariadb_root_password }}' \
-      -N -B -e "SELECT COUNT(*) FROM information_schema.tables \
-                WHERE table_schema='{{ bookstack_db_name | default('bookstack') }}' \
-                  AND table_name='permissions';"
-  register: _bookstack_perm_table
+      -N -B -e "SELECT COUNT(*) FROM \`{{ bookstack_db_name | default('bookstack') }}\`.migrations;" 2>/dev/null || echo 0
+  register: _bookstack_migrations_done
   changed_when: false
   failed_when: false
   check_mode: false
 
+# Partial-state detector: role_user exists but migrations table has < 30 rows.
+# This is the classic mid-crash state from the old MariaDB 11.4.10 FK ALTER bug
+# (now fixed by named volume + 11.8.6). Still worth detecting in case a future
+# regression corrupts the migration run midway.
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Detect partial migration state"
   ansible.builtin.shell: |
     {{ docker_bin }} exec infra-mariadb-1 mariadb \
@@ -37,13 +44,13 @@
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Set partial-state flag"
   ansible.builtin.set_fact:
-    _bookstack_partial: "{{ (_bookstack_perm_table.stdout | trim | int) == 0 and (_bookstack_partial_tables.stdout | trim | int) > 0 }}"
-    _bookstack_migration_ok: "{{ (_bookstack_perm_table.stdout | trim | int) > 0 }}"
+    _bookstack_partial: "{{ (_bookstack_migrations_done.stdout | trim | int) < 30 and (_bookstack_partial_tables.stdout | trim | int) > 0 }}"
+    _bookstack_migration_ok: "{{ (_bookstack_migrations_done.stdout | trim | int) >= 30 }}"
     _bookstack_migration_tries_used: "{{ bookstack_try }}"
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Migration looks healthy — skip recovery"
   ansible.builtin.debug:
-    msg: "permissions table exists -> migration #10 complete, skipping recovery"
+    msg: "{{ _bookstack_migrations_done.stdout | trim }} migrations recorded -> healthy, skipping recovery"
   when: _bookstack_migration_ok | default(false)
 
 # 2) If partial — drop the whole DB + restart the container
