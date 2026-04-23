@@ -1,0 +1,15 @@
+---
+# pazny.backup — retention rotation
+# Delegates to the shell script (which has the full Python-powered classifier)
+# so the logic stays in one place. Use on demand:
+#   ansible-playbook main.yml --tags backup -e "backup_run_rotate=true"
+
+- name: "[backup/rotate] Invoke rotate step via backup.sh"
+  ansible.builtin.command: "{{ backup_script_path }} --rotate-only"
+  register: _backup_rotate
+  changed_when: _backup_rotate.rc == 0
+  failed_when: false
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ backup_target_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ backup_target_secret_key }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"

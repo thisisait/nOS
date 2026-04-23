@@ -1,0 +1,29 @@
+---
+# pazny.backup — ad-hoc Docker named volume dump
+# Uses a disposable alpine container to stream a tar.gz of each volume into s3.
+
+- name: "[backup/vol] tar-gz each named volume → s3"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    DATE="$(date -u +%Y-%m-%d)"
+    TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    VOL="{{ item }}"
+    KEY="s3://{{ backup_target_bucket }}/${DATE}/volume-${VOL}.${TS}.tar.gz"
+    docker run --rm \
+      -v "${VOL}:/data:ro" \
+      alpine:3 \
+      sh -c 'cd /data && tar -czf - .' \
+      | aws --endpoint-url {{ backup_target_endpoint }} \
+            --region {{ backup_target_region }} \
+            s3 cp - "${KEY}"
+  args:
+    executable: /bin/bash
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ backup_target_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ backup_target_secret_key }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  loop: "{{ backup_volumes_to_dump }}"
+  loop_control:
+    label: "{{ item }}"
+  changed_when: true
+  no_log: true

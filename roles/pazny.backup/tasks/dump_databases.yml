@@ -1,0 +1,59 @@
+---
+# pazny.backup — ad-hoc database dump (Ansible-driven)
+# The nightly run is executed by ~/.nos/backup.sh (launchd). This file exists
+# so operators can trigger a DB-only backup on demand:
+#   ansible-playbook main.yml --tags backup -e "backup_run_databases=true"
+# or include it from another play.
+
+- name: "[backup/db] mariadb-dump --all-databases → gzip → s3"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    DATE="$(date -u +%Y-%m-%d)"
+    TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    KEY="s3://{{ backup_target_bucket }}/${DATE}/mariadb-all.${TS}.sql.gz"
+    docker exec -i {{ backup_mariadb_container }} \
+      mariadb-dump \
+        --all-databases \
+        --single-transaction \
+        --quick \
+        --routines \
+        --triggers \
+        -u{{ backup_mariadb_user }} \
+        -p'{{ backup_mariadb_password }}' \
+      | gzip -c \
+      | aws --endpoint-url {{ backup_target_endpoint }} \
+            --region {{ backup_target_region }} \
+            s3 cp - "${KEY}"
+  args:
+    executable: /bin/bash
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ backup_target_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ backup_target_secret_key }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  when: backup_databases_mariadb | bool
+  changed_when: true
+  no_log: true
+
+- name: "[backup/db] pg_dumpall → gzip → s3"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    DATE="$(date -u +%Y-%m-%d)"
+    TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    KEY="s3://{{ backup_target_bucket }}/${DATE}/postgresql-all.${TS}.sql.gz"
+    docker exec -i \
+      -e PGPASSWORD='{{ backup_postgresql_password }}' \
+      {{ backup_postgresql_container }} \
+      pg_dumpall -U {{ backup_postgresql_user }} \
+      | gzip -c \
+      | aws --endpoint-url {{ backup_target_endpoint }} \
+            --region {{ backup_target_region }} \
+            s3 cp - "${KEY}"
+  args:
+    executable: /bin/bash
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ backup_target_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ backup_target_secret_key }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  when: backup_databases_postgresql | bool
+  changed_when: true
+  no_log: true

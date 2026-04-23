@@ -1,0 +1,57 @@
+---
+# pazny.backup — default variables
+# Nightly backup orchestration for stateful nOS services, targeting RustFS (S3).
+
+# -- Schedule (launchd StartCalendarInterval) ----------------------------------
+backup_schedule_hour: 3
+backup_schedule_minute: 0
+
+# -- S3 / RustFS target --------------------------------------------------------
+backup_target_bucket: "backups"
+backup_target_endpoint: "http://127.0.0.1:9010"   # RustFS S3 API (nOS default)
+backup_target_region: "us-east-1"                 # RustFS ignores, aws-cli requires a value
+backup_target_access_key: "{{ rustfs_access_key }}"
+backup_target_secret_key: "{{ rustfs_secret_key }}"
+
+# -- Retention (days / weeks / months to keep) ---------------------------------
+backup_retention_daily: 7
+backup_retention_weekly: 4
+backup_retention_monthly: 12
+
+# -- Sources -------------------------------------------------------------------
+backup_databases_mariadb: true
+backup_databases_postgresql: true
+backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
+
+# Docker named volumes to tar+upload. Only mariadb_data is migrated today;
+# extend this list as services adopt the named-volume pattern.
+backup_volumes_to_dump:
+  - mariadb_data
+
+# -- Container names (match the project-wide convention) -----------------------
+backup_mariadb_container: "{{ mariadb_container_name | default('nos-mariadb') }}"
+backup_postgresql_container: "{{ postgresql_container_name | default('nos-postgresql') }}"
+
+# -- DB credentials (re-use playbook-wide secrets) -----------------------------
+backup_mariadb_user: "root"
+backup_mariadb_password: "{{ mariadb_root_password }}"
+backup_postgresql_user: "{{ postgresql_root_user | default('postgres') }}"
+backup_postgresql_password: "{{ postgresql_root_password }}"
+
+# -- Authentik API -------------------------------------------------------------
+backup_authentik_url: "http://127.0.0.1:9000"
+backup_authentik_token: "{{ authentik_bootstrap_token | default('') }}"
+
+# -- Runtime paths -------------------------------------------------------------
+backup_home_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
+backup_status_file: "{{ backup_home_dir }}/backup-status.json"
+backup_log_file: "{{ backup_home_dir }}/backup.log"
+backup_script_path: "{{ backup_home_dir }}/backup.sh"
+backup_launchd_label: "eu.thisisait.nos.backup"
+backup_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_launchd_label }}.plist"
+
+# -- Behavior toggles ----------------------------------------------------------
+# If today's prefix already exists in the bucket, overwrite (true) or skip (false).
+backup_overwrite_same_day: true
+# Run backup immediately after deploying the script (handy for debugging / tests).
+backup_run_now: false

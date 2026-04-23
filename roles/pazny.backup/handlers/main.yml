@@ -1,0 +1,11 @@
+---
+# pazny.backup — handlers
+
+- name: Reload backup launchd
+  ansible.builtin.shell: |
+    label="{{ backup_launchd_label }}"
+    plist="{{ backup_launchd_plist }}"
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl load -w "$plist"
+  changed_when: true
+  failed_when: false

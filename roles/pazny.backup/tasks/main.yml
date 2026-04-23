@@ -1,0 +1,59 @@
+---
+# ==============================================================================
+# pazny.backup — nightly backup orchestration
+#
+# Renders ~/.nos/backup.sh + a LaunchAgent that fires it every day at 03:00.
+# The shell script handles the actual work (dump DBs, tar volumes, export
+# Authentik blueprints, upload to RustFS, rotate). Ansible only provisions.
+# ==============================================================================
+
+- name: "[backup] Ensure ~/.nos runtime dir exists"
+  ansible.builtin.file:
+    path: "{{ backup_home_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: "[backup] Ensure aws-cli is installed (RustFS S3 client)"
+  community.general.homebrew:
+    name: awscli
+    state: present
+
+- name: "[backup] Render backup.sh entrypoint"
+  ansible.builtin.template:
+    src: "{{ role_path }}/files/backup.sh"
+    dest: "{{ backup_script_path }}"
+    mode: '0700'
+  # files/backup.sh is actually a Jinja template (the .sh suffix keeps it
+  # lint-friendly and executable stand-alone for debugging). `template:`
+  # accepts any source path, so reading from files/ is fine.
+
+- name: "[backup] Ensure status file exists (empty skeleton)"
+  ansible.builtin.copy:
+    dest: "{{ backup_status_file }}"
+    content: |
+      {"last_run": 0, "sources": []}
+    mode: '0600'
+    force: false
+
+- name: "[backup] Deploy launchd plist"
+  ansible.builtin.template:
+    src: backup-launchd.plist.j2
+    dest: "{{ backup_launchd_plist }}"
+    mode: '0644'
+  notify: Reload backup launchd
+
+- name: "[backup] Load launchd agent (idempotent)"
+  ansible.builtin.command: >
+    launchctl load -w "{{ backup_launchd_plist }}"
+  register: _backup_load
+  changed_when: _backup_load.rc == 0
+  failed_when: >
+    _backup_load.rc != 0 and
+    'already loaded' not in (_backup_load.stderr | default(''))
+
+- name: "[backup] Optionally run backup.sh immediately (backup_run_now=true)"
+  ansible.builtin.command: "{{ backup_script_path }}"
+  when: backup_run_now | bool
+  register: _backup_run
+  changed_when: _backup_run.rc == 0
+  failed_when: false

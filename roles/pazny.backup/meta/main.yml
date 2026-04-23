@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: backup
+  namespace: pazny
+  author: Pázny
+  description: Nightly backups of stateful nOS services to RustFS (S3) via launchd
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# No role dependencies — Homebrew (aws-cli) and RustFS are wired from main.yml.
+dependencies: []
+
+collections:
+  - community.general  # community.general.homebrew

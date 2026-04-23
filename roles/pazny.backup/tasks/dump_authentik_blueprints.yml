@@ -1,0 +1,59 @@
+---
+# pazny.backup — Authentik blueprint export
+# Pulls the full blueprint JSON via the Authentik API and stores it in S3.
+# Falls back silently when Authentik is disabled or the bootstrap token is
+# not yet seeded (e.g., very first blank run).
+
+- name: "[backup/authentik] Skip when Authentik not enabled or token missing"
+  ansible.builtin.debug:
+    msg: "Authentik blueprint backup skipped (install_authentik={{ install_authentik | default(false) }}, token_present={{ (backup_authentik_token | length) > 0 }})"
+  when: (not (backup_authentik_blueprints | bool)) or (backup_authentik_token | length == 0)
+
+- name: "[backup/authentik] Fetch blueprints"
+  ansible.builtin.uri:
+    url: "{{ backup_authentik_url }}/api/v3/managed/blueprints/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ backup_authentik_token }}"
+      Accept: "application/json"
+    status_code: [200]
+    return_content: true
+  register: _authentik_blueprints
+  when:
+    - backup_authentik_blueprints | bool
+    - (backup_authentik_token | length) > 0
+  no_log: true
+
+- name: "[backup/authentik] Write blueprint JSON locally"
+  ansible.builtin.copy:
+    dest: "{{ backup_home_dir }}/authentik-blueprints.json"
+    content: "{{ _authentik_blueprints.content }}"
+    mode: '0600'
+  when:
+    - backup_authentik_blueprints | bool
+    - (backup_authentik_token | length) > 0
+    - _authentik_blueprints is defined
+    - _authentik_blueprints.status | default(0) == 200
+
+- name: "[backup/authentik] Upload blueprint JSON to S3"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    DATE="$(date -u +%Y-%m-%d)"
+    TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    KEY="s3://{{ backup_target_bucket }}/${DATE}/authentik-blueprints.${TS}.json.gz"
+    gzip -c "{{ backup_home_dir }}/authentik-blueprints.json" \
+      | aws --endpoint-url {{ backup_target_endpoint }} \
+            --region {{ backup_target_region }} \
+            s3 cp - "${KEY}"
+  args:
+    executable: /bin/bash
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ backup_target_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ backup_target_secret_key }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  when:
+    - backup_authentik_blueprints | bool
+    - (backup_authentik_token | length) > 0
+    - _authentik_blueprints is defined
+    - _authentik_blueprints.status | default(0) == 200
+  changed_when: true
