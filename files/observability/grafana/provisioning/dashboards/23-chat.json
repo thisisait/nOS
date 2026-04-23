@@ -1,0 +1,134 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Open WebUI conversations + LLM usage. Deep chat telemetry requires a Wave 2 poller that exports SQLite stats to InfluxDB.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "Chat / Open WebUI — Wave 2 banner",
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "## Requires Wave 2 — Chat telemetry to InfluxDB\n\nOpen WebUI does not expose a Prometheus endpoint and stores conversation state in **SQLite inside the container**. Wave 2 adds a poller (`files/openwebui/exporter.py`) that reads `webui.db` and writes to InfluxDB. Until then this dashboard shows **nginx upstream metrics** (real), **container resources** (real), and **placeholder stat tiles** for chat counters."
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Conversations today (placeholder — Wave 2)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Tokens / model / day (placeholder — Wave 2)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Avg latency (placeholder — Wave 2)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
+      "fieldConfig": {"defaults": {"unit": "ms", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Conversation retention (placeholder — Wave 2)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "Open WebUI request rate (Nginx upstream)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"refId": "A", "expr": "rate(nginx_http_requests_total{host=~\".*openwebui.*|.*chat.*\"}[5m])", "legendFormat": "{{host}} {{status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 7,
+      "title": "Open WebUI 5xx rate (Nginx)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"refId": "A", "expr": "rate(nginx_http_requests_total{host=~\".*openwebui.*|.*chat.*\", status=~\"5..\"}[5m])", "legendFormat": "5xx {{host}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "errps", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "title": "Container resources — Open WebUI",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "targets": [
+        {"refId": "A", "expr": "rate(container_cpu_usage_seconds_total{name=~\".*openwebui.*|.*open-webui.*\"}[5m]) * 100", "legendFormat": "cpu% {{name}}"},
+        {"refId": "B", "expr": "container_memory_usage_bytes{name=~\".*openwebui.*|.*open-webui.*\"} / 1024 / 1024", "legendFormat": "mem MiB {{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "logs",
+      "id": 9,
+      "title": "Open WebUI errors (Loki)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+      "targets": [
+        {"refId": "A", "expr": "{container_name=~\".*openwebui.*|.*open-webui.*\"} |~ \"(?i)error|exception|traceback\"", "maxLines": 200}
+      ],
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "chat", "openwebui", "llm"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Chat (Open WebUI / LLM)",
+  "uid": "nos-23-chat",
+  "version": 1,
+  "weekStart": ""
+}

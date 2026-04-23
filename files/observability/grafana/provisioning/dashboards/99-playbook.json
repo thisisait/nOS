@@ -1,0 +1,158 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Ansible run history + Glasswing event timeline + migration / upgrade queues. Fed by callback_plugins/glasswing_telemetry.py (BoxAPI → Glasswing SQLite with ~/.nos/events.jsonl fallback).",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "Playbook — data sources",
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "Every `main.yml` run emits structured events via `callback_plugins/glasswing_telemetry.py`. Events land in **BoxAPI → Glasswing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"glasswing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
+      }
+    },
+    {
+      "type": "text",
+      "id": 2,
+      "title": "Last run recap",
+      "description": "Pulls ~/.nos/state.yml last_run.recap via an Alloy file_scrape + Loki tail. For now: open Glasswing /timeline for the live view.",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 4},
+      "options": {
+        "mode": "markdown",
+        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Glasswing `/timeline`\n- `glasswing.sqlite` → `ansible_runs`"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Runs last 7d",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 4},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\"[7d]))", "legendFormat": "runs"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Failed runs 7d",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 4},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\" |~ \"status=failed\"[7d]))", "legendFormat": "failed"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Avg duration 7d",
+      "description": "Placeholder — needs duration label on playbook_end events (Wave 1+).",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 4},
+      "targets": [{"refId": "A", "expr": "avg(nos_playbook_duration_seconds)", "legendFormat": "avg"}],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "Pending migrations",
+      "description": "Wave 4: nos_migrations_pending gauge emitted by pazny.state_manager.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 7},
+      "targets": [{"refId": "A", "expr": "nos_migrations_pending", "legendFormat": "migrations"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}, "noValue": "Wave 4"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "title": "Pending upgrades",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 7},
+      "targets": [{"refId": "A", "expr": "nos_upgrades_pending", "legendFormat": "upgrades"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}, "noValue": "Wave 4"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 8,
+      "title": "Coexistence tracks",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 7},
+      "targets": [{"refId": "A", "expr": "nos_coexistence_tracks_active", "legendFormat": "tracks"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 4"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "barchart",
+      "id": 9,
+      "title": "Run history (last 30d) — durations",
+      "description": "count of playbook_end events per day, split by status.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 10},
+      "targets": [
+        {"refId": "A", "expr": "sum by (status) (count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\" | json | __error__=\"\"[1d]))", "legendFormat": "{{status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"orientation": "vertical", "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0, "stacking": "normal"}
+    },
+    {
+      "type": "logs",
+      "id": 10,
+      "title": "Event timeline (last 50)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
+      "targets": [
+        {"refId": "A", "expr": "{job=\"glasswing\"}", "maxLines": 50}
+      ],
+      "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+    },
+    {
+      "type": "table",
+      "id": 11,
+      "title": "Recent commits — placeholder (Wave 3)",
+      "description": "Wave 3: pull from Gitea API or state/last_run.commits via scripted exporter.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
+      "fieldConfig": {"defaults": {"unit": "short", "noValue": "Wave 3"}, "overrides": []},
+      "options": {"showHeader": true}
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "playbook", "ansible", "glasswing", "migrations"],
+  "templating": {"list": []},
+  "time": {"from": "now-7d", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Playbook & Glasswing Timeline",
+  "uid": "nos-99-playbook",
+  "version": 1,
+  "weekStart": ""
+}

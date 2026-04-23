@@ -1,0 +1,162 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "RustFS (S3-compatible) storage dashboard. RustFS does not expose Prometheus metrics directly; operations are derived from container logs via Loki.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "RustFS S3 storage — notes",
+      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "RustFS has **no native Prometheus exporter**. Bucket-op panels parse container logs via Loki. Storage-size panels prefer the bind-mount path `/Volumes/SSD1TB/rustfs/data` when configured, otherwise fall back to the Docker volume size reported by cAdvisor. **Wave 2**: ship a `prometheus.exporter.script` that calls `mc admin info` for authoritative bucket/object totals."
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 2,
+      "title": "S3 bucket operations / min (parsed from logs)",
+      "description": "count_over_time on Loki — PUT / GET / LIST / DELETE actions logged by RustFS.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 3},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \"action=put_object\"[1m]))", "legendFormat": "PUT"},
+        {"refId": "B", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \"action=get_object\"[1m]))", "legendFormat": "GET"},
+        {"refId": "C", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \"action=list_bucket\"[1m]))", "legendFormat": "LIST"},
+        {"refId": "D", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \"action=delete_object\"[1m]))", "legendFormat": "DELETE"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 3,
+      "title": "Error rate (4xx / 5xx from access logs)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 3},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \" (4[0-9]{2}) \"[1m]))", "legendFormat": "4xx"},
+        {"refId": "B", "expr": "sum(count_over_time({container_name=\"iiab-rustfs-1\"} |~ \" (5[0-9]{2}) \"[1m]))", "legendFormat": "5xx"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "errors", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 4,
+      "title": "Network bandwidth (cAdvisor)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 11},
+      "targets": [
+        {"refId": "A", "expr": "rate(container_network_receive_bytes_total{name=~\".*rustfs.*\"}[5m])", "legendFormat": "rx {{name}}"},
+        {"refId": "B", "expr": "rate(container_network_transmit_bytes_total{name=~\".*rustfs.*\"}[5m])", "legendFormat": "tx {{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "Bps", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Container memory",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 11},
+      "targets": [
+        {"refId": "A", "expr": "container_memory_usage_bytes{name=~\".*rustfs.*\"}", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1073741824}, {"color": "red", "value": 2147483648}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "Container CPU %",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 11},
+      "targets": [
+        {"refId": "A", "expr": "rate(container_cpu_usage_seconds_total{name=~\".*rustfs.*\"}[5m]) * 100", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 50}, {"color": "red", "value": 85}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "title": "Disk used on rustfs FS (requires node-exporter w/ bind mount)",
+      "description": "Uses node_filesystem_* if /Volumes/SSD1TB is exported; otherwise panel reads N/A. Wave 2 will add a dedicated collector.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 15},
+      "targets": [
+        {"refId": "A", "expr": "(node_filesystem_size_bytes{mountpoint=~\"/Volumes/SSD1TB.*\"} - node_filesystem_avail_bytes{mountpoint=~\"/Volumes/SSD1TB.*\"})", "legendFormat": "{{mountpoint}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 500000000000}, {"color": "red", "value": 900000000000}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "logs",
+      "id": 8,
+      "title": "Recent errors (Loki)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 19},
+      "targets": [
+        {"refId": "A", "expr": "{container_name=\"iiab-rustfs-1\"} |~ \"(?i)error|panic|fatal|denied\"", "maxLines": 200}
+      ],
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+    },
+    {
+      "type": "table",
+      "id": 9,
+      "title": "Admin console users — placeholder (Wave 2)",
+      "description": "Requires Wave 2 RustFS admin script exporter. Placeholder table.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 27},
+      "targets": [
+        {"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}
+      ],
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "options": {"showHeader": true}
+    },
+    {
+      "type": "table",
+      "id": 10,
+      "title": "Objects per bucket — placeholder (Wave 2)",
+      "description": "Requires Wave 2 `mc admin info` scripted exporter.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 27},
+      "targets": [
+        {"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}
+      ],
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "options": {"showHeader": true}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "storage", "rustfs", "s3"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Storage (RustFS / S3)",
+  "uid": "nos-14-storage",
+  "version": 1,
+  "weekStart": ""
+}

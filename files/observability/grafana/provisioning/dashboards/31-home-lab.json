@@ -1,0 +1,219 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Home Assistant (smart home) + Jellyfin (media) + Kiwix (offline knowledge). Home Assistant metrics come from /api/prometheus; Jellyfin from its optional /metrics endpoint; Kiwix from Loki log parse.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "Home Lab — notes",
+      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "**Home Assistant** exports via `/api/prometheus` — metrics include `entity_available`, `sensor_unit_*`, `automation_triggered_total`, `last_updated_time_seconds`. **Jellyfin** requires the `EnablePrometheus` option enabled in `network.xml`. **Kiwix** has no exporter — search count is parsed from access logs via Loki; ZIM-file count is a placeholder (Wave 2 scrapes `library.xml`)."
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Home Assistant",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 3},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Entities up",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "targets": [{"refId": "A", "expr": "sum(entity_available == 1)", "legendFormat": "up"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Entities down",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+      "targets": [{"refId": "A", "expr": "sum(entity_available == 0)", "legendFormat": "down"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Unique entities",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+      "targets": [{"refId": "A", "expr": "count(count by (entity) (entity_available))", "legendFormat": "entities"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Last state update (age)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+      "targets": [{"refId": "A", "expr": "time() - max(last_updated_time_seconds)", "legendFormat": "age"}],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 300}, {"color": "red", "value": 1800}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "Automations triggered / min",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"refId": "A", "expr": "sum by (entity) (rate(automation_triggered_total[5m])) * 60", "legendFormat": "{{entity}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "opm", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 7,
+      "title": "Sensor readings (temperature, °C)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"refId": "A", "expr": "sensor_unit_c", "legendFormat": "{{friendly_name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "celsius", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "row",
+      "id": 101,
+      "title": "Jellyfin",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 16},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 8,
+      "title": "Active streams",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 17},
+      "targets": [{"refId": "A", "expr": "jellyfin_active_streams", "legendFormat": "streams"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}, {"color": "green", "value": 1}]}, "noValue": "0"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 9,
+      "title": "Transcoding sessions",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 17},
+      "targets": [{"refId": "A", "expr": "jellyfin_transcoding_sessions", "legendFormat": "transcoding"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 2}, {"color": "red", "value": 5}]}, "noValue": "0"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 10,
+      "title": "Users currently watching",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 17},
+      "targets": [{"refId": "A", "expr": "count(count by (user) (jellyfin_sessions))", "legendFormat": "users"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "0"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "row",
+      "id": 102,
+      "title": "Kiwix (offline knowledge)",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Kiwix search queries / 5m (Loki log parse)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({container_name=\"iiab-kiwix-1\"} |~ \"GET /search\"[5m]))", "legendFormat": "/search"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "title": "ZIM files loaded (placeholder — Wave 2)",
+      "description": "Wave 2: parse library.xml from kiwix data volume.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 22},
+      "targets": [{"refId": "A", "expr": "kiwix_zim_count", "legendFormat": "zims"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "row",
+      "id": 103,
+      "title": "Container resources",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "CPU usage (all three)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 31},
+      "targets": [
+        {"refId": "A", "expr": "rate(container_cpu_usage_seconds_total{name=~\".*(homeassistant|jellyfin|kiwix).*\"}[5m]) * 100", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "title": "Memory (all three)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 31},
+      "targets": [
+        {"refId": "A", "expr": "container_memory_usage_bytes{name=~\".*(homeassistant|jellyfin|kiwix).*\"}", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "home", "homeassistant", "jellyfin", "kiwix"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Home Lab (HA / Jellyfin / Kiwix)",
+  "uid": "nos-31-home-lab",
+  "version": 1,
+  "weekStart": ""
+}

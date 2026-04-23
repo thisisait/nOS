@@ -1,0 +1,222 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Security overview — Vaultwarden, Infisical, Authentik failed logins, Nginx suspicious paths, sudo failures, CVE queue.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "Security — notes",
+      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "Vaultwarden stock images do **not** expose `/metrics` (requires `-Dvaultwarden/metrics` at build). Use a PG-exporter custom query against `vaultwarden.users` (Wave 1+). Infisical exposes `/api/v1/metrics` — wired via Prometheus scrape job when `install_infisical=true`. CVE queue is pulled from Glasswing's `security_findings` table (Wave 1+ exporter). Until then the panel shows a placeholder."
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Vaults",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 3},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Vaultwarden users (PG exporter)",
+      "description": "Requires pazny.postgresql custom query: SELECT count(*) FROM vaultwarden.users.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "targets": [{"refId": "A", "expr": "vaultwarden_users_total", "legendFormat": "users"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Vaultwarden orgs",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+      "targets": [{"refId": "A", "expr": "vaultwarden_organizations_total", "legendFormat": "orgs"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Infisical secrets",
+      "description": "From /api/v1/metrics — when install_infisical=true.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+      "targets": [{"refId": "A", "expr": "infisical_secrets_total", "legendFormat": "secrets"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Verify endpoint"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Infisical projects",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+      "targets": [{"refId": "A", "expr": "infisical_projects_total", "legendFormat": "projects"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Verify endpoint"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "logs",
+      "id": 6,
+      "title": "Vaultwarden — last failed logins",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "targets": [
+        {"refId": "A", "expr": "{container_name=~\".*vaultwarden.*\"} |~ \"(?i)invalid|failed|unauthorized|login.*fail\"", "maxLines": 100}
+      ],
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+    },
+    {
+      "type": "row",
+      "id": 101,
+      "title": "Authentik — failed logins",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 16},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "table",
+      "id": 7,
+      "title": "Top source IPs with failed logins (24h)",
+      "description": "Parses Authentik server event log for 'Login failed' with client_ip label.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 17},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (client_ip) (count_over_time({container_name=~\".*authentik.*\"} |~ \"login_failed\" | json | __error__=\"\" [24h])))",
+          "legendFormat": "{{client_ip}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "options": {"showHeader": true}
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "title": "Failed logins / 5m (Authentik)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 27},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({container_name=~\".*authentik.*\"} |~ \"login_failed\"[5m]))", "legendFormat": "failed"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "row",
+      "id": 102,
+      "title": "CVE queue (Glasswing)",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 35},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "id": 9,
+      "title": "Open findings by severity — placeholder (Wave 1+)",
+      "description": "SELECT severity, count(*) FROM security_findings WHERE status='open' GROUP BY severity — via Glasswing SQLite exporter.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36},
+      "targets": [
+        {"refId": "A", "expr": "glasswing_findings_open{severity=\"critical\"}", "legendFormat": "critical"},
+        {"refId": "B", "expr": "glasswing_findings_open{severity=\"high\"}", "legendFormat": "high"},
+        {"refId": "C", "expr": "glasswing_findings_open{severity=\"medium\"}", "legendFormat": "medium"},
+        {"refId": "D", "expr": "glasswing_findings_open{severity=\"low\"}", "legendFormat": "low"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "options": {"orientation": "horizontal", "displayMode": "gradient", "reduceOptions": {"calcs": ["lastNotNull"]}, "showUnfilled": true}
+    },
+    {
+      "type": "row",
+      "id": 103,
+      "title": "Web attack surface",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 42},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 10,
+      "title": "Nginx — suspicious path probes / 5m",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 43},
+      "targets": [
+        {"refId": "A", "expr": "sum(rate({container_name=~\".*nginx.*|.*php.*\"} |~ \"/\\\\.env|/wp-admin|/admin\\\\.php|/phpmyadmin|/.git|/xmlrpc.php\"[5m]))", "legendFormat": "probes"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Failed sudo attempts (/var/log/auth.log via Alloy)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 43},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({job=\"auth\"} |~ \"(?i)sudo.*(FAILED|authentication failure)\"[5m]))", "legendFormat": "failed sudo"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "single"}}
+    },
+    {
+      "type": "row",
+      "id": 104,
+      "title": "Certificates",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 51},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "table",
+      "id": 12,
+      "title": "Critical certs expiring < 14 days (mirror of 12-nginx)",
+      "description": "Filtered to hosts where expiry < 14d. See 12-nginx dashboard for full list.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 52},
+      "targets": [
+        {"refId": "A", "expr": "(probe_ssl_earliest_cert_expiry - time()) / 86400 < 14", "legendFormat": "{{instance}}", "instant": true, "format": "table"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "d", "custom": {"align": "auto"}, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 7}, {"color": "green", "value": 14}]}}, "overrides": []},
+      "options": {"showHeader": true}
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nos", "security", "vaultwarden", "authentik", "cve"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS — Security",
+  "uid": "nos-90-security",
+  "version": 1,
+  "weekStart": ""
+}
