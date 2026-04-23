@@ -132,16 +132,35 @@ final class PatchRepository
 
 
 	/**
-	 * Append a patch-applied history row. Called by StatePresenter ingestion
+	 * Upsert a patch-applied history row. Called by StatePresenter::actionSync
 	 * when state_manager pushes the updated ~/.nos/state.yml patches_applied[].
+	 *
+	 * Idempotent: if a row with the same (patch_id, applied_at) already exists
+	 * we return its id without re-inserting. This lets Glasswing re-sync from
+	 * BoxAPI freely without creating duplicate timeline entries.
+	 *
+	 * Returns the row id (newly inserted or existing).
 	 */
 	public function recordApplied(array $record): int
 	{
+		$patchId   = (string) ($record['patch_id']   ?? $record['id'] ?? '');
+		$appliedAt = (string) ($record['applied_at'] ?? gmdate('c'));
+
+		if ($patchId !== '') {
+			$existing = $this->db->table('patches_applied')
+				->where('patch_id', $patchId)
+				->where('applied_at', $appliedAt)
+				->fetch();
+			if ($existing) {
+				return (int) $existing['id'];
+			}
+		}
+
 		$row = [
-			'patch_id'        => (string) ($record['patch_id']     ?? $record['id'] ?? ''),
+			'patch_id'        => $patchId,
 			'component_id'    => $record['component_id'] ?? null,
 			'finding_ref'     => $record['finding_ref']  ?? null,
-			'applied_at'      => (string) ($record['applied_at']   ?? gmdate('c')),
+			'applied_at'      => $appliedAt,
 			'success'         => !empty($record['success']) ? 1 : 0,
 			'duration_sec'    => isset($record['duration_sec']) ? (int) $record['duration_sec'] : null,
 			'rolled_back'     => !empty($record['rolled_back']) ? 1 : 0,

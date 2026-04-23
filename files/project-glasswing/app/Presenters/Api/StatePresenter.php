@@ -7,6 +7,7 @@ namespace App\Presenters\Api;
 use App\Model\BoxApiClient;
 use App\Model\CoexistenceRepository;
 use App\Model\MigrationRepository;
+use App\Model\PatchRepository;
 
 /**
  * GET  /api/v1/state                     — proxy BoxAPI ~/.nos/state.yml
@@ -14,7 +15,8 @@ use App\Model\MigrationRepository;
  * GET  /api/v1/state/services/<id>       — one service
  * POST /api/v1/state/sync                — refresh local SQLite mirrors from
  *                                          current state.yml (migrations_applied
- *                                          + coexistence_tracks). Idempotent.
+ *                                          + patches_applied + coexistence_tracks).
+ *                                          Idempotent.
  */
 final class StatePresenter extends BaseApiPresenter
 {
@@ -22,6 +24,7 @@ final class StatePresenter extends BaseApiPresenter
 		private BoxApiClient $box,
 		private MigrationRepository $migrations,
 		private CoexistenceRepository $coexistence,
+		private PatchRepository $patches,
 	) {
 	}
 
@@ -54,11 +57,24 @@ final class StatePresenter extends BaseApiPresenter
 		$state = $resp['body'];
 		$migrationsCount = 0;
 		$tracksCount = 0;
+		$patchesCount = 0;
 
 		foreach (($state['migrations_applied'] ?? []) as $rec) {
 			try {
 				$this->migrations->upsertApplied($rec);
 				$migrationsCount++;
+			} catch (\Throwable) {
+				// skip malformed records; keep syncing the rest
+			}
+		}
+
+		foreach (($state['patches_applied'] ?? []) as $rec) {
+			if (!is_array($rec)) {
+				continue;
+			}
+			try {
+				$this->patches->recordApplied($rec);
+				$patchesCount++;
 			} catch (\Throwable) {
 				// skip malformed records; keep syncing the rest
 			}
@@ -85,6 +101,7 @@ final class StatePresenter extends BaseApiPresenter
 		$this->sendSuccess([
 			'synced'     => true,
 			'migrations' => $migrationsCount,
+			'patches'    => $patchesCount,
 			'tracks'     => $tracksCount,
 		]);
 	}
