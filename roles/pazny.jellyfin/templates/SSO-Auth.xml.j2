@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+{#
+  SSO-Auth plugin configuration for jellyfin-plugin-sso ({{ jellyfin_sso_plugin_version }}).
+
+  Schema: see
+  https://github.com/9p4/jellyfin-plugin-sso/blob/v{{ jellyfin_sso_plugin_version }}/SSO-Auth/Config/PluginConfiguration.cs
+
+  OidConfigs / SamlConfigs serialize as <dictionary><item><key/><value/></item>...</dictionary>
+  (SerializableDictionary<TKey,TValue>). Jellyfin is expected to rewrite this file after
+  first admin interaction; we only seed the initial state so the plugin is usable via
+  the "Sign in with Authentik" button on first boot.
+#}
+<PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SamlConfigs />
+  <OidConfigs>
+    <item>
+      <key>
+        <string>{{ jellyfin_oidc_provider_name }}</string>
+      </key>
+      <value>
+        <OidConfig>
+          <OidEndpoint>{{ jellyfin_oidc_endpoint }}</OidEndpoint>
+          <OidClientId>{{ jellyfin_oidc_client_id }}</OidClientId>
+          <OidSecret>{{ jellyfin_oidc_client_secret }}</OidSecret>
+          <Enabled>true</Enabled>
+          <EnableAuthorization>true</EnableAuthorization>
+          <EnableAllFolders>true</EnableAllFolders>
+          <EnabledFolders />
+          <AdminRoles>
+{% for role in jellyfin_oidc_admin_roles %}
+            <string>{{ role }}</string>
+{% endfor %}
+          </AdminRoles>
+          <Roles>
+{% for role in jellyfin_oidc_user_roles %}
+            <string>{{ role }}</string>
+{% endfor %}
+          </Roles>
+          <EnableFolderRoles>false</EnableFolderRoles>
+          <EnableLiveTvRoles>false</EnableLiveTvRoles>
+          <EnableLiveTv>false</EnableLiveTv>
+          <EnableLiveTvManagement>false</EnableLiveTvManagement>
+          <LiveTvRoles />
+          <LiveTvManagementRoles />
+          <FolderRoleMappings />
+          <RoleClaim>groups</RoleClaim>
+          <OidScopes>
+            <string>openid</string>
+            <string>profile</string>
+            <string>email</string>
+            <string>groups</string>
+          </OidScopes>
+          <DefaultProvider></DefaultProvider>
+          <DefaultUsernameClaim>preferred_username</DefaultUsernameClaim>
+          <SchemeOverride>https</SchemeOverride>
+          <NewPath>true</NewPath>
+          <CanonicalLinks />
+        </OidConfig>
+      </value>
+    </item>
+  </OidConfigs>
+</PluginConfiguration>

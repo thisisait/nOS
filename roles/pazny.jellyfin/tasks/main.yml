@@ -21,7 +21,44 @@
     - "{{ jellyfin_movies_dir }}"
     - "{{ jellyfin_shows_dir }}"
     - "{{ jellyfin_music_dir }}"
+    - "{{ jellyfin_config_dir }}/plugins"
+    - "{{ jellyfin_config_dir }}/plugins/configurations"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+
+# ─── Native OIDC via jellyfin-plugin-sso ─────────────────────────────────────
+# Plugin download is host-side (before first container start) so Jellyfin picks
+# it up on boot. Install skipped when install_authentik is disabled.
+- name: "[pazny.jellyfin] Ensure SSO plugin target directory exists"
+  ansible.builtin.file:
+    path: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
+    state: directory
+    mode: '0755'
+  when: install_authentik | default(false)
+
+- name: "[pazny.jellyfin] Check whether SSO plugin already installed"
+  ansible.builtin.stat:
+    path: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0/SSO-Auth.dll"
+  register: _jf_sso_installed
+  when: install_authentik | default(false)
+
+- name: "[pazny.jellyfin] Download + unpack jellyfin-plugin-sso {{ jellyfin_sso_plugin_version }}"
+  ansible.builtin.unarchive:
+    src: "{{ jellyfin_sso_plugin_url }}"
+    dest: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
+    remote_src: true
+    mode: '0755'
+  when:
+    - install_authentik | default(false)
+    - not (_jf_sso_installed.stat.exists | default(false))
+  notify: Restart jellyfin
+
+- name: "[pazny.jellyfin] Render SSO-Auth plugin configuration (XML)"
+  ansible.builtin.template:
+    src: SSO-Auth.xml.j2
+    dest: "{{ jellyfin_config_dir }}/plugins/configurations/SSO-Auth.xml"
+    mode: '0600'
+  when: install_authentik | default(false)
+  notify: Restart jellyfin
 
 - name: "[pazny.jellyfin] Enable nginx vhost"
   ansible.builtin.file:

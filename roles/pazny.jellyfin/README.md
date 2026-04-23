@@ -14,6 +14,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
    - Prints a post-install note
    - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/jellyfin.yml`
    - Notifies `Restart jellyfin` when the override changes
+   - **(Native OIDC)** Downloads [`jellyfin-plugin-sso`](https://github.com/9p4/jellyfin-plugin-sso) v{{ jellyfin_sso_plugin_version }} into `{{ jellyfin_config_dir }}/plugins/SSO-Auth_<version>.0/` and renders the Authentik OIDC config as `SSO-Auth.xml` in the plugin's config folder (gated on `install_authentik`)
 
 2. **Post (`tasks/post.yml`)** — runs *after* `docker compose -p iiab up`:
    - Waits for `/health` to return 200
@@ -46,6 +47,24 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 | `jellyfin_country` | `CZ` | Startup `MetadataCountryCode` |
 | `jellyfin_mem_limit` | `docker_mem_limit_critical` | Defaults to `2g` |
 | `jellyfin_cpus` | `docker_cpus_standard` | Defaults to `1.0` |
+| `jellyfin_sso_plugin_version` | `3.5.2.4` | jellyfin-plugin-sso release (last 3.x, compatible with Jellyfin 10.10.x; 4.x targets 10.11) |
+| `jellyfin_sso_plugin_url` | *(GitHub release zip)* | Override only for air-gapped mirrors |
+| `jellyfin_oidc_provider_name` | `Authentik` | Key used in `OidConfigs` dict + login button label |
+| `jellyfin_oidc_client_id` | `nos-jellyfin` | Authentik OIDC client ID |
+| `jellyfin_oidc_client_secret` | `{{ global_password_prefix }}_pw_oidc_jellyfin` | Auto-generated |
+| `jellyfin_oidc_endpoint` | `https://{{ authentik_domain }}/application/o/jellyfin/` | Well-known discovery base |
+| `jellyfin_oidc_admin_roles` | `[nos-admins, nos-providers]` | Groups granted admin in Jellyfin |
+| `jellyfin_oidc_user_roles` | `[nos-admins, nos-providers, nos-managers, nos-users, nos-guests]` | Groups granted login |
+
+## Authentication model
+
+**Native OIDC via jellyfin-plugin-sso.** Users land on Jellyfin's own login page and click "Sign in with Authentik" (button provisioned by admins via Branding → Login disclaimer — see the plugin README). The redirect URI is:
+
+```
+https://{{ jellyfin_domain }}/sso/OID/redirect/{{ jellyfin_oidc_provider_name }}
+```
+
+RBAC is enforced by the `groups` claim — `nos-admins` / `nos-providers` map to Jellyfin admins, all other `nos-*` groups get standard user accounts. The nginx vhost no longer includes Authentik forward-auth; Jellyfin owns the auth flow end-to-end.
 
 ## Usage
 

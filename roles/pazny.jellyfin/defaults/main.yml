@@ -23,3 +23,26 @@ jellyfin_country: "CZ"
 
 jellyfin_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 jellyfin_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# ----------------------------------------------------------------------------
+# Native OIDC via jellyfin-plugin-sso (https://github.com/9p4/jellyfin-plugin-sso)
+# Pinned to v3.5.2.4 — last release compatible with Jellyfin 10.10.x (see
+# jellyfin_version). v4.x targets Jellyfin 10.11 only.
+# ----------------------------------------------------------------------------
+jellyfin_sso_plugin_version: "3.5.2.4"
+jellyfin_sso_plugin_url: "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v{{ jellyfin_sso_plugin_version }}/sso-authentication_{{ jellyfin_sso_plugin_version }}.zip"
+
+# Authentik OIDC provider config (matches authentik_oidc_apps entry "jellyfin").
+jellyfin_oidc_provider_name: "Authentik"
+jellyfin_oidc_client_id: "nos-jellyfin"
+jellyfin_oidc_client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
+jellyfin_oidc_endpoint: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/jellyfin/"
+jellyfin_oidc_admin_roles:
+  - "nos-admins"
+  - "nos-providers"
+jellyfin_oidc_user_roles:
+  - "nos-admins"
+  - "nos-providers"
+  - "nos-managers"
+  - "nos-users"
+  - "nos-guests"
