@@ -24,3 +24,9 @@ homeassistant_admin_user: "admin"
 
 homeassistant_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 homeassistant_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# auth_oidc HACS community plugin (christiaangoossens/hass-oidc-auth)
+# Installed into {{ homeassistant_config_dir }}/custom_components/auth_oidc
+# when install_authentik is true. Required for native OIDC (HA core only
+# supports OAuth2, not OIDC discovery against Authentik).
+homeassistant_auth_oidc_version: "0.9.0"

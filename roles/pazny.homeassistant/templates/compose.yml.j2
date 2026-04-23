@@ -30,6 +30,11 @@ services:
       - /tmp
     environment:
       TZ: "{{ homeassistant_timezone | default('Europe/Prague') }}"
+{% if install_authentik | default(false) and not (homeassistant_privileged | default(false)) %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
     logging:
       driver: "json-file"
       options:

@@ -12,14 +12,38 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
    - Creates the config directory on the host
    - Seeds `configuration.yaml` with `default_config:` on first run
    - Injects an Ansible-managed `http: trusted_proxies` block for nginx reverse-proxy compatibility
-   - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/homeassistant.yml`
-   - Notifies `Restart homeassistant` when either changes
+   - **OIDC** (when `install_authentik`): downloads the [`auth_oidc`](https://github.com/christiaangoossens/hass-oidc-auth) HACS community plugin into `custom_components/auth_oidc/`, renders `secrets.yaml` with the OIDC client_id/secret, and injects an Ansible-managed `auth_oidc:` block into `configuration.yaml` pointing at Authentik's discovery URL
+   - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/homeassistant.yml` (adds `extra_hosts` for `auth.dev.local` so the container can reach Authentik)
+   - Notifies `Restart homeassistant` when any of the above change
 
 2. **Post (`tasks/post.yml`)** — runs *after* `docker compose -p iiab up`:
    - Waits for the web UI to respond (20 × 10s retry)
    - On first run, drives `/api/onboarding/users → core_config → analytics → integration`
    - On subsequent runs, reconverges the admin password via `hass --script auth change_password` in-container
    - Degrades gracefully if the API is unreachable (`failed_when: false` throughout)
+
+## SSO (native OIDC via `auth_oidc` plugin)
+
+Home Assistant core only supports OAuth2 — no native OIDC discovery. This role installs the community [`christiaangoossens/hass-oidc-auth`](https://github.com/christiaangoossens/hass-oidc-auth) HACS plugin, which adds a true OIDC auth provider with discovery-URL support against Authentik.
+
+**Install flow (first run, when `install_authentik: true`):**
+
+1. `get_url` fetches `hass-oidc-auth-v{{ homeassistant_auth_oidc_version }}.tar.gz` from GitHub releases
+2. `unarchive` extracts into `{{ homeassistant_config_dir }}/hass-oidc-auth-<version>/`
+3. A shell move step promotes `custom_components/auth_oidc/` to its final location and cleans up the tarball + extracted tree
+4. `secrets.yaml` is rendered with `oidc_client_id` / `oidc_client_secret` pulled from the `authentik_oidc_apps` registry (see `default.config.yml`)
+5. `configuration.yaml` gets an `# BEGIN ANSIBLE MANAGED - auth_oidc … # END` block wiring the plugin to `https://{{ authentik_domain }}/application/o/homeassistant/.well-known/openid-configuration`
+
+**Login UX:** HA's login screen shows an additional "Sign in with Authentik" provider below the local username/password form. Users are auto-created on first OIDC login (`automatic_person_creation: true`).
+
+**Callback URL** (declared in the OIDC registry, not in this role):
+```
+https://{{ homeassistant_domain }}/auth/oidc/callback
+```
+
+**Nginx forward-auth has been removed** — HA handles auth end-to-end. The vhost at `templates/nginx/sites-available/homeassistant.conf` is a plain reverse proxy.
+
+**Fallback / manual install:** if the GitHub download fails (offline, rate-limited, or the tag moves), `install_authentik` tasks degrade with `failed_when: false`. To install manually, grab the release from <https://github.com/christiaangoossens/hass-oidc-auth/releases>, extract, and drop `custom_components/auth_oidc/` into `{{ homeassistant_config_dir }}/custom_components/`. Re-run the playbook — the stat check skips the download when `manifest.json` already exists.
 
 ## Requirements
 
@@ -42,6 +66,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 | `homeassistant_admin_password` | *(from prefix)* | Falls back to `{{ global_password_prefix }}_pw_homeassistant` |
 | `homeassistant_mem_limit` | `docker_mem_limit_standard` | Defaults to `1g` |
 | `homeassistant_cpus` | `docker_cpus_standard` | Defaults to `1.0` |
+| `homeassistant_auth_oidc_version` | `0.9.0` | `christiaangoossens/hass-oidc-auth` release tag (plugin downloaded on first run when `install_authentik`) |
 
 ## Usage
 
