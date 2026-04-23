@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# Migration: rename BoxAPI → Bone (L4 runtime layer).
+#
+# Context: the BoxAPI service was renamed to Bone (see docs/anatomy.md).
+# Prior commits in this sprint renamed the role directory, the Ansible vars,
+# the launchd plist filename in the repo, the PHP client class, and the
+# event pipeline. What remains on already-provisioned boxes is the runtime
+# identity: the launchd Label and the install directory on disk. This
+# migration moves both so the next playbook run deploys cleanly to the new
+# names without leaving a zombie agent on the old label.
+#
+# Idempotency: the applies_if gate checks for either surface of the old
+# identity. On fresh nOS installs (post-rebrand) the gate is false and the
+# migration is a no-op.
+# ==============================================================================
+
+id: "2026-04-23-boxapi-to-bone"
+title: "Rename BoxAPI → Bone (launchd label + install dir)"
+summary: |
+  Boot out the eu.thisisait.nos.api launchd agent, delete its plist,
+  and move ~/boxapi/ → ~/bone/. The subsequent role run (pazny.bone)
+  re-renders the new plist at ~/Library/LaunchAgents/eu.thisisait.nos.bone.plist
+  and loads it.
+severity: "breaking"
+created_at: "2026-04-23"
+authors: ["pazny"]
+references:
+  - "docs/anatomy.md"
+notes: |
+  Retained for audit / reference + future forks and pre-rebrand clones.
+  On fresh post-rebrand installs the applies_if gate is false (no
+  ~/boxapi, no eu.thisisait.nos.api launch agent), so nos_migrate
+  records nothing and every run is a true no-op.
+
+allow_shell: false
+
+downtime:
+  estimated_sec: 5
+  services_affected: [bone]
+
+# GATE — idempotency hinge. Any ONE true = legacy state still present.
+applies_if:
+  any_of:
+    - fs_path_exists: "~/boxapi"
+    - launchagent_matches: "eu.thisisait.nos.api"
+
+preconditions:
+  - fs_path_exists: "~"
+
+steps:
+  # 1. Stop the old launchd agent before touching its working directory.
+  #    bootout_and_delete is the same action used by the devboxnos-to-nos
+  #    migration; it unloads the job, removes the plist, and is idempotent
+  #    (missing target = success).
+  - id: "bootout_old_boxapi_launchagent"
+    description: "Stop and delete the legacy eu.thisisait.nos.api launchagent."
+    detect:
+      launchagent_matches: "eu.thisisait.nos.api"
+    action:
+      type: launchd.bootout_and_delete
+      pattern: "eu.thisisait.nos.api.plist"
+      directory: "~/Library/LaunchAgents"
+    verify:
+      - negate: true
+        launchagent_matches: "eu.thisisait.nos.api"
+    # Irreversible by design — the pazny.bone role deploys the new
+    # eu.thisisait.nos.bone plist on the next full playbook run. Rollback
+    # would require re-rendering the old plist from repo history.
+    rollback:
+      type: noop
+      reason: "New agent is redeployed on next playbook run; old plist would have to be restored from git"
+
+  # 2. Move the install directory. venv + log/ survive the rename because
+  #    fs.mv is a single-atomic rename on same filesystem.
+  - id: "move_install_dir"
+    description: "Rename ~/boxapi/ → ~/bone/ (preserves venv + log/)."
+    detect:
+      fs_path_exists: "~/boxapi"
+    action:
+      type: fs.mv
+      src: "~/boxapi"
+      dst: "~/bone"
+    verify:
+      - fs_path_exists: "~/bone"
+    rollback:
+      type: fs.mv
+      src: "~/bone"
+      dst: "~/boxapi"
+
+# Post-migration: confirm the new identity is in place.
+post_verify:
+  - { type: fs_path_exists, path: "~/bone" }
+  - { type: negate, of: { type: fs_path_exists, path: "~/boxapi" } }

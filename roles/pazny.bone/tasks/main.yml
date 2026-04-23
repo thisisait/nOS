@@ -11,13 +11,13 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ ansible_facts['env']['HOME'] }}/boxapi"
-    - "{{ ansible_facts['env']['HOME'] }}/boxapi/log"
+    - "{{ ansible_facts['env']['HOME'] }}/bone"
+    - "{{ ansible_facts['env']['HOME'] }}/bone/log"
 
 - name: "[Bone] Copy application files"
   ansible.builtin.copy:
     src: "bone/{{ item }}"
-    dest: "{{ ansible_facts['env']['HOME'] }}/boxapi/{{ item }}"
+    dest: "{{ ansible_facts['env']['HOME'] }}/bone/{{ item }}"
     mode: '0644'
   loop:
     - main.py
@@ -33,26 +33,26 @@
 - name: "[Bone] Create Python venv"
   ansible.builtin.command:
     cmd: python3 -m venv venv
-    chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
-    creates: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/python"
+    chdir: "{{ ansible_facts['env']['HOME'] }}/bone"
+    creates: "{{ ansible_facts['env']['HOME'] }}/bone/venv/bin/python"
 
 - name: "[Bone] Install Python dependencies"
   ansible.builtin.command:
-    cmd: "{{ ansible_facts['env']['HOME'] }}/boxapi/venv/bin/pip install --no-cache-dir -r requirements.txt"
-    chdir: "{{ ansible_facts['env']['HOME'] }}/boxapi"
+    cmd: "{{ ansible_facts['env']['HOME'] }}/bone/venv/bin/pip install --no-cache-dir -r requirements.txt"
+    chdir: "{{ ansible_facts['env']['HOME'] }}/bone"
   register: _bone_pip
   changed_when: "'Successfully installed' in _bone_pip.stdout"
 
 - name: "[Bone] Deploy launchd plist"
   ansible.builtin.template:
     src: bone-launchd.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist"
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
     mode: '0644'
   notify: Restart bone
 
 - name: "[Bone] Load launchd service"
   ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.api.plist
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist
   register: _bone_load
   changed_when: "'Bootstrap failed: 5' not in (_bone_load.stderr | default(''))"
   failed_when: >

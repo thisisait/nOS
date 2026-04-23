@@ -6,5 +6,5 @@
 
 - name: Restart bone
   ansible.builtin.command: >
-    launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.api"
+    launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.bone"
   failed_when: false

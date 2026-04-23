@@ -152,8 +152,7 @@ async def run_tag(
 # State & Migration Framework (agent 7) ------------------------------------
 # Additive routes. Helper logic lives in state.py / migrations.py /
 # upgrades.py / coexistence.py / events.py — all sibling modules in
-# ~/boxapi/ (install dir renames to ~/bone/ in L4). Do not restructure the
-# original routes above.
+# ~/bone/. Do not restructure the original routes above.
 # ============================================================================
 
 # Deferred imports so existing deployments without the new sibling modules

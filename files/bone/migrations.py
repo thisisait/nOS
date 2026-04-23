@@ -17,7 +17,7 @@ from typing import Any
 
 import yaml
 
-import state as state_mod  # sibling module in ~/boxapi/ (renames to ~/bone/ in L4)
+import state as state_mod  # sibling module in ~/bone/
 
 MIGRATIONS_DIR = Path(
     os.getenv("NOS_MIGRATIONS_DIR",

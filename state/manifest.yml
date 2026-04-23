@@ -754,7 +754,7 @@ services:
     stack: null
     install_flag: install_bone
     version_source: launchd
-    launchd_label: "eu.thisisait.nos.api"
+    launchd_label: "eu.thisisait.nos.bone"
     domain_var: bone_domain
     port_var: bone_port
     health_check:

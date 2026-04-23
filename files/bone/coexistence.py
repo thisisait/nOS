@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-import migrations as migrate_mod  # sibling module in ~/boxapi/ (renames to ~/bone/ in L4)
+import migrations as migrate_mod  # sibling module in ~/bone/
 import state as state_mod
 
 _SERVICE_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
