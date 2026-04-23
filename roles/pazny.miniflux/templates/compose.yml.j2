@@ -43,7 +43,9 @@ services:
       OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_miniflux_client_secret }}"
       OAUTH2_REDIRECT_URL: "https://{{ miniflux_domain | default('rss.dev.local') }}/oauth2/oidc/callback"
       OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/miniflux/"
+      OAUTH2_OIDC_PROVIDER_NAME: "Authentik"
       OAUTH2_USER_CREATION: "1"
+      DISABLE_LOCAL_AUTH: "0"
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:

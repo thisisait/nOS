@@ -49,7 +49,13 @@ From `tasks/stacks/stack-up.yml`, gate on `install_miniflux`:
   when: install_miniflux | default(false)
 ```
 
-## SSO tier
+## SSO
+
+**Native OIDC via Authentik** (login button on the sign-in page). Miniflux renders a "Sign in with Authentik" button next to the local username/password form. Users are auto-provisioned on first OIDC login (`OAUTH2_USER_CREATION=1`); local auth stays enabled (`DISABLE_LOCAL_AUTH=0`) as a fallback.
+
+Wired via env vars in the compose override (`OAUTH2_PROVIDER=oidc`, `OAUTH2_OIDC_DISCOVERY_ENDPOINT=https://auth.<tld>/application/o/miniflux/`, `OAUTH2_OIDC_PROVIDER_NAME=Authentik`). The nginx vhost does **not** run forward_auth — Miniflux owns authentication end-to-end. `extra_hosts: auth.<tld>:host-gateway` maps the Authentik hostname to the Docker gateway so in-container OIDC discovery resolves.
+
+### Tier
 
 Tier 3 (user) — `nos-users`, `nos-managers`, `nos-admins`.
 
