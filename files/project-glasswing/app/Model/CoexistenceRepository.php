@@ -98,6 +98,23 @@ final class CoexistenceRepository
 			->delete();
 	}
 
+	/**
+	 * Count services that have a coexistence scenario mid-flight: more than
+	 * one track and at least one inactive (i.e. waiting for a cutover or a
+	 * post-cutover cleanup). Reads the local mirror only, so cheap enough
+	 * for the dashboard summary.
+	 */
+	public function pendingCutoverCount(): int
+	{
+		$rows = $this->db->query(
+			'SELECT service, COUNT(*) AS n, SUM(active) AS active_count
+			 FROM coexistence_tracks
+			 GROUP BY service
+			 HAVING n > 1 AND active_count < n',
+		)->fetchAll();
+		return count($rows);
+	}
+
 	// BoxAPI passthroughs.
 
 	public function provision(string $service, array $body): array

@@ -9,6 +9,9 @@ use App\Model\RemediationRepository;
 use App\Model\PentestRepository;
 use App\Model\AdvisoryRepository;
 use App\Model\ScanStateRepository;
+use App\Model\PatchRepository;
+use App\Model\UpgradeRepository;
+use App\Model\CoexistenceRepository;
 
 final class DashboardPresenter extends BaseApiPresenter
 {
@@ -20,6 +23,9 @@ final class DashboardPresenter extends BaseApiPresenter
 		private PentestRepository $pentestRepo,
 		private AdvisoryRepository $advisoryRepo,
 		private ScanStateRepository $scanRepo,
+		private PatchRepository $patchRepo,
+		private UpgradeRepository $upgradeRepo,
+		private CoexistenceRepository $coexistRepo,
 	) {
 	}
 
@@ -52,6 +58,25 @@ final class DashboardPresenter extends BaseApiPresenter
 
 		$areasTotal = $areasTested + $areasPlanned;
 
+		// ---- Maintenance block -------------------------------------------------
+		// Consolidated "what's waiting for me to act on" aggregate for the UI
+		// front page. Each counter is cheap (local SQLite or one BoxAPI call)
+		// and non-fatal: if the source is unreachable, we return 0.
+		$upgradesPending = 0;
+		try {
+			foreach ($this->upgradeRepo->matrix() as $row) {
+				if (!empty($row['recipe_available'])) {
+					$upgradesPending++;
+				}
+			}
+		} catch (\Throwable) {
+			// BoxAPI down — keep 0, dashboard still renders.
+		}
+
+		$patchesDraft    = $this->patchRepo->statusCount('draft');
+		$patchesPending  = $this->patchRepo->statusCount('pending');
+		$coexistPending  = $this->coexistRepo->pendingCutoverCount();
+
 		$this->sendSuccess([
 			'scan_cycle' => $state['config']['scan_cycle'] ?? $state['latest_cycle'] ?? 0,
 			'last_scan' => $state['config']['last_advisory_check'] ?? null,
@@ -69,6 +94,17 @@ final class DashboardPresenter extends BaseApiPresenter
 				'areas_total' => $areasTotal,
 				'coverage_pct' => $areasTotal > 0 ? round($areasTested / $areasTotal * 100) : 0,
 				'findings' => $findingsTotal,
+			],
+			// New: unified actionable counters across the patch/update/upgrade/
+			// migrate suite. Consumers (front page badges, CLI, ntfy alerts) can
+			// read a single endpoint instead of fanning out to each subsystem.
+			'maintenance' => [
+				'upgrades_pending'           => $upgradesPending,
+				'patches_draft'              => $patchesDraft,
+				'patches_pending'            => $patchesPending,
+				'advisories_critical'        => $criticalPending,
+				'coexistence_pending_cutover' => $coexistPending,
+				'total'                      => $upgradesPending + $patchesDraft + $patchesPending + $criticalPending + $coexistPending,
 			],
 			'schedule' => $state['config']['schedule'] ?? '2x daily',
 			'next_batch' => $state['next_batch'] ?? [],

@@ -59,6 +59,13 @@ final class RouterFactory
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
 		$api->addRoute('api/v1/upgrades/<service>', 'Upgrades:service');
 		$api->addRoute('api/v1/upgrades', 'Upgrades:default');
+		// Patches — first-class sibling of upgrades (nested pentest/patches kept
+		// for backward compat, see PentestPresenter::actionPatches).
+		$api->addRoute('api/v1/patches/history', 'Patches:history');
+		$api->addRoute('api/v1/patches/<id>/plan', 'Patches:plan');
+		$api->addRoute('api/v1/patches/<id>/apply', 'Patches:apply');
+		$api->addRoute('api/v1/patches/<id>/events', 'Patches:events');
+		$api->addRoute('api/v1/patches[/<id>]', 'Patches:default');
 		$api->addRoute('api/v1/coexistence/<service>/provision', 'Coexistence:provision');
 		$api->addRoute('api/v1/coexistence/<service>/cutover', 'Coexistence:cutover');
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');

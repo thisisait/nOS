@@ -21,6 +21,7 @@ final class EventRepository
 		'handler_start', 'handler_ok',
 		'migration_start', 'migration_step_ok', 'migration_step_failed', 'migration_end',
 		'upgrade_start', 'upgrade_step_ok', 'upgrade_end',
+		'patch_start', 'patch_step_ok', 'patch_step_failed', 'patch_end',
 		'coexistence_provision', 'coexistence_cutover', 'coexistence_cleanup',
 	];
 
@@ -53,6 +54,7 @@ final class EventRepository
 				: null,
 			'migration_id' => $payload['migration_id'] ?? null,
 			'upgrade_id'   => $payload['upgrade_id']   ?? null,
+			'patch_id'     => $payload['patch_id']     ?? null,
 			'coexist_svc'  => $payload['coexistence_service'] ?? null,
 		];
 
@@ -85,6 +87,9 @@ final class EventRepository
 		}
 		if (!empty($filters['upgrade_id'])) {
 			$query->where('upgrade_id', $filters['upgrade_id']);
+		}
+		if (!empty($filters['patch_id'])) {
+			$query->where('patch_id', $filters['patch_id']);
 		}
 		if (!empty($filters['coexist_svc'])) {
 			$query->where('coexist_svc', $filters['coexist_svc']);
@@ -132,6 +137,25 @@ final class EventRepository
 		$items = [];
 		foreach ($this->db->table('events')
 			->where('upgrade_id', $upgradeId)
+			->order('id ASC')
+			->fetchAll() as $row) {
+			$item = $row->toArray();
+			if (!empty($item['result_json'])) {
+				$item['result'] = json_decode($item['result_json'], true);
+			}
+			$items[] = $item;
+		}
+		return $items;
+	}
+
+	/**
+	 * All events tied to a patch_id (chronological). Mirrors listForUpgrade.
+	 */
+	public function listForPatch(string $patchId): array
+	{
+		$items = [];
+		foreach ($this->db->table('events')
+			->where('patch_id', $patchId)
 			->order('id ASC')
 			->fetchAll() as $row) {
 			$item = $row->toArray();

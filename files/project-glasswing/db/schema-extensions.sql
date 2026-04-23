@@ -3,6 +3,8 @@
 -- re-run: all statements use CREATE ... IF NOT EXISTS.
 
 -- Events from the Ansible callback plugin (agent 3).
+-- NOTE: for already-initialized DBs, bin/init-db.php performs an idempotent
+-- ALTER TABLE ADD COLUMN sweep to add patch_id / any future typed ids.
 CREATE TABLE IF NOT EXISTS events (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     ts            TEXT NOT NULL,           -- ISO-8601
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS events (
     result_json   TEXT,                    -- JSON blob
     migration_id  TEXT,
     upgrade_id    TEXT,
+    patch_id      TEXT,
     coexist_svc   TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -26,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_events_ts        ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_type      ON events(type);
 CREATE INDEX IF NOT EXISTS idx_events_migration ON events(migration_id);
 CREATE INDEX IF NOT EXISTS idx_events_upgrade   ON events(upgrade_id);
+CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
 
 -- Migration history mirror. Source of truth lives in ~/.nos/state.yml; this
 -- table is a read cache populated via BoxAPI /api/state pushes.
@@ -81,3 +85,23 @@ CREATE TABLE IF NOT EXISTS coexistence_tracks (
 );
 CREATE INDEX IF NOT EXISTS idx_coexist_service ON coexistence_tracks(service);
 CREATE INDEX IF NOT EXISTS idx_coexist_active  ON coexistence_tracks(active);
+
+-- Patch apply history. Each apply/rollback produces one row. Mirrors
+-- upgrades_applied so the UI can render a unified "maintenance timeline".
+-- Source of truth is ~/.nos/state.yml patches_applied[] populated by the
+-- apply-patches engine; this table is a BoxAPI-pushed read cache.
+CREATE TABLE IF NOT EXISTS patches_applied (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    patch_id          TEXT NOT NULL,           -- PATCH-NNN (FK to patches.id)
+    component_id      TEXT,
+    finding_ref       TEXT,
+    applied_at        TEXT NOT NULL,
+    success           INTEGER NOT NULL,
+    duration_sec      INTEGER,
+    rolled_back       INTEGER NOT NULL DEFAULT 0,
+    event_run_id      TEXT,
+    raw_record_json   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_patches_applied_patch ON patches_applied(patch_id);
+CREATE INDEX IF NOT EXISTS idx_patches_applied_at    ON patches_applied(applied_at);
+CREATE INDEX IF NOT EXISTS idx_patches_applied_comp  ON patches_applied(component_id);

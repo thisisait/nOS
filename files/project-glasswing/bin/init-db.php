@@ -305,6 +305,39 @@ if (is_file($extPath)) {
 	}
 }
 
+/**
+ * Idempotent ALTER TABLE ADD COLUMN sweep.
+ *
+ * SQLite has no "ALTER TABLE ADD COLUMN IF NOT EXISTS". For DBs that were
+ * initialized before a new correlation column was added to schema-extensions.sql
+ * (where CREATE TABLE IF NOT EXISTS is a no-op on existing tables), we detect
+ * missing columns via PRAGMA table_info and ALTER them in.
+ *
+ * @param SQLite3 $db
+ * @param string  $table
+ * @param array<string,string> $columns  map: column name -> SQL type/constraints
+ */
+$addMissingColumns = static function (SQLite3 $db, string $table, array $columns): void {
+	$have = [];
+	$res = $db->query('PRAGMA table_info(' . $table . ')');
+	if ($res instanceof SQLite3Result) {
+		while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+			$have[$row['name']] = true;
+		}
+	}
+	foreach ($columns as $name => $type) {
+		if (!isset($have[$name])) {
+			$db->exec(sprintf('ALTER TABLE %s ADD COLUMN %s %s', $table, $name, $type));
+		}
+	}
+};
+
+// events.patch_id — correlate events with apply-patches runs.
+$addMissingColumns($db, 'events', [
+	'patch_id' => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_events_patch ON events(patch_id)');
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';
@@ -312,4 +345,5 @@ echo "$status database schema at $dbPath\n";
 echo "Tables: components, scan_cycles, component_scan_state, scan_config, attack_probes,\n";
 echo "        remediation_items, advisories, pentest_targets, pentest_areas_tested,\n";
 echo "        pentest_areas_planned, pentest_findings, patches, report_types,\n";
-echo "        events, migrations_applied, upgrades_applied, coexistence_tracks\n";
+echo "        events, migrations_applied, upgrades_applied, patches_applied,\n";
+echo "        coexistence_tracks\n";
