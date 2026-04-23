@@ -124,6 +124,7 @@ services:
       url_template: "http://localhost:{{ infisical_port }}/api/status"
       expect_status: 200
     upgrade_recipe: upgrades/infisical.yml
+    oidc: native                            # env-seeded org SSO config; requires one-time Security→SSO toggle in UI post-install
 
   - id: portainer
     category: devops
@@ -241,7 +242,7 @@ services:
     image: wordpress
     domain_var: wordpress_domain
     port_var: wordpress_port
-    oidc: proxy
+    oidc: native
     rbac_tier: 4
 
   - id: nextcloud
@@ -316,7 +317,7 @@ services:
     image: jellyfin/jellyfin
     domain_var: jellyfin_domain
     port_var: jellyfin_port
-    oidc: proxy
+    oidc: native
     rbac_tier: 4
 
   - id: open_webui
@@ -369,7 +370,7 @@ services:
     image: ghcr.io/home-assistant/home-assistant
     domain_var: homeassistant_domain
     port_var: homeassistant_port
-    oidc: proxy
+    oidc: native
     rbac_tier: 3
 
   - id: rustfs
@@ -540,7 +541,7 @@ services:
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/erpnext.yml
-    oidc: proxy
+    oidc: native
     rbac_tier: 2
 
   - id: freescout
@@ -553,7 +554,7 @@ services:
     domain_var: freescout_domain
     port_var: freescout_port
     data_path_var: freescout_data_dir
-    oidc: proxy
+    oidc: native
     rbac_tier: 2
 
   - id: outline
@@ -675,7 +676,7 @@ services:
     image: apache/superset
     port_var: superset_port
     data_path_var: superset_data_dir
-    oidc: proxy
+    oidc: native
     rbac_tier: 2
 
   - id: influxdb
