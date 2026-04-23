@@ -15,9 +15,14 @@ postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
-# max_connections bump na 400 — Authentik 2025.x drzi ~60 spojeni i s
-# CONN_MAX_AGE=0 behem pikoveho provozu, plus Outline/Hedgedoc/Superset/
-# Metabase/Paperclip/Miniflux/Nextcloud in parallel. Default 100 leads to the error
-# "remaining connection slots are reserved for SUPERUSER" during concurrent
-# startu. Jde dohromady s pazny.authentik pool tuning (authentik_pg_conn_max_age).
-postgresql_max_connections: 400
+# max_connections bumped from 400 -> 600 after observing a runtime leak:
+# Authentik 2025.x keeps growing its pool even with CONN_MAX_AGE=0 — ~390
+# idle Authentik connections observed in a freshly-blanked install, which
+# exhausts max_connections=400 and locks Outline + HedgeDoc out with
+# "remaining connection slots are reserved for SUPERUSER" on startup.
+# Paired with postgresql_idle_session_timeout_ms below, which makes PG
+# auto-close idle connections older than 5 min — the real fix for the leak,
+# applied server-side because we cannot easily patch Authentik's pool.
+postgresql_max_connections: 600
+postgresql_idle_session_timeout_ms: 300000          # 5 min — close truly idle client connections
+postgresql_idle_in_transaction_timeout_ms: 60000    # 1 min — close idle transactions (rogue client safety)

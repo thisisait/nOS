@@ -1,12 +1,12 @@
 # =============================================================================
 # pazny.postgresql — compose override fragment
-# Merged do `docker compose up` v tasks/stacks/core-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
+# Merged into `docker compose up` by tasks/stacks/core-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/infra/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
-# Docker compose merge semantics umoznuje referencovat vnejsi networky
-# dokud je kterykoli z merge-ovanych souboru definuje.
+# Does not declare top-level networks: — infra_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/infra/docker-compose.yml.j2.
+# Docker compose merge semantics allow referencing external networks as long
+# as any of the merged files defines them.
 # =============================================================================
 
 services:
@@ -18,7 +18,17 @@ services:
       - "127.0.0.1:{{ postgresql_port | default(5432) }}:5432"
     volumes:
       - {{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}:/var/lib/postgresql/data
-    command: ["-c", "max_connections={{ postgresql_max_connections | default(300) }}"]
+    command:
+      - "-c"
+      - "max_connections={{ postgresql_max_connections | default(600) }}"
+      - "-c"
+      # Auto-close truly idle client sessions. Authentik 2025.x has a pool
+      # leak that grows to ~400 idle connections even with CONN_MAX_AGE=0;
+      # letting PostgreSQL reap them server-side is the reliable fix.
+      - "idle_session_timeout={{ postgresql_idle_session_timeout_ms | default(300000) }}"
+      - "-c"
+      # Safety net for rogue clients that open a transaction and wander off.
+      - "idle_in_transaction_session_timeout={{ postgresql_idle_in_transaction_timeout_ms | default(60000) }}"
     environment:
       POSTGRES_PASSWORD: "{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}"
       POSTGRES_USER: "{{ postgresql_root_user | default('postgres') }}"

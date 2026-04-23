@@ -326,8 +326,16 @@ health_probes:
     proto: http
     port_var: outline_port
     port_default: 3005
+    # OIDC is env-driven (compose template sets OIDC_* when install_authentik is
+    # on), so no manual SSO step is needed on a healthy install. If this probe
+    # still fails, the real suspect is PostgreSQL connection-pool exhaustion:
+    # Authentik 2025.x can grow to ~400 idle connections and lock Outline out
+    # with "remaining connection slots are reserved for SUPERUSER". Check with:
+    #   docker exec infra-postgresql-1 psql -U postgres \
+    #     -c "SELECT usename, state, count(*) FROM pg_stat_activity \
+    #         GROUP BY usename, state ORDER BY count DESC;"
     onboarding: true
-    hint: "Outline requires an SSO provider (Authentik OIDC). Configure under Settings → Authentication."
+    hint: "Outline 502 usually means PostgreSQL is saturated (Authentik pool leak). Inspect pg_stat_activity; postgresql_max_connections + idle_session_timeout now reap the leak automatically on the next restart."
 
   - slug: freepbx
     name: "FreePBX"
