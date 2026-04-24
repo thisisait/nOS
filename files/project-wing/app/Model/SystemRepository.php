@@ -179,7 +179,7 @@ final class SystemRepository
 			CURLOPT_TIMEOUT => (int) ceil($timeout),
 			CURLOPT_CONNECTTIMEOUT_MS => (int) ($timeout * 1000),
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_USERAGENT => 'Glasswing/2.0',
+			CURLOPT_USERAGENT => 'Wing/2.0',
 		]);
 		curl_exec($handle);
 		$code = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Glasswing — NOS Security Research Dashboard</title>
+<title>Wing — NOS Security Research Dashboard</title>
 <style>
 :root {
   --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
@@ -142,7 +142,7 @@ a { color: var(--accent); text-decoration: none; }
 <div class="header">
   <div class="header-left">
     <div>
-      <h1>Glasswing <span style="color:var(--text2); font-weight:400">NOS Security Research</span></h1>
+      <h1>Wing <span style="color:var(--text2); font-weight:400">NOS Security Research</span></h1>
       <div class="subtitle">FOSS vulnerability monitoring, autonomous pentesting, upstream patch development</div>
     </div>
   </div>
@@ -857,8 +857,8 @@ function buildRemediation() {
 function buildHelp() {
   const frag = document.createDocumentFragment();
   const help = h('div',{class:'help'});
-  help.appendChild(h('h3',null,'Project Glasswing \u2014 NOS FOSS Security Research'));
-  help.appendChild(h('p',null,'Glasswing is an autonomous security research pipeline for nOS \u2014 a self-hosted FOSS platform running 40+ Docker services on Apple Silicon.'));
+  help.appendChild(h('h3',null,'Project Wing \u2014 NOS FOSS Security Research'));
+  help.appendChild(h('p',null,'Wing is an autonomous security research pipeline for nOS \u2014 a self-hosted FOSS platform running 40+ Docker services on Apple Silicon.'));
 
   help.appendChild(h('h3',{style:{marginTop:'16px'}},'How it works'));
   const ol1 = h('ol');

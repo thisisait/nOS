@@ -5,7 +5,7 @@
 # Consumed by:
 #   - nos_state (introspect)        — reports installed version per service
 #   - nos_migrate                   — detects coexistence support, reads identifiers
-#   - Glasswing Upgrades matrix     — list of services to poll
+#   - Wing Upgrades matrix     — list of services to poll
 #   - Bone /api/state/services      — canonical list
 #
 # When you add a Docker service, append an entry here. Entries are validated

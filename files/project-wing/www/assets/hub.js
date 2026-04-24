@@ -1,5 +1,5 @@
 /**
- * Glasswing Hub — systems dashboard client-side logic.
+ * Wing Hub — systems dashboard client-side logic.
  *   - Stack/search filtering
  *   - Health probe polling via /api/v1/hub/health
  */

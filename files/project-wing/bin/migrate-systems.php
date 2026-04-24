@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Glasswing — Migrate components -> systems table.
+ * Wing — Migrate components -> systems table.
  *
  * Idempotent: safe to re-run. Checks if migration is needed by looking
  * for the old `components` TABLE (not VIEW). If `systems` table already

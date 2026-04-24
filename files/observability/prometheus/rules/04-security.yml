@@ -1,7 +1,7 @@
 # ==============================================================================
 # nOS Prometheus Alert Rules — Security
 #
-# Covers: Glasswing CVE tracker, Vaultwarden admin token aging, failed-sudo
+# Covers: Wing CVE tracker, Vaultwarden admin token aging, failed-sudo
 # bursts (Loki), suspicious Nginx probe paths (Loki).
 # Domain label: security
 # ==============================================================================
@@ -10,8 +10,8 @@ groups:
   - name: nos_security_cve
     interval: 5m
     rules:
-      # Glasswing pushes `nos_cve_open{severity="HIGH|CRITICAL",cve="CVE-...",service="..."}` via its callback plugin.
-      # TODO: confirm exact label names when A5 ships the Glasswing pushgateway.
+      # Wing pushes `nos_cve_open{severity="HIGH|CRITICAL",cve="CVE-...",service="..."}` via its callback plugin.
+      # TODO: confirm exact label names when A5 ships the Wing pushgateway.
       - alert: NosCriticalCveFoundHigh
         expr: nos_cve_open{severity="HIGH"} > 0
         for: 1h
@@ -21,7 +21,7 @@ groups:
         annotations:
           summary: "HIGH-severity CVE open: {{ $labels.cve }} ({{ $labels.service }})"
           description: |
-            Glasswing reports {{ $value }} open HIGH-severity CVE(s) affecting
+            Wing reports {{ $value }} open HIGH-severity CVE(s) affecting
             {{ $labels.service }} (example: {{ $labels.cve }}). Patch window
             should be prioritized within the next sprint.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundHigh.md"
@@ -35,7 +35,7 @@ groups:
         annotations:
           summary: "CRITICAL CVE open: {{ $labels.cve }} ({{ $labels.service }})"
           description: |
-            Glasswing reports {{ $value }} open CRITICAL CVE(s) affecting
+            Wing reports {{ $value }} open CRITICAL CVE(s) affecting
             {{ $labels.service }} (example: {{ $labels.cve }}). Patch immediately
             — consider taking the service offline until remediated.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundCritical.md"
@@ -43,7 +43,7 @@ groups:
   - name: nos_security_secrets
     interval: 1h
     rules:
-      # Vaultwarden admin-token rotation monitor. Expects an exporter (or Glasswing
+      # Vaultwarden admin-token rotation monitor. Expects an exporter (or Wing
       # hook) that publishes `nos_vaultwarden_admin_token_age_seconds`.
       # TODO: add a scraper for the admin_token mtime in the vaultwarden role.
       - alert: NosWarningVaultwardenAdminTokenOld

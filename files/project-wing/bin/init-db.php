@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Glasswing — Idempotent SQLite schema initialization.
+ * Wing — Idempotent SQLite schema initialization.
  * Usage: php bin/init-db.php [--data-dir=/path/to/data]
  */
 

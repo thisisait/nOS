@@ -4,7 +4,7 @@
 # Copy this file to patches/PATCH-NNN.yml. Each patch = one file. Schema is
 # intentionally small today; new step kinds land in tasks/apply-patches.yml
 # as they are needed. The on-disk YAML is the source of truth — the matching
-# row in Glasswing's `patches` table is a read mirror that developers keep
+# row in Wing's `patches` table is a read mirror that developers keep
 # in sync.
 #
 # Lifecycle (tasks/apply-patches.yml):
@@ -24,7 +24,7 @@ id: PATCH-000                          # REQUIRED. Format: PATCH-NNN or PATCH-NN
 component: example                     # REQUIRED. Matches systems.id (e.g. puter, superset).
 severity: MEDIUM                       # REQUIRED. CRITICAL | HIGH | MEDIUM | LOW.
 status: draft                          # REQUIRED. draft | ready | applied | superseded.
-title: "One-line summary of the fix"   # REQUIRED. Rendered as the card heading in Glasswing.
+title: "One-line summary of the fix"   # REQUIRED. Rendered as the card heading in Wing.
 
 # Optional cross-refs — surfaced in the UI if present.
 finding_ref: null                      # e.g. "PENTEST-017" (FK to pentest_findings.id).

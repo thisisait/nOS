@@ -1,4 +1,4 @@
-/* Glasswing — Coexistence cutover + cleanup UI.
+/* Wing — Coexistence cutover + cleanup UI.
  *
  * Cutover is destructive, so we require a typed confirmation ("CUTOVER") before
  * submitting. Also updates TTL countdowns every second.

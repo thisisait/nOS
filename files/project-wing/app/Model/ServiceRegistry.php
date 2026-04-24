@@ -92,7 +92,7 @@ final class ServiceRegistry
 			CURLOPT_TIMEOUT => (int) ceil($timeoutSeconds),
 			CURLOPT_CONNECTTIMEOUT_MS => (int) ($timeoutSeconds * 1000),
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_USERAGENT => 'Glasswing-Hub/1.0',
+			CURLOPT_USERAGENT => 'Wing-Hub/1.0',
 		]);
 		curl_exec($handle);
 		$code = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);

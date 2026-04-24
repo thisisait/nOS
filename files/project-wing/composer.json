@@ -1,6 +1,6 @@
 {
   "name": "nos/wing",
-  "description": "Wing — nOS security research dashboard (formerly Glasswing)",
+  "description": "Wing — nOS security research dashboard (formerly Wing)",
   "type": "project",
   "require": {
     "php": ">=8.3",

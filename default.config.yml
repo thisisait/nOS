@@ -111,7 +111,7 @@ install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP c
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
-install_wing: true           # Glasswing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
+install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 install_playwright_tests: false   # Playwright e2e tests under files/project-wing/tests (smoke + first-admin provisioning)
 
 # ── macOS system configuration ────────────────────────────────────────────────
@@ -453,7 +453,7 @@ php_composer_packages:
   # - name: drush/drush
   #   state: present
 
-# ── Glasswing Security Dashboard ─────────────────────────────────────────────
+# ── Wing Security Dashboard ─────────────────────────────────────────────
 wing_domain: "glasswing.dev.local"
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
@@ -1717,7 +1717,7 @@ authentik_oidc_apps:
     launch_url: "https://{{ puter_domain | default('os.dev.local') }}"
     external_host: "https://{{ puter_domain | default('os.dev.local') }}"
     type: "proxy"
-  - name: "Glasswing"
+  - name: "Wing"
     slug: "glasswing"
     enabled: "{{ install_wing | default(install_php | default(true)) }}"
     launch_url: "https://{{ wing_domain | default('glasswing.dev.local') }}"

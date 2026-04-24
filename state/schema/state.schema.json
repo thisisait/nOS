@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/state.schema.json",
   "title": "nOS Runtime State (~/.nos/state.yml)",
-  "description": "Runtime state persisted by pazny.state_manager. Source of truth for the Glasswing read model. See docs/framework-plan.md §3.2.",
+  "description": "Runtime state persisted by pazny.state_manager. Source of truth for the Wing read model. See docs/framework-plan.md §3.2.",
   "type": "object",
   "required": ["schema_version", "generated_at", "generator", "instance", "services"],
   "additionalProperties": true,

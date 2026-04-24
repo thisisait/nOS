@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Ansible run history + Glasswing event timeline + migration / upgrade queues. Fed by callback_plugins/glasswing_telemetry.py (BoxAPI → Glasswing SQLite with ~/.nos/events.jsonl fallback).",
+  "description": "Ansible run history + Wing event timeline + migration / upgrade queues. Fed by callback_plugins/glasswing_telemetry.py (BoxAPI → Wing SQLite with ~/.nos/events.jsonl fallback).",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -27,18 +27,18 @@
       "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "Every `main.yml` run emits structured events via `callback_plugins/glasswing_telemetry.py`. Events land in **BoxAPI → Glasswing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"glasswing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
+        "content": "Every `main.yml` run emits structured events via `callback_plugins/glasswing_telemetry.py`. Events land in **BoxAPI → Wing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"glasswing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
       }
     },
     {
       "type": "text",
       "id": 2,
       "title": "Last run recap",
-      "description": "Pulls ~/.nos/state.yml last_run.recap via an Alloy file_scrape + Loki tail. For now: open Glasswing /timeline for the live view.",
+      "description": "Pulls ~/.nos/state.yml last_run.recap via an Alloy file_scrape + Loki tail. For now: open Wing /timeline for the live view.",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 4},
       "options": {
         "mode": "markdown",
-        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Glasswing `/timeline`\n- `glasswing.sqlite` → `ansible_runs`"
+        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Wing `/timeline`\n- `glasswing.sqlite` → `ansible_runs`"
       }
     },
     {
@@ -151,7 +151,7 @@
   "time": {"from": "now-7d", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "nOS — Playbook & Glasswing Timeline",
+  "title": "nOS — Playbook & Wing Timeline",
   "uid": "nos-99-playbook",
   "version": 1,
   "weekStart": ""

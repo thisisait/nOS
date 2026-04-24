@@ -9,7 +9,7 @@ service: example                      # REQUIRED. Must match state/manifest.yml 
 docs_url: "https://example.com/docs"  # optional
 maintainers: ["pazny"]
 notes: |
-  Free-form human notes — shown at the top of the recipe in Glasswing.
+  Free-form human notes — shown at the top of the recipe in Wing.
 
 recipes:
   # Each block is a single version transition. Multiple recipes can live in

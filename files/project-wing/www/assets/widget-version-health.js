@@ -1,4 +1,4 @@
-/* Glasswing — version-health dashboard widget.
+/* Wing — version-health dashboard widget.
  * Polls /api/v1/state every 30s and re-renders the top-5 services needing attention.
  * Safe DOM construction (no innerHTML).
  */

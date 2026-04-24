@@ -1,4 +1,4 @@
-/* Glasswing — Dashboard widgets (version-health, pending-migrations, event-stream).
+/* Wing — Dashboard widgets (version-health, pending-migrations, event-stream).
  * Consolidated styles; widgets are embedded in Dashboard/default.latte via {include @widgets/...}.
  */
 

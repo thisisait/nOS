@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Glasswing — Provision/reconverge API token (called by Ansible).
+ * Wing — Provision/reconverge API token (called by Ansible).
  *
  * Idempotent UPSERT: DELETE all rows matching --name, then INSERT the new
  * token hash. Runs every playbook execution so prefix rotation propagates

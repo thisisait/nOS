@@ -27,7 +27,7 @@
       "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails → Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** — full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Glasswing telemetry (`callback_plugins/glasswing_telemetry.py`) streams agent runs to Loki today."
+        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails → Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** — full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Wing telemetry (`callback_plugins/glasswing_telemetry.py`) streams agent runs to Loki today."
       }
     },
     {
@@ -73,7 +73,7 @@
     {
       "type": "timeseries",
       "id": 6,
-      "title": "Agent runs / minute (Glasswing event stream via Loki)",
+      "title": "Agent runs / minute (Wing event stream via Loki)",
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
       "targets": [

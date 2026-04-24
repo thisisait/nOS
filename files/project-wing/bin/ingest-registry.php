@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Glasswing — Ingest service-registry.json into systems table.
+ * Wing — Ingest service-registry.json into systems table.
  *
  * Usage:
  *   php bin/ingest-registry.php --registry=/path/to/service-registry.json

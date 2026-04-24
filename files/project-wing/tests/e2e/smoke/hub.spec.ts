@@ -1,7 +1,7 @@
 import { test, expect, request } from '@playwright/test';
 import { gotoWithAuth } from '../fixtures/authentik';
 
-test.describe('Glasswing Hub — smoke', () => {
+test.describe('Wing Hub — smoke', () => {
   test('GET /api/v1/hub/systems returns systems list', async () => {
     const ctx = await request.newContext({ ignoreHTTPSErrors: true });
     const res = await ctx.get('/api/v1/hub/systems');
@@ -52,7 +52,7 @@ test.describe('Glasswing Hub — smoke', () => {
 
   test('public homepage loads without auth', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('Glasswing');
+    await expect(page.locator('h1')).toContainText('Wing');
     await expect(page.getByRole('link', { name: /systems hub/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /security dashboard/i })).toBeVisible();
   });

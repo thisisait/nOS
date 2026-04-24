@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Glasswing — One-time JSON to SQLite data migration.
+ * Wing — One-time JSON to SQLite data migration.
  * Usage: php bin/migrate.php --json-dir=/path/to/docs/llm/security
  */
 

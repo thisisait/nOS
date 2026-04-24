@@ -1,4 +1,4 @@
-/* Glasswing — Migrations UI
+/* Wing — Migrations UI
  *
  * Handles [Preview], [Apply], [Rollback] buttons on both /migrations and
  * /migrations/<id>. Uses the shared Preview modal to show a dry-run plan

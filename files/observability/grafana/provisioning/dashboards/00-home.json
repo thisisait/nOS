@@ -398,7 +398,7 @@
       "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
       "id": 103,
       "panels": [],
-      "title": "Playbook run summary (Glasswing telemetry)",
+      "title": "Playbook run summary (Wing telemetry)",
       "type": "row"
     },
     {

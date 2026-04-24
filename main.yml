@@ -915,10 +915,10 @@
       tags: ['vulnscan']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Glasswing - Security Research Dashboard (Nette PHP + SQLite)
+    # Wing - Security Research Dashboard (Nette PHP + SQLite)
     # Wave 2.1 role extraction - see docs/wave2-role-migration.md
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "Glasswing (pazny.wing role)"
+    - name: "Wing (pazny.wing role)"
       ansible.builtin.import_role:
         name: pazny.wing
       when: install_wing | default(install_php | default(true))
@@ -975,7 +975,7 @@
 
     # ── State & Migration Framework: post-provision state report ─────────────
     # Introspects running services + persists ~/.nos/state.yml with the result.
-    # Pushes a snapshot to Glasswing so the dashboard reflects the current run.
-    - name: "[Framework] State report (persist + push to Glasswing)"
+    # Pushes a snapshot to Wing so the dashboard reflects the current run.
+    - name: "[Framework] State report (persist + push to Wing)"
       ansible.builtin.import_tasks: tasks/state-report.yml
       tags: ['always', 'state', 'report']

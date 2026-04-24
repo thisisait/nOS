@@ -14,7 +14,7 @@ id: "YYYY-MM-DD-short-slug"         # REQUIRED, matches filename
 title: "Human-readable one-liner"    # REQUIRED
 summary: |                            # REQUIRED
   1-2 sentence plain-English explanation of what this migration does and
-  WHY it needs to run. Surfaces in the Glasswing Migrations card.
+  WHY it needs to run. Surfaces in the Wing Migrations card.
 severity: patch                       # REQUIRED: patch | minor | breaking | security
 authors: ["you@example.com"]
 created_at: "YYYY-MM-DD"              # REQUIRED (ISO date)

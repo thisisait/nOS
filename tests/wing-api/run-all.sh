@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run all Glasswing State & Migration Framework tests.
+# Run all Wing State & Migration Framework tests.
 set -u
 
 cd "$(dirname "$0")"

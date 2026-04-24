@@ -90,8 +90,8 @@ final class EventsPresenter extends BaseApiPresenter
 
 	/**
 	 * Validate HMAC signature. Callback plugin sends:
-	 *   X-Glasswing-Timestamp: <unix ts>
-	 *   X-Glasswing-Signature: hex(hmac_sha256(secret, "<ts>.<raw_body>"))
+	 *   X-Wing-Timestamp: <unix ts>
+	 *   X-Wing-Signature: hex(hmac_sha256(secret, "<ts>.<raw_body>"))
 	 * The secret is read from GLASSWING_EVENTS_HMAC_SECRET (populated by the
 	 * nginx fastcgi_param block). Timestamp must be within ±300s of server
 	 * time (replay protection).
@@ -104,8 +104,8 @@ final class EventsPresenter extends BaseApiPresenter
 		}
 
 		$req = $this->getHttpRequest();
-		$ts  = (string) $req->getHeader('X-Glasswing-Timestamp');
-		$sig = (string) $req->getHeader('X-Glasswing-Signature');
+		$ts  = (string) $req->getHeader('X-Wing-Timestamp');
+		$sig = (string) $req->getHeader('X-Wing-Signature');
 
 		if ($ts === '' || $sig === '') {
 			$this->sendError('Missing HMAC headers', 401);

@@ -136,7 +136,7 @@ final class PatchRepository
 	 * when state_manager pushes the updated ~/.nos/state.yml patches_applied[].
 	 *
 	 * Idempotent: if a row with the same (patch_id, applied_at) already exists
-	 * we return its id without re-inserting. This lets Glasswing re-sync from
+	 * we return its id without re-inserting. This lets Wing re-sync from
 	 * BoxAPI freely without creating duplicate timeline entries.
 	 *
 	 * Returns the row id (newly inserted or existing).

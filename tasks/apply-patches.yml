@@ -26,7 +26,7 @@
 #
 #   On completion we append a record to ~/.nos/state.yml patches_applied[],
 #   which the state_manager role later pushes to BoxAPI, which mirrors it
-#   into Glasswing's patches_applied table. The record shape:
+#   into Wing's patches_applied table. The record shape:
 #
 #     - patch_id:      "PATCH-001"
 #       component_id:  "puter"

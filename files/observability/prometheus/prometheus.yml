@@ -14,7 +14,7 @@ global:
 #   01-infra.yml       — PostgreSQL, MariaDB, Redis, containers, host disk/memory
 #   02-network.yml     — Nginx 5xx/latency, blackbox probes, TLS cert expiry
 #   03-apps.yml        — Authentik, Outline, BookStack/Firefly migrations, stack health
-#   04-security.yml    — Glasswing CVE feed, Vaultwarden token age, auth/path scans
+#   04-security.yml    — Wing CVE feed, Vaultwarden token age, auth/path scans
 rule_files:
   - /etc/prometheus/rules/*.yml
 

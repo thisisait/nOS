@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Glasswing frontend smoke test
+# Wing frontend smoke test
 #
 # Headless, dependency-free check that the state-framework views render with:
 #   - expected HTML skeleton
@@ -49,7 +49,7 @@ check_path() {
     ok "$label"
 }
 
-printf 'Glasswing frontend smoke — BASE_URL=%s\n' "$BASE_URL"
+printf 'Wing frontend smoke — BASE_URL=%s\n' "$BASE_URL"
 
 check_path "/migrations"              "Migrations index"  "migrations.css"  "migrations.js"  "mig-grid"
 check_path "/upgrades"                "Upgrades matrix"   "upgrades.css"    "upg-matrix"

@@ -27,7 +27,7 @@
       "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "Vaultwarden stock images do **not** expose `/metrics` (requires `-Dvaultwarden/metrics` at build). Use a PG-exporter custom query against `vaultwarden.users` (Wave 1+). Infisical exposes `/api/v1/metrics` — wired via Prometheus scrape job when `install_infisical=true`. CVE queue is pulled from Glasswing's `security_findings` table (Wave 1+ exporter). Until then the panel shows a placeholder."
+        "content": "Vaultwarden stock images do **not** expose `/metrics` (requires `-Dvaultwarden/metrics` at build). Use a PG-exporter custom query against `vaultwarden.users` (Wave 1+). Infisical exposes `/api/v1/metrics` — wired via Prometheus scrape job when `install_infisical=true`. CVE queue is pulled from Wing's `security_findings` table (Wave 1+ exporter). Until then the panel shows a placeholder."
       }
     },
     {
@@ -132,7 +132,7 @@
     {
       "type": "row",
       "id": 102,
-      "title": "CVE queue (Glasswing)",
+      "title": "CVE queue (Wing)",
       "gridPos": {"h": 1, "w": 24, "x": 0, "y": 35},
       "collapsed": false,
       "panels": []
@@ -141,7 +141,7 @@
       "type": "bargauge",
       "id": 9,
       "title": "Open findings by severity — placeholder (Wave 1+)",
-      "description": "SELECT severity, count(*) FROM security_findings WHERE status='open' GROUP BY severity — via Glasswing SQLite exporter.",
+      "description": "SELECT severity, count(*) FROM security_findings WHERE status='open' GROUP BY severity — via Wing SQLite exporter.",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36},
       "targets": [

@@ -148,7 +148,7 @@ groups:
   - name: nos_apps_wave5_placeholders
     interval: 5m
     rules:
-      # Wave 5 integration: Glasswing will push a gauge per service indicating
+      # Wave 5 integration: Wing will push a gauge per service indicating
       # a newer upstream version is available. Until then, the metric is absent
       # and this alert never fires.
       # TODO: replace `absent(nos_upgrade_available)` wrapper once A5 ships the exporter.
@@ -161,7 +161,7 @@ groups:
         annotations:
           summary: "Upgrade available for {{ $labels.service }}"
           description: |
-            Glasswing has detected a newer upstream version for
+            Wing has detected a newer upstream version for
             {{ $labels.service }} (current {{ $labels.current_version }},
             latest {{ $labels.latest_version }}). Run
             `ansible-playbook main.yml -K --tags upgrade -e upgrade_service={{ $labels.service }}`.

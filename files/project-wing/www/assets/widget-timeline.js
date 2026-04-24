@@ -1,4 +1,4 @@
-/* Glasswing — Timeline client behaviour.
+/* Wing — Timeline client behaviour.
  * - Filter chips (filter events in-place by data-kind).
  * - Infinite scroll / Load-more against /api/v1/events?cursor=<>.
  */

@@ -10,7 +10,7 @@
 #      Nginx HTTPS loopback, and optional Docker healthcheck pass-through
 #   5. reconverge the admin password (reset-password.py)
 #   6. invoke setup-monitors.py with a spec JSON that covers
-#        monitors + ntfy + Glasswing webhook + public status page
+#        monitors + ntfy + Wing webhook + public status page
 #   7. verify monitor count
 # ==============================================================================
 

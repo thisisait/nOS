@@ -1,4 +1,4 @@
-/* Glasswing Dashboard — client-side interactivity */
+/* Wing Dashboard — client-side interactivity */
 (function () {
 	'use strict';
 
