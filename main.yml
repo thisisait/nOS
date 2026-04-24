@@ -918,9 +918,9 @@
     # Glasswing - Security Research Dashboard (Nette PHP + SQLite)
     # Wave 2.1 role extraction - see docs/wave2-role-migration.md
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "Glasswing (pazny.glasswing role)"
+    - name: "Glasswing (pazny.wing role)"
       ansible.builtin.import_role:
-        name: pazny.glasswing
+        name: pazny.wing
       when: install_glasswing | default(install_php | default(true))
       tags: ['glasswing', 'security']
 

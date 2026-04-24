@@ -1,9 +1,9 @@
 ---
 galaxy_info:
-  role_name: glasswing
+  role_name: wing
   namespace: pazny
   author: Pázny
-  description: Nette PHP + SQLite security research dashboard (nOS)
+  description: Wing — Nette PHP + SQLite read model / dashboard organ of nOS (formerly Glasswing)
   license: MIT
   min_ansible_version: "2.14"
   platforms:
@@ -12,7 +12,7 @@ galaxy_info:
         - all
 
 # No role dependencies — PHP / nginx / composer are installed in main.yml
-# before the glasswing role. The handler "Restart php-fpm" is defined play-level
+# before the wing role. The handler "Restart php-fpm" is defined play-level
 # in main.yml and globally visible to all roles.
 dependencies: []
 
