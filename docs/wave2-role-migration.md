@@ -202,7 +202,7 @@ Invocation from `tasks/stacks/core-up.yml`:
 | `roles/pazny.glasswing/templates/` | — | **Does not exist.** Glasswing is non-Docker (nginx vhost + PHP-FPM). No compose fragment, no `{{ stacks_dir }}/<stack>/overrides/` render. |
 | `files/project-glasswing/` | Unchanged | **Stays in place.** The role rsyncs it from `{{ playbook_dir }}/files/project-glasswing/`; treating it as role `files/` would force every consumer to vendor the Nette PHP app. Same rule applies to jsOS, OpenClaw, iiab-terminal when those migrate in Wave 2.2. |
 
-Glasswing is the template for **task-only roles** (non-Docker, no compose override). The Wave 2.2 `non-docker-services` worker (Unit 13) uses this exact shape for `pazny.jsos`, `pazny.iiab_terminal`, `pazny.openclaw`, `pazny.boxapi`.
+Glasswing is the template for **task-only roles** (non-Docker, no compose override). The Wave 2.2 `non-docker-services` worker (Unit 13) uses this exact shape for `pazny.jsos`, `pazny.iiab_terminal`, `pazny.openclaw`, `pazny.bone`.
 
 ### Override file placement convention
 
@@ -241,7 +241,7 @@ After Wave 2.2 Unit 2 lands, `stack-up.yml` will create the equivalent directori
 
 Do not move into roles:
 
-- **`files/project-<name>/`** — internal app source (Glasswing/jsOS/OpenClaw/iiab-terminal/boxapi). The role rsyncs from `{{ playbook_dir }}/files/project-<name>/`; treating it as role `files/` would force every consumer to vendor the app. Wave 3 extracts these into per-project repos.
+- **`files/project-<name>/`** — internal app source (Glasswing/jsOS/OpenClaw/iiab-terminal/bone). The role rsyncs from `{{ playbook_dir }}/files/project-<name>/`; treating it as role `files/` would force every consumer to vendor the app. Wave 3 extracts these into per-project repos.
 - **`default.credentials.yml` / `credentials.yml`** — central secrets. Role defaults reference variables (`{{ mariadb_root_password }}`, `{{ grafana_admin_password }}`, etc.) that resolve through the central credentials file. See Section 7.
 - **`requirements.yml`** — authoritative install list for Ansible Galaxy collections. Per-role `meta/main.yml` is documentation plus a soft assert; CI installs from `requirements.yml`.
 - **`main.yml`** — play-level handlers (`Restart nginx`, `Restart php-fpm`, shared `Restart <svc>` duplicates) and the role wiring itself.
@@ -265,7 +265,7 @@ The remaining ~35 services are being extracted in parallel by 13 workers. The ri
 Per-worker dispatch (unit number → services → stack file) lives in `~/.claude/plans/magical-finding-bird.md` Worker Dispatch Summary. Risk tiering is for the coordinator's Phase B integration order (merge low-risk worker PRs first so rebases stay cheap).
 
 **Low risk** (single container, optional post-start, no SSO complications):
-- `pazny.uptime_kuma`, `pazny.calibre_web`, `pazny.jellyfin`, `pazny.kiwix`, `pazny.rustfs`, `pazny.vaultwarden`, `pazny.freepbx`, `pazny.qgis_server`, `pazny.outline`, `pazny.freescout`, `pazny.portainer`, `pazny.traefik`, `pazny.offline_maps` (tileserver), `pazny.boxapi`, `pazny.iiab_terminal`
+- `pazny.uptime_kuma`, `pazny.calibre_web`, `pazny.jellyfin`, `pazny.kiwix`, `pazny.rustfs`, `pazny.vaultwarden`, `pazny.freepbx`, `pazny.qgis_server`, `pazny.outline`, `pazny.freescout`, `pazny.portainer`, `pazny.traefik`, `pazny.offline_maps` (tileserver), `pazny.bone`, `pazny.iiab_terminal`
 
 These follow the mariadb/glasswing template almost verbatim. Check per service that the nginx vhost in `templates/nginx/sites-available/` still references the right hostname after the role declares its compose port.
 

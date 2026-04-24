@@ -79,7 +79,7 @@ nOS/
 │   │       ├── UpgradesPresenter.php
 │   │       ├── CoexistencePresenter.php
 │   │       ├── EventsPresenter.php             # ingestion
-│   │       └── StatePresenter.php              # proxy to ~/.nos/state.yml via BoxAPI
+│   │       └── StatePresenter.php              # proxy to ~/.nos/state.yml via Bone
 │   ├── app/Model/                              [agent 7]
 │   │   ├── EventRepository.php
 │   │   ├── MigrationRepository.php
@@ -251,7 +251,7 @@ tags: [rebrand, identity]
 references: ["https://github.com/thisisait/nOS/pull/XX"]
 downtime:
   estimated_sec: 30
-  services_affected: [authentik, boxapi]
+  services_affected: [authentik, bone]
 
 # GATE — migration is eligible only when applies_if evaluates true
 applies_if:
@@ -641,9 +641,9 @@ Data cloning strategies:
 
 ---
 
-## 5. BoxAPI endpoint additions (agent 7 coordinates with existing boxapi role)
+## 5. Bone endpoint additions (agent 7 coordinates with existing bone role)
 
-Existing BoxAPI at `files/boxapi/main.py` already has `/api/health`, `/api/status`, `/api/run-tag`. Add:
+Existing Bone at `files/bone/main.py` already has `/api/health`, `/api/status`, `/api/run-tag`. Add:
 
 ```
 GET  /api/state                     -> ~/.nos/state.yml as JSON
@@ -671,11 +671,11 @@ POST /api/events                    -> ingestion from callback plugin (HMAC auth
 GET  /api/events                    -> paginated query (?run_id=..., ?type=..., ?since=..., limit=N)
 ```
 
-Auth model: existing `BOXAPI_SECRET` header on all POST endpoints. `/api/events` POST uses HMAC with shared secret between callback plugin and BoxAPI. GET endpoints require token too (read-sensitive data).
+Auth model: existing `BONE_SECRET` header on all POST endpoints. `/api/events` POST uses HMAC with shared secret between callback plugin and Bone. GET endpoints require token too (read-sensitive data).
 
-### 5.1 Agent 7 note: BoxAPI extension scope
+### 5.1 Agent 7 note: Bone extension scope
 
-Agent 7 extends `files/boxapi/main.py` with the new routes but **does not** restructure the existing code. Add routes via additional `@app.get` / `@app.post` decorators. New helper modules in `files/boxapi/state.py`, `files/boxapi/migrations.py`, `files/boxapi/upgrades.py` for logic.
+Agent 7 extends `files/bone/main.py` with the new routes but **does not** restructure the existing code. Add routes via additional `@app.get` / `@app.post` decorators. New helper modules in `files/bone/state.py`, `files/bone/migrations.py`, `files/bone/upgrades.py` for logic.
 
 ---
 
@@ -693,10 +693,10 @@ Agent 7 extends `files/boxapi/main.py` with the new routes but **does not** rest
 
 /api/v1/events            -> Api:EventsPresenter:create (POST from callback)
 /api/v1/events            -> Api:EventsPresenter:list (GET)
-/api/v1/migrations        -> proxy to BoxAPI
-/api/v1/upgrades          -> proxy to BoxAPI
-/api/v1/state             -> proxy to BoxAPI /api/state
-/api/v1/coexistence       -> proxy to BoxAPI
+/api/v1/migrations        -> proxy to Bone
+/api/v1/upgrades          -> proxy to Bone
+/api/v1/state             -> proxy to Bone /api/state
+/api/v1/coexistence       -> proxy to Bone
 ```
 
 ### 6.2 Presenter sketches (agent 7 implements full)
@@ -734,10 +734,10 @@ final class EventsPresenter extends BaseApiPresenter {
 
 ### 6.3 Repositories (agent 7)
 
-Each repository wraps SQLite queries and (where applicable) calls BoxAPI for live state.
+Each repository wraps SQLite queries and (where applicable) calls Bone for live state.
 
 - `EventRepository` — query events table
-- `MigrationRepository` — merge `~/.nos/state.yml` (live) + events + migrations/*.yml (static) — BoxAPI proxy
+- `MigrationRepository` — merge `~/.nos/state.yml` (live) + events + migrations/*.yml (static) — Bone proxy
 - `UpgradeRepository` — upgrades/*.yml (static) + state (live) + events
 - `CoexistenceRepository` — tracks table + state
 
@@ -855,7 +855,7 @@ Thin wrappers around `nos_coexistence` module. Each takes `coexist_service`, `co
 
 ### 7.4 `tasks/state-report.yml` (agent 1)
 
-Runs in `post_tasks` at end of every playbook. Dumps `~/.nos/state.yml`, POSTs to BoxAPI `/api/state` for Glasswing cache refresh, emits `playbook_end` event.
+Runs in `post_tasks` at end of every playbook. Dumps `~/.nos/state.yml`, POSTs to Bone `/api/state` for Glasswing cache refresh, emits `playbook_end` event.
 
 ---
 

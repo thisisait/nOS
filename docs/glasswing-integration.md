@@ -37,7 +37,7 @@ pentest journal, advisory feed). The framework extends it with four views that a
 - **What's dual-running?** — active coexistence tracks, TTL countdowns, cutover controls
 
 Glasswing is **read + command**, not a scheduler. Clicking "Apply migration" calls
-BoxAPI, which invokes `ansible-playbook` in-process. Glasswing does not run Ansible itself.
+Bone, which invokes `ansible-playbook` in-process. Glasswing does not run Ansible itself.
 
 ---
 
@@ -53,10 +53,10 @@ BoxAPI, which invokes `ansible-playbook` in-process. Glasswing does not run Ansi
 | `/coexistence` | `CoexistencePresenter:default` | GET | Active tracks, cutover controls |
 | `/api/v1/events` | `Api:EventsPresenter:create` | POST | Ingestion from callback plugin (HMAC) |
 | `/api/v1/events` | `Api:EventsPresenter:list` | GET | Paginated query |
-| `/api/v1/migrations` | `Api:MigrationsPresenter` | GET/POST | Proxied to BoxAPI |
-| `/api/v1/upgrades` | `Api:UpgradesPresenter` | GET/POST | Proxied to BoxAPI |
-| `/api/v1/state` | `Api:StatePresenter` | GET | Proxied to BoxAPI `/api/state` |
-| `/api/v1/coexistence` | `Api:CoexistencePresenter` | GET/POST | Proxied to BoxAPI |
+| `/api/v1/migrations` | `Api:MigrationsPresenter` | GET/POST | Proxied to Bone |
+| `/api/v1/upgrades` | `Api:UpgradesPresenter` | GET/POST | Proxied to Bone |
+| `/api/v1/state` | `Api:StatePresenter` | GET | Proxied to Bone `/api/state` |
+| `/api/v1/coexistence` | `Api:CoexistencePresenter` | GET/POST | Proxied to Bone |
 
 Routes are declared in `app/router.php` (or via attribute routing per Nette convention).
 
@@ -279,7 +279,7 @@ expands to `/timeline`.
 
 ## REST API
 
-Glasswing exposes `/api/v1/*` endpoints. Most are thin proxies to BoxAPI; events ingestion
+Glasswing exposes `/api/v1/*` endpoints. Most are thin proxies to Bone; events ingestion
 is native.
 
 ### Events
@@ -300,7 +300,7 @@ curl "https://glasswing.dev.local/api/v1/events?type=migration_step_ok&since=202
   -H "X-Token: $GLASSWING_TOKEN"
 ```
 
-### Migrations (proxied to BoxAPI)
+### Migrations (proxied to Bone)
 
 ```bash
 # List pending + applied
@@ -324,7 +324,7 @@ curl -X POST https://glasswing.dev.local/api/v1/migrations/2026-04-22-devboxnos-
   -H "X-Token: $GLASSWING_TOKEN"
 ```
 
-### Upgrades (proxied to BoxAPI)
+### Upgrades (proxied to Bone)
 
 ```bash
 # Matrix
@@ -344,7 +344,7 @@ curl -X POST https://glasswing.dev.local/api/v1/upgrades/grafana/grafana-11-to-1
   -H "X-Token: $GLASSWING_TOKEN"
 ```
 
-### State (proxied to BoxAPI)
+### State (proxied to Bone)
 
 ```bash
 # Full state document
@@ -357,7 +357,7 @@ curl https://glasswing.dev.local/api/v1/state/services -H "X-Token: $GLASSWING_T
 curl https://glasswing.dev.local/api/v1/state/services/grafana -H "X-Token: $GLASSWING_TOKEN"
 ```
 
-### Coexistence (proxied to BoxAPI)
+### Coexistence (proxied to Bone)
 
 ```bash
 # List all tracks
@@ -381,8 +381,8 @@ curl -X POST https://glasswing.dev.local/api/v1/coexistence/grafana/cleanup/lega
   -H "X-Token: $GLASSWING_TOKEN"
 ```
 
-See [framework-plan.md §5](framework-plan.md#5-boxapi-endpoint-additions-agent-7-coordinates-with-existing-boxapi-role)
-for the BoxAPI endpoint definitions these proxy to.
+See [framework-plan.md §5](framework-plan.md#5-bone-endpoint-additions-agent-7-coordinates-with-existing-bone-role)
+for the Bone endpoint definitions these proxy to.
 
 ---
 
@@ -395,7 +395,7 @@ for the BoxAPI endpoint definitions these proxy to.
      callback_plugins/glasswing_telemetry.py
                     │
                     ▼ HTTP POST (HMAC signed)
-        BoxAPI /api/events (:8099)
+        Bone /api/events (:8099)
                     │
                     ▼ writes
      Glasswing SQLite (events table)
@@ -413,10 +413,10 @@ for the BoxAPI endpoint definitions these proxy to.
                   operator
 ```
 
-When the network to BoxAPI is unavailable, the callback plugin spools events to
+When the network to Bone is unavailable, the callback plugin spools events to
 `~/.nos/events.jsonl` and replays them on the next successful POST.
 
-Live state (the `/api/v1/state` proxy) reads `~/.nos/state.yml` through BoxAPI on every
+Live state (the `/api/v1/state` proxy) reads `~/.nos/state.yml` through Bone on every
 request — no caching in Glasswing — so values are always fresh.
 
 ---

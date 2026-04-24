@@ -60,7 +60,7 @@ roles/pazny.<service>/
 
 **Role invocation with tag inheritance:** `include_role` needs both `apply: { tags: [...] }` **and** `tags: [...]` on the task itself so CLI `--tags` filtering actually reaches the inner role tasks.
 
-**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, boxapi, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
+**Non-Docker roles** (glasswing, jsos, openclaw, iiab_terminal, bone, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
 
 ### Configuration layering (later overrides earlier)
 
@@ -115,7 +115,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 - **OpenCode** — agentic coding helper
 - **IIAB Terminal** — Python Textual TUI, SSH `ForceCommand` for the `home` user
 - **Glasswing** — security-research dashboard, PHP via Homebrew
-- **BoxAPI** — local REST API bridge
+- **Bone** — local REST API bridge
 
 ### IAM & SSO (Authentik)
 
@@ -159,7 +159,7 @@ Declarative state and safe transitions for long-lived installs. Four surfaces:
 - **Upgrade recipes** — per-service version transitions in `upgrades/<service>.yml`. `pre` / `apply` / `post` / `rollback` phases. Invoked explicitly (`--tags upgrade -e upgrade_service=<svc>`) or via Glasswing. Covers breaking patterns like `pg_upgrade`, `mariadb-upgrade`, Grafana dashboard-preserving bumps.
 - **Coexistence** — dual-version operation via `nos_coexistence` module. Provision a second track on a shifted port with cloned data, test, cut over via atomic Nginx reload, clean up after TTL. Supported: Grafana, Postgres, MariaDB, Authentik (special), Gitea, Nextcloud, WordPress.
 
-Observability: a callback plugin (`callback_plugins/glasswing_telemetry.py`) emits structured events for every task + framework action to BoxAPI → Glasswing SQLite (with `~/.nos/events.jsonl` fallback). Glasswing exposes `/migrations`, `/upgrades`, `/timeline`, `/coexistence` views. Custom Ansible modules: `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`.
+Observability: a callback plugin (`callback_plugins/glasswing_telemetry.py`) emits structured events for every task + framework action to Bone → Glasswing SQLite (with `~/.nos/events.jsonl` fallback). Glasswing exposes `/migrations`, `/upgrades`, `/timeline`, `/coexistence` views. Custom Ansible modules: `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`.
 
 Authoring: see [docs/framework-overview.md](docs/framework-overview.md), [docs/migration-authoring.md](docs/migration-authoring.md), [docs/upgrade-recipes.md](docs/upgrade-recipes.md), [docs/coexistence-playbook.md](docs/coexistence-playbook.md), [docs/glasswing-integration.md](docs/glasswing-integration.md). Authoritative spec: [docs/framework-plan.md](docs/framework-plan.md).
 

@@ -127,11 +127,11 @@ See [coexistence-playbook.md](coexistence-playbook.md).
 
 A Python Ansible callback plugin (`callback_plugins/glasswing_telemetry.py`) emits a
 structured event for every task, migration step, upgrade step, and coexistence action.
-Events POST to BoxAPI → Glasswing SQLite, with an append-only local JSONL fallback
+Events POST to Bone → Glasswing SQLite, with an append-only local JSONL fallback
 when the network is down.
 
 Glasswing exposes four new views (`/migrations`, `/upgrades`, `/timeline`, `/coexistence`)
-that read the events + mirror state via BoxAPI. See [glasswing-integration.md](glasswing-integration.md).
+that read the events + mirror state via Bone. See [glasswing-integration.md](glasswing-integration.md).
 
 ---
 
@@ -146,7 +146,7 @@ upgrades/*.yml       ◄── read ────►  ~/.nos/state.yml#services (
                                      ~/.nos/backups/<id>/      (pre-upgrade backups)
                                      ~/.nos/events.jsonl       (callback fallback)
 
-                     ┌── BoxAPI ──► Glasswing SQLite
+                     ┌── Bone ──► Glasswing SQLite
 Callback plugin ─────┤
                      └── fallback ► ~/.nos/events.jsonl
 ```
@@ -201,7 +201,7 @@ PLAY [Playbook] *************************************************
   # host roles, stacks, post-start ... (unchanged)
   ...
   TASK [State] Persist updated state                # post_tasks
-  TASK [State] Push state to BoxAPI
+  TASK [State] Push state to Bone
 ```
 
 Already-applied migrations are silently skipped. First-time install: 0 migrations pending.
@@ -219,7 +219,7 @@ Four new views under the main nav (see [glasswing-integration.md](glasswing-inte
 
 - `~/.nos/state.yml` — pretty-printed YAML, safe to `cat`, safe to back up
 - `~/.nos/backups/<upgrade_id>/` — pre-upgrade backup bundles (data dirs, dashboards, DB dumps)
-- `~/.nos/events.jsonl` — append-only event log, used only as fallback when BoxAPI is down
+- `~/.nos/events.jsonl` — append-only event log, used only as fallback when Bone is down
 
 ---
 
@@ -250,7 +250,7 @@ Every significant action emits a structured event. The event schema is defined i
   `migration_end`, `upgrade_start`, `upgrade_step_ok`, `upgrade_end`, `coexistence_provision`,
   `coexistence_cutover`, `coexistence_cleanup`
 
-Events POST to `BoxAPI /api/events` (HMAC-signed). BoxAPI writes them to Glasswing SQLite.
+Events POST to `Bone /api/events` (HMAC-signed). Bone writes them to Glasswing SQLite.
 If the POST fails, events spool to `~/.nos/events.jsonl` and the callback plugin replays
 them on the next successful POST.
 

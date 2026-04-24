@@ -116,7 +116,7 @@ grouped into **8 Docker Compose stacks** that boot in dependency order.
 
 Non-Docker services installed directly on the host: **OpenClaw** (launchd agent daemon),
 **jsOS** (Node.js webtop via PM2), **Glasswing** (Nette PHP security dashboard),
-**BoxAPI** (local management REST bridge), **IIAB Terminal** (Python Textual TUI over SSH).
+**Bone** (local management REST bridge), **IIAB Terminal** (Python Textual TUI over SSH).
 
 ---
 
@@ -289,7 +289,7 @@ ansible-playbook main.yml -K --tags "TAG[,TAG…]"
 | `glasswing`, `security` | Glasswing security dashboard |
 | `iiab-terminal`, `ssh` | SSH + ForceCommand TUI |
 | `jsos`, `desktop` | jsOS webtop |
-| `boxapi`, `api` | Management REST bridge |
+| `bone`, `api` | Local FastAPI (structure / state / dispatcher) |
 | `dnsmasq`, `dns`, `network` | `*.<tld>` resolver |
 | `tailscale` | VPN |
 | `external-storage`, `storage` | Tier data onto `/Volumes/*` |
