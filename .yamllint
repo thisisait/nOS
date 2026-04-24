@@ -21,4 +21,4 @@ ignore: |
   .venv
   roles
   files/observability
-  files/project-glasswing
+  files/project-wing

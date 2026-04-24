@@ -359,8 +359,8 @@
           [hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes'),
            hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes')], [])
         +
-        (install_glasswing | default(install_php | default(true))) | ternary(
-          [glasswing_app_dir | default(ansible_facts['env']['HOME'] + '/glasswing/app')], [])
+        (install_wing | default(install_php | default(true))) | ternary(
+          [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')], [])
       }}
 
 - name: "[BLANK] Remove data directories (sudo - Docker creates files as www-data)"

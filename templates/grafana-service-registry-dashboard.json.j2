@@ -106,8 +106,8 @@
 {% if install_offline_maps | default(false) %}
 {% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps.dev.local'), maps_port | default(8081), "Offline maps", "iiab")) %}
 {% endif %}
-{% if install_glasswing | default(install_php | default(true)) %}
-{% set _ = _cards.append(card("Wing", glasswing_domain | default('glasswing.dev.local'), 443, "Security Research Dashboard", "security")) %}
+{% if install_wing | default(install_php | default(true)) %}
+{% set _ = _cards.append(card("Wing", wing_domain | default('wing.dev.local'), 443, "Security Research Dashboard", "security")) %}
 {% endif %}
 {% if install_authentik | default(false) %}
 {% set _ = _cards.append(card("Authentik", authentik_domain | default('auth.dev.local'), authentik_port | default(9003), "SSO / Identity Provider", "infra")) %}

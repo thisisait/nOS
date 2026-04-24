@@ -6,8 +6,8 @@ Part of [nOS](../../README.md) Wave 2 role extraction pilot. First of three base
 
 ## What it does
 
-1. Creates the deployment directory tree (`~/glasswing/app/{data,temp,log}`, `~/glasswing/{repos,patches}`)
-2. Rsyncs `files/project-glasswing/` from the playbook into the deployment dir
+1. Creates the deployment directory tree (`~/wing/app/{data,temp,log}`, `~/wing/{repos,patches}`)
+2. Rsyncs `files/project-wing/` from the playbook into the deployment dir
 3. Runs `composer install` with production flags
 4. Initializes the SQLite schema via `bin/init-db.php`
 5. On first run, migrates security advisory JSON data into SQLite via `bin/migrate.php`
@@ -28,8 +28,8 @@ Changes to the app source or composer deps trigger a `Restart php-fpm` handler.
 
 | Variable | Default | Description |
 |---|---|---|
-| `wing_domain` | `glasswing.dev.local` | Public hostname behind nginx vhost |
-| `wing_app_dir` | `~/glasswing/app` | Deployment directory for the Nette app |
+| `wing_domain` | `wing.dev.local` | Public hostname behind nginx vhost |
+| `wing_app_dir` | `~/wing/app` | Deployment directory for the Nette app |
 | `wing_data_dir` | `{{ wing_app_dir }}/data` | SQLite database location |
 | `wing_json_source` | `{{ playbook_dir }}/docs/llm/security` | Source JSON advisories for first-run migration |
 | `wing_api_token` | *(from credentials)* | REST API bearer token, reconverged on every run |
@@ -44,9 +44,9 @@ In the consuming playbook:
 - import_role:
     name: pazny.wing
   when: install_wing | default(install_php | default(true))
-  tags: ['glasswing', 'security']
+  tags: ['wing', 'security']
 ```
 
 ## Rollback
 
-Revert the commit that introduced this role and restore `tasks/glasswing.yml` + the `import_tasks` call site in `main.yml`. The `files/project-glasswing/` source tree is untouched by the role migration.
+Revert the commit that introduced this role and restore `tasks/glasswing.yml` + the `import_tasks` call site in `main.yml`. The `files/project-wing/` source tree is untouched by the role migration.

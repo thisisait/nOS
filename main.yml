@@ -922,7 +922,7 @@
       ansible.builtin.import_role:
         name: pazny.wing
       when: install_wing | default(install_php | default(true))
-      tags: ['wing', 'glasswing', 'security']
+      tags: ['wing', 'wing', 'security']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Export/Import – hardware migration (run only with --tags)

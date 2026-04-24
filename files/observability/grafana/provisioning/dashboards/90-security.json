@@ -145,10 +145,10 @@
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36},
       "targets": [
-        {"refId": "A", "expr": "glasswing_findings_open{severity=\"critical\"}", "legendFormat": "critical"},
-        {"refId": "B", "expr": "glasswing_findings_open{severity=\"high\"}", "legendFormat": "high"},
-        {"refId": "C", "expr": "glasswing_findings_open{severity=\"medium\"}", "legendFormat": "medium"},
-        {"refId": "D", "expr": "glasswing_findings_open{severity=\"low\"}", "legendFormat": "low"}
+        {"refId": "A", "expr": "wing_findings_open{severity=\"critical\"}", "legendFormat": "critical"},
+        {"refId": "B", "expr": "wing_findings_open{severity=\"high\"}", "legendFormat": "high"},
+        {"refId": "C", "expr": "wing_findings_open{severity=\"medium\"}", "legendFormat": "medium"},
+        {"refId": "D", "expr": "wing_findings_open{severity=\"low\"}", "legendFormat": "low"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}, "noValue": "Wave 1+"}, "overrides": []},
       "options": {"orientation": "horizontal", "displayMode": "gradient", "reduceOptions": {"calcs": ["lastNotNull"]}, "showUnfilled": true}

@@ -27,7 +27,7 @@
       "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails → Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** — full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Wing telemetry (`callback_plugins/glasswing_telemetry.py`) streams agent runs to Loki today."
+        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails → Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** — full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Wing telemetry (`callback_plugins/wing_telemetry.py`) streams agent runs to Loki today."
       }
     },
     {
@@ -77,7 +77,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
       "targets": [
-        {"refId": "A", "expr": "sum by (service) (count_over_time({job=\"glasswing\"} |~ \"event_type=agent_run\"[1m]))", "legendFormat": "{{service}}"}
+        {"refId": "A", "expr": "sum by (service) (count_over_time({job=\"wing\"} |~ \"event_type=agent_run\"[1m]))", "legendFormat": "{{service}}"}
       ],
       "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
       "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
@@ -173,7 +173,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 33},
       "targets": [
-        {"refId": "A", "expr": "{job=~\"glasswing|openclaw|paperclip\"}", "maxLines": 300}
+        {"refId": "A", "expr": "{job=~\"wing|openclaw|paperclip\"}", "maxLines": 300}
       ],
       "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
     }

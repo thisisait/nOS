@@ -19,7 +19,7 @@ if (!is_dir($dataDir)) {
 	mkdir($dataDir, 0755, true);
 }
 
-$dbPath = $dataDir . '/glasswing.db';
+$dbPath = $dataDir . '/wing.db';
 $isNew = !file_exists($dbPath);
 
 $db = new SQLite3($dbPath);

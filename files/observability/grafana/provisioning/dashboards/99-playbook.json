@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Ansible run history + Wing event timeline + migration / upgrade queues. Fed by callback_plugins/glasswing_telemetry.py (BoxAPI → Wing SQLite with ~/.nos/events.jsonl fallback).",
+  "description": "Ansible run history + Wing event timeline + migration / upgrade queues. Fed by callback_plugins/wing_telemetry.py (BoxAPI → Wing SQLite with ~/.nos/events.jsonl fallback).",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -27,7 +27,7 @@
       "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "Every `main.yml` run emits structured events via `callback_plugins/glasswing_telemetry.py`. Events land in **BoxAPI → Wing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"glasswing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
+        "content": "Every `main.yml` run emits structured events via `callback_plugins/wing_telemetry.py`. Events land in **BoxAPI → Wing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"wing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
       }
     },
     {
@@ -38,7 +38,7 @@
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 4},
       "options": {
         "mode": "markdown",
-        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Wing `/timeline`\n- `glasswing.sqlite` → `ansible_runs`"
+        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Wing `/timeline`\n- `wing.sqlite` → `ansible_runs`"
       }
     },
     {
@@ -48,7 +48,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 3, "w": 4, "x": 12, "y": 4},
       "targets": [
-        {"refId": "A", "expr": "sum(count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\"[7d]))", "legendFormat": "runs"}
+        {"refId": "A", "expr": "sum(count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\"[7d]))", "legendFormat": "runs"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
@@ -60,7 +60,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 3, "w": 4, "x": 16, "y": 4},
       "targets": [
-        {"refId": "A", "expr": "sum(count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\" |~ \"status=failed\"[7d]))", "legendFormat": "failed"}
+        {"refId": "A", "expr": "sum(count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\" |~ \"status=failed\"[7d]))", "legendFormat": "failed"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
@@ -115,7 +115,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 10},
       "targets": [
-        {"refId": "A", "expr": "sum by (status) (count_over_time({job=\"glasswing\"} |~ \"event_type=playbook_end\" | json | __error__=\"\"[1d]))", "legendFormat": "{{status}}"}
+        {"refId": "A", "expr": "sum by (status) (count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\" | json | __error__=\"\"[1d]))", "legendFormat": "{{status}}"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
       "options": {"orientation": "vertical", "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0, "stacking": "normal"}
@@ -127,7 +127,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
       "targets": [
-        {"refId": "A", "expr": "{job=\"glasswing\"}", "maxLines": 50}
+        {"refId": "A", "expr": "{job=\"wing\"}", "maxLines": 50}
       ],
       "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
     },
@@ -146,7 +146,7 @@
   "refresh": "1m",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["nos", "playbook", "ansible", "glasswing", "migrations"],
+  "tags": ["nos", "playbook", "ansible", "wing", "migrations"],
   "templating": {"list": []},
   "time": {"from": "now-7d", "to": "now"},
   "timepicker": {},

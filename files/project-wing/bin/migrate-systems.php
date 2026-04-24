@@ -19,7 +19,7 @@ foreach ($argv as $arg) {
 	}
 }
 $dataDir ??= __DIR__ . '/../data';
-$dbPath = $dataDir . '/glasswing.db';
+$dbPath = $dataDir . '/wing.db';
 
 if (!is_file($dbPath)) {
 	echo "No database at $dbPath -- run init-db.php first\n";

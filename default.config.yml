@@ -454,8 +454,8 @@ php_composer_packages:
   #   state: present
 
 # ── Wing Security Dashboard ─────────────────────────────────────────────
-wing_domain: "glasswing.dev.local"
-wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
+wing_domain: "wing.dev.local"
+wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 
@@ -1718,10 +1718,10 @@ authentik_oidc_apps:
     external_host: "https://{{ puter_domain | default('os.dev.local') }}"
     type: "proxy"
   - name: "Wing"
-    slug: "glasswing"
+    slug: "wing"
     enabled: "{{ install_wing | default(install_php | default(true)) }}"
-    launch_url: "https://{{ wing_domain | default('glasswing.dev.local') }}"
-    external_host: "https://{{ wing_domain | default('glasswing.dev.local') }}"
+    launch_url: "https://{{ wing_domain | default('wing.dev.local') }}"
+    external_host: "https://{{ wing_domain | default('wing.dev.local') }}"
     type: "proxy"
   # ── Wave A+B native OIDC services ──────────────────────────────────────
   - name: "Miniflux"

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * token hash. Runs every playbook execution so prefix rotation propagates
  * to the live DB without leaving stale tokens behind.
  *
- * Usage: php bin/provision-token.php --db=/path/to/glasswing.db --token=VALUE --name=NAME
+ * Usage: php bin/provision-token.php --db=/path/to/wing.db --token=VALUE --name=NAME
  */
 
 $dbPath = null;

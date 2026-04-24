@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/event.schema.json",
   "title": "nOS Ansible Event",
-  "description": "Structured event emitted by the glasswing_telemetry callback plugin. One event per lifecycle signal during an Ansible playbook run. Consumed by BoxAPI /api/v1/events (HMAC-authenticated) and mirrored into the Wing events table.",
+  "description": "Structured event emitted by the wing_telemetry callback plugin. One event per lifecycle signal during an Ansible playbook run. Consumed by BoxAPI /api/v1/events (HMAC-authenticated) and mirrored into the Wing events table.",
   "type": "object",
   "required": ["ts", "type", "run_id"],
   "additionalProperties": false,

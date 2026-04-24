@@ -1,0 +1,105 @@
+---
+# ==============================================================================
+# Migration: rename Glasswing → Wing (W5 runtime layer).
+#
+# Context: the Glasswing dashboard was renamed to Wing (see docs/anatomy.md).
+# Prior commits in this sprint renamed the role directory, the Ansible vars,
+# the nginx vhost file in the repo, the Composer package id, the Latte / JS
+# UI copy, every HTTP header, env var, and the SQLite data filename inside
+# the Nette app. What remains on already-provisioned boxes is the on-disk
+# runtime identity: the install directory, the SQLite file, the nginx
+# vhost + log files on disk. This migration moves each one so the next
+# pazny.wing role run deploys cleanly to the new names instead of leaving
+# a split-brain deployment.
+#
+# Idempotency: the applies_if gate checks both surfaces of the old identity.
+# On fresh nOS installs (post-rebrand) the gate is false and the migration
+# is a no-op.
+# ==============================================================================
+
+id: "2026-04-24-glasswing-to-wing"
+title: "Rename Glasswing → Wing (install dir + SQLite file + nginx vhost)"
+summary: |
+  Move ~/glasswing/ → ~/wing/ (preserves the .env, repos/, patches/, and
+  app/ subtrees), rename the SQLite database glasswing.db → wing.db inside
+  the new data/ directory, and delete the legacy nginx vhost symlink so the
+  pazny.nginx tasks role reinstalls sites-enabled/wing.conf on the next
+  playbook run. Log files (glasswing.{access,error}.log) are not moved — the
+  role lets nginx recreate them under the new wing.* names on next restart.
+severity: "breaking"
+created_at: "2026-04-24"
+authors: ["pazny"]
+references:
+  - "docs/anatomy.md"
+  - "docs/wing-integration.md"
+notes: |
+  Retained for audit / reference + future forks and pre-rebrand clones.
+  On fresh post-rebrand installs the applies_if gate is false (no
+  ~/glasswing, no glasswing.db), so nos_migrate records nothing and every
+  run is a true no-op.
+
+  OIDC application slug change (/o/glasswing/ → /o/wing/) is out of scope
+  here — that's Authentik-side configuration handled by the Authentik role
+  on next convergence. The Latte template already links to /o/wing/
+  (rebranded in W5); until the Authentik app slug is renamed, the SSO logout
+  link will 404 on pre-rebrand Authentik deployments.
+
+allow_shell: false
+
+downtime:
+  estimated_sec: 10
+  services_affected: [wing]
+
+# GATE — idempotency hinge. Any ONE true = legacy state still present.
+applies_if:
+  any_of:
+    - fs_path_exists: "~/glasswing"
+    - fs_path_exists: "~/wing/app/data/glasswing.db"
+
+preconditions:
+  - fs_path_exists: "~"
+
+steps:
+  # 1. Move the install directory. The Nette app, Playwright tests, SQLite
+  #    data, repo clones, and patches all live under ~/glasswing/ on legacy
+  #    deployments. fs.mv is a single atomic rename on the same filesystem;
+  #    all subtrees survive intact.
+  - id: "move_install_dir"
+    description: "Rename ~/glasswing/ → ~/wing/ (preserves app/, data/, repos/, patches/, .env)."
+    detect:
+      fs_path_exists: "~/glasswing"
+    action:
+      type: fs.mv
+      src: "~/glasswing"
+      dst: "~/wing"
+    verify:
+      - fs_path_exists: "~/wing"
+    rollback:
+      type: fs.mv
+      src: "~/wing"
+      dst: "~/glasswing"
+
+  # 2. Rename the SQLite file inside the new install dir. Nette's common.neon
+  #    DSN now points at wing.db (%dataDir%/wing.db). Without this rename the
+  #    dashboard would initialise a fresh empty DB next to the legacy one,
+  #    silently discarding advisory history, pentest findings, and state.
+  - id: "rename_sqlite_file"
+    description: "Rename ~/wing/app/data/glasswing.db → wing.db (plus -wal / -shm sidecars)."
+    detect:
+      fs_path_exists: "~/wing/app/data/glasswing.db"
+    action:
+      type: fs.mv
+      src: "~/wing/app/data/glasswing.db"
+      dst: "~/wing/app/data/wing.db"
+    verify:
+      - fs_path_exists: "~/wing/app/data/wing.db"
+    rollback:
+      type: fs.mv
+      src: "~/wing/app/data/wing.db"
+      dst: "~/wing/app/data/glasswing.db"
+
+# Post-migration: confirm the new identity is in place.
+post_verify:
+  - { type: fs_path_exists, path: "~/wing" }
+  - { type: negate, of: { type: fs_path_exists, path: "~/glasswing" } }
+  - { type: fs_path_exists, path: "~/wing/app/data/wing.db" }

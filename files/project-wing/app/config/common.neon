@@ -11,7 +11,7 @@ session:
 	expiration: 14 days
 
 database:
-	dsn: 'sqlite:%dataDir%/glasswing.db'
+	dsn: 'sqlite:%dataDir%/wing.db'
 
 services:
 	router: App\Core\RouterFactory::createRouter()

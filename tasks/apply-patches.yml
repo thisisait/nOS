@@ -17,7 +17,7 @@
 #
 # Telemetry:
 #
-#   The glasswing_telemetry callback plugin auto-extracts the patch id from
+#   The wing_telemetry callback plugin auto-extracts the patch id from
 #   the "[Patch] PATCH-NNN ..." task-name prefix and stamps every emitted
 #   event with patch_id. The recipe's apply/verify/rollback step names MUST
 #   keep that prefix (the _template.yml shows the shape).

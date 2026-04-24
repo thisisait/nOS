@@ -18,7 +18,7 @@ foreach ($argv as $arg) {
 	}
 }
 $dataDir ??= __DIR__ . '/../data';
-$dbPath = $dataDir . '/glasswing.db';
+$dbPath = $dataDir . '/wing.db';
 
 if (!$jsonDir || !is_dir($jsonDir)) {
 	echo "Usage: php bin/migrate.php --json-dir=/path/to/docs/llm/security\n";

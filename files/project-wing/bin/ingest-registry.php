@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Usage:
  *   php bin/ingest-registry.php --registry=/path/to/service-registry.json
  *
- * Called by pazny.glasswing Ansible role after deploy + schema init.
+ * Called by pazny.wing Ansible role after deploy + schema init.
  * Idempotent — re-running updates existing entries, never duplicates.
  */
 

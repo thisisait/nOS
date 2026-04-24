@@ -7,7 +7,7 @@
 #   - no obvious Latte render errors
 #
 # Usage:
-#   BASE_URL=https://glasswing.dev.local ./tests/glasswing-frontend/smoke.sh
+#   BASE_URL=https://wing.dev.local ./tests/wing-frontend/smoke.sh
 #
 # Exits non-zero on the first failure. This is a best-effort check; full
 # coverage lives in presenter-level PHPUnit tests (agent 7).

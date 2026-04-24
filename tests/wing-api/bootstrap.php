@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-define('GW_ROOT', dirname(__DIR__, 2) . '/files/project-glasswing');
+define('GW_ROOT', dirname(__DIR__, 2) . '/files/project-wing');
 
 require GW_ROOT . '/vendor/autoload.php';
 
@@ -79,7 +79,7 @@ function gw_make_temp_db(): string
 {
 	$dir = sys_get_temp_dir() . '/gw-test-' . bin2hex(random_bytes(4));
 	mkdir($dir, 0755, true);
-	$dbPath = $dir . '/glasswing.db';
+	$dbPath = $dir . '/wing.db';
 
 	$pdo = new PDO('sqlite:' . $dbPath);
 	$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
