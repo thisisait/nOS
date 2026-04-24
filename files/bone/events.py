@@ -16,11 +16,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-HMAC_SECRET = os.getenv("GLASSWING_EVENTS_HMAC_SECRET", "")
-GLASSWING_DB = Path(
+HMAC_SECRET = os.getenv("WING_EVENTS_HMAC_SECRET", "")
+WING_DB = Path(
     os.getenv(
-        "GLASSWING_DB_PATH",
-        os.path.expanduser("~/projects/nOS/files/project-glasswing/data/glasswing.db"),
+        "WING_DB_PATH",
+        os.path.expanduser("~/projects/nOS/files/project-wing/data/wing.db"),
     )
 )
 
@@ -69,10 +69,10 @@ def validate_payload(payload: dict[str, Any]) -> str | None:
 
 
 def insert_event(payload: dict[str, Any]) -> int:
-    """Insert into Glasswing's events table. Returns new row id."""
-    if not GLASSWING_DB.parent.exists():
-        raise RuntimeError(f"Glasswing data dir missing: {GLASSWING_DB.parent}")
-    conn = sqlite3.connect(str(GLASSWING_DB))
+    """Insert into Wing's events table. Returns new row id."""
+    if not WING_DB.parent.exists():
+        raise RuntimeError(f"Wing data dir missing: {WING_DB.parent}")
+    conn = sqlite3.connect(str(WING_DB))
     try:
         cur = conn.execute(
             """

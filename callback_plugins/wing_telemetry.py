@@ -2,7 +2,7 @@
 # (c) 2026, This is AIT / nOS project
 # GNU GPL v3.0 — distributed with the nOS Ansible playbook.
 """
-glasswing_telemetry — Ansible callback plugin.
+wing_telemetry — Ansible callback plugin.
 
 Emits structured lifecycle events (see ``state/schema/event.schema.json``) to
 the Glasswing telemetry ingestion endpoint (BoxAPI ``/api/v1/events``), with
@@ -12,20 +12,20 @@ the HTTP transport is unreachable.
 The plugin is **inactive by default**. It activates only when one of:
 
 * env var ``NOS_TELEMETRY_ENABLED=1`` is set, or
-* play var ``glasswing_telemetry_enabled: true`` is present.
+* play var ``wing_telemetry_enabled: true`` is present.
 
 When inactive, every callback hook is a no-op (zero network / disk overhead).
 
 Configuration (environment variables)
 -------------------------------------
-``GLASSWING_EVENTS_URL``              default ``http://api.dev.local/api/v1/events``
-``GLASSWING_EVENTS_HMAC_SECRET``      shared secret; if unset, best-effort read
+``WING_EVENTS_URL``              default ``http://api.dev.local/api/v1/events``
+``WING_EVENTS_HMAC_SECRET``      shared secret; if unset, best-effort read
                                       from ``~/.nos/secrets.yml`` (key
-                                      ``glasswing_events_hmac_secret``)
-``GLASSWING_EVENTS_SQLITE_FALLBACK``  default ``/tmp/nos-events-fallback.db``
-``GLASSWING_EVENTS_BATCH_SIZE``       default ``10``
-``GLASSWING_EVENTS_FLUSH_INTERVAL_SEC`` default ``5``
-``GLASSWING_EVENTS_DEBUG``            ``1`` prints each event to stderr and
+                                      ``wing_events_hmac_secret``)
+``WING_EVENTS_SQLITE_FALLBACK``  default ``/tmp/nos-events-fallback.db``
+``WING_EVENTS_BATCH_SIZE``       default ``10``
+``WING_EVENTS_FLUSH_INTERVAL_SEC`` default ``5``
+``WING_EVENTS_DEBUG``            ``1`` prints each event to stderr and
                                       flushes immediately (no batching).
 """
 
@@ -34,14 +34,14 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 DOCUMENTATION = r"""
-    name: glasswing_telemetry
+    name: wing_telemetry
     type: notification
     short_description: Emit nOS lifecycle events to Glasswing / BoxAPI.
     description:
       - "Streams structured playbook / task / migration / upgrade events to the
         Glasswing read model via BoxAPI /api/v1/events."
       - "Inactive unless NOS_TELEMETRY_ENABLED=1 or play var
-        glasswing_telemetry_enabled=true is set."
+        wing_telemetry_enabled=true is set."
       - "HMAC-SHA256 signs every batch; batches fall back to SQLite on HTTP
         failure so the operator can replay later."
     requirements:
@@ -65,7 +65,7 @@ except ImportError:  # pragma: no cover - allows import under pytest w/o ansible
     class CallbackBase(object):  # type: ignore[no-redef]
         CALLBACK_VERSION = 2.0
         CALLBACK_TYPE = "notification"
-        CALLBACK_NAME = "glasswing_telemetry"
+        CALLBACK_NAME = "wing_telemetry"
 
         def __init__(self, *_, **__):
             pass
@@ -128,7 +128,7 @@ def scrub(obj, _depth=0):
 
 
 def hmac_signature(secret, body_bytes):
-    """Compute ``sha256=<hex>`` HMAC for the X-Glasswing-Signature header."""
+    """Compute ``sha256=<hex>`` HMAC for the X-Wing-Signature header."""
     if not secret:
         return None
     if isinstance(secret, str):
@@ -170,7 +170,7 @@ def load_hmac_secret_fallback(secrets_path="~/.nos/secrets.yml"):
                 if not line or line.startswith("#"):
                     continue
                 m = re.match(
-                    r"^glasswing_events_hmac_secret\s*:\s*(.+?)\s*$", line)
+                    r"^wing_events_hmac_secret\s*:\s*(.+?)\s*$", line)
                 if m:
                     return m.group(1).strip('"').strip("'")
     except (OSError, UnicodeDecodeError):
@@ -214,11 +214,11 @@ class HTTPTransport(object):
                           ensure_ascii=False).encode("utf-8")
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "glasswing-telemetry/1.0",
+            "User-Agent": "wing-telemetry/1.0",
         }
         sig = hmac_signature(self.secret, body)
         if sig:
-            headers["X-Glasswing-Signature"] = sig
+            headers["X-Wing-Signature"] = sig
 
         requests = self._requests()
         last_err = None
@@ -319,7 +319,7 @@ class CallbackModule(CallbackBase):
 
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = "notification"
-    CALLBACK_NAME = "glasswing_telemetry"
+    CALLBACK_NAME = "wing_telemetry"
     CALLBACK_NEEDS_WHITELIST = True
 
     DEFAULT_URL = "http://api.dev.local/api/v1/events"
@@ -352,26 +352,26 @@ class CallbackModule(CallbackBase):
         self._current_patch_id = None
         self._current_coexistence_service = None
 
-        self._debug = os.environ.get("GLASSWING_EVENTS_DEBUG", "") == "1"
+        self._debug = os.environ.get("WING_EVENTS_DEBUG", "") == "1"
 
         # Configurable knobs
-        self._url = os.environ.get("GLASSWING_EVENTS_URL",
+        self._url = os.environ.get("WING_EVENTS_URL",
                                    self.DEFAULT_URL)
-        self._sqlite_path = os.environ.get("GLASSWING_EVENTS_SQLITE_FALLBACK",
+        self._sqlite_path = os.environ.get("WING_EVENTS_SQLITE_FALLBACK",
                                            self.DEFAULT_SQLITE)
         try:
             self._batch_size = int(os.environ.get(
-                "GLASSWING_EVENTS_BATCH_SIZE", self.DEFAULT_BATCH_SIZE))
+                "WING_EVENTS_BATCH_SIZE", self.DEFAULT_BATCH_SIZE))
         except (TypeError, ValueError):
             self._batch_size = self.DEFAULT_BATCH_SIZE
         try:
             self._flush_interval = float(os.environ.get(
-                "GLASSWING_EVENTS_FLUSH_INTERVAL_SEC",
+                "WING_EVENTS_FLUSH_INTERVAL_SEC",
                 self.DEFAULT_FLUSH_INTERVAL))
         except (TypeError, ValueError):
             self._flush_interval = self.DEFAULT_FLUSH_INTERVAL
 
-        self._secret = (os.environ.get("GLASSWING_EVENTS_HMAC_SECRET")
+        self._secret = (os.environ.get("WING_EVENTS_HMAC_SECRET")
                         or load_hmac_secret_fallback())
 
         # Lazily created so inactive plugin has no side effects.
@@ -385,7 +385,7 @@ class CallbackModule(CallbackBase):
         was_active = self._active
         if self._activated_by_env:
             self._active = True
-        if play_vars and play_vars.get("glasswing_telemetry_enabled"):
+        if play_vars and play_vars.get("wing_telemetry_enabled"):
             self._active = True
         if not self._active or was_active:
             # Either still inactive, or already activated — don't re-init
@@ -401,7 +401,7 @@ class CallbackModule(CallbackBase):
                 # mark sqlite as unavailable and carry on.
                 self._sqlite = None
                 sys.stderr.write(
-                    "[glasswing_telemetry] sqlite fallback unavailable: %s\n"
+                    "[wing_telemetry] sqlite fallback unavailable: %s\n"
                     % exc)
         if self._schema_validator is None:
             self._load_schema_validator()
@@ -461,7 +461,7 @@ class CallbackModule(CallbackBase):
         ev = self._make_event(event_type, **fields)
         self._validate_or_warn(ev)
         if self._debug:
-            sys.stderr.write("[glasswing_telemetry] %s\n"
+            sys.stderr.write("[wing_telemetry] %s\n"
                              % json.dumps(ev, ensure_ascii=False))
             sys.stderr.flush()
             self._buffer.append(ev)
@@ -480,7 +480,7 @@ class CallbackModule(CallbackBase):
         if errors:
             msg = "; ".join(e.message for e in errors[:3])
             sys.stderr.write(
-                "[glasswing_telemetry] schema violation for %s: %s\n"
+                "[wing_telemetry] schema violation for %s: %s\n"
                 % (ev.get("type"), msg))
 
     def _flush(self):
@@ -499,11 +499,11 @@ class CallbackModule(CallbackBase):
                     self._sqlite.enqueue(batch)
                 except sqlite3.Error as db_exc:
                     sys.stderr.write(
-                        "[glasswing_telemetry] HTTP and SQLite both failed: "
+                        "[wing_telemetry] HTTP and SQLite both failed: "
                         "%s / %s\n" % (exc, db_exc))
             else:
                 sys.stderr.write(
-                    "[glasswing_telemetry] HTTP failed, no SQLite fallback: "
+                    "[wing_telemetry] HTTP failed, no SQLite fallback: "
                     "%s\n" % exc)
 
     # ----- synthetic context (migration/upgrade/coexistence) ---------------

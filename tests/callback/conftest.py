@@ -102,7 +102,7 @@ def validator(event_schema):
 def _reset_env(monkeypatch):
     """Strip telemetry env vars before each test so activation is explicit."""
     for k in list(os.environ):
-        if k.startswith("GLASSWING_") or k == "NOS_TELEMETRY_ENABLED":
+        if k.startswith("WING_") or k == "NOS_TELEMETRY_ENABLED":
             monkeypatch.delenv(k, raising=False)
     yield
 
@@ -111,17 +111,17 @@ def _reset_env(monkeypatch):
 def fresh_plugin(monkeypatch, tmp_path):
     """Import a fresh CallbackModule with env vars pointing at a tmp sqlite."""
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK",
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "fallback.db"))
-    monkeypatch.setenv("GLASSWING_EVENTS_URL",
+    monkeypatch.setenv("WING_EVENTS_URL",
                        "http://test.invalid/api/v1/events")
-    monkeypatch.setenv("GLASSWING_EVENTS_BATCH_SIZE", "100")
-    monkeypatch.setenv("GLASSWING_EVENTS_FLUSH_INTERVAL_SEC", "3600")
+    monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "100")
+    monkeypatch.setenv("WING_EVENTS_FLUSH_INTERVAL_SEC", "3600")
 
     # Reimport to pick up env.
     import importlib
-    mod = importlib.import_module("glasswing_telemetry")
+    mod = importlib.import_module("wing_telemetry")
     importlib.reload(mod)
     plugin = mod.CallbackModule()
-    plugin._finalize_activation({"glasswing_telemetry_enabled": True})
+    plugin._finalize_activation({"wing_telemetry_enabled": True})
     return mod, plugin

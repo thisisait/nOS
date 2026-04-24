@@ -8,7 +8,7 @@ from tests.callback.conftest import FakePlay, FakePlaybook
 
 
 def test_fallback_enqueue_roundtrip(tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     db_path = tmp_path / "fallback.db"
     fallback = gt.SQLiteFallback(str(db_path))
@@ -38,12 +38,12 @@ def test_fallback_enqueue_roundtrip(tmp_path):
 
 def test_http_failure_spills_to_sqlite(monkeypatch, tmp_path):
     """Full-stack: flush with broken HTTP should populate the SQLite db."""
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     db_path = tmp_path / "fallback.db"
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK", str(db_path))
-    monkeypatch.setenv("GLASSWING_EVENTS_BATCH_SIZE", "2")
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK", str(db_path))
+    monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "2")
 
     plugin = gt.CallbackModule()
     plugin._finalize_activation(None)
@@ -74,7 +74,7 @@ def test_http_failure_spills_to_sqlite(monkeypatch, tmp_path):
 
 def test_sqlite_schema_is_idempotent(tmp_path):
     """Creating the fallback twice on the same path should be a no-op."""
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     p = tmp_path / "f.db"
     gt.SQLiteFallback(str(p))
@@ -82,7 +82,7 @@ def test_sqlite_schema_is_idempotent(tmp_path):
 
 
 def test_empty_enqueue_is_noop(tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fallback = gt.SQLiteFallback(str(tmp_path / "f.db"))
     assert fallback.enqueue([]) == 0

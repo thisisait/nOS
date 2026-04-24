@@ -32,7 +32,7 @@ class FakeRequests:
 
 
 def test_successful_post_sends_hmac_header(monkeypatch):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([FakeResponse(202)])
     tr = gt.HTTPTransport(url="http://example/api/v1/events",
@@ -42,15 +42,15 @@ def test_successful_post_sends_hmac_header(monkeypatch):
 
     assert len(fake.calls) == 1
     headers = fake.calls[0]["headers"]
-    assert "X-Glasswing-Signature" in headers
-    assert headers["X-Glasswing-Signature"].startswith("sha256=")
+    assert "X-Wing-Signature" in headers
+    assert headers["X-Wing-Signature"].startswith("sha256=")
     # Body is valid JSON with events array
     body = json.loads(fake.calls[0]["data"].decode("utf-8"))
     assert "events" in body and len(body["events"]) == 1
 
 
 def test_no_hmac_header_when_secret_missing(monkeypatch):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([FakeResponse(202)])
     tr = gt.HTTPTransport(url="http://example/api/v1/events",
@@ -58,11 +58,11 @@ def test_no_hmac_header_when_secret_missing(monkeypatch):
                           session=fake, max_retries=1, backoff_base=0.0)
     tr.send_batch([{"type": "task_ok", "run_id": "run_x", "ts": "now"}])
 
-    assert "X-Glasswing-Signature" not in fake.calls[0]["headers"]
+    assert "X-Wing-Signature" not in fake.calls[0]["headers"]
 
 
 def test_retries_then_succeeds(monkeypatch):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([
         ConnectionError("net down"),
@@ -77,7 +77,7 @@ def test_retries_then_succeeds(monkeypatch):
 
 
 def test_raises_after_all_retries_fail():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([
         ConnectionError("x"),
@@ -93,7 +93,7 @@ def test_raises_after_all_retries_fail():
 
 
 def test_non_2xx_status_triggers_retry():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([
         FakeResponse(500, "fail"),
@@ -109,7 +109,7 @@ def test_non_2xx_status_triggers_retry():
 
 
 def test_empty_batch_is_noop():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     fake = FakeRequests([])
     tr = gt.HTTPTransport(url="http://example/api/v1/events",
@@ -119,7 +119,7 @@ def test_empty_batch_is_noop():
 
 
 def test_hmac_signature_stable():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     body = b'{"events":[{"ts":"2026-01-01T00:00:00Z"}]}'
     sig1 = gt.hmac_signature("secret", body)

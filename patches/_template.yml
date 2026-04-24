@@ -16,7 +16,7 @@
 #     -> on success: append ~/.nos/state.yml patches_applied[] entry
 #     -> on failure: rollback[] + record success=false
 #
-# The [Patch] prefix in task names is what the glasswing_telemetry callback
+# The [Patch] prefix in task names is what the wing_telemetry callback
 # plugin uses to auto-tag emitted events with patch_id — keep the prefix in
 # every apply/verify/rollback step.
 

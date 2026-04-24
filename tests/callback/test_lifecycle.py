@@ -14,7 +14,7 @@ from tests.callback.conftest import (FakePlay, FakePlaybook, FakeResult,
 
 def test_inactive_by_default_is_noop(monkeypatch, tmp_path):
     """No env var, no play var -> every callback is a zero-overhead no-op."""
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     plugin = gt.CallbackModule()
     assert plugin._active is False
@@ -39,10 +39,10 @@ def test_inactive_by_default_is_noop(monkeypatch, tmp_path):
 
 
 def test_env_var_activates(monkeypatch, tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK",
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "f.db"))
     plugin = gt.CallbackModule()
     plugin.v2_playbook_on_start(FakePlaybook("main.yml"))
@@ -50,9 +50,9 @@ def test_env_var_activates(monkeypatch, tmp_path):
 
 
 def test_play_var_activates(tmp_path, monkeypatch):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK",
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "f.db"))
     plugin = gt.CallbackModule()
     plugin.v2_playbook_on_start(FakePlaybook("main.yml"))
@@ -61,7 +61,7 @@ def test_play_var_activates(tmp_path, monkeypatch):
     captured = []
 
     plugin.v2_playbook_on_play_start(
-        FakePlay("p1", vars_={"glasswing_telemetry_enabled": True}))
+        FakePlay("p1", vars_={"wing_telemetry_enabled": True}))
     if plugin._http is not None:
         plugin._http.send_batch = lambda events: captured.extend(events)
     assert plugin._active is True
@@ -95,7 +95,7 @@ def test_run_id_stable_across_events(fresh_plugin):
 def test_different_plugin_instances_have_distinct_run_ids(fresh_plugin,
                                                           monkeypatch,
                                                           tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     _, plugin1 = fresh_plugin
     plugin2 = gt.CallbackModule()
@@ -131,7 +131,7 @@ def test_playbook_start_and_end_pair(fresh_plugin):
 # --------------------------------------------------------------------------- #
 
 def test_scrub_removes_sensitive_keys():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     src = {
         "msg": "ok",
@@ -248,13 +248,13 @@ def test_no_tag_leaves_context_null(fresh_plugin):
 # --------------------------------------------------------------------------- #
 
 def test_batch_flushes_on_size(monkeypatch, tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK",
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "f.db"))
-    monkeypatch.setenv("GLASSWING_EVENTS_BATCH_SIZE", "3")
-    monkeypatch.setenv("GLASSWING_EVENTS_FLUSH_INTERVAL_SEC", "3600")
+    monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "3")
+    monkeypatch.setenv("WING_EVENTS_FLUSH_INTERVAL_SEC", "3600")
 
     plugin = gt.CallbackModule()
     plugin._finalize_activation(None)
@@ -277,11 +277,11 @@ def test_batch_flushes_on_size(monkeypatch, tmp_path):
 
 
 def test_debug_mode_flushes_immediately(monkeypatch, tmp_path):
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_DEBUG", "1")
-    monkeypatch.setenv("GLASSWING_EVENTS_SQLITE_FALLBACK",
+    monkeypatch.setenv("WING_EVENTS_DEBUG", "1")
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "f.db"))
 
     plugin = gt.CallbackModule()
@@ -302,7 +302,7 @@ def test_debug_mode_flushes_immediately(monkeypatch, tmp_path):
 
 
 def test_tagged_id_extraction_helper():
-    from callback_plugins import glasswing_telemetry as gt
+    from callback_plugins import wing_telemetry as gt
 
     assert gt.extract_tagged_id("[Migrate] abc-123",
                                  gt._MIGRATION_TAG_RE) == "abc-123"

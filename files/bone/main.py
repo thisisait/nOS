@@ -409,8 +409,8 @@ async def coexistence_cleanup(
 
 @app.post("/api/events")
 async def events_ingest(
-    x_glasswing_timestamp: str = Header(default=""),
-    x_glasswing_signature: str = Header(default=""),
+    x_wing_timestamp: str = Header(default=""),
+    x_wing_signature: str = Header(default=""),
     body: dict | None = None,
 ):
     """HMAC-authenticated (not API-key) event ingestion from the callback
@@ -422,7 +422,7 @@ async def events_ingest(
     # so the callback plugin can reproduce the signature on its side.
     raw = json.dumps(body or {}, separators=(",", ":"), sort_keys=True).encode("utf-8")
     ok, err = _nos_events.verify_hmac(
-        x_glasswing_timestamp, x_glasswing_signature, raw
+        x_wing_timestamp, x_wing_signature, raw
     )
     if not ok:
         raise HTTPException(status_code=401, detail=f"HMAC check failed: {err}")
@@ -455,9 +455,9 @@ async def events_list(
     _require_framework()
     import sqlite3
     db_path = os.getenv(
-        "GLASSWING_DB_PATH",
+        "WING_DB_PATH",
         os.path.expanduser(
-            "~/projects/nOS/files/project-glasswing/data/glasswing.db"
+            "~/projects/nOS/files/project-wing/data/wing.db"
         ),
     )
     conn = sqlite3.connect(db_path)
