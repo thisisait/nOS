@@ -2,11 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load ~/glasswing/.env (Ansible-generated) and tests/.env (opt-in overrides)
-dotenv.config({ path: path.join(process.env.HOME || '', 'glasswing', '.env') });
+// Load ~/wing/.env (Ansible-generated) and tests/.env (opt-in overrides)
+dotenv.config({ path: path.join(process.env.HOME || '', 'wing', '.env') });
 dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
-const baseURL = process.env.GLASSWING_URL || 'https://glasswing.dev.local';
+const baseURL = process.env.WING_URL || 'https://wing.dev.local';
 
 export default defineConfig({
   testDir: './e2e',

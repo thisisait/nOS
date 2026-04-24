@@ -1,8 +1,8 @@
 /**
  * Centralized credentials loader for e2e tests.
  *
- * Credentials come from env vars — set them either in ~/glasswing/.env
- * (written by Ansible glasswing role) or in tests/.env for local override.
+ * Credentials come from env vars — set them either in ~/wing/.env
+ * (written by the pazny.wing Ansible role) or in tests/.env for local override.
  * Never hard-code secrets. Never commit tests/.env.
  *
  * All credentials are OPTIONAL — if a test's required env is not present,

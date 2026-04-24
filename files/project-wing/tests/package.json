@@ -1,8 +1,8 @@
 {
-  "name": "glasswing-e2e",
+  "name": "wing-e2e",
   "private": true,
   "version": "1.0.0",
-  "description": "Playwright e2e tests for Glasswing Hub and first-admin provisioning of nOS services",
+  "description": "Playwright e2e tests for Wing Hub and first-admin provisioning of nOS services",
   "scripts": {
     "install-browsers": "playwright install chromium",
     "test": "playwright test",
