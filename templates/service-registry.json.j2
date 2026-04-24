@@ -384,16 +384,16 @@
   "description": "Web desktop with Bluesky auth"
 }) %}
 {% endif %}
-{% if install_glasswing | default(install_php | default(true)) %}
+{% if install_wing | default(install_php | default(true)) %}
 {% set _ = _services.append({
   "name": "Glasswing",
   "category": "security",
   "tier": 1,
   "enabled": true,
-  "toggle_var": "install_glasswing",
-  "domain": glasswing_domain | default('glasswing.dev.local'),
+  "toggle_var": "install_wing",
+  "domain": wing_domain | default('glasswing.dev.local'),
   "port": 443,
-  "url": "https://" ~ (glasswing_domain | default('glasswing.dev.local')),
+  "url": "https://" ~ (wing_domain | default('glasswing.dev.local')),
   "type": "php",
   "stack": "native",
   "description": "Security Research Dashboard (Nette + SQLite)"

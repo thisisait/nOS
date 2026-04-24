@@ -74,7 +74,7 @@ def load_config(path: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# HMAC helpers (mirror callback_plugins/glasswing_telemetry.py)
+# HMAC helpers (mirror callback_plugins/wing_telemetry.py)
 # ---------------------------------------------------------------------------
 
 def hmac_signature(secret: str, body: bytes) -> Optional[str]:

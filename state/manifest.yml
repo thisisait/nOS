@@ -741,13 +741,13 @@ services:
     version_source: homebrew
     brew_formula: opencode
 
-  - id: glasswing
+  - id: wing
     category: security
     stack: null
-    install_flag: install_glasswing
+    install_flag: install_wing
     version_source: git_tag
-    domain_var: glasswing_domain
-    data_path_var: glasswing_data_dir
+    domain_var: wing_domain
+    data_path_var: wing_data_dir
 
   - id: bone
     category: api

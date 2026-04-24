@@ -133,7 +133,7 @@
           enabled: true
           name: "nOS → Wing (Bone)"
           url: "{{ uptime_kuma_notify_webhook_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/events') }}"
-          hmac_secret: "{{ glasswing_api_token | default('') }}"
+          hmac_secret: "{{ wing_api_token | default('') }}"
           is_default: true
           body:
             source: "uptime-kuma"
