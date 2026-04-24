@@ -1,14 +1,14 @@
 ---
 # ==============================================================================
-# pazny.glasswing — Nette PHP + SQLite security research dashboard
+# pazny.wing — Nette PHP + SQLite security research dashboard
 #
-# Credentials (glasswing_api_token) stay in top-level default.credentials.yml
+# Credentials (wing_api_token) stay in top-level default.credentials.yml
 # so prefix rotation via global_password_prefix works consistently.
 # App source file/project-glasswing/ stays in the playbook repo — the role only
 # rsyncuje, neownuje.
 # ==============================================================================
 
-glasswing_domain: "glasswing.dev.local"
-glasswing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
-glasswing_data_dir: "{{ glasswing_app_dir }}/data"
-glasswing_json_source: "{{ playbook_dir }}/docs/llm/security"
+wing_domain: "glasswing.dev.local"
+wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
+wing_data_dir: "{{ wing_app_dir }}/data"
+wing_json_source: "{{ playbook_dir }}/docs/llm/security"

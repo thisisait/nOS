@@ -1,25 +1,25 @@
 ---
 # ==============================================================================
-# pazny.glasswing — Security Research Dashboard (Nette PHP + SQLite)
+# pazny.wing — Security Research Dashboard (Nette PHP + SQLite)
 # ==============================================================================
 
-- name: "[Glasswing] Ensure glasswing directories exist"
+- name: "[Wing] Ensure glasswing directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
-    - "{{ glasswing_app_dir }}"
-    - "{{ glasswing_app_dir }}/data"
-    - "{{ glasswing_app_dir }}/temp"
-    - "{{ glasswing_app_dir }}/log"
+    - "{{ wing_app_dir }}"
+    - "{{ wing_app_dir }}/data"
+    - "{{ wing_app_dir }}/temp"
+    - "{{ wing_app_dir }}/log"
     - "{{ ansible_facts['env']['HOME'] }}/glasswing/repos"
     - "{{ ansible_facts['env']['HOME'] }}/glasswing/patches"
 
-- name: "[Glasswing] Rsync app files to deployment directory"
+- name: "[Wing] Rsync app files to deployment directory"
   ansible.posix.synchronize:
-    src: "{{ playbook_dir }}/files/project-glasswing/"
-    dest: "{{ glasswing_app_dir }}/"
+    src: "{{ playbook_dir }}/files/project-wing/"
+    dest: "{{ wing_app_dir }}/"
     delete: true
     rsync_opts:
       - "--exclude=data/"
@@ -35,78 +35,78 @@
   delegate_to: "{{ inventory_hostname }}"
   notify: Restart php-fpm
 
-- name: "[Glasswing] Run composer install"
+- name: "[Wing] Run composer install"
   ansible.builtin.command:
     cmd: "{{ homebrew_prefix }}/bin/composer install --no-dev --optimize-autoloader --no-interaction"
-    chdir: "{{ glasswing_app_dir }}"
+    chdir: "{{ wing_app_dir }}"
   environment:
     PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     COMPOSER_HOME: "{{ ansible_facts['env']['HOME'] }}/.composer"
-  register: glasswing_composer
-  changed_when: "'Nothing to install' not in (glasswing_composer.stderr | default(''))"
+  register: wing_composer
+  changed_when: "'Nothing to install' not in (wing_composer.stderr | default(''))"
 
-- name: "[Glasswing] Initialize SQLite database schema"
+- name: "[Wing] Initialize SQLite database schema"
   ansible.builtin.command:
-    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/init-db.php --data-dir={{ glasswing_data_dir }}"
-    chdir: "{{ glasswing_app_dir }}"
-  register: glasswing_initdb
-  changed_when: "'Created' in (glasswing_initdb.stdout | default(''))"
+    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/init-db.php --data-dir={{ wing_data_dir }}"
+    chdir: "{{ wing_app_dir }}"
+  register: wing_initdb
+  changed_when: "'Created' in (wing_initdb.stdout | default(''))"
 
-- name: "[Glasswing] Migrate components -> systems (idempotent)"
+- name: "[Wing] Migrate components -> systems (idempotent)"
   ansible.builtin.command:
-    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate-systems.php --data-dir={{ glasswing_data_dir }}"
-    chdir: "{{ glasswing_app_dir }}"
-  register: glasswing_migrate_sys
-  changed_when: "'Migrated' in (glasswing_migrate_sys.stdout | default('')) or 'Created' in (glasswing_migrate_sys.stdout | default(''))"
+    cmd: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate-systems.php --data-dir={{ wing_data_dir }}"
+    chdir: "{{ wing_app_dir }}"
+  register: wing_migrate_sys
+  changed_when: "'Migrated' in (wing_migrate_sys.stdout | default('')) or 'Created' in (wing_migrate_sys.stdout | default(''))"
 
-- name: "[Glasswing] Check if legacy JSON migration needed"
+- name: "[Wing] Check if legacy JSON migration needed"
   ansible.builtin.shell: |
     {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php -r "
-      \$db = new SQLite3('{{ glasswing_data_dir }}/glasswing.db');
+      \$db = new SQLite3('{{ wing_data_dir }}/glasswing.db');
       echo \$db->querySingle('SELECT COUNT(*) FROM systems WHERE source IN (\"components_db\",\"manual\")');
       \$db->close();
     "
-  register: glasswing_component_count
+  register: wing_component_count
   changed_when: false
 
-- name: "[Glasswing] Run JSON to SQLite data migration (legacy components)"
+- name: "[Wing] Run JSON to SQLite data migration (legacy components)"
   ansible.builtin.command:
     cmd: >
       {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/migrate.php
-      --json-dir={{ glasswing_json_source }}
-      --data-dir={{ glasswing_data_dir }}
-    chdir: "{{ glasswing_app_dir }}"
-  when: glasswing_component_count.stdout | int == 0
-  register: glasswing_migrate
+      --json-dir={{ wing_json_source }}
+      --data-dir={{ wing_data_dir }}
+    chdir: "{{ wing_app_dir }}"
+  when: wing_component_count.stdout | int == 0
+  register: wing_migrate
 
-- name: "[Glasswing] Ingest service-registry.json into systems table"
+- name: "[Wing] Ingest service-registry.json into systems table"
   ansible.builtin.command:
     cmd: >
       {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php bin/ingest-registry.php
       --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
-    chdir: "{{ glasswing_app_dir }}"
+    chdir: "{{ wing_app_dir }}"
   environment:
     PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
-  register: glasswing_ingest
-  changed_when: "'Ingested' in (glasswing_ingest.stdout | default('')) and 'Ingested 0' not in (glasswing_ingest.stdout | default(''))"
+  register: wing_ingest
+  changed_when: "'Ingested' in (wing_ingest.stdout | default('')) and 'Ingested 0' not in (wing_ingest.stdout | default(''))"
 
-- name: "[Glasswing] Reconverge API token from credentials (state-declarative)"
+- name: "[Wing] Reconverge API token from credentials (state-declarative)"
   ansible.builtin.shell: |
-    {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php {{ glasswing_app_dir }}/bin/provision-token.php \
-      --db={{ glasswing_data_dir }}/glasswing.db \
-      --token={{ glasswing_api_token }} \
+    {{ homebrew_prefix }}/opt/php@{{ php_version }}/bin/php {{ wing_app_dir }}/bin/provision-token.php \
+      --db={{ wing_data_dir }}/glasswing.db \
+      --token={{ wing_api_token }} \
       --name=ansible-provisioned
-  register: glasswing_token_result
-  changed_when: "'Created' in (glasswing_token_result.stdout | default('')) or 'Updated' in (glasswing_token_result.stdout | default(''))"
+  register: wing_token_result
+  changed_when: "'Created' in (wing_token_result.stdout | default('')) or 'Updated' in (wing_token_result.stdout | default(''))"
 
-- name: "[Glasswing] Write .env with API token + e2e credentials"
+- name: "[Wing] Write .env with API token + e2e credentials"
   ansible.builtin.copy:
     dest: "{{ ansible_facts['env']['HOME'] }}/glasswing/.env"
     mode: '0600'
     content: |
-      # Auto-generated by pazny.glasswing — do not edit
-      GLASSWING_API_TOKEN={{ glasswing_api_token }}
-      GLASSWING_URL=https://{{ glasswing_domain | default('glasswing.dev.local') }}
+      # Auto-generated by pazny.wing — do not edit
+      WING_API_TOKEN={{ wing_api_token }}
+      WING_URL=https://{{ wing_domain | default('glasswing.dev.local') }}
       DEV_DOMAIN={{ instance_tld | default('dev.local') }}
 
       # Authentik SSO — used by Playwright authenticated smoke test
@@ -124,24 +124,24 @@
       UPTIME_KUMA_ADMIN_USER={{ uptime_kuma_admin_user | default('admin') }}
       UPTIME_KUMA_ADMIN_PASSWORD={{ uptime_kuma_admin_password | default(service_admin_password | default('')) }}
 
-- name: "[Glasswing] Set permissions on data directory"
+- name: "[Wing] Set permissions on data directory"
   ansible.builtin.file:
-    path: "{{ glasswing_data_dir }}"
+    path: "{{ wing_data_dir }}"
     mode: '0755'
     recurse: true
 
-- name: "[Glasswing] Ensure temp and log are writable by PHP-FPM"
+- name: "[Wing] Ensure temp and log are writable by PHP-FPM"
   ansible.builtin.file:
     path: "{{ item }}"
     mode: '0777'
     recurse: true
   loop:
-    - "{{ glasswing_app_dir }}/temp"
-    - "{{ glasswing_app_dir }}/log"
+    - "{{ wing_app_dir }}/temp"
+    - "{{ wing_app_dir }}/log"
 
-- name: "[Glasswing] Clear Nette cache after deploy"
+- name: "[Wing] Clear Nette cache after deploy"
   ansible.builtin.file:
-    path: "{{ glasswing_app_dir }}/temp/cache"
+    path: "{{ wing_app_dir }}/temp/cache"
     state: absent
   changed_when: false
 
@@ -149,39 +149,39 @@
 # Enabled only when install_playwright_tests=true. Adds npm install + chromium
 # browser download to glasswing/app/tests/. Runs locally against the machine
 # that provisioned the playbook.
-- name: "[Glasswing] Playwright — npm install"
+- name: "[Wing] Playwright — npm install"
   ansible.builtin.command:
     cmd: "{{ homebrew_prefix }}/bin/npm install --no-audit --no-fund"
-    chdir: "{{ glasswing_app_dir }}/tests"
-    creates: "{{ glasswing_app_dir }}/tests/node_modules/@playwright/test"
+    chdir: "{{ wing_app_dir }}/tests"
+    creates: "{{ wing_app_dir }}/tests/node_modules/@playwright/test"
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   when: install_playwright_tests | default(false)
 
-- name: "[Glasswing] Playwright — install chromium browser"
+- name: "[Wing] Playwright — install chromium browser"
   ansible.builtin.command:
     cmd: "{{ homebrew_prefix }}/bin/npx playwright install chromium"
-    chdir: "{{ glasswing_app_dir }}/tests"
+    chdir: "{{ wing_app_dir }}/tests"
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   register: _playwright_install
   changed_when: "'is already installed' not in (_playwright_install.stdout | default(''))"
   when: install_playwright_tests | default(false)
 
-- name: "[Glasswing] Playwright — print how to run tests"
+- name: "[Wing] Playwright — print how to run tests"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════
-       Playwright e2e tests ready at {{ glasswing_app_dir }}/tests
+       Playwright e2e tests ready at {{ wing_app_dir }}/tests
       ══════════════════════════════════════════════════════════
        Run smoke tests (fast, ~30s):
-         cd {{ glasswing_app_dir }}/tests && npm run test:smoke
+         cd {{ wing_app_dir }}/tests && npm run test:smoke
 
        Run first-admin provisioning (Metabase/Jellyfin/Open WebUI/Uptime Kuma):
-         cd {{ glasswing_app_dir }}/tests && npm run test:provisioning
+         cd {{ wing_app_dir }}/tests && npm run test:provisioning
 
        Open HTML report:
-         cd {{ glasswing_app_dir }}/tests && npm run report
+         cd {{ wing_app_dir }}/tests && npm run report
 
        Credentials come from ~/glasswing/.env (auto-generated above).
       ══════════════════════════════════════════════════════════

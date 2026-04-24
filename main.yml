@@ -535,7 +535,7 @@
         vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
         paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         jsos_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        glasswing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
+        wing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
       tags: ['always']
@@ -921,8 +921,8 @@
     - name: "Glasswing (pazny.wing role)"
       ansible.builtin.import_role:
         name: pazny.wing
-      when: install_glasswing | default(install_php | default(true))
-      tags: ['glasswing', 'security']
+      when: install_wing | default(install_php | default(true))
+      tags: ['wing', 'glasswing', 'security']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Export/Import – hardware migration (run only with --tags)

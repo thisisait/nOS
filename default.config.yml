@@ -111,8 +111,8 @@ install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP c
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
-install_glasswing: true           # Glasswing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
-install_playwright_tests: false   # Playwright e2e tests under glasswing/tests (smoke + first-admin provisioning)
+install_wing: true           # Glasswing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
+install_playwright_tests: false   # Playwright e2e tests under files/project-wing/tests (smoke + first-admin provisioning)
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
@@ -454,10 +454,10 @@ php_composer_packages:
   #   state: present
 
 # ── Glasswing Security Dashboard ─────────────────────────────────────────────
-glasswing_domain: "glasswing.dev.local"
-glasswing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
-glasswing_data_dir: "{{ glasswing_app_dir }}/data"
-glasswing_json_source: "{{ playbook_dir }}/docs/llm/security"
+wing_domain: "glasswing.dev.local"
+wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/glasswing/app"
+wing_data_dir: "{{ wing_app_dir }}/data"
+wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 
 # ==============================================================================
 # NODE.JS
@@ -1543,7 +1543,7 @@ authentik_app_tiers:
   home-assistant: 3
   kiwix: 4
   jellyfin: 4
-  glasswing: 1
+  wing: 1
   wordpress: 4
   code-server: 1
   influxdb: 1
@@ -1719,9 +1719,9 @@ authentik_oidc_apps:
     type: "proxy"
   - name: "Glasswing"
     slug: "glasswing"
-    enabled: "{{ install_glasswing | default(install_php | default(true)) }}"
-    launch_url: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
-    external_host: "https://{{ glasswing_domain | default('glasswing.dev.local') }}"
+    enabled: "{{ install_wing | default(install_php | default(true)) }}"
+    launch_url: "https://{{ wing_domain | default('glasswing.dev.local') }}"
+    external_host: "https://{{ wing_domain | default('glasswing.dev.local') }}"
     type: "proxy"
   # ── Wave A+B native OIDC services ──────────────────────────────────────
   - name: "Miniflux"
