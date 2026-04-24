@@ -73,11 +73,18 @@
     {
       "type": "timeseries",
       "id": 6,
-      "title": "Agent runs / minute (Wing event stream via Loki)",
-      "datasource": {"type": "loki", "uid": "loki"},
+      "title": "Ansible task rate (Wing events)",
+      "description": "Per-minute count of Ansible task events reaching Wing SQLite. Covers any playbook run emitting wing_telemetry callback events (gated on NOS_TELEMETRY_ENABLED=1).",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
       "targets": [
-        {"refId": "A", "expr": "sum by (service) (count_over_time({job=\"wing\"} |~ \"event_type=agent_run\"[1m]))", "legendFormat": "{{service}}"}
+        {
+          "refId": "A",
+          "queryType": "time series",
+          "rawQueryText": "SELECT strftime('%s', ts) * 1 AS time, type AS metric, COUNT(*) AS value FROM events WHERE type IN ('task_ok','task_changed','task_failed','task_skipped') AND ts >= datetime('now','-6 hours') GROUP BY strftime('%Y-%m-%d %H:%M', ts), type ORDER BY time ASC",
+          "queryText": "SELECT strftime('%s', ts) * 1 AS time, type AS metric, COUNT(*) AS value FROM events WHERE type IN ('task_ok','task_changed','task_failed','task_skipped') AND ts >= datetime('now','-6 hours') GROUP BY strftime('%Y-%m-%d %H:%M', ts), type ORDER BY time ASC",
+          "timeColumns": ["time"]
+        }
       ],
       "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
       "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
@@ -173,7 +180,7 @@
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 33},
       "targets": [
-        {"refId": "A", "expr": "{job=~\"wing|openclaw|paperclip\"}", "maxLines": 300}
+        {"refId": "A", "expr": "{job=~\"openclaw|paperclip\"}", "maxLines": 300}
       ],
       "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
     }

@@ -27,6 +27,15 @@ services:
       - {{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}:/var/lib/grafana
       - {{ stacks_dir }}/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - {{ ansible_facts['env']['HOME'] }}/observability/dashboards:/var/lib/grafana/dashboards:ro
+{% if install_wing | default(install_php | default(true)) %}
+      # Wing SQLite — read-only mount of data/ dir (needs .db + -wal + -shm)
+      # so frser-sqlite-datasource can query events / migrations_applied /
+      # upgrades_applied / coexistence_tracks / patches_applied tables for
+      # dashboards 99-playbook and others. Mounted RO; the datasource opens
+      # with mode=ro so no locks contend with Wing's writer (bone's HMAC
+      # ingest on api.dev.local/api/v1/events).
+      - {{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}:/var/lib/grafana/wing:ro
+{% endif %}
 {% if install_authentik | default(false) %}
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/grafana/mkcert-ca.crt:ro
 {% endif %}
@@ -39,6 +48,13 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
+{% if install_wing | default(install_php | default(true)) %}
+      # Auto-install the community SQLite datasource plugin so dashboards
+      # (99-playbook et al.) can query Wing's events table directly.
+      # Signed community plugin; Grafana 11+ tolerates it without an extra
+      # allow_loading_unsigned_plugins entry.
+      GF_INSTALL_PLUGINS: "frser-sqlite-datasource"
+{% endif %}
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       GF_AUTH_GENERIC_OAUTH_ENABLED: "true"

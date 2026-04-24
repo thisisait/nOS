@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Ansible run history + Wing event timeline + migration / upgrade queues. Fed by callback_plugins/wing_telemetry.py (BoxAPI → Wing SQLite with ~/.nos/events.jsonl fallback).",
+  "description": "Ansible run history + Wing event timeline + migration / upgrade queues. Queries Wing's SQLite events table directly via frser-sqlite-datasource (bind-mounted read-only from ~/wing/app/data/wing.db).",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -27,28 +27,34 @@
       "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
       "options": {
         "mode": "markdown",
-        "content": "Every `main.yml` run emits structured events via `callback_plugins/wing_telemetry.py`. Events land in **BoxAPI → Wing SQLite** and fall back to **`~/.nos/events.jsonl`** (tailed by Alloy → Loki with `job=\"wing\"`). `state/manifest.yml` holds the expected shape; `~/.nos/state.yml` holds the last run's runtime facts (`last_run.recap`, durations). Migration/upgrade queues surface `nos_migrations_pending` / `nos_upgrades_pending` gauges — currently a **Wave 4 integration** target."
+        "content": "Every `main.yml` run emits structured lifecycle events via `callback_plugins/wing_telemetry.py` (gated on `NOS_TELEMETRY_ENABLED=1` or `wing_telemetry_enabled: true`). The plugin POSTs HMAC-signed batches to Bone (`http://api.dev.local/api/v1/events`); Bone writes them into **Wing SQLite** (`~/wing/app/data/wing.db` → `events` table). This dashboard reads that table directly via the `frser-sqlite-datasource` plugin (read-only volume mount). If the HTTP POST fails, the plugin spools to `/tmp/nos-events-fallback.db` and the operator can replay manually."
       }
     },
     {
       "type": "text",
       "id": 2,
       "title": "Last run recap",
-      "description": "Pulls ~/.nos/state.yml last_run.recap via an Alloy file_scrape + Loki tail. For now: open Wing /timeline for the live view.",
+      "description": "Latest playbook run summary. Reads from events.recap via JSON extract on the most recent playbook_end event.",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 4},
       "options": {
         "mode": "markdown",
-        "content": "_Last-run recap text_\n\nThis panel shows the `last_run.recap` block from `~/.nos/state.yml`. Wire-up: Alloy `local.file` → Loki → Grafana text panel (via annotation query). **Wave 1+ target.**\n\nMeanwhile consult:\n- `~/.nos/state.yml`\n- Wing `/timeline`\n- `wing.sqlite` → `ansible_runs`"
+        "content": "_For the full recap, open Wing `/timeline` — it renders the same events table with per-run drill-down._\n\nThe panels below show:\n- **counts** (runs, failed runs) over 7d / 30d\n- **avg duration** from `events.duration_ms` (playbook_end events)\n- **active coexistence tracks** from `coexistence_tracks`\n- **last 50 events** across every run_id"
       }
     },
     {
       "type": "stat",
       "id": 3,
       "title": "Runs last 7d",
-      "datasource": {"type": "loki", "uid": "loki"},
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 12, "y": 4},
       "targets": [
-        {"refId": "A", "expr": "sum(count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\"[7d]))", "legendFormat": "runs"}
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(DISTINCT run_id) AS runs FROM events WHERE type = 'playbook_end' AND ts >= datetime('now', '-7 days')",
+          "queryText": "SELECT COUNT(DISTINCT run_id) AS runs FROM events WHERE type = 'playbook_end' AND ts >= datetime('now', '-7 days')",
+          "timeColumns": []
+        }
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
@@ -57,10 +63,17 @@
       "type": "stat",
       "id": 4,
       "title": "Failed runs 7d",
-      "datasource": {"type": "loki", "uid": "loki"},
+      "description": "Count of distinct run_ids where at least one task_failed or task_unreachable event was recorded within the retention window.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 16, "y": 4},
       "targets": [
-        {"refId": "A", "expr": "sum(count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\" |~ \"status=failed\"[7d]))", "legendFormat": "failed"}
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(DISTINCT run_id) AS failed FROM events WHERE type IN ('task_failed', 'task_unreachable') AND ts >= datetime('now', '-7 days')",
+          "queryText": "SELECT COUNT(DISTINCT run_id) AS failed FROM events WHERE type IN ('task_failed', 'task_unreachable') AND ts >= datetime('now', '-7 days')",
+          "timeColumns": []
+        }
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
@@ -69,78 +82,153 @@
       "type": "stat",
       "id": 5,
       "title": "Avg duration 7d",
-      "description": "Placeholder — needs duration label on playbook_end events (Wave 1+).",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Average wallclock playbook duration (ms → s) across playbook_end events in the last 7 days.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 20, "y": 4},
-      "targets": [{"refId": "A", "expr": "avg(nos_playbook_duration_seconds)", "legendFormat": "avg"}],
-      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT AVG(duration_ms) / 1000.0 AS avg_seconds FROM events WHERE type = 'playbook_end' AND duration_ms IS NOT NULL AND ts >= datetime('now', '-7 days')",
+          "queryText": "SELECT AVG(duration_ms) / 1000.0 AS avg_seconds FROM events WHERE type = 'playbook_end' AND duration_ms IS NOT NULL AND ts >= datetime('now', '-7 days')",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "decimals": 1}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
     },
     {
       "type": "stat",
       "id": 6,
-      "title": "Pending migrations",
-      "description": "Wave 4: nos_migrations_pending gauge emitted by pazny.state_manager.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Migrations applied (total)",
+      "description": "Total rows in migrations_applied. New rows are inserted on every successful nos_migrate apply.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 12, "y": 7},
-      "targets": [{"refId": "A", "expr": "nos_migrations_pending", "legendFormat": "migrations"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}, "noValue": "Wave 4"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS migrations FROM migrations_applied",
+          "queryText": "SELECT COUNT(*) AS migrations FROM migrations_applied",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
     },
     {
       "type": "stat",
       "id": 7,
-      "title": "Pending upgrades",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Upgrades applied (total)",
+      "description": "Total rows in upgrades_applied. Includes rollbacks (rolled_back=1).",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 16, "y": 7},
-      "targets": [{"refId": "A", "expr": "nos_upgrades_pending", "legendFormat": "upgrades"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}, "noValue": "Wave 4"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS upgrades FROM upgrades_applied",
+          "queryText": "SELECT COUNT(*) AS upgrades FROM upgrades_applied",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
     },
     {
       "type": "stat",
       "id": 8,
-      "title": "Coexistence tracks",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Active coexistence tracks",
+      "description": "Rows in coexistence_tracks with active=1 (a live dual-version track for the given service).",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 3, "w": 4, "x": 20, "y": 7},
-      "targets": [{"refId": "A", "expr": "nos_coexistence_tracks_active", "legendFormat": "tracks"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 4"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS tracks FROM coexistence_tracks WHERE active = 1",
+          "queryText": "SELECT COUNT(*) AS tracks FROM coexistence_tracks WHERE active = 1",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}, {"color": "orange", "value": 1}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
     },
     {
       "type": "barchart",
       "id": 9,
-      "title": "Run history (last 30d) — durations",
-      "description": "count of playbook_end events per day, split by status.",
-      "datasource": {"type": "loki", "uid": "loki"},
+      "title": "Run history — last 30 days (ok vs failed)",
+      "description": "Per-day count of distinct run_ids that reached playbook_end, split by whether any task failed or went unreachable during the run.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 10},
       "targets": [
-        {"refId": "A", "expr": "sum by (status) (count_over_time({job=\"wing\"} |~ \"event_type=playbook_end\" | json | __error__=\"\"[1d]))", "legendFormat": "{{status}}"}
+        {
+          "refId": "A",
+          "queryType": "time series",
+          "rawQueryText": "SELECT strftime('%s', date(e.ts)) * 1 AS time, CASE WHEN EXISTS (SELECT 1 FROM events f WHERE f.run_id = e.run_id AND f.type IN ('task_failed','task_unreachable')) THEN 'failed' ELSE 'ok' END AS status, COUNT(DISTINCT e.run_id) AS runs FROM events e WHERE e.type = 'playbook_end' AND e.ts >= datetime('now','-30 days') GROUP BY date(e.ts), status ORDER BY time ASC",
+          "queryText": "SELECT strftime('%s', date(e.ts)) * 1 AS time, CASE WHEN EXISTS (SELECT 1 FROM events f WHERE f.run_id = e.run_id AND f.type IN ('task_failed','task_unreachable')) THEN 'failed' ELSE 'ok' END AS status, COUNT(DISTINCT e.run_id) AS runs FROM events e WHERE e.type = 'playbook_end' AND e.ts >= datetime('now','-30 days') GROUP BY date(e.ts), status ORDER BY time ASC",
+          "timeColumns": ["time"]
+        }
       ],
       "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
       "options": {"orientation": "vertical", "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0, "stacking": "normal"}
     },
     {
-      "type": "logs",
+      "type": "table",
       "id": 10,
       "title": "Event timeline (last 50)",
-      "datasource": {"type": "loki", "uid": "loki"},
+      "description": "Latest 50 events across all run_ids, newest first.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
       "targets": [
-        {"refId": "A", "expr": "{job=\"wing\"}", "maxLines": 50}
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT ts, type, run_id, playbook, role, task, host, duration_ms, changed, migration_id, upgrade_id, patch_id FROM events ORDER BY id DESC LIMIT 50",
+          "queryText": "SELECT ts, type, run_id, playbook, role, task, host, duration_ms, changed, migration_id, upgrade_id, patch_id FROM events ORDER BY id DESC LIMIT 50",
+          "timeColumns": []
+        }
       ],
-      "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": [{"matcher": {"id": "byName", "options": "type"}, "properties": [{"id": "custom.width", "value": 140}, {"id": "mappings", "value": [{"type": "value", "options": {"task_failed": {"color": "red", "index": 0, "text": "task_failed"}, "task_unreachable": {"color": "red", "index": 1, "text": "task_unreachable"}, "playbook_end": {"color": "blue", "index": 2, "text": "playbook_end"}, "playbook_start": {"color": "blue", "index": 3, "text": "playbook_start"}}}]}, {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}, {"matcher": {"id": "byName", "options": "duration_ms"}, "properties": [{"id": "unit", "value": "ms"}, {"id": "custom.width", "value": 110}]}, {"matcher": {"id": "byName", "options": "ts"}, "properties": [{"id": "custom.width", "value": 200}]}, {"matcher": {"id": "byName", "options": "run_id"}, "properties": [{"id": "custom.width", "value": 120}]}]},
+      "options": {"showHeader": true, "footer": {"show": false}, "cellHeight": "sm"}
     },
     {
       "type": "table",
       "id": 11,
-      "title": "Recent commits — placeholder (Wave 3)",
-      "description": "Wave 3: pull from Gitea API or state/last_run.commits via scripted exporter.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "short", "noValue": "Wave 3"}, "overrides": []},
-      "options": {"showHeader": true}
+      "title": "Recent migrations",
+      "description": "Last 20 rows from migrations_applied — one row per nos_migrate apply (and, if rolled back, one row per rollback).",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 32},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT id, title, severity, applied_at, success, duration_sec, steps_applied, steps_total, rolled_back_from FROM migrations_applied ORDER BY applied_at DESC LIMIT 20",
+          "queryText": "SELECT id, title, severity, applied_at, success, duration_sec, steps_applied, steps_total, rolled_back_from FROM migrations_applied ORDER BY applied_at DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [{"matcher": {"id": "byName", "options": "duration_sec"}, "properties": [{"id": "unit", "value": "s"}]}, {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "mappings", "value": [{"type": "value", "options": {"0": {"color": "red", "index": 0, "text": "fail"}, "1": {"color": "green", "index": 1, "text": "ok"}}}]}, {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}]},
+      "options": {"showHeader": true, "cellHeight": "sm"}
+    },
+    {
+      "type": "table",
+      "id": 12,
+      "title": "Recent upgrades",
+      "description": "Last 20 rows from upgrades_applied — one row per service upgrade apply / rollback.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 32},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT service, recipe_id, from_version, to_version, severity, applied_at, success, duration_sec, rolled_back FROM upgrades_applied ORDER BY applied_at DESC LIMIT 20",
+          "queryText": "SELECT service, recipe_id, from_version, to_version, severity, applied_at, success, duration_sec, rolled_back FROM upgrades_applied ORDER BY applied_at DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [{"matcher": {"id": "byName", "options": "duration_sec"}, "properties": [{"id": "unit", "value": "s"}]}, {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "mappings", "value": [{"type": "value", "options": {"0": {"color": "red", "index": 0, "text": "fail"}, "1": {"color": "green", "index": 1, "text": "ok"}}}]}, {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}]},
+      "options": {"showHeader": true, "cellHeight": "sm"}
     }
   ],
   "refresh": "1m",
@@ -153,6 +241,6 @@
   "timezone": "",
   "title": "nOS — Playbook & Wing Timeline",
   "uid": "nos-99-playbook",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

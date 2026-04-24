@@ -57,6 +57,28 @@ datasources:
     version: 1
     editable: false
 
+{% if install_wing | default(install_php | default(true)) %}
+  # ── Wing SQLite – playbook events + migration / upgrade / patch history ──
+  # Read-only direct SQLite read of Wing's events.db (bind-mounted into the
+  # Grafana container as /var/lib/grafana/wing/wing.db). Used by the
+  # 99-playbook dashboard to render ansible run history, failure counts,
+  # and event timeline without needing a Loki pipeline. The mode=ro URL
+  # param opens WAL-mode DB without contending with bone's writer.
+  #
+  # Uses the community plugin frser-sqlite-datasource, auto-installed via
+  # GF_INSTALL_PLUGINS in roles/pazny.grafana/templates/compose.yml.j2.
+  - name: Wing SQLite
+    type: frser-sqlite-datasource
+    uid: wing_sqlite
+    access: proxy
+    jsonData:
+      path: /var/lib/grafana/wing/wing.db
+      # Open read-only so we don't race with the Nette writer.
+      pathOptions: "mode=ro"
+    version: 1
+    editable: false
+{% endif %}
+
 {% if install_influxdb | default(false) %}
   # ── InfluxDB 2.x – time-series data (Flux) ────────────────────────────────
   # Token is read from credentials.yml (influxdb_admin_token). On blank runs it
