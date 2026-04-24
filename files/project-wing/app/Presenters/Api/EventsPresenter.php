@@ -92,13 +92,13 @@ final class EventsPresenter extends BaseApiPresenter
 	 * Validate HMAC signature. Callback plugin sends:
 	 *   X-Wing-Timestamp: <unix ts>
 	 *   X-Wing-Signature: hex(hmac_sha256(secret, "<ts>.<raw_body>"))
-	 * The secret is read from GLASSWING_EVENTS_HMAC_SECRET (populated by the
+	 * The secret is read from WING_EVENTS_HMAC_SECRET (populated by the
 	 * nginx fastcgi_param block). Timestamp must be within ±300s of server
 	 * time (replay protection).
 	 */
 	private function checkHmac(): void
 	{
-		$secret = (string) (getenv('GLASSWING_EVENTS_HMAC_SECRET') ?: '');
+		$secret = (string) (getenv('WING_EVENTS_HMAC_SECRET') ?: '');
 		if ($secret === '') {
 			$this->sendError('HMAC secret not configured', 500);
 		}

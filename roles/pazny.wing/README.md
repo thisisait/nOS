@@ -1,6 +1,6 @@
 # pazny.wing
 
-Ansible role for deploying **Glasswing** — a Nette PHP + SQLite security research dashboard — on a macOS host running Homebrew nginx + php-fpm.
+Ansible role for deploying **Wing** — a Nette PHP + SQLite security research dashboard — on a macOS host running Homebrew nginx + php-fpm.
 
 Part of [nOS](../../README.md) Wave 2 role extraction pilot. First of three base roles (`pazny.wing`, `pazny.mariadb`, `pazny.grafana`).
 

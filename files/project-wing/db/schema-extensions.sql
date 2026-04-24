@@ -1,4 +1,4 @@
--- Glasswing schema extensions for the nOS State & Migration Framework.
+-- Wing schema extensions for the nOS State & Migration Framework.
 -- Applied idempotently by bin/init-db.php after the base schema. Safe to
 -- re-run: all statements use CREATE ... IF NOT EXISTS.
 

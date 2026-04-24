@@ -1,6 +1,6 @@
 """State endpoints — serve ~/.nos/state.yml as JSON.
 
-Used by Glasswing's Api\\StatePresenter (proxies here) and by the
+Used by Wing's Api\\StatePresenter (proxies here) and by the
 post-provision `state-report.yml` task that pushes state snapshots.
 """
 

@@ -1,6 +1,6 @@
 # Wave 2 — Role Migration Design
 
-Status: Wave 2.1 pilot **complete**; Wave 2.2 parallel batch **in progress**. Target branch: `dev`. Pilot scope (done): three roles — `pazny.glasswing`, `pazny.mariadb`, `pazny.grafana`.
+Status: Wave 2.1 pilot **complete**; Wave 2.2 parallel batch **in progress**. Target branch: `dev`. Pilot scope (done): three roles — `pazny.wing`, `pazny.mariadb`, `pazny.grafana`.
 
 This document describes how the nOS playbook migrates from inline `tasks/` files plus monolithic `templates/stacks/<stack>/docker-compose.yml.j2` files into per-service Ansible roles. It was originally the operational plan for the Wave 2.1 pilot; it has been revised post-pilot to capture the lessons learned and serve as the authoritative spec for the Wave 2.2 parallel batch and all future sprints.
 
@@ -12,7 +12,7 @@ Wave 1 of the state-declarative refactor landed on `dev`, followed by the Wave 2
 
 - `3c2a5d3` — feat(roles): extract grafana into `pazny.grafana` role (Wave 2.1 pilot)
 - `9ba0bfc` — feat(roles): extract mariadb into `pazny.mariadb` role (Wave 2.1 pilot)
-- `3719258` — feat(roles): extract glasswing into `pazny.glasswing` role (Wave 2.1 pilot)
+- `3719258` — feat(roles): extract wing into `pazny.wing` role (Wave 2.1 pilot)
 - `2c4daae` — feat(core-up): enumerate compose overrides for per-role fragments
 - `075a79d` — docs: wave 2 role migration design (this doc, initial draft)
 - `ec3e3c8` — refactor(verify): data-driven `stack_verify` via health-probes catalog
@@ -191,18 +191,18 @@ Invocation from `tasks/stacks/core-up.yml`:
 
 **Grafana-specific pattern note:** the `files/observability/grafana/provisioning/datasources/all.yml.j2` and `files/observability/grafana/provisioning/dashboards/all.yml.j2` renders remain in `core-up.yml` (see the "Deploy Grafana datasources/dashboards provisioning" tasks around lines 208–222). They depend on play-level Authentik/service-registry state and moving them into the role would require plumbing those vars through role parameters — a net loss. This is the canonical example of the "provisioning stays central" rule in the lessons-learned table.
 
-### Source map — `pazny.glasswing` (as shipped in commit `3719258`)
+### Source map — `pazny.wing` (as shipped in commit `3719258`)
 
 | Role file | Source in pre-pilot repo | Pilot outcome |
 |---|---|---|
-| `roles/pazny.glasswing/defaults/main.yml` | `glasswing_*` block from `default.config.yml` | `glasswing_domain`, `glasswing_app_dir`, `glasswing_data_dir`, `glasswing_json_source`. |
-| `roles/pazny.glasswing/tasks/main.yml` | Verbatim move from `tasks/glasswing.yml` | Rsync of `{{ playbook_dir }}/files/project-glasswing/`, composer install, SQLite DB bootstrap, nginx vhost notify (via play-level `Restart nginx` / `Restart php-fpm`). |
-| `roles/pazny.glasswing/meta/main.yml` | New file | `dependencies: []`, `collections: [ansible.posix]` (for `synchronize`). |
-| `roles/pazny.glasswing/handlers/main.yml` | — | **Does not exist.** Glasswing relies entirely on play-level shared handlers (`Restart nginx`, `Restart php-fpm`) — the pilot proved that notify from a role to a play-level handler works. No service-specific handler needed. |
-| `roles/pazny.glasswing/templates/` | — | **Does not exist.** Glasswing is non-Docker (nginx vhost + PHP-FPM). No compose fragment, no `{{ stacks_dir }}/<stack>/overrides/` render. |
-| `files/project-glasswing/` | Unchanged | **Stays in place.** The role rsyncs it from `{{ playbook_dir }}/files/project-glasswing/`; treating it as role `files/` would force every consumer to vendor the Nette PHP app. Same rule applies to jsOS, OpenClaw, iiab-terminal when those migrate in Wave 2.2. |
+| `roles/pazny.wing/defaults/main.yml` | `wing_*` block from `default.config.yml` | `wing_domain`, `wing_app_dir`, `wing_data_dir`, `wing_json_source`. |
+| `roles/pazny.wing/tasks/main.yml` | Verbatim move from `tasks/wing.yml` | Rsync of `{{ playbook_dir }}/files/project-wing/`, composer install, SQLite DB bootstrap, nginx vhost notify (via play-level `Restart nginx` / `Restart php-fpm`). |
+| `roles/pazny.wing/meta/main.yml` | New file | `dependencies: []`, `collections: [ansible.posix]` (for `synchronize`). |
+| `roles/pazny.wing/handlers/main.yml` | — | **Does not exist.** Wing relies entirely on play-level shared handlers (`Restart nginx`, `Restart php-fpm`) — the pilot proved that notify from a role to a play-level handler works. No service-specific handler needed. |
+| `roles/pazny.wing/templates/` | — | **Does not exist.** Wing is non-Docker (nginx vhost + PHP-FPM). No compose fragment, no `{{ stacks_dir }}/<stack>/overrides/` render. |
+| `files/project-wing/` | Unchanged | **Stays in place.** The role rsyncs it from `{{ playbook_dir }}/files/project-wing/`; treating it as role `files/` would force every consumer to vendor the Nette PHP app. Same rule applies to jsOS, OpenClaw, iiab-terminal when those migrate in Wave 2.2. |
 
-Glasswing is the template for **task-only roles** (non-Docker, no compose override). The Wave 2.2 `non-docker-services` worker (Unit 13) uses this exact shape for `pazny.jsos`, `pazny.iiab_terminal`, `pazny.openclaw`, `pazny.bone`.
+Wing is the template for **task-only roles** (non-Docker, no compose override). The Wave 2.2 `non-docker-services` worker (Unit 13) uses this exact shape for `pazny.jsos`, `pazny.iiab_terminal`, `pazny.openclaw`, `pazny.bone`.
 
 ### Override file placement convention
 
@@ -241,7 +241,7 @@ After Wave 2.2 Unit 2 lands, `stack-up.yml` will create the equivalent directori
 
 Do not move into roles:
 
-- **`files/project-<name>/`** — internal app source (Glasswing/jsOS/OpenClaw/iiab-terminal/bone). The role rsyncs from `{{ playbook_dir }}/files/project-<name>/`; treating it as role `files/` would force every consumer to vendor the app. Wave 3 extracts these into per-project repos.
+- **`files/project-<name>/`** — internal app source (Wing/jsOS/OpenClaw/iiab-terminal/bone). The role rsyncs from `{{ playbook_dir }}/files/project-<name>/`; treating it as role `files/` would force every consumer to vendor the app. Wave 3 extracts these into per-project repos.
 - **`default.credentials.yml` / `credentials.yml`** — central secrets. Role defaults reference variables (`{{ mariadb_root_password }}`, `{{ grafana_admin_password }}`, etc.) that resolve through the central credentials file. See Section 7.
 - **`requirements.yml`** — authoritative install list for Ansible Galaxy collections. Per-role `meta/main.yml` is documentation plus a soft assert; CI installs from `requirements.yml`.
 - **`main.yml`** — play-level handlers (`Restart nginx`, `Restart php-fpm`, shared `Restart <svc>` duplicates) and the role wiring itself.
@@ -254,9 +254,9 @@ Do not move into roles:
 
 ### Wave 2.1 — pilot (DONE)
 
-1. **`pazny.glasswing`** (commit `3719258`) — simplest first. Non-Docker, no compose override, no post-start surprises, no shared-network coupling. Proved the role wiring: `include_role` from inside `tasks:`, handler visibility, tag inheritance via `apply: { tags: [...] }` + top-level `tags:`. Result: `notify: Restart php-fpm` from a role fires the play-level handler cleanly.
+1. **`pazny.wing`** (commit `3719258`) — simplest first. Non-Docker, no compose override, no post-start surprises, no shared-network coupling. Proved the role wiring: `include_role` from inside `tasks:`, handler visibility, tag inheritance via `apply: { tags: [...] }` + top-level `tags:`. Result: `notify: Restart php-fpm` from a role fires the play-level handler cleanly.
 2. **`pazny.mariadb`** (commit `9ba0bfc`, after `2c4daae` added the core-up find+merge plumbing) — introduced the compose-override pattern and the post-start task pattern. MariaDB is the template for every Docker role to come: no provisioning files, no SSO env vars, no host-side configs. Result: override fragment renders to `{{ stacks_dir }}/infra/overrides/mariadb.yml`, `core-up.yml` picks it up via `find`, post-start creates DBs and users against the running container.
-3. **`pazny.grafana`** (commit `3c2a5d3`) — added the pieces glasswing and mariadb skipped: post-start admin password reconverge via `grafana-cli`, HTTP health probe, OIDC env vars guarded by `{% if install_authentik %}`. Result: `services.grafana.networks` references `observability_net` and `{{ stacks_shared_network }}` **without** redeclaring the top-level `networks:` key — the original Section 9 "stacks_shared_network gotcha" was overly defensive.
+3. **`pazny.grafana`** (commit `3c2a5d3`) — added the pieces wing and mariadb skipped: post-start admin password reconverge via `grafana-cli`, HTTP health probe, OIDC env vars guarded by `{% if install_authentik %}`. Result: `services.grafana.networks` references `observability_net` and `{{ stacks_shared_network }}` **without** redeclaring the top-level `networks:` key — the original Section 9 "stacks_shared_network gotcha" was overly defensive.
 
 ### Wave 2.2 — parallel batch (IN PROGRESS)
 
@@ -267,7 +267,7 @@ Per-worker dispatch (unit number → services → stack file) lives in `~/.claud
 **Low risk** (single container, optional post-start, no SSO complications):
 - `pazny.uptime_kuma`, `pazny.calibre_web`, `pazny.jellyfin`, `pazny.kiwix`, `pazny.rustfs`, `pazny.vaultwarden`, `pazny.freepbx`, `pazny.qgis_server`, `pazny.outline`, `pazny.freescout`, `pazny.portainer`, `pazny.traefik`, `pazny.offline_maps` (tileserver), `pazny.bone`, `pazny.iiab_terminal`
 
-These follow the mariadb/glasswing template almost verbatim. Check per service that the nginx vhost in `templates/nginx/sites-available/` still references the right hostname after the role declares its compose port.
+These follow the mariadb/wing template almost verbatim. Check per service that the nginx vhost in `templates/nginx/sites-available/` still references the right hostname after the role declares its compose port.
 
 **Medium risk** (foundation services, multiple consumers, post-start setup, some cross-service dependencies):
 - `pazny.postgresql`, `pazny.redis`, `pazny.prometheus`, `pazny.loki`, `pazny.tempo`, `pazny.metabase`, `pazny.superset`, `pazny.woodpecker`, `pazny.gitea`, `pazny.gitlab`, `pazny.wordpress`, `pazny.puter`, `pazny.homeassistant`, `pazny.open_webui`, `pazny.jsos`, `pazny.openclaw`
@@ -442,8 +442,8 @@ The top-level `requirements.yml` remains the authoritative install list that CI 
 Each pilot role landed as a single atomic commit touching:
 
 - The new `roles/pazny.<svc>/` directory and all of its files.
-- The rewire in `tasks/stacks/core-up.yml` (for `pazny.mariadb` / `pazny.grafana`) or `main.yml` (for `pazny.glasswing`).
-- The deletion of the now-orphaned source file (`tasks/iiab/mariadb_setup.yml`, `tasks/iiab/grafana_admin.yml`, `tasks/glasswing.yml`).
+- The rewire in `tasks/stacks/core-up.yml` (for `pazny.mariadb` / `pazny.grafana`) or `main.yml` (for `pazny.wing`).
+- The deletion of the now-orphaned source file (`tasks/iiab/mariadb_setup.yml`, `tasks/iiab/grafana_admin.yml`, `tasks/wing.yml`).
 - The shrink of the base compose template — migrated service block removed.
 
 `git revert <commit>` on any pilot commit restores the pre-role state cleanly. This shape worked because the pilot was sequential: one role per commit, each standalone.
@@ -470,7 +470,7 @@ The Wave 2.1 pilot confirmed or corrected each of these. Read before starting an
 
 ### `roles:` vs `tasks:` execution order — CONFIRMED
 
-Ansible runs the play's `roles:` section *before* its `tasks:` section. If `pazny.glasswing` were wired as a top-level role (`- role: pazny.glasswing` in the play's `roles:` list), it would run before `tasks/php.yml` installed the PHP runtime and `composer install` would fail with "command not found".
+Ansible runs the play's `roles:` section *before* its `tasks:` section. If `pazny.wing` were wired as a top-level role (`- role: pazny.wing` in the play's `roles:` list), it would run before `tasks/php.yml` installed the PHP runtime and `composer install` would fail with "command not found".
 
 **Mitigation:** keep all pilot and Wave 2.2 roles inside the existing `tasks:` block via `include_role` / `import_role` or invoke them from `core-up.yml` / `stack-up.yml`. Do **not** add them to the play's top-level `roles:` list until the whole migration is done and the dependency order has been deliberately re-shuffled.
 

@@ -1,8 +1,8 @@
-# Glasswing Integration
+# Wing Integration
 
-> What the State & Migration Framework adds to Glasswing — the views, the widgets, the
-> REST API, and how the data gets there. Glasswing is the read model for framework state.
-> Spec: [framework-plan.md §6](framework-plan.md#6-glasswing-integration-agents-7--8).
+> What the State & Migration Framework adds to Wing — the views, the widgets, the
+> REST API, and how the data gets there. Wing is the read model for framework state.
+> Spec: [framework-plan.md §6](framework-plan.md#6-wing-integration-agents-7--8).
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## Purpose
 
-Glasswing already serves as the security-research dashboard (vulnerability reports,
+Wing already serves as the security-research dashboard (vulnerability reports,
 pentest journal, advisory feed). The framework extends it with four views that answer:
 
 - **What's pending?** — migrations, upgrades, breaking changes queued for the next run
@@ -36,8 +36,8 @@ pentest journal, advisory feed). The framework extends it with four views that a
 - **What just happened?** — live event stream from the Ansible callback plugin
 - **What's dual-running?** — active coexistence tracks, TTL countdowns, cutover controls
 
-Glasswing is **read + command**, not a scheduler. Clicking "Apply migration" calls
-Bone, which invokes `ansible-playbook` in-process. Glasswing does not run Ansible itself.
+Wing is **read + command**, not a scheduler. Clicking "Apply migration" calls
+Bone, which invokes `ansible-playbook` in-process. Wing does not run Ansible itself.
 
 ---
 
@@ -279,106 +279,106 @@ expands to `/timeline`.
 
 ## REST API
 
-Glasswing exposes `/api/v1/*` endpoints. Most are thin proxies to Bone; events ingestion
+Wing exposes `/api/v1/*` endpoints. Most are thin proxies to Bone; events ingestion
 is native.
 
 ### Events
 
 ```bash
 # Ingest (from callback plugin; HMAC-authenticated)
-curl -X POST https://glasswing.dev.local/api/v1/events \
+curl -X POST https://wing.dev.local/api/v1/events \
   -H "Content-Type: application/json" \
   -H "X-Hmac: <signature>" \
   -d '{"ts": "2026-04-22T12:45:20Z", "run_id": "run_abc123", "type": "migration_start", ...}'
 
 # List (token-authenticated)
-curl https://glasswing.dev.local/api/v1/events?run_id=run_abc123&limit=50 \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/events?run_id=run_abc123&limit=50 \
+  -H "X-Token: $WING_TOKEN"
 
 # Filter by type + since
-curl "https://glasswing.dev.local/api/v1/events?type=migration_step_ok&since=2026-04-22T00:00:00Z&limit=100" \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl "https://wing.dev.local/api/v1/events?type=migration_step_ok&since=2026-04-22T00:00:00Z&limit=100" \
+  -H "X-Token: $WING_TOKEN"
 ```
 
 ### Migrations (proxied to Bone)
 
 ```bash
 # List pending + applied
-curl https://glasswing.dev.local/api/v1/migrations \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/migrations \
+  -H "X-Token: $WING_TOKEN"
 
 # Single migration detail
-curl https://glasswing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos \
+  -H "X-Token: $WING_TOKEN"
 
 # Preview (dry-run)
-curl -X POST https://glasswing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/preview \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/preview \
+  -H "X-Token: $WING_TOKEN"
 
 # Apply
-curl -X POST https://glasswing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/apply \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/apply \
+  -H "X-Token: $WING_TOKEN"
 
 # Rollback
-curl -X POST https://glasswing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/rollback \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/migrations/2026-04-22-devboxnos-to-nos/rollback \
+  -H "X-Token: $WING_TOKEN"
 ```
 
 ### Upgrades (proxied to Bone)
 
 ```bash
 # Matrix
-curl https://glasswing.dev.local/api/v1/upgrades \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/upgrades \
+  -H "X-Token: $WING_TOKEN"
 
 # Recipes for a service
-curl https://glasswing.dev.local/api/v1/upgrades/grafana \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/upgrades/grafana \
+  -H "X-Token: $WING_TOKEN"
 
 # Plan a specific recipe
-curl -X POST https://glasswing.dev.local/api/v1/upgrades/grafana/grafana-11-to-12/plan \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/upgrades/grafana/grafana-11-to-12/plan \
+  -H "X-Token: $WING_TOKEN"
 
 # Apply
-curl -X POST https://glasswing.dev.local/api/v1/upgrades/grafana/grafana-11-to-12/apply \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/upgrades/grafana/grafana-11-to-12/apply \
+  -H "X-Token: $WING_TOKEN"
 ```
 
 ### State (proxied to Bone)
 
 ```bash
 # Full state document
-curl https://glasswing.dev.local/api/v1/state -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/state -H "X-Token: $WING_TOKEN"
 
 # Service subset
-curl https://glasswing.dev.local/api/v1/state/services -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/state/services -H "X-Token: $WING_TOKEN"
 
 # Single service
-curl https://glasswing.dev.local/api/v1/state/services/grafana -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/state/services/grafana -H "X-Token: $WING_TOKEN"
 ```
 
 ### Coexistence (proxied to Bone)
 
 ```bash
 # List all tracks
-curl https://glasswing.dev.local/api/v1/coexistence \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl https://wing.dev.local/api/v1/coexistence \
+  -H "X-Token: $WING_TOKEN"
 
 # Provision
-curl -X POST https://glasswing.dev.local/api/v1/coexistence/grafana/provision \
-  -H "X-Token: $GLASSWING_TOKEN" \
+curl -X POST https://wing.dev.local/api/v1/coexistence/grafana/provision \
+  -H "X-Token: $WING_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tag": "new", "version": "12.0.0", "port": 3010, "data_source": "clone_from:legacy"}'
 
 # Cutover
-curl -X POST https://glasswing.dev.local/api/v1/coexistence/grafana/cutover \
-  -H "X-Token: $GLASSWING_TOKEN" \
+curl -X POST https://wing.dev.local/api/v1/coexistence/grafana/cutover \
+  -H "X-Token: $WING_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"target_tag": "new"}'
 
 # Cleanup
-curl -X POST https://glasswing.dev.local/api/v1/coexistence/grafana/cleanup/legacy \
-  -H "X-Token: $GLASSWING_TOKEN"
+curl -X POST https://wing.dev.local/api/v1/coexistence/grafana/cleanup/legacy \
+  -H "X-Token: $WING_TOKEN"
 ```
 
 See [framework-plan.md §5](framework-plan.md#5-bone-endpoint-additions-agent-7-coordinates-with-existing-bone-role)
@@ -392,22 +392,22 @@ for the Bone endpoint definitions these proxy to.
             Ansible playbook
                     │
                     ▼
-     callback_plugins/glasswing_telemetry.py
+     callback_plugins/wing_telemetry.py
                     │
                     ▼ HTTP POST (HMAC signed)
         Bone /api/events (:8099)
                     │
                     ▼ writes
-     Glasswing SQLite (events table)
+     Wing SQLite (events table)
                     ▲
                     │ reads
-              Glasswing presenters
+              Wing presenters
                     │
                     ▼ renders
                  Latte views
                     │
                     ▼ served by
-        Glasswing nginx vhost (:443)
+        Wing nginx vhost (:443)
                     │
                     ▼
                   operator
@@ -417,7 +417,7 @@ When the network to Bone is unavailable, the callback plugin spools events to
 `~/.nos/events.jsonl` and replays them on the next successful POST.
 
 Live state (the `/api/v1/state` proxy) reads `~/.nos/state.yml` through Bone on every
-request — no caching in Glasswing — so values are always fresh.
+request — no caching in Wing — so values are always fresh.
 
 ---
 
@@ -425,9 +425,9 @@ request — no caching in Glasswing — so values are always fresh.
 
 Two separate secrets:
 
-1. **HMAC for event ingestion.** Shared between the Ansible callback plugin and Glasswing's
+1. **HMAC for event ingestion.** Shared between the Ansible callback plugin and Wing's
    `/api/v1/events` POST endpoint. Stored in Infisical as
-   `glasswing/event_ingest_hmac`. Rotate by running `tasks/rotate-hmac.yml`.
+   `wing/event_ingest_hmac`. Rotate by running `tasks/rotate-hmac.yml`.
 2. **Token for UI + API queries.** Per-user token issued via Authentik; presented as
    `X-Token:` header. UI obtains it via the normal SSO flow. API clients (e.g. a scripted
    operator tool) use a service token with `nos-admins` tier.
@@ -441,7 +441,7 @@ See [README.md §SSO & RBAC](../README.md#sso--rbac) for the broader tier model.
 
 ## Styling conventions
 
-Glasswing uses vanilla CSS + vanilla JS — no framework. New assets follow the existing
+Wing uses vanilla CSS + vanilla JS — no framework. New assets follow the existing
 patterns:
 
 - **Dark theme** — `#0b0f14` bg, `#e6edf3` fg, `#2dd4bf` teal accent
@@ -451,7 +451,7 @@ patterns:
 - **Status icons** — check (ok), refresh (rolled back), cross (failed), clock (pending)
 - **Card grid** — `display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));`
 
-Assets live in `files/project-glasswing/www/assets/`:
+Assets live in `files/project-wing/www/assets/`:
 
 - `migrations.css` — card grid, severity badges, state icons
 - `upgrades.css` — matrix layout, column widths, colour legend
@@ -461,7 +461,7 @@ Assets live in `files/project-glasswing/www/assets/`:
 - `widget-timeline.js` — 5 s polling for tail, infinite scroll
 - `widget-cutover-confirm.js` — typed confirmation modal
 
-Templates live in `files/project-glasswing/app/Templates/`:
+Templates live in `files/project-wing/app/Templates/`:
 
 - `Migrations/default.latte`, `Migrations/detail.latte`
 - `Upgrades/default.latte`, `Upgrades/service.latte`
@@ -471,7 +471,7 @@ Templates live in `files/project-glasswing/app/Templates/`:
 - `@widgets/pending-migrations.latte`
 - `@widgets/event-stream.latte`
 
-Reference: open `files/project-glasswing/app/Templates/Dashboard/default.latte` for
+Reference: open `files/project-wing/app/Templates/Dashboard/default.latte` for
 layout patterns; mimic the tile + header structure.
 
 ---
@@ -479,8 +479,8 @@ layout patterns; mimic the tile + header structure.
 ## See also
 
 - [framework-overview.md](framework-overview.md) — what the framework is
-- [framework-plan.md](framework-plan.md) — authoritative spec (§6 for Glasswing specifics)
+- [framework-plan.md](framework-plan.md) — authoritative spec (§6 for Wing specifics)
 - [migration-authoring.md](migration-authoring.md) — what drives the `/migrations` view
 - [upgrade-recipes.md](upgrade-recipes.md) — what drives the `/upgrades` view
 - [coexistence-playbook.md](coexistence-playbook.md) — what drives the `/coexistence` view
-- `files/project-glasswing/app/` — presenter + repository source
+- `files/project-wing/app/` — presenter + repository source

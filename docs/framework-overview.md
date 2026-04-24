@@ -34,7 +34,7 @@ stack eventually runs into:
 3. **"How do I upgrade a stateful service without a downtime window, and roll back if it breaks?"**
 
 The framework answers with YAML records, a handful of Ansible modules, a set of guarantees,
-and a read model in Glasswing. No new DSL, no daemon, no database — the playbook stays the
+and a read model in Wing. No new DSL, no daemon, no database — the playbook stays the
 single source of truth.
 
 ---
@@ -109,7 +109,7 @@ Per-service transitions from a version range to a target version. Examples:
 
 A recipe is a YAML file under `upgrades/`, with `pre`, `apply`, `post`, and `rollback`
 phases. Invoked explicitly (`--tags upgrade -e upgrade_service=grafana`) or offered as
-a suggestion in Glasswing when the manifest shows a newer stable version. See
+a suggestion in Wing when the manifest shows a newer stable version. See
 [upgrade-recipes.md](upgrade-recipes.md).
 
 ### 4. Coexistence
@@ -125,13 +125,13 @@ See [coexistence-playbook.md](coexistence-playbook.md).
 
 ### 5. Observability
 
-A Python Ansible callback plugin (`callback_plugins/glasswing_telemetry.py`) emits a
+A Python Ansible callback plugin (`callback_plugins/wing_telemetry.py`) emits a
 structured event for every task, migration step, upgrade step, and coexistence action.
-Events POST to Bone → Glasswing SQLite, with an append-only local JSONL fallback
+Events POST to Bone → Wing SQLite, with an append-only local JSONL fallback
 when the network is down.
 
-Glasswing exposes four new views (`/migrations`, `/upgrades`, `/timeline`, `/coexistence`)
-that read the events + mirror state via Bone. See [glasswing-integration.md](glasswing-integration.md).
+Wing exposes four new views (`/migrations`, `/upgrades`, `/timeline`, `/coexistence`)
+that read the events + mirror state via Bone. See [wing-integration.md](wing-integration.md).
 
 ---
 
@@ -146,7 +146,7 @@ upgrades/*.yml       ◄── read ────►  ~/.nos/state.yml#services (
                                      ~/.nos/backups/<id>/      (pre-upgrade backups)
                                      ~/.nos/events.jsonl       (callback fallback)
 
-                     ┌── Bone ──► Glasswing SQLite
+                     ┌── Bone ──► Wing SQLite
 Callback plugin ─────┤
                      └── fallback ► ~/.nos/events.jsonl
 ```
@@ -164,14 +164,14 @@ A typical breaking upstream bump (Grafana 12 release) moves through the framewor
 1. **Author writes a recipe** — `upgrades/grafana.yml` gets a new `grafana-11-to-12` entry
    with `pre` (backup dashboards), `apply` (bump compose tag), `post` (wait healthy),
    `rollback` (revert tag + restore dashboards).
-2. **Operator sees it in Glasswing** — the `/upgrades` matrix highlights Grafana with a
+2. **Operator sees it in Wing** — the `/upgrades` matrix highlights Grafana with a
    yellow "breaking upgrade available" badge.
 3. **Operator chooses a mode** —
    - **Direct:** `ansible-playbook main.yml -K --tags upgrade -e upgrade_service=grafana`.
      Recipe runs start-to-finish, ~2 min of downtime.
    - **Coexistence:** provision a `new` track on port 3010, test it, then cut over.
      Zero-downtime. See [coexistence-playbook.md](coexistence-playbook.md).
-4. **Events land in Glasswing** — every step shows up in `/timeline` and in the detail
+4. **Events land in Wing** — every step shows up in `/timeline` and in the detail
    page for the upgrade. The final event marks the recipe `success` or `failed`.
 5. **State is persisted** — `~/.nos/state.yml#services.grafana.installed` is updated.
    If anything failed, `rollback` runs and state stays at the old version.
@@ -206,9 +206,9 @@ PLAY [Playbook] *************************************************
 
 Already-applied migrations are silently skipped. First-time install: 0 migrations pending.
 
-### In Glasswing
+### In Wing
 
-Four new views under the main nav (see [glasswing-integration.md](glasswing-integration.md)):
+Four new views under the main nav (see [wing-integration.md](wing-integration.md)):
 
 - `/migrations` — pending + applied cards, with [Preview] / [Apply] / [Rollback] buttons
 - `/upgrades` — service × version matrix with severity badges
@@ -250,7 +250,7 @@ Every significant action emits a structured event. The event schema is defined i
   `migration_end`, `upgrade_start`, `upgrade_step_ok`, `upgrade_end`, `coexistence_provision`,
   `coexistence_cutover`, `coexistence_cleanup`
 
-Events POST to `Bone /api/events` (HMAC-signed). Bone writes them to Glasswing SQLite.
+Events POST to `Bone /api/events` (HMAC-signed). Bone writes them to Wing SQLite.
 If the POST fails, events spool to `~/.nos/events.jsonl` and the callback plugin replays
 them on the next successful POST.
 
@@ -295,5 +295,5 @@ Explicitly out of scope for v1 (see [framework-plan.md §10](framework-plan.md))
 - [migration-authoring.md](migration-authoring.md) — how to write a migration
 - [upgrade-recipes.md](upgrade-recipes.md) — how to write an upgrade recipe
 - [coexistence-playbook.md](coexistence-playbook.md) — operator guide for dual-version
-- [glasswing-integration.md](glasswing-integration.md) — Glasswing views, widgets, API
+- [wing-integration.md](wing-integration.md) — Wing views, widgets, API
 - [../README.md](../README.md) — project-level overview

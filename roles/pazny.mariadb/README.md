@@ -2,7 +2,7 @@
 
 Ansible role for deploying **MariaDB** as a compose override fragment in the nOS `infra` stack. Foundation database for WordPress, Nextcloud, ERPNext, FreeScout, and FreePBX.
 
-Part of [nOS](../../README.md) Wave 2 role extraction pilot. Second of three base roles (`pazny.glasswing`, **`pazny.mariadb`**, `pazny.grafana`).
+Part of [nOS](../../README.md) Wave 2 role extraction pilot. Second of three base roles (`pazny.wing`, **`pazny.mariadb`**, `pazny.grafana`).
 
 ## What it does
 

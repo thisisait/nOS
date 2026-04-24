@@ -29,7 +29,7 @@ Nightly backups of stateful nOS services → RustFS (S3-compatible) bucket.
    }
    ```
 
-   Agent C3's Glasswing dashboard reads this file.
+   Agent C3's Wing dashboard reads this file.
 
 ## Idempotence
 

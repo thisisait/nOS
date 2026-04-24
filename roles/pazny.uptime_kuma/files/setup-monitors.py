@@ -78,7 +78,7 @@ def load_config(path: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def hmac_signature(secret: str, body: bytes) -> Optional[str]:
-    """Compute ``sha256=<hex>`` HMAC for the X-Glasswing-Signature header."""
+    """Compute ``sha256=<hex>`` HMAC for the X-Wing-Signature header."""
     if not secret:
         return None
     key = secret.encode("utf-8") if isinstance(secret, str) else secret
@@ -289,8 +289,8 @@ class KumaClient:
         if hmac_secret:
             sig = hmac_signature(hmac_secret, body_json.encode("utf-8"))
             if sig:
-                extra_headers["X-Glasswing-Signature"] = sig
-                extra_headers["X-Glasswing-Source"] = "uptime-kuma"
+                extra_headers["X-Wing-Signature"] = sig
+                extra_headers["X-Wing-Source"] = "uptime-kuma"
 
         args = {
             "type": NT.WEBHOOK,
@@ -439,7 +439,7 @@ def _modern_run(args) -> int:
 
         if webhook_cfg and webhook_cfg.get("enabled", True):
             client.upsert_webhook(
-                name=webhook_cfg.get("name", "nOS → Glasswing"),
+                name=webhook_cfg.get("name", "nOS → Wing"),
                 url=webhook_cfg["url"],
                 body_template=webhook_cfg.get("body", {
                     "source": "uptime-kuma",

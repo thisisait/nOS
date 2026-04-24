@@ -51,7 +51,7 @@ dispatcher in `module_utils/nos_state_lib.py`.
 2. **`tasks/pre-migrate.yml`** (agent 1) introspects and persists.
 3. **`tasks/state-report.yml`** (agent 1) runs in `post_tasks`, bumps
    `generated_at`, records `last_run`, and POSTs the state to Bone so
-   Glasswing's read cache stays fresh.
+   Wing's read cache stays fresh.
 4. **Migration / upgrade steps** append to `migrations_applied` /
    `upgrades_applied` via `nos_migrate` (agent 2) and `nos_upgrade`
    (agent 6).

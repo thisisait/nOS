@@ -32,7 +32,7 @@
 |---|---|---|
 | **Scope** | Global system state (identifiers, paths, config) | One service, one version transition |
 | **Triggered by** | Time — "last run was pre-2026-04-22" | Version — "installed matches from_regex" |
-| **Runs** | Automatically in `pre_tasks` | Explicitly by operator, or proposed in Glasswing |
+| **Runs** | Automatically in `pre_tasks` | Explicitly by operator, or proposed in Wing |
 | **Frequency** | Once, ever | Once per version boundary, per service |
 | **File** | `migrations/<date>-<slug>.yml` | `upgrades/<service>.yml` |
 | **Idempotency gate** | per-step `detect` + `applies_if` | `from_regex` on `state.services.<svc>.installed` |
@@ -624,7 +624,7 @@ recipe runs against `9.5.0` because `from_regex: "^[0-9]+\\."` matches any major
 ### 3. `to` is a range, not a version
 
 **Symptom:** recipe's target changes on every run, producing spurious "upgrade available"
-notifications in Glasswing.
+notifications in Wing.
 
 **Fix:** `to:` must resolve to a specific version string at runtime. Use a Jinja
 expression backed by a version_policy variable, not a range: `to: "{{ grafana_versions.stable_12 }}"`.
@@ -683,6 +683,6 @@ should always use coexistence unless the operator explicitly accepts a downtime 
 - [framework-plan.md](framework-plan.md) — authoritative spec
 - [migration-authoring.md](migration-authoring.md) — sibling concept for global state changes
 - [coexistence-playbook.md](coexistence-playbook.md) — zero-downtime upgrade path
-- [glasswing-integration.md](glasswing-integration.md) — monitor upgrade progress
+- [wing-integration.md](wing-integration.md) — monitor upgrade progress
 - `upgrades/_template.yml` — copy-paste starting point
 - `state/schema/upgrade.schema.json` — authoritative JSON Schema for lint

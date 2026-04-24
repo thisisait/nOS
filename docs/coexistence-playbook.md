@@ -67,7 +67,7 @@ Everything is driven by three sub-tasks under `tasks/`:
 - `coexistence-cleanup.yml` — `nos_coexistence.cleanup_track`
 
 Runtime state lives under `coexistence.<service>.tracks[]` in `~/.nos/state.yml`, mirrored
-to Glasswing's `coexistence_tracks` table. See
+to Wing's `coexistence_tracks` table. See
 [framework-plan.md §3.2](framework-plan.md#32-nosstateyml--private-runtime-generated).
 
 ---
@@ -104,7 +104,7 @@ Before starting a coexistence workflow:
    that connects to it either points to the legacy track (default) or needs its own
    connection string override.
 
-Glasswing shows all four in the `/coexistence` precheck panel.
+Wing shows all four in the `/coexistence` precheck panel.
 
 ---
 
@@ -265,7 +265,7 @@ After the clone:
 - For databases: row counts for every table are checked against the source.
 
 A clone that fails integrity aborts the provision. Operator sees a clear error in
-Glasswing and the terminal.
+Wing and the terminal.
 
 ---
 
@@ -380,7 +380,7 @@ Docker Desktop's file-sharing permissions: the new data path must be in the File
 allowlist. Add it via Docker Desktop → Settings → Resources → File Sharing, or relocate
 the new track under `/Volumes/SSD1TB` (default allowlist).
 
-### New track starts but doesn't appear in Glasswing
+### New track starts but doesn't appear in Wing
 
 Two likely causes:
 
@@ -440,4 +440,4 @@ selectively.
 - [framework-plan.md](framework-plan.md) — authoritative spec
 - [upgrade-recipes.md](upgrade-recipes.md) — recipes that support coexistence
 - [migration-authoring.md](migration-authoring.md) — how coexistence interacts with migrations
-- [glasswing-integration.md](glasswing-integration.md) — `/coexistence` view + widgets
+- [wing-integration.md](wing-integration.md) — `/coexistence` view + widgets

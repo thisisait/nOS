@@ -7,7 +7,7 @@ edits it IN PLACE rather than re-running the role.
 
 Why in-place edit?  It's faster, it avoids a role-rerun dependency, and
 (most importantly) it produces a diff the operator can see in
-``git status`` / Glasswing.  The caveat is documented in upgrades/README.md:
+``git status`` / Wing.  The caveat is documented in upgrades/README.md:
 if a later playbook run re-renders the override, the manual tag gets
 overwritten.  The upgrade engine mitigates this by also recording the new
 version in ``~/.nos/state.yml`` under ``services.<svc>.desired`` so any

@@ -2,7 +2,7 @@
 
 Patches are developer-authored code remediations persisted as YAML recipes in
 ``patches/*.yml`` (one file per patch id, PATCH-NNN). The on-disk file is the
-source of truth for *what* the patch does; ``patches_applied`` in the Glasswing
+source of truth for *what* the patch does; ``patches_applied`` in the Wing
 SQLite is the read-mirror of *where* each patch has already been applied.
 
 Apply / plan shell out to ``ansible-playbook --tags apply-patches``; the
@@ -10,7 +10,7 @@ Apply / plan shell out to ``ansible-playbook --tags apply-patches``; the
 the ``nos_patch_actions`` table (see module_utils), and emits patch_* events
 (see EventRepository::VALID_TYPES) via the callback plugin.
 
-Mirrors ``upgrades.py`` in shape so Glasswing's PatchesPresenter can proxy
+Mirrors ``upgrades.py`` in shape so Wing's PatchesPresenter can proxy
 cleanly.
 """
 
@@ -65,7 +65,7 @@ def list_on_disk() -> list[dict[str, Any]]:
 
 
 def list_all() -> dict[str, Any]:
-    """Summary matrix for /api/patches. Separate from Glasswing's DB list —
+    """Summary matrix for /api/patches. Separate from Wing's DB list —
     this enumerates what's authored *on disk* (the apply surface)."""
     return {"patches": list_on_disk()}
 

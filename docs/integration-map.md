@@ -6,7 +6,7 @@ state file. Use this as the single page to answer "where does this event/record
 actually land?".
 
 Long-form narratives live in [`framework-plan.md`](framework-plan.md),
-[`glasswing-integration.md`](glasswing-integration.md), and the per-suite
+[`wing-integration.md`](wing-integration.md), and the per-suite
 docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`).
 
 ---
@@ -20,7 +20,7 @@ docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`)
  │        apply-patches |           │
  │        coexist-{provision,...}   │
  └─────────────┬────────────────────┘
-               │ emits via callback_plugins/glasswing_telemetry.py
+               │ emits via callback_plugins/wing_telemetry.py
                │ — auto-tags migration_id / upgrade_id / patch_id /
                │   coexistence_service from "[Migrate|Upgrade|Patch|Coexist]"
                │   task-name prefix
@@ -56,7 +56,7 @@ docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`)
                │ HTTP (curl via App\Model\BoneClient)
                ▼
  ┌──────────────────────────────────┐
- │  Glasswing  (Nette PHP)          │
+ │  Wing  (Nette PHP)          │
  │  :8070   Bearer + proxy auth     │
  │                                   │
  │  SQLite read-mirror:              │
@@ -78,7 +78,7 @@ docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`)
  └─────────────┬────────────────────┘
                ▼
  ┌──────────────────────────────────┐
- │  Glasswing Web UI                │
+ │  Wing Web UI                │
  │  /dashboard /timeline            │
  │  /migrations /upgrades           │
  │  /coexistence   (patches UI TBD) │
@@ -113,7 +113,7 @@ it only reads from SQLite (fast) or proxies to Bone (slow-but-authoritative).
    - executes `apply[]` steps (task names prefixed with `[Patch] PATCH-001 | …`)
    - runs `verify[]`; on failure runs `rollback[]`
    - appends a record to `~/.nos/state.yml patches_applied[]` via `nos_state`.
-6. **During the run**: `wing_telemetry` callback plugin emits `patch_start` → `patch_step_ok|_failed` (one per step) → `patch_end`, each stamped with `patch_id='PATCH-001'` automatically because of the `[Patch]` name prefix. Transport is HTTP → Bone `/api/events` → Wing SQLite `events`; if HTTP is down the plugin spools to `~/.nos/events.sqlite` and retries next run. *(callback plugin filename `glasswing_telemetry.py` renames to `wing_telemetry.py` during the Wing L3 slice.)*
+6. **During the run**: `wing_telemetry` callback plugin emits `patch_start` → `patch_step_ok|_failed` (one per step) → `patch_end`, each stamped with `patch_id='PATCH-001'` automatically because of the `[Patch]` name prefix. Transport is HTTP → Bone `/api/events` → Wing SQLite `events`; if HTTP is down the plugin spools to `~/.nos/events.sqlite` and retries next run. *(callback plugin filename `wing_telemetry.py` renames to `wing_telemetry.py` during the Wing L3 slice.)*
 7. **Post-run**: `pazny.state_manager` role's `report.yml` pushes the updated snapshot to Bone `/api/state`.
 8. **Next UI refresh** (or explicit `POST /api/v1/state/sync`): `StatePresenter::actionSync` pulls `/api/state`, iterates `patches_applied[]`, calls `PatchRepository::recordApplied()` for each. Row is deduplicated on `(patch_id, applied_at)` so re-syncing is a no-op.
 9. **Dashboard** `GET /api/v1/dashboard/summary` returns the new `maintenance` block with `patches_draft`, `patches_pending`, and related counters.
@@ -133,7 +133,7 @@ name prefix — recipes MUST include it on every dispatched step.
 | `[Patch] PATCH-NNN | step: …` | `patch_id` |
 | `[Coexist] <service> | step: …` | `coexist_svc` |
 
-Regexes live in `callback_plugins/glasswing_telemetry.py`: `_MIGRATION_TAG_RE`,
+Regexes live in `callback_plugins/wing_telemetry.py`: `_MIGRATION_TAG_RE`,
 `_UPGRADE_TAG_RE`, `_PATCH_TAG_RE`, `_COEXIST_TAG_RE`.
 
 ---
@@ -143,13 +143,13 @@ Regexes live in `callback_plugins/glasswing_telemetry.py`: `_MIGRATION_TAG_RE`,
 Adding a new suite follows the same six-step recipe:
 
 1. **DB schema**: add `<suite>_applied` table + an `events.<suite>_id` column
-   and index to `files/project-glasswing/db/schema-extensions.sql`.
+   and index to `files/project-wing/db/schema-extensions.sql`.
    Add a sweep for the new column in `bin/init-db.php` (the helper in there
    is reusable).
-2. **Glasswing model**: a `<Suite>Repository` with
+2. **Wing model**: a `<Suite>Repository` with
    `list / getById / statusCount / history / recordApplied (idempotent) /
    getEventsFor / plan / apply` and register it in `app/config/common.neon`.
-3. **Glasswing presenter + routes**: one `Api\<Suite>Presenter` + route
+3. **Wing presenter + routes**: one `Api\<Suite>Presenter` + route
    block in `app/Core/RouterFactory.php`. Put specific routes
    (`/history`, `/<id>/plan`, `/<id>/apply`, `/<id>/events`) **before**
    the catch-all `[/<id>]` route.
@@ -166,7 +166,7 @@ Adding a new suite follows the same six-step recipe:
    `App\Model\EventRepository::VALID_TYPES`.
 
 The patch suite (commits `213824e`, `c257b21`, `6b66967`, `875352c`,
-`0845c70`, `2269599`, `a97f64e` and the `feat(glasswing): first-class patch
+`0845c70`, `2269599`, `a97f64e` and the `feat(wing): first-class patch
 suite API` commit) is the reference implementation — grep for `PATCH-` and
 `_PATCH_TAG_RE` to walk the graph.
 
@@ -175,7 +175,7 @@ suite API` commit) is the reference implementation — grep for `PATCH-` and
 ## See also
 
 - [`framework-plan.md`](framework-plan.md) — full design narrative.
-- [`glasswing-integration.md`](glasswing-integration.md) — URL / view / widget catalog.
+- [`wing-integration.md`](wing-integration.md) — URL / view / widget catalog.
 - [`migration-authoring.md`](migration-authoring.md) — how to write migrations.
 - [`upgrade-recipes.md`](upgrade-recipes.md) — how to write upgrade recipes.
 - [`coexistence-playbook.md`](coexistence-playbook.md) — dual-version rollouts.

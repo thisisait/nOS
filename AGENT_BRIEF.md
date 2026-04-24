@@ -6,7 +6,7 @@ This document is a **binding specification standard** for all agents authoring n
 
 - **nOS** = Ansible playbook for macOS Apple Silicon with ~46 Docker services (plus ~13 non-Docker host roles — 59 roles total under the `pazny.*` namespace) organized into 8 compose stacks (`infra`, `observability`, `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`).
 - Each Docker service has **its own Ansible role** under the `pazny.*` namespace that renders a **compose override fragment** into `{{ stacks_dir }}/<stack>/overrides/<service>.yml`. The orchestrator (`tasks/stacks/stack-up.yml` or `core-up.yml`) collects overrides via `ansible.builtin.find` and passes them as `-f` flags to `docker compose up`.
-- **Glasswing** (`files/project-glasswing/`) = Nette PHP control plane dashboard with a unified `systems` table (SQLite). Each service = record in `systems` with parent_id hierarchy (stack → service → sub-service), health tracking, scan state, versions. The `pazny.glasswing` Ansible role imports `service-registry.json` into the DB on deploy.
+- **Wing** (`files/project-wing/`) = Nette PHP control plane dashboard with a unified `systems` table (SQLite). Each service = record in `systems` with parent_id hierarchy (stack → service → sub-service), health tracking, scan state, versions. The `pazny.wing` Ansible role imports `service-registry.json` into the DB on deploy.
 - Root worktree path = `/Users/pazny/projects/nOS/.claude/worktrees/<your-name>` (branch based on `master`). The old `mac-dev-playbook/` path was retired as part of the nOS rebrand.
 
 ## 2. Git workflow (REQUIRED)
@@ -335,9 +335,9 @@ If your role creates a new stack (e.g. `mail`, `health`, `engineering` — the p
 - INTEGRATION.md is complete and precise
 - Clean commit on your branch, no unrelated files
 
-## 12. Glasswing System Entity (new system → registration)
+## 12. Wing System Entity (new system → registration)
 
-Every service automatically appears in the Glasswing Hub dashboard thanks to the pipeline:
+Every service automatically appears in the Wing Hub dashboard thanks to the pipeline:
 
 1. **Ansible service-registry.json.j2** — the role adds an entry to `templates/service-registry.json.j2` (under the Wave A+B block):
    ```jinja
@@ -359,7 +359,7 @@ Every service automatically appears in the Glasswing Hub dashboard thanks to the
    {% endif %}
    ```
 
-2. **Glasswing ingest** — `bin/ingest-registry.php` (called by the `pazny.glasswing` Ansible role) imports the JSON into the SQLite `systems` table:
+2. **Wing ingest** — `bin/ingest-registry.php` (called by the `pazny.wing` Ansible role) imports the JSON into the SQLite `systems` table:
    - `id` = toggle_var (e.g. `install_nextcloud`)
    - `parent_id` = `stack-<stack>` (created automatically)
    - Health probing, scan state, version tracking — all in the DB

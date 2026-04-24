@@ -115,7 +115,7 @@ grouped into **8 Docker Compose stacks** that boot in dependency order.
 | **data** | 2 | Metabase, Apache Superset |
 
 Non-Docker services installed directly on the host: **OpenClaw** (launchd agent daemon),
-**jsOS** (Node.js webtop via PM2), **Glasswing** (Nette PHP security dashboard),
+**jsOS** (Node.js webtop via PM2), **Wing** (Nette PHP security dashboard),
 **Bone** (local management REST bridge), **IIAB Terminal** (Python Textual TUI over SSH).
 
 ---
@@ -175,7 +175,7 @@ it, and how do I roll back". Four surfaces: declarative state
 (`migrations/*.yml`, auto-applied in `pre_tasks`), per-service upgrade recipes
 (`upgrades/*.yml`, including `pg_upgrade` / `mariadb-upgrade` / Grafana
 dashboard-preserving patterns), and dual-version coexistence for zero-downtime major
-upgrades. Every action emits structured events to Glasswing
+upgrades. Every action emits structured events to Wing
 (`/migrations`, `/upgrades`, `/timeline`, `/coexistence` views).
 
 See [docs/framework-overview.md](docs/framework-overview.md) for the operator tour,
@@ -211,7 +211,7 @@ declared in `authentik_app_tiers`; users are added to the corresponding `nos-*` 
 
 | Tier | Role | Scope | Example services |
 |---|---|---|---|
-| 1 | **admin** | Infra, secrets, monitoring | Portainer, Infisical, Grafana, Glasswing, InfluxDB |
+| 1 | **admin** | Infra, secrets, monitoring | Portainer, Infisical, Grafana, Wing, InfluxDB |
 | 2 | **manager** | Dev tools, analytics, automation | Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout |
 | 3 | **user** | Employee productivity | Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Home Assistant, Calibre-Web |
 | 4 | **guest** | Public/content | Kiwix, Jellyfin, WordPress |
@@ -286,7 +286,7 @@ ansible-playbook main.yml -K --tags "TAG[,TAG…]"
 | `nginx` | Nginx + vhosts + mkcert certs |
 | `php`, `node`, `python`, `go`, `dotnet`, `bun` | Single language runtime |
 | `openclaw`, `hermes`, `ai` | AI agents |
-| `glasswing`, `security` | Glasswing security dashboard |
+| `wing`, `security` | Wing security dashboard |
 | `iiab-terminal`, `ssh` | SSH + ForceCommand TUI |
 | `jsos`, `desktop` | jsOS webtop |
 | `bone`, `api` | Local FastAPI (structure / state / dispatcher) |

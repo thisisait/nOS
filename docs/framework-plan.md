@@ -9,7 +9,7 @@
 - **Declarative** — state lives in data files, not scripts. Migrations and upgrade recipes are records. The Ansible layer is a thin executor.
 - **Replayable** — every applied action can be described, inverted, and re-applied from the record alone.
 - **Idempotent** — running the framework against an already-migrated system is a no-op. Every `detect → apply → verify` step is guarded.
-- **Observable** — every significant action emits a structured event. Glasswing is the read model.
+- **Observable** — every significant action emits a structured event. Wing is the read model.
 - **Coexistence-capable** — breaking changes can run old + new side-by-side with distinct data until the operator flips the cutover flag.
 - **Rollback-first** — every forward step declares its inverse. Per-migration rollback, not per-service.
 
@@ -45,7 +45,7 @@ nOS/
 │   └── infisical.yml
 │
 ├── callback_plugins/                           [agent 3]
-│   └── glasswing_telemetry.py
+│   └── wing_telemetry.py
 │
 ├── library/                                    # custom Ansible modules
 │   ├── nos_state.py                            [agent 1]
@@ -68,7 +68,7 @@ nOS/
 │   ├── coexistence-cleanup.yml                 [agent 5]
 │   └── state-report.yml                        [agent 1]  # post-provision: persist state + push
 │
-├── files/project-glasswing/
+├── files/project-wing/
 │   ├── app/Presenters/                         [agent 7]
 │   │   ├── MigrationsPresenter.php
 │   │   ├── UpgradesPresenter.php
@@ -110,10 +110,10 @@ nOS/
     ├── migration-authoring.md
     ├── upgrade-recipes.md
     ├── coexistence-playbook.md
-    └── glasswing-integration.md
+    └── wing-integration.md
 ```
 
-**Strict rule for agents:** only write to files under the paths listed above with your agent-number bracket. Do NOT modify `main.yml`, `ansible.cfg`, any existing role, any existing `tasks/*.yml` (except the new ones you own), or any existing Glasswing presenter. Integration edits will be made by a human operator after all agents finish.
+**Strict rule for agents:** only write to files under the paths listed above with your agent-number bracket. Do NOT modify `main.yml`, `ansible.cfg`, any existing role, any existing `tasks/*.yml` (except the new ones you own), or any existing Wing presenter. Integration edits will be made by a human operator after all agents finish.
 
 ---
 
@@ -424,7 +424,7 @@ recipes:
 }
 ```
 
-### 3.6 Glasswing SQLite schema extension (`db/schema-extensions.sql`)
+### 3.6 Wing SQLite schema extension (`db/schema-extensions.sql`)
 
 ```sql
 -- Events from Ansible callback plugin
@@ -679,7 +679,7 @@ Agent 7 extends `files/bone/main.py` with the new routes but **does not** restru
 
 ---
 
-## 6. Glasswing integration (agents 7 + 8)
+## 6. Wing integration (agents 7 + 8)
 
 ### 6.1 Routes (in `app/router.php` or via attribute routing — check Nette convention)
 
@@ -743,7 +743,7 @@ Each repository wraps SQLite queries and (where applicable) calls Bone for live 
 
 ### 6.4 Templates (agent 8)
 
-Latte templates. Follow existing Glasswing styling conventions (see `app/Templates/Dashboard/default.latte` as reference). Keep visual language consistent — dark theme, teal accent, Inter/mono fonts.
+Latte templates. Follow existing Wing styling conventions (see `app/Templates/Dashboard/default.latte` as reference). Keep visual language consistent — dark theme, teal accent, Inter/mono fonts.
 
 Core views:
 
@@ -769,7 +769,7 @@ Core views:
 - `widget-timeline.js`: infinite scroll + filter
 - `widget-cutover-confirm.js`: modal with typed confirmation ("type CUTOVER to proceed")
 
-Use vanilla JS (Glasswing uses no framework). Follow existing `www/assets/dashboard.js` patterns.
+Use vanilla JS (Wing uses no framework). Follow existing `www/assets/dashboard.js` patterns.
 
 ---
 
@@ -855,7 +855,7 @@ Thin wrappers around `nos_coexistence` module. Each takes `coexist_service`, `co
 
 ### 7.4 `tasks/state-report.yml` (agent 1)
 
-Runs in `post_tasks` at end of every playbook. Dumps `~/.nos/state.yml`, POSTs to Bone `/api/state` for Glasswing cache refresh, emits `playbook_end` event.
+Runs in `post_tasks` at end of every playbook. Dumps `~/.nos/state.yml`, POSTs to Bone `/api/state` for Wing cache refresh, emits `playbook_end` event.
 
 ---
 
@@ -869,7 +869,7 @@ Agents MUST provide at minimum:
 - **Agent 4**: `tests/authentik/` — group rename preserves members, OIDC client rename preserves bindings. Use HTTP mocks.
 - **Agent 5**: `tests/coexistence/` — provision creates override + vhost + data, cutover flips atomically, cleanup refuses active track.
 - **Agent 6**: `tests/upgrades/` — schema validation, recipe ordering (pre → apply → post), rollback on failure.
-- **Agent 7**: `tests/glasswing-api/` — minimal PHP tests (PHPUnit style) for each presenter + repository.
+- **Agent 7**: `tests/wing-api/` — minimal PHP tests (PHPUnit style) for each presenter + repository.
 - **Agent 8**: frontend smoke test (headless check that /migrations renders without JS errors) — optional.
 - **Agent 9**: docs lint (markdownlint), internal link check.
 
@@ -908,7 +908,7 @@ Each agent's final report must include:
 4. Edit `ansible.cfg` to add `callback_plugins = ./callback_plugins`.
 5. Run `ansible-playbook main.yml -K --tags preflight,migrate --check` — dry-run validation.
 6. If clean: apply for real on next full playbook run.
-7. Commit framework as 5 section commits (state core, migration engine, callback + authentik, coexistence + upgrades, glasswing). Push.
+7. Commit framework as 5 section commits (state core, migration engine, callback + authentik, coexistence + upgrades, wing). Push.
 
 ---
 

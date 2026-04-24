@@ -2,7 +2,7 @@
 
 Ansible role for deploying **Grafana** as a compose override fragment in the nOS `observability` stack. Co-deployed alongside Prometheus / Loki / Tempo (which remain in the base compose template pending their own Wave 2.2 role extraction).
 
-Part of [nOS](../../README.md) Wave 2 role extraction pilot. Third of three base roles (`pazny.glasswing`, `pazny.mariadb`, **`pazny.grafana`**).
+Part of [nOS](../../README.md) Wave 2 role extraction pilot. Third of three base roles (`pazny.wing`, `pazny.mariadb`, **`pazny.grafana`**).
 
 ## What it does
 

@@ -5,7 +5,7 @@
 wing_telemetry — Ansible callback plugin.
 
 Emits structured lifecycle events (see ``state/schema/event.schema.json``) to
-the Glasswing telemetry ingestion endpoint (BoxAPI ``/api/v1/events``), with
+the Wing telemetry ingestion endpoint (BoxAPI ``/api/v1/events``), with
 HMAC-SHA256 authentication, bounded batching, and a SQLite fallback queue when
 the HTTP transport is unreachable.
 
@@ -36,10 +36,10 @@ __metaclass__ = type
 DOCUMENTATION = r"""
     name: wing_telemetry
     type: notification
-    short_description: Emit nOS lifecycle events to Glasswing / BoxAPI.
+    short_description: Emit nOS lifecycle events to Wing / BoxAPI.
     description:
       - "Streams structured playbook / task / migration / upgrade events to the
-        Glasswing read model via BoxAPI /api/v1/events."
+        Wing read model via BoxAPI /api/v1/events."
       - "Inactive unless NOS_TELEMETRY_ENABLED=1 or play var
         wing_telemetry_enabled=true is set."
       - "HMAC-SHA256 signs every batch; batches fall back to SQLite on HTTP

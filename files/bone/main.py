@@ -414,7 +414,7 @@ async def events_ingest(
     body: dict | None = None,
 ):
     """HMAC-authenticated (not API-key) event ingestion from the callback
-    plugin. Writes directly to Glasswing's events.db.
+    plugin. Writes directly to Wing's events.db.
     """
     _require_framework()
     # Rebuild raw body from the parsed dict — FastAPI doesn't give us the raw

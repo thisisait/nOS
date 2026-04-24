@@ -650,8 +650,8 @@ ansible-playbook main.yml -K --tags migrate -e 'migration_id=<YOUR_ID>'
 ansible-playbook main.yml -K --tags migrate-rollback -e 'migration_id=<YOUR_ID>'
 ```
 
-Watch the `/timeline` view in Glasswing during the run to observe events landing in
-real time. See [glasswing-integration.md](glasswing-integration.md#timeline).
+Watch the `/timeline` view in Wing during the run to observe events landing in
+real time. See [wing-integration.md](wing-integration.md#timeline).
 
 ### Unit tests
 
@@ -783,6 +783,6 @@ playbook variable scope. Prefer `{{ external_storage_root }}/ollama` over
 - [framework-plan.md](framework-plan.md) — authoritative spec, action registry
 - [upgrade-recipes.md](upgrade-recipes.md) — version upgrades (sibling concept)
 - [coexistence-playbook.md](coexistence-playbook.md) — dual-version during migrations
-- [glasswing-integration.md](glasswing-integration.md) — observe migrations live
+- [wing-integration.md](wing-integration.md) — observe migrations live
 - `migrations/_template.yml` — copy-paste starting point
 - `state/schema/migration.schema.json` — authoritative JSON Schema for lint
