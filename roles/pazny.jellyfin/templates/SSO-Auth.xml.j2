@@ -2,13 +2,19 @@
 {#
   SSO-Auth plugin configuration for jellyfin-plugin-sso ({{ jellyfin_sso_plugin_version }}).
 
-  Schema: see
+  Schema authority: PluginConfiguration.cs at
   https://github.com/9p4/jellyfin-plugin-sso/blob/v{{ jellyfin_sso_plugin_version }}/SSO-Auth/Config/PluginConfiguration.cs
 
-  OidConfigs / SamlConfigs serialize as <dictionary><item><key/><value/></item>...</dictionary>
-  (SerializableDictionary<TKey,TValue>). Jellyfin is expected to rewrite this file after
-  first admin interaction; we only seed the initial state so the plugin is usable via
-  the "Sign in with Authentik" button on first boot.
+  Critical implementation details (.NET XmlSerializer is strict on order):
+    * OidConfigs / SamlConfigs are SerializableDictionary<TKey,TValue>; their
+      wire format is <item><key><string/></key><value><OidConfig/></value></item>...
+    * OidConfig fields must appear in declaration order (XmlSerializer is order-
+      sensitive when [XmlElement] is implicit).
+    * The C# field is named `FolderRoleMapping` (singular), but [XmlArray("FolderRoleMappings")]
+      renames the wrapping element to PLURAL. Empty list → self-closing tag.
+    * If the plugin can't deserialize, it silently falls back to an empty
+      dict and overwrites this file on the next save — every login attempt
+      then 400s with "Provider does not exist".
 #}
 <PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <SamlConfigs />
@@ -51,10 +57,13 @@
             <string>groups</string>
           </OidScopes>
           <DefaultProvider></DefaultProvider>
-          <DefaultUsernameClaim>preferred_username</DefaultUsernameClaim>
           <SchemeOverride>https</SchemeOverride>
           <NewPath>true</NewPath>
           <CanonicalLinks />
+          <DefaultUsernameClaim>preferred_username</DefaultUsernameClaim>
+          <DisableHttps>false</DisableHttps>
+          <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
+          <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
         </OidConfig>
       </value>
     </item>
