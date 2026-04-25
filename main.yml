@@ -16,6 +16,14 @@
     - default.config.yml
     - default.credentials.yml
 
+  # Play-level vars are visible to callback plugins via play.get_vars(); vars
+  # from vars_files (default.config.yml / config.yml) are NOT — Ansible only
+  # surfaces the play's own vars: block. Anything that a callback plugin must
+  # see goes here. Override via `-e wing_telemetry_enabled=false` if you want
+  # to silence the callback on a specific run.
+  vars:
+    wing_telemetry_enabled: "{{ install_bone | default(false) }}"
+
   pre_tasks:
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
     # Catches syntax errors (stray markdown paste, missing ':', bad indent)
