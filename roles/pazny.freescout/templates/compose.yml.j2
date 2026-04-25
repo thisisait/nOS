@@ -59,9 +59,26 @@ services:
       FREESCOUT_OIDC_DISPLAY_NAME: "Authentik"
       PHP_CURL_CAINFO: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
-{% if install_authentik | default(false) %}
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via host-gateway.
+      # Switches MODE_MAIL away from the image's bundled postfix-relay default.
+      MODE_MAIL: "SMTP"
+      SMTP_HOST: "host.docker.internal"
+      SMTP_PORT: "1025"
+      SMTP_USERNAME: ""
+      SMTP_PASSWORD: ""
+      SMTP_ENCRYPTION: "null"
+      MAIL_FROM_ADDRESS: "helpdesk@{{ instance_tld | default('dev.local') }}"
+{% endif %}
+{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
+{% if install_authentik | default(false) %}
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+{% if install_mailpit | default(false) %}
+      - "host.docker.internal:host-gateway"
+{% endif %}
 {% endif %}
     networks:
       - b2b_net

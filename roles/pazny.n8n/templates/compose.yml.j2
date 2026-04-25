@@ -36,6 +36,14 @@ services:
       N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/n8n/"
       N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
 {% endif %}
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      N8N_EMAIL_MODE: "smtp"
+      N8N_SMTP_HOST: "mailpit"
+      N8N_SMTP_PORT: "1025"
+      N8N_SMTP_SENDER: "n8n@{{ instance_tld | default('dev.local') }}"
+      N8N_SMTP_SSL: "false"
+{% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
       interval: 30s

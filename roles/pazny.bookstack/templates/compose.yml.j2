@@ -57,9 +57,26 @@ services:
       OIDC_USER_TO_GROUPS: "true"
       OIDC_ADDITIONAL_SCOPES: "groups"
 {% endif %}
-{% if install_authentik | default(false) %}
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via host-gateway.
+      MAIL_DRIVER: "smtp"
+      MAIL_HOST: "host.docker.internal"
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM: "bookstack@{{ instance_tld | default('dev.local') }}"
+      MAIL_FROM_NAME: "BookStack"
+      MAIL_ENCRYPTION: ""
+{% endif %}
+{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
+{% if install_authentik | default(false) %}
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+{% if install_mailpit | default(false) %}
+      - "host.docker.internal:host-gateway"
+{% endif %}
 {% endif %}
     networks:
       - b2b_net

@@ -33,6 +33,20 @@ services:
       GITEA__service__DISABLE_REGISTRATION: "{{ gitea_disable_registration | default(false) | string | lower }}"
       GITEA__log__LEVEL: "Warn"
       TZ: "Europe/Prague"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via host-gateway.
+      GITEA__mailer__ENABLED: "true"
+      GITEA__mailer__SMTP_ADDR: "host.docker.internal"
+      GITEA__mailer__SMTP_PORT: "1025"
+      GITEA__mailer__FROM: "gitea@{{ instance_tld | default('dev.local') }}"
+      GITEA__mailer__USER: ""
+      GITEA__mailer__PASSWD: ""
+{% endif %}
+{% if install_mailpit | default(false) %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3000/api/v1/version"]
       interval: 30s

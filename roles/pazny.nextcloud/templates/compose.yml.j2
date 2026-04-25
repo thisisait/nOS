@@ -30,6 +30,18 @@ services:
       NEXTCLOUD_DATA_DIR: "/data"
       NEXTCLOUD_TRUSTED_DOMAINS: "{{ nextcloud_domain | default('cloud.dev.local') }} localhost 127.0.0.1"
       OVERWRITEPROTOCOL: "https"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit is on iiab_net — reachable by docker DNS as 'mailpit'.
+      SMTP_HOST: "mailpit"
+      SMTP_PORT: "1025"
+      SMTP_NAME: ""
+      SMTP_PASSWORD: ""
+      SMTP_AUTHTYPE: "NONE"
+      SMTP_SECURE: ""
+      MAIL_DOMAIN: "{{ instance_tld | default('dev.local') }}"
+      MAIL_FROM_ADDRESS: "nextcloud"
+{% endif %}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

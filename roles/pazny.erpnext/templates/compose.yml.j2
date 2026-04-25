@@ -70,6 +70,20 @@ services:
       REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
       REDIS_SOCKETIO: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2"
       SOCKETIO_PORT: "9000"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via host-gateway.
+      MAIL_SERVER: "host.docker.internal"
+      MAIL_PORT: "1025"
+      MAIL_LOGIN: ""
+      MAIL_PASSWORD: ""
+      MAIL_USE_TLS: "0"
+      MAIL_DEFAULT_SENDER: "erpnext@{{ instance_tld | default('dev.local') }}"
+{% endif %}
+{% if install_mailpit | default(false) %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -172,6 +186,19 @@ services:
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
       REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
       REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (scheduler fires queued emails) ───────────────
+      MAIL_SERVER: "host.docker.internal"
+      MAIL_PORT: "1025"
+      MAIL_LOGIN: ""
+      MAIL_PASSWORD: ""
+      MAIL_USE_TLS: "0"
+      MAIL_DEFAULT_SENDER: "erpnext@{{ instance_tld | default('dev.local') }}"
+{% endif %}
+{% if install_mailpit | default(false) %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

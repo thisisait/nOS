@@ -59,6 +59,18 @@ services:
       AUTHENTICATION_GUARD_HEADER: "REMOTE_USER"
       AUTHENTICATION_GUARD_EMAIL: "REMOTE_EMAIL"
 {% endif %}
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via host-gateway.
+      MAIL_MAILER: "smtp"
+      MAIL_HOST: "host.docker.internal"
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_ENCRYPTION: "null"
+      MAIL_FROM_ADDRESS: "firefly@{{ instance_tld | default('dev.local') }}"
+      MAIL_FROM_NAME: "Firefly III"
+{% endif %}
     # /health is Firefly's own Laravel route and only returns 200 once schema
     # is migrated AND redis is reachable. Print the HTTP status via curl -w so
     # failing probes show the actual code in `docker inspect`'s Health.Log
@@ -69,9 +81,14 @@ services:
       timeout: 10s
       retries: 5
       start_period: 180s      # up from 90s; first-boot migrations on a slow MariaDB can take 60-120s
-{% if install_authentik | default(false) %}
+{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
+{% if install_authentik | default(false) %}
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+{% endif %}
+{% if install_mailpit | default(false) %}
+      - "host.docker.internal:host-gateway"
+{% endif %}
 {% endif %}
     networks:
       - b2b_net

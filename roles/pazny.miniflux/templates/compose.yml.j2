@@ -47,6 +47,15 @@ services:
       OAUTH2_USER_CREATION: "1"
       DISABLE_LOCAL_AUTH: "0"
 {% endif %}
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit is on iiab_net — reachable by docker DNS as 'mailpit'.
+      SMTP_HOST: "mailpit"
+      SMTP_PORT: "1025"
+      SMTP_USERNAME: ""
+      SMTP_PASSWORD: ""
+      SMTP_FROM: "miniflux@{{ instance_tld | default('dev.local') }}"
+{% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
       - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"

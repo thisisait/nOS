@@ -53,6 +53,20 @@ services:
       AUTHENTIK_COOKIE_DOMAIN: ".{{ instance_tld | default('dev.local') }}"
       AUTHENTIK_HOST: "https://{{ authentik_domain | default('auth.dev.local') }}"
       AUTHENTIK_HOST_BROWSER: "https://{{ authentik_domain | default('auth.dev.local') }}"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
+      # Mailpit lives on iiab_net only; reach it via the host-gateway
+      # (Mailpit is bound to 127.0.0.1:1025 on the host).
+      AUTHENTIK_EMAIL__HOST: "host.docker.internal"
+      AUTHENTIK_EMAIL__PORT: "1025"
+      AUTHENTIK_EMAIL__USERNAME: ""
+      AUTHENTIK_EMAIL__PASSWORD: ""
+      AUTHENTIK_EMAIL__USE_TLS: "False"
+      AUTHENTIK_EMAIL__USE_SSL: "False"
+      AUTHENTIK_EMAIL__FROM: "authentik@{{ instance_tld | default('dev.local') }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
     networks:
       - infra_net
       - {{ stacks_shared_network }}
@@ -88,6 +102,18 @@ services:
       AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: "true"
       AUTHENTIK_WORKER__PROCESSES: "{{ authentik_worker_processes | default(1) }}"
       AUTHENTIK_WORKER__THREADS: "{{ authentik_worker_threads | default(2) }}"
+{% if install_mailpit | default(false) %}
+      # ── SMTP relay → Mailpit (worker sends most emails) ────────────────────
+      AUTHENTIK_EMAIL__HOST: "host.docker.internal"
+      AUTHENTIK_EMAIL__PORT: "1025"
+      AUTHENTIK_EMAIL__USERNAME: ""
+      AUTHENTIK_EMAIL__PASSWORD: ""
+      AUTHENTIK_EMAIL__USE_TLS: "False"
+      AUTHENTIK_EMAIL__USE_SSL: "False"
+      AUTHENTIK_EMAIL__FROM: "authentik@{{ instance_tld | default('dev.local') }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+{% endif %}
     networks:
       - infra_net
       - {{ stacks_shared_network }}
