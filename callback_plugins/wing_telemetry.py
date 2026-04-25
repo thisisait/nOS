@@ -318,6 +318,41 @@ class SQLiteFallback(object):
         finally:
             conn.close()
 
+    def fetch_batch(self, limit=100):
+        """Return a list of (id, payload_dict) tuples, oldest first."""
+        conn = self._conn()
+        try:
+            cur = conn.execute(
+                "SELECT id, payload FROM fallback_events ORDER BY id LIMIT ?",
+                (limit,),
+            )
+            rows = []
+            for row_id, payload in cur.fetchall():
+                try:
+                    rows.append((row_id, json.loads(payload)))
+                except (TypeError, ValueError):
+                    # Corrupt row — keep for forensics, skip drain
+                    continue
+            return rows
+        finally:
+            conn.close()
+
+    def delete_ids(self, ids):
+        """Remove drained events. Tolerate empty lists."""
+        if not ids:
+            return 0
+        conn = self._conn()
+        try:
+            placeholders = ",".join("?" * len(ids))
+            conn.execute(
+                "DELETE FROM fallback_events WHERE id IN ({})".format(placeholders),
+                ids,
+            )
+            conn.commit()
+            return len(ids)
+        finally:
+            conn.close()
+
 
 # --------------------------------------------------------------------------- #
 # The callback plugin                                                         #
@@ -417,6 +452,57 @@ class CallbackModule(CallbackBase):
                     % exc)
         if self._schema_validator is None:
             self._load_schema_validator()
+        # On activation, opportunistically drain anything left in the
+        # fallback queue from previous runs that couldn't reach Bone.
+        # This is best-effort — a slow Bone won't block the playbook.
+        self._drain_fallback()
+
+    def _drain_fallback(self):
+        """Replay queued events to Bone. Drops them on success.
+
+        Called once at activation (and could be called again in shutdown if
+        we want belt-and-braces). Bounded by `WING_EVENTS_DRAIN_LIMIT` env
+        (default 500) to avoid burning the playbook startup on a huge
+        backlog — anything left rolls over to the next run.
+        """
+        if self._sqlite is None or self._http is None:
+            return
+        try:
+            backlog = self._sqlite.count()
+        except sqlite3.Error:
+            return
+        if backlog == 0:
+            return
+        try:
+            limit = int(os.environ.get("WING_EVENTS_DRAIN_LIMIT", "500"))
+        except (TypeError, ValueError):
+            limit = 500
+        drained = 0
+        batch_size = min(self._batch_size, 50)
+        if os.environ.get("WING_EVENTS_DEBUG") == "1":
+            sys.stderr.write(
+                "[wing_telemetry] draining {} queued events (limit={})\n"
+                .format(backlog, limit))
+        while drained < limit:
+            try:
+                rows = self._sqlite.fetch_batch(limit=batch_size)
+            except sqlite3.Error:
+                break
+            if not rows:
+                break
+            row_ids = [rid for rid, _ in rows]
+            events = [ev for _, ev in rows]
+            try:
+                self._http.send_batch(events)
+            except TransportError:
+                # Bone still unreachable — leave the rest for the next run.
+                break
+            try:
+                self._sqlite.delete_ids(row_ids)
+            except sqlite3.Error:
+                # Drained-but-not-deleted is worse than re-sending — abort.
+                break
+            drained += len(row_ids)
 
     def _load_schema_validator(self):
         """Best-effort: load jsonschema validator if the lib is installed."""

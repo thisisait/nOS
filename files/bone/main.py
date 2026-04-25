@@ -195,6 +195,29 @@ async def state_root(_: None = Depends(_verify_api_key)):
     return _nos_state.read_state()
 
 
+@app.post("/api/state")
+async def state_push(
+    body: dict | None = None,
+    _: None = Depends(_verify_api_key),
+):
+    """Accept a state snapshot from pazny.state_manager (end-of-run report).
+
+    Authentication is the standard X-API-Key (BONE_SECRET) — no HMAC like the
+    events endpoint, because state pushes happen rarely and the snapshot is
+    already on disk in ~/.nos/state.yml that the role wrote first.
+    """
+    _require_framework()
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400, detail="body must be a JSON object")
+    try:
+        return _nos_state.write_state(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"state write failed: {exc}")
+
+
 @app.get("/api/state/services")
 async def state_services(_: None = Depends(_verify_api_key)):
     _require_framework()

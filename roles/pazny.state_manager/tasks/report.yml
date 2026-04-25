@@ -20,6 +20,11 @@
     method: POST
     body_format: json
     body: "{{ nos_state_snapshot | default({}) }}"
+    headers:
+      # Bone requires X-API-Key on every authenticated route. BONE_SECRET
+      # comes from the launchd plist — same value lives in default.credentials
+      # as bone_secret.
+      X-API-Key: "{{ bone_secret | default(global_password_prefix + '_pw_bone') }}"
     status_code: [200, 201, 202, 204]
     timeout: 5
   when:
@@ -27,4 +32,5 @@
     - nos_state_snapshot is defined
   failed_when: false      # best-effort — never fail the playbook on a cache miss
   changed_when: false
+  no_log: true            # X-API-Key would leak into the run log otherwise
   tags: ['state', 'report']
