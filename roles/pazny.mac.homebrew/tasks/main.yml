@@ -215,6 +215,7 @@
         # `brew info --cask --json` (canonical artifacts list) and pgrep
         # the bundle name. Falls back to fuzzy match on cask name when
         # the JSON lookup fails (cask without an .app artifact = skip).
+        set -o pipefail
         running=()
         while IFS= read -r cask; do
           [ -z "$cask" ] && continue
