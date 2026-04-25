@@ -32,7 +32,15 @@ class FakeRequests:
 
 
 def test_successful_post_sends_hmac_header(monkeypatch):
+    """The HMAC contract with Bone's events.py verifier (commit 70c353f):
+    - X-Wing-Timestamp header carries the unix epoch as a digit string
+    - X-Wing-Signature is BARE hex (no `sha256=` prefix) over
+      `(timestamp + ".") + body_bytes`
+    - Body is canonical JSON with sort_keys=True
+    """
     from callback_plugins import wing_telemetry as gt
+    import hmac as _hmac
+    import hashlib as _hashlib
 
     fake = FakeRequests([FakeResponse(202)])
     tr = gt.HTTPTransport(url="http://example/api/v1/events",
@@ -42,11 +50,23 @@ def test_successful_post_sends_hmac_header(monkeypatch):
 
     assert len(fake.calls) == 1
     headers = fake.calls[0]["headers"]
+    assert "X-Wing-Timestamp" in headers
+    assert headers["X-Wing-Timestamp"].isdigit()
     assert "X-Wing-Signature" in headers
-    assert headers["X-Wing-Signature"].startswith("sha256=")
-    # Body is valid JSON with events array
-    body = json.loads(fake.calls[0]["data"].decode("utf-8"))
+    sig = headers["X-Wing-Signature"]
+    assert not sig.startswith("sha256="), \
+        "signature must be bare hex (Bone's verify_hmac compares sig directly)"
+    assert len(sig) == 64 and all(c in "0123456789abcdef" for c in sig)
+
+    # Body is canonical JSON with events array
+    body_bytes = fake.calls[0]["data"]
+    body = json.loads(body_bytes.decode("utf-8"))
     assert "events" in body and len(body["events"]) == 1
+
+    # Reproduce Bone's verifier — sig must match hmac(secret, ts + "." + body)
+    msg = (headers["X-Wing-Timestamp"] + ".").encode("utf-8") + body_bytes
+    expected = _hmac.new(b"topsecret", msg, _hashlib.sha256).hexdigest()
+    assert sig == expected, "plugin signature must match Bone-side HMAC"
 
 
 def test_no_hmac_header_when_secret_missing(monkeypatch):
