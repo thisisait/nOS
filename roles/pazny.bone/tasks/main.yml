@@ -60,6 +60,15 @@
     'Bootstrap failed: 5' not in (_bone_load.stderr | default('')) and
     'service already loaded' not in (_bone_load.stderr | default(''))
 
+- name: "[Bone] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/bone.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/bone.conf"
+    state: link
+    force: true
+  when: install_nginx | default(true)
+  notify: Restart nginx
+
 - name: "[Bone] Print setup summary"
   ansible.builtin.debug:
     msg: |

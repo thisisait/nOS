@@ -216,6 +216,11 @@ health_probes:
     proto: http
     port_var: freescout_port
     port_default: 8090
+    # FreeScout's Laravel TrustHosts middleware rejects 127.0.0.1 with
+    # "Untrusted Host" → 500. Probe must carry a Host header matching
+    # APP_TRUSTED_HOSTS (built from freescout_domain in the role).
+    host_header_var: freescout_domain
+    host_header_default: "helpdesk.dev.local"
     hint: "docker compose -p b2b logs freescout"
 
   - slug: firefly
@@ -301,6 +306,16 @@ health_probes:
     port_default: 3001
     onboarding: true
     hint: "Open https://{{ uptime_kuma_domain | default('uptime.dev.local') }} and create an admin account"
+
+  - slug: mailpit
+    name: "Mailpit"
+    toggle: install_mailpit
+    proto: http
+    port_var: mailpit_ui_port
+    port_default: 8025
+    path: "/livez"
+    status: [200]
+    hint: "docker compose -p iiab logs mailpit"
 
   - slug: wordpress
     name: "WordPress"

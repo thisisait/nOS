@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# pazny.mailpit/tasks/main.yml
+#
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`:
+# creates the data dir, renders the compose override + nginx vhost.
+#
+# Mailpit is a single-binary Go SMTP sink. The role is intentionally thin —
+# all the lifecycle ergonomics live in the compose template + nginx vhost.
+# ==============================================================================
+
+- name: "[pazny.mailpit] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ mailpit_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.mailpit] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/mailpit.yml"
+    mode: '0600'
+  notify: Restart mailpit
+
+- name: "[pazny.mailpit] Enable nginx vhost"
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/mailpit.conf"
+    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/mailpit.conf"
+    state: link
+    force: true
+  when: install_nginx | default(true)
+  notify: Restart nginx

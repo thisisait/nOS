@@ -17,3 +17,6 @@ _credentials.yml
 __pycache__/
 *.pyc
 tools/social-poster/index.html
+
+# Playwright MCP transient artifacts (snapshot YAMLs + console logs)
+.playwright-mcp/

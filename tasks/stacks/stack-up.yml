@@ -71,6 +71,7 @@
 - { name: "[Stacks] pazny.kiwix render", ansible.builtin.include_role: { name: pazny.kiwix, apply: { tags: ['kiwix'] } }, when: "install_kiwix | default(false)", tags: ['kiwix'] }
 - { name: "[Stacks] pazny.jellyfin render", ansible.builtin.include_role: { name: pazny.jellyfin, apply: { tags: ['jellyfin'] } }, when: "install_jellyfin | default(false)", tags: ['jellyfin'] }
 - { name: "[Stacks] pazny.uptime_kuma render", ansible.builtin.include_role: { name: pazny.uptime_kuma, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false)", tags: ['uptime-kuma'] }
+- { name: "[Stacks] pazny.mailpit render", ansible.builtin.include_role: { name: pazny.mailpit, apply: { tags: ['mailpit', 'mail'] } }, when: "install_mailpit | default(false)", tags: ['mailpit', 'mail'] }
 - { name: "[Stacks] pazny.calibre_web render", ansible.builtin.include_role: { name: pazny.calibre_web, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
 - { name: "[Stacks] pazny.open_webui render", ansible.builtin.include_role: { name: pazny.open_webui, apply: { tags: ['openwebui'] } }, when: "install_openwebui | default(false)", tags: ['openwebui'] }
 - { name: "[Stacks] pazny.mcp_gateway render", ansible.builtin.include_role: { name: pazny.mcp_gateway, apply: { tags: ['mcp', 'mcp_gateway'] } }, when: "install_mcp_gateway | default(false)", tags: ['mcp', 'mcp_gateway'] }

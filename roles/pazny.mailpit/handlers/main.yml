@@ -1,0 +1,8 @@
+---
+# Compose-level restart fires when the override template changes; stack-up
+# recreates the service on next docker compose up.
+- name: Restart mailpit
+  ansible.builtin.command: >-
+    {{ docker_bin | default('docker') }} compose -p iiab up -d mailpit
+  changed_when: false
+  failed_when: false

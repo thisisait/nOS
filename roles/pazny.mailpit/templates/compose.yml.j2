@@ -1,0 +1,48 @@
+# =============================================================================
+# pazny.mailpit — compose override fragment
+# Merged into `docker compose up iiab` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Listens on:
+#   - 127.0.0.1:{{ mailpit_smtp_port }}  → SMTP (apps relay here as 'mailpit:1025'
+#                                          inside the iiab_net docker network)
+#   - 127.0.0.1:{{ mailpit_ui_port }}    → Web UI + REST API
+#                                          (nginx fronts it at mail.<tld> with
+#                                          forward_auth via Authentik)
+#
+# Persistent storage at {{ mailpit_data_dir }}/mailpit.db (SQLite). Capped at
+# {{ mailpit_max_messages }} messages — older messages auto-pruned.
+# =============================================================================
+
+services:
+  mailpit:
+    image: axllent/mailpit:{{ mailpit_version | default('v1.20') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ mailpit_smtp_port | default(1025) }}:1025"
+      - "127.0.0.1:{{ mailpit_ui_port | default(8025) }}:8025"
+    volumes:
+      - {{ mailpit_data_dir }}:/data
+    environment:
+      MP_MAX_MESSAGES: "{{ mailpit_max_messages | default(5000) }}"
+      MP_DATABASE: "/data/mailpit.db"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+{% if mailpit_ui_user | length > 0 %}
+      MP_UI_AUTH: "{{ mailpit_ui_user }}:{{ mailpit_ui_password }}"
+{% endif %}
+    networks:
+      - iiab_net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8025/livez"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ mailpit_mem_limit | default('128m') }}
+    cpus: {{ mailpit_cpus | default('0.25') }}

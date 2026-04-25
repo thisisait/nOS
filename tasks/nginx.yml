@@ -14,6 +14,7 @@
       - mkcert
       - nss
     state: present
+  when: instance_tld_is_local | default(true) | bool
 
 - name: Ensure nginx sites directories exist
   ansible.builtin.file:
@@ -111,6 +112,10 @@
     - firefly.conf
     - onlyoffice.conf
     - influxdb.conf
+    # ── Mail tier
+    - mailpit.conf
+    # ── Local API (Bone)
+    - bone.conf
   notify: Restart nginx
 
 - name: Build list of nginx sites to enable
@@ -160,6 +165,8 @@
          + ((install_firefly | default(false)) | ternary(['firefly.conf'], []))
          + ((install_onlyoffice | default(false)) | ternary(['onlyoffice.conf'], []))
          + ((install_influxdb | default(false)) | ternary(['influxdb.conf'], []))
+         + ((install_mailpit | default(false)) | ternary(['mailpit.conf'], []))
+         + ((install_bone | default(false)) | ternary(['bone.conf'], []))
          + (nginx_sites_extra | default([]))
       }}
 
@@ -184,57 +191,64 @@
     done
   changed_when: false
 
-- name: Install mkcert CA into system trust store
-  ansible.builtin.command: mkcert -install
-  become: true
-  environment:
-    CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
-  changed_when: false
-
 - name: Ensure nginx SSL directory exists
   ansible.builtin.file:
     path: "{{ homebrew_prefix }}/etc/nginx/ssl"
     state: directory
     mode: '0700'
 
-- name: Build list of required SSL SANs
-  ansible.builtin.set_fact:
-    _ssl_san_required:
-      - "*.{{ instance_tld | default('dev.local') }}"
-      - "{{ '*.os.' + (instance_tld | default('dev.local')) if (install_puter | default(false)) else '' }}"
-      - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
-      - "{{ '*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) if (install_bluesky_pds | default(false)) else '' }}"
+# ── mkcert (local-only TLDs) ─────────────────────────────────────────────────
+# When instance_tld is real (pazny.eu etc.) the cert comes from pazny.acme
+# instead. mkcert/local-dev.* tasks are gated as a single block to avoid
+# polluting a public-TLD install with a local CA in the system trust store.
+- name: "[mkcert] Install dev CA + generate local-dev wildcard cert"
+  when: instance_tld_is_local | default(true) | bool
+  block:
+    - name: "[mkcert] Install CA into system trust store"
+      ansible.builtin.command: mkcert -install
+      become: true
+      environment:
+        CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+      changed_when: false
 
-- name: Check if SSL cert covers all required SANs
-  ansible.builtin.shell: >
-    openssl x509 -in {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt -noout -text 2>/dev/null
-    | grep -qF '{{ item }}'
-  loop: "{{ _ssl_san_required | select | list }}"
-  register: _cert_san_check
-  changed_when: false
-  failed_when: false
+    - name: "[mkcert] Build list of required SSL SANs"
+      ansible.builtin.set_fact:
+        _ssl_san_required:
+          - "*.{{ instance_tld | default('dev.local') }}"
+          - "{{ '*.os.' + (instance_tld | default('dev.local')) if (install_puter | default(false)) else '' }}"
+          - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
+          - "{{ '*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) if (install_bluesky_pds | default(false)) else '' }}"
 
-- name: Remove old SSL cert if missing required SANs
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
-    - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key"
-  when: _cert_san_check.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
+    - name: "[mkcert] Check if SSL cert covers all required SANs"
+      ansible.builtin.shell: >
+        openssl x509 -in {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt -noout -text 2>/dev/null
+        | grep -qF '{{ item }}'
+      loop: "{{ _ssl_san_required | select | list }}"
+      register: _cert_san_check
+      changed_when: false
+      failed_when: false
 
-- name: Generate local dev wildcard certificate
-  ansible.builtin.command: >
-    mkcert
-    -cert-file {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt
-    -key-file  {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key
-    "localhost" "127.0.0.1" "::1" "*.localhost"
-    "*.{{ instance_tld | default('dev.local') }}"
-    {{ '"*.os.' + (instance_tld | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
-    {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
-    {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
-  args:
-    creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
+    - name: "[mkcert] Remove old SSL cert if missing required SANs"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
+        - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key"
+      when: _cert_san_check.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
+
+    - name: "[mkcert] Generate local dev wildcard certificate"
+      ansible.builtin.command: >
+        mkcert
+        -cert-file {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt
+        -key-file  {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key
+        "localhost" "127.0.0.1" "::1" "*.localhost"
+        "*.{{ instance_tld | default('dev.local') }}"
+        {{ '"*.os.' + (instance_tld | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
+        {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
+        {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
+      args:
+        creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
 
 - name: Start and enable nginx via brew services
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start nginx"

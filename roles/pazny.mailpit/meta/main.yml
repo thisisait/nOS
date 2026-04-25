@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: mailpit
+  author: pazny
+  description: "Mailpit — SMTP capture-all sink + modern web UI (dev mail tier)."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions: [any]
+  galaxy_tags:
+    - mail
+    - smtp
+    - mailpit
+    - sink
+    - dev
+
+dependencies: []

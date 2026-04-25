@@ -36,10 +36,22 @@ heartbeat_api_key: "{{ global_password_prefix }}_pw_heartbeat"
 
 # ── Bone (local FastAPI — structure/state/dispatcher organ) ──────────────────
 # Formerly BoxAPI. See docs/anatomy.md.
-install_bone: false                       # FastAPI management API
+install_bone: true                        # FastAPI management API — required for Wing telemetry sink
 bone_port: 8099
 bone_domain: "api.{{ instance_tld }}"
 bone_secret: "{{ global_password_prefix }}_pw_bone"
+
+# Wing telemetry callback plugin self-activates when this is true. It also
+# honours NOS_TELEMETRY_ENABLED=1 env var. Auto-tied to install_bone so the
+# plugin is silent on hosts that don't have a Bone endpoint to receive events.
+wing_telemetry_enabled: "{{ install_bone | default(false) }}"
+
+# ── Mailpit (dev SMTP capture-all + modern web UI) ───────────────────────────
+# Default ON — every other service relays SMTP into mailpit:1025 inside the
+# iiab_net docker network. UI at https://mail.<tld>, gated by Authentik
+# forward_auth (Tier 2 manager). See roles/pazny.mailpit/README.md.
+install_mailpit: true                     # SMTP sink + web UI for dev mail capture
+mailpit_domain: "mail.{{ instance_tld }}"
 
 # ── Provider Access ──────────────────────────────────────────────────────────
 provider_admin_email: ""                  # Provider (thisisait.eu) email — same rights as CEO
@@ -1551,6 +1563,7 @@ authentik_app_tiers:
   nodered: 2
   firefly: 2
   miniflux: 3
+  mailpit: 2
   hedgedoc: 3
   bookstack: 3
   onlyoffice: 3
@@ -1781,6 +1794,12 @@ authentik_oidc_apps:
     enabled: "{{ install_onlyoffice | default(false) }}"
     launch_url: "https://{{ onlyoffice_domain | default('office.dev.local') }}"
     external_host: "https://{{ onlyoffice_domain | default('office.dev.local') }}"
+    type: "proxy"
+  - name: "Mailpit"
+    slug: "mailpit"
+    enabled: "{{ install_mailpit | default(false) }}"
+    launch_url: "https://{{ mailpit_domain | default('mail.dev.local') }}"
+    external_host: "https://{{ mailpit_domain | default('mail.dev.local') }}"
     type: "proxy"
 
 # Helper variables (derived from the registry, for compose templates)

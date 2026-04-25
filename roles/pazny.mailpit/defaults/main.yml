@@ -1,0 +1,33 @@
+---
+# ==============================================================================
+# pazny.mailpit — Mailpit (SMTP capture-all + modern web UI)
+#
+# Default-on. Acts as the dev-grade SMTP sink that every other service in the
+# stack relays into (Authentik, Infisical, n8n, Outline, ERPNext, FreeScout,
+# BookStack, HedgeDoc, Firefly, Miniflux). The web UI at mail.<tld> shows the
+# captured messages with full HTML/text/raw/headers/attachments inspection.
+#
+# In dev (instance_tld=dev.local) this is the ONLY mail relay — no outbound
+# delivery happens. When pazny.stalwart is enabled, Stalwart becomes the real
+# MTA and Mailpit stays as an archival mirror via the bcc-relay pattern.
+#
+# Web UI is gated by Authentik forward_auth (Tier 2 manager), no native OIDC
+# (Mailpit only supports HTTP basic auth on the UI as of v1.20).
+#
+# Project: https://mailpit.axllent.org
+# Image:   axllent/mailpit (linux/arm64 native)
+# ==============================================================================
+
+mailpit_version: "v1.20"
+mailpit_smtp_port: 1025                              # SMTP listen port (apps relay here)
+mailpit_ui_port: 8025                                # Web UI / REST API port
+mailpit_domain: "mail.{{ instance_tld | default('dev.local') }}"
+mailpit_data_dir: "{{ ansible_facts['env']['HOME'] }}/mailpit/data"
+mailpit_max_messages: 5000                           # Cap retained messages (older are pruned)
+mailpit_mem_limit: "{{ docker_mem_limit_micro | default('128m') }}"
+mailpit_cpus: "{{ docker_cpus_micro | default('0.25') }}"
+
+# UI basic-auth (defense-in-depth in addition to Authentik forward_auth).
+# Empty disables basic auth — Authentik gating remains.
+mailpit_ui_user: ""
+mailpit_ui_password: ""
