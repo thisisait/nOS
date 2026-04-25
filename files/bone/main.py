@@ -474,6 +474,11 @@ async def events_ingest(
                                 detail=f"events[{idx}]: {verr}")
         try:
             accepted_ids.append(_nos_events.insert_event(ev))
+        except _nos_events.WingDBNotReady as exc:
+            # Transient — Wing hasn't been initialised yet (e.g. early in a
+            # blank reset where Bone deploys before pazny.wing). 503 so the
+            # callback plugin retries from its fallback queue on next run.
+            raise HTTPException(status_code=503, detail=str(exc))
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=500,
                                 detail=f"events[{idx}] insert failed: {exc}")

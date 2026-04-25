@@ -68,10 +68,23 @@ def validate_payload(payload: dict[str, Any]) -> str | None:
     return None
 
 
+class WingDBNotReady(Exception):
+    """Raised when Wing's SQLite DB hasn't been initialised yet.
+
+    Bone receives events before pazny.wing has run init-db.php on a fresh
+    blank. Translate this into a 503 (transient) instead of 500
+    (terminal) so the callback plugin keeps the events in its fallback
+    queue and replays them on the next run.
+    """
+
+
 def insert_event(payload: dict[str, Any]) -> int:
     """Insert into Wing's events table. Returns new row id."""
-    if not WING_DB.parent.exists():
-        raise RuntimeError(f"Wing data dir missing: {WING_DB.parent}")
+    if not WING_DB.parent.exists() or not WING_DB.is_file():
+        raise WingDBNotReady(
+            f"Wing DB not initialised yet at {WING_DB}; "
+            "pazny.wing/init-db.php hasn't run on this host"
+        )
     conn = sqlite3.connect(str(WING_DB))
     try:
         cur = conn.execute(
