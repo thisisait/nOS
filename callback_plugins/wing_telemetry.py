@@ -438,6 +438,13 @@ class CallbackModule(CallbackBase):
             # Either still inactive, or already activated — don't re-init
             # the transports (tests and real runs both depend on this).
             return
+        # Late URL resolution: if the operator set wing_events_url at play
+        # scope (typical for non-dev TLDs where api.dev.local doesn't
+        # exist), prefer it over the hardcoded DEFAULT_URL. The env var
+        # WING_EVENTS_URL still wins because it's the most explicit signal.
+        env_url = os.environ.get("WING_EVENTS_URL", "")
+        if not env_url and play_vars and play_vars.get("wing_events_url"):
+            self._url = play_vars["wing_events_url"]
         if self._http is None:
             self._http = HTTPTransport(url=self._url, secret=self._secret)
         if self._sqlite is None:

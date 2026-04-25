@@ -23,6 +23,11 @@
   # to silence the callback on a specific run.
   vars:
     wing_telemetry_enabled: "{{ install_bone | default(false) }}"
+    # Resolve the events ingestion URL from bone_domain so it tracks the
+    # current instance_tld instead of the stale plugin default of
+    # http://api.dev.local. Operators on a real TLD (pazny.eu, etc.) get
+    # api.<tld> automatically without an env-var override.
+    wing_events_url: "http://{{ bone_domain | default('api.' ~ (instance_tld | default('dev.local'))) }}/api/v1/events"
 
   pre_tasks:
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
@@ -799,10 +804,16 @@
       when: install_tailscale | default(true)
       tags: ['tailscale', 'network', 'vpn']
 
+    # dnsmasq runs for local TLDs (*.local / .lan / .test) by default, OR for
+    # public TLDs when the operator wants HYBRID mode (real domain + valid LE
+    # cert + box reachable only locally on 127.0.0.1). Set
+    # `dnsmasq_force_local_domains: true` in config.yml to keep /etc/resolver
+    # active on a public TLD.
     - import_tasks: tasks/dnsmasq.yml
       when:
         - install_dnsmasq | default(true)
-        - instance_tld_is_local | default(true) | bool       # only for *.local / .lan / .test
+        - (instance_tld_is_local | default(true) | bool)
+          or (dnsmasq_force_local_domains | default(false) | bool)
       tags: ['dnsmasq', 'dns', 'network']
 
     # ──────────────────────────────────────────────────────────────────────────

@@ -42,6 +42,14 @@ acme_staging: false                       # true → use LE staging endpoint (te
 # Cloudflare API token with "Zone:DNS:Edit" + "Zone:Zone:Read" — set in
 # credentials.yml as `acme_cloudflare_api_token`.
 acme_cloudflare_api_token: ""
+
+# Hybrid mode — keep dnsmasq + /etc/resolver active even on a public TLD so
+# `*.pazny.eu` resolves to 127.0.0.1 locally while public DNS (Cloudflare)
+# can independently point at the home IP for external clients later. Useful
+# for staged transitions where you want a valid LE cert + real domain
+# identity NOW but aren't yet ready to expose ports / set CF A records.
+# Default false (clean separation: local TLD → dnsmasq, public TLD → real DNS).
+dnsmasq_force_local_domains: false
 instance_org: ""                          # Client organization name
 instance_location: ""                     # Location (e.g. "Prague, CZ")
 instance_role: "standalone"               # standalone | headquarters | factory | office | division
