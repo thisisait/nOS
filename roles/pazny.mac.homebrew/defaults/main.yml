@@ -9,13 +9,23 @@ homebrew_installed_packages: []
 
 homebrew_uninstalled_packages: []
 
-homebrew_upgrade_all_packages: false
+# Run `brew upgrade` for every managed formula on each playbook run. Default
+# true so the box stays current — every blank/run pulls latest patch
+# versions of CLI tools (sqlite, jq, openssl, …). Set false in config.yml
+# if a specific tool's behaviour is sensitive to its minor version.
+homebrew_upgrade_all_packages: true
 
 homebrew_taps: []
 
 homebrew_cask_apps: []
 
 homebrew_cask_uninstalled_apps: []
+
+# Run `brew upgrade --cask --greedy` for every cask after install. Default
+# true so installed apps (Brave, Blender, Discord, Sequel Ace, …) stay
+# current. Without this, casks are pinned to their first-install version
+# forever because the install task short-circuits on Caskroom existence.
+homebrew_cask_auto_upgrade: true
 
 homebrew_cask_appdir: /Applications
 homebrew_cask_accept_external_apps: false

@@ -184,6 +184,105 @@
       notify:
         - Clear homebrew cache
 
+    # ── Cask upgrades — transparent reporting ────────────────────────────────
+    # Without this every cask installed once stays pinned to its first version
+    # forever (Brave, Blender, GIMP, 1password-cli, dotnet-sdk, ...). The
+    # install task above short-circuits on `Caskroom/<name>` existing, which
+    # means the playbook never re-runs `brew install --cask` to upgrade.
+    #
+    # Default: run the upgrade so the box stays current. Operators who want
+    # to pin specific casks can add them to homebrew_cask_pinned_apps; we
+    # honour `brew pin --cask <name>` semantics by passing --greedy and
+    # respecting Homebrew's pin list (managed manually).
+    # Self-updating casks (Brave, Discord, …) handle their own upgrades and
+    # `brew outdated --cask` correctly omits them. We don't pass --greedy
+    # for that reason — it would force re-installs that conflict with the
+    # app's internal updater.
+    - name: "List outdated casks (snapshot before upgrade)"
+      ansible.builtin.command: brew outdated --cask --quiet
+      register: _cask_outdated_before
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when: homebrew_cask_auto_upgrade | default(true) | bool
+
+    # Detect which outdated casks are CURRENTLY RUNNING so we don't
+    # interrupt the user's session. Apps in /Applications/<Name>.app
+    # whose binary is in `pgrep`'s output get deferred to a manual run.
+    - name: "Detect running cask apps"
+      ansible.builtin.shell: |
+        # For each outdated cask, look up its installed .app bundle via
+        # `brew info --cask --json` (canonical artifacts list) and pgrep
+        # the bundle name. Falls back to fuzzy match on cask name when
+        # the JSON lookup fails (cask without an .app artifact = skip).
+        running=()
+        while IFS= read -r cask; do
+          [ -z "$cask" ] && continue
+          # Pull artifact name from brew metadata (handles "Sequel Ace.app"
+          # vs cask "sequel-ace" without heuristics).
+          app=$(brew info --cask --json=v2 "$cask" 2>/dev/null \
+                | python3 -c "import json,sys; d=json.load(sys.stdin); arts=d['casks'][0].get('artifacts',[]); apps=[a for art in arts if isinstance(art,dict) for a in (art.get('app') or []) if isinstance(a,str)]; print(apps[0] if apps else '')" 2>/dev/null || true)
+          [ -z "$app" ] && continue
+          app_name=$(basename "$app" .app)
+          if pgrep -xfi "$app_name" >/dev/null 2>&1 \
+             || pgrep -fi "/Applications/${app}/Contents/MacOS/" >/dev/null 2>&1; then
+            running+=("$cask")
+          fi
+        done <<< "{{ (_cask_outdated_before.stdout_lines | default([])) | join('\n') }}"
+        printf '%s\n' "${running[@]}"
+      args:
+        executable: /bin/bash
+      register: _cask_running
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when:
+        - homebrew_cask_auto_upgrade | default(true) | bool
+        - (_cask_outdated_before.stdout_lines | default([]) | length) > 0
+
+    - name: "Upgrade outdated casks (skip running)"
+      ansible.builtin.command: >-
+        brew upgrade --cask {{ _safe_to_upgrade | join(' ') }}
+      vars:
+        _safe_to_upgrade: >-
+          {{ (_cask_outdated_before.stdout_lines | default([]))
+             | difference(_cask_running.stdout_lines | default([])) }}
+      register: _cask_upgrade_result
+      changed_when:
+        - _cask_upgrade_result.rc == 0
+        - (_safe_to_upgrade | length) > 0
+      failed_when:
+        - _cask_upgrade_result.rc != 0
+        - "'No available formula' not in (_cask_upgrade_result.stderr | default(''))"
+      environment:
+        HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      when:
+        - homebrew_cask_auto_upgrade | default(true) | bool
+        - (_safe_to_upgrade | length) > 0
+
+    - name: "Cask upgrade report"
+      ansible.builtin.debug:
+        msg: |-
+          {% set outdated = _cask_outdated_before.stdout_lines | default([]) %}
+          {% set running = _cask_running.stdout_lines | default([]) %}
+          {% set upgraded = outdated | difference(running) %}
+          {% if outdated | length == 0 %}
+          Casks: all up-to-date ({{ homebrew_cask_apps | length }} managed).
+          {% else %}
+          Casks: {{ upgraded | length }} upgraded, {{ running | length }} skipped (running).
+          {% if upgraded %}
+          Upgraded:
+          {% for c in upgraded %}  - {{ c }}
+          {% endfor %}
+          {% endif %}
+          {% if running %}
+          Deferred (quit the app + re-run --tags homebrew):
+          {% for c in running %}  - {{ c }}
+          {% endfor %}
+          {% endif %}
+          {% endif %}
+      when: homebrew_cask_auto_upgrade | default(true) | bool
+
     # Brew.
     - name: Ensure blacklisted homebrew packages are not installed.
       homebrew:
@@ -234,6 +333,14 @@
       notify:
         - Clear homebrew cache
 
+    - name: "List outdated formulae (snapshot before upgrade)"
+      ansible.builtin.command: brew outdated --formula --quiet
+      register: _formula_outdated_before
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when: homebrew_upgrade_all_packages | default(false) | bool
+
     - name: Upgrade all homebrew packages (if configured).
       homebrew:
         update_homebrew: true
@@ -241,6 +348,20 @@
       when: homebrew_upgrade_all_packages
       notify:
         - Clear homebrew cache
+
+    - name: "Formulae upgrade report"
+      ansible.builtin.debug:
+        msg: |-
+          {% set before = _formula_outdated_before.stdout_lines | default([]) %}
+          {% if before | length == 0 %}
+          Formulae: all up-to-date.
+          {% else %}
+          Formulae upgraded: {{ before | length }}
+          {% for f in before %}
+            - {{ f }}
+          {% endfor %}
+          {% endif %}
+      when: homebrew_upgrade_all_packages | default(false) | bool
 
     - name: Check for Brewfile.
       stat:
