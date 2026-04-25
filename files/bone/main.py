@@ -404,10 +404,14 @@ async def coexistence_cleanup(
     return payload
 
 
-# ---- /api/events ----------------------------------------------------------
+# ---- /api/events + /api/v1/events (aliased) -------------------------------
+# Plugin's documented URL is /api/v1/events but main.py historically used the
+# unversioned form. Keep both registered so existing tests + the callback
+# plugin both work without a config flag.
 
 
 @app.post("/api/events")
+@app.post("/api/v1/events")
 async def events_ingest(
     x_wing_timestamp: str = Header(default=""),
     x_wing_signature: str = Header(default=""),
@@ -427,15 +431,30 @@ async def events_ingest(
     if not ok:
         raise HTTPException(status_code=401, detail=f"HMAC check failed: {err}")
 
-    validation_err = _nos_events.validate_payload(body or {})
-    if validation_err is not None:
-        raise HTTPException(status_code=400, detail=validation_err)
+    # The callback plugin sends batches as {"events": [event, event, ...]}.
+    # Iterate, validate each, insert each. Single-event payloads are also
+    # accepted for backwards compat with hand-curl tests.
+    payload = body or {}
+    if "events" in payload and isinstance(payload["events"], list):
+        events = payload["events"]
+    else:
+        events = [payload]
 
-    try:
-        event_id = _nos_events.insert_event(body or {})
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=f"insert failed: {exc}")
-    return {"accepted": True, "id": event_id}
+    accepted_ids: list[int] = []
+    for idx, ev in enumerate(events):
+        if not isinstance(ev, dict):
+            raise HTTPException(status_code=400,
+                                detail=f"events[{idx}]: not a JSON object")
+        verr = _nos_events.validate_payload(ev)
+        if verr is not None:
+            raise HTTPException(status_code=400,
+                                detail=f"events[{idx}]: {verr}")
+        try:
+            accepted_ids.append(_nos_events.insert_event(ev))
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=500,
+                                detail=f"events[{idx}] insert failed: {exc}")
+    return {"accepted": True, "count": len(accepted_ids), "ids": accepted_ids}
 
 
 @app.get("/api/events")

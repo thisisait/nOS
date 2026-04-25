@@ -35,6 +35,13 @@
     <string>{{ playbook_dir }}</string>
     <key>INSTANCE_NAME</key>
     <string>{{ instance_name | default('nos') }}</string>
+
+    <!-- Wing telemetry sink: events.py opens this SQLite db and the plugin
+         signs each batch with this HMAC secret. Both sides must agree. -->
+    <key>WING_DB_PATH</key>
+    <string>{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db</string>
+    <key>WING_EVENTS_HMAC_SECRET</key>
+    <string>{{ wing_events_hmac_secret | default(bone_secret | default('')) }}</string>
   </dict>
 </dict>
 </plist>

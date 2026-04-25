@@ -210,15 +210,24 @@ class HTTPTransport(object):
         terminal failure after all retries are exhausted."""
         if not events:
             return
+        # Body MUST be canonical (sort_keys=True, ensure_ascii=True) so Bone's
+        # reconstruction in events.py matches byte-for-byte. Bone parses the
+        # JSON, then re-serialises with the same flags, then verifies HMAC
+        # over (ts + "." + reconstructed_body). Any drift in serialisation
+        # breaks the signature.
         body = json.dumps({"events": events}, separators=(",", ":"),
-                          ensure_ascii=False).encode("utf-8")
+                          sort_keys=True).encode("utf-8")
+        ts = str(int(time.time()))
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "wing-telemetry/1.0",
+            "X-Wing-Timestamp": ts,
         }
-        sig = hmac_signature(self.secret, body)
-        if sig:
-            headers["X-Wing-Signature"] = sig
+        if self.secret:
+            secret_bytes = self.secret.encode("utf-8") if isinstance(self.secret, str) else self.secret
+            message = (ts + ".").encode("utf-8") + body
+            digest = hmac.new(secret_bytes, message, hashlib.sha256).hexdigest()
+            headers["X-Wing-Signature"] = digest
 
         requests = self._requests()
         last_err = None
@@ -322,7 +331,10 @@ class CallbackModule(CallbackBase):
     CALLBACK_NAME = "wing_telemetry"
     CALLBACK_NEEDS_WHITELIST = True
 
-    DEFAULT_URL = "http://api.dev.local/api/v1/events"
+    # Default to localhost so the callback bypasses nginx (which 301s HTTP→HTTPS
+    # and would break a plain-HTTP plugin). Override with WING_EVENTS_URL when
+    # running on a remote box.
+    DEFAULT_URL = "http://127.0.0.1:8099/api/v1/events"
     DEFAULT_SQLITE = "/tmp/nos-events-fallback.db"
     DEFAULT_BATCH_SIZE = 10
     DEFAULT_FLUSH_INTERVAL = 5.0
