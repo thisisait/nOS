@@ -1,0 +1,20 @@
+---
+- name: Reload acme renewal launchd
+  ansible.builtin.command: >-
+    launchctl bootout gui/{{ ansible_facts['user_uid'] }}/{{ acme_renewal_label }}
+  changed_when: false
+  failed_when: false
+  notify: Bootstrap acme renewal launchd
+
+- name: Bootstrap acme renewal launchd
+  ansible.builtin.command: >-
+    launchctl bootstrap gui/{{ ansible_facts['user_uid'] }}
+    {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_renewal_label }}.plist
+  changed_when: true
+  failed_when: false
+
+- name: Restart nginx
+  ansible.builtin.command: >-
+    {{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew services restart nginx
+  changed_when: true
+  failed_when: false

@@ -15,6 +15,33 @@ global_password_prefix: "changeme"
 instance_name: "nos"                # Unique instance name (lowercase, no spaces)
 instance_tld: "dev.local"                 # TLD for all services (e.g. grafana.<tld>)
 default_admin_email: "admin@{{ instance_tld | default('dev.local') }}"  # Fallback admin email for all services
+
+# ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
+# instance_tld_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
+#                       false → use ACME (Let's Encrypt) + public DNS (prod mode)
+# Heuristic: anything ending in .local, .lan, .test, .localhost, or literally
+# 'localhost' is treated as local. Everything else is assumed public.
+# Override with `-e instance_tld_is_local=false` if you want to force ACME on
+# a custom local TLD (e.g. if you have your own internal CA).
+instance_tld_is_local: "{{ (instance_tld | regex_search('\\.(local|lan|test|localhost)$|^localhost$')) is not none }}"
+
+# ── SSL cert paths (all nginx vhosts use these vars) ─────────────────────────
+# Local dev: mkcert generates {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.{crt,key}
+# Production: pazny.acme writes /etc/nginx/ssl/acme/{instance_tld}.{crt,key}
+ssl_cert_path: "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/{{ 'local-dev.crt' if instance_tld_is_local else 'acme/' + instance_tld + '.crt' }}"
+ssl_cert_key:  "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/{{ 'local-dev.key' if instance_tld_is_local else 'acme/' + instance_tld + '.key' }}"
+
+# ── ACME (Let's Encrypt) — auto-enabled for public TLDs ──────────────────────
+# Wildcard cert *.{instance_tld} via DNS-01 challenge to Cloudflare.
+# Keys & state stored at ~/.acme.sh/, certs symlinked into nginx/ssl/acme/.
+install_acme: "{{ not (instance_tld_is_local | bool) }}"
+acme_provider: "cloudflare"               # cloudflare | manual | http
+acme_email: "{{ default_admin_email }}"
+acme_renewal_days: 60                     # Re-issue when cert expires within N days
+acme_staging: false                       # true → use LE staging endpoint (testing)
+# Cloudflare API token with "Zone:DNS:Edit" + "Zone:Zone:Read" — set in
+# credentials.yml as `acme_cloudflare_api_token`.
+acme_cloudflare_api_token: ""
 instance_org: ""                          # Client organization name
 instance_location: ""                     # Location (e.g. "Prague, CZ")
 instance_role: "standalone"               # standalone | headquarters | factory | office | division

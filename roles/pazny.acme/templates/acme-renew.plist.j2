@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ acme_renewal_label }}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin/acme.sh</string>
+        <string>--cron</string>
+        <string>--home</string>
+        <string>{{ acme_home }}</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CF_Token</key>
+        <string>{{ acme_cloudflare_api_token }}</string>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>{{ acme_renewal_hour | default(3) }}</integer>
+        <key>Minute</key>
+        <integer>{{ acme_renewal_minute | default(30) }}</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>{{ acme_home }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ acme_home }}/launchd.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

@@ -1,0 +1,148 @@
+---
+# ==============================================================================
+# pazny.acme/tasks/main.yml
+#
+# 1. Install acme.sh via Homebrew (`brew install acme.sh`).
+# 2. Configure CF_Token env in acme.sh's account.conf.
+# 3. Issue wildcard cert (DNS-01 challenge to Cloudflare API).
+# 4. Symlink fullchain.cer → ssl_cert_path, key → ssl_cert_key.
+# 5. Drop launchd plist for daily renewal check.
+#
+# Idempotent: each step skips if already in desired state. Re-runs are no-ops
+# until the cert is within `acme_renewal_days` of expiry.
+# ==============================================================================
+
+- name: "[ACME] Skip when running on local TLD"
+  ansible.builtin.meta: end_play
+  when: instance_tld_is_local | default(false) | bool
+
+- name: "[ACME] Refuse to run without a Cloudflare API token"
+  ansible.builtin.fail:
+    msg: |-
+      ACME is enabled (instance_tld={{ instance_tld }} is not local) but
+      acme_cloudflare_api_token is empty. Set it in credentials.yml or
+      disable ACME with `-e install_acme=false` (and provide your own
+      ssl_cert_path/ssl_cert_key).
+  when:
+    - install_acme | default(false) | bool
+    - (acme_cloudflare_api_token | default('') | length) == 0
+
+# ── 1. Install acme.sh via Homebrew ─────────────────────────────────────────
+- name: "[ACME] Install acme.sh via Homebrew"
+  community.general.homebrew:
+    name: "{{ acme_brew_pkg }}"
+    state: present
+  register: _acme_brew
+
+- name: "[ACME] Ensure ~/.acme.sh and the cert symlink directory exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0700'
+  loop:
+    - "{{ acme_home }}"
+    - "{{ acme_cert_dir }}"
+
+# ── 2. Configure account + provider ──────────────────────────────────────────
+# acme.sh stores Cloudflare token at ~/.acme.sh/account.conf. We render a
+# minimal config (acme.sh appends, never deletes — so safe to overwrite).
+- name: "[ACME] Render account.conf with Cloudflare credentials"
+  ansible.builtin.copy:
+    dest: "{{ acme_home }}/account.conf"
+    mode: '0600'
+    content: |
+      ACCOUNT_EMAIL="{{ acme_email }}"
+      CF_Token="{{ acme_cloudflare_api_token }}"
+      LOG_FILE="{{ acme_home }}/acme.log"
+      LOG_LEVEL=1
+      AUTO_UPGRADE=1
+      USER_PATH="/usr/bin:/bin:/usr/sbin:/sbin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin"
+  no_log: true
+
+- name: "[ACME] Register account with Let's Encrypt"
+  ansible.builtin.command: >-
+    {{ homebrew_prefix | default('/opt/homebrew') }}/bin/acme.sh
+    --register-account
+    --server {{ 'letsencrypt_test' if (acme_staging | bool) else 'letsencrypt' }}
+    --email {{ acme_email }}
+  args:
+    creates: "{{ acme_home }}/ca/acme-v02.api.letsencrypt.org{{ '/staging' if acme_staging else '' }}/account.key"
+  register: _acme_register
+  changed_when: "'is already registered' not in (_acme_register.stdout | default(''))"
+
+# ── 3. Issue wildcard cert (or reissue if expired) ──────────────────────────
+- name: "[ACME] Issue/renew wildcard cert {{ instance_tld }}"
+  ansible.builtin.command: >-
+    {{ homebrew_prefix | default('/opt/homebrew') }}/bin/acme.sh
+    --issue
+    {% for d in acme_domains %}-d {{ d }} {% endfor %}
+    --dns dns_cf
+    --keylength 2048
+    --server {{ 'letsencrypt_test' if (acme_staging | bool) else 'letsencrypt' }}
+    --renew-hook "{{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew services restart nginx"
+  environment:
+    CF_Token: "{{ acme_cloudflare_api_token }}"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+  register: _acme_issue
+  changed_when:
+    - _acme_issue.rc == 0
+    - "'Cert success' in (_acme_issue.stdout | default('')) or 'is not expired yet' not in (_acme_issue.stdout | default(''))"
+  failed_when:
+    - _acme_issue.rc != 0
+    - "'is not expired yet' not in (_acme_issue.stdout | default(''))"
+  no_log: true
+
+# acme.sh stores the cert at ~/.acme.sh/{first_domain_no_wildcard}_ecc/ or
+# without _ecc/ depending on key type. With --keylength 2048 it's RSA without
+# _ecc. The "first domain" of a wildcard issuance is the wildcard itself but
+# acme.sh uses the apex form (strips the leading "*."). For pazny.eu it's
+# at ~/.acme.sh/pazny.eu/.
+- name: "[ACME] Symlink fullchain.cer → {{ acme_cert_path }}"
+  ansible.builtin.file:
+    src: "{{ acme_home }}/{{ instance_tld }}/fullchain.cer"
+    dest: "{{ acme_cert_path }}"
+    state: link
+    force: true
+
+- name: "[ACME] Symlink {tld}.key → {{ acme_cert_key }}"
+  ansible.builtin.file:
+    src: "{{ acme_home }}/{{ instance_tld }}/{{ instance_tld }}.key"
+    dest: "{{ acme_cert_key }}"
+    state: link
+    force: true
+  notify: Restart nginx
+
+# ── 4. launchd renewal job ───────────────────────────────────────────────────
+- name: "[ACME] Render renewal launchd plist"
+  ansible.builtin.template:
+    src: acme-renew.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_renewal_label }}.plist"
+    mode: '0644'
+  notify: Reload acme renewal launchd
+
+- name: "[ACME] Load renewal launchd job"
+  ansible.builtin.command: >-
+    launchctl load -w
+    {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_renewal_label }}.plist
+  register: _acme_load
+  changed_when:
+    - _acme_load.rc == 0
+    - "'Bootstrap failed' not in (_acme_load.stderr | default(''))"
+  failed_when:
+    - _acme_load.rc != 0
+    - "'service already loaded' not in (_acme_load.stderr | default(''))"
+    - "'Bootstrap failed: 5' not in (_acme_load.stderr | default(''))"
+
+- name: "[ACME] Setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ======================================================
+       ACME (Let's Encrypt) — ready
+      ======================================================
+       Provider:    {{ acme_provider }}
+       Domains:     {{ acme_domains | join(', ') }}
+       Cert path:   {{ acme_cert_path }}
+       Key path:    {{ acme_cert_key }}
+       Renewal:     daily at {{ '%02d:%02d' | format(acme_renewal_hour, acme_renewal_minute) }} (launchd: {{ acme_renewal_label }})
+       Account:     {{ acme_email }}
+      ======================================================

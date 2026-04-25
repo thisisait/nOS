@@ -1,0 +1,47 @@
+---
+# ==============================================================================
+# pazny.acme — Let's Encrypt wildcard cert via acme.sh + DNS-01 challenge
+#
+# Issues *.{instance_tld} + {instance_tld} as a wildcard cert and symlinks
+# the result into {{ ssl_cert_path }} / {{ ssl_cert_key }} so every nginx
+# vhost picks it up without further changes.
+#
+# Why acme.sh (not certbot/Lego):
+#   - pure Bash, no Python/Go runtime → tiny footprint
+#   - first-class DNS-01 for 100+ providers (Cloudflare native)
+#   - built-in cron renewal logic (we wrap it in a launchd plist)
+#
+# Why DNS-01 (not HTTP-01):
+#   - HTTP-01 requires port 80 reachable from the public internet → we want
+#     to hide the home IP behind Cloudflare proxy AND avoid running a public
+#     port 80 listener.
+#   - DNS-01 needs only outbound HTTPS to the Cloudflare API → no inbound.
+#   - DNS-01 is the only way to get *wildcard* certs anyway.
+# ==============================================================================
+
+# Tied to install_acme in default.config.yml (auto-derived from instance_tld).
+# Skip rendering when running on a local TLD (dev.local / lan / test / localhost).
+acme_provider: "cloudflare"
+acme_email: "{{ default_admin_email | default('admin@' + instance_tld) }}"
+acme_renewal_days: 60                     # Re-issue when cert expires within N days
+acme_staging: false                       # Use LE staging endpoint (testing)
+acme_cloudflare_api_token: ""             # SET IN credentials.yml
+
+# Where acme.sh lives + where it stores certs internally
+acme_home: "{{ ansible_facts['env']['HOME'] }}/.acme.sh"
+acme_brew_pkg: "acme.sh"
+
+# Where pazny.nginx looks for the cert (matches default.config.yml ssl_cert_path)
+acme_cert_dir: "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/acme"
+acme_cert_path: "{{ acme_cert_dir }}/{{ instance_tld }}.crt"
+acme_cert_key: "{{ acme_cert_dir }}/{{ instance_tld }}.key"
+
+# Domains to cover. Wildcard + apex by default; extend if you want explicit
+# subdomains (helpful when CF certificate transparency logs leak the apex).
+acme_domains: >-
+  {{ ['*.' + instance_tld, instance_tld] }}
+
+# Renewal launchd job (runs daily at 03:30; acme.sh internally checks expiry)
+acme_renewal_label: "eu.thisisait.nos.acme-renew"
+acme_renewal_hour: 3
+acme_renewal_minute: 30

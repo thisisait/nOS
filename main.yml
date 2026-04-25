@@ -691,6 +691,20 @@
       tags: ['php']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # ACME (Let's Encrypt wildcard cert via Cloudflare DNS-01) — runs BEFORE
+    # nginx so the cert exists when nginx -t validates the config.
+    # Skipped automatically on local TLDs (dev.local, .lan, .test) where
+    # mkcert generates the dev cert in tasks/nginx.yml instead.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "ACME — Let's Encrypt wildcard cert"
+      ansible.builtin.include_role:
+        name: pazny.acme
+      when:
+        - install_acme | default(false) | bool
+        - not (instance_tld_is_local | default(true) | bool)
+      tags: ['acme', 'tls', 'cert']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Web server (after PHP so the socket exists before nginx -t)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/nginx.yml
@@ -778,7 +792,9 @@
       tags: ['tailscale', 'network', 'vpn']
 
     - import_tasks: tasks/dnsmasq.yml
-      when: install_dnsmasq | default(true)
+      when:
+        - install_dnsmasq | default(true)
+        - instance_tld_is_local | default(true) | bool       # only for *.local / .lan / .test
       tags: ['dnsmasq', 'dns', 'network']
 
     # ──────────────────────────────────────────────────────────────────────────
