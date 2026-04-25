@@ -98,13 +98,10 @@
             "launchd.kickstart",
             "authentik.rename_group_prefix",
             "authentik.rename_oidc_client_prefix",
-            "authentik.rename_group",
-            "authentik.rename_oidc_client",
             "authentik.migrate_members",
             "docker.compose_override_rename",
             "docker.volume_clone",
             "state.set",
-            "state.unset",
             "state.bump_schema_version",
             "exec.shell",
             "noop"

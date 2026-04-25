@@ -187,12 +187,27 @@ def validate_record(record, schema_path=None):
 # Preconditions
 
 def _check_precondition(pre, ctx):
-    """Return (ok: bool, detail: dict)."""
+    """Return (ok: bool, detail: dict).
+
+    Accepts two forms (same as detect/verify/post_verify):
+      1. explicit: ``{type: fs_path_exists, path: "~"}``
+      2. shorthand: ``{fs_path_exists: "~"}`` — single predicate key.
+
+    Precondition-only types (``authentik_api_reachable``,
+    ``no_active_coexistence``) are handled inline; everything else delegates
+    to the shared predicate evaluator.
+    """
     if not isinstance(pre, dict):
         return False, {"error": "precondition must be a mapping"}
     ptype = pre.get("type")
     if not ptype:
-        return False, {"error": "precondition missing 'type'"}
+        # Shorthand: delegate to the shared predicate evaluator, which
+        # already understands single-key forms like {fs_path_exists: "~"}.
+        try:
+            ok = evaluate(pre, ctx)
+            return bool(ok), {}
+        except PredicateError as exc:
+            return False, {"error": str(exc)}
 
     if ptype == "authentik_api_reachable":
         client = ctx.get("authentik_client") if ctx else None

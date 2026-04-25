@@ -25,9 +25,6 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MANIFEST_PATH = os.path.join(REPO_ROOT, "state", "manifest.yml")
 MANIFEST_SCHEMA = os.path.join(REPO_ROOT, "state", "schema", "manifest.schema.json")
 MIGRATION_SCHEMA = os.path.join(REPO_ROOT, "state", "schema", "migration.schema.json")
-RETROACTIVE_MIGRATION = os.path.join(
-    REPO_ROOT, "migrations", "2026-04-22-devboxnos-to-nos.yml"
-)
 
 
 # ---------------------------------------------------------------------------
@@ -280,67 +277,6 @@ class IntrospectTest(unittest.TestCase):
             self.assertIn("installed", entry)
             self.assertIn("desired", entry)
             self.assertIn("healthy", entry)
-
-
-# ---------------------------------------------------------------------------
-# Retroactive migration: detect predicates are FALSE on the current host/repo.
-# ---------------------------------------------------------------------------
-
-class RetroactiveMigrationTest(unittest.TestCase):
-    def setUp(self):
-        with open(RETROACTIVE_MIGRATION, "r", encoding="utf-8") as fh:
-            self.migration = yaml.safe_load(fh)
-
-    def test_id_matches_filename(self):
-        fname = os.path.basename(RETROACTIVE_MIGRATION)
-        self.assertEqual(self.migration["id"] + ".yml", fname)
-
-    def test_severity_is_breaking(self):
-        self.assertEqual(self.migration["severity"], "breaking")
-
-    def test_has_notes_explaining_retention(self):
-        notes = self.migration.get("notes", "") or ""
-        self.assertTrue(
-            "audit" in notes.lower() or "retain" in notes.lower() or "fork" in notes.lower(),
-            "notes should document why the migration is retained",
-        )
-
-    def test_applies_if_gate_is_false_on_current_host(self):
-        """Mirror the `applies_if` predicates and verify each one resolves false.
-
-        This is the idempotency contract: on current nOS, the migration does
-        not apply. We exercise the filesystem predicate directly and stub out
-        Authentik predicates (the real check requires a live API).
-        """
-        # fs_path_exists: "~/.devboxnos"
-        self.assertFalse(
-            os.path.exists(os.path.expanduser("~/.devboxnos")),
-            "This test host carries ~/.devboxnos — the retroactive migration "
-            "would fire. Clean up before running tests.",
-        )
-        # launchagent_matches: "com.devboxnos.*"
-        la_dir = os.path.expanduser("~/Library/LaunchAgents")
-        if os.path.isdir(la_dir):
-            legacy = [f for f in os.listdir(la_dir) if f.startswith("com.devboxnos.")]
-            self.assertEqual(legacy, [], "legacy com.devboxnos.* plists present")
-
-    def test_each_step_has_detect_and_rollback(self):
-        for step in self.migration["steps"]:
-            self.assertIn("id", step)
-            self.assertIn("action", step)
-            # every step must have a rollback (may be noop).
-            self.assertIn("rollback", step)
-
-    def test_validates_against_schema(self):
-        try:
-            import jsonschema  # noqa: F401
-        except ImportError:
-            self.skipTest("jsonschema not installed; skipping schema validation")
-        import jsonschema
-
-        with open(MIGRATION_SCHEMA, "r", encoding="utf-8") as fh:
-            schema = json.load(fh)
-        jsonschema.validate(lib.to_json_safe(self.migration), schema)
 
 
 if __name__ == "__main__":  # pragma: no cover

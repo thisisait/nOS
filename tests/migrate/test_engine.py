@@ -127,6 +127,23 @@ def test_precondition_abort(tmp_path, base_ctx):
     assert not (tmp_path / "dst").exists()
 
 
+def test_precondition_shorthand_predicate_form(tmp_path, base_ctx):
+    """Preconditions accept the same shorthand form as detect/verify
+    (`{fs_path_exists: "~"}`) — not only the explicit `type:` form."""
+    rec = _devboxnos_record(tmp_path)
+    rec["preconditions"] = [{"fs_path_exists": str(tmp_path / "src")}]
+    result = apply(rec, ctx=base_ctx)
+    assert result["success"] is True
+    # And the negative: shorthand precondition pointing at a non-existent path
+    # aborts the migration cleanly at the precondition phase.
+    rec2 = _devboxnos_record(tmp_path)
+    rec2["preconditions"] = [{"fs_path_exists": str(tmp_path / "does_not_exist")}]
+    # Reset fs: _devboxnos_record re-creates tmp_path/src for a new run.
+    result2 = apply(rec2, ctx=base_ctx)
+    assert result2["success"] is False
+    assert result2["phase"] == "precondition"
+
+
 def test_step_failure_triggers_rollback(tmp_path, base_ctx):
     # Build a record whose second step fails, so the first must be rolled back.
     a = str(tmp_path / "a")

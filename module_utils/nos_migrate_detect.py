@@ -20,7 +20,10 @@ table in section 4.2:
   * ``{authentik_oidc_client_exists: "nos-grafana"}``
   * ``{state_schema_version_lt: 2}``
   * ``{compose_image_tag_is: {service: grafana, tag: "12.0.0", stack: observability}}``
-  * combinators: ``{all_of: [...], any_of: [...], not: {...}}``
+  * combinators — two equivalent spellings:
+      - shorthand:  ``{all_of: [...]}``  ``{any_of: [...]}``  ``{not: {...}}``
+      - type-form:  ``{type: all_of, of: [...]}``  ``{type: any_of, of: [...]}``
+                    ``{type: negate, of: {...}}``  (``type: not`` is an alias)
   * top-level ``negate: true`` on any predicate inverts its result.
 
 The evaluator returns a plain ``bool``.  Errors in side-effectful predicates
@@ -271,14 +274,27 @@ def evaluate(predicate, ctx=None):
     if not isinstance(predicate, dict):
         raise PredicateError("predicate must be dict/list/bool, got %r" % type(predicate))
 
-    # combinators (note: JSON-schema-friendly; we also accept the python-reserved
-    # word "not" as a dict key since YAML allows it).
+    # combinators — shorthand spelling (JSON-schema-friendly; we also accept
+    # the python-reserved word "not" as a dict key since YAML allows it).
     if "all_of" in predicate:
         return all(evaluate(p, ctx) for p in (predicate.get("all_of") or []))
     if "any_of" in predicate:
         return any(evaluate(p, ctx) for p in (predicate.get("any_of") or []))
     if "not" in predicate:
         return not evaluate(predicate.get("not"), ctx)
+
+    # combinators — type-form spelling, used in post_verify for readability:
+    #   {type: negate, of: {type: fs_path_exists, path: "~/glasswing"}}
+    # Also accepted: type: not (alias), type: all_of, type: any_of with `of: [...]`.
+    if predicate.get("type") in ("negate", "not"):
+        operand = predicate.get("of")
+        if operand is None:
+            raise PredicateError("type: %s requires 'of'" % predicate["type"])
+        return not evaluate(operand, ctx)
+    if predicate.get("type") == "all_of":
+        return all(evaluate(p, ctx) for p in (predicate.get("of") or []))
+    if predicate.get("type") == "any_of":
+        return any(evaluate(p, ctx) for p in (predicate.get("of") or []))
 
     # alternate form used in post_verify:
     #   {type: fs_path_exists, path: "~/.nos/secrets.yml"}
@@ -317,4 +333,4 @@ def evaluate(predicate, ctx=None):
 
 
 def list_predicate_types():
-    return sorted(list(_SIMPLE.keys()) + ["all_of", "any_of", "not"])
+    return sorted(list(_SIMPLE.keys()) + ["all_of", "any_of", "not", "negate"])

@@ -108,3 +108,35 @@ def test_recipe_from_regex_compiles(path):
                 "recipe %s in %s has invalid from_regex %r: %s"
                 % (rec["id"], path, rec["from_regex"], exc)
             )
+
+
+# ---------------------------------------------------------------------------
+# Catalog smoke test — every step's `type:` in every recipe must resolve to
+# a handler in merged_handlers() at runtime.  The JSON schema already guards
+# the enum, but schema enum drift from the dispatcher has bitten us before;
+# this is the runtime equivalent check that fails loudly in CI.
+
+from module_utils.nos_upgrade_actions import merged_handlers  # noqa: E402
+
+
+_HANDLER_KEYS = set(merged_handlers().keys())
+
+
+def _steps(recipe):
+    for phase in ("pre", "apply", "post", "rollback"):
+        for step in recipe.get(phase) or []:
+            yield phase, step
+
+
+@pytest.mark.parametrize("path", _recipe_files())
+def test_recipe_step_types_have_handlers(path):
+    doc = _load_yaml(path)
+    for rec in doc.get("recipes", []):
+        for phase, step in _steps(rec):
+            t = step.get("type")
+            assert t in _HANDLER_KEYS, (
+                "recipe %s step %s (%s.%s) uses type %r with no handler. "
+                "Known handlers: %r"
+                % (rec["id"], step.get("id", "?"), os.path.basename(path),
+                   phase, t, sorted(_HANDLER_KEYS))
+            )

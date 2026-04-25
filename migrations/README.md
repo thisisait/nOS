@@ -10,7 +10,6 @@ Declarative, replayable, idempotent, rollback-first migration records. Executed 
 migrations/
 ├── README.md                               # you are here
 ├── _template.yml                           # annotated template — copy, rename, edit
-├── 2026-04-22-devboxnos-to-nos.yml         # retroactive rebrand (reference example)
 └── YYYY-MM-DD-<slug>.yml                   # your next migration
 ```
 
@@ -53,7 +52,7 @@ See `state/schema/migration.schema.json` for the full enum. Quick list:
 - **launchd:** `launchd.bootout_and_delete`, `launchd.kickstart`
 - **Authentik:** `authentik.rename_group_prefix`, `authentik.rename_oidc_client_prefix`, `authentik.migrate_members`
 - **Docker:** `docker.compose_override_rename`, `docker.volume_clone`
-- **state:** `state.set`, `state.unset`, `state.bump_schema_version`
+- **state:** `state.set`, `state.bump_schema_version`
 - **escape hatch:** `exec.shell` (requires `allow_shell: true` at the top of the migration)
 - **no-op:** `noop` — document irreversible steps with a `reason:`
 
