@@ -79,6 +79,8 @@ wing_telemetry_enabled: "{{ install_bone | default(false) }}"
 # forward_auth (Tier 2 manager). See roles/pazny.mailpit/README.md.
 install_mailpit: true                     # SMTP sink + web UI for dev mail capture
 mailpit_domain: "mail.{{ instance_tld }}"
+mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
+mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
 
 # ── Provider Access ──────────────────────────────────────────────────────────
 provider_admin_email: ""                  # Provider (thisisait.eu) email — same rights as CEO
