@@ -14,9 +14,13 @@ from pathlib import Path
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
 
-app = FastAPI(title="nOS Bone API", version="0.1.0")
+app = FastAPI(title="nOS Bone API", version="0.2.0")
 
-BONE_SECRET = os.getenv("BONE_SECRET", "")
+# Track B (2026-04-26): operational endpoints now require Authentik-issued
+# JWTs with capability scopes. The legacy BONE_SECRET / X-API-Key channel is
+# retired (decision O4); the only places that read it from env are Bone's
+# own boot-time guard (auth.py:assert_configured) and the events.py HMAC
+# fallback secret. See files/bone/auth.py for the verifier.
 SERVICE_REGISTRY_PATH = os.getenv(
     "SERVICE_REGISTRY_PATH",
     os.path.expanduser("~/projects/default/service-registry.json"),
@@ -27,13 +31,28 @@ BOOT_TIME = time.time()
 
 
 # -- Auth --------------------------------------------------------------------
+# JWT-based scope checks. The dependency factory `require_scope(...)` lives
+# in auth.py; importing it here gives every route a one-liner gate.
 
+try:  # noqa: SIM105
+    from auth import require_scope, assert_configured as _assert_auth_configured
+    _assert_auth_configured()
+    _AUTH_READY = True
+except Exception as _auth_err:  # noqa: BLE001
+    # Boot-time auth failures are loud — Bone refuses to serve operational
+    # routes if its JWT auth isn't wired up. We still expose /api/health so
+    # docker compose's healthcheck can report the underlying issue via a
+    # response body, instead of just hanging the container in a restart loop.
+    _AUTH_READY = False
+    _AUTH_INIT_ERROR = str(_auth_err)
 
-def _verify_api_key(x_api_key: str = Header(default="")) -> None:
-    if not BONE_SECRET:
-        raise HTTPException(status_code=500, detail="BONE_SECRET not configured")
-    if x_api_key != BONE_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    def require_scope(*scopes: str):  # type: ignore[no-redef]
+        async def _dep():
+            raise HTTPException(
+                status_code=503,
+                detail=f"Bone JWT auth not initialized: {_AUTH_INIT_ERROR}",
+            )
+        return _dep
 
 
 # -- Helpers -----------------------------------------------------------------
@@ -116,7 +135,7 @@ async def status():
 @app.post("/api/run-tag")
 async def run_tag(
     tag: str,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:run-tag")),
 ):
     """Trigger ansible-playbook with a specific tag (requires API key)."""
     # Strict allow-list: must start with a letter, then alphanumeric + `_-,`.
@@ -197,7 +216,7 @@ def _status_from_payload(payload: dict, default: int = 200) -> int:
 
 
 @app.get("/api/state")
-async def state_root(_: None = Depends(_verify_api_key)):
+async def state_root(_=Depends(require_scope("nos:state:read"))):
     _require_framework()
     return _nos_state.read_state()
 
@@ -205,13 +224,14 @@ async def state_root(_: None = Depends(_verify_api_key)):
 @app.post("/api/state")
 async def state_push(
     body: dict | None = None,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:state:write")),
 ):
     """Accept a state snapshot from pazny.state_manager (end-of-run report).
 
-    Authentication is the standard X-API-Key (BONE_SECRET) — no HMAC like the
-    events endpoint, because state pushes happen rarely and the snapshot is
-    already on disk in ~/.nos/state.yml that the role wrote first.
+    JWT scope `nos:state:write` is required (Track B, 2026-04-26). The
+    snapshot is already on disk in ~/.nos/state.yml that the role wrote
+    first, so this endpoint is mostly a "telemetry trigger" + "remote
+    operator can poke a state push without ssh" affordance.
     """
     _require_framework()
     if not isinstance(body, dict):
@@ -226,13 +246,13 @@ async def state_push(
 
 
 @app.get("/api/state/services")
-async def state_services(_: None = Depends(_verify_api_key)):
+async def state_services(_=Depends(require_scope("nos:state:read"))):
     _require_framework()
     return _nos_state.get_services()
 
 
 @app.get("/api/state/services/{service_id}")
-async def state_service(service_id: str, _: None = Depends(_verify_api_key)):
+async def state_service(service_id: str, _=Depends(require_scope("nos:state:read"))):
     _require_framework()
     svc = _nos_state.get_service(service_id)
     if svc is None:
@@ -244,13 +264,13 @@ async def state_service(service_id: str, _: None = Depends(_verify_api_key)):
 
 
 @app.get("/api/migrations")
-async def migrations_list(_: None = Depends(_verify_api_key)):
+async def migrations_list(_=Depends(require_scope("nos:migrations:read"))):
     _require_framework()
     return _nos_migrations.split_pending_applied()
 
 
 @app.get("/api/migrations/{migration_id}")
-async def migrations_get(migration_id: str, _: None = Depends(_verify_api_key)):
+async def migrations_get(migration_id: str, _=Depends(require_scope("nos:migrations:read"))):
     _require_framework()
     rec = _nos_migrations.get_by_id(migration_id)
     if rec is None:
@@ -259,7 +279,7 @@ async def migrations_get(migration_id: str, _: None = Depends(_verify_api_key)):
 
 
 @app.post("/api/migrations/{migration_id}/preview")
-async def migrations_preview(migration_id: str, _: None = Depends(_verify_api_key)):
+async def migrations_preview(migration_id: str, _=Depends(require_scope("nos:migrations:read"))):
     _require_framework()
     payload = _nos_migrations.preview(migration_id)
     status = _status_from_payload(payload)
@@ -272,7 +292,7 @@ async def migrations_preview(migration_id: str, _: None = Depends(_verify_api_ke
 async def migrations_apply(
     migration_id: str,
     body: dict | None = None,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:migrations:apply")),
 ):
     _require_framework()
     dry_run = bool((body or {}).get("dry_run"))
@@ -284,7 +304,7 @@ async def migrations_apply(
 
 
 @app.post("/api/migrations/{migration_id}/rollback")
-async def migrations_rollback(migration_id: str, _: None = Depends(_verify_api_key)):
+async def migrations_rollback(migration_id: str, _=Depends(require_scope("nos:migrations:apply"))):
     _require_framework()
     payload = _nos_migrations.rollback(migration_id)
     status = _status_from_payload(payload)
@@ -297,13 +317,13 @@ async def migrations_rollback(migration_id: str, _: None = Depends(_verify_api_k
 
 
 @app.get("/api/upgrades")
-async def upgrades_matrix(_: None = Depends(_verify_api_key)):
+async def upgrades_matrix(_=Depends(require_scope("nos:upgrades:read"))):
     _require_framework()
     return _nos_upgrades.matrix()
 
 
 @app.get("/api/upgrades/{service}")
-async def upgrades_service(service: str, _: None = Depends(_verify_api_key)):
+async def upgrades_service(service: str, _=Depends(require_scope("nos:upgrades:read"))):
     _require_framework()
     data = _nos_upgrades.for_service(service)
     if data is None:
@@ -312,7 +332,7 @@ async def upgrades_service(service: str, _: None = Depends(_verify_api_key)):
 
 
 @app.get("/api/upgrades/{service}/{recipe_id}")
-async def upgrades_recipe(service: str, recipe_id: str, _: None = Depends(_verify_api_key)):
+async def upgrades_recipe(service: str, recipe_id: str, _=Depends(require_scope("nos:upgrades:read"))):
     _require_framework()
     rec = _nos_upgrades.get_recipe(service, recipe_id)
     if rec is None:
@@ -321,7 +341,7 @@ async def upgrades_recipe(service: str, recipe_id: str, _: None = Depends(_verif
 
 
 @app.post("/api/upgrades/{service}/{recipe_id}/plan")
-async def upgrades_plan(service: str, recipe_id: str, _: None = Depends(_verify_api_key)):
+async def upgrades_plan(service: str, recipe_id: str, _=Depends(require_scope("nos:upgrades:read"))):
     _require_framework()
     payload = _nos_upgrades.plan(service, recipe_id)
     status = _status_from_payload(payload)
@@ -331,7 +351,7 @@ async def upgrades_plan(service: str, recipe_id: str, _: None = Depends(_verify_
 
 
 @app.post("/api/upgrades/{service}/{recipe_id}/apply")
-async def upgrades_apply(service: str, recipe_id: str, _: None = Depends(_verify_api_key)):
+async def upgrades_apply(service: str, recipe_id: str, _=Depends(require_scope("nos:upgrades:apply"))):
     _require_framework()
     payload = _nos_upgrades.apply(service, recipe_id)
     status = _status_from_payload(payload)
@@ -344,13 +364,13 @@ async def upgrades_apply(service: str, recipe_id: str, _: None = Depends(_verify
 
 
 @app.get("/api/patches")
-async def patches_list(_: None = Depends(_verify_api_key)):
+async def patches_list(_=Depends(require_scope("nos:patches:read"))):
     _require_framework()
     return _nos_patches.list_all()
 
 
 @app.get("/api/patches/{patch_id}")
-async def patches_get(patch_id: str, _: None = Depends(_verify_api_key)):
+async def patches_get(patch_id: str, _=Depends(require_scope("nos:patches:read"))):
     _require_framework()
     rec = _nos_patches.get_by_id(patch_id)
     if rec is None:
@@ -359,7 +379,7 @@ async def patches_get(patch_id: str, _: None = Depends(_verify_api_key)):
 
 
 @app.post("/api/patches/{patch_id}/plan")
-async def patches_plan(patch_id: str, _: None = Depends(_verify_api_key)):
+async def patches_plan(patch_id: str, _=Depends(require_scope("nos:patches:read"))):
     _require_framework()
     payload = _nos_patches.plan(patch_id)
     status = _status_from_payload(payload)
@@ -369,7 +389,7 @@ async def patches_plan(patch_id: str, _: None = Depends(_verify_api_key)):
 
 
 @app.post("/api/patches/{patch_id}/apply")
-async def patches_apply(patch_id: str, _: None = Depends(_verify_api_key)):
+async def patches_apply(patch_id: str, _=Depends(require_scope("nos:patches:apply"))):
     _require_framework()
     payload = _nos_patches.apply(patch_id)
     status = _status_from_payload(payload)
@@ -382,7 +402,7 @@ async def patches_apply(patch_id: str, _: None = Depends(_verify_api_key)):
 
 
 @app.get("/api/coexistence")
-async def coexistence_list(_: None = Depends(_verify_api_key)):
+async def coexistence_list(_=Depends(require_scope("nos:coexistence:read"))):
     _require_framework()
     return _nos_coexistence.list_tracks()
 
@@ -391,7 +411,7 @@ async def coexistence_list(_: None = Depends(_verify_api_key)):
 async def coexistence_provision(
     service: str,
     body: dict,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:coexistence:write")),
 ):
     _require_framework()
     payload = _nos_coexistence.provision(service, body or {})
@@ -405,7 +425,7 @@ async def coexistence_provision(
 async def coexistence_cutover(
     service: str,
     body: dict,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:coexistence:write")),
 ):
     _require_framework()
     target_tag = str((body or {}).get("target_tag", ""))
@@ -423,7 +443,7 @@ async def coexistence_cleanup(
     service: str,
     tag: str,
     body: dict | None = None,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:coexistence:write")),
 ):
     _require_framework()
     force = bool((body or {}).get("force"))
@@ -500,7 +520,7 @@ async def events_list(
     migration_id: str | None = None,
     upgrade_id: str | None = None,
     limit: int = 100,
-    _: None = Depends(_verify_api_key),
+    _=Depends(require_scope("nos:state:read")),
 ):
     """Paginated event query. Wing also serves its own /api/v1/events
     directly from SQLite — this route is a Bone-side convenience for CLI

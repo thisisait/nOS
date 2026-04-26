@@ -3,6 +3,6 @@
 # atomically, so there is nothing to "restart". Kept as an extension point
 # for future use (e.g. nudging Bone to refresh its cache).
 
-- name: state_manager refresh cache
+- name: State_manager refresh cache
   ansible.builtin.debug:
     msg: "state_manager: handler fired (no-op placeholder)"

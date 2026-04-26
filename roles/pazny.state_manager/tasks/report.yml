@@ -14,6 +14,33 @@
 
       {% endfor %}
 
+# Track B (2026-04-26): fetch a JWT from Authentik before posting state.
+# We reach for httpx via Bone? No — the playbook talks to Authentik
+# directly, no detour. Token is good for 12h but we ask for a fresh one
+# each run because playbook runs are rare and Authentik's token endpoint
+# is fast.
+- name: "[state] Fetch OIDC client_credentials token"
+  ansible.builtin.uri:
+    url: "{{ nos_state_oidc_token_url }}"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: client_credentials
+      client_id: "{{ nos_state_oidc_client_id }}"
+      client_secret: "{{ nos_state_oidc_client_secret }}"
+      scope: "{{ nos_state_oidc_scopes | join(' ') }}"
+    status_code: [200]
+    timeout: 10
+    validate_certs: "{{ not (instance_tld_is_local | default(false)) }}"
+  register: _state_oidc_token
+  when:
+    - nos_state_push_bone | bool
+    - nos_state_oidc_enabled | bool
+    - nos_state_snapshot is defined
+  failed_when: false      # best-effort — Authentik may be down on first blank run
+  no_log: true
+  tags: ['state', 'report']
+
 - name: "[state] Push state to Bone"
   ansible.builtin.uri:
     url: "{{ nos_state_bone_url }}"
@@ -21,16 +48,18 @@
     body_format: json
     body: "{{ nos_state_snapshot | default({}) }}"
     headers:
-      # Bone requires X-API-Key on every authenticated route. BONE_SECRET
-      # comes from the launchd plist — same value lives in default.credentials
-      # as bone_secret.
-      X-API-Key: "{{ bone_secret | default(global_password_prefix + '_pw_bone') }}"
+      # Track B: Bearer JWT replaces the legacy X-API-Key. The nos-state-manager
+      # OIDC client must have nos:state:write in its capabilities (configured
+      # in authentik_agent_clients[nos-state-manager].capabilities).
+      Authorization: "Bearer {{ _state_oidc_token.json.access_token | default('') }}"
     status_code: [200, 201, 202, 204]
     timeout: 5
   when:
     - nos_state_push_bone | bool
+    - nos_state_oidc_enabled | bool
     - nos_state_snapshot is defined
+    - _state_oidc_token.json.access_token is defined
   failed_when: false      # best-effort — never fail the playbook on a cache miss
   changed_when: false
-  no_log: true            # X-API-Key would leak into the run log otherwise
+  no_log: true
   tags: ['state', 'report']

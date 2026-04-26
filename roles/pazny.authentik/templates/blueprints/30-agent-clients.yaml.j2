@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS Agent OAuth2 clients (Track B, 2026-04-26) ─────────────────────
+#
+# Source of truth: `authentik_agent_clients` + `authentik_agent_scopes` in
+# default.config.yml.  Each entry creates:
+#
+#   1. One scopemapping per declared `nos:*` scope (idempotent — Authentik
+#      uses the scope_name as the unique identifier; the same scope shared
+#      across multiple clients reconciles to a single DB row).
+#   2. One oauth2provider per agent, configured for the client_credentials
+#      grant (no user flow, no refresh token).
+#   3. One application bound to that provider (so the provider shows up in
+#      the Authentik admin UI; not user-launchable).
+#
+# The wing_telemetry callback intentionally does NOT use this — it stays on
+# HMAC because it runs inside an ansible-playbook tree where Authentik may
+# not yet be up. See docs/anatomy.md "Telemetry channel" for rationale.
+
+version: 1
+metadata:
+  name: nos-agent-clients
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  # ── Scope mappings ────────────────────────────────────────────────────
+  # One per scope in authentik_agent_scopes. Authentik's client_credentials
+  # flow drops scopes that have no scopemapping, so this list IS the
+  # authorisation surface. The expression returns nothing (machine-to-machine
+  # tokens carry no extra claims; the scope name itself is the capability).
+{% for scope in authentik_agent_scopes | default([]) %}
+  - model: authentik_providers_oauth2.scopemapping
+    state: present
+    identifiers:
+      scope_name: "{{ scope }}"
+    attrs:
+      name: "nOS scope: {{ scope }}"
+      managed: "nos/{{ scope }}"
+      expression: |
+        return {}
+{% endfor %}
+
+{% for agent in authentik_agent_clients | default([]) %}
+{% set caps = agent.capabilities | default([]) %}
+  # ── {{ agent.name }} ({{ agent.slug }}) ───────────────────────────────
+  - model: authentik_providers_oauth2.oauth2provider
+    state: present
+    identifiers:
+      name: "{{ agent.name }}"
+    attrs:
+      client_type: "confidential"
+      client_id: "{{ agent.client_id }}"
+      client_secret: "{{ agent.client_secret }}"
+      # client_credentials grant doesn't traverse a flow, but Authentik
+      # still requires authorization_flow + invalidation_flow to exist on
+      # the provider for the admin UI to render. They're never executed
+      # for machine tokens.
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      access_code_validity: "minutes=10"
+      access_token_validity: "{{ authentik_agent_token_validity | default('hours=12') }}"
+      # No refresh tokens for client_credentials (RFC 6749 §4.4.3 — the
+      # client just re-authenticates with its own credentials when the
+      # access token expires).
+      refresh_token_validity: "seconds=0"
+      sub_mode: "user_username"
+      include_claims_in_id_token: true
+      # All agent providers share one issuer URL so Bone needs only one
+      # JWKS client. issuer = https://auth.<tld>/application/o/  (no trailing
+      # slug). per_provider would force Bone to maintain N JWKS caches.
+      issuer_mode: "global"
+      property_mappings:
+{% for cap in caps %}
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, "{{ cap }}"]]
+{% endfor %}
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: "{{ agent.slug }}"
+    attrs:
+      name: "{{ agent.name }}"
+      meta_launch_url: ""
+      meta_description: |
+        Machine-to-machine OAuth2 client (client_credentials grant) used by
+        the {{ agent.name }} component to call the Bone API.
+        Capabilities: {{ caps | join(', ') }}.
+      provider: !Find [authentik_providers_oauth2.oauth2provider, [name, "{{ agent.name }}"]]
+      policy_engine_mode: "any"
+      open_in_new_tab: false
+{% endfor %}

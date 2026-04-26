@@ -38,3 +38,13 @@
     dest: "{{ stacks_dir }}/infra/authentik/blueprints/20-rbac-policies.yaml"
     mode: '0640'
   notify: Reapply authentik blueprints
+
+- name: "[pazny.authentik Blueprints] Render agent OAuth2 clients (Track B)"
+  # Track B: machine-to-machine OIDC clients used by Bone callers
+  # (state-manager, OpenClaw, Wing). Source list:
+  # `authentik_agent_clients` + `authentik_agent_scopes` in default.config.yml.
+  ansible.builtin.template:
+    src: "blueprints/30-agent-clients.yaml.j2"
+    dest: "{{ stacks_dir }}/infra/authentik/blueprints/30-agent-clients.yaml"
+    mode: '0640'
+  notify: Reapply authentik blueprints

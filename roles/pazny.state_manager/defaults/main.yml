@@ -23,6 +23,17 @@ nos_state_report_stdout: true
 nos_state_push_bone: "{{ install_bone | default(false) }}"
 nos_state_bone_url: "http://localhost:{{ bone_port | default(8099) }}/api/state"
 
+# Track B (2026-04-26): the state-manager agent fetches an Authentik
+# client_credentials JWT before POSTing to /api/state. The client_id matches
+# the `nos-state-manager` entry in authentik_agent_clients (default.config.yml);
+# the secret is derived the same way (global_password_prefix rotation).
+nos_state_oidc_enabled: "{{ install_authentik | default(false) }}"
+nos_state_oidc_client_id: "nos-state-manager"
+nos_state_oidc_client_secret: "{{ global_password_prefix }}_pw_agent_state_manager"
+nos_state_oidc_scopes:
+  - "nos:state:write"
+nos_state_oidc_token_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
+
 # Generator tag — bumped when the role's on-disk layout changes. Mirrors
 # the GENERATOR_ID constant in module_utils/nos_state_lib.py.
 nos_state_generator: "pazny.state_manager v1.0"
