@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.linux.systemd_user — systemd --user service manager
+# (Linux sibling of pazny.bone's launchd plist + pazny.acme's renewal plist
+#  + pazny.backup's launchd agent.)
+#
+# Status: STUB. Phase 1 scaffolding. Real implementation later.
+#
+# Plan: a thin abstraction `linux_systemd_unit(name, exec, env, timer)` that
+# Linux versions of pazny.bone / pazny.acme / pazny.backup / pazny.openclaw
+# include in lieu of launchctl bootstrap. Output: a systemd .service +
+# optional .timer rendered into ~/.config/systemd/user/.
+# ==============================================================================
+
+# Default unit file location (XDG-compliant, no sudo needed)
+linux_systemd_user_dir: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+
+# Should we enable lingering for the user (so user services run without an
+# active login session)? Required for daemons like Bone that should survive
+# logout. Requires sudo.
+linux_systemd_user_enable_lingering: true

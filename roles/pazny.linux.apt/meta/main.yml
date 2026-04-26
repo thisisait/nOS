@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: linux_apt
+  author: pazny
+  description: "Debian/Ubuntu apt package manager (sibling of pazny.mac.homebrew)."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]   # 22.04, 24.04
+    - name: Debian
+      versions: [bookworm, trixie]  # 12, 13
+  galaxy_tags:
+    - apt
+    - debian
+    - ubuntu
+    - packages
+    - linux
+
+dependencies: []

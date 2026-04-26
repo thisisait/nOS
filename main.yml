@@ -362,25 +362,51 @@
       failed_when: false
 
   roles:
+    # ── macOS-only host roles ───────────────────────────────────────────────
+    # Gated on Darwin so the playbook is preflight-safe on Linux. Linux
+    # siblings live under pazny.linux.* and are wired below.
     - role: elliotweiser.osx-command-line-tools
+      when: ansible_os_family == 'Darwin'
 
     - role: pazny.mac.homebrew
-      when: install_homebrew_packages | default(true)
+      when:
+        - ansible_os_family == 'Darwin'
+        - install_homebrew_packages | default(true)
       tags: ['homebrew']
 
+    # Dotfiles is OS-portable (drops files into $HOME); no OS gate needed.
     - role: pazny.dotfiles
       when: configure_dotfiles | default(true)
       tags: ['dotfiles']
 
     - role: pazny.mac.mas
-      when: |
-        (install_mas_apps | default(false)) and
-        ((mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0))
+      when:
+        - ansible_os_family == 'Darwin'
+        - install_mas_apps | default(false)
+        - (mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0)
       tags: ['mas']
 
     - role: pazny.mac.dock
-      when: configure_dock | default(false)
+      when:
+        - ansible_os_family == 'Darwin'
+        - configure_dock | default(false)
       tags: ['dock']
+
+    # ── Linux-only host roles (Phase 1: stubs only) ─────────────────────────
+    # Activate on Debian/RedHat families. Currently empty — real
+    # implementation lands after the cross-platform refactor is validated
+    # end-to-end on Ubuntu 24.04 LTS. See docs/agent-operable-nos.md
+    # roadmap section "Linux port".
+    - role: pazny.linux.apt
+      when:
+        - ansible_os_family in ['Debian', 'RedHat']
+        - install_linux_packages | default(true)
+      tags: ['apt', 'packages']
+
+    - role: pazny.linux.systemd_user
+      when:
+        - ansible_os_family in ['Debian', 'RedHat']
+      tags: ['systemd']
 
   tasks:
     # ──────────────────────────────────────────────────────────────────────────

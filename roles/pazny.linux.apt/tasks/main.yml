@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.linux.apt — STUB tasks for the Linux package manager.
+#
+# Phase 1 of the cross-platform port. The real implementation lands in a
+# follow-up commit once the macOS path is verified to still work after the
+# OS-conditional refactor in main.yml.
+#
+# What goes here eventually:
+#   * apt update + apt-key for third-party repos (Docker, Tailscale, …)
+#   * apt install for linux_apt_packages
+#   * apt remove for linux_apt_uninstalled_packages
+#   * apt upgrade-all loop with snapshot-before / report-after, mirroring
+#     pazny.mac.homebrew's outdated → upgrade → report flow
+# ==============================================================================
+
+- name: "[pazny.linux.apt] STUB — Linux port not yet wired"
+  ansible.builtin.debug:
+    msg: |
+      pazny.linux.apt is a Phase-1 scaffolding stub.
+      No packages will be installed on this run.
+      Track the Linux port progress in docs/agent-operable-nos.md.
+  when: ansible_os_family in ['Debian', 'RedHat']

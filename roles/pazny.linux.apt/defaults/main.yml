@@ -1,0 +1,29 @@
+---
+# ==============================================================================
+# pazny.linux.apt — Debian/Ubuntu package management (Linux sibling of pazny.mac.homebrew)
+#
+# Status: STUB. Phase 1 of Linux port — scaffolding only, no real tasks yet.
+# Plan: mirror pazny.mac.homebrew's variable shape so config.yml can declare
+# packages once with cross-platform semantics:
+#
+#     packages:
+#       - { name: jq }
+#       - { name: ripgrep, mac: { brew: ripgrep }, linux: { apt: ripgrep } }
+#
+# ==============================================================================
+
+# Packages installed via `apt-get install`. Each entry is either a string
+# (just the package name) or a dict with `name` + optional `state`.
+linux_apt_packages: []
+
+# Packages explicitly removed.
+linux_apt_uninstalled_packages: []
+
+# Run `apt-get upgrade` for everything currently installed (mirrors
+# homebrew_upgrade_all_packages on macOS). Default true so the box stays
+# current — every blank/run pulls latest patch versions.
+linux_apt_upgrade_all_packages: true
+
+# Install third-party repositories before package install (e.g., Docker
+# official, Tailscale, etc.). Each entry: { name, key_url, repo_line }.
+linux_apt_third_party_repos: []

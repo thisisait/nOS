@@ -1,0 +1,17 @@
+---
+# ==============================================================================
+# pazny.linux.systemd_user — STUB tasks for systemd --user.
+#
+# Phase 1 of cross-platform port. Real implementation later: a reusable
+# `include_role: name=pazny.linux.systemd_user tasks_from=ensure_unit` that
+# Linux ports of pazny.bone / pazny.acme / pazny.backup invoke instead of
+# the launchctl bootstrap dance.
+# ==============================================================================
+
+- name: "[pazny.linux.systemd_user] STUB — Linux port not yet wired"
+  ansible.builtin.debug:
+    msg: |
+      pazny.linux.systemd_user is a Phase-1 scaffolding stub.
+      Real systemd unit rendering lands once pazny.linux.apt + the
+      cross-platform refactor in main.yml are validated on Ubuntu 24.04 LTS.
+  when: ansible_os_family in ['Debian', 'RedHat']
