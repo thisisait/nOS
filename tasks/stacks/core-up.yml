@@ -102,6 +102,8 @@
     - { path: "{{ portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer') }}", enabled: "{{ install_portainer | default(false) | bool }}" }
     - { path: "{{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}", enabled: "{{ install_traefik | default(false) | bool }}" }
     - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) | bool }}" }
+    - { path: "{{ spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
+    - { path: "{{ spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
     - { path: "{{ ansible_facts['env']['HOME'] }}/agents/log", enabled: true }
   when: item.enabled | bool
   loop_control:
@@ -146,7 +148,8 @@
     install_portainer | default(false) or install_traefik | default(false) or
     install_mariadb | default(false) or install_postgresql | default(false) or
     redis_docker | default(false) or install_bluesky_pds | default(false) or
-    install_authentik | default(false) or install_infisical | default(false)
+    install_authentik | default(false) or install_infisical | default(false) or
+    install_spacetimedb | default(false)
 
 - name: "[Core] Deploy observability compose"
   ansible.builtin.template:
@@ -200,6 +203,11 @@
   ansible.builtin.include_role: { name: pazny.bluesky_pds, apply: { tags: ['bluesky-pds', 'infra'] } }
   when: install_bluesky_pds | default(false)
   tags: ['bluesky-pds', 'infra']
+
+- name: "[Core] pazny.spacetimedb render"
+  ansible.builtin.include_role: { name: pazny.spacetimedb, apply: { tags: ['spacetimedb', 'infra'] } }
+  when: install_spacetimedb | default(false)
+  tags: ['spacetimedb', 'infra']
 
 # Observability roles
 - name: "[Core] pazny.grafana render"
@@ -314,7 +322,8 @@
       {{ (install_portainer | default(false)) or (install_traefik | default(false)) or
          (install_mariadb | default(false)) or (install_postgresql | default(false)) or
          (redis_docker | default(false)) or (install_bluesky_pds | default(false)) or
-         (install_authentik | default(false)) or (install_infisical | default(false)) }}
+         (install_authentik | default(false)) or (install_infisical | default(false)) or
+         (install_spacetimedb | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
 
 # ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
@@ -457,6 +466,13 @@
     - _core_infra_enabled | bool
   tags: ['portainer', 'infra']
 
+- name: "[Core] pazny.spacetimedb post-start (host CLI + server alias + onboarding)"
+  ansible.builtin.include_role: { name: pazny.spacetimedb, tasks_from: post.yml, apply: { tags: ['spacetimedb', 'infra'] } }
+  when:
+    - install_spacetimedb | default(false)
+    - _core_infra_enabled | bool
+  tags: ['spacetimedb', 'infra']
+
 # ── Result ───────────────────────────────────────────────────────────────────
 
 - name: "[Core] Summary"
@@ -470,6 +486,7 @@
        Authentik:     {{ 'configured' if (install_authentik | default(false)) else 'disabled' }}
        Infisical:     {{ 'configured' if (install_infisical | default(false)) else 'disabled' }}
        Bluesky PDS:   {{ 'configured' if (install_bluesky_pds | default(false)) else 'disabled' }}
+       SpacetimeDB:   {{ 'configured' if (install_spacetimedb | default(false)) else 'disabled' }}
 
       Remaining stacks (iiab/devops/b2b/voip/data/engineering) will come up
       later via tasks/stacks/stack-up.yml after service-side tasks have

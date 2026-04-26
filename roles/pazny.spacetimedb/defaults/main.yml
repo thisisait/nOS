@@ -1,0 +1,50 @@
+---
+# ==============================================================================
+# pazny.spacetimedb — SpacetimeDB Standalone (infra compose stack)
+#
+# Realtime database (Rust + WASM) under Business Source License 1.1. The BSL
+# Additional Use Grant permits one production instance for an internal app or
+# service used by your own employees and contractors — exactly the nOS use
+# case. License converts to AGPLv3 (with linking exception) on 2031-03-20.
+# https://github.com/clockworklabs/SpacetimeDB/blob/master/LICENSE.txt
+#
+# Auth model: SpacetimeDB has no admin UI / passwords. Identity is JWT-based:
+#   1) Server-issued tokens — signed by the local ECDSA keypair we generate
+#      below and mount into the container. Used by the host `spacetime` CLI
+#      to publish modules.
+#   2) External OIDC tokens — clients pass any well-formed OIDC ID token
+#      (e.g. issued by Authentik); SpacetimeDB validates via the issuer's
+#      JWKS endpoint. Trust is enforced at the module level (reducer reads
+#      ctx.sender.identity / iss claim) — there is no "trusted issuer" list
+#      on the server side.
+#
+# Port note: container listens on 3000 (default). Grafana also defaults to
+# 3000 inside its container, but on the host we map SpacetimeDB to 3030 to
+# avoid any confusion. Postgres wire protocol (--pg-port) is intentionally
+# NOT enabled to keep port 5432 free for pazny.postgresql.
+# ==============================================================================
+
+spacetimedb_version: "latest"                    # pin to a specific tag (e.g. "1.5") for production
+spacetimedb_port: 3030                           # host port → container 3000 (HTTP + WebSocket)
+spacetimedb_domain: "spacetime.dev.local"
+spacetimedb_data_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/data"
+spacetimedb_keys_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/keys"
+spacetimedb_mem_limit: "{{ docker_mem_limit_standard | default('2g') }}"
+spacetimedb_cpus: "{{ docker_cpus_standard | default('1.5') }}"
+
+# Optional: install the `spacetime` CLI on the host so the operator can
+# publish modules from their shell. Default true on macOS (Homebrew bin
+# path is in the standard PATH). Set false if you only use docker exec.
+spacetimedb_install_host_cli: true
+spacetimedb_cli_install_url: "https://install.spacetimedb.com"
+
+# Authentik issuer URL — exposed as an env var so client apps + future
+# modules can read it from the registry. Server-side does not need it
+# (validation is per-token, JWKS is fetched on demand).
+spacetimedb_oidc_issuer: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/spacetimedb/"
+
+# Onboarding: dev database name created post-start. Empty string disables.
+# Note: actually publishing a module requires a WASM artifact; the post-start
+# only registers the server alias in the host CLI config and prints a
+# "spacetime publish <module> {{ spacetimedb_dev_db }}" hint.
+spacetimedb_dev_db: "dev"

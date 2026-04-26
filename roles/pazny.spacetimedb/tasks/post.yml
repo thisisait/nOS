@@ -1,0 +1,132 @@
+---
+# ==============================================================================
+# pazny.spacetimedb/tasks/post.yml
+#
+# Called from tasks/stacks/core-up.yml AFTER `docker compose up infra --wait`.
+# SpacetimeDB has NO admin-password concept — auth is JWT, signed by the
+# keypair we generated in tasks/main.yml. Onboarding therefore reduces to:
+#
+#   1) Health check (/v1/ping)
+#   2) Install the `spacetime` CLI on the host (Homebrew prefix bin) so the
+#      operator can publish modules from their shell. Idempotent — re-runs
+#      no-op if the binary is already present.
+#   3) Configure the host CLI to use the local server (server alias `nos`,
+#      set as default). Idempotent — uses `spacetime server list/edit` and
+#      tolerates "already exists".
+#   4) Print summary with next-step hints (publish a module, generate
+#      bindings, hook up Authentik OIDC tokens).
+#
+# We deliberately do NOT auto-publish a module: publishing requires a WASM
+# artifact, which is project-specific. The role's job is to land the
+# infrastructure; the user owns their first module.
+# ==============================================================================
+
+- name: "[pazny.spacetimedb Post] Wait for HTTP API to be ready"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}/v1/ping"
+    method: GET
+    timeout: 5
+    status_code: [200, 204]
+  register: _spacetimedb_ready
+  until: _spacetimedb_ready.status | default(0) in [200, 204]
+  retries: 18
+  delay: 5
+  failed_when: false
+
+- name: "[pazny.spacetimedb Post] Health check status"
+  ansible.builtin.debug:
+    msg: >-
+      SpacetimeDB:
+      {{ 'OK — /v1/ping responding'
+         if _spacetimedb_ready.status | default(0) in [200, 204]
+         else 'FAILED — /v1/ping unreachable, skipping onboarding' }}
+
+# ── Host CLI install (optional, gated) ───────────────────────────────────────
+- name: "[pazny.spacetimedb Post] Detect existing host CLI"
+  ansible.builtin.command:
+    argv: [which, spacetime]
+  register: _spacetimedb_cli_which
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: spacetimedb_install_host_cli | default(true) | bool
+
+- name: "[pazny.spacetimedb Post] Install spacetime CLI on host"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL "{{ spacetimedb_cli_install_url }}" | sh -s -- --yes
+  args:
+    creates: "{{ ansible_facts['env']['HOME'] }}/.local/bin/spacetime"
+  register: _spacetimedb_cli_install
+  when:
+    - spacetimedb_install_host_cli | default(true) | bool
+    - _spacetimedb_ready.status | default(0) in [200, 204]
+    - _spacetimedb_cli_which.rc | default(1) != 0
+  failed_when: false
+  changed_when: _spacetimedb_cli_install.rc | default(1) == 0
+
+- name: "[pazny.spacetimedb Post] Resolve spacetime CLI absolute path"
+  ansible.builtin.shell: |
+    command -v spacetime || echo "$HOME/.local/bin/spacetime"
+  register: _spacetimedb_cli_path
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: spacetimedb_install_host_cli | default(true) | bool
+
+# ── Local server alias (host CLI talks to http://127.0.0.1:<port>) ───────────
+- name: "[pazny.spacetimedb Post] Register 'nos' server alias in host CLI"
+  ansible.builtin.shell: |
+    set -uo pipefail
+    SP="{{ _spacetimedb_cli_path.stdout | default('spacetime') | trim }}"
+    if "$SP" server list 2>/dev/null | awk '{print $1}' | grep -qx "nos"; then
+      exit 0
+    fi
+    "$SP" server add --no-fingerprint --url "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}" nos
+  register: _spacetimedb_server_add
+  changed_when: _spacetimedb_server_add.rc == 0 and (_spacetimedb_server_add.stdout | length > 0)
+  failed_when: false
+  when:
+    - spacetimedb_install_host_cli | default(true) | bool
+    - _spacetimedb_ready.status | default(0) in [200, 204]
+    - (_spacetimedb_cli_path.stdout | default('') | trim | length) > 0
+
+- name: "[pazny.spacetimedb Post] Set 'nos' as default server"
+  ansible.builtin.shell: |
+    set -uo pipefail
+    SP="{{ _spacetimedb_cli_path.stdout | default('spacetime') | trim }}"
+    "$SP" server set-default nos
+  register: _spacetimedb_server_default
+  changed_when: false
+  failed_when: false
+  when:
+    - spacetimedb_install_host_cli | default(true) | bool
+    - _spacetimedb_ready.status | default(0) in [200, 204]
+    - (_spacetimedb_cli_path.stdout | default('') | trim | length) > 0
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+- name: "[pazny.spacetimedb Post] Onboarding summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════
+       SpacetimeDB ready — http://127.0.0.1:{{ spacetimedb_port | default(3030) }}
+                          https://{{ spacetimedb_domain | default('spacetime.dev.local') }}
+      ══════════════════════════════════════════════════════════════════
+       JWT keys:    {{ spacetimedb_keys_dir }}/id_ecdsa{,.pub}
+       Data dir:    {{ spacetimedb_data_dir }}
+       Auth issuer: {{ spacetimedb_oidc_issuer }}
+
+       Next steps for the operator:
+         spacetime --server nos init my-module --lang rust
+         (cd my-module && spacetime publish --server nos {{ spacetimedb_dev_db | default('dev') }})
+         spacetime --server nos sql {{ spacetimedb_dev_db | default('dev') }} 'SELECT 1'
+
+       For client apps using Authentik SSO: pass the ID token from
+       {{ spacetimedb_oidc_issuer }} as the auth bearer when connecting
+       — SpacetimeDB validates the JWT against Authentik's JWKS on its own.
+
+       BSL Additional Use Grant: ONE production instance, internal use
+       (employees + contractors). Do not run multiple prod nodes nor
+       offer SpacetimeDB as a multi-tenant DB-as-a-Service to third
+       parties without a commercial license. Converts to AGPLv3 on
+       2031-03-20. https://github.com/clockworklabs/SpacetimeDB/blob/master/LICENSE.txt

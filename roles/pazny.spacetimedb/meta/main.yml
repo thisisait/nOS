@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: spacetimedb
+  namespace: pazny
+  author: Pázny
+  description: SpacetimeDB Standalone in Docker compose override (nOS infra stack)
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []
+
+collections: []

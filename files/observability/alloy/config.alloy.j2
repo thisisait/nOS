@@ -116,6 +116,22 @@ prometheus.scrape "influxdb" {
 }
 {% endif %}
 
+{% if install_spacetimedb | default(false) %}
+// SpacetimeDB — native Rust process metrics (worker pool, db ops, energy, WS conns).
+// Path is /v1/prometheus (the /metrics router under /v1 returns the same blob;
+// /v1/prometheus is the explicit Prometheus-format route). Hits 127.0.0.1
+// directly to bypass the nginx proxy-auth gate on spacetime.<tld>.
+prometheus.scrape "spacetimedb" {
+  targets = [{
+    __address__ = "localhost:{{ spacetimedb_port | default(3030) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "spacetimedb"
+  metrics_path = "/v1/prometheus"
+  scrape_interval = "30s"
+}
+{% endif %}
+
 // Self-monitoring – Alloy's own metrics
 prometheus.scrape "alloy_self" {
   targets = [{

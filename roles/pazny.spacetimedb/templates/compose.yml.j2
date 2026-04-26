@@ -1,0 +1,52 @@
+# =============================================================================
+# pazny.spacetimedb — compose override fragment
+# Merged into `docker compose up` by tasks/stacks/core-up.yml via
+# ansible.builtin.find across {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Does not declare top-level networks: — infra_net and {{ stacks_shared_network }}
+# are defined in base templates/stacks/infra/docker-compose.yml.j2.
+# =============================================================================
+
+services:
+  spacetimedb:
+    image: clockworklabs/spacetime:{{ spacetimedb_version | default('latest') }}
+    hostname: spacetimedb
+    restart: unless-stopped
+    # Bind to 127.0.0.1 unless services_lan_access — host CLI talks to localhost,
+    # nginx vhost forwards from spacetime.<tld>:443 → 127.0.0.1:{{ spacetimedb_port }}.
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ spacetimedb_port | default(3030) }}:3000"
+{% else %}
+      - "127.0.0.1:{{ spacetimedb_port | default(3030) }}:3000"
+{% endif %}
+    volumes:
+      - {{ spacetimedb_data_dir }}:/stdb
+      - {{ spacetimedb_keys_dir }}:/etc/spacetimedb:ro
+    command:
+      - start
+      - --listen-addr=0.0.0.0:3000
+      - --data-dir=/stdb
+      - --jwt-pub-key-path=/etc/spacetimedb/id_ecdsa.pub
+      - --jwt-priv-key-path=/etc/spacetimedb/id_ecdsa
+    environment:
+      RUST_BACKTRACE: "1"
+      # Surfaced for client modules / SDKs that want to validate Authentik tokens.
+      # SpacetimeDB itself ignores these — validation is per-JWT via JWKS.
+      SPACETIMEDB_OIDC_ISSUER: "{{ spacetimedb_oidc_issuer }}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/v1/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ spacetimedb_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ spacetimedb_cpus | default(docker_cpus_standard | default('1.0')) }}

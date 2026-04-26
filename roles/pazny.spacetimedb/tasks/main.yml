@@ -1,0 +1,78 @@
+---
+# ==============================================================================
+# pazny.spacetimedb/tasks/main.yml
+#
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`:
+#   1) Ensure data + keys directories exist
+#   2) Generate ECDSA P-256 JWT keypair (id_ecdsa, id_ecdsa.pub) if missing.
+#      The keypair signs server-issued identities; rotating it would orphan
+#      every existing identity / database, so we ONLY generate when absent.
+#   3) Render compose override fragment to {{ stacks_dir }}/infra/overrides/spacetimedb.yml
+#      which core-up.yml then collects via `find` and passes as an extra -f flag.
+#
+# Post-start onboarding (host CLI, server alias, summary) lives in tasks/post.yml —
+# called from core-up.yml AFTER `docker compose up infra --wait`.
+# ==============================================================================
+
+- name: "[pazny.spacetimedb] Ensure data + keys directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ spacetimedb_data_dir }}", mode: "0755" }
+    - { path: "{{ spacetimedb_keys_dir }}", mode: "0700" }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "[pazny.spacetimedb] Stat JWT private key"
+  ansible.builtin.stat:
+    path: "{{ spacetimedb_keys_dir }}/id_ecdsa"
+  register: _spacetimedb_priv_key
+
+# Generate ECDSA P-256 (prime256v1) keypair if missing. SpacetimeDB requires
+# this exact curve — see https://spacetimedb.com/docs/how-to/self-hosted-key-rotation/
+- name: "[pazny.spacetimedb] Generate ECDSA P-256 keypair"
+  when: not _spacetimedb_priv_key.stat.exists
+  block:
+    - name: "[pazny.spacetimedb] openssl genpkey (private)"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - genpkey
+          - -algorithm
+          - EC
+          - -pkeyopt
+          - "ec_paramgen_curve:prime256v1"
+          - -out
+          - "{{ spacetimedb_keys_dir }}/id_ecdsa"
+      changed_when: true
+
+    - name: "[pazny.spacetimedb] openssl pkey -pubout (public)"
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - pkey
+          - -in
+          - "{{ spacetimedb_keys_dir }}/id_ecdsa"
+          - -pubout
+          - -out
+          - "{{ spacetimedb_keys_dir }}/id_ecdsa.pub"
+      changed_when: true
+
+- name: "[pazny.spacetimedb] Enforce key permissions"
+  ansible.builtin.file:
+    path: "{{ spacetimedb_keys_dir }}/{{ item.name }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { name: "id_ecdsa",     mode: "0600" }
+    - { name: "id_ecdsa.pub", mode: "0644" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "[pazny.spacetimedb] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/spacetimedb.yml"
+    mode: '0600'
+  notify: Restart spacetimedb

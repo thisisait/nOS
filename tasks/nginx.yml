@@ -71,6 +71,7 @@
     - jellyfin.conf
     - openwebui.conf
     - portainer.conf
+    - spacetimedb.conf
     - woodpecker.conf
     - uptime-kuma.conf
     - status.conf
@@ -133,6 +134,7 @@
          + ((install_jellyfin | default(false)) | ternary(['jellyfin.conf'], []))
          + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
          + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
+         + ((install_spacetimedb | default(false)) | ternary(['spacetimedb.conf'], []))
          + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
          + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf', 'status.conf'], []))
          + ((install_calibreweb | default(false)) | ternary(['calibreweb.conf'], []))
