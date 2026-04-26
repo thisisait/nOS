@@ -1,0 +1,60 @@
+---
+# ==============================================================================
+# pazny.watchtower — automatic Docker image freshness watcher
+#
+# Runs containrrr/watchtower against the iiab_net + shared_net, looking for
+# image-tag drift. Default mode: NOTIFY-ONLY — surfaces stale images in
+# Mailpit (or any SMTP relay) without auto-restarting anything. Operators
+# bump versions explicitly through the upgrade-recipe engine
+# (`upgrades/<service>.yml`), which runs backups + verify hooks. This role
+# is the early-warning system, not the executor.
+#
+# When `watchtower_auto_apply: true` is set per-host, watchtower goes
+# live: it pulls + re-creates containers labeled with
+# `com.centurylinklabs.watchtower.enable=true`. Use this only on
+# stateless services (mailpit, miniflux feed reader, etc.) — anything
+# stateful (postgres, mariadb, gitea, nextcloud) must stay manual via
+# upgrade recipes.
+#
+# Telemetry: every run emits a watchtower.<event> via the Wing pipeline
+# so the operator sees update activity in /timeline alongside playbook
+# events.
+#
+# Project: https://containrrr.dev/watchtower/   (MIT, ARM64-native)
+# ==============================================================================
+
+watchtower_image: "containrrr/watchtower:1.7"
+watchtower_data_dir: "{{ ansible_facts['env']['HOME'] }}/watchtower"
+
+# How often to scan for new images (cron expression — Go cron, 6 fields).
+# Default: every day at 04:30 local. Avoid the on-the-hour avalanche when
+# every other watchtower instance pings Docker Hub.
+watchtower_schedule: "0 30 4 * * *"
+
+# Operating mode:
+#   notify  — print available updates, do not pull/recreate (safe default)
+#   apply   — pull + restart containers tagged for it (opt-in per host)
+watchtower_mode: "notify"
+
+# Which containers to watch. Watchtower's default is "everything" which is
+# noisy on a 60-service box. We label-gate by default — only services
+# explicitly opted in via compose-template `labels: {watchtower.enable: true}`
+# get scanned. To switch back to global scan, set false.
+watchtower_label_enable_only: true
+
+# Notification routing — relayed through Mailpit by default so the operator
+# sees activity in mail.<tld> UI. Override to a real outbound SMTP later.
+watchtower_notifications: "email"
+watchtower_notification_email_from: "watchtower@{{ instance_tld | default('dev.local') }}"
+watchtower_notification_email_to: "{{ default_admin_email | default('admin@' ~ instance_tld) }}"
+watchtower_notification_email_server: "{{ 'mailpit' if (install_mailpit | default(true)) else 'host.docker.internal' }}"
+watchtower_notification_email_port: 1025
+watchtower_notification_email_starttls: false
+
+watchtower_mem_limit: "{{ docker_mem_limit_micro | default('128m') }}"
+watchtower_cpus: "{{ docker_cpus_micro | default('0.25') }}"
+
+# Cleanup old image layers after pulling new ones. Saves disk on a busy box
+# but means rollback to N-1 is gone. Default true (we have backup snapshots
+# of data; the image itself can always be re-pulled by tag).
+watchtower_cleanup: true

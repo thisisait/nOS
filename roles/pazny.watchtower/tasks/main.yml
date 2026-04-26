@@ -1,0 +1,32 @@
+---
+# ==============================================================================
+# pazny.watchtower/tasks/main.yml
+#
+# Renders compose-override + log dir. Watchtower has no nginx vhost (no UI);
+# its output is the notification stream into Mailpit / SMTP relay.
+# ==============================================================================
+
+- name: "[pazny.watchtower] Ensure data directory exists"
+  ansible.builtin.file:
+    path: "{{ watchtower_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.watchtower] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/watchtower.yml"
+    mode: '0600'
+  notify: Restart watchtower
+
+- name: "[pazny.watchtower] Mode banner"
+  ansible.builtin.debug:
+    msg: |
+      ======================================================
+       Watchtower — image freshness watcher
+      ======================================================
+       Mode:        {{ watchtower_mode | upper }}{{ '  (notify-only, safe)' if watchtower_mode == 'notify' else '  (auto-apply on labeled containers)' }}
+       Schedule:    {{ watchtower_schedule }}
+       Scope:       {{ 'opt-in via watchtower.enable=true label' if watchtower_label_enable_only else 'all containers' }}
+       Notify:      {{ watchtower_notification_email_to }} via {{ watchtower_notification_email_server }}:{{ watchtower_notification_email_port }}
+      ======================================================

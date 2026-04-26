@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: watchtower
+  author: pazny
+  description: "Watchtower — auto-detect (and optionally apply) Docker image updates."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: MacOSX
+      versions: [any]
+  galaxy_tags:
+    - docker
+    - watchtower
+    - update
+    - automation
+    - notification
+
+dependencies: []

@@ -1,0 +1,6 @@
+---
+- name: Restart watchtower
+  ansible.builtin.command: >-
+    {{ docker_bin | default('docker') }} compose -p iiab up -d watchtower
+  changed_when: false
+  failed_when: false

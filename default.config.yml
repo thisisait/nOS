@@ -89,6 +89,13 @@ mailpit_domain: "mail.{{ instance_tld }}"
 mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
 mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
 
+# ── Watchtower (Docker image freshness watcher) ──────────────────────────────
+# Default ON in NOTIFY-ONLY mode — surfaces stale images in Mailpit without
+# auto-restarting anything. Stateful upgrades stay manual via upgrade
+# recipes. See roles/pazny.watchtower/defaults/main.yml for tuning.
+install_watchtower: true                  # Docker image drift watcher
+watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
+
 # ── Provider Access ──────────────────────────────────────────────────────────
 provider_admin_email: ""                  # Provider (thisisait.eu) email — same rights as CEO
 provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag for the provider
@@ -196,6 +203,7 @@ install_woodpecker: false         # Woodpecker CI – CI/CD for Gitea           
 install_openwebui: true          # Open WebUI – chat UI for Ollama            [requires: Docker, Ollama]
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
+install_spacetimedb: false       # SpacetimeDB Standalone – realtime DB (BSL 1.1, internal-SaaS use only) [Docker]
 install_jellyfin: false           # Jellyfin – media server                    [requires: Docker]
 install_uptime_kuma: true        # Uptime Kuma – monitoring dashboard         [requires: Docker]
 install_calibreweb: true         # Calibre-Web – ebook server                [requires: Docker, calibre]
@@ -1134,6 +1142,19 @@ portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 
 # ==============================================================================
+# INFRA – SPACETIMEDB (realtime DB, BSL 1.1)
+# Single production instance only — see roles/pazny.spacetimedb/README.md.
+# ==============================================================================
+
+spacetimedb_domain: "spacetime.dev.local"
+spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
+spacetimedb_version: "latest"           # pin to a specific tag (e.g. "1.5") for production
+spacetimedb_data_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/data"
+spacetimedb_keys_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/keys"
+spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
+spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
+
+# ==============================================================================
 # IIAB – JELLYFIN (media server)
 # ==============================================================================
 
@@ -1573,6 +1594,7 @@ authentik_app_tiers:
   portainer: 1
   infisical: 1
   grafana: 1
+  spacetimedb: 1
   gitea: 2
   gitlab: 2
   n8n: 2
@@ -1747,6 +1769,16 @@ authentik_oidc_apps:
     client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
     redirect_uris: "https://{{ vaultwarden_domain | default('pass.dev.local') }}/identity/connect/oidc-signin"
     launch_url: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
+  # SpacetimeDB has no admin UI — proxy-auth gates the public API endpoint
+  # (browser access to https://spacetime.<tld>). The host `spacetime` CLI
+  # bypasses the proxy by hitting 127.0.0.1:{{ spacetimedb_port | default(3030) }}.
+  # Module-level RBAC happens inside the user's WASM via ctx.sender.identity.
+  - name: "SpacetimeDB"
+    slug: "spacetimedb"
+    enabled: "{{ install_spacetimedb | default(false) }}"
+    launch_url: "https://{{ spacetimedb_domain | default('spacetime.dev.local') }}"
+    external_host: "https://{{ spacetimedb_domain | default('spacetime.dev.local') }}"
+    type: "proxy"
   - name: "Paperclip"
     slug: "paperclip"
     enabled: "{{ install_paperclip | default(false) }}"

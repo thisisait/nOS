@@ -1,0 +1,68 @@
+# =============================================================================
+# pazny.watchtower — compose override fragment
+# Container watcher that polls Docker Hub on a cron schedule, looking for
+# image-tag drift. Notify-only by default (WATCHTOWER_MONITOR_ONLY=true).
+# Telemetry: notifications route through Mailpit so updates are visible
+# in the operator's mail.<tld> UI alongside other system events.
+# =============================================================================
+
+services:
+  watchtower:
+    image: {{ watchtower_image | default('containrrr/watchtower:1.7') }}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - {{ watchtower_data_dir }}:/data
+    environment:
+      WATCHTOWER_SCHEDULE: "{{ watchtower_schedule | default('0 30 4 * * *') }}"
+{% if watchtower_mode == 'notify' %}
+      WATCHTOWER_MONITOR_ONLY: "true"
+{% else %}
+      WATCHTOWER_CLEANUP: "{{ 'true' if (watchtower_cleanup | default(true)) else 'false' }}"
+      WATCHTOWER_INCLUDE_RESTARTING: "true"
+      WATCHTOWER_ROLLING_RESTART: "true"
+{% endif %}
+{% if watchtower_label_enable_only | default(true) %}
+      WATCHTOWER_LABEL_ENABLE: "true"
+{% endif %}
+      # Notifications via shoutrrr — email driver routes through Mailpit (or
+      # any SMTP relay) so the operator gets a unified inbox of update
+      # activity and other system events.
+      WATCHTOWER_NOTIFICATIONS: "{{ watchtower_notifications | default('email') }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_FROM: "{{ watchtower_notification_email_from }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_TO: "{{ watchtower_notification_email_to }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER: "{{ watchtower_notification_email_server }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT: "{{ watchtower_notification_email_port }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_DELAY: "5"
+      WATCHTOWER_NOTIFICATION_EMAIL_SUBJECTTAG: "[nOS:{{ instance_name | default('nos') }}]"
+      WATCHTOWER_NOTIFICATION_REPORT: "true"
+      WATCHTOWER_NOTIFICATION_TEMPLATE: |
+        {{ '{{- if .Report -}}' }}
+        nOS update report — {{ '{{ .Host }}' }} — {{ '{{ .Time }}' }}
+        =============================================================
+        Scanned: {{ '{{ .Report.Scanned }}' }}    Updated: {{ '{{ .Report.Updated }}' }}    Failed: {{ '{{ .Report.Failed }}' }}
+        {{ '{{- if .Report.Updated }}' }}
+
+        Updated containers:
+        {{ '{{- range .Report.Updated }}' }}
+          - {{ '{{ .Name }}' }}: {{ '{{ .ImageName }}' }}
+            {{ '{{ .CurrentImageID.ShortID }}' }} -> {{ '{{ .LatestImageID.ShortID }}' }}
+        {{ '{{- end }}' }}
+        {{ '{{- end }}' }}
+        {{ '{{- if .Report.Failed }}' }}
+
+        Failed updates:
+        {{ '{{- range .Report.Failed }}' }}
+          - {{ '{{ .Name }}' }}: {{ '{{ .Error }}' }}
+        {{ '{{- end }}' }}
+        {{ '{{- end }}' }}
+        {{ '{{- end }}' }}
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ watchtower_mem_limit | default('128m') }}
+    cpus: {{ watchtower_cpus | default('0.25') }}
