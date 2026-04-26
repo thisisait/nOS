@@ -51,6 +51,8 @@ not feature-flagged enterprise tiers.
 
 ### Track A — Containerize Bone + Wing **(unblocks B+C)**
 
+**Status: code-complete on master 2026-04-26.** Final acceptance gate is a successful run of `ansible-playbook main.yml -K --tags infra,iiab` on the operator's host followed by the smoke checklist in A7. Migration recipe `migrations/2026-05-01-bone-wing-to-container.yml` handles the cut over from launchd Bone + Homebrew php-fpm. After verification, mark this track DONE and unblock Tracks B + C.
+
 #### Why this comes first
 Bone (FastAPI) and Wing (PHP-FPM via Homebrew) are currently host-native via launchd plist + nginx vhost pointing at `127.0.0.1:8099` / Unix socket. This means:
 - Linux port has to re-engineer launchd → systemd for both services
@@ -452,38 +454,13 @@ Total ETA: **~3 weeks of focused work**.
 
 ---
 
-## Open decisions (need operator answer)
+## Open decisions
 
-### O1. Bone container image — official registry?
-Push to `ghcr.io/thisisait/bone:<tag>` or build locally on every host?
-- Registry: faster `docker compose up`, but requires GitHub Container Registry setup + token rotation
-- Local build: every host re-builds from `files/bone/Dockerfile` on each blank
-- **Default proposal:** local build for v1, registry for v2 once we have CI image-build job
+_All six original open decisions were resolved on 2026-04-26 — see the
+Decision log below. This section is kept as a header so future operator
+prompts know where to land._
 
-### O2. Wing container image — same question
-Same trade-off. Wing builds Composer install + asset pipeline. Local build is slower but simpler.
-
-### O3. Agent token lifetime
-15 min default proposed. Trade-off:
-- Short: better security, agent must refresh frequently
-- Long (hours): less Authentik load, easier offline operation
-- **Default proposal:** 15 min for write capability, 1 hour for read-only
-
-### O4. BONE_SECRET deprecation window
-90 days proposed. Should we make it shorter (30d) or longer (180d)?
-- Shorter = forces migration but breaks unmanaged scripts
-- Longer = compatibility but legacy secret persists
-- **Default proposal:** 90 days, with monthly reminder events emitted to wing.db
-
-### O5. ANSSI hardening default
-- Linux-only opt-in (`install_hardening: false`)? — current proposal
-- Linux-only opt-out (default true on Ubuntu)? — more secure, may surprise operators
-- **Default proposal:** opt-in for v1, evaluate flipping after 6 months of feedback
-
-### O6. GDPR DPA register format
-- Markdown file in repo? — easy, but requires regeneration
-- Wing `/gdpr` UI? — requires Wing changes (Track D scope creep)
-- **Default proposal:** Markdown for v1, Wing UI later
+(none open)
 
 ---
 
@@ -502,6 +479,12 @@ Same trade-off. Wing builds Composer install + asset pipeline. Local build is sl
 | 2026-04-26 | Containerize Bone + Wing (NOT whole-nOS-in-VM) | Ditches launchd/systemd duplication; preserves Apple Silicon perks |
 | 2026-04-26 | Agent identity = Authentik OIDC client_credentials grant | Native Authentik primitive, machine-readable, audit logged |
 | 2026-04-26 | Don't move whole nOS into a Linux VM | Loses MLX backend; resource tax; HW passthrough complications |
+| 2026-04-26 | **O1**: Bone container = local build (not registry) | Single-host home lab; no GHCR token rotation; simpler. Re-evaluate when CI image-build job lands. |
+| 2026-04-26 | **O2**: Wing container = local build (not registry) | Same rationale as O1. Composer install runs inside container via `wing-cli` profile. |
+| 2026-04-26 | **O3**: Agent token lifetime = 12 hours | Long enough to survive a workday + overnight cron, short enough to rotate during operator shift. Refresh-token flow handles longer sessions. |
+| 2026-04-26 | **O4**: Drop `BONE_SECRET` without deprecation window | Repo isn't yet in third-party hands; full agent SSO integration is the cleaner cut than carrying dual auth for 90 days. Breaking change documented in Track B. |
+| 2026-04-26 | **O5**: ANSSI hardening default = ON, opt-out via `install_hardening: false` | Matches French/Danish sovereignty stance; surprise-on-deploy is acceptable for a security-positioned product. |
+| 2026-04-26 | **O6**: GDPR Article 30 register = Wing UI (not just markdown) | Markdown alone is too passive for B2B sales conversations. Track D scope grows by ~1 day for the `/gdpr` route. |
 
 ---
 

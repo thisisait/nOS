@@ -1,14 +1,39 @@
 ---
 # ==============================================================================
-# pazny.wing — Nette PHP + SQLite security research dashboard
+# pazny.wing — Nette PHP-FPM security-research dashboard.
 #
-# Credentials (wing_api_token) stay in top-level default.credentials.yml
-# so prefix rotation via global_password_prefix works consistently.
-# App source files/project-wing/ stays in the playbook repo — the role only
-# rsyncuje, neownuje.
+# As of Track A (2026-04-26) Wing runs as the `wing` service inside the iiab
+# compose stack. nginx (host) talks FastCGI to it on 127.0.0.1:9000. The
+# wing source tree still lives on the host (rsync'd from files/project-wing/)
+# and is bind-mounted into the container at the SAME absolute path so
+# nginx-supplied SCRIPT_FILENAME values resolve correctly inside FPM.
+#
+# Credentials (wing_api_token) stay in top-level default.credentials.yml so
+# prefix rotation via global_password_prefix works consistently.
 # ==============================================================================
 
 wing_domain: "wing.dev.local"
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
+
+# FPM listens on this loopback port; nginx upstream `php_fpm` (defined in
+# templates/nginx/nginx.conf) targets 127.0.0.1:9000. Don't change this
+# unless you also update the upstream block.
+wing_port: 9000
+
+# Container image is built locally from {{ playbook_dir }}/files/project-wing.
+# The image deliberately contains no Wing source — see Dockerfile header for
+# the rationale. Tag is bumped manually when the Dockerfile changes.
+wing_image_tag: "local"
+wing_image: "nos-wing:{{ wing_image_tag }}"
+
+# UID/GID the FPM process runs as inside the container. Must match the
+# Dockerfile ARG values; the role chowns the host data dir to this UID so
+# php-fpm can write wing.db / temp / log without permission errors.
+wing_container_uid: 10082
+wing_container_gid: 10082
+
+# Resource caps. Wing's hot path is small (single-tenant home lab), but
+# Nette + tracy can spike during cache warmup.
+wing_mem_limit: "512m"

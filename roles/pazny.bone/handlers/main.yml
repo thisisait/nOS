@@ -1,10 +1,17 @@
 ---
 # pazny.bone — handlers.
-# "Restart bone" is also defined at the play level in main.yml for
-# cross-role notifies. The play-level handler takes priority, so this
-# role-local one is effectively unreachable — kept for role independence.
+#
+# "Restart bone" is also defined at the play level in main.yml for cross-role
+# notifies (e.g. when something rotates BONE_SECRET). The play-level handler
+# takes priority, so this role-local one is the fallback for direct role
+# invocations (`ansible-playbook --tags bone` without going through main.yml).
+#
+# Container path (Track A, 2026-04-26): bounce the bone service inside the
+# infra compose stack. `restart` keeps the container, env vars, and bind
+# mounts; the new image (if rebuilt by the role) needs `up -d --build` which
+# core-up.yml already runs on full plays.
 
 - name: Restart bone
   ansible.builtin.command: >
-    launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.bone"
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra restart bone
   failed_when: false

@@ -157,7 +157,7 @@
          + ((install_puter | default(false)) | ternary(['puter.conf'], []))
          + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
          + ((install_paperclip | default(false)) | ternary(['paperclip.conf'], []))
-         + ((install_wing | default(install_php | default(true))) | ternary(['wing.conf'], []))
+         + ((install_wing | default(true)) | ternary(['wing.conf'], []))
          + ((install_ntfy | default(false)) | ternary(['ntfy.conf'], []))
          + ((install_miniflux | default(false)) | ternary(['miniflux.conf'], []))
          + ((install_nodered | default(false)) | ternary(['nodered.conf'], []))

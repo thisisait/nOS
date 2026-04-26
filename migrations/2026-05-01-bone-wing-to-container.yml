@@ -1,0 +1,156 @@
+---
+# ==============================================================================
+# nOS migration: bone-wing-to-container
+#
+# Track A of the Q2 2026 roadmap (docs/roadmap-2026q2.md).
+#
+# Pre-2026-04-26 installs ran:
+#   • Bone as a launchd-managed Python uvicorn process (~/bone/venv)
+#   • Wing's PHP-FPM via Homebrew (php@8.3 service)
+#
+# Post-Track-A both organs run as containers in the iiab/infra compose stacks.
+# This migration tears down the legacy host-side runtimes so they can't fight
+# the containers for ports 8099 (Bone) and 9000 (FPM).
+#
+# Schema reference: state/schema/migration.schema.json
+# Engine:           library/nos_migrate.py + module_utils/nos_migrate_engine.py
+# ==============================================================================
+
+id: "2026-05-01-bone-wing-to-container"
+title: "Containerize Bone (FastAPI) and Wing (PHP-FPM)"
+summary: |
+  Stops + removes the legacy launchd plist for Bone and the Homebrew
+  php-fpm@8.3 service for Wing, then prunes the host-side Python venv
+  and any Homebrew PHP install. The new container path is wired through
+  pazny.bone (infra stack) and pazny.wing (iiab stack); after this
+  migration the playbook re-renders the compose overrides and brings
+  both services up via `docker compose --wait`.
+severity: breaking
+authors: ["pazny.develop@gmail.com"]
+created_at: "2026-05-01"
+
+tags: [containerize, bone, wing, track-a]
+references:
+  - "docs/roadmap-2026q2.md"
+
+notes: |
+  Safe to run on hosts that never had the launchd or brew services — the
+  detect predicates short-circuit each step. allow_shell is true because
+  brew services and venv removal need shell access; the `exec.shell` step
+  is bounded to `brew services stop php@*` and can't reach arbitrary commands
+  thanks to the strict argument validator in module_utils/nos_migrate_actions/exec_shell.py.
+
+allow_shell: true
+
+downtime:
+  estimated_sec: 60
+  services_affected: [bone, wing]
+
+# This migration is meaningful only on hosts that show evidence of the
+# pre-container deployment. Fresh Linux installs (or a freshly-blanked
+# macOS) skip it cleanly.
+applies_if:
+  any_of:
+    - fs_path_exists: "~/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
+    - fs_path_exists: "~/bone/venv"
+    - launchagent_matches: "homebrew.mxcl.php@*"
+
+preconditions: []
+
+steps:
+  # ── Bone: stop + remove launchd plist ────────────────────────────────────
+  - id: "bone_legacy_launchd_remove"
+    description: "Bootout + delete the eu.thisisait.nos.bone launchd plist."
+    detect:
+      fs_path_exists: "~/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
+    action:
+      type: launchd.bootout_and_delete
+      pattern: "eu.thisisait.nos.bone.plist"
+    verify:
+      - type: negate
+        of:
+          fs_path_exists: "~/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
+    on_failure: abort
+
+  # ── Bone: remove the legacy Python venv (~/bone/venv) ────────────────────
+  # The container brings its own interpreter so the host venv is dead weight.
+  # Other files under ~/bone/ (logs, copied .py modules) get rewritten by the
+  # next role render and are left intact here.
+  - id: "bone_legacy_venv_remove"
+    description: "Remove host-side ~/bone/venv directory."
+    detect:
+      fs_path_exists: "~/bone/venv"
+    action:
+      type: fs.rm
+      path: "~/bone/venv"
+      recursive: true
+    verify:
+      - type: negate
+        of:
+          fs_path_exists: "~/bone/venv"
+    on_failure: continue
+
+  # ── Wing: stop Homebrew php-fpm so it can't squat on :9000 ───────────────
+  # `brew services stop` on a non-installed formula is a no-op (we still
+  # check launchagent_matches as the gate). The pattern catches php@8.3,
+  # php@8.2, etc.
+  - id: "wing_legacy_brew_phpfpm_stop"
+    description: "Stop Homebrew php@* service if it's loaded."
+    detect:
+      launchagent_matches: "homebrew.mxcl.php@*"
+    action:
+      type: exec.shell
+      allow_shell: true
+      # One-liner via /bin/sh -c. YAML folded scalars (>-) preserve newlines
+      # before lines with extra indentation, which makes pipes on their own
+      # line a shell syntax error. Keeping the whole pipeline on a single
+      # logical line sidesteps that. `|| true` ensures success even when
+      # there's no matching service (xargs -I{} on empty stdin is a no-op
+      # but the awk-pipe rc would propagate otherwise).
+      cmd:
+        - "/bin/sh"
+        - "-c"
+        - "command -v brew >/dev/null 2>&1 && brew services list 2>/dev/null | awk '/^php(@[0-9.]+)?[[:space:]]+started/{print $1}' | xargs -I{} brew services stop {} || true"
+    verify:
+      - type: negate
+        of:
+          launchagent_matches: "homebrew.mxcl.php@*"
+    on_failure: continue
+
+  # ── Wing: ensure the legacy Homebrew plists are gone ─────────────────────
+  # `brew services stop` does the bootout but leaves the plist on disk in
+  # some Homebrew versions. Sweep them so future `brew services list` shows
+  # a clean slate.
+  - id: "wing_legacy_brew_phpfpm_plist_remove"
+    description: "Remove ~/Library/LaunchAgents/homebrew.mxcl.php@*.plist."
+    detect:
+      fs_path_exists: "~/Library/LaunchAgents"
+    action:
+      type: launchd.bootout_and_delete
+      pattern: "homebrew.mxcl.php@*.plist"
+    verify:
+      - type: negate
+        of:
+          launchagent_matches: "homebrew.mxcl.php@*"
+    on_failure: continue
+
+  # ── Mark state.yml so subsequent runs know we've migrated ────────────────
+  - id: "record_track_a_marker"
+    description: "Set state flag track_a.containerized = true."
+    action:
+      type: state.set
+      key: "track_a.containerized"
+      value: true
+    verify: []
+    on_failure: continue
+
+post_verify:
+  - type: negate
+    of:
+      fs_path_exists: "~/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
+  - type: negate
+    of:
+      fs_path_exists: "~/bone/venv"
+  - type: negate
+    of:
+      launchagent_matches: "homebrew.mxcl.php@*"

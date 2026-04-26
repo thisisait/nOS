@@ -1,0 +1,74 @@
+# =============================================================================
+# pazny.wing — compose override fragment
+# Merged into `docker compose up iiab` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Image is built locally from {{ playbook_dir }}/files/project-wing/Dockerfile.
+# Source code is NOT in the image — it bind-mounts from the host at the same
+# absolute path so nginx-supplied SCRIPT_FILENAME values resolve inside FPM.
+#
+# Mounts:
+#   {{ wing_app_dir }} → {{ wing_app_dir }}     rw   (Nette writes temp/, log/)
+#
+# A separate one-shot service `wing-cli` shares the same image + mounts and
+# is invoked via `docker compose run --rm wing-cli <cmd>` from tasks/post.yml
+# for composer install + DB migrations + token reconverge. profiles: ["cli"]
+# keeps it out of the default `docker compose up` set.
+# =============================================================================
+
+services:
+  wing:
+    build:
+      context: {{ playbook_dir }}/files/project-wing
+      dockerfile: Dockerfile
+      args:
+        WING_UID: "{{ wing_container_uid }}"
+        WING_GID: "{{ wing_container_gid }}"
+    image: {{ wing_image }}
+    container_name: wing
+    restart: unless-stopped
+    user: "{{ wing_container_uid }}:{{ wing_container_gid }}"
+    ports:
+      # nginx upstream `php_fpm` (defined in templates/nginx/nginx.conf)
+      # targets 127.0.0.1:9000. The container therefore must publish on
+      # exactly that host port — replacing what Homebrew php-fpm used to
+      # serve. Localhost-only by design (FPM is not a public protocol).
+      - "127.0.0.1:{{ wing_port }}:9000"
+    volumes:
+      - {{ wing_app_dir }}:{{ wing_app_dir }}:rw
+    networks:
+      - iiab_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ wing_mem_limit }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # One-shot helper that shares the wing image + mounts. Used from
+  # tasks/post.yml for composer install + bin/init-db.php + bin/migrate.php
+  # + bin/provision-token.php. The `cli` profile keeps it out of normal
+  # `docker compose up` invocations — only `docker compose run --rm wing-cli`
+  # ever spins it up.
+  wing-cli:
+    image: {{ wing_image }}
+    profiles: ["cli"]
+    user: "{{ wing_container_uid }}:{{ wing_container_gid }}"
+    working_dir: {{ wing_app_dir }}
+    volumes:
+      - {{ wing_app_dir }}:{{ wing_app_dir }}:rw
+    environment:
+      COMPOSER_ALLOW_SUPERUSER: "1"
+      COMPOSER_NO_INTERACTION: "1"
+      COMPOSER_HOME: /tmp/composer
+    networks:
+      - iiab_net
+    # No CMD — `docker compose run --rm wing-cli <cmd...>` supplies it.
+    entrypoint: []

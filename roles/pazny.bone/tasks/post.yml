@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# pazny.bone — post-start tasks
+# Invoked from tasks/stacks/core-up.yml AFTER `docker compose up infra --wait`.
+# Just a health probe — Bone has no DB to seed, no admin to provision.
+# ==============================================================================
+
+- name: "[pazny.bone] Wait for /api/health (container up + uvicorn bound)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ bone_port }}/api/health"
+    status_code: 200
+    return_content: false
+  register: _bone_health
+  retries: 12
+  delay: 5
+  until: _bone_health.status | default(0) == 200
+
+- name: "[pazny.bone] Health probe result"
+  ansible.builtin.debug:
+    msg: "Bone container is healthy at http://127.0.0.1:{{ bone_port }}/api/health"
+  when: _bone_health.status | default(0) == 200

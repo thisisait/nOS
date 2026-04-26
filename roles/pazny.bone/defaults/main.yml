@@ -1,13 +1,32 @@
 ---
 # ==============================================================================
-# pazny.bone — local FastAPI (structure / state / dispatcher organ).
-# Formerly BoxAPI. See docs/anatomy.md for the organ metaphor.
+# pazny.bone — local FastAPI organ (state / migrations / dispatcher).
 #
-# The secret (bone_secret) stays in top-level default.config.yml so prefix
+# As of 2026-04-26 Bone is containerized (Track A of the Q2 roadmap). The
+# role used to render a launchd plist + Python venv on the host; that path
+# is now retired. The container is built locally from files/bone/Dockerfile
+# and lives in the `infra` compose stack.
+#
+# `bone_secret` itself stays in top-level default.config.yml so prefix
 # rotation via global_password_prefix works consistently.
-# App sources files/bone/ and the template bone-launchd.plist.j2 stay in
-# the playbook repo.
 # ==============================================================================
 
 bone_port: 8099
 bone_domain: "api.{{ instance_tld | default('dev.local') }}"
+
+# Container image is built locally from {{ playbook_dir }}/files/bone.
+# Tag is bumped manually when the Dockerfile or pinned ansible-core
+# version changes (see Track A6 migration recipe).
+bone_image_tag: "local"
+bone_image: "nos-bone:{{ bone_image_tag }}"
+
+# Resource caps. Bone's hot path is pure FastAPI (sub-100MB RSS); the
+# generous limit covers `ansible-playbook` subprocess invocations.
+bone_mem_limit: "512m"
+
+# Runtime mounts. State lives outside the playbook tree so a `git clean`
+# can never wipe migration history. The wing-db parent is the directory
+# Wing's container will write into (Track A5).
+bone_state_dir:    "{{ ansible_facts['env']['HOME'] }}/.nos"
+bone_registry_dir: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default"
+bone_wing_db_dir:  "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}"

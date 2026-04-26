@@ -84,6 +84,7 @@
 - { name: "[Stacks] pazny.ntfy render", ansible.builtin.include_role: { name: pazny.ntfy, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.miniflux render", ansible.builtin.include_role: { name: pazny.miniflux, apply: { tags: ['miniflux'] } }, when: "install_miniflux | default(false)", tags: ['miniflux'] }
 - { name: "[Stacks] pazny.nodered render", ansible.builtin.include_role: { name: pazny.nodered, apply: { tags: ['nodered'] } }, when: "install_nodered | default(false)", tags: ['nodered'] }
+- { name: "[Stacks] pazny.wing render", ansible.builtin.include_role: { name: pazny.wing, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true)", tags: ['wing', 'security'] }
 
 # DevOps roles
 - { name: "[Stacks] pazny.gitea render", ansible.builtin.include_role: { name: pazny.gitea, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
@@ -199,6 +200,7 @@
 - { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
 - { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
+- { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
 # DevOps post-start
 - { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }

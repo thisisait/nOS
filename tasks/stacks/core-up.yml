@@ -104,6 +104,10 @@
     - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) | bool }}" }
     - { path: "{{ spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
     - { path: "{{ spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
+    # Bone container bind-mount targets (Track A, 2026-04-26). Pre-creating
+    # them here keeps Docker from racing the role tasks and creating empty
+    # root-owned dirs.
+    - { path: "{{ ansible_facts['env']['HOME'] }}/.nos", enabled: "{{ install_bone | default(false) | bool }}" }
     - { path: "{{ ansible_facts['env']['HOME'] }}/agents/log", enabled: true }
   when: item.enabled | bool
   loop_control:
@@ -208,6 +212,14 @@
   ansible.builtin.include_role: { name: pazny.spacetimedb, apply: { tags: ['spacetimedb', 'infra'] } }
   when: install_spacetimedb | default(false)
   tags: ['spacetimedb', 'infra']
+
+- name: "[Core] pazny.bone render"
+  # Bone is part of the infra stack now (Track A, 2026-04-26). The render
+  # task seeds the state dir + service-registry placeholder so the bind
+  # mounts have valid sources at compose-up time.
+  ansible.builtin.include_role: { name: pazny.bone, apply: { tags: ['bone', 'api', 'infra'] } }
+  when: install_bone | default(false)
+  tags: ['bone', 'api', 'infra']
 
 # Observability roles
 - name: "[Core] pazny.grafana render"
@@ -323,7 +335,7 @@
          (install_mariadb | default(false)) or (install_postgresql | default(false)) or
          (redis_docker | default(false)) or (install_bluesky_pds | default(false)) or
          (install_authentik | default(false)) or (install_infisical | default(false)) or
-         (install_spacetimedb | default(false)) }}
+         (install_spacetimedb | default(false)) or (install_bone | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
 
 # ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
@@ -472,6 +484,13 @@
     - install_spacetimedb | default(false)
     - _core_infra_enabled | bool
   tags: ['spacetimedb', 'infra']
+
+- name: "[Core] pazny.bone post-start (health probe)"
+  ansible.builtin.include_role: { name: pazny.bone, tasks_from: post.yml, apply: { tags: ['bone', 'api', 'infra'] } }
+  when:
+    - install_bone | default(false)
+    - _core_infra_enabled | bool
+  tags: ['bone', 'api', 'infra']
 
 # ── Result ───────────────────────────────────────────────────────────────────
 

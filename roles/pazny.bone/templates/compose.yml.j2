@@ -1,0 +1,83 @@
+# =============================================================================
+# pazny.bone — compose override fragment
+# Merged into `docker compose up infra` in tasks/stacks/core-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/infra/overrides/*.yml.
+#
+# Image is built locally from {{ playbook_dir }}/files/bone/Dockerfile.
+# Compose only rebuilds when files in that directory change (the build
+# cache short-circuits everything else).
+#
+# Mounts:
+#   /playbook       → playbook_dir       rw   (ansible reads + writes state files)
+#   /state          → bone_state_dir     rw   (state.yml, run history)
+#   /registry       → bone_registry_dir  ro   (service-registry.json parent dir)
+#   /wing-db        → bone_wing_db_dir   rw   (telemetry SQLite writes)
+#   /var/run/docker.sock                 rw   (compose-up from inside Bone)
+# =============================================================================
+
+services:
+  bone:
+    build:
+      context: {{ playbook_dir }}/files/bone
+      dockerfile: Dockerfile
+    image: {{ bone_image }}
+    container_name: bone
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ bone_port }}:8099"
+    environment:
+      BONE_SECRET: "{{ bone_secret | default('') }}"
+      WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default(bone_secret | default('')) }}"
+      INSTANCE_NAME: "{{ instance_name | default('nos') }}"
+      INSTANCE_TLD: "{{ instance_tld | default('dev.local') }}"
+      # Override the default mount paths only if you need to deviate from the
+      # Dockerfile contract; defaults match the volumes block below.
+      SERVICE_REGISTRY_PATH: "/registry/service-registry.json"
+      # Track B (2026-04-26): JWT auth against Authentik for operational
+      # endpoints. The container reaches Authentik over the host LAN via
+      # the loopback proxy (Authentik publishes 127.0.0.1:9443 on the host,
+      # accessible from infra_net via host.docker.internal on Docker
+      # Desktop). If Authentik is wholly disabled (install_authentik=false),
+      # set BONE_REQUIRE_JWT_AUTH=0 in your config.yml to fall back to
+      # HMAC-only mode (telemetry pipeline still works).
+      # Issuer URL we expect on incoming tokens (matches Authentik's
+      # `issuer_mode: global` claim). Used for `iss` claim match only —
+      # Bone never connects to this URL for JWKS.
+      AUTHENTIK_OIDC_ISSUER: "{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth.dev.local')) + '/application/o/') }}"
+      # JWKS fetch URL — internal compose-network HTTP endpoint, NOT the
+      # public HTTPS URL. Avoids TLS trust dance + DNS resolution for
+      # `auth.<tld>` from inside the container. Any agent's slug works
+      # (they all share the signing key).
+      AUTHENTIK_JWKS_URL: "{{ bone_jwks_url | default('http://authentik-server:9000/application/o/nos-state-manager/jwks/') }}"
+      BONE_REQUIRE_JWT_AUTH: "{{ '1' if (install_authentik | default(false)) else '0' }}"
+    volumes:
+      - {{ playbook_dir }}:/playbook:rw
+      - {{ bone_state_dir }}:/state:rw
+      - {{ bone_registry_dir }}:/registry:ro
+      - {{ bone_wing_db_dir }}:/wing-db:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - infra_net
+{% if install_authentik | default(false) %}
+    # Track B (2026-04-26): Bone fetches JWKS from authentik-server on the
+    # internal compose network. depends_on enforces start ordering — Bone
+    # waits for Authentik to be healthy before serving auth-protected
+    # endpoints. Soft dependency: Bone container starts and serves /api/health
+    # even if Authentik is hard-down (since /api/health is unauthenticated).
+    depends_on:
+      authentik-server:
+        condition: service_started
+{% endif %}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ bone_mem_limit }}
+    cpus: {{ docker_cpus_light | default('0.5') }}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8099/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3

@@ -359,7 +359,7 @@
           [hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes'),
            hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes')], [])
         +
-        (install_wing | default(install_php | default(true))) | ternary(
+        (install_wing | default(true)) | ternary(
           [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')], [])
       }}
 

@@ -1,0 +1,253 @@
+---
+# ==============================================================================
+# pazny.wing/tasks/post.yml — POST-START PHASE.
+#
+# Runs from tasks/stacks/stack-up.yml AFTER `docker compose up iiab --wait`
+# so the wing image is built and the named iiab compose project exists.
+#
+# Everything in here is idempotent. composer install only runs if vendor/ is
+# missing or composer.lock has shifted. DB init only seeds tables that aren't
+# there yet. The provision-token script is a reconverge — it overwrites the
+# Ansible-side token in wing.db on every run.
+#
+# All commands run inside the `wing-cli` one-shot service (profile: cli) which
+# shares the wing image and the bind-mounted source. We invoke them via
+# `docker compose -p iiab run --rm wing-cli <cmd>` — that way they reach the
+# same PHP/Composer toolchain as the FPM, on Linux and macOS alike.
+# ==============================================================================
+
+# Convenience facts so the long compose invocation doesn't repeat in every task.
+- name: "[pazny.wing] Resolve compose CLI base for iiab project"
+  ansible.builtin.set_fact:
+    _wing_compose_base: >-
+      {{ docker_bin | default('docker') }} compose
+      -f {{ stacks_dir }}/iiab/docker-compose.yml
+      -f {{ stacks_dir }}/iiab/overrides/wing.yml
+      -p iiab
+    _wing_run_cli: >-
+      {{ docker_bin | default('docker') }} compose
+      -f {{ stacks_dir }}/iiab/docker-compose.yml
+      -f {{ stacks_dir }}/iiab/overrides/wing.yml
+      -p iiab
+      run --rm
+      --workdir {{ wing_app_dir }}
+      wing-cli
+
+# ── composer install (skip if vendor/ already complete) ──────────────────────
+# Composer's autoload is the canary: if vendor/autoload.php is missing or
+# composer.lock has changed since the last install, we run composer. The
+# image bundles composer 2 already.
+
+- name: "[pazny.wing] Stat vendor/autoload.php"
+  ansible.builtin.stat:
+    path: "{{ wing_app_dir }}/vendor/autoload.php"
+  register: _wing_autoload_stat
+
+- name: "[pazny.wing] Stat composer.lock"
+  ansible.builtin.stat:
+    path: "{{ wing_app_dir }}/composer.lock"
+  register: _wing_lock_stat
+
+- name: "[pazny.wing] Run composer install (vendor missing or lock newer)"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    composer install --no-dev --optimize-autoloader --no-interaction
+  register: _wing_composer
+  changed_when: "'Nothing to install' not in (_wing_composer.stdout | default('')) or _wing_composer.rc != 0"
+  when: >
+    not _wing_autoload_stat.stat.exists
+    or (_wing_lock_stat.stat.exists
+        and _wing_autoload_stat.stat.mtime < _wing_lock_stat.stat.mtime)
+
+# ── DB init: create schema if wing.db is empty ───────────────────────────────
+
+- name: "[pazny.wing] Initialize SQLite database schema (idempotent)"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php bin/init-db.php --data-dir={{ wing_data_dir }}
+  register: _wing_initdb
+  changed_when: "'Created' in (_wing_initdb.stdout | default(''))"
+
+- name: "[pazny.wing] Migrate components → systems (idempotent)"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php bin/migrate-systems.php --data-dir={{ wing_data_dir }}
+  register: _wing_migrate_sys
+  changed_when: >
+    'Migrated' in (_wing_migrate_sys.stdout | default(''))
+    or 'Created' in (_wing_migrate_sys.stdout | default(''))
+
+# ── Legacy JSON migration (only on a brand-new install) ──────────────────────
+
+- name: "[pazny.wing] Detect whether legacy JSON migration is still needed"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php -r "$db = new SQLite3('{{ wing_data_dir }}/wing.db');
+    echo $db->querySingle('SELECT COUNT(*) FROM systems WHERE source IN (\"components_db\",\"manual\")');
+    $db->close();"
+  register: _wing_component_count
+  changed_when: false
+
+- name: "[pazny.wing] Run legacy JSON → SQLite import (only if no rows yet)"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php bin/migrate.php
+    --json-dir={{ wing_json_source }}
+    --data-dir={{ wing_data_dir }}
+  register: _wing_migrate
+  when: (_wing_component_count.stdout | default('0') | trim | int) == 0
+
+# ── Service registry ingestion ───────────────────────────────────────────────
+
+- name: "[pazny.wing] Ingest service-registry.json into systems table"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php bin/ingest-registry.php
+    --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+  register: _wing_ingest
+  changed_when: >
+    'Ingested' in (_wing_ingest.stdout | default(''))
+    and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
+
+# ── API token reconverge ─────────────────────────────────────────────────────
+# Overwrites whatever token is in wing.db with the canonical wing_api_token
+# from credentials. Safe to repeat — the script is `INSERT OR REPLACE`.
+
+- name: "[pazny.wing] Reconverge API token from credentials (state-declarative)"
+  ansible.builtin.shell: >
+    {{ _wing_run_cli }}
+    php bin/provision-token.php
+    --db={{ wing_data_dir }}/wing.db
+    --token={{ wing_api_token }}
+    --name=ansible-provisioned
+  register: _wing_token_result
+  changed_when: >
+    'Created' in (_wing_token_result.stdout | default(''))
+    or 'Updated' in (_wing_token_result.stdout | default(''))
+  no_log: true
+
+# ── Local .env for Playwright + Wing ─────────────────────────────────────────
+# Lives outside the bind-mount so it isn't part of the container payload.
+
+- name: "[pazny.wing] Write .env with API token + e2e credentials"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/wing/.env"
+    mode: '0600'
+    content: |
+      # Auto-generated by pazny.wing — do not edit
+      WING_API_TOKEN={{ wing_api_token }}
+      WING_URL=https://{{ wing_domain | default('wing.dev.local') }}
+      DEV_DOMAIN={{ instance_tld | default('dev.local') }}
+
+      # Track B (2026-04-26) — agent identity for Wing → Bone calls.
+      # AgentIdentity::fromEnv() reads these to mint Bearer tokens via
+      # Authentik's client_credentials grant. The matching OIDC client
+      # is seeded in default.config.yml under authentik_agent_clients.
+      AUTHENTIK_DOMAIN={{ authentik_domain | default('auth.dev.local') }}
+      WING_AGENT_CLIENT_ID=nos-wing
+      WING_AGENT_CLIENT_SECRET={{ global_password_prefix }}_pw_agent_wing
+      WING_AGENT_SCOPES=nos:state:read nos:migrations:read nos:upgrades:read nos:patches:read nos:coexistence:read
+
+      # Authentik SSO — used by Playwright authenticated smoke test
+      AUTHENTIK_USER={{ authentik_bootstrap_user | default('akadmin') }}
+      AUTHENTIK_PASSWORD={{ authentik_bootstrap_password | default('') }}
+
+      # Service provisioning (Playwright idempotent first-admin setup)
+      SERVICE_ADMIN_PASSWORD={{ service_admin_password | default('') }}
+      METABASE_ADMIN_EMAIL={{ metabase_admin_email | default('admin@' + (instance_tld | default('dev.local'))) }}
+      METABASE_ADMIN_PASSWORD={{ metabase_admin_password | default(service_admin_password | default('')) }}
+      JELLYFIN_ADMIN_USER={{ jellyfin_admin_user | default('admin') }}
+      JELLYFIN_ADMIN_PASSWORD={{ jellyfin_admin_password | default(service_admin_password | default('')) }}
+      OPENWEBUI_ADMIN_EMAIL={{ openwebui_admin_email | default('admin@' + (instance_tld | default('dev.local'))) }}
+      OPENWEBUI_ADMIN_PASSWORD={{ openwebui_admin_password | default(service_admin_password | default('')) }}
+      UPTIME_KUMA_ADMIN_USER={{ uptime_kuma_admin_user | default('admin') }}
+      UPTIME_KUMA_ADMIN_PASSWORD={{ uptime_kuma_admin_password | default(service_admin_password | default('')) }}
+  no_log: true
+
+# ── Clear Nette cache after deploy (force latte recompile) ───────────────────
+
+- name: "[pazny.wing] Clear Nette cache after deploy"
+  ansible.builtin.file:
+    path: "{{ wing_app_dir }}/temp/cache"
+    state: absent
+  changed_when: false
+
+# ── Retire legacy Homebrew PHP-FPM if it's still kicking ─────────────────────
+# Pre-2026-04-26 installs ran php-fpm via Homebrew. The container now binds
+# 127.0.0.1:9000 — both can't coexist. Stop and unload the brew service.
+# Only meaningful on macOS; on Linux it's a no-op.
+
+- name: "[pazny.wing] Stop legacy Homebrew php-fpm if present (macOS)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    if command -v brew >/dev/null 2>&1; then
+      brew services list 2>/dev/null \
+        | awk '/^php(@[0-9.]+)?[[:space:]]+started/{print $1; exit 0}' \
+        | head -1 \
+        | xargs -I{} brew services stop {}
+    fi
+  args:
+    executable: /bin/bash
+  register: _wing_brew_stop
+  changed_when: "'Successfully stopped' in (_wing_brew_stop.stdout | default(''))"
+  failed_when: false
+  when: ansible_os_family == 'Darwin'
+
+# ── Optional: Playwright e2e harness on host (kept, was already host-side) ───
+# Only runs when install_playwright_tests=true. Adds npm install + chromium
+# browser download to wing/app/tests/. Independent of the container path.
+
+- name: "[pazny.wing] Playwright — npm install"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/bin/npm install --no-audit --no-fund"
+    chdir: "{{ wing_app_dir }}/tests"
+    creates: "{{ wing_app_dir }}/tests/node_modules/@playwright/test"
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  when:
+    - install_playwright_tests | default(false)
+    - ansible_os_family == 'Darwin'
+
+- name: "[pazny.wing] Playwright — install chromium browser"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/bin/npx playwright install chromium"
+    chdir: "{{ wing_app_dir }}/tests"
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  register: _playwright_install
+  changed_when: "'is already installed' not in (_playwright_install.stdout | default(''))"
+  when:
+    - install_playwright_tests | default(false)
+    - ansible_os_family == 'Darwin'
+
+- name: "[pazny.wing] Playwright — print how to run tests"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════
+       Playwright e2e tests ready at {{ wing_app_dir }}/tests
+      ══════════════════════════════════════════════════════════
+       Run smoke tests (fast, ~30s):
+         cd {{ wing_app_dir }}/tests && npm run test:smoke
+
+       Run first-admin provisioning (Metabase/Jellyfin/Open WebUI/Uptime Kuma):
+         cd {{ wing_app_dir }}/tests && npm run test:provisioning
+
+       Open HTML report:
+         cd {{ wing_app_dir }}/tests && npm run report
+
+       Credentials come from ~/wing/.env (auto-generated above).
+      ══════════════════════════════════════════════════════════
+  when: install_playwright_tests | default(false)
+
+- name: "[pazny.wing] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Wing — security-research dashboard (containerized) ready
+      ══════════════════════════════════════════════════════
+       Image:    {{ wing_image }}  (built locally from files/project-wing/)
+       URL:      https://{{ wing_domain }}  (via nginx vhost)
+       FPM:      127.0.0.1:{{ wing_port }} (loopback only)
+       Source:   {{ wing_app_dir }}        (host, bind-mounted at same path)
+       Data:     {{ wing_data_dir }}/wing.db
+      ══════════════════════════════════════════════════════

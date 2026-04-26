@@ -1,0 +1,6 @@
+# Wing Dockerfile is intentionally source-less (bind-mounted at runtime),
+# so almost everything in the build context is unnecessary. Keep the
+# context tiny.
+*
+!Dockerfile
+!.dockerignore

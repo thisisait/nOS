@@ -1,0 +1,12 @@
+# Build context hygiene for the Bone image.
+# Keep this in sync with the explicit COPY list in the Dockerfile.
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+*.md
+Dockerfile*
+.dockerignore

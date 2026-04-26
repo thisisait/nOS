@@ -1,82 +1,98 @@
 ---
 # ==============================================================================
-# BONE — local FastAPI (structure / state / dispatcher organ of nOS).
-# Formerly BoxAPI. Provides the REST API every other organ talks to when it
-# needs on-disk truth or an ansible-playbook subprocess.
+# pazny.bone — local FastAPI organ (Track A: containerized 2026-04-26).
+#
+# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`.
+# Renders the compose-override fragment + ensures the host directories that
+# Bone bind-mounts exist (Docker would otherwise create them as root-owned
+# directories and crash the role).
+#
+# Post-start health probe lives in tasks/post.yml — invoked AFTER infra is
+# up so we can verify /api/health from the host.
 # ==============================================================================
 
-- name: "[Bone] Create application + log directories"
+# ── Ensure host-side bind-mount targets exist ─────────────────────────────────
+# Docker creates missing bind-mount sources as empty directories owned by root.
+# That's fine for state_dir / wing-db (we expect them to be a dir), but the
+# registry parent must exist or Bone won't be able to read it on startup.
+
+- name: "[pazny.bone] Ensure state + registry + wing-db directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
-    - "{{ ansible_facts['env']['HOME'] }}/bone"
-    - "{{ ansible_facts['env']['HOME'] }}/bone/log"
+    - "{{ bone_state_dir }}"
+    - "{{ bone_registry_dir }}"
+    - "{{ bone_wing_db_dir }}"
 
-- name: "[Bone] Copy application files"
+# ── Touch service-registry.json so its absence doesn't break compose-up ───────
+# Bone tolerates a missing file (returns []), but we want a stable bind-mount
+# semantic. The placeholder is overwritten by tasks/service-registry.yml later
+# in the playbook when actual services are known.
+
+- name: "[pazny.bone] Stat service-registry.json"
+  ansible.builtin.stat:
+    path: "{{ bone_registry_dir }}/service-registry.json"
+  register: _bone_registry_stat
+
+- name: "[pazny.bone] Seed empty service-registry.json placeholder"
   ansible.builtin.copy:
-    src: "bone/{{ item }}"
-    dest: "{{ ansible_facts['env']['HOME'] }}/bone/{{ item }}"
+    dest: "{{ bone_registry_dir }}/service-registry.json"
+    content: "{{ {'services': []} | to_nice_json }}\n"
     mode: '0644'
-  loop:
-    - main.py
-    - requirements.txt
-    # State & Migration Framework helpers
-    - state.py
-    - migrations.py
-    - upgrades.py
-    - coexistence.py
-    - events.py
-    - patches.py
+    force: false  # never overwrite a real registry
+  when: not _bone_registry_stat.stat.exists
 
-- name: "[Bone] Create Python venv"
-  ansible.builtin.command:
-    cmd: python3 -m venv venv
-    chdir: "{{ ansible_facts['env']['HOME'] }}/bone"
-    creates: "{{ ansible_facts['env']['HOME'] }}/bone/venv/bin/python"
+# ── Render compose-override fragment ──────────────────────────────────────────
+# Discovered by tasks/stacks/core-up.yml's find task and merged into
+# `docker compose up infra` via additional -f flags.
 
-- name: "[Bone] Install Python dependencies"
-  ansible.builtin.command:
-    cmd: "{{ ansible_facts['env']['HOME'] }}/bone/venv/bin/pip install --no-cache-dir -r requirements.txt"
-    chdir: "{{ ansible_facts['env']['HOME'] }}/bone"
-  register: _bone_pip
-  changed_when: "'Successfully installed' in _bone_pip.stdout"
-
-- name: "[Bone] Deploy launchd plist"
+- name: "[pazny.bone] Render compose override fragment"
   ansible.builtin.template:
-    src: bone-launchd.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
-    mode: '0644'
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/bone.yml"
+    mode: '0600'
   notify: Restart bone
 
-- name: "[Bone] Load launchd service"
-  ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist
-  register: _bone_load
-  changed_when: "'Bootstrap failed: 5' not in (_bone_load.stderr | default(''))"
-  failed_when: >
-    _bone_load.rc != 0 and
-    'Bootstrap failed: 5' not in (_bone_load.stderr | default('')) and
-    'service already loaded' not in (_bone_load.stderr | default(''))
+# ── Retire the legacy launchd plist ───────────────────────────────────────────
+# Pre-2026-04-26 installs ran Bone as a launchd-managed Python process. The
+# container now owns the lifecycle; remove the plist so it can't fight the
+# container for port 8099. Migration recipe at migrations/2026-05-01-...yml
+# does the heavy lifting (launchctl bootout + venv cleanup) — these tasks are
+# the idempotent fallback for fresh installs that never had the plist.
 
-- name: "[Bone] Enable nginx vhost"
+- name: "[pazny.bone] Stop legacy launchd service if present"
+  ansible.builtin.command:
+    cmd: launchctl bootout gui/{{ ansible_facts['user_uid'] | default(ansible_user_uid | default('501')) }}/eu.thisisait.nos.bone
+  register: _bone_legacy_bootout
+  changed_when: _bone_legacy_bootout.rc == 0
+  failed_when:
+    - _bone_legacy_bootout.rc != 0
+    - "'Could not find specified service' not in (_bone_legacy_bootout.stderr | default(''))"
+    - "'No such process' not in (_bone_legacy_bootout.stderr | default(''))"
+  when: ansible_os_family == 'Darwin'
+
+- name: "[pazny.bone] Remove legacy launchd plist"
   ansible.builtin.file:
-    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/bone.conf"
-    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/bone.conf"
-    state: link
-    force: true
-  when: install_nginx | default(true)
-  notify: Restart nginx
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
+    state: absent
+  when: ansible_os_family == 'Darwin'
 
-- name: "[Bone] Print setup summary"
+# ── Print summary ─────────────────────────────────────────────────────────────
+
+- name: "[pazny.bone] Print setup summary"
   ansible.builtin.debug:
     msg: |
-      ======================================================
-       Bone — local FastAPI (formerly BoxAPI) -- ready
-      ======================================================
-       URL:     https://{{ bone_domain | default('api.dev.local') }}
-       Port:    {{ bone_port | default(8099) }}
-       Health:  https://{{ bone_domain | default('api.dev.local') }}/api/health
-       Status:  https://{{ bone_domain | default('api.dev.local') }}/api/status
-      ======================================================
+      ══════════════════════════════════════════════════════
+       Bone — local FastAPI (containerized, Track A) ready
+      ══════════════════════════════════════════════════════
+       Image:    {{ bone_image }}  (built locally from files/bone/)
+       URL:      https://{{ bone_domain }}  (via nginx vhost)
+       Direct:   http://127.0.0.1:{{ bone_port }}
+       Health:   http://127.0.0.1:{{ bone_port }}/api/health
+       Status:   http://127.0.0.1:{{ bone_port }}/api/status
+       Mounts:   playbook={{ playbook_dir }}
+                 state={{ bone_state_dir }}
+                 wing-db={{ bone_wing_db_dir }}
+      ══════════════════════════════════════════════════════

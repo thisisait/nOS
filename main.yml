@@ -30,6 +30,13 @@
     wing_events_url: "http://{{ bone_domain | default('api.' ~ (instance_tld | default('dev.local'))) }}/api/v1/events"
 
   pre_tasks:
+    # ── Platform detection (Track C, 2026-04-26) ──────────────────────────
+    # Resolves nos_* variables (nginx paths, service manager, docker bin)
+    # so cross-platform tasks below can use them instead of hardcoded
+    # /opt/homebrew / launchctl paths.
+    - import_tasks: tasks/_platform.yml
+      tags: ['always', 'platform']
+
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
     # Catches syntax errors (stray markdown paste, missing ':', bad indent)
     # before Ansible's own include_vars barfs with a cryptic scanner error.
@@ -208,6 +215,11 @@
       notify: Restart nginx
 
     - name: Restart php-fpm
+      # Legacy handler — kept for backwards compatibility with any role still
+      # notifying it. As of Track A (2026-04-26) Wing's PHP-FPM runs in the
+      # `wing` compose service (see "Restart wing" below) and Homebrew
+      # php@8.x is no longer installed by the playbook. The launchctl path
+      # is a defensive no-op for hosts that haven't run the migration yet.
       ansible.builtin.shell: |
         svc="php@{{ php_version | default('8.3') }}"
         plist="$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist"
@@ -216,6 +228,15 @@
         [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
       args:
         executable: /bin/bash
+      failed_when: false
+
+    - name: Restart wing
+      # Container path (Track A, 2026-04-26): bounce the wing service in the
+      # iiab compose stack. Triggered by the wing role when source rsync
+      # changed or the compose-override fragment was rewritten.
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        restart wing
       failed_when: false
 
     - name: Restart mariadb
@@ -343,8 +364,12 @@
       failed_when: false
 
     - name: Restart bone
-      ansible.builtin.command: >
-        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/eu.thisisait.nos.bone"
+      # Container path (Track A, 2026-04-26): Bone runs as the `bone` service
+      # in the infra compose stack. The legacy launchd plist is removed by
+      # roles/pazny.bone/tasks/main.yml + the bone-to-container migration.
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        restart bone
       failed_when: false
 
     - name: Restart bluesky-pds
@@ -407,6 +432,32 @@
       when:
         - ansible_os_family in ['Debian', 'RedHat']
       tags: ['systemd']
+
+    # Track C (2026-04-26) — Docker CE + nginx via APT, the Linux equivalents
+    # of Docker Desktop + Homebrew nginx on macOS. Both are gated on Linux
+    # platform AND the matching install_* flag so operators that opt out
+    # (e.g. "I'll bring my own docker") get clean skips.
+    - role: pazny.linux.docker
+      when:
+        - ansible_os_family in ['Debian']
+        - install_docker | default(true)
+      tags: ['docker', 'linux']
+
+    - role: pazny.linux.nginx
+      when:
+        - ansible_os_family in ['Debian']
+        - install_nginx | default(true)
+      tags: ['nginx', 'linux']
+
+    # Track D (2026-04-26) — ANSSI baseline. Default ON, opt-out via
+    # `install_hardening: false`. Decision O5 (2026-04-26) noted that
+    # surprise-on-deploy is acceptable for a security-positioned product;
+    # operators who don't want it set the flag in config.yml.
+    - role: pazny.linux.hardening
+      when:
+        - ansible_os_family in ['Debian']
+        - install_hardening | default(true)
+      tags: ['hardening', 'linux', 'security']
 
   tasks:
     # ──────────────────────────────────────────────────────────────────────────
@@ -947,12 +998,13 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Bone – local FastAPI service (structure / state / dispatcher).
     # Former BoxAPI. See docs/anatomy.md for the organ metaphor.
+    #
+    # As of Track A (2026-04-26) Bone runs as a container in the `infra`
+    # compose stack, not a host launchd process. The render + post-start
+    # tasks now live in tasks/stacks/core-up.yml alongside MariaDB / Postgres
+    # / Authentik so they all come up together. This block stays as a
+    # documentary anchor; the actual wiring is upstream.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "Bone (pazny.bone role)"
-      ansible.builtin.import_role:
-        name: pazny.bone
-      when: install_bone | default(false)
-      tags: ['bone', 'api']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Heartbeat – fleet reporting daemon
@@ -976,14 +1028,13 @@
       tags: ['vulnscan']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Wing - Security Research Dashboard (Nette PHP + SQLite)
-    # Wave 2.1 role extraction - see docs/wave2-role-migration.md
+    # Wing - Security Research Dashboard (Nette PHP-FPM + SQLite)
+    #
+    # As of Track A (2026-04-26) Wing runs as the `wing` service in the iiab
+    # compose stack, not via Homebrew php-fpm. Render + post tasks now live
+    # in tasks/stacks/stack-up.yml alongside other iiab services. This block
+    # is a documentary anchor; the actual wiring is upstream.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "Wing (pazny.wing role)"
-      ansible.builtin.import_role:
-        name: pazny.wing
-      when: install_wing | default(install_php | default(true))
-      tags: ['wing', 'wing', 'security']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Export/Import – hardware migration (run only with --tags)

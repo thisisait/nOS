@@ -152,6 +152,10 @@ install_mas_apps: false           # Mac App Store applications
 # ── Web server ────────────────────────────────────────────────────────────────
 install_nginx: true               # Nginx (reverse proxy, PHP-FPM, vhosts)
 
+# Track C+D (2026-04-26): Linux-only flags. Ignored on macOS.
+install_docker: true              # Linux: install Docker CE + compose plugin via APT
+install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
+
 # ── Languages / runtimes ──────────────────────────────────────────────────────
 install_php: true                 # PHP 8.x + PHP-FPM + Composer
 install_node: true                # Node.js + NVM + global npm packages
@@ -1800,7 +1804,7 @@ authentik_oidc_apps:
     type: "proxy"
   - name: "Wing"
     slug: "wing"
-    enabled: "{{ install_wing | default(install_php | default(true)) }}"
+    enabled: "{{ install_wing | default(true) }}"
     launch_url: "https://{{ wing_domain | default('wing.dev.local') }}"
     external_host: "https://{{ wing_domain | default('wing.dev.local') }}"
     type: "proxy"
@@ -1896,6 +1900,83 @@ authentik_oidc_n8n_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equ
 authentik_oidc_n8n_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'n8n') | first).client_secret }}"
 authentik_oidc_vaultwarden_client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'vaultwarden') | first).client_id }}"
 authentik_oidc_vaultwarden_client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'vaultwarden') | first).client_secret }}"
+
+# ==============================================================================
+# AGENT IDENTITY — Authentik OIDC client_credentials (Track B, 2026-04-26)
+#
+# Replaces the old shared BONE_SECRET on operational endpoints. Each
+# autonomous component (state-manager, OpenClaw, Wing reads) gets its own
+# OIDC client at Authentik with a discrete client_id + secret + capability
+# scope list. Bone validates incoming JWTs against Authentik's JWKS and
+# enforces the required scope per route.
+#
+# The wing_telemetry callback's POST /api/v1/events keeps its HMAC channel —
+# it has a different threat model (fires from inside a playbook run, must
+# not depend on Authentik being up at the time). Everything else moves to
+# JWT.
+#
+# Token lifetime: 12 hours (decision O3, 2026-04-26).
+# ==============================================================================
+
+# Capability scopes Bone recognises. Adding a scope here ALSO requires:
+#   - a route in files/bone/main.py decorated with require_scope(...)
+#   - the matching scopemapping entry in the Authentik blueprint
+authentik_agent_scopes:
+  - "nos:state:read"
+  - "nos:state:write"
+  - "nos:migrations:read"
+  - "nos:migrations:apply"
+  - "nos:upgrades:read"
+  - "nos:upgrades:apply"
+  - "nos:patches:read"
+  - "nos:patches:apply"
+  - "nos:coexistence:read"
+  - "nos:coexistence:write"
+  - "nos:run-tag"
+
+# Default agents seeded into Authentik. Add custom agents by extending this
+# list in your local config.yml (Ansible vars_files merge appends).
+#
+# capabilities:  scopes the agent is allowed to request. Any scope outside
+#                this list is dropped at token-emit time by Authentik.
+authentik_agent_clients:
+  - name: "nOS State Manager"
+    slug: "nos-state-manager"
+    client_id: "nos-state-manager"
+    client_secret: "{{ global_password_prefix }}_pw_agent_state_manager"
+    capabilities:
+      - "nos:state:read"
+      - "nos:state:write"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+      - "nos:coexistence:read"
+
+  - name: "nOS OpenClaw"
+    slug: "nos-openclaw"
+    client_id: "nos-openclaw"
+    client_secret: "{{ global_password_prefix }}_pw_agent_openclaw"
+    capabilities: "{{ authentik_agent_scopes }}"  # full operational
+
+  - name: "nOS Wing"
+    slug: "nos-wing"
+    client_id: "nos-wing"
+    client_secret: "{{ global_password_prefix }}_pw_agent_wing"
+    capabilities:
+      - "nos:state:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+      - "nos:coexistence:read"
+
+# Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
+# during the cutover (NOT recommended — both sides should agree on JWT only).
+authentik_agent_token_validity: "hours=12"
+
+# Authentik OIDC discovery URL — derived. Bone reads /.well-known/openid-configuration
+# from this base, then loads JWKS from there. The role ensures Authentik is
+# up before Bone's post-start runs, so this lookup never races.
+authentik_oidc_issuer: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/"
 
 # ==============================================================================
 # INFISICAL CE – Secrets Management (REST API, CLI, SDK)

@@ -403,14 +403,33 @@ def apply(record, ctx=None, dry_run=False):
                                 (sid, action_type, exc),
                           phase="action", failed_step=sid, started=started)
         if not isinstance(res, dict) or not res.get("success"):
+            on_failure = (step.get("on_failure") or "rollback").lower()
+            err_msg = (res or {}).get("error") or "step %s failed" % sid
             _state_record_step(ctx, migration_id, sid,
                                {"status": "failed", "action": action_type,
-                                "error": (res or {}).get("error")})
+                                "error": (res or {}).get("error"),
+                                "on_failure": on_failure})
+            if on_failure == "continue":
+                # Step opted into best-effort semantics: log the failure but
+                # advance to the next step. Don't add to applied_steps so a
+                # later rollback request doesn't try to undo something that
+                # never landed. Migration is recorded as partial-success at
+                # the end if any other step succeeds.
+                continue
+            if on_failure == "abort":
+                # No rollback — operator wants the partial state to persist
+                # (used for migrations where some steps are independently
+                # observable and rolling them back would cause more disruption
+                # than leaving them).
+                return _final(False, migration_id, len(applied_steps),
+                              error=err_msg, phase="action",
+                              failed_step=sid, started=started,
+                              action_result=res)
+            # Default: rollback already-applied steps and abort.
             _rollback(applied_steps, ctx)
             return _final(False, migration_id, len(applied_steps),
-                          error=(res or {}).get("error") or
-                                "step %s failed" % sid,
-                          phase="action", failed_step=sid, started=started,
+                          error=err_msg, phase="action",
+                          failed_step=sid, started=started,
                           action_result=res)
 
         # 4c. verify
