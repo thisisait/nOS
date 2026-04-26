@@ -40,11 +40,20 @@ jobs:
         run: ansible-lint
 
   # ──────────────────────────────────────────────────────────────────────────
-  # SYNTAX CHECK – Ansible syntax-check without execution (fast, on Linux)
+  # SYNTAX CHECK – Ansible syntax-check across the supported OS matrix.
+  # Adds Ubuntu LTS targets ahead of the Phase-1 Linux port. matrix.os is
+  # a workflow-controlled value (no external input) so no escaping needed.
   # ──────────────────────────────────────────────────────────────────────────
   syntax:
-    name: Syntax Check
-    runs-on: ubuntu-latest
+    name: Syntax Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - macos-14
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v6
@@ -68,6 +77,33 @@ jobs:
 
       - name: Ansible syntax check.
         run: ansible-playbook main.yml --syntax-check
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PYTEST – Python unit tests covering the callback plugin, migrate
+  # engine, schema-handler consistency, upgrade actions, and state manager.
+  # Fast (~2s) — runs on every PR. Excludes wing-api/wing-frontend (PHP).
+  # ──────────────────────────────────────────────────────────────────────────
+  pytest:
+    name: Pytest (Python tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        run: pip3 install pytest pyyaml jsonschema
+
+      - name: Run pytest suite.
+        run: >
+          python3 -m pytest tests/
+          --ignore=tests/wing-api
+          --ignore=tests/wing-frontend
+          -q
 
   # ──────────────────────────────────────────────────────────────────────────
   # INTEGRATION – full run on real macOS (slower, expensive)
