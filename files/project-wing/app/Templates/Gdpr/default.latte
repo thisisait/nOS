@@ -1,0 +1,106 @@
+{block title}GDPR Article 30 register{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+
+<div class="coex-page-header">
+	<div>
+		<h2>GDPR — Article 30 register</h2>
+		<div class="sub">
+			Records of processing activities, data-subject access requests (DSAR),
+			and personal-data breaches. Inspector-friendly CSV export at
+			<a href="/api/v1/gdpr/export.csv" target="_blank">/api/v1/gdpr/export.csv</a>.
+		</div>
+	</div>
+</div>
+
+<div class="coex-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+	<div class="stat-card"><div class="stat-num">{$stats['processingCount']}</div><div class="stat-label">Processing activities</div></div>
+	<div class="stat-card"><div class="stat-num">{$stats['pendingDsar']}</div><div class="stat-label">Pending DSARs</div></div>
+	<div class="stat-card"><div class="stat-num">{$stats['completedDsar']}</div><div class="stat-label">Completed DSARs</div></div>
+	<div class="stat-card"><div class="stat-num">{$stats['openBreaches']}</div><div class="stat-label">Open breaches</div></div>
+</div>
+
+<h3 style="margin-top:24px">Processing activities</h3>
+{if empty($processing)}
+	<div class="coex-empty">
+		No processing activities recorded yet. The default seed (auth, telemetry,
+		tenant-vault, …) is loaded by <code>bin/init-db.php</code>; if it's missing,
+		something went wrong with the migration step.
+	</div>
+{else}
+	<table class="data-table" style="width:100%;border-collapse:collapse">
+		<thead>
+			<tr>
+				<th>Slug</th>
+				<th>Name</th>
+				<th>Legal basis</th>
+				<th>Retention</th>
+				<th>Outside EU</th>
+				<th>Updated</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $processing as $p}
+				<tr>
+					<td><code>{$p['id']}</code></td>
+					<td>{$p['name']}</td>
+					<td>{$p['legal_basis']}</td>
+					<td>{$p['retention_days'] ?? '—'} {if $p['retention_days']}days{/if}</td>
+					<td>{$p['transfers_outside_eu'] ? 'yes' : 'no'}</td>
+					<td>{$p['updated_at']}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<h3 style="margin-top:32px">Data-subject access requests</h3>
+{if empty($dsar)}
+	<div class="coex-empty">No DSARs on file.</div>
+{else}
+	<table class="data-table" style="width:100%;border-collapse:collapse">
+		<thead>
+			<tr><th>Received</th><th>Subject</th><th>Type</th><th>Status</th><th>Completed</th></tr>
+		</thead>
+		<tbody>
+			{foreach $dsar as $r}
+				<tr>
+					<td>{$r['received_at']}</td>
+					<td><code>{$r['subject_email']}</code></td>
+					<td>{$r['request_type']}</td>
+					<td>{$r['status']}</td>
+					<td>{$r['completed_at'] ?? '—'}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<h3 style="margin-top:32px">Personal-data breach register</h3>
+{if empty($breaches)}
+	<div class="coex-empty">No breaches recorded. The empty register itself is the proof of compliance — keep it that way.</div>
+{else}
+	<table class="data-table" style="width:100%;border-collapse:collapse">
+		<thead>
+			<tr><th>Detected</th><th>Nature</th><th>Affected</th><th>Status</th><th>Supervisor notified</th></tr>
+		</thead>
+		<tbody>
+			{foreach $breaches as $b}
+				<tr>
+					<td>{$b['detected_at']}</td>
+					<td>{$b['nature']}</td>
+					<td>{$b['affected_subjects'] ?? '—'}</td>
+					<td>{$b['status']}</td>
+					<td>{$b['notified_supervisor_at'] ?? '—'}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<p style="margin-top:32px;font-size:12px;color:var(--text2)">
+	Reference: <a href="https://gdpr-info.eu/art-30-gdpr/" target="_blank">GDPR Article 30</a> ·
+	<a href="/docs/anssi-mapping.md" target="_blank">ANSSI hardening</a>
+</p>
+{/block}

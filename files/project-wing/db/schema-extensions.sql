@@ -105,3 +105,60 @@ CREATE TABLE IF NOT EXISTS patches_applied (
 CREATE INDEX IF NOT EXISTS idx_patches_applied_patch ON patches_applied(patch_id);
 CREATE INDEX IF NOT EXISTS idx_patches_applied_at    ON patches_applied(applied_at);
 CREATE INDEX IF NOT EXISTS idx_patches_applied_comp  ON patches_applied(component_id);
+
+-- ── GDPR Article 30 register (Track D, 2026-04-26) ─────────────────────
+-- Each row is one entry in the "register of processing activities" required
+-- of EU operators by GDPR Art. 30. Wing's /gdpr UI renders these as a CSV-
+-- exportable table. Authoritative seed data ships in
+-- files/project-wing/db/gdpr-seed.sql; operators add custom processing
+-- activities by inserting more rows.
+CREATE TABLE IF NOT EXISTS gdpr_processing (
+    id                  TEXT PRIMARY KEY,           -- stable slug (auth, telemetry, …)
+    name                TEXT NOT NULL,              -- human-readable
+    purpose             TEXT NOT NULL,              -- why we process this data
+    legal_basis         TEXT NOT NULL,              -- contract | consent | legitimate-interest | …
+    data_categories     TEXT NOT NULL,              -- JSON array of names
+    data_subjects       TEXT NOT NULL,              -- JSON array (operators, end-users, …)
+    retention_days      INTEGER,                    -- NULL = indefinite (justify in notes)
+    storage_location    TEXT NOT NULL,              -- where the data physically lives
+    transfers_outside_eu INTEGER NOT NULL DEFAULT 0, -- 0/1
+    processors          TEXT NOT NULL DEFAULT '[]', -- JSON array of third-party processors
+    security_measures   TEXT NOT NULL DEFAULT '[]', -- JSON array of mitigations
+    notes               TEXT,                       -- free-form
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Data Subject Access Request log. CNIL inspections check that DSAR responses
+-- are tracked. Each row records an incoming request and its disposition.
+CREATE TABLE IF NOT EXISTS gdpr_dsar (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    received_at         TEXT NOT NULL,
+    subject_email       TEXT NOT NULL,
+    request_type        TEXT NOT NULL,              -- access | rectify | erase | portability | object
+    status              TEXT NOT NULL,              -- received | in-progress | completed | rejected
+    completed_at        TEXT,
+    rejection_reason    TEXT,
+    processing_ids      TEXT NOT NULL DEFAULT '[]', -- JSON array of gdpr_processing.id touched
+    notes               TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_gdpr_dsar_email  ON gdpr_dsar(subject_email);
+CREATE INDEX IF NOT EXISTS idx_gdpr_dsar_status ON gdpr_dsar(status);
+
+-- Personal data breach register (GDPR Art. 33-34). Inspectors expect a log
+-- even if zero entries — proves the operator considered the question.
+CREATE TABLE IF NOT EXISTS gdpr_breaches (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    detected_at         TEXT NOT NULL,
+    notified_supervisor_at TEXT,                    -- 72h deadline tracker
+    notified_subjects_at   TEXT,                    -- when "high risk"
+    nature              TEXT NOT NULL,              -- short headline
+    affected_subjects   INTEGER,
+    likely_consequences TEXT,
+    measures_taken      TEXT,
+    status              TEXT NOT NULL,              -- detected | notified | resolved | non-reportable
+    notes               TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);

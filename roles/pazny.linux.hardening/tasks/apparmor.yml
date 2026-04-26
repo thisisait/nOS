@@ -1,0 +1,26 @@
+---
+- name: "[hardening.apparmor] Install AppArmor + utility profiles"
+  ansible.builtin.apt:
+    name:
+      - apparmor
+      - apparmor-utils
+      - apparmor-profiles
+    state: present
+
+- name: "[hardening.apparmor] Enable AppArmor at boot via systemd"
+  ansible.builtin.systemd:
+    name: apparmor
+    enabled: true
+    state: started
+
+- name: "[hardening.apparmor] Verify AppArmor is enforcing"
+  ansible.builtin.command:
+    cmd: aa-status
+  register: _aa_status
+  changed_when: false
+  failed_when: false
+
+- name: "[hardening.apparmor] Report status"
+  ansible.builtin.debug:
+    msg: "{{ _aa_status.stdout_lines | select('match', '^[0-9]+ profiles') | list }}"
+  when: _aa_status.rc == 0

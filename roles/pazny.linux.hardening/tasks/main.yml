@@ -1,0 +1,61 @@
+---
+# ==============================================================================
+# pazny.linux.hardening — ANSSI baseline implementation.
+# See defaults/main.yml for individual toggles. Tasks split into includes so
+# operators can run a subset via tags (e.g. --tags hardening,ufw to only
+# (re)apply the firewall).
+# ==============================================================================
+
+- name: Block (Debian/Ubuntu only — RHEL siblings are a follow-up)
+  when: ansible_os_family == 'Debian'
+  become: true
+  block:
+    - import_tasks: ufw.yml
+      when: hardening_ufw | bool
+      tags: ['hardening', 'ufw', 'firewall']
+
+    - import_tasks: fail2ban.yml
+      when: hardening_fail2ban | bool
+      tags: ['hardening', 'fail2ban']
+
+    - import_tasks: sysctl.yml
+      when: hardening_sysctl | bool
+      tags: ['hardening', 'sysctl', 'kernel']
+
+    - import_tasks: auditd.yml
+      when: hardening_auditd | bool
+      tags: ['hardening', 'auditd', 'audit']
+
+    - import_tasks: apparmor.yml
+      when: hardening_apparmor | bool
+      tags: ['hardening', 'apparmor']
+
+    - import_tasks: chrony.yml
+      when: hardening_chrony | bool
+      tags: ['hardening', 'chrony', 'ntp']
+
+    - import_tasks: ssh.yml
+      when: hardening_ssh | bool
+      tags: ['hardening', 'ssh']
+
+    - import_tasks: unattended.yml
+      when: hardening_unattended | bool
+      tags: ['hardening', 'unattended']
+
+- name: "[hardening] Print summary"
+  ansible.builtin.debug:
+    msg: |
+      ── ANSSI hardening applied ─────────────────────────────────────────
+       ufw:         {{ hardening_ufw         | bool | ternary('on', 'off') }}
+       fail2ban:    {{ hardening_fail2ban    | bool | ternary('on', 'off') }}
+       sysctl:      {{ hardening_sysctl      | bool | ternary('on', 'off') }}
+       auditd:      {{ hardening_auditd      | bool | ternary('on', 'off') }}{{ ' (immutable)' if hardening_auditd_immutable else '' }}
+       apparmor:    {{ hardening_apparmor    | bool | ternary('on', 'off') }}
+       chrony:      {{ hardening_chrony      | bool | ternary('on', 'off') }}
+       ssh:         {{ hardening_ssh         | bool | ternary('on', 'off') }}
+       unattended:  {{ hardening_unattended  | bool | ternary('on', 'off') }}
+
+       ANSSI rule mapping: docs/anssi-mapping.md
+       Disable wholesale: install_hardening: false
+      ────────────────────────────────────────────────────────────────────
+  when: ansible_os_family == 'Debian'

@@ -1,0 +1,11 @@
+---
+- name: "[hardening.chrony] Install chrony"
+  ansible.builtin.apt:
+    name: chrony
+    state: present
+
+- name: "[hardening.chrony] Enable + start chronyd"
+  ansible.builtin.systemd:
+    name: chrony
+    enabled: true
+    state: started

@@ -71,6 +71,12 @@ final class RouterFactory
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');
 		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
 
+		// GDPR Article 30 register (Track D, 2026-04-26).
+		$api->addRoute('api/v1/gdpr/processing[/<id>]', 'Gdpr:processing');
+		$api->addRoute('api/v1/gdpr/dsar[/<id>]', 'Gdpr:dsar');
+		$api->addRoute('api/v1/gdpr/breaches[/<id>]', 'Gdpr:breaches');
+		$api->addRoute('api/v1/gdpr/export.csv', 'Gdpr:exportCsv');
+
 		// Public homepage (no auth — nginx exempts exact /)
 		$router->addRoute('', 'Homepage:default');
 
@@ -88,6 +94,9 @@ final class RouterFactory
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');
 		$router->addRoute('coexistence', 'Coexistence:default');
+
+		// GDPR browser route (Track D, 2026-04-26)
+		$router->addRoute('gdpr', 'Gdpr:default');
 
 		return $router;
 	}

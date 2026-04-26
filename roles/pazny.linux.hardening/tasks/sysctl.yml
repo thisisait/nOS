@@ -1,0 +1,11 @@
+---
+- name: "[hardening.sysctl] Apply kernel runtime parameters"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-nos-hardening.conf
+    reload: true
+  loop: "{{ hardening_sysctl_settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}={{ item.value }}"

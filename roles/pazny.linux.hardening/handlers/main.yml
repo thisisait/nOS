@@ -1,0 +1,19 @@
+---
+- name: "Restart fail2ban"
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+  become: true
+
+- name: "Restart auditd"
+  ansible.builtin.systemd:
+    name: auditd
+    state: restarted
+  become: true
+
+- name: "Reload sshd"
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded
+  become: true
+  failed_when: false   # service might be `sshd.service` on some distros

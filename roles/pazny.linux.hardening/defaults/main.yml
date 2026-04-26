@@ -1,0 +1,96 @@
+---
+# ==============================================================================
+# pazny.linux.hardening — ANSSI-aligned baseline (Track D, 2026-04-26).
+#
+# Defaults follow the ANSSI "Recommandations de configuration d'un système
+# Linux" (NT-028, BP-040 et seq.) with a few relaxations to keep a single-
+# tenant home lab usable: no AIDE (too noisy without a dedicated quarantine
+# host), no full disk encryption (assumed handled at install time).
+#
+# All flags are individually toggleable so an operator can disable a single
+# subsystem (e.g. ufw) if they prefer their own implementation. The ROOT
+# kill switch is `install_hardening: false` in default.config.yml — that
+# bypasses the entire role.
+# ==============================================================================
+
+# ── Subsystem toggles ─────────────────────────────────────────────────────────
+
+hardening_ufw:        true       # uncomplicated firewall
+hardening_fail2ban:   true       # ssh + nginx brute-force throttling
+hardening_sysctl:     true       # kernel runtime parameters
+hardening_auditd:     true       # CNIL-friendly audit log + immutable mode
+hardening_apparmor:   true       # MAC profile enforcement
+hardening_chrony:     true       # synced clock for token validation + audit logs
+hardening_ssh:        true       # /etc/ssh/sshd_config.d/99-nos.conf
+hardening_unattended: true       # automatic security updates
+
+# ── ufw policy ────────────────────────────────────────────────────────────────
+# Default: deny incoming, allow outgoing. SSH always allowed (loopback
+# self-lockout protection). HTTP/HTTPS opened because nginx faces the
+# operator's network. Tailscale port (UDP 41641) opened opportunistically;
+# leave the rule in place even if Tailscale isn't installed yet.
+
+hardening_ufw_default_incoming: "deny"
+hardening_ufw_default_outgoing: "allow"
+hardening_ufw_allowed_services:
+  - { proto: "tcp", port: 22,    comment: "SSH" }
+  - { proto: "tcp", port: 80,    comment: "HTTP (nginx)" }
+  - { proto: "tcp", port: 443,   comment: "HTTPS (nginx)" }
+  - { proto: "udp", port: 41641, comment: "Tailscale" }
+
+# ── fail2ban jails ────────────────────────────────────────────────────────────
+# 2-hour ban on 4 failed SSH attempts is the ANSSI default for human users.
+# nginx jail uses the bundled nginx-http-auth filter.
+
+hardening_fail2ban_bantime_seconds: 7200
+hardening_fail2ban_findtime_seconds: 600
+hardening_fail2ban_maxretry: 4
+
+# ── sysctl ────────────────────────────────────────────────────────────────────
+# A pragmatic subset. Full ANSSI list is in docs/anssi-mapping.md.
+
+hardening_sysctl_settings:
+  # Network — avoid IP spoofing + redirects
+  net.ipv4.conf.all.rp_filter: "1"
+  net.ipv4.conf.default.rp_filter: "1"
+  net.ipv4.icmp_echo_ignore_broadcasts: "1"
+  net.ipv4.icmp_ignore_bogus_error_responses: "1"
+  net.ipv4.conf.all.accept_source_route: "0"
+  net.ipv4.conf.default.accept_source_route: "0"
+  net.ipv6.conf.all.accept_source_route: "0"
+  net.ipv4.conf.all.accept_redirects: "0"
+  net.ipv4.conf.default.accept_redirects: "0"
+  net.ipv4.conf.all.secure_redirects: "0"
+  net.ipv4.conf.default.secure_redirects: "0"
+  net.ipv6.conf.all.accept_redirects: "0"
+  # SYN flood protection
+  net.ipv4.tcp_syncookies: "1"
+  # Docker bridge networking (also set by pazny.linux.docker if hardening
+  # is disabled — duplicate is fine, sysctl is idempotent).
+  net.ipv4.ip_forward: "1"
+  net.bridge.bridge-nf-call-iptables: "1"
+  # Memory + kernel
+  kernel.randomize_va_space: "2"
+  kernel.kptr_restrict: "2"
+  kernel.dmesg_restrict: "1"
+  fs.protected_hardlinks: "1"
+  fs.protected_symlinks: "1"
+  fs.suid_dumpable: "0"
+
+# ── auditd ────────────────────────────────────────────────────────────────────
+# Minimum subset: log all sudo invocations, identity changes, and writes to
+# /etc, /etc/ssh, /etc/sudoers*. Buffer 8192 events to absorb spikes.
+# We do NOT enable immutable mode (-e 2) — would require a reboot to change
+# rules and complicates upgrade recipes. ANSSI requires immutable in
+# regulated production; flip via hardening_auditd_immutable for those.
+
+hardening_auditd_buffer_size: 8192
+hardening_auditd_immutable: false
+
+# ── ssh ───────────────────────────────────────────────────────────────────────
+# Drop in /etc/ssh/sshd_config.d/99-nos.conf so we don't fight Debian's
+# default config. Disables passwords, MaxAuthTries=3, X11 off.
+
+hardening_ssh_password_auth: false
+hardening_ssh_permit_root_login: false
+hardening_ssh_max_auth_tries: 3

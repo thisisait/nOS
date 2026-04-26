@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: linux_hardening
+  namespace: pazny
+  author: Pazny
+  description: |
+    ANSSI-aligned baseline hardening for Debian/Ubuntu nOS hosts.
+    Covers ufw firewall, fail2ban, sysctl kernel hardening, auditd,
+    AppArmor enforcement, chrony NTP. Default: ON, opt-out via
+    `install_hardening: false`. Mapping to ANSSI BP-040, BP-058,
+    BP-063 and cloud-gouv/securix references is in
+    docs/anssi-mapping.md.
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions: ["22.04", "24.04"]
+    - name: Debian
+      versions: ["12"]
+
+dependencies: []

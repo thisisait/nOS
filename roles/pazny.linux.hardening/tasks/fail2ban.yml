@@ -1,0 +1,34 @@
+---
+- name: "[hardening.fail2ban] Install fail2ban"
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+
+- name: "[hardening.fail2ban] Drop nOS jail config"
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.d/99-nos.local
+    mode: '0644'
+    content: |
+      # Managed by pazny.linux.hardening — do not edit
+      [DEFAULT]
+      bantime  = {{ hardening_fail2ban_bantime_seconds }}
+      findtime = {{ hardening_fail2ban_findtime_seconds }}
+      maxretry = {{ hardening_fail2ban_maxretry }}
+      backend  = systemd
+
+      [sshd]
+      enabled = true
+      port    = ssh
+
+      [nginx-http-auth]
+      enabled = true
+      port    = http,https
+      filter  = nginx-http-auth
+      logpath = /var/log/nginx/error.log
+  notify: "Restart fail2ban"
+
+- name: "[hardening.fail2ban] Enable + start fail2ban"
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started

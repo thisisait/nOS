@@ -1,0 +1,26 @@
+---
+- name: "[hardening.ssh] Drop nOS sshd hardening into /etc/ssh/sshd_config.d"
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-nos-hardening.conf
+    mode: '0644'
+    content: |
+      # Managed by pazny.linux.hardening — do not edit
+      PasswordAuthentication {{ 'yes' if hardening_ssh_password_auth | bool else 'no' }}
+      PermitRootLogin {{ 'yes' if hardening_ssh_permit_root_login | bool else 'no' }}
+      MaxAuthTries {{ hardening_ssh_max_auth_tries }}
+      X11Forwarding no
+      AllowAgentForwarding no
+      AllowTcpForwarding yes
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+      LoginGraceTime 30s
+      PermitEmptyPasswords no
+      Protocol 2
+  notify: "Reload sshd"
+
+- name: "[hardening.ssh] Validate sshd config"
+  ansible.builtin.command:
+    cmd: sshd -t
+  register: _sshd_test
+  changed_when: false
+  failed_when: _sshd_test.rc != 0

@@ -1,0 +1,55 @@
+---
+- name: "[hardening.auditd] Install auditd + audispd-plugins"
+  ansible.builtin.apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: present
+
+- name: "[hardening.auditd] Drop nOS audit rules"
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/99-nos.rules
+    mode: '0640'
+    content: |
+      # Managed by pazny.linux.hardening — do not edit
+      # Buffer (events held while auditd is being signaled)
+      -b {{ hardening_auditd_buffer_size }}
+
+      # Failure mode: 1 = printk, 2 = panic. ANSSI BP-058 recommends 1
+      # for production unless integrity is paramount.
+      -f 1
+
+      # Identity / authentication
+      -w /etc/group       -p wa -k identity
+      -w /etc/passwd      -p wa -k identity
+      -w /etc/shadow      -p wa -k identity
+      -w /etc/gshadow     -p wa -k identity
+      -w /etc/sudoers     -p wa -k privesc
+      -w /etc/sudoers.d/  -p wa -k privesc
+      -w /etc/ssh/sshd_config        -p wa -k ssh
+      -w /etc/ssh/sshd_config.d/     -p wa -k ssh
+
+      # Time management — relevant for token validation under client_credentials
+      -a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change
+      -w /etc/localtime -p wa -k time-change
+
+      # Privilege escalation
+      -a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=4294967295 -k privileged
+
+      # Module loading (CVE-class kernel exploits)
+      -w /sbin/insmod -p x -k modules
+      -w /sbin/rmmod  -p x -k modules
+      -w /sbin/modprobe -p x -k modules
+
+      {% if hardening_auditd_immutable | bool %}
+      # Make rules immutable until reboot. ANSSI BP-058 requires this in
+      # regulated production. Costs a reboot to change rules.
+      -e 2
+      {% endif %}
+  notify: "Restart auditd"
+
+- name: "[hardening.auditd] Enable + start auditd"
+  ansible.builtin.systemd:
+    name: auditd
+    enabled: true
+    state: started

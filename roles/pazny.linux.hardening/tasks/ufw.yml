@@ -1,0 +1,28 @@
+---
+- name: "[hardening.ufw] Install ufw"
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: "[hardening.ufw] Set default policies"
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: "{{ hardening_ufw_default_incoming }}" }
+    - { direction: outgoing, policy: "{{ hardening_ufw_default_outgoing }}" }
+
+- name: "[hardening.ufw] Allow declared services"
+  community.general.ufw:
+    rule: allow
+    proto: "{{ item.proto }}"
+    port: "{{ item.port | string }}"
+    comment: "{{ item.comment | default(item.port | string) }}"
+  loop: "{{ hardening_ufw_allowed_services }}"
+
+- name: "[hardening.ufw] Enable + start"
+  community.general.ufw:
+    state: enabled
+    logging: "low"

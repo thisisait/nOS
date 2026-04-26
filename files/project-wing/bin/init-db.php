@@ -295,13 +295,18 @@ if ($count === 0) {
 	$db->exec('INSERT INTO scan_config (id) VALUES (1)');
 }
 
-// Apply schema extensions (State & Migration Framework tables).
-// File is idempotent — safe to run every time.
-$extPath = __DIR__ . '/../db/schema-extensions.sql';
-if (is_file($extPath)) {
-	$sql = file_get_contents($extPath);
-	if ($sql !== false && trim($sql) !== '') {
-		$db->exec($sql);
+// Apply schema extensions (State & Migration Framework tables) AND the
+// GDPR Article 30 seed register (Track D, 2026-04-26). Both files are
+// idempotent — schema uses CREATE TABLE IF NOT EXISTS, gdpr-seed uses
+// INSERT OR IGNORE — so re-running this script never overwrites operator
+// edits.
+foreach ([__DIR__ . '/../db/schema-extensions.sql',
+          __DIR__ . '/../db/gdpr-seed.sql'] as $sqlFile) {
+	if (is_file($sqlFile)) {
+		$sql = file_get_contents($sqlFile);
+		if ($sql !== false && trim($sql) !== '') {
+			$db->exec($sql);
+		}
 	}
 }
 
