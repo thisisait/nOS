@@ -45,21 +45,13 @@
   delegate_to: "{{ inventory_hostname }}"
   notify: Restart wing
 
-- name: "[pazny.wing] Chown wing tree to FPM container UID/GID"
-  # The wing container runs FPM as uid={{ wing_container_uid }} (non-root).
-  # Without this chown FPM can't write to temp/, log/, or data/wing.db.
-  # Recursive but cheap (small tree, only changes on first run / blank).
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ wing_container_uid }}"
-    group: "{{ wing_container_gid }}"
-    recurse: true
-  loop:
-    - "{{ wing_data_dir }}"
-    - "{{ wing_app_dir }}/temp"
-    - "{{ wing_app_dir }}/log"
-  become: true
+# Track A → as of 2026-04-26: container UID is bound to the host user's UID
+# (see wing_container_uid in defaults/main.yml) so files written by FPM
+# inside the container have correct ownership on the host without a chown
+# step. macOS Docker Desktop's filesystem proxy refuses writes when the
+# container UID doesn't match a real host user — anchoring container UID
+# to host UID sidesteps that entirely. On Linux (where bind-mount semantics
+# are direct UID-equivalence), it's also the simplest valid setup.
 
 - name: "[pazny.wing] Render compose-override fragment"
   ansible.builtin.template:

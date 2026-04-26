@@ -23,7 +23,7 @@
 # Project: https://containrrr.dev/watchtower/   (MIT, ARM64-native)
 # ==============================================================================
 
-watchtower_image: "containrrr/watchtower:1.7"
+watchtower_image: "containrrr/watchtower:1.7.1"
 watchtower_data_dir: "{{ ansible_facts['env']['HOME'] }}/watchtower"
 
 # How often to scan for new images (cron expression — Go cron, 6 fields).

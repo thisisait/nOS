@@ -25,10 +25,14 @@
 services: {}
 
 networks:
+  # iiab_net used to pin 172.20.0.0/16 explicitly — but Docker auto-assigns
+  # bridge subnets in start-order, and on a fresh blank reset where infra
+  # comes up before iiab, another stack (typically devops) grabs 172.20.x.y
+  # first → iiab compose-up then errors with "Pool overlaps with other one
+  # on this address space". Letting Docker pick works because nothing in
+  # the codebase pins routing rules to a specific range (verified by
+  # grepping for 172.20).
   iiab_net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
   {{ stacks_shared_network }}:
     external: true

@@ -28,11 +28,16 @@ wing_port: 9000
 wing_image_tag: "local"
 wing_image: "nos-wing:{{ wing_image_tag }}"
 
-# UID/GID the FPM process runs as inside the container. Must match the
-# Dockerfile ARG values; the role chowns the host data dir to this UID so
-# php-fpm can write wing.db / temp / log without permission errors.
-wing_container_uid: 10082
-wing_container_gid: 10082
+# UID/GID the FPM process runs as inside the container. We use the HOST
+# user's UID (typically 501 on macOS, 1000 on Linux) because the wing
+# source + data dirs are bind-mounted from the host, and macOS Docker
+# Desktop's gRPC-FUSE filesystem proxy rejects writes when the container
+# UID doesn't match a real host user. Linux bind mounts simply require
+# the host directory to be writable by the same UID. Either way, mirroring
+# the host UID inside the container is the most portable answer — it
+# avoids the chown dance entirely.
+wing_container_uid: "{{ ansible_facts['user_uid'] | default(ansible_user_uid | default(501)) }}"
+wing_container_gid: "{{ ansible_facts['user_gid'] | default(ansible_user_gid | default(20)) }}"
 
 # Resource caps. Wing's hot path is small (single-tenant home lab), but
 # Nette + tracy can spike during cache warmup.

@@ -79,15 +79,32 @@ RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini \
 
 # php-fpm runs as user `www-data` by default in the upstream image; that
 # UID (82 in alpine) won't necessarily match the host user owning the
-# bind-mounted source. We override the pool to run as a fixed UID we can
-# chown the data dir to from the role.
-ARG WING_UID=10082
-ARG WING_GID=10082
-RUN deluser www-data 2>/dev/null || true \
- && delgroup www-data 2>/dev/null || true \
- && addgroup -g "${WING_GID}" -S wing \
- && adduser  -u "${WING_UID}" -S -G wing -h /home/wing -s /bin/bash wing
-RUN sed -i "s|^user = .*|user = wing|; s|^group = .*|group = wing|" \
+# bind-mounted source. We bind the container user to the HOST user's UID
+# so files written by FPM appear as host-owned (no chown dance needed),
+# which is also the only setup that works under macOS Docker Desktop's
+# gRPC-FUSE filesystem proxy.
+#
+# Alpine's base image already populates several low GIDs (e.g. gid 20 =
+# games), and the host user's primary GID on macOS is 20. So we can't
+# blindly `addgroup -g $GID`. Strategy: if a group with the desired GID
+# already exists, keep it; otherwise create one named "wing". Then
+# `usermod` the upstream `www-data` user onto the desired UID + GID. This
+# avoids deletion+recreation entirely and is robust to GID collisions.
+ARG WING_UID=501
+ARG WING_GID=20
+RUN set -eu; \
+    target_uid="${WING_UID}"; target_gid="${WING_GID}"; \
+    existing_grp="$(getent group "${target_gid}" 2>/dev/null | cut -d: -f1 || true)"; \
+    if [ -z "${existing_grp}" ]; then \
+        addgroup -g "${target_gid}" -S wing; \
+        existing_grp="wing"; \
+    fi; \
+    # www-data exists in php:fpm-alpine; retarget it to the host UID/GID
+    if id -u www-data >/dev/null 2>&1; then \
+        deluser www-data; \
+    fi; \
+    adduser -u "${target_uid}" -S -G "${existing_grp}" -h /home/wing -s /bin/bash www-data; \
+    sed -i "s|^user = .*|user = www-data|; s|^group = .*|group = ${existing_grp}|" \
         /usr/local/etc/php-fpm.d/www.conf
 
 EXPOSE 9000
