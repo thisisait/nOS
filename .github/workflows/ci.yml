@@ -13,6 +13,13 @@ name: CI
   schedule:
     - cron: "0 5 * * 4"
 
+# Default minimum permissions for every job — read-only access to the
+# repository. Closes GitHub Code Scanning's actions/missing-workflow-
+# permissions alerts (#1, #2, #7). Per-job overrides may add more
+# capabilities (e.g., write for release jobs) once we have any.
+permissions:
+  contents: read
+
 jobs:
 
   # ──────────────────────────────────────────────────────────────────────────

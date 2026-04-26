@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import socket
 import subprocess
 import time
@@ -118,7 +119,13 @@ async def run_tag(
     _: None = Depends(_verify_api_key),
 ):
     """Trigger ansible-playbook with a specific tag (requires API key)."""
-    if not tag or not tag.replace("-", "").replace("_", "").replace(",", "").isalnum():
+    # Strict allow-list: must start with a letter, then alphanumeric + `_-,`.
+    # Rejects values that would parse as ansible-playbook flags (e.g. starting
+    # with `-`). subprocess.Popen is invoked with a list-form `cmd` and
+    # shell=False so even loose validation can't reach a shell, but we keep
+    # the validator strict so CodeQL's command-injection check is satisfied
+    # without having to mark the alert as "won't fix".
+    if not tag or not re.match(r"^[A-Za-z][A-Za-z0-9_,-]{0,99}$", tag):
         raise HTTPException(status_code=400, detail="Invalid tag format")
 
     cmd = [
