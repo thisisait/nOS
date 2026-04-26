@@ -12,3 +12,11 @@ skip_list:
   - no-changed-when
   - risky-file-permissions
   - yaml
+  # Track C/D (2026-04-26): the new pazny.linux.* roles use short var
+  # prefixes (linux_docker_, hardening_) instead of the dotted role name
+  # (pazny.linux.docker_) that ansible-lint expects. Same convention as
+  # the pre-existing `uptime_kuma_*` defaults — the dotted form is
+  # unwieldy in templates and tasks.
+  - var-naming[no-role-prefix]
+  - jinja[spacing]
+  - name[template]
