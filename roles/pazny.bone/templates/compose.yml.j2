@@ -40,10 +40,11 @@ services:
       # Desktop). If Authentik is wholly disabled (install_authentik=false),
       # set BONE_REQUIRE_JWT_AUTH=0 in your config.yml to fall back to
       # HMAC-only mode (telemetry pipeline still works).
-      # Issuer URL we expect on incoming tokens (matches Authentik's
-      # `issuer_mode: global` claim). Used for `iss` claim match only —
-      # Bone never connects to this URL for JWKS.
-      AUTHENTIK_OIDC_ISSUER: "{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth.dev.local')) + '/application/o/') }}"
+      # Issuer URL we expect on incoming tokens. Authentik with
+      # `issuer_mode: global` emits `iss = https://<authentik_domain>/`
+      # (root URL, trailing slash, no /application/o/). The trailing
+      # slash matters — PyJWT's verify_iss does strict string match.
+      AUTHENTIK_OIDC_ISSUER: "{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth.dev.local')) + '/') }}"
       # JWKS fetch URL — internal compose-network HTTP endpoint, NOT the
       # public HTTPS URL. Avoids TLS trust dance + DNS resolution for
       # `auth.<tld>` from inside the container. Any agent's slug works

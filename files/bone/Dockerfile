@@ -68,6 +68,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt \
 # Copy every Python module in files/bone/. Keep this list explicit — adding a
 # new module to the role means adding it here too.
 COPY main.py        /app/main.py
+COPY auth.py        /app/auth.py
 COPY events.py      /app/events.py
 COPY state.py       /app/state.py
 COPY migrations.py  /app/migrations.py

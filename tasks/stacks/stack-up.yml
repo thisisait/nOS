@@ -163,7 +163,7 @@
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     {% for f in _stack_overrides_map[item] | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p "{{ item }}"
-    up -d --remove-orphans --wait --wait-timeout 120
+    up -d --build --remove-orphans --wait --wait-timeout 120
     {{ _docker_compose_pull | default('') }} 2>&1
   loop: "{{ _remaining_stacks }}"
   register: _stack_results

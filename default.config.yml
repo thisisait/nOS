@@ -1976,7 +1976,11 @@ authentik_agent_token_validity: "hours=12"
 # Authentik OIDC discovery URL — derived. Bone reads /.well-known/openid-configuration
 # from this base, then loads JWKS from there. The role ensures Authentik is
 # up before Bone's post-start runs, so this lookup never races.
-authentik_oidc_issuer: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/"
+# Authentik with `issuer_mode: global` (set per-provider in the agent
+# clients blueprint) emits `iss = https://<authentik_domain>/` — the root
+# URL with a trailing slash, NOT /application/o/. Bone's JWT validator
+# matches this string exactly, so the trailing slash matters.
+authentik_oidc_issuer: "https://{{ authentik_domain | default('auth.dev.local') }}/"
 
 # ==============================================================================
 # INFISICAL CE – Secrets Management (REST API, CLI, SDK)

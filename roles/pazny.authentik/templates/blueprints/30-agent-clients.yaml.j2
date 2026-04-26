@@ -70,6 +70,13 @@ entries:
       # JWKS client. issuer = https://auth.<tld>/application/o/  (no trailing
       # slug). per_provider would force Bone to maintain N JWKS caches.
       issuer_mode: "global"
+      # Authentik's oauth2provider serializer requires redirect_uris even
+      # for the client_credentials grant (which never uses them — there's
+      # no browser flow). Stub with an unreachable localhost URI; the field
+      # is validated for shape, not actually consulted at token-mint time.
+      redirect_uris:
+        - matching_mode: "strict"
+          url: "http://localhost/never-used-by-client-credentials"
       property_mappings:
 {% for cap in caps %}
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, "{{ cap }}"]]
