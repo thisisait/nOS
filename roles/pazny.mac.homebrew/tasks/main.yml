@@ -241,13 +241,46 @@
         - homebrew_cask_auto_upgrade | default(true) | bool
         - (_cask_outdated_before.stdout_lines | default([]) | length) > 0
 
-    - name: "Upgrade outdated casks (skip running)"
+    - name: "Detect pkg-installer casks (need sudo for /Library cleanup)"
+      # Casks with `pkg` artifacts (dotnet-sdk, microsoft-edge, vmware-fusion, …)
+      # drop files into /Library/* and call `sudo` internally during upgrade.
+      # We split them out of the fast batch upgrade and run them via the
+      # `homebrew_cask` Ansible module with `sudo_password:` — that's the only
+      # supported way to feed sudo a password without an interactive terminal.
+      ansible.builtin.shell: |
+        set -o pipefail
+        pkg=()
+        while IFS= read -r cask; do
+          [ -z "$cask" ] && continue
+          has_pkg=$(brew info --cask --json=v2 "$cask" 2>/dev/null \
+                    | python3 -c "import json,sys; d=json.load(sys.stdin); arts=d['casks'][0].get('artifacts',[]); print('yes' if any(isinstance(a,dict) and a.get('pkg') for a in arts) else 'no')" 2>/dev/null || echo "no")
+          if [ "$has_pkg" = "yes" ]; then
+            pkg+=("$cask")
+          fi
+        done <<< "{{ (_cask_outdated_before.stdout_lines | default([])) | join('\n') }}"
+        printf '%s\n' "${pkg[@]}"
+      args:
+        executable: /bin/bash
+      register: _cask_pkg_installer
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when:
+        - homebrew_cask_auto_upgrade | default(true) | bool
+        - (_cask_outdated_before.stdout_lines | default([]) | length) > 0
+
+    - name: "Upgrade non-pkg casks (fast batch via brew CLI)"
+      # Plain `brew upgrade --cask <list>` is ~5x faster than looping through
+      # the homebrew_cask module per-cask, but it can't supply a sudo password.
+      # We use this for casks WITHOUT pkg artifacts; pkg-installer casks go
+      # through the slower-but-sudo-aware module loop below.
       ansible.builtin.command: >-
         brew upgrade --cask {{ _safe_to_upgrade | join(' ') }}
       vars:
         _safe_to_upgrade: >-
           {{ (_cask_outdated_before.stdout_lines | default([]))
-             | difference(_cask_running.stdout_lines | default([])) }}
+             | difference(_cask_running.stdout_lines | default([]))
+             | difference(_cask_pkg_installer.stdout_lines | default([])) }}
       register: _cask_upgrade_result
       changed_when:
         - _cask_upgrade_result.rc == 0
@@ -261,24 +294,76 @@
         - homebrew_cask_auto_upgrade | default(true) | bool
         - (_safe_to_upgrade | length) > 0
 
+    - name: "Upgrade pkg-installer casks (homebrew_cask + sudo_password)"
+      # The `homebrew_cask` module's `sudo_password:` parameter is the
+      # canonical way to drive cask upgrades that touch /Library/*. The
+      # password comes from -K (collected at playbook start as
+      # ansible_become_password) and never lands in logs (no_log: true).
+      # Module is slower per cask (~30s) than the batch CLI but is the only
+      # path that handles brew's internal sudo prompts cleanly.
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+        state: latest
+        sudo_password: "{{ ansible_become_password }}"
+      loop: "{{ _cask_pkg_installer.stdout_lines | default([]) }}"
+      register: _cask_pkg_upgrade_result
+      no_log: true
+      when:
+        - homebrew_cask_auto_upgrade | default(true) | bool
+        - (_cask_pkg_installer.stdout_lines | default([]) | length) > 0
+        - ansible_become_password is defined
+        - ansible_become_password | length > 0
+
+    - name: "Notice: pkg-installer casks left for manual upgrade (no -K password)"
+      # Operator ran `ansible-playbook` without -K, so we have no sudo
+      # password to feed homebrew_cask. Print a single-line manual-upgrade
+      # command they can paste into a terminal. NOT a workaround — this
+      # is the deterministic fallback when the playbook is intentionally
+      # invoked without escalation.
+      ansible.builtin.debug:
+        msg: |
+          {{ _cask_pkg_installer.stdout_lines | length }} pkg-installer cask(s) need sudo for cleanup
+          and were not upgraded (no BECOME password supplied — re-run with -K to upgrade them).
+          Manual one-liner:
+            brew upgrade --cask {{ _cask_pkg_installer.stdout_lines | join(' ') }}
+      when:
+        - homebrew_cask_auto_upgrade | default(true) | bool
+        - (_cask_pkg_installer.stdout_lines | default([]) | length) > 0
+        - ansible_become_password is not defined or (ansible_become_password | default('') | length) == 0
+
     - name: "Cask upgrade report"
       ansible.builtin.debug:
         msg: |-
           {% set outdated = _cask_outdated_before.stdout_lines | default([]) %}
           {% set running = _cask_running.stdout_lines | default([]) %}
-          {% set upgraded = outdated | difference(running) %}
+          {% set pkginst = _cask_pkg_installer.stdout_lines | default([]) %}
+          {% set has_become = (ansible_become_password | default('') | length) > 0 %}
+          {% set fast_upgraded = outdated | difference(running) | difference(pkginst) %}
+          {% set pkg_upgraded = pkginst if has_become else [] %}
+          {% set pkg_deferred = [] if has_become else pkginst %}
+          {% set total_upgraded = (fast_upgraded | length) + (pkg_upgraded | length) %}
           {% if outdated | length == 0 %}
           Casks: all up-to-date ({{ homebrew_cask_apps | length }} managed).
           {% else %}
-          Casks: {{ upgraded | length }} upgraded, {{ running | length }} skipped (running).
-          {% if upgraded %}
-          Upgraded:
-          {% for c in upgraded %}  - {{ c }}
+          Casks: {{ total_upgraded }} upgraded ({{ fast_upgraded | length }} fast + {{ pkg_upgraded | length }} pkg-installer), {{ running | length }} skipped (running){% if pkg_deferred %}, {{ pkg_deferred | length }} skipped (no BECOME password){% endif %}.
+          {% if fast_upgraded %}
+          Upgraded (fast batch):
+          {% for c in fast_upgraded %}  - {{ c }}
+          {% endfor %}
+          {% endif %}
+          {% if pkg_upgraded %}
+          Upgraded (pkg-installer via sudo):
+          {% for c in pkg_upgraded %}  - {{ c }}
           {% endfor %}
           {% endif %}
           {% if running %}
           Deferred (quit the app + re-run --tags homebrew):
           {% for c in running %}  - {{ c }}
+          {% endfor %}
+          {% endif %}
+          {% if pkg_deferred %}
+          Skipped pkg-installer (no -K — re-run with -K or upgrade manually):
+          {% for c in pkg_deferred %}  - {{ c }}
           {% endfor %}
           {% endif %}
           {% endif %}
