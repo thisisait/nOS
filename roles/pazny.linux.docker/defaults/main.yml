@@ -1,0 +1,29 @@
+---
+# ==============================================================================
+# pazny.linux.docker — Docker CE + compose plugin install on Debian/Ubuntu.
+# Sibling role to the Mac path where Docker Desktop is the runtime; on Linux
+# we use the upstream Docker repo (so we get a recent compose plugin and
+# buildx, not the older docker.io APT package).
+# ==============================================================================
+
+# Whether to add the invoking user to the `docker` group so they can run
+# `docker` without sudo. Disabled by default — operators that prefer to
+# keep the user out of the docker group can use the systemd-managed user
+# session via `loginctl enable-linger` + the rootless setup (future work).
+linux_docker_add_user_to_group: true
+
+# Linux user to add to the docker group. Defaults to the SSH login user.
+linux_docker_user: "{{ ansible_user_id }}"
+
+# Pin the Docker repo distribution. Auto-detected by lsb_release; override
+# only if you're on a derivative (Pop!_OS, Linux Mint, etc.) where the
+# upstream codename differs.
+linux_docker_distro_codename: "{{ ansible_distribution_release | lower }}"
+
+# Apt repo selection. `stable` follows the latest GA. `test` and `nightly`
+# exist if you want to live dangerously.
+linux_docker_repo_channel: "stable"
+
+# Optional: pin a specific docker-ce version (apt-style version spec, e.g.
+# "5:27.3.1-1~ubuntu.24.04~noble"). Empty = latest.
+linux_docker_version: ""

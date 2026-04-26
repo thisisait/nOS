@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# Install Docker CE + compose plugin + buildx on Debian/Ubuntu hosts.
+#
+# Pipeline:
+#   1. Install GPG key + repo prerequisite packages
+#   2. Add Docker's official APT key to /etc/apt/keyrings
+#   3. Add the repo to /etc/apt/sources.list.d/docker.list
+#   4. apt update + install docker-ce, cli, containerd, buildx, compose plugin
+#   5. Add the user to the `docker` group (optional)
+#   6. Enable + start the daemon
+#
+# Idempotent on every step; safe to re-run after Docker upgrades.
+# ==============================================================================
+
+- name: Block (Debian/Ubuntu only)
+  when: ansible_os_family in ['Debian']
+  become: true
+  block:
+    - name: "[linux.docker] Install repo prerequisites"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "[linux.docker] Ensure /etc/apt/keyrings exists"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: "[linux.docker] Add Docker official GPG key"
+      # Idempotent: ansible.builtin.apt_key + url honors the dest file's
+      # presence and skips re-download if the bytes match.
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: "[linux.docker] Add Docker APT repository"
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ ansible_architecture | replace('aarch64', 'arm64')
+                                            | replace('x86_64', 'amd64') }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/{{ ansible_distribution | lower }}
+          {{ linux_docker_distro_codename }} {{ linux_docker_repo_channel }}
+        state: present
+        filename: docker
+        update_cache: true
+
+    - name: "[linux.docker] Install Docker CE + compose plugin + buildx"
+      ansible.builtin.apt:
+        name: >-
+          {{ ['docker-ce' + (('=' + linux_docker_version) if linux_docker_version else ''),
+              'docker-ce-cli',
+              'containerd.io',
+              'docker-buildx-plugin',
+              'docker-compose-plugin'] }}
+        state: present
+
+    - name: "[linux.docker] Enable + start docker.service"
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: "[linux.docker] Add {{ linux_docker_user }} to docker group"
+      ansible.builtin.user:
+        name: "{{ linux_docker_user }}"
+        groups: docker
+        append: true
+      when: linux_docker_add_user_to_group | bool
+
+    - name: "[linux.docker] Notice if user just got group access"
+      ansible.builtin.debug:
+        msg: |
+          {{ linux_docker_user }} was added to the docker group. The change
+          takes effect on the next login (or `newgrp docker`). Until then
+          docker commands need sudo.
+      when:
+        - linux_docker_add_user_to_group | bool
+
+    - name: "[linux.docker] Verify daemon is responsive"
+      ansible.builtin.command:
+        cmd: docker info
+      register: _docker_info
+      changed_when: false
+      retries: 5
+      delay: 2
+      until: _docker_info.rc == 0
+
+    - name: "[linux.docker] Print install summary"
+      ansible.builtin.debug:
+        msg: |
+          Docker installed and running.
+          Daemon: {{ (_docker_info.stdout_lines | select('match', '^ Server Version:.*') | first) | default('?') }}
+          Compose plugin: {{ ansible_facts['env']['HOME'] }}/.docker/cli-plugins/docker-compose

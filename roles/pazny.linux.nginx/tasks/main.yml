@@ -1,0 +1,57 @@
+---
+# ==============================================================================
+# Install nginx on Debian/Ubuntu and lay out the directories the playbook's
+# vhost templates expect.
+#
+# nOS's vhost templates use `{{ nos_nginx_etc_dir }}/sites-available/<svc>.conf`
+# + symlinks to sites-enabled. Debian's nginx package ships those dirs out
+# of the box, so we mostly verify they exist and that nginx -t passes.
+# ==============================================================================
+
+- name: Block (Debian/Ubuntu only)
+  when: ansible_os_family == 'Debian'
+  become: true
+  block:
+    - name: "[linux.nginx] Install nginx package"
+      ansible.builtin.apt:
+        name: "{{ linux_nginx_package }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "[linux.nginx] Ensure sites-available + sites-enabled exist"
+      # Debian's package creates these. Defensive `state: directory` covers
+      # the edge case where someone deleted them by hand.
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ nos_nginx_sites_available | default('/etc/nginx/sites-available') }}"
+        - "{{ nos_nginx_sites_enabled   | default('/etc/nginx/sites-enabled') }}"
+        - "{{ nos_nginx_etc_dir         | default('/etc/nginx') }}/conf.d"
+
+    - name: "[linux.nginx] Disable Debian's default vhost (we replace it)"
+      ansible.builtin.file:
+        path: "{{ nos_nginx_sites_enabled | default('/etc/nginx/sites-enabled') }}/default"
+        state: absent
+      notify: "Reload nginx (linux)"
+
+    - name: "[linux.nginx] Install snakeoil cert (placeholder until ACME/mkcert)"
+      ansible.builtin.apt:
+        name: ssl-cert
+        state: present
+      when: linux_nginx_use_snakeoil | bool
+
+    - name: "[linux.nginx] Validate nginx config"
+      ansible.builtin.command:
+        cmd: nginx -t
+      register: _linux_nginx_test
+      changed_when: false
+      failed_when: _linux_nginx_test.rc != 0
+
+    - name: "[linux.nginx] Enable + start nginx.service"
+      ansible.builtin.systemd:
+        name: nginx
+        enabled: true
+        state: started

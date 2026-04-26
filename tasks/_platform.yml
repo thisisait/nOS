@@ -1,0 +1,99 @@
+---
+# ==============================================================================
+# Cross-platform variable resolution (Track C, 2026-04-26).
+#
+# Imported as the very first thing in main.yml's pre_tasks. Sets a small set
+# of nos_* variables that abstract the macOS vs Ubuntu Linux differences
+# touched by the playbook. Most roles still default to the macOS path via
+# `homebrew_prefix` etc. — this layer is for the cross-platform glue
+# (nginx vhost rendering, docker bin path, autostart unit dir).
+#
+# Variables produced (all prefixed `nos_`):
+#   nos_platform              "macos" | "ubuntu" | "debian" | "redhat" | "linux"
+#   nos_pkg_manager           "homebrew" | "apt" | "dnf"
+#   nos_nginx_prefix          /opt/homebrew | /usr
+#   nos_nginx_etc_dir         /opt/homebrew/etc/nginx | /etc/nginx
+#   nos_nginx_log_dir         /opt/homebrew/var/log/nginx | /var/log/nginx
+#   nos_nginx_run_user        _www | www-data
+#   nos_nginx_sites_available {{ nos_nginx_etc_dir }}/sites-available
+#   nos_nginx_sites_enabled   {{ nos_nginx_etc_dir }}/sites-enabled
+#   nos_systemd_user_dir      ~/Library/LaunchAgents | ~/.config/systemd/user
+#   nos_service_manager       "launchd" | "systemd-user" | "systemd-system"
+#   nos_docker_bin            /usr/local/bin/docker | /usr/bin/docker
+#   nos_homebrew_prefix       /opt/homebrew | "" (empty on Linux)
+#
+# Why: 282 references to `homebrew_prefix` / `launchctl` / `Library/LaunchAgents`
+# exist across the playbook. We don't rewrite all of them in Track C — this
+# file is the seam future cross-platform fixes plug into. Roles that mutate
+# the host (Homebrew installs, launchd loads) keep their Darwin gates and
+# get Linux siblings (pazny.linux.*).
+# ==============================================================================
+
+- name: "[platform] Detect distribution flavour"
+  ansible.builtin.set_fact:
+    nos_platform: >-
+      {{ 'macos' if ansible_os_family == 'Darwin' else
+         'ubuntu' if ansible_distribution == 'Ubuntu' else
+         'debian' if ansible_os_family == 'Debian' else
+         'redhat' if ansible_os_family == 'RedHat' else
+         'linux' }}
+
+- name: "[platform] Set macOS variables"
+  ansible.builtin.set_fact:
+    nos_pkg_manager: "homebrew"
+    nos_homebrew_prefix: "{{ homebrew_prefix | default('/opt/homebrew') }}"
+    nos_nginx_prefix: "{{ homebrew_prefix | default('/opt/homebrew') }}"
+    nos_nginx_etc_dir: "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx"
+    nos_nginx_log_dir: "{{ homebrew_prefix | default('/opt/homebrew') }}/var/log/nginx"
+    nos_nginx_run_user: "_www"
+    nos_systemd_user_dir: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents"
+    nos_service_manager: "launchd"
+    nos_docker_bin: "{{ docker_bin | default('/usr/local/bin/docker') }}"
+  when: nos_platform == 'macos'
+
+- name: "[platform] Set Debian/Ubuntu variables"
+  ansible.builtin.set_fact:
+    nos_pkg_manager: "apt"
+    nos_homebrew_prefix: ""
+    nos_nginx_prefix: "/usr"
+    nos_nginx_etc_dir: "/etc/nginx"
+    nos_nginx_log_dir: "/var/log/nginx"
+    nos_nginx_run_user: "www-data"
+    nos_systemd_user_dir: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    # We default to user-mode systemd so the playbook can run unprivileged
+    # outside of `become: true` blocks. Hardening + docker install need root
+    # via explicit `become: true` in their own roles.
+    nos_service_manager: "systemd-user"
+    nos_docker_bin: "/usr/bin/docker"
+  when: nos_platform in ['ubuntu', 'debian']
+
+- name: "[platform] Set RedHat/Fedora variables"
+  ansible.builtin.set_fact:
+    nos_pkg_manager: "dnf"
+    nos_homebrew_prefix: ""
+    nos_nginx_prefix: "/usr"
+    nos_nginx_etc_dir: "/etc/nginx"
+    nos_nginx_log_dir: "/var/log/nginx"
+    nos_nginx_run_user: "nginx"
+    nos_systemd_user_dir: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    nos_service_manager: "systemd-user"
+    nos_docker_bin: "/usr/bin/docker"
+  when: nos_platform == 'redhat'
+
+- name: "[platform] Compute derived nginx vhost paths"
+  ansible.builtin.set_fact:
+    nos_nginx_sites_available: "{{ nos_nginx_etc_dir }}/sites-available"
+    nos_nginx_sites_enabled: "{{ nos_nginx_etc_dir }}/sites-enabled"
+
+- name: "[platform] Print platform summary"
+  ansible.builtin.debug:
+    msg: |
+      ── platform ────────────────────────────────────────────────────────
+       OS family:        {{ ansible_os_family }}
+       Distribution:     {{ ansible_distribution | default('?') }}
+       Detected:         {{ nos_platform }}
+       Package manager:  {{ nos_pkg_manager }}
+       Service manager:  {{ nos_service_manager }}
+       nginx etc:        {{ nos_nginx_etc_dir }}
+       systemd user:     {{ nos_systemd_user_dir }}
+      ────────────────────────────────────────────────────────────────────

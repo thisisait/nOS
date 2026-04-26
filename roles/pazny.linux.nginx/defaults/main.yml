@@ -1,0 +1,15 @@
+---
+# ==============================================================================
+# pazny.linux.nginx — install + start nginx on Debian/Ubuntu hosts.
+# Sibling to the macOS path (Homebrew nginx). Same vhost templates plug in
+# via the cross-platform nos_nginx_* vars from tasks/_platform.yml.
+# ==============================================================================
+
+# Whether to provision a snakeoil cert at install time so nginx -t passes
+# before tasks/nginx.yml renders real certs from mkcert / acme.sh. The
+# Debian package ships /etc/ssl/certs/ssl-cert-snakeoil.pem already.
+linux_nginx_use_snakeoil: true
+
+# Which subset of mods to enable. The defaults match Debian's `nginx-light`
+# featureset; switch to `nginx-extras` if you need lua / image_filter / etc.
+linux_nginx_package: "nginx"

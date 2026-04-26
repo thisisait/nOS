@@ -1,0 +1,6 @@
+---
+- name: "Reload nginx (linux)"
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  become: true
