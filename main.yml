@@ -3,35 +3,47 @@
   hosts: all
   gather_facts: true
 
-  # Sudo password is prompted by Ansible's native -K / --ask-become-pass flag.
-  # The prompted value is accessible as `ansible_become_password` in templates,
-  # so no vars_prompt is needed. Run:
-  #   ansible-playbook main.yml -K                # full install with sudo
-  #   ansible-playbook main.yml -K -e blank=true  # clean reinstall
-  # Running without -K is fine for read-only / dry-run checks:
+  # Sudo password is prompted ONCE via vars_prompt (see below). Don't pass
+  # -K — the vars_prompt'd value is also wired into ansible_become_password
+  # (in the vars: block below), so Ansible's native `become: true` and
+  # template-visible sudo (homebrew_cask, askpass) share a single source.
+  # Run:
+  #   ansible-playbook main.yml                  # full install (prompts for password)
+  #   ansible-playbook main.yml -e blank=true    # clean reinstall (also prompts)
+  # Press Enter at the prompt for read-only / dry-run checks:
   #   ansible-playbook main.yml --tags preflight --check
-  # but any sudo task (dnsmasq, /etc/resolver, system-services) will fail.
+  # but any sudo task (dnsmasq, /etc/resolver, system-services) will then fail.
 
   vars_files:
     - default.config.yml
     - default.credentials.yml
 
   # Sudo password — captured ONCE at playbook start as `nos_sudo_password`.
-  # Required path: -K populates `ansible_become_password` for Ansible's
-  # internal `become: true` tasks, but Ansible deliberately HIDES that
-  # variable from Jinja templates (a security feature that varies by
-  # version). Tasks that need to forward sudo into a child process tree
-  # (Homebrew cask pkg-installer cleanup, expect-style automation) need
-  # the password as a real, template-visible variable. vars_prompt is the
-  # single canonical source. Press Enter to skip — pkg-installer cask
-  # upgrades will then fall back to a manual one-liner.
+  # This SINGLE variable serves both:
+  #
+  #   1. Tasks that need it template-visible (homebrew_cask sudo_password,
+  #      askpass helper, anything else that forwards sudo into a child
+  #      process tree). Ansible's own -K populates `ansible_become_password`
+  #      but deliberately hides that variable from Jinja templates as a
+  #      security feature, which varies by version — vars_prompt sidesteps
+  #      that entirely.
+  #
+  #   2. Ansible's own `become: true` escalation, via the
+  #      `ansible_become_password` assignment in the `vars:` block below
+  #      (Ansible reads that magic var and uses it for sudo).
+  #
+  # The upshot: run plain `ansible-playbook main.yml -e blank=true`
+  # (no -K). Type the password once at the prompt. Press Enter to skip
+  # — pkg-installer cask upgrades + sudo-needing system tasks will then
+  # fall back to manual one-liners.
   vars_prompt:
     - name: nos_sudo_password
       prompt: |-
 
         ──────────────────────────────────────────────────────────────────
-         macOS sudo password (for pkg-installer cask upgrades + system tasks).
-         Same value you give to `-K`. Press Enter to skip.
+         macOS sudo password (one-stop — replaces -K).
+         Used for system tasks AND Homebrew cask pkg-installer cleanup.
+         Press Enter to skip (those tasks will fall back to manual mode).
         ──────────────────────────────────────────────────────────────────
       private: true
       confirm: false
@@ -43,6 +55,13 @@
   # see goes here. Override via `-e wing_telemetry_enabled=false` if you want
   # to silence the callback on a specific run.
   vars:
+    # Make the vars_prompt'd password also serve Ansible's internal `become:
+    # true` escalation. This eliminates the need for -K — typing at the
+    # vars_prompt above is sufficient for both template-visible sudo
+    # (homebrew_cask) AND Ansible's native become path (system tasks like
+    # /etc/resolver, dnsmasq, network-services).
+    ansible_become_password: "{{ nos_sudo_password }}"
+
     wing_telemetry_enabled: "{{ install_bone | default(false) }}"
     # Resolve the events ingestion URL from bone_domain so it tracks the
     # current instance_tld instead of the stale plugin default of
@@ -59,45 +78,32 @@
       tags: ['always', 'platform']
 
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
-    # Catches syntax errors (stray markdown paste, missing ':', bad indent)
-    # before Ansible's own include_vars barfs with a cryptic scanner error.
-    # Missing user overrides (config.yml / credentials.yml) are skipped
-    # silently (FileNotFoundError -> exit 0). Run standalone with
-    # `--tags preflight` to sanity-check configs without a full playbook run.
-    - name: "[Preflight] Validate YAML config files are well-formed"
-      ansible.builtin.command:
-        argv:
-          - python3
-          - "-c"
-          - |
-            import sys, yaml
-            path = sys.argv[1]
-            try:
-                with open(path) as f:
-                    yaml.safe_load(f)
-            except FileNotFoundError:
-                sys.exit(0)
-            except yaml.YAMLError as e:
-                mark = getattr(e, "problem_mark", None)
-                loc = f":{mark.line + 1}:{mark.column + 1}" if mark else ""
-                msg = f"{path}{loc}: {getattr(e, 'problem', e)}"
-                ctx = getattr(e, "context", None)
-                if ctx:
-                    # e.context already starts with "while ..." — don't double it
-                    msg += f" ({ctx})"
-                sys.stderr.write(msg + "\n")
-                sys.stderr.write(
-                    "Hint: ensure every non-comment line is 'key: value'. "
-                    "Raw markdown/prose must be prefixed with '# '.\n"
-                )
-                sys.exit(1)
-          - "{{ item }}"
+    # Uses Ansible's own YAML loader via `include_vars` — no external Python
+    # interpreter, no PyYAML dependency on the host (some Homebrew Python
+    # upgrades drop pyyaml from site-packages and broke the previous python3
+    # -based validator). The loaded vars go into a throwaway scope name so
+    # they don't pollute the real var namespace; the real vars_files +
+    # config.yml include below this block do the actual loading.
+    - name: "[Preflight] Stat config files (skip cleanly if user overrides absent)"
+      ansible.builtin.stat:
+        path: "{{ item }}"
       loop:
         - "{{ playbook_dir }}/default.config.yml"
         - "{{ playbook_dir }}/default.credentials.yml"
         - "{{ playbook_dir }}/config.yml"
         - "{{ playbook_dir }}/credentials.yml"
+      register: _preflight_stats
       changed_when: false
+      tags: ['always', 'preflight']
+
+    - name: "[Preflight] Validate YAML config files are well-formed"
+      ansible.builtin.include_vars:
+        file: "{{ item.item }}"
+        name: "_preflight_throwaway"
+      loop: "{{ _preflight_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stat.exists | default(false)
       tags: ['always', 'preflight']
 
     - name: Include playbook configuration overrides.
