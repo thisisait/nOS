@@ -16,6 +16,27 @@
     - default.config.yml
     - default.credentials.yml
 
+  # Sudo password — captured ONCE at playbook start as `nos_sudo_password`.
+  # Required path: -K populates `ansible_become_password` for Ansible's
+  # internal `become: true` tasks, but Ansible deliberately HIDES that
+  # variable from Jinja templates (a security feature that varies by
+  # version). Tasks that need to forward sudo into a child process tree
+  # (Homebrew cask pkg-installer cleanup, expect-style automation) need
+  # the password as a real, template-visible variable. vars_prompt is the
+  # single canonical source. Press Enter to skip — pkg-installer cask
+  # upgrades will then fall back to a manual one-liner.
+  vars_prompt:
+    - name: nos_sudo_password
+      prompt: |-
+
+        ──────────────────────────────────────────────────────────────────
+         macOS sudo password (for pkg-installer cask upgrades + system tasks).
+         Same value you give to `-K`. Press Enter to skip.
+        ──────────────────────────────────────────────────────────────────
+      private: true
+      confirm: false
+      default: ""
+
   # Play-level vars are visible to callback plugins via play.get_vars(); vars
   # from vars_files (default.config.yml / config.yml) are NOT — Ansible only
   # surfaces the play's own vars: block. Anything that a callback plugin must
@@ -172,23 +193,27 @@
         _docker_compose_pull: "{{ '--pull always' if version_policy | default('stable') in ['latest', 'lts'] else '' }}"
       tags: ['always']
 
-    # sudo askpass helper - Homebrew cask installer (and others) internally calls
-    # sudo but does not know the Ansible become password. This script hands it over via
-    # SUDO_ASKPASS env var so cask install does not fail on "sudo: a password is required".
+    # sudo askpass helper — Homebrew cask installer (and other tools) internally
+    # calls plain `sudo` and only respects SUDO_ASKPASS when sudo is invoked
+    # with -A. The askpass script is set on the play environment below so
+    # any task / shell invocation that does spawn `sudo -A` reaches the
+    # password. The password itself comes from the `nos_sudo_password`
+    # vars_prompt above (NOT `ansible_become_password`, which Ansible hides
+    # from templates).
     - name: Create sudo askpass helper script.
       ansible.builtin.copy:
         content: |
           #!/bin/bash
-          echo "{{ ansible_become_password }}"
+          printf '%s' '{{ nos_sudo_password }}'
         dest: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
         mode: '0700'
       no_log: true
       changed_when: false
       tags: ['always']
-      when: ansible_become_password | default('') | length > 0
+      when: (nos_sudo_password | default('') | length) > 0
 
   environment:
-    SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if (ansible_become_password | default('') | length > 0) else '' }}"
+    SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if ((nos_sudo_password | default('') | length) > 0) else '' }}"
 
   # ============================================================================
   # HANDLERS - centralized, callable via notify: from any task file

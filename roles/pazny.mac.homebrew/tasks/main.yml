@@ -281,38 +281,41 @@
     - name: "Upgrade still-outdated casks via homebrew_cask + sudo_password"
       # `community.general.homebrew_cask`'s `sudo_password:` parameter is
       # the canonical way to drive cask upgrades that touch /Library/*.
-      # The password comes from -K (ansible_become_password) and never
-      # lands in logs (no_log: true). The module is slower per cask
-      # (~30s) than the batch CLI but cleanly handles brew's internal
-      # sudo prompts — exactly what pkg-installer casks like dotnet-sdk
-      # need.
+      # Password comes from the `nos_sudo_password` vars_prompt at playbook
+      # start (NOT `ansible_become_password` — Ansible hides that variable
+      # from Jinja templates as a security feature, which silently broke
+      # the previous version of this task).
+      # Module is slower per cask (~30s) than the batch CLI but cleanly
+      # handles brew's internal sudo prompts — exactly what pkg-installer
+      # casks like dotnet-sdk need. no_log: true keeps the password out
+      # of the playbook log.
       community.general.homebrew_cask:
         name: "{{ item }}"
         state: latest
-        sudo_password: "{{ ansible_become_password }}"
+        sudo_password: "{{ nos_sudo_password }}"
       loop: "{{ _cask_outdated_after.stdout_lines | default([]) | difference(_cask_running.stdout_lines | default([])) }}"
       register: _cask_sudo_upgrade
       no_log: true
       when:
         - homebrew_cask_auto_upgrade | default(true) | bool
         - (_cask_outdated_after.stdout_lines | default([]) | length) > 0
-        - ansible_become_password is defined
-        - ansible_become_password | length > 0
+        - (nos_sudo_password | default('') | length) > 0
 
-    - name: "Notice: still-outdated casks left for manual upgrade (no -K password)"
-      # Operator ran without -K, so homebrew_cask can't supply sudo. The
-      # surviving outdated casks need a terminal-with-sudo to upgrade.
-      # Single-line copy-paste command — not a workaround, this is the
-      # deterministic fallback when the playbook isn't given escalation.
+    - name: "Notice: still-outdated casks left for manual upgrade (no sudo password)"
+      # Operator pressed Enter at the vars_prompt instead of typing a sudo
+      # password, so homebrew_cask can't supply sudo. The surviving
+      # outdated casks need a terminal-with-sudo to upgrade. Single-line
+      # copy-paste command — not a workaround, this is the deterministic
+      # fallback when escalation isn't supplied.
       ansible.builtin.debug:
         msg: |
           {{ _cask_outdated_after.stdout_lines | length }} cask(s) still outdated after the fast batch
-          (pkg-installer casks need sudo). Re-run with -K to upgrade them automatically, or:
+          (pkg-installer casks need sudo). Re-run and provide the sudo password at the prompt, or:
             brew upgrade --cask {{ _cask_outdated_after.stdout_lines | join(' ') }}
       when:
         - homebrew_cask_auto_upgrade | default(true) | bool
         - (_cask_outdated_after.stdout_lines | default([]) | length) > 0
-        - ansible_become_password is not defined or (ansible_become_password | default('') | length) == 0
+        - (nos_sudo_password | default('') | length) == 0
 
     - name: "Cask upgrade report"
       ansible.builtin.debug:
@@ -320,7 +323,7 @@
           {% set outdated_before = _cask_outdated_before.stdout_lines | default([]) %}
           {% set outdated_after  = _cask_outdated_after.stdout_lines  | default([]) %}
           {% set running = _cask_running.stdout_lines | default([]) %}
-          {% set has_become = (ansible_become_password | default('') | length) > 0 %}
+          {% set has_become = (nos_sudo_password | default('') | length) > 0 %}
           {% set fast_upgraded = outdated_before | difference(outdated_after) | difference(running) %}
           {% set sudo_upgraded = (outdated_after | difference(running)) if has_become else [] %}
           {% set deferred      = [] if has_become else (outdated_after | difference(running)) %}
