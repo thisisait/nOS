@@ -1,0 +1,131 @@
+---
+# ==============================================================================
+# Tier-2 app manifest TEMPLATE — copy to apps/<your-name>.yml and edit.
+#
+# Schema: state/schema/app.schema.json
+# Parser: module_utils/nos_app_parser.py
+# Runner: roles/pazny.apps_runner/  (D4)
+#
+# Smoke-test before committing:
+#   python3 -m module_utils.nos_app_parser apps/<your-name>.yml
+#
+# Files starting with `_` are skipped by the runner. This template is
+# intentionally `_template.yml` for that reason.
+# ==============================================================================
+
+meta:
+  # Slug must match the filename (without .yml). Used as compose project
+  # name, vhost subdomain default, secret prefix.
+  name: "example"
+  version: "1.0.0"        # pin upstream tag here, not in compose.image
+  summary: "One-line description shown in Wing /apps."
+  homepage: "https://example.com/"
+  category: "productivity"   # mindmap bucket, free-form
+  ports: [8080]              # http port the container exposes (first = primary)
+  tags: ["self-hosted", "demo"]
+
+# ── GDPR Article 30 register entry — MANDATORY ───────────────────────────────
+# The parser will REJECT this manifest if any required key below is missing.
+# This isn't bureaucracy — these answers drive deploy gates (TLS, SSO,
+# EU-residency) AND populate Wing's /gdpr/apps cards so DPO inquiries can
+# be answered without re-investigating each app from scratch.
+gdpr:
+  purpose: |
+    Plain-language sentence (or two) describing why we process data.
+    A DPO reading this should understand the business reason without
+    looking at the app's docs.
+
+  # Art 6(1) lawful basis. Pick exactly one:
+  #   consent              — opt-in, withdrawable. Triggers SSO gate.
+  #   contract             — necessary to deliver service to user
+  #   legal_obligation     — required by law (e.g. accounting retention)
+  #   vital_interests      — life-or-death (rare)
+  #   public_task          — public-interest task (rare)
+  #   legitimate_interests — balancing test, document the legitimate interest
+  legal_basis: "legitimate_interests"
+
+  # Categories of personal data PROCESSED. Be specific.
+  # Common values: email, name, ip_address, location, photos, audio,
+  # health_data, financial_data, government_id, behavioural_data
+  data_categories:
+    - "email"
+    - "ip_address"
+
+  # Whose data we process. These values drive the TLS gate:
+  #   end_users / patients / minors / employees → TLS termination required
+  #   anonymous / partners                       → no TLS-from-data gate
+  data_subjects:
+    - "end_users"
+
+  # Auto-erasure horizon in days. The DSAR worker (D8) reads this.
+  #   90  — typical for analytics
+  #   365 — typical for content + auth
+  #   -1  — explicit "forever" (audit-only data, document why in `purpose`)
+  #    0  — INVALID, use -1 if you really need forever
+  retention_days: 365
+
+  # Third-party processors invoked. Empty list OK, but be explicit.
+  # If your app calls out to an external API on every request (LLM
+  # provider, CDN, payment gateway), it goes here.
+  processors: []
+
+  # True = data leaves the EU/EEA. The parser enforces EU registry
+  # provenance for compose images when this is False; setting True
+  # bypasses that gate (operator acknowledges the transfer).
+  transfers_outside_eu: false
+
+  # Optional: shell or HTTP that DSAR worker invokes on user-erasure.
+  # Receives DSAR_USER_ID + DSAR_USER_EMAIL env vars.
+  # dsar_endpoint: "docker compose -p apps exec example /erase.sh"
+
+  # Optional: default severity tag if Wing /breaches gets a hit on this app.
+  # breach_severity_default: "medium"
+
+# ── Compose fragment ──────────────────────────────────────────────────────────
+# Verbatim docker-compose syntax. The runner merges this into the `apps`
+# Compose project. Magic tokens are expanded BEFORE compose-up:
+#
+#   $SERVICE_FQDN_<APP>          → <app>.<instance_tld>
+#   $SERVICE_PASSWORD_<SUFFIX>   → 32-char random; same SUFFIX = same value
+#   $SERVICE_USER_<SUFFIX>       → <app>_<lowercase-suffix>
+#   $SERVICE_BASE64_64_<NAME>    → 64-byte base64
+#
+# Use `nos-host:host-gateway` for host-loopback (Postgres on host, etc.)
+# — same alias the nginx_container uses.
+compose:
+  services:
+    example:
+      image: "ghcr.io/example/example:1.0.0"
+      container_name: example
+      restart: unless-stopped
+      ports:
+        - "8080:8080"
+      environment:
+        - "EXAMPLE_DB_USER=$SERVICE_USER_DB"
+        - "EXAMPLE_DB_PASSWORD=$SERVICE_PASSWORD_DB"
+        - "EXAMPLE_PUBLIC_URL=https://$SERVICE_FQDN_EXAMPLE/"
+        - "EXAMPLE_SESSION_KEY=$SERVICE_BASE64_32_SESSION"
+      volumes:
+        - example_data:/data
+      networks:
+        - apps_net
+      mem_limit: 256m
+      cpus: 0.5
+
+  volumes:
+    example_data:
+
+# ── Optional: nginx vhost hints ───────────────────────────────────────────────
+# If omitted, the runner derives a default vhost from meta.name +
+# meta.ports[0] with auth=proxy (Authentik forward-auth).
+# nginx:
+#   subdomain: "example"      # default = meta.name
+#   upstream_port: 8080       # default = meta.ports[0]
+#   auth: "proxy"             # none | proxy | oidc
+#   extra_directives: |
+#     client_max_body_size 100m;
+
+# ── Optional: ordering ────────────────────────────────────────────────────────
+# Names of Tier-1 services that must be up before this app starts.
+# The runner sorts the apps_up loop accordingly.
+# depends_on: ["postgres", "redis"]

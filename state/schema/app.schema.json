@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/schemas/nos/app.schema.json",
+  "title": "nOS Tier-2 App Manifest (apps/<name>.yml)",
+  "description": "Coolify-style lightweight app manifest. Validated by module_utils/nos_app_parser.py and consumed by pazny.apps_runner. The `gdpr:` block is mandatory — apps cannot deploy without a complete GDPR Article 30 record. See docs/framework-overview.md for two-tier rationale, apps/_template.yml for a worked example.",
+  "type": "object",
+  "required": ["meta", "gdpr", "compose"],
+  "additionalProperties": false,
+
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["name", "version", "summary"],
+      "additionalProperties": true,
+      "properties": {
+        "name":     { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "App slug; matches the filename without .yml." },
+        "version":  { "type": "string", "description": "Upstream image tag pinned for this manifest." },
+        "summary":  { "type": "string", "minLength": 3 },
+        "homepage": { "type": "string", "format": "uri" },
+        "tags":     { "type": "array", "items": { "type": "string" } },
+        "ports":    { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+        "category": { "type": "string", "description": "Mindmap bucket, e.g. 'productivity', 'media', 'devops'." }
+      }
+    },
+
+    "gdpr": {
+      "description": "GDPR Article 30 register entry. EVERY field required. The parser refuses to deploy without this block.",
+      "type": "object",
+      "required": ["purpose", "legal_basis", "data_categories", "data_subjects", "retention_days", "processors", "transfers_outside_eu"],
+      "additionalProperties": true,
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 8,
+          "description": "Plain-language sentence: why we process this data."
+        },
+        "legal_basis": {
+          "type": "string",
+          "enum": ["consent", "contract", "legal_obligation", "vital_interests", "public_task", "legitimate_interests"],
+          "description": "GDPR Art 6(1) lawful basis. `consent` triggers the SSO gate."
+        },
+        "data_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Categories of personal data processed, e.g. ['email','name','ip_address','photos']."
+        },
+        "data_subjects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Who the subjects are. Values from {end_users, employees, partners, patients, minors, anonymous} drive the TLS gate."
+        },
+        "retention_days": {
+          "type": "integer",
+          "description": "Auto-erasure horizon in days. Use -1 for explicit 'forever' (audit-only). 0 is invalid (use -1 if intentional)."
+        },
+        "processors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Third-party processors. Empty list OK but explicit. Each entry should be a name + URL or a sub-record."
+        },
+        "transfers_outside_eu": {
+          "type": "boolean",
+          "description": "True = data leaves the EU/EEA (triggers the EU-residency registry gate to be bypassed; operator acknowledges)."
+        },
+        "dsar_endpoint": {
+          "type": "string",
+          "description": "Optional shell command or HTTP endpoint the DSAR worker invokes on erasure requests."
+        },
+        "breach_severity_default": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Default severity tag for incidents in Wing's breach register."
+        }
+      }
+    },
+
+    "compose": {
+      "type": "object",
+      "required": ["services"],
+      "additionalProperties": true,
+      "properties": {
+        "services": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "description": "Verbatim docker-compose `services:` block; magic tokens resolved by the runner."
+        },
+        "volumes":  { "type": "object", "additionalProperties": true },
+        "networks": { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "nginx": {
+      "description": "Optional vhost auto-derivation hints. If absent the runner still creates a default vhost from meta.name + meta.ports[0].",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "subdomain":         { "type": "string" },
+        "upstream_port":     { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "auth":              { "type": "string", "enum": ["none", "proxy", "oidc"] },
+        "extra_directives":  { "type": "string", "description": "Raw nginx config snippet appended inside `location /`." }
+      }
+    },
+
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Other Tier-1 / Tier-2 service names this app needs running first. The runner reorders the apps_up loop to honour this."
+    }
+  }
+}
