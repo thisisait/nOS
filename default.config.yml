@@ -157,7 +157,14 @@ install_docker: true              # Linux: install Docker CE + compose plugin vi
 install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
 
 # ── Languages / runtimes ──────────────────────────────────────────────────────
-install_php: true                 # PHP 8.x + PHP-FPM + Composer
+# PHP at the host level is no longer needed by default — Track A (2026-04-26)
+# moved Wing's PHP-FPM into a container and Composer runs inside that
+# container via the wing-cli sidecar. Re-enabling this flag will install
+# Homebrew php@8.3 + start its launchd service, which then steals port 9000
+# from the Wing container (FPM upstream `php_fpm` in nginx is also at :9000).
+# Only flip this back to true if you have host-side PHP needs that don't go
+# through Wing.
+install_php: false                # PHP 8.x + PHP-FPM + Composer (host) — Track A makes this superfluous
 install_node: true                # Node.js + NVM + global npm packages
 install_bun: true                 # Bun JavaScript runtime / bundler
 install_python: true              # Python + pyenv + pip packages

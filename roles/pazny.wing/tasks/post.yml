@@ -80,11 +80,33 @@
 # ── Legacy JSON migration (only on a brand-new install) ──────────────────────
 
 - name: "[pazny.wing] Detect whether legacy JSON migration is still needed"
-  ansible.builtin.shell: >
-    {{ _wing_run_cli }}
-    php -r "$db = new SQLite3('{{ wing_data_dir }}/wing.db');
-    echo $db->querySingle('SELECT COUNT(*) FROM systems WHERE source IN (\"components_db\",\"manual\")');
-    $db->close();"
+  # Inline `php -r` is awkward through `ansible.builtin.shell + folded scalar`
+  # because bash expands `$db` on its way through, leaving PHP staring at
+  # ` = new SQLite3(...);` and bombing with a parse error. Solution: use
+  # the cmd: list form so bash never sees the script as a string, and pass
+  # the PHP source as a single argument (single-quoted at the YAML layer
+  # so $db survives untouched).
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - "compose"
+      - "-f"
+      - "{{ stacks_dir }}/iiab/docker-compose.yml"
+      - "-f"
+      - "{{ stacks_dir }}/iiab/overrides/wing.yml"
+      - "-p"
+      - "iiab"
+      - "run"
+      - "--rm"
+      - "--workdir"
+      - "{{ wing_app_dir }}"
+      - "wing-cli"
+      - "php"
+      - "-r"
+      - >-
+        $db = new SQLite3('{{ wing_data_dir }}/wing.db');
+        echo $db->querySingle('SELECT COUNT(*) FROM systems WHERE source IN ("components_db","manual")');
+        $db->close();
   register: _wing_component_count
   changed_when: false
 

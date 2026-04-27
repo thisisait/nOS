@@ -34,3 +34,6 @@ services:
 	- App\Model\MigrationRepository
 	- App\Model\UpgradeRepository
 	- App\Model\CoexistenceRepository
+
+	# GDPR Article 30 register (Track D, 2026-04-26)
+	- App\Model\GdprRepository
