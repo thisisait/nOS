@@ -421,6 +421,29 @@ class CallbackModule(CallbackBase):
         self._secret = (os.environ.get("WING_EVENTS_HMAC_SECRET")
                         or load_hmac_secret_fallback())
 
+        # ── Cross-tool event hooks (file-based, plugin-agnostic) ────────────
+        # JSONL log appended on every playbook_start / playbook_end event so
+        # external observers (Claude / Cursor / Copilot / Codex / fswatch /
+        # Monitor / a CI watcher) can react without polling the Bone HTTP
+        # endpoint. Always written, even when telemetry is otherwise inactive
+        # (the JSONL has no HMAC requirement — it's a local file).
+        self._jsonl_path = os.path.expanduser(os.path.expandvars(
+            os.environ.get("NOS_PLAYBOOK_JSONL_PATH",
+                           "~/.nos/events/playbook.jsonl")))
+        # Optional shell hook scripts (executable files in this dir) get the
+        # event JSON on stdin + a few NOS_* env vars. Failures don't propagate.
+        # Default lives in-repo so contributors can drop hooks alongside their
+        # changes (versioned per branch).
+        try:
+            _repo_default_hooks = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..", "hooks", "playbook-end.d")
+        except Exception:  # pragma: no cover
+            _repo_default_hooks = ""
+        self._hooks_dir = os.path.expanduser(os.path.expandvars(
+            os.environ.get("NOS_PLAYBOOK_HOOKS_DIR",
+                           _repo_default_hooks)))
+
         # Lazily created so inactive plugin has no side effects.
         self._http = None
         self._sqlite = None
@@ -627,6 +650,71 @@ class CallbackModule(CallbackBase):
         if cox is not None:
             self._current_coexistence_service = cox
 
+    # ----- Cross-tool lifecycle hooks (independent of telemetry on/off) -----
+
+    def _publish_lifecycle(self, event_type, payload):
+        """Append a lifecycle event to the JSONL log and execute hook scripts.
+
+        Always runs, regardless of whether HMAC telemetry is active. Failures
+        are swallowed — a broken hook must never poison the playbook run.
+        Cross-tool by design: any agent can `tail -f` the JSONL or drop a
+        shell script into hooks/playbook-end.d/. See docs/playbook-event-hooks.md.
+        """
+        # ── 1. Append JSONL (best-effort) ──────────────────────────────────
+        try:
+            d = os.path.dirname(self._jsonl_path)
+            if d and not os.path.isdir(d):
+                os.makedirs(d, exist_ok=True)
+            with open(self._jsonl_path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        except Exception as exc:  # noqa: BLE001
+            sys.stderr.write(
+                "[wing_telemetry] JSONL append failed (%s): %s\n"
+                % (self._jsonl_path, exc))
+
+        # ── 2. Execute hook scripts (only on playbook_end) ─────────────────
+        if event_type != "playbook_end":
+            return
+        try:
+            if not self._hooks_dir or not os.path.isdir(self._hooks_dir):
+                return
+            entries = sorted(os.listdir(self._hooks_dir))
+        except Exception:  # noqa: BLE001
+            return
+        recap = payload.get("recap") or {}
+        env = os.environ.copy()
+        env.update({
+            "NOS_RUN_ID": payload.get("run_id") or "",
+            "NOS_PLAYBOOK": payload.get("playbook") or "",
+            "NOS_PLAYBOOK_DURATION_MS":
+                str(payload.get("duration_ms") or ""),
+            "NOS_PLAYBOOK_RECAP_OK": str(recap.get("ok") or 0),
+            "NOS_PLAYBOOK_RECAP_CHANGED": str(recap.get("changed") or 0),
+            "NOS_PLAYBOOK_RECAP_FAILED": str(recap.get("failed") or 0),
+            "NOS_PLAYBOOK_RECAP_SKIPPED": str(recap.get("skipped") or 0),
+            "NOS_PLAYBOOK_RECAP_UNREACHABLE":
+                str(recap.get("unreachable") or 0),
+            "NOS_PLAYBOOK_EVENT_JSON": json.dumps(payload, ensure_ascii=False),
+        })
+        import subprocess  # local import — keeps top of file lean
+        for name in entries:
+            if name.startswith(".") or name.endswith(".example") \
+                    or name.endswith(".md"):
+                continue
+            path = os.path.join(self._hooks_dir, name)
+            if not os.path.isfile(path) or not os.access(path, os.X_OK):
+                continue
+            try:
+                subprocess.run(
+                    [path],
+                    input=json.dumps(payload, ensure_ascii=False),
+                    text=True, env=env, timeout=15,
+                    check=False, capture_output=True,
+                )
+            except Exception as exc:  # noqa: BLE001
+                sys.stderr.write(
+                    "[wing_telemetry] hook %s failed: %s\n" % (name, exc))
+
     # ----- Ansible v2 callback hooks ---------------------------------------
 
     def v2_playbook_on_start(self, playbook):
@@ -634,6 +722,14 @@ class CallbackModule(CallbackBase):
             or getattr(playbook, "name", None)
         self._playbook_name = os.path.basename(name) if name else None
         self._playbook_started_at = time.monotonic()
+
+        # Cross-tool lifecycle event (always; independent of telemetry gate).
+        self._publish_lifecycle("playbook_start", {
+            "ts": utc_now_iso(),
+            "run_id": self._run_id,
+            "type": "playbook_start",
+            "playbook": self._playbook_name,
+        })
 
         # Pull play vars at first play — but also peek here if possible so
         # inactive runs never allocate resources.
@@ -773,8 +869,8 @@ class CallbackModule(CallbackBase):
         )
 
     def v2_playbook_on_stats(self, stats):
-        if not self._active:
-            return
+        # Recap aggregation runs whether or not telemetry is active — the
+        # cross-tool lifecycle hook below needs the numbers regardless.
         recap = {"ok": 0, "changed": 0, "failed": 0,
                  "skipped": 0, "unreachable": 0,
                  "rescued": 0, "ignored": 0}
@@ -790,6 +886,19 @@ class CallbackModule(CallbackBase):
         if self._playbook_started_at is not None:
             duration_ms = int(
                 (time.monotonic() - self._playbook_started_at) * 1000)
+
+        # ── Cross-tool lifecycle: JSONL append + hooks/playbook-end.d ──────
+        self._publish_lifecycle("playbook_end", {
+            "ts": utc_now_iso(),
+            "run_id": self._run_id,
+            "type": "playbook_end",
+            "playbook": self._playbook_name,
+            "duration_ms": duration_ms,
+            "recap": recap,
+        })
+
+        if not self._active:
+            return
         self._emit("playbook_end",
                    playbook=self._playbook_name,
                    duration_ms=duration_ms,

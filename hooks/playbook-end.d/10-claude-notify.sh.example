@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# 10-claude-notify.sh — example post-playbook hook.
+#
+# Copy to 10-claude-notify.sh and chmod +x to enable. The wing_telemetry
+# callback runs every executable file in this directory (lexicographic
+# order, 15s timeout each) right after the PLAY RECAP is computed.
+#
+# This script is intentionally tiny. The default behaviour is already
+# enough for a watching agent: every playbook_end event is appended to
+# ~/.nos/events/playbook.jsonl. Most agents just tail that.
+#
+# Use this hook for things you want to *push* somewhere — Slack, email,
+# desktop notification, a CI webhook, etc.
+#
+# Two ways to read the event:
+#   1. Stdin (JSON)      — read by jq below
+#   2. Environment vars  — NOS_RUN_ID, NOS_PLAYBOOK_RECAP_FAILED, etc.
+
+set -euo pipefail
+
+# Pull data either from env vars (cheap) or stdin (full JSON).
+failed="${NOS_PLAYBOOK_RECAP_FAILED:-0}"
+ok="${NOS_PLAYBOOK_RECAP_OK:-0}"
+changed="${NOS_PLAYBOOK_RECAP_CHANGED:-0}"
+duration_ms="${NOS_PLAYBOOK_DURATION_MS:-0}"
+duration_s=$(( duration_ms / 1000 ))
+
+# ── 1. Local desktop notification (macOS) ────────────────────────────────
+if command -v osascript >/dev/null 2>&1; then
+    if [[ "$failed" -eq 0 ]]; then
+        title="✅ nOS playbook OK"
+    else
+        title="❌ nOS playbook FAILED ($failed)"
+    fi
+    body="ok=$ok changed=$changed in ${duration_s}s"
+    osascript -e "display notification \"$body\" with title \"$title\""
+fi
+
+# ── 2. (Optional) Slack webhook ──────────────────────────────────────────
+# slack_url="${SLACK_WEBHOOK_URL:-}"
+# if [[ -n "$slack_url" ]]; then
+#     curl -sf -X POST -H 'Content-Type: application/json' \
+#          -d "{\"text\":\"nOS playbook done: ok=$ok changed=$changed failed=$failed (${duration_s}s)\"}" \
+#          "$slack_url" >/dev/null || true
+# fi
+
+# ── 3. (Optional) Mark a file external watchers can poll ────────────────
+# date -u +%FT%TZ > "${HOME}/.nos/events/last-playbook-end.txt"
+
+exit 0
