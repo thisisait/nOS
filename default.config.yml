@@ -150,7 +150,8 @@ install_cask_apps: true           # GUI applications via Homebrew Cask
 install_mas_apps: false           # Mac App Store applications
 
 # ── Web server ────────────────────────────────────────────────────────────────
-install_nginx: true               # Nginx (reverse proxy, PHP-FPM, vhosts)
+install_nginx: true               # Nginx host service (Homebrew on macOS, apt on Linux). Set to false when migrating to install_nginx_container.
+install_nginx_container: false    # Nginx as container in the infra stack (replaces host nginx). Coexistence with install_nginx: true is refused (port 80/443 collision). Migration recipe: 2026-05-15-nginx-host-to-container.
 
 # Track C+D (2026-04-26): Linux-only flags. Ignored on macOS.
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
