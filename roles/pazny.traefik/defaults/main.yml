@@ -16,7 +16,9 @@
 traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin
 traefik_http_port: 80
 traefik_https_port: 443
-traefik_dashboard_port: 8080
+# Dashboard on 8090 (was 8080) — cadvisor takes 8080 in the observability
+# stack and starts before infra Traefik in `docker compose up`. Moved 2026-04-27.
+traefik_dashboard_port: 8090
 traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 
