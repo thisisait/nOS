@@ -221,14 +221,6 @@
   when: install_bone | default(false)
   tags: ['bone', 'api', 'infra']
 
-- name: "[Core] pazny.nginx_container render"
-  # Containerized nginx (post-Q2, 2026-04-27). Replaces host-side
-  # Homebrew nginx when install_nginx_container is on. Coexistence
-  # with install_nginx: true is refused by the role's preflight.
-  ansible.builtin.include_role: { name: pazny.nginx_container, apply: { tags: ['nginx', 'nginx-container', 'infra'] } }
-  when: install_nginx_container | default(false)
-  tags: ['nginx', 'nginx-container', 'infra']
-
 # Observability roles
 - name: "[Core] pazny.grafana render"
   ansible.builtin.include_role: { name: pazny.grafana, apply: { tags: ['grafana', 'observability'] } }
@@ -343,8 +335,7 @@
          (install_mariadb | default(false)) or (install_postgresql | default(false)) or
          (redis_docker | default(false)) or (install_bluesky_pds | default(false)) or
          (install_authentik | default(false)) or (install_infisical | default(false)) or
-         (install_spacetimedb | default(false)) or (install_bone | default(false)) or
-         (install_nginx_container | default(false)) }}
+         (install_spacetimedb | default(false)) or (install_bone | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
 
 # ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────

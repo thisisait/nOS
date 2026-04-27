@@ -90,8 +90,9 @@ gdpr:
 #   $SERVICE_USER_<SUFFIX>       → <app>_<lowercase-suffix>
 #   $SERVICE_BASE64_64_<NAME>    → 64-byte base64
 #
-# Use `nos-host:host-gateway` for host-loopback (Postgres on host, etc.)
-# — same alias the nginx_container uses.
+# Use `nos-host:host-gateway` for host-loopback (e.g. reaching a Postgres
+# instance running on the host) — Docker Desktop on macOS resolves this to
+# vEthernet, Linux Docker resolves to the docker0 bridge IP.
 compose:
   services:
     example:

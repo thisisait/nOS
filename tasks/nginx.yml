@@ -1,33 +1,23 @@
 ---
 # ==============================================================================
-# NGINX - installation and configuration
+# NGINX - installation and configuration (host service)
 #
-# Two render targets are supported via a single task file. Host nginx
-# (Homebrew on macOS, apt on Linux) writes to {{ nginx_etc_dir }}
-# and is started via brew services / systemd. Container nginx (the
-# pazny.nginx_container role) writes to {{ stacks_dir }}/infra/nginx/etc
-# instead, and is bounced via `docker compose -p infra restart nginx`.
-#
-# Switch between them via:
-#   install_nginx:           true (default) → host nginx on 80/443
-#   install_nginx_container: true            → container nginx on 80/443
-# Both true is rejected by pazny.nginx_container's preflight (port collision).
+# Host nginx (Homebrew on macOS, apt on Linux) writes vhost templates to
+# {{ nginx_etc_dir }} and is started via `brew services start nginx` /
+# systemd. Default while the Traefik primary cutover (C1.x) is in
+# progress; will become opt-in fallback once Traefik takes 80/443.
 # ==============================================================================
 
-# ── Resolve render target up front ────────────────────────────────────────────
-- name: "[nginx] Resolve render target (host vs container)"
+# ── Render target ────────────────────────────────────────────────────────────
+- name: "[nginx] Resolve render target"
   ansible.builtin.set_fact:
-    nginx_etc_dir: "{{ nginx_container_etc if (install_nginx_container | default(false) | bool) else (homebrew_prefix + '/etc/nginx') }}"
-    nginx_log_dir: "{{ nginx_container_logs if (install_nginx_container | default(false) | bool) else (homebrew_prefix + '/var/log/nginx') }}"
-  vars:
-    nginx_container_etc:  "{{ stacks_dir }}/infra/nginx/etc"
-    nginx_container_logs: "{{ stacks_dir }}/infra/nginx/log"
+    nginx_etc_dir: "{{ homebrew_prefix }}/etc/nginx"
+    nginx_log_dir: "{{ homebrew_prefix }}/var/log/nginx"
 
 - name: Install nginx via Homebrew
   community.general.homebrew:
     name: nginx
     state: present
-  when: not (install_nginx_container | default(false) | bool)
 
 - name: Install mkcert for local SSL certificates
   community.general.homebrew:
@@ -274,8 +264,6 @@
         creates: "{{ nginx_etc_dir }}/ssl/local-dev.crt"
 
 - name: Start and enable nginx via brew services
-  # Host-side nginx only. Container nginx is managed by the
-  # pazny.nginx_container role + `docker compose -p infra up nginx`.
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start nginx"
   register: nginx_svc
   changed_when: >
@@ -285,11 +273,7 @@
     nginx_svc.rc != 0 and
     'already started' not in (nginx_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
-  when: not (install_nginx_container | default(false) | bool)
 
 - name: Test nginx configuration
-  # Host-side nginx test. Container nginx self-tests via its compose
-  # healthcheck (CMD nginx -t) — no need for a host-side dry-run.
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
   changed_when: false
-  when: not (install_nginx_container | default(false) | bool)

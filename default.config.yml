@@ -150,8 +150,12 @@ install_cask_apps: true           # GUI applications via Homebrew Cask
 install_mas_apps: false           # Mac App Store applications
 
 # ── Web server ────────────────────────────────────────────────────────────────
-install_nginx: true               # Nginx host service (Homebrew on macOS, apt on Linux). Set to false when migrating to install_nginx_container.
-install_nginx_container: false    # Nginx as container in the infra stack (replaces host nginx). Coexistence with install_nginx: true is refused (port 80/443 collision). Migration recipe: 2026-05-15-nginx-host-to-container.
+# Host nginx (Homebrew on macOS, apt on Linux). Default true for now; will
+# flip to false once the Traefik primary path lands (C1.2-C1.5). The
+# short-lived `install_nginx_container` flag (Q2 2026) was retired before
+# anyone enabled it — the intermediate-step role added more surface than it
+# saved, and Traefik handles container-ingress duty better.
+install_nginx: true
 
 # Track C+D (2026-04-26): Linux-only flags. Ignored on macOS.
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
