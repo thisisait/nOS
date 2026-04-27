@@ -52,16 +52,14 @@ services:
       start_period: 15s
       retries: 3
 
-  # Big-Bang 2026-04-27: nginx sidecar that fronts the FPM container with HTTP.
-  # Traefik (primary edge proxy) can't speak FastCGI so a thin nginx fronts
-  # Wing on the shared network. The wing source tree is mounted read-only at
-  # the SAME absolute path used inside the FPM container so the
-  # SCRIPT_FILENAME values nginx forwards resolve correctly inside FPM.
+  # nginx sidecar fronts the Wing FPM container with HTTP. Traefik (the edge
+  # proxy) can't speak FastCGI directly, so this thin nginx joins shared_net
+  # and forwards FastCGI to wing:9000. The Wing source tree is mounted read-
+  # only at the SAME absolute path used inside the FPM container so the
+  # SCRIPT_FILENAME values resolve correctly across the two containers.
   #
-  # When install_nginx (host) is true, this sidecar is the redundant path —
-  # operator can omit it via wing_with_sidecar: false. When install_nginx is
-  # false (default after Big-Bang), the sidecar is the ONLY way Wing serves
-  # HTTP, so the default is on.
+  # Default on. Operators running host nginx with their own wing.conf vhost
+  # can disable the sidecar via wing_with_sidecar: false.
 {% if wing_with_sidecar | default(true) | bool %}
   wing-nginx:
     image: nginx:1.27-alpine

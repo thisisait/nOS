@@ -31,9 +31,8 @@ acme_cloudflare_api_token: ""             # SET IN credentials.yml
 acme_home: "{{ ansible_facts['env']['HOME'] }}/.acme.sh"
 acme_brew_pkg: "acme.sh"
 
-# Where the cert lands. Big-Bang cutover (2026-04-27) moved this from the
-# host-nginx ssl/ tree to the neutral {{ tls_cert_dir }} so Traefik (primary)
-# and host nginx (opt-in fallback) both find the cert at the same path.
+# Cert lands under the shared TLS tree so Traefik (mounts /certs:ro) and
+# host nginx (reads ssl_certificate paths) consume the same files.
 acme_cert_dir: "{{ tls_cert_dir | default(stacks_dir + '/infra/tls') }}/acme"
 acme_cert_path: "{{ acme_cert_dir }}/{{ instance_tld }}.crt"
 acme_cert_key: "{{ acme_cert_dir }}/{{ instance_tld }}.key"

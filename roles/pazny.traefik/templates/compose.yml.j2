@@ -1,8 +1,5 @@
 # =============================================================================
-# pazny.traefik — compose override fragment (PRIMARY edge proxy).
-# Big-Bang cutover 2026-04-27: binds 80/443 unconditionally; host nginx is
-# opt-in fallback (install_nginx) and runs alongside on alternative ports
-# only when explicitly enabled.
+# pazny.traefik — compose override fragment.
 #
 # Networks: joins infra_net (Authentik etc.) + shared_net (Tier-2 apps via
 # Docker provider). Adds nos-host:host-gateway alias so file-provider routers

@@ -13,8 +13,7 @@
   changed_when: true
   failed_when: false
 
-# Big-Bang 2026-04-27: ACME renewal triggers either Traefik (primary) or
-# host nginx (opt-in fallback) bounce, depending on which is active.
+# ACME renewal triggers a bounce of whichever proxy is reading the cert.
 - name: Restart nginx
   ansible.builtin.command: >-
     {{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew services restart nginx

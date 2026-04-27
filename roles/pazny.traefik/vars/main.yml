@@ -2,8 +2,8 @@
 # ==============================================================================
 # pazny.traefik/vars/main.yml — auth-mode lookup for Tier-1 services.
 #
-# Big-Bang cutover (2026-04-27). Auto-derived router list comes from
-# state/manifest.yml entries that have both `domain_var` and `port_var`.
+# The auto-derived router list (see templates/dynamic/services.yml.j2) iterates
+# every state/manifest.yml entry that has both `domain_var` and `port_var`.
 # This map decides which Traefik middleware to attach per service id:
 #
 #   none   → service handles its own auth (Authentik itself, JWT APIs,

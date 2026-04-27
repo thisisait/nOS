@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
-# Wing nginx sidecar — minimal HTTP front for FPM. Big-Bang 2026-04-27.
-# Traefik (primary edge, on shared_net) calls this on `wing-nginx:80`.
+# Wing nginx sidecar — minimal HTTP front for the FPM container.
+# Traefik (edge, on shared_net) calls this on `wing-nginx:80`.
 # Auth gating + security headers are applied at Traefik (authentik@file +
 # security-headers@file middleware) — this config is intentionally lean.
 

@@ -1,11 +1,24 @@
 ---
 # ==============================================================================
-# NGINX - installation and configuration (host service)
+# tasks/nginx.yml — optional host nginx (Homebrew on macOS / apt on Linux).
 #
-# Host nginx (Homebrew on macOS, apt on Linux) writes vhost templates to
-# {{ nginx_etc_dir }} and is started via `brew services start nginx` /
-# systemd. Default while the Traefik primary cutover (C1.x) is in
-# progress; will become opt-in fallback once Traefik takes 80/443.
+# Traefik runs the edge. This file exists for operators who want a thin
+# host-side nginx alongside it — niche flows like SCRIPT_FILENAME-style
+# tunnels through the legacy vhost templates, or local dev experiments
+# without the Docker network.
+#
+# Behaviour when install_nginx: true
+#   1. Brew installs nginx + main nginx.conf.
+#   2. brew services starts the daemon.
+#   3. sites-enabled stays EMPTY unless `nginx_sites_enabled` is set
+#      explicitly in config.yml (e.g. ['gitea.conf', 'wing.conf']). The
+#      operator opts in per-vhost — nothing auto-derives from install_*
+#      flags any more.
+#
+# Vhost templates under templates/nginx/sites-available/*.conf are kept
+# as a legacy archive (see templates/nginx/_LEGACY.md). They share the
+# `nginx_backend_host` indirection with Traefik, so they keep working
+# when explicitly enabled.
 # ==============================================================================
 
 # ── Render target ────────────────────────────────────────────────────────────
@@ -13,14 +26,12 @@
   ansible.builtin.set_fact:
     nginx_etc_dir: "{{ homebrew_prefix }}/etc/nginx"
     nginx_log_dir: "{{ homebrew_prefix }}/var/log/nginx"
+    nginx_enabled: "{{ nginx_sites_enabled | default([]) }}"
 
 - name: Install nginx via Homebrew
   community.general.homebrew:
     name: nginx
     state: present
-
-# mkcert + cert generation moved to tasks/tls-certs.yml (proxy-agnostic).
-# This file is now strictly host-nginx render + brew-services start.
 
 - name: Ensure nginx sites directories exist
   ansible.builtin.file:
@@ -42,6 +53,8 @@
   notify: Restart nginx
 
 - name: Deploy Authentik proxy auth snippets
+  # Required when any explicitly-enabled vhost uses auth_request. Skipped
+  # when the operator hasn't opted any vhosts in.
   ansible.builtin.template:
     src: "nginx/{{ item }}"
     dest: "{{ nginx_etc_dir }}/{{ item }}"
@@ -49,134 +62,18 @@
   loop:
     - authentik-proxy-auth.conf
     - authentik-proxy-locations.conf
-  when: install_authentik | default(false)
+  when:
+    - install_authentik | default(false)
+    - nginx_enabled | length > 0
   notify: Reload nginx
 
-- name: Deploy nginx virtual host templates
+- name: Deploy explicitly enabled nginx vhost templates
   ansible.builtin.template:
     src: "nginx/sites-available/{{ item }}"
     dest: "{{ nginx_etc_dir }}/sites-available/{{ item }}"
     mode: '0644'
-  loop:
-    # ── Dev templates ─────────────────────────────────────────────────────────
-    - default.conf
-    - php-app.conf
-    - node-proxy.conf
-    - python-proxy.conf
-    - go-proxy.conf
-    - static-site.conf
-    # ── IIAB templates (always deployed, enabled only if the service is enabled)
-    - wordpress.conf
-    - nextcloud.conf
-    - kiwix.conf
-    - maps.conf
-    - grafana.conf
-    - n8n.conf
-    - gitea.conf
-    - gitlab.conf
-    - jellyfin.conf
-    - openwebui.conf
-    - portainer.conf
-    - spacetimedb.conf
-    - woodpecker.conf
-    - uptime-kuma.conf
-    - status.conf
-    - calibreweb.conf
-    - homeassistant.conf
-    - rustfs.conf
-    - traefik.conf
-    - openclaw.conf
-    # ── B2B stack
-    - erpnext.conf
-    - freescout.conf
-
-    - outline.conf
-    # ── VoIP / Engineering / Data stacks
-    - freepbx.conf
-    - qgis.conf
-    - metabase.conf
-    - superset.conf
-    # ── IAM & Secrets
-    - authentik.conf
-    - infisical.conf
-    - vaultwarden.conf
-    # ── Identity
-    - bluesky-pds.conf
-    # ── Web desktop
-    - puter.conf
-    - jsos.conf
-    # ── AI orchestration
-    - paperclip.conf
-    # ── Security dashboard
-    - wing.conf
-    # ── Wave A+B (2026-04) new services
-    - ntfy.conf
-    - miniflux.conf
-    - nodered.conf
-    - code-server.conf
-    - hedgedoc.conf
-    - bookstack.conf
-    - firefly.conf
-    - onlyoffice.conf
-    - influxdb.conf
-    # ── Mail tier
-    - mailpit.conf
-    # ── Local API (Bone)
-    - bone.conf
+  loop: "{{ nginx_enabled }}"
   notify: Restart nginx
-
-- name: Build list of nginx sites to enable
-  ansible.builtin.set_fact:
-    _nginx_sites_auto: >-
-      {{ ['default.conf']
-         + ((install_wordpress | default(false)) | ternary(['wordpress.conf'], []))
-         + ((install_nextcloud | default(false)) | ternary(['nextcloud.conf'], []))
-         + ((install_kiwix | default(false)) | ternary(['kiwix.conf'], []))
-         + ((install_offline_maps | default(false)) | ternary(['maps.conf'], []))
-         + ((install_observability | default(true)) | ternary(['grafana.conf'], []))
-         + ((install_n8n | default(false)) | ternary(['n8n.conf'], []))
-         + ((install_gitea | default(false)) | ternary(['gitea.conf'], []))
-         + ((install_gitlab | default(false)) | ternary(['gitlab.conf'], []))
-         + ((install_jellyfin | default(false)) | ternary(['jellyfin.conf'], []))
-         + ((install_openwebui | default(false)) | ternary(['openwebui.conf'], []))
-         + ((install_portainer | default(false)) | ternary(['portainer.conf'], []))
-         + ((install_spacetimedb | default(false)) | ternary(['spacetimedb.conf'], []))
-         + ((install_woodpecker | default(false)) | ternary(['woodpecker.conf'], []))
-         + ((install_uptime_kuma | default(false)) | ternary(['uptime-kuma.conf', 'status.conf'], []))
-         + ((install_calibreweb | default(false)) | ternary(['calibreweb.conf'], []))
-         + ((install_homeassistant | default(false)) | ternary(['homeassistant.conf'], []))
-         + ((install_rustfs | default(false)) | ternary(['rustfs.conf'], []))
-         + ((install_traefik | default(false)) | ternary(['traefik.conf'], []))
-         + ((install_openclaw | default(false)) | ternary(['openclaw.conf'], []))
-         + ((install_erpnext | default(false)) | ternary(['erpnext.conf'], []))
-         + ((install_freescout | default(false)) | ternary(['freescout.conf'], []))
-
-         + ((install_outline | default(false)) | ternary(['outline.conf'], []))
-         + ((install_freepbx | default(false)) | ternary(['freepbx.conf'], []))
-         + ((install_qgis_server | default(false)) | ternary(['qgis.conf'], []))
-         + ((install_metabase | default(false)) | ternary(['metabase.conf'], []))
-         + ((install_superset | default(false)) | ternary(['superset.conf'], []))
-         + ((install_authentik | default(false)) | ternary(['authentik.conf'], []))
-         + ((install_infisical | default(false)) | ternary(['infisical.conf'], []))
-         + ((install_vaultwarden | default(false)) | ternary(['vaultwarden.conf'], []))
-         + ((install_bluesky_pds | default(false)) | ternary(['bluesky-pds.conf'], []))
-         + ((install_puter | default(false)) | ternary(['puter.conf'], []))
-         + ((install_jsos | default(false)) | ternary(['jsos.conf'], []))
-         + ((install_paperclip | default(false)) | ternary(['paperclip.conf'], []))
-         + ((install_wing | default(true)) | ternary(['wing.conf'], []))
-         + ((install_ntfy | default(false)) | ternary(['ntfy.conf'], []))
-         + ((install_miniflux | default(false)) | ternary(['miniflux.conf'], []))
-         + ((install_nodered | default(false)) | ternary(['nodered.conf'], []))
-         + ((install_code_server | default(false)) | ternary(['code-server.conf'], []))
-         + ((install_hedgedoc | default(false)) | ternary(['hedgedoc.conf'], []))
-         + ((install_bookstack | default(false)) | ternary(['bookstack.conf'], []))
-         + ((install_firefly | default(false)) | ternary(['firefly.conf'], []))
-         + ((install_onlyoffice | default(false)) | ternary(['onlyoffice.conf'], []))
-         + ((install_influxdb | default(false)) | ternary(['influxdb.conf'], []))
-         + ((install_mailpit | default(false)) | ternary(['mailpit.conf'], []))
-         + ((install_bone | default(false)) | ternary(['bone.conf'], []))
-         + (nginx_sites_extra | default([]))
-      }}
 
 - name: Enable nginx sites (symlink)
   ansible.builtin.file:
@@ -184,7 +81,7 @@
     dest: "{{ nginx_etc_dir }}/sites-enabled/{{ item }}"
     state: link
     force: true
-  loop: "{{ nginx_sites_enabled | default(_nginx_sites_auto) }}"
+  loop: "{{ nginx_enabled }}"
   notify: Reload nginx
 
 - name: Remove disabled nginx sites
@@ -192,14 +89,14 @@
     for f in {{ nginx_etc_dir }}/sites-enabled/*.conf; do
       name=$(basename "$f")
       found=false
-      for enabled in {{ (nginx_sites_enabled | default(_nginx_sites_auto)) | join(' ') }}; do
+      for enabled in {{ nginx_enabled | join(' ') }}; do
         [ "$name" = "$enabled" ] && found=true && break
       done
       $found || rm -f "$f"
     done
   changed_when: false
 
-# Cert files live under {{ tls_cert_dir }} (neutral, written by tasks/tls-certs.yml).
+# Cert files live under {{ tls_cert_dir }} (written by tasks/tls-certs.yml).
 # Host nginx vhosts read them via ssl_certificate {{ ssl_cert_path }};
 
 - name: Start and enable nginx via brew services

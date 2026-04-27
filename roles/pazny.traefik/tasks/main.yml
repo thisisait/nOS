@@ -1,29 +1,27 @@
 ---
 # ==============================================================================
-# pazny.traefik/tasks/main.yml
+# pazny.traefik/tasks/main.yml — render and run the edge proxy.
 #
-# Big-Bang cutover 2026-04-27: Traefik is now the primary edge proxy.
-# This file renders:
-#   - static config:    traefik.yml
-#   - dynamic providers: conf.d/middlewares.yml + conf.d/services.yml + conf.d/tls.yml
-#   - compose override: {{ stacks_dir }}/infra/overrides/traefik.yml
+# Outputs:
+#   - static config:     {{ traefik_config_dir }}/traefik.yml
+#   - dynamic providers: {{ traefik_dynamic_dir }}/{middlewares,tls,services}.yml
+#   - compose override:  {{ stacks_dir }}/infra/overrides/traefik.yml
 #
 # Tier-1 services.yml is auto-derived from state/manifest.yml + install_*
 # flags (one router + one service per enabled domain-bound service).
-# Tier-2 apps go through the Docker provider (apps_runner emits labels).
+# Tier-2 apps go through the Docker provider via apps_runner labels.
 # ==============================================================================
 
-# ── Refuse if nginx is also active on 80/443 ─────────────────────────────────
-# Coexistence is allowed (host nginx as opt-in fallback) but they can't both
-# bind 80/443. Operator must pick the active edge — see install_nginx /
-# install_traefik in default.config.yml.
+# ── Coexistence guard ────────────────────────────────────────────────────────
+# Host nginx may run alongside Traefik for niche workflows, but only one of
+# them can own 80/443. Refuse the run early instead of failing midway with
+# a cryptic Docker port-bind error.
 - name: "[pazny.traefik] Refuse if host nginx and Traefik both want 80/443"
   ansible.builtin.fail:
     msg: |
       install_nginx ({{ install_nginx | default(false) }}) and
-      install_traefik ({{ install_traefik | default(true) }}) are both true.
-      Pick ONE edge proxy — they would clash on ports 80/443.
-      Recommended (Big-Bang default): install_nginx=false, install_traefik=true.
+      install_traefik ({{ install_traefik | default(true) }}) are both true —
+      they would clash on ports 80/443. Pick one.
   when:
     - install_nginx | default(false) | bool
     - install_traefik | default(true) | bool
@@ -93,14 +91,14 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       Traefik — primary edge proxy (Big-Bang 2026-04-27)
+       Traefik — edge proxy
       ══════════════════════════════════════════════════════
-       Ports:           80 + 443 (edge), 127.0.0.1:8080 (dashboard)
+       Ports:           80 + 443 (edge), 127.0.0.1:{{ traefik_dashboard_port }} (dashboard)
        Static config:   {{ traefik_config_dir }}/traefik.yml
        Dynamic config:  {{ traefik_dynamic_dir }}/{middlewares,tls,services}.yml
        Cert tree:       {{ traefik_certs_dir }} (mounted /certs:ro)
        Logs:            {{ traefik_log_dir }} (json)
        Networks:        {{ traefik_networks | join(', ') }}
-       Tier-1 catalog:  auto-derived from state/manifest.yml
-       Tier-2 catalog:  Docker provider via apps_runner labels
+       Tier-1 catalog:  file provider — state/manifest.yml + install_* flags
+       Tier-2 catalog:  Docker provider — apps_runner labels
       ══════════════════════════════════════════════════════

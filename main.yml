@@ -113,23 +113,20 @@
       tags: ['always']
 
     # ── Preflight: edge-proxy sanity ─────────────────────────────────────────
-    # Big-Bang cutover (2026-04-27) flipped the defaults to install_nginx=false +
-    # install_traefik=true. An operator's gitignored config.yml can override
-    # both back to false, leaving the box with NO listener on 80/443 — Docker
-    # services run fine internally but every URL is silently broken. Refuse the
-    # run so the operator notices before sitting through a 15-min blank.
+    # Catch a misconfigured config.yml early — Docker services run happily
+    # on internal networks even when nothing answers 80/443, so the failure
+    # mode is "every URL silently broken" rather than a loud crash. Better
+    # to refuse the run than sit through a 15-min blank with no edge proxy.
     - name: "[Preflight] Refuse if no edge proxy is enabled"
       ansible.builtin.fail:
         msg: |
-          Both install_nginx and install_traefik are false — no edge proxy
-          would be active after this run. 80/443 would have no listener.
+          Both install_nginx and install_traefik are false — nothing will
+          listen on 80/443. Pick one:
+            install_traefik: true   (default — Docker container, file + Docker providers)
+            install_nginx: true     (host nginx via Homebrew/apt)
 
-          Pick ONE:
-            install_traefik: true   # primary, recommended (Big-Bang 2026-04-27)
-            install_nginx: true     # opt-in fallback (host nginx via Homebrew)
-
-          To bypass intentionally (advanced; running behind another proxy on
-          the host), pass `-e nos_skip_edge_check=true`.
+          Advanced override (running behind a separate proxy on the host):
+            -e nos_skip_edge_check=true
       when:
         - not (install_nginx | default(false) | bool)
         - not (install_traefik | default(true) | bool)
@@ -139,9 +136,8 @@
     - name: "[Preflight] Refuse if BOTH install_nginx and install_traefik are true"
       ansible.builtin.fail:
         msg: |
-          install_nginx and install_traefik are BOTH true — they would clash
-          on ports 80/443. Pick ONE edge proxy. Recommended (post-Big-Bang):
-          install_nginx=false, install_traefik=true.
+          install_nginx and install_traefik are both true — they would clash
+          on ports 80/443. Pick one edge proxy.
       when:
         - install_nginx | default(false) | bool
         - install_traefik | default(true) | bool
@@ -853,7 +849,7 @@
     # mkcert generates the dev cert in tasks/nginx.yml instead.
     # ──────────────────────────────────────────────────────────────────────────
     # ──────────────────────────────────────────────────────────────────────────
-    # TLS certs — proxy-agnostic. Run BEFORE acme + nginx so cert dir exists.
+    # TLS certs — runs before acme + nginx so {{ tls_cert_dir }} exists.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/tls-certs.yml
       tags: ['tls', 'cert', 'mkcert']
@@ -867,8 +863,8 @@
       tags: ['acme', 'tls', 'cert']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Host nginx — opt-in fallback (Big-Bang 2026-04-27 → Traefik primary).
-    # When install_nginx: false (default), Traefik takes 80/443.
+    # Host nginx — optional. Empty by default. Operator opts in per-vhost via
+    # `nginx_sites_enabled`. See tasks/nginx.yml header + templates/nginx/_LEGACY.md.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/nginx.yml
       when: install_nginx | default(false)

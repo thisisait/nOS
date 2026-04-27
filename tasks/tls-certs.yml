@@ -1,19 +1,15 @@
 ---
 # ==============================================================================
-# tasks/tls-certs.yml — TLS certificate provisioning (proxy-agnostic).
-#
-# Big-Bang cutover 2026-04-27: extracted from tasks/nginx.yml so cert
-# generation runs regardless of which reverse proxy is active. Traefik
-# reads from {{ tls_cert_dir }} via a bind mount; host nginx (opt-in
-# fallback, install_nginx: true) reads the same path via vhost
-# `ssl_certificate {{ ssl_cert_path }};` directives.
+# tasks/tls-certs.yml — TLS certificate provisioning.
 #
 # Two flows, switched by `instance_tld_is_local`:
-#   - local TLD (.local/.lan/.test) → mkcert + dev CA in trust store
-#   - public TLD                    → ACME (Let's Encrypt) wildcard via DNS-01
+#   local TLD (.local/.lan/.test) → mkcert + dev CA in trust store
+#   public TLD                    → ACME (Let's Encrypt) wildcard via DNS-01
 #
-# Both produce {{ ssl_cert_path }} + {{ ssl_cert_key }} (computed in
-# default.config.yml from `tls_cert_dir`).
+# Both produce {{ ssl_cert_path }} + {{ ssl_cert_key }} under
+# {{ tls_cert_dir }} (computed in default.config.yml). Traefik mounts the
+# tree as /certs:ro; host nginx (when install_nginx is on) reads the same
+# absolute paths via `ssl_certificate {{ ssl_cert_path }};`.
 # ==============================================================================
 
 # ── Cert directory tree ──────────────────────────────────────────────────────
@@ -88,7 +84,7 @@
       args:
         creates: "{{ ssl_cert_path }}"
 
-    - name: "[mkcert] Ensure cert files are world-readable (Traefik UID 0 in container reads them)"
+    - name: "[mkcert] Ensure cert files are world-readable (Traefik container UID reads them)"
       ansible.builtin.file:
         path: "{{ item }}"
         mode: '0644'
