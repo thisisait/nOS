@@ -110,14 +110,30 @@
   register: _wing_component_count
   changed_when: false
 
-- name: "[pazny.wing] Run legacy JSON → SQLite import (only if no rows yet)"
+- name: "[pazny.wing] Stat legacy JSON source dir (skip migration if no markdown to import)"
+  # The legacy migrate.php is an upgrade path from old Wing where component
+  # metadata lived in markdown files under docs/llm/security. Fresh-blank
+  # installs don't have anything to migrate from; skip cleanly so the
+  # playbook doesn't trip on `migrate.php: Usage: ...` (rc=1) when the
+  # directory is empty or absent.
+  ansible.builtin.find:
+    paths: "{{ wing_json_source }}"
+    patterns: "*.md"
+    file_type: file
+  register: _wing_legacy_md
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.wing] Run legacy JSON → SQLite import (only if no rows yet AND markdown sources exist)"
   ansible.builtin.shell: >
     {{ _wing_run_cli }}
     php bin/migrate.php
     --json-dir={{ wing_json_source }}
     --data-dir={{ wing_data_dir }}
   register: _wing_migrate
-  when: (_wing_component_count.stdout | default('0') | trim | int) == 0
+  when:
+    - (_wing_component_count.stdout | default('0') | trim | int) == 0
+    - (_wing_legacy_md.files | default([]) | length) > 0
 
 # ── Service registry ingestion ───────────────────────────────────────────────
 

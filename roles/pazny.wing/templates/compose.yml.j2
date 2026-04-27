@@ -64,6 +64,15 @@ services:
     working_dir: {{ wing_app_dir }}
     volumes:
       - {{ wing_app_dir }}:{{ wing_app_dir }}:rw
+      # Legacy JSON source for bin/migrate.php (one-time component → SQLite
+      # import). Read-only — wing-cli only needs to read .md files. Path is
+      # bind-mounted at the SAME host path so the --json-dir CLI flag works
+      # without container-vs-host translation.
+      - {{ wing_json_source }}:{{ wing_json_source }}:ro
+      # service-registry.json — bin/ingest-registry.php reads this to populate
+      # the systems table. Mount the parent directory so the bind-mount has a
+      # stable target even when the file is absent at compose-up time.
+      - {{ ansible_facts['env']['HOME'] }}/projects/default:{{ ansible_facts['env']['HOME'] }}/projects/default:ro
     environment:
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_NO_INTERACTION: "1"
