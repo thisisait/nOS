@@ -39,13 +39,13 @@
     - "{{ traefik_dynamic_dir }}"
     - "{{ traefik_log_dir }}"
 
-# ── Load state/manifest.yml for the file-provider auto-derivation ────────────
-# Loaded into a local namespace so it doesn't pollute global vars. Used only
-# by templates/dynamic/services.yml.j2.
-- name: "[pazny.traefik] Load state/manifest.yml (catalog source)"
-  ansible.builtin.include_vars:
-    file: "{{ playbook_dir }}/state/manifest.yml"
-    name: nos_manifest
+# Manifest catalog is loaded per-task via `vars:` scope on the services
+# template render below (NOT include_vars at the role level). Loading it
+# globally would pollute the host vars namespace with manifest health-check
+# url_template strings like "http://localhost:{{ bookstack_port }}/login" —
+# pazny.state_manager later does `role_vars: "{{ vars }}"` which forces
+# resolution of every value, and an undefined port_var (e.g. install_bookstack
+# is false → bookstack_port never defined) fails the whole introspect task.
 
 # ── Static config ────────────────────────────────────────────────────────────
 - name: "[pazny.traefik] Render Traefik static configuration"
@@ -74,6 +74,11 @@
     src: dynamic/services.yml.j2
     dest: "{{ traefik_dynamic_dir }}/services.yml"
     mode: '0644'
+  vars:
+    # Loaded per-task only — not via include_vars — to keep manifest's
+    # url_template strings out of the global host-vars namespace. See
+    # comment above the static-config block.
+    nos_manifest: "{{ lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml }}"
 
 # ── Compose override fragment ────────────────────────────────────────────────
 - name: "[pazny.traefik] Render compose override fragment"
