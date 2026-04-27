@@ -1,12 +1,13 @@
 # {{ ansible_managed }}
-# Traefik static configuration — rendered by pazny.traefik role.
-# Big-Bang cutover 2026-04-27: PRIMARY edge proxy (was host nginx).
+# Traefik static configuration — rendered by pazny.traefik. Edge proxy.
 
 api:
   dashboard: true
-  # `insecure: true` exposes the dashboard on the dashboard entry point with
-  # no auth. We bind that entry point to 127.0.0.1 host-side (see compose.yml.j2)
-  # so it's local-only — same posture as the previous traefik nginx vhost.
+  # `insecure: true` exposes the dashboard on Traefik's built-in "traefik"
+  # entry point (port 8080 inside the container). We don't define a separate
+  # `dashboard` entry point — that would collide with the built-in one.
+  # The compose override binds host 127.0.0.1:{{ traefik_dashboard_port }} →
+  # container :8080 so the dashboard stays local-only.
   insecure: true
 
 global:
@@ -27,8 +28,6 @@ entryPoints:
     http:
       tls:
         options: "modern@file"
-  dashboard:
-    address: ":8080"
 
 providers:
   docker:
@@ -52,3 +51,7 @@ accessLog:
   filePath: "/var/log/traefik/access.log"
   format: "json"
   bufferingSize: 100
+
+# Liveness endpoint for the docker healthcheck — exposed on the same built-in
+# "traefik" entry point as the dashboard (i.e. container port 8080).
+ping: {}
