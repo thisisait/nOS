@@ -16,8 +16,9 @@
 traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin
 traefik_http_port: 80
 traefik_https_port: 443
-# Dashboard on 8090 — 8080 is taken by cadvisor in the observability stack.
-traefik_dashboard_port: 8090
+# Host port for the Traefik dashboard. Default 8082 — 8080=cadvisor,
+# 8081=tileserver, 8090=freescout. Container always exposes :8080 (built-in).
+traefik_dashboard_port: 8082
 traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 

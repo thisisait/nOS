@@ -1330,7 +1330,7 @@ iiab_compose_dir: "{{ stacks_dir }}/iiab"
 traefik_image_version: "v3.6.12"        # CVE-2026-33186 (gRPC auth bypass) + CVE-2026-33433 (BasicAuth spoofing). Was v3.6.11
 traefik_http_port: 80
 traefik_https_port: 443
-traefik_dashboard_port: 8090            # 8080 is owned by cadvisor in observability stack
+traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
 traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_config_dir / traefik_dynamic_dir / traefik_certs_dir live in
