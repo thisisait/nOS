@@ -112,6 +112,41 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # ── Preflight: edge-proxy sanity ─────────────────────────────────────────
+    # Big-Bang cutover (2026-04-27) flipped the defaults to install_nginx=false +
+    # install_traefik=true. An operator's gitignored config.yml can override
+    # both back to false, leaving the box with NO listener on 80/443 — Docker
+    # services run fine internally but every URL is silently broken. Refuse the
+    # run so the operator notices before sitting through a 15-min blank.
+    - name: "[Preflight] Refuse if no edge proxy is enabled"
+      ansible.builtin.fail:
+        msg: |
+          Both install_nginx and install_traefik are false — no edge proxy
+          would be active after this run. 80/443 would have no listener.
+
+          Pick ONE:
+            install_traefik: true   # primary, recommended (Big-Bang 2026-04-27)
+            install_nginx: true     # opt-in fallback (host nginx via Homebrew)
+
+          To bypass intentionally (advanced; running behind another proxy on
+          the host), pass `-e nos_skip_edge_check=true`.
+      when:
+        - not (install_nginx | default(false) | bool)
+        - not (install_traefik | default(true) | bool)
+        - not (nos_skip_edge_check | default(false) | bool)
+      tags: ['always', 'preflight']
+
+    - name: "[Preflight] Refuse if BOTH install_nginx and install_traefik are true"
+      ansible.builtin.fail:
+        msg: |
+          install_nginx and install_traefik are BOTH true — they would clash
+          on ports 80/443. Pick ONE edge proxy. Recommended (post-Big-Bang):
+          install_nginx=false, install_traefik=true.
+      when:
+        - install_nginx | default(false) | bool
+        - install_traefik | default(true) | bool
+      tags: ['always', 'preflight']
+
     # ── State & Migration Framework: orchestrator (runs before roles) ────────
     # Reads ~/.nos/state.yml, evaluates migrations/*.yml, applies any that
     # gate true and have not been recorded as applied. Idempotent — if
