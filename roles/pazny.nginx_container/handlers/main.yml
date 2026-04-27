@@ -1,0 +1,8 @@
+---
+- name: "Restart nginx_container"
+  # Bounces nginx in the infra compose project. `restart` keeps the
+  # container + bind mounts; only the nginx process itself recycles —
+  # which is what notify wants when a vhost render changed.
+  ansible.builtin.command: >
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra restart nginx
+  failed_when: false

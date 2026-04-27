@@ -1,0 +1,47 @@
+---
+# ==============================================================================
+# pazny.nginx_container — containerized nginx for the infra stack.
+#
+# Replaces the host-side Homebrew (macOS) / apt (Linux) nginx that
+# tasks/nginx.yml currently provisions. The container reads vhost
+# templates from {{ stacks_dir }}/infra/nginx/, which is itself written
+# by tasks/nginx.yml (or a thin shim that we'll add when this role is
+# wired in). nginx + cert + log directories all live under one stack
+# tree so the migration is a contained move rather than a host-wide
+# refactor.
+#
+# Coexistence policy: at most ONE of `install_nginx` / `install_nginx_container`
+# is allowed at a time. Preflight gate in tasks/nginx_preflight.yml refuses
+# a run that has both. Operators flip from host → container via the
+# 2026-05-15-nginx-host-to-container migration recipe.
+# ==============================================================================
+
+nginx_container_image: "nginx:1.27-alpine"
+
+# Standard ports — can be overridden if running side-by-side with another
+# reverse proxy (e.g. while traefik is being trialled in parallel).
+nginx_container_http_port: 80
+nginx_container_https_port: 443
+
+# Where to keep the live config tree on the host. Bind-mounted read-only
+# into the container.
+nginx_container_root: "{{ stacks_dir }}/infra/nginx"
+nginx_container_etc:    "{{ nginx_container_root }}/etc"
+nginx_container_logs:   "{{ nginx_container_root }}/log"
+nginx_container_cache:  "{{ nginx_container_root }}/cache"
+
+# Resource caps. nginx in front of ~50 vhosts is light (10-30 MB RSS in
+# practice); the cap exists mostly so a runaway access log can't OOM the
+# host.
+nginx_container_mem_limit: "256m"
+
+# ── Backend host alias (the cross-platform one) ──────────────────────────────
+# Vhost templates use `{{ nginx_backend_host }}` for proxy_pass / fastcgi_pass
+# upstreams. With host-side nginx, this resolves to 127.0.0.1 (same machine).
+# With container-side nginx, the container can't reach host loopback by that
+# name, so we map an alias `nos-host` to host-gateway via extra_hosts. Same
+# variable, two values depending on which path is active — no template fork.
+#
+# Default value for HOST nginx (tasks/nginx.yml). The role overrides it via
+# set_fact when install_nginx_container is on.
+nginx_backend_host: "127.0.0.1"
