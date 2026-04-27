@@ -1,12 +1,33 @@
 ---
 # ==============================================================================
 # NGINX - installation and configuration
+#
+# Two render targets are supported via a single task file. Host nginx
+# (Homebrew on macOS, apt on Linux) writes to {{ nginx_etc_dir }}
+# and is started via brew services / systemd. Container nginx (the
+# pazny.nginx_container role) writes to {{ stacks_dir }}/infra/nginx/etc
+# instead, and is bounced via `docker compose -p infra restart nginx`.
+#
+# Switch between them via:
+#   install_nginx:           true (default) → host nginx on 80/443
+#   install_nginx_container: true            → container nginx on 80/443
+# Both true is rejected by pazny.nginx_container's preflight (port collision).
 # ==============================================================================
+
+# ── Resolve render target up front ────────────────────────────────────────────
+- name: "[nginx] Resolve render target (host vs container)"
+  ansible.builtin.set_fact:
+    nginx_etc_dir: "{{ nginx_container_etc if (install_nginx_container | default(false) | bool) else (homebrew_prefix + '/etc/nginx') }}"
+    nginx_log_dir: "{{ nginx_container_logs if (install_nginx_container | default(false) | bool) else (homebrew_prefix + '/var/log/nginx') }}"
+  vars:
+    nginx_container_etc:  "{{ stacks_dir }}/infra/nginx/etc"
+    nginx_container_logs: "{{ stacks_dir }}/infra/nginx/log"
 
 - name: Install nginx via Homebrew
   community.general.homebrew:
     name: nginx
     state: present
+  when: not (install_nginx_container | default(false) | bool)
 
 - name: Install mkcert for local SSL certificates
   community.general.homebrew:
@@ -22,15 +43,15 @@
     state: directory
     mode: '0755'
   loop:
-    - "{{ homebrew_prefix }}/etc/nginx/sites-available"
-    - "{{ homebrew_prefix }}/etc/nginx/sites-enabled"
-    - "{{ homebrew_prefix }}/etc/nginx/conf.d"
-    - "{{ homebrew_prefix }}/var/log/nginx"
+    - "{{ nginx_etc_dir }}/sites-available"
+    - "{{ nginx_etc_dir }}/sites-enabled"
+    - "{{ nginx_etc_dir }}/conf.d"
+    - "{{ nginx_log_dir }}"
 
 - name: Deploy main nginx.conf
   ansible.builtin.template:
     src: nginx/nginx.conf
-    dest: "{{ homebrew_prefix }}/etc/nginx/nginx.conf"
+    dest: "{{ nginx_etc_dir }}/nginx.conf"
     backup: true
     mode: '0644'
   notify: Restart nginx
@@ -38,7 +59,7 @@
 - name: Deploy Authentik proxy auth snippets
   ansible.builtin.template:
     src: "nginx/{{ item }}"
-    dest: "{{ homebrew_prefix }}/etc/nginx/{{ item }}"
+    dest: "{{ nginx_etc_dir }}/{{ item }}"
     mode: '0644'
   loop:
     - authentik-proxy-auth.conf
@@ -49,7 +70,7 @@
 - name: Deploy nginx virtual host templates
   ansible.builtin.template:
     src: "nginx/sites-available/{{ item }}"
-    dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
+    dest: "{{ nginx_etc_dir }}/sites-available/{{ item }}"
     mode: '0644'
   loop:
     # ── Dev templates ─────────────────────────────────────────────────────────
@@ -174,8 +195,8 @@
 
 - name: Enable nginx sites (symlink)
   ansible.builtin.file:
-    src: "{{ homebrew_prefix }}/etc/nginx/sites-available/{{ item }}"
-    dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/{{ item }}"
+    src: "{{ nginx_etc_dir }}/sites-available/{{ item }}"
+    dest: "{{ nginx_etc_dir }}/sites-enabled/{{ item }}"
     state: link
     force: true
   loop: "{{ nginx_sites_enabled | default(_nginx_sites_auto) }}"
@@ -183,7 +204,7 @@
 
 - name: Remove disabled nginx sites
   ansible.builtin.shell: |
-    for f in {{ homebrew_prefix }}/etc/nginx/sites-enabled/*.conf; do
+    for f in {{ nginx_etc_dir }}/sites-enabled/*.conf; do
       name=$(basename "$f")
       found=false
       for enabled in {{ (nginx_sites_enabled | default(_nginx_sites_auto)) | join(' ') }}; do
@@ -195,7 +216,7 @@
 
 - name: Ensure nginx SSL directory exists
   ansible.builtin.file:
-    path: "{{ homebrew_prefix }}/etc/nginx/ssl"
+    path: "{{ nginx_etc_dir }}/ssl"
     state: directory
     mode: '0700'
 
@@ -223,7 +244,7 @@
 
     - name: "[mkcert] Check if SSL cert covers all required SANs"
       ansible.builtin.shell: >
-        openssl x509 -in {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt -noout -text 2>/dev/null
+        openssl x509 -in {{ nginx_etc_dir }}/ssl/local-dev.crt -noout -text 2>/dev/null
         | grep -qF '{{ item }}'
       loop: "{{ _ssl_san_required | select | list }}"
       register: _cert_san_check
@@ -235,24 +256,26 @@
         path: "{{ item }}"
         state: absent
       loop:
-        - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
-        - "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key"
+        - "{{ nginx_etc_dir }}/ssl/local-dev.crt"
+        - "{{ nginx_etc_dir }}/ssl/local-dev.key"
       when: _cert_san_check.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
 
     - name: "[mkcert] Generate local dev wildcard certificate"
       ansible.builtin.command: >
         mkcert
-        -cert-file {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt
-        -key-file  {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.key
+        -cert-file {{ nginx_etc_dir }}/ssl/local-dev.crt
+        -key-file  {{ nginx_etc_dir }}/ssl/local-dev.key
         "localhost" "127.0.0.1" "::1" "*.localhost"
         "*.{{ instance_tld | default('dev.local') }}"
         {{ '"*.os.' + (instance_tld | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
         {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
         {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
       args:
-        creates: "{{ homebrew_prefix }}/etc/nginx/ssl/local-dev.crt"
+        creates: "{{ nginx_etc_dir }}/ssl/local-dev.crt"
 
 - name: Start and enable nginx via brew services
+  # Host-side nginx only. Container nginx is managed by the
+  # pazny.nginx_container role + `docker compose -p infra up nginx`.
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start nginx"
   register: nginx_svc
   changed_when: >
@@ -262,7 +285,11 @@
     nginx_svc.rc != 0 and
     'already started' not in (nginx_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
+  when: not (install_nginx_container | default(false) | bool)
 
 - name: Test nginx configuration
+  # Host-side nginx test. Container nginx self-tests via its compose
+  # healthcheck (CMD nginx -t) — no need for a host-side dry-run.
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
   changed_when: false
+  when: not (install_nginx_container | default(false) | bool)
