@@ -21,3 +21,6 @@ docs/funding/*
 
 # Playwright MCP transient artifacts (snapshot YAMLs + console logs)
 .playwright-mcp/
+
+# Local-only operator scripts (not committed by request)
+tools/wipe-nginx-relics.sh

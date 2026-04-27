@@ -52,6 +52,48 @@ services:
       start_period: 15s
       retries: 3
 
+  # Big-Bang 2026-04-27: nginx sidecar that fronts the FPM container with HTTP.
+  # Traefik (primary edge proxy) can't speak FastCGI so a thin nginx fronts
+  # Wing on the shared network. The wing source tree is mounted read-only at
+  # the SAME absolute path used inside the FPM container so the
+  # SCRIPT_FILENAME values nginx forwards resolve correctly inside FPM.
+  #
+  # When install_nginx (host) is true, this sidecar is the redundant path —
+  # operator can omit it via wing_with_sidecar: false. When install_nginx is
+  # false (default after Big-Bang), the sidecar is the ONLY way Wing serves
+  # HTTP, so the default is on.
+{% if wing_with_sidecar | default(true) | bool %}
+  wing-nginx:
+    image: nginx:1.27-alpine
+    container_name: wing-nginx
+    restart: unless-stopped
+    depends_on:
+      wing:
+        condition: service_healthy
+    volumes:
+      # FPM-resolvable Wing source (must match the path inside the wing container)
+      - {{ wing_app_dir }}:{{ wing_app_dir }}:ro
+      # nginx config — rendered by tasks/main.yml from wing-nginx.conf.j2
+      # into ~/wing/wing-nginx.conf (sibling of app/) so it survives a wing_app_dir wipe.
+      - {{ ansible_facts['env']['HOME'] }}/wing/wing-nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network | default('shared_net') }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 64m
+    cpus: 0.25
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+{% endif %}
+
   # One-shot helper that shares the wing image + mounts. Used from
   # tasks/post.yml for composer install + bin/init-db.php + bin/migrate.php
   # + bin/provision-token.php. The `cli` profile keeps it out of normal

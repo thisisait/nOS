@@ -2,20 +2,52 @@
 # ==============================================================================
 # pazny.traefik/tasks/main.yml
 #
-# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`.
-# Renderuje Traefik static config (traefik.yml) do {{ traefik_config_dir }}
-# a compose override fragment do {{ stacks_dir }}/infra/overrides/.
+# Big-Bang cutover 2026-04-27: Traefik is now the primary edge proxy.
+# This file renders:
+#   - static config:    traefik.yml
+#   - dynamic providers: conf.d/middlewares.yml + conf.d/services.yml + conf.d/tls.yml
+#   - compose override: {{ stacks_dir }}/infra/overrides/traefik.yml
+#
+# Tier-1 services.yml is auto-derived from state/manifest.yml + install_*
+# flags (one router + one service per enabled domain-bound service).
+# Tier-2 apps go through the Docker provider (apps_runner emits labels).
 # ==============================================================================
 
-- name: "[pazny.traefik] Ensure config directory exists"
+# ── Refuse if nginx is also active on 80/443 ─────────────────────────────────
+# Coexistence is allowed (host nginx as opt-in fallback) but they can't both
+# bind 80/443. Operator must pick the active edge — see install_nginx /
+# install_traefik in default.config.yml.
+- name: "[pazny.traefik] Refuse if host nginx and Traefik both want 80/443"
+  ansible.builtin.fail:
+    msg: |
+      install_nginx ({{ install_nginx | default(false) }}) and
+      install_traefik ({{ install_traefik | default(true) }}) are both true.
+      Pick ONE edge proxy — they would clash on ports 80/443.
+      Recommended (Big-Bang default): install_nginx=false, install_traefik=true.
+  when:
+    - install_nginx | default(false) | bool
+    - install_traefik | default(true) | bool
+
+# ── Host directory tree ──────────────────────────────────────────────────────
+- name: "[pazny.traefik] Ensure config + dynamic + log directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
     - "{{ traefik_config_dir }}"
-    - "{{ traefik_config_dir }}/conf.d"
+    - "{{ traefik_dynamic_dir }}"
+    - "{{ traefik_log_dir }}"
 
+# ── Load state/manifest.yml for the file-provider auto-derivation ────────────
+# Loaded into a local namespace so it doesn't pollute global vars. Used only
+# by templates/dynamic/services.yml.j2.
+- name: "[pazny.traefik] Load state/manifest.yml (catalog source)"
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/state/manifest.yml"
+    name: nos_manifest
+
+# ── Static config ────────────────────────────────────────────────────────────
 - name: "[pazny.traefik] Render Traefik static configuration"
   ansible.builtin.template:
     src: traefik.yml.j2
@@ -23,9 +55,47 @@
     mode: '0644'
   notify: Restart traefik
 
+# ── Dynamic config (file provider) ───────────────────────────────────────────
+- name: "[pazny.traefik] Render dynamic middlewares (Authentik forward-auth + headers)"
+  ansible.builtin.template:
+    src: dynamic/middlewares.yml.j2
+    dest: "{{ traefik_dynamic_dir }}/middlewares.yml"
+    mode: '0644'
+  # File provider is hot-watched, no restart needed.
+
+- name: "[pazny.traefik] Render dynamic TLS pairs"
+  ansible.builtin.template:
+    src: dynamic/tls.yml.j2
+    dest: "{{ traefik_dynamic_dir }}/tls.yml"
+    mode: '0644'
+
+- name: "[pazny.traefik] Render Tier-1 services (auto-derived from manifest + install_* flags)"
+  ansible.builtin.template:
+    src: dynamic/services.yml.j2
+    dest: "{{ traefik_dynamic_dir }}/services.yml"
+    mode: '0644'
+
+# ── Compose override fragment ────────────────────────────────────────────────
 - name: "[pazny.traefik] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
     dest: "{{ stacks_dir }}/infra/overrides/traefik.yml"
     mode: '0600'
   notify: Restart traefik
+
+# ── Print summary ────────────────────────────────────────────────────────────
+- name: "[pazny.traefik] Print setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Traefik — primary edge proxy (Big-Bang 2026-04-27)
+      ══════════════════════════════════════════════════════
+       Ports:           80 + 443 (edge), 127.0.0.1:8080 (dashboard)
+       Static config:   {{ traefik_config_dir }}/traefik.yml
+       Dynamic config:  {{ traefik_dynamic_dir }}/{middlewares,tls,services}.yml
+       Cert tree:       {{ traefik_certs_dir }} (mounted /certs:ro)
+       Logs:            {{ traefik_log_dir }} (json)
+       Networks:        {{ traefik_networks | join(', ') }}
+       Tier-1 catalog:  auto-derived from state/manifest.yml
+       Tier-2 catalog:  Docker provider via apps_runner labels
+      ══════════════════════════════════════════════════════

@@ -817,6 +817,12 @@
     # Skipped automatically on local TLDs (dev.local, .lan, .test) where
     # mkcert generates the dev cert in tasks/nginx.yml instead.
     # ──────────────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────────────────────────────────
+    # TLS certs — proxy-agnostic. Run BEFORE acme + nginx so cert dir exists.
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/tls-certs.yml
+      tags: ['tls', 'cert', 'mkcert']
+
     - name: "ACME — Let's Encrypt wildcard cert"
       ansible.builtin.include_role:
         name: pazny.acme
@@ -826,10 +832,11 @@
       tags: ['acme', 'tls', 'cert']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Web server (after PHP so the socket exists before nginx -t)
+    # Host nginx — opt-in fallback (Big-Bang 2026-04-27 → Traefik primary).
+    # When install_nginx: false (default), Traefik takes 80/443.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/nginx.yml
-      when: install_nginx | default(true)
+      when: install_nginx | default(false)
       tags: ['nginx', 'webserver']
 
     - import_tasks: tasks/node.yml

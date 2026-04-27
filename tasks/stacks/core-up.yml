@@ -195,7 +195,7 @@
 
 - name: "[Core] pazny.traefik render"
   ansible.builtin.include_role: { name: pazny.traefik, apply: { tags: ['traefik', 'infra'] } }
-  when: install_traefik | default(false)
+  when: install_traefik | default(true)
   tags: ['traefik', 'infra']
 
 - name: "[Core] pazny.portainer render"

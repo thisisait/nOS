@@ -1,0 +1,73 @@
+# {{ ansible_managed }}
+# Traefik FILE-PROVIDER routers + services — Tier-1 catalog.
+# Auto-derived from state/manifest.yml: every service entry that has both
+# `domain_var` and `port_var` AND whose `install_flag` is currently true.
+#
+# Upstream is uniformly `nos-host:<port>` because every Tier-1 Docker
+# service publishes its primary port via host loopback in its compose
+# template. Host-side services (jsos, openclaw, hermes) work the same
+# way because nos-host:host-gateway resolves to the Docker host.
+#
+# Auth middleware is decided by traefik_auth_modes in vars/main.yml:
+#   none/oidc → no middleware (service handles its own auth)
+#   proxy     → authentik@file + security-headers@file (forward-auth, fail-closed)
+#
+# Wing is special-cased: it needs FastCGI which Traefik can't speak. Its
+# nginx sidecar (rendered by pazny.wing) listens on the shared_net Docker
+# network as `wing-nginx:80` — the wing router targets that name directly.
+
+http:
+  routers:
+{% for s in nos_manifest.services | default([]) %}
+{% if s.domain_var is defined and (s.port_var is defined or s.id in ['wing']) and s.id not in (traefik_skip_ids | default([])) %}
+{% set _flag_value = lookup('vars', s.install_flag, default=false) %}
+{% if _flag_value is string %}
+{%   set _enabled = (_flag_value | lower) in ['true', '1', 'yes'] %}
+{% else %}
+{%   set _enabled = _flag_value | bool %}
+{% endif %}
+{% if _enabled %}
+{% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ '.' ~ instance_tld) %}
+{% set _auth = traefik_auth_modes.get(s.id, 'proxy') %}
+{% set _router = s.id | replace('_', '-') %}
+    {{ _router }}:
+      rule: "Host(`{{ _host }}`)"
+      entryPoints: ["websecure"]
+      service: "{{ _router }}"
+      tls: {}
+{% if _auth == 'proxy' %}
+      middlewares: ["authentik@file", "security-headers@file", "compress@file"]
+{% else %}
+      middlewares: ["security-headers@file", "compress@file"]
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+  services:
+{% for s in nos_manifest.services | default([]) %}
+{% if s.domain_var is defined and (s.port_var is defined or s.id in ['wing']) and s.id not in (traefik_skip_ids | default([])) %}
+{% set _flag_value = lookup('vars', s.install_flag, default=false) %}
+{% if _flag_value is string %}
+{%   set _enabled = (_flag_value | lower) in ['true', '1', 'yes'] %}
+{% else %}
+{%   set _enabled = _flag_value | bool %}
+{% endif %}
+{% if _enabled %}
+{% set _port = lookup('vars', s.port_var, default=80) %}
+{% set _router = s.id | replace('_', '-') %}
+{% if s.id == 'wing' %}
+    {{ _router }}:
+      loadBalancer:
+        servers:
+          # Wing FPM can't speak HTTP directly — use its nginx sidecar.
+          - url: "http://wing-nginx:80"
+{% else %}
+    {{ _router }}:
+      loadBalancer:
+        servers:
+          - url: "http://nos-host:{{ _port }}"
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}

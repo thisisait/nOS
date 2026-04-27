@@ -1,0 +1,97 @@
+---
+# ==============================================================================
+# tasks/tls-certs.yml — TLS certificate provisioning (proxy-agnostic).
+#
+# Big-Bang cutover 2026-04-27: extracted from tasks/nginx.yml so cert
+# generation runs regardless of which reverse proxy is active. Traefik
+# reads from {{ tls_cert_dir }} via a bind mount; host nginx (opt-in
+# fallback, install_nginx: true) reads the same path via vhost
+# `ssl_certificate {{ ssl_cert_path }};` directives.
+#
+# Two flows, switched by `instance_tld_is_local`:
+#   - local TLD (.local/.lan/.test) → mkcert + dev CA in trust store
+#   - public TLD                    → ACME (Let's Encrypt) wildcard via DNS-01
+#
+# Both produce {{ ssl_cert_path }} + {{ ssl_cert_key }} (computed in
+# default.config.yml from `tls_cert_dir`).
+# ==============================================================================
+
+# ── Cert directory tree ──────────────────────────────────────────────────────
+- name: "[tls] Ensure TLS cert directory tree exists"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ tls_cert_dir }}"
+    - "{{ tls_cert_dir }}/acme"
+
+# ── mkcert (local-only TLDs) ─────────────────────────────────────────────────
+# When instance_tld is real (pazny.eu etc.) the cert comes from pazny.acme
+# instead. mkcert/local-dev.* tasks are gated as a single block to avoid
+# polluting a public-TLD install with a local CA in the system trust store.
+- name: "[mkcert] Install dev CA + generate local-dev wildcard cert"
+  when: instance_tld_is_local | default(true) | bool
+  block:
+    - name: "[mkcert] Install mkcert via Homebrew"
+      community.general.homebrew:
+        name:
+          - mkcert
+          - nss
+        state: present
+
+    - name: "[mkcert] Install CA into system trust store"
+      ansible.builtin.command: mkcert -install
+      become: true
+      environment:
+        CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+      changed_when: false
+
+    - name: "[mkcert] Build list of required SSL SANs"
+      ansible.builtin.set_fact:
+        _ssl_san_required:
+          - "*.{{ instance_tld | default('dev.local') }}"
+          - "*.apps.{{ instance_tld | default('dev.local') }}"
+          - "{{ '*.os.' + (instance_tld | default('dev.local')) if (install_puter | default(false)) else '' }}"
+          - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
+          - "{{ '*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) if (install_bluesky_pds | default(false)) else '' }}"
+
+    - name: "[mkcert] Check if SSL cert covers all required SANs"
+      ansible.builtin.shell: >
+        openssl x509 -in {{ ssl_cert_path }} -noout -text 2>/dev/null
+        | grep -qF '{{ item }}'
+      loop: "{{ _ssl_san_required | select | list }}"
+      register: _cert_san_check
+      changed_when: false
+      failed_when: false
+
+    - name: "[mkcert] Remove old SSL cert if missing required SANs"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ ssl_cert_path }}"
+        - "{{ ssl_cert_key }}"
+      when: _cert_san_check.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
+
+    - name: "[mkcert] Generate local dev wildcard certificate"
+      ansible.builtin.command: >
+        mkcert
+        -cert-file {{ ssl_cert_path }}
+        -key-file  {{ ssl_cert_key }}
+        "localhost" "127.0.0.1" "::1" "*.localhost"
+        "*.{{ instance_tld | default('dev.local') }}"
+        "*.apps.{{ instance_tld | default('dev.local') }}"
+        {{ '"*.os.' + (instance_tld | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
+        {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
+        {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
+      args:
+        creates: "{{ ssl_cert_path }}"
+
+    - name: "[mkcert] Ensure cert files are world-readable (Traefik UID 0 in container reads them)"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: '0644'
+      loop:
+        - "{{ ssl_cert_path }}"
+        - "{{ ssl_cert_key }}"

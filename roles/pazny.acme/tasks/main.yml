@@ -79,7 +79,7 @@
     --dns dns_cf
     --keylength 2048
     --server {{ 'letsencrypt_test' if (acme_staging | bool) else 'letsencrypt' }}
-    --renew-hook "{{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew services restart nginx"
+    --renew-hook "{{ ('/opt/homebrew/bin/brew services restart nginx' if (install_nginx | default(false)) else (docker_bin | default('/usr/local/bin/docker')) + ' compose -p infra restart traefik') }}"
   environment:
     CF_Token: "{{ acme_cloudflare_api_token }}"
     HOME: "{{ ansible_facts['env']['HOME'] }}"
@@ -110,7 +110,9 @@
     dest: "{{ acme_cert_key }}"
     state: link
     force: true
-  notify: Restart nginx
+  notify:
+    - Restart nginx
+    - Restart traefik
 
 # ── 4. launchd renewal job ───────────────────────────────────────────────────
 - name: "[ACME] Render renewal launchd plist"

@@ -1,26 +1,54 @@
 # {{ ansible_managed }}
-# Traefik static configuration — rendered by pazny.traefik role
+# Traefik static configuration — rendered by pazny.traefik role.
+# Big-Bang cutover 2026-04-27: PRIMARY edge proxy (was host nginx).
 
 api:
   dashboard: true
+  # `insecure: true` exposes the dashboard on the dashboard entry point with
+  # no auth. We bind that entry point to 127.0.0.1 host-side (see compose.yml.j2)
+  # so it's local-only — same posture as the previous traefik nginx vhost.
   insecure: true
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
 
 entryPoints:
   web:
     address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
     address: ":443"
+    http:
+      tls:
+        options: "modern@file"
+  dashboard:
+    address: ":8080"
 
 providers:
   docker:
+    # Tier-2 apps (apps_runner) + any future labelled containers.
     exposedByDefault: false
-    network: {{ stacks_shared_network | default('shared_net') }}
+    network: "{{ stacks_shared_network | default('shared_net') }}"
     endpoint: "tcp://docker-socket-proxy:2375"
+    watch: true
   file:
+    # Tier-1 services (existing pazny.* roles) — services.yml, middlewares.yml,
+    # tls.yml rendered by tasks/main.yml. Watch=true → hot-reload on change.
     directory: "/etc/traefik/conf.d"
     watch: true
 
 log:
   level: "{{ traefik_log_level | default('INFO') }}"
+  filePath: "/var/log/traefik/traefik.log"
+  format: "json"
 
-accessLog: {}
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: "json"
+  bufferingSize: 100

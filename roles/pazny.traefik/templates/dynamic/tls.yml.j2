@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# Traefik FILE-PROVIDER TLS — cert pairs from neutral {{ tls_cert_dir }}.
+# Container path: /certs (bind-mount from host {{ traefik_certs_dir }}:ro).
+
+tls:
+  certificates:
+{% if instance_tld_is_local | default(true) | bool %}
+    - certFile: /certs/local-dev.crt
+      keyFile:  /certs/local-dev.key
+{% else %}
+    - certFile: /certs/acme/{{ instance_tld }}.crt
+      keyFile:  /certs/acme/{{ instance_tld }}.key
+{% endif %}
+
+  stores:
+    default:
+      defaultCertificate:
+{% if instance_tld_is_local | default(true) | bool %}
+        certFile: /certs/local-dev.crt
+        keyFile:  /certs/local-dev.key
+{% else %}
+        certFile: /certs/acme/{{ instance_tld }}.crt
+        keyFile:  /certs/acme/{{ instance_tld }}.key
+{% endif %}

@@ -13,8 +13,18 @@
   changed_when: true
   failed_when: false
 
+# Big-Bang 2026-04-27: ACME renewal triggers either Traefik (primary) or
+# host nginx (opt-in fallback) bounce, depending on which is active.
 - name: Restart nginx
   ansible.builtin.command: >-
     {{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew services restart nginx
   changed_when: true
   failed_when: false
+  when: install_nginx | default(false) | bool
+
+- name: Restart traefik
+  ansible.builtin.command: >-
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra restart traefik
+  changed_when: true
+  failed_when: false
+  when: install_traefik | default(true) | bool

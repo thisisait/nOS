@@ -1,20 +1,37 @@
 ---
 # ==============================================================================
-# pazny.traefik — Traefik reverse proxy (infra compose stack)
+# pazny.traefik — Traefik reverse proxy (PRIMARY edge after Big-Bang 2026-04-27)
 #
-# Traefik provides Docker service discovery + ingress for local development.
-# We use it alongside nginx — nginx handles vhost routing for native services,
-# Traefik picks up dynamic Docker labels. Config files (traefik.yml
-# + conf.d/) are rendered by this role (templates/traefik.yml.j2) and
-# Traefik reads them via a bind mount.
+# Two providers:
+#   docker — Tier-2 apps (apps_runner-onboarded) auto-discovered via labels
+#   file   — Tier-1 services (existing pazny.* roles) auto-derived from
+#            state/manifest.yml + install_* flags. One YAML rendered into
+#            {{ traefik_dynamic_dir }}/services.yml; Traefik watches it
+#            for hot-reload.
+#
+# Authentik forward-auth lives as a file-provider middleware
+# ({{ traefik_dynamic_dir }}/middlewares.yml) — fail-closed (PENTEST-002).
 # ==============================================================================
 
 traefik_image_version: "v3.6.12"                    # CVE-2026-33186 + CVE-2026-33433 pin
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8080
-traefik_domain: "traefik.dev.local"
+traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
-traefik_config_dir: "{{ ansible_facts['env']['HOME'] }}/iiab/traefik"
+
+# Config tree on the host. Bind-mounted into the container.
+traefik_config_dir:  "{{ stacks_dir }}/infra/traefik"
+traefik_dynamic_dir: "{{ traefik_config_dir }}/conf.d"
+traefik_certs_dir:   "{{ tls_cert_dir | default(stacks_dir + '/infra/tls') }}"
+traefik_log_dir:     "{{ traefik_config_dir }}/log"
+
 traefik_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 traefik_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# Networks Traefik joins. shared_net = Tier-2 apps; per-stack nets = Tier-1
+# upstream containers. host-gateway gives access to host loopback for services
+# that publish on 127.0.0.1:<port> (most of the catalog).
+traefik_networks:
+  - infra_net
+  - "{{ stacks_shared_network | default('shared_net') }}"

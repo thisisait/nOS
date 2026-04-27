@@ -59,3 +59,13 @@
     dest: "{{ stacks_dir }}/iiab/overrides/wing.yml"
     mode: '0600'
   notify: Restart wing
+
+# Big-Bang 2026-04-27: nginx sidecar config for FPM HTTP front. Lives at
+# ~/wing/wing-nginx.conf so it survives a wing_app_dir wipe.
+- name: "[pazny.wing] Render wing-nginx sidecar config"
+  ansible.builtin.template:
+    src: wing-nginx.conf.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/wing/wing-nginx.conf"
+    mode: '0644'
+  when: wing_with_sidecar | default(true) | bool
+  notify: Restart wing

@@ -1,0 +1,67 @@
+---
+# ==============================================================================
+# pazny.traefik/vars/main.yml — auth-mode lookup for Tier-1 services.
+#
+# Big-Bang cutover (2026-04-27). Auto-derived router list comes from
+# state/manifest.yml entries that have both `domain_var` and `port_var`.
+# This map decides which Traefik middleware to attach per service id:
+#
+#   none   → service handles its own auth (Authentik itself, JWT APIs,
+#            services with native OIDC env vars / API config).
+#   oidc   → native OIDC was wired into the service via env / API; Traefik
+#            does NOT add forward-auth — the service's own login button
+#            redirects to Authentik. Same router as `none` in practice;
+#            kept distinct for documentation + future per-mode policy.
+#   proxy  → service has no native SSO support, so Traefik gates the
+#            request via the Authentik forward-auth middleware (mirror
+#            of nginx's `include authentik-proxy-locations.conf` pattern,
+#            fail-closed semantics — see PENTEST-002).
+#
+# DEFAULT FOR UNLISTED SERVICES = 'proxy'. Anything new gets gated until
+# the operator wires native OIDC or explicitly opts out.
+# ==============================================================================
+
+traefik_auth_modes:
+  # ── No auth (public or self-managed) ───────────────────────────────────────
+  authentik: none           # IS the auth provider
+  bone: none                # JWT-validated API
+  bluesky_pds: none         # AT Protocol federation
+  rustfs: none              # S3 API, own credentials
+  ntfy: none                # push notifications, optional own auth
+  miniflux: none            # own user/pass
+  onlyoffice: none          # DocServer for collab
+  influxdb: none            # token-based
+  spacetimedb: none         # binary protocol
+  traefik: none             # dashboard (127.0.0.1 only via static config)
+
+  # ── Native OIDC (env var or API) — service does its own login flow ────────
+  grafana: oidc
+  gitea: oidc
+  gitlab: oidc
+  n8n: oidc
+  nextcloud: oidc
+  open_webui: oidc
+  openwebui: oidc           # alias spelling guard
+  outline: oidc
+  portainer: oidc
+  vaultwarden: oidc
+  woodpecker: oidc          # delegated via Gitea OAuth
+  hedgedoc: oidc
+  bookstack: oidc
+
+  # Everything else falls through to 'proxy' (forward-auth).
+
+# Service ids to skip even if their install flag is on (no Traefik router).
+# These either expose a non-HTTP protocol or are intentionally LAN-only.
+traefik_skip_ids:
+  - traefik          # Dashboard handled by static config (127.0.0.1:8080)
+  - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
+
+# Service ids whose backend is the host (bind on 0.0.0.0 or 127.0.0.1) — use
+# `nos-host:<port>`. Everything else uses the same alias too because every
+# Docker compose template publishes its primary port via 127.0.0.1:<port>:<int>.
+# This map is informational; the template emits `nos-host:<port>` uniformly.
+traefik_host_services:
+  - jsos
+  - openclaw
+  - hermes

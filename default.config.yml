@@ -25,11 +25,13 @@ default_admin_email: "admin@{{ instance_tld | default('dev.local') }}"  # Fallba
 # a custom local TLD (e.g. if you have your own internal CA).
 instance_tld_is_local: "{{ (instance_tld | regex_search('\\.(local|lan|test|localhost)$|^localhost$')) is not none }}"
 
-# ── SSL cert paths (all nginx vhosts use these vars) ─────────────────────────
-# Local dev: mkcert generates {{ homebrew_prefix }}/etc/nginx/ssl/local-dev.{crt,key}
-# Production: pazny.acme writes /etc/nginx/ssl/acme/{instance_tld}.{crt,key}
-ssl_cert_path: "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/{{ 'local-dev.crt' if instance_tld_is_local else 'acme/' + instance_tld + '.crt' }}"
-ssl_cert_key:  "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/nginx/ssl/{{ 'local-dev.key' if instance_tld_is_local else 'acme/' + instance_tld + '.key' }}"
+# ── TLS cert paths (neutral — used by both Traefik and host nginx) ──────────
+# Cert tree lives under the infra stack dir so it survives a host-nginx
+# uninstall (Big-Bang Traefik cutover, 2026-04-27). mkcert / pazny.acme
+# write here; both Traefik and host nginx read these paths.
+tls_cert_dir: "{{ stacks_dir }}/infra/tls"
+ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if instance_tld_is_local else 'acme/' + instance_tld + '.crt' }}"
+ssl_cert_key:  "{{ tls_cert_dir }}/{{ 'local-dev.key' if instance_tld_is_local else 'acme/' + instance_tld + '.key' }}"
 
 # ── ACME (Let's Encrypt) — auto-enabled for public TLDs ──────────────────────
 # Wildcard cert *.{instance_tld} via DNS-01 challenge to Cloudflare.
@@ -149,13 +151,16 @@ install_homebrew_packages: true   # CLI tools (including build tools: cmake, nin
 install_cask_apps: true           # GUI applications via Homebrew Cask
 install_mas_apps: false           # Mac App Store applications
 
-# ── Web server ────────────────────────────────────────────────────────────────
-# Host nginx (Homebrew on macOS, apt on Linux). Default true for now; will
-# flip to false once the Traefik primary path lands (C1.2-C1.5). The
-# short-lived `install_nginx_container` flag (Q2 2026) was retired before
-# anyone enabled it — the intermediate-step role added more surface than it
-# saved, and Traefik handles container-ingress duty better.
-install_nginx: true
+# ── Reverse proxy ─────────────────────────────────────────────────────────────
+# Big-Bang cutover (2026-04-27): Traefik is now the primary edge proxy. Host
+# nginx is opt-in fallback only — flip install_nginx: true if you need the old
+# vhost-template path (Homebrew/apt nginx on 80/443). Mutually exclusive with
+# Traefik on the same ports — preflight refuses the combination.
+#
+# The short-lived `install_nginx_container` flag (Q2 2026 intermediate step)
+# was retired before anyone enabled it. Traefik replaces both the host and
+# container nginx paths.
+install_nginx: false
 
 # Track C+D (2026-04-26): Linux-only flags. Ignored on macOS.
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
@@ -226,7 +231,7 @@ install_calibreweb: true         # Calibre-Web – ebook server                [
 install_ntfy: false               # ntfy – push notifications server [Docker]
 install_miniflux: false           # Miniflux – RSS reader [Docker, requires: PostgreSQL]
 install_nodered: false            # Node-RED – flow automation [Docker]
-install_traefik: false           # Traefik – Docker ingress (nginx is the primary proxy)     [Docker]
+install_traefik: true            # Traefik – primary reverse proxy (Big-Bang 2026-04-27)    [Docker]
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
 install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
