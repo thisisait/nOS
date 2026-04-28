@@ -155,9 +155,13 @@
         )
       }}
 
-# ── Start remaining stacks ──────────────────────────────────────────────────
+# ── Start remaining stacks (parallel) ───────────────────────────────────────
+# Wave-2 stacks are independent of each other (only infra+observability are
+# shared). Firing them in parallel via async + poll:0 cuts blank time by
+# ~10 min vs the legacy sequential loop. Hard ceiling 600s per stack;
+# async_status polls every 10s for up to 60 retries (10 min total).
 
-- name: "[Stacks] Start remaining active stacks (docker compose up --wait)"
+- name: "[Stacks] Fire docker compose up --wait per stack (async, parallel)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
@@ -166,15 +170,46 @@
     up -d --build --remove-orphans --wait --wait-timeout 120
     {{ _docker_compose_pull | default('') }} 2>&1
   loop: "{{ _remaining_stacks }}"
-  register: _stack_results
-  changed_when: "'Started' in (item_result.stdout | default('')) or 'Created' in (item_result.stdout | default(''))"
+  async: 600
+  poll: 0
+  register: _stack_jobs
+  changed_when: false
   failed_when: false
   check_mode: false
   loop_control:
     loop_var: item
     label: "{{ item }}"
+
+- name: "[Stacks] Wait for parallel stack-up jobs to finish"
+  ansible.builtin.async_status:
+    jid: "{{ async_job.ansible_job_id }}"
+  loop: "{{ _stack_jobs.results }}"
+  loop_control:
+    loop_var: async_job
+    label: "{{ async_job.item }}"
+  register: _stack_results_raw
+  retries: 60
+  delay: 10
+  until: _stack_results_raw.finished | default(false)
+  failed_when: false
+  changed_when: false
+
+# Normalise async result shape to match the legacy sequential loop:
+# downstream tasks expect _stack_results.results[i].item to be the stack
+# name string. async_status's loop_var is `async_job`, so the original
+# stack name lives at result.async_job.item — flatten it back here.
+- name: "[Stacks] Normalise parallel results to legacy shape"
+  ansible.builtin.set_fact:
+    _stack_results:
+      results: "{{ _stack_results_raw.results | default([]) | community.general.json_query(_query) }}"
   vars:
-    item_result: "{{ _stack_results.results | default([{}]) | last }}"
+    _query: >-
+      [*].{item: async_job.item,
+           rc: rc,
+           stdout: stdout,
+           stdout_lines: stdout_lines,
+           stderr: stderr,
+           finished: finished}
 
 # ── App-level setup - MUST run AFTER stacks start ───────────────────────────
 # Note: Authentik / Infisical / Bluesky PDS post-start already run in core-up.yml,
