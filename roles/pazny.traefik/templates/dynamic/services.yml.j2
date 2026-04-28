@@ -61,7 +61,15 @@ http:
 {% endif %}
 {% endfor %}
 {# ── Extra (non-manifest) routers from traefik_extra_routers var ──────── #}
+{# Anti-duplicate guard: skip any extra entry whose id clashes with a       #}
+{# manifest service — that would produce duplicate YAML mapping keys and   #}
+{# Traefik's file provider rejects the entire file (drops to 0 routers).   #}
+{% set _manifest_ids = (nos_manifest.services | default([])) | map(attribute='id') | list %}
 {% for r in traefik_extra_routers | default([]) %}
+{% if r.id in _manifest_ids %}
+    # WARNING: skipping extra router '{{ r.id }}' — already defined as a
+    # manifest entry. Remove it from traefik_extra_routers in vars/main.yml.
+{% else %}
     {{ r.id | replace('_', '-') }}:
       rule: "Host(`{{ r.host }}`)"
       entryPoints: ["websecure"]
@@ -71,6 +79,7 @@ http:
       middlewares: ["authentik@file", "security-headers@file", "compress@file"]
 {% else %}
       middlewares: ["security-headers@file", "compress@file"]
+{% endif %}
 {% endif %}
 {% endfor %}
 
@@ -110,8 +119,10 @@ http:
 {% endfor %}
 {# ── Extra services for traefik_extra_routers ─────────────────────────── #}
 {% for r in traefik_extra_routers | default([]) %}
+{% if r.id not in _manifest_ids %}
     {{ r.id | replace('_', '-') }}:
       loadBalancer:
         servers:
           - url: "{{ r.upstream }}"
+{% endif %}
 {% endfor %}

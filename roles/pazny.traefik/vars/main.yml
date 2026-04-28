@@ -41,6 +41,7 @@ traefik_auth_modes:
   onlyoffice: none          # DocServer for collab (JWT-secured)
   spacetimedb: none         # binary protocol
   traefik: none             # own dashboard (LAN-only via 127.0.0.1 bind)
+  offline_maps: none        # public tile server (no Authentik provider entry exists)
 
   # ── Native OIDC (Authentik OAuth2 provider) ────────────────────────────────
   grafana: oidc
@@ -83,7 +84,6 @@ traefik_auth_modes:
   jsos: proxy
   openclaw: proxy
   hermes: proxy
-  offline_maps: proxy
   qgis_server: proxy
 
   # Everything else falls through to 'proxy' as a safe default — but the
@@ -102,19 +102,20 @@ traefik_skip_ids:
 traefik_https_upstream_ids:
   - code_server      # publishes 8443/tcp inside the container
 
-# Special-case routes that don't follow the manifest auto-derivation pattern
-# (e.g. Traefik's own dashboard, services on host alternative ports).
+# Special-case routes that don't follow the manifest auto-derivation pattern.
 # Added to the rendered services.yml verbatim — bypass the manifest loop.
+#
+# Note: do NOT also list a service id here that already has a manifest entry
+# with domain_var + port_var — the auto-loop will already emit a router and
+# adding another with the same id breaks YAML parsing (mapping key duplicate).
+# `traefik` is a manifest entry (domain_var=traefik_domain, port_var=traefik_dashboard_port)
+# so the dashboard route is auto-derived; no extra_routers entry needed.
 #
 # auth: proxy here would require the operator to register a matching Authentik
 # proxy provider for the Host header, otherwise the outpost returns 404. Use
-# 'none' for things that already gate themselves (Traefik dashboard) or
-# 'oidc' for endpoints with native OIDC support.
-traefik_extra_routers:
-  - id: traefik
-    host: "{{ traefik_domain }}"
-    upstream: "http://nos-host:{{ traefik_dashboard_port }}"
-    auth: none         # dashboard is admin-tier; protect via 127.0.0.1 bind + LAN access
+# 'none' for things that already gate themselves or 'oidc' for endpoints with
+# native OIDC support.
+traefik_extra_routers: []
 
 # Service ids whose backend is the host (bind on 0.0.0.0 or 127.0.0.1) — use
 # `nos-host:<port>`. Everything else uses the same alias too because every

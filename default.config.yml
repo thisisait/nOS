@@ -1343,6 +1343,12 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # would only have role defaults loaded for services they're actively running
 # include_role on. Lifting the port numbers up here makes the lookup succeed
 # and avoids the "default(80) → infinite loop on Traefik's own :80" footgun.
+# Domain hostname overrides — must match the value baked into authentik_oidc_apps
+# entries below. The Traefik file-provider falls back to '<id>.<tld>' when these
+# aren't defined, which would mismatch Authentik's redirect_uris and break SSO.
+miniflux_domain: "rss.{{ instance_tld | default('dev.local') }}"
+code_server_domain: "code.{{ instance_tld | default('dev.local') }}"
+
 nodered_port: 1880
 ntfy_port: 2586
 miniflux_port: 3011

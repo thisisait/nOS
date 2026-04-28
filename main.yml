@@ -908,7 +908,13 @@
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/external-storage.yml
       when: configure_external_storage | default(false)
-      tags: ['external-storage', 'storage']
+      # 'always' so the SSD-redirection set_facts apply even on tagged runs
+      # (e.g. ansible-playbook main.yml --tags traefik). Without it, render
+      # tasks fall back to the {{ stacks_dir }}/<svc> defaults and write to
+      # /Users/<user>/stacks/... while Docker bind-mounts still point at
+      # the SSD path the previous full run used. That mismatch silently
+      # ships stale config to the running container.
+      tags: ['always', 'external-storage', 'storage']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks - shared network and prerequisites
