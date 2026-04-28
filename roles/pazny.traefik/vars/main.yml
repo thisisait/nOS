@@ -21,20 +21,28 @@
 # the operator wires native OIDC or explicitly opts out.
 # ==============================================================================
 
+#
+# Source of truth for native-OIDC vs proxy-auth: authentik_oidc_apps in
+# default.config.yml. Entries with `redirect_uris:` get an OAuth2 provider
+# (= service handles its own login); entries with `external_host:` +
+# `type: "proxy"` get a Proxy provider (= forward_auth via outpost).
+#
+# Matching the wrong mode here breaks login two ways:
+#   - oidc service marked as 'proxy' → Authentik outpost has no proxy
+#     provider for that Host header → 404 from outpost (not Traefik!)
+#   - proxy service marked as 'oidc' → Traefik just forwards anonymous
+#     traffic to the upstream → service shows its own (un-gated) login.
 traefik_auth_modes:
   # ── No auth (public or self-managed) ───────────────────────────────────────
   authentik: none           # IS the auth provider
   bone: none                # JWT-validated API
   bluesky_pds: none         # AT Protocol federation
   rustfs: none              # S3 API, own credentials
-  ntfy: none                # push notifications, optional own auth
-  miniflux: none            # own user/pass
-  onlyoffice: none          # DocServer for collab
-  influxdb: none            # token-based
+  onlyoffice: none          # DocServer for collab (JWT-secured)
   spacetimedb: none         # binary protocol
-  traefik: none             # own dashboard (admin tier, LAN-only via 127.0.0.1 bind)
+  traefik: none             # own dashboard (LAN-only via 127.0.0.1 bind)
 
-  # ── Native OIDC (env var or API) — service does its own login flow ────────
+  # ── Native OIDC (Authentik OAuth2 provider) ────────────────────────────────
   grafana: oidc
   gitea: oidc
   gitlab: oidc
@@ -49,8 +57,37 @@ traefik_auth_modes:
   hedgedoc: oidc
   bookstack: oidc
   superset: oidc            # SUPERSET_AUTH_TYPE=AUTH_OAUTH
+  homeassistant: oidc       # Auth provider plugin
+  jellyfin: oidc            # SSO-Auth plugin
+  wordpress: oidc           # OpenID Connect Generic plugin
+  erpnext: oidc             # Frappe OAuth2 social_login_keys
+  freescout: oidc           # OAuth Module
+  infisical: oidc           # /api/v1/sso/oidc/callback
+  miniflux: oidc            # OAUTH2_PROVIDER=oidc
 
-  # Everything else falls through to 'proxy' (forward-auth).
+  # ── Proxy (Authentik forward-auth via outpost) ─────────────────────────────
+  metabase: proxy
+  uptime_kuma: proxy
+  calibre_web: proxy
+  kiwix: proxy
+  paperclip: proxy
+  puter: proxy
+  wing: proxy
+  code_server: proxy
+  ntfy: proxy               # has its own user DB but admin UI is gated
+  nodered: proxy
+  firefly: proxy
+  influxdb: proxy           # admin UI gated; token-based API still works
+  mailpit: proxy            # admin tier
+  mcp_gateway: proxy
+  jsos: proxy
+  openclaw: proxy
+  hermes: proxy
+  offline_maps: proxy
+  qgis_server: proxy
+
+  # Everything else falls through to 'proxy' as a safe default — but the
+  # explicit catalog above should already cover every manifest entry.
 
 # Service ids to skip even if their install flag is on (no Traefik router).
 # These either expose a non-HTTP protocol or are intentionally LAN-only.
@@ -68,11 +105,16 @@ traefik_https_upstream_ids:
 # Special-case routes that don't follow the manifest auto-derivation pattern
 # (e.g. Traefik's own dashboard, services on host alternative ports).
 # Added to the rendered services.yml verbatim — bypass the manifest loop.
+#
+# auth: proxy here would require the operator to register a matching Authentik
+# proxy provider for the Host header, otherwise the outpost returns 404. Use
+# 'none' for things that already gate themselves (Traefik dashboard) or
+# 'oidc' for endpoints with native OIDC support.
 traefik_extra_routers:
   - id: traefik
     host: "{{ traefik_domain }}"
     upstream: "http://nos-host:{{ traefik_dashboard_port }}"
-    auth: proxy        # gate dashboard behind Authentik (admin tier)
+    auth: none         # dashboard is admin-tier; protect via 127.0.0.1 bind + LAN access
 
 # Service ids whose backend is the host (bind on 0.0.0.0 or 127.0.0.1) — use
 # `nos-host:<port>`. Everything else uses the same alias too because every
