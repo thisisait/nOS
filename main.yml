@@ -1166,3 +1166,12 @@
     - name: "[Framework] State report (persist + push to Wing)"
       ansible.builtin.import_tasks: tasks/state-report.yml
       tags: ['always', 'state', 'report']
+
+    # ── Post-run web-UI smoke check ──────────────────────────────────────────
+    # tools/nos-smoke.py auto-derives one probe per Tier-1 service from
+    # state/manifest.yml + applies overrides from state/smoke-catalog.yml.
+    # Output goes to stdout and ~/.nos/events/smoke.jsonl (cross-tool hook).
+    # Non-fatal by default — set -e nos_smoke_strict=true to fail the run.
+    - name: "[Smoke] Run post-run smoke check"
+      ansible.builtin.import_tasks: tasks/post-smoke.yml
+      tags: ['always', 'smoke']

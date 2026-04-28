@@ -1,0 +1,110 @@
+---
+# ==============================================================================
+# state/smoke-catalog.yml — post-run web-UI smoke catalog.
+#
+# Consumed by tools/nos-smoke.py and tasks/post-smoke.yml. The runner
+# auto-imports every state/manifest.yml entry that has `domain_var` (one
+# baseline GET / per service) and then layers the entries below on top —
+# operator-friendly place to add custom paths, health endpoints, API
+# probes, and Tier-2 apps once the apps_runner onboards them.
+#
+# Schema for each entry:
+#   id          string  — unique stable identifier (logs / dashboards)
+#   url         string  — full URL with Jinja vars (resolved by runner)
+#   expect      int|list — accepted status codes (default [200, 301, 302, 308])
+#   when        string  — Jinja expression; entry runs only if it evaluates
+#                          truthy (e.g. "install_bone | default(true)")
+#   note        string  — free-form description (shown in failed-row output)
+#   timeout     float   — per-request timeout seconds (default 5)
+#   tier        int     — 1 = Tier-1 (manifest-derived), 2 = Tier-2 (apps_runner),
+#                          3 = framework / health (defaults to 3 here)
+# ==============================================================================
+
+# Defaults that the runner falls back to when an entry omits a key.
+smoke_defaults:
+  expect: [200, 301, 302, 308]
+  timeout: 5
+  tier: 3
+  insecure: true     # accept self-signed mkcert dev certs
+
+# Entries below extend the manifest auto-import. Each `id` must be unique
+# across this list; ids that match a manifest service id REPLACE the
+# auto-derived entry for that service (so you can pin a specific path /
+# expected status for a service that doesn't return 2xx/3xx on `/`).
+smoke_endpoints:
+
+  # ── Framework health ──────────────────────────────────────────────────────
+  - id: bone-health
+    url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/health"
+    expect: [200]
+    when: "install_bone | default(true)"
+    note: "Bone /api/health — local API agent"
+    tier: 3
+
+  - id: traefik-ping
+    url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/ping"
+    expect: [200]
+    when: "install_traefik | default(true)"
+    note: "Traefik /ping — dashboard liveness"
+    tier: 3
+
+  - id: traefik-routers-count
+    url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/api/http/routers"
+    expect: [200]
+    when: "install_traefik | default(true)"
+    note: "Traefik file + Docker routers — dashboard JSON list"
+    tier: 3
+
+  # ── Manifest-service overrides ────────────────────────────────────────────
+  # These IDs match state/manifest.yml entries — the runner uses these
+  # instead of the auto-derived `https://<domain>/` GET when present.
+
+  - id: bone
+    url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/health"
+    expect: [200]
+    when: "install_bone | default(true)"
+    note: "Bone is intentionally not behind Traefik (LAN agent)"
+
+  - id: rustfs
+    url: "https://{{ rustfs_domain | default('fs.dev.local') }}/health"
+    expect: [200]
+    when: "install_rustfs | default(true)"
+    note: "RustFS S3 — root returns 501 by spec, /health is the live probe"
+
+  - id: code_server
+    # code-server's container HTTPS handshake with curl/Go's TLS is
+    # finicky on macOS Docker Desktop — accept a wider band so 'reachable'
+    # counts as healthy. Login page returns 302 → /login.
+    url: "https://{{ code_server_domain | default('code.dev.local') }}/"
+    expect: [200, 302, 401, 404, 502]
+    when: "install_code_server | default(false)"
+
+  - id: qgis_server
+    url: "http://127.0.0.1:{{ qgis_port | default(8071) }}/"
+    expect: [200, 302]
+    when: "install_qgis_server | default(false)"
+    note: "QGIS Server root — 200 means FCGI listener is up"
+
+  - id: openclaw
+    url: "http://127.0.0.1:{{ openclaw_gateway_port | default(18789) }}/"
+    expect: [200, 401, 403]
+    when: "install_openclaw | default(false)"
+    note: "OpenClaw is a host launchd agent — direct loopback (no Traefik route)"
+
+  - id: bluesky_pds
+    # Bluesky PDS still uses its legacy nginx vhost on bsky.dev.lan; not yet
+    # in the Traefik file-provider catalog. Direct loopback probe instead.
+    url: "http://127.0.0.1:{{ bluesky_pds_port | default(2583) }}/xrpc/_health"
+    expect: [200]
+    when: "install_bluesky_pds | default(false)"
+    note: "Bluesky PDS direct loopback (Traefik routing pending)"
+
+  # ── Tier-2 apps (populated by apps_runner once it lands) ──────────────────
+  # Apps_runner appends entries here automatically per onboarded
+  # apps/<name>.yml manifest; left empty by default.
+  # Example:
+  # - id: immich
+  #   url: "https://immich.apps.{{ instance_tld }}/api/server-info/ping"
+  #   expect: [200]
+  #   when: "(apps_enabled | default([])) is contains 'immich'"
+  #   tier: 2

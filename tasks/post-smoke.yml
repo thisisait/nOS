@@ -1,0 +1,44 @@
+---
+# ==============================================================================
+# tasks/post-smoke.yml — post-run web-UI smoke check.
+#
+# Calls tools/nos-smoke.py against state/smoke-catalog.yml + state/manifest.yml.
+# Output:
+#   - stdout: pretty table with ✅/❌ rows + summary
+#   - JSONL:  ~/.nos/events/smoke.jsonl (cross-tool consumable, like
+#             the playbook lifecycle hooks)
+#
+# Failures are NON-FATAL by default — the smoke check is informational
+# (the operator decides whether to act on a 404 from a single endpoint).
+# Set `nos_smoke_strict: true` to fail the playbook when any probe fails.
+# ==============================================================================
+
+- name: "[smoke] Run nos-smoke.py"
+  ansible.builtin.command: >
+    {{ ansible_playbook_python | default('python3') }}
+    {{ playbook_dir }}/tools/nos-smoke.py
+    {{ '--failed-only' if (nos_smoke_failed_only | default(false) | bool) else '' }}
+    --jsonl {{ nos_smoke_jsonl | default(ansible_facts['env']['HOME'] + '/.nos/events/smoke.jsonl') }}
+  register: _nos_smoke
+  changed_when: false
+  failed_when:
+    - nos_smoke_strict | default(false) | bool
+    - _nos_smoke.rc != 0
+  tags: ['always', 'smoke']
+
+- name: "[smoke] Show smoke results"
+  ansible.builtin.debug:
+    msg: "{{ _nos_smoke.stdout_lines }}"
+  when: _nos_smoke.stdout_lines is defined
+  tags: ['always', 'smoke']
+
+- name: "[smoke] Warn on failures (non-strict mode)"
+  ansible.builtin.debug:
+    msg: |
+      ⚠ {{ _nos_smoke.rc }} smoke probe(s) failed. Run individually:
+        python3 tools/nos-smoke.py --failed-only
+      Or fail the playbook on smoke errors with: -e nos_smoke_strict=true
+  when:
+    - _nos_smoke.rc | default(0) | int > 0
+    - not (nos_smoke_strict | default(false) | bool)
+  tags: ['always', 'smoke']
