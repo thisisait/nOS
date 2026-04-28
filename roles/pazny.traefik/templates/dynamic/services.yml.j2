@@ -3,23 +3,32 @@
 # Auto-derived from state/manifest.yml: every service entry that has both
 # `domain_var` and `port_var` AND whose `install_flag` is currently true.
 #
-# Upstream is uniformly `nos-host:<port>` because every Tier-1 Docker
-# service publishes its primary port via host loopback in its compose
-# template. Host-side services (jsos, openclaw, hermes) work the same
-# way because nos-host:host-gateway resolves to the Docker host.
+# Upstream is uniformly `http(s)://nos-host:<port>` because every Tier-1
+# Docker service publishes its primary port via host loopback in its
+# compose template. Host-side services (jsos, openclaw, hermes) work the
+# same way because nos-host:host-gateway resolves to the Docker host.
 #
-# Auth middleware is decided by traefik_auth_modes in vars/main.yml:
-#   none/oidc → no middleware (service handles its own auth)
+# Auth middleware comes from traefik_auth_modes in vars/main.yml:
+#   none/oidc → no auth middleware (service handles its own auth)
 #   proxy     → authentik@file + security-headers@file (forward-auth, fail-closed)
 #
-# Wing is special-cased: it needs FastCGI which Traefik can't speak. Its
-# nginx sidecar (rendered by pazny.wing) listens on the shared_net Docker
-# network as `wing-nginx:80` — the wing router targets that name directly.
+# Special cases:
+#   - wing                   — FPM, can't speak HTTP. Routes to its
+#                              wing-nginx:80 sidecar via Docker DNS.
+#   - traefik_https_upstream_ids — services that publish HTTPS (e.g. code_server
+#                              binds 8443/tcp inside container). Upstream
+#                              uses https:// + serversTransport noverify.
+#   - traefik_extra_routers  — manually-added routes that don't follow the
+#                              manifest auto-derivation (e.g. Traefik dashboard).
+#
+# Anti-loop guard: if a port_var resolves to 80 or 443, skip the router —
+# those are Traefik's own entry points, routing back into them would loop
+# forever and Traefik would return 404 to the original request.
 
 http:
   routers:
 {% for s in nos_manifest.services | default([]) %}
-{% if s.domain_var is defined and (s.port_var is defined or s.id in ['wing']) and s.id not in (traefik_skip_ids | default([])) %}
+{% if s.domain_var is defined and (s.port_var is defined or s.id == 'wing') and s.id not in (traefik_skip_ids | default([])) %}
 {% set _flag_value = lookup('vars', s.install_flag, default=false) %}
 {% if _flag_value is string %}
 {%   set _enabled = (_flag_value | lower) in ['true', '1', 'yes'] %}
@@ -27,6 +36,13 @@ http:
 {%   set _enabled = _flag_value | bool %}
 {% endif %}
 {% if _enabled %}
+{% if s.id == 'wing' %}{% set _port = 80 %}{% else %}{% set _port = lookup('vars', s.port_var, default=0) | int %}{% endif %}
+{# Anti-loop guard: 80 / 443 are Traefik's own entry points #}
+{% if _port in [80, 443] and s.id != 'wing' %}
+    # WARNING: skipping {{ s.id }} — port_var={{ s.port_var }} resolved to {{ _port }}
+    # which would loop into Traefik itself. Define {{ s.port_var }} explicitly
+    # in default.config.yml.
+{% else %}
 {% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ '.' ~ instance_tld) %}
 {% set _auth = traefik_auth_modes.get(s.id, 'proxy') %}
 {% set _router = s.id | replace('_', '-') %}
@@ -42,11 +58,25 @@ http:
 {% endif %}
 {% endif %}
 {% endif %}
+{% endif %}
+{% endfor %}
+{# ── Extra (non-manifest) routers from traefik_extra_routers var ──────── #}
+{% for r in traefik_extra_routers | default([]) %}
+    {{ r.id | replace('_', '-') }}:
+      rule: "Host(`{{ r.host }}`)"
+      entryPoints: ["websecure"]
+      service: "{{ r.id | replace('_', '-') }}"
+      tls: {}
+{% if r.auth | default('proxy') == 'proxy' %}
+      middlewares: ["authentik@file", "security-headers@file", "compress@file"]
+{% else %}
+      middlewares: ["security-headers@file", "compress@file"]
+{% endif %}
 {% endfor %}
 
   services:
 {% for s in nos_manifest.services | default([]) %}
-{% if s.domain_var is defined and (s.port_var is defined or s.id in ['wing']) and s.id not in (traefik_skip_ids | default([])) %}
+{% if s.domain_var is defined and (s.port_var is defined or s.id == 'wing') and s.id not in (traefik_skip_ids | default([])) %}
 {% set _flag_value = lookup('vars', s.install_flag, default=false) %}
 {% if _flag_value is string %}
 {%   set _enabled = (_flag_value | lower) in ['true', '1', 'yes'] %}
@@ -54,8 +84,11 @@ http:
 {%   set _enabled = _flag_value | bool %}
 {% endif %}
 {% if _enabled %}
-{% set _port = lookup('vars', s.port_var, default=80) %}
+{% if s.id == 'wing' %}{% set _port = 80 %}{% else %}{% set _port = lookup('vars', s.port_var, default=0) | int %}{% endif %}
+{% if not (_port in [80, 443] and s.id != 'wing') %}
 {% set _router = s.id | replace('_', '-') %}
+{% set _is_https = s.id in (traefik_https_upstream_ids | default([])) %}
+{% set _scheme = 'https' if _is_https else 'http' %}
 {% if s.id == 'wing' %}
     {{ _router }}:
       loadBalancer:
@@ -66,8 +99,19 @@ http:
     {{ _router }}:
       loadBalancer:
         servers:
-          - url: "http://nos-host:{{ _port }}"
+          - url: "{{ _scheme }}://nos-host:{{ _port }}"
+{% if _is_https %}
+        serversTransport: "noverify@file"
 {% endif %}
 {% endif %}
 {% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{# ── Extra services for traefik_extra_routers ─────────────────────────── #}
+{% for r in traefik_extra_routers | default([]) %}
+    {{ r.id | replace('_', '-') }}:
+      loadBalancer:
+        servers:
+          - url: "{{ r.upstream }}"
 {% endfor %}

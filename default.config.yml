@@ -1336,6 +1336,26 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_config_dir / traefik_dynamic_dir / traefik_certs_dir live in
 # roles/pazny.traefik/defaults/main.yml — they reference {{ stacks_dir }}.
 
+# ── Tier-1 service ports lifted from role defaults ────────────────────────────
+# These are referenced via lookup('vars', '<svc>_port') in the Traefik file
+# provider template. Role defaults aren't visible to that lookup because the
+# role isn't included for *every* service during the Traefik render — operator
+# would only have role defaults loaded for services they're actively running
+# include_role on. Lifting the port numbers up here makes the lookup succeed
+# and avoids the "default(80) → infinite loop on Traefik's own :80" footgun.
+nodered_port: 1880
+ntfy_port: 2586
+miniflux_port: 3011
+code_server_port: 3009                  # container 8443 (HTTPS) — Traefik upstream is https://nos-host:3009
+hedgedoc_port: 3012
+bookstack_port: 3013
+firefly_port: 3014
+onlyoffice_port: 3015
+influxdb_port: 8086
+mcpo_port: 8765
+hermes_web_port: 18790
+mailpit_port: 8025                      # UI port (1025 is SMTP)
+
 # ── Home Assistant ─────────────────────────────────────────────────────────────
 homeassistant_version: "2026.4"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
 homeassistant_port: 8123
@@ -1369,7 +1389,7 @@ rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 # ==============================================================================
 
 erpnext_domain: "erp.dev.local"
-erpnext_port: 8082                     # 8080 taken by Traefik dashboard
+erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 taken
 erpnext_version: "v15.98.1"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset

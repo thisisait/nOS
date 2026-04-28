@@ -32,7 +32,7 @@ traefik_auth_modes:
   onlyoffice: none          # DocServer for collab
   influxdb: none            # token-based
   spacetimedb: none         # binary protocol
-  traefik: none             # dashboard (127.0.0.1 only via static config)
+  traefik: none             # own dashboard (admin tier, LAN-only via 127.0.0.1 bind)
 
   # ── Native OIDC (env var or API) — service does its own login flow ────────
   grafana: oidc
@@ -48,14 +48,31 @@ traefik_auth_modes:
   woodpecker: oidc          # delegated via Gitea OAuth
   hedgedoc: oidc
   bookstack: oidc
+  superset: oidc            # SUPERSET_AUTH_TYPE=AUTH_OAUTH
 
   # Everything else falls through to 'proxy' (forward-auth).
 
 # Service ids to skip even if their install flag is on (no Traefik router).
 # These either expose a non-HTTP protocol or are intentionally LAN-only.
+# Keep in mind: removing entries here exposes services on Traefik routes —
+# make sure their auth_mode above is set sensibly first.
 traefik_skip_ids:
-  - traefik          # Dashboard handled by static config (127.0.0.1:8080)
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
+
+# Service ids whose host-loopback bind is HTTPS (not HTTP). Traefik upstream
+# URL gets the https:// prefix and `serversTransport: noverify` so the
+# self-signed dev cert is tolerated.
+traefik_https_upstream_ids:
+  - code_server      # publishes 8443/tcp inside the container
+
+# Special-case routes that don't follow the manifest auto-derivation pattern
+# (e.g. Traefik's own dashboard, services on host alternative ports).
+# Added to the rendered services.yml verbatim — bypass the manifest loop.
+traefik_extra_routers:
+  - id: traefik
+    host: "{{ traefik_domain }}"
+    upstream: "http://nos-host:{{ traefik_dashboard_port }}"
+    auth: proxy        # gate dashboard behind Authentik (admin tier)
 
 # Service ids whose backend is the host (bind on 0.0.0.0 or 127.0.0.1) — use
 # `nos-host:<port>`. Everything else uses the same alias too because every

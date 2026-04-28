@@ -437,6 +437,17 @@ services:
     domain_var: miniflux_domain
     port_var: miniflux_port
 
+  - id: mailpit
+    category: mail
+    stack: iiab
+    install_flag: install_mailpit
+    version_source: docker_image
+    image: axllent/mailpit
+    domain_var: mailpit_domain
+    port_var: mailpit_port             # 8025 = UI; 1025 = SMTP relay (not via Traefik)
+    oidc: proxy
+    rbac_tier: 1
+
   # ------------------------------------------------------------ devops stack
   - id: gitea
     category: devops
@@ -650,6 +661,7 @@ services:
     version_source: docker_image
     image: camptocamp/qgis-server
     container_name: engineering-qgis-server-1   # id has underscore, compose service uses hyphen
+    domain_var: qgis_domain
     port_var: qgis_port
     data_path_var: qgis_data_dir
     oidc: none
@@ -662,6 +674,7 @@ services:
     version_var: metabase_version
     version_source: docker_image
     image: metabase/metabase
+    domain_var: metabase_domain
     port_var: metabase_port
     data_path_var: metabase_data_dir
     oidc: proxy
@@ -674,6 +687,7 @@ services:
     version_var: superset_version
     version_source: docker_image
     image: apache/superset
+    domain_var: superset_domain
     port_var: superset_port
     data_path_var: superset_data_dir
     oidc: native
