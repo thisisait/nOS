@@ -198,18 +198,25 @@
 # downstream tasks expect _stack_results.results[i].item to be the stack
 # name string. async_status's loop_var is `async_job`, so the original
 # stack name lives at result.async_job.item — flatten it back here.
+# (Idiomatic Jinja/Ansible: for + set + append. No jmespath dependency.)
 - name: "[Stacks] Normalise parallel results to legacy shape"
   ansible.builtin.set_fact:
     _stack_results:
-      results: "{{ _stack_results_raw.results | default([]) | community.general.json_query(_query) }}"
+      results: "{{ _normalised_acc }}"
   vars:
-    _query: >-
-      [*].{item: async_job.item,
-           rc: rc,
-           stdout: stdout,
-           stdout_lines: stdout_lines,
-           stderr: stderr,
-           finished: finished}
+    _normalised_acc: |-
+      {%- set out = [] -%}
+      {%- for r in (_stack_results_raw.results | default([])) -%}
+        {%- set _ = out.append({
+          'item': r.async_job.item,
+          'rc': r.rc | default(124),
+          'stdout': r.stdout | default(''),
+          'stdout_lines': r.stdout_lines | default([]),
+          'stderr': r.stderr | default(''),
+          'finished': r.finished | default(false)
+        }) -%}
+      {%- endfor -%}
+      {{ out }}
 
 # ── App-level setup - MUST run AFTER stacks start ───────────────────────────
 # Note: Authentik / Infisical / Bluesky PDS post-start already run in core-up.yml,
