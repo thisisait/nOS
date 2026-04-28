@@ -5,13 +5,31 @@
 # Runs AFTER data stack startup (stack-up.yml).
 # ==============================================================================
 
-- name: "[pazny.superset Post] Wait for Superset container to be ready"
+# Pre-check: TCP-connect from inside the Superset container to Postgres.
+# Cheap (a couple of system calls), so we can poll fast — saves the
+# ~25s python+gunicorn boot every time `superset db upgrade` retries
+# against an unreachable DB. This loop only fires while Postgres is
+# still settling; once it answers, the rest is a one-shot.
+- name: "[pazny.superset Post] Wait for Postgres reachable from Superset"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p data exec -T superset
+    python -c "import socket; s=socket.socket(); s.settimeout(2);
+               s.connect(('postgresql', 5432)); s.close()"
+  register: _superset_pg_probe
+  retries: 30
+  delay: 2
+  until: _superset_pg_probe.rc == 0
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: "[pazny.superset Post] Run Superset db upgrade"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p data
     exec -T superset superset db upgrade
   register: _superset_db
-  retries: 12
-  delay: 10
+  retries: 4
+  delay: 15
   until: _superset_db.rc == 0
   changed_when: false
   failed_when: false
