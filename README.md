@@ -162,10 +162,24 @@ service by creating a role — no hand-edits to the base stack template.
 8. **Post-start core** — Authentik blueprints + OIDC app provisioning, Infisical init, PDS bootstrap, Portainer admin + OAuth
 9. **Remaining stacks up** — `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`
 10. **Post-start services** — admin users, DB migrations, OIDC wiring, onboarding
-11. **Post-provision** — stack health verification, jsOS desktop, service registry
+11. **Tier-2 apps stack** — `pazny.apps_runner` discovers `apps/<name>.yml` manifests,
+    validates them (GDPR Article 30 + TLS / SSO / EU-residency gates), renders
+    a merged compose override, brings the apps stack up, fires observability
+    hooks. See [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
+12. **Post-provision** — stack health verification, jsOS desktop, service registry
 
 **Invariant:** post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical,
 Grafana, Loki, and Tempo are already online.
+
+### Reverse proxy
+
+Traefik in a container is the default edge proxy (binds 80/443) as of C1
+(2026-04-29). Two providers: **file** (auto-derived from `state/manifest.yml`
+for the 50+ existing Tier-1 services) and **docker** (auto-emitted labels
+for Tier-2 apps_runner manifests). Authentik forward-auth wires through
+the `authentik@file` middleware. Host nginx is opt-in via
+`install_nginx: true` and lives behind the same `tasks/nginx.yml`. See
+[docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md).
 
 ### State & Migration Framework
 

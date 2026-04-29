@@ -163,17 +163,47 @@ Observability: a callback plugin (`callback_plugins/wing_telemetry.py`) emits st
 
 Authoring: see [docs/framework-overview.md](docs/framework-overview.md), [docs/migration-authoring.md](docs/migration-authoring.md), [docs/upgrade-recipes.md](docs/upgrade-recipes.md), [docs/coexistence-playbook.md](docs/coexistence-playbook.md), [docs/wing-integration.md](docs/wing-integration.md). Authoritative spec: [docs/framework-plan.md](docs/framework-plan.md).
 
-### Nginx auto-enable
+### Reverse proxy: Traefik (primary) + host nginx (opt-in fallback)
 
-50 vhost templates in `templates/nginx/sites-available/`. Activated automatically based on `install_*` flags. Override with `nginx_sites_enabled` or extend with `nginx_sites_extra`.
+Traefik in a container is the default edge proxy as of C1 (2026-04-29). It binds 80/443 unconditionally and serves both Tier-1 and Tier-2 services through two providers:
 
-### Adding a new Docker service
+- **File provider** — `traefik_dynamic_dir/services.yml` is auto-derived from `state/manifest.yml`. Every Tier-1 service with `domain_var` + `port_var` set in the manifest gets a router + service block. No per-role edits — one central YAML.
+- **Docker provider** — Tier-2 apps in the `apps` compose stack emit Traefik labels in their compose service block. The runner (`library/nos_apps_render.py`) auto-generates the labels from the manifest.
+
+Authentik forward-auth is a file-provider middleware (`authentik@file`), applied via Tier-1 routers' `middlewares=` field or Tier-2 labels. TLS reads the same cert path nginx used (`{{ tls_cert_path }}` / `{{ tls_key_path }}`) — mkcert wildcards or LE wildcards Just Work.
+
+`install_nginx: false` is the default. Host nginx remains as an opt-in fallback (`install_nginx: true`) for operators with bespoke vhost-level constraints — `tasks/nginx.yml` is fully gated behind the flag. Nginx vhost templates remain in `templates/nginx/sites-available/` for that path.
+
+Authoritative guide: [docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md).
+
+### Tier-2 apps_runner (manifest-driven onboarding)
+
+For long-tail self-hosted apps that don't merit a full `pazny.<name>` role, drop a YAML manifest at `apps/<name>.yml` and re-run the playbook. `pazny.apps_runner` discovers manifests, validates them (via `module_utils/nos_app_parser` — schema + GDPR Article 30 + TLS / SSO / EU-residency gates), resolves magic tokens, renders a single merged compose override, brings the apps stack up, and fires post-hooks (service-registry append, Wing systems ingest, Authentik blueprint reconverge, Bone HMAC `app.deployed` events, Portainer endpoint reg, Kuma monitor extension, GDPR upsert via Wing CLI, smoke catalog runtime extension).
+
+GDPR enforcement is **mandatory** — the parser refuses any manifest without a complete `gdpr:` block (purpose, legal_basis enum, data categories, data subjects, retention horizon, processors, EU-residency flag). This is by design: GDPR Article 30 compliance is part of the deploy gate, not an afterthought.
+
+Coolify (Apache-2.0) maintains ~280 compose templates that we can import via `tools/import-coolify-template.py` (rewrites their `${SERVICE_*}` token syntax to ours, scaffolds the `gdpr:` block with `TODO` sentinels the operator must fill in before the parser will accept the file).
+
+Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md), [docs/coolify-import.md](docs/coolify-import.md).
+
+### Adding a new Docker service (Tier-1)
 
 1. Create a role `roles/pazny.<service>/` following the compose-override pattern above.
 2. Add an `include_role` call in the right orchestrator (`core-up.yml` or `stack-up.yml`) — remember both `apply: { tags: [...] }` **and** `tags: [...]` so `--tags` filtering works.
 3. Add an `install_<service>` toggle in `default.config.yml`.
-4. (Optional) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template.
-5. (Optional) Add an Nginx vhost template in `templates/nginx/sites-available/`.
+4. Add a row to `state/manifest.yml` with `domain_var` + `port_var` so Traefik file-provider auto-routes it.
+5. (Optional) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template.
+
+### Adding a new Docker service (Tier-2 — manifest-driven)
+
+```bash
+cp apps/_template.yml apps/myapp.yml
+$EDITOR apps/myapp.yml          # fill meta + gdpr + compose blocks
+python3 -m module_utils.nos_app_parser apps/myapp.yml   # smoke-parse
+ansible-playbook main.yml -K
+```
+
+No code changes. The runner takes care of routing, secrets, and observability.
 
 ### Feature-toggle pattern
 
