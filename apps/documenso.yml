@@ -123,6 +123,8 @@ compose:
       mem_limit: 512m
       cpus: 0.5
 
+  # Volumes namespace: documenso_*. Unique across all Tier-2 pilots
+  # (tfa_* for twofauth, rcube_* for roundcube).
   volumes:
     documenso_app:
     documenso_db:

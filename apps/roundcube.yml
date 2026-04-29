@@ -85,9 +85,15 @@ compose:
         interval: 30s
         timeout: 5s
         retries: 5
+        # Apache + PHP + SQLite schema init on first start; gives the
+        # Laravel-style boot ~60s before Docker treats failed probes as
+        # unhealthy.
+        start_period: 60s
       mem_limit: 512m
       cpus: 0.5
 
+  # Volumes namespace: rcube_*. Unique across all Tier-2 pilots
+  # (tfa_* for twofauth, documenso_* for documenso).
   volumes:
     rcube_db:
     rcube_config:

@@ -83,9 +83,16 @@ compose:
         interval: 30s
         timeout: 5s
         retries: 5
+        # Laravel + SQLite migration on first start can take 30-50s on a
+        # cold image pull. start_period swallows those early probe failures
+        # so Docker doesn't restart the container during legitimate boot.
+        start_period: 60s
       mem_limit: 256m
       cpus: 0.5
 
+  # Volumes namespace: tfa_*. Unique across all Tier-2 pilots
+  # (rcube_* for roundcube, documenso_* for documenso). New pilots SHOULD
+  # use a distinct prefix to avoid global-namespace collisions.
   volumes:
     tfa_data:
     tfa_storage:
