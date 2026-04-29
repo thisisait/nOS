@@ -5,7 +5,13 @@
 > the active track. Each track has its own commit conventions and exit
 > criteria so progress survives context resets.
 >
-> Last updated: 2026-04-26 • commit: `3783ffa` • by: pazny
+> Last updated: 2026-04-29 • commit: `f9e57c1` • by: pazny+claude
+>
+> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 (Tracks E-H, the post-Q2-A-D
+> work) is in flight. New sessions land in [Track E](#track-e--tier-2-appsrunner-wet-test--d8d9)
+> unless explicitly directed elsewhere — see also
+> [`docs/active-work.md`](active-work.md) for the always-current
+> "what to do right now" pointer.
 
 ## Mission (in 3 sentences)
 
@@ -18,20 +24,26 @@ Wing's read model. The product we sell is **operational excellence
 around the FOSS core** — setup, retainer, monitoring, hotfix priority —
 not feature-flagged enterprise tiers.
 
-## Where we are today (2026-04-26)
+## Where we are today (2026-04-29)
 
-### Verified working
-- **macOS Apple Silicon** primary target — `ansible-playbook main.yml -K -e blank=true` produces 0 failed, ok=811 (last clean run)
-- **60+ services** deployed across 8 Docker stacks (`infra`, `observability`, `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`)
+### Verified working (refreshed since last snapshot)
+- **macOS Apple Silicon** primary target — last clean blank: `ok=842 changed=262 failed=0 skipped=364` (run 52853, 2026-04-29)
+- **9 Docker stacks** (added `apps` for Tier-2): `infra` (12 healthy), `observability` (10), `iiab` (21), `devops`, `b2b`, `voip`, `engineering`, `data`, `apps`
+- **Traefik containerized as primary edge proxy** (Track E1 / D1-D2 / commits `42c19c5..f9e57c1`) — two providers (file for Tier-1, Docker labels for Tier-2). 39+ Tier-1 routes auto-derived from `state/manifest.yml`. Host nginx is opt-in via `install_nginx: true`.
+- **Tier-2 apps_runner — render path solid** (Track E2 partial / D3-D7 / commits `98a6d32..f9e57c1`) — `library/nos_apps_render.py` parses + GDPR-gates + token-resolves; `roles/pazny.apps_runner` renders compose override + persists secrets via canonical `to_nice_yaml`; image pre-flight catches typos before compose-up.
+- **Coolify hybrid importer** — `tools/import-coolify-template.py` rewrites `${SERVICE_*}` → `$SERVICE_*_X` and scaffolds GDPR TODO block; 13 unit tests
+- **4 pilot manifests** authored: `apps/{twofauth,roundcube,documenso}.yml` + `apps/plane.yml.draft`. All parse cleanly.
 - **Authentik SSO** with auto-OIDC for ~30 apps, RBAC tier 1–4 mapping
 - **State framework** (state.yml + migrations + upgrades + coexistence) with JSON Schema validation
-- **Wing telemetry pipeline** — 1949 events/blank, fallback queue empty, end-to-end tested
-- **Watchtower** (notify-only) — Docker image drift surfaces in Mailpit
-- **Mailpit** dev SMTP sink — 12 services relay through it
-- **ACME / Let's Encrypt** wildcard cert via Cloudflare DNS-01 (role ready, awaiting CF zone delegation)
+- **Wing telemetry pipeline** end-to-end tested
 - **CI**: lint + syntax-check matrix (ubuntu-22.04, ubuntu-24.04, macos-14) + pytest job
-- **Tests**: 355 Python passing, 71 PHP passing
-- **GitHub Code Scanning**: 4 alerts fixed, 6 documented as false positive, 1 won't-fix (see `docs/security-triage.md`)
+- **Tests**: 386 Python passing (355 baseline + 31 new for apps render + Coolify importer + schema), 71 PHP passing
+
+### NOT YET WET-TESTED (code shipped, never ran end-to-end on a healthy apps stack)
+- **Tier-2 apps stack containers running healthy** — three blank attempts so far: image typos (Documenso ghcr→docker.io, twofauth org name) and one indent-drift bug stopped the apps stack at 0 containers each time. Pre-flight image probe (commit `f9e57c1`) prevents repeat. Fourth blank should produce 4 healthy containers.
+- **Tier-2 observability hooks (8 of them)** — never executed because they are gated behind apps stack-up rc=0. Specifically: service-registry append, Wing systems re-ingest, Authentik blueprint reconverge, Bone HMAC `app.deployed` events, Portainer apps endpoint, Kuma monitor extension, GDPR upsert via `bin/upsert-gdpr.php`, smoke-catalog runtime extension.
+
+This is what Track E is for — close that gap with a real wet test.
 
 ### Reference docs (read these before starting any track)
 - [`docs/agent-operable-nos.md`](agent-operable-nos.md) — strategic vision (Spine, Eye, Ear, Hand anatomy extensions)
@@ -396,6 +408,149 @@ roles/pazny.<svc>/tasks/forget_user.yml   # per service, ~12 to add
 
 ---
 
+### Track E — Tier-2 apps_runner wet test **(active — D8-D9)**
+
+**Status: render path code-complete on master 2026-04-29 (commits `d3a9d35..f9e57c1`); deploy path + observability hooks UNVERIFIED.** Three blank-runs hit image typos / indent drift; image pre-flight (`f9e57c1`) is the last layer of defence. Track exit = 4-th blank produces a healthy apps stack with all 8 post-hooks proven.
+
+#### Why this comes first (before dynamic-domain refactor F)
+Without a working Tier-2 deploy, refactoring `instance_tld` → `tenant_domain + host_alias + apps_subdomain` (Track F) is vacuum-state design. Tier-2 wet test surfaces the operational shape that F has to honour.
+
+#### Scope
+1. **Single-pilot wet test (D8)** — `apps/twofauth.yml` only. Promote `apps/roundcube.yml` and `apps/documenso.yml` to `.draft` so the runner ignores them. Get this ONE to:
+   - 1 container running healthy in `apps` stack (verifiable: `docker compose -p apps ps`)
+   - Traefik route visible (verifiable: `curl -s http://127.0.0.1:8080/api/http/routers | jq '.[] | select(.name | contains("twofauth"))'`)
+   - Authentik proxy provider visible (verifiable: Authentik admin UI / Applications)
+   - Wing `/hub` lists `app_twofauth` row (verifiable: browser at https://wing.dev.local/hub or `sqlite3 ~/wing/wing.db "SELECT id, name FROM systems WHERE id LIKE 'app_%'"`)
+   - GDPR row inserted (verifiable: `sqlite3 ~/wing/wing.db "SELECT id, legal_basis FROM gdpr_processing"`)
+   - Bone `app.deployed` event in events.jsonl (verifiable: `tail ~/.nos/events/playbook.jsonl | grep app.deployed`)
+   - Kuma monitor green (verifiable: https://kuma.dev.local — login → Monitors)
+   - Smoke probe passes (verifiable: `python3 tools/nos-smoke.py --tier 2`)
+   - Browser → `https://twofauth.apps.dev.local` → 302 → Authentik login → 200 + 2FAuth UI
+2. **Multi-pilot wet test (D9)** — un-draft `roundcube` + `documenso` once `twofauth` is fully observable. Verify same checklist for each. Plane stays `.draft` (13 containers, separate stress-test sprint).
+
+#### Files to touch
+- `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml` — only if any one of them surfaces a manifest-level issue (image, env, healthcheck)
+- `roles/pazny.apps_runner/tasks/post.yml` — only if a hook misfires; otherwise no edits
+- `docs/tier2-wet-test-checklist.md` (NEW) — operator's copy-paste checklist; primary deliverable of D8
+
+#### Exit criteria
+- 4 healthy containers (twofauth + roundcube + documenso + documenso-db) in `apps` stack
+- 3 entries each in: service-registry.json, Wing systems table, Authentik proxy providers, Kuma monitors, gdpr_processing rows
+- 3 `app.deployed` events in `~/.nos/events/playbook.jsonl`
+- `state/smoke-catalog.runtime.yml` exists with 3 entries
+- `python3 tools/nos-smoke.py --tier 2` returns 0 failures
+- Track marked DONE; new commits use `feat(apps): ` for additions, `fix(apps): ` for follow-ups
+- `docs/tier2-wet-test-checklist.md` published — re-runnable forever
+
+---
+
+### Track F — Dynamic instance_tld + per-host alias **(after E, D10)**
+
+**Status: not started.** Currently `instance_tld: dev.local` is host-default; `dnsmasq_dev_domain` is local-only DNS suffix; mkcert wildcards `*.dev.local`. For multi-host fleets (operator's vision: Ansible runner on a Raspberry Pi managing several Macs across a tenant network) and for public deploy, FQDN composition needs to flex.
+
+#### Why this comes after E
+Dynamic-domain design is informed by what Tier-2 actually looks like in production. Refactoring before the wet test means doing it twice.
+
+#### Scope
+1. **Decompose `instance_tld`** into composable parts (operator-set in `config.yml`):
+   - `tenant_domain` — the TLD the tenant owns (e.g. `acme.com` for public, `dev.local` for solo dev)
+   - `host_alias` — per-host prefix when many nOS hosts share a `tenant_domain` (default `""`; e.g. `media`, `office`)
+   - `apps_subdomain` — Tier-2 isolation segment (default `apps`; settable to `""` for direct `<svc>.<tenant_domain>`)
+   - Resolved FQDN pattern: `<svc>[.<host_alias>][.<apps_subdomain>].<tenant_domain>` (segments dropped when empty)
+2. **Refactor consumers** — anywhere `instance_tld` appears (about 50 templates + role tasks):
+   - `pazny.acme` — wildcard cert SAN list
+   - `pazny.traefik` static config + dynamic services file provider
+   - `library/nos_apps_render._fqdn_for` + `module_utils.nos_app_parser.resolve_tokens` (already accept `apps_subdomain` kwarg from F precedent)
+   - `templates/service-registry.json.j2`
+   - `roles/pazny.dnsmasq` — local-only resolver suffix
+   - `tasks/nginx.yml` (legacy fallback path)
+3. **Backwards-compat default** — `tenant_domain: "dev.local"`, `host_alias: ""`, `apps_subdomain: "apps"` reproduces today's hostnames byte-for-byte. Existing deploys survive without manual edits.
+4. **Test**: blank with `tenant_domain: "foo.example"` produces a fully working set of FQDNs that match (a) Traefik routes, (b) Authentik OIDC redirect_uris, (c) cookie domain, (d) cert SAN.
+
+#### Files to touch
+- `default.config.yml` — new vars + deprecation alias for `instance_tld`
+- `roles/pazny.{acme,traefik,dnsmasq}/` — consume new vars
+- `library/nos_apps_render.py` — already wired
+- `templates/service-registry.json.j2` — derive URL from new vars
+- `migrations/2026-05-XX-instance-tld-decomposition.yml` (NEW) — migrates old config.yml to new shape
+- `docs/operator-domain-naming.md` (NEW)
+
+#### Exit criteria
+- Two test blanks: one with `tenant_domain: "dev.local" + host_alias: ""` (today's behaviour, byte-for-byte same hostnames) + one with `host_alias: "lab"` (every FQDN flips to `<svc>.lab.<rest>`)
+- Both blanks: smoke 39+/39+ green, Tier-2 still works
+- Migration recipe ships
+- `docs/operator-domain-naming.md` published
+
+---
+
+### Track G — Cloudflare proxy + LE production exposure **(after F, D11)**
+
+**Status: 1/3 prerequisites already exist.** `pazny.acme` role with Cloudflare DNS-01 challenge is ready (per Track A's existing notes). Missing: operator wiring + public-deploy decisions for Bluesky PDS, optional Mastodon, and primary local SMTP server.
+
+#### Why this comes after F
+F sets up `tenant_domain` as a real public domain. Without F, public deploy is a hack (config.yml manually overrides `instance_tld`). G picks up where F leaves off.
+
+#### Scope
+1. **Public-exposed services (operator-decided)**:
+   - **Bluesky PDS** — already in infra stack, has `bluesky_pds_hostname`, just needs port-80/443 exposure via Traefik + LE wildcard cert + CF orange-cloud (or grey-cloud for federation requirements TBD)
+   - **Local SMTP relay** (Stalwart-class — see Track G appendix) — primary motivation: outbound mail for all services that today log-only via Mailpit. INBOUND IMAP optional. Stalwart over alternatives because: written in Rust (Apple Silicon-friendly), single binary, supports SMTP+IMAP+JMAP, has its own admin UI.
+   - **Mastodon** (optional, time-permitting) — requires real public DNS; cleanly fits Tier-2 once F lands
+2. **Cloudflare proxy modes** in `default.config.yml`:
+   - `cloudflare_proxy_mode: off` (default — DNS-only, public IP visible)
+   - `cloudflare_proxy_mode: flexible` — orange-cloud, edge TLS to nOS plain HTTP (fast but downgrades end-to-end TLS)
+   - `cloudflare_proxy_mode: full` — orange-cloud, edge TLS to nOS HTTPS (LE cert at origin)
+3. **Operator-facing public deploy guide** — `docs/public-deploy.md`
+4. **Wing UI deep-link refresh** — `wing.dev.local/hub` and `/apps` URLs reflect `tenant_domain` (no hardcoded `dev.local`)
+
+#### Files to touch
+- `default.config.yml` — `cloudflare_proxy_mode`, `expose_public: [bsky, smtp, ...]`
+- `roles/pazny.acme/` — already mostly there
+- `roles/pazny.bluesky_pds/` — public exposure flag
+- `roles/pazny.smtp_stalwart/` (NEW) — full role
+- `templates/traefik/dynamic/services.yml.j2` — public router blocks gated on `expose_public` membership
+- `docs/public-deploy.md` (NEW)
+
+#### Exit criteria
+- `tenant_domain: <real-domain.tld>` + `cloudflare_proxy_mode: full` blank produces:
+  - Bluesky PDS reachable from external network at `https://bsky.<tenant_domain>` with valid LE cert
+  - Local SMTP server accepting outbound mail from at least 5 services
+  - Wing UI shows correct tenant URLs in `/hub` cards
+- Operator runbook in `docs/public-deploy.md` survives a fresh-eyes read
+
+---
+
+### Track H — ansible-core ≥ 2.24 upgrade **(after G, D12)**
+
+**Status: parked tech debt** (CLAUDE.md flags it as "Known Tech Debt: ansible_env needs migration to ansible_facts before Ansible-core 2.24"). Intentional last-of-roadmap so dynamic-domain + public-deploy work doesn't get derailed by a foundational shake-up.
+
+#### Why this comes last
+Mechanical migration with cross-cutting touch surface. Easier when the rest of the codebase is stable.
+
+#### Scope
+1. **`ansible_env` → `ansible_facts['env']`** — sed-batch replace across all `roles/pazny.*` and `tasks/`. ~200-400 occurrences expected; verifiable with grep.
+2. **Collection version bumps** — sync `requirements.yml` against ansible-core 2.24-compatible minor versions for `community.general`, `community.docker`, `community.crypto`, `ansible.posix`.
+3. **`meta/main.yml` for all roles** — bump `min_ansible_version: "2.16"` → `"2.24"`.
+4. **Custom modules audit** — `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`, `nos_apps_render.py` — verify `AnsibleModule` API + `module_utils.*` import paths against 2.24 lazy-resolve changes.
+5. **Callback plugin audit** — `callback_plugins/wing_telemetry.py` uses `v2_*` hooks (stable across 2.16-2.24).
+6. **Lint sweep** — re-baseline `ansible-lint` rules; some 2.24 rules tighten (`schema[meta]`, `loop-var-prefix`).
+7. **CI matrix bump** — GitHub Actions `ansible-core` pin → `>=2.24,<2.25`.
+
+#### Files to touch
+- ~50 role `meta/main.yml`
+- ~200-400 `ansible_env` occurrences
+- `requirements.yml`
+- `.github/workflows/*.yml`
+- `tests/` — possibly minor test-rig adjustments for ansible-core API drift
+
+#### Exit criteria
+- `ansible-core==2.24.x` installed; `ansible-playbook --version` confirms
+- Blank run: 0 failed, smoke 36+/36+ green
+- All 4 Tier-2 pilots: still healthy
+- CI green on all matrix rows
+- `meta/main.yml` advertises `min_ansible_version: "2.24"` everywhere
+
+---
+
 ## Cross-cutting concerns
 
 ### Testing strategy across tracks
@@ -456,9 +611,12 @@ Total ETA: **~3 weeks of focused work**.
 
 ## Open decisions
 
-_All six original open decisions were resolved on 2026-04-26 — see the
-Decision log below. This section is kept as a header so future operator
-prompts know where to land._
+_All Q2 wave-1 decisions (Tracks A–D) were resolved on 2026-04-26.
+Q2 wave-2 (Tracks E–H) decisions were resolved on 2026-04-29 — see
+Decision log below. The roadmap has explicit ordering, and tracks
+have explicit exit criteria, so there's no decision blocking next
+session's work. Multi-tenant fleet mode + router-as-architecture were
+deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 (none open)
 
@@ -485,6 +643,11 @@ prompts know where to land._
 | 2026-04-26 | **O4**: Drop `BONE_SECRET` without deprecation window | Repo isn't yet in third-party hands; full agent SSO integration is the cleaner cut than carrying dual auth for 90 days. Breaking change documented in Track B. |
 | 2026-04-26 | **O5**: ANSSI hardening default = ON, opt-out via `install_hardening: false` | Matches French/Danish sovereignty stance; surprise-on-deploy is acceptable for a security-positioned product. |
 | 2026-04-26 | **O6**: GDPR Article 30 register = Wing UI (not just markdown) | Markdown alone is too passive for B2B sales conversations. Track D scope grows by ~1 day for the `/gdpr` route. |
+| 2026-04-29 | **O7**: Tier-2 default subdomain = `<slug>.apps.<tld>` (NOT direct `<slug>.<tld>`) | Explicit isolation segment prevents Tier-2 slug from colliding with any future Tier-1 vhost; one extra URL segment is acceptable cost. Per-app override via `nginx.subdomain` is intentionally NOT added (more code, more docs, no concrete need today). |
+| 2026-04-29 | **O8**: Tier-2 slug stays bound to filename (`^[a-z][a-z0-9-]*$`); no brand-name override | E.g. 2FAuth ships as `apps/twofauth.yml` and serves at `twofauth.apps.<tld>` — operator lives with the textified slug. Brand-friendly URLs are a stretch goal. |
+| 2026-04-29 | **O9**: Multi-host fleet mode = composable `host_alias` segment (Track F), NOT per-tenant-on-one-host | Track F adds `host_alias` (e.g. `media`) so FQDN becomes `<svc>.<host_alias>.<tenant_domain>` in multi-host fleet networks. Per-tenant-on-one-host (many TLDs sharing one nOS deploy) is 5× more work and is **deferred to post-roadmap** (see Stretch goals). |
+| 2026-04-29 | **O10**: Public exposure (Track G) targets Bluesky PDS + local SMTP server (Stalwart-class), with Mastodon optional | Personal sovereign-identity (bsky) + outbound mail (today's biggest gap, every service log-only) are the clear value adds. Mastodon ships if time permits. |
+| 2026-04-29 | **O11**: Roadmap order = E (Tier-2 wet test) → F (dynamic domain) → G (public deploy) → H (ansible-core 2.24) | Wet test before refactor: dynamic-domain design is informed by what Tier-2 actually looks like in production. ansible-core upgrade last so it doesn't derail in-flight work. |
 
 ---
 
@@ -493,17 +656,20 @@ prompts know where to land._
 **If you're picking up this work fresh, do this:**
 
 1. Read this file (you're doing it).
-2. `git log --oneline -20` to see what's landed since the snapshot at top.
-3. `git status` — uncommitted work might belong to operator's other branch, leave alone unless explicitly asked.
-4. Check `~/.nos/state.yml` and `wing.db.events` count to verify the box is still in working order.
-5. Choose your track:
-   - Track A if Bone + Wing are still launchd-bound — that's the bottleneck.
-   - Track B if Track A is done and operator wants agent identity.
-   - Track C if Linux is the priority for sales push.
-   - Track D if a customer conversation is imminent (compliance is the ask).
-6. Read the track's "Files to touch" + "Exit criteria" before starting code.
-7. Pre-flight: `ansible-playbook main.yml --syntax-check` + `python3 -m pytest tests/ -q` should both pass cleanly.
-8. Always update the **Decision log** when making a non-trivial choice — future-you will thank you.
+2. Read [`docs/active-work.md`](active-work.md) — the always-current "what to do right now" pointer; updated more often than this file.
+3. `git log --oneline -20` to see what's landed since the snapshot at top.
+4. `git status` — uncommitted work might belong to operator's other branch, leave alone unless explicitly asked.
+5. Check `~/.nos/state.yml` and the most recent ansible.log for the last blank's `PLAY RECAP` line.
+6. Choose your track based on `docs/active-work.md`. Default order today (2026-04-29):
+   - **Track E** if `apps/twofauth.yml` is not yet end-to-end live (verifiable: Wing /hub doesn't list `app_twofauth`)
+   - **Track F** if Tier-2 wet test is done but `instance_tld` is still monolithic
+   - **Track G** if dynamic-domain refactor is done but Bluesky PDS / SMTP server are not publicly exposed
+   - **Track H** if everything else is green and you're ready for the ansible-core 2.24 mechanical upgrade
+   - Tracks A–D are DONE — do not re-open them; if a regression appears, fix in place.
+7. Read the track's "Files to touch" + "Exit criteria" before starting code.
+8. Pre-flight: `ansible-playbook main.yml --syntax-check` + `python3 -m pytest tests/apps tests/state_manager -q` should both pass cleanly.
+9. Always update the **Decision log** when making a non-trivial choice — future-you will thank you.
+10. After meaningful progress, update `docs/active-work.md` so the next session has a fresh entry point.
 
 **Commit message convention:**
 - `feat(<area>): one-line summary` for new functionality
@@ -516,13 +682,16 @@ prompts know where to land._
 
 ---
 
-## Appendix: stretch goals (post-Q2)
+## Appendix: stretch goals (post-Q2 / next-roadmap)
 
-These are valid ideas that don't fit Q2:
+These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):
 
 - **Eye organ** (CVE feed integration) — referenced in `agent-operable-nos.md`, holds for Q3
 - **Spine organ** (services.yml as single source of truth) — partial entry point already in Track D's `state/gdpr-classes.yml`
 - **Hand organ** (capability-token executor) — overlaps with Track B's RBAC, fold in there
 - **EUDIW integration** — Q3 2026 EU calls; build the Authentik blueprint when the call opens
-- **Multi-tenant fleet mode** — central Bone aggregating state from many hosts; needed when nOS hits 10+ paid clients
+- **Multi-tenant fleet mode (per-tenant-on-one-host)** — operator's brainstorm 2026-04-29: many TLDs sharing one nOS deploy. **NOT** the same as multi-host fleet mode (Track F's `host_alias` covers that). Per-tenant-on-one-host is ~5× more work — Authentik tenants, Wing /hub multi-tenant view, per-tenant secret namespaces, per-tenant data segregation. Needed when nOS hits 10+ paid clients sharing infra. Postponed.
+- **Router-as-architecture** — operator's brainstorm 2026-04-29: every nOS host MUST sit behind a tenant-controlled router (e.g. OpenWrt / pfSense / Mikrotik) which handles cross-host LAN, DNS for the `<host_alias>` namespace, optional WireGuard hub for the tenant network, and split-horizon DNS (split between LAN view and CF-proxied public view). Could solve substantial cross-host comms without code on the nOS side. Worth a 1-day spike when fleet mode lands.
+- **Brand-friendly Tier-2 URLs** — per-app `nginx.subdomain` override so 2FAuth lands at `2fa.apps.<tld>` instead of `twofauth.apps.<tld>`. Trivial code, deferred only because no concrete need today (O7 / O8).
 - **La Suite Calc** — early prototype, watch upstream maturity, integrate when stable
+- **Ansible runner on Raspberry Pi controlling Mac inventory** — operator's brainstorm 2026-04-29: physically separate the playbook driver from the deploy host. Probably falls out naturally once Track F's fleet model is in place; document in fleet runbook when written.
