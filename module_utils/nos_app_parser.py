@@ -40,6 +40,7 @@ import os
 import re
 import secrets
 import string
+import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -131,7 +132,17 @@ def load_app_file(path: str) -> Dict[str, Any]:
     the schema — call ``validate(record)`` after.
     """
     if yaml is None:
-        raise RuntimeError("PyYAML required for nos_app_parser")
+        # Surface the offending interpreter so the operator knows where
+        # to install pyyaml. Ansible's auto-discovered interpreter on
+        # macOS is /opt/homebrew/bin/python3, which Homebrew's python@3.13
+        # upgrades occasionally strip pyyaml from. The pazny.apps_runner
+        # role's main.yml ensures pyyaml is present before invoking the
+        # render module — this branch is the safety net for callers
+        # importing the parser directly.
+        raise RuntimeError(
+            "PyYAML required for nos_app_parser. Install with: "
+            + sys.executable + " -m pip install --user --break-system-packages pyyaml"
+        )
     app_name = os.path.splitext(os.path.basename(path))[0]
     try:
         with open(path, "r") as fh:

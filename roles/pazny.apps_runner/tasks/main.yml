@@ -60,6 +60,22 @@
             - "{{ stacks_dir }}/apps"
             - "{{ stacks_dir }}/apps/overrides"
 
+        # ── Ensure PyYAML is available for the Ansible Python interpreter ────
+        # nos_apps_render → module_utils.nos_app_parser does `import yaml`.
+        # On macOS the Ansible-discovered interpreter is /opt/homebrew/bin/
+        # python3, and Homebrew's python@3.13 upgrades occasionally drop
+        # pyyaml from site-packages (same scenario flagged in main.yml:82
+        # for the Preflight YAML validator). Idempotent: pip is a no-op
+        # when PyYAML is already present.
+        - name: "[pazny.apps_runner] Ensure PyYAML is installed for the parser"
+          ansible.builtin.pip:
+            name: PyYAML
+            state: present
+            extra_args: "--user --break-system-packages"
+          register: _apps_pyyaml_pip
+          failed_when: false
+          changed_when: "'Successfully installed' in (_apps_pyyaml_pip.stdout | default(''))"
+
         # ── Run the render module ────────────────────────────────────────────
         # Returns: {apps, generated_secrets, gate_violations, ids}
         - name: "[pazny.apps_runner] Run nos_apps_render"
