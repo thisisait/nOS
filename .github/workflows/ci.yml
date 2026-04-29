@@ -113,6 +113,31 @@ jobs:
           -q
 
   # ──────────────────────────────────────────────────────────────────────────
+  # PYTEST-APPS – focused subset on tests/apps/ for fast per-submodule
+  # failure visibility. Tier-2 apps_runner + Coolify importer regressions
+  # surface here before they bleed into the full pytest suite. Runs in
+  # parallel with the full pytest job; same Python pin so coverage is
+  # consistent. ~0.2s today.
+  # ──────────────────────────────────────────────────────────────────────────
+  pytest-apps:
+    name: Pytest (apps + importer)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        run: pip3 install pytest pyyaml jsonschema
+
+      - name: Run apps + importer tests.
+        run: python3 -m pytest tests/apps/ -v
+
+  # ──────────────────────────────────────────────────────────────────────────
   # INTEGRATION – full run on real macOS (slower, expensive)
   # Runs only on master/claude/** pushes, not on every PR commit
   # ──────────────────────────────────────────────────────────────────────────

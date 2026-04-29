@@ -1,0 +1,62 @@
+# nOS pre-commit hooks — OPT-IN
+# ===============================================================
+#
+# Activation (one-time per clone):
+#
+#   pip install pre-commit
+#   pre-commit install
+#
+# After that, every `git commit` runs the hooks below against the
+# staged files only. Hooks are LOCAL (no network at commit time —
+# we explicitly do NOT image-probe at pre-commit because that
+# requires Docker + registry access; image probes happen at
+# `tools/import-coolify-template.py` import time and at apps_runner
+# pre-flight during the playbook run).
+#
+# To skip hooks for a single commit (rare; document why):
+#
+#   git commit --no-verify -m "..."
+#
+# To run all hooks against the whole tree on demand:
+#
+#   pre-commit run --all-files
+#
+# This config is intentionally minimal — it catches the failure
+# class that bit blank #2 (broken YAML in apps/<name>.yml that
+# the parser would reject anyway, just hours later in the run).
+
+repos:
+  - repo: local
+    hooks:
+      # ─── Tier-2 manifest parser gate ─────────────────────────────
+      # Ensures every staged apps/*.yml (excluding *.draft) parses
+      # cleanly via module_utils.nos_app_parser before commit.
+      # Catches schema errors, GDPR-block omissions, missing required
+      # fields. Cost: ~30ms per file.
+      - id: parse-tier2-manifests
+        name: Parse Tier-2 app manifests
+        language: python
+        entry: python3
+        args:
+          - "-c"
+          - |
+            import sys
+            sys.path.insert(0, ".")
+            from module_utils.nos_app_parser import parse_app_file, AppParseError
+            failures = []
+            for f in sys.argv[1:]:
+                try:
+                    parse_app_file(f)
+                except AppParseError as exc:
+                    failures.append("[" + exc.app_name + "] " + " | ".join(exc.violations))
+                except Exception as exc:  # noqa: BLE001
+                    failures.append("[" + f + "] unexpected: " + str(exc))
+            if failures:
+                print("\n".join(failures))
+                sys.exit(1)
+        files: ^apps/.*\.yml$
+        exclude: ^apps/.*\.draft(\..+)?$
+        pass_filenames: true
+        additional_dependencies:
+          - pyyaml
+          - jsonschema
