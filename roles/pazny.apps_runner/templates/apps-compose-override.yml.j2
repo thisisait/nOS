@@ -32,11 +32,12 @@ services:
 {% endfor %}
 {% endif %}
 {% if 'networks' not in (svc_def | default({})) %}
-{# default networks — apps_net + traefik shared_net + infra_net (Postgres/Auth) #}
+{# default networks — apps_net (internal Tier-2) + shared_net (Traefik routing
+   AND cross-stack bus to infra postgres/mariadb/redis/authentik, which are
+   dual-attached). Manifests can override by declaring `networks:` themselves. #}
     networks:
       - apps_net
       - {{ apps_traefik_network }}
-      - infra_net
 {% endif %}
 {% endfor %}
 {% endfor %}
@@ -60,6 +61,4 @@ networks:
   apps_net:
     driver: bridge
   {{ apps_traefik_network }}:
-    external: true
-  infra_net:
     external: true

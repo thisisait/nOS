@@ -2,8 +2,10 @@
 # Per-service definitions arrive via merged override at
 # {{ stacks_dir }}/apps/overrides/auto.yml (rendered by pazny.apps_runner).
 #
-# Networks: apps_net is internal to Tier-2; shared_net is Traefik's network;
-# infra_net gets the apps to Postgres / Authentik / Redis.
+# Networks: apps_net is internal to Tier-2; shared_net is Traefik's network
+# AND the cross-stack bus that infra services (postgres / mariadb / redis /
+# authentik) are dual-attached to — Tier-2 reaches them via shared_net just
+# like b2b / iiab / data do.
 
 services: {}
 
@@ -11,8 +13,6 @@ networks:
   apps_net:
     driver: bridge
   {{ stacks_shared_network | default('shared_net') }}:
-    external: true
-  infra_net:
     external: true
 
 volumes: {}
