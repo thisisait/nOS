@@ -682,6 +682,20 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 ---
 
+### Track P — Automated wet-test (Playwright + Cowork) **(post-H stretch)**
+
+**Status: scaffolding seeded in Track E batch (commit chain `c7b5a4e..`).** File skeletons landed:
+- `docs/wet-test-automation.md` — architecture, Cowork session protocol, file layout, activation steps
+- `tests/e2e/tier2-wet-test.spec.ts` — Playwright skeleton mapping checklist sections 2/3/4/5/8/11 to `describe`/`test` blocks; every test currently calls `test.fixme()` so a `npx playwright test` reports "skipped" until Track P proper
+
+**Why this matters:** walking `docs/tier2-wet-test-checklist.md` by hand is tractable for 3-5 pilots but won't scale once the Tier-2 catalog reaches 10+. Operator's vision: a Cowork session driven Playwright suite that walks the 12 sections autonomously, files `fix(apps):` commits for low-risk failures (image tag bumps, healthcheck timing), and surfaces Cowork questions for anything that needs human judgment.
+
+**Activation (post-H):** `cd tests/e2e && npm ci && npx playwright install chromium`, then a Cowork session runs `npx playwright test --reporter=json` after each blank and acts on the JSON.
+
+**Exit criteria:** all 12 checklist sections have a corresponding Playwright test; Cowork session can drive a full wet-test from "blank just finished" to "all green, branch ready for review" hands-free; documented Cowork prompt template at `docs/cowork-wet-test-prompt.md`; operator confirms a successful end-to-end Cowork-driven wet test in the Decision log.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):
