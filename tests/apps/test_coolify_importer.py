@@ -161,10 +161,17 @@ class TestRenderManifestEndToEnd:
         """The draft must be:
           1) syntactically valid YAML
           2) compose-wrapped so parser sees compose.services
-          3) parser-rejected ONLY because legal_basis is "TODO"
+          3) parser-rejected when category is unknown (all-TODO scaffold)
           4) parser-accepted once the operator replaces TODOs
         """
+        # Force an UNKNOWN category so the auto-hint doesn't pre-fill the
+        # gdpr block (the productivity hint table now produces a
+        # parser-valid manifest out of the box, which is good but defeats
+        # the "is the fail-then-pass round-trip working?" test premise).
+        # Use sample_template's body but override category in the parsed
+        # header dict so we explicitly walk the all-TODO path.
         header = importer.parse_header(sample_template)
+        header["category"] = "esoteric"  # not in CATEGORY_GDPR_HINTS
         body = importer.strip_header(sample_template)
         rewritten, todos = importer.rewrite_tokens(body, "EXAMPLE")
         manifest = importer.render_manifest(
@@ -225,3 +232,176 @@ class TestRenderManifestEndToEnd:
         assert "DISABLE_SIGNUP" in manifest
         # And the WITHOUT-default var is flagged as REQUIRED
         assert "REQUIRED" in manifest
+
+
+# ─── Slug-vs-image-org warning (Phase 3 — W3.2) ─────────────────────────────
+
+class TestSlugOrgWarning:
+    """Regression coverage for the `2fauth → twofauth` lesson:
+    when --name renames the slug, the importer must warn if the rewritten
+    compose body still contains `image: <old-slug>/...`.
+    """
+
+    def test_warns_when_slug_renamed_matches_image_org(self, importer):
+        body = (
+            "services:\n"
+            "  app:\n"
+            "    image: docker.io/myapp/myapp:1.0\n"
+        )
+        warning = importer.detect_slug_org_collision(
+            default_name="myapp", name="renamed-app", compose_body=body,
+        )
+        assert warning is not None
+        assert "myapp" in warning
+        assert "renamed-app" in warning
+        assert "image org" in warning.lower()
+
+    def test_no_warning_when_slug_unchanged(self, importer):
+        body = (
+            "services:\n"
+            "  app:\n"
+            "    image: docker.io/myapp/myapp:1.0\n"
+        )
+        warning = importer.detect_slug_org_collision(
+            default_name="myapp", name="myapp", compose_body=body,
+        )
+        assert warning is None
+
+    def test_no_warning_when_image_org_differs(self, importer):
+        # Rename happened, but the image org is unrelated to either slug
+        # (typical for upstream images hosted under a personal account).
+        body = (
+            "services:\n"
+            "  app:\n"
+            "    image: docker.io/louislam/uptime-kuma:2\n"
+        )
+        warning = importer.detect_slug_org_collision(
+            default_name="uptime-kuma", name="kuma2", compose_body=body,
+        )
+        assert warning is None
+
+
+# ─── Category-based GDPR hints (Phase 3 — W3.4) ────────────────────────────
+
+class TestCategoryGdprHints:
+    """When the upstream Coolify category matches our hint table, we
+    pre-fill legal_basis + data_categories instead of leaving all-TODO."""
+
+    @pytest.fixture
+    def _empty_compose_body(self):
+        return "services:\n  app:\n    image: example/example:1\n"
+
+    def test_productivity_gets_contract_hint(self, importer, _empty_compose_body):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={"category": "productivity"},
+            compose_body=_empty_compose_body,
+            todos=[],
+            source_url="file:///fixture",
+        )
+        assert 'legal_basis: "contract"' in manifest
+        assert "auto-hint from category=productivity" in manifest
+
+    def test_security_gets_legitimate_interests(self, importer, _empty_compose_body):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={"category": "security"},
+            compose_body=_empty_compose_body,
+            todos=[],
+            source_url="file:///fixture",
+        )
+        assert 'legal_basis: "legitimate_interests"' in manifest
+        # And the data_categories list should have a security-flavoured hint
+        assert "credentials" in manifest
+
+    def test_unknown_category_stays_todo(self, importer, _empty_compose_body):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={"category": "esoteric"},
+            compose_body=_empty_compose_body,
+            todos=[],
+            source_url="file:///fixture",
+        )
+        assert 'legal_basis: "TODO"' in manifest
+        assert 'auto-hint' not in manifest
+
+
+# ─── Numbered TODO format with type hints (Phase 3 — W3.3) ─────────────────
+
+class TestNumberedTodoFormat:
+    """Operator-supplied env vars get a numbered sub-list with type hints
+    derived from the var name (PASSWORD → secret, HOST → url_or_host, etc.)."""
+
+    def test_env_type_hint_classifications(self, importer):
+        assert importer.env_type_hint("ADMIN_PASSWORD") == "secret"
+        assert importer.env_type_hint("APP_SECRET") == "secret"
+        assert importer.env_type_hint("SOME_KEY") == "secret"
+        assert importer.env_type_hint("AUTH_TOKEN") == "secret"
+        assert importer.env_type_hint("ENCRYPTION_BASE64") == "base64"
+        assert importer.env_type_hint("DB_USER") == "username"
+        assert importer.env_type_hint("ADMIN_EMAIL") == "email"
+        assert importer.env_type_hint("SMTP_HOST") == "url_or_host"
+        assert importer.env_type_hint("API_DOMAIN") == "url_or_host"
+        assert importer.env_type_hint("REDIRECT_URL") == "url_or_host"
+        assert importer.env_type_hint("LISTEN_PORT") == "integer"
+        assert importer.env_type_hint("RANDOM_LABEL") == "string"
+
+    def test_numbered_sublist_present_in_manifest(self, importer):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={"category": "productivity"},
+            compose_body="services:\n  app:\n    image: x/x:1\n",
+            todos=[("ADMIN_PASSWORD", ""), ("SMTP_HOST", "")],
+            source_url="file:///fixture",
+        )
+        # Step parent index "3." (after the two static steps), with .1/.2
+        # for the two TODO vars.
+        assert "3.1  ADMIN_PASSWORD" in manifest
+        assert "3.2  SMTP_HOST" in manifest
+
+    def test_password_var_gets_secret_type_hint(self, importer):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={},
+            compose_body="services:\n  app:\n    image: x/x:1\n",
+            todos=[("ADMIN_PASSWORD", "")],
+            source_url="file:///fixture",
+        )
+        assert "type: secret" in manifest
+
+    def test_host_var_gets_url_or_host_hint(self, importer):
+        manifest = importer.render_manifest(
+            name="demo",
+            header={},
+            compose_body="services:\n  app:\n    image: x/x:1\n",
+            todos=[("MAIL_HOST", "")],
+            source_url="file:///fixture",
+        )
+        assert "type: url_or_host" in manifest
+
+
+# ─── Image extraction (Phase 3 — W3.1 plumbing) ────────────────────────────
+
+class TestImageExtraction:
+    def test_extract_image_refs_dedups(self, importer):
+        body = (
+            "services:\n"
+            "  app:\n"
+            "    image: foo/bar:1\n"
+            "  worker:\n"
+            "    image: foo/bar:1\n"
+            "  db:\n"
+            "    image: postgres:15-alpine\n"
+        )
+        refs = importer.extract_image_refs(body)
+        assert refs == ["foo/bar:1", "postgres:15-alpine"]
+
+    def test_extract_handles_quoted_form(self, importer):
+        body = "services:\n  app:\n    image: \"foo/bar:1.0\"\n"
+        refs = importer.extract_image_refs(body)
+        assert refs == ["foo/bar:1.0"]
+
+    def test_extract_returns_empty_when_no_images(self, importer):
+        # Compose with just `services: {}` — no image lines
+        body = "services: {}\nvolumes:\n  data:\n"
+        assert importer.extract_image_refs(body) == []
