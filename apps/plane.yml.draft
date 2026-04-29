@@ -1,0 +1,279 @@
+---
+# ============================================================================
+# Plane — open-source project management (Jira-class). Pilot 4/4 — STRESS.
+#
+# 13 containers in a single manifest is the upper end of what apps_runner
+# is designed for. Kept as `.yml.draft` on purpose so the FIRST blank run
+# after C5 doesn't try to bring 13 containers up before pilots 1-3 prove
+# stable. To enable: `mv apps/plane.yml.draft apps/plane.yml` and re-run.
+#
+# Surface: web + api + admin + space + worker + beat + live + monitor +
+#          silo + postgres + valkey + rabbitmq + minio.
+# Auth:    OIDC (Plane has native OIDC support — no Authentik forward-auth).
+# Memory:  ~6-8 GB nominally. Plan ahead.
+#
+# Upstream:    https://github.com/makeplane/plane
+# License:     AGPL-3.0
+# Images:      docker.io/makeplane/* (multi-arch incl. arm64),
+#              docker.io/postgres:15-alpine,
+#              docker.io/valkey/valkey:7.2-alpine,
+#              docker.io/rabbitmq:3-alpine,
+#              docker.io/minio/minio:latest
+# ============================================================================
+
+meta:
+  name: "plane"
+  version: "0.27.1"
+  summary: "Open-source project management (issues, sprints, roadmaps)."
+  homepage: "https://docs.plane.so/"
+  category: "productivity"
+  ports: [80]
+  tags: ["self-hosted", "project-management", "oss-jira"]
+
+# ── GDPR Article 30 — legal_basis = contract ───────────────────────────────
+# Same logic as Documenso: the operator deploys Plane to fulfil their
+# contract with the team using it (work-management = contracted service).
+gdpr:
+  purpose: |
+    Project / issue / sprint tracking for the operator's team. Stores
+    issue text + comments + assignee history + uploaded attachments.
+    Contracts with team members imply visibility of their own task
+    activity to teammates within the same workspace.
+  legal_basis: "contract"
+  data_categories:
+    - "name"
+    - "email"
+    - "ip_address"
+    - "behavioural_data"          # who-did-what timeline
+    - "uploaded_attachments"
+  data_subjects:
+    - "end_users"                  # the team using Plane
+    - "operators"
+  # Default 365 days = typical project lifespan. Larger orgs with audit
+  # trails for years bump this; single-team installs may shrink to 90.
+  retention_days: 365
+  processors: []
+  transfers_outside_eu: false
+
+# ── Compose fragment ───────────────────────────────────────────────────────
+# This is a faithful but somewhat-trimmed adaptation of Plane's official
+# self-hosted compose. Kept-features:
+#   - All 13 services (web, api, admin, space, worker, beat, live, monitor,
+#     silo, postgres, valkey, rabbitmq, minio)
+#   - Internal Docker DNS for service-to-service (no host networking)
+#   - Per-service mem_limit so a runaway worker can't OOM the whole stack
+#
+# Removed/simplified vs. upstream:
+#   - Nginx ingress (we use Traefik instead — primary `web` service is the
+#     Tier-2 entrypoint and gets the Traefik label set)
+#   - Dockerfile-build steps (we pin :0.27.1 tags and pull from registry)
+compose:
+  services:
+    # ── Frontend tier ─────────────────────────────────────────────────────
+    plane:
+      image: "docker.io/makeplane/plane-frontend:v0.27.1"
+      container_name: plane-web
+      restart: unless-stopped
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      ports:
+        - "3201:3000"
+      environment:
+        - "NEXT_PUBLIC_API_BASE_URL=https://$SERVICE_FQDN_PLANE/api"
+        - "NEXT_PUBLIC_ADMIN_BASE_URL=https://$SERVICE_FQDN_PLANE/god-mode"
+        - "NEXT_PUBLIC_SPACE_BASE_URL=https://$SERVICE_FQDN_PLANE/spaces"
+      mem_limit: 512m
+      cpus: 0.5
+
+    plane-admin:
+      image: "docker.io/makeplane/plane-admin:v0.27.1"
+      container_name: plane-admin
+      restart: unless-stopped
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      mem_limit: 256m
+      cpus: 0.25
+
+    plane-space:
+      image: "docker.io/makeplane/plane-space:v0.27.1"
+      container_name: plane-space
+      restart: unless-stopped
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      mem_limit: 256m
+      cpus: 0.25
+
+    plane-live:
+      image: "docker.io/makeplane/plane-live:v0.27.1"
+      container_name: plane-live
+      restart: unless-stopped
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      mem_limit: 256m
+      cpus: 0.25
+
+    # ── Backend tier ──────────────────────────────────────────────────────
+    plane-api:
+      image: "docker.io/makeplane/plane-backend:v0.27.1"
+      container_name: plane-api
+      restart: unless-stopped
+      depends_on:
+        plane-db:
+          condition: service_healthy
+        plane-redis:
+          condition: service_healthy
+        plane-mq:
+          condition: service_healthy
+      environment: &plane-backend-env
+        - "DEBUG=0"
+        - "DJANGO_SETTINGS_MODULE=plane.settings.production"
+        - "SECRET_KEY=$SERVICE_BASE64_64_DJANGOKEY"
+        - "WEB_URL=https://$SERVICE_FQDN_PLANE/"
+        - "DATABASE_URL=postgresql://$SERVICE_USER_DB:$SERVICE_PASSWORD_DB@plane-db:5432/plane"
+        - "REDIS_URL=redis://plane-redis:6379/0"
+        - "AMQP_URL=amqp://$SERVICE_USER_MQ:$SERVICE_PASSWORD_MQ@plane-mq:5672/"
+        - "AWS_ACCESS_KEY_ID=$SERVICE_USER_S3"
+        - "AWS_SECRET_ACCESS_KEY=$SERVICE_PASSWORD_S3"
+        - "AWS_S3_ENDPOINT_URL=http://plane-storage:9000"
+        - "AWS_S3_BUCKET_NAME=plane"
+        - "AWS_REGION=us-east-1"
+        - "FILE_SIZE_LIMIT=5242880"
+        - "ENABLE_SIGNUP=1"
+      healthcheck:
+        test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8000/api/instances/ || exit 1"]
+        interval: 30s
+        timeout: 10s
+        retries: 10
+        start_period: 60s
+      mem_limit: 1g
+      cpus: 1.0
+
+    plane-worker:
+      image: "docker.io/makeplane/plane-backend:v0.27.1"
+      container_name: plane-worker
+      restart: unless-stopped
+      command: ["./bin/worker"]
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      environment: *plane-backend-env
+      mem_limit: 512m
+      cpus: 0.5
+
+    plane-beat:
+      image: "docker.io/makeplane/plane-backend:v0.27.1"
+      container_name: plane-beat
+      restart: unless-stopped
+      command: ["./bin/beat"]
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      environment: *plane-backend-env
+      mem_limit: 256m
+      cpus: 0.25
+
+    plane-monitor:
+      image: "docker.io/makeplane/plane-backend:v0.27.1"
+      container_name: plane-monitor
+      restart: unless-stopped
+      command: ["./bin/monitor"]
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      environment: *plane-backend-env
+      mem_limit: 256m
+      cpus: 0.25
+
+    plane-silo:
+      image: "docker.io/makeplane/plane-silo:v0.27.1"
+      container_name: plane-silo
+      restart: unless-stopped
+      depends_on:
+        plane-api:
+          condition: service_healthy
+      mem_limit: 256m
+      cpus: 0.25
+
+    # ── Data tier ─────────────────────────────────────────────────────────
+    plane-db:
+      image: "docker.io/postgres:15-alpine"
+      container_name: plane-db
+      restart: unless-stopped
+      environment:
+        - "POSTGRES_USER=$SERVICE_USER_DB"
+        - "POSTGRES_PASSWORD=$SERVICE_PASSWORD_DB"
+        - "POSTGRES_DB=plane"
+      volumes:
+        - plane_db:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d plane"]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+      mem_limit: 1g
+      cpus: 1.0
+
+    plane-redis:
+      image: "docker.io/valkey/valkey:7.2-alpine"
+      container_name: plane-redis
+      restart: unless-stopped
+      command: ["valkey-server", "--save", "60", "1", "--appendonly", "yes"]
+      volumes:
+        - plane_redis:/data
+      healthcheck:
+        test: ["CMD", "valkey-cli", "ping"]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+      mem_limit: 256m
+      cpus: 0.25
+
+    plane-mq:
+      image: "docker.io/rabbitmq:3-alpine"
+      container_name: plane-mq
+      restart: unless-stopped
+      environment:
+        - "RABBITMQ_DEFAULT_USER=$SERVICE_USER_MQ"
+        - "RABBITMQ_DEFAULT_PASS=$SERVICE_PASSWORD_MQ"
+      volumes:
+        - plane_mq:/var/lib/rabbitmq
+      healthcheck:
+        test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      mem_limit: 512m
+      cpus: 0.5
+
+    plane-storage:
+      image: "docker.io/minio/minio:latest"
+      container_name: plane-storage
+      restart: unless-stopped
+      command: ["server", "/data", "--address", ":9000", "--console-address", ":9090"]
+      environment:
+        - "MINIO_ROOT_USER=$SERVICE_USER_S3"
+        - "MINIO_ROOT_PASSWORD=$SERVICE_PASSWORD_S3"
+      volumes:
+        - plane_storage:/data
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+      mem_limit: 512m
+      cpus: 0.5
+
+  volumes:
+    plane_db:
+    plane_redis:
+    plane_mq:
+    plane_storage:
+
+# ── Tier-2 routing — native OIDC (Plane has built-in OIDC, not forward-auth)
+nginx:
+  auth: "oidc"
+  oidc_callback: "/auth/callback"

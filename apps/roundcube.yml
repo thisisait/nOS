@@ -1,0 +1,94 @@
+---
+# ============================================================================
+# Roundcube — webmail client. Pilot 2/4 of the Tier-2 stress test.
+#
+# Surface: single PHP container + SQLite for user prefs. Connects to an
+# EXTERNAL IMAP/SMTP server via env (placeholder for the Phase-2 Stalwart
+# mail role). The pilot proves: env-driven external service wiring +
+# proxy-auth gate over a stateful PHP session.
+#
+# Upstream:    https://github.com/roundcube/roundcubemail
+# License:     GPL-3.0-or-later
+# Image:       docker.io/roundcube/roundcubemail (multi-arch incl. arm64)
+# Persistence: SQLite at /var/roundcube/db (volume rcube_db)
+# ============================================================================
+
+meta:
+  name: "roundcube"
+  version: "1.6.11"
+  summary: "Webmail client for IMAP/SMTP — read mail in the browser."
+  homepage: "https://roundcube.net/"
+  category: "mail"
+  ports: [80]
+  tags: ["self-hosted", "webmail", "imap", "smtp"]
+
+# ── GDPR Article 30 — pilot 2, legal basis = legitimate_interests ──────────
+# Roundcube is a transport, not a store: emails live on the upstream IMAP
+# server (which is the controller of the message bodies). What Roundcube
+# itself stores is local-cache + UI prefs + an address book — that's the
+# scope of the Article 30 entry.
+gdpr:
+  purpose: |
+    Web frontend over the operator's IMAP/SMTP mail server. Roundcube
+    itself stores only UI prefs, address book entries, and a short-term
+    cache of message metadata for performance — message bodies live on
+    the IMAP server (which has its own Article 30 entry).
+  legal_basis: "legitimate_interests"
+  data_categories:
+    - "email_metadata"           # subjects, headers, flags
+    - "address_book_entries"     # contact name + email + phone
+    - "ui_preferences"
+  data_subjects:
+    - "operators"
+    - "end_users"                # if other tenants are given a Roundcube login
+  # 365 days = typical webmail cache horizon. The IMAP server's own retention
+  # is independent — operators set THAT via the upstream IMAP role.
+  retention_days: 365
+  processors: []
+  transfers_outside_eu: false
+
+# ── Compose fragment ───────────────────────────────────────────────────────
+# Pilot routes mail through a placeholder IMAP host. Operators wire their
+# real IMAP/SMTP credentials via the env block below — values shown here
+# are SAFE DEFAULTS for the smoke run (the container will start and the
+# UI will render, but login attempts will fail until the IMAP host points
+# somewhere real).
+compose:
+  services:
+    roundcube:
+      image: "docker.io/roundcube/roundcubemail:1.6.11-apache"
+      container_name: roundcube
+      restart: unless-stopped
+      ports:
+        - "8120:80"
+      environment:
+        # Connection to the upstream IMAP server. Replace 'mail.dev.local'
+        # with your real IMAP host once the Phase-2 Stalwart role lands.
+        - "ROUNDCUBEMAIL_DEFAULT_HOST=tls://mail.dev.local"
+        - "ROUNDCUBEMAIL_DEFAULT_PORT=993"
+        - "ROUNDCUBEMAIL_SMTP_SERVER=tls://mail.dev.local"
+        - "ROUNDCUBEMAIL_SMTP_PORT=587"
+        - "ROUNDCUBEMAIL_DB_TYPE=sqlite"
+        - "ROUNDCUBEMAIL_DES_KEY=$SERVICE_BASE64_32_DESKEY"
+        - "ROUNDCUBEMAIL_PLUGINS=archive,managesieve,markasjunk,zipdownload"
+        - "ROUNDCUBEMAIL_SKIN=elastic"
+        # Loosen Roundcube's session.cookie_secure default — the TLS
+        # termination is upstream at Traefik.
+        - "ROUNDCUBEMAIL_REQUEST_PATH=/"
+      volumes:
+        - rcube_db:/var/roundcube/db
+        - rcube_config:/var/roundcube/config
+      healthcheck:
+        test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+        interval: 30s
+        timeout: 5s
+        retries: 5
+      mem_limit: 512m
+      cpus: 0.5
+
+  volumes:
+    rcube_db:
+    rcube_config:
+
+nginx:
+  auth: "proxy"

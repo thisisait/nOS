@@ -1,0 +1,87 @@
+---
+# ============================================================================
+# 2FAuth (slug: twofauth) — self-hosted TOTP / HOTP authenticator.
+# The upstream brand "2FAuth" starts with a digit; nOS app slugs must match
+# ^[a-z][a-z0-9-]*$ (state/schema/app.schema.json), so we slug it textually.
+# Hostname becomes twofauth.apps.<tld>.
+# Pilot 1/4 of the Tier-2 stress test. Smallest surface: single container,
+# embedded SQLite, no external deps. Proves the apps_runner round-trip:
+#   manifest → render → docker compose up → Authentik proxy gate → smoke probe.
+#
+# Upstream:    https://github.com/Bubka/2FAuth
+# License:     AGPL-3.0
+# Image:       docker.io/twofauth/twofauth (multi-arch incl. arm64)
+# Persistence: SQLite at /srv/database (volume tfa_data)
+# ============================================================================
+
+meta:
+  name: "twofauth"
+  version: "5.6.0"
+  summary: "Self-hosted authenticator for TOTP/HOTP secrets, browser-friendly."
+  homepage: "https://docs.twofauth.app/"
+  category: "security"
+  ports: [8000]
+  tags: ["self-hosted", "totp", "2fa", "security"]
+
+# ── GDPR Article 30 — pilot 1, legal basis = legitimate_interests ──────────
+# 2FAuth stores the operator's TOTP secrets — these are credentials of the
+# OPERATOR, not third-party data subjects, but the manifest still encodes
+# everything because Wing's /gdpr UI surfaces the row uniformly.
+gdpr:
+  purpose: |
+    Hosts the operator's TOTP / HOTP authenticator secrets so they can be
+    reached from any device on the LAN without locking the operator into
+    a single phone. Replaces a hardware authenticator + paper backup. No
+    third-party user data — the operator is the only data subject.
+  legal_basis: "legitimate_interests"
+  data_categories:
+    - "credentials"            # TOTP shared secrets (encrypted at rest)
+    - "authentication_metadata"  # service names, icons, last-use timestamps
+  data_subjects:
+    - "operators"              # not end_users → TLS gate is informational
+  # -1 = forever. Audit trail preservation is the point — the entire purpose
+  # of an authenticator is that secrets persist until the operator rotates
+  # them. Documented here so the gate (-1 requires a justification in
+  # purpose) sees the rationale above.
+  retention_days: -1
+  processors: []
+  transfers_outside_eu: false
+
+# ── Compose fragment — single container, SQLite, internal network ──────────
+compose:
+  services:
+    twofauth:
+      image: "docker.io/twofauth/twofauth:5.6.0"
+      container_name: twofauth
+      restart: unless-stopped
+      ports:
+        - "8000:8000"
+      environment:
+        - "APP_NAME=2FAuth"
+        - "APP_ENV=production"
+        - "APP_KEY=$SERVICE_BASE64_32_APPKEY"
+        - "APP_URL=https://$SERVICE_FQDN_TWOFAUTH/"
+        - "SITE_OWNER=admin@dev.local"
+        - "DB_DATABASE=/srv/database/database.sqlite"
+        - "CACHE_DRIVER=file"
+        - "SESSION_DRIVER=file"
+        - "MAIL_MAILER=log"   # Pilot: log-only mail. Wire SMTP in Phase-2.
+        - "AUTHENTICATION_GUARD=web-guard"
+      volumes:
+        - tfa_data:/srv/database
+        - tfa_storage:/var/www/html/storage
+      healthcheck:
+        test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8000/api/v1/heartbeat"]
+        interval: 30s
+        timeout: 5s
+        retries: 5
+      mem_limit: 256m
+      cpus: 0.5
+
+  volumes:
+    tfa_data:
+    tfa_storage:
+
+# ── Tier-2 routing — proxy auth via Authentik forward-auth ─────────────────
+nginx:
+  auth: "proxy"
