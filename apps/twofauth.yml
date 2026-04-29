@@ -16,7 +16,7 @@
 
 meta:
   name: "twofauth"
-  version: "5.6.0"
+  version: "6.1.3"
   summary: "Self-hosted authenticator for TOTP/HOTP secrets, browser-friendly."
   homepage: "https://docs.twofauth.app/"
   category: "security"
@@ -51,7 +51,11 @@ gdpr:
 compose:
   services:
     twofauth:
-      image: "docker.io/twofauth/twofauth:5.6.0"
+      # Upstream image org is "2fauth" (brand starts with a digit; nOS app
+      # slug is "twofauth" — schema requires ^[a-z] for the slug, but the
+      # Docker Hub repo follows the brand). Verified 2026-04-29 against
+      # hub.docker.com/v2/repositories/2fauth/2fauth/tags.
+      image: "docker.io/2fauth/2fauth:6.1.3"
       container_name: twofauth
       restart: unless-stopped
       # No host port mapping — Traefik reaches the container over the

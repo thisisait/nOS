@@ -136,6 +136,63 @@
             dest: "{{ apps_overrides_path }}"
             mode: '0600'
 
+        # ── Pre-flight: verify each manifest's images actually exist ─────────
+        # Two blanks lost to image typos (ghcr.io/documenso/documenso:1.10.4 —
+        # wrong registry; docker.io/twofauth/twofauth — wrong org name from
+        # accidental replace_all rename). `docker manifest inspect` queries
+        # the registry without pulling — cheap, deterministic. Failure here
+        # is more useful than a 60s wait + cascade-aborted compose-up.
+        # `failed_when: false` → we COLLECT the list of bad images and fail
+        # in the next task with all offenders at once.
+        - name: "[pazny.apps_runner] Collect every image referenced by Tier-2 manifests"
+          ansible.builtin.set_fact:
+            _apps_images: "{{ _images_acc | unique | sort }}"
+          vars:
+            _images_acc: |-
+              {%- set out = [] -%}
+              {%- for app in (_apps_render.apps | default([])) -%}
+                {%- for svc_name, svc_def in (app.compose.services | default({})).items() -%}
+                  {%- if svc_def.image is defined -%}
+                    {%- set _ = out.append(svc_def.image) -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {{ out }}
+
+        - name: "[pazny.apps_runner] Probe each image with docker manifest inspect (pre-flight)"
+          ansible.builtin.command: "{{ docker_bin | default('docker') }} manifest inspect {{ item }}"
+          loop: "{{ _apps_images | default([]) }}"
+          register: _apps_image_probes
+          changed_when: false
+          failed_when: false
+          check_mode: false
+          # Probes can be slow on cold registry caches; throttle parallelism
+          # only via natural sequential loop here — Docker's own caching
+          # makes the second probe of a layer-shared image fast.
+
+        - name: "[pazny.apps_runner] Identify unreachable images"
+          ansible.builtin.set_fact:
+            _apps_bad_images: >-
+              {{ (_apps_image_probes.results | default([]))
+                 | rejectattr('rc', 'equalto', 0)
+                 | map(attribute='item') | list }}
+
+        - name: "[pazny.apps_runner] Refuse run when any image is unreachable"
+          ansible.builtin.fail:
+            msg: |
+              {{ _apps_bad_images | length }} Tier-2 image(s) cannot be resolved
+              on the registry. Fix the manifest(s) and re-run, or pass
+              -e apps_force_image_check_skip=true to bypass (NOT recommended —
+              this catch costs zero seconds and saves a 60s compose-up + cascade
+              of interrupted concurrent pulls).
+
+              {% for bad in _apps_bad_images %}
+                - {{ bad }}
+              {% endfor %}
+          when:
+            - (_apps_bad_images | length) > 0
+            - not (apps_force_image_check_skip | default(false) | bool)
+
         # ── Per-app summary ──────────────────────────────────────────────────
         - name: "[pazny.apps_runner] Render summary"
           ansible.builtin.debug:
