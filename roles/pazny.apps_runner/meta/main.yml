@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: pazny.develop@gmail.com
+  description: nOS Tier-2 apps runner — onboard apps/<name>.yml manifests
+  license: GPLv3
+  min_ansible_version: "2.16"
+  platforms:
+    - name: MacOSX
+      versions: ["13", "14", "15"]
+    - name: Ubuntu
+      versions: ["22.04", "24.04"]
+    - name: Debian
+      versions: ["12"]
+  galaxy_tags:
+    - nos
+    - apps
+    - tier2
+    - traefik
+    - gdpr
+
+dependencies: []

@@ -1,0 +1,30 @@
+---
+# ==============================================================================
+# pazny.apps_runner/tasks/post.yml — POST-START PHASE.
+#
+# Called from tasks/stacks/apps-up.yml AFTER the apps stack has been brought
+# up via `docker compose up apps --wait`. Each app from the render phase
+# (_apps_render.apps) gets:
+#
+#   1. service-registry.json append (consumed by Bone /api/services)
+#   2. Wing systems table upsert (POST /api/v1/hub/systems)
+#   3. Authentik blueprint reconverge (new OAuth2 / proxy providers)
+#   4. Bone HMAC-signed `app.deployed` event
+#   5. Portainer endpoint reg (idempotent — gap-fill from operator request)
+#   6. Uptime Kuma manifest extension (runtime fact, no on-disk schema change)
+#   7. GDPR Article 30 row INSERT via Wing GdprRepository::upsertProcessing()
+#   8. state/smoke-catalog.yml extension (one smoke entry per app)
+#
+# C3 implements these in order. Until then this file is a placeholder so the
+# runner role's import_tasks: tasks_from: post.yml resolves cleanly.
+# ==============================================================================
+
+- name: "[pazny.apps_runner Post] (C3 placeholder — observability hooks)"
+  ansible.builtin.debug:
+    msg: |
+      Tier-2 post-start hooks not yet implemented (lands in C3).
+      Render produced {{ (_apps_render.apps | default([])) | length }} app(s):
+      {% for a in (_apps_render.apps | default([])) %}
+        - {{ a.id }} (https://{{ a.fqdn }}/)
+      {% endfor %}
+  when: _apps_render is defined

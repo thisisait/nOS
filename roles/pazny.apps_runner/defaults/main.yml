@@ -1,0 +1,58 @@
+---
+# ==============================================================================
+# pazny.apps_runner — render Tier-2 apps from apps/<name>.yml manifests.
+#
+# Driven by library/nos_apps_render.py + module_utils/nos_app_parser.py.
+# Manifests live at apps/<name>.yml (skip _*-prefixed and *.draft files).
+# Each manifest is parsed → gated (TLS / SSO / EU residency) → tokens
+# resolved → rendered into a single compose override at
+# {{ stacks_dir }}/apps/overrides/auto.yml.
+#
+# This role is the RENDER phase only. Observability hooks (Wing systems
+# upsert, Bone events, Portainer endpoint reg, Kuma manifest extension)
+# live in tasks/post.yml — wired in by tasks/stacks/apps-up.yml after the
+# stack is up.
+# ==============================================================================
+
+# Where Tier-2 manifests live. Operator can point this elsewhere with
+# `-e apps_dir=/path/to/some/dir`.
+apps_dir: "{{ playbook_dir }}/apps"
+
+# Tier-2 hostname pattern: <id>.<apps_subdomain>.<instance_tld>
+# Set apps_subdomain: "" to expose Tier-2 directly under the TLD (rare —
+# would clash with Tier-1 routes).
+apps_subdomain: "apps"
+
+# EU-residency allow-list extension. The parser hard-fails any compose
+# image from gcr.io / public.ecr.aws / mcr.microsoft.com when the manifest
+# declares transfers_outside_eu: false. Operators with a private EU mirror
+# add their host here.
+apps_eu_registries: []
+
+# When true, fail the render task on the first gate violation. Default
+# false — collect ALL violations first so the operator sees every issue
+# in one report.
+apps_strict: false
+
+# Override: skip the entire renderer (e.g. while debugging Tier-1).
+apps_runner_enabled: true
+
+# Where to write the merged compose override fragment for the apps stack.
+# Same pattern as every other Tier-1 role.
+apps_overrides_path: "{{ stacks_dir }}/apps/overrides/auto.yml"
+
+# Docker network Traefik scans for Docker-provider labels. Must match
+# stacks_shared_network in default.config.yml so `traefik.docker.network=`
+# labels resolve.
+apps_traefik_network: "{{ stacks_shared_network | default('shared_net') }}"
+
+# When true, render also appends Tier-2 entries to state/smoke-catalog.yml
+# (one smoke entry per onboarded app — id=app_<name>, expect=200/302/308/401).
+# Disable if you maintain the smoke catalog by hand.
+apps_extend_smoke_catalog: true
+
+# Per-app secret seeds — passed to nos_apps_render so PASSWORD/BASE64 tokens
+# stay stable across runs. Populated from credentials.yml under the
+# `app_secrets:` key. The runner persists newly-generated secrets back into
+# credentials.yml after each run (idempotent).
+app_secrets: {}

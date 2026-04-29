@@ -1,0 +1,18 @@
+# {{ ansible_managed }} — apps stack base.
+# Per-service definitions arrive via merged override at
+# {{ stacks_dir }}/apps/overrides/auto.yml (rendered by pazny.apps_runner).
+#
+# Networks: apps_net is internal to Tier-2; shared_net is Traefik's network;
+# infra_net gets the apps to Postgres / Authentik / Redis.
+
+services: {}
+
+networks:
+  apps_net:
+    driver: bridge
+  {{ stacks_shared_network | default('shared_net') }}:
+    external: true
+  infra_net:
+    external: true
+
+volumes: {}

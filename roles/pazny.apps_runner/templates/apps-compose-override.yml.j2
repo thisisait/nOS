@@ -1,0 +1,65 @@
+# {{ ansible_managed }}
+# Tier-2 apps merged compose override — rendered by pazny.apps_runner.
+# Each top-level entry comes from one apps/<name>.yml manifest, with magic
+# tokens already resolved and Traefik labels injected. Operator-edited
+# changes belong in the source manifest, not here.
+
+services:
+{% for app in (_apps_render.apps | default([])) %}
+{% for svc_name, svc_def in (app.compose.services | default({})).items() %}
+  {{ svc_name }}:
+{% for k, v in (svc_def | default({})).items() %}
+{% if k == 'labels' %}
+{# merge any manifest-defined labels with Traefik labels emitted by the runner #}
+    labels:
+{% for lbl in (v | default([])) %}
+      - "{{ lbl }}"
+{% endfor %}
+{% if svc_name == app.id %}
+{% for tlbl in app.traefik_labels %}
+      - "{{ tlbl }}"
+{% endfor %}
+{% endif %}
+{% else %}
+    {{ k }}: {{ v | to_json }}
+{% endif %}
+{% endfor %}
+{% if 'labels' not in (svc_def | default({})) and svc_name == app.id %}
+{# manifest didn't declare labels; runner injects Traefik labels for the primary service #}
+    labels:
+{% for tlbl in app.traefik_labels %}
+      - "{{ tlbl }}"
+{% endfor %}
+{% endif %}
+{% if 'networks' not in (svc_def | default({})) %}
+{# default networks — apps_net + traefik shared_net + infra_net (Postgres/Auth) #}
+    networks:
+      - apps_net
+      - {{ apps_traefik_network }}
+      - infra_net
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+# Top-level volumes from each manifest's compose.volumes (additive — keys
+# must be unique across apps; the runner doesn't dedupe).
+{% set _all_volumes = {} %}
+{% for app in (_apps_render.apps | default([])) %}
+{% for vname, vdef in (app.compose.volumes | default({})).items() %}
+{% set _ = _all_volumes.update({vname: vdef}) %}
+{% endfor %}
+{% endfor %}
+{% if _all_volumes %}
+volumes:
+{% for vname, vdef in _all_volumes.items() %}
+  {{ vname }}: {{ vdef | default(None) | to_json }}
+{% endfor %}
+{% endif %}
+
+networks:
+  apps_net:
+    driver: bridge
+  {{ apps_traefik_network }}:
+    external: true
+  infra_net:
+    external: true
