@@ -6,25 +6,319 @@
 # up via `docker compose up apps --wait`. Each app from the render phase
 # (_apps_render.apps) gets:
 #
-#   1. service-registry.json append (consumed by Bone /api/services)
-#   2. Wing systems table upsert (POST /api/v1/hub/systems)
-#   3. Authentik blueprint reconverge (new OAuth2 / proxy providers)
-#   4. Bone HMAC-signed `app.deployed` event
-#   5. Portainer endpoint reg (idempotent — gap-fill from operator request)
-#   6. Uptime Kuma manifest extension (runtime fact, no on-disk schema change)
-#   7. GDPR Article 30 row INSERT via Wing GdprRepository::upsertProcessing()
-#   8. state/smoke-catalog.yml extension (one smoke entry per app)
+#   1. service-registry.json append (consumed by Bone /api/services + Wing
+#      systems table via existing ingest-registry.php pipeline)
+#   2. Wing systems table refresh (re-runs bin/ingest-registry.php — the same
+#      script the wing role uses; Tier-2 entries flow through the unchanged
+#      ingestion path now that step 1 added them)
+#   3. Authentik blueprint reconverge (extends authentik_oidc_apps with the
+#      Tier-2 entries that asked for proxy/oidc, then re-includes
+#      pazny.authentik post.yml — idempotent because the blueprint pipeline
+#      is INSERT-OR-UPDATE keyed on slug)
+#   4. Bone HMAC-signed `app.deployed` event — one POST /api/v1/events per
+#      onboarded app, X-Wing-Signature = sha256=<hex> over the body
+#   5. Portainer apps endpoint registration (handled by pazny.portainer post
+#      via portainer_register_apps_endpoint flag — gap-fill, idempotent)
+#   6. Uptime Kuma manifest extension — set _kuma_manifest_apps fact, then
+#      re-include monitors.yml so each Tier-2 app gets an HTTP probe
+#   7. GDPR Article 30 row INSERT via Wing CLI (bin/upsert-gdpr.php — wraps
+#      App\Model\GdprRepository::upsertProcessing)
+#   8. state/smoke-catalog.runtime.yml extension (one smoke entry per app —
+#      tools/nos-smoke.py auto-merges this on top of state/smoke-catalog.yml)
 #
-# C3 implements these in order. Until then this file is a placeholder so the
-# runner role's import_tasks: tasks_from: post.yml resolves cleanly.
+# All hooks are idempotent and gated on (_apps_render.apps | length > 0). The
+# 0-app case (apps/ contains only _template.yml) makes this file a no-op.
+# Heavy reconverges (Authentik / Kuma) can be skipped via
+# `apps_runner_reconverge_blueprints: false` for fast iteration.
 # ==============================================================================
 
-- name: "[pazny.apps_runner Post] (C3 placeholder — observability hooks)"
+# Cheap exit when there's nothing to do — keeps the runner-with-no-manifests
+# case fully silent in the play recap.
+- name: "[pazny.apps_runner Post] Skip — no Tier-2 apps rendered"
   ansible.builtin.debug:
-    msg: |
-      Tier-2 post-start hooks not yet implemented (lands in C3).
-      Render produced {{ (_apps_render.apps | default([])) | length }} app(s):
-      {% for a in (_apps_render.apps | default([])) %}
-        - {{ a.id }} (https://{{ a.fqdn }}/)
-      {% endfor %}
-  when: _apps_render is defined
+    msg: "No Tier-2 apps in _apps_render — post-start hooks skipped."
+  when:
+    - (_apps_render is not defined) or ((_apps_render.apps | default([])) | length == 0)
+
+- name: "[pazny.apps_runner Post] Run observability hooks"
+  when:
+    - _apps_render is defined
+    - (_apps_render.apps | default([])) | length > 0
+  block:
+
+    # ── Hook 1+2: service-registry append + Wing systems re-ingest ──────────
+    - name: "[Apps Post] Set apps_extra_services fact (Tier-2 registry entries)"
+      ansible.builtin.set_fact:
+        apps_extra_services: >-
+          {{ _apps_render.apps | map(attribute='registry_entry') | list }}
+
+    - name: "[Apps Post] Re-render service-registry.json with Tier-2 entries"
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/service-registry.json.j2"
+        dest: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
+        mode: '0644'
+
+    - name: "[Apps Post] Re-ingest service-registry into Wing systems table"
+      ansible.builtin.shell: >
+        {{ docker_bin | default('docker') }} compose
+        -f {{ stacks_dir }}/iiab/docker-compose.yml
+        -f {{ stacks_dir }}/iiab/overrides/wing.yml
+        -p iiab
+        run --rm
+        --workdir {{ wing_app_dir }}
+        wing-cli
+        php bin/ingest-registry.php
+        --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+      register: _apps_wing_ingest
+      # changed_when uses the script's "Ingested N" output line — N>0 means
+      # something flipped. Same convention as roles/pazny.wing/tasks/post.yml.
+      changed_when: >
+        'Ingested' in (_apps_wing_ingest.stdout | default(''))
+        and 'Ingested 0' not in (_apps_wing_ingest.stdout | default(''))
+      failed_when: false
+      when: install_wing | default(true) | bool
+
+    # ── Hook 3: Authentik blueprint reconverge ──────────────────────────────
+    # Tier-2 apps with auth_mode=proxy|oidc declare an `authentik_entry` block
+    # (nos_apps_render._authentik_entry). Append those to the global
+    # authentik_oidc_apps list, then re-run pazny.authentik post.yml — the
+    # blueprint pipeline (templates/blueprints/10-oidc-apps.yaml.j2) is keyed
+    # on slug, so INSERT-OR-UPDATE is the natural semantic.
+    - name: "[Apps Post] Compute Authentik extras (proxy/oidc Tier-2 apps)"
+      ansible.builtin.set_fact:
+        _apps_authentik_extras: >-
+          {{ _apps_render.apps
+             | selectattr('authentik_entry', 'defined')
+             | rejectattr('authentik_entry', 'equalto', None)
+             | map(attribute='authentik_entry')
+             | list }}
+
+    - name: "[Apps Post] Extend authentik_oidc_apps with Tier-2 entries"
+      ansible.builtin.set_fact:
+        authentik_oidc_apps: >-
+          {{ (authentik_oidc_apps | default([])) + _apps_authentik_extras }}
+      when: (_apps_authentik_extras | length) > 0
+
+    - name: "[Apps Post] Reconverge Authentik blueprints (Tier-2 OIDC/Proxy providers)"
+      ansible.builtin.include_role:
+        name: pazny.authentik
+        tasks_from: post.yml
+        apply:
+          tags: ['authentik', 'iam', 'apps']
+      when:
+        - apps_runner_reconverge_blueprints | default(true) | bool
+        - install_authentik | default(false) | bool
+        - (_apps_authentik_extras | length) > 0
+      tags: ['authentik', 'iam', 'apps']
+
+    # ── Hook 4: Bone HMAC-signed app.deployed events ────────────────────────
+    # The Bone /api/v1/events endpoint accepts batch payloads {events: [...]},
+    # signed with HMAC-SHA256 over the body using wing_events_hmac_secret.
+    # Header format matches callback_plugins/wing_telemetry.py:131 —
+    # X-Wing-Signature = "sha256=<hex>" (the receiver verifies the prefix).
+    #
+    # Build the batch as a real list (pure Jinja set + append, same idiom as
+    # tasks/stacks/stack-up.yml result-normalisation — avoids the jmespath
+    # dependency which isn't installed by default on macOS).
+    - name: "[Apps Post] Assemble Bone events batch"
+      ansible.builtin.set_fact:
+        _apps_bone_batch:
+          events: "{{ _events_acc }}"
+      vars:
+        _events_acc: |-
+          {%- set out = [] -%}
+          {%- for a in _apps_render.apps -%}
+            {%- set _ = out.append({
+              'ts': ansible_date_time.iso8601,
+              'run_id': ansible_date_time.iso8601,
+              'type': 'app.deployed',
+              'source': 'apps_runner',
+              'app_id': a.id,
+              'fqdn': a.fqdn,
+              'category': a.category,
+              'auth_mode': a.auth_mode,
+              'version': a.version,
+              'stack': 'apps',
+              'tier': 2
+            }) -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "[Apps Post] Serialise event batch to JSON (single source of truth for HMAC)"
+      ansible.builtin.set_fact:
+        _apps_bone_body: "{{ _apps_bone_batch | to_json }}"
+
+    # Ansible's built-in `hash` filter is unkeyed (hashlib only — no HMAC
+    # variant). For a real keyed HMAC-SHA256 we delegate to openssl, which
+    # ships on every macOS + Linux dev box. Result is hex; we prefix
+    # "sha256=" to match the header format the receiver expects (see
+    # callback_plugins/wing_telemetry.py:131).
+    - name: "[Apps Post] Compute keyed HMAC-SHA256 via openssl"
+      ansible.builtin.shell:
+        cmd: >-
+          printf '%s' "$NOS_BODY"
+          | openssl dgst -sha256 -hmac "$NOS_KEY" -hex
+          | awk '{print $NF}'
+        executable: /bin/bash
+      environment:
+        NOS_BODY: "{{ _apps_bone_body }}"
+        NOS_KEY: "{{ wing_events_hmac_secret | default('') }}"
+      register: _apps_bone_hmac_calc
+      no_log: true
+      changed_when: false
+      check_mode: false
+
+    - name: "[Apps Post] Wrap HMAC into X-Wing-Signature header value"
+      ansible.builtin.set_fact:
+        _apps_bone_signature: "sha256={{ _apps_bone_hmac_calc.stdout | trim }}"
+      no_log: true
+
+    - name: "[Apps Post] POST app.deployed events to Bone"
+      ansible.builtin.uri:
+        url: "{{ wing_events_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/v1/events') }}"
+        method: POST
+        body_format: json
+        body: "{{ _apps_bone_batch }}"
+        headers:
+          Content-Type: "application/json"
+          X-Wing-Signature: "{{ _apps_bone_signature }}"
+          X-Wing-Timestamp: "{{ ansible_date_time.iso8601 }}"
+        status_code: [200, 201, 202, 204]
+        timeout: 10
+      register: _apps_bone_post
+      failed_when: false
+      changed_when: _apps_bone_post.status | default(0) in [200, 201, 202, 204]
+      no_log: true
+      when: install_bone | default(true) | bool
+
+    - name: "[Apps Post] Bone events delivery summary"
+      ansible.builtin.debug:
+        msg: >-
+          Bone app.deployed:
+          {{ 'OK — ' ~ (_apps_render.apps | length) ~ ' event(s) accepted (HTTP ' ~ (_apps_bone_post.status | default('?')) ~ ')'
+             if (_apps_bone_post.status | default(0) in [200, 201, 202, 204])
+             else 'FAILED — HTTP ' ~ (_apps_bone_post.status | default('?')) ~ ' (events queued in fallback if WING_EVENTS_QUEUE is set)' }}
+      when:
+        - install_bone | default(true) | bool
+        - _apps_bone_post is defined
+
+    # ── Hook 5: Portainer apps endpoint (gap-fill via flag) ─────────────────
+    # The actual POST /api/endpoints lives in roles/pazny.portainer/tasks/
+    # post.yml under the `portainer_register_apps_endpoint` flag — defaulting
+    # to false so existing installs keep their current single-endpoint UX.
+    # When operators want a dedicated `apps` endpoint, they flip the flag in
+    # config.yml. Re-running the role's post.yml here lets the flag take
+    # effect after Tier-2 apps come up, without mutating core-up.yml ordering.
+    - name: "[Apps Post] Re-include Portainer post (gap-fill apps endpoint when flag is set)"
+      ansible.builtin.include_role:
+        name: pazny.portainer
+        tasks_from: post.yml
+        apply:
+          tags: ['portainer', 'infra', 'apps']
+      when:
+        - install_portainer | default(false) | bool
+        - portainer_register_apps_endpoint | default(false) | bool
+      tags: ['portainer', 'infra', 'apps']
+
+    # ── Hook 6: Uptime Kuma — extend monitors with Tier-2 apps ──────────────
+    # _kuma_manifest_apps gets consumed by the new clause in
+    # roles/pazny.uptime_kuma/tasks/monitors.yml (added in this commit).
+    - name: "[Apps Post] Set _kuma_manifest_apps fact for uptime_kuma reconverge"
+      ansible.builtin.set_fact:
+        _kuma_manifest_apps: >-
+          {{ _apps_render.apps | map(attribute='kuma_monitor') | list }}
+
+    - name: "[Apps Post] Reconverge Uptime Kuma monitors (picks up Tier-2 entries)"
+      ansible.builtin.include_role:
+        name: pazny.uptime_kuma
+        tasks_from: monitors.yml
+        apply:
+          tags: ['uptime-kuma', 'apps']
+      when:
+        - apps_runner_reconverge_blueprints | default(true) | bool
+        - install_uptime_kuma | default(false) | bool
+      tags: ['uptime-kuma', 'apps']
+
+    # ── Hook 7: GDPR Article 30 register — upsert one row per app ───────────
+    # Each apps/<name>.yml passes the parser only if it contains a complete
+    # `gdpr:` block. We forward that block to wing-cli/bin/upsert-gdpr.php
+    # via stdin (avoids writing a temp file on the controller). The PHP
+    # script wraps GdprRepository::upsertProcessing — same code path Wing's
+    # /gdpr UI uses. Idempotent: re-running on an already-onboarded app
+    # rewrites the row with the latest manifest values (operators can edit
+    # the manifest's gdpr block and re-run to update the register).
+    - name: "[Apps Post] Upsert GDPR processing rows (Wing CLI, one per app)"
+      ansible.builtin.shell:
+        cmd: >-
+          printf '%s' "$NOS_GDPR_JSON"
+          | {{ docker_bin | default('docker') }} compose
+          -f {{ stacks_dir }}/iiab/docker-compose.yml
+          -f {{ stacks_dir }}/iiab/overrides/wing.yml
+          -p iiab
+          run --rm -T
+          --workdir {{ wing_app_dir }}
+          wing-cli
+          php bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
+        executable: /bin/bash
+      environment:
+        NOS_GDPR_JSON: >-
+          {{ (item.gdpr | default({}) | combine({'name': item.id})) | to_json }}
+      loop: "{{ _apps_render.apps }}"
+      loop_control:
+        label: "{{ item.id }}"
+      register: _apps_gdpr_upserts
+      changed_when: "'OK upserted' in (_apps_gdpr_upserts.stdout | default(''))"
+      failed_when: false
+      when: install_wing | default(true) | bool
+
+    - name: "[Apps Post] GDPR upsert summary"
+      ansible.builtin.debug:
+        msg: >-
+          GDPR Article 30: {{ (_apps_gdpr_upserts.results | default([])
+              | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) | list | length) }}/{{ _apps_render.apps | length }} app(s) upserted.
+
+    # ── Hook 8: state/smoke-catalog.runtime.yml extension ───────────────────
+    # tools/nos-smoke.py loads state/smoke-catalog.yml + state/smoke-catalog.
+    # runtime.yml (loaded additively when present — see the matching change
+    # in nos-smoke.py). The runtime file is YAML with the same shape as the
+    # checked-in catalog so the smoke runner code stays simple.
+    - name: "[Apps Post] Build smoke runtime catalog payload"
+      ansible.builtin.set_fact:
+        _apps_smoke_catalog:
+          # No defaults override — runtime entries inherit from the static
+          # catalog's smoke_defaults. Keeps the runtime file minimal.
+          smoke_endpoints: "{{ _apps_render.apps | map(attribute='smoke_entry') | list }}"
+
+    - name: "[Apps Post] Write state/smoke-catalog.runtime.yml"
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/state/smoke-catalog.runtime.yml"
+        content: |
+          # Auto-generated by pazny.apps_runner — do not edit by hand.
+          # Source of truth is apps/<name>.yml manifests + nos_apps_render.
+          # This file is consumed by tools/nos-smoke.py on top of
+          # state/smoke-catalog.yml. Delete safely — it'll regenerate on the
+          # next playbook run.
+          {{ _apps_smoke_catalog | to_nice_yaml(indent=2) }}
+        mode: '0644'
+      when: apps_extend_smoke_catalog | default(true) | bool
+
+    # ── Final summary ───────────────────────────────────────────────────────
+    - name: "[Apps Post] Tier-2 onboarding summary"
+      ansible.builtin.debug:
+        msg: |
+          ══════════════════════════════════════════════════════════════════
+           Tier-2 apps_runner — POST-START COMPLETE
+          ══════════════════════════════════════════════════════════════════
+           Apps onboarded:    {{ _apps_render.apps | length }}
+           Service registry:  {{ apps_extra_services | length }} entry/-ies appended
+           Authentik:         {{ _apps_authentik_extras | length }} provider(s) reconverged
+           Bone events:       {{ 'sent (HTTP ' ~ (_apps_bone_post.status | default('?')) ~ ')' if install_bone | default(true) else 'skipped (bone disabled)' }}
+           Kuma monitors:     {{ _kuma_manifest_apps | length }} probe(s) registered
+           GDPR rows:         {{ (_apps_gdpr_upserts.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) | list | length) }} upserted
+           Smoke runtime:     {{ 'state/smoke-catalog.runtime.yml written' if (apps_extend_smoke_catalog | default(true)) else 'skipped' }}
+          ══════════════════════════════════════════════════════════════════
+
+          Each app:
+          {% for app in _apps_render.apps %}
+            · {{ app.id }} → https://{{ app.fqdn }}/  (auth={{ app.auth_mode }})
+          {% endfor %}

@@ -80,6 +80,41 @@
     - vars[svc.install_flag] | default(false)
     - vars[svc.domain_var] | default('') | length > 0
 
+# ── Tier-2 (apps_runner) — runtime-derived monitors ─────────────────────────
+# `_kuma_manifest_apps` is set by roles/pazny.apps_runner/tasks/post.yml from
+# nos_apps_render's per-app `kuma_monitor` block (one entry per parsed
+# apps/<name>.yml). Each entry uses domain_var=__inline__ + _resolved_domain
+# instead of looking up a vars[] key — Tier-2 hostnames are computed at render
+# time and don't have a default.config.yml var to point at. Sentinel install
+# flag __always__ means "monitor whenever the app rendered successfully".
+- name: "[pazny.uptime_kuma] Append HTTP monitors for runtime-derived Tier-2 apps"
+  ansible.builtin.set_fact:
+    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [_m] }}"
+  loop: "{{ _kuma_manifest_apps | default([]) }}"
+  loop_control:
+    loop_var: svc
+    label: "{{ svc.id }}"
+  vars:
+    _domain: >-
+      {%- if svc.domain_var | default('') == '__inline__' -%}
+      {{ svc._resolved_domain }}
+      {%- else -%}
+      {{ vars[svc.domain_var] | default('') }}
+      {%- endif -%}
+    _m:
+      name: "{{ svc.id | replace('_', ' ') | title }}"
+      type: "http"
+      url: "https://{{ _domain }}"
+      interval: 60
+      maxretries: 2
+      ignore_tls: true
+      # 401 covers proxy-auth gate redirect-then-block before login
+      accepted_statuscodes: ["200-299", "301", "302", "308", "401", "403"]
+      expiry_notification: "{{ uptime_kuma_tls_expiry_monitors | default(true) }}"
+      tags: ["{{ svc.stack | default('apps') }}", "{{ svc.category | default('app') }}", "tier2"]
+  when:
+    - _domain | trim | length > 0
+
 # ── Database / infra TCP probes ─────────────────────────────────────────────
 - name: "[pazny.uptime_kuma] Append MariaDB TCP monitor"
   ansible.builtin.set_fact:

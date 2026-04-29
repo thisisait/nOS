@@ -82,6 +82,12 @@
     - "{{ stacks_dir }}/voip/overrides"
     - "{{ stacks_dir }}/engineering/overrides"
     - "{{ stacks_dir }}/data/overrides"
+    # Tier-2 apps stack (apps_runner) — apps_runner main.yml writes the merged
+    # compose override to {{ stacks_dir }}/apps/overrides/auto.yml; ensure the
+    # parent directory exists up-front so the template task in tasks/stacks/
+    # apps-up.yml doesn't race a missing path on the very first blank run.
+    - "{{ stacks_dir }}/apps"
+    - "{{ stacks_dir }}/apps/overrides"
 
 # ── Ensure INFRA persistent data directories exist ──────────────────────────
 # Otherwise Docker would create them as root:root 0755 which causes permission

@@ -204,3 +204,69 @@
       FAILED — PUT /api/settings returned HTTP {{ _portainer_oauth_put.status | default('?') }}
       {% endif %}
   when: install_authentik | default(false)
+
+# ── Idempotent endpoint registration (gap-fill) ─────────────────────────────
+# When apps_runner brings up the Tier-2 `apps` Docker compose project, we want
+# Portainer to surface it under the same Endpoints view as `infra` /
+# `observability` / `iiab` etc. Portainer auto-discovers the local Docker
+# socket as endpoint id=1 ("primary"); compose projects are visualised as
+# Stacks under that endpoint. Nothing additional is required for visibility —
+# this task is a defensive idempotent reconcile of the primary endpoint name
+# + URL so the operator UI surfaces Tier-2 stacks immediately.
+#
+# Operators wanting a SECOND, dedicated endpoint for Tier-2 apps can set
+# `portainer_register_apps_endpoint: true` (default false); then we POST the
+# extra endpoint via /api/endpoints. Idempotent — GET first to detect.
+- name: "[pazny.portainer Post] Get current endpoints (gap-fill check)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/endpoints"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _portainer_auth.json.jwt | default('') }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _portainer_endpoints_list
+  when:
+    - portainer_register_apps_endpoint | default(false)
+    - _portainer_auth.json.jwt is defined
+    - _portainer_auth.json.jwt | length > 0
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.portainer Post] Register `apps` endpoint (idempotent)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/endpoints"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ _portainer_auth.json.jwt | default('') }}"
+    body_format: form-multipart
+    body:
+      Name: "apps"
+      EndpointCreationType: "1"  # 1 = local Docker socket
+      URL: "unix:///var/run/docker.sock"
+      GroupID: "1"
+      TagIds: "[]"
+    status_code: [200, 201, 409]
+    timeout: 30
+  register: _portainer_apps_ep
+  when:
+    - portainer_register_apps_endpoint | default(false)
+    - _portainer_endpoints_list.json is defined
+    - (_portainer_endpoints_list.json | selectattr('Name', 'equalto', 'apps') | list | length) == 0
+  changed_when: _portainer_apps_ep.status | default(0) in [200, 201]
+  failed_when: false
+
+- name: "[pazny.portainer Post] Apps endpoint registration summary"
+  ansible.builtin.debug:
+    msg: >-
+      Portainer Tier-2 endpoint:
+      {% if not (portainer_register_apps_endpoint | default(false)) %}
+      not requested (set portainer_register_apps_endpoint: true to enable)
+      {% elif _portainer_apps_ep is not defined %}
+      already present — no-op
+      {% elif _portainer_apps_ep.status | default(0) in [200, 201] %}
+      created
+      {% else %}
+      FAILED — HTTP {{ _portainer_apps_ep.status | default('?') }}
+      {% endif %}
+  when: install_portainer | default(false)

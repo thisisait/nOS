@@ -1,0 +1,122 @@
+---
+# ==============================================================================
+# TIER-2 APPS STACK — apps_runner orchestrator
+#
+# Runs AFTER tasks/stacks/stack-up.yml (Tier-1 stacks online: infra, observability,
+# iiab, devops, b2b, voip, engineering, data). This file:
+#
+#   1. Renders apps/<name>.yml manifests via pazny.apps_runner main.yml
+#      → discovers manifests, parses + gates them (TLS / SSO / EU residency),
+#        resolves magic tokens, emits a single compose override at
+#        {{ stacks_dir }}/apps/overrides/auto.yml.
+#   2. If at least one manifest rendered, deploys the apps base compose,
+#      enumerates per-app overrides, and brings the apps stack up via
+#      `docker compose up apps --wait`.
+#   3. Calls pazny.apps_runner post.yml — observability hooks: service-registry
+#      append, Wing systems ingest, Authentik blueprint reconverge, Bone
+#      app.deployed events, Portainer endpoint registration, Kuma manifest
+#      extension, GDPR upsertProcessing, smoke-catalog runtime extension.
+#
+# Skip cleanly when:
+#   - apps_runner_enabled = false, or
+#   - apps/ contains no manifests beyond _template.yml / *.draft files
+# (the role's own main.yml short-circuits in those cases; we still gate the
+# compose-up + post hooks here so an empty Tier-2 deploy is a true no-op).
+# ==============================================================================
+
+- name: "[Apps] Flush handlers before apps stack deployment"
+  ansible.builtin.meta: flush_handlers
+
+# ── Render: parse manifests, run gates, persist secrets, emit override ──────
+- name: "[Apps] pazny.apps_runner render"
+  ansible.builtin.include_role:
+    name: pazny.apps_runner
+    apply:
+      tags: ['apps', 'tier2', 'apps-runner']
+  tags: ['apps', 'tier2', 'apps-runner']
+
+# ── Stack-up + post-hooks gated on actual rendered apps ─────────────────────
+# _apps_render is registered by library/nos_apps_render.py. It's defined only
+# when the runner ran successfully AND at least one manifest existed; the
+# .apps key may still be empty if every manifest hit a gate violation +
+# apps_force=true was set. Skip cleanly in either case.
+- name: "[Apps] Apps-stack up + post-hooks (skipped when no apps rendered)"
+  when:
+    - _apps_render is defined
+    - (_apps_render.apps | default([])) | length > 0
+  block:
+
+    # ── Deploy apps base compose template ───────────────────────────────────
+    - name: "[Apps] Deploy apps base compose"
+      ansible.builtin.template:
+        src: "stacks/apps/docker-compose.yml.j2"
+        dest: "{{ stacks_dir }}/apps/docker-compose.yml"
+        mode: '0644'
+
+    # ── Enumerate per-app overrides for the merge ───────────────────────────
+    - name: "[Apps] Enumerate apps compose overrides"
+      ansible.builtin.find:
+        paths: "{{ stacks_dir }}/apps/overrides"
+        patterns: "*.yml"
+        file_type: file
+      register: _apps_overrides_find
+      check_mode: false
+
+    # ── Bring the apps stack up ─────────────────────────────────────────────
+    # `--wait` blocks until every container is healthy or 120s elapse. Each
+    # Tier-2 app declares its own healthcheck in apps/<name>.yml; the parser
+    # has already verified the compose block is valid YAML.
+    - name: "[Apps] Start APPS stack (docker compose up --wait)"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/apps/docker-compose.yml"
+        {% for f in _apps_overrides_find.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+        -p apps
+        up -d --build --remove-orphans --wait --wait-timeout 120
+        {{ _docker_compose_pull | default('') }} 2>&1
+      register: _apps_stack_result
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "[Apps] Apps stack result"
+      ansible.builtin.debug:
+        msg: "apps: rc={{ _apps_stack_result.rc | default('?') }} {{ (_apps_stack_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
+
+    # ── Post-start observability hooks ──────────────────────────────────────
+    - name: "[Apps] pazny.apps_runner post-start (service-registry / Wing / Authentik / Bone / Portainer / Kuma / GDPR / smoke)"
+      ansible.builtin.include_role:
+        name: pazny.apps_runner
+        tasks_from: post.yml
+        apply:
+          tags: ['apps', 'tier2', 'apps-runner']
+      tags: ['apps', 'tier2', 'apps-runner']
+
+    # ── Container status (parity with stack-up.yml summary) ─────────────────
+    - name: "[Apps] Container status"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/apps/docker-compose.yml"
+        -p apps
+        ps --format "table {{'{{'}}.Name{{'}}'}}\t{{'{{'}}.Status{{'}}'}}" 2>&1
+      register: _apps_ps
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "[Apps] Apps stack containers"
+      ansible.builtin.debug:
+        msg: "{{ _apps_ps.stdout_lines | default(['(no containers)']) }}"
+
+# ── No-op summary when no Tier-2 manifests are present ──────────────────────
+- name: "[Apps] No Tier-2 apps onboarded — apps stack skipped"
+  ansible.builtin.debug:
+    msg: |
+      Tier-2 apps_runner: nothing to deploy.
+      {% if _apps_render is not defined %}
+      (Render skipped — apps_runner_enabled={{ apps_runner_enabled | default(true) }}.)
+      {% else %}
+      (Render produced 0 apps — apps/ contained only _template.yml / *.draft files.)
+      {% endif %}
+      Drop a manifest at apps/<name>.yml (see apps/_template.yml) and re-run.
+  when: (_apps_render is not defined) or ((_apps_render.apps | default([])) | length == 0)

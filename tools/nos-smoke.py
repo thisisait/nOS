@@ -335,12 +335,28 @@ def main() -> int:
         if isinstance(v, str) and "{{" in v:
             vars_dict[k] = resolve_jinja_lite(v, vars_dict)
 
-    # ── Load manifest + smoke catalog ──────────────────────────────────────
+    # ── Load manifest + smoke catalog (static + runtime) ───────────────────
+    # state/smoke-catalog.yml         — checked-in, edited by humans
+    # state/smoke-catalog.runtime.yml — auto-written by pazny.apps_runner
+    #                                   tasks/post.yml; one entry per Tier-2
+    #                                   apps/<name>.yml manifest. Same shape
+    #                                   as the static catalog so this loader
+    #                                   stays simple. Missing file = no-op.
     manifest = load_yaml(REPO / "state" / "manifest.yml")
     catalog = load_yaml(REPO / "state" / "smoke-catalog.yml")
 
     defaults = catalog.get("smoke_defaults") or {}
-    extras = catalog.get("smoke_endpoints") or []
+    extras = list(catalog.get("smoke_endpoints") or [])
+
+    runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
+    if runtime_path.is_file():
+        runtime_catalog = load_yaml(runtime_path)
+        runtime_extras = runtime_catalog.get("smoke_endpoints") or []
+        # Append after the static entries so static IDs win on duplicate keys
+        # (matching the same precedence rule merge_catalog applies to manifest
+        # vs. catalog entries — last-writer-wins becomes first-wins via the
+        # merge_catalog dedup logic).
+        extras = extras + list(runtime_extras)
 
     manifest_entries = derive_from_manifest(manifest, vars_dict, defaults)
     all_entries = merge_catalog(manifest_entries, extras, defaults, vars_dict)

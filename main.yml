@@ -1051,6 +1051,15 @@
     # (all service post-start tasks are now called from tasks/stacks/stack-up.yml
     #  and tasks/stacks/core-up.yml via include_role tasks_from=post.yml)
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Tier-2 apps stack (apps_runner) — render + deploy + observability hooks
+    #
+    # Runs AFTER the Tier-1 stacks so apps can rely on Postgres / Authentik /
+    # Traefik / Bone / Wing being online. Empty apps/ is a clean no-op.
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/stacks/apps-up.yml
+      tags: ['apps', 'tier2', 'stack', 'stacks', 'apps-runner']
+
     # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml
       tags: ['iiab', 'stack', 'verify', 'stacks']

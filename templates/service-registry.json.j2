@@ -784,6 +784,14 @@
   "description": "S3-compatible object storage"
 }) %}
 {% endif %}
+{# ── Tier-2: apps onboarded via pazny.apps_runner ──────────────────────── #}
+{# apps_extra_services is a runtime fact set by roles/pazny.apps_runner/    #}
+{# tasks/post.yml — one entry per parsed apps/<name>.yml manifest. Each     #}
+{# entry already has the same shape as Tier-1 entries above (registry_entry #}
+{# in nos_apps_render).                                                     #}
+{% for svc in (apps_extra_services | default([])) %}
+{% set _ = _services.append(svc) %}
+{% endfor %}
 {# ── Output _services as a JSON array ───────────────────────────────────── #}
 {% for svc in _services %}
     {{ svc | to_json }}{{ "," if not loop.last else "" }}
