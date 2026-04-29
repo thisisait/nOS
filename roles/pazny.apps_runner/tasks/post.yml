@@ -99,6 +99,27 @@
           {{ (authentik_oidc_apps | default([])) + _apps_authentik_extras }}
       when: (_apps_authentik_extras | length) > 0
 
+    # Build Tier-2 RBAC tier mapping from per-app rbac_tier (drives the
+    # authentik_app_tiers dict consumed by templates/blueprints/20-rbac-
+    # policies.yaml.j2). Each Tier-2 app gets its slug → tier-int entry
+    # so the existing RBAC pipeline (groups → expression policies) covers
+    # them without per-app authoring.
+    - name: "[Apps Post] Compute Tier-2 RBAC tier mapping"
+      ansible.builtin.set_fact:
+        _apps_rbac_tier_map: >-
+          {{ dict(_apps_render.apps
+              | selectattr('auth_mode', 'in', ['proxy', 'oidc'])
+              | map(attribute='id') | map('replace', '_', '-')
+              | zip(_apps_render.apps
+                    | selectattr('auth_mode', 'in', ['proxy', 'oidc'])
+                    | map(attribute='rbac_tier'))) }}
+
+    - name: "[Apps Post] Extend authentik_app_tiers with Tier-2 mappings"
+      ansible.builtin.set_fact:
+        authentik_app_tiers: >-
+          {{ (authentik_app_tiers | default({})) | combine(_apps_rbac_tier_map) }}
+      when: (_apps_rbac_tier_map | length) > 0
+
     - name: "[Apps Post] Reconverge Authentik blueprints (Tier-2 OIDC/Proxy providers)"
       ansible.builtin.include_role:
         name: pazny.authentik
@@ -153,6 +174,16 @@
     # ships on every macOS + Linux dev box. Result is hex; we prefix
     # "sha256=" to match the header format the receiver expects (see
     # callback_plugins/wing_telemetry.py:131).
+    #
+    # When wing_events_hmac_secret is empty (operator hasn't set it),
+    # we skip HMAC entirely and let Bone reject if it strict-requires
+    # signed events. callback_plugins/wing_telemetry.py uses the same
+    # opt-in semantic — no key, no signature header.
+    - name: "[Apps Post] Resolve HMAC secret (may be empty if operator hasn't set it)"
+      ansible.builtin.set_fact:
+        _apps_bone_hmac_key: "{{ wing_events_hmac_secret | default('') }}"
+      no_log: true
+
     - name: "[Apps Post] Compute keyed HMAC-SHA256 via openssl"
       ansible.builtin.shell:
         cmd: >-
@@ -162,18 +193,14 @@
         executable: /bin/bash
       environment:
         NOS_BODY: "{{ _apps_bone_body }}"
-        NOS_KEY: "{{ wing_events_hmac_secret | default('') }}"
+        NOS_KEY: "{{ _apps_bone_hmac_key }}"
       register: _apps_bone_hmac_calc
       no_log: true
       changed_when: false
       check_mode: false
+      when: (_apps_bone_hmac_key | length) > 0
 
-    - name: "[Apps Post] Wrap HMAC into X-Wing-Signature header value"
-      ansible.builtin.set_fact:
-        _apps_bone_signature: "sha256={{ _apps_bone_hmac_calc.stdout | trim }}"
-      no_log: true
-
-    - name: "[Apps Post] POST app.deployed events to Bone"
+    - name: "[Apps Post] POST app.deployed events to Bone (signed)"
       ansible.builtin.uri:
         url: "{{ wing_events_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/v1/events') }}"
         method: POST
@@ -181,7 +208,7 @@
         body: "{{ _apps_bone_batch }}"
         headers:
           Content-Type: "application/json"
-          X-Wing-Signature: "{{ _apps_bone_signature }}"
+          X-Wing-Signature: "sha256={{ _apps_bone_hmac_calc.stdout | trim }}"
           X-Wing-Timestamp: "{{ ansible_date_time.iso8601 }}"
         status_code: [200, 201, 202, 204]
         timeout: 10
@@ -189,7 +216,35 @@
       failed_when: false
       changed_when: _apps_bone_post.status | default(0) in [200, 201, 202, 204]
       no_log: true
-      when: install_bone | default(true) | bool
+      when:
+        - install_bone | default(true) | bool
+        - (_apps_bone_hmac_key | length) > 0
+
+    - name: "[Apps Post] POST app.deployed events to Bone (unsigned fallback)"
+      ansible.builtin.uri:
+        url: "{{ wing_events_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/v1/events') }}"
+        method: POST
+        body_format: json
+        body: "{{ _apps_bone_batch }}"
+        headers:
+          Content-Type: "application/json"
+          X-Wing-Timestamp: "{{ ansible_date_time.iso8601 }}"
+        status_code: [200, 201, 202, 204, 401, 403]
+        timeout: 10
+      register: _apps_bone_post_unsigned
+      failed_when: false
+      changed_when: _apps_bone_post_unsigned.status | default(0) in [200, 201, 202, 204]
+      when:
+        - install_bone | default(true) | bool
+        - (_apps_bone_hmac_key | length) == 0
+
+    # Normalise: downstream summary task reads _apps_bone_post.status.
+    - name: "[Apps Post] Normalise _apps_bone_post when unsigned path was taken"
+      ansible.builtin.set_fact:
+        _apps_bone_post: "{{ _apps_bone_post_unsigned }}"
+      when:
+        - _apps_bone_post is not defined or (_apps_bone_post.skipped | default(false))
+        - _apps_bone_post_unsigned is defined
 
     - name: "[Apps Post] Bone events delivery summary"
       ansible.builtin.debug:

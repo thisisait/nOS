@@ -54,8 +54,12 @@ compose:
       image: "docker.io/twofauth/twofauth:5.6.0"
       container_name: twofauth
       restart: unless-stopped
-      ports:
-        - "8000:8000"
+      # No host port mapping — Traefik reaches the container over the
+      # shared Docker network via traefik.http.services.<slug>.
+      # loadbalancer.server.port (label emitted by nos_apps_render).
+      # Avoids host-port collisions and matches the Tier-2 isolation model.
+      expose:
+        - "8000"
       environment:
         - "APP_NAME=2FAuth"
         - "APP_ENV=production"
@@ -85,3 +89,7 @@ compose:
 # ── Tier-2 routing — proxy auth via Authentik forward-auth ─────────────────
 nginx:
   auth: "proxy"
+  # Authentik RBAC tier — TOTP secrets are operator credentials, only
+  # admins should reach this UI. Drives authentik_app_tiers extension
+  # at runtime → only nos-providers + nos-admins pass the proxy gate.
+  rbac_tier: 1

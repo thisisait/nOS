@@ -59,8 +59,10 @@ compose:
       image: "docker.io/roundcube/roundcubemail:1.6.11-apache"
       container_name: roundcube
       restart: unless-stopped
-      ports:
-        - "8120:80"
+      # Tier-2 isolation: no host port mapping — Traefik routes via the
+      # shared Docker network (label emitted by nos_apps_render).
+      expose:
+        - "80"
       environment:
         # Connection to the upstream IMAP server. Replace 'mail.dev.local'
         # with your real IMAP host once the Phase-2 Stalwart role lands.
@@ -92,3 +94,7 @@ compose:
 
 nginx:
   auth: "proxy"
+  # Authentik RBAC tier — webmail is end-user-facing (anyone with a
+  # valid login that has nos-users gets through). The IMAP server's
+  # OWN auth is the second gate.
+  rbac_tier: 3

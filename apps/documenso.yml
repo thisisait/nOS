@@ -68,8 +68,10 @@ compose:
       depends_on:
         documenso-db:
           condition: service_healthy
-      ports:
-        - "3070:3000"
+      # Tier-2 isolation: no host port mapping — Traefik routes via the
+      # shared Docker network (label emitted by nos_apps_render).
+      expose:
+        - "3000"
       environment:
         - "PORT=3000"
         - "NEXTAUTH_URL=https://$SERVICE_FQDN_DOCUMENSO/"
@@ -124,3 +126,7 @@ compose:
 
 nginx:
   auth: "proxy"
+  # Authentik RBAC tier — e-signature is a manager-level workflow
+  # (signing parties get magic-link emails, only managers + admins
+  # initiate signing flows from the UI).
+  rbac_tier: 2

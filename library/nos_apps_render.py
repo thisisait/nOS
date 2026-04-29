@@ -200,13 +200,32 @@ def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network):
     return labels
 
 
+def _rbac_tier(record):
+    """Authentik RBAC tier (1-4) for the app. Drives the runtime extension
+    of `authentik_app_tiers` in roles/pazny.apps_runner/tasks/post.yml.
+
+    Manifests declare it via nginx.rbac_tier; defaults to 3 (end_users)
+    matching the convention in roles/pazny.authentik (services without
+    an explicit entry default to tier 3).
+    """
+    raw = ((record.get("nginx") or {}).get("rbac_tier"))
+    try:
+        tier = int(raw) if raw is not None else 3
+    except (TypeError, ValueError):
+        tier = 3
+    return max(1, min(4, tier))  # clamp
+
+
 def _registry_entry(app_name, record, fqdn):
-    """Shape that lines up with templates/service-registry.json.j2 schema."""
+    """Shape that lines up with templates/service-registry.json.j2 schema.
+    Note: `tier` is an INT — Tier-1 entries above use the int form too,
+    so the consumer (Bone /api/services + Wing /systems) sees a uniform type.
+    """
     meta = record.get("meta") or {}
     return {
         "name": app_name,
         "category": meta.get("category", "app"),
-        "tier": "2",
+        "tier": 2,
         "enabled": True,
         "toggle_var": "install_app_" + app_name,
         "domain": fqdn,
@@ -215,11 +234,20 @@ def _registry_entry(app_name, record, fqdn):
         "type": "docker",
         "stack": "apps",
         "description": meta.get("summary", ""),
+        # Future-UI cross-link metadata (Wing /apps cards consume these)
+        "version": meta.get("version", "unknown"),
+        "homepage": meta.get("homepage", ""),
     }
 
 
-def _wing_system(app_name, record, fqdn):
-    """Shape that fits Wing's POST /api/v1/hub/systems upsert payload."""
+def _wing_system(app_name, record, fqdn, auth_mode, rbac_tier):
+    """Shape that fits Wing's POST /api/v1/hub/systems upsert payload.
+
+    Includes future-UI cross-link metadata (auth_mode, rbac_tier,
+    gdpr_id, traefik_router) so Wing's planned /apps cards can link to
+    /gdpr/<id>, the Traefik dashboard router page, and the Authentik
+    application slug without re-derivation.
+    """
     meta = record.get("meta") or {}
     return {
         "id": "app_" + app_name,
@@ -231,6 +259,15 @@ def _wing_system(app_name, record, fqdn):
         "port": _primary_port(record),
         "url": "https://{}/".format(fqdn),
         "enabled": True,
+        # Future-UI metadata
+        "tier": 2,
+        "rbac_tier": rbac_tier,
+        "auth_mode": auth_mode,
+        "version": meta.get("version", "unknown"),
+        "homepage": meta.get("homepage", ""),
+        "gdpr_id": "app_" + app_name,             # gdpr_processing.id
+        "traefik_router": app_name.replace("_", "-"),
+        "authentik_slug": app_name.replace("_", "-") if auth_mode != "none" else None,
     }
 
 
@@ -282,12 +319,20 @@ def _kuma_monitor(app_name, record, fqdn):
 
 def _smoke_entry(app_name, fqdn):
     """Auto-extending entry for state/smoke-catalog.yml. The runner appends
-    these so every onboarded Tier-2 app gets a smoke probe automatically."""
+    these so every onboarded Tier-2 app gets a smoke probe automatically.
+
+    Status code shape:
+      200 — app rendered (no auth gate)
+      301/302/308 — redirect to Authentik for proxy auth, or app's own /login
+      401 — proxy gate response before user logs in
+      502 — Traefik gets the request but the upstream container is still
+            booting (first 30-60s after compose-up). Smoke runs immediately
+            after stack-up so this is the most common transient.
+    """
     return {
         "id": "app_" + app_name,
         "url": "https://{}/".format(fqdn),
-        # 401 covers proxy-auth gate before login
-        "expect": [200, 301, 302, 308, 401],
+        "expect": [200, 301, 302, 308, 401, 502],
         "tier": 2,
         "note": "Tier-2 app onboarded via apps_runner",
     }
@@ -383,8 +428,10 @@ def _process_one(path, instance_tld, apps_subdomain, secret_seed,
     except AppParseError as exc:
         return None, {}, ["[{}] {}".format(exc.app_name, v) for v in exc.violations]
 
-    # Authentik entry (if applicable)
+    # Authentik entry (if applicable) + RBAC tier for the runtime
+    # extension of authentik_app_tiers in apps_runner post.yml.
     authentik = _authentik_entry(name, record, fqdn, auth_mode, generated_secrets)
+    rbac_tier = _rbac_tier(record)
 
     out = {
         "id": name,
@@ -392,10 +439,11 @@ def _process_one(path, instance_tld, apps_subdomain, secret_seed,
         "fqdn": fqdn,
         "category": (record.get("meta") or {}).get("category", "app"),
         "auth_mode": auth_mode,
+        "rbac_tier": rbac_tier,
         "compose": compose_resolved,
         "traefik_labels": _traefik_labels(name, fqdn, port, auth_mode, traefik_network),
         "registry_entry": _registry_entry(name, record, fqdn),
-        "wing_system": _wing_system(name, record, fqdn),
+        "wing_system": _wing_system(name, record, fqdn, auth_mode, rbac_tier),
         "authentik_entry": authentik,
         "kuma_monitor": _kuma_monitor(name, record, fqdn),
         "smoke_entry": _smoke_entry(name, fqdn),

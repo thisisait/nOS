@@ -77,8 +77,10 @@ compose:
       depends_on:
         plane-api:
           condition: service_healthy
-      ports:
-        - "3201:3000"
+      # Tier-2 isolation: no host port mapping — Traefik routes via the
+      # shared Docker network (label emitted by nos_apps_render).
+      expose:
+        - "3000"
       environment:
         - "NEXT_PUBLIC_API_BASE_URL=https://$SERVICE_FQDN_PLANE/api"
         - "NEXT_PUBLIC_ADMIN_BASE_URL=https://$SERVICE_FQDN_PLANE/god-mode"
@@ -277,3 +279,5 @@ compose:
 nginx:
   auth: "oidc"
   oidc_callback: "/auth/callback"
+  # Authentik RBAC tier — project mgmt is team-wide, end-users.
+  rbac_tier: 3

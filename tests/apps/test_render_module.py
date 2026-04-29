@@ -316,10 +316,15 @@ class TestDerivedShapes(object):
         )
         re_ = app["registry_entry"]
         assert re_["name"] == "demo"
-        assert re_["tier"] == "2"
+        # tier is INT — uniform with Tier-1 entries in service-registry.json.j2
+        assert re_["tier"] == 2
+        assert isinstance(re_["tier"], int)
         assert re_["stack"] == "apps"
         assert re_["url"] == "https://demo.apps.dev.local/"
         assert re_["port"] == 8080
+        # Future-UI metadata
+        assert "version" in re_
+        assert "homepage" in re_
 
     def test_wing_system_minimal_fields(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
@@ -332,6 +337,12 @@ class TestDerivedShapes(object):
         assert ws["id"] == "app_demo"
         assert ws["type"] == "app"
         assert ws["stack"] == "apps"
+        # Future-UI cross-link metadata
+        assert ws["tier"] == 2
+        assert ws["rbac_tier"] in (1, 2, 3, 4)
+        assert ws["auth_mode"] in ("proxy", "oidc", "none")
+        assert ws["gdpr_id"] == "app_demo"
+        assert ws["traefik_router"] == "demo"
 
     def test_smoke_entry_uses_wider_expect(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
@@ -343,7 +354,40 @@ class TestDerivedShapes(object):
         se = app["smoke_entry"]
         assert se["id"] == "app_demo"
         assert 401 in se["expect"]   # accepts proxy-auth gate
+        assert 502 in se["expect"]   # accepts Traefik-while-upstream-booting
         assert se["tier"] == 2
+
+    def test_rbac_tier_default_and_clamp(self, render, tmp_path):
+        # No nginx.rbac_tier in manifest → default 3
+        path = _write_app(tmp_path, "demo", _record())
+        app, _, _ = render._process_one(
+            path, instance_tld="dev.local", apps_subdomain="apps",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app["rbac_tier"] == 3
+
+        # Explicit tier respected
+        rec = _record()
+        rec["nginx"] = {"auth": "proxy", "rbac_tier": 1}
+        path2 = _write_app(tmp_path, "admin", rec)
+        app2, _, _ = render._process_one(
+            path2, instance_tld="dev.local", apps_subdomain="apps",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app2["rbac_tier"] == 1
+
+        # Out-of-range clamped
+        rec3 = _record()
+        rec3["nginx"] = {"auth": "proxy", "rbac_tier": 99}
+        path3 = _write_app(tmp_path, "wild", rec3)
+        app3, _, _ = render._process_one(
+            path3, instance_tld="dev.local", apps_subdomain="apps",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app3["rbac_tier"] == 4
 
     def test_kuma_monitor_inline_domain_marker(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
