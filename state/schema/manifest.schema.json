@@ -41,7 +41,7 @@
         "id":             { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
         "category": {
           "type": "string",
-          "enum": ["infra", "database", "cache", "identity", "observability", "storage", "proxy", "web", "collaboration", "media", "devops", "automation", "ai", "messaging", "pbx", "gis", "data", "finance", "cms", "helpdesk", "wiki", "iam", "vault", "notifications", "rss", "iiab", "agent", "desktop", "api", "security", "homeautomation", "vpn"]
+          "enum": ["infra", "database", "cache", "identity", "observability", "storage", "proxy", "web", "collaboration", "media", "devops", "automation", "ai", "messaging", "pbx", "gis", "data", "finance", "cms", "helpdesk", "wiki", "iam", "vault", "notifications", "rss", "iiab", "agent", "desktop", "api", "security", "homeautomation", "vpn", "mail", "monitoring", "knowledge", "productivity", "app"]
         },
         "stack":          { "type": ["string", "null"], "description": "Docker compose stack (infra, observability, iiab, devops, b2b, voip, engineering, data) or null for host-native services." },
         "install_flag":   { "type": "string", "description": "Name of install_<service> boolean in default.config.yml." },
