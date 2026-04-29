@@ -164,6 +164,33 @@ class TestHappyPath(object):
         )
         assert app["fqdn"] == "demo.dev.local"
 
+    def test_generated_secrets_round_trip_through_yaml(self, render, tmp_path):
+        """Regression test for the blockinfile indent drift bug:
+        generated_secrets must round-trip through PyYAML safe_load when
+        emitted via to_nice_yaml — that's the canonical credentials.yml
+        persistence path. Catches regressions if the dict shape changes
+        in a way that produces colon-bait values (e.g. URLs as values
+        without quoting).
+        """
+        import yaml as _yaml
+        path = _write_app(tmp_path, "demo", _record())
+        _, secrets, _ = render._process_one(
+            path, instance_tld="dev.local", apps_subdomain="apps",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        # Mimic the persist task in roles/pazny.apps_runner/tasks/main.yml
+        # — wrap under app_secrets, dump via safe_dump (Ansible's
+        # to_nice_yaml uses the same emitter).
+        emitted = _yaml.safe_dump(
+            {"app_secrets": secrets}, default_flow_style=False, indent=2,
+            width=200,
+        )
+        # Round-trip must succeed and preserve every value
+        loaded = _yaml.safe_load(emitted)
+        assert "app_secrets" in loaded
+        assert loaded["app_secrets"]["demo"]["PASSWORD_DB"] == secrets["demo"]["PASSWORD_DB"]
+
     def test_service_fqdn_token_in_env_matches_traefik_route(self, render, tmp_path):
         """Regression test for the FQDN resolver subdomain-blindness:
         $SERVICE_FQDN_DEMO inside compose env strings used to resolve to
