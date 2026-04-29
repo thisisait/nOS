@@ -16,7 +16,7 @@
 
 meta:
   name: "documenso"
-  version: "1.10.4"
+  version: "v2.9.1"
   summary: "Open-source DocuSign alternative — sign PDF documents in browser."
   homepage: "https://documenso.com/"
   category: "productivity"
@@ -62,7 +62,10 @@ gdpr:
 compose:
   services:
     documenso:
-      image: "ghcr.io/documenso/documenso:1.10.4"
+      # Image is on Docker Hub under documenso/documenso (not ghcr.io). Tag
+      # uses the upstream `v` prefix. Verified 2026-04-29 against
+      # hub.docker.com/v2/repositories/documenso/documenso/tags.
+      image: "docker.io/documenso/documenso:v2.9.1"
       container_name: documenso
       restart: unless-stopped
       depends_on:

@@ -164,6 +164,38 @@ class TestHappyPath(object):
         )
         assert app["fqdn"] == "demo.dev.local"
 
+    def test_service_fqdn_token_in_env_matches_traefik_route(self, render, tmp_path):
+        """Regression test for the FQDN resolver subdomain-blindness:
+        $SERVICE_FQDN_DEMO inside compose env strings used to resolve to
+        ``demo.dev.local`` while the Traefik route was emitted as
+        ``demo.apps.dev.local`` — apps would advertise a hostname with
+        no route. Both must use the same FQDN now.
+        """
+        rec = _record(compose_overrides={
+            "services": {
+                "demo": {
+                    "image": "ghcr.io/demo/demo:1",
+                    "environment": [
+                        "PUBLIC_URL=https://$SERVICE_FQDN_DEMO/",
+                        "CALLBACK=https://$SERVICE_FQDN_DEMO/auth/callback",
+                    ],
+                    "ports": ["8080:8080"],
+                },
+            },
+        })
+        path = _write_app(tmp_path, "demo", rec)
+        app, _, _ = render._process_one(
+            path, instance_tld="dev.local", apps_subdomain="apps",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        env = app["compose"]["services"]["demo"]["environment"]
+        # Env vars use the same hostname Traefik routes
+        assert any("PUBLIC_URL=https://demo.apps.dev.local/" in e for e in env)
+        assert any("CALLBACK=https://demo.apps.dev.local/auth/callback" in e for e in env)
+        # And the Traefik label confirms the same FQDN
+        assert any("Host(`demo.apps.dev.local`)" in lbl for lbl in app["traefik_labels"])
+
     def test_secret_seed_pins_existing_passwords(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         seed = {"demo": {"PASSWORD_DB": "PERSISTED-XYZ"}}

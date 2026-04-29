@@ -340,6 +340,7 @@ def resolve_tokens(
     app_name: str,
     instance_tld: str,
     secret_seed: Optional[Dict[str, str]] = None,
+    apps_subdomain: str = "",
 ) -> Tuple[str, Dict[str, str]]:
     """Expand magic tokens in `text`. Returns (expanded, secrets_dict).
 
@@ -349,9 +350,17 @@ def resolve_tokens(
 
     ``secret_seed`` lets the runner pre-seed values from a previous run
     so PASSWORD/BASE64 tokens stay stable across re-renders.
+
+    ``apps_subdomain`` is injected between the slug and the TLD when set,
+    e.g. apps_subdomain="apps" + instance_tld="dev.local" yields
+    ``$SERVICE_FQDN_DOCUMENSO`` → ``documenso.apps.dev.local``. Default
+    empty string keeps the legacy Tier-1 behaviour where tokens resolve
+    directly under the TLD (no isolating subdomain). Tier-2 callers
+    (``library/nos_apps_render``) pass ``"apps"``.
     """
     seed = dict(secret_seed or {})
     out_secrets: Dict[str, str] = {}
+    sub = (apps_subdomain or "").strip(".")
 
     def replace(match: re.Match) -> str:
         kind = match.group(1)
@@ -362,7 +371,11 @@ def resolve_tokens(
         elif kind == "FQDN":
             # APP suffix may include the app name itself (typical) or a
             # different subdomain like API. Lowercase it for the FQDN.
-            value = "%s.%s" % (suffix.lower().replace("_", "-"), instance_tld)
+            host = suffix.lower().replace("_", "-")
+            if sub:
+                value = "%s.%s.%s" % (host, sub, instance_tld)
+            else:
+                value = "%s.%s" % (host, instance_tld)
         elif kind == "USER":
             value = "%s_%s" % (app_name, suffix.lower())
         elif kind == "PASSWORD":

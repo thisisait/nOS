@@ -250,9 +250,19 @@
 # falls back to the stdout summary from setup-monitors.py for the exact number.
 - name: "[pazny.uptime_kuma] Verify monitor count summary"
   ansible.builtin.debug:
+    # Build the result line in a step-by-step Jinja that doesn't lean on
+    # ``| default([...]) | first``. Jinja's default() does NOT fire on an
+    # empty list — only on undefined / null / empty-string — so the pipeline
+    # ``[] | default(['x']) | first`` raises "No first item, sequence was
+    # empty". Hit on the second include of monitors.yml from
+    # roles/pazny.apps_runner/tasks/post.yml when setup-monitors.py is
+    # skipped (re-run on already-converged Kuma) and stdout_lines is
+    # absent.
     msg: >-
       Requested {{ _kuma_spec.monitors | length }} monitors.
-      Result: {{ (_kuma_result.stdout_lines | default([]) | select('match', '^Done:') | list) | default(['(skipped)']) | first }}
+      Result:
+      {%- set _done = (_kuma_result.stdout_lines | default([]) | select('match', '^Done:') | list) -%}
+      {{ _done[0] if _done | length > 0 else '(skipped or no Done: line in setup-monitors output)' }}
   when: _kuma_result is defined
 
 - name: "[pazny.uptime_kuma] WARN: pip install failed"

@@ -341,10 +341,19 @@ def _smoke_entry(app_name, fqdn):
 # ---------------------------------------------------------------------------
 # Compose service block resolution
 
-def _resolve_compose_block(app_name, record, instance_tld, secret_seed):
+def _resolve_compose_block(app_name, record, instance_tld, secret_seed,
+                           apps_subdomain=""):
     """Walk record.compose.services, resolve magic tokens in every string
     field, return (resolved compose dict, generated secrets dict, secret keys
     actually used).
+
+    Pass-through of apps_subdomain so $SERVICE_FQDN_<APP> resolves to
+    ``<host>.<apps_subdomain>.<tld>`` matching what _fqdn_for() emits for
+    the Traefik label. Without this the env-var FQDN diverges from the
+    Traefik route — Documenso ends up advertising
+    https://documenso.dev.local/ in NEXT_PUBLIC_WEBAPP_URL while Traefik
+    actually routes documenso.apps.dev.local. Magic-link emails would
+    point at a host with no route.
     """
     import json
     compose = record.get("compose") or {}
@@ -355,7 +364,7 @@ def _resolve_compose_block(app_name, record, instance_tld, secret_seed):
     raw = json.dumps(compose, ensure_ascii=False)
     resolved, secrets = resolve_tokens(
         raw, app_name=app_name, instance_tld=instance_tld,
-        secret_seed=secret_seed,
+        secret_seed=secret_seed, apps_subdomain=apps_subdomain,
     )
     try:
         out = json.loads(resolved)
@@ -420,10 +429,12 @@ def _process_one(path, instance_tld, apps_subdomain, secret_seed,
     port = _primary_port(record)
     auth_mode = _auth_mode(record)
 
-    # Resolve compose block tokens
+    # Resolve compose block tokens — pass apps_subdomain so $SERVICE_FQDN_*
+    # in env strings matches the Traefik-routed hostname.
     try:
         compose_resolved, generated_secrets, secrets_used = _resolve_compose_block(
             name, record, instance_tld, seed_for_app,
+            apps_subdomain=apps_subdomain,
         )
     except AppParseError as exc:
         return None, {}, ["[{}] {}".format(exc.app_name, v) for v in exc.violations]

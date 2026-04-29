@@ -83,6 +83,28 @@
       ansible.builtin.debug:
         msg: "apps: rc={{ _apps_stack_result.rc | default('?') }} {{ (_apps_stack_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
 
+    # When compose-up failed (image pull error, healthcheck timeout, etc.)
+    # we skip the observability post-hooks. Firing "app.deployed" Bone
+    # events or appending Tier-2 entries to service-registry / Wing
+    # systems table for apps that didn't actually come up would be
+    # misleading. The operator fixes the manifest / image and re-runs.
+    - name: "[Apps] Apps stack-up FAILED — skipping post-hooks"
+      ansible.builtin.debug:
+        msg: |
+          Apps stack returned rc={{ _apps_stack_result.rc | default('?') }} — observability
+          hooks (service-registry, Wing systems, Authentik blueprint, Bone
+          events, Portainer, Kuma, GDPR, smoke) are skipped to avoid
+          recording state that contradicts reality.
+
+          Last 3 lines of compose-up output:
+          {% for line in (_apps_stack_result.stdout_lines | default([]))[-3:] %}
+            {{ line }}
+          {% endfor %}
+
+          Fix the manifest(s) and re-run. apps_runner main.yml (render)
+          ALREADY ran successfully — _apps_render.apps has {{ (_apps_render.apps | default([])) | length }} entries.
+      when: (_apps_stack_result.rc | default(1)) != 0
+
     # ── Post-start observability hooks ──────────────────────────────────────
     - name: "[Apps] pazny.apps_runner post-start (service-registry / Wing / Authentik / Bone / Portainer / Kuma / GDPR / smoke)"
       ansible.builtin.include_role:
@@ -90,6 +112,7 @@
         tasks_from: post.yml
         apply:
           tags: ['apps', 'tier2', 'apps-runner']
+      when: (_apps_stack_result.rc | default(1)) == 0
       tags: ['apps', 'tier2', 'apps-runner']
 
     # ── Container status (parity with stack-up.yml summary) ─────────────────
