@@ -89,6 +89,25 @@
             traefik_network: "{{ apps_traefik_network }}"
           register: _apps_render
 
+        # ── Defensive 0-app warning ──────────────────────────────────────────
+        # Catches a class of silent failure: manifest dir non-empty but render
+        # returns 0 apps AND 0 gate violations. Indicates a parser bug or an
+        # exclude-pattern catching files it shouldn't (typical mistake: naming
+        # a file `apps/draft-myapp.yml` and the pattern matches `*draft*`).
+        - name: "[pazny.apps_runner] Warn when manifest dir non-empty but 0 apps rendered"
+          ansible.builtin.debug:
+            msg: >-
+              WARNING: {{ (_apps_manifests.files | default([])) | length }} manifest
+              file(s) under {{ apps_dir }} but nos_apps_render returned 0 apps and
+              0 gate violations. Likely causes: parser swallowed an exception
+              silently, or every file matched the skip-list (excludes={{ ['_*', '*.draft', '*.draft.yml', '*.draft.yaml'] | join(', ') }}).
+              Inspect with:
+                python3 -m module_utils.nos_app_parser apps/<file>.yml
+          when:
+            - (_apps_manifests.files | default([])) | length > 0
+            - (_apps_render.apps | default([]) | length) == 0
+            - (_apps_render.gate_violations | default([]) | length) == 0
+
         # ── Hard-fail on gate violations (unless apps_force) ─────────────────
         # Each violation already includes the app id and gate name — operator
         # sees the full list at once, not one error per re-run.
@@ -177,18 +196,52 @@
                  | rejectattr('rc', 'equalto', 0)
                  | map(attribute='item') | list }}
 
+        # Map each bad image back to the manifest(s) that reference it, so
+        # the operator can `vim apps/<name>.yml` immediately. The lookup is
+        # heuristic — a single image may legitimately appear in multiple
+        # manifests (shared postgres, shared redis); we list every manifest
+        # that contains it.
+        - name: "[pazny.apps_runner] Map unreachable images back to manifest ids"
+          ansible.builtin.set_fact:
+            _apps_bad_image_owners: |-
+              {%- set rows = [] -%}
+              {%- for bad in _apps_bad_images -%}
+                {%- set owners = [] -%}
+                {%- for app in (_apps_render.apps | default([])) -%}
+                  {%- for svc_name, svc_def in (app.compose.services | default({})).items() -%}
+                    {%- if (svc_def.image | default('')) == bad -%}
+                      {%- set _ = owners.append(app.id) -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endfor -%}
+                {%- set _ = rows.append({'image': bad, 'manifests': (owners | unique | list)}) -%}
+              {%- endfor -%}
+              {{ rows }}
+
         - name: "[pazny.apps_runner] Refuse run when any image is unreachable"
           ansible.builtin.fail:
             msg: |
               {{ _apps_bad_images | length }} Tier-2 image(s) cannot be resolved
-              on the registry. Fix the manifest(s) and re-run, or pass
-              -e apps_force_image_check_skip=true to bypass (NOT recommended —
-              this catch costs zero seconds and saves a 60s compose-up + cascade
-              of interrupted concurrent pulls).
+              on the registry.
 
-              {% for bad in _apps_bad_images %}
-                - {{ bad }}
+              {% for row in _apps_bad_image_owners %}
+                - {{ row.image }}
+                  manifests: {{ row.manifests | join(', ') if row.manifests else '(none — orphaned image?)' }}
+                  diagnose:  docker manifest inspect {{ row.image }}
               {% endfor %}
+
+              Likely causes:
+                · slug rename trap (e.g. {{ '`2fauth → twofauth`' }} accidentally
+                  rewrote the image org too — check if the image org
+                  matches an OLD slug you renamed)
+                · tag does not exist on registry (look up the upstream
+                  Dockerfile / GitHub releases for current stable tag)
+                · registry rate-limit (rare; retry after a few minutes)
+                · wrong registry host (e.g. ghcr.io vs docker.io)
+
+              Fix the manifest(s) and re-run, or pass
+                -e apps_force_image_check_skip=true
+              to bypass (NOT recommended).
           when:
             - (_apps_bad_images | length) > 0
             - not (apps_force_image_check_skip | default(false) | bool)

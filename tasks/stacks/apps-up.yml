@@ -131,6 +131,36 @@
       ansible.builtin.debug:
         msg: "{{ _apps_ps.stdout_lines | default(['(no containers)']) }}"
 
+    # ── Inline Tier-2 smoke (informational) ────────────────────────────────
+    # Runs nos-smoke.py against Tier-2 endpoints right after stack-up so the
+    # operator sees probe results in the play recap (not just at the global
+    # post-smoke step at the end of main.yml). Non-blocking: failures here
+    # surface in the summary, not as fatals — the apps stack might still be
+    # warming healthchecks, and 502 is in the accepted-codes list anyway.
+    - name: "[Apps] Inline smoke — probe Tier-2 endpoints"
+      ansible.builtin.command:
+        cmd: "python3 {{ playbook_dir }}/tools/nos-smoke.py --tier 2 --no-jsonl"
+        chdir: "{{ playbook_dir }}"
+      register: _apps_smoke_inline
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when:
+        - apps_inline_smoke | default(true) | bool
+        - (_apps_stack_result.rc | default(1)) == 0
+
+    - name: "[Apps] Inline smoke summary"
+      ansible.builtin.debug:
+        msg: |
+          Tier-2 smoke {{ 'OK (rc=0)' if (_apps_smoke_inline.rc | default(1)) == 0
+                                       else ('returned rc=' ~ (_apps_smoke_inline.rc | default('?')) ~ ' — see lines below') }}
+          {% for line in (_apps_smoke_inline.stdout_lines | default([]))[-12:] %}
+            {{ line }}
+          {% endfor %}
+      when:
+        - apps_inline_smoke | default(true) | bool
+        - (_apps_stack_result.rc | default(1)) == 0
+
 # ── No-op summary when no Tier-2 manifests are present ──────────────────────
 - name: "[Apps] No Tier-2 apps onboarded — apps stack skipped"
   ansible.builtin.debug:
