@@ -81,7 +81,12 @@ compose:
         - rcube_db:/var/roundcube/db
         - rcube_config:/var/roundcube/config
       healthcheck:
-        test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+        # roundcube/roundcubemail:1.6.11-apache ships curl but NOT wget
+        # (verified 2026-04-30 against the live container — `wget` returned
+        # `executable file not found in $PATH`, `curl` is at /usr/bin/curl).
+        # `-fsS` makes curl exit non-zero on HTTP error, silent except for
+        # transport errors — the right semantics for a healthcheck probe.
+        test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
         interval: 30s
         timeout: 5s
         retries: 5
