@@ -63,16 +63,21 @@
       check_mode: false
 
     # ── Bring the apps stack up ─────────────────────────────────────────────
-    # `--wait` blocks until every container is healthy or 120s elapse. Each
-    # Tier-2 app declares its own healthcheck in apps/<name>.yml; the parser
-    # has already verified the compose block is valid YAML.
+    # `--wait` blocks until every container is healthy or 240s elapse. The
+    # 240s budget covers parallel cold-start of N Tier-2 apps:
+    #   start_period (60s) + healthcheck interval × retries (≤150s) ≈ 210s
+    # plus headroom for image pull / volume init. Verified empirically
+    # against twofauth + roundcube + documenso + documenso-db on Apple
+    # Silicon — 120s was tight (compose-up timed out before roundcube +
+    # twofauth flipped to healthy, even though both reached healthy within
+    # ~30s of compose-up's exit).
     - name: "[Apps] Start APPS stack (docker compose up --wait)"
       ansible.builtin.shell: >
         {{ docker_bin }} compose
         -f "{{ stacks_dir }}/apps/docker-compose.yml"
         {% for f in _apps_overrides_find.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
         -p apps
-        up -d --build --remove-orphans --wait --wait-timeout 120
+        up -d --build --remove-orphans --wait --wait-timeout 240
         {{ _docker_compose_pull | default('') }} 2>&1
       register: _apps_stack_result
       changed_when: false

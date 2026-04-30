@@ -120,12 +120,39 @@
           {{ (authentik_app_tiers | default({})) | combine(_apps_rbac_tier_map) }}
       when: (_apps_rbac_tier_map | length) > 0
 
+    # Re-render the blueprint TEMPLATES with the freshly-extended
+    # authentik_oidc_apps + authentik_app_tiers vars (the two set_fact
+    # tasks above merged the Tier-2 entries into them). The render task
+    # in pazny.authentik/tasks/blueprints.yml has `notify: Reapply
+    # authentik blueprints` on each template — when the file content
+    # changes, the play-level handler in main.yml fires and runs
+    # `ak apply_blueprint` for all three blueprints.
+    #
+    # NOTE: previously this called `tasks_from: post.yml` which only
+    # contains a health probe (Wait + Health), NOT the blueprint render
+    # — so the Tier-2 OIDC/Proxy providers never made it into Authentik
+    # and Traefik's authentik@file middleware returned 404 for every
+    # *.apps.<tld> request. blueprints.yml is the right entry-point;
+    # post.yml is for read-only confirmations.
     - name: "[Apps Post] Reconverge Authentik blueprints (Tier-2 OIDC/Proxy providers)"
       ansible.builtin.include_role:
         name: pazny.authentik
-        tasks_from: post.yml
+        tasks_from: blueprints.yml
         apply:
           tags: ['authentik', 'iam', 'apps']
+      when:
+        - apps_runner_reconverge_blueprints | default(true) | bool
+        - install_authentik | default(false) | bool
+        - (_apps_authentik_extras | length) > 0
+      tags: ['authentik', 'iam', 'apps']
+
+    # Force the "Reapply authentik blueprints" handler (play-level, in
+    # main.yml) to fire RIGHT NOW so providers are live before Bone
+    # events / Kuma / smoke run downstream. Without this flush, handlers
+    # only fire at end-of-play — too late for the inline smoke at the
+    # bottom of apps-up.yml to see the new providers.
+    - name: "[Apps Post] Flush handlers — apply blueprints to Authentik now"
+      ansible.builtin.meta: flush_handlers
       when:
         - apps_runner_reconverge_blueprints | default(true) | bool
         - install_authentik | default(false) | bool
