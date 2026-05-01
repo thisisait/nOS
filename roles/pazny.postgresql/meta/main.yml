@@ -17,5 +17,10 @@ galaxy_info:
 # tasks/stacks/core-up.yml.
 dependencies: []
 
-collections:
-  - community.postgresql  # pg query modules (volitelne; post.yml aktualne vola psql pres docker compose exec)
+# No declared collections — the role uses `docker compose exec` against the
+# postgres container for schema setup (see tasks/stacks/core-up.yml's
+# postgres post-start block). community.postgresql was declared
+# aspirationally pre-2026; dropped 2026-05-01 (Track H Phase 1) once usage
+# audit confirmed zero references in the codebase. Re-add with explicit
+# version range if a future role needs the pg query modules.
+collections: []

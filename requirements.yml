@@ -1,22 +1,49 @@
 ---
+# Galaxy roles + collection pins for nOS.
+#
+# Floors and upper bounds align with ansible-core 2.20.x (current operator
+# baseline) and ansible-core 2.21 (latest RC at 2026-05-01) — all listed
+# collection versions verified compatible with both. Track H Phase 1.
+#
+# When ansible-core 2.24 ships (upstream timeline still pending), revisit
+# the upper bounds. The 2.24 jump itself is a separate ~1-day mini-track
+# (collection bumps + meta/main.yml floor + custom-module audit + blank).
+#
+# Note: community.crypto, community.postgresql, and nextcloud.admin are
+# NOT in this list — they were declared aspirationally but the codebase
+# uses zero of their modules (verified 2026-05-01 by grep). If a future
+# task needs them, re-add with the same explicit floor + upper bound
+# pattern.
+
 roles:
   - name: elliotweiser.osx-command-line-tools
   - name: geerlingguy.dotfiles
 
 collections:
+  # Mac-specific roles (homebrew, mas, dock) — pinned via tag, not version
+  # range, because geerlingguy.mac doesn't follow strict semver and the
+  # Galaxy "latest" pointer drifts faster than we can re-test.
   - name: geerlingguy.mac
-  # Homebrew management (homebrew, homebrew_tap, homebrew_cask, ini_file, osx_defaults, composer, …)
+
+  # community.general — heavy use across ~26 files (homebrew, homebrew_tap,
+  # homebrew_cask, ini_file, osx_defaults, composer, php_ini, ufw, …).
+  # 12.x is the active 2025-2026 release line; supports ansible-core 2.16+.
   - name: community.general
-    version: ">=8.0.0"
-  # Docker image/container management (n8n, Kiwix, Uptime Kuma, Calibre-Web)
+    version: ">=10.0.0,<13.0.0"
+
+  # community.docker — used in 3 files (mostly docker_image / docker_volume
+  # gap-fills; the bulk of compose orchestration goes through `docker compose`
+  # CLI invocations). 5.x supports ansible-core 2.17+.
   - name: community.docker
-    version: ">=3.0.0"
-  # MariaDB/MySQL management (wordpress, nextcloud databases)
+    version: ">=5.0.0,<6.0.0"
+
+  # community.mysql — MariaDB/MySQL management for wordpress, nextcloud,
+  # gitea, freescout databases. 4.x supports ansible-core 2.16+.
   - name: community.mysql
-    version: ">=3.0.0"
-  # PostgreSQL query module (idempotence refactor — Metabase/n8n admin pw fallback)
-  - name: community.postgresql
-    version: ">=3.0.0"
-  # Nextcloud admin (run_occ wrapper, user/group modules)
-  - name: nextcloud.admin
-    version: ">=1.0.0"
+    version: ">=4.0.0,<5.0.0"
+
+  # ansible.posix — synchronize (rsync wrapper) + sysctl (linux.hardening).
+  # NEW in this pinning pass (was implicitly installed via dependency-of-
+  # dependency, never explicit). 2.x supports ansible-core 2.16+.
+  - name: ansible.posix
+    version: ">=2.0.0,<3.0.0"
