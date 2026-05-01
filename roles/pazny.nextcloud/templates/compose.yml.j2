@@ -39,7 +39,7 @@ services:
       SMTP_PASSWORD: ""
       SMTP_AUTHTYPE: "NONE"
       SMTP_SECURE: ""
-      MAIL_DOMAIN: "{{ instance_tld | default('dev.local') }}"
+      MAIL_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
       MAIL_FROM_ADDRESS: "nextcloud"
 {% endif %}
     networks:

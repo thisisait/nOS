@@ -10,7 +10,7 @@
       generator: "{{ nos_state_generator }}"
       instance:
         name: "{{ instance_name | default('nos') }}"
-        tld: "{{ instance_tld | default('dev.local') }}"
+        tld: "{{ tenant_domain | default('dev.local') }}"
         role: "{{ instance_role | default('standalone') }}"
       identifiers:
         state_dir: "{{ nos_state_dir }}"

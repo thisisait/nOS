@@ -78,7 +78,7 @@ services:
       MAIL_LOGIN: ""
       MAIL_PASSWORD: ""
       MAIL_USE_TLS: "0"
-      MAIL_DEFAULT_SENDER: "erpnext@{{ instance_tld | default('dev.local') }}"
+      MAIL_DEFAULT_SENDER: "erpnext@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
 {% if install_mailpit | default(false) %}
     extra_hosts:
@@ -193,7 +193,7 @@ services:
       MAIL_LOGIN: ""
       MAIL_PASSWORD: ""
       MAIL_USE_TLS: "0"
-      MAIL_DEFAULT_SENDER: "erpnext@{{ instance_tld | default('dev.local') }}"
+      MAIL_DEFAULT_SENDER: "erpnext@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
 {% if install_mailpit | default(false) %}
     extra_hosts:

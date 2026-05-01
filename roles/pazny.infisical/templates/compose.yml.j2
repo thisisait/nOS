@@ -46,7 +46,7 @@ services:
       SMTP_PORT: "1025"
       SMTP_USERNAME: ""
       SMTP_PASSWORD: ""
-      SMTP_FROM_ADDRESS: "infisical@{{ instance_tld | default('dev.local') }}"
+      SMTP_FROM_ADDRESS: "infisical@{{ tenant_domain | default('dev.local') }}"
       SMTP_FROM_NAME: "Infisical"
 {% endif %}
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}

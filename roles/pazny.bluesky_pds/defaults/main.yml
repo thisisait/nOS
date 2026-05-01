@@ -13,10 +13,10 @@
 # ==============================================================================
 
 bluesky_pds_version: "0.4"                          # aligned with default.config.yml; ghcr.io/bluesky-social/pds has no semver tags, 0.4 tracks current
-# AT Protocol forbids .local TLD. On dev (instance_tld=dev.local) we fall back
-# to .dev.lan; on a real public TLD we use bsky.<instance_tld> directly.
+# AT Protocol forbids .local TLD. On dev (tenant_domain=dev.local) we fall back
+# to .dev.lan; on a real public TLD we use bsky.<tenant_domain> directly.
 # Federation only works on the public-TLD path (needs DNS + LE cert).
-bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (instance_tld_is_local | default(true) | bool) else 'bsky.' + (instance_tld | default('dev.local')) }}"
+bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true) | bool) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_invite_required: true                   # Invite-only registrace
@@ -29,4 +29,4 @@ bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"
 # Handle MUST NOT be a reserved word (admin, root, pds, app, bsky, atproto, ...)
 # AT Protocol handles = <handle>.{{ bluesky_pds_hostname }}
 bluesky_pds_admin_handle: "pazny.{{ bluesky_pds_hostname }}"
-bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (instance_tld | default('dev.local'))) }}"
+bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (tenant_domain | default('dev.local'))) }}"

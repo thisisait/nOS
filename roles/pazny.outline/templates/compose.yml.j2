@@ -55,8 +55,8 @@ services:
       # Mailpit lives on iiab_net only; reach it via host-gateway.
       SMTP_HOST: "host.docker.internal"
       SMTP_PORT: "1025"
-      SMTP_FROM_EMAIL: "outline@{{ instance_tld | default('dev.local') }}"
-      SMTP_REPLY_EMAIL: "outline@{{ instance_tld | default('dev.local') }}"
+      SMTP_FROM_EMAIL: "outline@{{ tenant_domain | default('dev.local') }}"
+      SMTP_REPLY_EMAIL: "outline@{{ tenant_domain | default('dev.local') }}"
       SMTP_TLS_CIPHERS: ""
       SMTP_SECURE: "false"
 {% endif %}

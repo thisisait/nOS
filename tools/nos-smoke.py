@@ -330,7 +330,7 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
-    # Self-substitute Jinja inside vars (e.g. wing_domain: "wing.{{ instance_tld }}")
+    # Self-substitute Jinja inside vars (e.g. wing_domain: "wing.{{ tenant_domain }}")
     for k, v in list(vars_dict.items()):
         if isinstance(v, str) and "{{" in v:
             vars_dict[k] = resolve_jinja_lite(v, vars_dict)

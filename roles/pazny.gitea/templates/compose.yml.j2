@@ -39,7 +39,7 @@ services:
       GITEA__mailer__ENABLED: "true"
       GITEA__mailer__SMTP_ADDR: "host.docker.internal"
       GITEA__mailer__SMTP_PORT: "1025"
-      GITEA__mailer__FROM: "gitea@{{ instance_tld | default('dev.local') }}"
+      GITEA__mailer__FROM: "gitea@{{ tenant_domain | default('dev.local') }}"
       GITEA__mailer__USER: ""
       GITEA__mailer__PASSWD: ""
 {% endif %}

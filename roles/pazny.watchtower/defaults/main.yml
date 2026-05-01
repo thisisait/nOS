@@ -45,8 +45,8 @@ watchtower_label_enable_only: true
 # Notification routing — relayed through Mailpit by default so the operator
 # sees activity in mail.<tld> UI. Override to a real outbound SMTP later.
 watchtower_notifications: "email"
-watchtower_notification_email_from: "watchtower@{{ instance_tld | default('dev.local') }}"
-watchtower_notification_email_to: "{{ default_admin_email | default('admin@' ~ instance_tld) }}"
+watchtower_notification_email_from: "watchtower@{{ tenant_domain | default('dev.local') }}"
+watchtower_notification_email_to: "{{ default_admin_email | default('admin@' ~ tenant_domain) }}"
 watchtower_notification_email_server: "{{ 'mailpit' if (install_mailpit | default(true)) else 'host.docker.internal' }}"
 watchtower_notification_email_port: 1025
 watchtower_notification_email_starttls: false

@@ -63,7 +63,7 @@ services:
       AUTHENTIK_EMAIL__PASSWORD: ""
       AUTHENTIK_EMAIL__USE_TLS: "False"
       AUTHENTIK_EMAIL__USE_SSL: "False"
-      AUTHENTIK_EMAIL__FROM: "authentik@{{ instance_tld | default('dev.local') }}"
+      AUTHENTIK_EMAIL__FROM: "authentik@{{ tenant_domain | default('dev.local') }}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
@@ -110,7 +110,7 @@ services:
       AUTHENTIK_EMAIL__PASSWORD: ""
       AUTHENTIK_EMAIL__USE_TLS: "False"
       AUTHENTIK_EMAIL__USE_SSL: "False"
-      AUTHENTIK_EMAIL__FROM: "authentik@{{ instance_tld | default('dev.local') }}"
+      AUTHENTIK_EMAIL__FROM: "authentik@{{ tenant_domain | default('dev.local') }}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}

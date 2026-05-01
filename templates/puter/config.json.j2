@@ -1,7 +1,7 @@
 {
   "config_name": "{{ instance_name | default('nos') }}",
-  "domain": "{{ puter_domain | default('os.' + instance_tld | default('dev.local')) }}",
-  "api_domain": "{{ puter_api_domain | default('api.' + puter_domain | default('api.os.' + instance_tld | default('dev.local'))) }}",
+  "domain": "{{ puter_domain | default('os.' + tenant_domain | default('dev.local')) }}",
+  "api_domain": "{{ puter_api_domain | default('api.' + puter_domain | default('api.os.' + tenant_domain | default('dev.local'))) }}",
   "http_port": 4100,
   "pub_port": 443,
   "protocol": "https",

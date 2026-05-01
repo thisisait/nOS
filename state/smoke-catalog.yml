@@ -104,7 +104,7 @@ smoke_endpoints:
   # apps/<name>.yml manifest; left empty by default.
   # Example:
   # - id: immich
-  #   url: "https://immich.apps.{{ instance_tld }}/api/server-info/ping"
+  #   url: "https://immich.apps.{{ tenant_domain }}/api/server-info/ping"
   #   expect: [200]
   #   when: "(apps_enabled | default([])) is contains 'immich'"
   #   tier: 2

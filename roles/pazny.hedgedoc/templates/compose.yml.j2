@@ -65,7 +65,7 @@ services:
       CMD_SMTP_HOST: "host.docker.internal"
       CMD_SMTP_PORT: "1025"
       CMD_SMTP_SECURE: "false"
-      CMD_SMTP_FROM: "hedgedoc@{{ instance_tld | default('dev.local') }}"
+      CMD_SMTP_FROM: "hedgedoc@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:

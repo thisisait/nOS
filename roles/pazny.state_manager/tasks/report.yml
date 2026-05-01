@@ -31,7 +31,7 @@
       scope: "{{ nos_state_oidc_scopes | join(' ') }}"
     status_code: [200]
     timeout: 10
-    validate_certs: "{{ not (instance_tld_is_local | default(false)) }}"
+    validate_certs: "{{ not (tenant_domain_is_local | default(false)) }}"
   register: _state_oidc_token
   when:
     - nos_state_push_bone | bool

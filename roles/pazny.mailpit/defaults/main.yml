@@ -7,7 +7,7 @@
 # BookStack, HedgeDoc, Firefly, Miniflux). The web UI at mail.<tld> shows the
 # captured messages with full HTML/text/raw/headers/attachments inspection.
 #
-# In dev (instance_tld=dev.local) this is the ONLY mail relay — no outbound
+# In dev (tenant_domain=dev.local) this is the ONLY mail relay — no outbound
 # delivery happens. When pazny.stalwart is enabled, Stalwart becomes the real
 # MTA and Mailpit stays as an archival mirror via the bcc-relay pattern.
 #

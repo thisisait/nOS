@@ -85,7 +85,7 @@ gdpr:
 # Verbatim docker-compose syntax. The runner merges this into the `apps`
 # Compose project. Magic tokens are expanded BEFORE compose-up:
 #
-#   $SERVICE_FQDN_<APP>          → <app>.<instance_tld>
+#   $SERVICE_FQDN_<APP>          → <app>.<tenant_domain>
 #   $SERVICE_PASSWORD_<SUFFIX>   → 32-char random; same SUFFIX = same value
 #   $SERVICE_USER_<SUFFIX>       → <app>_<lowercase-suffix>
 #   $SERVICE_BASE64_64_<NAME>    → 64-byte base64

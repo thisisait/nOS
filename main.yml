@@ -64,10 +64,10 @@
 
     wing_telemetry_enabled: "{{ install_bone | default(false) }}"
     # Resolve the events ingestion URL from bone_domain so it tracks the
-    # current instance_tld instead of the stale plugin default of
+    # current tenant_domain instead of the stale plugin default of
     # http://api.dev.local. Operators on a real TLD (pazny.eu, etc.) get
     # api.<tld> automatically without an env-var override.
-    wing_events_url: "http://{{ bone_domain | default('api.' ~ (instance_tld | default('dev.local'))) }}/api/v1/events"
+    wing_events_url: "http://{{ bone_domain | default('api.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/events"
 
   pre_tasks:
     # ── Platform detection (Track C, 2026-04-26) ──────────────────────────
@@ -859,7 +859,7 @@
         name: pazny.acme
       when:
         - install_acme | default(false) | bool
-        - not (instance_tld_is_local | default(true) | bool)
+        - not (tenant_domain_is_local | default(true) | bool)
       tags: ['acme', 'tls', 'cert']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -964,7 +964,7 @@
     - import_tasks: tasks/dnsmasq.yml
       when:
         - install_dnsmasq | default(true)
-        - (instance_tld_is_local | default(true) | bool)
+        - (tenant_domain_is_local | default(true) | bool)
           or (dnsmasq_force_local_domains | default(false) | bool)
       tags: ['dnsmasq', 'dns', 'network']
 

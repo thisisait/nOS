@@ -41,7 +41,7 @@ services:
       N8N_EMAIL_MODE: "smtp"
       N8N_SMTP_HOST: "mailpit"
       N8N_SMTP_PORT: "1025"
-      N8N_SMTP_SENDER: "n8n@{{ instance_tld | default('dev.local') }}"
+      N8N_SMTP_SENDER: "n8n@{{ tenant_domain | default('dev.local') }}"
       N8N_SMTP_SSL: "false"
 {% endif %}
     healthcheck:

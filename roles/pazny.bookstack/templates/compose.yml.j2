@@ -65,7 +65,7 @@ services:
       MAIL_PORT: "1025"
       MAIL_USERNAME: ""
       MAIL_PASSWORD: ""
-      MAIL_FROM: "bookstack@{{ instance_tld | default('dev.local') }}"
+      MAIL_FROM: "bookstack@{{ tenant_domain | default('dev.local') }}"
       MAIL_FROM_NAME: "BookStack"
       MAIL_ENCRYPTION: ""
 {% endif %}

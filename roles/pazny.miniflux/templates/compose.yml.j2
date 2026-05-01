@@ -54,7 +54,7 @@ services:
       SMTP_PORT: "1025"
       SMTP_USERNAME: ""
       SMTP_PASSWORD: ""
-      SMTP_FROM: "miniflux@{{ instance_tld | default('dev.local') }}"
+      SMTP_FROM: "miniflux@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
