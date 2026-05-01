@@ -42,14 +42,27 @@ acme_cert_zone: "{{ ((_host_alias_normalized + '.') if ((_host_alias_normalized 
 acme_cert_path: "{{ acme_cert_dir }}/{{ acme_cert_zone }}.crt"
 acme_cert_key: "{{ acme_cert_dir }}/{{ acme_cert_zone }}.key"
 
-# Domains to cover. Wildcard + apex by default; with host_alias=lab the cert
-# covers *.lab.<tenant_domain> + lab.<tenant_domain> + *.apps.lab.<tenant_domain>.
-# Without host_alias (default fleet config) it covers *.<tenant_domain>,
-# <tenant_domain>, and *.apps.<tenant_domain> — byte-identical to pre-Track-F
-# semantics plus the Tier-2 wildcard that was already emitted by mkcert.
+# Domains to cover. **Apex MUST come first** — acme.sh creates its working
+# directory using the literal first `-d` arg as the folder name, which means
+# putting the wildcard first results in `~/.acme.sh/*.<tenant>/` (with a
+# literal asterisk in the path) and breaks downstream symlink targets.
+# Putting the apex first yields the clean `~/.acme.sh/<tenant>/` path.
+# Surfaced 2026-05-02 during the first pazny.eu production blank (manual
+# symlink fix-up was needed because the prior wildcard-first order had
+# already issued the cert into the asterisk directory on this host).
+#
+# Default fleet config (host_alias=""):
+#   1. <tenant_domain>                    → ~/.acme.sh/<tenant_domain>/  (clean)
+#   2. *.<tenant_domain>                  → wildcard SAN
+#   3. *.<apps_subdomain>.<tenant_domain> → Tier-2 wildcard SAN
+#
+# host_alias="lab":
+#   1. lab.<tenant_domain>                  → ~/.acme.sh/lab.<tenant_domain>/
+#   2. *.lab.<tenant_domain>                → wildcard SAN
+#   3. *.lab.<apps_subdomain>.<tenant_domain> → Tier-2 wildcard SAN
 acme_domains: >-
-  {{ ['*' + (_host_alias_seg | default('')) + '.' + tenant_domain,
-      ((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain,
+  {{ [((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain,
+      '*' + (_host_alias_seg | default('')) + '.' + tenant_domain,
       '*' + (_host_alias_seg | default('')) + '.' + (apps_subdomain | default('apps')) + '.' + tenant_domain] }}
 
 # Renewal launchd job (runs daily at 03:30; acme.sh internally checks expiry)

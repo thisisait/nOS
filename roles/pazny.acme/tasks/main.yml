@@ -92,21 +92,48 @@
     - "'is not expired yet' not in (_acme_issue.stdout | default(''))"
   no_log: true
 
-# acme.sh stores the cert at ~/.acme.sh/{first_domain_no_wildcard}_ecc/ or
-# without _ecc/ depending on key type. With --keylength 2048 it's RSA without
-# _ecc. The "first domain" of a wildcard issuance is the wildcard itself but
-# acme.sh uses the apex form (strips the leading "*."). For pazny.eu it's
-# at ~/.acme.sh/pazny.eu/.
+# acme.sh stores the cert at `~/.acme.sh/<first-domain>/` where <first-domain>
+# is the literal first `-d` arg passed to `--issue`. Defaults order in this
+# role puts the apex first (Track G/recovery 2026-05-02) → clean directory
+# name (`~/.acme.sh/<tenant>/`). On hosts that previously issued the cert
+# with the wildcard-first order, the directory is `*.<tenant>/` (literal
+# asterisk) — we detect both shapes here so existing installs pick up the
+# new symlink without an acme.sh cleanup dance.
+- name: "[ACME] Detect actual acme.sh cert directory (apex vs wildcard-first)"
+  ansible.builtin.stat:
+    path: "{{ item }}/fullchain.cer"
+  loop:
+    - "{{ acme_home }}/{{ acme_cert_zone }}"
+    - "{{ acme_home }}/*.{{ acme_cert_zone }}"
+  register: _acme_dir_probe
+
+- name: "[ACME] Resolve cert source dir (first existing match)"
+  ansible.builtin.set_fact:
+    _acme_actual_dir: >-
+      {{ (_acme_dir_probe.results
+          | selectattr('stat.exists', 'equalto', true)
+          | map(attribute='item')
+          | list
+          | first)
+         | default(acme_home + '/' + acme_cert_zone) }}
+    _acme_key_basename: >-
+      {{ (acme_cert_zone) if ((_acme_dir_probe.results
+                              | selectattr('stat.exists', 'equalto', true)
+                              | map(attribute='item')
+                              | list
+                              | first) | default('') | basename | regex_search('^\\*\\.') is none)
+         else ('*.' + acme_cert_zone) }}
+
 - name: "[ACME] Symlink fullchain.cer → {{ acme_cert_path }}"
   ansible.builtin.file:
-    src: "{{ acme_home }}/{{ acme_cert_zone }}/fullchain.cer"
+    src: "{{ _acme_actual_dir }}/fullchain.cer"
     dest: "{{ acme_cert_path }}"
     state: link
     force: true
 
 - name: "[ACME] Symlink {zone}.key → {{ acme_cert_key }}"
   ansible.builtin.file:
-    src: "{{ acme_home }}/{{ acme_cert_zone }}/{{ acme_cert_zone }}.key"
+    src: "{{ _acme_actual_dir }}/{{ _acme_key_basename }}.key"
     dest: "{{ acme_cert_key }}"
     state: link
     force: true
