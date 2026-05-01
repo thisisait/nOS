@@ -137,7 +137,7 @@
 {{ trow("PHP-FPM", "socket", "homebrew", S_brew, "host", "PHP FastCGI") }}
 {% endif %}
 {% if install_dnsmasq | default(true) %}
-{{ trow("dnsmasq", dnsmasq_port | default(53) | string, "homebrew", S_brew, "host", "DNS resolver (*.dev.local)") }}
+{{ trow("dnsmasq", dnsmasq_port | default(53) | string, "homebrew", S_brew, "host", "DNS resolver (*.{{ dnsmasq_dev_domain | default('dev.local') }})") }}
 {% endif %}
 {% if install_mariadb | default(false) %}
 {{ trow("MariaDB", mariadb_port | default(3306) | string, "docker", S_docker, "infra", "Relational database") }}

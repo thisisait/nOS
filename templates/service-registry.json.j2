@@ -591,7 +591,7 @@
   "toggle_var": "install_dnsmasq",
   "port": dnsmasq_port | default(53),
   "type": "homebrew",
-  "description": "DNS resolver (*.dev.local)"
+  "description": "DNS resolver (*.{{ dnsmasq_dev_domain | default('dev.local') }})"
 }) %}
 {% endif %}
 {% if install_mariadb | default(false) %}

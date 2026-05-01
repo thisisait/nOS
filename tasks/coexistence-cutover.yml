@@ -36,7 +36,7 @@
     stacks_dir: "{{ stacks_dir }}"
     nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
     nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
-    domain: "{{ coexist_domain | default(coexist_service + '.' + (nos_tld | default('dev.local'))) }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
     state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
     ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
     dry_run: "{{ coexist_dry_run | default(false) | bool }}"
