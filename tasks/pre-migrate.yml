@@ -16,7 +16,7 @@
 - name: "[pre-migrate] Read current state"
   nos_state:
     action: read
-    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
   register: _nos_state
   check_mode: false
   tags: ['migrate']
@@ -24,7 +24,7 @@
 - name: "[pre-migrate] Introspect services against manifest"
   nos_state:
     action: introspect
-    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     manifest_path: "{{ playbook_dir }}/state/manifest.yml"
     role_vars: "{{ vars }}"
   register: _nos_introspect
@@ -79,7 +79,7 @@
     action: apply
     migration: "{{ item }}"
     dry_run: "{{ migrate_dry_run | default(false) | bool }}"
-    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
   loop: "{{ _pending.pending | default([]) }}"
   loop_control:
     label: "{{ item.id }}"
@@ -97,7 +97,7 @@
 - name: "[pre-migrate] Persist updated state"
   nos_state:
     action: write
-    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     merge: true
     state: {}
   tags: ['migrate']

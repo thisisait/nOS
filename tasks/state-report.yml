@@ -28,7 +28,7 @@
 - name: "[state-report] Record last_run recap"
   nos_state:
     action: write
-    state_path: "{{ ansible_env.HOME }}/.nos/state.yml"
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     merge: true
     state:
       last_run:

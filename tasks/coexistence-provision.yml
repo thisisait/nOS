@@ -64,7 +64,7 @@
     nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
     nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
     domain: "{{ coexist_domain | default(coexist_service + '.' + (nos_tld | default('dev.local'))) }}"
-    state_path: "{{ nos_state_path | default(ansible_env.HOME + '/.nos/state.yml') }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
     clone_strategy: "{{ coexist_clone_strategy | default(omit) }}"
     clone_spec: "{{ coexist_clone_spec | default(omit) }}"
     force: "{{ coexist_force | default(false) | bool }}"

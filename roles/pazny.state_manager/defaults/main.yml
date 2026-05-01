@@ -7,7 +7,7 @@
 # ==============================================================================
 
 # Where ~/.nos/state.yml lives. The role creates the parent dir with mode 0700.
-nos_state_dir: "{{ ansible_env.HOME }}/.nos"
+nos_state_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
 nos_state_file: "{{ nos_state_dir }}/state.yml"
 
 # Absolute paths to framework artifacts.
