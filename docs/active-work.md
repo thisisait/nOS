@@ -8,31 +8,29 @@
 
 ---
 
-## Current track: **F — Dynamic instance_tld + per-host alias**
+## Current track: **G — Cloudflare proxy + LE production exposure**
+
+> Track F **DONE 2026-05-01** — see "What's done already" below.
+
+## Previous track: **F — Dynamic instance_tld + per-host alias** ✅
 
 [Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 
-## Current sub-step: **F5 — operator wet-verify blank**
+## Current sub-step: **Track G kickoff — Phase 1 awaits**
 
-Track F implementation **complete in 7 commits** `8e8a038..e4e877f` (incl. deep
-review eliminating hardcoded `dev.local` across 174+ files). Phases 1-4, 6, 7
-all done dry. Phase 5 = operator runs blank (default config + `host_alias=lab`
-smoke) to wet-verify.
+Track F **DONE 2026-05-01** in 16 commits `8e8a038..69f021b`. All seven
+phases (F1 survey → F7 docs) verified, plus deep-review covering
+174-file hardcoded `dev.local` cleanup, plus edge-case input
+normalization, plus smoke-pipeline fixes for nos-smoke subprocess.
 
-```bash
-# 1. Default-config blank (gate F4 wet-verify)
-ansible-playbook main.yml -K -e blank=true
-# Expected: ok=891+ changed=267+ failed=0, 39/39 smoke OK, byte-identical
-#           shape to 2026-05-01 16:37 baseline.
-
-# 2. host_alias smoke (Phase F5 proper)
-ansible-playbook main.yml -K -e blank=true -e host_alias=lab
-# Expected: smoke endpoints respond on *.lab.dev.local; Authentik OIDC
-#           redirect_uris list lab.dev.local hosts; mkcert generates a
-#           wildcard with *.lab.dev.local + *.lab.apps.dev.local SANs.
-```
-
-If both green → Track F **DONE**, advance to Track G.
+**Track F final verification (both wet-blanks 2026-05-01 evening):**
+- **F4 default-config**: `ok=892 changed=267 failed=0`, 38/39 smoke OK
+  (1 wordpress 500 cold-start flake — 302 on retry, pre-existing not
+  Track-F regression).
+- **F5 host_alias=lab**: `ok=892 changed=268 failed=0`, **39/39 smoke
+  OK** after passing host_alias to nos-smoke subprocess. Traefik
+  reports 40 routers on `*.lab.dev.local`. All 3 Tier-2 piloti healthy
+  on `*.lab.apps.dev.local`.
 
 ### What's done already (going into F)
 
@@ -121,8 +119,8 @@ Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this
 | Surface | State |
 |---|---|
 | `git status` | clean (or pending commits — check before any write) |
-| Last green blank | `ok=891 changed=267 failed=0 skipped=375` (2026-05-01 16:37) — **Track-E/J/H end-to-end gate ✅** Tier-2 pilots 3/3 healthy (documenso/roundcube/twofauth), 39/39 smoke OK |
-| Last partial recovery | `ok=130 changed=10 failed=0 skipped=36` (2026-04-30 13:59) — Tier-2 stack 4/4 healthy, post-hooks all fired |
+| Last green blank | `ok=892 changed=268 failed=0 skipped=378` (2026-05-01 22:58, host_alias=lab) — **Track F end-to-end ✅** 40 Traefik routers on `*.lab.dev.local`, 3/3 Tier-2 piloti on `*.lab.apps.dev.local`, 39/39 smoke OK |
+| Last default-config blank | `ok=892 changed=267 failed=0 skipped=378` (2026-05-01 22:19) — Track F default verified byte-identical-shape, 38/39 smoke OK (1× wordpress 500 cold-start flake) |
 | Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live |
 | Tier-1 services | all healthy |
 | Tests | 431 collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 skipped (optional deps). |
