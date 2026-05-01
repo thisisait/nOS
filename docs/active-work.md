@@ -4,7 +4,7 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-01 16:37 • commit: post-blank-green gate cleared • by: pazny+claude
+> Last updated: 2026-05-01 • commit: e4e877f post-Track-F-implementation • by: pazny+claude
 
 ---
 
@@ -12,11 +12,27 @@
 
 [Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 
-## Current sub-step: **Phase 1 — survey + decompose `instance_tld`**
+## Current sub-step: **F5 — operator wet-verify blank**
 
-**Blank gate cleared 2026-05-01 16:37** (`ok=891 changed=267 failed=0 skipped=375`,
-39/39 smoke OK, all 3 Tier-2 pilots healthy end-to-end). Track F unblocked —
-Phase 1 starts now.
+Track F implementation **complete in 7 commits** `8e8a038..e4e877f` (incl. deep
+review eliminating hardcoded `dev.local` across 174+ files). Phases 1-4, 6, 7
+all done dry. Phase 5 = operator runs blank (default config + `host_alias=lab`
+smoke) to wet-verify.
+
+```bash
+# 1. Default-config blank (gate F4 wet-verify)
+ansible-playbook main.yml -K -e blank=true
+# Expected: ok=891+ changed=267+ failed=0, 39/39 smoke OK, byte-identical
+#           shape to 2026-05-01 16:37 baseline.
+
+# 2. host_alias smoke (Phase F5 proper)
+ansible-playbook main.yml -K -e blank=true -e host_alias=lab
+# Expected: smoke endpoints respond on *.lab.dev.local; Authentik OIDC
+#           redirect_uris list lab.dev.local hosts; mkcert generates a
+#           wildcard with *.lab.dev.local + *.lab.apps.dev.local SANs.
+```
+
+If both green → Track F **DONE**, advance to Track G.
 
 ### What's done already (going into F)
 
