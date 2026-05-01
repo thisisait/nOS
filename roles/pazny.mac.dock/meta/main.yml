@@ -1,0 +1,22 @@
+---
+# Track H Phase 2 (2026-05-01): added meta/main.yml so the role advertises
+# its ansible-core floor + macOS-only platform like every other pazny.*
+# role. The role configures the macOS Dock (item list, autohide, position).
+
+dependencies: []
+
+galaxy_info:
+  role_name: dock
+  namespace: pazny
+  author: Pázny
+  description: macOS Dock configuration (item list, autohide, position) for nOS host roles.
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+  galaxy_tags:
+    - macos
+    - dock
+    - configuration

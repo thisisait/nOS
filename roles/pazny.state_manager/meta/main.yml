@@ -8,7 +8,7 @@ galaxy_info:
     to ~/.nos/state.yml, and emit a post-run report. Thin wrapper around the
     nos_state custom module — no side effects beyond the state file.
   license: GPL-3.0-or-later
-  min_ansible_version: "2.15"
+  min_ansible_version: "2.20"
   platforms:
     - name: MacOSX
       versions:

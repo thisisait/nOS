@@ -5,7 +5,7 @@ galaxy_info:
   author: pazny
   description: Hermes Agent framework (Nous Research) — Python daemon with MCP, skill autogen, cross-channel gateway
   license: MIT
-  min_ansible_version: "2.14"
+  min_ansible_version: "2.20"
   platforms:
     - name: MacOSX
       versions: [all]

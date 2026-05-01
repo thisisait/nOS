@@ -5,7 +5,7 @@ galaxy_info:
   author: Pázny
   description: Gitea in Docker compose override (nOS devops stack)
   license: MIT
-  min_ansible_version: "2.14"
+  min_ansible_version: "2.20"
   platforms:
     - name: MacOSX
       versions:

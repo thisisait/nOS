@@ -1,0 +1,24 @@
+---
+# Track H Phase 2 (2026-05-01): added meta/main.yml so the role advertises
+# its ansible-core floor + macOS-only platform like every other pazny.*
+# role. The role wraps `mas` (Mac App Store CLI) for declarative app
+# install from the App Store.
+
+dependencies: []
+
+galaxy_info:
+  role_name: mas
+  namespace: pazny
+  author: Pázny
+  description: Mac App Store (mas CLI) declarative app install for nOS host roles.
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+  galaxy_tags:
+    - macos
+    - app-store
+    - mas
+    - package
