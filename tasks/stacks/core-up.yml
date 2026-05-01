@@ -456,8 +456,8 @@
 # Other tasks in main.yml can then assume IAM / Vault / PDS
 # are available (health check waits inside these include_tasks).
 
-- name: "[Core] pazny.authentik post-start (health + blueprints reconcile)"
-  ansible.builtin.include_role: { name: pazny.authentik, tasks_from: post.yml, apply: { tags: ['authentik', 'iam'] } }
+- name: "[Core] pazny.authentik post-start (readiness probe — blueprints applied by container on boot)"
+  ansible.builtin.include_role: { name: pazny.authentik, tasks_from: health.yml, apply: { tags: ['authentik', 'iam'] } }
   when:
     - install_authentik | default(false)
     - _core_infra_enabled | bool

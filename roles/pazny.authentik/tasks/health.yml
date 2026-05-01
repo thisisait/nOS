@@ -1,6 +1,25 @@
 ---
 # ==============================================================================
-# pazny.authentik/tasks/post.yml — post-start health-check only.
+# pazny.authentik/tasks/health.yml — POST-START READINESS PROBE ONLY.
+#
+# Renamed from post.yml on 2026-05-01 (Track J Phase 3) — the prior name
+# falsely suggested it did "post-deploy work" (blueprint reconverge,
+# OIDC config, RBAC policy apply). It does NOT. It only:
+#   1. Polls /-/health/ready/ until 200/204 (30 retries × 5s = 2:30 max)
+#   2. Prints a one-line status with admin URL + akadmin login
+#
+# Anyone needing to RECONVERGE Authentik state (re-render OIDC providers /
+# proxy applications / RBAC policy bindings after extending
+# authentik_oidc_apps or authentik_app_tiers at runtime) MUST call:
+#
+#     ansible.builtin.include_role:
+#       name: pazny.authentik
+#       tasks_from: blueprints.yml
+#
+# followed by `meta: flush_handlers` so the play-level "Reapply authentik
+# blueprints" handler runs `ak apply_blueprint` on the templates this just
+# rendered. See roles/pazny.apps_runner/tasks/post.yml for the canonical
+# caller pattern (used by the Tier-2 Authentik blueprint reconverge hook).
 #
 # Admin user + groups + OIDC providers + applications + RBAC policies are
 # managed by the Authentik Blueprints engine (files in /blueprints/custom/,
@@ -12,7 +31,7 @@
 # tasks/stacks/authentik_service_post.yml and runs later in stack-up.yml.
 # ==============================================================================
 
-- name: "[pazny.authentik Post] Wait for server to be ready"
+- name: "[pazny.authentik Health] Wait for server to be ready"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/-/health/ready/"
     status_code: [200, 204]
@@ -23,7 +42,7 @@
   until: _authentik_health.status | default(0) in [200, 204]
   failed_when: false
 
-- name: "[pazny.authentik Post] Health status"
+- name: "[pazny.authentik Health] Status"
   ansible.builtin.debug:
     msg: >-
       Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204] else 'UNAVAILABLE' }}

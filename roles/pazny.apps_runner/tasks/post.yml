@@ -13,8 +13,11 @@
 #      ingestion path now that step 1 added them)
 #   3. Authentik blueprint reconverge (extends authentik_oidc_apps with the
 #      Tier-2 entries that asked for proxy/oidc, then re-includes
-#      pazny.authentik post.yml — idempotent because the blueprint pipeline
-#      is INSERT-OR-UPDATE keyed on slug)
+#      pazny.authentik tasks_from: blueprints.yml + meta: flush_handlers
+#      — the render task notifies "Reapply authentik blueprints" handler
+#      which runs `ak apply_blueprint` against the live container.
+#      Idempotent because the blueprint pipeline is INSERT-OR-UPDATE
+#      keyed on slug.)
 #   4. Bone HMAC-signed `app.deployed` event — one POST /api/v1/events per
 #      onboarded app, X-Wing-Signature = sha256=<hex> over the body
 #   5. Portainer apps endpoint registration (handled by pazny.portainer post
@@ -81,9 +84,10 @@
     # ── Hook 3: Authentik blueprint reconverge ──────────────────────────────
     # Tier-2 apps with auth_mode=proxy|oidc declare an `authentik_entry` block
     # (nos_apps_render._authentik_entry). Append those to the global
-    # authentik_oidc_apps list, then re-run pazny.authentik post.yml — the
-    # blueprint pipeline (templates/blueprints/10-oidc-apps.yaml.j2) is keyed
-    # on slug, so INSERT-OR-UPDATE is the natural semantic.
+    # authentik_oidc_apps list, then re-run pazny.authentik tasks_from:
+    # blueprints.yml + flush handlers — the blueprint pipeline
+    # (templates/blueprints/10-oidc-apps.yaml.j2) is keyed on slug, so
+    # INSERT-OR-UPDATE is the natural semantic.
     - name: "[Apps Post] Compute Authentik extras (proxy/oidc Tier-2 apps)"
       ansible.builtin.set_fact:
         _apps_authentik_extras: >-
