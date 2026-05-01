@@ -45,7 +45,7 @@ recipes:
           > {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
       - id: export_blueprints
         type: http.get_all
-        url: "https://{{ authentik_domain | default('auth.dev.local') }}/api/v3/managed/blueprints/"
+        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/managed/blueprints/"
         auth:
           type: bearer
           token_var: "authentik_bootstrap_token"
@@ -63,13 +63,13 @@ recipes:
     post:
       - id: wait_server_healthy
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/live/"
+        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/live/"
         expect_status: 204
         timeout_sec: 180
         interval_sec: 4
       - id: wait_ready
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/ready/"
+        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/ready/"
         expect_status: 204
         timeout_sec: 120
         interval_sec: 3
@@ -145,7 +145,7 @@ recipes:
     post:
       - id: wait_server_healthy
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth.dev.local') }}/-/health/live/"
+        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/live/"
         expect_status: 204
         timeout_sec: 180
         interval_sec: 4

@@ -115,7 +115,7 @@
       ======================================================
        Tileserver-gl (offline mapy) nainstalovan
       ======================================================
-       URL:       https://{{ maps_domain | default('maps.dev.local') }}
+       URL:       https://{{ maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Port:      {{ maps_port | default(8070) }}
        Data dir:  {{ maps_data_dir }}
 
@@ -127,7 +127,7 @@
            - url: "https://..."
              dest: "czech-republic.mbtiles"
 
-       Add to /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps.dev.local') }}
+       Add to /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
       ======================================================
 
 - name: "[pazny.offline_maps] Render compose override fragment"

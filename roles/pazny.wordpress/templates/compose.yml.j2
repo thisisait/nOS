@@ -37,17 +37,17 @@ services:
       # pushed into the openid_connect_generic_settings option (idempotent).
       WP_OIDC_CLIENT_ID: "{{ authentik_oidc_wordpress_client_id | default('nos-wordpress') }}"
       WP_OIDC_CLIENT_SECRET: "{{ authentik_oidc_wordpress_client_secret | default(global_password_prefix + '_pw_oidc_wordpress') }}"
-      WP_OIDC_ENDPOINT_LOGIN: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-      WP_OIDC_ENDPOINT_USERINFO: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
-      WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
-      WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/wordpress/end-session/"
+      WP_OIDC_ENDPOINT_LOGIN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      WP_OIDC_ENDPOINT_USERINFO: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
+      WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/end-session/"
       WP_OIDC_SCOPE: "openid profile email"
       WP_OIDC_LOGIN_TYPE: "{{ wordpress_oidc_login_type | default('button') }}"
       WP_OIDC_IDENTITY_KEY: "preferred_username"
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - iiab_net

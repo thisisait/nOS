@@ -23,7 +23,7 @@ services:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
-      DOMAIN: "https://{{ vaultwarden_domain | default('pass.dev.local') }}"
+      DOMAIN: "https://{{ vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       SIGNUPS_ALLOWED: "{{ vaultwarden_signups_allowed | default(false) | string | lower }}"
       ADMIN_TOKEN: "{{ vaultwarden_admin_token }}"
       WEBSOCKET_ENABLED: "true"
@@ -31,7 +31,7 @@ services:
       SSO_ENABLED: "true"
       SSO_CLIENT_ID: "{{ authentik_oidc_vaultwarden_client_id }}"
       SSO_CLIENT_SECRET: "{{ authentik_oidc_vaultwarden_client_secret }}"
-      SSO_AUTHORITY: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/vaultwarden/"
+      SSO_AUTHORITY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/vaultwarden/"
       SSO_PKCE: "true"
       SSO_ONLY: "false"
 {% endif %}
@@ -39,7 +39,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["update-ca-certificates 2>/dev/null; exec /start.sh"]
     extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - iiab_net

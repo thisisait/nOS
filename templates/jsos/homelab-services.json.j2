@@ -4,7 +4,7 @@
     "id": "grafana",
     "name": "Grafana",
     "description": "Metriky, logy, traces",
-    "url": "https://{{ grafana_domain | default('grafana.dev.local') }}",
+    "url": "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ grafana_port | default(3000) }},
     "category": "observability"
   },
@@ -14,7 +14,7 @@
     "id": "nextcloud",
     "name": "Nextcloud",
     "description": "Self-hosted cloud",
-    "url": "https://{{ nextcloud_domain | default('cloud.dev.local') }}",
+    "url": "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ nextcloud_port | default(8085) }},
     "category": "iiab"
   },
@@ -24,7 +24,7 @@
     "id": "gitea",
     "name": "Gitea",
     "description": "Git server",
-    "url": "https://{{ gitea_domain | default('git.dev.local') }}",
+    "url": "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ gitea_port | default(3003) }},
     "category": "devops"
   },
@@ -34,7 +34,7 @@
     "id": "gitlab",
     "name": "GitLab",
     "description": "Full DevOps platform",
-    "url": "https://{{ gitlab_domain | default('gitlab.dev.local') }}",
+    "url": "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ gitlab_http_port | default(8929) }},
     "category": "devops"
   },
@@ -44,7 +44,7 @@
     "id": "n8n",
     "name": "n8n",
     "description": "Workflow automation",
-    "url": "https://{{ n8n_domain | default('n8n.dev.local') }}",
+    "url": "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ n8n_port | default(5678) }},
     "category": "iiab"
   },
@@ -54,7 +54,7 @@
     "id": "openwebui",
     "name": "Open WebUI",
     "description": "AI chat (Ollama)",
-    "url": "https://{{ openwebui_domain | default('ai.dev.local') }}",
+    "url": "https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ openwebui_port | default(3004) }},
     "category": "ai"
   },
@@ -64,7 +64,7 @@
     "id": "portainer",
     "name": "Portainer",
     "description": "Docker management",
-    "url": "https://{{ portainer_domain | default('portainer.dev.local') }}",
+    "url": "https://{{ portainer_domain | default('portainer' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ portainer_port | default(9002) }},
     "category": "infra"
   },
@@ -74,7 +74,7 @@
     "id": "jellyfin",
     "name": "Jellyfin",
     "description": "Media server",
-    "url": "https://{{ jellyfin_domain | default('media.dev.local') }}",
+    "url": "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ jellyfin_port | default(8096) }},
     "category": "iiab"
   },
@@ -84,7 +84,7 @@
     "id": "uptime_kuma",
     "name": "Uptime Kuma",
     "description": "Monitoring",
-    "url": "https://{{ uptime_kuma_domain | default('uptime.dev.local') }}",
+    "url": "https://{{ uptime_kuma_domain | default('uptime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ uptime_kuma_port | default(3001) }},
     "category": "iiab"
   },
@@ -94,7 +94,7 @@
     "id": "calibreweb",
     "name": "Calibre-Web",
     "description": "E-book server",
-    "url": "https://{{ calibreweb_domain | default('books.dev.local') }}",
+    "url": "https://{{ calibreweb_domain | default('books' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ calibreweb_port | default(8083) }},
     "category": "iiab"
   },
@@ -104,7 +104,7 @@
     "id": "kiwix",
     "name": "Kiwix",
     "description": "Offline Wikipedia",
-    "url": "https://{{ kiwix_domain | default('kiwix.dev.local') }}",
+    "url": "https://{{ kiwix_domain | default('kiwix' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ kiwix_port | default(8888) }},
     "category": "iiab"
   },
@@ -114,7 +114,7 @@
     "id": "maps",
     "name": "Offline mapy",
     "description": "Tileserver GL",
-    "url": "https://{{ maps_domain | default('maps.dev.local') }}",
+    "url": "https://{{ maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ maps_port | default(8080) }},
     "category": "iiab"
   },
@@ -124,7 +124,7 @@
     "id": "wordpress",
     "name": "WordPress",
     "description": "CMS",
-    "url": "https://{{ wordpress_domain | default('wordpress.dev.local') }}",
+    "url": "https://{{ wordpress_domain | default('wordpress' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ wordpress_port | default(8084) }},
     "category": "iiab"
   },
@@ -134,7 +134,7 @@
     "id": "homeassistant",
     "name": "Home Assistant",
     "description": "Dom\u00e1c\u00ed automatizace",
-    "url": "https://{{ homeassistant_domain | default('home.dev.local') }}",
+    "url": "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ homeassistant_port | default(8123) }},
     "category": "iiab"
   },
@@ -144,7 +144,7 @@
     "id": "rustfs",
     "name": "RustFS",
     "description": "S3 storage konzole",
-    "url": "https://{{ rustfs_domain | default('fs.dev.local') }}",
+    "url": "https://{{ rustfs_domain | default('fs' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ rustfs_console_port | default(9001) }},
     "category": "infra"
   },
@@ -154,7 +154,7 @@
     "id": "erpnext",
     "name": "ERPNext",
     "description": "CRM + ERP",
-    "url": "https://{{ erpnext_domain | default('erp.dev.local') }}",
+    "url": "https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ erpnext_port | default(8082) }},
     "category": "b2b"
   },
@@ -164,7 +164,7 @@
     "id": "freescout",
     "name": "FreeScout",
     "description": "Helpdesk",
-    "url": "https://{{ freescout_domain | default('helpdesk.dev.local') }}",
+    "url": "https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ freescout_port | default(8090) }},
     "category": "b2b"
   },
@@ -174,7 +174,7 @@
     "id": "mattermost",
     "name": "Mattermost",
     "description": "Team chat",
-    "url": "https://{{ mattermost_domain | default('chat.dev.local') }}",
+    "url": "https://{{ mattermost_domain | default('chat' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ mattermost_port | default(8065) }},
     "category": "b2b"
   },
@@ -184,7 +184,7 @@
     "id": "outline",
     "name": "Outline",
     "description": "Team wiki",
-    "url": "https://{{ outline_domain | default('wiki.dev.local') }}",
+    "url": "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ outline_port | default(3005) }},
     "category": "b2b"
   },
@@ -194,7 +194,7 @@
     "id": "metabase",
     "name": "Metabase",
     "description": "BI dashboardy",
-    "url": "https://{{ metabase_domain | default('bi.dev.local') }}",
+    "url": "https://{{ metabase_domain | default('bi' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ metabase_port | default(3002) }},
     "category": "data"
   },
@@ -204,7 +204,7 @@
     "id": "superset",
     "name": "Apache Superset",
     "description": "Data vizualizace",
-    "url": "https://{{ superset_domain | default('superset.dev.local') }}",
+    "url": "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ superset_port | default(8089) }},
     "category": "data"
   },
@@ -214,7 +214,7 @@
     "id": "woodpecker",
     "name": "Woodpecker CI",
     "description": "CI/CD",
-    "url": "https://{{ woodpecker_domain | default('ci.dev.local') }}",
+    "url": "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ woodpecker_port | default(8060) }},
     "category": "devops"
   },
@@ -224,7 +224,7 @@
     "id": "freepbx",
     "name": "FreePBX",
     "description": "PBX / VoIP",
-    "url": "https://{{ freepbx_domain | default('pbx.dev.local') }}",
+    "url": "https://{{ freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ freepbx_port | default(8088) }},
     "category": "voip"
   },
@@ -234,7 +234,7 @@
     "id": "qgis",
     "name": "QGIS Server",
     "description": "GIS mapy",
-    "url": "https://{{ qgis_domain | default('gis.dev.local') }}",
+    "url": "https://{{ qgis_domain | default('gis' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ qgis_port | default(8071) }},
     "category": "engineering"
   },
@@ -244,7 +244,7 @@
     "id": "puter",
     "name": "Puter",
     "description": "Cloud OS desktop",
-    "url": "https://{{ puter_domain | default('os.dev.local') }}",
+    "url": "https://{{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ puter_port | default(5050) }},
     "category": "desktop"
   },
@@ -254,7 +254,7 @@
     "id": "paperclip",
     "name": "Paperclip",
     "description": "Multi-agent orchestrace",
-    "url": "https://{{ paperclip_domain | default('paperclip.dev.local') }}",
+    "url": "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}",
     "port": {{ paperclip_port | default(3006) }},
     "category": "ai"
   },

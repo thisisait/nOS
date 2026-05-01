@@ -9,7 +9,7 @@
 
 n8n_version: "2.14.1"  # CVE-2026-33660/33696/33663/33713 pin
 n8n_port: 5678
-n8n_domain: "n8n.dev.local"
+n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_firstname: "Admin"

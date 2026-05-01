@@ -31,7 +31,7 @@
     method: GET
     timeout: 5
     headers:
-      Host: "{{ puter_domain | default('os.dev.local') }}"
+      Host: "{{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     status_code: [200]
   register: _puter_ready
   until: _puter_ready.status | default(0) == 200

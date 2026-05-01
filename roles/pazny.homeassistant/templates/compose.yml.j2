@@ -33,7 +33,7 @@ services:
 {% if install_authentik | default(false) and not (homeassistant_privileged | default(false)) %}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     logging:
       driver: "json-file"

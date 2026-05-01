@@ -9,7 +9,7 @@
 
 homeassistant_version: "2026.4"                     # CVE-2026-34205 pin (Supervisor bypass)
 homeassistant_port: 8123
-homeassistant_domain: "home.dev.local"
+homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
 homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 

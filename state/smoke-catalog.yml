@@ -66,7 +66,7 @@ smoke_endpoints:
     note: "Bone is intentionally not behind Traefik (LAN agent)"
 
   - id: rustfs
-    url: "https://{{ rustfs_domain | default('fs.dev.local') }}/health"
+    url: "https://{{ rustfs_domain | default('fs' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/health"
     expect: [200]
     when: "install_rustfs | default(true)"
     note: "RustFS S3 — root returns 501 by spec, /health is the live probe"
@@ -75,7 +75,7 @@ smoke_endpoints:
     # code-server's container HTTPS handshake with curl/Go's TLS is
     # finicky on macOS Docker Desktop — accept a wider band so 'reachable'
     # counts as healthy. Login page returns 302 → /login.
-    url: "https://{{ code_server_domain | default('code.dev.local') }}/"
+    url: "https://{{ code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
     expect: [200, 302, 401, 404, 502]
     when: "install_code_server | default(false)"
 

@@ -37,7 +37,7 @@ services:
       DB_NAME: "{{ freescout_db_name | default('freescout') }}"
       DB_USER: "{{ freescout_db_user | default('freescout') }}"
       DB_PASS: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
-      SITE_URL: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
+      SITE_URL: "https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       ADMIN_EMAIL: "{{ freescout_admin_email | default(default_admin_email) }}"
       ADMIN_PASS: "{{ freescout_admin_password | default(global_password_prefix + '_pw_freescout') }}"
       TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
@@ -47,15 +47,15 @@ services:
       # These are read by the freescout-oauth module on bootstrap; the post.yml
       # also persists them into the module's DB settings for headless install.
       FREESCOUT_OIDC_ENABLED: "true"
-      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/.well-known/openid-configuration"
+      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration"
       FREESCOUT_OIDC_CLIENT_ID: "{{ authentik_oidc_freescout_client_id | default('nos-freescout') }}"
       FREESCOUT_OIDC_CLIENT_SECRET: "{{ authentik_oidc_freescout_client_secret | default(global_password_prefix + '_pw_oidc_freescout') }}"
-      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain | default('helpdesk.dev.local') }}/oauth/callback"
+      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/callback"
       FREESCOUT_OIDC_SCOPES: "openid profile email"
-      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
-      FREESCOUT_OIDC_USERINFO_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
-      FREESCOUT_OIDC_LOGOUT_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/freescout/end-session/"
+      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      FREESCOUT_OIDC_USERINFO_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
+      FREESCOUT_OIDC_LOGOUT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/end-session/"
       FREESCOUT_OIDC_DISPLAY_NAME: "Authentik"
       PHP_CURL_CAINFO: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
@@ -74,7 +74,7 @@ services:
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
 {% if install_mailpit | default(false) %}
       - "host.docker.internal:host-gateway"

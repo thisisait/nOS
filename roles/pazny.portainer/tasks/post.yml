@@ -156,9 +156,9 @@
         ClientID: "{{ authentik_oidc_portainer_client_id }}"
         ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
         # Browser-side URLs (HTTPS -> nginx -> Authentik): the user logs in via browser
-        AuthorizationURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-        RedirectURI: "https://{{ portainer_domain | default('portainer.dev.local') }}"
-        LogoutURI: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/portainer/end-session/"
+        AuthorizationURI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+        RedirectURI: "https://{{ portainer_domain | default('portainer' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+        LogoutURI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/portainer/end-session/"
         # Server-side URLs (HTTP → Docker interni sit): Portainer backend ↔ Authentik.
         # We use internal HTTP so Portainer (Go) does not have to trust the mkcert CA.
         AccessTokenURI: "http://authentik-server:9000/application/o/token/"

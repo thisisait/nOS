@@ -14,66 +14,66 @@
       ── AUTOMATICALLY CONFIGURED (login: admin / {{ global_password_prefix }}_pw_[service]) ──
 
       {% if install_observability | default(true) %}
-        Grafana          https://grafana.dev.local          admin / {{ global_password_prefix }}_pw_grafana
+        Grafana          https://{{ grafana_domain }}          admin / {{ global_password_prefix }}_pw_grafana
       {% endif %}
       {% if install_nextcloud | default(false) %}
-        Nextcloud        https://cloud.dev.local             admin / {{ global_password_prefix }}_pw_nextcloud_admin
+        Nextcloud        https://{{ nextcloud_domain }}             admin / {{ global_password_prefix }}_pw_nextcloud_admin
       {% endif %}
       {% if install_gitea | default(false) %}
-        Gitea            https://gitea.dev.local              {{ gitea_admin_user | default(ansible_facts['user_id']) }} / {{ global_password_prefix }}_pw_gitea
+        Gitea            https://{{ gitea_domain }}              {{ gitea_admin_user | default(ansible_facts['user_id']) }} / {{ global_password_prefix }}_pw_gitea
       {% endif %}
       {% if install_wordpress | default(false) %}
-        WordPress        https://wordpress.dev.local          admin / {{ global_password_prefix }}_pw_wordpress_admin
+        WordPress        https://{{ wordpress_domain }}          admin / {{ global_password_prefix }}_pw_wordpress_admin
       {% endif %}
       {% if install_freescout | default(false) %}
-        FreeScout        https://helpdesk.dev.local           {{ freescout_admin_email | default(default_admin_email) }} / {{ global_password_prefix }}_pw_freescout
+        FreeScout        https://{{ freescout_domain }}           {{ freescout_admin_email | default(default_admin_email) }} / {{ global_password_prefix }}_pw_freescout
       {% endif %}
       {% if install_portainer | default(false) %}
-        Portainer        https://portainer.dev.local          WARN: create admin account within 5 minutes!
+        Portainer        https://{{ portainer_domain }}          WARN: create admin account within 5 minutes!
       {% endif %}
       {% if install_rustfs | default(false) %}
-        RustFS           https://fs.dev.local                 {{ global_password_prefix }}_pw_rustfs_access / _secret
+        RustFS           https://{{ rustfs_domain }}                 {{ global_password_prefix }}_pw_rustfs_access / _secret
       {% endif %}
 
       ── REQUIRE MANUAL ONBOARDING ─────────────────────────────────────────────
 
       {% if install_jellyfin | default(false) %}
-        Jellyfin         https://media.dev.local              -> Run setup wizard
+        Jellyfin         https://{{ jellyfin_domain }}              -> Run setup wizard
       {% endif %}
       {% if install_homeassistant | default(false) %}
-        Home Assistant   https://home.dev.local               -> Run onboarding wizard
+        Home Assistant   https://{{ homeassistant_domain }}               -> Run onboarding wizard
       {% endif %}
       {% if install_n8n | default(false) %}
-        n8n              https://n8n.dev.local                 -> Register (first user = owner)
+        n8n              https://{{ n8n_domain }}                 -> Register (first user = owner)
                                                                  Ollama: Settings -> Credentials -> http://host.docker.internal:11434
       {% endif %}
       {% if install_openwebui | default(false) %}
-        Open WebUI       https://ai.dev.local                 -> Register (first user = admin)
+        Open WebUI       https://{{ openwebui_domain }}                 -> Register (first user = admin)
       {% endif %}
       {% if install_uptime_kuma | default(false) %}
-        Uptime Kuma      https://uptime.dev.local              -> Create admin account
+        Uptime Kuma      https://{{ uptime_kuma_domain }}              -> Create admin account
       {% endif %}
       {% if install_calibreweb | default(false) %}
-        Calibre-Web      https://books.dev.local               admin / admin123 (change password!)
+        Calibre-Web      https://{{ calibreweb_domain }}               admin / admin123 (change password!)
       {% endif %}
       {% if install_erpnext | default(false) %}
-        ERPNext          https://erp.dev.local                 Administrator / {{ global_password_prefix }}_pw_erpnext
+        ERPNext          https://{{ erpnext_domain }}                 Administrator / {{ global_password_prefix }}_pw_erpnext
                                                                  WARN: initialization takes 2-5 minutes after first start
       {% endif %}
       {% if install_outline | default(false) %}
-        Outline          https://wiki.dev.local                -> Requires SSO provider (Gitea OAuth / OIDC)
+        Outline          https://{{ outline_domain }}                -> Requires SSO provider (Gitea OAuth / OIDC)
       {% endif %}
       {% if install_metabase | default(false) %}
-        Metabase         https://bi.dev.local                  -> Register (first user = admin)
+        Metabase         https://{{ metabase_domain }}                  -> Register (first user = admin)
       {% endif %}
       {% if install_superset | default(false) %}
-        Superset         https://superset.dev.local            -> docker exec data-superset-1 superset fab create-admin
+        Superset         https://{{ superset_domain }}            -> docker exec data-superset-1 superset fab create-admin
       {% endif %}
       {% if install_bluesky_pds | default(false) %}
         Bluesky PDS      https://bsky.dev.lan                  -> goat CLI (admin auto-provisioned)
       {% endif %}
       {% if install_freepbx | default(false) %}
-        FreePBX          https://pbx.dev.local                 -> Run setup wizard
+        FreePBX          https://{{ freepbx_domain }}                 -> Run setup wizard
       {% endif %}
 
       ── INTERNAL SERVICES (no direct login) ───────────────────────────────────

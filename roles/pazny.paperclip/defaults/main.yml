@@ -9,7 +9,7 @@
 # ==============================================================================
 
 paperclip_version: "latest"
-paperclip_domain: "paperclip.dev.local"
+paperclip_domain: "paperclip{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 paperclip_port: 3006                              # 3100 collides with Loki on the host
 paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
 paperclip_db_name: "paperclip"

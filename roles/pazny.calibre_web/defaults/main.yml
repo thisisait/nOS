@@ -12,7 +12,7 @@
 
 calibreweb_version: "latest"
 calibreweb_port: 8083
-calibreweb_domain: "books.dev.local"
+calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"
 calibreweb_config_dir: "{{ ansible_facts['env']['HOME'] }}/calibre-web/config"
 calibreweb_timezone: "Europe/Prague"

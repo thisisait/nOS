@@ -42,7 +42,7 @@
         provider: "openidConnect"
         client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_id }}"
         client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_secret }}"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitea/.well-known/openid-configuration"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
         scopes: ["openid", "profile", "email"]
     status_code: [200, 201]
   when:
@@ -66,7 +66,7 @@
         provider: "openidConnect"
         client_id: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_id }}"
         client_secret: "{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'gitea') | first).client_secret }}"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitea/.well-known/openid-configuration"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
         scopes: ["openid", "profile", "email"]
     status_code: [200, 204]
   register: _gitea_source_patch
@@ -153,7 +153,7 @@
     php occ user_oidc:provider authentik
     --clientid="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_id }}"
     --clientsecret="{{ (authentik_oidc_apps | selectattr('slug', 'equalto', 'nextcloud') | first).client_secret }}"
-    --discoveryuri="https://{{ authentik_domain | default('auth.dev.local') }}/application/o/nextcloud/.well-known/openid-configuration"
+    --discoveryuri="https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/nextcloud/.well-known/openid-configuration"
     --mapping-uid="preferred_username"
     --mapping-email="email"
     --mapping-displayname="name"

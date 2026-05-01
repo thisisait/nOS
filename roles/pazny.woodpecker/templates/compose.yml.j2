@@ -21,17 +21,17 @@ services:
       - {{ woodpecker_data_dir }}:/var/lib/woodpecker
     environment:
       WOODPECKER_GITEA: "true"
-      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
+      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
       WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
       WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
-      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci.dev.local') }}"
+      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
       WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
     extra_hosts:
-      - "{{ gitea_domain | default('git.dev.local') }}:host-gateway"
+      - "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - devops_net

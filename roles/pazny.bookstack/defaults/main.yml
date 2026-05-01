@@ -14,7 +14,7 @@
 # ==============================================================================
 
 bookstack_version: "v26.03.3-ls256"                    # LSIO pinned stable tag
-bookstack_domain: "bookstack{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+bookstack_domain: "bookstack{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 bookstack_port: 3013                                    # unique — see PORT REGISTRY
 bookstack_data_dir: "{{ ansible_facts['env']['HOME'] }}/bookstack/config"
 bookstack_db_name: "bookstack"

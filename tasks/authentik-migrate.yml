@@ -32,7 +32,7 @@
     action: wait_api_reachable
     authentik_api_url: "{{ authentik_api_url | default(omit) }}"
     authentik_port: "{{ authentik_port | default(9003) }}"
-    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_domain: "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     authentik_api_token: "{{ authentik_api_token | default(omit) }}"
     secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
     verify_tls: "{{ authentik_verify_tls | default(false) }}"
@@ -47,7 +47,7 @@
     action: rename_group_prefix
     authentik_api_url: "{{ authentik_api_url | default(omit) }}"
     authentik_port: "{{ authentik_port | default(9003) }}"
-    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_domain: "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     authentik_api_token: "{{ authentik_api_token | default(omit) }}"
     secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
     verify_tls: "{{ authentik_verify_tls | default(false) }}"
@@ -64,7 +64,7 @@
     action: rename_oidc_client_prefix
     authentik_api_url: "{{ authentik_api_url | default(omit) }}"
     authentik_port: "{{ authentik_port | default(9003) }}"
-    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_domain: "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     authentik_api_token: "{{ authentik_api_token | default(omit) }}"
     secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
     verify_tls: "{{ authentik_verify_tls | default(false) }}"
@@ -81,7 +81,7 @@
     action: rename_group
     authentik_api_url: "{{ authentik_api_url | default(omit) }}"
     authentik_port: "{{ authentik_port | default(9003) }}"
-    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_domain: "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     authentik_api_token: "{{ authentik_api_token | default(omit) }}"
     secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
     verify_tls: "{{ authentik_verify_tls | default(false) }}"
@@ -99,7 +99,7 @@
     action: rename_oidc_client
     authentik_api_url: "{{ authentik_api_url | default(omit) }}"
     authentik_port: "{{ authentik_port | default(9003) }}"
-    authentik_domain: "{{ authentik_domain | default('auth.dev.local') }}"
+    authentik_domain: "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     authentik_api_token: "{{ authentik_api_token | default(omit) }}"
     secrets_path: "{{ authentik_secrets_path | default('~/.nos/secrets.yml') }}"
     verify_tls: "{{ authentik_verify_tls | default(false) }}"

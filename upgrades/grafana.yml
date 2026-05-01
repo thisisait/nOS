@@ -36,7 +36,7 @@ recipes:
         label: "pre-{{ upgrade_id }}"
       - id: export_dashboards
         type: http.get_all
-        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/search?type=dash-db"
         auth:
           type: bearer
           token_var: "grafana_admin_api_token"
@@ -54,7 +54,7 @@ recipes:
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/health"
         expect_status: 200
         timeout_sec: 120
         interval_sec: 3
@@ -62,7 +62,7 @@ recipes:
         type: custom.module
         module: ansible.builtin.uri
         args:
-          url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+          url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/health"
           return_content: true
         register_as: _g_health
 
@@ -102,7 +102,7 @@ recipes:
         label: "pre-{{ upgrade_id }}"
       - id: export_dashboards
         type: http.get_all
-        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/search?type=dash-db"
         auth:
           type: bearer
           token_var: "grafana_admin_api_token"
@@ -120,7 +120,7 @@ recipes:
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/health"
+        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/health"
         expect_status: 200
         timeout_sec: 120
         interval_sec: 3
@@ -128,7 +128,7 @@ recipes:
         type: custom.module
         module: ansible.builtin.uri
         args:
-          url: "https://{{ grafana_domain | default('grafana.dev.local') }}/api/search?type=dash-db"
+          url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/search?type=dash-db"
           headers:
             Authorization: "Bearer {{ grafana_admin_api_token | default('') }}"
           return_content: true

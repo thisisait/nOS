@@ -32,7 +32,7 @@ nos_state_oidc_client_id: "nos-state-manager"
 nos_state_oidc_client_secret: "{{ global_password_prefix }}_pw_agent_state_manager"
 nos_state_oidc_scopes:
   - "nos:state:write"
-nos_state_oidc_token_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
+nos_state_oidc_token_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
 
 # Generator tag — bumped when the role's on-disk layout changes. Mirrors
 # the GENERATOR_ID constant in module_utils/nos_state_lib.py.

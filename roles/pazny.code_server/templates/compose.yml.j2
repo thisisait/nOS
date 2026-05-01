@@ -35,7 +35,7 @@ services:
       PASSWORD: ""
       HASHED_PASSWORD: ""
       SUDO_PASSWORD: ""
-      PROXY_DOMAIN: "{{ code_server_domain | default('code.dev.local') }}"
+      PROXY_DOMAIN: "{{ code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       DEFAULT_WORKSPACE: "{{ code_server_default_workspace | default('/config/workspace') }}"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8443/healthz || curl -sf http://localhost:8443/ || exit 1"]
@@ -45,7 +45,7 @@ services:
       start_period: 60s
 {% if install_authentik | default(false) %}
     extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - devops_net

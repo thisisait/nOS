@@ -42,8 +42,8 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"
       GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana') }}"
-      GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana.dev.local') }}"
-      GF_SERVER_ROOT_URL: "https://{{ grafana_domain | default('grafana.dev.local') }}"
+      GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      GF_SERVER_ROOT_URL: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
@@ -62,9 +62,9 @@ services:
       GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ authentik_oidc_grafana_client_id }}"
       GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ authentik_oidc_grafana_client_secret }}"
       GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
-      GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
-      GF_AUTH_GENERIC_OAUTH_API_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo"
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      GF_AUTH_GENERIC_OAUTH_API_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo"
       GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
       GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
       GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: "email"
@@ -73,7 +73,7 @@ services:
       GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'nos-admins') && 'Admin' || 'Viewer'"
       GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC: "false"
       GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: "/etc/grafana/mkcert-ca.crt"
-      GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/grafana/end-session/"
+      GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/grafana/end-session/"
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
@@ -84,7 +84,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - observability_net

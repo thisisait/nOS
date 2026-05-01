@@ -32,7 +32,7 @@ services:
       - {{ puter_config_dir | default(ansible_facts['env']['HOME'] + '/puter/config') }}:/etc/puter
       - {{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data:/var/puter
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --header='Host: {{ puter_domain | default('os.dev.local') }}' http://127.0.0.1:4100/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --header='Host: {{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}' http://127.0.0.1:4100/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5

@@ -46,6 +46,6 @@
   ansible.builtin.debug:
     msg: >-
       Authentik {{ 'OK' if _authentik_health.status | default(0) in [200, 204] else 'UNAVAILABLE' }}
-      | Admin: https://{{ authentik_domain | default('auth.dev.local') }}/if/admin/
+      | Admin: https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/if/admin/
       | Login: akadmin / {{ authentik_bootstrap_password }}
       | (password is re-applied by the blueprint on every container start)

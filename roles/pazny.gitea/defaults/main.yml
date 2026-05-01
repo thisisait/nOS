@@ -8,7 +8,7 @@
 # ==============================================================================
 
 gitea_version: "1.25.5"                 # CVE-2026-gitea-template-traversal pin
-gitea_domain: "git.dev.local"
+gitea_domain: "git{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitea_port: 3003                        # 3000=Grafana, 3001=Uptime Kuma, 3002=reserved
 gitea_ssh_port: 2222
 gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"

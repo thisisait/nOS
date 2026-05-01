@@ -17,7 +17,7 @@
 # ==============================================================================
 
 mcpo_version: "main"                                    # ghcr nepublikuje semver, jen 'main' + 'latest'
-mcpo_domain: "mcp.dev.local"
+mcpo_domain: "mcp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mcpo_port: 8765                                         # host port
 mcpo_api_key: "{{ global_password_prefix }}_pw_mcpo"    # bearer token for OpenWebUI
 mcpo_data_dir: "{{ ansible_facts['env']['HOME'] }}/mcpo"

@@ -74,7 +74,7 @@
     msg: |
       ==========================================================================
        JELLYFIN - FIRST RUN
-       URL: https://{{ jellyfin_domain | default('media.dev.local') }}
+       URL: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Admin ucet + knihovny auto-setup pres Startup API (post.yml).
        Medialni slozky v kontejneru:
          /media/movies -> {{ jellyfin_movies_dir }}

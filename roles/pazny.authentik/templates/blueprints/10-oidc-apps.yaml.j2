@@ -96,8 +96,8 @@ entries:
 {% endif %}
 {% endfor %}
       config:
-        authentik_host: "https://{{ authentik_domain | default('auth.dev.local') }}"
-        authentik_host_browser: "https://{{ authentik_domain | default('auth.dev.local') }}"
+        authentik_host: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+        authentik_host_browser: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
         authentik_host_insecure: false
         log_level: "info"
         object_naming_template: "ak-outpost-%(name)s"

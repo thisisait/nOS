@@ -25,7 +25,7 @@ services:
       AUTH_SECRET: "{{ infisical_auth_secret }}"
       DB_CONNECTION_URI: "postgresql://{{ infisical_db_user | default('infisical') }}:{{ infisical_db_password }}@postgresql:5432/{{ infisical_db_name | default('infisical') }}"
       REDIS_URL: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379"
-      SITE_URL: "https://{{ infisical_domain | default('vault.dev.local') }}"
+      SITE_URL: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       TELEMETRY_ENABLED: "false"
 {% if install_authentik | default(false) %}
       # ── Native OIDC (Authentik) ─────────────────────────────────────────────
@@ -35,9 +35,9 @@ services:
       # by roles/pazny.infisical/tasks/post.yml when the orchestrator wires it.
       OIDC_CLIENT_ID: "{{ authentik_oidc_infisical_client_id | default('nos-infisical') }}"
       OIDC_CLIENT_SECRET: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
-      OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/infisical/.well-known/openid-configuration"
-      OIDC_ISSUER: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/infisical/"
-      OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault.dev.local') }}/api/v1/sso/oidc/callback"
+      OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
+      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
+      OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
 {% endif %}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
@@ -52,7 +52,7 @@ services:
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
 {% if install_mailpit | default(false) %}
       - "host.docker.internal:host-gateway"

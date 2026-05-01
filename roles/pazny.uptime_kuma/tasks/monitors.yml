@@ -161,7 +161,7 @@
         ntfy:
           enabled: "{{ install_ntfy | default(false) }}"
           name: "nOS → ntfy"
-          server_url: "https://{{ ntfy_domain | default('ntfy.dev.local') }}"
+          server_url: "https://{{ ntfy_domain | default('ntfy' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
           topic: "{{ uptime_kuma_ntfy_topic | default('nos-alerts') }}"
           is_default: true
         webhook:

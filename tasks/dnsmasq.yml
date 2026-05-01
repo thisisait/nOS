@@ -51,8 +51,10 @@
       listen-address={{ _dnsmasq_listen }}
       bind-interfaces
 
-      # Do not forward .local queries to upstream DNS (mDNS/Bonjour domain)
-      local=/dev.local/
+      # Do not forward queries for the configured tenant_domain to upstream
+      # DNS (treats e.g. .local / .lan / .test as authoritative locally —
+      # honouring tenant_domain so the dnsmasq scope follows operator's TLD).
+      local=/{{ dnsmasq_dev_domain | default('dev.local') }}/
       {% if install_bluesky_pds | default(false) %}
       local=/dev.lan/
       {% endif %}
@@ -109,8 +111,8 @@
     - dnsmasq_svc.rc != 0
     - "'already started' not in (dnsmasq_svc.stdout | default(''))"
 
-- name: Verify dnsmasq resolves dev.local correctly
-  ansible.builtin.command: "dig +short grafana.dev.local @127.0.0.1"
+- name: "Verify dnsmasq resolves {{ dnsmasq_dev_domain | default('dev.local') }} correctly"
+  ansible.builtin.command: "dig +short grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain | default('dev.local') }} @127.0.0.1"
   register: dns_check
   changed_when: false
   failed_when: false

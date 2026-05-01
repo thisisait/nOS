@@ -9,7 +9,7 @@
 # ==============================================================================
 
 outline_version: "latest"
-outline_domain: "wiki.dev.local"
+outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
 outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"

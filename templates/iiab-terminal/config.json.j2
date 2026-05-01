@@ -15,28 +15,28 @@
   "services": [
 {% set _svc = [] %}
 {% if install_observability | default(true) %}
-{% set _ = _svc.append({"name": "Grafana", "url": "https://" ~ grafana_domain | default('grafana.dev.local'), "port": grafana_port | default(3000), "description": "Metriky a dashboardy"}) %}
+{% set _ = _svc.append({"name": "Grafana", "url": "https://" ~ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": grafana_port | default(3000), "description": "Metriky a dashboardy"}) %}
 {% endif %}
 {% if install_kiwix | default(false) %}
-{% set _ = _svc.append({"name": "Kiwix", "url": "https://" ~ kiwix_domain | default('kiwix.dev.local'), "port": kiwix_port | default(8888), "description": "Offline Wikipedia"}) %}
+{% set _ = _svc.append({"name": "Kiwix", "url": "https://" ~ kiwix_domain | default('kiwix' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": kiwix_port | default(8888), "description": "Offline Wikipedia"}) %}
 {% endif %}
 {% if install_calibreweb | default(false) %}
-{% set _ = _svc.append({"name": "Calibre-Web", "url": "https://" ~ calibreweb_domain | default('books.dev.local'), "port": calibreweb_port | default(8083), "description": "E-book knihovna"}) %}
+{% set _ = _svc.append({"name": "Calibre-Web", "url": "https://" ~ calibreweb_domain | default('books' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": calibreweb_port | default(8083), "description": "E-book knihovna"}) %}
 {% endif %}
 {% if install_jellyfin | default(false) %}
-{% set _ = _svc.append({"name": "Jellyfin", "url": "https://" ~ jellyfin_domain | default('media.dev.local'), "port": jellyfin_port | default(8096), "description": "Media server"}) %}
+{% set _ = _svc.append({"name": "Jellyfin", "url": "https://" ~ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": jellyfin_port | default(8096), "description": "Media server"}) %}
 {% endif %}
 {% if install_nextcloud | default(false) %}
-{% set _ = _svc.append({"name": "Nextcloud", "url": "https://" ~ nextcloud_domain | default('cloud.dev.local'), "port": nextcloud_port | default(8085), "description": "Cloud uloziste"}) %}
+{% set _ = _svc.append({"name": "Nextcloud", "url": "https://" ~ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": nextcloud_port | default(8085), "description": "Cloud uloziste"}) %}
 {% endif %}
 {% if install_openwebui | default(false) %}
-{% set _ = _svc.append({"name": "Open WebUI", "url": "https://" ~ openwebui_domain | default('ai.dev.local'), "port": openwebui_port | default(3004), "description": "AI Chat (web)"}) %}
+{% set _ = _svc.append({"name": "Open WebUI", "url": "https://" ~ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": openwebui_port | default(3004), "description": "AI Chat (web)"}) %}
 {% endif %}
 {% if install_n8n | default(false) %}
-{% set _ = _svc.append({"name": "n8n", "url": "https://" ~ n8n_domain | default('n8n.dev.local'), "port": n8n_port | default(5678), "description": "Workflow automatizace"}) %}
+{% set _ = _svc.append({"name": "n8n", "url": "https://" ~ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": n8n_port | default(5678), "description": "Workflow automatizace"}) %}
 {% endif %}
 {% if install_gitea | default(false) %}
-{% set _ = _svc.append({"name": "Gitea", "url": "https://" ~ gitea_domain | default('git.dev.local'), "port": gitea_port | default(3003), "description": "Git server"}) %}
+{% set _ = _svc.append({"name": "Gitea", "url": "https://" ~ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), "port": gitea_port | default(3003), "description": "Git server"}) %}
 {% endif %}
 {% for s in _svc %}
     {{ s | to_json }}{{ "," if not loop.last else "" }}

@@ -67,7 +67,7 @@ ollama_models_dir: "{{ ansible_facts['env']['HOME'] }}/.ollama/models"
 
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true
-openclaw_domain: "claw.dev.local"
+openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openclaw_gateway_port: 18789
 
 # Agent name (persona)

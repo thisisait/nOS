@@ -10,7 +10,7 @@
 
 grafana_version: "12.4.2"                           # CVE-2026-27876 pin
 grafana_port: 3000
-grafana_domain: "grafana.dev.local"
+grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 grafana_admin_user: "admin"
 grafana_allow_embedding: false

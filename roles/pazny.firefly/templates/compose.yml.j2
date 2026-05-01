@@ -29,7 +29,7 @@ services:
       APP_DEBUG: "false"
       APP_KEY: "{{ firefly_app_key }}"
       SITE_OWNER: "{{ firefly_site_owner | default(default_admin_email) }}"
-      APP_URL: "https://{{ firefly_domain | default('firefly.dev.local') }}"
+      APP_URL: "https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       TRUSTED_PROXIES: "**"
       TZ: "{{ firefly_tz | default('Europe/Prague') }}"
       DEFAULT_LANGUAGE: "{{ firefly_default_language | default('en_US') }}"
@@ -84,7 +84,7 @@ services:
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
 {% if install_mailpit | default(false) %}
       - "host.docker.internal:host-gateway"

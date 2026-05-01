@@ -54,10 +54,10 @@
       ══════════════════════════════════════════════════════
        ntfy (Docker) ready
       ══════════════════════════════════════════════════════
-       URL:         https://{{ ntfy_domain | default('ntfy.dev.local') }}
+       URL:         https://{{ ntfy_domain | default('ntfy' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Container:   ntfy → 127.0.0.1:{{ ntfy_port | default(2586) }}
        Admin user:  {{ ntfy_admin_user | default('admin') }} / {{ ntfy_admin_password }}
-       CLI login:   ntfy login -u {{ ntfy_admin_user | default('admin') }} https://{{ ntfy_domain | default('ntfy.dev.local') }}
+       CLI login:   ntfy login -u {{ ntfy_admin_user | default('admin') }} https://{{ ntfy_domain | default('ntfy' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        SSO:         Authentik forward_auth (UI); ntfy ACL pro publish/subscribe
       ══════════════════════════════════════════════════════
   when: _ntfy_container.stdout | default('') | length > 0

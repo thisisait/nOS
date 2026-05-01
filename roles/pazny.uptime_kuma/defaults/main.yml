@@ -13,7 +13,7 @@
 
 uptime_kuma_version: "1"                            # "1" = latest v1.x; pin e.g. "1.23.13"
 uptime_kuma_port: 3001
-uptime_kuma_domain: "uptime.dev.local"
+uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_auto_monitors: true                     # Automatically create monitors for all install_* services

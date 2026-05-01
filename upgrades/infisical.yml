@@ -53,7 +53,7 @@ recipes:
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/status"
+        url: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/status"
         expect_status: 200
         timeout_sec: 120
         interval_sec: 3
@@ -61,7 +61,7 @@ recipes:
         type: custom.module
         module: ansible.builtin.uri
         args:
-          url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/v1/status"
+          url: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/status"
           return_content: true
           status_code: [200]
         ignore_errors: true
@@ -131,7 +131,7 @@ recipes:
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ infisical_domain | default('vault.dev.local') }}/api/status"
+        url: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/status"
         expect_status: 200
         timeout_sec: 120
         interval_sec: 3

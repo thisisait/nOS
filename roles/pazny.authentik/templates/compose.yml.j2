@@ -51,8 +51,8 @@ services:
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
       AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
       AUTHENTIK_COOKIE_DOMAIN: "{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-      AUTHENTIK_HOST: "https://{{ authentik_domain | default('auth.dev.local') }}"
-      AUTHENTIK_HOST_BROWSER: "https://{{ authentik_domain | default('auth.dev.local') }}"
+      AUTHENTIK_HOST: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      AUTHENTIK_HOST_BROWSER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via the host-gateway

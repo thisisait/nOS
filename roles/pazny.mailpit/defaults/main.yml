@@ -21,7 +21,7 @@
 mailpit_version: "v1.20"
 mailpit_smtp_port: 1025                              # SMTP listen port (apps relay here)
 mailpit_ui_port: 8025                                # Web UI / REST API port
-mailpit_domain: "mail{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+mailpit_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mailpit_data_dir: "{{ ansible_facts['env']['HOME'] }}/mailpit/data"
 mailpit_max_messages: 5000                           # Cap retained messages (older are pruned)
 mailpit_mem_limit: "{{ docker_mem_limit_micro | default('128m') }}"

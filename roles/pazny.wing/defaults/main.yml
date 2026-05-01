@@ -12,7 +12,7 @@
 # prefix rotation via global_password_prefix works consistently.
 # ==============================================================================
 
-wing_domain: "wing.dev.local"
+wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"

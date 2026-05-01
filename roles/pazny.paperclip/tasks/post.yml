@@ -46,7 +46,7 @@
     method: GET
     timeout: 5
     headers:
-      Host: "{{ paperclip_domain | default('paperclip.dev.local') }}"
+      Host: "{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     status_code: [200, 301, 302, 401, 403]
   register: _paperclip_ready
   until: _paperclip_ready.status | default(0) in [200, 301, 302, 401, 403]
@@ -57,7 +57,7 @@
 - name: "[pazny.paperclip Post] Register primary allowed hostname"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
-    pnpm paperclipai allowed-hostname {{ paperclip_domain | default('paperclip.dev.local') }}
+    pnpm paperclipai allowed-hostname {{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   register: _paperclip_hostname
   changed_when: _paperclip_hostname.rc | default(1) == 0
   failed_when: false
@@ -100,7 +100,7 @@
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai auth bootstrap-ceo
     --data-dir /paperclip
-    --base-url "https://{{ paperclip_domain | default('paperclip.dev.local') }}" 2>&1
+    --base-url "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}" 2>&1
   register: _paperclip_bootstrap
   when:
     # Only run when we're reasonably sure it's a first-run. The 'Count 0'
@@ -145,7 +145,7 @@
 - name: "[pazny.paperclip Post] Native OIDC — reachability check to Authentik issuer"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
-    sh -c 'curl -sfk -o /dev/null -w "%{http_code}" https://{{ authentik_domain | default("auth.dev.local") }}/application/o/paperclip/.well-known/openid-configuration'
+    sh -c 'curl -sfk -o /dev/null -w "%{http_code}" https://{{ authentik_domain | default("auth" ~ (_host_alias_seg | default("")) ~ "." ~ (tenant_domain | default("dev.local"))) }}/application/o/paperclip/.well-known/openid-configuration'
   register: _paperclip_oidc_reach
   changed_when: false
   failed_when: false

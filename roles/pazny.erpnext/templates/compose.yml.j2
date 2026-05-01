@@ -34,7 +34,7 @@ services:
         bench set-config -g redis_cache redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0 &&
         bench set-config -g redis_queue redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1 &&
         bench set-config -g redis_socketio redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2 &&
-        bench new-site {{ erpnext_site_name | default('erp.dev.local') }}
+        bench new-site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
         --no-mariadb-socket
         --db-root-username=root
         --db-root-password={{ mariadb_root_password }}

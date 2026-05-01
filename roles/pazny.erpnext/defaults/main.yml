@@ -14,8 +14,11 @@
 # ==============================================================================
 
 erpnext_version: "v15.98.1"                  # CVE-2026-27471 (CVSS 9.3 unauth doc access)
-erpnext_domain: "erp.dev.local"
+erpnext_domain: "erp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 erpnext_port: 8082                           # 8080 obsazen Traefik dashboardem
-erpnext_site_name: "erp.dev.local"
+# ERPNext bench requires the site name to match the FQDN it serves — derive
+# from erpnext_domain so the two stay in sync across host_alias / tenant_domain
+# permutations. Operator can still override explicitly if needed.
+erpnext_site_name: "{{ erpnext_domain }}"
 erpnext_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 erpnext_cpus: "{{ docker_cpus_standard | default('1.0') }}"

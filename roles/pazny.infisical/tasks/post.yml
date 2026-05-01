@@ -19,5 +19,5 @@
     msg: >-
       Infisical {{ 'OK' if _infisical_health.status | default(0) == 200
       else 'UNAVAILABLE - docker logs infra-infisical-1' }}
-      | Dashboard: https://{{ infisical_domain | default('vault.dev.local') }}
+      | Dashboard: https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
       | Signup: first user = admin

@@ -11,7 +11,7 @@ services:
   gitlab:
     image: gitlab/gitlab-ce:{{ gitlab_version | default('latest') }}
     restart: unless-stopped
-    hostname: "{{ gitlab_domain | default('gitlab.dev.local') }}"
+    hostname: "{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     shm_size: 256m
     ports:
       - "127.0.0.1:{{ gitlab_http_port | default(8929) }}:80"
@@ -25,7 +25,7 @@ services:
 {% endif %}
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://{{ gitlab_domain | default('gitlab.dev.local') }}'
+        external_url 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}'
         gitlab_rails['gitlab_shell_ssh_port'] = {{ gitlab_ssh_port | default(2224) }}
         nginx['listen_port'] = 80
         nginx['listen_https'] = false
@@ -44,11 +44,11 @@ services:
         gitlab_rails['omniauth_enabled'] = true
         gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
         gitlab_rails['omniauth_block_auto_created_users'] = false
-        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth.dev.local') }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab.dev.local') }}/users/auth/openid_connect/callback' } } }]
+        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:80/-/readiness || exit 1"]

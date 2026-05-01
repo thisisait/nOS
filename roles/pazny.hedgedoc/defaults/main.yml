@@ -10,7 +10,7 @@
 # ==============================================================================
 
 hedgedoc_version: "1.10.7"
-hedgedoc_domain: "hedgedoc{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+hedgedoc_domain: "hedgedoc{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 hedgedoc_port: 3012
 hedgedoc_data_dir: "{{ ansible_facts['env']['HOME'] }}/hedgedoc/uploads"
 hedgedoc_db_name: "hedgedoc"

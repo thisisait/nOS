@@ -58,7 +58,7 @@ recipes:
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ example_domain | default('example.dev.local') }}/health"
+        url: "https://{{ example_domain | default('example' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/health"
         expect_status: 200
         timeout_sec: 120
         interval_sec: 3

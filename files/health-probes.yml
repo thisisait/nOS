@@ -220,7 +220,7 @@ health_probes:
     # "Untrusted Host" → 500. Probe must carry a Host header matching
     # APP_TRUSTED_HOSTS (built from freescout_domain in the role).
     host_header_var: freescout_domain
-    host_header_default: "helpdesk.dev.local"
+    host_header_default: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
     hint: "docker compose -p b2b logs freescout"
 
   - slug: firefly
@@ -305,7 +305,7 @@ health_probes:
     port_var: uptime_kuma_port
     port_default: 3001
     onboarding: true
-    hint: "Open https://{{ uptime_kuma_domain | default('uptime.dev.local') }} and create an admin account"
+    hint: "Open https://{{ uptime_kuma_domain | default('uptime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }} and create an admin account"
 
   - slug: mailpit
     name: "Mailpit"
@@ -324,7 +324,7 @@ health_probes:
     port_var: wordpress_port
     port_default: 8084
     onboarding: true
-    hint: "Open https://{{ wordpress_domain | default('wp.dev.local') }}/wp-admin/install.php"
+    hint: "Open https://{{ wordpress_domain | default('wp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/wp-admin/install.php"
 
   - slug: kiwix
     name: "Kiwix"
@@ -359,4 +359,4 @@ health_probes:
     port_var: freepbx_port
     port_default: 8088
     onboarding: true
-    hint: "Open https://{{ freepbx_domain | default('pbx.dev.local') }} and go through the setup wizard."
+    hint: "Open https://{{ freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }} and go through the setup wizard."

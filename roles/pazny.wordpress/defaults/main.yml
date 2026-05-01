@@ -10,7 +10,7 @@
 
 wordpress_version: "latest"
 wordpress_port: 8084
-wordpress_domain: "wordpress.dev.local"
+wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
 wordpress_db_name: "wordpress"
 wordpress_db_user: "wordpress"

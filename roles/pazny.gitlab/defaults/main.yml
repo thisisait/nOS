@@ -8,7 +8,7 @@
 # ==============================================================================
 
 gitlab_version: "18.10.3-ce.0"          # aligned with default.config.yml (CVE-2026-5173, CVE-2026-1092, CVE-2025-12664)
-gitlab_domain: "gitlab.dev.local"
+gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929                  # Internal HTTP port (nginx handles SSL)
 gitlab_ssh_port: 2224                   # Git SSH (22=system, 2222=Gitea)
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"

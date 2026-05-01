@@ -84,7 +84,7 @@
     php occ config:system:set trusted_domains {{ item.index }}
     --value={{ item.domain | quote }}
   loop:
-    - { index: 0, domain: "{{ nextcloud_domain | default('cloud.dev.local') }}" }
+    - { index: 0, domain: "{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}" }
     - { index: 1, domain: "localhost" }
     - { index: 2, domain: "127.0.0.1" }
   loop_control:

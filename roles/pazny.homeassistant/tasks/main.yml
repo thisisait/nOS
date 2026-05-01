@@ -127,7 +127,7 @@
       auth_oidc:
         client_id: !secret oidc_client_id
         client_secret: !secret oidc_client_secret
-        discovery_url: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/homeassistant/.well-known/openid-configuration"
+        discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/homeassistant/.well-known/openid-configuration"
         display_name: "Authentik"
         features:
           automatic_user_linking: true

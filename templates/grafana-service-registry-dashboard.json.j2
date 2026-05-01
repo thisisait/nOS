@@ -29,103 +29,103 @@
 {# ── Panel 1: Tier 1 cards ──────────────────────────────────────────────── #}
 {% set _cards = [] %}
 {% if install_observability | default(true) %}
-{% set _ = _cards.append(card("Grafana", grafana_domain | default('grafana.dev.local'), grafana_port | default(3000), "Monitoring and dashboards", "observability")) %}
+{% set _ = _cards.append(card("Grafana", grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), grafana_port | default(3000), "Monitoring and dashboards", "observability")) %}
 {% endif %}
 {% if install_wordpress | default(false) %}
-{% set _ = _cards.append(card("WordPress", wordpress_domain | default('wordpress.dev.local'), wordpress_port | default(8084), "CMS and blog", "iiab")) %}
+{% set _ = _cards.append(card("WordPress", wordpress_domain | default('wordpress' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), wordpress_port | default(8084), "CMS and blog", "iiab")) %}
 {% endif %}
 {% if install_nextcloud | default(false) %}
-{% set _ = _cards.append(card("Nextcloud", nextcloud_domain | default('cloud.dev.local'), nextcloud_port | default(8085), "Cloud storage", "iiab")) %}
+{% set _ = _cards.append(card("Nextcloud", nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), nextcloud_port | default(8085), "Cloud storage", "iiab")) %}
 {% endif %}
 {% if install_n8n | default(false) %}
-{% set _ = _cards.append(card("n8n", n8n_domain | default('n8n.dev.local'), n8n_port | default(5678), "Workflow automation", "iiab")) %}
+{% set _ = _cards.append(card("n8n", n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), n8n_port | default(5678), "Workflow automation", "iiab")) %}
 {% endif %}
 {% if install_kiwix | default(false) %}
-{% set _ = _cards.append(card("Kiwix", kiwix_domain | default('kiwix.dev.local'), kiwix_port | default(8888), "Offline Wikipedia", "iiab")) %}
+{% set _ = _cards.append(card("Kiwix", kiwix_domain | default('kiwix' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), kiwix_port | default(8888), "Offline Wikipedia", "iiab")) %}
 {% endif %}
 {% if install_jellyfin | default(false) %}
-{% set _ = _cards.append(card("Jellyfin", jellyfin_domain | default('media.dev.local'), jellyfin_port | default(8096), "Media server", "iiab")) %}
+{% set _ = _cards.append(card("Jellyfin", jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), jellyfin_port | default(8096), "Media server", "iiab")) %}
 {% endif %}
 {% if install_gitea | default(false) %}
-{% set _ = _cards.append(card("Gitea", gitea_domain | default('git.dev.local'), gitea_port | default(3003), "Self-hosted Git", "devops")) %}
+{% set _ = _cards.append(card("Gitea", gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), gitea_port | default(3003), "Self-hosted Git", "devops")) %}
 {% endif %}
 {% if install_gitlab | default(false) %}
-{% set _ = _cards.append(card("GitLab", gitlab_domain | default('gitlab.dev.local'), gitlab_http_port | default(8929), "DevOps platform", "devops")) %}
+{% set _ = _cards.append(card("GitLab", gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), gitlab_http_port | default(8929), "DevOps platform", "devops")) %}
 {% endif %}
 {% if install_woodpecker | default(false) %}
-{% set _ = _cards.append(card("Woodpecker CI", woodpecker_domain | default('ci.dev.local'), woodpecker_port | default(8060), "CI/CD pipeline", "devops")) %}
+{% set _ = _cards.append(card("Woodpecker CI", woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), woodpecker_port | default(8060), "CI/CD pipeline", "devops")) %}
 {% endif %}
 {% if install_openwebui | default(false) %}
-{% set _ = _cards.append(card("Open WebUI", openwebui_domain | default('ai.dev.local'), openwebui_port | default(3004), "Chat UI for Ollama", "iiab")) %}
+{% set _ = _cards.append(card("Open WebUI", openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), openwebui_port | default(3004), "Chat UI for Ollama", "iiab")) %}
 {% endif %}
 {% if install_portainer | default(false) %}
-{% set _ = _cards.append(card("Portainer", portainer_domain | default('portainer.dev.local'), portainer_port | default(9002), "Docker management", "infra")) %}
+{% set _ = _cards.append(card("Portainer", portainer_domain | default('portainer' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), portainer_port | default(9002), "Docker management", "infra")) %}
 {% endif %}
 {% if install_uptime_kuma | default(false) %}
-{% set _ = _cards.append(card("Uptime Kuma", uptime_kuma_domain | default('uptime.dev.local'), uptime_kuma_port | default(3001), "Availability monitoring", "iiab")) %}
+{% set _ = _cards.append(card("Uptime Kuma", uptime_kuma_domain | default('uptime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), uptime_kuma_port | default(3001), "Availability monitoring", "iiab")) %}
 {% endif %}
 {% if install_calibreweb | default(false) %}
-{% set _ = _cards.append(card("Calibre-Web", calibreweb_domain | default('books.dev.local'), calibreweb_port | default(8083), "eBook server", "iiab")) %}
+{% set _ = _cards.append(card("Calibre-Web", calibreweb_domain | default('books' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), calibreweb_port | default(8083), "eBook server", "iiab")) %}
 {% endif %}
 {% if install_homeassistant | default(false) %}
-{% set _ = _cards.append(card("Home Assistant", homeassistant_domain | default('home.dev.local'), homeassistant_port | default(8123), "Home automation", "iiab")) %}
+{% set _ = _cards.append(card("Home Assistant", homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), homeassistant_port | default(8123), "Home automation", "iiab")) %}
 {% endif %}
 {% if install_rustfs | default(false) %}
-{% set _ = _cards.append(card("RustFS", rustfs_domain | default('fs.dev.local'), rustfs_console_port | default(9001), "S3 object storage", "iiab")) %}
+{% set _ = _cards.append(card("RustFS", rustfs_domain | default('fs' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), rustfs_console_port | default(9001), "S3 object storage", "iiab")) %}
 {% endif %}
 {% if install_traefik | default(false) %}
-{% set _ = _cards.append(card("Traefik", traefik_domain | default('traefik.dev.local'), traefik_dashboard_port | default(8080), "Reverse proxy dashboard", "infra")) %}
+{% set _ = _cards.append(card("Traefik", traefik_domain | default('traefik' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), traefik_dashboard_port | default(8080), "Reverse proxy dashboard", "infra")) %}
 {% endif %}
 {% if install_openclaw | default(false) %}
-{% set _ = _cards.append(card("OpenClaw", openclaw_domain | default('claw.dev.local'), openclaw_gateway_port | default(18789), "AI Agent Gateway", "agent")) %}
+{% set _ = _cards.append(card("OpenClaw", openclaw_domain | default('claw' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), openclaw_gateway_port | default(18789), "AI Agent Gateway", "agent")) %}
 {% endif %}
 {% if install_erpnext | default(false) %}
-{% set _ = _cards.append(card("ERPNext", erpnext_domain | default('erp.dev.local'), erpnext_port | default(8082), "CRM/ERP system", "b2b")) %}
+{% set _ = _cards.append(card("ERPNext", erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), erpnext_port | default(8082), "CRM/ERP system", "b2b")) %}
 {% endif %}
 {% if install_freescout | default(false) %}
-{% set _ = _cards.append(card("FreeScout", freescout_domain | default('helpdesk.dev.local'), freescout_port | default(8090), "Helpdesk and ticketing", "b2b")) %}
+{% set _ = _cards.append(card("FreeScout", freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), freescout_port | default(8090), "Helpdesk and ticketing", "b2b")) %}
 {% endif %}
 {% if install_outline | default(false) %}
-{% set _ = _cards.append(card("Outline", outline_domain | default('wiki.dev.local'), outline_port | default(3005), "Team wiki", "b2b")) %}
+{% set _ = _cards.append(card("Outline", outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), outline_port | default(3005), "Team wiki", "b2b")) %}
 {% endif %}
 {% if install_metabase | default(false) %}
-{% set _ = _cards.append(card("Metabase", metabase_domain | default('bi.dev.local'), metabase_port | default(3002), "BI dashboards", "data")) %}
+{% set _ = _cards.append(card("Metabase", metabase_domain | default('bi' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), metabase_port | default(3002), "BI dashboards", "data")) %}
 {% endif %}
 {% if install_superset | default(false) %}
-{% set _ = _cards.append(card("Superset", superset_domain | default('superset.dev.local'), superset_port | default(8089), "Data visualization", "data")) %}
+{% set _ = _cards.append(card("Superset", superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), superset_port | default(8089), "Data visualization", "data")) %}
 {% endif %}
 {% if install_freepbx | default(false) %}
-{% set _ = _cards.append(card("FreePBX", freepbx_domain | default('pbx.dev.local'), freepbx_port | default(8088), "VoIP phone exchange", "voip")) %}
+{% set _ = _cards.append(card("FreePBX", freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), freepbx_port | default(8088), "VoIP phone exchange", "voip")) %}
 {% endif %}
 {% if install_qgis_server | default(false) %}
-{% set _ = _cards.append(card("QGIS Server", qgis_domain | default('gis.dev.local'), qgis_port | default(8071), "GIS map server", "engineering")) %}
+{% set _ = _cards.append(card("QGIS Server", qgis_domain | default('gis' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), qgis_port | default(8071), "GIS map server", "engineering")) %}
 {% endif %}
 {% if install_bluesky_pds | default(false) %}
 {% set _ = _cards.append(card("Bluesky PDS", bluesky_pds_hostname | default('bsky.dev.lan'), bluesky_pds_port | default(2583), "AT Protocol PDS", "infra")) %}
 {% endif %}
 {% if install_offline_maps | default(false) %}
-{% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps.dev.local'), maps_port | default(8081), "Offline maps", "iiab")) %}
+{% set _ = _cards.append(card("Tileserver GL", maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), maps_port | default(8081), "Offline maps", "iiab")) %}
 {% endif %}
 {% if install_wing | default(install_php | default(true)) %}
-{% set _ = _cards.append(card("Wing", wing_domain | default('wing.dev.local'), 443, "Security Research Dashboard", "security")) %}
+{% set _ = _cards.append(card("Wing", wing_domain | default('wing' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), 443, "Security Research Dashboard", "security")) %}
 {% endif %}
 {% if install_authentik | default(false) %}
-{% set _ = _cards.append(card("Authentik", authentik_domain | default('auth.dev.local'), authentik_port | default(9003), "SSO / Identity Provider", "infra")) %}
+{% set _ = _cards.append(card("Authentik", authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), authentik_port | default(9003), "SSO / Identity Provider", "infra")) %}
 {% endif %}
 {% if install_infisical | default(false) %}
-{% set _ = _cards.append(card("Infisical", infisical_domain | default('vault.dev.local'), infisical_port | default(8075), "Secrets vault", "infra")) %}
+{% set _ = _cards.append(card("Infisical", infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), infisical_port | default(8075), "Secrets vault", "infra")) %}
 {% endif %}
 {% if install_vaultwarden | default(false) %}
-{% set _ = _cards.append(card("Vaultwarden", vaultwarden_domain | default('pass.dev.local'), vaultwarden_port | default(8062), "Password vault", "iiab")) %}
+{% set _ = _cards.append(card("Vaultwarden", vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), vaultwarden_port | default(8062), "Password vault", "iiab")) %}
 {% endif %}
 {% if install_puter | default(false) %}
-{% set _ = _cards.append(card("Puter", puter_domain | default('os.dev.local'), puter_port | default(5050), "Cloud OS desktop", "iiab")) %}
+{% set _ = _cards.append(card("Puter", puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), puter_port | default(5050), "Cloud OS desktop", "iiab")) %}
 {% endif %}
 {% if install_paperclip | default(false) %}
-{% set _ = _cards.append(card("Paperclip", paperclip_domain | default('paperclip.dev.local'), paperclip_port | default(3006), "AI agent orchestration", "devops")) %}
+{% set _ = _cards.append(card("Paperclip", paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), paperclip_port | default(3006), "AI agent orchestration", "devops")) %}
 {% endif %}
 {% if install_jsos | default(false) %}
-{% set _ = _cards.append(card("jsOS", jsos_domain | default('jsos.dev.local'), jsos_port | default(8070), "Web desktop (OS.js)", "desktop")) %}
+{% set _ = _cards.append(card("jsOS", jsos_domain | default('jsos' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), jsos_port | default(8070), "Web desktop (OS.js)", "desktop")) %}
 {% endif %}
 {# ── Panel 2: Tier 2 table rows ─────────────────────────────────────────── #}
 {% set _rows = [] %}

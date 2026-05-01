@@ -18,7 +18,7 @@
 
 - name: "[pazny.erpnext Post] Check if site already configured"
   ansible.builtin.stat:
-    path: "{{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}/{{ erpnext_site_name | default('erp.dev.local') }}/site_config.json"
+    path: "{{ erpnext_data_dir | default(ansible_facts['env']['HOME'] + '/erpnext/sites') }}/{{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/site_config.json"
   register: _erpnext_site_config
 
 # ── Pripad 1: site neexistuje → full retry ────────────────────────────────────
@@ -66,7 +66,7 @@
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T erpnext-backend bash -c '
       find /home/frappe/frappe-bench/sites -name "*.lock" -delete 2>/dev/null || true
-      bench --site {{ erpnext_site_name | default("erp.dev.local") }} migrate 2>&1
+      bench --site {{ erpnext_site_name | default("erp" ~ (_host_alias_seg | default("")) ~ "." ~ (tenant_domain | default("dev.local"))) }} migrate 2>&1
     '
   register: _erpnext_migrate
   retries: 3
@@ -103,7 +103,7 @@
 - name: "[pazny.erpnext Post] Reconverge Administrator password"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b exec -T erpnext-backend
-    bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+    bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
     set-admin-password {{ erpnext_admin_password | quote }} 2>&1
   register: _erpnext_pw_reset
   when: _erpnext_site_config.stat.exists
@@ -121,7 +121,7 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
     headers:
-      Host: "{{ erpnext_site_name | default('erp.dev.local') }}"
+      Host: "{{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     status_code: [200, 403, 417]
     timeout: 10
   register: _erpnext_health
@@ -155,7 +155,7 @@
     - name: "[pazny.erpnext Post] Check for existing Authentik Social Login Key"
       ansible.builtin.shell: >
         {{ docker_bin }} compose -p b2b exec -T erpnext-backend
-        bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+        bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
         execute frappe.client.get_list
         --kwargs '{"doctype":"Social Login Key","filters":{"provider_name":"Authentik"}}'
         2>&1
@@ -166,7 +166,7 @@
     - name: "[pazny.erpnext Post] Create Authentik Social Login Key (first run only)"
       ansible.builtin.shell: >
         {{ docker_bin }} compose -p b2b exec -T erpnext-backend
-        bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+        bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
         execute frappe.client.insert
         --kwargs '{{ _erpnext_slk_payload | to_json }}'
         2>&1
@@ -178,7 +178,7 @@
             social_login_provider: "Custom"
             client_id: "{{ authentik_oidc_erpnext_client_id | default('nos-erpnext') }}"
             client_secret: "{{ authentik_oidc_erpnext_client_secret | default(global_password_prefix + '_pw_oidc_erpnext') }}"
-            base_url: "https://{{ authentik_domain | default('auth.dev.local') }}"
+            base_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
             authorize_url: "/application/o/authorize/"
             access_token_url: "/application/o/token/"
             api_endpoint: "/application/o/userinfo/"

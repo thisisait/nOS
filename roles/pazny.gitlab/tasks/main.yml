@@ -39,7 +39,7 @@
       # Edit via config.yml variables, not directly here.
       # ===========================================================================
 
-      external_url 'https://{{ gitlab_domain | default("gitlab.dev.local") }}'
+      external_url 'https://{{ gitlab_domain | default("gitlab" ~ (_host_alias_seg | default("")) ~ "." ~ (tenant_domain | default("dev.local"))) }}'
 
       # ── Interni nginx (reverzni proxy prebira SSL) ────────────────────────────
       nginx['listen_port']  = 80
@@ -104,6 +104,6 @@
       ||  GitLab takes 2-5 minutes to start. Watch:                           ||
       ║    docker logs -f gitlab                                             ║
       ║                                                                      ║
-      ║  Admin URL: https://{{ gitlab_domain | default("gitlab.dev.local") }}║
+      ║  Admin URL: https://{{ gitlab_domain | default("gitlab" ~ (_host_alias_seg | default("")) ~ "." ~ (tenant_domain | default("dev.local"))) }}║
       ║  SSH klon: git clone ssh://git@localhost:{{ gitlab_ssh_port | default(2224) }}/group/repo.git
       ==========================================================================

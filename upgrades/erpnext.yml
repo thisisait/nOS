@@ -35,7 +35,7 @@ recipes:
         type: exec.shell
         command: >-
           docker compose -p b2b exec -T erpnext-backend
-          bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+          bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
           backup --with-files
           --backup-path /home/frappe/frappe-bench/sites/_backups/pre-{{ upgrade_id }}
         allow_shell: true
@@ -73,7 +73,7 @@ recipes:
         type: exec.shell
         command: >-
           docker compose -p b2b exec -T erpnext-backend
-          bench --site {{ erpnext_site_name | default('erp.dev.local') }} migrate
+          bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }} migrate
         allow_shell: true
         # Accept 'Queued rebuilding of search index' as success marker — bench
         # queues async work after DDL and returns non-zero on the worker hand-off.
@@ -81,12 +81,12 @@ recipes:
         type: exec.shell
         command: >-
           docker compose -p b2b exec -T erpnext-backend
-          bench --site {{ erpnext_site_name | default('erp.dev.local') }} clear-cache
+          bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }} clear-cache
         allow_shell: true
       - id: wait_api
         type: http.wait
         url: "http://127.0.0.1:{{ erpnext_port | default(8082) }}/api/method/frappe.ping"
-        host_header: "{{ erpnext_site_name | default('erp.dev.local') }}"
+        host_header: "{{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
         expect_status: [200, 403, 417]
         timeout_sec: 180
         interval_sec: 5
@@ -102,7 +102,7 @@ recipes:
         type: exec.shell
         command: >-
           docker compose -p b2b exec -T erpnext-backend
-          bench --site {{ erpnext_site_name | default('erp.dev.local') }}
+          bench --site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
           restore
           /home/frappe/frappe-bench/sites/_backups/pre-{{ upgrade_id }}/database.sql.gz
         allow_shell: true

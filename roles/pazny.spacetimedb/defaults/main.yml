@@ -26,7 +26,7 @@
 
 spacetimedb_version: "latest"                    # pin to a specific tag (e.g. "1.5") for production
 spacetimedb_port: 3030                           # host port → container 3000 (HTTP + WebSocket)
-spacetimedb_domain: "spacetime.dev.local"
+spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_data_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/data"
 spacetimedb_keys_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/keys"
 spacetimedb_mem_limit: "{{ docker_mem_limit_standard | default('2g') }}"
@@ -41,7 +41,7 @@ spacetimedb_cli_install_url: "https://install.spacetimedb.com"
 # Authentik issuer URL — exposed as an env var so client apps + future
 # modules can read it from the registry. Server-side does not need it
 # (validation is per-token, JWKS is fetched on demand).
-spacetimedb_oidc_issuer: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/spacetimedb/"
+spacetimedb_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/spacetimedb/"
 
 # Onboarding: dev database name created post-start. Empty string disables.
 # Note: actually publishing a module requires a WASM artifact; the post-start

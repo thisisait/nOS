@@ -12,7 +12,7 @@
 # ==============================================================================
 
 woodpecker_version: "v3"                # latest tag removed, must be semver
-woodpecker_domain: "ci.dev.local"
+woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 woodpecker_port: 8060                   # Web UI
 woodpecker_grpc_port: 9060              # gRPC pro agenty (interni)
 woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"

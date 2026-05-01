@@ -19,7 +19,7 @@ services:
       - "127.0.0.1:{{ jellyfin_port | default(8096) }}:8096"
 {% endif %}
     environment:
-      JELLYFIN_PublishedServerUrl: "https://{{ jellyfin_domain | default('media.dev.local') }}"
+      JELLYFIN_PublishedServerUrl: "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     volumes:
       - {{ jellyfin_config_dir }}:/config
       - {{ jellyfin_cache_dir }}:/cache

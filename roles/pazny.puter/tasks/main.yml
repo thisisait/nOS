@@ -44,8 +44,8 @@
       ══════════════════════════════════════════════════════
        Puter cloud OS ready (starts via the IIAB stack)
       ══════════════════════════════════════════════════════
-       URL:       https://{{ puter_domain | default('os.dev.local') }}
-       API:       https://{{ puter_api_domain | default('api.os.dev.local') }}
+       URL:       https://{{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+       API:       https://{{ puter_api_domain | default('api.os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Port:      {{ puter_port | default(5050) }}
        Data:      {{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}
        Ollama:    auto-detect (localhost:11434)

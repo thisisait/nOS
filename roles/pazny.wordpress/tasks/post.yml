@@ -48,7 +48,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
     exec -T wordpress wp core install --allow-root
-    --url="https://{{ wordpress_domain | default('wordpress.dev.local') }}"
+    --url="https://{{ wordpress_domain | default('wordpress' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     --title="Dev WordPress"
     --admin_user="{{ wordpress_admin_user | default('admin') }}"
     --admin_password="{{ wordpress_admin_password }}"

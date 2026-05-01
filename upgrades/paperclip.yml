@@ -56,7 +56,7 @@ recipes:
       - id: wait_http
         type: http.wait
         url: "http://127.0.0.1:{{ paperclip_port | default(3006) }}/"
-        host_header: "{{ paperclip_domain | default('paperclip.dev.local') }}"
+        host_header: "{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
         expect_status: [200, 302, 401, 403]
         timeout_sec: 120
         interval_sec: 3

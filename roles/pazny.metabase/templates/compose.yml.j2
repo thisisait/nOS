@@ -26,7 +26,7 @@ services:
       MB_DB_USER: "{{ metabase_db_user | default('metabase') }}"
       MB_DB_PASS: "{{ metabase_db_password | default(global_password_prefix + '_pw_metabase') }}"
       MB_DB_HOST: postgresql
-      MB_EMBEDDING_APP_ORIGIN: "https://{{ puter_domain | default('os.dev.local') }}"
+      MB_EMBEDDING_APP_ORIGIN: "https://{{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       JAVA_TIMEZONE: "{{ metabase_timezone | default('Europe/Prague') }}"
     networks:
       - data_net

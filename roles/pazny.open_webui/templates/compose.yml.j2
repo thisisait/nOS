@@ -58,7 +58,7 @@ services:
       OAUTH_PROVIDER_NAME: "Authentik"
       OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
       OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
-      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/open-webui/.well-known/openid-configuration"
+      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/open-webui/.well-known/openid-configuration"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
       OAUTH_SCOPES: "openid profile email"
 {% endif %}
@@ -71,7 +71,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - iiab_net

@@ -31,7 +31,7 @@ services:
       CREATE_ADMIN: "1"
       ADMIN_USERNAME: "admin"
       ADMIN_PASSWORD: "{{ miniflux_admin_password | default(global_password_prefix + '_pw_miniflux_admin') }}"
-      BASE_URL: "https://{{ miniflux_domain | default('rss.dev.local') }}"
+      BASE_URL: "https://{{ miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       LISTEN_ADDR: ":8080"
       LOG_LEVEL: "info"
       METRICS_COLLECTOR: "1"
@@ -41,8 +41,8 @@ services:
       OAUTH2_PROVIDER: "oidc"
       OAUTH2_CLIENT_ID: "{{ authentik_oidc_miniflux_client_id }}"
       OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_miniflux_client_secret }}"
-      OAUTH2_REDIRECT_URL: "https://{{ miniflux_domain | default('rss.dev.local') }}/oauth2/oidc/callback"
-      OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/miniflux/"
+      OAUTH2_REDIRECT_URL: "https://{{ miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth2/oidc/callback"
+      OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/miniflux/"
       OAUTH2_OIDC_PROVIDER_NAME: "Authentik"
       OAUTH2_USER_CREATION: "1"
       DISABLE_LOCAL_AUTH: "0"
@@ -58,7 +58,7 @@ services:
 {% endif %}
 {% if install_authentik | default(false) %}
     extra_hosts:
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
     networks:
       - iiab_net

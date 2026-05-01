@@ -8,7 +8,7 @@
 # stay in the playbook repo — the role references them via playbook_dir path.
 # ==============================================================================
 
-jsos_domain: "jsos.dev.local"
+jsos_domain: "jsos{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jsos_port: 8070
 jsos_dir: "{{ ansible_facts['env']['HOME'] }}/projects/jsOs"
 jsos_db_name: "jsos"

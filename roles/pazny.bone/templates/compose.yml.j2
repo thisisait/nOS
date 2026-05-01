@@ -48,7 +48,7 @@ services:
       # `issuer_mode: global` emits `iss = https://<authentik_domain>/`
       # (root URL, trailing slash, no /application/o/). The trailing
       # slash matters — PyJWT's verify_iss does strict string match.
-      AUTHENTIK_OIDC_ISSUER: "{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth.dev.local')) + '/') }}"
+      AUTHENTIK_OIDC_ISSUER: "{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) + '/') }}"
       # JWKS fetch URL — internal compose-network HTTP endpoint, NOT the
       # public HTTPS URL. Avoids TLS trust dance + DNS resolution for
       # `auth.<tld>` from inside the container. Any agent's slug works

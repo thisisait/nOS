@@ -12,7 +12,7 @@
 
 authentik_version: "2025.12.4"                      # CVE-2026-25227 pin (CVSS 9.1)
 authentik_port: 9003                                # 9000=PHP-FPM, 9001=RustFS, 9002=Portainer
-authentik_domain: "auth.dev.local"
+authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
 authentik_db_name: "authentik"
 authentik_db_user: "authentik"

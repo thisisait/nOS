@@ -18,9 +18,11 @@
 # `-e apps_dir=/path/to/some/dir`.
 apps_dir: "{{ playbook_dir }}/apps"
 
-# Tier-2 hostname pattern: <id>.<apps_subdomain>.<tenant_domain>
+# Tier-2 hostname pattern: <id>[.<host_alias>].<apps_subdomain>.<tenant_domain>
 # Set apps_subdomain: "" to expose Tier-2 directly under the TLD (rare —
-# would clash with Tier-1 routes).
+# would clash with Tier-1 routes). The play-level default.config.yml hoists
+# this same key for operator visibility; this role default is the fallback
+# for direct role invocation outside main.yml.
 apps_subdomain: "apps"
 
 # EU-residency allow-list extension. The parser hard-fails any compose

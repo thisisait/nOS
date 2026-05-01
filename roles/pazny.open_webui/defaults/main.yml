@@ -12,7 +12,7 @@
 
 openwebui_version: "0.8.12"                         # Native MCP + function calling + code exec (0.8.x)
 openwebui_port: 3004                                # Container 8080 → host 3004
-openwebui_domain: "ai.dev.local"
+openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_enable_signup: true                       # false = admin manually adds users
 openwebui_admin_name: "Admin"

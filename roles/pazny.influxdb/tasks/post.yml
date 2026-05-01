@@ -84,7 +84,7 @@
       ══════════════════════════════════════════════════════
        InfluxDB 2.x (Docker) ready
       ══════════════════════════════════════════════════════
-       URL:         https://{{ influxdb_domain | default('influx.dev.local') }}
+       URL:         https://{{ influxdb_domain | default('influx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Container:   influxdb → 127.0.0.1:{{ influxdb_port | default(8086) }}
        Admin user:  {{ influxdb_admin_user | default('admin') }}
        Org:         {{ influxdb_org | default('nos') }}

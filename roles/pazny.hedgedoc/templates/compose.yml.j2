@@ -31,7 +31,7 @@ services:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
       CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
       # ── Public URL / protocol ──────────────────────────────────────────────
-      CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc.dev.local') }}"
+      CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       CMD_URL_ADDPORT: "false"
       CMD_PROTOCOL_USESSL: "true"
       CMD_HOST: "0.0.0.0"
@@ -49,9 +49,9 @@ services:
       CMD_OAUTH2_PROVIDERNAME: "Authentik"
       CMD_OAUTH2_CLIENT_ID: "{{ authentik_oidc_hedgedoc_client_id }}"
       CMD_OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_hedgedoc_client_secret }}"
-      CMD_OAUTH2_AUTHORIZATION_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/authorize/"
-      CMD_OAUTH2_TOKEN_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/token/"
-      CMD_OAUTH2_USER_PROFILE_URL: "https://{{ authentik_domain | default('auth.dev.local') }}/application/o/userinfo/"
+      CMD_OAUTH2_AUTHORIZATION_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      CMD_OAUTH2_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      CMD_OAUTH2_USER_PROFILE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
       CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: "preferred_username"
       CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "name"
       CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
@@ -70,7 +70,7 @@ services:
 {% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
     extra_hosts:
 {% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth.dev.local') }}:host-gateway"
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}
 {% if install_mailpit | default(false) %}
       - "host.docker.internal:host-gateway"

@@ -23,8 +23,8 @@ services:
     environment:
       USER_UID: "{{ ansible_facts['user_uid'] }}"
       USER_GID: "{{ ansible_facts['user_gid'] }}"
-      GITEA__server__DOMAIN: "{{ gitea_domain | default('git.dev.local') }}"
-      GITEA__server__ROOT_URL: "https://{{ gitea_domain | default('git.dev.local') }}"
+      GITEA__server__DOMAIN: "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      GITEA__server__ROOT_URL: "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GITEA__server__SSH_PORT: "{{ gitea_ssh_port | default(2222) }}"
       GITEA__server__OFFLINE_MODE: "true"
       GITEA__database__DB_TYPE: "sqlite3"

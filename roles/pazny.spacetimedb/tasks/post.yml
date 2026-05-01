@@ -110,7 +110,7 @@
     msg: |
       ══════════════════════════════════════════════════════════════════
        SpacetimeDB ready — http://127.0.0.1:{{ spacetimedb_port | default(3030) }}
-                          https://{{ spacetimedb_domain | default('spacetime.dev.local') }}
+                          https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
       ══════════════════════════════════════════════════════════════════
        JWT keys:    {{ spacetimedb_keys_dir }}/id_ecdsa{,.pub}
        Data dir:    {{ spacetimedb_data_dir }}

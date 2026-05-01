@@ -13,7 +13,7 @@
 
 maps_tileserver_version: "latest"                   # maptiler/tileserver-gl image tag
 maps_port: 8070                                     # Docker host port (compose template default)
-maps_domain: "maps.dev.local"
+maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"
 
 # MBTiles files to download (empty = do not download automatically)

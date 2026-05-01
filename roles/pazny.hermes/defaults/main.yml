@@ -92,7 +92,7 @@ hermes_mcp_servers:
 hermes_web_enabled: true                            # FastAPI na hermes_web_port
 hermes_web_host: "127.0.0.1"
 hermes_web_port: 18790                              # vedle openclaw 18789
-hermes_domain: "hermes.dev.local"
+hermes_domain: "hermes{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 # -- Daemon mode (optional, manual after deploy) ──────────────────────────────
 # Hermes has no generic daemon mode. If you want persistent:
