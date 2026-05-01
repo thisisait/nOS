@@ -5,9 +5,14 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import pytest
-import responses
 
-from library import nos_authentik as mod  # type: ignore[import]
+# Track J Phase 5: gate on optional `responses` mock library so pytest
+# collection passes on machines without the test-extras venv. Tests
+# themselves still run identically when `responses` IS installed.
+pytest.importorskip("responses")
+import responses  # noqa: E402
+
+from library import nos_authentik as mod  # type: ignore[import] # noqa: E402
 
 
 def _paged(results, next_page=None):

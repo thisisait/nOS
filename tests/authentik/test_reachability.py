@@ -7,10 +7,13 @@ __metaclass__ = type
 import time
 
 import pytest
-import responses
-import requests
 
-from module_utils.nos_authentik_client import (
+# Track J Phase 5: gate on optional `responses` mock library.
+pytest.importorskip("responses")
+import responses  # noqa: E402
+import requests  # noqa: E402
+
+from module_utils.nos_authentik_client import (  # noqa: E402
     AuthentikApiError,
     NosAuthentikClient,
 )

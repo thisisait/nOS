@@ -10,9 +10,16 @@ from __future__ import annotations
 
 import time
 
-import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+
+# Track J Phase 5: gate on optional Track-B-only deps (PyJWT + cryptography).
+# Track B's Bone JWT verifier hasn't shipped yet (commit not on master);
+# these tests live here as placeholders until then. Skipping cleanly on
+# missing deps lets the rest of pytest collect green.
+pytest.importorskip("jwt")
+pytest.importorskip("cryptography")
+import jwt  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
 
 
 ISSUER = "https://auth.test.example/application/o/"

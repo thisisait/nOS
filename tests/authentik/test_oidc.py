@@ -4,9 +4,13 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-import responses
+import pytest
 
-from library import nos_authentik as mod  # type: ignore[import]
+# Track J Phase 5: gate on optional `responses` mock library.
+pytest.importorskip("responses")
+import responses  # noqa: E402
+
+from library import nos_authentik as mod  # type: ignore[import] # noqa: E402
 
 
 def _paged(results, next_page=None):
