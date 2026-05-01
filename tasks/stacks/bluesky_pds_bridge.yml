@@ -100,18 +100,34 @@
          | list }}
   when: _pds_bridge_eligible | default([]) | length > 0
 
-# Filter out users that already have PDS accounts
+# Filter out users that already have PDS accounts.
+#
+# IMPORTANT: the previous form used a `>-` YAML folded-scalar block with a
+# Jinja for-loop that built `new_list` via `namespace`/`set _ = new_list.append(user)`.
+# That approach renders the result as a STRING ('[<dict>, <dict>]' literal),
+# which breaks `loop:` consumers downstream with "loop value must resolve
+# to a 'list', not 'str'". Surfaced 2026-05-02 during the first pazny.eu
+# production blank when 4 new agent SSO users (nos-tester + nos-inspektor +
+# nos-librarian + nos-scout) hit this bridge for the first time.
+#
+# Fix: build a JSON-array string with the for-loop, then round-trip through
+# `from_json` so set_fact stores a real Python list. The substring match
+# semantics are preserved exactly — "<username>.<hostname>" not in goat
+# list-accounts stdout. `joiner(',')` handles the comma between items.
 - name: "[PDS Bridge] Check which users need provisioning"
   ansible.builtin.set_fact:
-    _pds_bridge_new_users: >-
-      {% set existing = _pds_bridge_existing.stdout | default('') %}
-      {% set new_list = [] %}
-      {% for user in _pds_bridge_to_create | default([]) %}
-      {%   if (user.username ~ '.' ~ _pds_hostname) not in existing %}
-      {%     set _ = new_list.append(user) %}
-      {%   endif %}
-      {% endfor %}
-      {{ new_list }}
+    _pds_bridge_new_users: "{{ _pds_filtered_json | from_json }}"
+  vars:
+    _pds_filtered_json: |-
+      {%- set existing = _pds_bridge_existing.stdout | default('') -%}
+      [
+      {%- set comma = joiner(',') -%}
+      {%- for user in _pds_bridge_to_create | default([]) -%}
+      {%-   if (user.username ~ '.' ~ _pds_hostname) not in existing -%}
+      {{ comma() }}{{ user | to_json }}
+      {%-   endif -%}
+      {%- endfor -%}
+      ]
   when: _pds_bridge_to_create | default([]) | length > 0
 
 # ── 5a. Issue invite codes (invite-only PDS) ────────────────────────────────
