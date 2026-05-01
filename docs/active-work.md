@@ -80,14 +80,21 @@ Once blank green:
 - **G — Cloudflare proxy + LE production exposure (bsky / Stalwart SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
   — `pazny.acme` Cloudflare DNS-01 already exists; `pazny.smtp_stalwart` is a NEW role; Bluesky exposure flag flip. ~4-5 days.
 
-After G — **post-G arc (proposed, scope TBD):**
-- **K — Wing audit + refactor** (~4-5 days)
-- **L — Agent suite framework** (~4-5 days)
-- **M — Watchtower scheduler + pentest run-loop** (~2-3 days)
+After G — **bones & wings refactor (planned, full plan written 2026-05-01):**
 
-See [roadmap K/L/M section](roadmap-2026q2.md#tracks-k--l--m--wing-modernization--agent-platform-post-g-arc-proposed-2026-05-01)
-for the strategic sketch (operator-proposed 2026-05-01; detailed scope to be filled in
-before code commits).
+The former K/L/M arc was consolidated into one comprehensive plan with all 7 architectural
+decisions resolved with operator on 2026-05-01. **Authoritative document:
+[`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).**
+
+- **All-local architecture** — Wing PHP-FPM + Bone/Pulse Python via launchd (reverses Track A
+  containerization for the platform-control plane; zero-trust between subsystems)
+- **Repo reorg** — `files/anatomy/` umbrella; moves `migrations/`, `library/`, `module_utils/`,
+  `patches/`, framework-internal `docs/` into anatomy
+- **Plugin system** — drop-a-directory auto-wiring; gitleaks as PoC plugin
+- **Conductor as primary agent** (PoC); inspektor/librarian/scout post-PoC, ~2-4h each
+- **PoC estimate: ~12 days sequential.** Post-PoC expansion incremental.
+
+Pre-implementation gates: Tracks F + G DONE + Stalwart SMTP shipped (from G).
 
 Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this file.
 

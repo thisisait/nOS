@@ -707,7 +707,8 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 | 2026-04-30 | **O15**: Section 12 recovery pattern is the canonical Tier-2 fix flow (no full blank required) | `ansible-playbook main.yml -K --tags apps,tier2,apps-runner` re-renders manifests, re-runs image probes, re-deploys apps stack, re-fires post-hooks. Validated 3× in succession during Track E recovery (each commit `8091c07` / `a8fc804` / `d4e99f2` was tested via partial re-run). Documented as Section 12 of `docs/tier2-wet-test-checklist.md`. |
 | 2026-05-01 | **O16**: Roadmap order revised to **J → H → F → G** | Track J (tech debt cleanup, ~3-4h) lands first to remove Track-E-recovery debris and false-friend traps. Track H (ansible-core 2.24) shrinks to ~1 day after J Phase 4 lands the `ansible_env` migration (9 occurrences, not 200-400 as originally feared). Track F (instance_tld decomposition) keeps its position before G. Track G (public deploy) keeps its position last so Stalwart SMTP role can build on a clean tree. Total revised Q2-wave-2 ETA: ~7-9 days (was estimated ~3 weeks). |
 | 2026-05-01 | **O17**: Track H re-scoped from "ansible-core 2.24 upgrade" to "2.20+ tightening + 2.24 readiness" | ansible-core 2.24 not yet released by upstream (audit 2026-05-01: latest stable 2.20.5, latest RC 2.21.0rc1). Original Track H was forward-looking. Re-scoped to deliver what's possible today: pin current versions across operator + CI, modernize what 2.21 RC flags, run ansible-lint production profile clean. The actual 2.24 jump becomes a ~4h floor-bump follow-up when 2.24 ships. Operator confirmed Variant A. Track H DONE 2026-05-01 in 7 commits `6767e56..72c021d`. |
-| 2026-05-01 | **O18**: New post-G arc — Wing modernization + agent platform | Operator-proposed 2026-05-01: a strategic Wing audit + refactor + agent-suite + watchtower-scheduler + pentest-run-loop that turns `~/wing/` from a fragmented filesystem layout into a cohesive Tier-2-app-style project consuming our own infra (Authentik + Bone + Loki + Traefik). Sketched as Tracks K/L/M at the end of this document. Detailed scope to be confirmed in a planning pass before code commits. |
+| 2026-05-01 | **O18**: New post-G arc — Wing modernization + agent platform | Operator-proposed 2026-05-01: a strategic Wing audit + refactor + agent-suite + watchtower-scheduler + pentest-run-loop that turns `~/wing/` from a fragmented filesystem layout into a cohesive Tier-2-app-style project consuming our own infra (Authentik + Bone + Loki + Traefik). Sketched as Tracks K/L/M at the end of this document. **SUPERSEDED by O19** (2026-05-01) — full plan written, scope expanded, Track K/L/M IDs retired. |
+| 2026-05-01 | **O19**: bones & wings refactor — full plan written, all 7 architectural decisions resolved | Plan in [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md). Replaces K/L/M. Scope expanded beyond original sketch: (a) **all-local architecture** — Wing PHP-FPM via Homebrew + Bone/Pulse Python via launchd; reverses Track A containerization for the platform-control plane; zero shared volumes/networks within anatomy. (b) **Repo reorg** — `files/anatomy/` umbrella absorbs `migrations/`, `library/`, `module_utils/`, `patches/`, framework-internal `docs/`; top-level repo becomes lean Ansible. (c) **Plugin system** — drop-a-directory auto-wiring (Authentik client + Wing route + Pulse cron + Grafana dashboard + ntfy/mail templates + GDPR row + schema migration). (d) **Conductor as primary agent** (PoC); inspektor/librarian/scout post-PoC, each ~2-4h. (e) **Gitleaks as PoC plugin**, others as separate plugin commits post-PoC. (f) **Per-actor Authentik identity + audit trail** — every wing.db write tagged `(actor_id, action_id, acted_at)`; GDPR Article 30 query is one SELECT. (g) **Wing source as git submodule** at `external/wing/` with `cp+jinja` render pattern. PoC estimate: ~12 days sequential. Pre-impl gate: Tracks F + G DONE. |
 
 ---
 
@@ -742,74 +743,28 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 ---
 
-### Tracks K / L / M — Wing modernization + agent platform **(post-G arc, proposed 2026-05-01)**
+### bones & wings refactor **(post-G arc, planned 2026-05-01)**
 
-**Status: PROPOSED — operator's strategic vision sketched here for review; detailed scope (file inventory, agent profile schemas, exit criteria) to be filled in before any commits.** This arc turns Wing from a fragmented bundle of host-side scripts + bind-mounts into a cohesive **Tier-2-app-style project** that consumes the same infra it serves: Authentik for auth, Bone for events, Loki for logs, Traefik for routing, manifest-rendered compose for deploy.
+**Replaces former Tracks K / L / M** — the original sketch from O18 (2026-05-01) was expanded into a comprehensive plan during a same-day operator review. **Authoritative document: [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).** Track K/L/M phase IDs are retired; new phases A0-A10 in §8 of the refactor doc are the current breakdown.
 
-**Why three tracks (K/L/M) instead of one:** the work is large (~3 weeks if done end-to-end). Each track ships independently usable value:
-- **K** = audit + refactor (foundation; Wing keeps doing what it does today, just cleaner)
-- **L** = agent platform (NEW capability: scout/steward/librarian/migrator/inspektor profiles)
-- **M** = pentest run-loop (USES the agent platform; proves the loop end-to-end)
+**Headline shape:**
+- **Umbrella name:** bones & wings (operator-facing); **`anatomy`** (path/identifier form)
+- **Architecture:** **all-local** — Wing PHP-FPM via Homebrew + Bone/Pulse Python via launchd. Reverses Track A containerization for the platform-control plane in service of zero-trust (no shared Docker volumes, no shared networks within anatomy). Wing UI still served via Traefik file-provider with Authentik forward-auth (upstream just changes from container to `host.docker.internal:9000`).
+- **Repo reorg:** `files/anatomy/` becomes the home for all platform code: Wing source (git submodule at `external/wing/`), Bone, Pulse, skills, plugins, agents, schema artifacts. Moves `migrations/`, `library/`, `module_utils/`, `patches/`, framework-internal `docs/` into anatomy. Top-level repo becomes lean Ansible.
+- **Plugin system:** drop-a-directory auto-wiring. `files/anatomy/plugins/<name>/plugin.yml` declares Authentik client, Wing route/view, Pulse cron job, Grafana dashboard, ntfy/mail templates, GDPR row, schema migration. `ansible-playbook --tags anatomy.plugins` wires all of it.
+- **Primary agent:** **conductor** (PoC). Runs `ansible-playbook --check` every 4h; reports drift via Wing `/inbox`; on operator approval applies upgrades/migrations. Other profiles (inspektor, librarian, scout) post-PoC, each ~2-4h work.
+- **PoC plugin:** **gitleaks**. Other FOSS cybersec tools (trivy/grype/syft/nuclei/lynis/testssl/osquery) ship as separate plugin commits once the gitleaks pattern is operator-validated.
+- **Audit trail:** every wing.db write tagged `(actor_id, action_id, acted_at)`. GDPR Article 30 forensic query is one SELECT.
+- **Notification fanout:** Wing `/inbox` primary; ntfy for push (severity ≥ high); mail (Stalwart from Track G) for critical; everything observable in Grafana.
 
-#### Track K — Wing audit + refactor **(post-G, ~4-5 days)**
+**PoC estimate: ~12 days sequential** (single agent + operator). Post-PoC expansion is incremental, ~2-4h per added plugin or profile.
 
-**Phase K1 — audit (~1 day):** verify the wiring still works end-to-end:
-- Telemetry callback (`callback_plugins/wing_telemetry.py`) → Bone (`/api/v1/events`) → wing.db.events
-- Log scraping (Alloy → Loki → Wing UI dashboard)
-- Every `/api/v1/*` endpoint that `docs/llm/security/pentest-task.md` references — does it answer 200 with the right shape?
-- Document gaps in `docs/wing-audit-2026Q2.md` + `~/.nos/wing-audit-findings.json` for downstream consumption
+**Pre-implementation gates:**
+- Track F DONE + blank-test green
+- Track G DONE (Stalwart SMTP needed for mail notifications)
+- Operator accepts the refactor doc (sections 4, 5, 8 specifically)
 
-**Phase K2 — refactor (~3-4 days):** turn `~/wing/` into a Tier-2-style project:
-- Migrate from `roles/pazny.wing/` (host-managed PHP-FPM + nginx vhost + bind mounts) into `apps/wing.yml` (manifest-rendered compose, Authentik proxy auth like everything else, named volume for `wing.db`)
-- Eat-our-own-dogfood: Wing UI gates through Traefik forward-auth (no more host nginx vhost), logs ship via Alloy → Loki, deploy uses image-probe + healthcheck like every other Tier-2 app
-- Migration recipe `migrations/2026-05-XX-wing-host-to-app.yml` for existing deploys
-- Wing's `bin/*.php` CLIs (upsert-gdpr, ingest-registry) accessible via `docker compose run --rm wing-cli` (already done in apps_runner — extend to other callers)
-
-#### Track L — Agent suite framework **(post-K, ~4-5 days)**
-
-**Concept:** every agent is a first-class Authentik OIDC client (Track B precedent) with:
-- A unified persistence skill — `bin/agent-api-call.sh` wrapper that handles Bearer token rotation + retries + dedupe semantics
-- A unified telemetry contract — every run emits `agent.scan.start`, `agent.scan.complete`, `agent.finding`, `agent.error` events with `agent_id` + `agent_tier` + `parent_event_id`
-- A profile in `state/agent-profiles.yml` declaring `(name, tier, schedule_cron, model_class, tools_allowed, max_runtime_min)`
-
-**Proposed initial profiles:**
-| Profile | Tier | Cadence | Model class | Job |
-|---|---|---|---|---|
-| **scout** | T4 | every 30 min | small/cheap | tail logs + telemetry, flag anomalies → POST `/api/v1/agent/observations` |
-| **steward** | T3 | every 2h | medium | review scout's outputs, dedupe, plan next CVE batch → POST `/api/v1/agent/plans` |
-| **librarian** | T2 | daily | smart | upstream version watcher → POST `/api/v1/upgrades/pending` (NEW table) |
-| **migrator** | T2 | on-demand | smart | when `pending_upgrade.migration_required = true`, draft migration script → POST `/api/v1/upgrades/{id}/draft-migration` |
-| **inspektor** | T1 | daily | SOTA | the existing `pentest-task.md` runner (Phase 1+2+2b+3) — gets first-class persistence + telemetry |
-
-**Plus new wing.db tables:** `pending_upgrades`, `upgrade_drafts`, `agent_observations`, `agent_plans`, `agent_runs` (audit log).
-
-#### Track M — Watchtower scheduler + pentest run-loop **(post-L, ~2-3 days)**
-
-**"Watchtower" naming caveat:** unrelated to `containrrr/watchtower` (the Docker image-watching tool already in our infra). Operator's vision is a Wing-managed scheduler that fires agent profiles on schedule. Pick a different visible name to avoid confusion (proposal: `wing-scheduler` or `nos-pulse`).
-
-**Phase M1 — scheduler:** new container in the Wing project (or sidecar) that reads `state/agent-profiles.yml`, computes next-fire times, exec's `claude` (or appropriate runtime) with the profile's prompt + skills.
-
-**Phase M2 — pentest run-loop:** wire `docs/llm/security/pentest-task.md` into the inspektor profile. Operator runs first end-to-end: scheduler fires inspektor, it does Phase 1 (CVE scan via API, dedupe, record findings), Phase 2 (clone repo, code-review one area, record), Phase 2b (draft patch if confirmed_vuln), Phase 3 (advisory + housekeeping). All persistence via the API skill, all telemetry into wing.db.events.
-
-**Phase M3 — operator approval workflow:** `/api/v1/upgrades/pending` rows that `librarian` proposed get reviewed via Wing UI; operator approves → migration script committed to `migrations/`; rejects → `librarian` learns (e.g. version pinning preference). Same approval workflow for `inspektor`'s patch drafts (per `pentest-task.md` Phase 2b: "DO NOT SEND A PR — leave it to the user").
-
-#### Cross-cutting concerns for K/L/M
-- **Authentik blueprints for agent OIDC clients** — Track B's framework, just instantiated for the 5 profiles. Each agent's tier maps to existing `nos-{providers,admins,managers,users,guests}` groups.
-- **GDPR Article 30 entries** — every agent processes some data; Wing's `/gdpr` view auto-includes them.
-- **Skills convention** — `bin/agent-skills/` directory with one file per capability (api-call, log-tail, repo-clone, patch-format), agent profiles declare which skills they import. Skills tested under pytest.
-- **Cost guardrails** — `agent_runs.tokens_used` + per-tier monthly budget warning emitted to Bone events; operator can pause a profile via Wing UI without playbook re-run.
-
-#### Estimate (revised post-G)
-- Track K: 4-5 days
-- Track L: 4-5 days
-- Track M: 2-3 days
-- **Total: ~2.5 weeks of focused work**
-
-#### Pre-implementation gates
-- Operator confirms scope of K (audit findings document → refactor design → migration plan)
-- Operator picks scheduler name (drops "watchtower" naming collision)
-- Operator confirms initial agent profile list + cadences
-- Track G's Stalwart SMTP role lands first so agent telemetry has a real outbound mail path for critical alerts
+**Read the full plan in [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md) before any code-touch.** It has ~1100 lines of architecture, edge-case catalog, and phase-by-phase exit criteria; this stub is just the index card.
 
 ---
 
