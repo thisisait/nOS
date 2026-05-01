@@ -323,6 +323,16 @@ def main() -> int:
                    help="disable JSONL output")
     p.add_argument("--workers", type=int, default=20,
                    help="parallel probe workers (default 20)")
+    # ── Track F: ad-hoc Ansible -e overrides that this subprocess otherwise
+    # doesn't see (the YAML files are the only var source). Operators running
+    # `ansible-playbook -K -e blank=true -e host_alias=lab` need smoke to
+    # pick up host_alias=lab so the URLs probe the right hosts.
+    p.add_argument("--host-alias", dest="host_alias", default=None,
+                   help="override host_alias from YAML (mirrors -e host_alias=...)")
+    p.add_argument("--tenant-domain", dest="tenant_domain", default=None,
+                   help="override tenant_domain from YAML (mirrors -e tenant_domain=...)")
+    p.add_argument("--apps-subdomain", dest="apps_subdomain", default=None,
+                   help="override apps_subdomain from YAML")
     args = p.parse_args()
 
     # ── Load Ansible-style variables ───────────────────────────────────────
@@ -330,6 +340,18 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
+
+    # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
+    # These mirror Ansible -e flags. Without them, the subprocess can't see
+    # the operator's per-blank overrides (host_alias=lab etc.) and probes
+    # the wrong hosts. nos_smoke_strict=true then fails the playbook for
+    # what is fundamentally a smoke-config drift.
+    if args.host_alias is not None:
+        vars_dict["host_alias"] = args.host_alias
+    if args.tenant_domain is not None:
+        vars_dict["tenant_domain"] = args.tenant_domain
+    if args.apps_subdomain is not None:
+        vars_dict["apps_subdomain"] = args.apps_subdomain
 
     # ── Track F: pre-compute domain composition helpers ──────────────────────
     # default.config.yml defines `_host_alias_seg`, `_host_alias_normalized`,

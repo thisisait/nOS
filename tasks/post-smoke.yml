@@ -19,6 +19,9 @@
     {{ playbook_dir }}/tools/nos-smoke.py
     {{ '--failed-only' if (nos_smoke_failed_only | default(false) | bool) else '' }}
     --jsonl {{ nos_smoke_jsonl | default(ansible_facts['env']['HOME'] + '/.nos/events/smoke.jsonl') }}
+    --tenant-domain {{ tenant_domain | default('dev.local') | quote }}
+    --host-alias {{ host_alias | default('') | quote }}
+    --apps-subdomain {{ apps_subdomain | default('apps') | quote }}
   register: _nos_smoke
   changed_when: false
   failed_when:
