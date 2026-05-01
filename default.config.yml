@@ -13,17 +13,46 @@ global_password_prefix: "changeme"
 # ==============================================================================
 
 instance_name: "nos"                # Unique instance name (lowercase, no spaces)
-instance_tld: "dev.local"                 # TLD for all services (e.g. grafana.<tld>)
-default_admin_email: "admin@{{ instance_tld | default('dev.local') }}"  # Fallback admin email for all services
+
+# ── Domain composition (Track F decomposition, 2026-05) ──────────────────────
+# Three vars compose every nOS hostname. Defaults reproduce today's flat layout
+# (`<svc>.dev.local`, `<svc>.apps.dev.local`); set `host_alias` to slot a
+# per-host segment between the service name and the rest (lab/factory/branch).
+#
+#   Tier-1 service host:  <svc>[.<host_alias>].<tenant_domain>
+#   Tier-2 app host:      <svc>[.<host_alias>].<apps_subdomain>.<tenant_domain>
+#
+# Examples (tenant_domain=dev.local, apps_subdomain=apps):
+#   host_alias=""    → bone.dev.local           |  documenso.apps.dev.local
+#   host_alias="lab" → bone.lab.dev.local       |  documenso.lab.apps.dev.local
+#
+# `instance_tld` is kept as a backwards-compat shim that resolves to
+# `tenant_domain`; existing consumers (179 occurrences across 69 files at the
+# Track-F kickoff) continue to work unchanged. Phase 3 of Track F migrates
+# them to the explicit segment layout. See docs/operator-domain-naming.md.
+tenant_domain: "dev.local"                # Primary TLD; all FQDNs resolve here
+host_alias: ""                            # Per-host segment ("" drops it; "lab" yields bone.lab.dev.local)
+apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (Coolify-imported et al.)
+
+# Helper: ".<host_alias>" when host_alias is set, "" otherwise. Consumer
+# templates compose hostnames as: "<svc>{{ _host_alias_seg }}.{{ tenant_domain }}".
+_host_alias_seg: "{{ ('.' + host_alias) if (host_alias | default('') | length > 0) else '' }}"
+
+# Backwards-compat shim — Phase 3 will migrate consumers to tenant_domain
+# directly, then this can be removed in a follow-up cleanup commit.
+instance_tld: "{{ tenant_domain }}"
+
+default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallback admin email for all services
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
-# instance_tld_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
-#                       false → use ACME (Let's Encrypt) + public DNS (prod mode)
+# tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
+#                        false → use ACME (Let's Encrypt) + public DNS (prod mode)
 # Heuristic: anything ending in .local, .lan, .test, .localhost, or literally
 # 'localhost' is treated as local. Everything else is assumed public.
-# Override with `-e instance_tld_is_local=false` if you want to force ACME on
+# Override with `-e tenant_domain_is_local=false` if you want to force ACME on
 # a custom local TLD (e.g. if you have your own internal CA).
-instance_tld_is_local: "{{ (instance_tld | regex_search('\\.(local|lan|test|localhost)$|^localhost$')) is not none }}"
+tenant_domain_is_local: "{{ (tenant_domain | regex_search('\\.(local|lan|test|localhost)$|^localhost$')) is not none }}"
+instance_tld_is_local: "{{ tenant_domain_is_local }}"  # Backwards-compat shim
 
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local
@@ -1261,7 +1290,7 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # Removes the need to manually edit /etc/hosts
 # ==============================================================================
 
-dnsmasq_dev_domain: "dev.local"           # Domain for local development
+dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
 dnsmasq_dev_address: "127.0.0.1"          # Target for *.dev.local from localhost
 dnsmasq_port: 53                          # DNS port (53 = default)
 dnsmasq_lan_access: true                  # true = dnsmasq also listens on LAN (for TVs, mobiles, guests)
