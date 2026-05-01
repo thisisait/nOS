@@ -27,12 +27,14 @@ import argparse
 import concurrent.futures
 import json
 import os
+import http.cookiejar
 import pathlib
 import re
 import ssl
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -204,23 +206,118 @@ class ProbeResult:
         self.ok = ok
 
 
-def probe(entry: dict) -> ProbeResult:
-    """Single HEAD/GET probe. Falls back to GET if HEAD returns 405."""
-    url = entry["url"]
-    timeout = float(entry.get("timeout", 5))
-    expect = entry.get("expect")
-    if isinstance(expect, int):
-        expect = [expect]
-    expect = set(expect or [200, 301, 302, 308])
-
+def _make_ssl_context(insecure: bool) -> ssl.SSLContext:
     ctx = ssl.create_default_context()
-    if entry.get("insecure", True):
+    if insecure:
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
+    return ctx
 
+
+def _try_authentik_login(opener, authentik_domain: str, tester_user: str,
+                         tester_password: str, ctx: ssl.SSLContext,
+                         timeout: float) -> tuple[bool, str | None]:
+    """Submit tester credentials via Authentik flow executor API.
+
+    Authentik exposes ``/api/v3/flows/executor/<slug>/?query=`` for headless
+    auth — POST a JSON body with the username (identification stage) then a
+    second POST with the password (password stage). On success the cookie
+    jar attached to ``opener`` carries the session, and any subsequent GET
+    against a forward_auth-protected service should return 200.
+
+    Returns (success, error_message).
+    """
+    # Default flow slug for Authentik 2024.2+: 'default-authentication-flow'.
+    # Could be overridden via env later.
+    flow_slug = "default-authentication-flow"
+    base = "https://%s/api/v3/flows/executor/%s/" % (authentik_domain, flow_slug)
+    headers_common = {
+        "User-Agent": "nos-smoke/1.0 (auth-flow)",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    def _post(url: str, body: dict) -> tuple[int | None, dict | None, str | None]:
+        data = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        for k, v in headers_common.items():
+            req.add_header(k, v)
+        try:
+            with opener.open(req, timeout=timeout, context=ctx) as resp:
+                txt = resp.read().decode("utf-8", "replace")
+                return resp.status, json.loads(txt) if txt else None, None
+        except urllib.error.HTTPError as exc:
+            txt = exc.read().decode("utf-8", "replace")
+            try:
+                return exc.code, json.loads(txt), None
+            except Exception:
+                return exc.code, None, txt[:200]
+        except Exception as exc:  # noqa: BLE001
+            return None, None, type(exc).__name__ + ": " + str(exc)
+
+    # Stage 1: prime the flow (GET so the executor sets initial cookies).
+    try:
+        req = urllib.request.Request(base, method="GET")
+        req.add_header("User-Agent", "nos-smoke/1.0 (auth-flow)")
+        opener.open(req, timeout=timeout, context=ctx).read()
+    except Exception:  # noqa: BLE001
+        pass  # not fatal — POST may still work
+
+    # Stage 2: identification (username).
+    code, body, err = _post(base, {"uid_field": tester_user})
+    if err:
+        return False, "auth identification: %s" % err
+    if code and code >= 400:
+        return False, "auth identification HTTP %s" % code
+
+    # Stage 3: password.
+    code, body, err = _post(base, {"password": tester_password})
+    if err:
+        return False, "auth password: %s" % err
+    if code and code >= 400:
+        return False, "auth password HTTP %s" % code
+
+    # Authentik returns the next stage in the body. A successful login lands
+    # on type=redirect (back to source app) or type=ak-stage-access-denied etc.
+    if isinstance(body, dict):
+        comp = body.get("component", "")
+        if "access-denied" in comp or "deny" in comp:
+            return False, "auth flow ended: %s" % comp
+    return True, None
+
+
+def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
+          tester_password: str | None = None,
+          authentik_domain: str | None = None) -> ProbeResult:
+    """Single HEAD/GET probe. Falls back to GET if HEAD returns 405.
+
+    In strict mode (``strict=True``) the default expected status set tightens
+    to [200, 204] and 30x answers fail unless the entry declares
+    ``auth: tester`` and the tester auth flow successfully follows the
+    redirect chain to a final 200.
+    """
+    url = entry["url"]
+    timeout = float(entry.get("timeout", 5))
+    auth_mode = entry.get("auth", "anon")
+
+    # Pick expect set based on strict mode + entry override.
+    explicit = entry.get("expect")
+    explicit_strict = entry.get("expect_strict")
+    if strict:
+        expect = explicit_strict if explicit_strict is not None else (
+            explicit if explicit is not None else [200, 204]
+        )
+    else:
+        expect = explicit if explicit is not None else [200, 301, 302, 308]
+    if isinstance(expect, int):
+        expect = [expect]
+    expect = set(expect or [200])
+
+    ctx = _make_ssl_context(entry.get("insecure", True))
     started = time.monotonic()
 
-    def _do(method: str) -> tuple[int | None, str | None]:
+    # ── Anon path: simple HEAD/GET ─────────────────────────────────────────
+    def _do_simple(method: str) -> tuple[int | None, str | None]:
         req = urllib.request.Request(url, method=method)
         req.add_header("User-Agent", "nos-smoke/1.0")
         try:
@@ -233,12 +330,79 @@ def probe(entry: dict) -> ProbeResult:
         except Exception as exc:  # noqa: BLE001
             return None, type(exc).__name__ + ": " + str(exc)
 
-    code, err = _do("HEAD")
-    if code == 405:  # some apps refuse HEAD — try GET
-        code, err = _do("GET")
+    if auth_mode in ("anon", "none", None) or not (tester_user and tester_password):
+        # No tester credentials available, or entry doesn't ask for auth.
+        # In strict mode without auth, 30x is a failure — caller has chance
+        # to label this entry `auth: tester` and supply credentials.
+        code, err = _do_simple("HEAD")
+        if code == 405:
+            code, err = _do_simple("GET")
+        if strict and auth_mode == "tester" and not (tester_user and tester_password):
+            err = err or "auth: tester requested but no --tester-user/--tester-password"
+        duration_ms = int((time.monotonic() - started) * 1000)
+        return ProbeResult(entry, code, duration_ms, err, code in expect)
+
+    # ── Auth path: cookie-jar Session + Authentik flow executor ────────────
+    cj = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(cj),
+        urllib.request.HTTPSHandler(context=ctx),
+    )
+    opener.addheaders = [("User-Agent", "nos-smoke/1.0 (tester)")]
+
+    # 1. First request — may return 200 (already-public health endpoint) or
+    #    302 to Authentik. We follow up to 5 redirects manually so we can
+    #    detect when we land on the auth flow page.
+    final_code: int | None = None
+    err: str | None = None
+    cur = url
+    for _ in range(5):
+        try:
+            req = urllib.request.Request(cur, method="GET")
+            with opener.open(req, timeout=timeout, context=ctx) as resp:
+                final_code = resp.status
+                final_url = resp.geturl()
+                break
+        except urllib.error.HTTPError as exc:
+            final_code = exc.code
+            final_url = cur
+            break
+        except Exception as exc:  # noqa: BLE001
+            err = type(exc).__name__ + ": " + str(exc)
+            final_code = None
+            final_url = cur
+            break
+
+    # 2. If we ended up on Authentik (anywhere under auth.<tld>), perform
+    #    the headless flow then re-fetch the original URL with the cookie.
+    auth_used = False
+    if final_code in (200, 401) and authentik_domain and authentik_domain in (final_url or ""):
+        ok_auth, auth_err = _try_authentik_login(
+            opener, authentik_domain, tester_user, tester_password, ctx, timeout
+        )
+        auth_used = True
+        if not ok_auth:
+            err = auth_err
+        else:
+            # Re-fetch original URL with the auth session cookie.
+            try:
+                req = urllib.request.Request(url, method="GET")
+                with opener.open(req, timeout=timeout, context=ctx) as resp:
+                    final_code = resp.status
+            except urllib.error.HTTPError as exc:
+                final_code = exc.code
+            except Exception as exc:  # noqa: BLE001
+                err = type(exc).__name__ + ": " + str(exc)
+                final_code = None
+
     duration_ms = int((time.monotonic() - started) * 1000)
-    ok = code in expect
-    return ProbeResult(entry, code, duration_ms, err, ok)
+    ok = final_code in expect
+    if auth_used and not err:
+        # Annotate the entry's note for the table render — the operator can
+        # see at a glance which probes actually went through the auth flow.
+        entry = dict(entry)
+        entry["_auth_used"] = True
+    return ProbeResult(entry, final_code, duration_ms, err, ok)
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +497,18 @@ def main() -> int:
                    help="override tenant_domain from YAML (mirrors -e tenant_domain=...)")
     p.add_argument("--apps-subdomain", dest="apps_subdomain", default=None,
                    help="override apps_subdomain from YAML")
+    # ── Track G: strict mode + tester credentials ──────────────────────────
+    # Strict mode tightens default expect to [200, 204] and treats any 30x
+    # without a successful tester auth-flow as failure (per AIT philosophy:
+    # 30x alone is not proof a service works for an authorized user).
+    p.add_argument("--strict", action="store_true",
+                   help="strict mode — expect [200,204] only; 30x must auth-flow to 200")
+    p.add_argument("--tester-user", dest="tester_user", default=None,
+                   help="override tester username (mirrors nos_tester_username)")
+    p.add_argument("--tester-password", dest="tester_password", default=None,
+                   help="override tester password (mirrors nos_tester_password)")
+    p.add_argument("--authentik-domain", dest="authentik_domain", default=None,
+                   help="override authentik_domain — needed only when auth flow runs")
     args = p.parse_args()
 
     # ── Load Ansible-style variables ───────────────────────────────────────
@@ -423,10 +599,31 @@ def main() -> int:
         sys.stderr.write("smoke catalog yielded zero entries (check filters / install_* flags)\n")
         return 0
 
+    # ── Tester credentials & strict mode resolution ────────────────────────
+    # Prefer CLI overrides; fall back to YAML; allow either to be missing
+    # (auth-flow entries simply won't auth-flow if credentials are absent —
+    # they'll fall back to anon and the strict-mode check will catch the 30x).
+    tester_user = args.tester_user or vars_dict.get("nos_tester_username") or "nos-tester"
+    tester_password = args.tester_password or vars_dict.get("nos_tester_password")
+    authentik_domain = (
+        args.authentik_domain
+        or vars_dict.get("authentik_domain")
+        or "auth%s.%s" % (vars_dict.get("_host_alias_seg", ""), vars_dict.get("tenant_domain", "dev.local"))
+    )
+
+    def _probe_one(e):
+        return probe(
+            e,
+            strict=args.strict,
+            tester_user=tester_user,
+            tester_password=tester_password,
+            authentik_domain=authentik_domain,
+        )
+
     # ── Run probes in parallel ─────────────────────────────────────────────
     run_id = "smoke_" + datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as ex:
-        results = list(ex.map(probe, all_entries))
+        results = list(ex.map(_probe_one, all_entries))
 
     # ── Output ─────────────────────────────────────────────────────────────
     if args.json:

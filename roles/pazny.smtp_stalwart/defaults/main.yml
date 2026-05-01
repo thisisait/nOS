@@ -1,0 +1,62 @@
+---
+# ==============================================================================
+# pazny.smtp_stalwart — Stalwart Mail Server (SMTP / IMAP / JMAP)
+#
+# Track G role. Stalwart is a Rust-based, modern, all-in-one mail server
+# (SMTP submission + IMAP/POP3 + JMAP) — replaces Mailpit for production
+# (Mailpit stays as a dev SMTP capture, only enabled when not in production).
+#
+# Project: https://stalw.art/  (MIT/AGPL dual)
+# Docker:  https://hub.docker.com/r/stalwartlabs/mail-server
+#
+# DNS prerequisites for production (operator-managed via Cloudflare):
+#   MX     <tenant_domain>           → mail.<tenant_domain>
+#   A      mail.<tenant_domain>      → public IP (or Tailscale Funnel)
+#   TXT    <tenant_domain>           "v=spf1 mx ~all"
+#   TXT    _dmarc.<tenant_domain>    "v=DMARC1; p=quarantine; rua=mailto:…"
+#   TXT    selector._domainkey.<td>  (DKIM key — Stalwart auto-generates,
+#                                      operator pastes into CF DNS)
+#
+# Router prerequisites:
+#   25/tcp  (incoming SMTP)         — many home ISPs block 25, use a relay
+#   465/tcp (SMTP submission TLS)   — required for client send
+#   587/tcp (SMTP submission STARTTLS)
+#   993/tcp (IMAP TLS)
+# ==============================================================================
+
+# Toggle — disabled by default until operator switches to a public TLD.
+# Mailpit (install_mailpit: true) handles local-dev capture in the meantime.
+install_smtp_stalwart: false
+
+stalwart_image: "stalwartlabs/mail-server:v0.13.6"
+stalwart_data_dir: "{{ ansible_facts['env']['HOME'] }}/stalwart"
+
+# Public hostname for the mail server. Defaults to mail.<tenant_domain>.
+stalwart_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+# Port mappings — all bind to the host (0.0.0.0) so the router can forward
+# to them. Override `stalwart_lan_only: true` to bind only on 127.0.0.1
+# (useful for Tailscale-only deployments — funnel does the public exposure).
+stalwart_lan_only: false
+stalwart_port_smtp:    25     # MTA — incoming mail
+stalwart_port_smtps:   465    # implicit TLS submission
+stalwart_port_submission: 587 # STARTTLS submission
+stalwart_port_imap:    993    # IMAPS
+
+# Admin user — created on first boot. Password rotates with global prefix.
+stalwart_admin_username: "admin"
+# stalwart_admin_password lives in default.credentials.yml
+
+# Resource limits — Stalwart's Rust footprint is small; default to 512MB.
+stalwart_mem_limit: "{{ docker_mem_limit_standard | default('512m') }}"
+stalwart_cpus: "{{ docker_cpus_light | default('0.5') }}"
+
+# Authentik OIDC integration (post-PoC; Stalwart 0.13+ supports OIDC for
+# admin webui + IMAP SASL OAUTHBEARER). Disabled until Track G phase 3.
+stalwart_authentik_oidc: false
+
+# TLS certificates — when on a public TLD, Stalwart consumes the same
+# wildcard cert pazny.acme issues (so mail.<td>, smtp.<td>, imap.<td> all
+# resolve to one cert). Path resolved from default.config.yml's ssl_cert_*.
+stalwart_tls_cert_path: "{{ ssl_cert_path }}"
+stalwart_tls_cert_key:  "{{ ssl_cert_key }}"

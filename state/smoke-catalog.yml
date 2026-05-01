@@ -11,21 +11,39 @@
 # Schema for each entry:
 #   id          string  — unique stable identifier (logs / dashboards)
 #   url         string  — full URL with Jinja vars (resolved by runner)
-#   expect      int|list — accepted status codes (default [200, 301, 302, 308])
+#   expect      int|list — accepted status codes (default [200] in strict mode;
+#                          falls back to [200,301,302,308] in legacy mode)
+#   auth        string  — "anon" (default), "tester" (perform tester login when
+#                          redirected to Authentik), "none" (alias for anon)
 #   when        string  — Jinja expression; entry runs only if it evaluates
 #                          truthy (e.g. "install_bone | default(true)")
 #   note        string  — free-form description (shown in failed-row output)
 #   timeout     float   — per-request timeout seconds (default 5)
 #   tier        int     — 1 = Tier-1 (manifest-derived), 2 = Tier-2 (apps_runner),
 #                          3 = framework / health (defaults to 3 here)
+#
+# Strict mode (Track G):
+#   nos-smoke.py --strict (or post-smoke.yml with `nos_smoke_strict_status: true`)
+#   tightens defaults — accepts ONLY 200/204 unless an entry explicitly overrides.
+#   Redirect-to-auth entries should declare `auth: "tester"` so the runner
+#   follows the redirect, submits tester credentials, and validates the FINAL
+#   200 instead of accepting the redirect itself. Per the AIT philosophy
+#   (Akademická IT — automatizovaná testovací identita), 30x/40x/50x answers
+#   alone are not proof a service works.
 # ==============================================================================
 
 # Defaults that the runner falls back to when an entry omits a key.
+# Two profiles:
+#   - non-strict (default, today's behavior): accepts redirect responses
+#   - strict (when --strict / nos_smoke_strict_status=true): must reach 200/204
+#     either directly or via tester auth flow
 smoke_defaults:
   expect: [200, 301, 302, 308]
+  expect_strict: [200, 204]
   timeout: 5
   tier: 3
-  insecure: true     # accept self-signed mkcert dev certs
+  auth: "anon"        # one of: anon | tester | none
+  insecure: true      # accept self-signed mkcert dev certs
 
 # Entries below extend the manifest auto-import. Each `id` must be unique
 # across this list; ids that match a manifest service id REPLACE the

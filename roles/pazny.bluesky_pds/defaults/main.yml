@@ -30,3 +30,29 @@ bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"
 # AT Protocol handles = <handle>.{{ bluesky_pds_hostname }}
 bluesky_pds_admin_handle: "pazny.{{ bluesky_pds_hostname }}"
 bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (tenant_domain | default('dev.local'))) }}"
+
+# ── AT Protocol public federation (Track G) ────────────────────────────────
+# Off by default — federation requires:
+#   1. tenant_domain is a public TLD (not .local/.lan/.test)
+#   2. DNS A record bsky.<tenant_domain> → public IP (or Tailscale Funnel)
+#   3. ACME wildcard cert covers *.{tenant_domain} or explicit bsky cert
+#   4. Inbound 443 from the open internet to Traefik
+#
+# When on, the PDS advertises itself as a federation peer (via
+# /xrpc/com.atproto.server.describeServer + /.well-known/atproto-did).
+# The PDS still works locally without federation — flag controls whether
+# external relays (bsky.network) accept records from this PDS.
+#
+# To enable in production:
+#   1. Switch tenant_domain to your public domain
+#   2. Run pazny.acme to issue the wildcard
+#   3. Add CF DNS A record bsky.<td> → your IP
+#   4. Set bluesky_pds_public_federation: true in config.yml
+#   5. Re-run with --tags bluesky-pds
+bluesky_pds_public_federation: false
+
+# Default: Bluesky AppView host (where users see their feeds). The official
+# bsky.network AppView is the open public default; advanced operators can
+# point this at their own AppView when self-hosting one.
+bluesky_pds_appview_url: "https://api.bsky.app"
+bluesky_pds_appview_did: "did:web:api.bsky.app"

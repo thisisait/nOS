@@ -134,6 +134,29 @@ mailpit_domain: "mail{{ _host_alias_seg }}.{{ tenant_domain }}"
 mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
 mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
 
+# ── Stalwart Mail Server (production SMTP / IMAP / JMAP — Track G) ──────────
+# Disabled by default. Enable AFTER:
+#   1. tenant_domain switched to a public TLD (your real domain)
+#   2. pazny.acme has issued the wildcard cert via Cloudflare DNS-01
+#   3. CF DNS records added: MX, A mail.<td>, SPF/DKIM/DMARC TXT
+#   4. router/Tailscale Funnel forwards 25/465/587/993 to host
+# When install_smtp_stalwart is on, role refuses to render on a local TLD
+# (Mailpit covers dev capture). See roles/pazny.smtp_stalwart/defaults
+# and docs/operator-domain-switch.md.
+install_smtp_stalwart: false
+
+# ── Mastodon (ActivityPub federation — future-proofing flag, Track G) ───────
+# Off by default; role doesn't exist yet. Reserved here so config.yml /
+# operator overrides validate cleanly + the flag is discoverable. Full
+# implementation lands as roles/pazny.mastodon when operator commits the
+# bsky+mastodon dual-federation work (post-PoC).
+#
+# When enabled it'll need: PostgreSQL + Redis (already on) + dedicated S3
+# bucket (rustfs or external) + DNS for mastodon.<tenant_domain> +
+# ACME wildcard cert. See docs/operator-domain-switch.md for prep.
+install_mastodon: false
+mastodon_domain: "social{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
 # ── Watchtower (Docker image freshness watcher) ──────────────────────────────
 # Default ON in NOTIFY-ONLY mode — surfaces stale images in Mailpit without
 # auto-restarting anything. Stateful upgrades stay manual via upgrade
@@ -1648,6 +1671,14 @@ authentik_db_user: "authentik"
 authentik_db_password: "{{ global_password_prefix }}_pw_authentik_db"
 authentik_bootstrap_password: "{{ global_password_prefix }}_pw_authentik_admin"
 authentik_bootstrap_email: "{{ default_admin_email }}"
+
+# ── Tester identity (Track G) ───────────────────────────────────────────────
+# Provisioned via roles/pazny.authentik/templates/blueprints/00-admin-groups
+# as a member of all RBAC tier groups so `nos-smoke --strict` can probe
+# any service end-to-end. Override only if you need a different login slug.
+nos_tester_username: "nos-tester"
+nos_tester_email: "nos-tester@{{ tenant_domain | default('dev.local') }}"
+# nos_tester_password lives in default.credentials.yml (so secret hygiene).
 
 # ── Authentik RBAC groups (created automatically on blank run) ────────────────
 authentik_default_groups:

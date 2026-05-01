@@ -1,0 +1,60 @@
+---
+# ==============================================================================
+# pazny.smtp_stalwart — render compose override + ensure data dirs
+#
+# Track G scaffold. Activated by `install_smtp_stalwart: true`.
+# ==============================================================================
+
+- name: "[pazny.smtp_stalwart] Refuse on local TLD (production-only role)"
+  ansible.builtin.fail:
+    msg: |-
+      pazny.smtp_stalwart is a production role — it requires a public
+      tenant_domain so MX records, DKIM, and ACME wildcards work end-to-end.
+      Current tenant_domain={{ tenant_domain }} is detected as local
+      (.local/.lan/.test/localhost). Either:
+        - leave install_smtp_stalwart: false (Mailpit handles dev capture)
+        - or set tenant_domain to a public domain (and run pazny.acme first)
+  when:
+    - install_smtp_stalwart | default(false) | bool
+    - tenant_domain_is_local | default(true) | bool
+
+- name: "[pazny.smtp_stalwart] Ensure data + config directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ stalwart_data_dir }}"
+    - "{{ stalwart_data_dir }}/etc"
+    - "{{ stalwart_data_dir }}/logs"
+    - "{{ stalwart_data_dir }}/queue"
+
+- name: "[pazny.smtp_stalwart] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/infra/overrides/smtp_stalwart.yml"
+    mode: '0644'
+  notify: Restart smtp_stalwart
+
+- name: "[pazny.smtp_stalwart] Print operator info banner"
+  ansible.builtin.debug:
+    msg: |-
+      ════════════════════════════════════════════════════════════════════
+       pazny.smtp_stalwart — scaffold rendered
+      ════════════════════════════════════════════════════════════════════
+       Mail host:    {{ stalwart_domain }}
+       Webadmin:     https://{{ stalwart_domain }}/admin (post-deploy)
+       SMTP submit:  smtps://{{ stalwart_domain }}:{{ stalwart_port_smtps }}
+       IMAP:         imaps://{{ stalwart_domain }}:{{ stalwart_port_imap }}
+       Admin user:   {{ stalwart_admin_username }}
+       Data dir:     {{ stalwart_data_dir }}
+
+       NEXT (operator):
+         1. Open Cloudflare DNS → add MX <td> → mail.<td>, A mail.<td> → IP
+         2. Wait for cert via pazny.acme (--tags acme)
+         3. Open https://{{ stalwart_domain }}/admin, paste DKIM key into CF
+            (Stalwart auto-generates first key on first run)
+         4. Test send:    swaks --to <you>@gmail.com --server {{ stalwart_domain }}
+         5. Test receive: swaks --to test@{{ tenant_domain }}
+                                --server external-mta-of-your-choice
+      ════════════════════════════════════════════════════════════════════

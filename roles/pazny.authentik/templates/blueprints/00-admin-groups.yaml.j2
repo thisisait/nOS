@@ -53,3 +53,35 @@ entries:
       intent: api
       expiring: false
       description: "nOS automation (PDS bridge, service provisioning)"
+
+  # ── Tester identita pro automatizovaný smoke + Playwright (Track G) ─────────
+  # nos-tester je dedikovaný účet pro headless ověřování auth flowů. Smoke
+  # tester pošle credentials přes Authentik flow executor a validuje 200
+  # response z chráněné aplikace — tím získáme reálný end-to-end důkaz, že
+  # služba odpovídá autorizovanému uživateli, ne jen že vrací 30x na /.
+  #
+  # Členství: všechny RBAC tier groups, takže může otestovat libovolnou
+  # aplikaci napříč tier-1/2/3/4. Audit-log v wing.db tagovaný
+  # `actor_id=nos-tester` aby se to v běžné statistice vyřešilo jako
+  # synthetický provoz.
+  #
+  # Heslo se re-aplikuje na každý reconcile (stejně jako akadmin) — rotace
+  # global_password_prefix automaticky promazává pak.
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: "{{ nos_tester_username | default('nos-tester') }}"
+    attrs:
+      name: "nOS Smoke Tester"
+      email: "{{ nos_tester_email | default('nos-tester@' + (tenant_domain | default('dev.local'))) }}"
+      password: "{{ nos_tester_password }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      attributes:
+        automated_test_account: true
+        purpose: "smoke + Playwright headless validation (Track G)"
+      groups:
+{% for g in (authentik_default_groups | default([])) %}
+        - !Find [authentik_core.group, [name, "{{ g.name }}"]]
+{% endfor %}

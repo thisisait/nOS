@@ -214,6 +214,11 @@
   when: install_bluesky_pds | default(false)
   tags: ['bluesky-pds', 'infra']
 
+- name: "[Core] pazny.smtp_stalwart render (Track G — production SMTP/IMAP/JMAP)"
+  ansible.builtin.include_role: { name: pazny.smtp_stalwart, apply: { tags: ['smtp', 'stalwart', 'mail', 'infra'] } }
+  when: install_smtp_stalwart | default(false)
+  tags: ['smtp', 'stalwart', 'mail', 'infra']
+
 - name: "[Core] pazny.spacetimedb render"
   ansible.builtin.include_role: { name: pazny.spacetimedb, apply: { tags: ['spacetimedb', 'infra'] } }
   when: install_spacetimedb | default(false)

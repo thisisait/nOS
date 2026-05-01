@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: smtp_stalwart
+  namespace: pazny
+  author: pazny
+  description: Stalwart Mail Server (SMTP / IMAP / JMAP) container — Track G production role
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - any
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  galaxy_tags:
+    - mail
+    - smtp
+    - imap
+    - stalwart
+    - production
+dependencies: []

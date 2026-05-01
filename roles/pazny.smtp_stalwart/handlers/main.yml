@@ -1,0 +1,10 @@
+---
+- name: Restart smtp_stalwart
+  ansible.builtin.command: >
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra
+    restart smtp_stalwart
+  register: _stalwart_restart
+  changed_when: _stalwart_restart.rc == 0
+  failed_when:
+    - _stalwart_restart.rc != 0
+    - "'No such service' not in (_stalwart_restart.stderr | default(''))"

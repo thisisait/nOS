@@ -1,0 +1,55 @@
+# ==============================================================================
+# pazny.smtp_stalwart — Stalwart Mail Server compose override fragment
+# Merged into `docker compose -p infra up` via tasks/stacks/core-up.yml.
+#
+# Stalwart binds to host ports directly (not Traefik) — SMTP (25/465/587)
+# and IMAP (993) need raw TCP, not HTTP. The webadmin (HTTPS on a separate
+# port) goes through Traefik like everything else.
+# ==============================================================================
+
+services:
+  smtp_stalwart:
+    image: {{ stalwart_image }}
+    container_name: smtp_stalwart
+    restart: unless-stopped
+    ports:
+{% set _bind = '127.0.0.1:' if (stalwart_lan_only | default(false) | bool) else '' %}
+      - "{{ _bind }}{{ stalwart_port_smtp }}:25"
+      - "{{ _bind }}{{ stalwart_port_smtps }}:465"
+      - "{{ _bind }}{{ stalwart_port_submission }}:587"
+      - "{{ _bind }}{{ stalwart_port_imap }}:993"
+    environment:
+      # First-boot bootstrap. Stalwart reads etc/config.toml after first run;
+      # these envs only seed the initial install.
+      MAIL_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+      MAIL_HOSTNAME: "{{ stalwart_domain }}"
+      MAIL_ADMIN_USER: "{{ stalwart_admin_username }}"
+      MAIL_ADMIN_PASS: "{{ stalwart_admin_password }}"
+    volumes:
+      - {{ stalwart_data_dir }}/etc:/opt/stalwart-mail/etc
+      - {{ stalwart_data_dir }}/logs:/opt/stalwart-mail/logs
+      - {{ stalwart_data_dir }}/queue:/opt/stalwart-mail/data
+{% if not (tenant_domain_is_local | default(true) | bool) %}
+      # Wildcard cert from pazny.acme — Stalwart reads PEM directly.
+      - {{ stalwart_tls_cert_path }}:/opt/stalwart-mail/etc/cert.pem:ro
+      - {{ stalwart_tls_cert_key }}:/opt/stalwart-mail/etc/key.pem:ro
+{% endif %}
+    networks:
+      - infra_net
+      - {{ stacks_shared_network }}
+    labels:
+      # Webadmin via Traefik (HTTPS). Stalwart's webadmin lives on internal
+      # port 8080; Traefik fronts it at https://{{ stalwart_domain }}/admin.
+      - "traefik.enable=true"
+      - "traefik.http.routers.smtp-stalwart-webadmin.rule=Host(`{{ stalwart_domain }}`)"
+      - "traefik.http.routers.smtp-stalwart-webadmin.entrypoints=websecure"
+      - "traefik.http.routers.smtp-stalwart-webadmin.tls=true"
+      - "traefik.http.routers.smtp-stalwart-webadmin.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.smtp-stalwart-webadmin.loadbalancer.server.port=8080"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ stalwart_mem_limit }}
+    cpus: {{ stalwart_cpus }}
