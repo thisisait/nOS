@@ -4,7 +4,7 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-01 • commit: post Track H landing • by: pazny+claude
+> Last updated: 2026-05-01 16:37 • commit: post-blank-green gate cleared • by: pazny+claude
 
 ---
 
@@ -14,9 +14,9 @@
 
 ## Current sub-step: **Phase 1 — survey + decompose `instance_tld`**
 
-After operator confirms Track H green via fresh `--blank` test (operator
-explicitly asked to "začít testování s --blank na novo" before moving to F).
-If blank green → kick off Track F. If anything red → fix in place, re-test.
+**Blank gate cleared 2026-05-01 16:37** (`ok=891 changed=267 failed=0 skipped=375`,
+39/39 smoke OK, all 3 Tier-2 pilots healthy end-to-end). Track F unblocked —
+Phase 1 starts now.
 
 ### What's done already (going into F)
 
@@ -105,7 +105,7 @@ Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this
 | Surface | State |
 |---|---|
 | `git status` | clean (or pending commits — check before any write) |
-| Last green blank | `ok=845 changed=261 failed=0 skipped=369` (2026-04-29 23:27) |
+| Last green blank | `ok=891 changed=267 failed=0 skipped=375` (2026-05-01 16:37) — **Track-E/J/H end-to-end gate ✅** Tier-2 pilots 3/3 healthy (documenso/roundcube/twofauth), 39/39 smoke OK |
 | Last partial recovery | `ok=130 changed=10 failed=0 skipped=36` (2026-04-30 13:59) — Tier-2 stack 4/4 healthy, post-hooks all fired |
 | Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live |
 | Tier-1 services | all healthy |
@@ -114,7 +114,7 @@ Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this
 | ansible-core | 2.20.5 (operator + CI matrix); forward-compat verified under 2.21.0rc1 |
 | Pilots live | `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml`. `apps/plane.yml.draft` deferred. |
 | Decision log | O1-O18 in roadmap-2026q2.md |
-| Next gate | Operator runs fresh `ansible-playbook main.yml -K -e blank=true` to verify Tracks E + J + H end-to-end; if green → Track F |
+| Next gate | **Cleared 2026-05-01 16:37** — fresh blank green (`ok=891 failed=0`, 39/39 smoke ✅). Track F unblocked. |
 
 ---
 
