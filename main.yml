@@ -112,6 +112,50 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # ── Track F compat: legacy `instance_tld` → `tenant_domain` auto-promote ──
+    # Pre-Track-F config.yml may pin `instance_tld: pazny.eu` (or similar). The
+    # default.config.yml shim makes `instance_tld` resolve to `tenant_domain`,
+    # but Ansible's vars-merge silently drops the shim's Jinja expression when
+    # the operator overrides the bare key — leaving `tenant_domain` stuck at
+    # its default (`dev.local`) while `instance_tld` reflects the operator's
+    # real choice. All Tier-1 svc_domain vars now read `tenant_domain`, so
+    # without this fix the operator's TLD override would be silently lost.
+    #
+    # This task detects that exact mismatch and promotes the legacy override
+    # forward, then warns once. Idempotent: no-op when the operator has
+    # already moved to `tenant_domain` in their config.yml.
+    - name: "[Track F compat] Auto-promote legacy instance_tld override to tenant_domain"
+      ansible.builtin.set_fact:
+        tenant_domain: "{{ instance_tld }}"
+        _legacy_instance_tld_promoted: true
+      when:
+        - instance_tld is defined
+        - tenant_domain | default('dev.local') == 'dev.local'   # operator did NOT explicitly set tenant_domain
+        - instance_tld != (tenant_domain | default('dev.local'))  # but instance_tld differs
+      tags: ['always']
+
+    - name: "[Track F compat] Warn on legacy instance_tld override (one-time deprecation notice)"
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  DEPRECATION NOTICE — Track F variable rename
+          ─────────────────────────────────────────────────────
+          Your config.yml still defines:    instance_tld: {{ instance_tld }}
+          Auto-promoted at runtime to:      tenant_domain: {{ tenant_domain }}
+
+          Please update config.yml at your convenience:
+
+              # Before (legacy):
+              instance_tld: {{ instance_tld }}
+
+              # After (Track F):
+              tenant_domain: {{ tenant_domain }}
+              # host_alias: ""             # optional per-host segment, e.g. "lab"
+
+          The compat shim will remain through Q3 2026 then be removed in a
+          follow-up cleanup commit. See docs/operator-domain-naming.md.
+      when: _legacy_instance_tld_promoted | default(false) | bool
+      tags: ['always']
+
     # ── Preflight: edge-proxy sanity ─────────────────────────────────────────
     # Catch a misconfigured config.yml early — Docker services run happily
     # on internal networks even when nothing answers 80/443, so the failure
