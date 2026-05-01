@@ -12,15 +12,16 @@
 # ==============================================================================
 
 - name: "[pazny.nodered] Ensure data directory exists"
+  # The Docker nodered image runs as UID 1000 — if the host user has a different
+  # UID, Docker Desktop for Mac handles it via osxfs/virtiofs user mapping.
+  # We accept failures here because on macOS chown without `become: true`
+  # may bounce against System Integrity Protection / TCC — the Docker
+  # mount works regardless.
   ansible.builtin.file:
     path: "{{ nodered_data_dir }}"
     state: directory
     mode: '0755'
-    # The Docker nodered image runs as UID 1000 — if the host user has a different
-    # UID, Docker Desktop for Mac handles it via osxfs/virtiofs user mapping.
-    # We specify an owner, but failed_when is false — on macOS it is often not
-    # required / possible without `become: true`.
-  ignore_errors: true
+  failed_when: false
 
 - name: "[pazny.nodered] Render settings.js (no adminAuth → gated by Authentik)"
   ansible.builtin.template:

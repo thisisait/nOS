@@ -28,8 +28,14 @@
     path: "{{ homebrew_prefix }}/bin/opencode"
   register: _opencode_final_check
 
-- name: "[OpenCode] Fallback to curl installer (if brew failed)"
+- name: "[OpenCode] Fallback to curl installer (if brew failed)"  # noqa: command-instead-of-module
+  # Upstream provides a `curl ... | bash` install pipeline; the get_url
+  # module would download but not execute, and replicating the install
+  # script's logic in Ansible is brittle (paths, shell rc setup, version
+  # detection — upstream changes these without notice). Shell+curl|bash
+  # mirrors the documented install path 1:1.
   ansible.builtin.shell: |
+    set -o pipefail
     curl -fsSL https://opencode.ai/install | bash
   args:
     executable: /bin/bash

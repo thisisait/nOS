@@ -42,7 +42,11 @@
     prefix: nos-import-
   register: _import_tmpdir
 
-- name: "[Import] Extract tarball"
+- name: "[Import] Extract tarball"  # noqa: command-instead-of-module
+  # ansible.builtin.unarchive would work but its `dest:` extraction
+  # behavior (preserves absolute paths from inside archive) doesn't
+  # round-trip cleanly with the export-state.yml `-C parent basename`
+  # creation pattern. Shell+tar keeps the import/export pair symmetric.
   ansible.builtin.shell: >
     tar xzf "{{ import_tarball }}" -C "{{ _import_tmpdir.path }}"
   check_mode: false
@@ -166,7 +170,8 @@
   loop: "{{ _import_archive_names }}"
   register: _import_archive_stats
 
-- name: "[Import] Restore data archives"
+- name: "[Import] Restore data archives"  # noqa: command-instead-of-module
+  # Symmetric with the export tar: see [Import] Extract tarball comment.
   ansible.builtin.shell: >
     tar xzf "{{ _import_src }}/{{ item.item }}.tar.gz"
     -C "{{ ansible_facts['env']['HOME'] }}"

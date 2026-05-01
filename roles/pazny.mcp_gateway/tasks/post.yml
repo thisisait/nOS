@@ -102,7 +102,12 @@
 # ── 3. Update compose override s Grafana tokenem + restart ───────────────────
 
 - name: "[mcp_gateway Post] Update mcp-grafana env with real token"
+  # noqa: risky-shell-pipe — the | characters in the sed command are
+  # regex delimiters (s|FOO|BAR|g), not shell pipes; ansible-lint's
+  # rule is conservative and matches | anywhere in the shell block.
+  # No actual pipe semantics here.
   ansible.builtin.shell: |
+    set -o pipefail
     if [ -f "{{ mcpo_data_dir }}/.grafana_sa_token" ]; then
       token=$(cat "{{ mcpo_data_dir }}/.grafana_sa_token")
       sed -i.bak "s|GRAFANA_SERVICE_ACCOUNT_TOKEN: \".*\"|GRAFANA_SERVICE_ACCOUNT_TOKEN: \"${token}\"|g" \
@@ -118,7 +123,11 @@
   changed_when: "'UPDATED' in _mcpo_token_update.stdout"
   when: mcp_enable_grafana | default(true)
 
-- name: "[mcp_gateway Post] Restart mcp-grafana to pick up new token"
+- name: "[mcp_gateway Post] Restart mcp-grafana to pick up new token"  # noqa: no-handler
+  # Inline (not a handler) because the next task in this file probes
+  # mcpo /openapi.json — that probe must run AFTER the restart, but
+  # handlers fire at end-of-play. Same ordering pattern as launchctl
+  # plist reload tasks elsewhere in the codebase.
   ansible.builtin.shell: |
     cd {{ stacks_dir }}/iiab
     {{ docker_bin }} compose -p iiab \

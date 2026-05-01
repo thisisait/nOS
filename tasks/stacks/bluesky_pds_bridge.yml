@@ -17,12 +17,15 @@
 
 - name: "[PDS Bridge] Get Authentik API token"
   ansible.builtin.shell: >
+    set -o pipefail;
     {{ docker_bin }} compose -p infra exec -T authentik-server
     ak shell -c
     "from authentik.core.models import Token;
     t=Token.objects.filter(identifier='nos-api').first();
     print(t.key if t else '')"
     2>/dev/null | tail -1
+  args:
+    executable: /bin/bash
   register: _pds_bridge_token_raw
   changed_when: false
   failed_when: false
@@ -118,11 +121,14 @@
 
 - name: "[PDS Bridge] Mint invite code per user"
   ansible.builtin.shell: >
+    set -o pipefail;
     {{ docker_bin }} compose -p infra exec -T bluesky-pds
     goat pds admin invite create
     --pds-host http://localhost:3000
     --admin-password "{{ bluesky_pds_admin_password }}"
     --uses 1 2>&1 | tr -d '[:space:]'
+  args:
+    executable: /bin/bash
   register: _pds_bridge_invites
   loop: "{{ _pds_bridge_new_users | default([]) }}"
   loop_control:

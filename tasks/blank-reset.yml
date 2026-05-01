@@ -24,7 +24,7 @@
 # include blank would delete non-existent ~/service directories and the real data
 # on /Volumes/SSD1TB/{jellyfin,openwebui,portainer,...} would survive.
 - name: "[BLANK] Apply external storage path overrides (if external_storage_root set)"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/external-paths.yml"
+  ansible.builtin.include_tasks: "tasks/stacks/external-paths.yml"
   when:
     - external_storage_root is defined
     - external_storage_root | default('') | length > 0
@@ -88,7 +88,7 @@
   changed_when: true
 
 - name: "[BLANK] Prune all unused Docker networks"
-  ansible.builtin.shell: "{{ docker_bin }} network prune -f"
+  ansible.builtin.command: "{{ docker_bin }} network prune -f"
   failed_when: false
   changed_when: true
 

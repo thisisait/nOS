@@ -218,6 +218,7 @@
     - name: "[Apps Post] Compute keyed HMAC-SHA256 via openssl"
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           printf '%s' "$NOS_BODY"
           | openssl dgst -sha256 -hmac "$NOS_KEY" -hex
           | awk '{print $NF}'
@@ -336,6 +337,7 @@
     - name: "[Apps Post] Upsert GDPR processing rows (Wing CLI, one per app)"
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           printf '%s' "$NOS_GDPR_JSON"
           | {{ docker_bin | default('docker') }} compose
           -f {{ stacks_dir }}/iiab/docker-compose.yml

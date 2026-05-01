@@ -2,6 +2,11 @@
 exclude_paths:
   - roles/elliotweiser.osx-command-line-tools
   - files/observability
+  # Track H Phase 6 (2026-05-01): pazny.dotfiles ships an upstream
+  # Molecule test scaffold that references a `geerlingguy.git` role we
+  # don't install (it's a Molecule-only test dep, not a runtime dep).
+  # Excluding the molecule/ subdir keeps lint focused on runtime code.
+  - roles/pazny.dotfiles/molecule
 
 skip_list:
   - schema[meta]
@@ -20,3 +25,11 @@ skip_list:
   - var-naming[no-role-prefix]
   - jinja[spacing]
   - name[template]
+
+# Track H Phase 6 (2026-05-01): ansible-lint 26.x reports load-failure
+# warnings on three include_tasks paths where the included file lives
+# at the correct relative path (verified manually + --syntax-check OK
+# on 2.20.5 + 2.21.0rc1) but lint resolves through a wrong stem
+# (e.g. `tasks/stacks/tasks/stacks/...`). load-failure is unskippable
+# per ansible-lint design; leaving these as WARNINGS (not errors) which
+# don't fail CI. Upstream resolver fix will eventually clear them.

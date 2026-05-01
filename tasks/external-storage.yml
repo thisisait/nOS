@@ -29,7 +29,7 @@
 # paths and does not delete non-existent ~/service directories.
 
 - name: "[External SSD] Apply data path overrides"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/external-paths.yml"
+  ansible.builtin.include_tasks: "tasks/stacks/external-paths.yml"
 
 # ── Create directory structure on SSD ────────────────────────────────────
 # Loop over overridden variables from external-paths.yml - no hard-coded

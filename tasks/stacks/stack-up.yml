@@ -249,13 +249,13 @@
 
 # ── Authentik OIDC: service-side configuration (Gitea API, Nextcloud occ) ───
 - name: "[Stacks] Authentik service-side OIDC post-setup"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/authentik_service_post.yml"
+  ansible.builtin.include_tasks: "tasks/stacks/authentik_service_post.yml"
   when:
     - install_authentik | default(false)
 
 # ── Authentik -> Bluesky PDS identity bridge ────────────────────────────────
 - name: "[Stacks] Authentik->PDS identity bridge: provision Bluesky accounts"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/stacks/bluesky_pds_bridge.yml"
+  ansible.builtin.include_tasks: "tasks/stacks/bluesky_pds_bridge.yml"
   when:
     - install_bluesky_pds | default(false)
     - install_authentik | default(false)
@@ -294,9 +294,12 @@
 # is unhealthy" (false-positive - service is running, just HC timing / badly written test)
 - name: "[Stacks] Count running containers per failed stack"
   ansible.builtin.shell: >
+    set -o pipefail;
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     -p "{{ item }}" ps -q 2>/dev/null | wc -l | tr -d ' '
+  args:
+    executable: /bin/bash
   loop: "{{ _failed_stacks | default([]) }}"
   register: _failed_stacks_counts
   changed_when: false

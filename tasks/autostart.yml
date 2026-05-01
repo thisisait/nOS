@@ -15,7 +15,10 @@
 
 - name: "[Auto-start] Check if Docker Desktop is in login items"
   ansible.builtin.shell: |
+    set -o pipefail
     osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null | tr ',' '\n' | grep -qi docker
+  args:
+    executable: /bin/bash
   register: _docker_login_check
   changed_when: false
   failed_when: false
@@ -32,7 +35,11 @@
 # ── 2. PM2 startup (jsOS) ────────────────────────────────────────────────────
 
 - name: "[Auto-start] Check if jsOS is running under PM2"
-  ansible.builtin.shell: pm2 list 2>/dev/null | grep -c "online" || echo "0"
+  ansible.builtin.shell: |
+    set -o pipefail
+    pm2 list 2>/dev/null | grep -c "online" || echo "0"
+  args:
+    executable: /bin/bash
   register: _pm2_status
   changed_when: false
   failed_when: false
@@ -58,7 +65,10 @@
 
 - name: "[Auto-start] Verify Docker containers have restart policy"
   ansible.builtin.shell: |
+    set -o pipefail
     docker ps -q 2>/dev/null | xargs -I {} docker inspect {} --format '{{ "{{" }}.Name{{ "}}" }}: {{ "{{" }}.HostConfig.RestartPolicy.Name{{ "}}" }}' 2>/dev/null | grep ": no$" || echo "ALL_OK"
+  args:
+    executable: /bin/bash
   register: _container_restart_check
   changed_when: false
   failed_when: false

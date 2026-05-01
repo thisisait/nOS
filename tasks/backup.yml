@@ -128,8 +128,12 @@
     mode: '0644'
   register: backup_plist
 
-- name: "[Backup] Load launchd backup schedule"
+- name: "[Backup] Load launchd backup schedule"  # noqa: no-handler
+  # Inline (not a handler) — same launchctl unload→load ordering rationale
+  # as the vulnerability-scan plist tasks: must run mid-play, not at
+  # end-of-play handler dispatch, so the scheduler is consistent for any
+  # later tasks that check `launchctl list`.
   ansible.builtin.command: >
     launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist
-  when: backup_plist.changed
+  when: backup_plist is changed
   failed_when: false

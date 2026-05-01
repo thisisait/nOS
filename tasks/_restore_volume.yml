@@ -28,6 +28,7 @@
 
 - name: "[Restore][volume] Find containers mounting '{{ vol_name }}'"
   ansible.builtin.shell: |
+    set -o pipefail
     docker ps -a --format '{% raw %}{{.Names}}{% endraw %}' \
       | while read c; do
           if docker inspect -f '{% raw %}{{range .Mounts}}{{.Name}} {{end}}{% endraw %}' "$c" 2>/dev/null \

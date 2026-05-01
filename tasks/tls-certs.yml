@@ -54,8 +54,11 @@
 
     - name: "[mkcert] Check if SSL cert covers all required SANs"
       ansible.builtin.shell: >
+        set -o pipefail;
         openssl x509 -in {{ ssl_cert_path }} -noout -text 2>/dev/null
         | grep -qF '{{ item }}'
+      args:
+        executable: /bin/bash
       loop: "{{ _ssl_san_required | select | list }}"
       register: _cert_san_check
       changed_when: false

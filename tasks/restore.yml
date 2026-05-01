@@ -150,7 +150,7 @@
       ║ There is NO undo. Take a fresh backup first if unsure.
       ║ Press ENTER to continue, Ctrl-C to abort.
       ╚══════════════════════════════════════════════════════════════════════╝
-  when: not ansible_check_mode and (restore_auto_confirm | default(false) | bool) == false
+  when: not ansible_check_mode and not (restore_auto_confirm | default(false) | bool)
 
 - name: "[Restore] Ensure restore work-dir exists"
   ansible.builtin.file:
@@ -337,7 +337,14 @@
 # Best-effort: each role's post.yml is idempotent; re-running re-verifies
 # migrations, re-seeds admin users, re-applies OIDC wiring, etc.
 
-- name: "[Restore] Replay MariaDB role post.yml (service bootstrap)"
+- name: "[Restore] Replay MariaDB role post.yml (service bootstrap)"  # noqa: ignore-errors
+  # Best-effort: post.yml is idempotent, but a partial restore may leave
+  # the DB in a state where bootstrap (CREATE USER, GRANT, etc.) errors.
+  # We accept those errors here so the next role's replay still runs.
+  # `failed_when` doesn't apply to include_role in ansible-core 2.20+;
+  # ignore_errors is the supported escape hatch. ansible-lint flags it
+  # but the alternative (block/rescue around an include_role) adds
+  # cognitive load without behavior change.
   ansible.builtin.include_role:
     name: pazny.mariadb
     tasks_from: post.yml
@@ -349,7 +356,8 @@
   tags: ['restore']
   ignore_errors: true
 
-- name: "[Restore] Replay PostgreSQL role post.yml"
+- name: "[Restore] Replay PostgreSQL role post.yml"  # noqa: ignore-errors
+  # Same best-effort policy as MariaDB above.
   ansible.builtin.include_role:
     name: pazny.postgresql
     tasks_from: post.yml

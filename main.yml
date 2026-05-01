@@ -1067,7 +1067,10 @@
     # ──────────────────────────────────────────────────────────────────────────
     # jsOS - web desktop (OS.js v3 + Bluesky auth + homelab integration)
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "jsOS (pazny.jsos role)"
+    - name: "jsOS (pazny.jsos role)"  # noqa: name[casing]
+      # noqa rationale: 'jsOS' is the project's brand name (deliberate
+      # lowercase 'j', uppercase 'OS'). Capitalising it would be
+      # misleading (the user-facing name is jsOS, not JsOS).
       ansible.builtin.import_role:
         name: pazny.jsos
       when: install_jsos | default(false)

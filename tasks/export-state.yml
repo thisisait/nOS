@@ -117,7 +117,11 @@
     label: "{{ item.name }}"
   register: _export_dir_stats
 
-- name: "[Export] Archive existing data directories"
+- name: "[Export] Archive existing data directories"  # noqa: command-instead-of-module
+  # Symmetric with [Export] Create final tarball — see comment there.
+  # Plus needs --exclude flags which the archive module's `exclude:` arg
+  # treats as path-suffix matches (not glob patterns over arbitrary path
+  # depth) — shell+tar gives the recursive exclusion we actually want.
   ansible.builtin.shell: >
     tar czf "{{ _export_ts_dir }}/{{ item.item.name }}.tar.gz"
     --exclude='node_modules' --exclude='.cache'
@@ -152,7 +156,12 @@
 
 # ── Final tarball ────────────────────────────────────────────────────────────
 
-- name: "[Export] Create final tarball"
+- name: "[Export] Create final tarball"  # noqa: command-instead-of-module
+  # Using shell+tar instead of community.general.archive because the
+  # archive module's path/dest semantics don't cleanly express
+  # `-C <parent> <basename>` (we want the archive to contain
+  # nos-2026-XX-XX/ at the top, not the absolute export_dir path).
+  # Shell+tar keeps the resulting archive layout obvious.
   ansible.builtin.shell: >
     tar czf "{{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz"
     -C "{{ export_dir }}" "nos-{{ ansible_date_time.date }}"

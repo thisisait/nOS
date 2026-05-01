@@ -4,11 +4,15 @@
 # ==============================================================================
 
 - name: "[Git] Configure user.name"
-  ansible.builtin.command: git config --global user.name "{{ git_user_name }}"
+  community.general.git_config:
+    name: user.name
+    scope: global
+    value: "{{ git_user_name }}"
   when: git_user_name | default('') | length > 0
-  changed_when: false
 
 - name: "[Git] Configure user.email"
-  ansible.builtin.command: git config --global user.email "{{ git_user_email }}"
+  community.general.git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_user_email }}"
   when: git_user_email | default('') | length > 0
-  changed_when: false

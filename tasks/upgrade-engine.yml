@@ -83,14 +83,19 @@
     _target_service: "{{ upgrade_service | default('') }}"
     _target_recipe_id: "{{ upgrade_recipe_id | default('') }}"
   ansible.builtin.set_fact:
+    # Track H Phase 6 (2026-05-01): the previous expression
+    # `_installed_map[item.0.service].installed if item.0.service in _installed_map else ''`
+    # raised UndefinedMarker when Jinja eagerly evaluated the truthy
+    # branch even on services NOT in the map. Defensive default makes
+    # the lookup safe regardless of map content.
     _upgrade_jobs: >-
       {{
         _upgrade_jobs | default([]) + [
           {
             'service':   item.0.service,
             'recipe':    item.1,
-            'installed': (_installed_map[item.0.service].installed
-                          if item.0.service in _installed_map else ''),
+            'installed': ((_installed_map | default({}))[item.0.service]
+                          | default({})).installed | default(''),
             'recipe_path': item.0.__path
           }
         ]
