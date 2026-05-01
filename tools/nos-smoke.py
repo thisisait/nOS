@@ -330,6 +330,35 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
+
+    # ── Track F: pre-compute domain composition helpers ──────────────────────
+    # default.config.yml defines `_host_alias_seg`, `_host_alias_normalized`,
+    # and `_acme_zone` via Jinja expressions with conditionals + length filters
+    # (e.g. `{{ '.' + x if (x | length > 0) else '' }}`) that the lightweight
+    # resolver below cannot parse. If we leave them as raw Jinja strings, the
+    # downstream `<svc>_domain` lookup expands them via lite-resolver to the
+    # raw text — producing literal '{{...}}' in URLs that curl rejects with
+    # 'InvalidURL: control characters'. Pre-computing them here as concrete
+    # values keeps the resolver narrow while honouring host_alias.
+    _host_alias_raw = vars_dict.get("host_alias", "") or ""
+    if not isinstance(_host_alias_raw, str):
+        _host_alias_raw = ""
+    _host_alias_norm = _host_alias_raw.strip(".")
+    vars_dict["_host_alias_normalized"] = _host_alias_norm
+    vars_dict["_host_alias_seg"] = f".{_host_alias_norm}" if _host_alias_norm else ""
+
+    _tenant_domain_raw = vars_dict.get("tenant_domain", "dev.local") or "dev.local"
+    _acme_zone = (
+        f"{_host_alias_norm}.{_tenant_domain_raw}" if _host_alias_norm
+        else _tenant_domain_raw
+    )
+    vars_dict["_acme_zone"] = _acme_zone
+
+    _apps_subdomain_raw = vars_dict.get("apps_subdomain", "apps") or "apps"
+    if not isinstance(_apps_subdomain_raw, str):
+        _apps_subdomain_raw = "apps"
+    vars_dict["_apps_subdomain_normalized"] = _apps_subdomain_raw.strip(".")
+
     # Self-substitute Jinja inside vars (e.g. wing_domain: "wing.{{ tenant_domain }}")
     for k, v in list(vars_dict.items()):
         if isinstance(v, str) and "{{" in v:
