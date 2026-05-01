@@ -38,7 +38,7 @@ acme_brew_pkg: "acme.sh"
 # Cert filename uses the wildcard zone apex (host_alias.tenant_domain when
 # set, else just tenant_domain) to keep one file per fleet box.
 acme_cert_dir: "{{ tls_cert_dir | default(stacks_dir + '/infra/tls') }}/acme"
-acme_cert_zone: "{{ ((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain }}"
+acme_cert_zone: "{{ ((_host_alias_normalized + '.') if ((_host_alias_normalized | default('')) | length > 0) else '') + tenant_domain }}"
 acme_cert_path: "{{ acme_cert_dir }}/{{ acme_cert_zone }}.crt"
 acme_cert_key: "{{ acme_cert_dir }}/{{ acme_cert_zone }}.key"
 

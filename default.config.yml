@@ -34,9 +34,18 @@ tenant_domain: "dev.local"                # Primary TLD; all FQDNs resolve here
 host_alias: ""                            # Per-host segment ("" drops it; "lab" yields bone.lab.dev.local)
 apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (Coolify-imported et al.)
 
+# Normalize host_alias by stripping leading/trailing dots. Operators may
+# accidentally type '.lab' or 'lab.' — both should produce a clean '.lab'
+# segment without double-dot artefacts in the rendered FQDN.
+_host_alias_normalized: "{{ host_alias | default('') | regex_replace('^\\.+|\\.+$', '') }}"
+
 # Helper: ".<host_alias>" when host_alias is set, "" otherwise. Consumer
 # templates compose hostnames as: "<svc>{{ _host_alias_seg }}.{{ tenant_domain }}".
-_host_alias_seg: "{{ ('.' + host_alias) if (host_alias | default('') | length > 0) else '' }}"
+_host_alias_seg: "{{ ('.' + _host_alias_normalized) if (_host_alias_normalized | length > 0) else '' }}"
+
+# Same normalization for apps_subdomain — operators may type 'apps.' or '.apps';
+# Tier-2 Jinja consumers (mkcert SANs, ACME domains list) should both render cleanly.
+_apps_subdomain_normalized: "{{ apps_subdomain | default('apps') | regex_replace('^\\.+|\\.+$', '') }}"
 
 # Backwards-compat shim — Phase 3 will migrate consumers to tenant_domain
 # directly, then this can be removed in a follow-up cleanup commit.
@@ -62,7 +71,7 @@ tls_cert_dir: "{{ stacks_dir }}/infra/tls"
 # Cert filename uses the wildcard zone apex (host_alias.tenant_domain when
 # host_alias is set, else just tenant_domain). Keeps one cert file per fleet
 # box so multiple host_alias deploys against the same tenant_domain coexist.
-_acme_zone: "{{ ((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain }}"
+_acme_zone: "{{ ((_host_alias_normalized + '.') if (_host_alias_normalized | length > 0) else '') + tenant_domain }}"
 ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if tenant_domain_is_local else 'acme/' + _acme_zone + '.crt' }}"
 ssl_cert_key:  "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local else 'acme/' + _acme_zone + '.key' }}"
 

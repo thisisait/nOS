@@ -124,6 +124,36 @@
     # This task detects that exact mismatch and promotes the legacy override
     # forward, then warns once. Idempotent: no-op when the operator has
     # already moved to `tenant_domain` in their config.yml.
+    # ── Track F input validation: tenant_domain must be non-empty + DNS-safe ─
+    # Catches typos before they propagate into 100+ template renders. Empty
+    # tenant_domain produces 'bone=api.' (truncated FQDN); spaces or invalid
+    # chars produce broken DNS records that look correct in Jinja but fail
+    # at the resolver. Cheaper to fail here than spend 30 min of blank time
+    # to discover it.
+    - name: "[Track F validate] tenant_domain must be set + DNS-safe"
+      ansible.builtin.fail:
+        msg: |-
+          tenant_domain is invalid: '{{ tenant_domain | default('<unset>') }}'
+          Must be a non-empty DNS-safe string (a-z, 0-9, '.', '-').
+          Set in config.yml:   tenant_domain: "dev.local"   (or your real TLD)
+      when: >-
+        (tenant_domain | default('') | length == 0) or
+        (not (tenant_domain | regex_search('^[a-z0-9][a-z0-9.\\-]*[a-z0-9]$', ignorecase=True)))
+      tags: ['always', 'preflight']
+
+    - name: "[Track F validate] host_alias must be DNS-safe (or empty)"
+      ansible.builtin.fail:
+        msg: |-
+          host_alias is invalid: '{{ host_alias }}'
+          Must be empty (default) OR a DNS-safe label (a-z, 0-9, '.', '-').
+          Leading/trailing dots are stripped automatically — but middle
+          spaces or special chars are rejected.
+          Examples: "" (default) | "lab" | "factory" | "my-lab" | "lab.staging"
+      when:
+        - host_alias | default('') | length > 0
+        - not (host_alias | regex_search('^[a-z0-9][a-z0-9.\\-]*[a-z0-9]$|^[a-z0-9]$', ignorecase=True))
+      tags: ['always', 'preflight']
+
     - name: "[Track F compat] Auto-promote legacy instance_tld override to tenant_domain"
       ansible.builtin.set_fact:
         tenant_domain: "{{ instance_tld }}"
