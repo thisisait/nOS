@@ -33,6 +33,12 @@ VALID_TYPES = {
     "migration_start", "migration_step_ok", "migration_step_failed", "migration_end",
     "upgrade_start", "upgrade_step_ok", "upgrade_end",
     "coexistence_provision", "coexistence_cutover", "coexistence_cleanup",
+    # ── Track G/seed: agentic security scans (files/vuln-scan/scan-runner.sh) ─
+    "scan.batch_started",        # batch picked + dispatching to LLM
+    "scan.finding_recorded",     # one finding written to remediation-queue
+    "scan.batch_done",           # state file updated, cycle counter checked
+    # ── Track G/seed: programmatic security drift (hooks/playbook-end.d/) ────
+    "security.drift.snapshot",   # 20-cve-drift-check.sh post-playbook snapshot
 }
 
 

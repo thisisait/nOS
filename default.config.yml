@@ -2054,6 +2054,16 @@ authentik_agent_scopes:
   - "nos:coexistence:read"
   - "nos:coexistence:write"
   - "nos:run-tag"
+  # ── Track G/seed: security agent scopes ────────────────────────────────────
+  # Per-agent identity for the security pipeline. Each scope maps to a Bone
+  # route guarded by require_scope(...) when the corresponding endpoint
+  # ships (post-refactor §A4). Until then these scopes are declarative —
+  # available for clients to request, no enforcement surface yet. The
+  # bones&wings refactor's Conductor primary will wire enforcement.
+  - "nos:security:read"          # read scan-state, remediation-queue, advisories
+  - "nos:security:write"         # append findings, update remediation status
+  - "nos:security:scan"          # trigger ad-hoc scan run (between scheduled batches)
+  - "nos:pentest:execute"        # actually run the inspektor's attack probes (high blast radius)
 
 # Default agents seeded into Authentik. Add custom agents by extending this
 # list in your local config.yml (Ansible vars_files merge appends).
@@ -2089,6 +2099,55 @@ authentik_agent_clients:
       - "nos:upgrades:read"
       - "nos:patches:read"
       - "nos:coexistence:read"
+
+  # ── Track G/seed: security agent identities (per-actor SSO) ───────────────
+  # Distinct from `nos-tester` (smoke probe — proves apps respond after auth)
+  # and `nos-state-manager` (operational state pushes). These three are the
+  # security-research agent profiles from the bones&wings refactor (§7),
+  # provisioned NOW so wing.db audit trail tags every finding/scan/probe with
+  # the right actor_id from day one.
+
+  - name: "nOS Inspektor"
+    slug: "nos-inspektor"
+    client_id: "nos-inspektor"
+    client_secret: "{{ global_password_prefix }}_pw_agent_inspektor"
+    # Pentest agent — full security read/write + scan trigger + probe execute.
+    # System-prompt source: docs/llm/security/pentest-task.md (drop-in ready).
+    # Audit: every wing.db row tagged actor_id=nos-inspektor; GDPR Article 30
+    # query is one SELECT.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:security:write"
+      - "nos:security:scan"
+      - "nos:pentest:execute"
+
+  - name: "nOS Librarian"
+    slug: "nos-librarian"
+    client_id: "nos-librarian"
+    client_secret: "{{ global_password_prefix }}_pw_agent_librarian"
+    # Knowledge/RAG agent — read-only across state + security (so it can
+    # surface "have we already remediated this before?" context); future
+    # write scope for indexing into a RAG store post-PoC.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+
+  - name: "nOS Scout"
+    slug: "nos-scout"
+    client_id: "nos-scout"
+    client_secret: "{{ global_password_prefix }}_pw_agent_scout"
+    # Drift/visibility agent — read-only on state + security state.
+    # The 20-cve-drift-check.sh hook (programmatic) is its dumb cousin;
+    # Scout adds the LLM layer post-PoC (correlates drift trends across
+    # services + suggests prioritization). Same client_id used by the
+    # Grafana annotation push when a finding lands on a critical row.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
 
 # Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
 # during the cutover (NOT recommended — both sides should agree on JWT only).

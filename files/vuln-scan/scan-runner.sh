@@ -21,6 +21,14 @@ PROMPT_FILE="${REPO_DIR}/files/vuln-scan/scan-prompt.md"
 LOG_FILE="${SECURITY_DIR}/scan.log"
 LOCK_FILE="/tmp/nos-vulnscan.lock"
 
+# Track G/seed: structured event emit. SCAN_RUN_ID threads through the
+# whole batch so wing.db can aggregate per-batch finding counts under one
+# timeline row. lib-jsonl.sh tees to ~/.nos/events/scan.jsonl + HMAC POSTs
+# to Bone (when WING_EVENTS_HMAC_SECRET set; silent no-op otherwise).
+export SCAN_RUN_ID="scan_$(date +%s)_$$"
+# shellcheck source=lib-jsonl.sh
+source "$(dirname "$0")/lib-jsonl.sh"
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 log() {
@@ -131,9 +139,22 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
 PROMPT_EOF
 )
 
+# ── Emit scan.batch_started event ────────────────────────────────────────────
+
+# Convert BATCH (newline-separated) → JSON array for the event payload.
+BATCH_JSON=$(echo "$BATCH" | jq -R . | jq -sc .)
+emit_event "scan.batch_started" "$(jq -nc \
+    --argjson components "$BATCH_JSON" \
+    --argjson batch_size "$BATCH_SIZE" \
+    --arg probe "$PROBE_NAME" \
+    --argjson cycle "$SCAN_CYCLE" \
+    '{components:$components, batch_size:$batch_size, attack_probe:$probe, scan_cycle:$cycle}'
+)" >> "$LOG_FILE"
+
 # ── Dispatch Claude Code ──────────────────────────────────────────────────────
 
 log "Dispatching Claude Code scan..."
+SCAN_STARTED_AT=$(date +%s)
 
 echo "$DYNAMIC_PROMPT" | claude --dangerously-skip-permissions -p - \
     --output-format text \
@@ -178,4 +199,19 @@ jq --argjson nb "$NEXT_BATCH" '.rotation.next_batch = $nb' "$STATE_FILE" > "${ST
     && mv "${STATE_FILE}.tmp" "$STATE_FILE"
 
 log "Next batch: $(echo "$NEXT_BATCH" | jq -r 'join(", ")')"
+
+# ── Emit scan.batch_done event ───────────────────────────────────────────────
+# Closes the batch in wing.db's timeline. duration_s lets us track scan
+# latency over time (Grafana panel can spot a misbehaving Claude Code rev).
+SCAN_DURATION=$(( $(date +%s) - SCAN_STARTED_AT ))
+PENDING_AFTER=$(jq '[.items[] | select(.status == "pending")] | length' \
+                  "${SECURITY_DIR}/remediation-queue.json" 2>/dev/null || echo "null")
+emit_event "scan.batch_done" "$(jq -nc \
+    --argjson components "$BATCH_JSON" \
+    --argjson duration_s "$SCAN_DURATION" \
+    --argjson pending_after "$PENDING_AFTER" \
+    --argjson cycle_complete "$([ "$PENDING" -eq 0 ] && echo true || echo false)" \
+    '{components:$components, duration_s:$duration_s, pending_total_after:$pending_after, cycle_complete:$cycle_complete}'
+)" >> "$LOG_FILE"
+
 log "=== NOS Vulnerability Scan finished ==="

@@ -8,9 +8,9 @@
 
 ---
 
-## Current track: **G — Cloudflare proxy + LE production exposure**
+## Current track: **G — Cloudflare proxy + LE production exposure** (scaffolded; wet activation pending domain switch)
 
-> Track F **DONE 2026-05-01** — see "What's done already" below.
+> Track F **DONE 2026-05-01**, Track G **scaffolded 2026-05-01** (all toggles off pending DNS flip), bones&wings refactor seed-work **landed 2026-05-02** (`hooks/playbook-end.d/20-cve-drift-check.sh` + `tools/wing-telemetry-smoke.py` + `files/vuln-scan/lib-jsonl.sh` integration + 3 security agent SSO identities). Refactor PoC implementation (phases A0-A10) still NOT started; gate = operator confirms domain switch + Stalwart wet test.
 
 ## Previous track: **F — Dynamic instance_tld + per-host alias** ✅
 
