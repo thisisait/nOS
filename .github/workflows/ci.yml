@@ -37,8 +37,11 @@ jobs:
         with:
           python-version: '3.x'
 
+      # Pin ansible-core to operator's installed baseline (2.20.x). Avoids
+      # CI drift when upstream cuts 2.21+ stable. Bump in a coordinated
+      # commit when ansible-core 2.21/2.22/2.24 is intentionally adopted.
       - name: Install lint dependencies.
-        run: pip3 install yamllint ansible ansible-lint
+        run: pip3 install yamllint 'ansible-core>=2.20,<2.21' ansible-lint
 
       - name: yamllint – YAML syntax check.
         run: yamllint .
@@ -70,8 +73,9 @@ jobs:
         with:
           python-version: '3.x'
 
+      # Pin to current operator baseline (2.20.x). See Lint job comment.
       - name: Install Ansible.
-        run: pip3 install ansible
+        run: pip3 install 'ansible-core>=2.20,<2.21'
 
       - name: Install Ansible Galaxy requirements.
         run: ansible-galaxy install -r requirements.yml
@@ -169,10 +173,11 @@ jobs:
           sudo rm -rf /Applications/Google\ Chrome.app
           sudo rm -rf /usr/local/bin/firefox
 
+      # Pin to current operator baseline (2.20.x). See Lint job comment.
       - name: Install test dependencies.
         run: |
           sudo pip3 install --upgrade pip
-          sudo pip3 install ansible
+          sudo pip3 install 'ansible-core>=2.20,<2.21'
 
       - name: Set up the test environment.
         run: |
