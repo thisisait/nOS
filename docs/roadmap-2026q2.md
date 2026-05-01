@@ -5,10 +5,12 @@
 > the active track. Each track has its own commit conventions and exit
 > criteria so progress survives context resets.
 >
-> Last updated: 2026-04-29 • commit: `f9e57c1` • by: pazny+claude
+> Last updated: 2026-05-01 • commit: post Track J landing • by: pazny+claude
 >
-> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 (Tracks E-H, the post-Q2-A-D
-> work) is in flight. New sessions land in [Track E](#track-e--tier-2-appsrunner-wet-test--d8d9)
+> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 (Tracks E, J, H, F, G) — order
+> revised per O16. **Track E** code-complete + wet-tested green 2026-04-30
+> (3 recovery commits). **Track J** (tech-debt cleanup, 6 commits) DONE
+> 2026-05-01. New sessions land in [Track H](#track-h--ansible-core--224-upgrade-after-j-per-o16-was-d12)
 > unless explicitly directed elsewhere — see also
 > [`docs/active-work.md`](active-work.md) for the always-current
 > "what to do right now" pointer.
@@ -519,28 +521,56 @@ F sets up `tenant_domain` as a real public domain. Without F, public deploy is a
 
 ---
 
-### Track H — ansible-core ≥ 2.24 upgrade **(after G, D12)**
+### Track J — Tech debt cleanup **(2026-05-01, between E and H per O16)**
 
-**Status: parked tech debt** (CLAUDE.md flags it as "Known Tech Debt: ansible_env needs migration to ansible_facts before Ansible-core 2.24"). Intentional last-of-roadmap so dynamic-domain + public-deploy work doesn't get derailed by a foundational shake-up.
+**Status: DONE 2026-05-01 in 6 commits `0a6a960..f321b6e` + this commit.** A focused 3-3.5h sweep landing all the debris from Track E recovery (mailpit cross-stack, misleading task names, false-friend traps) plus an opportunistic pull-forward of the `ansible_env` modernization that simplified Track H.
 
-#### Why this comes last
-Mechanical migration with cross-cutting touch surface. Easier when the rest of the codebase is stable.
+#### Why this came before H/F/G
+Three Track-E recovery commits (`8091c07`, `a8fc804`, `d4e99f2`) shipped working code but left footprints — comments that lied about architecture, file names that misled the next reader, a misnamed warning that led ME to misdiagnose its own logs. Cleaning these up before tackling Track H (mechanical ansible-core upgrade), Track F (108-occurrence `instance_tld` refactor), or Track G (new Stalwart role + public deploy) means each downstream track starts from a tree that doesn't actively mislead.
 
-#### Scope
-1. **`ansible_env` → `ansible_facts['env']`** — sed-batch replace across all `roles/pazny.*` and `tasks/`. ~200-400 occurrences expected; verifiable with grep.
+#### Scope (6 phases, 6 commits)
+1. **Phase 1 — apps-up clarity polish** (commit `0a6a960`). The post-hook gate at `tasks/stacks/apps-up.yml:120` was correct all along (`when: rc == 0`); audit of yesterday's logs showed `skipping: [127.0.0.1]` on the include task when rc=1. I had misread Ansible's task-registration log lines. This commit just renames the warning task and adds the Section 12 recovery hint to its body.
+2. **Phase 2 — mailpit dual-attach** (commit `9708133`). Mailpit was on `iiab_iiab_net` only — Documenso couldn't resolve `mailpit:1025` from `apps_apps_net`. Added `shared_net` to mailpit's networks list (parity with infra postgres / mariadb / redis / authentik dual-attach). Fixed lying comment that claimed apps reached mailpit "inside the iiab_net docker network".
+3. **Phase 3 — `pazny.authentik post.yml` rename** (commit `326a592`). The 32-line file did ONLY readiness probe but its name suggested post-deploy reconverge. `git mv post.yml health.yml` + update single caller + 25-line docstring pointing future readers to the canonical `tasks_from: blueprints.yml + meta: flush_handlers` reconverge pattern.
+4. **Phase 4 — `ansible_env` → `ansible_facts['env']`** (commit `85b933b`). Pulled forward from Track H. Actual count: 9 occurrences in 6 files (state-manager + coexistence + pre-migrate + state-report). Track H is now ~1 day instead of 2 (no sed pass needed).
+5. **Phase 5 — pytest collection cleanup** (commit `f321b6e`). 4 collection errors on `tests/authentik/*` (missing `responses`) + `tests/bone_auth/*` (missing `jwt` — Track B work that hasn't landed). Top-of-file `pytest.importorskip` so collection succeeds without optional deps. Net: 431 tests collected (was 8 collected + 4 errors).
+6. **Phase 6 — roadmap + active-work + remember refresh** (this commit). Decisions O12-O16 logged. Track H scope reduced. active-work.md flipped to point at Track J → Track H.
+
+#### Total LOC delta
+~140 lines code/comments + 6 commits + 0 tests added (this is debt-paydown, not feature work). 89 apps tests still passing post-J.
+
+#### Exit criteria
+- [x] All Track E recovery footprints cleaned up
+- [x] Track H Phase 1 (`ansible_env`) pre-paid
+- [x] Pytest collection green (0 errors)
+- [x] Decisions O12-O16 logged
+- [x] Roadmap reflects new J→H→F→G order
+
+---
+
+### Track H — ansible-core ≥ 2.24 upgrade **(after J per O16, was D12)**
+
+**Status: scope shrunk by Track J Phase 4 (commit `85b933b` landed `ansible_env` → `ansible_facts['env']` modernization).** ~1 day mechanical work remaining; CLAUDE.md "Known Tech Debt" entry can be removed at end of H.
+
+#### Why ordering revised (O16)
+Original O11 placed H at the end. Once `ansible_env` count came in at **9** (not 200-400 as the roadmap originally feared), H became a 1-day mechanical job that's safer to land BEFORE F. Track F's `instance_tld` decomposition touches 108 places — running it on ansible-core 2.24 from the start avoids a re-test pass.
+
+#### Scope (post-J)
+1. ~~`ansible_env` → `ansible_facts['env']`~~ — **DONE in Track J Phase 4** (9 occurrences, commit `85b933b`).
 2. **Collection version bumps** — sync `requirements.yml` against ansible-core 2.24-compatible minor versions for `community.general`, `community.docker`, `community.crypto`, `ansible.posix`.
-3. **`meta/main.yml` for all roles** — bump `min_ansible_version: "2.16"` → `"2.24"`.
+3. **`meta/main.yml` for all roles** — bump `min_ansible_version: "2.16"` → `"2.24"`. (~50 files; mechanical.)
 4. **Custom modules audit** — `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`, `nos_apps_render.py` — verify `AnsibleModule` API + `module_utils.*` import paths against 2.24 lazy-resolve changes.
 5. **Callback plugin audit** — `callback_plugins/wing_telemetry.py` uses `v2_*` hooks (stable across 2.16-2.24).
 6. **Lint sweep** — re-baseline `ansible-lint` rules; some 2.24 rules tighten (`schema[meta]`, `loop-var-prefix`).
 7. **CI matrix bump** — GitHub Actions `ansible-core` pin → `>=2.24,<2.25`.
+8. **CLAUDE.md** — remove `ansible_env needs migration` from "Known Tech Debt".
 
 #### Files to touch
 - ~50 role `meta/main.yml`
-- ~200-400 `ansible_env` occurrences
 - `requirements.yml`
 - `.github/workflows/*.yml`
-- `tests/` — possibly minor test-rig adjustments for ansible-core API drift
+- `library/*.py` + `module_utils/*.py` (audit only, edits if API drift surfaces)
+- `CLAUDE.md` (remove obsolete Tech Debt line)
 
 #### Exit criteria
 - `ansible-core==2.24.x` installed; `ansible-playbook --version` confirms
@@ -548,6 +578,8 @@ Mechanical migration with cross-cutting touch surface. Easier when the rest of t
 - All 4 Tier-2 pilots: still healthy
 - CI green on all matrix rows
 - `meta/main.yml` advertises `min_ansible_version: "2.24"` everywhere
+
+#### Estimate (revised post-J): **~1 day**
 
 ---
 
@@ -647,7 +679,12 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 | 2026-04-29 | **O8**: Tier-2 slug stays bound to filename (`^[a-z][a-z0-9-]*$`); no brand-name override | E.g. 2FAuth ships as `apps/twofauth.yml` and serves at `twofauth.apps.<tld>` — operator lives with the textified slug. Brand-friendly URLs are a stretch goal. |
 | 2026-04-29 | **O9**: Multi-host fleet mode = composable `host_alias` segment (Track F), NOT per-tenant-on-one-host | Track F adds `host_alias` (e.g. `media`) so FQDN becomes `<svc>.<host_alias>.<tenant_domain>` in multi-host fleet networks. Per-tenant-on-one-host (many TLDs sharing one nOS deploy) is 5× more work and is **deferred to post-roadmap** (see Stretch goals). |
 | 2026-04-29 | **O10**: Public exposure (Track G) targets Bluesky PDS + local SMTP server (Stalwart-class), with Mastodon optional | Personal sovereign-identity (bsky) + outbound mail (today's biggest gap, every service log-only) are the clear value adds. Mastodon ships if time permits. |
-| 2026-04-29 | **O11**: Roadmap order = E (Tier-2 wet test) → F (dynamic domain) → G (public deploy) → H (ansible-core 2.24) | Wet test before refactor: dynamic-domain design is informed by what Tier-2 actually looks like in production. ansible-core upgrade last so it doesn't derail in-flight work. |
+| 2026-04-29 | **O11**: Roadmap order = E (Tier-2 wet test) → F (dynamic domain) → G (public deploy) → H (ansible-core 2.24) | Wet test before refactor: dynamic-domain design is informed by what Tier-2 actually looks like in production. ansible-core upgrade last so it doesn't derail in-flight work. **SUPERSEDED by O15** (2026-05-01) once the actual `ansible_env` count came in at 9 (not 200-400). |
+| 2026-04-30 | **O12**: Tier-2 apps reach infra services via `shared_net`, not a dedicated `infra_net` external mount | The infra stack's network is named `infra_infra_net` (compose project prefix); declaring `external: infra_net` in the apps stack never resolved. Architecture already routes cross-stack via `shared_net` — infra services are dual-attached. Same pattern now applied to mailpit (Track J Phase 2, commit `9708133`) and any future cross-stack service. Surfaced during Track E recovery, fixed in commit `8091c07`. |
+| 2026-04-30 | **O13**: Apps stack `--wait-timeout` = 240s default | Cold-start budget for N parallel Tier-2 containers: `start_period (60s) + healthcheck interval × retries (≤150s) + image pull/volume init headroom`. With 4 containers (twofauth + roundcube + documenso + documenso-db) on Apple Silicon, 120s was tight (compose-up returned rc=1 even though all 4 became healthy ~30s later). 240s gives enough margin for 6-8 containers; will need to revisit if Tier-2 catalog grows past ~10 simultaneous deploys. Commit `d4e99f2`. |
+| 2026-04-30 | **O14**: Authentik runtime reconverge entry-point = `tasks_from: blueprints.yml` + `meta: flush_handlers` | The role's `tasks_from: post.yml` (renamed to `health.yml` in Track J Phase 3, commit `326a592`) is JUST a readiness probe — calling it for "blueprint reconverge" is a no-op trap that burns recovery cycles. Canonical pattern lives in `roles/pazny.apps_runner/tasks/post.yml` lines ~123-150 (commit `d4e99f2`). |
+| 2026-04-30 | **O15**: Section 12 recovery pattern is the canonical Tier-2 fix flow (no full blank required) | `ansible-playbook main.yml -K --tags apps,tier2,apps-runner` re-renders manifests, re-runs image probes, re-deploys apps stack, re-fires post-hooks. Validated 3× in succession during Track E recovery (each commit `8091c07` / `a8fc804` / `d4e99f2` was tested via partial re-run). Documented as Section 12 of `docs/tier2-wet-test-checklist.md`. |
+| 2026-05-01 | **O16**: Roadmap order revised to **J → H → F → G** | Track J (tech debt cleanup, ~3-4h) lands first to remove Track-E-recovery debris and false-friend traps. Track H (ansible-core 2.24) shrinks to ~1 day after J Phase 4 lands the `ansible_env` migration (9 occurrences, not 200-400 as originally feared). Track F (instance_tld decomposition) keeps its position before G. Track G (public deploy) keeps its position last so Stalwart SMTP role can build on a clean tree. Total revised Q2-wave-2 ETA: ~7-9 days (was estimated ~3 weeks). |
 
 ---
 

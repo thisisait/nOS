@@ -4,70 +4,77 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-04-29 evening • commit on update: `f9e57c1` (+ this commit) • by: pazny+claude
+> Last updated: 2026-05-01 • commit: post Track J landing • by: pazny+claude
 
 ---
 
-## Current track: **E — Tier-2 apps_runner wet test**
+## Current track: **H — ansible-core 2.24 upgrade**
 
-[Section in roadmap →](roadmap-2026q2.md#track-e--tier-2-appsrunner-wet-test--d8d9)
+[Section in roadmap →](roadmap-2026q2.md#track-h--ansible-core--224-upgrade-after-j-per-o16-was-d12)
 
-## Current sub-step: **D8 — single-pilot end-to-end live**
+## Current sub-step: **Phase 1 — collection version bumps + meta/main.yml min_ansible_version**
 
-The previous three blank-runs (2026-04-29) produced a healthy Tier-1
-deploy (`ok=842 changed=262 failed=0`) but the Tier-2 `apps` stack
-never came up to a state where post-hooks could fire. Code-side defence
-is now exhausted (image pre-flight catches typos, post-hook gate stops
-false `app.deployed` events). Track E's first job is a **wet test of
-ONE pilot from blank to fully observable**, using
-[`docs/tier2-wet-test-checklist.md`](tier2-wet-test-checklist.md) as
-the operator runbook.
+Track J Phase 4 (commit `85b933b`) landed the `ansible_env → ansible_facts['env']`
+modernization (9 occurrences, not 200-400 as the original roadmap feared) — Track H
+shrinks to ~1 day of mechanical work.
 
-### What's in the way (none — ready to run)
+### What's done already (going into H)
 
-- Image pre-flight commit `f9e57c1` is in master
-- `apps/twofauth.yml` has the right image (`docker.io/2fauth/2fauth:6.1.3`)
-- `apps/roundcube.yml` and `apps/documenso.yml` exist as Tier-2 manifests; for D8 we want to **temporarily demote them** so only `twofauth` deploys (renaming `.yml` → `.yml.draft` or prefixing `_`). Restore at start of D9.
+- Track E (Tier-2 wet test) code-complete + wet-tested green 2026-04-30
+  (3 recovery commits `8091c07..d4e99f2` + sign-off pending operator's
+  manual checklist walk)
+- Track J (tech-debt cleanup) DONE 2026-05-01 in 6 commits `0a6a960..f321b6e`
+  + roadmap refresh: gate clarity, mailpit dual-attach, authentik post.yml
+  rename, ansible_env modernization, pytest collection cleanup
+- `ansible_env` count post-J: **0** (was 9). One Track H phase pre-paid.
+- Pytest collection: 431 tests, 0 errors (was 8 + 4 errors pre-J)
+- 89 apps tests still passing across all 6 J commits
 
 ### How to enter the work
 
-1. **Operator step**: rename Roundcube + Documenso to skip-list:
-   ```bash
-   cd /Users/pazny/projects/nOS
-   mv apps/roundcube.yml apps/roundcube.yml.draft
-   mv apps/documenso.yml apps/documenso.yml.draft
-   ```
-2. Run a blank: `ansible-playbook main.yml -K -e blank=true`. Expected outcome:
-   - `ok=N failed=0` (where N is around 800)
-   - `docker compose -p apps ps` shows 1 container `twofauth (healthy)`
-   - The 8 post-hooks all log "OK" / "1 app upserted" / "(unsigned fallback HTTP 200)" etc.
-3. Walk through [`docs/tier2-wet-test-checklist.md`](tier2-wet-test-checklist.md) line by line.
-4. Anything red on the checklist becomes a `fix(apps): ` commit.
-5. When all checklist rows are green, restore Roundcube + Documenso (`mv .draft .yml`), re-run, repeat. That's D9.
-6. Plane stays `.draft` for now — separate stress-test sprint after D9 is done.
+1. Survey `requirements.yml` against ansible-galaxy for current 2.24-compatible
+   versions of `community.general`, `community.docker`, `community.crypto`,
+   `ansible.posix`. Bump versions; commit as `chore(deps): bump ansible
+   collections for 2.24 compat`.
+2. `find roles/ -name 'meta/main.yml' | xargs grep -l 'min_ansible_version'`
+   — bump `"2.16"` → `"2.24"` everywhere. ~50 files; one commit
+   `chore(meta): min_ansible_version 2.16 → 2.24`.
+3. Audit custom modules (`library/nos_*.py`, `module_utils/nos_*.py`,
+   `callback_plugins/wing_telemetry.py`) against 2.24 API:
+   - `AnsibleModule` instantiation: still uses positional `argument_spec` (stable)
+   - `module_utils.*` lazy-resolve: 2.24 may flag previously-permissive imports
+   - Run `pip install ansible-core==2.24` in a sandbox venv, do
+     `ansible-playbook main.yml --syntax-check` — catches most issues
+4. Re-baseline `ansible-lint` — some 2.24 rules tighten (`schema[meta]`,
+   `loop-var-prefix`).
+5. CI matrix bump: `.github/workflows/ci.yml` — `ansible-core` pin to
+   `>=2.24,<2.25`.
+6. Strip `ansible_env needs migration` from `CLAUDE.md` "Known Tech Debt"
+   section — that's now historic.
+7. Operator runs blank with new ansible-core: `ansible-playbook main.yml -K -e blank=true`.
+   Expected: same `ok=N changed=M failed=0` as pre-H, smoke 36+/36+.
 
 ### Where to look for diagnostics if something fails
 
 | Symptom | Where to look |
 |---|---|
-| Apps stack 0 containers | `grep "Apps stack result" ~/.nos/ansible.log \| tail -1` — error message in the rc=1 path |
-| Post-hook crashed | `grep "Apps Post" ~/.nos/ansible.log \| tail -30` — last task before fatal |
-| Authentik provider missing | `https://auth.dev.local/if/admin/#/core/applications` — search for slug |
-| Wing /hub missing entry | `sqlite3 ~/wing/wing.db "SELECT id, name FROM systems"` |
-| GDPR row missing | `sqlite3 ~/wing/wing.db "SELECT id, legal_basis FROM gdpr_processing"` |
-| Bone event missing | `tail -20 ~/.nos/events/playbook.jsonl \| grep app.deployed` |
-| Smoke probe red | `python3 tools/nos-smoke.py --tier 2` |
-| Browser 404 / cert error | `curl -kIL https://twofauth.apps.dev.local/` |
+| Collection install fails | `ansible-galaxy collection list` — verify pins |
+| `module_utils` ImportError | Check 2.24 lazy-resolve note + module's relative imports |
+| `lint` regression | `ansible-lint --offline -p main.yml` — note new rule violations |
+| Custom module fail | Run `python -c 'from library import nos_apps_render'` — surface deprecations |
+| Blank rc != 0 | Same triage as Track E: `~/.nos/ansible.log` for the failed task |
 
 ---
 
-## Tracks coming next (don't start until E is DONE)
+## Tracks coming next (do not start until H is DONE)
 
 - **F — Dynamic instance_tld + per-host alias** ([roadmap section](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10))
-- **G — Cloudflare proxy + public exposure (bsky / SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
-- **H — ansible-core ≥ 2.24 upgrade** ([roadmap section](roadmap-2026q2.md#track-h--ansible-core--224-upgrade-after-g-d12))
+  — 108 occurrences of `instance_tld`; `apps_subdomain` token already wired
+  in 4 places (parser + render module + role) so the precedent exists. ~1-2 days.
+- **G — Cloudflare proxy + LE production exposure (bsky / SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
+  — Stalwart SMTP role new; Bluesky exposure flag flip; Mastodon optional. ~4-5 days.
 
-Tracks A–D are DONE. If you find yourself there, stop and re-read this file.
+Tracks A–D + E + J are DONE. If you find yourself there, stop and re-read this file.
 
 ---
 
@@ -76,11 +83,13 @@ Tracks A–D are DONE. If you find yourself there, stop and re-read this file.
 | Surface | State |
 |---|---|
 | `git status` | clean (or pending commits — check before any write) |
-| Last blank result | `ok=842 changed=262 failed=0 skipped=364` (PID 52853, 2026-04-29) |
-| Apps stack | rc=1 last attempt (twofauth image typo) — fixed in `f9e57c1`, untested at time of writing |
-| Tier-1 services | all healthy (12 infra + 10 obs + 21 iiab + …) |
-| Tests | 386 Python passing (72 apps + 25 schema + 13 importer + 276 baseline), 71 PHP passing |
-| Pilots | `apps/twofauth.yml` (live), `apps/roundcube.yml` (live but demote for D8), `apps/documenso.yml` (live but demote for D8), `apps/plane.yml.draft` (deliberate — 13 containers, separate sprint) |
+| Last blank result | `ok=845 changed=261 failed=0 skipped=369` (PID 28378, 2026-04-29 23:27) |
+| Last partial recovery | `ok=130 changed=10 failed=0 skipped=36` (PID 40835, 2026-04-30 13:59) — Tier-2 stack 4/4 healthy, post-hooks all fired |
+| Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live; smoke runtime catalog populated |
+| Tier-1 services | all healthy except transient Superset DNS hiccup (mDNS — re-probes green) |
+| Tests | 431 tests collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 tests skipped (optional deps not installed). |
+| Pilots live | `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml` (all 3 wet-tested). `apps/plane.yml.draft` deferred. |
+| Decision log | O1-O16 in roadmap-2026q2.md |
 
 ---
 
@@ -89,7 +98,7 @@ Tracks A–D are DONE. If you find yourself there, stop and re-read this file.
 This file rots in days, not weeks. After every meaningful work session:
 
 1. Update **Current track / sub-step** if you advanced
-2. Update the snapshot table at the bottom (last blank result, anything that flipped state)
+2. Update the snapshot table at the bottom (last blank/partial result, anything that flipped state)
 3. If a track-level decision was made (e.g. "documenso DB moved from embedded to shared infra-postgres"), log it in the **Decision log** in `roadmap-2026q2.md` — that file is the long-form record
 4. Commit `docs(roadmap): refresh active-work pointer`
 
