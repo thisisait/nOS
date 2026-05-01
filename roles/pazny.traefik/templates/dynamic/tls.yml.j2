@@ -4,21 +4,21 @@
 
 tls:
   certificates:
-{% if instance_tld_is_local | default(true) | bool %}
+{% if tenant_domain_is_local | default(true) | bool %}
     - certFile: /certs/local-dev.crt
       keyFile:  /certs/local-dev.key
 {% else %}
-    - certFile: /certs/acme/{{ instance_tld }}.crt
-      keyFile:  /certs/acme/{{ instance_tld }}.key
+    - certFile: /certs/acme/{{ _acme_zone }}.crt
+      keyFile:  /certs/acme/{{ _acme_zone }}.key
 {% endif %}
 
   stores:
     default:
       defaultCertificate:
-{% if instance_tld_is_local | default(true) | bool %}
+{% if tenant_domain_is_local | default(true) | bool %}
         certFile: /certs/local-dev.crt
         keyFile:  /certs/local-dev.key
 {% else %}
-        certFile: /certs/acme/{{ instance_tld }}.crt
-        keyFile:  /certs/acme/{{ instance_tld }}.key
+        certFile: /certs/acme/{{ _acme_zone }}.crt
+        keyFile:  /certs/acme/{{ _acme_zone }}.key
 {% endif %}

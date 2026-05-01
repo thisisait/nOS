@@ -14,12 +14,12 @@
 
 - name: "[ACME] Skip when running on local TLD"
   ansible.builtin.meta: end_play
-  when: instance_tld_is_local | default(false) | bool
+  when: tenant_domain_is_local | default(false) | bool
 
 - name: "[ACME] Refuse to run without a Cloudflare API token"
   ansible.builtin.fail:
     msg: |-
-      ACME is enabled (instance_tld={{ instance_tld }} is not local) but
+      ACME is enabled (tenant_domain={{ tenant_domain }} is not local) but
       acme_cloudflare_api_token is empty. Set it in credentials.yml or
       disable ACME with `-e install_acme=false` (and provide your own
       ssl_cert_path/ssl_cert_key).
@@ -71,7 +71,7 @@
   changed_when: "'is already registered' not in (_acme_register.stdout | default(''))"
 
 # ── 3. Issue wildcard cert (or reissue if expired) ──────────────────────────
-- name: "[ACME] Issue/renew wildcard cert {{ instance_tld }}"
+- name: "[ACME] Issue/renew wildcard cert {{ acme_cert_zone }}"
   ansible.builtin.command: >-
     {{ homebrew_prefix | default('/opt/homebrew') }}/bin/acme.sh
     --issue
@@ -99,14 +99,14 @@
 # at ~/.acme.sh/pazny.eu/.
 - name: "[ACME] Symlink fullchain.cer → {{ acme_cert_path }}"
   ansible.builtin.file:
-    src: "{{ acme_home }}/{{ instance_tld }}/fullchain.cer"
+    src: "{{ acme_home }}/{{ acme_cert_zone }}/fullchain.cer"
     dest: "{{ acme_cert_path }}"
     state: link
     force: true
 
-- name: "[ACME] Symlink {tld}.key → {{ acme_cert_key }}"
+- name: "[ACME] Symlink {zone}.key → {{ acme_cert_key }}"
   ansible.builtin.file:
-    src: "{{ acme_home }}/{{ instance_tld }}/{{ instance_tld }}.key"
+    src: "{{ acme_home }}/{{ acme_cert_zone }}/{{ acme_cert_zone }}.key"
     dest: "{{ acme_cert_key }}"
     state: link
     force: true

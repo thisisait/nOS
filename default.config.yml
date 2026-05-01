@@ -59,13 +59,18 @@ instance_tld_is_local: "{{ tenant_domain_is_local }}"  # Backwards-compat shim
 # TLDs; pazny.acme symlinks LE certs here for public TLDs. Traefik mounts
 # this dir as /certs:ro; host nginx (if enabled) reads the same paths.
 tls_cert_dir: "{{ stacks_dir }}/infra/tls"
-ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if instance_tld_is_local else 'acme/' + instance_tld + '.crt' }}"
-ssl_cert_key:  "{{ tls_cert_dir }}/{{ 'local-dev.key' if instance_tld_is_local else 'acme/' + instance_tld + '.key' }}"
+# Cert filename uses the wildcard zone apex (host_alias.tenant_domain when
+# host_alias is set, else just tenant_domain). Keeps one cert file per fleet
+# box so multiple host_alias deploys against the same tenant_domain coexist.
+_acme_zone: "{{ ((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain }}"
+ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if tenant_domain_is_local else 'acme/' + _acme_zone + '.crt' }}"
+ssl_cert_key:  "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local else 'acme/' + _acme_zone + '.key' }}"
 
 # ── ACME (Let's Encrypt) — auto-enabled for public TLDs ──────────────────────
-# Wildcard cert *.{instance_tld} via DNS-01 challenge to Cloudflare.
-# Keys & state stored at ~/.acme.sh/, certs symlinked into nginx/ssl/acme/.
-install_acme: "{{ not (instance_tld_is_local | bool) }}"
+# Wildcard cert *{host_alias_seg}.{tenant_domain} (+ Tier-2 wildcard) via
+# DNS-01 challenge to Cloudflare. Keys & state stored at ~/.acme.sh/, certs
+# symlinked into nginx/ssl/acme/.
+install_acme: "{{ not (tenant_domain_is_local | bool) }}"
 acme_provider: "cloudflare"               # cloudflare | manual | http
 acme_email: "{{ default_admin_email }}"
 acme_renewal_days: 60                     # Re-issue when cert expires within N days

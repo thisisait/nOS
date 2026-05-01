@@ -43,7 +43,10 @@ http:
     # which would loop into Traefik itself. Define {{ s.port_var }} explicitly
     # in default.config.yml.
 {% else %}
-{% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ '.' ~ instance_tld) %}
+{# Tier-1 Host fallback — when a service in state/manifest.yml has no
+   matching <svc>_domain var, build the FQDN from the new Track-F segments
+   so host_alias slot is honoured for auto-routed services. #}
+{% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ tenant_domain) %}
 {% set _auth = traefik_auth_modes.get(s.id, 'proxy') %}
 {% set _router = s.id | replace('_', '-') %}
     {{ _router }}:

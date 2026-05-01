@@ -2,7 +2,7 @@
 # ==============================================================================
 # tasks/tls-certs.yml — TLS certificate provisioning.
 #
-# Two flows, switched by `instance_tld_is_local`:
+# Two flows, switched by `tenant_domain_is_local`:
 #   local TLD (.local/.lan/.test) → mkcert + dev CA in trust store
 #   public TLD                    → ACME (Let's Encrypt) wildcard via DNS-01
 #
@@ -10,6 +10,10 @@
 # {{ tls_cert_dir }} (computed in default.config.yml). Traefik mounts the
 # tree as /certs:ro; host nginx (when install_nginx is on) reads the same
 # absolute paths via `ssl_certificate {{ ssl_cert_path }};`.
+#
+# SAN list takes host_alias into account (Track F):
+#   default (host_alias=""):   *.<tenant_domain>, *.apps.<tenant_domain>
+#   host_alias="lab":          *.lab.<tenant_domain>, *.lab.apps.<tenant_domain>
 # ==============================================================================
 
 # ── Cert directory tree ──────────────────────────────────────────────────────
@@ -23,11 +27,11 @@
     - "{{ tls_cert_dir }}/acme"
 
 # ── mkcert (local-only TLDs) ─────────────────────────────────────────────────
-# When instance_tld is real (pazny.eu etc.) the cert comes from pazny.acme
+# When tenant_domain is real (pazny.eu etc.) the cert comes from pazny.acme
 # instead. mkcert/local-dev.* tasks are gated as a single block to avoid
 # polluting a public-TLD install with a local CA in the system trust store.
 - name: "[mkcert] Install dev CA + generate local-dev wildcard cert"
-  when: instance_tld_is_local | default(true) | bool
+  when: tenant_domain_is_local | default(true) | bool
   block:
     - name: "[mkcert] Install mkcert via Homebrew"
       community.general.homebrew:
@@ -45,10 +49,13 @@
 
     - name: "[mkcert] Build list of required SSL SANs"
       ansible.builtin.set_fact:
+        # Wildcards include host_alias segment when set:
+        #   default:           *.dev.local, *.apps.dev.local
+        #   host_alias=lab:    *.lab.dev.local, *.lab.apps.dev.local
         _ssl_san_required:
-          - "*.{{ instance_tld | default('dev.local') }}"
-          - "*.apps.{{ instance_tld | default('dev.local') }}"
-          - "{{ '*.os.' + (instance_tld | default('dev.local')) if (install_puter | default(false)) else '' }}"
+          - "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+          - "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
+          - "{{ '*' + (_host_alias_seg | default('')) + '.os.' + (tenant_domain | default('dev.local')) if (install_puter | default(false)) else '' }}"
           - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
           - "{{ '*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) if (install_bluesky_pds | default(false)) else '' }}"
 
@@ -79,9 +86,9 @@
         -cert-file {{ ssl_cert_path }}
         -key-file  {{ ssl_cert_key }}
         "localhost" "127.0.0.1" "::1" "*.localhost"
-        "*.{{ instance_tld | default('dev.local') }}"
-        "*.apps.{{ instance_tld | default('dev.local') }}"
-        {{ '"*.os.' + (instance_tld | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
+        "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+        "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
+        {{ '"*' + (_host_alias_seg | default('')) + '.os.' + (tenant_domain | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
         {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
         {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
       args:
