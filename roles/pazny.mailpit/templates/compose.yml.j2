@@ -4,10 +4,17 @@
 # ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
 # Listens on:
-#   - 127.0.0.1:{{ mailpit_smtp_port }}  → SMTP (apps relay here as 'mailpit:1025'
-#                                          inside the iiab_net docker network)
+#   - 127.0.0.1:{{ mailpit_smtp_port }}  → SMTP. Reachable from:
+#                                          • iiab_net (intra-stack: nginx vhost,
+#                                            wing, wordpress, etc.)
+#                                          • shared_net (cross-stack bus —
+#                                            Tier-2 apps + devops + b2b + data
+#                                            stacks reach mailpit:1025 by name
+#                                            because mailpit is dual-attached;
+#                                            same pattern as infra postgres /
+#                                            mariadb / redis / authentik)
 #   - 127.0.0.1:{{ mailpit_ui_port }}    → Web UI + REST API
-#                                          (nginx fronts it at mail.<tld> with
+#                                          (Traefik fronts it at mail.<tld> with
 #                                          forward_auth via Authentik)
 #
 # Persistent storage at {{ mailpit_data_dir }}/mailpit.db (SQLite). Capped at
@@ -33,6 +40,7 @@ services:
 {% endif %}
     networks:
       - iiab_net
+      - {{ stacks_shared_network | default('shared_net') }}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8025/livez"]
       interval: 30s
