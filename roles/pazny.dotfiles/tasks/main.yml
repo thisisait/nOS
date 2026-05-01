@@ -13,14 +13,21 @@
   failed_when: false
   check_mode: false
   changed_when: false
-  with_items: "{{ dotfiles_files }}"
+  loop: "{{ dotfiles_files }}"
 
 - name: Remove existing dotfiles file if a replacement is being linked.
+  # Track H Phase 4 (2026-05-01): with_indexed_items removed in
+  # ansible-core 2.24+. Modern equivalent = loop with index_var; the
+  # old `item.0` (index) becomes `idx`, the old `item.1` (results dict)
+  # becomes `item`.
   file:
-    path: "{{ dotfiles_home }}/{{ dotfiles_files[item.0] }}"
+    path: "{{ dotfiles_home }}/{{ dotfiles_files[idx] }}"
     state: absent
-  when: "'@' not in item.1.stdout"
-  with_indexed_items: "{{ existing_dotfile_info.results }}"
+  when: "'@' not in item.stdout"
+  loop: "{{ existing_dotfile_info.results }}"
+  loop_control:
+    index_var: idx
+    label: "{{ dotfiles_files[idx] }}"
 
 - name: Ensure parent folders of link dotfiles exist.
   file:
@@ -28,7 +35,7 @@
     state: directory
     follow: true
   become: false
-  with_items: "{{ dotfiles_files }}"
+  loop: "{{ dotfiles_files }}"
 
 - name: Link dotfiles into home folder.
   file:
@@ -36,4 +43,4 @@
     dest: "{{ dotfiles_home }}/{{ item }}"
     state: link
   become: false
-  with_items: "{{ dotfiles_files }}"
+  loop: "{{ dotfiles_files }}"
