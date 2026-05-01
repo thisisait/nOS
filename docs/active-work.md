@@ -4,77 +4,92 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-01 • commit: post Track J landing • by: pazny+claude
+> Last updated: 2026-05-01 • commit: post Track H landing • by: pazny+claude
 
 ---
 
-## Current track: **H — ansible-core 2.24 upgrade**
+## Current track: **F — Dynamic instance_tld + per-host alias**
 
-[Section in roadmap →](roadmap-2026q2.md#track-h--ansible-core--224-upgrade-after-j-per-o16-was-d12)
+[Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 
-## Current sub-step: **Phase 1 — collection version bumps + meta/main.yml min_ansible_version**
+## Current sub-step: **Phase 1 — survey + decompose `instance_tld`**
 
-Track J Phase 4 (commit `85b933b`) landed the `ansible_env → ansible_facts['env']`
-modernization (9 occurrences, not 200-400 as the original roadmap feared) — Track H
-shrinks to ~1 day of mechanical work.
+After operator confirms Track H green via fresh `--blank` test (operator
+explicitly asked to "začít testování s --blank na novo" before moving to F).
+If blank green → kick off Track F. If anything red → fix in place, re-test.
 
-### What's done already (going into H)
+### What's done already (going into F)
 
-- Track E (Tier-2 wet test) code-complete + wet-tested green 2026-04-30
-  (3 recovery commits `8091c07..d4e99f2` + sign-off pending operator's
-  manual checklist walk)
-- Track J (tech-debt cleanup) DONE 2026-05-01 in 6 commits `0a6a960..f321b6e`
-  + roadmap refresh: gate clarity, mailpit dual-attach, authentik post.yml
-  rename, ansible_env modernization, pytest collection cleanup
-- `ansible_env` count post-J: **0** (was 9). One Track H phase pre-paid.
-- Pytest collection: 431 tests, 0 errors (was 8 + 4 errors pre-J)
-- 89 apps tests still passing across all 6 J commits
+- **Track E** (Tier-2 wet test) — DONE 2026-04-30, 3 piloti zelení end-to-end
+- **Track J** (tech-debt cleanup) — DONE 2026-05-01, 6 commits `0a6a960..f321b6e`
+- **Track H** (ansible-core 2.20+ tightening + 2.24 readiness) — DONE 2026-05-01, 7 commits `6767e56..72c021d`. Re-scoped per O17 because 2.24 not yet released; current state ships `ansible-core 2.20.5` floor + verified forward-compat under 2.21.0rc1 + ansible-lint production profile clean.
+- **89 apps tests + 431 total tests** collecting clean (12 skipped on optional deps).
+- **0 ansible-lint failures**, production profile.
+- **`apps_subdomain` token already wired** in 4 places (parser + render + role) — Track F reuses this precedent for the 108 `instance_tld` occurrences.
 
 ### How to enter the work
 
-1. Survey `requirements.yml` against ansible-galaxy for current 2.24-compatible
-   versions of `community.general`, `community.docker`, `community.crypto`,
-   `ansible.posix`. Bump versions; commit as `chore(deps): bump ansible
-   collections for 2.24 compat`.
-2. `find roles/ -name 'meta/main.yml' | xargs grep -l 'min_ansible_version'`
-   — bump `"2.16"` → `"2.24"` everywhere. ~50 files; one commit
-   `chore(meta): min_ansible_version 2.16 → 2.24`.
-3. Audit custom modules (`library/nos_*.py`, `module_utils/nos_*.py`,
-   `callback_plugins/wing_telemetry.py`) against 2.24 API:
-   - `AnsibleModule` instantiation: still uses positional `argument_spec` (stable)
-   - `module_utils.*` lazy-resolve: 2.24 may flag previously-permissive imports
-   - Run `pip install ansible-core==2.24` in a sandbox venv, do
-     `ansible-playbook main.yml --syntax-check` — catches most issues
-4. Re-baseline `ansible-lint` — some 2.24 rules tighten (`schema[meta]`,
-   `loop-var-prefix`).
-5. CI matrix bump: `.github/workflows/ci.yml` — `ansible-core` pin to
-   `>=2.24,<2.25`.
-6. Strip `ansible_env needs migration` from `CLAUDE.md` "Known Tech Debt"
-   section — that's now historic.
-7. Operator runs blank with new ansible-core: `ansible-playbook main.yml -K -e blank=true`.
-   Expected: same `ok=N changed=M failed=0` as pre-H, smoke 36+/36+.
+**Operator gate first:** `ansible-playbook main.yml -K -e blank=true` on a clean
+host. Expected: same `ok=N changed=M failed=0` shape, smoke 36+/36+, all 4
+Tier-2 containers healthy, all 8 post-hooks fire, Authentik proxy providers
+materialize, Wing /hub lists `app_*` rows. If any line red → triage as Track-E
+recovery, no Track F until it's clean.
+
+Once blank green:
+
+1. **Phase F1 — survey** (~2h): inventory all 108 `instance_tld` occurrences.
+   `grep -rn 'instance_tld' --include='*.yml' --include='*.j2' --include='*.py'`
+   Categorize: (a) FQDN composition, (b) cookie domain, (c) cert SAN list,
+   (d) DNS suffix (dnsmasq), (e) Authentik OIDC redirect_uris.
+2. **Phase F2 — decompose** (~3h): introduce in `default.config.yml`:
+   - `tenant_domain` (replaces today's `instance_tld`; default `dev.local`)
+   - `host_alias` (default `""` — empty drops the segment)
+   - `apps_subdomain` (already exists; default `apps`)
+   - Resolved FQDN: `<svc>[.<host_alias>][.<apps_subdomain>].<tenant_domain>`
+3. **Phase F3 — refactor consumers** (~6h): touch the 108 occurrences.
+   Order: `pazny.acme` cert SAN → `pazny.traefik` static + dynamic config
+   → `library/nos_apps_render._fqdn_for` (already accepts apps_subdomain
+   kwarg) → `templates/service-registry.json.j2` → `roles/pazny.dnsmasq`
+   → `tasks/nginx.yml` (legacy fallback path)
+4. **Phase F4 — backwards-compat tests** (~1h): blank with default config
+   produces byte-identical FQDNs to today's deploy. Operator's existing
+   credentials.yml and config.yml survive without manual edits.
+5. **Phase F5 — `host_alias` smoke test** (~2h): blank with `host_alias: "lab"`
+   produces working `*.lab.dev.local` services, Authentik OIDC redirects work,
+   Tier-2 still healthy.
+6. **Phase F6 — migration recipe** (~1h): `migrations/2026-05-XX-instance-tld-decomposition.yml`
+   migrates old config.yml `instance_tld: foo` to new `tenant_domain: foo`.
+7. **Phase F7 — docs** (~1h): `docs/operator-domain-naming.md` explaining
+   the three-segment composition + when to set `host_alias`.
 
 ### Where to look for diagnostics if something fails
 
 | Symptom | Where to look |
 |---|---|
-| Collection install fails | `ansible-galaxy collection list` — verify pins |
-| `module_utils` ImportError | Check 2.24 lazy-resolve note + module's relative imports |
-| `lint` regression | `ansible-lint --offline -p main.yml` — note new rule violations |
-| Custom module fail | Run `python -c 'from library import nos_apps_render'` — surface deprecations |
-| Blank rc != 0 | Same triage as Track E: `~/.nos/ansible.log` for the failed task |
+| FQDN mismatch in Traefik | `curl -s http://127.0.0.1:8082/api/http/routers \| jq` |
+| Cert SAN doesn't cover new hostname | `mkcert -CAROOT && openssl x509 -in $TLS_CERT -text \| grep DNS:` |
+| Authentik OIDC redirect_uri rejected | Authentik admin → Applications → check redirect URI match |
+| Wing /hub wrong URL | `sqlite3 ~/wing/wing.db "SELECT id, url FROM systems"` |
+| dnsmasq doesn't resolve new FQDN | `dig @127.0.0.1 -p 5353 <fqdn>` |
+| Cookie not shared cross-subdomain | DevTools → Cookies → check Domain=... |
 
 ---
 
-## Tracks coming next (do not start until H is DONE)
+## Tracks coming next (don't start until F is DONE)
 
-- **F — Dynamic instance_tld + per-host alias** ([roadmap section](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10))
-  — 108 occurrences of `instance_tld`; `apps_subdomain` token already wired
-  in 4 places (parser + render module + role) so the precedent exists. ~1-2 days.
-- **G — Cloudflare proxy + LE production exposure (bsky / SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
-  — Stalwart SMTP role new; Bluesky exposure flag flip; Mastodon optional. ~4-5 days.
+- **G — Cloudflare proxy + LE production exposure (bsky / Stalwart SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
+  — `pazny.acme` Cloudflare DNS-01 already exists; `pazny.smtp_stalwart` is a NEW role; Bluesky exposure flag flip. ~4-5 days.
 
-Tracks A–D + E + J are DONE. If you find yourself there, stop and re-read this file.
+After G — **post-G arc (proposed, scope TBD):**
+- **K — Wing audit + refactor** (~4-5 days)
+- **L — Agent suite framework** (~4-5 days)
+- **M — Watchtower scheduler + pentest run-loop** (~2-3 days)
+
+See [roadmap K/L/M section](roadmap-2026q2.md#tracks-k--l--m--wing-modernization--agent-platform-post-g-arc-proposed-2026-05-01)
+for the strategic sketch (operator-proposed 2026-05-01; detailed scope to be filled in
+before code commits).
+
+Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this file.
 
 ---
 
@@ -83,13 +98,16 @@ Tracks A–D + E + J are DONE. If you find yourself there, stop and re-read this
 | Surface | State |
 |---|---|
 | `git status` | clean (or pending commits — check before any write) |
-| Last blank result | `ok=845 changed=261 failed=0 skipped=369` (PID 28378, 2026-04-29 23:27) |
-| Last partial recovery | `ok=130 changed=10 failed=0 skipped=36` (PID 40835, 2026-04-30 13:59) — Tier-2 stack 4/4 healthy, post-hooks all fired |
-| Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live; smoke runtime catalog populated |
-| Tier-1 services | all healthy except transient Superset DNS hiccup (mDNS — re-probes green) |
-| Tests | 431 tests collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 tests skipped (optional deps not installed). |
-| Pilots live | `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml` (all 3 wet-tested). `apps/plane.yml.draft` deferred. |
-| Decision log | O1-O16 in roadmap-2026q2.md |
+| Last green blank | `ok=845 changed=261 failed=0 skipped=369` (2026-04-29 23:27) |
+| Last partial recovery | `ok=130 changed=10 failed=0 skipped=36` (2026-04-30 13:59) — Tier-2 stack 4/4 healthy, post-hooks all fired |
+| Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live |
+| Tier-1 services | all healthy |
+| Tests | 431 collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 skipped (optional deps). |
+| ansible-lint | 0 failures, 0 warnings, **production profile** |
+| ansible-core | 2.20.5 (operator + CI matrix); forward-compat verified under 2.21.0rc1 |
+| Pilots live | `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml`. `apps/plane.yml.draft` deferred. |
+| Decision log | O1-O18 in roadmap-2026q2.md |
+| Next gate | Operator runs fresh `ansible-playbook main.yml -K -e blank=true` to verify Tracks E + J + H end-to-end; if green → Track F |
 
 ---
 

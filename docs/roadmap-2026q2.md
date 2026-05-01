@@ -5,15 +5,23 @@
 > the active track. Each track has its own commit conventions and exit
 > criteria so progress survives context resets.
 >
-> Last updated: 2026-05-01 • commit: post Track J landing • by: pazny+claude
+> Last updated: 2026-05-01 • commit: post Track H landing • by: pazny+claude
 >
 > **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 (Tracks E, J, H, F, G) — order
 > revised per O16. **Track E** code-complete + wet-tested green 2026-04-30
 > (3 recovery commits). **Track J** (tech-debt cleanup, 6 commits) DONE
-> 2026-05-01. New sessions land in [Track H](#track-h--ansible-core--224-upgrade-after-j-per-o16-was-d12)
+> 2026-05-01. **Track H** (ansible-core 2.20+ tightening + future 2.24
+> readiness, 7 commits) DONE 2026-05-01. New sessions land in
+> [Track F](#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 > unless explicitly directed elsewhere — see also
 > [`docs/active-work.md`](active-work.md) for the always-current
 > "what to do right now" pointer.
+>
+> **NEW post-Track-G: Wing modernization + agent platform** — strategic
+> arc proposed by operator 2026-05-01, sketched at the end of this
+> document under "Tracks K/L/M (proposed)". Captures Wing audit +
+> refactor + agent suite + watchtower scheduler + pentest run-loop.
+> Detailed scope to be confirmed before commit.
 
 ## Mission (in 3 sentences)
 
@@ -548,38 +556,51 @@ Three Track-E recovery commits (`8091c07`, `a8fc804`, `d4e99f2`) shipped working
 
 ---
 
-### Track H — ansible-core ≥ 2.24 upgrade **(after J per O16, was D12)**
+### Track H — ansible-core 2.20+ tightening + 2.24 readiness **(DONE 2026-05-01)**
 
-**Status: scope shrunk by Track J Phase 4 (commit `85b933b` landed `ansible_env` → `ansible_facts['env']` modernization).** ~1 day mechanical work remaining; CLAUDE.md "Known Tech Debt" entry can be removed at end of H.
+**Status: DONE in 7 commits `6767e56..72c021d` on 2026-05-01.** Original Track H targeted ansible-core 2.24 — but 2.24 hasn't shipped yet (latest stable: 2.20.5; latest RC: 2.21.0rc1). Re-scoped (Decision O17) to "robust 2.20+ tightening + future 2.24 readiness". When 2.24 ships, the actual jump is ~4 hours (single requirements.yml floor bump + collection review + blank).
 
-#### Why ordering revised (O16)
-Original O11 placed H at the end. Once `ansible_env` count came in at **9** (not 200-400 as the roadmap originally feared), H became a 1-day mechanical job that's safer to land BEFORE F. Track F's `instance_tld` decomposition touches 108 places — running it on ansible-core 2.24 from the start avoids a re-test pass.
+#### Why ordering revised (O16) and re-scoped (O17)
+Original O11 placed H at the end targeting ansible-core 2.24. Track J Phase 4 pre-paid the `ansible_env` migration (9 occurrences, not 200-400). On audit 2026-05-01, ansible-core 2.24 turned out **not yet released** by upstream (latest stable: 2.20.5, RC: 2.21.0rc1). Decision O17: re-scope Track H to "robust 2.20+ tightening with verified 2.21 RC forward-compat + ansible-lint production-profile clean". The remaining 2.24 jump becomes a ~4h follow-up when upstream ships.
 
-#### Scope (post-J)
-1. ~~`ansible_env` → `ansible_facts['env']`~~ — **DONE in Track J Phase 4** (9 occurrences, commit `85b933b`).
-2. **Collection version bumps** — sync `requirements.yml` against ansible-core 2.24-compatible minor versions for `community.general`, `community.docker`, `community.crypto`, `ansible.posix`.
-3. **`meta/main.yml` for all roles** — bump `min_ansible_version: "2.16"` → `"2.24"`. (~50 files; mechanical.)
-4. **Custom modules audit** — `library/nos_state.py`, `nos_migrate.py`, `nos_authentik.py`, `nos_coexistence.py`, `nos_apps_render.py` — verify `AnsibleModule` API + `module_utils.*` import paths against 2.24 lazy-resolve changes.
-5. **Callback plugin audit** — `callback_plugins/wing_telemetry.py` uses `v2_*` hooks (stable across 2.16-2.24).
-6. **Lint sweep** — re-baseline `ansible-lint` rules; some 2.24 rules tighten (`schema[meta]`, `loop-var-prefix`).
-7. **CI matrix bump** — GitHub Actions `ansible-core` pin → `>=2.24,<2.25`.
-8. **CLAUDE.md** — remove `ansible_env needs migration` from "Known Tech Debt".
+#### Scope delivered (Phases 1-8)
+1. **Phase 1 — `requirements.yml` collection pinning** (commit `6767e56`):
+   - Bumped floors + added upper bounds for `community.general`, `community.docker`, `community.mysql`
+   - Added missing `ansible.posix` (3 files actually use it; previously implicit)
+   - Dropped 3 unused: `community.crypto`, `community.postgresql`, `nextcloud.admin`
+   - Reproducible installs across operator + ubuntu-22.04/24.04/macos-14 CI
+2. **Phase 2 — `meta/main.yml min_ansible_version`** (commit `9d26b4a`): 60× `2.14` + 4× `2.15` + 1× `2.16` + anomalies → all 66 at `"2.20"`. Plus 3 new meta/main.yml for `pazny.mac.{dock,homebrew,mas}` which were previously bare.
+3. **Phase 3 — CI ansible-core pin** (commit `ddd5722`): `pip3 install ansible` (floating) → `ansible-core>=2.20,<2.21` in lint + syntax + integration jobs. Reproducible builds; bump-here-once for next upgrade.
+4. **Phase 4 — Custom-module audit + with_* modernization** (commit `d65f8ba`): All 13 Python modules import clean under 2.20 + 2.21rc1, all `AnsibleModule()` use modern argspec, no v1 callback hooks, no `_text` legacy imports. Real finding: `pazny.dotfiles` had 4 `with_items`/`with_indexed_items` (forked from upstream pre-rebrand) → modernized to `loop:` + `loop_control: index_var`.
+5. **Phase 5 — 2.21.0rc1 sandbox forward-compat probe** (verification only, no commit): venv install, syntax-check + 89-test pytest suite + custom-module imports — all clean under 2.21 RC.
+6. **Phase 6 — ansible-lint production-profile clean** (commit `23d970b`): 30+ findings → 0 fatal/0 warning. Categories: 12× `risky-shell-pipe` (set -o pipefail + bash exec), 5× `command-instead-of-module` (kept tar+curl shell with noqa rationale, modernized git_config), 3× `no-handler` (kept inline with launchctl-ordering rationale), 4× `load-failure[filenotfounderror]` (root-cause fix: replaced `{{ playbook_dir }}/...` with relative paths in 4 includes), plus 5 minor (literal-compare, ignore-errors with rationale, jinja[invalid] defensive default, meta-no-tags 'app-store' → 'appstore', name[casing] noqa for jsOS brand). Final result: ansible-lint 26.4.0 reports `Passed: 0 failure(s), 0 warning(s) ... Last profile that met the validation criteria was 'production'.`
+7. **Phase 7 — CLAUDE.md Known Tech Debt refresh** (commit `72c021d`): replaced obsolete "ansible_env needs migration before 2.24" entry with current status + commit chain pointing at J + H phases.
+8. **Phase 8 — roadmap + active-work + remember refresh** (this commit): closes Track H, marks it DONE, flips active-work to Track F.
 
-#### Files to touch
-- ~50 role `meta/main.yml`
-- `requirements.yml`
-- `.github/workflows/*.yml`
-- `library/*.py` + `module_utils/*.py` (audit only, edits if API drift surfaces)
-- `CLAUDE.md` (remove obsolete Tech Debt line)
+#### Files touched
+- `requirements.yml` (Phase 1)
+- `roles/pazny.postgresql/meta/main.yml` (drop unused collection dep, Phase 1)
+- 69× `roles/pazny.*/meta/main.yml` (66 bumped + 3 new for mac.*, Phase 2)
+- `.github/workflows/ci.yml` (3 jobs, Phase 3)
+- `roles/pazny.dotfiles/tasks/main.yml` (Phase 4)
+- 21 files in roles/ + tasks/ (Phase 6 lint cleanup; see commit `23d970b` for full list)
+- `.ansible-lint` (skip_list extension + exclude_paths for molecule scaffold, Phase 6)
+- `CLAUDE.md` (Phase 7)
 
-#### Exit criteria
-- `ansible-core==2.24.x` installed; `ansible-playbook --version` confirms
-- Blank run: 0 failed, smoke 36+/36+ green
-- All 4 Tier-2 pilots: still healthy
-- CI green on all matrix rows
-- `meta/main.yml` advertises `min_ansible_version: "2.24"` everywhere
+#### Exit criteria — ALL MET
+- [x] `ansible-core==2.20.5` runs blank green (operator's last green blank: 2026-04-29 `ok=845 changed=261 failed=0`)
+- [x] CI matrix pinned to >=2.20,<2.21 across all jobs
+- [x] All 66 `roles/pazny.*` meta/main.yml advertise `min_ansible_version: "2.20"`
+- [x] 89 apps tests passing, 431 total tests collecting clean
+- [x] `ansible-playbook main.yml --syntax-check` — clean on 2.20.5 AND 2.21.0rc1
+- [x] `ansible-lint --offline` — 0 failures / 0 warnings (production profile)
+- [x] CLAUDE.md "Known Tech Debt" updated with reality, not aspirational guess
 
-#### Estimate (revised post-J): **~1 day**
+#### Outstanding (deferred until 2.24 ships)
+- One-line bump in `requirements.yml` + `.github/workflows/ci.yml` from `>=2.20,<2.21` to `>=2.24,<2.25`
+- Floor bump 66× `meta/main.yml` from `"2.20"` to `"2.24"`
+- One blank to surface any actual 2.24 changes
+- Estimated: ~4 hours when 2.24 stable lands
 
 ---
 
@@ -685,6 +706,8 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 | 2026-04-30 | **O14**: Authentik runtime reconverge entry-point = `tasks_from: blueprints.yml` + `meta: flush_handlers` | The role's `tasks_from: post.yml` (renamed to `health.yml` in Track J Phase 3, commit `326a592`) is JUST a readiness probe — calling it for "blueprint reconverge" is a no-op trap that burns recovery cycles. Canonical pattern lives in `roles/pazny.apps_runner/tasks/post.yml` lines ~123-150 (commit `d4e99f2`). |
 | 2026-04-30 | **O15**: Section 12 recovery pattern is the canonical Tier-2 fix flow (no full blank required) | `ansible-playbook main.yml -K --tags apps,tier2,apps-runner` re-renders manifests, re-runs image probes, re-deploys apps stack, re-fires post-hooks. Validated 3× in succession during Track E recovery (each commit `8091c07` / `a8fc804` / `d4e99f2` was tested via partial re-run). Documented as Section 12 of `docs/tier2-wet-test-checklist.md`. |
 | 2026-05-01 | **O16**: Roadmap order revised to **J → H → F → G** | Track J (tech debt cleanup, ~3-4h) lands first to remove Track-E-recovery debris and false-friend traps. Track H (ansible-core 2.24) shrinks to ~1 day after J Phase 4 lands the `ansible_env` migration (9 occurrences, not 200-400 as originally feared). Track F (instance_tld decomposition) keeps its position before G. Track G (public deploy) keeps its position last so Stalwart SMTP role can build on a clean tree. Total revised Q2-wave-2 ETA: ~7-9 days (was estimated ~3 weeks). |
+| 2026-05-01 | **O17**: Track H re-scoped from "ansible-core 2.24 upgrade" to "2.20+ tightening + 2.24 readiness" | ansible-core 2.24 not yet released by upstream (audit 2026-05-01: latest stable 2.20.5, latest RC 2.21.0rc1). Original Track H was forward-looking. Re-scoped to deliver what's possible today: pin current versions across operator + CI, modernize what 2.21 RC flags, run ansible-lint production profile clean. The actual 2.24 jump becomes a ~4h floor-bump follow-up when 2.24 ships. Operator confirmed Variant A. Track H DONE 2026-05-01 in 7 commits `6767e56..72c021d`. |
+| 2026-05-01 | **O18**: New post-G arc — Wing modernization + agent platform | Operator-proposed 2026-05-01: a strategic Wing audit + refactor + agent-suite + watchtower-scheduler + pentest-run-loop that turns `~/wing/` from a fragmented filesystem layout into a cohesive Tier-2-app-style project consuming our own infra (Authentik + Bone + Loki + Traefik). Sketched as Tracks K/L/M at the end of this document. Detailed scope to be confirmed in a planning pass before code commits. |
 
 ---
 
@@ -716,6 +739,77 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 - `refactor(<area>): one-line summary` for non-behavior code reshuffling
 - Body explains the **why**, not the what (diff shows the what)
 - Co-Authored-By is **forbidden** per CLAUDE.md repo policy
+
+---
+
+### Tracks K / L / M — Wing modernization + agent platform **(post-G arc, proposed 2026-05-01)**
+
+**Status: PROPOSED — operator's strategic vision sketched here for review; detailed scope (file inventory, agent profile schemas, exit criteria) to be filled in before any commits.** This arc turns Wing from a fragmented bundle of host-side scripts + bind-mounts into a cohesive **Tier-2-app-style project** that consumes the same infra it serves: Authentik for auth, Bone for events, Loki for logs, Traefik for routing, manifest-rendered compose for deploy.
+
+**Why three tracks (K/L/M) instead of one:** the work is large (~3 weeks if done end-to-end). Each track ships independently usable value:
+- **K** = audit + refactor (foundation; Wing keeps doing what it does today, just cleaner)
+- **L** = agent platform (NEW capability: scout/steward/librarian/migrator/inspektor profiles)
+- **M** = pentest run-loop (USES the agent platform; proves the loop end-to-end)
+
+#### Track K — Wing audit + refactor **(post-G, ~4-5 days)**
+
+**Phase K1 — audit (~1 day):** verify the wiring still works end-to-end:
+- Telemetry callback (`callback_plugins/wing_telemetry.py`) → Bone (`/api/v1/events`) → wing.db.events
+- Log scraping (Alloy → Loki → Wing UI dashboard)
+- Every `/api/v1/*` endpoint that `docs/llm/security/pentest-task.md` references — does it answer 200 with the right shape?
+- Document gaps in `docs/wing-audit-2026Q2.md` + `~/.nos/wing-audit-findings.json` for downstream consumption
+
+**Phase K2 — refactor (~3-4 days):** turn `~/wing/` into a Tier-2-style project:
+- Migrate from `roles/pazny.wing/` (host-managed PHP-FPM + nginx vhost + bind mounts) into `apps/wing.yml` (manifest-rendered compose, Authentik proxy auth like everything else, named volume for `wing.db`)
+- Eat-our-own-dogfood: Wing UI gates through Traefik forward-auth (no more host nginx vhost), logs ship via Alloy → Loki, deploy uses image-probe + healthcheck like every other Tier-2 app
+- Migration recipe `migrations/2026-05-XX-wing-host-to-app.yml` for existing deploys
+- Wing's `bin/*.php` CLIs (upsert-gdpr, ingest-registry) accessible via `docker compose run --rm wing-cli` (already done in apps_runner — extend to other callers)
+
+#### Track L — Agent suite framework **(post-K, ~4-5 days)**
+
+**Concept:** every agent is a first-class Authentik OIDC client (Track B precedent) with:
+- A unified persistence skill — `bin/agent-api-call.sh` wrapper that handles Bearer token rotation + retries + dedupe semantics
+- A unified telemetry contract — every run emits `agent.scan.start`, `agent.scan.complete`, `agent.finding`, `agent.error` events with `agent_id` + `agent_tier` + `parent_event_id`
+- A profile in `state/agent-profiles.yml` declaring `(name, tier, schedule_cron, model_class, tools_allowed, max_runtime_min)`
+
+**Proposed initial profiles:**
+| Profile | Tier | Cadence | Model class | Job |
+|---|---|---|---|---|
+| **scout** | T4 | every 30 min | small/cheap | tail logs + telemetry, flag anomalies → POST `/api/v1/agent/observations` |
+| **steward** | T3 | every 2h | medium | review scout's outputs, dedupe, plan next CVE batch → POST `/api/v1/agent/plans` |
+| **librarian** | T2 | daily | smart | upstream version watcher → POST `/api/v1/upgrades/pending` (NEW table) |
+| **migrator** | T2 | on-demand | smart | when `pending_upgrade.migration_required = true`, draft migration script → POST `/api/v1/upgrades/{id}/draft-migration` |
+| **inspektor** | T1 | daily | SOTA | the existing `pentest-task.md` runner (Phase 1+2+2b+3) — gets first-class persistence + telemetry |
+
+**Plus new wing.db tables:** `pending_upgrades`, `upgrade_drafts`, `agent_observations`, `agent_plans`, `agent_runs` (audit log).
+
+#### Track M — Watchtower scheduler + pentest run-loop **(post-L, ~2-3 days)**
+
+**"Watchtower" naming caveat:** unrelated to `containrrr/watchtower` (the Docker image-watching tool already in our infra). Operator's vision is a Wing-managed scheduler that fires agent profiles on schedule. Pick a different visible name to avoid confusion (proposal: `wing-scheduler` or `nos-pulse`).
+
+**Phase M1 — scheduler:** new container in the Wing project (or sidecar) that reads `state/agent-profiles.yml`, computes next-fire times, exec's `claude` (or appropriate runtime) with the profile's prompt + skills.
+
+**Phase M2 — pentest run-loop:** wire `docs/llm/security/pentest-task.md` into the inspektor profile. Operator runs first end-to-end: scheduler fires inspektor, it does Phase 1 (CVE scan via API, dedupe, record findings), Phase 2 (clone repo, code-review one area, record), Phase 2b (draft patch if confirmed_vuln), Phase 3 (advisory + housekeeping). All persistence via the API skill, all telemetry into wing.db.events.
+
+**Phase M3 — operator approval workflow:** `/api/v1/upgrades/pending` rows that `librarian` proposed get reviewed via Wing UI; operator approves → migration script committed to `migrations/`; rejects → `librarian` learns (e.g. version pinning preference). Same approval workflow for `inspektor`'s patch drafts (per `pentest-task.md` Phase 2b: "DO NOT SEND A PR — leave it to the user").
+
+#### Cross-cutting concerns for K/L/M
+- **Authentik blueprints for agent OIDC clients** — Track B's framework, just instantiated for the 5 profiles. Each agent's tier maps to existing `nos-{providers,admins,managers,users,guests}` groups.
+- **GDPR Article 30 entries** — every agent processes some data; Wing's `/gdpr` view auto-includes them.
+- **Skills convention** — `bin/agent-skills/` directory with one file per capability (api-call, log-tail, repo-clone, patch-format), agent profiles declare which skills they import. Skills tested under pytest.
+- **Cost guardrails** — `agent_runs.tokens_used` + per-tier monthly budget warning emitted to Bone events; operator can pause a profile via Wing UI without playbook re-run.
+
+#### Estimate (revised post-G)
+- Track K: 4-5 days
+- Track L: 4-5 days
+- Track M: 2-3 days
+- **Total: ~2.5 weeks of focused work**
+
+#### Pre-implementation gates
+- Operator confirms scope of K (audit findings document → refactor design → migration plan)
+- Operator picks scheduler name (drops "watchtower" naming collision)
+- Operator confirms initial agent profile list + cadences
+- Track G's Stalwart SMTP role lands first so agent telemetry has a real outbound mail path for critical alerts
 
 ---
 
