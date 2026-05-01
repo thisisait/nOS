@@ -19,7 +19,7 @@ traefik_https_port: 443
 # Host port for the Traefik dashboard. Default 8082 — 8080=cadvisor,
 # 8081=tileserver, 8090=freescout. Container always exposes :8080 (built-in).
 traefik_dashboard_port: 8082
-traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
+traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 
 # Config tree on the host. Bind-mounted into the container.

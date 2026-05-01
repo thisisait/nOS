@@ -104,7 +104,7 @@ heartbeat_api_key: "{{ global_password_prefix }}_pw_heartbeat"
 # Formerly BoxAPI. See docs/anatomy.md.
 install_bone: true                        # FastAPI management API — required for Wing telemetry sink
 bone_port: 8099
-bone_domain: "api.{{ instance_tld }}"
+bone_domain: "api{{ _host_alias_seg }}.{{ tenant_domain }}"
 bone_secret: "{{ global_password_prefix }}_pw_bone"
 
 # wing_telemetry_enabled lives in main.yml as a PLAY-level var (not here)
@@ -116,7 +116,7 @@ bone_secret: "{{ global_password_prefix }}_pw_bone"
 # iiab_net docker network. UI at https://mail.<tld>, gated by Authentik
 # forward_auth (Tier 2 manager). See roles/pazny.mailpit/README.md.
 install_mailpit: true                     # SMTP sink + web UI for dev mail capture
-mailpit_domain: "mail.{{ instance_tld }}"
+mailpit_domain: "mail{{ _host_alias_seg }}.{{ tenant_domain }}"
 mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
 mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
 
@@ -1233,7 +1233,7 @@ uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
 uptime_kuma_status_page_slug: "nos"               # Slug for public status page (status.dev.local → /status/<slug>)
 uptime_kuma_status_page_title: "nOS Service Status"
-uptime_kuma_status_page_domain: "status.{{ instance_tld | default('dev.local') }}"
+uptime_kuma_status_page_domain: "status{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_ntfy_topic: "nos-alerts"              # ntfy topic used for alert notifications
 uptime_kuma_notify_webhook_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/events"
 uptime_kuma_tls_expiry_monitors: true             # Create TLS cert-expiry monitors for HTTPS-exposed services
@@ -1360,7 +1360,7 @@ traefik_image_version: "v3.6.12"        # CVE-2026-33186 (gRPC auth bypass) + CV
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
-traefik_domain: "traefik.{{ instance_tld | default('dev.local') }}"
+traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_config_dir / traefik_dynamic_dir / traefik_certs_dir live in
 # roles/pazny.traefik/defaults/main.yml — they reference {{ stacks_dir }}.
@@ -1375,8 +1375,8 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # Domain hostname overrides — must match the value baked into authentik_oidc_apps
 # entries below. The Traefik file-provider falls back to '<id>.<tld>' when these
 # aren't defined, which would mismatch Authentik's redirect_uris and break SSO.
-miniflux_domain: "rss.{{ instance_tld | default('dev.local') }}"
-code_server_domain: "code.{{ instance_tld | default('dev.local') }}"
+miniflux_domain: "rss{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+code_server_domain: "code{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 nodered_port: 1880
 ntfy_port: 2586

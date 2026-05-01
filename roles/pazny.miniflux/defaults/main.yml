@@ -7,7 +7,7 @@
 # ==============================================================================
 
 miniflux_version: "2.2.19"
-miniflux_domain: "rss.{{ instance_tld | default('dev.local') }}"
+miniflux_domain: "rss{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 miniflux_port: 3011
 miniflux_db_name: "miniflux"
 miniflux_db_user: "miniflux"

@@ -131,7 +131,7 @@ class TestHappyPath(object):
         path = _write_app(tmp_path, "demo", _record())
         app, secrets, violations = render._process_one(
             path,
-            instance_tld="dev.local",
+            tenant_domain="dev.local",
             apps_subdomain="apps",
             secret_seed={},
             extra_eu_registries=[],
@@ -158,11 +158,50 @@ class TestHappyPath(object):
     def test_apps_subdomain_can_be_empty(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="",
+            path, tenant_domain="dev.local", apps_subdomain="",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
         assert app["fqdn"] == "demo.dev.local"
+
+    # ── Track F: host_alias plumbing ──────────────────────────────────────────
+
+    def test_host_alias_inserts_segment(self, render, tmp_path):
+        """host_alias='lab' yields <app>.lab.<apps_subdomain>.<tenant_domain>."""
+        path = _write_app(tmp_path, "demo", _record())
+        app, _, _ = render._process_one(
+            path, tenant_domain="dev.local", apps_subdomain="apps",
+            host_alias="lab",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app["fqdn"] == "demo.lab.apps.dev.local"
+        # Traefik Host rule must match the new FQDN — drift here means the
+        # router won't accept requests at the URL the env vars advertise.
+        assert any("Host(`demo.lab.apps.dev.local`)" in lbl
+                   for lbl in app["traefik_labels"])
+
+    def test_host_alias_empty_byte_identical(self, render, tmp_path):
+        """Empty host_alias → pre-Track-F output (FQDN drops the segment)."""
+        path = _write_app(tmp_path, "demo", _record())
+        app, _, _ = render._process_one(
+            path, tenant_domain="dev.local", apps_subdomain="apps",
+            host_alias="",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app["fqdn"] == "demo.apps.dev.local"
+
+    def test_host_alias_with_no_apps_subdomain(self, render, tmp_path):
+        """Tier-1-style: host_alias only (no apps_subdomain)."""
+        path = _write_app(tmp_path, "demo", _record())
+        app, _, _ = render._process_one(
+            path, tenant_domain="dev.local", apps_subdomain="",
+            host_alias="lab",
+            secret_seed={}, extra_eu_registries=[], strict=False,
+            traefik_network="shared_net",
+        )
+        assert app["fqdn"] == "demo.lab.dev.local"
 
     def test_generated_secrets_round_trip_through_yaml(self, render, tmp_path):
         """Regression test for the blockinfile indent drift bug:
@@ -175,7 +214,7 @@ class TestHappyPath(object):
         import yaml as _yaml
         path = _write_app(tmp_path, "demo", _record())
         _, secrets, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -212,7 +251,7 @@ class TestHappyPath(object):
         })
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -227,7 +266,7 @@ class TestHappyPath(object):
         path = _write_app(tmp_path, "demo", _record())
         seed = {"demo": {"PASSWORD_DB": "PERSISTED-XYZ"}}
         app, secrets, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed=seed, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -249,7 +288,7 @@ class TestAuthModes(object):
                                        "oidc_callback": "/api/sso/cb"})
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -264,7 +303,7 @@ class TestAuthModes(object):
         rec = _record(nginx_overrides={"auth": "none"})
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -276,7 +315,7 @@ class TestAuthModes(object):
     def test_proxy_mode_authentik_entry_has_external_host(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -296,7 +335,7 @@ class TestGates(object):
         )
         path = _write_app(tmp_path, "demo", rec)
         app, _, violations = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -310,7 +349,7 @@ class TestGates(object):
         }})
         path = _write_app(tmp_path, "demo", rec)
         app, _, violations = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -323,7 +362,7 @@ class TestGates(object):
         }})
         path = _write_app(tmp_path, "demo", rec)
         _, _, violations = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={},
             extra_eu_registries=["registry.weirdcorp.tld"],
             strict=False, traefik_network="shared_net",
@@ -337,7 +376,7 @@ class TestGates(object):
         )
         path = _write_app(tmp_path, "demo", rec)
         app, _, violations = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=True,
             traefik_network="shared_net",
         )
@@ -351,7 +390,7 @@ class TestParseFailures(object):
         bad.pop("gdpr")
         path = _write_app(tmp_path, "demo", bad)
         app, _, violations = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -369,7 +408,7 @@ class TestDerivedShapes(object):
     def test_registry_entry_minimal_fields(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -388,7 +427,7 @@ class TestDerivedShapes(object):
     def test_wing_system_minimal_fields(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -406,7 +445,7 @@ class TestDerivedShapes(object):
     def test_smoke_entry_uses_wider_expect(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -420,7 +459,7 @@ class TestDerivedShapes(object):
         # No nginx.rbac_tier in manifest → default 3
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -431,7 +470,7 @@ class TestDerivedShapes(object):
         rec["nginx"] = {"auth": "proxy", "rbac_tier": 1}
         path2 = _write_app(tmp_path, "admin", rec)
         app2, _, _ = render._process_one(
-            path2, instance_tld="dev.local", apps_subdomain="apps",
+            path2, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -442,7 +481,7 @@ class TestDerivedShapes(object):
         rec3["nginx"] = {"auth": "proxy", "rbac_tier": 99}
         path3 = _write_app(tmp_path, "wild", rec3)
         app3, _, _ = render._process_one(
-            path3, instance_tld="dev.local", apps_subdomain="apps",
+            path3, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -451,7 +490,7 @@ class TestDerivedShapes(object):
     def test_kuma_monitor_inline_domain_marker(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -469,7 +508,7 @@ class TestPortResolution(object):
         rec = _record(meta_overrides={"ports": [9999]})
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
@@ -479,7 +518,7 @@ class TestPortResolution(object):
         rec = _record(meta_overrides={"ports": []})
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
-            path, instance_tld="dev.local", apps_subdomain="apps",
+            path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )

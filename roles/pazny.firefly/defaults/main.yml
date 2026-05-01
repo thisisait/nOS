@@ -13,7 +13,7 @@
 # ==============================================================================
 
 firefly_version: "version-6.2.21"
-firefly_domain: "firefly.{{ instance_tld | default('dev.local') }}"
+firefly_domain: "firefly{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 firefly_port: 3014
 firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"
 firefly_export_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/export"

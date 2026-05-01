@@ -14,7 +14,7 @@
 # ==============================================================================
 
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
-onlyoffice_domain: "office.{{ instance_tld | default('dev.local') }}"
+onlyoffice_domain: "office{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 onlyoffice_port: 3015                              # host -> container :80
 onlyoffice_data_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/data"
 onlyoffice_logs_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/logs"

@@ -8,7 +8,7 @@
 # ==============================================================================
 
 ntfy_version: "v2.21.0"                               # https://github.com/binwiederhier/ntfy/releases
-ntfy_domain: "ntfy.{{ instance_tld | default('dev.local') }}"
+ntfy_domain: "ntfy{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 ntfy_port: 2586                                        # unikatni host port (kolize-free)
 ntfy_data_dir: "{{ ansible_facts['env']['HOME'] }}/ntfy/data"
 ntfy_base_url: "https://{{ ntfy_domain }}"

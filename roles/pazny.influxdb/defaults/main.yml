@@ -12,7 +12,7 @@
 
 # InfluxDB 2.7 is the stable OSS release (3.x is alpha, do not use).
 influxdb_version: "2.7.12"
-influxdb_domain: "influx.{{ instance_tld | default('dev.local') }}"
+influxdb_domain: "influx{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 influxdb_port: 8086
 influxdb_data_dir: "{{ ansible_facts['env']['HOME'] }}/influxdb/data"
 influxdb_config_dir: "{{ ansible_facts['env']['HOME'] }}/influxdb/config"

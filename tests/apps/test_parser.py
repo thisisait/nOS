@@ -231,6 +231,42 @@ class TestTokens(object):
         assert len(base64.b64decode(b)) == 64
         assert "BASE64_32_K1" in secrets_ and "BASE64_64_K2" in secrets_
 
+    # ── Track F: host_alias + apps_subdomain segments ─────────────────────────
+    # FQDN composition convention:
+    #   $SERVICE_FQDN_<APP> -> <app>[.<host_alias>][.<apps_subdomain>].<tenant_domain>
+
+    def test_fqdn_with_host_alias_only(self):
+        """host_alias slots between app slug and tenant_domain (no subdomain)."""
+        out, _ = resolve_tokens(
+            "https://$SERVICE_FQDN_IMMICH/", "immich", "dev.local",
+            host_alias="lab",
+        )
+        assert "https://immich.lab.dev.local/" == out
+
+    def test_fqdn_with_apps_subdomain_only(self):
+        """apps_subdomain slots between app slug and tenant_domain (Tier-2 default)."""
+        out, _ = resolve_tokens(
+            "https://$SERVICE_FQDN_DOCUMENSO/", "documenso", "dev.local",
+            apps_subdomain="apps",
+        )
+        assert "https://documenso.apps.dev.local/" == out
+
+    def test_fqdn_with_host_alias_and_apps_subdomain(self):
+        """Both segments present: <app>.<host_alias>.<apps_subdomain>.<tenant_domain>."""
+        out, _ = resolve_tokens(
+            "https://$SERVICE_FQDN_DOCUMENSO/", "documenso", "dev.local",
+            host_alias="lab", apps_subdomain="apps",
+        )
+        assert "https://documenso.lab.apps.dev.local/" == out
+
+    def test_fqdn_empty_host_alias_byte_identical(self):
+        """Empty host_alias drops the segment — backwards-compat with pre-Track-F."""
+        out, _ = resolve_tokens(
+            "https://$SERVICE_FQDN_IMMICH/", "immich", "dev.local",
+            host_alias="",
+        )
+        assert "https://immich.dev.local/" == out
+
 
 # ---------------------------------------------------------------------------
 # Template file integration

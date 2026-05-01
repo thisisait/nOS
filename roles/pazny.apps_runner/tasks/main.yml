@@ -81,7 +81,8 @@
         - name: "[pazny.apps_runner] Run nos_apps_render"
           nos_apps_render:
             apps_dir: "{{ apps_dir }}"
-            instance_tld: "{{ instance_tld | default('dev.local') }}"
+            tenant_domain: "{{ tenant_domain | default('dev.local') }}"
+            host_alias: "{{ host_alias | default('') }}"
             apps_subdomain: "{{ apps_subdomain | default('apps') }}"
             secret_seed: "{{ app_secrets | default({}) }}"
             eu_registries: "{{ apps_eu_registries | default([]) }}"

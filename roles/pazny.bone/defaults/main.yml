@@ -12,7 +12,7 @@
 # ==============================================================================
 
 bone_port: 8099
-bone_domain: "api.{{ instance_tld | default('dev.local') }}"
+bone_domain: "api{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 # Container image is built locally from {{ playbook_dir }}/files/bone.
 # Tag is bumped manually when the Dockerfile or pinned ansible-core

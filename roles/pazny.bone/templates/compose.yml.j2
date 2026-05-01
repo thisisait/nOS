@@ -29,7 +29,11 @@ services:
       BONE_SECRET: "{{ bone_secret | default('') }}"
       WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default(bone_secret | default('')) }}"
       INSTANCE_NAME: "{{ instance_name | default('nos') }}"
-      INSTANCE_TLD: "{{ instance_tld | default('dev.local') }}"
+      # NB: env var name kept stable for Bone backwards-compat (Bone reads
+      # INSTANCE_TLD); value resolved from Track-F vars (tenant_domain +
+      # host_alias). Bone does not yet consume host_alias; if/when it
+      # needs to, add a second env var rather than re-encoding here.
+      INSTANCE_TLD: "{{ tenant_domain | default('dev.local') }}"
       # Override the default mount paths only if you need to deviate from the
       # Dockerfile contract; defaults match the volumes block below.
       SERVICE_REGISTRY_PATH: "/registry/service-registry.json"

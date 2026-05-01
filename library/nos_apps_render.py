@@ -65,10 +65,18 @@ DOCUMENTATION = r"""
         description: Directory containing apps/*.yml manifests.
         required: true
         type: path
-      instance_tld:
-        description: TLD used in $SERVICE_FQDN_<APP> token expansion.
+      tenant_domain:
+        description: Primary TLD used in $SERVICE_FQDN_<APP> token expansion.
         required: true
         type: str
+      host_alias:
+        description: |
+          Per-host segment slotted between the service name and the rest
+          of the FQDN. Empty (default) drops the segment entirely; e.g.
+          host_alias='lab' → documenso.lab.apps.dev.local.
+        required: false
+        type: str
+        default: ""
       apps_subdomain:
         description: Subdomain segment for Tier-2 apps. Default 'apps'.
         required: false
@@ -126,14 +134,25 @@ except Exception:  # pragma: no cover — pytest fallback path
 # ---------------------------------------------------------------------------
 # Per-app derivations
 
-def _fqdn_for(app_name, instance_tld, subdomain):
-    """Tier-2 hostname: <id>.<subdomain>.<tld>. apps_subdomain keeps Tier-2
-    out of Tier-1 routing so a 'gitea' Tier-2 app can coexist with the Tier-1
-    pazny.gitea role on git.<tld>."""
+def _fqdn_for(app_name, tenant_domain, host_alias="", subdomain=""):
+    """Tier-2 hostname: <id>[.<host_alias>].<subdomain>.<tenant_domain>.
+
+    `apps_subdomain` keeps Tier-2 out of Tier-1 routing so a 'gitea' Tier-2
+    app can coexist with the Tier-1 pazny.gitea role on git.<tenant_domain>.
+
+    `host_alias` slots a per-host segment for multi-instance deploys (lab,
+    factory, branch). Empty (default) drops the segment so default deploys
+    keep producing byte-identical FQDNs to the pre-Track-F layout.
+    """
     sub = subdomain.strip(".") if subdomain else ""
+    alias = (host_alias or "").strip(".")
+    parts = [app_name]
+    if alias:
+        parts.append(alias)
     if sub:
-        return "{}.{}.{}".format(app_name, sub, instance_tld)
-    return "{}.{}".format(app_name, instance_tld)
+        parts.append(sub)
+    parts.append(tenant_domain)
+    return ".".join(parts)
 
 
 def _primary_port(record):
@@ -341,19 +360,19 @@ def _smoke_entry(app_name, fqdn):
 # ---------------------------------------------------------------------------
 # Compose service block resolution
 
-def _resolve_compose_block(app_name, record, instance_tld, secret_seed,
-                           apps_subdomain=""):
+def _resolve_compose_block(app_name, record, tenant_domain, secret_seed,
+                           host_alias="", apps_subdomain=""):
     """Walk record.compose.services, resolve magic tokens in every string
     field, return (resolved compose dict, generated secrets dict, secret keys
     actually used).
 
-    Pass-through of apps_subdomain so $SERVICE_FQDN_<APP> resolves to
-    ``<host>.<apps_subdomain>.<tld>`` matching what _fqdn_for() emits for
-    the Traefik label. Without this the env-var FQDN diverges from the
-    Traefik route — Documenso ends up advertising
-    https://documenso.dev.local/ in NEXT_PUBLIC_WEBAPP_URL while Traefik
-    actually routes documenso.apps.dev.local. Magic-link emails would
-    point at a host with no route.
+    Pass-through of host_alias + apps_subdomain so $SERVICE_FQDN_<APP>
+    resolves to ``<host>[.<host_alias>].<apps_subdomain>.<tenant_domain>``
+    matching what _fqdn_for() emits for the Traefik label. Without this the
+    env-var FQDN diverges from the Traefik route — Documenso ends up
+    advertising https://documenso.dev.local/ in NEXT_PUBLIC_WEBAPP_URL while
+    Traefik actually routes documenso.apps.dev.local. Magic-link emails
+    would point at a host with no route.
     """
     import json
     compose = record.get("compose") or {}
@@ -363,8 +382,9 @@ def _resolve_compose_block(app_name, record, instance_tld, secret_seed,
     # special-casing.
     raw = json.dumps(compose, ensure_ascii=False)
     resolved, secrets = resolve_tokens(
-        raw, app_name=app_name, instance_tld=instance_tld,
-        secret_seed=secret_seed, apps_subdomain=apps_subdomain,
+        raw, app_name=app_name, tenant_domain=tenant_domain,
+        secret_seed=secret_seed,
+        host_alias=host_alias, apps_subdomain=apps_subdomain,
     )
     try:
         out = json.loads(resolved)
@@ -378,8 +398,9 @@ def _resolve_compose_block(app_name, record, instance_tld, secret_seed,
 # ---------------------------------------------------------------------------
 # Main per-app processor
 
-def _process_one(path, instance_tld, apps_subdomain, secret_seed,
-                 extra_eu_registries, strict, traefik_network):
+def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
+                 extra_eu_registries, strict, traefik_network,
+                 host_alias=""):
     """Return ({app dict OR None}, {generated secrets OR {}}, [violations])."""
     name = os.path.splitext(os.path.basename(path))[0]
     try:
@@ -425,15 +446,17 @@ def _process_one(path, instance_tld, apps_subdomain, secret_seed,
     # Per-app secret seed (operator's previous-run secrets, if any)
     seed_for_app = (secret_seed or {}).get(name, {}) or {}
 
-    fqdn = _fqdn_for(name, instance_tld, apps_subdomain)
+    fqdn = _fqdn_for(name, tenant_domain, host_alias=host_alias,
+                     subdomain=apps_subdomain)
     port = _primary_port(record)
     auth_mode = _auth_mode(record)
 
-    # Resolve compose block tokens — pass apps_subdomain so $SERVICE_FQDN_*
-    # in env strings matches the Traefik-routed hostname.
+    # Resolve compose block tokens — pass host_alias + apps_subdomain so
+    # $SERVICE_FQDN_* in env strings matches the Traefik-routed hostname.
     try:
         compose_resolved, generated_secrets, secrets_used = _resolve_compose_block(
-            name, record, instance_tld, seed_for_app,
+            name, record, tenant_domain, seed_for_app,
+            host_alias=host_alias,
             apps_subdomain=apps_subdomain,
         )
     except AppParseError as exc:
@@ -471,7 +494,8 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             apps_dir=dict(type="path", required=True),
-            instance_tld=dict(type="str", required=True),
+            tenant_domain=dict(type="str", required=True),
+            host_alias=dict(type="str", default=""),
             apps_subdomain=dict(type="str", default="apps"),
             secret_seed=dict(type="dict", default={}),
             eu_registries=dict(type="list", elements="str", default=[]),
@@ -500,7 +524,8 @@ def main():
         path = os.path.join(apps_dir, fname)
         app, secrets, viol = _process_one(
             path,
-            instance_tld=p["instance_tld"],
+            tenant_domain=p["tenant_domain"],
+            host_alias=p["host_alias"],
             apps_subdomain=p["apps_subdomain"],
             secret_seed=p["secret_seed"],
             extra_eu_registries=p["eu_registries"],

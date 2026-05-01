@@ -315,12 +315,12 @@ def gate_eu_residency(
 #
 # Tier-2 templates use placeholders that the runner expands per-host. This
 # keeps templates portable and readable — operators write
-# ``$SERVICE_FQDN_IMMICH`` instead of `{{ instance_tld }}`. The expansion
+# ``$SERVICE_FQDN_IMMICH`` instead of `{{ tenant_domain }}`. The expansion
 # happens AFTER schema validation so a mistyped token is reported with
 # the rendered text in scope, not the raw placeholder.
 #
 # Supported tokens:
-#   $SERVICE_FQDN_<APP>          -> immich.<instance_tld>
+#   $SERVICE_FQDN_<APP>          -> immich[.<host_alias>][.<apps_subdomain>].<tenant_domain>
 #   $SERVICE_PASSWORD_<SUFFIX>   -> 32-char random, suffix groups same secret
 #   $SERVICE_USER_<SUFFIX>       -> <app>_user (lowercase suffix)
 #   $SERVICE_BASE64_64_<NAME>    -> 64-byte base64 (e.g. session keys)
@@ -338,8 +338,9 @@ _TOKEN_RE = re.compile(
 def resolve_tokens(
     text: str,
     app_name: str,
-    instance_tld: str,
+    tenant_domain: str,
     secret_seed: Optional[Dict[str, str]] = None,
+    host_alias: str = "",
     apps_subdomain: str = "",
 ) -> Tuple[str, Dict[str, str]]:
     """Expand magic tokens in `text`. Returns (expanded, secrets_dict).
@@ -351,16 +352,22 @@ def resolve_tokens(
     ``secret_seed`` lets the runner pre-seed values from a previous run
     so PASSWORD/BASE64 tokens stay stable across re-renders.
 
-    ``apps_subdomain`` is injected between the slug and the TLD when set,
-    e.g. apps_subdomain="apps" + instance_tld="dev.local" yields
-    ``$SERVICE_FQDN_DOCUMENSO`` → ``documenso.apps.dev.local``. Default
+    ``host_alias`` slots a per-host segment between the service name and
+    the rest of the FQDN. Empty (default) drops the segment so default
+    deploys keep producing byte-identical FQDNs to the pre-Track-F layout.
+
+    ``apps_subdomain`` is injected between the host_alias slot and the
+    TLD when set, e.g. apps_subdomain="apps" + tenant_domain="dev.local"
+    yields ``$SERVICE_FQDN_DOCUMENSO`` → ``documenso.apps.dev.local``
+    (or ``documenso.lab.apps.dev.local`` with host_alias="lab"). Default
     empty string keeps the legacy Tier-1 behaviour where tokens resolve
-    directly under the TLD (no isolating subdomain). Tier-2 callers
-    (``library/nos_apps_render``) pass ``"apps"``.
+    directly under the TLD. Tier-2 callers (``library/nos_apps_render``)
+    pass ``"apps"``.
     """
     seed = dict(secret_seed or {})
     out_secrets: Dict[str, str] = {}
     sub = (apps_subdomain or "").strip(".")
+    alias = (host_alias or "").strip(".")
 
     def replace(match: re.Match) -> str:
         kind = match.group(1)
@@ -372,10 +379,13 @@ def resolve_tokens(
             # APP suffix may include the app name itself (typical) or a
             # different subdomain like API. Lowercase it for the FQDN.
             host = suffix.lower().replace("_", "-")
+            parts = [host]
+            if alias:
+                parts.append(alias)
             if sub:
-                value = "%s.%s.%s" % (host, sub, instance_tld)
-            else:
-                value = "%s.%s" % (host, instance_tld)
+                parts.append(sub)
+            parts.append(tenant_domain)
+            value = ".".join(parts)
         elif kind == "USER":
             value = "%s_%s" % (app_name, suffix.lower())
         elif kind == "PASSWORD":
