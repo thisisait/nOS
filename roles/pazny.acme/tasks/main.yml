@@ -86,10 +86,21 @@
   register: _acme_issue
   changed_when:
     - _acme_issue.rc == 0
-    - "'Cert success' in (_acme_issue.stdout | default('')) or 'is not expired yet' not in (_acme_issue.stdout | default(''))"
+    - "'Cert success' in (_acme_issue.stdout | default(''))"
+  # acme.sh's idempotent no-op messages have evolved over releases:
+  #   - older: 'is not expired yet'        (legacy LE flow)
+  #   - newer: 'Skipping. Next renewal'    (current — uses NextRenewTime)
+  #   - 2025+: 'Domains not changed'       (no-domain-list-delta path)
+  # Treat all three as "no work to do, that's fine" — a real issuance fault
+  # would carry one of acme.sh's actual error strings (e.g. 'BR_QcGc',
+  # 'Verify error:', 'Authorization failed') and we'd fall through to
+  # `rc != 0` + no-skip-message → fail. Surfaced 2026-05-02 reconverge #3
+  # when acme.sh started returning rc=2 with 'Skipping' for our valid cert.
   failed_when:
     - _acme_issue.rc != 0
     - "'is not expired yet' not in (_acme_issue.stdout | default(''))"
+    - "'Skipping' not in (_acme_issue.stdout | default(''))"
+    - "'Domains not changed' not in (_acme_issue.stdout | default(''))"
   no_log: true
 
 # acme.sh stores the cert at `~/.acme.sh/<first-domain>/` where <first-domain>
