@@ -135,19 +135,40 @@
                               | first) | default('') | basename | regex_search('^\\*\\.') is none)
          else ('*.' + acme_cert_zone) }}
 
-- name: "[ACME] Symlink fullchain.cer → {{ acme_cert_path }}"
-  ansible.builtin.file:
+# Symlinks vs copy: the prior `state: link` form left dangling pointers
+# inside the Traefik container — `~/stacks/infra/tls/` is bind-mounted to
+# /certs:ro, but the symlink target (`/Users/pazny/.acme.sh/...`) is a
+# HOST path that the container's filesystem can't resolve. Result:
+# `cat /certs/acme/pazny.eu.crt` returns ENOENT inside the container,
+# Traefik accepts TCP on :443 but kills the TLS handshake half-way
+# (SSL_ERROR_SYSCALL on the client side, no log line in Traefik because
+# the cert file open errors before the listener emits anything).
+#
+# Fix: copy the actual cert + key bytes into the bind-mounted dir so the
+# container sees real files. acme.sh's renew-hook still triggers traefik
+# restart on rotation, so the next renewal will trigger this same task
+# (Ansible re-converges file content) — same idempotency, but with a
+# byte-stream rather than a symlink.
+#
+# Surfaced 2026-05-02 during 4th reconverge attempt for production
+# blank — Track G recovery.
+- name: "[ACME] Install fullchain.cer → {{ acme_cert_path }}"
+  ansible.builtin.copy:
     src: "{{ _acme_actual_dir }}/fullchain.cer"
     dest: "{{ acme_cert_path }}"
-    state: link
-    force: true
+    remote_src: true
+    mode: '0644'
+    follow: true
+  notify:
+    - Restart traefik
 
-- name: "[ACME] Symlink {zone}.key → {{ acme_cert_key }}"
-  ansible.builtin.file:
+- name: "[ACME] Install {zone}.key → {{ acme_cert_key }}"
+  ansible.builtin.copy:
     src: "{{ _acme_actual_dir }}/{{ _acme_key_basename }}.key"
     dest: "{{ acme_cert_key }}"
-    state: link
-    force: true
+    remote_src: true
+    mode: '0644'
+    follow: true
   notify:
     - Restart nginx
     - Restart traefik
