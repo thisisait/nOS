@@ -36,16 +36,19 @@
     cmd: "{{ pulse_python }} -m venv {{ pulse_venv }}"
     creates: "{{ pulse_venv }}/bin/python"
 
-- name: "[pazny.pulse] Install pulse package + deps (editable)"
-  ansible.builtin.pip:
-    name:
-      - "pip"  # ensure latest pip
-      - "{{ playbook_dir }}/files/anatomy/pulse"
-    state: latest
-    extra_args: "--upgrade"
-    editable: false  # 'pip install <path>' does not need -e for our use case
-    virtualenv: "{{ pulse_venv }}"
-  changed_when: false  # pip's stdout doesn't surface 'no-op' reliably
+- name: "[pazny.pulse] Upgrade pip in venv"
+  # Same reason as pazny.bone: avoid ansible.builtin.pip — its controller-
+  # side `packaging` import fails on PEP-668 Homebrew Python 3.14.
+  ansible.builtin.command:
+    cmd: "{{ pulse_venv }}/bin/pip install --quiet --disable-pip-version-check --upgrade pip"
+  register: _pulse_pip_upgrade
+  changed_when: _pulse_pip_upgrade.stdout | trim != ""
+
+- name: "[pazny.pulse] Install pulse package into venv"
+  ansible.builtin.command:
+    cmd: "{{ pulse_venv }}/bin/pip install --quiet --disable-pip-version-check --upgrade {{ playbook_dir }}/files/anatomy/pulse"
+  register: _pulse_pip_install
+  changed_when: _pulse_pip_install.stdout | trim != ""
 
 - name: "[pazny.pulse] Render launchd plist"
   ansible.builtin.template:

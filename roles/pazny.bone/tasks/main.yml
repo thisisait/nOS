@@ -85,11 +85,17 @@
     creates: "{{ bone_venv }}/bin/python"
 
 - name: "[pazny.bone] Install bone deps into venv"
-  ansible.builtin.pip:
-    requirements: "{{ playbook_dir }}/files/anatomy/bone/requirements.txt"
-    state: present
-    virtualenv: "{{ bone_venv }}"
-  changed_when: false  # pip's stdout doesn't surface 'no-op' reliably
+  # NB: we shell out to the venv's own pip rather than using
+  # ansible.builtin.pip. The pip module imports `packaging` from the
+  # controller-side interpreter (Homebrew Python 3.14 here), which is
+  # PEP 668 externally-managed on macOS — no clean way to inject the
+  # package without `--break-system-packages`. Using the venv's pip
+  # directly sidesteps the controller dependency entirely; idempotence
+  # comes from pip itself ("Requirement already satisfied" exits 0).
+  ansible.builtin.command:
+    cmd: "{{ bone_venv }}/bin/pip install --quiet --disable-pip-version-check -r {{ playbook_dir }}/files/anatomy/bone/requirements.txt"
+  register: _bone_pip
+  changed_when: _bone_pip.stdout | trim != ""
 
 - name: "[pazny.bone] Sync Bone source to runtime dir"
   ansible.posix.synchronize:

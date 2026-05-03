@@ -15,12 +15,13 @@
 # ==============================================================================
 
 - name: "[pazny.uptime_kuma] Install uptime-kuma-api + PyYAML"
-  ansible.builtin.pip:
-    name:
-      - uptime-kuma-api
-      - PyYAML
-    state: present
-    extra_args: "--user"
+  # ansible.builtin.pip imports `packaging` controller-side; that fails
+  # on PEP-668 Homebrew Python 3.14. Shell out to pip directly with
+  # --break-system-packages so --user installs land cleanly. The
+  # downstream setup-monitors.py invocation runs under the same
+  # interpreter so the packages resolve.
+  ansible.builtin.command:
+    cmd: "{{ ansible_python_interpreter | default('python3') }} -m pip install --quiet --disable-pip-version-check --user --break-system-packages uptime-kuma-api PyYAML"
   register: _kuma_pip
   failed_when: false
   changed_when: "'Successfully installed' in (_kuma_pip.stdout | default(''))"

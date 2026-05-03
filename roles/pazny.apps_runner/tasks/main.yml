@@ -68,10 +68,12 @@
         # for the Preflight YAML validator). Idempotent: pip is a no-op
         # when PyYAML is already present.
         - name: "[pazny.apps_runner] Ensure PyYAML is installed for the parser"
-          ansible.builtin.pip:
-            name: PyYAML
-            state: present
-            extra_args: "--user --break-system-packages"
+          # ansible.builtin.pip imports `packaging` controller-side; on
+          # PEP-668 Homebrew Python 3.14 that import fails before pip
+          # itself runs. Shelling out to `python -m pip` bypasses the
+          # Ansible module entirely.
+          ansible.builtin.command:
+            cmd: "{{ ansible_python_interpreter | default('python3') }} -m pip install --quiet --disable-pip-version-check --user --break-system-packages PyYAML"
           register: _apps_pyyaml_pip
           failed_when: false
           changed_when: "'Successfully installed' in (_apps_pyyaml_pip.stdout | default(''))"
@@ -190,12 +192,43 @@
           # only via natural sequential loop here — Docker's own caching
           # makes the second probe of a layer-shared image fast.
 
-        - name: "[pazny.apps_runner] Identify unreachable images"
+        # Local-cache fallback: when `docker manifest inspect` fails (typically
+        # Docker Hub anonymous rate limit — 100 pulls/6 h per IP — which we
+        # routinely hit during multi-blank dev days), check whether the image
+        # is already pulled locally. If yes, the deploy WILL succeed regardless
+        # of the registry being momentarily unreachable, so refusing the run
+        # is a false alarm. Operator's intent is "verify deploy will work";
+        # local cache is a perfectly valid resolution.
+        - name: "[pazny.apps_runner] Probe failed images against local Docker image cache"
+          ansible.builtin.command: "{{ docker_bin | default('docker') }} image inspect {{ item.item }}"
+          loop: "{{ (_apps_image_probes.results | default([])) | rejectattr('rc', 'equalto', 0) | list }}"
+          loop_control:
+            label: "{{ item.item }}"
+          register: _apps_image_local_probes
+          changed_when: false
+          failed_when: false
+          check_mode: false
+
+        - name: "[pazny.apps_runner] Identify unreachable images (registry AND local cache miss)"
           ansible.builtin.set_fact:
             _apps_bad_images: >-
-              {{ (_apps_image_probes.results | default([]))
+              {{ (_apps_image_local_probes.results | default([]))
                  | rejectattr('rc', 'equalto', 0)
+                 | map(attribute='item')
                  | map(attribute='item') | list }}
+            _apps_local_cache_hits: >-
+              {{ (_apps_image_local_probes.results | default([]))
+                 | selectattr('rc', 'equalto', 0)
+                 | map(attribute='item')
+                 | map(attribute='item') | list }}
+
+        - name: "[pazny.apps_runner] Note images served from local cache (registry probe failed)"
+          ansible.builtin.debug:
+            msg: >-
+              Local cache fallback: {{ _apps_local_cache_hits | length }}
+              image(s) unreachable on registry but pulled locally — proceeding.
+              ({{ _apps_local_cache_hits | join(', ') }})
+          when: (_apps_local_cache_hits | default([])) | length > 0
 
         # Map each bad image back to the manifest(s) that reference it, so
         # the operator can `vim apps/<name>.yml` immediately. The lookup is
@@ -237,7 +270,14 @@
                   matches an OLD slug you renamed)
                 · tag does not exist on registry (look up the upstream
                   Dockerfile / GitHub releases for current stable tag)
-                · registry rate-limit (rare; retry after a few minutes)
+                · Docker Hub anonymous pull rate-limit (100/6h per IP;
+                  multi-blank dev days hit this routinely). If the
+                  message says "toomanyrequests": run `docker login`
+                  to bump the limit to 200/6h, or wait ~10 min. Note:
+                  if the image is already in your LOCAL Docker cache,
+                  this task auto-resolves via `docker image inspect`
+                  fallback — you only see this fail when the registry
+                  miss AND the local cache miss.
                 · wrong registry host (e.g. ghcr.io vs docker.io)
 
               Fix the manifest(s) and re-run, or pass
