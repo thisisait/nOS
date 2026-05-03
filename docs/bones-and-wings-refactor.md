@@ -24,6 +24,58 @@ The point of the refactor is not feature parity in a prettier wrapper. The point
 
 ---
 
+## 1.1 Doctrine — "tendons & vessels": thin roles + modular wiring
+
+**Operator framing 2026-05-03:** *"Součásti Bones & Wings budou šlachy a cévy které budou zajišťovat autowiring systémů mezi sebou. Chceme do budoucna mít co nejtenší installer služby a k tomu poskytovat config a wiring — vše modulárně — ne jedna obrovská role."*
+
+Translated to architecture:
+
+- A **role** is just a **bone** — the skeletal install of a service. It does *one* thing: bring up the binary/container, render a minimal config, expose a port. No cross-service knowledge. No OIDC blueprints. No Grafana dashboards. No DB seeding for *other* roles. No notification templates. No GDPR rows. No Prometheus scrape config.
+- A **plugin manifest** is a **tendon or vessel** — the connective tissue. **Tendons** wire roles to anatomy (Wing UI, Pulse jobs, audit, GDPR). **Vessels** wire roles to infra/observability (DB tables, Prometheus scrape, Loki labels, Grafana dashboards, Tempo OTLP, ntfy/mail templates, OIDC clients). Drop a manifest, run one tag, the service joins the body.
+- **Composition plugins** are **synapses** — they fire only when two or more services are both alive (e.g., grafana-spacetimedb dashboard activates when both grafana AND spacetimedb are installed). Without a synapse plugin, the two services exist in the same body but don't talk; with it, they cooperate. **Same install state, different cooperation surface.**
+
+### Today's anatomy (the lesson learned)
+
+`roles/pazny.grafana/` today carries: dashboards, OIDC config, Prometheus datasource, Loki datasource, Tempo datasource, alert rules, schema for grafana.db, notifier wiring, mailpit relay. Roughly **70% of the role is wiring, not install.** Same shape across Authentik (~70% wiring), Bluesky PDS (~60%), Outline (~75%). The wiring is **glued into the role** because we lacked a place to put it.
+
+### The doctrine — what every role must shed
+
+After Track Q completes, a Tier-1 role like `roles/pazny.grafana/` should contain ONLY:
+
+```
+roles/pazny.grafana/
+├── defaults/main.yml         # version, port, data_dir, mem_limit
+├── tasks/main.yml            # data dir + render compose-override
+├── templates/compose.yml.j2  # Docker Compose service fragment, no top-level networks:
+└── meta/main.yml
+```
+
+That's it. **No `tasks/post.yml`. No dashboards/. No OIDC blocks in `default.config.yml`. No Prometheus scrape entry in `roles/pazny.alloy/`.** Everything that connects Grafana to the rest of the body lives in `files/anatomy/plugins/grafana-base/plugin.yml` (a service plugin) and in zero or more composition plugins (`files/anatomy/plugins/grafana-spacetimedb/`, `files/anatomy/plugins/grafana-bluesky-feed/`, etc.).
+
+**A role's only public surface, post-Track-Q, is its name + its `defaults/`.** Plugins read defaults to know where to write/scrape/connect. Plugins do not modify the role.
+
+### Implications for adding a new service
+
+**Today (pre-Track-Q):** add `roles/pazny.foo/`, then edit `default.config.yml` (OIDC entry), `roles/pazny.alloy/templates/scrape-config.yml.j2` (scrape), `tasks/stacks/core-up.yml` (DB), `roles/pazny.foo/tasks/post.yml` (auth wiring), `templates/traefik/dynamic/services.yml.j2` (router), maybe `roles/pazny.grafana/files/dashboards/` (dashboard). **Six files, three subsystems, no atomic commit.**
+
+**After Track Q:** add `roles/pazny.foo/` (4 files, ~50 lines, just install) + `files/anatomy/plugins/foo-base/plugin.yml` (1 file, all wiring). **Two files. Atomic. Reversible. Testable in isolation.**
+
+### Implications for the PoC
+
+This doctrine elevates Track Q from **"post-PoC follow-on, scope TBD"** (§13.1's old framing) to **a first-class architectural promise of the refactor itself**. The PoC must therefore:
+
+1. Build the plugin loader so it can validate AND apply **all three plugin types** (skill / service / composition), even if PoC only ships one of each. Forward-compat schema is no longer enough — loader code paths must exist.
+2. Migrate ONE Tier-1 service to the thin-role pattern as a **proof point** (proposed: `pazny.grafana` because its wiring is dense and self-contained — no cross-tenant complexity). This becomes the **canonical reference** for every subsequent migration.
+3. Document the migration recipe in `files/anatomy/docs/role-thinning-recipe.md` so future migrations follow a deterministic 6-step process.
+
+The new PoC exit criterion: **a fresh blank with `pazny.grafana` migrated to thin-role + grafana-base plugin produces a byte-identical functional Grafana** — same dashboards, same datasources, same OIDC, same scrape, same alerts. Zero operator-visible regression. **If we can't prove this on Grafana, the doctrine isn't real.**
+
+Track Q (the rest of the migration: Authentik, Outline, Bluesky PDS, ~50 more integrations) stays multi-week post-PoC, but with the recipe + reference migration in hand, each subsequent role is a 2-4h commit, not a "scope TBD" hand-wave.
+
+See §8 (revised PoC plan) for the new phase A6.5 — Grafana thin-role pilot. See §13 (revised) for Track Q with concrete first batch.
+
+---
+
 ## 2. Why now
 
 Three forces converge:
@@ -820,13 +872,14 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 | **A3** | track-A-reversal | Decommission Wing+Bone containerization. Remove wing+wing-nginx from `iiab` compose, remove bone from `infra` compose. Rewrite `pazny.wing` to install PHP 8.3 via Homebrew + render `~/wing/` configs + manage `eu.thisisait.nos.wing` launchd plist. Rewrite `pazny.bone` to install Python venv at `~/bone/venv`, copy `files/anatomy/bone/*.py` to `~/bone/`, manage launchd plist. Add Traefik file-provider entries for `wing.<tld>` → `host.docker.internal:9000` with `authentik@file` middleware. Migration recipe `migrations/2026-XX-anatomy-host-revert.yml` for existing deploys (operator-blank acceptable since pre-prod). | 1 d |
 | **A4** | pulse-skeleton | New `roles/pazny.pulse/` thin role: install Python venv at `~/pulse/venv`, copy `files/anatomy/pulse/*` to `~/pulse/`, manage launchd plist. Implement Pulse daemon: tick loop (30s), reads `wing.db.pulse_jobs` via Wing API, fires due jobs, logs runs to `wing.db.pulse_runs`. **No agentic runs yet** — only non-agentic subprocess shape. New wing.db tables `pulse_jobs`, `pulse_runs` via schema migration. | 1 d |
 | **A5** | wing-exports | Write `files/anatomy/wing/bin/export-openapi.php` (introspects Nette router + presenter PHPDoc → OpenAPI 3.1 YAML). Write `files/anatomy/wing/bin/export-schema.php` (introspects wing.db at runtime → DDL). Commit outputs to `files/anatomy/skills/contracts/`. Add CI drift check that re-runs exports vs committed and diffs. | 1 d |
-| **A6** | plugin-system | `state/schema/plugin.schema.json` JSONSchema for manifests. Implement plugin loader (Python script under `files/anatomy/scripts/load_plugins.py`) called by `pazny.anatomy --tags anatomy.plugins`. Loader does §6.2 steps. Includes `scaffold` subcommand: `python3 -m anatomy.load_plugins scaffold mynewplugin` → creates skeleton from `_template`. | 2 d |
-| **A7** | gitleaks-poc | First plugin: gitleaks. Manifest, skill (`skills/run-gitleaks.sh` invokes gitleaks binary, parses output, normalizes JSON), Wing Latte view, Grafana dashboard, mail+ntfy templates, GDPR row, schema migration for `wing.db.gitleaks_findings`. End-to-end: `ansible-playbook --tags anatomy.plugins`, gitleaks runs Sunday 03:00 (or `--tags anatomy.plugins,run_now=gitleaks` for immediate test). | 1 d |
+| **A6** | plugin-system | `state/schema/plugin.schema.json` JSONSchema for manifests — covers ALL three plugin types (skill / service / composition). Implement plugin loader (Python script under `files/anatomy/scripts/load_plugins.py`) called by `pazny.anatomy --tags anatomy.plugins`. Loader code paths exist for all three types (PoC only fires skill + one service path; composition stays untested-but-loadable). Loader does §6.4 steps. Includes `scaffold` subcommand: `python3 -m anatomy.load_plugins scaffold <name> --type {skill,service,composition}` → creates skeleton from per-type `_template`. | 2 d |
+| **A6.5** | grafana-thin-role-pilot | **Doctrine proof point (§1.1).** Migrate `roles/pazny.grafana/` to thin shape: keep `defaults/main.yml` + `tasks/main.yml` (data dir + compose render only) + `templates/compose.yml.j2` + `meta/main.yml`. Move EVERYTHING else (dashboards, OIDC config block, Prometheus datasource, Loki/Tempo wiring, alert rules, notifier templates) into a NEW `files/anatomy/plugins/grafana-base/plugin.yml` (service plugin with `requires.role: pazny.grafana`). Loader applies the wiring on `--tags anatomy.plugins`. Document the recipe in `files/anatomy/docs/role-thinning-recipe.md` (the deterministic 6-step process: identify wiring → create plugin manifest → move dashboards → move OIDC → move scrape → smoke-test). **Exit:** fresh blank with thin grafana + grafana-base plugin produces byte-identical functional Grafana (dashboards, datasources, OIDC, scrape, alerts all green; `diff` between old `~/.nos/state.yml` snapshot and new shows only path drift). | 1.5 d |
+| **A7** | gitleaks-poc | First skill plugin: gitleaks. Manifest, skill (`skills/run-gitleaks.sh` invokes gitleaks binary, parses output, normalizes JSON), Wing Latte view, Grafana dashboard, mail+ntfy templates, GDPR row, schema migration for `wing.db.gitleaks_findings`. End-to-end: `ansible-playbook --tags anatomy.plugins`, gitleaks runs Sunday 03:00 (or `--tags anatomy.plugins,run_now=gitleaks` for immediate test). | 1 d |
 | **A8** | conductor-poc | Conductor profile + system prompt. Pulse runner harness for agentic mode (`bin/pulse-run-agent.sh` mints token, assembles prompt, exec's claude, captures output, posts results). Wing `/inbox` view: pending approvals, conductor drift reports, gitleaks findings (unified inbox). Wing `/approvals` view: approve/reject buttons for pending upgrades. Conductor first run end-to-end: drift scan → drift report → operator-creates-test-approval → conductor next run applies it. | 2 d |
 | **A9** | notification-fanout | Notification dispatcher (Python module under `files/anatomy/wing/lib/notifications.py` — but Wing-PHP-side; Python module to be moved or rewritten as PHP). Wing `/inbox` is primary. ntfy: HTTP POST to ntfy container with topic `nos-critical`. Mail: SMTP to mailpit (Stalwart fallback when Track G ships). Templating uses notification template files from plugin manifest. Severity routing per manifest `notification:` block. | 1 d |
 | **A10** | audit-trail | Schema migration: add `actor_id` (FK to authentik clients), `actor_action_id` (UUID per action), `acted_at` to all wing.db write tables. Wing `/audit` view: filter by actor, by data category, by time range. GDPR Article 30 view auto-aggregates from `gdpr_processors` + `audit_log`. Per-agent Authentik blueprints (conductor + plugin-gitleaks for PoC) via Track B framework. | 1 d |
 
-**Total: 12.5 days.** Slack to 14 days realistic.
+**Total: 14 days** (was 12.5 — added A6.5 Grafana thin-role pilot per §1.1 doctrine). Slack to 16 days realistic.
 
 ### 8.2 Parallelization (if operator wants multiple agents)
 
@@ -853,7 +906,8 @@ Recommended split if 2 agents: agent-A on A0-A6 main spine; agent-B on A5+A7 (ex
 - gitleaks plugin is installed via `--tags anatomy.plugins`; Wing UI shows `/plugins/gitleaks`; Grafana shows the gitleaks dashboard; ntfy delivers a critical-severity test message; GDPR row present.
 - Conductor agent runs every 4h; first drift report visible in Wing `/inbox`; one operator approval round-trip verified end-to-end.
 - Audit trail: every write to wing.db has `actor_id` + `acted_at`; `/audit` view filters work.
-- All existing tests still pass (89 apps + 431 total). New tests: ~30 for plugin schema + ~15 for conductor profile + ~10 for Wing exports.
+- All existing tests still pass (89 apps + 438 total as of 2026-05-03). New tests: ~30 for plugin schema (covers all 3 types) + ~15 for conductor profile + ~10 for Wing exports + ~10 for grafana thin-role parity check.
+- **§1.1 doctrine proof:** thin `pazny.grafana` + `grafana-base` service plugin produces byte-identical functional Grafana vs. pre-Track-Q state. `files/anatomy/docs/role-thinning-recipe.md` documents the 6-step migration process. **If this exits red, the doctrine isn't shippable and Track Q is paused for redesign.**
 
 ---
 
@@ -1051,7 +1105,11 @@ All §10 items from the previous draft are resolved (operator 2026-05-01):
 
 ---
 
-## 13. Out of scope (this plan)
+## 13. In scope: PoC + Track Q follow-on (this plan)
+
+PoC ships the doctrine proof (A6.5: thin Grafana + grafana-base service plugin). Track Q applies the same recipe to every other Tier-1 role; see §13.1 for the seven-batch plan.
+
+### 13.0 Out of scope (this plan)
 
 - **Hermes integration** — Q3 follow-up after Hermes is audited (could become a Track O / P).
 - **Multi-tenant agent profiles** — every operator/tenant runs their own pulse. No shared agent suite across tenants.
@@ -1064,27 +1122,42 @@ All §10 items from the previous draft are resolved (operator 2026-05-01):
 - **Migrating `state/manifest.yml` itself into `files/anatomy/`** — manifest is the platform service catalog, referenced by Traefik, smoke tests, GDPR inventories. Stays top-level.
 - **Tier-2 apps moving into anatomy** — `apps/<name>.yml` manifests stay where they are. Only platform-control-plane code moves to anatomy.
 
-### 13.1 Future track candidate — Track Q: autowiring debt consolidation (post-PoC, scope TBD)
+### 13.1 Track Q — autowiring debt consolidation (first-class follow-on, post-PoC)
 
-The plugin model in §6 introduces **service** and **composition** plugin types. PoC implements only the **skill** type (gitleaks). Once the skill pattern is operator-validated, the natural next phase is **migrating today's scattered autowiring code into service + composition plugins**.
+**Status (2026-05-03):** promoted from "future candidate" to **first-class architectural follow-on** per §1.1 doctrine. Track Q is the realization of the "tendons & vessels" promise: every Tier-1 role gets thinned to install-only; all wiring lives in service + composition plugins under `files/anatomy/plugins/`.
 
-Today, the wiring between (for example) Grafana and SpaceTimeDB lives in:
-- `roles/pazny.grafana/files/dashboards/*.json` (dashboards)
-- `roles/pazny.alloy/templates/scrape-config.yml.j2` (Prometheus scrape)
-- `tasks/stacks/core-up.yml` (database init)
-- `default.config.yml` (OIDC entries, env wiring)
-- `roles/pazny.spacetimedb/tasks/post.yml` (cross-role bridge — when this role is added)
+The PoC ships the doctrine proof (A6.5: thin `pazny.grafana` + `grafana-base` service plugin). Track Q applies the same recipe to the rest of the body.
 
-The plugin model collapses that into **one plugin manifest** per integration, owned by the integration, not by either service. Migrating accumulates ~50-100 distinct integrations once we count Grafana, Loki, Prometheus, Tempo, OIDC, SMTP, ntfy, and per-service connections.
+**Concrete batches (post-PoC, each ~3-5 days):**
 
-**Track Q proposal (scope TBD before commits):**
-- Phase Q1 — schema for service-plugin manifests; loader extension for `requires.role` + `requires.feature_flag` + `infra:` + `observability:`.
-- Phase Q2 — composition-plugin support (multi-`requires`, conditional activation).
-- Phase Q3 — pilot migration: move 5 high-traffic integrations to plugins (e.g. grafana base, loki base, alloy scrape, mailpit dual-attach, ntfy notifier).
-- Phase Q4 — incremental migration of remaining integrations, in batches per surface (observability batch, IAM batch, storage batch).
-- Phase Q5 — once all integrations are plugins, role-internal `tasks/post.yml` files become thin (or empty) and the autowiring debt is paid.
+| Phase | Batch | Roles thinned | Plugins added | Why this order |
+|---|---|---|---|---|
+| **Q1** | observability | `pazny.alloy`, `pazny.prometheus`, `pazny.loki`, `pazny.tempo` | `alloy-scrape`, `prometheus-base`, `loki-base`, `tempo-base`, plus 8-12 composition plugins (`grafana-prometheus`, `grafana-loki`, `grafana-tempo`, `alloy-host-metrics`, `alloy-docker-metrics`, `alloy-syslog`, ...) | observability is the densest wiring surface today; biggest LOC reduction; lowest blast radius (no user data) |
+| **Q2** | IAM + secrets | `pazny.authentik`, `pazny.infisical`, `pazny.vaultwarden` | `authentik-base`, `infisical-base`, plus per-Tier-1 composition plugins for OIDC bindings (`authentik-grafana`, `authentik-outline`, `authentik-nextcloud`, …) — replaces today's central `authentik_oidc_apps` list | every other plugin depends on IAM; do this second so subsequent batches have stable plugin contracts |
+| **Q3** | storage + DB | `pazny.mariadb`, `pazny.postgres`, `pazny.redis`, `pazny.rustfs` | `mariadb-base`, `postgres-base`, `redis-base`, `rustfs-base`, plus DB-binding compositions (`postgres-outline`, `mariadb-nextcloud`, `redis-authentik`, ...) replacing the central `tasks/stacks/core-up.yml` DB-init block | DB init is currently in `tasks/stacks/core-up.yml`; moving each to its consumer plugin localizes blast radius |
+| **Q4** | comms | `pazny.smtp_stalwart`, `pazny.ntfy`, `pazny.mailpit` | `smtp-stalwart-base`, `ntfy-base`, `mailpit-dev-relay`, plus per-service notifier compositions | depends on Q1+Q2 (notifications need observability + identity) |
+| **Q5** | content | `pazny.nextcloud`, `pazny.outline`, `pazny.bookstack`, `pazny.hedgedoc`, `pazny.wordpress`, `pazny.calibre_web`, `pazny.kiwix`, `pazny.jellyfin` | one base plugin per role, plus cross-content compositions (e.g. `outline-onlyoffice`, `nextcloud-onlyoffice`) | tenant-data services last; most blast-radius |
+| **Q6** | dev/CI | `pazny.gitea`, `pazny.gitlab`, `pazny.woodpecker`, `pazny.code_server`, `pazny.paperclip` | base + composition plugins | parallel to Q5 if needed |
+| **Q7** | misc + sweep | everything else (`pazny.uptime_kuma`, `pazny.home_assistant`, `pazny.n8n`, `pazny.node_red`, `pazny.miniflux`, `pazny.openwebui`, `pazny.firefly_iii`, `pazny.erpnext`, `pazny.freescout`, `pazny.metabase`, `pazny.superset`, `pazny.influxdb`, `pazny.qgis_server`, `pazny.freepbx`) + cleanup of any `tasks/post.yml` shells left over | base plugins per role | tail; low-density wiring per service |
 
-Estimate: **multi-week**, deferred until bones & wings PoC is operator-validated AND Track F + G are landed. NOT in scope of this plan; this section is a forward-pointer so the plugin schema designed in PoC is forward-compatible.
+**Per-batch checklist (deterministic, drawn from A6.5 recipe):**
+1. Inventory wiring: `grep -rn "<service>" tasks/ default.config.yml roles/pazny.alloy/ templates/traefik/`
+2. Create `files/anatomy/plugins/<service>-base/plugin.yml` with `requires.role: pazny.<service>`
+3. Move dashboards, OIDC blocks, scrape entries, alert rules, notifier templates, schema migrations into the plugin
+4. Strip role: delete `tasks/post.yml`, drop service-specific entries from `default.config.yml`, prune unused defaults
+5. Run blank with the thinned role → verify byte-identical functional behavior (dashboards visible, OIDC works, scrape green, alerts firing as before)
+6. Commit `feat(anatomy): thin pazny.<service> + extract <service>-base plugin (Q<N>)`
+
+**Track Q exit criteria:**
+- Every Tier-1 role under `roles/pazny.<service>/` has shape: `defaults/`, `tasks/main.yml` (data dir + compose render only), `templates/compose.yml.j2`, `meta/`. **No `tasks/post.yml` anywhere** unless the post-step is genuinely service-internal (e.g. database `pgcrypto` extension on first install).
+- `default.config.yml` has zero per-service OIDC blocks (`authentik_oidc_apps` becomes a derived view from plugins).
+- `tasks/stacks/core-up.yml` + `stack-up.yml` lose their DB-init + post-start blocks — replaced by plugin loader's own ordering.
+- `roles/pazny.alloy/templates/scrape-config.yml.j2` becomes a Jinja loop over discovered plugin scrape entries, not a hardcoded list.
+- Net LOC delta expected: **-2000 to -3500** (rough estimate; will refresh after Q1 actuals).
+
+**Estimate:** 4-6 weeks total post-PoC, batched. Each batch is independently shippable; Q can pause mid-track without breaking anything.
+
+**Gate to start Q1:** PoC A6.5 exits green — i.e., the doctrine is proven on Grafana before generalization.
 
 ---
 
@@ -1100,7 +1173,9 @@ Estimate: **multi-week**, deferred until bones & wings PoC is operator-validated
   - **service plugin** — wraps an existing role/apps with complete autowiring spec (anatomy + infra + observability). Example: grafana base. Post-PoC.
   - **composition plugin** — cross-service wiring; activates only when ALL declared services are installed. Example: grafana-spacetimedb. Post-PoC.
 - **autowiring** — the integration code that connects a service to anatomy/infra/observability subsystems. Today scattered across role-internal `tasks/post.yml` and adjacent surfaces; **plugin manifests are its permanent home** post-PoC.
-- **Track Q** (proposed, post-PoC) — autowiring debt consolidation: migrate scattered integration code from role internals into service + composition plugins. Multi-week, scope TBD before commits. See §13.1.
+- **tendons & vessels** (operator framing 2026-05-03, §1.1) — the autowiring layer made explicit. **Tendons:** plugin manifests connecting roles to anatomy (Wing UI, Pulse, audit, GDPR). **Vessels:** plugin manifests connecting roles to infra/observability (DB, Prometheus, Loki, Grafana, OIDC, notifiers). Both are **modular and removable**; the role they wire knows nothing about them. **Synapses** (composition plugins) fire only when multiple services co-exist.
+- **thin role doctrine** (§1.1) — every Tier-1 `roles/pazny.<service>/` post-Track-Q contains ONLY `defaults/`, `tasks/main.yml` (data dir + compose render), `templates/compose.yml.j2`, `meta/`. No `tasks/post.yml`. No cross-service knowledge. Adding a new service = role + plugin (two files).
+- **Track Q** (first-class follow-on, post-PoC) — autowiring debt consolidation: migrate scattered integration code from role internals into service + composition plugins. 4-6 weeks batched (Q1-Q7). Gate: A6.5 doctrine proof on Grafana exits green. See §13.1.
 - **agent profile** — `files/anatomy/agents/<name>/profile.yml` declaring schedule, runtime, scopes, prompt path, skills, GDPR.
 - **skill** — reusable capability under `files/anatomy/skills/<name>/`. Importable by agent profiles and plugins.
 - **contract** — committed schema artifact under `files/anatomy/skills/contracts/`: `wing.openapi.yml`, `bone.openapi.yml`, `wing.db-schema.sql`. Single source of truth.

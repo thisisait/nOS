@@ -123,10 +123,12 @@ Once blank green:
 - **G — Cloudflare proxy + LE production exposure (bsky / Stalwart SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
   — `pazny.acme` Cloudflare DNS-01 already exists; `pazny.smtp_stalwart` is a NEW role; Bluesky exposure flag flip. ~4-5 days.
 
-After G — **bones & wings refactor (planned, full plan written 2026-05-01):**
+After G — **bones & wings refactor (planned, full plan written 2026-05-01, doctrine elevated 2026-05-03):**
 
 The former K/L/M arc was consolidated into one comprehensive plan with all 7 architectural
-decisions resolved with operator on 2026-05-01. **Authoritative document:
+decisions resolved with operator on 2026-05-01; expanded 2026-05-03 with **§1.1 "tendons & vessels"
+doctrine** (operator framing) and **first-class Track Q follow-on** (§13.1) for thin-role +
+modular-wiring rollout across all Tier-1 roles. **Authoritative document:
 [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).**
 
 - **All-local architecture** — Wing PHP-FPM + Bone/Pulse Python via launchd (reverses Track A
