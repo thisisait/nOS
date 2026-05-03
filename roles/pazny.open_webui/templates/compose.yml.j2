@@ -19,7 +19,9 @@ services:
 {% endif %}
     volumes:
       - {{ openwebui_data_dir }}:/app/backend/data
+{% if tenant_domain_is_local | default(true) | bool %}
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
     environment:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
@@ -29,13 +31,20 @@ services:
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # On a local TLD (.local/.lan/.test) the only TLS cert in play is the
+      # mkcert one — point the bundle at it. On a public TLD we must NOT set
+      # this, otherwise Python httpx + Open WebUI can't validate LE certs
+      # against the system root store (the mkcert-only bundle would shadow
+      # the Mozilla CA list). Surfaced 2026-05-03 against auth.pazny.eu.
       REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
       SSL_CERT_FILE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+      # ── MCP: akceptovat self-signed certy (mkcert) pri volani MCP serveru ──
+      AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
       # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
       # Umoznuje per-user auth a attribution pri volani MCP toolu.
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"
-      # ── MCP: akceptovat self-signed certy (mkcert) pri volani MCP serveru ──
-      AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% if install_mcp_gateway | default(false) %}
       # ── Auto-registrace mcpo MCP gateway jako tool server ──────────────────
       # OpenWebUI 0.8.x: TOOL_SERVER_CONNECTIONS se nacte pri prvnim startu

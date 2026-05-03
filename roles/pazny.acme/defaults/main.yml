@@ -60,10 +60,17 @@ acme_cert_key: "{{ acme_cert_dir }}/{{ acme_cert_zone }}.key"
 #   1. lab.<tenant_domain>                  → ~/.acme.sh/lab.<tenant_domain>/
 #   2. *.lab.<tenant_domain>                → wildcard SAN
 #   3. *.lab.<apps_subdomain>.<tenant_domain> → Tier-2 wildcard SAN
+#
+# Puter exposes its own API at `api.os.<tenant_domain>` (two-level deep);
+# `*.<tenant_domain>` only matches one label, so when install_puter is on
+# we add `*.os.<tenant_domain>` as a fourth SAN. Future "second-level
+# subdomain" services should follow the same conditional pattern (or we
+# refactor into a per-role-declaration builder once it's >2 callers).
 acme_domains: >-
   {{ [((host_alias + '.') if (host_alias | default('') | length > 0) else '') + tenant_domain,
       '*' + (_host_alias_seg | default('')) + '.' + tenant_domain,
-      '*' + (_host_alias_seg | default('')) + '.' + (apps_subdomain | default('apps')) + '.' + tenant_domain] }}
+      '*' + (_host_alias_seg | default('')) + '.' + (apps_subdomain | default('apps')) + '.' + tenant_domain]
+     + (['*' + (_host_alias_seg | default('')) + '.os.' + tenant_domain] if (install_puter | default(false) | bool) else []) }}
 
 # Renewal launchd job (runs daily at 03:30; acme.sh internally checks expiry)
 acme_renewal_label: "eu.thisisait.nos.acme-renew"

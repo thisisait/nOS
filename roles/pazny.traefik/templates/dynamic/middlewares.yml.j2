@@ -48,10 +48,15 @@ http:
 
   # ── Servers transports ────────────────────────────────────────────────
   serversTransports:
-    # Skip cert verify for upstream HTTPS — used when reaching Authentik or
-    # other services that present a self-signed dev cert. Tier-1 routers
-    # default to HTTP upstream so this is rarely needed; available as opt-in.
-    insecure-skip:
+    # Skip cert verify for upstream HTTPS — used when reaching Authentik,
+    # code-server (linuxserver image self-signs internal cert), or other
+    # services that present a self-signed dev cert. Tier-1 routers
+    # default to HTTP upstream so this is rarely needed; available as
+    # opt-in via `serversTransport: "noverify@file"` in services.yml.j2.
+    # NB: name MUST be `noverify` to match services.yml.j2 references —
+    # mismatch leaves dependent routers in `status: disabled` with a
+    # `servers transport not found noverify@file` error.
+    noverify:
       insecureSkipVerify: true
 
 # ── TLS options ─────────────────────────────────────────────────────────
