@@ -1,9 +1,9 @@
 # nOS Multi-Session Roadmap — Q2 2026
 
-> **This document is the entry point for any session that picks up nOS work.**
-> Read sections "Where we are today" + "Open decisions" first. Then go to
-> the active track. Each track has its own commit conventions and exit
-> criteria so progress survives context resets.
+> **Historical roadmap + decision log.** For the current session entry point,
+> read [`docs/active-work.md`](active-work.md) first. Older Track A-G sections
+> below are retained for context and may describe pre-2026-05-03 states that
+> have since been superseded.
 >
 > Last updated: 2026-05-03 evening • commit: post-A6 plugin-loader (`717c446`) • by: pazny+claude
 >
@@ -20,9 +20,12 @@
 > **Q2 wave 3 — Bones & Wings refactor** in flight 2026-05-03. Plan in
 > [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).
 > Phases A0+A1+A2+A3a+A4+A6 landed (12 commits 2026-05-03 morning + afternoon).
-> Phase A3.5 (Wing host-revert via FrankenPHP) is next; then A6.5 (Grafana
-> thin-role pilot) starts validating the Track Q "tendons & vessels"
-> doctrine. **Operator's runbook pointer:** [`docs/active-work.md`](active-work.md).
+> After the security-hardening full-blank gate, Phase A3.5 (Wing host-revert
+> via FrankenPHP) is next; then A5/A6.5 validate contracts and the Track Q
+> "tendons & vessels" doctrine. **Operator's runbook pointer:**
+> [`docs/active-work.md`](active-work.md).
+> Parallel implementation coordination lives in
+> [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md).
 >
 > **Q2 wave 4 — Track Q autowiring debt consolidation** is post-PoC.
 > See §"Track Q" below + the bones-and-wings refactor doc §13.1 for the
@@ -39,7 +42,26 @@ Wing's read model. The product we sell is **operational excellence
 around the FOSS core** — setup, retainer, monitoring, hotfix priority —
 not feature-flagged enterprise tiers.
 
-## Where we are today (2026-04-29)
+## Where we are today (snapshot superseded)
+
+> **Superseded:** this section is the 2026-04-29 snapshot preserved for
+> historical context. Current verified state lives in `docs/active-work.md`
+> and the bones & wings phase tracker in `docs/bones-and-wings-refactor.md`
+> Appendix B.
+
+### Current high-level state (2026-05-03 evening)
+
+- **Security hardening gate:** current active track; operator full blank +
+  `tools/post-blank.sh` is the next gate before more B&W implementation.
+- **Last known green full blank:** `ok=920 changed=282 failed=0`.
+- **Bones & Wings:** A0, A1, A2, A3a, A4, and A6 foundation landed.
+- **Next B&W implementation:** A3.5 Wing host-revert via FrankenPHP, then A5
+  contracts and A6.5 Grafana thin-role pilot.
+- **Known B&W gaps:** Wing Pulse API missing, no production Pulse jobs,
+  plugin side effects deferred beyond filesystem primitives, no committed
+  OpenAPI/DDL contracts, no conductor/inbox/audit trail yet.
+
+## Where we were on 2026-04-29
 
 ### Verified working (refreshed since last snapshot)
 - **macOS Apple Silicon** primary target — last clean blank: `ok=842 changed=262 failed=0 skipped=364` (run 52853, 2026-04-29)
@@ -729,12 +751,10 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 3. `git log --oneline -20` to see what's landed since the snapshot at top.
 4. `git status` — uncommitted work might belong to operator's other branch, leave alone unless explicitly asked.
 5. Check `~/.nos/state.yml` and the most recent ansible.log for the last blank's `PLAY RECAP` line.
-6. Choose your track based on `docs/active-work.md`. Default order today (2026-04-29):
-   - **Track E** if `apps/twofauth.yml` is not yet end-to-end live (verifiable: Wing /hub doesn't list `app_twofauth`)
-   - **Track F** if Tier-2 wet test is done but `instance_tld` is still monolithic
-   - **Track G** if dynamic-domain refactor is done but Bluesky PDS / SMTP server are not publicly exposed
-   - **Track H** if everything else is green and you're ready for the ansible-core 2.24 mechanical upgrade
-   - Tracks A–D are DONE — do not re-open them; if a regression appears, fix in place.
+6. Choose your track based on `docs/active-work.md`. Default order today
+   (2026-05-03 evening): finish the security-hardening full-blank gate, then
+   resume bones & wings at A3.5. For parallel B&W work, use
+   `docs/bones-and-wings-bulk-plan.md`.
 7. Read the track's "Files to touch" + "Exit criteria" before starting code.
 8. Pre-flight: `ansible-playbook main.yml --syntax-check` + `python3 -m pytest tests/apps tests/state_manager -q` should both pass cleanly.
 9. Always update the **Decision log** when making a non-trivial choice — future-you will thank you.
@@ -757,20 +777,17 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 **Headline shape:**
 - **Umbrella name:** bones & wings (operator-facing); **`anatomy`** (path/identifier form)
-- **Architecture:** **all-local** — Wing PHP-FPM via Homebrew + Bone/Pulse Python via launchd. Reverses Track A containerization for the platform-control plane in service of zero-trust (no shared Docker volumes, no shared networks within anatomy). Wing UI still served via Traefik file-provider with Authentik forward-auth (upstream just changes from container to `host.docker.internal:9000`).
-- **Repo reorg:** `files/anatomy/` becomes the home for all platform code: Wing source (git submodule at `external/wing/`), Bone, Pulse, skills, plugins, agents, schema artifacts. Moves `migrations/`, `library/`, `module_utils/`, `patches/`, framework-internal `docs/` into anatomy. Top-level repo becomes lean Ansible.
+- **Architecture:** **all-local target** — Wing FrankenPHP via launchd + Bone/Pulse Python via launchd. A3a already reverted Bone to host launchd; A3.5 reverts Wing from container/FPM sidecar to FrankenPHP. Wing UI stays served via Traefik file-provider with Authentik forward-auth.
+- **Repo reorg:** `files/anatomy/` is the home for platform code: Wing source (path-moved into `files/anatomy/wing/`; no `external/wing` submodule for PoC), Bone, Pulse, skills, plugins, agents, schema artifacts. Moves `migrations/`, `library`, `module_utils`, `patches`, framework-internal `docs` into anatomy. Top-level repo becomes lean Ansible.
 - **Plugin system:** drop-a-directory auto-wiring. `files/anatomy/plugins/<name>/plugin.yml` declares Authentik client, Wing route/view, Pulse cron job, Grafana dashboard, ntfy/mail templates, GDPR row, schema migration. `ansible-playbook --tags anatomy.plugins` wires all of it.
 - **Primary agent:** **conductor** (PoC). Runs `ansible-playbook --check` every 4h; reports drift via Wing `/inbox`; on operator approval applies upgrades/migrations. Other profiles (inspektor, librarian, scout) post-PoC, each ~2-4h work.
 - **PoC plugin:** **gitleaks**. Other FOSS cybersec tools (trivy/grype/syft/nuclei/lynis/testssl/osquery) ship as separate plugin commits once the gitleaks pattern is operator-validated.
 - **Audit trail:** every wing.db write tagged `(actor_id, action_id, acted_at)`. GDPR Article 30 forensic query is one SELECT.
 - **Notification fanout:** Wing `/inbox` primary; ntfy for push (severity ≥ high); mail (Stalwart from Track G) for critical; everything observable in Grafana.
 
-**PoC estimate: ~12 days sequential** (single agent + operator). Post-PoC expansion is incremental, ~2-4h per added plugin or profile.
+**PoC estimate: ~14-16 days sequential** from original start; A0-A4+A6 foundation has landed. Remaining implementation centers on A3.5, A5, A6.5, A7-A10. Post-PoC expansion is incremental, ~2-4h per added plugin or profile.
 
-**Pre-implementation gates:**
-- Track F DONE + blank-test green
-- Track G DONE (Stalwart SMTP needed for mail notifications)
-- Operator accepts the refactor doc (sections 4, 5, 8 specifically)
+**Current gate:** security-hardening full blank + wet test must pass before the next B&W slice, unless the operator explicitly waives it. After that: A3.5 → A5/A6.5 → A7/A8 → A9/A10.
 
 **Read the full plan in [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md) before any code-touch.** It has ~1100 lines of architecture, edge-case catalog, and phase-by-phase exit criteria; this stub is just the index card.
 
@@ -797,6 +814,40 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 **Out of Q (special-cased):** `pazny.bone` ✅ thin (A3a), `pazny.wing` ⏳ A3.5, `pazny.pulse` ✅ born thin (A4), `pazny.traefik` (source plugin candidate), `pazny.acme` (already thin), `pazny.bluesky_pds` (federation flag refactor), `pazny.watchtower` (image bump 2026-05-03 P0), `pazny.openclaw/opencode/hermes/iiab_terminal` (non-Docker host pattern), `pazny.mac.*/linux.*/dotfiles/state_manager/backup` (host infra).
 
 **Exit criteria:** every `roles/pazny.<service>/` post-Q has shape `defaults + tasks/main.yml + templates/compose.yml.j2 + meta`. No `tasks/post.yml` unless install-internal. `default.config.yml` has zero per-service OIDC blocks.
+
+---
+
+### Track R — Anatomy structure grooming + role namespace cleanup **(pre-Q / alongside A6.5, proposed 2026-05-03)**
+
+**Status: proposed.** Short structural cleanup before mass Track Q thinning. Goal: make the anatomy boundary explicit in both filesystem and Ansible naming, so future Tendons&Vessels work does not keep adding new `pazny.*` debt.
+
+**Target shape:**
+- **Anatomy control-plane roles:** rename `pazny.bone`, `pazny.wing`, `pazny.pulse`, and optional future `pazny.anatomy` to collection-style names under `n_os.anatomy.*`.
+- **Service installer roles:** stay `pazny.<service>` until Track Q thins them; they are not anatomy roles, they are bones that plugins wire.
+- **Tendons&Vessels:** `files/anatomy/plugins/<service>-base/` remains the config+wiring home. Role namespace cleanup must not move plugin manifests into roles.
+- **Compatibility:** keep aliases/wrappers for one release window so existing playbooks using `pazny.*` do not break abruptly.
+
+**R1 — Namespace decision + alias map (0.5 d):**
+- Decide exact physical layout: either `roles/n_os.anatomy.<organ>/` as repo-local role dirs, or a real Ansible collection under `collections/ansible_collections/n_os/anatomy/roles/<organ>/`.
+- Write a mapping table: `pazny.bone → n_os.anatomy.bone`, `pazny.wing → n_os.anatomy.wing`, `pazny.pulse → n_os.anatomy.pulse`, `pazny.anatomy → n_os.anatomy.platform`.
+- Define compatibility policy and deprecation warnings.
+
+**R2 — Move only anatomy-control roles (1-2 d):**
+- Rename/move role directories, update `main.yml`, `tasks/stacks/*`, docs, tests, and role READMEs.
+- Preserve runtime names (`eu.thisisait.nos.{wing,bone,pulse}`), vars (`wing_*`, `bone_*`, `pulse_*`), API paths, and filesystem paths (`files/anatomy/*`).
+- Add thin wrapper aliases if Ansible layout permits; otherwise document a hard-cut migration.
+
+**R3 — Tendons&Vessels contract cleanup (1 d):**
+- Update plugin schema/docs to allow `requires.role: n_os.anatomy.<organ>` and service roles such as `pazny.grafana`.
+- Update draft plugins (`grafana-base`) and recipes to distinguish **role being wired** from **anatomy role namespace**.
+- Add a short `docs/anatomy.md` naming section explaining organs, roles, plugins, tendons, vessels, synapses.
+
+**R4 — Q-readiness sweep (0.5-1 d):**
+- Grep stale anatomy paths and role names.
+- Update `docs/bones-and-wings-refactor.md`, `files/anatomy/README.md`, `CLAUDE.md`, and `docs/bones-and-wings-bulk-plan.md`.
+- Exit with a green syntax check and anatomy tests.
+
+**Exit criteria:** all anatomy-control-plane references use `n_os.anatomy.*`; service roles remain `pazny.<service>` until individually thinned by Track Q; plugin manifests remain the only home for config+wiring; old `pazny.{bone,wing,pulse}` usage is either wrapper-compatible or explicitly documented as migrated.
 
 ---
 

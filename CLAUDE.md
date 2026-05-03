@@ -114,12 +114,13 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 - **Hermes** — cross-channel messaging gateway
 - **OpenCode** — agentic coding helper
 - **IIAB Terminal** — Python Textual TUI, SSH `ForceCommand` for the `home` user
-- **Wing** — security-research dashboard, PHP via Homebrew
-- **Bone** — local REST API bridge
+- **Wing** — security-research dashboard; source at `files/anatomy/wing/`, currently container/FPM sidecar, target A3.5 runtime is FrankenPHP via launchd
+- **Bone** — local REST API bridge; source at `files/anatomy/bone/`, host launchd as of anatomy A3a
+- **Pulse** — scheduled-job daemon; source at `files/anatomy/pulse/`, host launchd skeleton as of anatomy A4
 
 ### IAM & SSO (Authentik)
 
-Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC auto-setup creates providers + applications for every enabled service. Single source of truth: the `authentik_oidc_apps` list in `default.config.yml`.
+Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC auto-setup creates providers + applications for every enabled service. Current pre-Track-Q single source of truth: the `authentik_oidc_apps` list in `default.config.yml`. Post-Track-Q target: each service/composition plugin carries its own `authentik:` block and the plugin loader aggregates it into Authentik blueprints.
 
 **Native OIDC (env vars):** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth), Vaultwarden (SSO)
 **Native OIDC (API / CLI):** Gitea (Admin API), Nextcloud (`occ`), Portainer (`PUT /api/settings`)
@@ -188,11 +189,13 @@ Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.m
 
 ### Adding a new Docker service (Tier-1)
 
+**Current pre-Track-Q workflow.** After bones & wings A6.5 + Track Q, the target workflow becomes thin role + `files/anatomy/plugins/<service>-base/plugin.yml`; see `docs/bones-and-wings-refactor.md` §1.1/§13.1 and `files/anatomy/docs/role-thinning-recipe.md`.
+
 1. Create a role `roles/pazny.<service>/` following the compose-override pattern above.
 2. Add an `include_role` call in the right orchestrator (`core-up.yml` or `stack-up.yml`) — remember both `apply: { tags: [...] }` **and** `tags: [...]` so `--tags` filtering works.
 3. Add an `install_<service>` toggle in `default.config.yml`.
 4. Add a row to `state/manifest.yml` with `domain_var` + `port_var` so Traefik file-provider auto-routes it.
-5. (Optional) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template.
+5. (Optional, pre-Q only) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template. Do not use this pattern for roles already migrated to plugin-based autowiring.
 
 ### Adding a new Docker service (Tier-2 — manifest-driven)
 
@@ -232,9 +235,9 @@ No code changes. The runner takes care of routing, secrets, and observability.
 - Jellyfin / Open WebUI: known upstream bugs on fresh DB init — first run may restart-loop until data regenerates.
 - Bluesky PDS federation not yet functional (the identity bridge creates accounts, but AT Protocol federation requires public DNS).
 - Pre-2026-04-22 installs carry legacy `devboxnos-*` Authentik group names, `com.devboxnos.*` launchd bundle IDs, and the `~/.devboxnos/` state directory. Rebrand complete in-repo; migration on existing hosts needs a blank reset (or manual rename of the Authentik groups + `launchctl bootout` of the old plists).
-- **Anatomy A3.5 — Wing host-revert (post-PoC):** A3a (Bone) reverted to host launchd 2026-05-03; Wing host-revert deferred because Traefik can't speak FastCGI directly. **Decision 2026-05-03:** target FrankenPHP (single binary, native HTTP, eliminates wing-nginx sidecar entirely). Implementation pending; until then Wing stays containerized — A2 source-move at `files/anatomy/wing/` is preserved.
+- **Anatomy A3.5 — Wing host-revert (next B&W slice):** A3a (Bone) reverted to host launchd 2026-05-03; Wing host-revert deferred because Traefik can't speak FastCGI directly. **Decision 2026-05-03:** target FrankenPHP (single binary, native HTTP, eliminates wing-nginx sidecar entirely). Implementation pending; until then Wing stays containerized — A2 source-move at `files/anatomy/wing/` is preserved.
 - **Track Q autowiring debt** (4-6 weeks, post-PoC): 30 of 71 `pazny.*` roles carry `tasks/post.yml` cross-service wiring totalling ~3000 LOC. Plan in `docs/bones-and-wings-refactor.md` §13.1 + `files/anatomy/docs/role-thinning-recipe.md`. Begins with Q1 (observability) once A6.5 Grafana thin-role pilot proves the doctrine.
 - **Drift baseline staleness (security scan):** `docs/llm/security/scan-state.json` last_full_scan field can drift (>14 days = drift hook starts complaining). Resolved long-term by conductor agent (A8 phase) auto-running scans on schedule; manual interim refresh: see `hooks/playbook-end.d/20-cve-drift-check.sh` output for the diagnostic format.
 - **Wing API endpoints for Pulse not yet implemented:** `/api/v1/pulse_jobs/due` and `/api/v1/pulse_runs/start|finish` are spec'd in `files/anatomy/docs/plugin-loader-spec.md` but missing PHP presenters in `files/anatomy/wing/app/Presenters/`. Pulse idle-tolerates 404 gracefully (warns once per minute, no crash-loop). Implementation lands alongside A7 (gitleaks plugin — first scheduled-job consumer).
-- **Security remediation backlog:** 24 pending `remediation_items` rows in `~/wing/app/data/wing.db` (was 54 at 2026-05-03 evening; 30 reconciled — 27 stale, 3 n8n via regex fix). Phase plan in `docs/active-work.md` Phase A/B/C/D. Phase A is mechanical CVE pins (~45 min); Phase B is `mem_limit`/`cpus` sweep across all compose templates (~1 day); Phase C is hardening (Postgres SSL, ERPNext least-priv, prompt injection, image pin sweep — ~2 days); Phase D is architectural (Portainer docker-socket-proxy, Uptime Kuma v1→v2, FreePBX tag, Woodpecker trusted repos). Vendor-blocked: Open WebUI ZDI CVEs, RustFS gRPC sigverify.
+- **Security remediation backlog:** see `docs/active-work.md` for the live count and phase plan. As of the 2026-05-03 evening snapshot there were 14 pending `remediation_items` rows after the security batch reconciled most stale findings. Phase A is mechanical CVE pins; Phase B is `mem_limit`/`cpus` sweep; Phase C is hardening; Phase D is architectural. Vendor-blocked: Open WebUI ZDI CVEs, RustFS gRPC sigverify.
 - **Wing /events table schema mismatch:** the `events` table doesn't have a `source` column; Bone's POST handler accepts the field in JSON payload but silently drops it on insert. Telemetry callbacks lose attribution (no way to distinguish playbook events from manual posts from agent runs). Fix is a schema migration adding `source TEXT` + index; lands during A8 (audit trail / per-actor identity). Until then, telemetry analysis uses the `task` text field which usually carries the source as a prefix.

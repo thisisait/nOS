@@ -1,8 +1,8 @@
 # bones & wings — refactor master plan
 
-> **Status:** PROPOSED 2026-05-01 (architecture decisions resolved with operator on the same day; PoC scope confirmed). **NO code commits before Track G ships.** Replaces and supersedes the K/L/M sketch in `docs/roadmap-2026q2.md` (lines 745-812). The roadmap section will be re-pointed at this document.
+> **Status:** IN FLIGHT 2026-05-03. Architecture decisions are resolved; phases A0, A1, A2, A3a, A4, and A6 foundation have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.
 >
-> **Out of scope until in scope:** this plan does **not** start until Tracks F (instance_tld) and G (CF + Stalwart + bsky exposure) are DONE. Estimated start: 2026-05-22…2026-05-29. **PoC estimate: ~12 days of focused work** (single agent, sequential). Post-PoC expansion (additional plugins, additional agent profiles) is incremental.
+> **Current gate:** the security-hardening batch must pass the operator full blank + wet-test gate before the next bones & wings implementation slice. After that, the next phase is A3.5 (Wing host-revert via FrankenPHP), then A5/A6.5. Post-PoC expansion (additional plugins, additional agent profiles) remains incremental.
 >
 > **Reading order:** sections 1-3 are vision and current-state. Section 4 introduces the **anatomy reorg** (a major repo-level structural change). Section 5 is the **all-local architecture**. Section 6 is the **plugin system** — the core extension surface. Section 7 covers agent profiles with **conductor as primary**. Section 8 is the **PoC phase plan**. Sections 9-13 cover edge cases, notifications, audit, decisions, and out-of-scope.
 
@@ -13,7 +13,7 @@
 The non-Docker zoo of Wing + Bone + ad-hoc shell scripts becomes a **single coherent platform** called **bones & wings**, with these properties:
 
 - **One namespace, one home.** All bones-and-wings source, configuration, schemas, and plugins live under `files/anatomy/`. The repo's top level becomes a clean Ansible playbook surface; everything platform-internal is collapsed into the `anatomy/` tree.
-- **Local-first, zero-trust.** Wing, Bone, and Pulse run as **local processes** on the macOS host (PHP-FPM via Homebrew + Python via launchd), not as containers. No shared Docker volumes between subsystems. No shared Docker networks within anatomy. Every subsystem has its own filesystem and its own data; cross-subsystem communication is HTTP+JWT (or HMAC for the legacy callback path).
+- **Local-first, zero-trust.** Wing, Bone, and Pulse run as **local processes** on the macOS host (Wing target: FrankenPHP via launchd; Bone/Pulse: Python via launchd), not as containers. No shared Docker volumes between subsystems. No shared Docker networks within anatomy. Every subsystem has its own filesystem and its own data; cross-subsystem communication is HTTP+JWT (or HMAC for the legacy callback path).
 - **Wing UI fronted by Traefik.** Even though Wing-PHP runs on the host, the public surface is `wing.<tld>` via Traefik file-provider with Authentik forward-auth — same as every other Tier-1 service. The user doesn't notice Wing isn't a container.
 - **Plugin system as the extension surface.** Any new capability — security tool, scheduled job, UI view, agent profile — lands as a **plugin** under `files/anatomy/plugins/<name>/` with a manifest. Wing's plugin loader auto-wires Authentik client + UI route + Pulse cron job + Grafana dashboard + ntfy/mail templates + GDPR row. Drop a plugin directory, run `ansible-playbook --tags anatomy.plugins`, capability is live.
 - **Pulse is the heartbeat.** A local launchd daemon (`nos-pulse`) runs both **agentic** (claude-SDK invocations) and **non-agentic** (cron-style scripts) scheduled work. Pulse calls Wing/Bone APIs over loopback — no privileged access, no Docker socket mount, no container indirection.
@@ -82,34 +82,32 @@ Three forces converge:
 
 1. **Tracks E + J + H landed.** Tier-2 apps_runner is solid, the framework is clean, ansible-core surface is hardened. We're standing on a stable base for the first time since branch start. Refactor risk is at a local minimum.
 2. **The pentest-task.md prompt is fully written but has no runner.** Every day it stays unscheduled is a day of CVE drift on 19 components. The refactor enables the runner.
-3. **Wing's PHP source is rsync'd from outside the repo today.** Every month we delay confronting that lock-in, drift between environments grows. The refactor binds Wing source as a git submodule and renders configs via jinja during `pazny.anatomy` install — explicit, versioned, reproducible.
+3. **Wing's PHP source is now first-class repo content.** The initial audit incorrectly treated Wing as external/rsync-only. A2 resolved this by moving the committed source into `files/anatomy/wing/`; the remaining lock-in is runtime shape (container/FPM sidecar → host FrankenPHP in A3.5), not source ownership.
 
-**Pre-implementation gates** (operator must clear before phase A0 code-touch):
-- Track F DONE + blank-test green
-- Track G DONE + bsky/SMTP wet-tested (Stalwart needed for mail notifications)
-- This document accepted by operator (sections 4, 5, 8 specifically)
+**Pre-implementation gates:** cleared for A0-A6 foundation work. **Current gate:** operator full blank + wet tests after the security-hardening batch. Do not start A3.5/A6.5 bulk work until that gate is green or explicitly waived by the operator.
 
 ---
 
 ## 3. Current state — one-pager
 
-What exists, what doesn't, what's the lock-in. Drawn from a 2026-05-01 audit.
+What exists, what doesn't, what's the lock-in. Refreshed 2026-05-03 after A0-A4+A6 foundation work.
 
 ### 3.1 What exists
 
 **Wing** (Tier-1, `iiab` stack, since Track A 2026-04-26)
-- Nette 8.3 PHP-FPM container + nginx sidecar
-- Source tree: `files/project-wing/` — **fully in repo** (106 tracked files: Dockerfile, NEON configs, app/, bin/, www/, tests/, composer.json). Build artifacts (`vendor/`, `temp/`, `log/`, runtime `data/wing.db*`) are gitignored. *Note 2026-05-03: earlier draft of this doc claimed app/src/www/bin were rsync'd from outside the repo — that was incorrect. Source IS committed; A2 reduces to a path-move into `files/anatomy/wing/`, no git submodule needed.*
+- Nette 8.3 app source now lives at `files/anatomy/wing/` after A2.
+- Runtime is still the Track-A container/FPM + nginx-sidecar shape until A3.5 lands. A3.5 replaces it with a host FrankenPHP launchd daemon on `127.0.0.1:9000`.
+- Source tree: **fully in repo** (Dockerfile, NEON configs, app/, bin/, www/, tests/, composer.json). Build artifacts (`vendor/`, `temp/`, `log/`, runtime `data/wing.db*`) are gitignored. No `external/wing` submodule exists or is required for the PoC.
 - DI services: 14 repositories registered (Component, ScanState, Remediation, Token, Pentest, Advisory, Patch, System, Event, Migration, Upgrade, Coexistence, Gdpr, BoneClient)
 - DB: SQLite at `~/wing/app/data/wing.db`; bootstrapped by `bin/init-db.php`, migrated by `bin/migrate-systems.php`
 - ~25 REST endpoints under `/api/v1/`, Bearer-token authenticated
 - **No OpenAPI spec committed.** API surface defined only in PHP controllers (which ARE in repo per the correction above; spec generation is A5 phase work).
 
-**Bone** (Tier-1, `infra` stack, since Track A 2026-04-26)
-- FastAPI 0.115 + Uvicorn, Python 3.13
-- Source tree: `files/bone/{main,auth,events,state,migrations,upgrades,coexistence,patches}.py` + Dockerfile (all committed)
+**Bone** (Tier-1 control-plane API)
+- FastAPI 0.115 + Uvicorn, Python 3.13, host launchd as of A3a.
+- Source tree: `files/anatomy/bone/{main,auth,events,state,migrations,upgrades,coexistence,patches}.py` + legacy Dockerfile retained for history/compatibility.
 - HMAC ingestion at `POST /api/v1/events`; JWT-scoped operational endpoints (`/api/run-tag`, `/api/state`, `/api/migrations`, `/api/upgrades`, `/api/coexistence`, `/api/patches`)
-- Cross-mount writes events directly into wing.db (anti-pattern under zero-trust; this refactor removes the cross-mount).
+- A3a removed the Bone container and legacy compose override. Bone now runs from `~/bone/venv` and uses the operator's pyenv/Ansible toolchain directly.
 
 **Telemetry callback** (`callback_plugins/wing_telemetry.py`)
 - Fires on every Ansible task; batched HTTP POST to Bone with HMAC
@@ -125,14 +123,15 @@ What exists, what doesn't, what's the lock-in. Drawn from a 2026-05-01 audit.
 - **OpenAPI spec for Wing.** Has to be generated. Operator's "symlink" expectation collapses to a committed file in `skills/contracts/`.
 - **OpenAPI spec for Bone.** FastAPI auto-generates `/openapi.json` at runtime; the artifact isn't committed.
 - **DB DDL export.** Wing's schema is implicit in `bin/init-db.php` + repository class definitions. No committed `db-schema.sql`.
-- **Scheduler.** No cron, no launchd timer, no in-app scheduler.
-- **Plugin system.** Does not exist. Every "skill" today is reimplemented inline in agent prompts.
+- **Wing Pulse API.** `pulse_jobs`/`pulse_runs` schema exists, and Pulse can poll/post, but Wing does not yet expose `/api/v1/pulse_jobs/due` or `/api/v1/pulse_runs/{start,finish}`.
+- **Production scheduler jobs.** Pulse daemon skeleton exists and is launchd-ready, but no first real job is registered yet; agent runner is A8.
+- **Plugin side effects.** Plugin schema, loader, DAG, aggregators, Ansible module, and hook wiring exist (A6 foundation), but several hook actions (`render`, `render_compose_extension`, `copy_dashboards`, `wait_health`) are still deferred until the first real plugin implementation.
 - **Per-agent Authentik identities for the agent profiles.** Track B framework is there; instances aren't.
 - **Approval workflow in Wing UI.** Pending plans / upgrade drafts / patch drafts have no inbox view.
 
 ### 3.3 Lock-in / brittle surfaces (resolved by this refactor)
 
-- ~~**Wing PHP source not in repo**~~ → **CORRECTED 2026-05-03**: Wing PHP source IS committed at `files/project-wing/` (106 files). The original doc draft was wrong about this. A2 phase rescoped from "git submodule under `external/wing/`" to "path-move into `files/anatomy/wing/`" — symmetric to A1.
+- ~~**Wing PHP source not in repo**~~ → **CORRECTED 2026-05-03**: Wing PHP source was already committed in this repo before A2. A2 moved it into `files/anatomy/wing/`. The earlier submodule plan was superseded; no `external/wing` submodule is required for the PoC.
 - **Bone bundles ansible-core 2.18-2.20 inside container** → resolved: Bone moves to host launchd daemon, uses operator's ansible-core 2.20.5 directly.
 - **wing.db cross-mount-written by Wing+Bone** → resolved: only Wing process writes; Bone POSTs events to Wing via existing HMAC channel, no shared mount.
 - **Bone callback HMAC secret rotates only on `blank=true`** → resolved: `migrations/2026-XX-rotate-bone-hmac.yml` recipe; rotation hook in conductor.
@@ -144,7 +143,7 @@ What exists, what doesn't, what's the lock-in. Drawn from a 2026-05-01 audit.
 
 ### 4.1 The umbrella
 
-**bones & wings** is the operator-facing product name. In paths and identifiers: **`anatomy`** (singular, no conjunction). The Ansible role that installs the platform is `pazny.anatomy`. Sub-tasks instantiate Wing, Bone, Pulse.
+**bones & wings** is the operator-facing product name. In paths and identifiers: **`anatomy`** (singular, no conjunction). Today the platform is installed by `roles/pazny.{wing,bone,pulse}` plus the plugin loader tasks in `tasks/stacks/core-up.yml`; `pazny.anatomy` remains an optional future parent role.
 
 Concrete names by surface:
 
@@ -152,19 +151,19 @@ Concrete names by surface:
 |---|---|
 | Product (operator-facing) | bones & wings |
 | Source tree (in repo) | `files/anatomy/` |
-| Ansible role(s) | `roles/pazny.{wing,bone,pulse,backup}/` (thin) + `roles/pazny.anatomy/` (parent-orchestrator-optional) |
+| Ansible role(s) | `roles/pazny.{wing,bone,pulse,backup}/` (thin) + optional future `roles/pazny.anatomy/` parent |
 | Top-level config flag | `install_anatomy: true` (default) |
 | Wing UI host | `wing.<tld>` (unchanged) |
 | Bone API loopback | `127.0.0.1:8099` (host port; was container) |
 | Pulse internal API loopback | `127.0.0.1:8090` (host port, NEW) |
-| Wing PHP-FPM | `127.0.0.1:9000` (host port; was container) |
+| Wing FrankenPHP | `127.0.0.1:9000` (host port after A3.5; currently container/FPM sidecar) |
 | launchd labels | `eu.thisisait.nos.{wing,bone,pulse}` |
 
 ### 4.2 The repo reorg
 
 **Goal:** every bones-and-wings file lives under `files/anatomy/`. Top-level repo becomes lean Ansible.
 
-**Target structure** (after the reorg lands):
+**Current / target structure** (A0-A2 landed; later phases populate the empty leaves):
 
 ```
 nOS/
@@ -174,11 +173,11 @@ nOS/
 ├── main.yml                    # playbook entry (unchanged)
 ├── requirements.yml
 ├── roles/                      # Ansible roles, namespace pazny.* (unchanged)
-│   ├── pazny.wing/             # thin role: PHP-FPM install, render config, launchd plist
+│   ├── pazny.wing/             # currently container/FPM render; A3.5 makes it host FrankenPHP launchd
 │   ├── pazny.bone/             # thin role: Python venv, copy code, launchd plist
-│   ├── pazny.pulse/            # NEW thin role: same shape
+│   ├── pazny.pulse/            # thin role: Python venv, launchd plist
 │   ├── pazny.backup/           # thin role
-│   ├── pazny.anatomy/          # OPTIONAL parent: import_role to wing+bone+pulse+backup
+│   ├── pazny.anatomy/          # OPTIONAL future parent: import_role to wing+bone+pulse+backup
 │   └── pazny.<service>/...     # all other Tier-1 deployments
 ├── tasks/                      # playbook tasks (unchanged)
 ├── templates/                  # playbook-level templates (unchanged)
@@ -187,15 +186,13 @@ nOS/
 │   └── manifest.yml            # service catalog — STAYS top-level (referenced platform-wide)
 ├── callback_plugins/           # Ansible callback plugins (Ansible convention)
 │   └── wing_telemetry.py
-├── external/
-│   └── wing/                   # NEW git submodule — Wing PHP source
 └── files/
     └── anatomy/                # NEW — all bones-and-wings code, configs, schemas
-        ├── wing/               # rendered configs, jinja templates for Wing self-update
-        │   ├── config/         # NEON files, rendered into ~/wing/app/config/
-        │   ├── bin/            # CLI scripts: export-openapi.php, export-schema.php
+        ├── wing/               # Wing PHP/Nette source moved here in A2
+        │   ├── config/         # NEON configs
+        │   ├── bin/            # CLI scripts; A5 adds export-openapi.php/export-schema.php
         │   └── README.md
-        ├── bone/               # FastAPI source (was files/bone/, now here)
+        ├── bone/               # FastAPI source (moved here in A3a)
         │   ├── main.py, auth.py, events.py, state.py, ...
         │   ├── pyproject.toml
         │   └── tests/
@@ -275,7 +272,7 @@ The split rule: if it's an **operator's runbook**, `/docs/`. If it's an **agent'
 
 | Subsystem | Where it runs | Owns | Communicates via |
 |---|---|---|---|
-| **wing** | local PHP-FPM via Homebrew (`brew services start php@8.3`) | wing.db, web views, REST API | Traefik forward-auth → host:9000 |
+| **wing** | target: local FrankenPHP via launchd (currently container/FPM until A3.5) | wing.db, web views, REST API | Traefik forward-auth → host:9000 |
 | **bone** | local Python via launchd | state.yml, migration/upgrade/patch files (read), playbook subprocess calls | host:8099 (loopback for callback HMAC; Traefik can also expose if needed) |
 | **pulse** | local Python via launchd | pulse_jobs table, agent_runs table, profile state | host:8090 (loopback only — no public surface) |
 | **plugins** | invoked by pulse OR loaded by wing | per-plugin filesystem space (subdirectory under `files/anatomy/plugins/<name>/runtime/` or `~/anatomy/plugins/<name>/`) | per-plugin: skill stdout JSON, Wing API HTTP, etc. |
@@ -318,7 +315,7 @@ Three local daemons supervised by launchd:
   Operator → ssh        │  ┌────────────────────────────┐  │
                         │  │  launchd                   │  │
                         │  │                            │  │
-                        │  │  ▸ eu.thisisait.nos.wing   │──┼──→ PHP-FPM 127.0.0.1:9000
+                        │  │  ▸ eu.thisisait.nos.wing   │──┼──→ FrankenPHP 127.0.0.1:9000
                         │  │  ▸ eu.thisisait.nos.bone   │──┼──→ FastAPI 127.0.0.1:8099
                         │  │  ▸ eu.thisisait.nos.pulse  │──┼──→ Pulse 127.0.0.1:8090 (loopback only)
                         │  └────────────────────────────┘  │
@@ -441,9 +438,9 @@ gitleaks plugin (the PoC plugin)
 
 Track A (2026-04-26, commit chain `c1bb311..d3a9d35`) containerized Wing and Bone. This refactor reverses that for the platform-control plane, while keeping all other Track A wins:
 
-**Reverted (Wing + Bone host-side):**
-- Wing dual-service compose (wing + wing-nginx) → Wing as PHP-FPM via Homebrew
-- Bone container in `infra` stack → Bone as Python launchd daemon
+**Reverted / being reverted (Wing + Bone host-side):**
+- Wing dual-service compose (wing + wing-nginx) → Wing as FrankenPHP launchd daemon (A3.5, pending)
+- Bone container in `infra` stack → Bone as Python launchd daemon (A3a, done)
 - Cross-mount writes to wing.db → HTTP-only access
 - Bone's bundled ansible-core 2.18-2.20 → Bone uses operator's ansible-core 2.20.5
 
@@ -451,7 +448,7 @@ Track A (2026-04-26, commit chain `c1bb311..d3a9d35`) containerized Wing and Bon
 - Traefik file-provider routing for wing.<tld> (just upstream changes from container to `host.docker.internal:9000`)
 - Authentik forward-auth via outpost (unchanged at Traefik layer)
 - mkcert wildcard cert (Traefik terminates TLS)
-- Loki labels for telemetry events (Alloy already tails Wing's PHP-FPM log path)
+- Loki labels for telemetry events (Alloy tail path must be verified again after A3.5 swaps Wing runtime)
 - Wing as a first-class Tier-1 service in `state/manifest.yml`
 - Bone's HMAC events ingestion contract (just the listening address changes)
 
@@ -510,7 +507,7 @@ type:
   - ui-extension     # adds Wing routes/views
   - notifier         # registers mail/ntfy templates
 
-# host-side install (executed by pazny.anatomy on --tags anatomy.plugins)
+# host-side install (executed by the plugin loader on --tags anatomy.plugins)
 requirements:
   binary: gitleaks
   install_via: brew
@@ -601,7 +598,7 @@ schema:
 
 > **Updated 2026-05-03 from V3 findings (`files/anatomy/docs/grafana-wiring-inventory.md`):** the loader needs **4 lifecycle hooks**, not a single linear pass, because plugin work depends on stack/role state that isn't all available at one moment. See `files/anatomy/docs/plugin-loader-spec.md` for the consolidated A6 implementation contract.
 
-`pazny.anatomy --tags anatomy.plugins` runs the plugin loader, which moves through **4 lifecycle hooks** that interleave with the playbook's existing role-render → docker-compose-up → post-tasks pipeline:
+`ansible-playbook --tags anatomy.plugins` runs the plugin loader, which moves through **4 lifecycle hooks** that interleave with the playbook's existing role-render → docker-compose-up → post-tasks pipeline:
 
 #### Hook 1 — `pre_render` (runs early in main.yml, before any role render)
 
@@ -629,7 +626,7 @@ Per plugin:
 10. **Wait for plugin's target service to be healthy** (HTTP probe per manifest; default = role's primary health endpoint).
 11. **API-side registrations:** Wing routes (write `files/anatomy/wing/config/plugins.neon`); Pulse jobs (POST `/api/v1/pulse_jobs`, UPSERT on plugin_name+job_name); Grafana dashboards (POST dashboard JSON, folder-isolated under "Plugins/<plugin-name>/"); ntfy/mail templates (write to `~/anatomy/notifications/templates/`).
 12. **GDPR row UPSERT** via Wing API (`POST /api/v1/gdpr/processors`).
-13. **Restart Wing** (graceful PHP-FPM reload — `brew services restart php@8.3`) so new routes/views are live.
+13. **Restart Wing** (runtime-specific graceful reload; A3.5 target is launchd kickstart of FrankenPHP) so new routes/views are live.
 14. **Restart Pulse** (launchd reload) so new jobs are scheduled.
 
 #### Hook 4 — `post_blank` (runs only when `blank=true`)
@@ -666,8 +663,8 @@ This is the "auto-wiring" — drop a plugin directory, run one tag, capability i
 For an operator (or Claude) adding a new plugin:
 
 ```bash
-# 1. Scaffold from template
-cp -r files/anatomy/plugins/_template files/anatomy/plugins/myplugin
+# 1. Create plugin directory manually until a scaffold/template exists
+mkdir -p files/anatomy/plugins/myplugin
 $EDITOR files/anatomy/plugins/myplugin/plugin.yml
 
 # 2. Write the skill script
@@ -676,8 +673,8 @@ $EDITOR files/anatomy/plugins/myplugin/skills/run-myplugin.sh
 # 3. (optional) Write the Wing UI Latte view
 $EDITOR files/anatomy/plugins/myplugin/views/MyPluginFindings.latte
 
-# 4. Validate manifest locally
-python3 -m files.anatomy.scripts.validate_plugin files/anatomy/plugins/myplugin/
+# 4. Validate via the loader test path until a dedicated CLI validator exists
+python3 -m pytest tests/anatomy/test_plugin_loader.py -q
 
 # 5. Apply
 ansible-playbook main.yml -K --tags anatomy.plugins
@@ -908,7 +905,7 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 | **A3.5** | wing host-revert via FrankenPHP | **Operator-chosen path 2026-05-03**: replace the FPM/nginx-sidecar pair with a single FrankenPHP binary on the host. FrankenPHP = PHP runtime + Caddy HTTP server in one process; serves Wing's index.php directly over HTTP (no FastCGI, no nginx). `brew install frankenphp` installs the binary; `frankenphp run` (or `php-server` mode) on `127.0.0.1:9000`. Traefik file-provider routes `wing.<tld>` → `nos-host:9000` directly. Eliminates wing-nginx container entirely. Migration: stop wing+wing-nginx containers via track-A reversal block (mirrors A3a Bone), retire compose-override fragments, render Caddyfile (or use FrankenPHP's `--listen` flag), launchd plist `eu.thisisait.nos.wing` running `frankenphp run` from `~/wing/app/`. **Risk:** new runtime; first wet run may surface PHP extension gaps (Wing's composer deps assume FPM environment). Mitigation: FrankenPHP supports the same PECL extensions, just verify gd/pdo_sqlite/etc. load. | 1.5 d |
 | **A4** | pulse-skeleton | New `roles/pazny.pulse/` thin role: install Python venv at `~/pulse/venv`, copy `files/anatomy/pulse/*` to `~/pulse/`, manage launchd plist. Implement Pulse daemon: tick loop (30s), reads `wing.db.pulse_jobs` via Wing API, fires due jobs, logs runs to `wing.db.pulse_runs`. **No agentic runs yet** — only non-agentic subprocess shape. New wing.db tables `pulse_jobs`, `pulse_runs` via schema migration. | 1 d |
 | **A5** | wing-exports | Write `files/anatomy/wing/bin/export-openapi.php` (introspects Nette router + presenter PHPDoc → OpenAPI 3.1 YAML). Write `files/anatomy/wing/bin/export-schema.php` (introspects wing.db at runtime → DDL). Commit outputs to `files/anatomy/skills/contracts/`. Add CI drift check that re-runs exports vs committed and diffs. | 1 d |
-| **A6** | plugin-system | `state/schema/plugin.schema.json` JSONSchema for manifests — covers ALL three plugin types (skill / service / composition). Implement plugin loader (Python module under `files/anatomy/module_utils/load_plugins.py` — moved from `scripts/` on 2026-05-03 so Ansiballz vendors it into the custom Ansible module wrapper) called by `pazny.anatomy --tags anatomy.plugins`. Implements **all 4 lifecycle hooks** (`pre_render`, `pre_compose`, `post_compose`, `post_blank`) per §6.4 + `files/anatomy/docs/plugin-loader-spec.md`. Loader is wired into `tasks/stacks/core-up.yml` + `stack-up.yml` at the canonical hook points (immediately before existing role-render block, between role-render and compose-up, after compose-up --wait, on blank-reset). Loader code paths exist for all three plugin types (PoC only fires skill + one service path; composition stays untested-but-loadable). Includes `scaffold` subcommand: `python3 -m anatomy.load_plugins scaffold <n> --type {skill,service,composition}` → creates skeleton from per-type `_template`. | 2.5 d (was 2 d — bumped for 4-hook implementation surface) |
+| **A6** | plugin-system foundation | **2026-05-03 ✅ foundation:** `state/schema/plugin.schema.json`, Python loader in `files/anatomy/module_utils/load_plugins.py`, Ansible module wrapper `files/anatomy/library/nos_plugin_loader.py`, DAG ordering, aggregators, 4 hook names (`pre_render`, `pre_compose`, `post_compose`, `post_blank`), hook wiring in `tasks/stacks/core-up.yml` + `tasks/blank-reset.yml`, and unit tests. **Important limitation:** hook actions beyond filesystem primitives are still deferred (`render`, `render_compose_extension`, `copy_dashboards`, `wait_health` record intent only). A6.5 must finish those side effects while making `grafana-base` real. No scaffold subcommand exists yet. | 2.5 d (foundation landed; side-effect completion folded into A6.5) |
 | **A6.5** | grafana-thin-role-pilot | **Doctrine proof point (§1.1).** Migrate `roles/pazny.grafana/` to thin shape: keep `defaults/main.yml` + `tasks/main.yml` (data dir + compose render only) + `templates/compose.yml.j2` + `meta/main.yml`. Move EVERYTHING else (dashboards, OIDC config block, Prometheus datasource, Loki/Tempo wiring, alert rules, notifier templates) into a NEW `files/anatomy/plugins/grafana-base/plugin.yml` (service plugin with `requires.role: pazny.grafana`). Loader applies the wiring on `--tags anatomy.plugins`. Document the recipe in `files/anatomy/docs/role-thinning-recipe.md` (the deterministic 6-step process: identify wiring → create plugin manifest → move dashboards → move OIDC → move scrape → smoke-test). **Exit:** fresh blank with thin grafana + grafana-base plugin produces byte-identical functional Grafana (dashboards, datasources, OIDC, scrape, alerts all green; `diff` between old `~/.nos/state.yml` snapshot and new shows only path drift). | 1.5 d |
 | **A7** | gitleaks-poc | First skill plugin: gitleaks. Manifest, skill (`skills/run-gitleaks.sh` invokes gitleaks binary, parses output, normalizes JSON), Wing Latte view, Grafana dashboard, mail+ntfy templates, GDPR row, schema migration for `wing.db.gitleaks_findings`. End-to-end: `ansible-playbook --tags anatomy.plugins`, gitleaks runs Sunday 03:00 (or `--tags anatomy.plugins,run_now=gitleaks` for immediate test). | 1 d |
 | **A8** | conductor-poc | Conductor profile + system prompt. Pulse runner harness for agentic mode (`bin/pulse-run-agent.sh` mints token, assembles prompt, exec's claude, captures output, posts results). Wing `/inbox` view: pending approvals, conductor drift reports, gitleaks findings (unified inbox). Wing `/approvals` view: approve/reject buttons for pending upgrades. Conductor first run end-to-end: drift scan → drift report → operator-creates-test-approval → conductor next run applies it. | 2 d |
@@ -918,6 +915,11 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 **Total: 14.0 days** (was 14.5 — A2 rescoped from submodule 1d → path-move 0.5d after 2026-05-03 correction that Wing source IS in repo). Slack to 16 days realistic.
 
 ### 8.2 Parallelization (if operator wants multiple agents)
+
+For the current planned bulk implementation batch, use the operational runbook
+in `docs/bones-and-wings-bulk-plan.md`. The notes below are the original
+high-level dependency sketch; the bulk plan is the live coordination document
+for lane ownership, shared-file locks, merge order, and gate checks.
 
 The PoC is small enough that parallelization saves <2 days. Sequential is recommended. If parallelizing:
 
@@ -934,9 +936,9 @@ Recommended split if 2 agents: agent-A on A0-A6 main spine; agent-B on A5+A7 (ex
 
 ### 8.3 PoC exit criteria
 
-- `files/anatomy/` is the home for all bones-and-wings code; top-level `migrations/`, `library/`, `module_utils/`, `patches/` directories are gone.
-- `external/wing/` submodule resolves; `pazny.anatomy --tags anatomy.wing` renders Wing source from submodule into `~/wing/`.
-- Wing runs as PHP-FPM via Homebrew on host:9000; Bone runs as launchd Python on host:8099; Pulse runs as launchd Python on host:8090. No Wing/Bone containers in any compose stack.
+- `files/anatomy/` is the home for all bones-and-wings code; top-level `migrations/`, `library/`, `module_utils/`, `patches` are gone or deprecated in favor of anatomy paths.
+- Wing source is committed at `files/anatomy/wing/`; no `external/wing` submodule is required for this PoC.
+- Wing runs as FrankenPHP via launchd on host:9000; Bone runs as launchd Python on host:8099; Pulse runs as launchd Python. No Wing/Bone containers in any compose stack.
 - Traefik routes `wing.<tld>` → `host.docker.internal:9000` with Authentik forward-auth.
 - `files/anatomy/skills/contracts/{wing,bone}.openapi.yml` + `wing.db-schema.sql` are committed; CI drift check passes.
 - gitleaks plugin is installed via `--tags anatomy.plugins`; Wing UI shows `/plugins/gitleaks`; Grafana shows the gitleaks dashboard; ntfy delivers a critical-severity test message; GDPR row present.
@@ -957,7 +959,7 @@ Organized by surface; each item has a one-line **mitigation** the implementing a
 - **wing.db locked during agent run.** SQLite WAL mode + Wing API uses short transactions. *Test: 100 concurrent /events POSTs while conductor fires.*
 - **Bone restart during agent run.** Skill `api-call.sh` retries on 502/503 with exponential backoff (max 5 retries, max 5 min). *Test: kill bone mid-run; verify resume or clean fail.*
 - **Authentik down during agent run.** Pulse caches client_credentials JWTs for 55 min; running runs complete with cached token; new runs fail-fast with `agent.run.error{auth_unavailable}`. *Test: stop authentik; verify scheduled run is suppressed not retry-looped.*
-- **Wing PHP-FPM reload mid-request.** PHP-FPM graceful reload (SIGUSR2) drains in-flight requests before swap. *Test: `brew services restart php@8.3` while gitleaks plugin is POSTing 100 findings.*
+- **Wing runtime reload mid-request.** A3.5 must verify FrankenPHP/launchd reload behavior under in-flight requests. *Test: kickstart Wing while gitleaks plugin is POSTing 100 findings; verify retry or clean failure, not partial writes.*
 
 ### 9.2 Token budget / cost
 
@@ -1017,14 +1019,14 @@ Organized by surface; each item has a one-line **mitigation** the implementing a
 - **wing.db corruption.** Nightly backup (existing `pazny.backup` framework). Recovery: stop wing+bone+pulse launchd, restore, restart.
 - **`hooks/playbook-end.d/*` blocks for >60s.** Callback executor: `subprocess.run(..., timeout=60)`. *Test: hook script `sleep 300`, verify timeout.*
 - **Pulse OOM during agent run.** launchd `MemoryLimit` per service (~512MB for pulse); agent run is forked subprocess so OOM-killer takes subprocess, parent restarts.
-- **Wing PHP-FPM accepts wrong-host header (host.docker.internal spoof).** Wing checks `X-Forwarded-Host` against allowlist (`wing.<tld>` only); reject otherwise.
+- **Wing runtime accepts wrong-host header (host.docker.internal spoof).** Wing checks `X-Forwarded-Host` against allowlist (`wing.<tld>` only); reject otherwise.
 
 ### 9.10 Track A reversal specifics
 
 - **Wing volume from old containerized deploy.** Migration recipe extracts `wing.db` from named volume, copies to `~/wing/data/`, then deletes volume. *Test: pre-revert blank with old shape, run revert, verify wing.db preserved.*
 - **Bone state.yml mount.** Bone container had `~/.nos/` mounted; new launchd Bone reads same path natively. No data move needed.
 - **Existing `state/manifest.yml` rows** for `wing` and `bone` reference old container shape (image, port, healthcheck). Migration A3 rewrites these rows for host-shape (no `image`, no `healthcheck` Docker-style; `health_endpoint: http://host.docker.internal:8099/api/health` for Bone; same pattern for Wing).
-- **Decommissioned `wing-nginx` sidecar.** PHP-FPM speaks FastCGI directly to Traefik via the `fastcgi` plugin. Verify Traefik fastcgi support. *If Traefik doesn't support FastCGI directly* (it does as of v3.0), fallback: install nginx via Homebrew on host as the FastCGI proxy listening on host:9001, Traefik routes to host:9001.
+- **Decommissioned `wing-nginx` sidecar.** A3.5 uses FrankenPHP so Traefik speaks plain HTTP to `host.docker.internal:9000`; no FastCGI path is required. Fallback, if FrankenPHP is not viable, is a host HTTP proxy such as Caddy/nginx in front of PHP-FPM, not a Traefik FastCGI dependency.
 
 ### 9.11 Repo reorg specifics
 
@@ -1073,7 +1075,7 @@ notification:
 - Pulse runs: structured JSON per tick + per job, `service=pulse`, `run_id=<uuid>`, `profile=<name>`
 - Agent stdout: tagged `service=agent`, `profile=<name>`, `run_id=<uuid>`
 - Plugin runs: tagged `service=plugin`, `plugin=<name>`, `run_id=<uuid>`
-- Wing PHP-FPM access log: tagged `service=wing`, parsed by Alloy
+- Wing access log: tagged `service=wing`, parsed by Alloy; A3.5 must verify the final FrankenPHP log path
 - Bone access log: tagged `service=bone`
 
 **Traces (Tempo):**
@@ -1128,16 +1130,16 @@ All §10 items from the previous draft are resolved (operator 2026-05-01):
 
 | # | Question | Resolved as |
 |---|---|---|
-| 1 | Wing PHP source strategy | **B (submodule)** with `cp+jinja` rendering — Wing self-update writes back to submodule on operator approval |
+| 1 | Wing PHP source strategy | **Path-move into `files/anatomy/wing/` for PoC**. Earlier submodule plan was superseded 2026-05-03 after confirming Wing source already lives in this repo; future split-out can add a submodule if Wing becomes independently versioned. |
 | 2 | Compose project name | **N/A — no compose project** under all-local architecture; everything is launchd daemons |
 | 3 | Local model timing | runtime.command pluggable per profile; default `claude`, swap when hardware permits, no hard date |
 | 4 | Five profiles or four | **One** in PoC (conductor); inspektor + librarian + scout post-PoC, each ~2-4h |
 | 5 | Approval inbox channel | **Wing /inbox primary; mail (Stalwart) for critical; ntfy for push; everything in Grafana** |
 | 6 | FOSS tool order | **gitleaks first (only)** as PoC; trivy/grype/syft/nuclei/lynis/testssl/osquery as separate plugin commits post-PoC |
 | 7 | GDPR processor list with Anthropic | **Yes, transparent and accurate**; per-actor identity foundation underpins audit trail |
-| 8 | Architecture | **Local PHP-FPM via Homebrew + Python launchd daemons** (Variant L, full local) |
+| 8 | Architecture | **Local FrankenPHP for Wing + Python launchd daemons for Bone/Pulse** (Variant L, full local; FrankenPHP chosen 2026-05-03 for A3.5 to eliminate FPM/nginx sidecar complexity) |
 | 9 | Repo reorg | **`files/anatomy/` umbrella** — moves `migrations/`, `library/`, `module_utils/`, `patches/`, framework-internal `docs/`; top-level `state/manifest.yml` and `callback_plugins/` retained per Ansible convention |
-| 10 | Roles location | **`/roles/pazny.{wing,bone,pulse,backup}/` thin role wrappers** stay in `/roles/` per Ansible convention; actual code lives in `files/anatomy/<sub>/` |
+| 10 | Roles location | **Current/pre-R:** `/roles/pazny.{wing,bone,pulse,backup}/` thin role wrappers stay in `/roles/` per Ansible convention; actual code lives in `files/anatomy/<sub>/`. **Planned cleanup (Track R):** anatomy control-plane roles move to `n_os.anatomy.*`; ordinary service installer roles remain `pazny.<service>` until Track Q thins them. |
 
 ---
 
@@ -1197,11 +1199,24 @@ The PoC ships the doctrine proof (A6.5: thin `pazny.grafana` + `grafana-base` se
 
 ---
 
+### 13.2 Track R — structure grooming + anatomy role namespace cleanup
+
+**Short form:** before large-scale Track Q, make the anatomy boundary explicit:
+
+- **Control-plane organs** (`bone`, `wing`, `pulse`, optional platform parent) should move from `pazny.*` to `n_os.anatomy.*`.
+- **Service installer roles** stay `pazny.<service>` until Track Q thins them; they are the bones that plugins wire, not anatomy control-plane.
+- **Tendons&Vessels** stay under `files/anatomy/plugins/`; namespace cleanup must not move config/wiring back into roles.
+- **Compatibility** should be explicit: either wrapper aliases for `pazny.{bone,wing,pulse}` or a documented hard-cut migration if Ansible layout makes aliases too costly.
+
+Detailed short plan lives in `docs/roadmap-2026q2.md` Track R.
+
+---
+
 ## 14. Glossary
 
 - **bones & wings** — operator-facing product name for the unified Wing + Bone + Pulse + Plugins platform.
-- **anatomy** — internal/path-form name. Sources live in `files/anatomy/`. Ansible role: `pazny.anatomy`.
-- **wing** — UI + read model + REST API (Nette PHP-FPM, local launchd via Homebrew).
+- **anatomy** — internal/path-form name. Sources live in `files/anatomy/`. Planned role namespace for control-plane organs: `n_os.anatomy.*` (Track R). Older `pazny.{bone,wing,pulse}` references are pre-R compatibility names.
+- **wing** — UI + read model + REST API (Nette PHP app; target runtime is FrankenPHP via launchd after A3.5).
 - **bone** — operational API + playbook dispatch (FastAPI Python, local launchd).
 - **pulse** (or **nos-pulse**) — local Python launchd daemon scheduling agentic and non-agentic jobs.
 - **plugin** — directory under `files/anatomy/plugins/<name>/` with `plugin.yml`. The unit of **anatomy auto-wiring**, not the service itself. Auto-wires on `--tags anatomy.plugins`. Three types (§6.2):
@@ -1220,7 +1235,7 @@ The PoC ships the doctrine proof (A6.5: thin `pazny.grafana` + `grafana-base` se
 - **non-agentic job** — scheduled task that doesn't talk to an LLM (registry refresh, GDPR digest, retention sweep, gitleaks scan).
 - **per-actor identity** — every agent + every plugin has its own Authentik OIDC client (e.g. `nos-conductor`, `nos-plugin-gitleaks`). Audit trail tags every write with actor_id.
 - **approval inbox** — Wing UI `/inbox` view; primary surface for pending plans/upgrade-drafts/patch-drafts/critical-findings.
-- **Variant L** (architecture) — full-local: Wing PHP-FPM + Bone Python + Pulse Python all as launchd daemons. **Decision: L.**
+- **Variant L** (architecture) — full-local: Wing FrankenPHP + Bone Python + Pulse Python all as launchd daemons. **Decision: L.**
 
 ---
 
@@ -1238,14 +1253,24 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 
 ## Appendix B — Implementation tracking
 
-When implementation starts, this section becomes a live tracker:
+**Live tracker updated 2026-05-03 evening.** `docs/active-work.md` remains the session-entry pointer; this appendix tracks only the bones & wings phase state.
 
-- Per-phase status (NOT STARTED / IN PROGRESS / DONE / BLOCKED)
-- Commit references
-- Open issues
-
-For now, every phase row is `NOT STARTED`. The first commit to touch this section will replace this placeholder with a status table.
+| Phase | Status | Landed / next action | Open issues |
+|---|---|---|---|
+| A0 | ✅ DONE | `files/anatomy/` skeleton + `ansible.cfg` paths | none |
+| A1 | ✅ DONE | `migrations/`, `library/`, `module_utils/`, `patches`, internal docs moved under `files/anatomy/` | stale references may still exist in older docs; grep before editing |
+| A2 | ✅ DONE | Wing source moved to `files/anatomy/wing/`; no `external/wing` submodule for PoC | none |
+| A3a | ✅ DONE | Bone host launchd + Track-A container cleanup | verify wet after security batch |
+| A3.5 | ⏭ NEXT | Wing host-revert via FrankenPHP | gated on operator full blank + wet-test green unless explicitly waived |
+| A4 | ✅ DONE | Pulse launchd skeleton + subprocess runner + schema tables | Wing Pulse API missing; no production jobs registered |
+| A5 | ⏳ NOT STARTED | Wing/Bone OpenAPI + wing.db DDL exports | depends on stable Wing runtime enough for export tests |
+| A6 | ✅ DONE (foundation) | plugin schema, loader, DAG, aggregators, Ansible wrapper, hook wiring, tests | render/copy/wait/API side effects deferred to A6.5 |
+| A6.5 | ⏳ NOT STARTED | Grafana thin-role pilot + real `grafana-base` service plugin | doctrine proof gate for Track Q |
+| A7 | ⏳ NOT STARTED | gitleaks PoC plugin | depends on A6.5 side-effect support + Pulse API |
+| A8 | ⏳ NOT STARTED | conductor profile + agent runner + inbox/approvals | depends on A4/A5/A7 primitives |
+| A9 | ⏳ NOT STARTED | notification fanout | should follow inbox/approval shape |
+| A10 | ⏳ NOT STARTED | audit trail + per-actor write tagging | must be complete before calling the platform compliant |
 
 ---
 
-*Last revision: 2026-05-01 — second draft, all 7 architectural decisions resolved with operator. Awaiting Track G completion before phase A0 code-touch.*
+*Last revision: 2026-05-03 evening — status tracker refreshed after A0-A4+A6 foundation and security-hardening gate audit.*

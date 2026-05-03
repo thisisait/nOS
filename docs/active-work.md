@@ -4,12 +4,14 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-03 evening • by: pazny+claude
-> • status: P0–P3 batch landed, security hardening Phase A/B/C ahead
+> Last updated: 2026-05-03 evening (post-push) • by: pazny+claude
+> • status: P0–P3 + Phase A/B/C-partial landed and pushed; sanity-check
+>   HMAC false-positive fixed; next track is GitHub Actions CI green +
+>   tune-and-thin doctrine pilot on Group D / C-real items
 
 ---
 
-## Current track: **Security hardening — Phase A/B/C** (post-P0/P3 cleanup)
+## Current track: **CI green pass + tune-and-thin pilot** (post-security-batch)
 
 > **P0–P3 batch DONE 2026-05-03 evening.** 5 production blockers + 5
 > chained Bone HMAC bugs all fixed; Wing /hub clean (51/51 systems
@@ -32,7 +34,7 @@ Earlier full blank: `ok=920 changed=282 failed=0`.
 - **66 remediation_items resolved / 14 pending** (was 26/54 at session start;
   +40 cleared this session via Phase A, mem_limit reconcile, openwebui hardening,
   Phase C openwebui prompt-injection, plus reconciler regex fix)
-- 22 commits ahead of `origin/master` ready for push (gate: green CI)
+- All Phase A/B/C commits pushed to `origin/master` (2026-05-03 evening)
 
 ### What just landed (P0–P3 batch)
 
@@ -47,18 +49,37 @@ Earlier full blank: `ok=920 changed=282 failed=0`.
 
 ---
 
-## Current sub-step: **Operator gate — operator runs full blank to verify all batch fixes wet**
+## Current sub-step: **GitHub Actions CI green pass + tune-and-thin pilot**
 
-22 commits ahead of origin; all production-relevant fixes plus
-Phase A/B/C autonomous landed. Operator's next step:
+Security batch + sanity-check fix pushed (2026-05-03 evening). Working tree
+clean. **Two parallel sub-tracks for the next session:**
+
+1. **CI green pass** — GitHub Actions currently failing per CLAUDE.md
+   known debt. Separate session work; no blank required.
+2. **Tune-and-thin doctrine pilot** — every role we touch from now on (for
+   Group D / Group C-real fixes below) gets harvested into a tendons +
+   vessels plugin draft under `files/anatomy/plugins/<service>-base/`
+   alongside the in-place fix. Goal: shrink the Track Q backlog
+   incrementally rather than as one mass migration. **Harvest rule:**
+
+   - Wiring that connects the role to anatomy (Wing UI, Pulse jobs, audit,
+     GDPR) → **tendon** block in the draft plugin manifest.
+   - Wiring that connects it to infra/observability (DB, Prometheus,
+     Loki, Grafana, OIDC, notifiers) → **vessel** block.
+   - The role itself stays Tier-1 (`pazny.<service>`); only post-tasks +
+     templated config moves into the plugin.
+   - **Tier-2 demotion** (`apps/<name>.yml` manifest) is reserved for
+     long-tail apps where Tier-1 install_<service> toggle, manifest entry,
+     and bespoke Authentik integration are NOT required. Don't demote
+     strategic services to Tier-2 just to look minimalistic — thin-role +
+     plugin is the right shape there.
+
+Operator's next blank, when triggered, runs:
 
 ```bash
 ansible-playbook main.yml -K -e blank=true
 bash tools/post-blank.sh   # expect: GREEN, 14/14 wet tests
 ```
-
-If green → push to origin → trigger green CI on GitHub Actions
-(currently failing per CLAUDE.md known debt — separate session work).
 
 ## Phase A/B/C — DONE this session
 
@@ -123,13 +144,17 @@ cross-service wiring totalling ~3000 LOC; consolidation in 7 batches,
 pilot proves the doctrine. Plan in `docs/bones-and-wings-refactor.md`
 §13.1 + `files/anatomy/docs/role-thinning-recipe.md`.
 
+For the planned larger parallel implementation batch, use
+`docs/bones-and-wings-bulk-plan.md`. It defines lane ownership, merge order,
+shared-file locks, and wave gates for A3.5/A5/A6.5/A7-A10.
+
 ---
 
 ## Quick state-of-the-world snapshot
 
 | Surface | State |
 |---|---|
-| `git status` | dirty (P0–P3 batch staged for commit; 7 logical commits planned) |
+| `git status` | clean, in sync with `origin/master` (security batch + sanity-check fix pushed 2026-05-03 evening) |
 | Last green blank | `ok=920 changed=282 failed=0` (2026-05-03 18:08, full blank) |
 | Last partial green | `ok=151 changed=12 failed=0` (2026-05-03 19:32, `--tags apps,wing,nginx,traefik`) |
 | Tier-1 services | all healthy; 51 systems registered in Wing /hub with clean IDs |
@@ -141,8 +166,8 @@ pilot proves the doctrine. Plan in `docs/bones-and-wings-refactor.md`
 | ansible-core | 2.20.5 floor; verified forward-compat under 2.21.0rc1 |
 | Decision log | O1-O18 in roadmap-2026q2.md |
 | Remediation queue | **66 resolved / 14 pending** (was 26/54 at session start; +40 cleared) |
-| Commits ahead | **22** (push gate: green CI on GitHub Actions) |
-| Next gate | Operator full blank verifying batch wet → push to origin → green CI |
+| Commits ahead | **0** — pushed; CI on GitHub Actions still failing per known-debt |
+| Next gate | GitHub Actions green CI pass (separate session work) + tune-and-thin pilot on first Group D / C-real fix |
 
 ---
 

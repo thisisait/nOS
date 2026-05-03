@@ -51,7 +51,7 @@ when it needs to touch disk, run Ansible, or read state.
 - **Role of the role**: fronts the on-disk truth (`~/.nos/state.yml`,
   `recipes/*`) and the only process allowed to shell out to
   `ansible-playbook` in this codebase.
-- **Files**: `roles/pazny.bone/`, `files/bone/`
+- **Files**: current/pre-R role `roles/pazny.bone/`, target role `n_os.anatomy.bone`; source `files/anatomy/bone/`
 - **Vars prefix**: `bone_*` (e.g. `bone_port`, `bone_api_key_env`)
 - **Env prefix**: `BONE_*` (formerly `BOXAPI_*`)
 - **Service label**: `eu.thisisait.bone` (launchd)
@@ -72,7 +72,7 @@ Formerly **Glasswing**. The read model. The place humans click to answer
   panel. Reads the SQLite mirror of `events`, `migrations_applied`,
   `upgrades_applied`, `patches_applied`, `coexistence_tracks`. Proxies
   command actions (apply, cutover, …) through Bone.
-- **Files**: `roles/pazny.wing/`, `files/project-wing/`
+- **Files**: current/pre-R role `roles/pazny.wing/`, target role `n_os.anatomy.wing`; source `files/anatomy/wing/`
 - **Vars prefix**: `wing_*`
 - **Env prefix**: `WING_*` (formerly `GLASSWING_*`)
 - **Callback plugin**: `callback_plugins/wing_telemetry.py`
@@ -130,8 +130,8 @@ For an organ named `<organ>` (lowercase, ≤ 5 chars):
 
 | Surface | Rule | Example (bone) |
 |---|---|---|
-| Ansible role | `roles/pazny.<organ>/` | `roles/pazny.bone/` |
-| Role files | `files/<organ>/` or `files/project-<organ>/` for PHP | `files/bone/` |
+| Ansible role | current/pre-R: `roles/pazny.<organ>/`; target for control-plane organs: `n_os.anatomy.<organ>` | `pazny.bone` → `n_os.anatomy.bone` |
+| Role files | `files/anatomy/<organ>/` for control-plane source | `files/anatomy/bone/` |
 | Ansible var prefix | `<organ>_*` | `bone_port`, `bone_api_key_env` |
 | Install toggle | `install_<organ>` | `install_bone: true` |
 | Environment variable prefix | `<ORGAN>_*` | `BONE_PORT`, `BONE_API_KEY` |
@@ -144,6 +144,10 @@ For an organ named `<organ>` (lowercase, ≤ 5 chars):
 
 Exceptions kept on purpose:
 
+- **Service installer roles stay outside anatomy namespace.** `pazny.grafana`
+  and other Tier-1 services remain ordinary bones until Track Q thins them;
+  Tendons&Vessels live in `files/anatomy/plugins/<service>-base/`, not inside
+  the service role.
 - **HTTP API paths don't change** when an organ renames. `/api/v1/state`
   stays `/api/v1/state`. External consumers don't care what we call the
   organ — they care about the contract.
@@ -167,8 +171,8 @@ organ. Adding a *new organ* is one level up:
 2. **Reserve the prefix.** Pick a ≤ 5-char lowercase name; sanity-check
    it isn't already used as a var prefix, role name, or table name.
 3. **Boot the skeleton**:
-   - `roles/pazny.<organ>/` (defaults, handlers, tasks, meta)
-   - `files/<organ>/` (code)
+   - `n_os.anatomy.<organ>` control-plane role (current pre-R compatibility may still use `roles/pazny.<organ>/`)
+   - `files/anatomy/<organ>/` (code)
    - Add `install_<organ>` toggle to `default.config.yml`
    - Wire it into `main.yml` (usually last, so its inputs are ready)
 4. **Give it a state block.** Decide which key it owns in

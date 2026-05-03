@@ -1,16 +1,26 @@
 # files/anatomy/
 
-> **Status:** seed (2026-05-03). Today this directory holds A6.5 research
-> artifacts only. Phases A0-A1 will materialize the full skeleton; phases
-> A2-A10 (and post-PoC Track Q) populate it.
+> **Status:** in-flight platform tree (2026-05-03 evening). A0-A4 and A6
+> foundation have landed: this directory now holds Wing source, Bone source,
+> Pulse source, custom Ansible modules, plugin-loader code, internal docs, and
+> the first draft service plugin. A3.5/A5/A6.5/A7-A10 remain the active PoC work.
 >
 > **Doctrine source:** `docs/bones-and-wings-refactor.md` §1.1 + §6.
 
-## Current contents (research-only)
+## Current contents
 
 ```
 files/anatomy/
 ├── README.md                                         # this file
+├── wing/                                             # Wing PHP/Nette source (A2)
+├── bone/                                             # Bone FastAPI source (A3a)
+├── pulse/                                            # nos-pulse daemon source (A4)
+├── library/                                          # custom Ansible modules (A1)
+├── module_utils/                                     # shared module utilities + plugin loader (A1/A6)
+├── migrations/                                       # moved framework migrations (A1)
+├── patches/                                          # moved patch artifacts (A1)
+├── skills/
+│   └── contracts/                                    # A5 outputs land here
 ├── docs/
 │   ├── grafana-wiring-inventory.md                   # V3 — consumer-shape inventory (A6.5)
 │   ├── authentik-wiring-inventory.md                 # V4 — source/aggregator-shape inventory (Q2 prep)
@@ -22,14 +32,14 @@ files/anatomy/
         └── plugin.yml                                # draft manifest
 ```
 
-## Eventual contents (post-A1, per refactor doc §4.2)
+## Target contents (per refactor doc §4.2)
 
 ```
 files/anatomy/
 ├── README.md
-├── wing/                       # Wing PHP-FPM rendered configs + jinja
-├── bone/                       # Bone Python source (FastAPI) — moved from files/bone/
-├── pulse/                      # Pulse Python source (NEW, A4)
+├── wing/                       # Wing PHP/Nette source; A3.5 switches runtime to FrankenPHP
+├── bone/                       # Bone Python source (FastAPI)
+├── pulse/                      # Pulse Python source
 ├── skills/                     # Reusable agent skills + contracts
 │   └── contracts/              # wing.openapi.yml, bone.openapi.yml, wing.db-schema.sql
 ├── plugins/                    # Plugin manifests (gitleaks, grafana-base, ...)
@@ -39,7 +49,7 @@ files/anatomy/
 ├── patches/                    # MOVED from /patches/
 ├── library/                    # MOVED from /library/
 ├── module_utils/               # MOVED from /module_utils/
-├── scripts/                    # Plugin loader, validators, exporters
+├── scripts/                    # Future validators/exporter CLIs; loader runtime is in module_utils/
 └── docs/                       # Internal anatomy docs (framework-* etc., MOVED here)
 ```
 
@@ -49,11 +59,11 @@ files/anatomy/
 - **A1 — anatomize-move** ✅ `2abbb5d`. migrations/library/module_utils/patches → files/anatomy/.
 - **A2 — wing-move** ✅ `4202f40`. files/project-wing/ → files/anatomy/wing/.
 - **A3a — bone host-revert** ✅ this commit. Bone container → host launchd. Source moved files/bone/ → files/anatomy/bone/. New plist + venv install in pazny.bone role.
-- **A3b — wing host-revert** ⏳ DEFERRED to phase A3.5 (Traefik/FastCGI gap, FrankenPHP eval pending).
+- **A3.5 — wing host-revert** ⏳ NEXT after security gate. Target: FrankenPHP via launchd.
 - **A4 — pulse skeleton** ✅ `b101a0d`. roles/pazny.pulse + Python source + 16 tests.
-- **A6 — plugin loader** ✅ this commit. JSON Schema + Python loader + Ansible custom module + 4 lifecycle hooks wired into core-up.yml/blank-reset.yml + 25 tests.
+- **A6 — plugin loader foundation** ✅ this commit. JSON Schema + Python loader + Ansible custom module + 4 lifecycle hooks wired into core-up.yml/blank-reset.yml + 25 tests. Hook side effects beyond filesystem primitives are deferred to A6.5.
 
-Remaining: A3b (Wing host-revert), A5 (Wing OpenAPI/DDL exports), A6.5
+Remaining: A3.5 (Wing host-revert via FrankenPHP), A5 (Wing OpenAPI/DDL exports), A6.5
 (Grafana thin-role pilot), A7 (gitleaks plugin), A8 (conductor + agent
 runner), A9 (notifications), A10 (audit trail).
 
