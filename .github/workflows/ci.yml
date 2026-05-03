@@ -172,6 +172,12 @@ jobs:
       - name: Check out the codebase.
         uses: actions/checkout@v6
 
+      - name: Set up Python 3.
+        id: python-setup
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
       - name: Uninstall GitHub Actions' built-in Homebrew.
         run: tests/uninstall-homebrew.sh
 
@@ -182,14 +188,19 @@ jobs:
           sudo rm -rf /usr/local/bin/firefox
 
       # Pin to current operator baseline (2.20.x). See Lint job comment.
+      #
+      # Critical: install into the SAME Python that Ansible's interpreter
+      # discovery picks on the localhost target. `pip3` from setup-python
+      # lives in /Users/runner/hostedtoolcache/...; Ansible's `auto`
+      # discovery on macOS often picks /usr/bin/python3 instead, so the
+      # custom-module pyyaml import fails. Install both into hostedtool
+      # python AND pin ANSIBLE_PYTHON_INTERPRETER (job-level env below)
+      # so localhost runs use the same one.
       - name: Install test dependencies.
         run: |
-          sudo pip3 install --upgrade pip
-          # pyyaml + jsonschema are required at runtime by our custom
-          # modules under files/anatomy/library/ (nos_state, nos_migrate,
-          # nos_apps_render). Without them, the very first pre-migrate
-          # task fails with "PyYAML is required for nos_state_lib".
-          sudo pip3 install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          sudo "$(command -v python3)" -m pip install --upgrade pip
+          sudo "$(command -v python3)" -m pip install \
+            'ansible-core>=2.20,<2.21' pyyaml jsonschema
 
       - name: Set up the test environment.
         run: |
@@ -206,11 +217,16 @@ jobs:
 
       - name: Test the playbook's syntax.
         run: ansible-playbook main.yml --syntax-check
+        env:
+          # Pin Ansible's localhost Python to the same one we installed
+          # pyyaml/jsonschema into (see Install test dependencies step).
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
 
       - name: Test the playbook.
         run: ansible-playbook main.yml
         env:
           ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
 
       - name: Idempotence check.
         run: |
@@ -221,3 +237,4 @@ jobs:
             || (echo 'Idempotence test: fail' && exit 1)
         env:
           ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
