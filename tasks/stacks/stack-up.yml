@@ -224,7 +224,7 @@
 
 # ── Wave 2.2 per-role post-start tasks (called AFTER compose up) ─────────────
 - { name: "[Stacks] pazny.bookstack post (migration retry)", ansible.builtin.include_role: { name: pazny.bookstack, tasks_from: post.yml, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['bookstack'] }
-- { name: "[Stacks] pazny.firefly post (migration retry)",   ansible.builtin.include_role: { name: pazny.firefly,   tasks_from: post.yml, apply: { tags: ['firefly']   } }, when: "install_firefly   | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['firefly']   }
+- { name: "[Stacks] pazny.firefly post (migration retry)", ansible.builtin.include_role: { name: pazny.firefly, tasks_from: post.yml, apply: { tags: ['firefly'] } }, when: "install_firefly | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['firefly'] }
 - { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['erpnext'] }
 - { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in (_remaining_stacks | default([]))", tags: ['superset'] }
 - { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in (_remaining_stacks | default([]))", tags: ['paperclip'] }

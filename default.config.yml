@@ -73,7 +73,7 @@ tls_cert_dir: "{{ stacks_dir }}/infra/tls"
 # box so multiple host_alias deploys against the same tenant_domain coexist.
 _acme_zone: "{{ ((_host_alias_normalized + '.') if (_host_alias_normalized | length > 0) else '') + tenant_domain }}"
 ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if tenant_domain_is_local else 'acme/' + _acme_zone + '.crt' }}"
-ssl_cert_key:  "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local else 'acme/' + _acme_zone + '.key' }}"
+ssl_cert_key: "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local else 'acme/' + _acme_zone + '.key' }}"
 
 # ── ACME (Let's Encrypt) — auto-enabled for public TLDs ──────────────────────
 # Wildcard cert *{host_alias_seg}.{tenant_domain} (+ Tier-2 wildcard) via
@@ -1145,8 +1145,8 @@ cadvisor_version: "v0.49.1"
 blackbox_exporter_version: "v0.25.0"
 
 alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
-alloy_scrape_mysqld_exporter:   "{{ install_mariadb   | default(false) }}"
-alloy_scrape_redis_exporter:    "{{ redis_docker      | default(false) }}"
+alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
+alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
 alloy_scrape_cadvisor: true
 alloy_scrape_blackbox_self: true   # scrape blackbox-exporter's own /metrics (probe results come from prometheus rules — A2)
 

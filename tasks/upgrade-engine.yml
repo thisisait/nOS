@@ -164,11 +164,11 @@
   nos_migrate:
     action: apply_upgrade
     upgrade:
-      service:      "{{ item.service }}"
-      recipe:       "{{ item.recipe }}"
-      installed:    "{{ item.installed }}"
-      recipe_path:  "{{ item.recipe_path }}"
-      run_ts:       "{{ _upgrade_run_ts }}"
+      service: "{{ item.service }}"
+      recipe: "{{ item.recipe }}"
+      installed: "{{ item.installed }}"
+      recipe_path: "{{ item.recipe_path }}"
+      run_ts: "{{ _upgrade_run_ts }}"
     dry_run: "{{ upgrade_dry_run | default(false) | bool }}"
   loop: "{{ _upgrade_jobs }}"
   loop_control:

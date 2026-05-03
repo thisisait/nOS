@@ -78,7 +78,15 @@ jobs:
         run: pip3 install 'ansible-core>=2.20,<2.21'
 
       - name: Install Ansible Galaxy requirements.
-        run: ansible-galaxy install -r requirements.yml
+        # Retry: Galaxy occasionally returns transient 502/Bad Gateway from
+        # GitHub's archive endpoint. 3 attempts with backoff covers it.
+        run: |
+          for attempt in 1 2 3; do
+            ansible-galaxy install -r requirements.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
 
       - name: Set up test inventory and config.
         run: |
@@ -107,7 +115,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install test dependencies.
-        run: pip3 install pytest pyyaml jsonschema
+        run: pip3 install pytest pyyaml jsonschema httpx
 
       - name: Run pytest suite.
         run: >
@@ -184,7 +192,13 @@ jobs:
           cp tests/ansible.cfg ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
-          ansible-galaxy install -r requirements.yml
+          # Retry Galaxy install — see Syntax Check job comment.
+          for attempt in 1 2 3; do
+            ansible-galaxy install -r requirements.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
 
       - name: Test the playbook's syntax.
         run: ansible-playbook main.yml --syntax-check
