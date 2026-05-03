@@ -81,6 +81,20 @@ ansible-playbook main.yml -K -e blank=true
 bash tools/post-blank.sh   # expect: GREEN, 14/14 wet tests
 ```
 
+## Tune-and-thin pilots landed (2026-05-03 evening)
+
+| # | Target | Tier | What landed | REM closed |
+|---|---|---|---|---|
+| 1 | Woodpecker | 1 (role) | Live REM-002 hardening in role compose + `files/anatomy/plugins/woodpecker-base/` draft (plugin.yml + compose-extension template + README + harvest map) | REM-002 |
+| 2 | Qdrant | 2 (app) | NEW Tier-2 manifest `apps/qdrant.yml` (vector DB, install today) + `files/anatomy/plugins/qdrant-base/` draft (default-collection bootstrap, Bone/Wing client glue, Prometheus scrape, Grafana dashboard slot, Wing /hub card) | n/a — new substrate |
+
+**Doctrine status post-pilots:** workflow proven on both Tier-1 (role +
+plugin draft) and Tier-2 (app manifest + plugin draft). Plugin manifest
+shape stable across grafana-base / woodpecker-base / qdrant-base. Each
+draft includes a "harvest map" comment block listing today's-surface →
+this-manifest-block — gives Track Q a pre-built checklist per role
+instead of re-doing inventory on each pass.
+
 ## Phase A/B/C — DONE this session
 
 | Phase | Status | What landed |

@@ -1,0 +1,304 @@
+# =============================================================================
+# qdrant-base — service plugin (DRAFT, second tune-and-thin pilot)
+#
+# Status: research draft, captured 2026-05-03 evening. NOT loaded by anything.
+# Purpose: tendons + vessels for the Tier-2 Qdrant manifest at apps/qdrant.yml.
+# Together they form the first **Tier-2-app + plugin** pair — proves that the
+# tune-and-thin doctrine works for both Tier-1 (Woodpecker) AND Tier-2 apps.
+#
+# What's here vs. what's in apps/qdrant.yml:
+#   • apps/qdrant.yml ......... installs Qdrant (image, ports, volumes, GDPR row,
+#                               Authentik proxy gate). Standalone usable today.
+#   • this plugin manifest .... wires Qdrant INTO the rest of the platform —
+#                               Bone client glue, Wing PHP client, default
+#                               collection bootstrap, Prometheus scrape,
+#                               Grafana dashboard, Loki log labels.
+#
+# Reading guide: see files/anatomy/plugins/grafana-base/plugin.yml for the
+# canonical block shape; files/anatomy/plugins/woodpecker-base/plugin.yml
+# for a sibling Tier-1 pilot.
+# =============================================================================
+
+name: qdrant-base
+version: 0.1.0
+description: |
+  Wiring layer for the Tier-2 Qdrant deployment: Bone Python client + Wing
+  PHP client glue, default-collection bootstrap (agent_outputs /
+  system_metadata / cybersec_intel), Prometheus scrape entry, Grafana
+  dashboard, Loki log labels.
+
+  The Tier-2 manifest at apps/qdrant.yml owns the install (image, volumes,
+  Traefik route, GDPR row); this plugin owns the cross-service wiring.
+upstream: https://qdrant.tech/
+license: Apache-2.0
+
+type:
+  - service           # binds to a deployed app (Tier-2, not a pazny.* role)
+  - ui-extension      # Wing /hub deep-link card + future /vector-search view
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+# Tier-2 binding mode: instead of `requires.role`, this plugin binds to a
+# Tier-2 app slug. Loader checks the merged apps catalog (post nos_apps_render)
+# to confirm `qdrant` is enabled before applying side effects.
+
+requires:
+  app: qdrant                           # Tier-2 binding (NEW vs. grafana-base)
+  # No feature_flag for Tier-2 plugins — the presence of apps/qdrant.yml +
+  # successful nos_apps_render IS the toggle. Loader checks the merged apps
+  # catalog at hook time; if `qdrant` is absent, this plugin no-ops.
+  variables:
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+  capability_consumers:                 # who needs Qdrant ready before they boot
+    - bone                              # Bone needs QDRANT_URL + key in plist
+    - wing                              # Wing PHP needs same in env
+
+# =============================================================================
+# AUTHENTIK — proxy-auth gate (Tier-2 manifest already declares mode: proxy)
+# =============================================================================
+# Captured here so the Track-Q sweep that retires the central
+# `authentik_oidc_apps` list has a single home for the OIDC client + slug.
+
+authentik:
+  mode: proxy_auth
+  client_id: nos-qdrant
+  client_secret: "{{ global_password_prefix }}_pw_oidc_qdrant"
+  slug: qdrant
+  external_host: "https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}"
+  internal_host: "http://qdrant:6333"
+  cookie_domain: ".{{ tenant_domain }}"
+  tier: 1                               # admin only; raw vector DB is power-user
+
+# =============================================================================
+# DEFAULT COLLECTIONS — bootstrap the three first-class buckets
+# =============================================================================
+# post_compose hook calls Qdrant REST API (`PUT /collections/{name}`) once
+# per collection, idempotent. Vector size 768 = OpenAI text-embedding-3-small
+# default; can be retuned per collection without breaking schema.
+
+collections:
+  - name: agent_outputs
+    description: |
+      Embeddings of agent run summaries (conductor, inspektor, gitleaks).
+      One point per agent run; payload includes run_id, profile, severity,
+      finding_id refs.
+    vector:
+      size: 768
+      distance: Cosine
+    payload_schema:
+      run_id: keyword
+      profile: keyword              # conductor / inspektor / gitleaks / ...
+      severity: keyword             # info / low / medium / high / critical
+      acted_at: integer             # epoch seconds
+      actor_id: keyword             # nos-conductor / nos-plugin-gitleaks / ...
+
+  - name: system_metadata
+    description: |
+      Wing /systems rows mirrored as embeddings — semantic search over the
+      service catalog. Re-built nightly by Pulse job (post-A7).
+    vector:
+      size: 768
+      distance: Cosine
+    payload_schema:
+      system_id: keyword
+      tier: integer                 # 1 / 2
+      stack: keyword                # infra / iiab / data / ...
+      domain: keyword
+      tags: keyword                 # array
+
+  - name: cybersec_intel
+    description: |
+      CVE descriptions, advisories, remediation_items, vendor patches.
+      Operator-facing similarity search ("show me past advisories like REM-002").
+    vector:
+      size: 768
+      distance: Cosine
+    payload_schema:
+      source: keyword               # cve / advisory / remediation_item / patch
+      severity: keyword
+      cve_id: keyword               # nullable
+      rem_id: keyword               # nullable
+      published_at: integer
+
+# =============================================================================
+# BONE INTEGRATION — Python client glue + plist env
+# =============================================================================
+# Bone gets a thin `qdrant_client.py` module + QDRANT_URL/QDRANT_API_KEY in
+# its launchd plist EnvironmentVariables. Bone REST endpoints `POST
+# /api/v1/embeddings/upsert` and `POST /api/v1/embeddings/search` proxy to
+# Qdrant — the API key never leaves the host.
+
+bone_integration:
+  client_module: clients/qdrant_client.py     # to be added under files/anatomy/bone/
+  env:
+    QDRANT_URL: "http://127.0.0.1:6333"        # via Docker port-publish (not via Traefik)
+    QDRANT_API_KEY: "{{ qdrant_api_key | default('') }}"   # mirrors $SERVICE_PASSWORD_API
+  routes_added:
+    - method: POST
+      path: /api/v1/embeddings/upsert
+      auth: jwt                                # operator-only token
+      summary: "Upsert N points into a Qdrant collection."
+    - method: POST
+      path: /api/v1/embeddings/search
+      auth: jwt
+      summary: "k-NN search over a Qdrant collection."
+
+# =============================================================================
+# WING INTEGRATION — PHP client glue
+# =============================================================================
+# Wing gets a `QdrantClient` repository in app/Model/. Wing presenters can
+# call into it for /vector-search views (post-A8).
+
+wing_integration:
+  php_repository: app/Model/QdrantClient.php   # to be added under files/anatomy/wing/
+  env:
+    QDRANT_URL: "http://127.0.0.1:6333"
+    QDRANT_API_KEY_RO: "{{ qdrant_api_key_ro | default('') }}"   # read-only key
+  views_added:
+    - route: /vector-search
+      tier: 1                                   # admin only
+      description: "Cross-collection semantic search UI (post-A8)."
+
+# =============================================================================
+# OBSERVABILITY — Prometheus scrape + Loki labels + Grafana dashboard
+# =============================================================================
+
+observability:
+  prometheus:
+    scrape:
+      - job_name: qdrant
+        targets: ["qdrant:6333"]
+        metrics_path: /metrics
+        scrape_interval: 30s
+        # /metrics is unauthenticated — see apps/qdrant.yml comment.
+  loki:
+    labels:
+      app: qdrant
+      stack: apps
+      tier: "2"
+  grafana:
+    dashboards:
+      - source: dashboards/qdrant-overview.json   # to ship with this plugin
+        folder: "Plugins/qdrant-base"
+        title: "Qdrant — collections & query latency"
+  metrics_of_interest:
+    - qdrant_collections_total
+    - qdrant_pending_operations
+    - qdrant_grpc_response_time_seconds
+    - qdrant_rest_responses_avg_duration_seconds
+    - process_resident_memory_bytes      # MMU for memmap warm-up
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension     # if defined below
+    - ensure_secret: qdrant_api_key                   # 32-byte url-safe random
+    - ensure_secret: qdrant_api_key_ro                # read-only key for Wing
+  post_compose:
+    - wait_health: "http://127.0.0.1:6333/healthz"
+    - bootstrap_collections: collections              # PUT each collection
+    - register_bone_client: bone_integration
+    - register_wing_client: wing_integration
+    - register_prometheus_scrape: observability.prometheus.scrape
+    - import_grafana_dashboard: observability.grafana.dashboards
+  post_blank:
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/qdrant"   # storage volume host-side
+    # Collections are inside the volume — wiped automatically with the data dir.
+
+# =============================================================================
+# GDPR — Article 30 register row (delta vs. apps/qdrant.yml)
+# =============================================================================
+# apps/qdrant.yml's gdpr block covers the OPERATIONAL register row. This
+# plugin's block tracks what the WIRING adds: when Bone/Wing route through
+# Qdrant, the data flow includes whichever subjects' embeddings are upserted.
+# Loader merges this into the canonical row at apply time.
+
+gdpr:
+  data_categories_added:
+    - "agent_prompt_context"          # conductor prompt embeddings may include op data
+    - "advisory_text"                 # CVE summaries, vendor advisories
+  processors_added: []                # all-local
+  bone_redaction_required: true       # Bone MUST strip operator email before upsert
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Qdrant"
+    icon: vector-square
+    url: "https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}/dashboard"
+    tier: 1
+    description: "Vector DB — agent embeddings + cybersec intel"
+    health_check: "https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}/healthz"
+
+# =============================================================================
+# NOTIFICATIONS
+# =============================================================================
+
+notification:
+  on_collection_bootstrap_failure:
+    channels: [wing-inbox, ntfy]
+    template: notifications/bootstrap-failed.txt
+  on_health_loss:
+    # Pulse job (post-A7) probes /healthz every 60s. Alert if 3 consecutive fails.
+    channels: [wing-inbox, ntfy]
+    template: notifications/health-loss.txt
+    severity: high
+
+# =============================================================================
+# SCHEMA — wing.db tables this plugin owns
+# =============================================================================
+# Tracks operator-visible per-collection stats so Wing's /vector-search view
+# can render without making N calls to Qdrant on every page load.
+
+schema:
+  tables:
+    qdrant_collections_cache:
+      columns:
+        name: TEXT PRIMARY KEY
+        points_count: INTEGER
+        vectors_count: INTEGER
+        last_synced_at: INTEGER       # epoch seconds
+        status: TEXT                  # green / yellow / red
+      refresh:
+        # Pulse job, every 5 min
+        cron: "*/5 * * * *"
+        ingest_endpoint: /api/v1/qdrant/sync_collections   # Wing route, not yet implemented
+
+# =============================================================================
+# HARVEST MAP — what already lives where (for the Track Q sweep)
+# =============================================================================
+# Surface today                                | Block in this manifest
+# ---------------------------------------------|---------------------------------
+# apps/qdrant.yml gdpr:                        | gdpr (delta only — `_added`)
+# apps/qdrant.yml authentik proxy entry        | authentik (tendon)
+# (gap today): default collections             | collections (NEW)
+# (gap today): Bone Qdrant client              | bone_integration (NEW)
+# (gap today): Wing Qdrant client              | wing_integration (NEW)
+# (gap today): Prom scrape + Grafana dash      | observability (NEW)
+# (gap today): Wing /hub card                  | ui-extension (NEW)
+# (gap today): qdrant_collections_cache table  | schema (NEW)
+#
+# Files that need to ship with this plugin once A6.5 makes loader real:
+#
+# files/anatomy/plugins/qdrant-base/
+# ├── plugin.yml                               # this file
+# ├── README.md                                # operator-facing
+# ├── dashboards/
+# │   └── qdrant-overview.json                 # Grafana 12.x panel pack
+# ├── notifications/
+# │   ├── bootstrap-failed.txt
+# │   ├── bootstrap-failed.ntfy
+# │   ├── health-loss.txt
+# │   └── health-loss.ntfy
+# └── tests/
+#     ├── test_collection_bootstrap.py         # idempotency (PUT twice = 200 + noop)
+#     └── test_bone_routes_register.py

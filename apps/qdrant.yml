@@ -1,0 +1,109 @@
+---
+# ============================================================================
+# Qdrant — open-source vector database (Rust-based).
+# Tier-2 pilot: first PoC of vector-DB substrate for nOS agentic platform.
+#
+# Use cases (forward-spec — actual ingestion lands with A8 conductor):
+#   • Agent outputs    — conductor / inspektor / gitleaks emit findings →
+#                        embedding via Bone → upserted into `agent_outputs`.
+#   • System metadata  — Wing /systems rows → semantic index for fuzzy lookup
+#                        ("find all systems running PHP 8.x in EU residency").
+#   • Cybersec intel   — CVEs / advisories / remediation_items → similarity
+#                        search ("find advisories like REM-002 across history").
+#
+# This manifest only brings Qdrant UP. The Bone/Wing/Grafana wiring lives
+# in `files/anatomy/plugins/qdrant-base/plugin.yml` (DRAFT, not loaded yet).
+#
+# Upstream:    https://qdrant.tech/
+# License:     Apache-2.0
+# Image:       docker.io/qdrant/qdrant (multi-arch incl. arm64)
+# Persistence: /qdrant/storage volume
+# ============================================================================
+
+meta:
+  name: "qdrant"
+  version: "v1.13.4"
+  summary: "Vector database for embeddings — agent outputs, system metadata, cybersec intel."
+  homepage: "https://qdrant.tech/"
+  category: "data"
+  ports: [6333]              # primary HTTP API; 6334 is gRPC, exposed only inside docker net
+  tags: ["self-hosted", "vector-db", "embeddings", "ai-substrate"]
+
+# ── GDPR Article 30 — agent / system / cybersec embeddings ────────────────────
+# Qdrant stores vector embeddings + a JSON payload per point. The payload is
+# where personal data could land (e.g. an agent run including operator's
+# email in its prompt context). All ingestion goes through Bone, which is the
+# enforcement point for redaction.
+gdpr:
+  purpose: |
+    Hosts vector embeddings + payload metadata for the nOS agentic platform:
+    semantic search over agent outputs, system metadata, and cybersec
+    intelligence. Embeddings are derived from text the operator chose to
+    process (audit logs, CVE descriptions, system facts) — Qdrant itself
+    does not collect data; it persists what Bone uploads.
+  legal_basis: "legitimate_interests"
+  data_categories:
+    - "agent_run_metadata"        # conductor / inspektor invocation logs
+    - "system_facts"              # Wing systems rows reflected as embeddings
+    - "cybersec_metadata"         # CVE / advisory / remediation descriptors
+  data_subjects:
+    - "operators"                 # the operator running the platform
+  # 365 days = audit trail + drift baseline horizon. Forever (-1) is rejected
+  # for derivative data — re-embedding from canonical sources is cheap.
+  retention_days: 365
+  processors: []                  # all-local; no managed-vector-DB SaaS
+  transfers_outside_eu: false
+
+# ── Compose fragment ──────────────────────────────────────────────────────────
+compose:
+  services:
+    qdrant:
+      image: "docker.io/qdrant/qdrant:v1.13.4"
+      container_name: qdrant
+      restart: unless-stopped
+      # No host port mapping — Traefik reaches the HTTP API via the shared
+      # apps_net. gRPC port 6334 stays internal until a real consumer needs it.
+      expose:
+        - "6333"
+        - "6334"
+      environment:
+        # Double-underscore in Qdrant env var = config-key nesting (e.g.
+        # `QDRANT__SERVICE__API_KEY` → service.api_key in config.yaml).
+        - "QDRANT__SERVICE__API_KEY=$SERVICE_PASSWORD_API"
+        - "QDRANT__SERVICE__READ_ONLY_API_KEY=$SERVICE_PASSWORD_RO_API"
+        # Public host the Qdrant dashboard advertises (CORS / link generation).
+        - "QDRANT__SERVICE__HOST=0.0.0.0"
+        # /healthz + /metrics — Prometheus scrape friendly, no API key required.
+        - "QDRANT__SERVICE__ENABLE_TLS=false"
+        # Telemetry off — Qdrant phones home anonymized usage stats by default.
+        - "QDRANT__TELEMETRY_DISABLED=true"
+        # Storage tuning — defaults are fine for a single-node operator workload.
+        - "QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD=20000"
+      volumes:
+        - qdrant_storage:/qdrant/storage
+        - qdrant_snapshots:/qdrant/snapshots
+      healthcheck:
+        # /healthz is unauthenticated and returns 200 once Qdrant is ready.
+        # /readyz requires HTTP1.1 — `wget --spider` works on both Alpine/Debian
+        # base images Qdrant ships.
+        test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:6333/healthz || exit 1"]
+        interval: 30s
+        timeout: 5s
+        retries: 5
+        # Cold start including memmap warm-up can run 15-30s. start_period
+        # swallows the early probe failures so Docker doesn't restart-loop.
+        start_period: 45s
+      mem_limit: 1g
+      cpus: 1.0
+
+  # Volumes namespace: qdrant_*. Unique across Tier-2 pilots.
+  volumes:
+    qdrant_storage:
+    qdrant_snapshots:
+
+# ── Tier-2 routing — Authentik proxy gate, admin-only ─────────────────────────
+# Qdrant's web dashboard exposes raw collection management — admin-only
+# territory. RBAC tier 1 = nos-providers + nos-admins only.
+nginx:
+  auth: "proxy"
+  rbac_tier: 1
