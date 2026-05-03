@@ -80,8 +80,12 @@ compose:
         - "QDRANT__SERVICE__ENABLE_TLS=false"
         # Telemetry off — Qdrant phones home anonymized usage stats by default.
         - "QDRANT__TELEMETRY_DISABLED=true"
-        # Storage tuning — defaults are fine for a single-node operator workload.
-        - "QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD=20000"
+        # NOTE: memmap_threshold env override removed 2026-05-03 — collided with
+        # the default config.yaml entry inside the image, causing
+        # "duplicate field memmap_threshold for key storage.optimizers" at
+        # parse time and a tight restart-loop. Defaults are fine for a single-
+        # node operator workload; tuning lands as a config.yaml override
+        # instead of an env var when actually needed.
       volumes:
         - qdrant_storage:/qdrant/storage
         - qdrant_snapshots:/qdrant/snapshots
