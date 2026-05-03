@@ -237,7 +237,7 @@
     # signed POST returns 401 "invalid signature" — surfaced 2026-05-03.
     - name: "[Apps Post] Canonicalize Bone body via jq -cS (matches server-side encoding)"
       ansible.builtin.shell:
-        cmd: 'printf %s "$NOS_BODY" | jq -cS .'
+        cmd: 'set -o pipefail; printf %s "$NOS_BODY" | jq -cS .'
         executable: /bin/bash
       environment:
         NOS_BODY: "{{ _apps_bone_body }}"
