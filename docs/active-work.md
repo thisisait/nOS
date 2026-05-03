@@ -4,19 +4,48 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-01 • commit: e4e877f post-Track-F-implementation • by: pazny+claude
+> Last updated: 2026-05-03 • commit: 84cc69a post-CF-Full-strict-fix • by: pazny+claude
 
 ---
 
-## Current track: **G — Cloudflare proxy + LE production exposure** (scaffolded; wet activation pending domain switch)
+## Current track: **G — Cloudflare proxy + LE production exposure** (~95% wet — Stalwart SMTP remaining)
 
-> Track F **DONE 2026-05-01**, Track G **scaffolded 2026-05-01** (all toggles off pending DNS flip), bones&wings refactor seed-work **landed 2026-05-02** (`hooks/playbook-end.d/20-cve-drift-check.sh` + `tools/wing-telemetry-smoke.py` + `files/vuln-scan/lib-jsonl.sh` integration + 3 security agent SSO identities). Refactor PoC implementation (phases A0-A10) still NOT started; gate = operator confirms domain switch + Stalwart wet test.
+> Track F **DONE 2026-05-01**, Track G **wet activation 2026-05-02/03** on `pazny.eu`: real LE wildcard via CF DNS-01, CF SSL/TLS = Full (strict) confirmed by operator 2026-05-03 (clears ERR_TOO_MANY_REDIRECTS), `dnsmasq_force_local_domains: true` enabled for LAN-internal access via 127.0.0.1. **Remaining for G exit:** Stalwart SMTP wet test (`install_smtp_stalwart: true` + outbound from 5+ services), Bluesky public federation toggle (`bluesky_pds_public_federation: true`). Bones&wings refactor PoC implementation (phases A0-A10) still NOT started; gate = Stalwart wet.
+
+### Production blank survivors (six fixes during 2026-05-02 prod cutover)
+
+| Commit | Fix |
+|---|---|
+| `5598342` | bluesky_pds_bridge: filter returns list not string (Jinja `>-` → `from_json` round-trip) |
+| `dbde538` | acme: apex-first `acme_domains` order + tolerant cert-dir detection (legacy `*.zone/` shape) |
+| `25998b9` | bluesky-pds: adopt new goat CLI shape (no `--invite-code` on `account create`) |
+| `f97e22d` | acme: tolerate evolved skip-message formats (`'Skipping'` + `'Domains not changed'`) |
+| `32489b4` | acme: copy cert files into bind-mount instead of symlinking host `$HOME` path (containers can't follow) |
+| `84cc69a` | nos-smoke: redirect-loop detector + `docs/operator-domain-switch.md` Step 3.5 (CF Full-strict requirement) |
 
 ## Previous track: **F — Dynamic instance_tld + per-host alias** ✅
 
 [Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 
-## Current sub-step: **Track G kickoff — Phase 1 awaits**
+## Current sub-step: **Track G — Stalwart SMTP wet test** (last mile to G exit)
+
+Stalwart role landed dry in `0b83066` (Track G full scaffold). Activation:
+
+```yaml
+# config.yml
+install_smtp_stalwart: true
+```
+
+Then `ansible-playbook main.yml -K --tags smtp_stalwart` (or full blank). Verify:
+- container healthy
+- outbound `swaks --to test@gmail.com --server smtp.pazny.eu:587` accepted
+- 5+ nOS services configured to use Stalwart as their relay (Authentik, Outline, Nextcloud, Vaultwarden, GitLab — pick 5 with SMTP env vars)
+
+Note: ISP-side port-25 block likely; Stalwart submission port (587) must be the relay path. Mailpit can stay as catch-all dev fallback.
+
+After Stalwart wet → Track G exit-criteria all green → flip pointer to **bones&wings PoC** (`docs/bones-and-wings-refactor.md`, ~12 days).
+
+## Previous sub-step: ~~Track G kickoff — Phase 1~~ DONE
 
 Track F **DONE 2026-05-01** in 16 commits `8e8a038..69f021b`. All seven
 phases (F1 survey → F7 docs) verified, plus deep-review covering
@@ -118,9 +147,9 @@ Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this
 
 | Surface | State |
 |---|---|
-| `git status` | clean (or pending commits — check before any write) |
-| Last green blank | `ok=892 changed=268 failed=0 skipped=378` (2026-05-01 22:58, host_alias=lab) — **Track F end-to-end ✅** 40 Traefik routers on `*.lab.dev.local`, 3/3 Tier-2 piloti on `*.lab.apps.dev.local`, 39/39 smoke OK |
-| Last default-config blank | `ok=892 changed=267 failed=0 skipped=378` (2026-05-01 22:19) — Track F default verified byte-identical-shape, 38/39 smoke OK (1× wordpress 500 cold-start flake) |
+| `git status` | clean; `master` 7 commits ahead of `origin/master` (2026-05-02/03 production fixes — push when ready) |
+| Last green blank | `ok=842 changed=262 failed=0` (2026-05-02, `tenant_domain=pazny.eu` PRODUCTION) — Track G wet, real LE wildcard via CF DNS-01, all 4 Tier-2 healthy, Authentik users provisioned, PDS DIDs created, smoke OK after CF Full-strict flip on 2026-05-03 |
+| Last green blank (dev.local) | `ok=892 changed=268 failed=0` (2026-05-01 22:58, host_alias=lab) — Track F end-to-end |
 | Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live |
 | Tier-1 services | all healthy |
 | Tests | 431 collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 skipped (optional deps). |
