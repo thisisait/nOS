@@ -1,0 +1,247 @@
+# =============================================================================
+# grafana-base — service plugin (DRAFT, A6.5 PoC artifact)
+#
+# Status: research draft, captured 2026-05-03. NOT loaded by anything.
+# Purpose: prove §1.1 doctrine on Grafana before Phase A6.5 implementation.
+#
+# This manifest documents what `pazny.grafana` will look like AFTER it sheds
+# its wiring. Every block here corresponds to a surface inventoried in
+# `files/anatomy/docs/grafana-wiring-inventory.md`.
+#
+# Reading guide:
+#   - Sections marked SKILL/SCHEDULED-JOB/UI-EXTENSION/NOTIFIER come from the
+#     PoC plugin schema (§6.3).
+#   - Sections marked INFRA/OBSERVABILITY/COMPOSE-EXTENSION are the post-PoC
+#     "service plugin" extensions (§6.2). For A6.5 these run; for skill-only
+#     plugins (gitleaks A7) they're absent.
+#   - `requires.role: pazny.grafana` makes this a SERVICE plugin — activates
+#     only when the role is installed.
+# =============================================================================
+
+name: grafana-base
+version: 0.1.0
+description: |
+  Wiring layer for the Grafana service: provisioning (datasources +
+  dashboards), Authentik OIDC, observability self-metrics, GDPR row.
+  This is the "vessel" connecting roles/pazny.grafana (skeleton) to anatomy.
+upstream: https://grafana.com/oss/grafana/
+license: AGPL-3.0  # Grafana itself; this plugin manifest is repo-licensed
+
+type:
+  - service           # this is a service-type plugin (binds to a role)
+  - ui-extension      # extends Wing /hub with grafana deep-link cards (post-PoC)
+
+# =============================================================================
+# REQUIRES — when does this plugin activate?
+# =============================================================================
+
+requires:
+  role: pazny.grafana          # only activates when grafana role is installed
+  feature_flag: install_observability   # AND the feature flag is on
+  variables:
+    - grafana_domain           # plugin's compose-extension references it
+    - grafana_port             # smoke + post-hook
+    - tenant_domain            # OIDC redirect_uri composition
+    - host_alias               # OIDC redirect_uri composition (may be empty)
+    - global_password_prefix   # OIDC client_secret derivation
+
+# =============================================================================
+# AUTHENTIK — OIDC client (replaces today's `authentik_oidc_apps` row)
+# =============================================================================
+# Plugin loader resolves these into the Authentik blueprint at deploy time.
+# Today's `authentik_oidc_apps | selectattr(slug=grafana)` derivation in
+# default.config.yml becomes redundant — loader derives `client_id` and
+# `client_secret` from this block.
+
+authentik:
+  client_id: nos-grafana
+  client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
+  slug: grafana
+  redirect_uris:
+    - "https://{{ grafana_domain }}/login/generic_oauth"
+  launch_url: "https://{{ grafana_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  # Tier binding (RBAC) — replaces today's `authentik_app_tiers` mapping
+  tier: 1   # admin
+
+# =============================================================================
+# COMPOSE-EXTENSION — secondary docker-compose override
+# =============================================================================
+# Plugin loader renders this template into
+#   {{ stacks_dir }}/observability/overrides/grafana-base.yml
+# Docker Compose merges it with the role's own override fragment.
+#
+# This is the resolution to EC1 (compose-template OIDC env block). The role's
+# template will lose all GF_AUTH_* and GF_INSTALL_PLUGINS env vars; this
+# override puts them back, scoped to the plugin's lifecycle.
+
+compose_extension:
+  template: templates/grafana-base.compose.yml.j2
+  target_stack: observability
+  target_service: grafana
+  # Loader renders into:
+  #   {{ stacks_dir }}/observability/overrides/grafana-base.yml
+  # which the existing override-discovery loop in core-up.yml picks up
+  # automatically (no core-up.yml changes needed — the loop is already
+  # `find ... -name "*.yml"`).
+
+# =============================================================================
+# PROVISIONING — Grafana-specific, file-based provisioning (datasources + dashboards)
+# =============================================================================
+# These were today in files/observability/grafana/provisioning/. Plugin loader
+# moves them at apply time to ~/observability/grafana/provisioning/.
+
+provisioning:
+  datasources:
+    template: provisioning/datasources/all.yml.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/all.yml"
+  dashboards_provider:
+    template: provisioning/dashboards/all.yml.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/dashboards/all.yml"
+  dashboards:
+    source_dir: provisioning/dashboards/
+    target_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/"
+    files:        # 17 dashboards from today's files/observability/grafana/provisioning/dashboards/
+      - 00-home.json
+      - 10-infra.json
+      - 11-docker.json
+      - 12-nginx.json
+      - 13-auth.json
+      - 14-storage.json
+      - 20-devops.json
+      - 21-wiki.json
+      - 22-ai-agents.json
+      - 23-chat.json
+      - 30-collab.json
+      - 31-home-lab.json
+      - 32-finance.json
+      - 90-security.json
+      - 91-backups.json
+      - 99-playbook.json
+
+  # Optional community dashboards downloaded from grafana.com (operator opts in
+  # via grafana_dashboards list). This was today in tasks/observability.yml.
+  community_dashboards:
+    enabled: "{{ (grafana_dashboards | default([])) | length > 0 }}"
+    list_var: grafana_dashboards
+    download_url_template: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.revision }}/download"
+    target_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/"
+
+# =============================================================================
+# LIFECYCLE HOOKS — when in the deploy timeline this plugin acts (EC5)
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    # Before `docker compose up observability --wait`
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/dashboards"
+    - render: provisioning.datasources
+    - render: provisioning.dashboards_provider
+    - copy_dashboards: provisioning.dashboards
+    - render_compose_extension: compose_extension
+  post_compose:
+    # After grafana container is up + healthy
+    - wait_health: "http://127.0.0.1:{{ grafana_port }}/api/health"
+    # Future: POST /api/folders for plugin folders, etc.
+    # Admin-password-reset stays in pazny.grafana/tasks/post.yml (EC2)
+  post_blank:
+    # On `blank=true` runs — plugin cleans its data
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning"
+    # Loader handles GDPR/audit row preservation per default policy
+
+# =============================================================================
+# OBSERVABILITY — plugin-self-metrics (Grafana scrapes itself)
+# =============================================================================
+# This is METRICS ABOUT the plugin's job (provisioning success), NOT about
+# Grafana the service. For Grafana-the-service metrics we'd add a separate
+# alloy-scrape entry in alloy-base plugin (post-Q1).
+
+observability:
+  metrics:
+    - name: grafana_base_provision_total
+      type: counter
+      labels: [result]                  # success / fail
+    - name: grafana_base_dashboards_count
+      type: gauge
+      labels: [source]                  # in_repo / community / plugin
+  # No dashboard for plugin-self-metrics (would be circular). Conductor agent
+  # surfaces these in /inbox if provisioning fails 2 runs in a row.
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+# Today: NO grafana row in any GDPR register (gap discovered via inventory).
+# This plugin closes that gap.
+
+gdpr:
+  data_categories:
+    - usage_metrics
+    - dashboard_view_logs
+    - oauth_session_data
+  data_subjects:
+    - operator
+    - admins
+  legal_basis: legitimate_interests
+  # Operator runs Grafana for self-observability — no third-party data subjects.
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card (post-PoC; here for forward-spec)
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Grafana"
+    icon: chart-line
+    url: "https://{{ grafana_domain }}"
+    tier: 1
+    description: "Metrics, logs, traces"
+    health_check: "https://{{ grafana_domain }}/api/health"
+  # No /plugins/grafana-base route in Wing — the value of this plugin is
+  # transparent (it's wiring, not a feature). Operator interacts with Grafana
+  # itself, not with the plugin.
+
+# =============================================================================
+# NOTIFICATIONS — what the plugin says to the operator
+# =============================================================================
+
+notification:
+  on_provision_failure:    # plugin-loader-emitted, severity=high
+    channels: [wing-inbox, ntfy]
+    template: notifications/provision-failed.txt
+  templates:
+    ntfy: notifications/provision-failed.ntfy
+
+# =============================================================================
+# SCHEMA — wing.db tables this plugin owns
+# =============================================================================
+# A6.5 scope: none. Plugin runs without DB writes (provisioning is filesystem +
+# Grafana API). If post-Q we want to track per-dashboard view counts in wing.db,
+# add a `schema:` block here.
+
+# =============================================================================
+# FILES SHIPPED WITH THIS PLUGIN
+# =============================================================================
+# Reference layout — for A6.5 implementation phase:
+#
+# files/anatomy/plugins/grafana-base/
+# ├── plugin.yml                                          # this file
+# ├── README.md                                            # operator-facing
+# ├── templates/
+# │   └── grafana-base.compose.yml.j2                     # vessel: OIDC + plugin install env
+# ├── provisioning/
+# │   ├── datasources/all.yml.j2                          # MOVED from files/observability/...
+# │   └── dashboards/
+# │       ├── all.yml.j2                                  # MOVED
+# │       └── [17 dashboard JSONs]                        # MOVED
+# ├── notifications/
+# │   ├── provision-failed.txt
+# │   └── provision-failed.ntfy
+# └── tests/
+#     └── test_compose_extension_renders.py               # plugin schema + render parity
