@@ -5,7 +5,7 @@
 {
   "generated_at": "{{ ansible_date_time.iso8601 }}",
   "hostname": "{{ ansible_facts['hostname'] }}",
-  "domain": "{{ dnsmasq_dev_domain | default('dev.local') }}",
+  "domain": "{{ tenant_domain | default(dnsmasq_dev_domain | default('dev.local')) }}",
   "services": [
 {% set _services = [] %}
 {# ── Tier 1: Services with a domain (HTTPS) ───────────────────────────── #}
@@ -792,8 +792,25 @@
 {% for svc in (apps_extra_services | default([])) %}
 {% set _ = _services.append(svc) %}
 {% endfor %}
-{# ── Output _services as a JSON array ───────────────────────────────────── #}
+{# Inject derived `id` field on every service entry. Avoids having to
+   patch all 56 _services.append blocks above; consumers (Bone /api/services,
+   Wing SystemRepository::ingestRegistry, jsOS catalog) all expect an
+   `id` slug. Derivation: toggle_var with `install_` prefix stripped
+   (mirrors the PHP fallback in SystemRepository.php). Apps-runner-supplied
+   entries already carry their own `id` (e.g. `app_documenso`); we only
+   inject when missing. #}
+{% set _services_with_ids = [] %}
 {% for svc in _services %}
+{%   if svc.get('id') %}
+{%     set _ = _services_with_ids.append(svc) %}
+{%   else %}
+{%     set _tv = svc.get('toggle_var', '') %}
+{%     set _id = (_tv[8:] if _tv.startswith('install_') else _tv) | default(svc.get('name','unknown') | lower | replace(' ','_'), true) %}
+{%     set _ = _services_with_ids.append(svc | combine({'id': _id})) %}
+{%   endif %}
+{% endfor %}
+{# ── Output _services as a JSON array ───────────────────────────────────── #}
+{% for svc in _services_with_ids %}
     {{ svc | to_json }}{{ "," if not loop.last else "" }}
 {% endfor %}
   ],

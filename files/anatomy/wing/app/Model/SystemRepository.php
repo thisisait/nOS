@@ -256,9 +256,30 @@ final class SystemRepository
 				}
 			}
 
-			// Normalize service ID
+			// Normalize service ID. Priority order:
+			//   1. explicit `id` field (preferred — set by template author)
+			//   2. toggle_var with `install_` prefix stripped (most registry
+			//      entries have only this; the prefix is an Ansible-flag
+			//      convention, not part of the system identity)
+			//   3. fallback: derive from `name`
+			//
+			// 2026-05-03: previously this used raw toggle_var as ID, which
+			// produced rows like `install_openwebui` instead of `openwebui`,
+			// orphaning every prior-run row in the table whenever the slug
+			// convention shifted. The strip+fallback chain keeps IDs stable
+			// across template revisions and across nOS rebrands.
 			$name = $svc['name'] ?? 'unknown';
-			$id = $svc['toggle_var'] ?? strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $name));
+			$id = $svc['id'] ?? null;
+			if (!$id) {
+				$tv = $svc['toggle_var'] ?? '';
+				if ($tv !== '' && str_starts_with($tv, 'install_')) {
+					$id = substr($tv, strlen('install_'));
+				} elseif ($tv !== '') {
+					$id = $tv;
+				} else {
+					$id = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $name));
+				}
+			}
 
 			$this->upsert([
 				'id' => $id,
@@ -281,11 +302,46 @@ final class SystemRepository
 			$imported++;
 		}
 
-		// After ingest: merge orphan components_db entries into their registry
-		// counterparts by name, then delete the orphans.
+		// Sweep: rows from prior runs that used the old `install_*` toggle_var
+		// as the ID convention are now orphaned (their non-prefixed counterparts
+		// were just upserted). Drop them so the /hub stops showing
+		// `install_openwebui` next to `openwebui`. Limited to source=registry
+		// so we don't nuke manually-curated entries (security scans, etc.).
+		$swept = $this->db->table('systems')
+			->where('source', 'registry')
+			->where('id LIKE ?', 'install_%')
+			->delete();
+
+		// Sweep: stale rows whose domain reflects an OLD tenant_domain
+		// (e.g. `*.dev.local` after the operator switched to `pazny.eu`).
+		// Identified by domain-suffix mismatch against the registry's
+		// current `domain` value. NOT source-gated — components_db rows
+		// from the security scanner pipeline can carry a stale `domain`
+		// field too (set by an earlier dedup() merge), and they're just
+		// as wrong on a re-tenanted host. Stack-parent rows are exempt
+		// (they never have a `domain` anyway).
+		$currentTenant = $data['domain'] ?? null;
+		$staleSwept = 0;
+		if ($currentTenant) {
+			$staleSwept = $this->db->table('systems')
+				->where('domain IS NOT NULL')
+				->where('domain != ?', '')
+				->where('NOT (domain LIKE ? OR domain = ?)',
+					'%.' . $currentTenant, $currentTenant)
+				->delete();
+		}
+
+		// After ingest + sweep: merge orphan components_db entries into their
+		// registry counterparts by name, then delete the orphans.
 		$merged = $this->dedup();
 
-		return ['imported' => $imported, 'stacks_created' => $stacksCreated, 'merged' => $merged];
+		return [
+			'imported' => $imported,
+			'stacks_created' => $stacksCreated,
+			'merged' => $merged,
+			'orphans_swept' => $swept,
+			'stale_domains_swept' => $staleSwept,
+		];
 	}
 
 

@@ -42,5 +42,7 @@ $repo = $container->getByType(App\Model\SystemRepository::class);
 $result = $repo->ingestRegistry($registryPath);
 
 $merged = $result['merged'] ?? 0;
-echo "Ingested {$result['imported']} systems, created {$result['stacks_created']} stack parents, merged $merged duplicates\n";
+$orphans = $result['orphans_swept'] ?? 0;
+$staleDom = $result['stale_domains_swept'] ?? 0;
+echo "Ingested {$result['imported']} systems, created {$result['stacks_created']} stack parents, merged $merged duplicates, swept $orphans install_* orphans + $staleDom stale-domain rows\n";
 echo "Registry: $registryPath\n";
