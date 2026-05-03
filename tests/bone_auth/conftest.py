@@ -1,6 +1,7 @@
 """Test fixtures for Bone's JWT auth module.
 
-We import auth.py directly from files/bone/ — same trick the existing
+We import auth.py directly from files/anatomy/bone/ (moved from
+files/bone/ in anatomy A3a, 2026-05-03) — same trick the existing
 callback tests use to load wing_telemetry.py without packaging the bone
 sources as a real Python distribution.
 """
@@ -15,7 +16,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-BONE_DIR = ROOT / "files" / "bone"
+BONE_DIR = ROOT / "files" / "anatomy" / "bone"
 
 
 def _load(name: str, path: Path):
@@ -29,7 +30,7 @@ def _load(name: str, path: Path):
 
 @pytest.fixture
 def auth_mod(monkeypatch):
-    """Load files/bone/auth.py with a deterministic test issuer."""
+    """Load files/anatomy/bone/auth.py with a deterministic test issuer."""
     monkeypatch.setenv("AUTHENTIK_OIDC_ISSUER", "https://auth.test.example/application/o/")
     monkeypatch.setenv("AUTHENTIK_JWKS_URL", "https://auth.test.example/application/o/jwks/")
     monkeypatch.setenv("BONE_REQUIRE_JWT_AUTH", "1")

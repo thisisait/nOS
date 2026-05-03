@@ -2,31 +2,40 @@
 # ==============================================================================
 # pazny.bone — local FastAPI organ (state / migrations / dispatcher).
 #
-# As of 2026-04-26 Bone is containerized (Track A of the Q2 roadmap). The
-# role used to render a launchd plist + Python venv on the host; that path
-# is now retired. The container is built locally from files/bone/Dockerfile
-# and lives in the `infra` compose stack.
+# History:
+#   pre-2026-04-26 — host launchd Python daemon
+#   2026-04-26 (Track A) — containerized in the infra compose stack
+#   2026-05-03 (Anatomy A3a) — REVERSED back to host launchd. Eliminates
+#     bundled-ansible-core debt (Bone uses operator's pyenv ansible
+#     directly), enables direct loopback API for Pulse + future host-Wing.
 #
-# `bone_secret` itself stays in top-level default.config.yml so prefix
-# rotation via global_password_prefix works consistently.
+# `bone_secret` stays in top-level default.config.yml so prefix rotation
+# via global_password_prefix works consistently.
 # ==============================================================================
 
 bone_port: 8099
 bone_domain: "api{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
-# Container image is built locally from {{ playbook_dir }}/files/bone.
-# Tag is bumped manually when the Dockerfile or pinned ansible-core
-# version changes (see Track A6 migration recipe).
-bone_image_tag: "local"
-bone_image: "nos-bone:{{ bone_image_tag }}"
+# ── Host launchd shape (Anatomy A3a) ────────────────────────────────────────
+bone_user: "{{ ansible_facts['env']['USER'] }}"
+bone_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/bone"
+bone_venv: "{{ bone_runtime_dir }}/venv"
+bone_log_dir: "{{ bone_runtime_dir }}/log"
+bone_launchd_label: "eu.thisisait.nos.bone"
+bone_python: "{{ ansible_facts['env']['HOME'] }}/.pyenv/shims/python3"
 
-# Resource caps. Bone's hot path is pure FastAPI (sub-100MB RSS); the
-# generous limit covers `ansible-playbook` subprocess invocations.
-bone_mem_limit: "512m"
-
-# Runtime mounts. State lives outside the playbook tree so a `git clean`
-# can never wipe migration history. The wing-db parent is the directory
-# Wing's container will write into (Track A5).
+# Mount paths (now real host paths, not bind-mount targets). State lives
+# outside the playbook tree so a `git clean` can never wipe migration
+# history. The wing-db parent is where Wing writes its sqlite (Track A2 ⇒
+# files/anatomy/wing/data → host ~/wing/app/data via pazny.wing rsync).
 bone_state_dir:    "{{ ansible_facts['env']['HOME'] }}/.nos"
 bone_registry_dir: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default"
 bone_wing_db_dir:  "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}"
+
+# ── Track-A legacy (kept for migration recipe + bone_image var refs) ────────
+# bone_image was used by Track-A compose. Retained as a sentinel for any
+# downstream consumer that still references the var (will produce a clear
+# 'image not used' message rather than an undefined-var error).
+bone_image_tag: "local"
+bone_image: "nos-bone:{{ bone_image_tag }}"
+bone_mem_limit: "512m"  # was a container limit; informational in host mode

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ bone_launchd_label }}</string>
+
+    <!--
+        Run bone via the role-managed venv's uvicorn directly. main.app is
+        the FastAPI ASGI app; uvicorn binds to the loopback. Traefik
+        reaches it via host.docker.internal:{{ bone_port }} (file-provider).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ bone_venv }}/bin/uvicorn</string>
+        <string>main:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>{{ bone_port }}</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ bone_runtime_dir }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ bone_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+
+        <!-- Bone-specific config (matches container env from Track A) -->
+        <key>BONE_SECRET</key>
+        <string>{{ bone_secret | default('') }}</string>
+        <key>WING_EVENTS_HMAC_SECRET</key>
+        <string>{{ wing_events_hmac_secret | default(bone_secret | default('')) }}</string>
+        <key>INSTANCE_NAME</key>
+        <string>{{ instance_name | default('nos') }}</string>
+        <!-- Track F: Bone reads INSTANCE_TLD; resolved from tenant_domain -->
+        <key>INSTANCE_TLD</key>
+        <string>{{ tenant_domain | default('dev.local') }}</string>
+
+        <!-- Direct host paths (formerly /playbook, /state, /registry, /wing-db mounts) -->
+        <key>PLAYBOOK_DIR</key>
+        <string>{{ playbook_dir }}</string>
+        <key>STATE_DIR</key>
+        <string>{{ bone_state_dir }}</string>
+        <key>SERVICE_REGISTRY_PATH</key>
+        <string>{{ bone_registry_dir }}/service-registry.json</string>
+        <key>WING_DB_DIR</key>
+        <string>{{ bone_wing_db_dir }}</string>
+
+        {% if install_authentik | default(false) %}
+        <!-- Track B JWT auth: Bone validates incoming tokens against Authentik. -->
+        <!-- In host mode, Bone reaches Authentik via the public Traefik path -->
+        <!-- (was http://authentik-server:9000 internal compose net). -->
+        <key>AUTHENTIK_OIDC_ISSUER</key>
+        <string>{{ authentik_oidc_issuer | default('https://' + (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) + '/') }}</string>
+        <key>AUTHENTIK_JWKS_URL</key>
+        <string>{{ bone_jwks_url | default('https://' + (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) + '/application/o/nos-state-manager/jwks/') }}</string>
+        <key>BONE_REQUIRE_JWT_AUTH</key>
+        <string>1</string>
+        {% else %}
+        <key>BONE_REQUIRE_JWT_AUTH</key>
+        <string>0</string>
+        {% endif %}
+    </dict>
+
+    <!-- launchd respawns on crash; ThrottleInterval prevents tight loops. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ bone_log_dir }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ bone_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

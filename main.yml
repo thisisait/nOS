@@ -500,13 +500,13 @@
       failed_when: false
 
     - name: Restart bone
-      # Container path (Track A, 2026-04-26): Bone runs as the `bone` service
-      # in the infra compose stack. The legacy launchd plist is removed by
-      # roles/pazny.bone/tasks/main.yml + the bone-to-container migration.
-      ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
-        restart bone
-      failed_when: false
+      # Anatomy A3a (2026-05-03): Bone reverted from container → host launchd.
+      # Restart via launchctl kickstart -k for graceful drain. The Track A
+      # docker compose restart path is gone — the container is removed by
+      # the role's track-A reversal cleanup.
+      ansible.builtin.shell: |
+        launchctl kickstart -k "gui/$(id -u)/eu.thisisait.nos.bone" 2>/dev/null || true
+      changed_when: false
 
     - name: Restart bluesky-pds
       ansible.builtin.shell: >

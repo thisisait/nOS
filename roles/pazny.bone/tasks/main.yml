@@ -1,35 +1,68 @@
 ---
 # ==============================================================================
-# pazny.bone — local FastAPI organ (Track A: containerized 2026-04-26).
+# pazny.bone — local FastAPI organ (host launchd, Anatomy A3a 2026-05-03).
 #
-# Called from tasks/stacks/core-up.yml BEFORE `docker compose up infra`.
-# Renders the compose-override fragment + ensures the host directories that
-# Bone bind-mounts exist (Docker would otherwise create them as root-owned
-# directories and crash the role).
+# History:
+#   pre-2026-04-26 — host launchd Python daemon
+#   2026-04-26 (Track A) — containerized in the infra compose stack
+#   2026-05-03 (Anatomy A3a) — REVERSED back to host launchd, mirroring the
+#     pulse role from A4. This eliminates the bundled-ansible-core debt
+#     (Bone now uses the operator's pyenv ansible directly) and allows
+#     direct loopback API access for Pulse + future host-mode Wing.
 #
-# Post-start health probe lives in tasks/post.yml — invoked AFTER infra is
-# up so we can verify /api/health from the host.
+# Source tree: files/anatomy/bone/  (moved from files/bone/ in this commit)
+# Runtime tree: ~/bone/{venv,state,log}
+#
+# This file ALSO does the one-shot container teardown for ops upgrading
+# from the Track A shape — see "Track-A reversal cleanup" block.
 # ==============================================================================
 
-# ── Ensure host-side bind-mount targets exist ─────────────────────────────────
-# Docker creates missing bind-mount sources as empty directories owned by root.
-# That's fine for state_dir / wing-db (we expect them to be a dir), but the
-# registry parent must exist or Bone won't be able to read it on startup.
+- name: "[pazny.bone] Skip when install_bone: false"
+  ansible.builtin.meta: end_play
+  when: not (install_bone | default(true) | bool)
 
-- name: "[pazny.bone] Ensure state + registry + wing-db directories exist"
+# ── Track-A reversal cleanup ─────────────────────────────────────────────────
+# Stop + remove the bone container if it exists from a prior (Track A) run.
+# Idempotent: when no container exists (fresh install), all four steps no-op.
+# The compose-override fragment is also removed so the next `docker compose
+# up infra` doesn't try to recreate the container.
+
+- name: "[pazny.bone] Track-A reversal — check if legacy bone container exists"
+  ansible.builtin.shell: |
+    {{ docker_bin | default('/usr/local/bin/docker') }} ps -a --filter "name=^bone$" --format "{{ '{{' }}.Names{{ '}}' }}"
+  register: _bone_container_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.bone] Track-A reversal — stop + remove legacy container"
+  ansible.builtin.shell: |
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra stop bone 2>/dev/null || true
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p infra rm -f bone 2>/dev/null || true
+    {{ docker_bin | default('/usr/local/bin/docker') }} rm -f bone 2>/dev/null || true
+  when: _bone_container_check.stdout | default('') | trim == 'bone'
+  changed_when: true
+
+- name: "[pazny.bone] Track-A reversal — remove stale compose override"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/infra/overrides/bone.yml"
+    state: absent
+
+# ── Runtime directories ──────────────────────────────────────────────────────
+
+- name: "[pazny.bone] Ensure runtime directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
+    - "{{ bone_runtime_dir }}"
+    - "{{ bone_log_dir }}"
     - "{{ bone_state_dir }}"
     - "{{ bone_registry_dir }}"
     - "{{ bone_wing_db_dir }}"
 
-# ── Touch service-registry.json so its absence doesn't break compose-up ───────
-# Bone tolerates a missing file (returns []), but we want a stable bind-mount
-# semantic. The placeholder is overwritten by tasks/service-registry.yml later
-# in the playbook when actual services are known.
+# ── Service-registry placeholder (unchanged from container era) ──────────────
 
 - name: "[pazny.bone] Stat service-registry.json"
   ansible.builtin.stat:
@@ -44,55 +77,73 @@
     force: false  # never overwrite a real registry
   when: not _bone_registry_stat.stat.exists
 
-# ── Render compose-override fragment ──────────────────────────────────────────
-# Discovered by tasks/stacks/core-up.yml's find task and merged into
-# `docker compose up infra` via additional -f flags.
+# ── Python venv + source sync ────────────────────────────────────────────────
 
-- name: "[pazny.bone] Render compose override fragment"
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ stacks_dir }}/infra/overrides/bone.yml"
-    mode: '0600'
+- name: "[pazny.bone] Create Python venv"
+  ansible.builtin.command:
+    cmd: "{{ bone_python }} -m venv {{ bone_venv }}"
+    creates: "{{ bone_venv }}/bin/python"
+
+- name: "[pazny.bone] Install bone deps into venv"
+  ansible.builtin.pip:
+    requirements: "{{ playbook_dir }}/files/anatomy/bone/requirements.txt"
+    state: present
+    virtualenv: "{{ bone_venv }}"
+  changed_when: false  # pip's stdout doesn't surface 'no-op' reliably
+
+- name: "[pazny.bone] Sync Bone source to runtime dir"
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/files/anatomy/bone/"
+    dest: "{{ bone_runtime_dir }}/"
+    delete: false
+    rsync_opts:
+      - "--exclude=__pycache__"
+      - "--exclude=.pytest_cache"
+      - "--exclude=Dockerfile"        # not needed at runtime in host mode
   notify: Restart bone
 
-# ── Retire the legacy launchd plist ───────────────────────────────────────────
-# Pre-2026-04-26 installs ran Bone as a launchd-managed Python process. The
-# container now owns the lifecycle; remove the plist so it can't fight the
-# container for port 8099. Migration recipe at migrations/2026-05-01-...yml
-# does the heavy lifting (launchctl bootout + venv cleanup) — these tasks are
-# the idempotent fallback for fresh installs that never had the plist.
+# ── launchd plist ────────────────────────────────────────────────────────────
 
-- name: "[pazny.bone] Stop legacy launchd service if present"
-  ansible.builtin.command:
-    cmd: launchctl bootout gui/{{ ansible_facts['user_uid'] | default(ansible_user_uid | default('501')) }}/eu.thisisait.nos.bone
-  register: _bone_legacy_bootout
-  changed_when: _bone_legacy_bootout.rc == 0
-  failed_when:
-    - _bone_legacy_bootout.rc != 0
-    - "'Could not find specified service' not in (_bone_legacy_bootout.stderr | default(''))"
-    - "'No such process' not in (_bone_legacy_bootout.stderr | default(''))"
-  when: ansible_os_family == 'Darwin'
+- name: "[pazny.bone] Render launchd plist"
+  ansible.builtin.template:
+    src: bone.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ bone_launchd_label }}.plist"
+    mode: '0644'
+  notify: Restart bone
 
-- name: "[pazny.bone] Remove legacy launchd plist"
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.bone.plist"
-    state: absent
-  when: ansible_os_family == 'Darwin'
+- name: "[pazny.bone] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ bone_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ bone_launchd_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _bone_bootstrap
+  changed_when: "'bootstrapped' in _bone_bootstrap.stdout"
 
-# ── Print summary ─────────────────────────────────────────────────────────────
+# ── Setup summary ────────────────────────────────────────────────────────────
 
-- name: "[pazny.bone] Print setup summary"
+- name: "[pazny.bone] Setup summary"
   ansible.builtin.debug:
     msg: |
-      ══════════════════════════════════════════════════════
-       Bone — local FastAPI (containerized, Track A) ready
-      ══════════════════════════════════════════════════════
-       Image:    {{ bone_image }}  (built locally from files/bone/)
-       URL:      https://{{ bone_domain }}  (via nginx vhost)
-       Direct:   http://127.0.0.1:{{ bone_port }}
-       Health:   http://127.0.0.1:{{ bone_port }}/api/health
-       Status:   http://127.0.0.1:{{ bone_port }}/api/status
-       Mounts:   playbook={{ playbook_dir }}
-                 state={{ bone_state_dir }}
-                 wing-db={{ bone_wing_db_dir }}
-      ══════════════════════════════════════════════════════
+      ══════════════════════════════════════════════════════════════════
+       Bone — local FastAPI (host launchd, Anatomy A3a) ready
+      ══════════════════════════════════════════════════════════════════
+       Label:        {{ bone_launchd_label }}
+       Source:       {{ playbook_dir }}/files/anatomy/bone/
+       Runtime:      {{ bone_runtime_dir }}/
+       Venv:         {{ bone_venv }}
+       Logs:         {{ bone_log_dir }}/{bone.log,launchd.{out,err}.log}
+       Listening:    127.0.0.1:{{ bone_port }}  (loopback only)
+       Health:       http://127.0.0.1:{{ bone_port }}/api/health
+       URL via TLS:  https://{{ bone_domain }}  (Traefik file-provider →
+                     host.docker.internal:{{ bone_port }})
+
+       Status:       launchctl print gui/$(id -u)/{{ bone_launchd_label }}
+       Reload:       launchctl kickstart -k gui/$(id -u)/{{ bone_launchd_label }}
+       Tail logs:    tail -f {{ bone_log_dir }}/bone.log
+      ══════════════════════════════════════════════════════════════════

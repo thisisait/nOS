@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nos.local/schemas/plugin.schema.json",
+  "title": "nOS plugin manifest",
+  "description": "Validates plugin.yml under files/anatomy/plugins/<name>/. Three behavioral classes (skill / service / composition) are union-typed via top-level `type` array. Source plugins (e.g. authentik-base) declare `aggregates`. See files/anatomy/docs/plugin-loader-spec.md for field source attributions.",
+  "type": "object",
+  "required": ["name", "version", "type", "gdpr"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$",
+      "description": "Plugin slug. Lowercase, hyphen-separated, 2-64 chars."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.-]+)?$",
+      "description": "Semver."
+    },
+    "description": {"type": "string"},
+    "upstream": {"type": "string", "format": "uri"},
+    "license": {"type": "string"},
+    "type": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["skill", "service", "composition", "scheduled-job", "ui-extension", "notifier"]
+      },
+      "description": "One or more shapes. Note: skill/service/composition are MUTUALLY EXCLUSIVE behavioral classes; scheduled-job/ui-extension/notifier are capability mixins."
+    },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role":          {"type": "string", "description": "Service plugin: which Tier-1 role must be installed."},
+        "apps_manifest": {"type": "string", "description": "Composition-Tier-2 plugin: which apps/<name>.yml triggers this."},
+        "plugin":        {"type": "array", "items": {"type": "string"}, "description": "DAG edges — plugins that must be loaded before this one."},
+        "feature_flag":  {"type": "string", "description": "Ansible var name (e.g. install_observability) that gates activation."},
+        "variables":     {"type": "array", "items": {"type": "string"}, "description": "Var names referenced by manifest Jinja — loader pre-checks they're defined."}
+      }
+    },
+    "aggregates": {
+      "type": "array",
+      "description": "Source plugins (e.g. authentik-base) harvest blocks from other loaded plugins / agent profiles into a merged input. See V4 inventory SR-1.",
+      "items": {
+        "type": "object",
+        "required": ["from", "block_path", "output_var"],
+        "additionalProperties": false,
+        "properties": {
+          "from":       {"type": "string", "enum": ["consumer_block", "agent_profile"]},
+          "block_path": {"type": "string", "description": "Top-level key in target manifests to harvest (e.g. 'authentik')."},
+          "output_var": {"type": "string", "description": "Where to deposit the aggregated list on this plugin's inputs.<output_var>."}
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pre_render":   {"type": "array"},
+        "pre_compose":  {"type": "array"},
+        "post_compose": {"type": "array"},
+        "post_blank":   {"type": "array"}
+      },
+      "description": "Per-hook action lists. Each entry is an arbitrary action object — loader interprets the well-known keys (ensure_dir, render, render_compose_extension, copy_dashboards, wait_health, remove_dir)."
+    },
+    "compose_extension": {
+      "type": "object",
+      "required": ["template", "target_stack", "target_service"],
+      "additionalProperties": false,
+      "properties": {
+        "template":       {"type": "string", "description": "Path under plugin dir to a docker-compose extension Jinja template."},
+        "target_stack":   {"type": "string", "enum": ["infra", "observability", "iiab", "devops", "b2b", "voip", "engineering", "data", "apps"]},
+        "target_service": {"type": "string", "description": "MUST match the role's compose template service name (V3 P2)."}
+      }
+    },
+    "provisioning": {"type": "object", "description": "Loader-specific shape — see grafana-base/plugin.yml for the canonical example."},
+    "authentik": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "client_id":     {"type": "string"},
+        "client_secret": {"type": "string"},
+        "slug":          {"type": "string"},
+        "tier":          {"type": "integer", "minimum": 1, "maximum": 4, "description": "Required if block present. RBAC tier 1 (admin) - 4 (guest)."},
+        "provider_type": {"type": "string", "enum": ["oauth2", "proxy", "forward_auth"]},
+        "scopes":        {"type": "array", "items": {"type": "string"}},
+        "redirect_uris": {"type": "array", "items": {"type": "string"}},
+        "launch_url":    {"type": "string"}
+      },
+      "anyOf": [
+        {"required": ["client_id", "client_secret", "tier"]}
+      ]
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "metrics":   {"type": "array"},
+        "scrape":    {"type": "object", "description": "Harvested by prometheus-base aggregator (post-Q1)."},
+        "dashboard": {"type": "string"}
+      }
+    },
+    "ui-extension": {"type": "object"},
+    "notification": {"type": "object"},
+    "schema": {"type": "array", "items": {"type": "string"}, "description": "Paths to .sql migration files run idempotently against wing.db."},
+    "skill":         {"type": "object"},
+    "scheduled-job": {"type": "object"},
+    "gdpr": {
+      "type": "object",
+      "required": ["data_categories", "data_subjects", "legal_basis", "retention_days", "processors"],
+      "additionalProperties": true,
+      "properties": {
+        "data_categories": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "data_subjects":   {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "legal_basis": {
+          "type": "string",
+          "enum": ["consent", "contract", "legal_obligation", "vital_interests", "public_task", "legitimate_interests"]
+        },
+        "retention_days": {"type": "integer", "minimum": -1},
+        "processors":     {"type": "array", "items": {"type": "string"}},
+        "eu_residency":   {"type": "boolean"}
+      }
+    }
+  }
+}

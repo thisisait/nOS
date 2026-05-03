@@ -23,6 +23,18 @@
 #   7) Authentik / Infisical / Bluesky PDS post-start
 # ==============================================================================
 
+# ── Plugin loader — pre_render hook (A6, 2026-05-03) ────────────────────────
+# Discovers plugin manifests, validates, runs aggregators (e.g. authentik-base
+# harvests OIDC blocks), installs host requirements (brew/docker/url),
+# registers Authentik blueprint inputs. MUST run BEFORE the existing
+# Authentik blueprint reconverge (P4 pitfall in role-thinning-recipe.md).
+# Empty plugin set is the common case — clean no-op.
+- name: "[Core] Plugin loader — pre_render hook"
+  nos_plugin_loader:
+    hook: pre_render
+    plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+  tags: ['anatomy', 'anatomy.plugins']
+
 # ── Flush handlers - nginx must listen on 443 before HTTPS services are verified ─
 - name: "[Core] Flush handlers before core stack deployment"
   ansible.builtin.meta: flush_handlers
@@ -372,6 +384,34 @@
   register: _observability_overrides
   check_mode: false
 
+# ── Plugin loader — pre_compose hook (A6, 2026-05-03) ──────────────────────
+# Renders plugin compose-extension fragments (the "vessel" pattern from V3
+# EC1) into {{ stacks_dir }}/<stack>/overrides/<plugin>.yml. The override
+# enumeration above (find tasks) re-runs implicitly when the next compose-up
+# fires because find re-reads the dir at task time.
+- name: "[Core] Plugin loader — pre_compose hook"
+  nos_plugin_loader:
+    hook: pre_compose
+    plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+  tags: ['anatomy', 'anatomy.plugins']
+
+# Re-enumerate overrides after pre_compose hook may have rendered new fragments.
+- name: "[Core] Re-enumerate infra compose overrides (after plugin loader)"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/infra/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _infra_overrides
+  check_mode: false
+
+- name: "[Core] Re-enumerate observability compose overrides (after plugin loader)"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/observability/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _observability_overrides
+  check_mode: false
+
 # ── Start INFRA stack first (DB must be ready before anything else) ─────────
 
 - name: "[Core] Start INFRA stack (docker compose up --wait)"
@@ -502,6 +542,17 @@
     - install_bone | default(false)
     - _core_infra_enabled | bool
   tags: ['bone', 'api', 'infra']
+
+# ── Plugin loader — post_compose hook (A6, 2026-05-03) ─────────────────────
+# After all core-stack containers are healthy, plugins do their API-side
+# registrations (Wing routes, Pulse jobs, Grafana dashboards, GDPR row,
+# ntfy/mail templates). Wing/Pulse reload happens at most once per loader
+# run (debounced inside the loader).
+- name: "[Core] Plugin loader — post_compose hook"
+  nos_plugin_loader:
+    hook: post_compose
+    plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+  tags: ['anatomy', 'anatomy.plugins']
 
 # ── Result ───────────────────────────────────────────────────────────────────
 

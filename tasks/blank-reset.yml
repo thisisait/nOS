@@ -53,6 +53,19 @@
 
        Press ENTER to continue or Ctrl+C -> A to cancel
 
+# ── Plugin loader — post_blank hook (A6, 2026-05-03) ──────────────────
+# Runs BEFORE the data-dir wipe so plugins can do orderly cleanup of
+# their owned filesystem state (provisioning dirs, cached downloads).
+# Audit-log rows in wing.db are NEVER cleared (regulatory requirement,
+# enforced inside the loader). Reverse-topological order so consumers
+# clean before sources.
+- name: "[BLANK] Plugin loader — post_blank hook"
+  nos_plugin_loader:
+    hook: post_blank
+    plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+  tags: ['blank', 'reset', 'anatomy.plugins']
+  failed_when: false  # blank must continue even if plugin cleanup misbehaves
+
 # ── 2. Docker stacks - stop and remove volumes ──────────────────────────
 - name: "[BLANK] Stop Docker stacks and remove volumes"
   ansible.builtin.shell: >

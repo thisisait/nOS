@@ -2069,7 +2069,7 @@ authentik_oidc_vaultwarden_client_secret: "{{ (authentik_oidc_apps | selectattr(
 # ==============================================================================
 
 # Capability scopes Bone recognises. Adding a scope here ALSO requires:
-#   - a route in files/bone/main.py decorated with require_scope(...)
+#   - a route in files/anatomy/bone/main.py decorated with require_scope(...)
 #   - the matching scopemapping entry in the Authentik blueprint
 authentik_agent_scopes:
   - "nos:state:read"

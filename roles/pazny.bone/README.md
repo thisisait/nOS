@@ -8,7 +8,7 @@ Bone runs as a user-level launchd agent (`eu.thisisait.nos.bone`), listens on a 
 
 ## What it does
 
-1. Creates `~/bone/` and copies the Python modules from `files/bone/` (`main.py`, `state.py`, `migrations.py`, `upgrades.py`, `patches.py`, `coexistence.py`, `events.py`, `requirements.txt`)
+1. Creates `~/bone/` and copies the Python modules from `files/anatomy/bone/` (`main.py`, `state.py`, `migrations.py`, `upgrades.py`, `patches.py`, `coexistence.py`, `events.py`, `requirements.txt`)
 2. Creates a Python venv at `~/bone/venv/` if missing
 3. Installs Python dependencies into the venv via pip
 4. Renders the launchd plist `eu.thisisait.nos.bone.plist` into `~/Library/LaunchAgents/` from `templates/bone-launchd.plist.j2`
@@ -21,7 +21,7 @@ Changes to the plist template trigger a `Restart bone` handler that kicks the ag
 ## Requirements
 
 - macOS with system Python 3 (shipped with Command Line Tools)
-- The `files/bone/` directory and `templates/bone-launchd.plist.j2` staying inside the playbook repo
+- The `files/anatomy/bone/` directory and `templates/bone-launchd.plist.j2` staying inside the playbook repo
 - Play-level handler `Restart bone` defined in the consuming playbook (a role-local copy is also provided)
 
 ## Variables

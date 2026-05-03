@@ -1,11 +1,15 @@
 ---
 # ==============================================================================
-# pazny.bone — post-start tasks
+# pazny.bone — post-start tasks (Anatomy A3a, host launchd mode 2026-05-03).
+#
 # Invoked from tasks/stacks/core-up.yml AFTER `docker compose up infra --wait`.
-# Just a health probe — Bone has no DB to seed, no admin to provision.
+# In host mode Bone is launchctl-managed (not docker-managed); the probe
+# verifies the daemon is actually answering on its loopback port. KeepAlive
+# in the plist will respawn it if it crashed during startup; we give the
+# probe up to 60s (12 × 5s) to catch first-boot warm-up.
 # ==============================================================================
 
-- name: "[pazny.bone] Wait for /api/health (container up + uvicorn bound)"
+- name: "[pazny.bone] Wait for /api/health (host uvicorn bound)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ bone_port }}/api/health"
     status_code: 200
@@ -14,8 +18,18 @@
   retries: 12
   delay: 5
   until: _bone_health.status | default(0) == 200
+  failed_when: false  # don't abort the playbook — bone may still be warming up
 
 - name: "[pazny.bone] Health probe result"
   ansible.builtin.debug:
-    msg: "Bone container is healthy at http://127.0.0.1:{{ bone_port }}/api/health"
-  when: _bone_health.status | default(0) == 200
+    msg: |-
+      {% if _bone_health.status | default(0) == 200 %}
+      Bone is healthy on host at http://127.0.0.1:{{ bone_port }}/api/health
+      Process: launchctl print gui/$(id -u)/{{ bone_launchd_label }}
+      {% else %}
+      Bone /api/health did NOT respond after 60s. Check:
+        launchctl print gui/$(id -u)/{{ bone_launchd_label }}
+        tail -30 {{ bone_log_dir }}/launchd.err.log
+      Common causes: missing pyenv python ({{ bone_python }}), venv not built,
+      port {{ bone_port }} occupied by leftover container, missing dep in venv.
+      {% endif %}

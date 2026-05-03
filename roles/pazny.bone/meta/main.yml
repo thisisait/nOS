@@ -12,6 +12,6 @@ galaxy_info:
         - all
 
 # No role dependencies — Python3 and Homebrew are installed outside the role.
-# Source files/bone/ and templates/bone-launchd.plist.j2 stay in playbook repo.
+# Source files/anatomy/bone/ and templates/bone-launchd.plist.j2 stay in playbook repo.
 # Tasks use only ansible.builtin, no extra collections.
 dependencies: []
