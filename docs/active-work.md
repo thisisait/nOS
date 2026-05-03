@@ -4,173 +4,125 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-03 evening • commit: post-A6 plugin-loader landing (`717c446`) • by: pazny+claude
+> Last updated: 2026-05-03 evening • by: pazny+claude
+> • status: P0–P3 batch landed, security hardening Phase A/B/C ahead
 
 ---
 
-## Current track: **Bones & Wings refactor — PoC mid-flight** (A0..A6 landed, blank-verification next)
+## Current track: **Security hardening — Phase A/B/C** (post-P0/P3 cleanup)
 
-> **Tracks F + G + bones&wings seed work all DONE.** Track G fully wet on `pazny.eu` (49/49 smoke green incl. Tier-2 + Wave A/B + Stalwart v0.11.8). Bones&wings PoC is **6 phases ahead of last week's plan** — A0+A1+A2+A3a+A4+A6 all landed since 2026-05-03 morning. Next gate: blank verifying A3a (bone host launchd) + A6 (plugin loader empty-set no-op) wet.
+> **P0–P3 batch DONE 2026-05-03 evening.** 5 production blockers + 5
+> chained Bone HMAC bugs all fixed; Wing /hub clean (51/51 systems
+> with proper ids); Tier-2 wet-test pipeline complete (post-blank.sh,
+> tests/wet/, Cowork prompt); 30 stale remediation_items reconciled
+> (was 54 pending, now 24).
 
-### Phase status (per `docs/bones-and-wings-refactor.md` §8)
+### Last verified state (2026-05-03 19:32)
 
-| Phase | What | Status | Commit |
-|---|---|---|---|
-| A0 | files/anatomy/ skeleton + dual-path ansible.cfg | ✅ | `c09fc52` |
-| A1 | migrations/library/module_utils/patches → files/anatomy/ | ✅ | `2abbb5d` |
-| A2 | files/project-wing/ → files/anatomy/wing/ | ✅ | `4202f40` |
-| A3a | bone container → host launchd (track-A reversal) + files/bone/ → files/anatomy/bone/ | ✅ | `717c446` |
-| **A3.5** | **wing host-revert via FrankenPHP** | ⏳ NEXT after blank | — |
-| A4 | pulse skeleton (host launchd, non-agentic only) | ✅ | `b101a0d` |
-| A5 | wing OpenAPI/DDL exports | not started | — |
-| A6 | plugin loader (4 hooks + DAG + aggregator + 25 tests) | ✅ | `717c446` |
-| A6.5 | **Grafana thin-role pilot — doctrine proof** | NEXT (post-blank) | — |
-| A7 | gitleaks plugin (first real plugin via loader) | not started | — |
-| A8 | conductor agent + agent runner | not started | — |
-| A9 | notification fanout | not started | — |
-| A10 | audit trail (per-actor identity) | not started | — |
+`--tags apps,wing,nginx,traefik` re-run: `ok=151 changed=12 failed=0`.
+Earlier full blank: `ok=920 changed=282 failed=0`.
 
-### Last green blank (2026-05-03 13:28)
+- Wing /hub: 51 systems with clean IDs (was 51 with `install_*` prefix orphans)
+- Bone /api/services: 51/51 with derived `id` field (was 0/51)
+- Bone events DB: HMAC pipeline functional (HTTP 200 accepted=true)
+- Pulse: idle-tolerant, healthy, ready for 24/7 (warns on 302 from
+  unfinished Wing API endpoints; no crash)
+- code-server, Open WebUI, Puter all reachable + SSO works on pazny.eu
+- Tier-2 (twofauth/roundcube/documenso) green
+- 56 remediation_items resolved / 24 pending
 
-`ok=849 changed=199 failed=0 skipped=412` — Track G wet on `pazny.eu`, 65 containers up, smoke 49/49 OK. Pre-anatomy state. Next blank verifies anatomy A3a + A6 + watchtower fix.
+### What just landed (P0–P3 batch)
 
-### Production blank survivors (six fixes during 2026-05-02 prod cutover)
-
-| Commit | Fix |
-|---|---|
-| `5598342` | bluesky_pds_bridge: filter returns list not string (Jinja `>-` → `from_json` round-trip) |
-| `dbde538` | acme: apex-first `acme_domains` order + tolerant cert-dir detection (legacy `*.zone/` shape) |
-| `25998b9` | bluesky-pds: adopt new goat CLI shape (no `--invite-code` on `account create`) |
-| `f97e22d` | acme: tolerate evolved skip-message formats (`'Skipping'` + `'Domains not changed'`) |
-| `32489b4` | acme: copy cert files into bind-mount instead of symlinking host `$HOME` path (containers can't follow) |
-| `84cc69a` | nos-smoke: redirect-loop detector + `docs/operator-domain-switch.md` Step 3.5 (CF Full-strict requirement) |
-
-## Previous track: **F — Dynamic instance_tld + per-host alias** ✅
-
-[Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
-
-## Current sub-step: **operator blank verifies A3a + A6** (next 30-60min)
-
-Pre-flight before next operator blank:
-
-```bash
-git log origin/master..HEAD --oneline | wc -l   # ~16 commits ahead
-ansible-playbook main.yml --syntax-check         # clean
-python3 -m pytest tests/ -q --ignore=tests/php   # 475 passed (+25 plugin loader, +16 pulse)
-```
-
-Operator runs:
-
-```bash
-ansible-playbook main.yml -K -e blank=true
-```
-
-**Watch for:**
-
-1. **Bone host launchd** — `tail -f ~/bone/log/launchd.err.log` should show uvicorn binding 127.0.0.1:8099. `curl -s http://127.0.0.1:8099/api/health` returns 200 once warmed (≤60s). Track-A reversal cleanup task should remove any leftover bone container without complaints.
-2. **Plugin loader hooks** — `grep "Plugin loader.*hook" ~/.nos/ansible.log` shows pre_render / pre_compose / post_compose all called; empty plugin set → all `ok no-op`.
-3. **Watchtower** — `docker ps | grep watchtower` shows healthy (not "Restarting"); `nickfedor/watchtower:1.16.1` image instead of dead `containrrr/watchtower:1.7.1`.
-4. **Smoke** — 49/49 OK retained.
-
-**If blank green:** move to A3.5 (Wing FrankenPHP) — design has been chosen by operator 2026-05-03. Then A6.5 (Grafana thin-role pilot using new plugin loader).
-
-## Previous sub-step: ~~Track G kickoff — Phase 1~~ DONE 2026-05-03 morning blank
-
-Track F **DONE 2026-05-01** in 16 commits `8e8a038..69f021b`. All seven
-phases (F1 survey → F7 docs) verified, plus deep-review covering
-174-file hardcoded `dev.local` cleanup, plus edge-case input
-normalization, plus smoke-pipeline fixes for nos-smoke subprocess.
-
-**Track F final verification (both wet-blanks 2026-05-01 evening):**
-- **F4 default-config**: `ok=892 changed=267 failed=0`, 38/39 smoke OK
-  (1 wordpress 500 cold-start flake — 302 on retry, pre-existing not
-  Track-F regression).
-- **F5 host_alias=lab**: `ok=892 changed=268 failed=0`, **39/39 smoke
-  OK** after passing host_alias to nos-smoke subprocess. Traefik
-  reports 40 routers on `*.lab.dev.local`. All 3 Tier-2 piloti healthy
-  on `*.lab.apps.dev.local`.
-
-### What's done already (going into F)
-
-- **Track E** (Tier-2 wet test) — DONE 2026-04-30, 3 piloti zelení end-to-end
-- **Track J** (tech-debt cleanup) — DONE 2026-05-01, 6 commits `0a6a960..f321b6e`
-- **Track H** (ansible-core 2.20+ tightening + 2.24 readiness) — DONE 2026-05-01, 7 commits `6767e56..72c021d`. Re-scoped per O17 because 2.24 not yet released; current state ships `ansible-core 2.20.5` floor + verified forward-compat under 2.21.0rc1 + ansible-lint production profile clean.
-- **89 apps tests + 431 total tests** collecting clean (12 skipped on optional deps).
-- **0 ansible-lint failures**, production profile.
-- **`apps_subdomain` token already wired** in 4 places (parser + render + role) — Track F reuses this precedent for the 108 `instance_tld` occurrences.
-
-### How to enter the work
-
-**Operator gate first:** `ansible-playbook main.yml -K -e blank=true` on a clean
-host. Expected: same `ok=N changed=M failed=0` shape, smoke 36+/36+, all 4
-Tier-2 containers healthy, all 8 post-hooks fire, Authentik proxy providers
-materialize, Wing /hub lists `app_*` rows. If any line red → triage as Track-E
-recovery, no Track F until it's clean.
-
-Once blank green:
-
-1. **Phase F1 — survey** (~2h): inventory all 108 `instance_tld` occurrences.
-   `grep -rn 'instance_tld' --include='*.yml' --include='*.j2' --include='*.py'`
-   Categorize: (a) FQDN composition, (b) cookie domain, (c) cert SAN list,
-   (d) DNS suffix (dnsmasq), (e) Authentik OIDC redirect_uris.
-2. **Phase F2 — decompose** (~3h): introduce in `default.config.yml`:
-   - `tenant_domain` (replaces today's `instance_tld`; default `dev.local`)
-   - `host_alias` (default `""` — empty drops the segment)
-   - `apps_subdomain` (already exists; default `apps`)
-   - Resolved FQDN: `<svc>[.<host_alias>][.<apps_subdomain>].<tenant_domain>`
-3. **Phase F3 — refactor consumers** (~6h): touch the 108 occurrences.
-   Order: `pazny.acme` cert SAN → `pazny.traefik` static + dynamic config
-   → `library/nos_apps_render._fqdn_for` (already accepts apps_subdomain
-   kwarg) → `templates/service-registry.json.j2` → `roles/pazny.dnsmasq`
-   → `tasks/nginx.yml` (legacy fallback path)
-4. **Phase F4 — backwards-compat tests** (~1h): blank with default config
-   produces byte-identical FQDNs to today's deploy. Operator's existing
-   credentials.yml and config.yml survive without manual edits.
-5. **Phase F5 — `host_alias` smoke test** (~2h): blank with `host_alias: "lab"`
-   produces working `*.lab.dev.local` services, Authentik OIDC redirects work,
-   Tier-2 still healthy.
-6. **Phase F6 — migration recipe** (~1h): `migrations/2026-05-XX-instance-tld-decomposition.yml`
-   migrates old config.yml `instance_tld: foo` to new `tenant_domain: foo`.
-7. **Phase F7 — docs** (~1h): `docs/operator-domain-naming.md` explaining
-   the three-segment composition + when to set `host_alias`.
-
-### Where to look for diagnostics if something fails
-
-| Symptom | Where to look |
-|---|---|
-| FQDN mismatch in Traefik | `curl -s http://127.0.0.1:8082/api/http/routers \| jq` |
-| Cert SAN doesn't cover new hostname | `mkcert -CAROOT && openssl x509 -in $TLS_CERT -text \| grep DNS:` |
-| Authentik OIDC redirect_uri rejected | Authentik admin → Applications → check redirect URI match |
-| Wing /hub wrong URL | `sqlite3 ~/wing/wing.db "SELECT id, url FROM systems"` |
-| dnsmasq doesn't resolve new FQDN | `dig @127.0.0.1 -p 5353 <fqdn>` |
-| Cookie not shared cross-subdomain | DevTools → Cookies → check Domain=... |
+| Pri | Fix | Files |
+|---|---|---|
+| P0 | Wing systems IDs — strip `install_` prefix in PHP, sweep stale `*.dev.local` rows | `app/Model/SystemRepository.php`, `bin/ingest-registry.php`, `templates/service-registry.json.j2` |
+| P1 | code-server Traefik route — `noverify@file` ↔ `insecure-skip` rename | `roles/pazny.traefik/templates/dynamic/middlewares.yml.j2` |
+| P1 | Puter cert — added `*.os.pazny.eu` SAN, LE re-issued | `roles/pazny.acme/defaults/main.yml` |
+| P2 | Open WebUI SSO — `REQUESTS_CA_BUNDLE` conditional on `tenant_domain_is_local` | `roles/pazny.open_webui/templates/compose.yml.j2` |
+| P3 | HMAC chain — symmetric default + epoch ts + jq -cS canonical body + sha256= prefix accept + app.deployed type + WING_DB_PATH plist key | `default.config.yml`, `apps_runner/tasks/post.yml`, `bone/events.py`, `bone/templates/bone.plist.j2` |
+| Bonus | Tier-2 wet-test infra + Bone HMAC delivery + apps_runner image probe local-cache fallback + ansible.builtin.pip → command sweep + plugin loader Ansiballz fix + 30 remediation_items reconciled | (see commits) |
 
 ---
 
-## Tracks coming next (don't start until F is DONE)
+## Current sub-step: **Phase A — quick CVE pins** (1 batch, ~45 min)
 
-- **G — Cloudflare proxy + LE production exposure (bsky / Stalwart SMTP / maybe Mastodon)** ([roadmap section](roadmap-2026q2.md#track-g--cloudflare-proxy--le-production-exposure-after-f-d11))
-  — `pazny.acme` Cloudflare DNS-01 already exists; `pazny.smtp_stalwart` is a NEW role; Bluesky exposure flag flip. ~4-5 days.
+24 pending remediation_items remain. Phase A clears 7 of them via
+mechanical config-only changes. See full plan in `docs/security-remediation-plan.md`
+(written next session) or in this session's transcript.
 
-After G — **bones & wings refactor (planned, full plan written 2026-05-01, doctrine elevated 2026-05-03):**
+**Phase A items (auto_fixable=1, low risk):**
 
-The former K/L/M arc was consolidated into one comprehensive plan with all 7 architectural
-decisions resolved with operator on 2026-05-01; expanded 2026-05-03 with **§1.1 "tendons & vessels"
-doctrine** (operator framing) and **first-class Track Q follow-on** (§13.1) for thin-role +
-modular-wiring rollout across all Tier-1 roles. **Authoritative document:
-[`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).**
+1. `metabase_version` pin (currently `latest`)
+2. `ollama` Homebrew bump (CVE-2026-34940 OS Command Injection via Model URL)
+3. `nginx` Homebrew bump → 1.29.7+ (4 CVEs in April 2026)
+4. `tempo_version` pin (currently `latest`)
+5. `uptime_kuma_version`: `1` → `1.23.x` (defer v2 major bump to Phase D)
+6. `traefik` static config — add `encodedCharacters` deny list (`%2F %5C %00`)
+7. Reconcile DB after pins (Python script tail of this session)
 
-- **All-local architecture** — Wing PHP-FPM + Bone/Pulse Python via launchd (reverses Track A
-  containerization for the platform-control plane; zero-trust between subsystems)
-- **Repo reorg** — `files/anatomy/` umbrella; moves `migrations/`, `library/`, `module_utils/`,
-  `patches/`, framework-internal `docs/` into anatomy
-- **Plugin system** — drop-a-directory auto-wiring; gitleaks as PoC plugin
-- **Conductor as primary agent** (PoC); inspektor/librarian/scout post-PoC, ~2-4h each
-- **PoC estimate: ~12 days sequential.** Post-PoC expansion incremental.
+**Risk:** very low. All upstream tags reachable in our cache or via brew.
 
-Pre-implementation gates: Tracks F + G DONE + Stalwart SMTP shipped (from G).
+**After A:** ~17 pending remediation_items.
 
-Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this file.
+## Next sub-steps queued
+
+### Phase B — Resource limits sweep (~1 day, 1 commit)
+
+`mem_limit` + `cpus` on every docker service per the recommended matrix:
+
+| Tier | Memory | CPUs |
+|---|---|---|
+| GitLab | 4 GB | 2 |
+| ERPNext (3 containers) | 1 GB | 1 each |
+| Critical (postgres, mariadb, authentik, traefik, infisical) | 2 GB | 2 |
+| Medium (grafana, n8n, nextcloud, etc.) | 1 GB | 1 |
+| Low (utility/sidecar) | 512 MB | 0.5 |
+
+Pattern: introduce a Jinja macro `mem_limits(class)` in
+`templates/_shared/limits.j2` (NEW), include from each role's
+`compose.yml.j2`. Less boilerplate than copy-paste.
+
+### Phase C — Hardening (~2 days, 3 commits)
+
+| C.1 | Postgres SSL enable + propagate `PGSSLMODE=require` to all clients (~10 compose-override updates) |
+| C.2 | ERPNext dedicated MariaDB user with least-privilege grants |
+| C.3 | Open WebUI prompt-injection mitigation + `version-pins-proposal.json` 23 image pins |
+
+### Phase D — Architectural (decision-required, defer)
+
+| D.1 | Portainer docker-socket-proxy sidecar (1-2 d) |
+| D.2 | Uptime Kuma v1 → v2 major migration (1-2 d, breaking config) |
+| D.3 | FreePBX tag pinning — upstream `tiredofit/freepbx` version mapping research |
+| D.4 | Woodpecker trusted repos feature (config + test) |
+
+### Vendor-blocked (wait, no action)
+
+- Open WebUI ZDI CVEs (no vendor patch yet)
+- RustFS gRPC non-constant-time signature (vendor)
+- Calibre-Web ReDoS (need version probe to confirm impact)
+
+---
+
+## After security batch: **bones & wings PoC continuation**
+
+Phase status (per `docs/bones-and-wings-refactor.md` §8):
+
+| Phase | What | Status |
+|---|---|---|
+| A0–A4, A6 | skeleton + anatomize-move + bone host launchd + pulse + plugin loader | ✅ DONE |
+| **A3.5** | **wing host-revert via FrankenPHP** | NEXT after security batch |
+| A5 | wing OpenAPI/DDL exports | not started |
+| A6.5 | Grafana thin-role pilot — doctrine proof | NEXT (post-A3.5) |
+| A7 | gitleaks plugin (first real plugin via loader) | not started |
+| A8 | conductor agent + agent runner | not started |
+| A9 | notification fanout | not started |
+| A10 | audit trail (per-actor identity) | not started |
+
+Plus **Track Q** (autowiring debt — 30 of 71 roles carry post.yml
+cross-service wiring totalling ~3000 LOC; consolidation in 7 batches,
+4-6 weeks). Begins with Q1 (observability) once A6.5 Grafana thin-role
+pilot proves the doctrine. Plan in `docs/bones-and-wings-refactor.md`
+§13.1 + `files/anatomy/docs/role-thinning-recipe.md`.
 
 ---
 
@@ -178,17 +130,19 @@ Tracks A–E + J + H are DONE. If you find yourself there, stop and re-read this
 
 | Surface | State |
 |---|---|
-| `git status` | clean; `master` 7 commits ahead of `origin/master` (2026-05-02/03 production fixes — push when ready) |
-| Last green blank | `ok=842 changed=262 failed=0` (2026-05-02, `tenant_domain=pazny.eu` PRODUCTION) — Track G wet, real LE wildcard via CF DNS-01, all 4 Tier-2 healthy, Authentik users provisioned, PDS DIDs created, smoke OK after CF Full-strict flip on 2026-05-03 |
-| Last green blank (dev.local) | `ok=892 changed=268 failed=0` (2026-05-01 22:58, host_alias=lab) — Track F end-to-end |
-| Apps stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db); Authentik proxy providers live |
-| Tier-1 services | all healthy |
-| Tests | 431 collected, 0 collection errors. 89 apps + 25 schema + 25 importer + 4 pilot manifests + 71 PHP pass. 12 skipped (optional deps). |
-| ansible-lint | 0 failures, 0 warnings, **production profile** |
-| ansible-core | 2.20.5 (operator + CI matrix); forward-compat verified under 2.21.0rc1 |
-| Pilots live | `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml`. `apps/plane.yml.draft` deferred. |
+| `git status` | dirty (P0–P3 batch staged for commit; 7 logical commits planned) |
+| Last green blank | `ok=920 changed=282 failed=0` (2026-05-03 18:08, full blank) |
+| Last partial green | `ok=151 changed=12 failed=0` (2026-05-03 19:32, `--tags apps,wing,nginx,traefik`) |
+| Tier-1 services | all healthy; 51 systems registered in Wing /hub with clean IDs |
+| Tier-2 stack | 4 healthy containers (twofauth, roundcube, documenso, documenso-db) |
+| Bone /api/v1/events | HMAC pipeline functional, accepts `app.deployed` + standard callback types |
+| Pulse | running on 30s tick, idle-tolerant (302/404 on unfinished Wing endpoints) |
+| Tests | `tests/anatomy tests/wet tests/apps -q` → 151 passed; 14 wet tests cover sections 6/7/9 (skip pre-blank, fail under `NOS_WET=1`) |
+| ansible-lint | 0 failures, production profile |
+| ansible-core | 2.20.5 floor; verified forward-compat under 2.21.0rc1 |
 | Decision log | O1-O18 in roadmap-2026q2.md |
-| Next gate | **Cleared 2026-05-01 16:37** — fresh blank green (`ok=891 failed=0`, 39/39 smoke ✅). Track F unblocked. |
+| Remediation queue | 56 resolved / 24 pending (was 26/54 at session start) |
+| Next gate | Phase A commit + autonomous batch |
 
 ---
 
@@ -198,11 +152,10 @@ This file rots in days, not weeks. After every meaningful work session:
 
 1. Update **Current track / sub-step** if you advanced
 2. Update the snapshot table at the bottom (last blank/partial result, anything that flipped state)
-3. If a track-level decision was made (e.g. "documenso DB moved from embedded to shared infra-postgres"), log it in the **Decision log** in `roadmap-2026q2.md` — that file is the long-form record
+3. If a track-level decision was made, log it in the **Decision log** in `roadmap-2026q2.md` — that file is the long-form record
 4. Commit `docs(roadmap): refresh active-work pointer`
 
 If you finish a track entirely:
 - Mark the track DONE in `roadmap-2026q2.md`
 - Flip "Current track" here to the next one
 - Reset "Current sub-step" to the next track's first sub-step
-- Update the "Where to look for diagnostics" table to match the new track's surfaces
