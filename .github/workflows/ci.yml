@@ -187,20 +187,17 @@ jobs:
           sudo rm -rf /Applications/Google\ Chrome.app
           sudo rm -rf /usr/local/bin/firefox
 
-      # Pin to current operator baseline (2.20.x). See Lint job comment.
-      #
-      # Critical: install into the SAME Python that Ansible's interpreter
-      # discovery picks on the localhost target. `pip3` from setup-python
-      # lives in /Users/runner/hostedtoolcache/...; Ansible's `auto`
-      # discovery on macOS often picks /usr/bin/python3 instead, so the
-      # custom-module pyyaml import fails. Install both into hostedtool
-      # python AND pin ANSIBLE_PYTHON_INTERPRETER (job-level env below)
-      # so localhost runs use the same one.
+      # Install into setup-python's hostedtoolcache python (writable to the
+      # runner user — no sudo needed). Sudo would reroute pip to root's user
+      # site or to a different python resolved by sudo's secure_path, missing
+      # the interpreter Ansible later targets via ANSIBLE_PYTHON_INTERPRETER.
       - name: Install test dependencies.
         run: |
-          sudo "$(command -v python3)" -m pip install --upgrade pip
-          sudo "$(command -v python3)" -m pip install \
-            'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          python3 -m pip install --upgrade pip
+          python3 -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          # Sanity probe — fail fast here if pyyaml/jsonschema aren't where
+          # Ansible will look. Same path used in ANSIBLE_PYTHON_INTERPRETER.
+          python3 -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__)'
 
       - name: Set up the test environment.
         run: |
