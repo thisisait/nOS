@@ -28,7 +28,11 @@
 # Mailpit (install_mailpit: true) handles local-dev capture in the meantime.
 install_smtp_stalwart: false
 
-stalwart_image: "stalwartlabs/mail-server:v0.13.6"
+# Pinned to v0.11.8 (latest as of 2026-05-03; previous v0.13.6 pin was a
+# future-version typo from Track G scaffolding that surfaced on first wet
+# activation — image not in registry, infra compose-up aborted, mariadb +
+# everything else couldn't start). Bump as new tags ship.
+stalwart_image: "stalwartlabs/mail-server:v0.11.8"
 stalwart_data_dir: "{{ ansible_facts['env']['HOME'] }}/stalwart"
 
 # Public hostname for the mail server. Defaults to mail.<tenant_domain>.
