@@ -599,22 +599,57 @@ schema:
 
 ### 6.4 The plugin loader
 
-`pazny.anatomy --tags anatomy.plugins` runs the plugin loader, which:
+> **Updated 2026-05-03 from V3 findings (`files/anatomy/docs/grafana-wiring-inventory.md`):** the loader needs **4 lifecycle hooks**, not a single linear pass, because plugin work depends on stack/role state that isn't all available at one moment. See `files/anatomy/docs/plugin-loader-spec.md` for the consolidated A6 implementation contract.
 
-1. **Discovers** every `files/anatomy/plugins/*/plugin.yml`.
-2. **Validates** each manifest against `state/schema/plugin.schema.json`.
-3. **Installs requirements** (`brew install gitleaks` if `requirements.install_via: brew`; for `docker`, `docker pull <image>`; for `url`, fetch+chmod+verify checksum).
-4. **Registers Authentik client** via blueprint upsert (uses Track B framework).
-5. **Registers Wing routes** by adding the manifest entries to a generated `files/anatomy/wing/config/plugins.neon` which Wing's DI container loads at boot.
-6. **Registers Pulse jobs** via Wing API: `POST /api/v1/pulse_jobs` (UPSERT on plugin_name+job_name).
-7. **Registers Grafana dashboard** by POSTing dashboard JSON to Grafana API (operator dashboards don't get clobbered — plugin dashboards are folder-isolated under "Plugins/").
-8. **Registers ntfy/mail templates** by writing to `~/anatomy/notifications/templates/` (read at notification-fire time).
-9. **Applies schema migrations** by running each `schema:` SQL file against wing.db (idempotent).
-10. **Adds GDPR row** via Wing API: `POST /api/v1/gdpr/processors` (UPSERT).
-11. **Restarts Wing** (graceful PHP-FPM reload via `brew services restart`) so the new routes/views are live.
-12. **Restarts Pulse** (launchd reload) so new jobs are scheduled.
+`pazny.anatomy --tags anatomy.plugins` runs the plugin loader, which moves through **4 lifecycle hooks** that interleave with the playbook's existing role-render → docker-compose-up → post-tasks pipeline:
 
-This is the "auto-wiring" — drop a plugin directory, run one tag, capability is live in <30 seconds.
+#### Hook 1 — `pre_render` (runs early in main.yml, before any role render)
+
+For every discovered plugin:
+
+1. **Discover** every `files/anatomy/plugins/*/plugin.yml`.
+2. **Validate** each manifest against `state/schema/plugin.schema.json` (covers all 3 types: skill / service / composition).
+3. **Resolve `requires.role` / `requires.feature_flag` / `requires.apps_manifest`.** Skip plugin if its required role isn't enabled or required apps manifest isn't installed (composition plugins skip when ANY required service is off).
+4. **Install host requirements** (`brew install gitleaks`; `docker pull <image>`; `url`+chmod+checksum).
+5. **Register Authentik clients** — emit blueprint entries into the same blueprint stream that `tasks/stacks/core-up.yml` reconverges. **This must run BEFORE the Authentik blueprint apply step** (pitfall P4 from `role-thinning-recipe.md`).
+
+#### Hook 2 — `pre_compose` (runs after role render, before `docker compose up <stack>`)
+
+Per plugin (in dependency order):
+
+6. **Ensure plugin-owned dirs exist** (`provisioning/`, etc., per manifest).
+7. **Render compose-extension fragment** (the "vessel" — `files/anatomy/plugins/<n>/templates/<n>.compose.yml.j2` → `{{ stacks_dir }}/<stack>/overrides/<plugin-name>.yml`). Compose's existing `-f`-discovery loop in core-up.yml/stack-up.yml picks it up — **no orchestrator change needed** (verified during V3 inventory).
+8. **Render provisioning files** (datasources, dashboards, scrape configs) into their target paths.
+9. **Apply schema migrations** by running each `schema:` SQL file against wing.db (idempotent).
+
+#### Hook 3 — `post_compose` (runs after `docker compose up <stack> --wait`)
+
+Per plugin:
+
+10. **Wait for plugin's target service to be healthy** (HTTP probe per manifest; default = role's primary health endpoint).
+11. **API-side registrations:** Wing routes (write `files/anatomy/wing/config/plugins.neon`); Pulse jobs (POST `/api/v1/pulse_jobs`, UPSERT on plugin_name+job_name); Grafana dashboards (POST dashboard JSON, folder-isolated under "Plugins/<plugin-name>/"); ntfy/mail templates (write to `~/anatomy/notifications/templates/`).
+12. **GDPR row UPSERT** via Wing API (`POST /api/v1/gdpr/processors`).
+13. **Restart Wing** (graceful PHP-FPM reload — `brew services restart php@8.3`) so new routes/views are live.
+14. **Restart Pulse** (launchd reload) so new jobs are scheduled.
+
+#### Hook 4 — `post_blank` (runs only when `blank=true`)
+
+Per plugin:
+
+15. **Remove plugin-owned filesystem state** per manifest's `lifecycle.post_blank:` declarations (provisioning dirs, cached downloads).
+16. **Audit log preserved** — `actor_id`-tagged rows in wing.db are NEVER cleared on blank (regulatory requirement). Plugin's data tables follow per-manifest `gdpr.retention_days`.
+
+#### Critical ordering invariants
+
+| Constraint | Why |
+|---|---|
+| Hook 1 step 5 (Authentik registration) MUST run before existing Authentik blueprint reconverge in `tasks/stacks/core-up.yml` | else blueprint apply fails because client doesn't exist (P4) |
+| Hook 2 steps 6-9 MUST run before `docker compose up <stack>` | because compose-extension fragments + provisioning files must exist when compose merges (`grafana` won't see dashboards otherwise) |
+| Hook 3 steps 10-12 MUST run after `docker compose up <stack> --wait` | because target service must be alive to accept API calls |
+| Hook 3 steps 13-14 MUST run after step 11 | because Wing/Pulse reload picks up registered config |
+| Hook 4 MUST run before role's data dir wipe | so plugin can do orderly cleanup before bulk `rm -rf` |
+
+This is the "auto-wiring" — drop a plugin directory, run one tag, capability is live in <30 seconds. **The 4-hook split is what makes it actually work** — single-pass would have to either run before compose (no API access) or after (provisioning files arrive too late).
 
 ### 6.5 Plugin removal
 
@@ -872,14 +907,14 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 | **A3** | track-A-reversal | Decommission Wing+Bone containerization. Remove wing+wing-nginx from `iiab` compose, remove bone from `infra` compose. Rewrite `pazny.wing` to install PHP 8.3 via Homebrew + render `~/wing/` configs + manage `eu.thisisait.nos.wing` launchd plist. Rewrite `pazny.bone` to install Python venv at `~/bone/venv`, copy `files/anatomy/bone/*.py` to `~/bone/`, manage launchd plist. Add Traefik file-provider entries for `wing.<tld>` → `host.docker.internal:9000` with `authentik@file` middleware. Migration recipe `migrations/2026-XX-anatomy-host-revert.yml` for existing deploys (operator-blank acceptable since pre-prod). | 1 d |
 | **A4** | pulse-skeleton | New `roles/pazny.pulse/` thin role: install Python venv at `~/pulse/venv`, copy `files/anatomy/pulse/*` to `~/pulse/`, manage launchd plist. Implement Pulse daemon: tick loop (30s), reads `wing.db.pulse_jobs` via Wing API, fires due jobs, logs runs to `wing.db.pulse_runs`. **No agentic runs yet** — only non-agentic subprocess shape. New wing.db tables `pulse_jobs`, `pulse_runs` via schema migration. | 1 d |
 | **A5** | wing-exports | Write `files/anatomy/wing/bin/export-openapi.php` (introspects Nette router + presenter PHPDoc → OpenAPI 3.1 YAML). Write `files/anatomy/wing/bin/export-schema.php` (introspects wing.db at runtime → DDL). Commit outputs to `files/anatomy/skills/contracts/`. Add CI drift check that re-runs exports vs committed and diffs. | 1 d |
-| **A6** | plugin-system | `state/schema/plugin.schema.json` JSONSchema for manifests — covers ALL three plugin types (skill / service / composition). Implement plugin loader (Python script under `files/anatomy/scripts/load_plugins.py`) called by `pazny.anatomy --tags anatomy.plugins`. Loader code paths exist for all three types (PoC only fires skill + one service path; composition stays untested-but-loadable). Loader does §6.4 steps. Includes `scaffold` subcommand: `python3 -m anatomy.load_plugins scaffold <name> --type {skill,service,composition}` → creates skeleton from per-type `_template`. | 2 d |
+| **A6** | plugin-system | `state/schema/plugin.schema.json` JSONSchema for manifests — covers ALL three plugin types (skill / service / composition). Implement plugin loader (Python module under `files/anatomy/scripts/load_plugins.py`) called by `pazny.anatomy --tags anatomy.plugins`. Implements **all 4 lifecycle hooks** (`pre_render`, `pre_compose`, `post_compose`, `post_blank`) per §6.4 + `files/anatomy/docs/plugin-loader-spec.md`. Loader is wired into `tasks/stacks/core-up.yml` + `stack-up.yml` at the canonical hook points (immediately before existing role-render block, between role-render and compose-up, after compose-up --wait, on blank-reset). Loader code paths exist for all three plugin types (PoC only fires skill + one service path; composition stays untested-but-loadable). Includes `scaffold` subcommand: `python3 -m anatomy.load_plugins scaffold <n> --type {skill,service,composition}` → creates skeleton from per-type `_template`. | 2.5 d (was 2 d — bumped for 4-hook implementation surface) |
 | **A6.5** | grafana-thin-role-pilot | **Doctrine proof point (§1.1).** Migrate `roles/pazny.grafana/` to thin shape: keep `defaults/main.yml` + `tasks/main.yml` (data dir + compose render only) + `templates/compose.yml.j2` + `meta/main.yml`. Move EVERYTHING else (dashboards, OIDC config block, Prometheus datasource, Loki/Tempo wiring, alert rules, notifier templates) into a NEW `files/anatomy/plugins/grafana-base/plugin.yml` (service plugin with `requires.role: pazny.grafana`). Loader applies the wiring on `--tags anatomy.plugins`. Document the recipe in `files/anatomy/docs/role-thinning-recipe.md` (the deterministic 6-step process: identify wiring → create plugin manifest → move dashboards → move OIDC → move scrape → smoke-test). **Exit:** fresh blank with thin grafana + grafana-base plugin produces byte-identical functional Grafana (dashboards, datasources, OIDC, scrape, alerts all green; `diff` between old `~/.nos/state.yml` snapshot and new shows only path drift). | 1.5 d |
 | **A7** | gitleaks-poc | First skill plugin: gitleaks. Manifest, skill (`skills/run-gitleaks.sh` invokes gitleaks binary, parses output, normalizes JSON), Wing Latte view, Grafana dashboard, mail+ntfy templates, GDPR row, schema migration for `wing.db.gitleaks_findings`. End-to-end: `ansible-playbook --tags anatomy.plugins`, gitleaks runs Sunday 03:00 (or `--tags anatomy.plugins,run_now=gitleaks` for immediate test). | 1 d |
 | **A8** | conductor-poc | Conductor profile + system prompt. Pulse runner harness for agentic mode (`bin/pulse-run-agent.sh` mints token, assembles prompt, exec's claude, captures output, posts results). Wing `/inbox` view: pending approvals, conductor drift reports, gitleaks findings (unified inbox). Wing `/approvals` view: approve/reject buttons for pending upgrades. Conductor first run end-to-end: drift scan → drift report → operator-creates-test-approval → conductor next run applies it. | 2 d |
 | **A9** | notification-fanout | Notification dispatcher (Python module under `files/anatomy/wing/lib/notifications.py` — but Wing-PHP-side; Python module to be moved or rewritten as PHP). Wing `/inbox` is primary. ntfy: HTTP POST to ntfy container with topic `nos-critical`. Mail: SMTP to mailpit (Stalwart fallback when Track G ships). Templating uses notification template files from plugin manifest. Severity routing per manifest `notification:` block. | 1 d |
 | **A10** | audit-trail | Schema migration: add `actor_id` (FK to authentik clients), `actor_action_id` (UUID per action), `acted_at` to all wing.db write tables. Wing `/audit` view: filter by actor, by data category, by time range. GDPR Article 30 view auto-aggregates from `gdpr_processors` + `audit_log`. Per-agent Authentik blueprints (conductor + plugin-gitleaks for PoC) via Track B framework. | 1 d |
 
-**Total: 14 days** (was 12.5 — added A6.5 Grafana thin-role pilot per §1.1 doctrine). Slack to 16 days realistic.
+**Total: 14.5 days** (was 12.5 base + 1.5 A6.5 + 0.5 A6 bump for 4-hook scope). Slack to 16-17 days realistic.
 
 ### 8.2 Parallelization (if operator wants multiple agents)
 

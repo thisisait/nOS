@@ -12,10 +12,12 @@
 files/anatomy/
 ├── README.md                                         # this file
 ├── docs/
-│   ├── grafana-wiring-inventory.md                   # A6.5 input — what wiring leaks today
-│   └── role-thinning-recipe.md                       # 6-step deterministic process
+│   ├── grafana-wiring-inventory.md                   # V3 — consumer-shape inventory (A6.5)
+│   ├── authentik-wiring-inventory.md                 # V4 — source/aggregator-shape inventory (Q2 prep)
+│   ├── role-thinning-recipe.md                       # 6-step deterministic process (v0.1; v0.2 needs V4 deltas)
+│   └── plugin-loader-spec.md                         # A6 implementation contract — 4 hooks + DAG + aggregator
 └── plugins/
-    └── grafana-base/                                 # A6.5 doctrine PoC artifact
+    └── grafana-base/                                 # A6.5 doctrine PoC artifact (consumer plugin)
         ├── README.md
         └── plugin.yml                                # draft manifest
 ```
