@@ -36,7 +36,13 @@ services:
       # ingest on api.dev.local/api/v1/events).
       - {{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}:/var/lib/grafana/wing:ro
 {% endif %}
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # Local TLDs (.local/.lan/.test) use mkcert-issued certs; mount the
+      # mkcert root CA so Grafana's Go HTTP client validates Authentik's
+      # OIDC endpoint. On a PUBLIC TLD this mount must NOT happen — the
+      # mkcert CA bundle would shadow the system Mozilla CA list and break
+      # validation of Authentik's Let's Encrypt cert (same regression as
+      # Open WebUI hit on auth.pazny.eu, surfaced 2026-05-03).
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/grafana/mkcert-ca.crt:ro
 {% endif %}
     environment:
@@ -72,7 +78,12 @@ services:
       GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
       GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'nos-admins') && 'Admin' || 'Viewer'"
       GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC: "false"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # Same conditional gate as the volume mount above — only present on
+      # mkcert-using local TLDs. Empty/absent on public TLD = Grafana uses
+      # its bundled Mozilla CA list to validate Authentik's LE cert.
       GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: "/etc/grafana/mkcert-ca.crt"
+{% endif %}
       GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/grafana/end-session/"
 {% endif %}
     healthcheck:
