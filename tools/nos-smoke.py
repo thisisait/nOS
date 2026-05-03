@@ -317,11 +317,51 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     started = time.monotonic()
 
     # ── Anon path: simple HEAD/GET ─────────────────────────────────────────
+    # Redirect-loop detection: urllib.request.urlopen follows redirects up to
+    # 10 hops by default. For our smoke, an honest service should land on a
+    # 200/30x within 1-2 hops; chains of 3+ identical Location headers signal
+    # the classic CF Flexible-SSL trap (CF→origin via HTTP, origin redirects
+    # to HTTPS, CF re-serves that 308, browser loops). Catch it explicitly so
+    # the smoke output points the operator at the actual root cause instead
+    # of a generic timeout. See docs/operator-domain-switch.md "Troubleshooting".
     def _do_simple(method: str) -> tuple[int | None, str | None]:
+        # Build a custom redirect handler that records every Location header
+        # seen and bails when we hit the same URL twice in a row (loop) or
+        # exceed our cap of 5 hops (longer than any legitimate auth flow).
+        seen_locations: list[str] = []
+        max_redirs = 5
+
+        class _LoopAwareRedirect(urllib.request.HTTPRedirectHandler):
+            def http_error_302(self, req, fp, code, msg, headers):
+                loc = headers.get("location") or headers.get("Location") or ""
+                if loc:
+                    if seen_locations and seen_locations[-1] == loc:
+                        raise urllib.error.URLError(
+                            "redirect loop detected: %d hops to %s "
+                            "(see docs/operator-domain-switch.md — likely "
+                            "CF Flexible SSL; switch to Full (strict))"
+                            % (len(seen_locations) + 1, loc)
+                        )
+                    seen_locations.append(loc)
+                    if len(seen_locations) > max_redirs:
+                        raise urllib.error.URLError(
+                            "exceeded %d redirects (last: %s)"
+                            % (max_redirs, loc)
+                        )
+                return super().http_error_302(req, fp, code, msg, headers)
+            http_error_301 = http_error_302
+            http_error_303 = http_error_302
+            http_error_307 = http_error_302
+            http_error_308 = http_error_302
+
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPSHandler(context=ctx),
+            _LoopAwareRedirect(),
+        )
         req = urllib.request.Request(url, method=method)
         req.add_header("User-Agent", "nos-smoke/1.0")
         try:
-            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            with opener.open(req, timeout=timeout) as resp:
                 return resp.status, None
         except urllib.error.HTTPError as exc:
             return exc.code, None

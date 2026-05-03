@@ -144,6 +144,27 @@ DKIM key — paste from Stalwart's webadmin **after first deploy**:
 |---|---|---|---|---|
 | `A` | `social` | `<your-public-IP>` | DNS only | Auto |
 
+### 3.5 ⚠️ Cloudflare SSL/TLS settings (MUST do this — without it browsers loop)
+
+After DNS records are in, navigate to **SSL/TLS** in the CF sidebar and set:
+
+| Setting | Value | Why |
+|---|---|---|
+| **Encryption mode** | **Full (strict)** | CF connects to origin via HTTPS + verifies cert chain. Our LE wildcard from public CA → trusted automatically. |
+| Always Use HTTPS | ON | CF redirects HTTP→HTTPS on edge before reaching origin |
+| Automatic HTTPS Rewrites | ON | Rewrites mixed-content `http://` URLs to `https://` |
+| Min TLS Version | 1.2 | Drop legacy TLS 1.0/1.1 |
+| Opportunistic Encryption | ON | Default; HTTP/2 negotiation hint |
+| TLS 1.3 | ON | Default; modern TLS |
+
+> **🚨 Failure mode if you skip this:** browsers hit `ERR_TOO_MANY_REDIRECTS`
+> on every orange-clouded host. The default CF SSL mode (when you add a new
+> zone) is **Flexible** — CF terminates TLS at the edge and connects to your
+> origin via plain HTTP port 80. Our origin Traefik then 308-redirects HTTP
+> to HTTPS, CF re-serves that 308 to the browser, browser comes back to CF
+> via HTTPS, CF goes to origin via HTTP, … infinite loop. **Full (strict)
+> tells CF to talk HTTPS to origin from the start.**
+
 ---
 
 ## Step 4 — Router port forwarding
@@ -281,6 +302,89 @@ the TLS layer; ACME goes dormant; the LE cert in `acme/` stays on disk
 (it'll expire in 90 days but doesn't bother anything).
 
 Cloudflare zone stays Active — no harm in leaving it for the next attempt.
+
+---
+
+---
+
+## Troubleshooting
+
+### `ERR_TOO_MANY_REDIRECTS` on every host
+
+**Cause:** Cloudflare SSL/TLS encryption mode is **Flexible** (default for new
+zones). CF terminates TLS at edge and connects to origin via plain HTTP;
+Traefik returns 308 to upgrade to HTTPS; CF passes that 308 to browser; loop.
+
+**Fix:** CF dashboard → SSL/TLS → Overview → switch to **Full (strict)**.
+See step 3.5 above. Takes effect within ~30 s; clear browser DNS cache
+(`chrome://net-internals/#dns` → Clear host cache) after the switch.
+
+**Verify with curl:**
+```bash
+curl -ksLI --max-redirs 3 https://wing.<your-domain>/
+# Before fix: 3× HTTP/2 308 → same Location → loop
+# After fix:  302 to https://auth.<your-domain>/application/o/authorize/...
+#             (Authentik OIDC redirect — expected, click through opens login)
+```
+
+### `ERR_SSL_PROTOCOL_ERROR` / `SSLV3_ALERT_HANDSHAKE_FAILURE` on Tier-2
+
+**Cause:** Cloudflare Universal SSL (Free plan) covers **`<zone>` + `*.<zone>`**
+only — single-level wildcard. Multi-level wildcards like `*.apps.<zone>` are
+**NOT** covered. Browser hits the `*.apps` host, CF anycast IP serves a cert
+for `*.<zone>` only, hostname mismatch → handshake fails.
+
+**Fix:** Either
+1. Keep `*.apps` as **DNS only** (gray cloud) — connection goes direct to your
+   origin where the LE wildcard cert covers `*.apps.<zone>` correctly. **Recommended**
+   — Tier-2 apps are typically less DDoS-targeted than Tier-1.
+2. Pay for **Cloudflare Advanced Certificate Manager** (~$10/mo) — covers
+   multi-level wildcards on edge.
+
+The default config in nOS expects Tier-2 to be DNS-only (recipe 3.1 above
+shows gray cloud for `*.apps`).
+
+### Browser cert error after a `tenant_domain` switch
+
+**Cause:** Browser caches HSTS and cert-pin state per-hostname. If you
+previously visited `<svc>.dev.local` with the mkcert dev CA, that's a
+different hostname — fine. But if you're testing a freshly-switched
+`<svc>.<your-domain>` and see ERR_CERT_AUTHORITY_INVALID, it's likely
+DNS propagation lag (CF edge cache) or the SSL/TLS misconfiguration above.
+
+**Verify what cert the browser sees:** DevTools → Security → "View
+certificate" → Issuer.
+- `Let's Encrypt R13` (or similar) = direct-to-origin path, your LE wildcard ✅
+- `Cloudflare Inc ECC CA-3` = Cloudflare edge cert (Universal SSL) — only
+  works if hostname matches single-level wildcard
+
+### Can't reach `<svc>.<your-domain>` from inside the local LAN
+
+**Cause:** Hairpin NAT (also called NAT loopback). Your home router can
+forward `WAN_IP:443` from outside but may not loop back when a LAN device
+asks for `WAN_IP:443`. Symptoms: timeouts, or you reach the router's admin
+page (with its own self-signed cert).
+
+**Fix options:**
+1. **Enable `dnsmasq_force_local_domains: true`** in your `config.yml` and
+   re-run the playbook — nOS will create `/etc/resolver/<your-domain>` so
+   macOS resolver routes `*.<your-domain>` to the local dnsmasq → 127.0.0.1
+   → Traefik → LE wildcard cert. Local browser bypasses the public-IP
+   round-trip. Production traffic still goes via CF.
+2. Or check your router for a "NAT Loopback" / "NAT Hairpin" / "Reflection"
+   toggle and enable it.
+3. Or add explicit `/etc/hosts` entries for the services you need to test
+   from inside.
+
+### Mail (Stalwart) doesn't deliver outbound
+
+**Cause:** Many home ISPs block outbound port 25 to fight spam botnets. Your
+local `swaks --to <you>@gmail.com --server localhost` succeeds, but mail
+never arrives at the recipient.
+
+**Fix:** Configure Stalwart to relay outbound through a paid SMTP relay
+(Mailgun, Sendgrid free tier, AWS SES). You keep your domain identity for
+sender, ISP doesn't see your traffic on 25.
 
 ---
 
