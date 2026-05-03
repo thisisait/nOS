@@ -215,16 +215,49 @@
         _apps_bone_hmac_key: "{{ wing_events_hmac_secret | default('') }}"
       no_log: true
 
-    - name: "[Apps Post] Compute keyed HMAC-SHA256 via openssl"
+    # Bone's HMAC scheme (files/anatomy/bone/events.py::verify_hmac):
+    #   - timestamp MUST be Unix epoch seconds (digits only, ±300s window)
+    #   - signature is HMAC-SHA256 over the literal string `{ts}.{body}`
+    #     (not over body alone — the dot-prefixed timestamp is part of the
+    #     signed message to bind it against replay)
+    # Earlier this task sent ISO-8601 + signed body-only; Bone responded
+    # 401 "invalid timestamp" on every run since A3a (Bone host launchd).
+    - name: "[Apps Post] Compute Unix-epoch timestamp for HMAC"
+      ansible.builtin.set_fact:
+        _apps_bone_ts_epoch: "{{ (ansible_date_time.epoch | int) | string }}"
+
+    # Bone server-side re-canonicalizes the parsed body before HMAC check
+    # (files/anatomy/bone/main.py: `json.dumps(body, separators=(",", ":"),
+    # sort_keys=True)`). The client's HMAC must match THAT exact canonical
+    # form, not what Ansible's `to_json` filter produces (which keeps insert
+    # order + default `, ` / `: ` separators).
+    #
+    # We funnel the body through `jq -cS` (compact, sort keys) to produce
+    # the same canonical bytes Bone signs against. Without this step, every
+    # signed POST returns 401 "invalid signature" — surfaced 2026-05-03.
+    - name: "[Apps Post] Canonicalize Bone body via jq -cS (matches server-side encoding)"
+      ansible.builtin.shell:
+        cmd: 'printf %s "$NOS_BODY" | jq -cS .'
+        executable: /bin/bash
+      environment:
+        NOS_BODY: "{{ _apps_bone_body }}"
+      register: _apps_bone_canon
+      no_log: true
+      changed_when: false
+      check_mode: false
+      when: (_apps_bone_hmac_key | length) > 0
+
+    - name: "[Apps Post] Compute keyed HMAC-SHA256 via openssl over {ts}.{canon-body}"
       ansible.builtin.shell:
         cmd: >-
           set -o pipefail;
-          printf '%s' "$NOS_BODY"
+          printf '%s.%s' "$NOS_TS" "$NOS_BODY"
           | openssl dgst -sha256 -hmac "$NOS_KEY" -hex
           | awk '{print $NF}'
         executable: /bin/bash
       environment:
-        NOS_BODY: "{{ _apps_bone_body }}"
+        NOS_TS: "{{ _apps_bone_ts_epoch }}"
+        NOS_BODY: "{{ _apps_bone_canon.stdout }}"
         NOS_KEY: "{{ _apps_bone_hmac_key }}"
       register: _apps_bone_hmac_calc
       no_log: true
@@ -241,7 +274,7 @@
         headers:
           Content-Type: "application/json"
           X-Wing-Signature: "sha256={{ _apps_bone_hmac_calc.stdout | trim }}"
-          X-Wing-Timestamp: "{{ ansible_date_time.iso8601 }}"
+          X-Wing-Timestamp: "{{ _apps_bone_ts_epoch }}"
         status_code: [200, 201, 202, 204]
         timeout: 10
       register: _apps_bone_post
@@ -288,6 +321,33 @@
       when:
         - install_bone | default(true) | bool
         - _apps_bone_post is defined
+
+    # ── Parallel JSONL sink for app.deployed events ─────────────────────────
+    # The callback plugin (wing_telemetry.py) writes ~/.nos/events/playbook.jsonl
+    # only with framework-level types (playbook_start/end) plus its own task
+    # telemetry. The `app.deployed` events posted above go straight to Bone
+    # over HTTP — they never reach the JSONL.
+    #
+    # That's a problem for the wet-test contract: docs/tier2-wet-test-checklist.md
+    # §7 and tests/wet/test_post_blank_state.py::TestSection7_BoneEvents both
+    # rely on `tail playbook.jsonl | jq 'select(.type == "app.deployed")'`.
+    # We mirror the events to JSONL here regardless of HTTP outcome so the
+    # operator-facing evidence path matches the documented recipe and the
+    # signal stays even when Bone is down.
+    - name: "[Apps Post] Mirror app.deployed events into ~/.nos/events/playbook.jsonl"
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos/events/playbook.jsonl"
+        line: "{{ event | to_json }}"
+        create: true
+        insertafter: EOF
+        mode: '0644'
+      loop: "{{ _apps_bone_batch.events }}"
+      loop_control:
+        loop_var: event
+        label: "{{ event.app_id }}"
+      when:
+        - _apps_bone_batch is defined
+        - (_apps_bone_batch.events | default([])) | length > 0
 
     # ── Hook 5: Portainer apps endpoint (gap-fill via flag) ─────────────────
     # The actual POST /api/endpoints lives in roles/pazny.portainer/tasks/
@@ -349,8 +409,19 @@
           php bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
         executable: /bin/bash
       environment:
+        # NOT NULL fields in wing.db gdpr_processing that manifests don't
+        # always carry: `name` (we use the slug) and `storage_location`
+        # (Tier-2 apps live in the iiab/apps Docker stack with bind-mounted
+        # volumes on the host — sensible default; manifests can still
+        # override by setting gdpr.storage_location explicitly).
         NOS_GDPR_JSON: >-
-          {{ (item.gdpr | default({}) | combine({'name': item.id})) | to_json }}
+          {{ (
+                {
+                  'name': item.id,
+                  'storage_location': "Docker volumes in the 'apps' compose stack on host (Tier-2, managed by pazny.apps_runner)"
+                }
+                | combine(item.gdpr | default({}))
+             ) | to_json }}
       loop: "{{ _apps_render.apps }}"
       loop_control:
         label: "{{ item.id }}"

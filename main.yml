@@ -63,11 +63,17 @@
     ansible_become_password: "{{ nos_sudo_password }}"
 
     wing_telemetry_enabled: "{{ install_bone | default(false) }}"
-    # Resolve the events ingestion URL from bone_domain so it tracks the
-    # current tenant_domain instead of the stale plugin default of
-    # http://api.dev.local. Operators on a real TLD (pazny.eu, etc.) get
-    # api.<tld> automatically without an env-var override.
-    wing_events_url: "http://{{ bone_domain | default('api.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/events"
+    # Bone events ingestion URL — read by the apps_runner post-hook AND
+    # by callback_plugins/wing_telemetry.py (which honours play vars).
+    #
+    # 2026-05-03 (A3a): Bone now runs as a host launchd process bound to
+    # 127.0.0.1:{{ bone_port }} and is INTENTIONALLY not Traefik-routed.
+    # The previous default `http://{{ bone_domain }}/api/v1/events` walked
+    # through the public proxy, which on a real TLD got HTTP→HTTPS 308'd
+    # by Traefik and the Ansible URI module dropped POST bodies on
+    # redirect → events vanished, apps_runner summary read "FAILED 308".
+    # Going straight to localhost both fixes that and shaves the round-trip.
+    wing_events_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/v1/events"
 
   pre_tasks:
     # ── Platform detection (Track C, 2026-04-26) ──────────────────────────

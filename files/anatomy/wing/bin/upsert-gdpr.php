@@ -100,6 +100,10 @@ $payload = [];
 $copyKeys = [
     'name', 'purpose', 'legal_basis', 'data_categories', 'data_subjects',
     'processors', 'security_measures', 'retention_days', 'notes',
+    // storage_location is NOT NULL in the gdpr_processing schema. Without
+    // it here, callers (apps_runner) couldn't satisfy the constraint even
+    // when supplying the column — the array filter dropped it silently.
+    'storage_location',
 ];
 foreach ($copyKeys as $k) {
     if (array_key_exists($k, $decoded)) {
