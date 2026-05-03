@@ -20,7 +20,10 @@ services:
       - {{ gitlab_config_dir }}:/etc/gitlab
       - {{ ansible_facts['env']['HOME'] }}/gitlab-logs:/var/log/gitlab
       - {{ gitlab_data_dir }}:/var/opt/gitlab
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # mkcert CA conditional — local TLDs only. GitLab's trusted-certs/ dir
+      # is read by Omnibus' update-ca-certificates wrapper at boot; on a
+      # public TLD the system Mozilla list already validates Authentik LE.
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/gitlab/trusted-certs/mkcert-ca.crt:ro
 {% endif %}
     environment:

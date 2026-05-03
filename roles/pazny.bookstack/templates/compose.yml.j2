@@ -24,7 +24,8 @@ services:
 {% endif %}
     volumes:
       - {{ bookstack_data_dir }}:/config
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:

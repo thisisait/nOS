@@ -23,7 +23,8 @@ services:
 {% endif %}
     volumes:
       - {{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data') }}:/var/lib/outline/data
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
@@ -48,7 +49,9 @@ services:
       OIDC_USERNAME_CLAIM: "preferred_username"
       OIDC_DISPLAY_NAME: "Authentik"
       OIDC_SCOPES: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
 {% endif %}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────

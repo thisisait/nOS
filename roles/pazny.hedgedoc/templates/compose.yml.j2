@@ -24,7 +24,8 @@ services:
 {% endif %}
     volumes:
       - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
@@ -56,7 +57,13 @@ services:
       CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "name"
       CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
       CMD_OAUTH2_SCOPE: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # mkcert CA conditional — see volume mount comment above. NODE's HTTPS
+      # client uses Mozilla CA list by default; on public TLDs the LE chain
+      # validates without this override (and pointing at a missing file would
+      # fall through to the system store anyway, but cleaner to skip).
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
 {% endif %}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
