@@ -39,6 +39,10 @@ VALID_TYPES = {
     "scan.batch_done",           # state file updated, cycle counter checked
     # ── Track G/seed: programmatic security drift (hooks/playbook-end.d/) ────
     "security.drift.snapshot",   # 20-cve-drift-check.sh post-playbook snapshot
+    # ── Track E: Tier-2 apps_runner deploy events ──────────────────────────
+    "app.deployed",              # one event per onboarded apps/<name>.yml
+                                 # manifest after compose up succeeds
+    "app.removed",               # operator-triggered tear-down of a Tier-2 app
 }
 
 
@@ -60,7 +64,11 @@ def verify_hmac(ts_header: str, sig_header: str, raw_body: bytes) -> tuple[bool,
         message.encode("utf-8"),
         digestmod="sha256",
     ).hexdigest()
-    if not hmac.compare_digest(expected, sig_header):
+    # Accept BOTH `<hex>` and `sha256=<hex>` (GitHub-webhook convention used
+    # by apps_runner / wing_telemetry). Strip the prefix if present so the
+    # constant-time compare works on raw hex either way.
+    sig_clean = sig_header[len("sha256="):] if sig_header.startswith("sha256=") else sig_header
+    if not hmac.compare_digest(expected, sig_clean):
         return False, "invalid signature"
     return True, ""
 

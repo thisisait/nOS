@@ -50,6 +50,10 @@
         <string>{{ bone_registry_dir }}/service-registry.json</string>
         <key>WING_DB_DIR</key>
         <string>{{ bone_wing_db_dir }}</string>
+        <!-- Bone's events/main.py read WING_DB_PATH (full file path), not the
+             directory. Set both so either convention resolves correctly. -->
+        <key>WING_DB_PATH</key>
+        <string>{{ bone_wing_db_dir }}/wing.db</string>
 
         {% if install_authentik | default(false) %}
         <!-- Track B JWT auth: Bone validates incoming tokens against Authentik. -->

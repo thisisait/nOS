@@ -120,12 +120,21 @@ install_bone: true                        # FastAPI management API — required 
 bone_port: 8099
 bone_domain: "api{{ _host_alias_seg }}.{{ tenant_domain }}"
 bone_secret: "{{ global_password_prefix }}_pw_bone"
+# HMAC secret for /api/v1/events ingestion. Both sides (Bone server +
+# apps_runner client + callback_plugins/wing_telemetry.py) MUST share this.
+# Default mirrors bone_secret so the symmetry holds without operator setup.
+# Override in credentials.yml for stronger hardening (recommended: 32+
+# random bytes — see docs/secrets-hardening.md once it lands).
+wing_events_hmac_secret: "{{ bone_secret }}"
 
 # ── Pulse (host launchd — scheduled-job daemon, A4 of bones-and-wings) ───────
 # Local Python daemon that polls Wing API for due jobs and fires them.
 # A4 PoC (2026-05-03): non-agentic only; agent runner lands in A8.
-# Toggle off until first wet activation lands clean. See roles/pazny.pulse/.
-install_pulse: false
+# Anatomy default is ON — Pulse is part of the nOS skeleton (not opt-in).
+# Wing API endpoints (/api/v1/pulse_jobs/due, /pulse_runs/start|finish)
+# return 404 today and Pulse idle-tolerates that gracefully (warns once
+# per minute, no crash-loop). Endpoints land alongside A7 (gitleaks plugin).
+install_pulse: true
 
 # wing_telemetry_enabled lives in main.yml as a PLAY-level var (not here)
 # because Ansible callback plugins can only see play.get_vars(), not the
@@ -1255,7 +1264,7 @@ spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboard
 
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
-jellyfin_version: "10.10.7"             # CVE-2025-31499 (FFmpeg argument injection → RCE)
+jellyfin_version: "10.11.8"             # CVE-2025-31499 (FFmpeg argument injection → RCE)
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
 jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
@@ -1551,7 +1560,7 @@ freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
 freepbx_iax_port: 4569                 # IAX2 protocol
 freepbx_rtp_start: 10000              # RTP media start port
 freepbx_rtp_end: 10100                # RTP media end port
-freepbx_version: "latest"
+freepbx_version: "latest"   # TODO: pin to verified tiredofit/freepbx tag — REM-014/046 CRITICAL CVEs (CVSS 10.0/9.3); upstream pkg version-mapping unclear without `docker run --rm tiredofit/freepbx env | grep VERSION`
 freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
