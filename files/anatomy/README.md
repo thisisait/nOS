@@ -43,20 +43,17 @@ files/anatomy/
 └── docs/                       # Internal anatomy docs (framework-* etc., MOVED here)
 ```
 
-## A0 + A1 status (2026-05-03)
+## A0 — A4 status (2026-05-03)
 
-- **A0 — skeleton** ✅ committed `c09fc52`. Empty subdirs created with `.gitkeep`; ansible.cfg declared dual-paths (legacy `./library` + new `./files/anatomy/library`).
-- **A1 — anatomize-move** ✅ this commit. Top-level `migrations/`, `library/`, `module_utils/`, `patches/` physically moved to `files/anatomy/`. ansible.cfg dropped legacy paths. Framework-internal docs (framework-overview, framework-plan, migration-authoring, upgrade-recipes, coexistence-playbook, wing-integration) moved from `/docs/` per §4.2 split rule. CLAUDE.md updated. 434/434 tests green; ansible-playbook --syntax-check clean.
+- **A0 — skeleton** ✅ `c09fc52`. Empty subdirs + dual-path ansible.cfg.
+- **A1 — anatomize-move** ✅ `2abbb5d`. migrations/library/module_utils/patches → files/anatomy/.
+- **A2 — wing-move** ✅ `4202f40`. files/project-wing/ → files/anatomy/wing/. (Rescoped from "submodule" after discovering source IS in repo.)
+- **A4 — pulse-skeleton** ✅ this commit. New `roles/pazny.pulse/` thin role + `files/anatomy/pulse/` Python source + launchd plist + 16 unit tests + wing.db schema (`pulse_jobs` + `pulse_runs`). PoC scope: non-agentic subprocess runner only; agent runner is A8.
 
-Top-level `migrations/`, `library/`, `module_utils/`, `patches/` directories
-are GONE. Anything that referenced them via path string has been updated to
-`files/anatomy/...`. Python imports of `module_utils.X` continue to work
-because `tests/conftest.py` (NEW in A1) adds `files/anatomy/` to sys.path
-in addition to repo root.
-
-Phases A2-A10 (per `docs/bones-and-wings-refactor.md` §8) populate the
-remaining empty subdirs (`wing/`, `bone/`, `pulse/`, `skills/contracts/`,
-`agents/`, `scripts/`).
+Phases A3 (track-A-reversal — Wing+Bone container → host launchd), A5
+(wing exports), A6 (plugin loader), A6.5 (grafana thin-role pilot), A7
+(gitleaks plugin), A8 (conductor + agent runner), A9 (notifications),
+A10 (audit trail) remain.
 
 ## Pointers
 

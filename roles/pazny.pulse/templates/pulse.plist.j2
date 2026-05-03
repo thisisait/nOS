@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ pulse_launchd_label }}</string>
+
+    <!--
+        Run pulse via the role-managed venv's python. WorkingDirectory points
+        at the source tree so `python -m pulse` resolves the package directly.
+        The venv is created by tasks/main.yml; if it's missing, the daemon
+        fails fast on import — KeepAlive will hot-loop, which is the right
+        signal for the operator (visible in launchctl print).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ pulse_venv }}/bin/python</string>
+        <string>-m</string>
+        <string>pulse</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ playbook_dir }}/files/anatomy/pulse</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>WING_API_BASE</key>
+        <string>{{ pulse_wing_api_base }}</string>
+        <key>WING_API_TOKEN</key>
+        <string>{{ pulse_api_token }}</string>
+        <key>PULSE_TICK_INTERVAL_S</key>
+        <string>{{ pulse_tick_interval_s }}</string>
+        <key>PULSE_MAX_CONCURRENT</key>
+        <string>{{ pulse_max_concurrent }}</string>
+        <key>PULSE_STATE_DIR</key>
+        <string>{{ pulse_state_dir }}</string>
+        <key>PULSE_LOG_PATH</key>
+        <string>{{ pulse_log_dir }}/pulse.log</string>
+        <key>PULSE_DRY_RUN</key>
+        <string>{{ '1' if (pulse_dry_run | bool) else '0' }}</string>
+    </dict>
+
+    <!--
+        RunAtLoad fires on bootstrap; KeepAlive ensures launchd respawns
+        on crash. ThrottleInterval prevents tight respawn loops if Pulse
+        fails fast (e.g. WING_API_BASE unreachable).
+    -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ pulse_log_dir }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ pulse_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

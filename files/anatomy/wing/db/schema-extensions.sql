@@ -162,3 +162,56 @@ CREATE TABLE IF NOT EXISTS gdpr_breaches (
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ============================================================================
+-- Pulse — scheduled-job catalog + run history (Anatomy A4, 2026-05-03)
+-- ============================================================================
+-- pulse_jobs: registered jobs (one row per (plugin_name, job_name)).
+-- Owned by plugin loader (files/anatomy/scripts/load_plugins.py); operators
+-- may pause/resume via the Wing UI without touching the playbook.
+--
+-- Pulse polls /api/v1/pulse_jobs/due (server computes next_fire_at from
+-- schedule + jitter) — Pulse itself stays dumb about cron syntax.
+
+CREATE TABLE IF NOT EXISTS pulse_jobs (
+    id              TEXT PRIMARY KEY,                 -- e.g. "wing-base:rotate-wing-db-backup"
+    plugin_name     TEXT NOT NULL,                    -- owning plugin (FK soft)
+    job_name        TEXT NOT NULL,                    -- unique within plugin
+    runner          TEXT NOT NULL DEFAULT 'subprocess', -- subprocess | agent (A8)
+    command         TEXT NOT NULL,
+    args_json       TEXT NOT NULL DEFAULT '[]',       -- JSON array
+    env_json        TEXT NOT NULL DEFAULT '{}',       -- JSON map (string→string)
+    schedule        TEXT NOT NULL,                    -- cron expression
+    jitter_min      INTEGER NOT NULL DEFAULT 0,
+    max_runtime_s   INTEGER NOT NULL DEFAULT 300,
+    max_concurrent  INTEGER NOT NULL DEFAULT 1,
+    paused          INTEGER NOT NULL DEFAULT 0,       -- 0/1; manual operator pause
+    paused_reason   TEXT,                             -- nullable
+    next_fire_at    TEXT,                             -- ISO-8601; computed Wing-side
+    last_fired_at   TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    removed_at      TEXT                              -- soft-delete (plugin removal)
+);
+CREATE INDEX IF NOT EXISTS idx_pulse_jobs_plugin     ON pulse_jobs(plugin_name);
+CREATE INDEX IF NOT EXISTS idx_pulse_jobs_due        ON pulse_jobs(paused, next_fire_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pulse_jobs_name ON pulse_jobs(plugin_name, job_name);
+
+-- pulse_runs: per-execution history. Pulse POSTs run_start (creates row)
+-- + run_finish (UPDATE on run_id). Audit-relevant — actor_id-tagged for
+-- the per-actor identity work in §11 of the refactor doc.
+CREATE TABLE IF NOT EXISTS pulse_runs (
+    run_id          TEXT PRIMARY KEY,                 -- UUID4
+    job_id          TEXT NOT NULL,                    -- FK soft → pulse_jobs.id
+    fired_at        TEXT NOT NULL,                    -- ISO-8601
+    finished_at     TEXT,                             -- nullable until finish
+    exit_code       INTEGER,                          -- nullable until finish (-9 = SIGKILL/timeout, 127 = no such command)
+    duration_ms     INTEGER,                          -- nullable until finish
+    stdout_tail     TEXT,                             -- last 2000 chars
+    stderr_tail     TEXT,
+    actor_id        TEXT,                             -- Authentik client_id of pulse instance
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pulse_runs_job_id     ON pulse_runs(job_id);
+CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at   ON pulse_runs(fired_at);

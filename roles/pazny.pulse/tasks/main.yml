@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# pazny.pulse/tasks/main.yml
+#
+# Thin install:
+#   1. Ensure runtime dirs (~/pulse/{venv,state,log})
+#   2. Create Python venv (idempotent — pip's --upgrade safely no-ops)
+#   3. Install pulse package (editable from files/anatomy/pulse/)
+#   4. Render launchd plist into ~/Library/LaunchAgents/
+#   5. Bootstrap (or reload) the launchd job
+#
+# Source code lives under {{ playbook_dir }}/files/anatomy/pulse/ and is
+# NOT copied — the venv installs editable + the launchd plist's
+# WorkingDirectory points there. This way edits-during-dev don't require
+# a re-deploy; just `launchctl kickstart -k gui/$UID/<label>`.
+# ==============================================================================
+
+- name: "[pazny.pulse] Skip when install_pulse: false"
+  ansible.builtin.meta: end_play
+  when: not (install_pulse | default(false) | bool)
+
+- name: "[pazny.pulse] Ensure runtime directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ pulse_home }}"
+    - "{{ pulse_log_dir }}"
+    - "{{ pulse_state_dir }}"
+
+# Use the playbook's pyenv shim so we get the same Python the rest of the
+# nos tooling uses. ``ansible.builtin.command: creates:`` handles idempotency.
+- name: "[pazny.pulse] Create Python venv"
+  ansible.builtin.command:
+    cmd: "{{ pulse_python }} -m venv {{ pulse_venv }}"
+    creates: "{{ pulse_venv }}/bin/python"
+
+- name: "[pazny.pulse] Install pulse package + deps (editable)"
+  ansible.builtin.pip:
+    name:
+      - "pip"  # ensure latest pip
+      - "{{ playbook_dir }}/files/anatomy/pulse"
+    state: latest
+    extra_args: "--upgrade"
+    editable: false  # 'pip install <path>' does not need -e for our use case
+    virtualenv: "{{ pulse_venv }}"
+  changed_when: false  # pip's stdout doesn't surface 'no-op' reliably
+
+- name: "[pazny.pulse] Render launchd plist"
+  ansible.builtin.template:
+    src: pulse.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_launchd_label }}.plist"
+    mode: '0644'
+  notify: Reload pulse launchd
+
+- name: "[pazny.pulse] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ pulse_launchd_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _pulse_bootstrap
+  changed_when: "'bootstrapped' in _pulse_bootstrap.stdout"
+
+- name: "[pazny.pulse] Setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════
+       Pulse — local launchd daemon ready
+      ══════════════════════════════════════════════════════════════════
+       Label:        {{ pulse_launchd_label }}
+       Source:       {{ playbook_dir }}/files/anatomy/pulse/
+       Venv:         {{ pulse_venv }}
+       Logs:         {{ pulse_log_dir }}/pulse.log
+                     {{ pulse_log_dir }}/launchd.{out,err}.log
+       Wing API:     {{ pulse_wing_api_base }}
+       Tick:         every {{ pulse_tick_interval_s }}s
+       Concurrency:  max {{ pulse_max_concurrent }} parallel runs
+       Dry-run:      {{ pulse_dry_run }}
+
+       Status:       launchctl print gui/$(id -u)/{{ pulse_launchd_label }}
+       Reload:       launchctl kickstart -k gui/$(id -u)/{{ pulse_launchd_label }}
+       Stop:         launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist
+      ══════════════════════════════════════════════════════════════════

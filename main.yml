@@ -1087,6 +1087,18 @@
       tags: ['opencode', 'ai']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Pulse — local launchd Python daemon for scheduled jobs (A4, 2026-05-03).
+    # Polls Wing API for due pulse_jobs and fires them as subprocess (A4 PoC) or
+    # claude SDK invocations (A8). First host-launchd organ in the bones-and-wings
+    # refactor — A3 (track-A-reversal) follows by reverting Wing+Bone too.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Pulse — scheduled-job daemon (pazny.pulse role)"
+      ansible.builtin.import_role:
+        name: pazny.pulse
+      when: install_pulse | default(false)
+      tags: ['pulse', 'anatomy']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Nightly backup orchestrator (pazny.backup) — dumps DBs + volumes +
     # Authentik blueprints to RustFS. Runs as a launchd agent on the host.
     # See roles/pazny.backup/README.md + docs/restore-runbook.md.

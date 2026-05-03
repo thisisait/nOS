@@ -1,0 +1,44 @@
+---
+# ==============================================================================
+# pazny.pulse — local launchd Python daemon for scheduled jobs.
+#
+# A4 phase of the bones-and-wings refactor (2026-05-03). NOT containerized
+# — runs as a host launchd service alongside the eventual host-Wing/host-Bone
+# from A3 (track-A-reversal). For now, Pulse calls Wing API at
+# wing.<tenant_domain> via Traefik (HTTPS) — same path as any external
+# consumer until A3 makes Wing-FPM listen on 127.0.0.1:9000 directly.
+#
+# Source tree: files/anatomy/pulse/
+# Runtime tree: ~/pulse/{venv,state,log}
+# ==============================================================================
+
+# Toggle — flip to true once Pulse first-run blank lands clean.
+install_pulse: false
+
+pulse_user: "{{ ansible_facts['env']['USER'] }}"
+pulse_home: "{{ ansible_facts['env']['HOME'] }}/pulse"
+pulse_venv: "{{ pulse_home }}/venv"
+pulse_log_dir: "{{ pulse_home }}/log"
+pulse_state_dir: "{{ pulse_home }}/state"
+
+# launchd plist
+pulse_launchd_label: "eu.thisisait.nos.pulse"
+
+# Tick + concurrency tuning
+pulse_tick_interval_s: 30
+pulse_max_concurrent: 4
+pulse_dry_run: false
+
+# Wing API endpoint Pulse calls. Default wires through Traefik so Pulse
+# survives Wing PHP-FPM port changes; A3 may switch this to direct
+# loopback (http://127.0.0.1:9000) once Wing runs on the host.
+pulse_wing_api_base: "https://{{ wing_domain | default('wing.' + (tenant_domain | default('dev.local'))) }}"
+
+# Pulse's auth token. We reuse wing_api_token (single shared secret for the
+# inner ring — Wing/Bone/Pulse). Per-actor identity (Pulse gets its own
+# OIDC client) lands in A10 (audit-trail phase).
+pulse_api_token: "{{ wing_api_token }}"
+
+# Python version. Reuses the playbook's pyenv-managed Python (ansible_facts
+# resolves to its real path on the host).
+pulse_python: "{{ ansible_facts['env']['HOME'] }}/.pyenv/shims/python3"

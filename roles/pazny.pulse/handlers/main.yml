@@ -1,0 +1,6 @@
+---
+- name: Reload pulse launchd
+  ansible.builtin.shell: |
+    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist 2>/dev/null || true
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist
+  changed_when: false
