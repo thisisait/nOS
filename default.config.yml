@@ -1278,7 +1278,7 @@ jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
 
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_port: 3001
-uptime_kuma_version: "1"   # or specific: "1.23.13"
+uptime_kuma_version: "1.23.13"   # specific pin (REM-067 SSTI in notification templates partially mitigated; v2.2.1 covers fully but breaking config-schema migration deferred to Phase D)
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"

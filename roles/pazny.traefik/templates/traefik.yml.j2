@@ -28,6 +28,18 @@ entryPoints:
     http:
       tls:
         options: "modern@file"
+      # ── Path-traversal hardening (REM-LOW Traefik) ────────────────────────
+      # Reject requests that contain encoded slash / backslash / null in
+      # the path. Defaults are all `true` (allow) — we set them all to
+      # false to defend against URL-canonicalization confusion where
+      # downstream services normalize differently than Traefik's router
+      # rule (e.g. an authentik@file middleware gated on `/admin/`
+      # silently lets a request to `/admin%2F../foo` through).
+      # https://doc.traefik.io/traefik/reference/install-configuration/entrypoints/#encodedcharacters
+      encodedCharacters:
+        allowEncodedSlash: false
+        allowEncodedBackSlash: false
+        allowEncodedNullCharacter: false
 
 providers:
   docker:
