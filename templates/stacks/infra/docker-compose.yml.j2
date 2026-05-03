@@ -38,18 +38,25 @@ services:
       INFO: 1
       EVENTS: 1
       VERSION: 1
-      # Portainer needs write access for container management
+      # ── REM-001: trimmed Portainer surface (was: full Swarm + SYSTEM) ────
+      # Swarm-related flags (NODES/PLUGINS/SECRETS/CONFIGS/SWARM) and SYSTEM
+      # are dropped — nOS does not run Swarm and Portainer's "system info"
+      # panel doesn't justify the API surface. Trim closes REM-001's
+      # "limit API surface" requirement at zero functional cost for our
+      # single-host home-lab use case.
 {% if install_portainer | default(false) %}
-      POST: 1
-      BUILD: 1
-      EXEC: 1
-      DISTRIBUTION: 1
-      NODES: 1
-      PLUGINS: 1
-      SECRETS: 1
-      CONFIGS: 1
-      SWARM: 1
-      SYSTEM: 1
+      POST: 1                                                  # container start/stop/restart
+      BUILD: 1                                                 # image build from Dockerfile UI
+      # EXEC = container shell. Highest-impact RCE surface if Portainer is
+      # compromised (CSRF / XSS / OAuth abuse → docker exec on any container).
+      # Operators security-sensitive flip `portainer_socket_proxy_can_exec:
+      # false` in config.yml; loses Portainer's web shell, keeps everything else.
+      EXEC: {{ 1 if (portainer_socket_proxy_can_exec | default(true)) else 0 }}
+      # DISTRIBUTION = registry pull from Portainer UI. Off by default-true;
+      # operators who pull images via docker CLI / Ansible only can flip
+      # `portainer_socket_proxy_can_distribution: false` to remove the
+      # registry-token-leak surface.
+      DISTRIBUTION: {{ 1 if (portainer_socket_proxy_can_distribution | default(true)) else 0 }}
 {% else %}
       POST: 0
 {% endif %}

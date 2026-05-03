@@ -13,3 +13,26 @@ portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 portainer_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# ── REM-001 hardening surface (Group D) ───────────────────────────────────────
+# The shared docker-socket-proxy in templates/stacks/infra/docker-compose.yml.j2
+# already shields direct /var/run/docker.sock access, but its API surface for
+# Portainer used to include every Swarm flag + SYSTEM + DISTRIBUTION + EXEC.
+# Two flags below let security-sensitive operators trim further:
+#
+#   portainer_socket_proxy_can_exec        — Portainer's web container shell
+#                                            (`docker exec` via Portainer UI).
+#                                            Highest-impact RCE surface if a
+#                                            Portainer XSS / CSRF / OAuth abuse
+#                                            lands. Default true (UI usability);
+#                                            flip to false to remove the surface.
+#   portainer_socket_proxy_can_distribution — Pull images from registry via the
+#                                            Portainer UI. Default true; flip
+#                                            to false if you only pull through
+#                                            the docker CLI + Ansible.
+#
+# Set both to false in config.yml to fully close REM-001 with a usability cost
+# (no Portainer shell, no Portainer image-pull); leave at default for normal
+# home-lab use — Swarm + SYSTEM + the rest stays trimmed regardless.
+portainer_socket_proxy_can_exec: true
+portainer_socket_proxy_can_distribution: true

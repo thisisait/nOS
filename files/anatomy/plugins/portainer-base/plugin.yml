@@ -1,0 +1,316 @@
+# =============================================================================
+# portainer-base — service plugin (DRAFT, third tune-and-thin pilot)
+#
+# Status: research draft, captured 2026-05-03 evening. NOT loaded by anything.
+# Purpose: harvest 272 LOC of `roles/pazny.portainer/tasks/post.yml` (admin
+# bootstrap + OAuth2 reconverge + endpoint registration) into a tendons +
+# vessels manifest. Bundled with REM-001 socket-proxy surface trimming
+# applied LIVE in templates/stacks/infra/docker-compose.yml.j2.
+#
+# Why Portainer is the pilot for "API-driven post-setup":
+#   • 272 LOC of post.yml is the LARGEST in the repo
+#   • All wiring is HTTP-API (POST /users/admin/init, PUT /users/1/passwd,
+#     PUT /settings, POST /endpoints) — no env vars, no OS-level glue
+#   • Demonstrates the harvest pattern for services that converge their
+#     configuration via REST calls rather than templated config files
+# =============================================================================
+
+name: portainer-base
+version: 0.1.0
+description: |
+  Wiring layer for Portainer CE: idempotent admin bootstrap + password
+  reconverge, OAuth2/Authentik setup via Settings API, `apps` Docker
+  endpoint registration, GDPR row, Wing /hub card.
+
+  Role `pazny.portainer` keeps install-only responsibilities (data dir +
+  compose render); the 272-LOC post.yml moves into this manifest's
+  `lifecycle.post_compose.api_calls` block once A6.5 makes loader real.
+upstream: https://www.portainer.io/
+license: zlib  # Portainer CE; manifest is repo-licensed
+
+type:
+  - service           # binds to roles/pazny.portainer
+  - ui-extension      # Wing /hub deep-link card
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.portainer
+  feature_flag: install_portainer
+  peer_service: docker_socket_proxy        # base infra service, REM-001 trim'd
+  variables:
+    - portainer_domain
+    - portainer_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+    - portainer_admin_password
+
+# =============================================================================
+# AUTHENTIK — native OIDC client (Portainer reads OIDC via Settings API)
+# =============================================================================
+
+authentik:
+  mode: native_oidc                      # Portainer's `OAuthSettings` API
+  client_id: nos-portainer
+  client_secret: "{{ global_password_prefix }}_pw_oidc_portainer"
+  slug: portainer
+  redirect_uris:
+    - "https://{{ portainer_domain }}"
+  launch_url: "https://{{ portainer_domain }}"
+  post_setup: portainer_api              # invokes the api_calls block below
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 1                                # admin only — Portainer is infra mgmt
+
+# =============================================================================
+# API CALLS — sequenced harvest of roles/pazny.portainer/tasks/post.yml (272 LOC)
+# =============================================================================
+# Each entry corresponds to one task in today's post.yml. Loader replays them
+# at post_compose time; the role's post.yml shrinks to a single
+# `include_role: pazny.anatomy.loader` invocation pointing here.
+
+api_calls:
+  base_url: "https://127.0.0.1:{{ portainer_port }}"
+  tls_verify: false                       # Portainer self-signs on first start
+  retries:
+    max: 30
+    delay_seconds: 2
+
+  sequence:
+    # Phase 1 — admin bootstrap (idempotent: detect-existing → create OR reconverge)
+    - id: wait_api_ready
+      method: GET
+      path: /api/system/status
+      expect_status: 200
+      timeout_seconds: 60
+
+    - id: check_admin_exists
+      method: GET
+      path: /api/users/admin/check
+      expect_status: [204, 404]            # 204=exists, 404=fresh
+      register: _admin_exists
+
+    - id: create_admin
+      when: "_admin_exists.status == 404"
+      method: POST
+      path: /api/users/admin/init
+      body:
+        Username: admin
+        Password: "{{ portainer_admin_password }}"
+
+    - id: login_current_password
+      when: "_admin_exists.status == 204"
+      method: POST
+      path: /api/auth
+      body:
+        Username: admin
+        Password: "{{ portainer_admin_password }}"
+      expect_status: [200, 422]            # 422 = wrong password (reconverge needed)
+      register: _login_current
+
+    - id: login_previous_password
+      when: "_login_current.status == 422"
+      method: POST
+      path: /api/auth
+      body:
+        Username: admin
+        Password: "{{ portainer_admin_password_previous | default('') }}"
+      expect_status: [200, 422]
+      register: _login_previous
+
+    - id: reconverge_password
+      when: "_login_previous.status == 200"
+      method: PUT
+      path: /api/users/1/passwd
+      auth_token_from: _login_previous.body.jwt
+      body:
+        currentPassword: "{{ portainer_admin_password_previous | default('') }}"
+        newPassword: "{{ portainer_admin_password }}"
+
+    # Phase 2 — Authentik OAuth2 (when install_authentik=true)
+    - id: get_admin_token
+      when: "install_authentik | bool"
+      method: POST
+      path: /api/auth
+      body:
+        Username: admin
+        Password: "{{ portainer_admin_password }}"
+      register: _admin_token
+
+    - id: configure_oauth2
+      when: "install_authentik | bool and _admin_token.status == 200"
+      method: PUT
+      path: /api/settings
+      auth_token_from: _admin_token.body.jwt
+      body:
+        OAuthSettings:
+          ClientID: "{{ authentik_oidc_portainer_client_id }}"
+          ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
+          AccessTokenURI: "https://{{ authentik_domain }}/application/o/token/"
+          AuthorizationURI: "https://{{ authentik_domain }}/application/o/authorize/"
+          ResourceURI: "https://{{ authentik_domain }}/application/o/userinfo/"
+          RedirectURI: "https://{{ portainer_domain }}"
+          UserIdentifier: preferred_username
+          Scopes: "openid email profile"
+          OAuthAutoCreateUsers: true
+          DefaultTeamID: 0
+
+    # Phase 3 — register the `apps` Docker endpoint (Tier-2 stack visibility)
+    - id: list_endpoints
+      when: "_admin_token.status == 200"
+      method: GET
+      path: /api/endpoints
+      auth_token_from: _admin_token.body.jwt
+      register: _endpoints
+
+    - id: register_apps_endpoint
+      when: "_admin_token.status == 200 and not (_endpoints.body | selectattr('Name', 'equalto', 'apps') | list)"
+      method: POST
+      path: /api/endpoints
+      auth_token_from: _admin_token.body.jwt
+      form_data:
+        Name: apps
+        EndpointCreationType: 1            # local Docker
+        URL: "tcp://docker-socket-proxy:2375"
+        GroupID: 1
+        TagIds: "[]"
+
+# =============================================================================
+# COMPOSE-EXTENSION — REM-001 hardening surface (LIVE today; this captures it)
+# =============================================================================
+# Today's templates/stacks/infra/docker-compose.yml.j2 already carries the
+# trimmed proxy-env block (commit "feat(portainer): REM-001 hardening").
+# This entry documents the post-Q target home: the trim moves out of the
+# infra base template into THIS plugin's compose_extension so a Portainer-less
+# install gets a tighter default proxy without any conditional logic in base.
+
+compose_extension:
+  template: templates/portainer-socket-proxy.compose.yml.j2
+  target_stack: infra
+  target_service: docker-socket-proxy
+  hardening_refs:
+    - REM-001               # Portainer least-privilege via socket-proxy
+
+# =============================================================================
+# OBSERVABILITY — Portainer doesn't expose /metrics natively
+# =============================================================================
+# Workaround: Alloy scrapes the docker-socket-proxy /version endpoint as a
+# liveness probe; full container-level metrics come from cadvisor (already in
+# the alloy config). Plugin self-metrics track our wiring only.
+
+observability:
+  loki:
+    labels:
+      app: portainer
+      stack: infra
+      tier: "1"
+  metrics_of_interest:
+    # cadvisor + docker-socket-proxy events; no Portainer-specific scrape
+    - container_cpu_usage_seconds_total
+    - container_memory_working_set_bytes
+  grafana:
+    dashboards: []                       # Portainer has its own UI; no Grafana panel today
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "https://127.0.0.1:{{ portainer_port }}/api/system/status"
+    - replay_api_calls: api_calls.sequence
+  post_blank:
+    - remove_dir: "{{ portainer_data_dir }}"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+# Operator-only management UI; no third-party data subjects. Closes today's
+# gap (no portainer row in Wing /gdpr).
+
+gdpr:
+  data_categories:
+    - admin_credentials                  # admin password hash (Portainer DB)
+    - oauth_session_data                 # Authentik OIDC sessions
+    - audit_logs                         # who clicked what (limited; Portainer's own audit)
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Portainer"
+    icon: docker
+    url: "https://{{ portainer_domain }}"
+    tier: 1
+    description: "Docker container management"
+    health_check: "https://{{ portainer_domain }}/api/system/status"
+
+# =============================================================================
+# NOTIFICATIONS — REM-001 surface drift watch + admin reconverge alerts
+# =============================================================================
+
+notification:
+  on_admin_reconverge_failure:
+    channels: [wing-inbox, ntfy]
+    severity: critical
+    template: notifications/admin-reconverge-failed.txt
+  on_oauth2_misconfigured:
+    channels: [wing-inbox]
+    severity: high
+    template: notifications/oauth2-misconfigured.txt
+  on_socket_proxy_surface_drift:
+    # Conductor (post-A8) periodically diffs the proxy env block against
+    # the trimmed REM-001 baseline; alert on any silent re-grant of
+    # NODES/PLUGINS/SECRETS/CONFIGS/SWARM/SYSTEM.
+    channels: [wing-inbox, ntfy]
+    severity: critical
+    template: notifications/socket-proxy-drift.txt
+
+# =============================================================================
+# HARVEST MAP — what already lives where (for the Track Q sweep)
+# =============================================================================
+# Surface today                                | Block in this manifest
+# ---------------------------------------------|---------------------------------
+# roles/pazny.portainer/tasks/post.yml :       |
+#   admin bootstrap (3 tasks)                  | api_calls phase 1 (wait + check + create)
+#   password reconverge (4 tasks)              | api_calls phase 1 (login_* + reconverge)
+#   OAuth2 setup via Settings API (3 tasks)    | api_calls phase 2
+#   apps endpoint registration (3 tasks)       | api_calls phase 3
+# default.config.yml authentik_oidc_apps:      |
+#   slug: portainer                            | authentik (tendon) + post_setup hook
+# templates/stacks/infra/docker-compose.yml.j2 |
+#   docker-socket-proxy environment block      | compose_extension (post-Q)
+#   REM-001 trim (NEW, lives there today)      | (mirrored here for documentation)
+# (gap today): GDPR Article 30 row             | gdpr (tendon) — NEW
+# (gap today): Wing /hub card                  | ui-extension (tendon) — NEW
+# (gap today): Conductor drift alarm           | notification (tendon) — post-A8
+#
+# Files that need to ship with this plugin once A6.5 makes loader real:
+#
+# files/anatomy/plugins/portainer-base/
+# ├── plugin.yml                               # this file
+# ├── README.md                                # operator-facing
+# ├── templates/
+# │   └── portainer-socket-proxy.compose.yml.j2 # vessel: REM-001 trim block
+# ├── notifications/
+# │   ├── admin-reconverge-failed.txt
+# │   ├── oauth2-misconfigured.txt
+# │   └── socket-proxy-drift.txt
+# └── tests/
+#     ├── test_admin_reconverge_idempotent.py
+#     └── test_socket_proxy_surface_baseline.py  # diff against REM-001 baseline
