@@ -566,3 +566,100 @@ async def events_list(
     finally:
         conn.close()
     return {"items": rows, "count": len(rows)}
+
+
+# ── Qdrant proxy — /api/v1/embeddings/{upsert,search,health} ─────────────────
+# Bone owns the Qdrant API key (passed via plist env QDRANT_API_KEY); agents
+# and plugin runners reach Qdrant ONLY through these endpoints, so the key
+# never leaves the host. Returns 503 when install_qdrant=false (URL empty).
+
+try:
+    from clients import qdrant_client as _qdrant
+except ImportError:  # pragma: no cover — only triggers in degraded env
+    _qdrant = None
+
+
+def _qdrant_or_503():
+    if _qdrant is None:
+        raise HTTPException(status_code=503, detail="qdrant client module not loaded")
+    client = _qdrant.get()
+    if not client.is_configured():
+        raise HTTPException(status_code=503, detail="QDRANT_URL is empty (install_qdrant=false)")
+    return client
+
+
+@app.get("/api/v1/embeddings/health")
+async def embeddings_health(_=Depends(require_scope("nos:embeddings:read"))):
+    """Probe Qdrant /healthz — uniform path agents can use as a precondition."""
+    client = _qdrant_or_503()
+    try:
+        return client.health()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"qdrant unhealthy: {exc}")
+
+
+@app.post("/api/v1/embeddings/upsert")
+async def embeddings_upsert(
+    body: dict | None = None,
+    _=Depends(require_scope("nos:embeddings:write")),
+):
+    """Upsert N points into a Qdrant collection.
+
+    Body shape:
+      {"collection": "agent_outputs",
+       "points": [{"id": "...", "vector": [..768..], "payload": {...}}, ...]}
+    """
+    client = _qdrant_or_503()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
+    collection = body.get("collection")
+    raw_points = body.get("points")
+    if not isinstance(collection, str) or not collection:
+        raise HTTPException(status_code=400, detail="collection (str) is required")
+    if not isinstance(raw_points, list) or not raw_points:
+        raise HTTPException(status_code=400, detail="points (non-empty list) is required")
+    try:
+        points = [
+            _qdrant.Point(
+                id=p["id"],
+                vector=p["vector"],
+                payload=p.get("payload"),
+            )
+            for p in raw_points
+        ]
+    except (KeyError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=f"invalid point: {exc}")
+    try:
+        return client.upsert(collection, points)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"qdrant upsert failed: {exc}")
+
+
+@app.post("/api/v1/embeddings/search")
+async def embeddings_search(
+    body: dict | None = None,
+    _=Depends(require_scope("nos:embeddings:read")),
+):
+    """k-NN search over a Qdrant collection.
+
+    Body shape:
+      {"collection": "agent_outputs",
+       "vector":  [..768..],
+       "limit":   10,                # optional, default 10
+       "filter":  {...} | null}      # optional Qdrant filter object
+    """
+    client = _qdrant_or_503()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
+    collection = body.get("collection")
+    vector = body.get("vector")
+    if not isinstance(collection, str) or not collection:
+        raise HTTPException(status_code=400, detail="collection (str) is required")
+    if not isinstance(vector, list) or not vector:
+        raise HTTPException(status_code=400, detail="vector (non-empty list) is required")
+    limit = int(body.get("limit") or 10)
+    filt = body.get("filter")
+    try:
+        return client.search(collection, vector, limit=limit, filter=filt)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"qdrant search failed: {exc}")

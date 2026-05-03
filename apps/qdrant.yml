@@ -61,10 +61,13 @@ compose:
       image: "docker.io/qdrant/qdrant:v1.13.4"
       container_name: qdrant
       restart: unless-stopped
-      # No host port mapping — Traefik reaches the HTTP API via the shared
-      # apps_net. gRPC port 6334 stays internal until a real consumer needs it.
+      # Host-side Bone (launchd) + Alloy (Homebrew brew service) reach the
+      # HTTP API on `127.0.0.1:6333`. Traefik also reaches the same port
+      # via the file provider — runner emits the auth-proxy router. gRPC
+      # 6334 stays inside apps_net until a real consumer arrives.
+      ports:
+        - "127.0.0.1:6333:6333"
       expose:
-        - "6333"
         - "6334"
       environment:
         # Double-underscore in Qdrant env var = config-key nesting (e.g.

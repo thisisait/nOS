@@ -1,0 +1,114 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Qdrant — vector DB for agent embeddings + system metadata + cybersec intel. Provisioned by qdrant-base plugin (DRAFT) once A6.5 makes loader real; until then ships via tasks/observability.yml provisioning copy. Scrape from Alloy gated on alloy_scrape_qdrant (defaults to install_qdrant).",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "Qdrant — vector DB substrate",
+      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "**Qdrant** is the nOS vector DB substrate. Three reserved collections (defined in `files/anatomy/plugins/qdrant-base/plugin.yml`): `agent_outputs` (conductor/inspektor/gitleaks runs), `system_metadata` (Wing /systems mirror), `cybersec_intel` (CVE/advisory/remediation similarity search). Ingestion lands with **A8 conductor** + plugin runners — until then this dashboard reads zeros."
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Collections",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 3},
+      "targets": [{"refId": "A", "expr": "qdrant_collections_total", "legendFormat": "collections"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}, {"color": "green", "value": 3}]}, "noValue": "no scrape"}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Pending ops",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 3},
+      "targets": [{"refId": "A", "expr": "qdrant_pending_operations", "legendFormat": "pending"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 50}, {"color": "red", "value": 200}]}, "noValue": "no scrape"}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Resident memory",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 3},
+      "targets": [{"refId": "A", "expr": "process_resident_memory_bytes{job=\"qdrant\"}", "legendFormat": "RSS"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1073741824}, {"color": "red", "value": 1610612736}]}, "noValue": "no scrape"}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Goroutines",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 3},
+      "targets": [{"refId": "A", "expr": "go_goroutines{job=\"qdrant\"}", "legendFormat": "goroutines"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "no scrape"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "id": 6,
+      "title": "REST response time (avg, by endpoint)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 7},
+      "targets": [
+        {"refId": "A", "expr": "sum by (endpoint) (rate(qdrant_rest_responses_total_duration_seconds[5m])) / sum by (endpoint) (rate(qdrant_rest_responses_total[5m]))", "legendFormat": "{{ endpoint }}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10}, "noValue": "no traffic"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "id": 7,
+      "title": "gRPC response time (avg, by service)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 7},
+      "targets": [
+        {"refId": "A", "expr": "sum by (grpc_service) (rate(qdrant_grpc_response_time_seconds_sum[5m])) / sum by (grpc_service) (rate(qdrant_grpc_response_time_seconds_count[5m]))", "legendFormat": "{{ grpc_service }}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10}, "noValue": "no traffic"}, "overrides": []}
+    },
+    {
+      "type": "logs",
+      "id": 8,
+      "title": "Qdrant logs (last 50)",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 16},
+      "targets": [
+        {"refId": "A", "expr": "{app=\"qdrant\"} |~ \"(?i)(error|warn|insert|search)\"", "queryType": "range", "maxLines": 50}
+      ],
+      "options": {"showTime": true, "wrapLogMessage": true, "sortOrder": "Descending"}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["nos", "vector-db", "qdrant", "ai-substrate"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "nOS · Vector DB (Qdrant)",
+  "uid": "nos-qdrant",
+  "version": 1,
+  "weekStart": ""
+}

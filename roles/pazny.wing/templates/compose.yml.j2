@@ -36,6 +36,22 @@ services:
       - "127.0.0.1:{{ wing_port }}:9000"
     volumes:
       - {{ wing_app_dir }}:{{ wing_app_dir }}:rw
+    environment:
+      # Bone runs on host launchd post-A3a. Wing FPM container reaches it via
+      # Docker Desktop's host-gateway alias.
+      BONE_URL: "{{ bone_url | default('http://host.docker.internal:' + (bone_port | default(8069) | string)) }}"
+      BONE_SECRET: "{{ bone_secret | default('') }}"
+      # Qdrant — Tier-2 vector DB at apps/qdrant.yml. Empty when
+      # install_qdrant=false; QdrantClient.php returns 503 in that case.
+      QDRANT_URL: "{{ ('http://host.docker.internal:' + (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else '' }}"
+      QDRANT_API_KEY_RO: "{{ qdrant_api_key_ro | default('') }}"
+{% if install_authentik | default(false) %}
+      # Wing presenters can mint operator JWTs against Authentik for cross-
+      # service calls (Bone, Qdrant via Bone). Same chain as Bone JWT auth.
+      AUTHENTIK_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
+{% endif %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - iiab_net
     logging:

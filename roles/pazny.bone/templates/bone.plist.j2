@@ -69,6 +69,14 @@
         <key>BONE_REQUIRE_JWT_AUTH</key>
         <string>0</string>
         {% endif %}
+
+        {# ── Qdrant vector-DB substrate (apps/qdrant.yml). Empty when ──────── #}
+        {# install_qdrant=false; Bone's clients/qdrant_client.py treats     #}
+        {# empty URL as "no vector backend, raise NotConfigured on call".  #}
+        <key>QDRANT_URL</key>
+        <string>{{ qdrant_url | default('http://127.0.0.1:' + (qdrant_port | default(6333) | string) if (install_qdrant | default(false)) else '') }}</string>
+        <key>QDRANT_API_KEY</key>
+        <string>{{ qdrant_api_key | default('') }}</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops. -->

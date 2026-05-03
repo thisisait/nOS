@@ -37,3 +37,9 @@ services:
 
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
+
+	# Vector DB substrate — Tier-2 Qdrant (apps/qdrant.yml).
+	# Reads QDRANT_URL + QDRANT_API_KEY_RO from env (read-only key by design;
+	# write path goes through Bone /api/v1/embeddings/upsert so all writes
+	# carry actor attribution).
+	- App\Model\QdrantClient

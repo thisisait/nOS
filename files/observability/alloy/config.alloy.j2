@@ -116,6 +116,22 @@ prometheus.scrape "influxdb" {
 }
 {% endif %}
 
+{% if alloy_scrape_qdrant | default(false) %}
+// Qdrant (Tier-2 vector DB) — collections, query latency, memmap RSS.
+// /metrics is unauthenticated by design (the data API requires the
+// QDRANT__SERVICE__API_KEY; metrics are exempt). Hits the host-bound
+// 127.0.0.1:6333 published by apps/qdrant.yml.
+prometheus.scrape "qdrant" {
+  targets = [{
+    __address__ = "localhost:{{ qdrant_port | default(6333) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "qdrant"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+}
+{% endif %}
+
 {% if install_spacetimedb | default(false) %}
 // SpacetimeDB — native Rust process metrics (worker pool, db ops, energy, WS conns).
 // Path is /v1/prometheus (the /metrics router under /v1 returns the same blob;
