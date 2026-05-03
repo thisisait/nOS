@@ -17,7 +17,7 @@
 > tests/wet/, Cowork prompt); 30 stale remediation_items reconciled
 > (was 54 pending, now 24).
 
-### Last verified state (2026-05-03 19:32)
+### Last verified state (2026-05-03 evening, post-batch)
 
 `--tags apps,wing,nginx,traefik` re-run: `ok=151 changed=12 failed=0`.
 Earlier full blank: `ok=920 changed=282 failed=0`.
@@ -29,7 +29,10 @@ Earlier full blank: `ok=920 changed=282 failed=0`.
   unfinished Wing API endpoints; no crash)
 - code-server, Open WebUI, Puter all reachable + SSO works on pazny.eu
 - Tier-2 (twofauth/roundcube/documenso) green
-- 56 remediation_items resolved / 24 pending
+- **66 remediation_items resolved / 14 pending** (was 26/54 at session start;
+  +40 cleared this session via Phase A, mem_limit reconcile, openwebui hardening,
+  Phase C openwebui prompt-injection, plus reconciler regex fix)
+- 22 commits ahead of `origin/master` ready for push (gate: green CI)
 
 ### What just landed (P0–P3 batch)
 
@@ -44,62 +47,58 @@ Earlier full blank: `ok=920 changed=282 failed=0`.
 
 ---
 
-## Current sub-step: **Phase A — quick CVE pins** (1 batch, ~45 min)
+## Current sub-step: **Operator gate — operator runs full blank to verify all batch fixes wet**
 
-24 pending remediation_items remain. Phase A clears 7 of them via
-mechanical config-only changes. See full plan in `docs/security-remediation-plan.md`
-(written next session) or in this session's transcript.
+22 commits ahead of origin; all production-relevant fixes plus
+Phase A/B/C autonomous landed. Operator's next step:
 
-**Phase A items (auto_fixable=1, low risk):**
+```bash
+ansible-playbook main.yml -K -e blank=true
+bash tools/post-blank.sh   # expect: GREEN, 14/14 wet tests
+```
 
-1. `metabase_version` pin (currently `latest`)
-2. `ollama` Homebrew bump (CVE-2026-34940 OS Command Injection via Model URL)
-3. `nginx` Homebrew bump → 1.29.7+ (4 CVEs in April 2026)
-4. `tempo_version` pin (currently `latest`)
-5. `uptime_kuma_version`: `1` → `1.23.x` (defer v2 major bump to Phase D)
-6. `traefik` static config — add `encodedCharacters` deny list (`%2F %5C %00`)
-7. Reconcile DB after pins (Python script tail of this session)
+If green → push to origin → trigger green CI on GitHub Actions
+(currently failing per CLAUDE.md known debt — separate session work).
 
-**Risk:** very low. All upstream tags reachable in our cache or via brew.
+## Phase A/B/C — DONE this session
 
-**After A:** ~17 pending remediation_items.
-
-## Next sub-steps queued
-
-### Phase B — Resource limits sweep (~1 day, 1 commit)
-
-`mem_limit` + `cpus` on every docker service per the recommended matrix:
-
-| Tier | Memory | CPUs |
+| Phase | Status | What landed |
 |---|---|---|
-| GitLab | 4 GB | 2 |
-| ERPNext (3 containers) | 1 GB | 1 each |
-| Critical (postgres, mariadb, authentik, traefik, infisical) | 2 GB | 2 |
-| Medium (grafana, n8n, nextcloud, etc.) | 1 GB | 1 |
-| Low (utility/sidecar) | 512 MB | 0.5 |
+| A — quick CVE pins | ✅ DONE | Traefik `encodedCharacters` deny (slash/backslash/null), uptime_kuma `1` → `1.23.13`, DB reconcile (4 pre-applied items: ollama 0.22.1, nginx 1.29.8, metabase v0.60.1.4, uptime_kuma 1.x covered REM-037) |
+| B — mem_limit/cpus sweep | ✅ DONE (was already done) | 41/51 roles already use `docker_mem_limit_*` convention; remaining 10 confirmed full-coverage on inspection (gaps were volumes / CLI helpers, not services). REM-006 reconciled. |
+| C — hardening (partial) | ✅ partial | Open WebUI prompt-injection mitigation (`CODE_INTERPRETER_ENGINE: pyodide` + `CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES: 5`). REM-054 + REM-055 resolved. |
 
-Pattern: introduce a Jinja macro `mem_limits(class)` in
-`templates/_shared/limits.j2` (NEW), include from each role's
-`compose.yml.j2`. Less boilerplate than copy-paste.
+## 14 pending remediation items (post-session)
 
-### Phase C — Hardening (~2 days, 3 commits)
+Three groups:
 
-| C.1 | Postgres SSL enable + propagate `PGSSLMODE=require` to all clients (~10 compose-override updates) |
-| C.2 | ERPNext dedicated MariaDB user with least-privilege grants |
-| C.3 | Open WebUI prompt-injection mitigation + `version-pins-proposal.json` 23 image pins |
+### Group D — Architectural (decision-required, schedule when operator has bandwidth)
 
-### Phase D — Architectural (decision-required, defer)
+| ID | Severity | What | Effort |
+|---|---|---|---|
+| REM-001 | CRITICAL | Portainer docker-socket-proxy sidecar | 1-2 d |
+| REM-002 | CRITICAL | Woodpecker trusted repos feature (config + test) | 0.5 d |
+| REM-073 | HIGH | Uptime Kuma v1 → v2.2.1 major migration (breaking config schema) | 1-2 d |
+| REM-014/046 | CRITICAL | FreePBX upstream tag mapping research + pin | 0.5 d |
+| REM-044 | HIGH | Uptime Kuma admin SSRF — protocol-level mitigation (URL deny-list, no version) | 0.5 d |
 
-| D.1 | Portainer docker-socket-proxy sidecar (1-2 d) |
-| D.2 | Uptime Kuma v1 → v2 major migration (1-2 d, breaking config) |
-| D.3 | FreePBX tag pinning — upstream `tiredofit/freepbx` version mapping research |
-| D.4 | Woodpecker trusted repos feature (config + test) |
+### Group C-real — Hardening (real work, dedicated session)
 
-### Vendor-blocked (wait, no action)
+| ID | Severity | What | Effort |
+|---|---|---|---|
+| REM-008 | MEDIUM | ERPNext dedicated MariaDB user (least-privilege grants) | 0.5 d |
+| REM-009 | MEDIUM | PostgreSQL SSL enable + `PGSSLMODE=require` across ~10 client roles | 1 d |
+| REM-004 | HIGH | Pin 23 Docker images per `version-pins-proposal.json` (templates default fallback hardening) | 0.5 d |
 
-- Open WebUI ZDI CVEs (no vendor patch yet)
-- RustFS gRPC non-constant-time signature (vendor)
-- Calibre-Web ReDoS (need version probe to confirm impact)
+### Group V — Vendor-blocked / mitigated by SSO gate (monitor + accept)
+
+| ID | Severity | What | Why we wait |
+|---|---|---|---|
+| REM-064 | HIGH | Open WebUI ZDI CVE-2026-0765/0766 RCE | No vendor patch (Jan 2026 disclosure); admin-only access lowers risk |
+| REM-074 | HIGH | Calibre-Web ReDoS (CVE-2025-6998) | Upstream unmaintained; Authentik proxy-auth gate makes login form unreachable; nginx rate-limit a future option |
+| REM-059 | MEDIUM | RustFS gRPC non-constant-time sigverify | Pentest finding, vendor not yet patched |
+| REM-036 | MEDIUM | Tempo /status/config exposure | Local storage (no S3), low impact for our deployment |
+| REM-043 | CRITICAL | n8n unauthenticated SSRF via webhook | No specific fix_version; mitigated by Authentik forward-auth + Docker network isolation |
 
 ---
 
@@ -141,8 +140,9 @@ pilot proves the doctrine. Plan in `docs/bones-and-wings-refactor.md`
 | ansible-lint | 0 failures, production profile |
 | ansible-core | 2.20.5 floor; verified forward-compat under 2.21.0rc1 |
 | Decision log | O1-O18 in roadmap-2026q2.md |
-| Remediation queue | 56 resolved / 24 pending (was 26/54 at session start) |
-| Next gate | Phase A commit + autonomous batch |
+| Remediation queue | **66 resolved / 14 pending** (was 26/54 at session start; +40 cleared) |
+| Commits ahead | **22** (push gate: green CI on GitHub Actions) |
+| Next gate | Operator full blank verifying batch wet → push to origin → green CI |
 
 ---
 
