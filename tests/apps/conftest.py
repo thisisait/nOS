@@ -10,5 +10,8 @@ import os
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+# Anatomy A1 (2026-05-03): module_utils moved to files/anatomy/module_utils.
+ANATOMY = os.path.join(ROOT, "files", "anatomy")
+for _p in (ROOT, ANATOMY):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)

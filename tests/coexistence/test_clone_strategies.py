@@ -28,7 +28,7 @@ def _load_module(relpath: str, name: str) -> types.ModuleType:
     return mod
 
 
-clone = _load_module("module_utils/nos_coexistence_clone.py",
+clone = _load_module("files/anatomy/module_utils/nos_coexistence_clone.py",
                      "module_utils.nos_coexistence_clone")
 
 

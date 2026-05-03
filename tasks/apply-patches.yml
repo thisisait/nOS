@@ -2,7 +2,7 @@
 # ==============================================================================
 # APPLY-PATCHES ENGINE
 # ------------------------------------------------------------------------------
-# Applies a single patch recipe (patches/<patch_id>.yml) end-to-end. Mirrors
+# Applies a single patch recipe (files/anatomy/patches/<patch_id>.yml) end-to-end. Mirrors
 # the upgrade-engine contract (preconditions -> apply -> verify -> on-failure
 # rollback) but stays pure-Ansible — no custom module. Step dispatch is a
 # conditional include based on which action field the step sets.
@@ -44,19 +44,19 @@
 
 - name: "[Patch] Locate recipe file"
   ansible.builtin.stat:
-    path: "{{ playbook_dir }}/patches/{{ patch_id }}.yml"
+    path: "{{ playbook_dir }}/files/anatomy/patches/{{ patch_id }}.yml"
   register: _patch_stat
   tags: ['always', 'apply-patches']
 
 - name: "[Patch] Fail fast if recipe missing"
   ansible.builtin.fail:
-    msg: "Patch recipe not found at {{ playbook_dir }}/patches/{{ patch_id }}.yml"
+    msg: "Patch recipe not found at {{ playbook_dir }}/files/anatomy/patches/{{ patch_id }}.yml"
   when: not _patch_stat.stat.exists
   tags: ['apply-patches']
 
 - name: "[Patch] Load recipe YAML"
   ansible.builtin.set_fact:
-    _patch: "{{ lookup('file', playbook_dir + '/patches/' + patch_id + '.yml') | from_yaml }}"
+    _patch: "{{ lookup('file', playbook_dir + '/files/anatomy/patches/' + patch_id + '.yml') | from_yaml }}"
   tags: ['always', 'apply-patches']
 
 - name: "[Patch] Validate required fields"

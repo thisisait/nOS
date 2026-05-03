@@ -161,7 +161,9 @@ def _collect_predicates(rec):
 
 def _migration_files():
     root = _osp.abspath(_osp.join(_osp.dirname(__file__), "..", ".."))
-    mdir = _osp.join(root, "migrations")
+    # Anatomy A1 (2026-05-03): migrations moved from /migrations/ to
+    # files/anatomy/migrations/ per refactor §4.2.
+    mdir = _osp.join(root, "files", "anatomy", "migrations")
     return sorted(f for f in _glob.glob(_osp.join(mdir, "*.yml"))
                   if not _osp.basename(f).startswith("_"))
 

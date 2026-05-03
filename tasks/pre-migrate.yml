@@ -33,7 +33,7 @@
 - name: "[pre-migrate] List pending migrations"
   nos_migrate:
     action: list_pending
-    migrations_dir: "{{ playbook_dir }}/migrations"
+    migrations_dir: "{{ playbook_dir }}/files/anatomy/migrations"
     state: "{{ _nos_state.state | default({}) }}"
   register: _pending
   # nos_migrate is delivered by agent 2. Until that ships, this task fails

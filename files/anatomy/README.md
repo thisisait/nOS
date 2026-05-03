@@ -43,18 +43,20 @@ files/anatomy/
 └── docs/                       # Internal anatomy docs (framework-* etc., MOVED here)
 ```
 
-## Why this dir exists today (before A0/A1)
+## A0 + A1 status (2026-05-03)
 
-Operator and Claude agreed 2026-05-03 to validate the §1.1 doctrine on
-Grafana FIRST (research dry-run V3) before doing the structural move (V2).
-This dir bootstraps with just enough scaffolding to hold the research output,
-so the artifacts have a stable home and aren't moved a second time when A0/A1
-run.
+- **A0 — skeleton** ✅ committed `c09fc52`. Empty subdirs created with `.gitkeep`; ansible.cfg declared dual-paths (legacy `./library` + new `./files/anatomy/library`).
+- **A1 — anatomize-move** ✅ this commit. Top-level `migrations/`, `library/`, `module_utils/`, `patches/` physically moved to `files/anatomy/`. ansible.cfg dropped legacy paths. Framework-internal docs (framework-overview, framework-plan, migration-authoring, upgrade-recipes, coexistence-playbook, wing-integration) moved from `/docs/` per §4.2 split rule. CLAUDE.md updated. 434/434 tests green; ansible-playbook --syntax-check clean.
 
-After A0/A1, the `library/`, `migrations/`, etc. above will be present here
-and the top-level repo dirs will be gone. **No files outside `files/anatomy/`
-will need moving in A6.5 implementation** — only role-internal modifications
-(thinning) plus new files inside this dir.
+Top-level `migrations/`, `library/`, `module_utils/`, `patches/` directories
+are GONE. Anything that referenced them via path string has been updated to
+`files/anatomy/...`. Python imports of `module_utils.X` continue to work
+because `tests/conftest.py` (NEW in A1) adds `files/anatomy/` to sys.path
+in addition to repo root.
+
+Phases A2-A10 (per `docs/bones-and-wings-refactor.md` §8) populate the
+remaining empty subdirs (`wing/`, `bone/`, `pulse/`, `skills/contracts/`,
+`agents/`, `scripts/`).
 
 ## Pointers
 

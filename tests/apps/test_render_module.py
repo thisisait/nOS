@@ -33,7 +33,8 @@ sys.path.insert(0, ROOT)
 
 def _load_render_module():
     """Import library/nos_apps_render.py without Ansible runtime."""
-    path = os.path.join(ROOT, "library", "nos_apps_render.py")
+    # Anatomy A1: library/ moved to files/anatomy/library/
+    path = os.path.join(ROOT, "files", "anatomy", "library", "nos_apps_render.py")
     spec = importlib.util.spec_from_file_location("nos_apps_render", path)
     mod = importlib.util.module_from_spec(spec)
     # AnsibleModule import will fail under pytest — that's fine, we only call

@@ -38,15 +38,16 @@ def _load_module(relpath: str, name: str) -> types.ModuleType:
 
 
 # module_utils first so library picks it up via sys.modules.
-clone_mod = _load_module("module_utils/nos_coexistence_clone.py",
+# Anatomy A1 (2026-05-03): library/ + module_utils/ now under files/anatomy/.
+clone_mod = _load_module("files/anatomy/module_utils/nos_coexistence_clone.py",
                          "module_utils.nos_coexistence_clone")
 # Ensure the package path resolves too.
 pkg = types.ModuleType("module_utils")
-pkg.__path__ = [str(_REPO / "module_utils")]  # type: ignore[attr-defined]
+pkg.__path__ = [str(_REPO / "files" / "anatomy" / "module_utils")]  # type: ignore[attr-defined]
 sys.modules.setdefault("module_utils", pkg)
 sys.modules["module_utils.nos_coexistence_clone"] = clone_mod
 
-lib = _load_module("library/nos_coexistence.py", "nos_coexistence_lib")
+lib = _load_module("files/anatomy/library/nos_coexistence.py", "nos_coexistence_lib")
 
 
 # ---------------------------------------------------------------------------
