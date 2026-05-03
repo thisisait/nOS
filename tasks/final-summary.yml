@@ -70,7 +70,7 @@
         Superset         https://{{ superset_domain }}            -> docker exec data-superset-1 superset fab create-admin
       {% endif %}
       {% if install_bluesky_pds | default(false) %}
-        Bluesky PDS      https://bsky.dev.lan                  -> goat CLI (admin auto-provisioned)
+        Bluesky PDS      https://{{ bluesky_pds_hostname }}            -> goat CLI (admin auto-provisioned)
       {% endif %}
       {% if install_freepbx | default(false) %}
         FreePBX          https://{{ freepbx_domain }}                 -> Run setup wizard

@@ -1580,7 +1580,12 @@ superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
 # Federated identity: @user.bsky.dev.local → SSO for all services
 # ==============================================================================
 
-bluesky_pds_hostname: "bsky.dev.lan"     # .local forbidden by AT Protocol spec
+# Track F (2026-05-01) + Track G prod cutover (2026-05-03) — derive
+# from tenant_domain. Local TLDs (.local/.lan/.test) keep the bsky.dev.lan
+# fallback for AT Protocol (.local is spec-forbidden); public TLDs get
+# bsky.<tenant_domain> so federation handles match the actual zone.
+# Override either side via config.yml if needed.
+bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true) | bool) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
@@ -1589,7 +1594,7 @@ bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generate: openssl rand -hex 32
 bluesky_pds_invite_required: true      # Invite-only registration (true = closed PDS)
 bluesky_pds_email_smtp_url: ""         # SMTP URL for PDS notifications (empty = disabled)
-bluesky_pds_email_from: ""             # Email sender (default: noreply@bsky.dev.lan)
+bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky_pds_hostname>)
 
 # ==============================================================================
 # PUTER – cloud OS web desktop (multi-user, AI gateway, iframe apps)
