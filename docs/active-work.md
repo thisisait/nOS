@@ -4,13 +4,35 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md) — that file is the
 > long-form plan, this one is just the next-step finger-pointer.
 >
-> Last updated: 2026-05-03 • commit: 84cc69a post-CF-Full-strict-fix • by: pazny+claude
+> Last updated: 2026-05-03 evening • commit: post-A6 plugin-loader landing (`717c446`) • by: pazny+claude
 
 ---
 
-## Current track: **G — Cloudflare proxy + LE production exposure** (~95% wet — Stalwart SMTP remaining)
+## Current track: **Bones & Wings refactor — PoC mid-flight** (A0..A6 landed, blank-verification next)
 
-> Track F **DONE 2026-05-01**, Track G **wet activation 2026-05-02/03** on `pazny.eu`: real LE wildcard via CF DNS-01, CF SSL/TLS = Full (strict) confirmed by operator 2026-05-03 (clears ERR_TOO_MANY_REDIRECTS), `dnsmasq_force_local_domains: true` enabled for LAN-internal access via 127.0.0.1. **Remaining for G exit:** Stalwart SMTP wet test (`install_smtp_stalwart: true` + outbound from 5+ services), Bluesky public federation toggle (`bluesky_pds_public_federation: true`). Bones&wings refactor PoC implementation (phases A0-A10) still NOT started; gate = Stalwart wet.
+> **Tracks F + G + bones&wings seed work all DONE.** Track G fully wet on `pazny.eu` (49/49 smoke green incl. Tier-2 + Wave A/B + Stalwart v0.11.8). Bones&wings PoC is **6 phases ahead of last week's plan** — A0+A1+A2+A3a+A4+A6 all landed since 2026-05-03 morning. Next gate: blank verifying A3a (bone host launchd) + A6 (plugin loader empty-set no-op) wet.
+
+### Phase status (per `docs/bones-and-wings-refactor.md` §8)
+
+| Phase | What | Status | Commit |
+|---|---|---|---|
+| A0 | files/anatomy/ skeleton + dual-path ansible.cfg | ✅ | `c09fc52` |
+| A1 | migrations/library/module_utils/patches → files/anatomy/ | ✅ | `2abbb5d` |
+| A2 | files/project-wing/ → files/anatomy/wing/ | ✅ | `4202f40` |
+| A3a | bone container → host launchd (track-A reversal) + files/bone/ → files/anatomy/bone/ | ✅ | `717c446` |
+| **A3.5** | **wing host-revert via FrankenPHP** | ⏳ NEXT after blank | — |
+| A4 | pulse skeleton (host launchd, non-agentic only) | ✅ | `b101a0d` |
+| A5 | wing OpenAPI/DDL exports | not started | — |
+| A6 | plugin loader (4 hooks + DAG + aggregator + 25 tests) | ✅ | `717c446` |
+| A6.5 | **Grafana thin-role pilot — doctrine proof** | NEXT (post-blank) | — |
+| A7 | gitleaks plugin (first real plugin via loader) | not started | — |
+| A8 | conductor agent + agent runner | not started | — |
+| A9 | notification fanout | not started | — |
+| A10 | audit trail (per-actor identity) | not started | — |
+
+### Last green blank (2026-05-03 13:28)
+
+`ok=849 changed=199 failed=0 skipped=412` — Track G wet on `pazny.eu`, 65 containers up, smoke 49/49 OK. Pre-anatomy state. Next blank verifies anatomy A3a + A6 + watchtower fix.
 
 ### Production blank survivors (six fixes during 2026-05-02 prod cutover)
 
@@ -27,25 +49,32 @@
 
 [Section in roadmap →](roadmap-2026q2.md#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
 
-## Current sub-step: **Track G — Stalwart SMTP wet test** (last mile to G exit)
+## Current sub-step: **operator blank verifies A3a + A6** (next 30-60min)
 
-Stalwart role landed dry in `0b83066` (Track G full scaffold). Activation:
+Pre-flight before next operator blank:
 
-```yaml
-# config.yml
-install_smtp_stalwart: true
+```bash
+git log origin/master..HEAD --oneline | wc -l   # ~16 commits ahead
+ansible-playbook main.yml --syntax-check         # clean
+python3 -m pytest tests/ -q --ignore=tests/php   # 475 passed (+25 plugin loader, +16 pulse)
 ```
 
-Then `ansible-playbook main.yml -K --tags smtp_stalwart` (or full blank). Verify:
-- container healthy
-- outbound `swaks --to test@gmail.com --server smtp.pazny.eu:587` accepted
-- 5+ nOS services configured to use Stalwart as their relay (Authentik, Outline, Nextcloud, Vaultwarden, GitLab — pick 5 with SMTP env vars)
+Operator runs:
 
-Note: ISP-side port-25 block likely; Stalwart submission port (587) must be the relay path. Mailpit can stay as catch-all dev fallback.
+```bash
+ansible-playbook main.yml -K -e blank=true
+```
 
-After Stalwart wet → Track G exit-criteria all green → flip pointer to **bones&wings PoC** (`docs/bones-and-wings-refactor.md`, ~12 days).
+**Watch for:**
 
-## Previous sub-step: ~~Track G kickoff — Phase 1~~ DONE
+1. **Bone host launchd** — `tail -f ~/bone/log/launchd.err.log` should show uvicorn binding 127.0.0.1:8099. `curl -s http://127.0.0.1:8099/api/health` returns 200 once warmed (≤60s). Track-A reversal cleanup task should remove any leftover bone container without complaints.
+2. **Plugin loader hooks** — `grep "Plugin loader.*hook" ~/.nos/ansible.log` shows pre_render / pre_compose / post_compose all called; empty plugin set → all `ok no-op`.
+3. **Watchtower** — `docker ps | grep watchtower` shows healthy (not "Restarting"); `nickfedor/watchtower:1.16.1` image instead of dead `containrrr/watchtower:1.7.1`.
+4. **Smoke** — 49/49 OK retained.
+
+**If blank green:** move to A3.5 (Wing FrankenPHP) — design has been chosen by operator 2026-05-03. Then A6.5 (Grafana thin-role pilot using new plugin loader).
+
+## Previous sub-step: ~~Track G kickoff — Phase 1~~ DONE 2026-05-03 morning blank
 
 Track F **DONE 2026-05-01** in 16 commits `8e8a038..69f021b`. All seven
 phases (F1 survey → F7 docs) verified, plus deep-review covering

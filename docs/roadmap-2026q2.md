@@ -5,23 +5,28 @@
 > the active track. Each track has its own commit conventions and exit
 > criteria so progress survives context resets.
 >
-> Last updated: 2026-05-01 • commit: post Track H landing • by: pazny+claude
+> Last updated: 2026-05-03 evening • commit: post-A6 plugin-loader (`717c446`) • by: pazny+claude
 >
-> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 (Tracks E, J, H, F, G) — order
-> revised per O16. **Track E** code-complete + wet-tested green 2026-04-30
-> (3 recovery commits). **Track J** (tech-debt cleanup, 6 commits) DONE
-> 2026-05-01. **Track H** (ansible-core 2.20+ tightening + future 2.24
-> readiness, 7 commits) DONE 2026-05-01. New sessions land in
-> [Track F](#track-f--dynamic-instance_tld--per-host-alias-after-e-d10)
-> unless explicitly directed elsewhere — see also
-> [`docs/active-work.md`](active-work.md) for the always-current
-> "what to do right now" pointer.
+> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 ALL DONE 2026-05-01 → 2026-05-03:
 >
-> **NEW post-Track-G: Wing modernization + agent platform** — strategic
-> arc proposed by operator 2026-05-01, sketched at the end of this
-> document under "Tracks K/L/M (proposed)". Captures Wing audit +
-> refactor + agent suite + watchtower scheduler + pentest run-loop.
-> Detailed scope to be confirmed before commit.
+> | Track | Status | Commits |
+> |---|---|---|
+> | E — Tier-2 apps_runner wet test | ✅ DONE 2026-04-30 | 3 recovery |
+> | J — Tech debt cleanup | ✅ DONE 2026-05-01 | 6 |
+> | H — ansible-core 2.20+ tightening | ✅ DONE 2026-05-01 | 7 |
+> | F — Dynamic instance_tld + per-host alias | ✅ DONE 2026-05-01 | 16 |
+> | G — Cloudflare proxy + LE production | ✅ DONE wet 2026-05-03 | scaffold + 6 prod-cutover fixes |
+>
+> **Q2 wave 3 — Bones & Wings refactor** in flight 2026-05-03. Plan in
+> [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).
+> Phases A0+A1+A2+A3a+A4+A6 landed (12 commits 2026-05-03 morning + afternoon).
+> Phase A3.5 (Wing host-revert via FrankenPHP) is next; then A6.5 (Grafana
+> thin-role pilot) starts validating the Track Q "tendons & vessels"
+> doctrine. **Operator's runbook pointer:** [`docs/active-work.md`](active-work.md).
+>
+> **Q2 wave 4 — Track Q autowiring debt consolidation** is post-PoC.
+> See §"Track Q" below + the bones-and-wings refactor doc §13.1 for the
+> 7-batch plan covering all 71 `pazny.*` roles.
 
 ## Mission (in 3 sentences)
 
@@ -768,6 +773,30 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 - Operator accepts the refactor doc (sections 4, 5, 8 specifically)
 
 **Read the full plan in [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md) before any code-touch.** It has ~1100 lines of architecture, edge-case catalog, and phase-by-phase exit criteria; this stub is just the index card.
+
+---
+
+### Track Q — Autowiring debt consolidation **(post-PoC, first-class follow-on, 2026-05-03 elevated)**
+
+**Status: blocked on bones&wings PoC A6.5 (Grafana thin-role pilot) — doctrine proof point.** 7 batches × 3-5 days each = 4-6 weeks total. Plan in `docs/bones-and-wings-refactor.md` §13.1.
+
+**Doctrine** (refactor doc §1.1, "tendons & vessels"): every Tier-1 role post-Track-Q is install-only (defaults + main.yml + compose template + meta). All wiring lives in service + composition plugins under `files/anatomy/plugins/`. Net LOC delta projected: **-2000 to -3500** across ~50 distinct integrations.
+
+**Audit 2026-05-03** of all 71 `pazny.*` roles found **30 with `tasks/post.yml` (= wiring leak indicator)**, top-10 by LOC: `pazny.apps_runner` 412 (framework, exempt), `pazny.wing` 291, `pazny.portainer` 272, `pazny.postgresql` 236, `pazny.erpnext` 205, `pazny.paperclip` 165, `pazny.mcp_gateway` 165, `pazny.jellyfin` 152, `pazny.freescout` 152, `pazny.nextcloud` 139.
+
+**Q1 — Observability (5 roles, ~700 LOC, start point):** grafana (A6.5 reference), prometheus, loki, tempo, alloy.
+**Q2 — IAM + secrets (3 roles, ~942 LOC, biggest blast):** authentik (V4 source-plugin pattern), infisical, vaultwarden. `authentik_oidc_apps` central list (40 entries) disappears.
+**Q3 — Storage + DB:** mariadb, postgresql, redis, rustfs.
+**Q4 — Comms:** smtp_stalwart, ntfy, mailpit.
+**Q5 — Content (largest, 9 roles, ~1300 LOC):** nextcloud, outline, bookstack, hedgedoc, wordpress, calibre_web, kiwix, jellyfin, puter.
+**Q6 — Dev/CI:** gitea, gitlab, woodpecker, code_server, paperclip.
+**Q7 — Misc + sweep (16 roles):** uptime_kuma, homeassistant, n8n, nodered, miniflux, openwebui, firefly, erpnext, freescout, metabase, superset, qgis_server, freepbx, onlyoffice, spacetimedb, mcp_gateway.
+
+**Per-batch deterministic 6-step recipe:** `files/anatomy/docs/role-thinning-recipe.md`.
+
+**Out of Q (special-cased):** `pazny.bone` ✅ thin (A3a), `pazny.wing` ⏳ A3.5, `pazny.pulse` ✅ born thin (A4), `pazny.traefik` (source plugin candidate), `pazny.acme` (already thin), `pazny.bluesky_pds` (federation flag refactor), `pazny.watchtower` (image bump 2026-05-03 P0), `pazny.openclaw/opencode/hermes/iiab_terminal` (non-Docker host pattern), `pazny.mac.*/linux.*/dotfiles/state_manager/backup` (host infra).
+
+**Exit criteria:** every `roles/pazny.<service>/` post-Q has shape `defaults + tasks/main.yml + templates/compose.yml.j2 + meta`. No `tasks/post.yml` unless install-internal. `default.config.yml` has zero per-service OIDC blocks.
 
 ---
 

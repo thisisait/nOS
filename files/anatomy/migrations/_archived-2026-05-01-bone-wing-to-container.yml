@@ -1,5 +1,27 @@
 ---
 # ==============================================================================
+# *** ARCHIVED 2026-05-03 — DO NOT REACTIVATE ***
+#
+# This migration was the Track-A cutover (host launchd → container). The
+# bones-and-wings refactor's phase A3a (commit 717c446) REVERSED Track A —
+# Bone is back to host launchd. The migration's actions are now
+# semantically inverted: running it would tear down A3a's plist and
+# restart the legacy container (which we've also removed).
+#
+# Filename prefixed with `_` so the migration discovery glob (*.yml,
+# excluding underscored files) skips it; the engine never sees it.
+# Kept for git history + post-mortem reference, NOT for execution.
+#
+# If you find yourself wanting to "re-archive" or update this file:
+#   - DON'T uncomment / unprefix
+#   - Write a NEW migration with the inverse semantics if needed
+#     (e.g. 2026-05-XX-anatomy-host-revert.yml that nukes any leftover
+#     bone container — but A3a's tasks/main.yml already does this for
+#     fresh runs)
+# ==============================================================================
+#
+# Original header (preserved for context):
+# ------------------------------------------------------------------------------
 # nOS migration: bone-wing-to-container
 #
 # Track A of the Q2 2026 roadmap (docs/roadmap-2026q2.md).
@@ -13,7 +35,7 @@
 # the containers for ports 8099 (Bone) and 9000 (FPM).
 #
 # Schema reference: state/schema/migration.schema.json
-# Engine:           library/nos_migrate.py + module_utils/nos_migrate_engine.py
+# Engine:           files/anatomy/library/nos_migrate.py + module_utils/...
 # ==============================================================================
 
 id: "2026-05-01-bone-wing-to-container"

@@ -8,7 +8,7 @@
 
 services:
   watchtower:
-    image: {{ watchtower_image | default('containrrr/watchtower:1.7') }}
+    image: {{ watchtower_image | default('nickfedor/watchtower:1.16.1') }}
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
