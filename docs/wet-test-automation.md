@@ -153,14 +153,32 @@ Cowork session runs it on operator's box after each blank.
 
 ---
 
+## Status update — 2026-05-03
+
+Post-Track-E batch the scaffolding got two real layers:
+
+- **`tools/post-blank.sh`** — operator-facing single-entry-point runner
+  (wet pytest → nos-smoke → Wing UI deep-links). Documented in
+  [`docs/post-blank.md`](post-blank.md).
+- **`tests/wet/test_post_blank_state.py`** — 14 deterministic Python
+  tests covering checklist sections 6/7/9 (SQLite GDPR rows, Bone JSONL
+  events, smoke catalog runtime). These ARE active; they SKIP pre-blank
+  and FAIL under `NOS_WET=1`.
+- **[`docs/cowork-wet-test-prompt.md`](cowork-wet-test-prompt.md)** —
+  the Cowork dispatch prompt; ready to paste into a Cowork session.
+
+What's still scaffold (= Track P proper, post-H): the Playwright
+bodies in `tests/e2e/tier2-wet-test.spec.ts` (sections 4/11). All
+other sections have working automation today.
+
+---
+
 ## Out of scope (current batch)
 
 - Playwright config (deferred — needs Track F `NOS_HOST` parameterisation)
-- Real test bodies (deferred — needs the wet-test loop running once
-  successfully so we know what assertions are stable)
+- Real Playwright test bodies (deferred — needs the wet-test loop
+  running once successfully so we know what assertions are stable)
 - CI integration (deferred — see "Activation" above)
-- Cowork session prompt template (deferred — operator authors when
-  Track P proper opens)
 
 ---
 
@@ -170,7 +188,8 @@ Cowork session runs it on operator's box after each blank.
   Playwright test
 - Cowork session can drive a full wet-test from "blank just finished"
   to "all green, branch ready for review" hands-free
-- Documented Cowork prompt template lives at `docs/cowork-wet-test-
-  prompt.md`
+- Documented Cowork prompt template lives at
+  [`docs/cowork-wet-test-prompt.md`](cowork-wet-test-prompt.md) ✅
+  (drafted 2026-05-03)
 - Operator reports a successful end-to-end Cowork-driven wet test in
   a Decision log entry
