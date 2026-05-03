@@ -1,0 +1,55 @@
+# =============================================================================
+# woodpecker-base — compose-extension fragment (DRAFT)
+#
+# Status: research draft, captured 2026-05-03 evening. NOT loaded by anything
+# yet. After Track Q, plugin loader will render this into:
+#   {{ stacks_dir }}/devops/overrides/woodpecker-base.yml
+#
+# Purpose: lift cross-service env vars + REM-002 hardening OUT of the role's
+# own compose.yml.j2 INTO this plugin so the role becomes install-only.
+# =============================================================================
+
+services:
+  woodpecker-server:
+    environment:
+      # ── Gitea OAuth2 (vessel — depends on `peer_service: gitea`) ────────────
+      WOODPECKER_GITEA: "true"
+      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
+      WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
+
+      # ── Public host + agent secret ──────────────────────────────────────────
+      WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
+
+      # ── REM-002: trusted-repos / privileged-plugins hardening ───────────────
+      # 1. Disable open registration (default already false; explicit for audit).
+      WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
+
+      # 2. Allow only operator-owned repos to trigger pipelines. Empty allowlist
+      #    would let ANY authenticated Gitea user trigger CI on their fork —
+      #    pipeline-as-RCE if a developer pushes a malicious .woodpecker.yml.
+      WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
+
+      # 3. Privileged plugins allowlist — empty means NO plugin can request
+      #    `privileged: true` containers. Default in Woodpecker v3 is empty,
+      #    but pinning it explicitly prevents a future env-var leak from
+      #    silently flipping the gate.
+      WOODPECKER_PLUGINS_PRIVILEGED: "{{ woodpecker_plugins_privileged | default('') }}"
+
+      # 4. Don't authenticate (= run pipelines for) public repo clones from
+      #    non-allowlisted owners. Defends against a forked-PR pipeline-RCE.
+      WOODPECKER_AUTHENTICATE_PUBLIC_REPOS: "false"
+
+      # 5. Prometheus scrape token — set even when alloy doesn't yet scrape,
+      #    so when post-Q1 alloy-base plugin lands the scrape, the token is
+      #    already in place (avoids a post-deploy compose restart).
+      WOODPECKER_PROMETHEUS_AUTH_TOKEN: "{{ woodpecker_prom_token | default(global_password_prefix + '_pw_wp_prom') }}"
+
+    extra_hosts:
+      # Vessel: Woodpecker's Gitea OAuth2 callback resolves the Gitea hostname
+      # against the host's loopback (mkcert / LE certs are bound there).
+      - "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% if install_authentik | default(false) %}
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

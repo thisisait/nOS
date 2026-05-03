@@ -1,0 +1,212 @@
+# =============================================================================
+# woodpecker-base — service plugin (DRAFT, post-A6.5 harvest pilot)
+#
+# Status: research draft, captured 2026-05-03 evening. NOT loaded by anything.
+# Purpose: first **tune-and-thin** harvest pilot per `docs/active-work.md`
+# (smaller than the A6.5 Grafana pilot — Woodpecker is ~140 LOC of role
+# vs. ~350 for grafana, good warm-up for the doctrine).
+#
+# Origin: REM-002 (Woodpecker trusted-repos / privileged-plugins hardening)
+# bundled with the harvest of the role's existing wiring into tendons (anatomy
+# autowiring: GDPR, /hub card) + vessels (infra wiring: Gitea OAuth, compose-
+# extension carrying the security env block).
+#
+# Reading guide: see `files/anatomy/plugins/grafana-base/plugin.yml` for the
+# canonical shape — same blocks, same comment headers, same lifecycle hooks.
+# =============================================================================
+
+name: woodpecker-base
+version: 0.1.0
+description: |
+  Wiring layer for Woodpecker CI: Gitea OAuth2 vessel, security-hardened
+  compose-extension (REM-002: trusted-repos / non-privileged plugins),
+  GDPR Article 30 row, Wing /hub deep-link card.
+
+  The role `pazny.woodpecker` will keep only install-internal responsibilities
+  (data dirs, base compose render with image+ports+volumes); every cross-
+  service env var + extra_hosts entry + Authentik/Gitea wiring becomes this
+  plugin's compose_extension + tendon blocks.
+upstream: https://woodpecker-ci.org/
+license: Apache-2.0  # Woodpecker itself; manifest is repo-licensed
+
+type:
+  - service           # binds to roles/pazny.woodpecker
+  - ui-extension      # Wing /hub deep-link card
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.woodpecker
+  feature_flag: install_woodpecker
+  peer_service: gitea            # Woodpecker auth = Gitea OAuth2; vessel below
+  variables:
+    - woodpecker_domain
+    - woodpecker_port
+    - woodpecker_grpc_port
+    - tenant_domain
+    - host_alias
+    - gitea_domain
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — proxy-auth gate (NOT native OIDC)
+# =============================================================================
+# Woodpecker has its own auth (Gitea OAuth2), so we don't replace its login
+# form. Instead, this is a Tier-1 forward-auth gate — Authentik must let the
+# operator past `ci.<tld>` BEFORE Woodpecker's own Gitea handshake fires.
+# Mirrors today's `authentik_oidc_apps` proxy entry for woodpecker.
+
+authentik:
+  mode: proxy_auth                # NOT native OIDC — Woodpecker uses Gitea
+  client_id: nos-woodpecker
+  client_secret: "{{ global_password_prefix }}_pw_oidc_woodpecker"
+  slug: woodpecker
+  external_host: "https://{{ woodpecker_domain }}"
+  internal_host: "http://woodpecker-server:8000"
+  cookie_domain: ".{{ tenant_domain }}"
+  tier: 2                         # manager — `nos-managers` group + above
+
+# =============================================================================
+# VESSEL — Gitea OAuth2 client (today set up by hand via debug message)
+# =============================================================================
+# Replaces the manual `debug:` task in roles/pazny.woodpecker/tasks/main.yml
+# that prints Gitea OAuth2 setup instructions. Plugin loader will reach into
+# Gitea's API (POST /api/v1/user/applications/oauth2) at post_compose time
+# and create/update the OAuth2 application idempotently.
+
+gitea_oauth2:
+  application_name: "Woodpecker CI"
+  redirect_uris:
+    - "https://{{ woodpecker_domain }}/authorize"
+  # Loader writes back into wing.db `service_secrets` so re-runs are
+  # idempotent. The current operator-typed `woodpecker_gitea_client` /
+  # `woodpecker_gitea_secret` config values become a fallback override.
+
+# =============================================================================
+# COMPOSE-EXTENSION — security-hardened env (REM-002) + cross-service wiring
+# =============================================================================
+# Plugin loader renders templates/woodpecker-base.compose.yml.j2 into
+#   {{ stacks_dir }}/devops/overrides/woodpecker-base.yml
+# Docker Compose merges it on top of the role's own override.
+#
+# This is where REM-002 hardening lives — `WOODPECKER_PLUGINS_PRIVILEGED: ""`
+# (no privileged plugins by default), `WOODPECKER_REPO_OWNERS` allowlist,
+# `WOODPECKER_AUTHENTICATE_PUBLIC_REPOS: "false"` (no anon clones running
+# pipelines).
+
+compose_extension:
+  template: templates/woodpecker-base.compose.yml.j2
+  target_stack: devops
+  target_service: woodpecker-server
+  hardening_refs:
+    - REM-002              # trusted repos / privileged plugins gate
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ woodpecker_port }}/version"
+    # Future (post-A8): POST to Gitea API to upsert the OAuth2 client (replaces
+    # the today's manual setup debug message).
+  post_blank:
+    # Plugin owns nothing operator data — role's data_dir cleanup is enough.
+    []
+
+# =============================================================================
+# OBSERVABILITY — plugin-self-metrics (no Woodpecker scrape today)
+# =============================================================================
+# Woodpecker doesn't expose /metrics out-of-box. Post-Q1: add an alloy scrape
+# entry pointing at `WOODPECKER_PROMETHEUS_AUTH_TOKEN`-protected /metrics.
+
+observability:
+  metrics:
+    - name: woodpecker_base_oauth_setup_total
+      type: counter
+      labels: [result]            # success / fail / skipped
+    - name: woodpecker_base_compose_render_total
+      type: counter
+      labels: [result]
+
+# =============================================================================
+# GDPR — Article 30 register row (closes today's gap)
+# =============================================================================
+# Today: NO woodpecker row in any GDPR register. CI logs can contain commit
+# author email + repo URL — pipeline owners' personal data. Closes the gap.
+
+gdpr:
+  data_categories:
+    - ci_pipeline_logs            # build output, may include commit metadata
+    - oauth_session_data          # Gitea OAuth2 session cookies
+    - commit_author_metadata      # author name + email per pipeline trigger
+  data_subjects:
+    - operator
+    - developers                  # repo contributors triggering pipelines
+  legal_basis: legitimate_interests
+  retention_days: 90              # CI logs auto-pruned by Woodpecker default
+  processors: []                  # all-local; no external CI runners
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Woodpecker CI"
+    icon: ci-pipeline
+    url: "https://{{ woodpecker_domain }}"
+    tier: 2
+    description: "CI/CD pipelines (Gitea-bound)"
+    health_check: "https://{{ woodpecker_domain }}/version"
+
+# =============================================================================
+# NOTIFICATIONS
+# =============================================================================
+# Pipeline-failure routing is Woodpecker's own concern (it has its own SMTP
+# config); the plugin emits operational events only:
+#   - on_oauth_setup_failure (loader-emitted, severity=high)
+#   - on_compose_render_failure (loader-emitted, severity=high)
+
+notification:
+  on_oauth_setup_failure:
+    channels: [wing-inbox, ntfy]
+    template: notifications/oauth-setup-failed.txt
+  on_compose_render_failure:
+    channels: [wing-inbox]
+    template: notifications/compose-render-failed.txt
+  templates:
+    ntfy: notifications/oauth-setup-failed.ntfy
+
+# =============================================================================
+# SCHEMA — wing.db tables this plugin owns
+# =============================================================================
+# Out of scope for this draft. Post-Q: add `service_secrets` rows for the
+# Gitea OAuth2 client_id / client_secret if we move them out of config.yml.
+
+# =============================================================================
+# HARVEST MAP — what comes from where (for the Track Q sweep that turns this
+# draft into reality)
+# =============================================================================
+# Today's surface                              | Block in this manifest
+# ---------------------------------------------|---------------------------------
+# `roles/pazny.woodpecker/tasks/main.yml`      |
+#   debug: Gitea OAuth2 setup msg              | gitea_oauth2 (vessel) — automated
+#   nginx vhost link                           | stays in role (install-glue)
+# `roles/pazny.woodpecker/templates/compose.   |
+#  yml.j2` env block:                          |
+#   WOODPECKER_GITEA_*                         | compose_extension template
+#   WOODPECKER_REPO_OWNERS                     | compose_extension (REM-002)
+#   WOODPECKER_OPEN                            | compose_extension
+#   extra_hosts: gitea, authentik              | compose_extension
+#   image, ports, volumes, mem_limit, cpus     | stay in role compose (install)
+# `default.config.yml` authentik_oidc_apps     |
+#   slug: woodpecker (proxy entry)             | authentik (tendon)
+# (gap today): GDPR Article 30 row             | gdpr (tendon)
+# (gap today): Wing /hub card                  | ui-extension (tendon)
+# (gap today): REM-002 hardening               | compose_extension env (NEW)

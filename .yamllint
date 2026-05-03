@@ -22,3 +22,8 @@ ignore: |
   roles
   files/observability
   files/project-wing
+  # Jinja2 templates can't be parsed as YAML — `{% if %}` blocks break
+  # tokenization. Anatomy plugin templates live outside `roles/` so they
+  # need their own exclusion line. Files inside `roles/` are already
+  # covered by the `roles` entry above.
+  files/anatomy/plugins/*/templates/*.j2

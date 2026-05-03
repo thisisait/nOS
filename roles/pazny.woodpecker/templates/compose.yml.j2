@@ -28,6 +28,19 @@ services:
       WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
       WOODPECKER_REPO_OWNERS: "{{ woodpecker_repo_owners | default(gitea_admin_user | default('')) }}"
+      # ── REM-002: trusted-repos / privileged-plugins hardening ───────────────
+      # Empty allowlist = NO plugin can request `privileged: true` containers
+      # (effectively root-on-host). Default is empty in Woodpecker v3 but
+      # pinning explicitly prevents silent regression on env merge.
+      WOODPECKER_PLUGINS_PRIVILEGED: "{{ woodpecker_plugins_privileged | default('') }}"
+      # Forked-PR / unaffiliated-contributor public repos do NOT trigger
+      # pipelines. Defends against pipeline-as-RCE from a malicious
+      # `.woodpecker.yml` push.
+      WOODPECKER_AUTHENTICATE_PUBLIC_REPOS: "false"
+      # Prometheus scrape token — set even though alloy doesn't yet scrape,
+      # so when the post-Q1 alloy-base plugin lands the scrape, the token is
+      # already in place (no compose restart needed).
+      WOODPECKER_PROMETHEUS_AUTH_TOKEN: "{{ woodpecker_prom_token | default(global_password_prefix + '_pw_wp_prom') }}"
     extra_hosts:
       - "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% if install_authentik | default(false) %}

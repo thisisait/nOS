@@ -1234,6 +1234,12 @@ woodpecker_gitea_client: ""      # FILL IN after creating OAuth2 app in Gitea
 woodpecker_gitea_secret: ""      # FILL IN after creating OAuth2 app in Gitea
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
 woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
+# REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
+# the full vessel block. Operators with vetted plugins can override
+# `woodpecker_plugins_privileged` with a comma-separated allowlist of plugin
+# image refs (e.g. "plugins/docker,plugins/kaniko"). Empty = no privileged plugins.
+woodpecker_plugins_privileged: ""
+woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
