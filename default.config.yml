@@ -1414,6 +1414,24 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # aren't defined, which would mismatch Authentik's redirect_uris and break SSO.
 miniflux_domain: "rss{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 code_server_domain: "code{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+# Wave A/B service domains (added 2026-05-03 — without top-level definition,
+# nos-smoke catalog auto-derive skips them because vars_dict.get('<svc>_domain')
+# returned None even though the var was used inside Jinja default(...) filters
+# in authentik_oidc_apps. Surfaced during pazny.eu prod blank — 8 healthy
+# Wave A/B services were silently absent from the smoke output.)
+ntfy_domain: "ntfy{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+nodered_domain: "nodered{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+hedgedoc_domain: "hedgedoc{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+bookstack_domain: "bookstack{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+firefly_domain: "firefly{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+# NOTE: hostnames match the Traefik file-provider's manifest-id fallback
+# (state/manifest.yml id=onlyoffice, id=influxdb) so URLs are consistent
+# whether Traefik resolves via domain_var or via id-suffix. Earlier OIDC
+# apps fallback expressions used 'office.' / 'influx.' which would have
+# diverged — those defaults still fire when these vars are undefined,
+# but with these top-level defs they're authoritative.
+onlyoffice_domain: "onlyoffice{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+influxdb_domain: "influxdb{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 nodered_port: 1880
 ntfy_port: 2586
@@ -1984,14 +2002,14 @@ authentik_oidc_apps:
   - name: "InfluxDB"
     slug: "influxdb"
     enabled: "{{ install_influxdb | default(false) }}"
-    launch_url: "https://{{ influxdb_domain | default('influx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-    external_host: "https://{{ influxdb_domain | default('influx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    launch_url: "https://{{ influxdb_domain | default('influxdb' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    external_host: "https://{{ influxdb_domain | default('influxdb' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     type: "proxy"
   - name: "ONLYOFFICE"
     slug: "onlyoffice"
     enabled: "{{ install_onlyoffice | default(false) }}"
-    launch_url: "https://{{ onlyoffice_domain | default('office' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-    external_host: "https://{{ onlyoffice_domain | default('office' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    launch_url: "https://{{ onlyoffice_domain | default('onlyoffice' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    external_host: "https://{{ onlyoffice_domain | default('onlyoffice' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     type: "proxy"
   - name: "Mailpit"
     slug: "mailpit"
