@@ -185,7 +185,11 @@ jobs:
       - name: Install test dependencies.
         run: |
           sudo pip3 install --upgrade pip
-          sudo pip3 install 'ansible-core>=2.20,<2.21'
+          # pyyaml + jsonschema are required at runtime by our custom
+          # modules under files/anatomy/library/ (nos_state, nos_migrate,
+          # nos_apps_render). Without them, the very first pre-migrate
+          # task fails with "PyYAML is required for nos_state_lib".
+          sudo pip3 install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
 
       - name: Set up the test environment.
         run: |
