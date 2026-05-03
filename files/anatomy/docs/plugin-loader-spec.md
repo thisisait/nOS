@@ -250,7 +250,7 @@ All from V3+V4 findings. Field-level:
 ## Implementation skeleton (Python)
 
 ```python
-# files/anatomy/scripts/load_plugins.py
+# files/anatomy/module_utils/load_plugins.py
 class PluginLoader:
     def __init__(self, manifest_glob: str, vars: dict):
         self.plugins = []  # discovered + validated

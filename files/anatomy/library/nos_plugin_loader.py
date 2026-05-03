@@ -1,5 +1,13 @@
-#!/usr/bin/env python3
-"""Ansible module wrapper around files/anatomy/scripts/load_plugins.py.
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""Ansible module wrapper around files/anatomy/module_utils/load_plugins.py.
+
+NB on shebang: `#!/usr/bin/python` is the canonical Ansible Ansiballz
+placeholder — Ansible rewrites it on assembly to the host's resolved
+`ansible_python_interpreter`. Using `#!/usr/bin/env python3` here
+breaks Ansiballz detection on Ansible 2.20 + Python 3.14 and the
+loader gets executed as a "binary script" with the literal shebang,
+which fails on hosts where /usr/bin/env's PATH doesn't have python3.
 
 Exposes structured `changed`/`failed` results so the playbook gets proper
 PLAY RECAP accounting + clean per-plugin error attribution rather than
@@ -17,15 +25,9 @@ from __future__ import annotations
 
 import os
 import pathlib
-import sys
 
-# Make our scripts package importable. Custom-module path mangling: this
-# file lives at files/anatomy/library/, scripts at files/anatomy/scripts/.
-_HERE = pathlib.Path(__file__).resolve().parent
-_ANATOMY = _HERE.parent
-sys.path.insert(0, str(_ANATOMY))
-
-from ansible.module_utils.basic import AnsibleModule  # noqa: E402
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils import load_plugins  # type: ignore[attr-defined]
 
 DOCUMENTATION = r"""
 ---
@@ -88,11 +90,6 @@ def main() -> None:
                                 or os.path.join(os.getcwd(),
                                                 "files/anatomy/plugins"))
     agent_root = module.params["agent_profiles_root"]
-    try:
-        from scripts import load_plugins  # type: ignore
-    except ImportError as e:
-        module.fail_json(msg=f"plugin loader import failed: {e}")
-        return
     plugins = load_plugins.discover(plugins_root)
     # Optional agent profile harvest
     agent_profiles: list[dict] = []

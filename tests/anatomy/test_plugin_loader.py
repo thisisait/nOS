@@ -1,4 +1,4 @@
-"""Unit tests for files/anatomy/scripts/load_plugins.py.
+"""Unit tests for files/anatomy/module_utils/load_plugins.py.
 
 Coverage targets (per files/anatomy/docs/plugin-loader-spec.md "Tests A6
 must include"):
@@ -19,8 +19,9 @@ import sys
 import pytest
 import yaml
 
-# tests/anatomy/conftest.py adds files/anatomy/ to sys.path; explicit import:
-from scripts import load_plugins  # type: ignore  # noqa: E402
+# tests/conftest.py adds files/anatomy/ to sys.path; A6 fix (2026-05-03)
+# moved load_plugins.py to module_utils/ so Ansiballz can vendor it.
+from module_utils import load_plugins  # type: ignore  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 

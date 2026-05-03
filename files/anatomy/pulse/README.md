@@ -50,7 +50,7 @@ instead of every tick) — useful in dev when Wing is down.
 
 ```yaml
 # Conceptual shape — registered via Wing API at plugin-loader time
-# (anatomy/scripts/load_plugins.py POSTs to /api/v1/pulse_jobs).
+# (anatomy/module_utils/load_plugins.py POSTs to /api/v1/pulse_jobs).
 id: "rotate-wing-db-backup"
 plugin_name: "wing-base"        # owner; supports cleanup on plugin removal
 runner: "subprocess"            # "subprocess" | "agent" (A8)

@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS gdpr_breaches (
 -- Pulse — scheduled-job catalog + run history (Anatomy A4, 2026-05-03)
 -- ============================================================================
 -- pulse_jobs: registered jobs (one row per (plugin_name, job_name)).
--- Owned by plugin loader (files/anatomy/scripts/load_plugins.py); operators
+-- Owned by plugin loader (files/anatomy/module_utils/load_plugins.py); operators
 -- may pause/resume via the Wing UI without touching the playbook.
 --
 -- Pulse polls /api/v1/pulse_jobs/due (server computes next_fire_at from
