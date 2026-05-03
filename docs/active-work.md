@@ -86,7 +86,10 @@ bash tools/post-blank.sh   # expect: GREEN, 14/14 wet tests
 | # | Target | Tier | What landed | REM closed |
 |---|---|---|---|---|
 | 1 | Woodpecker | 1 (role) | Live REM-002 hardening in role compose + `files/anatomy/plugins/woodpecker-base/` draft (plugin.yml + compose-extension template + README + harvest map) | REM-002 |
-| 2 | Qdrant | 2 (app) | NEW Tier-2 manifest `apps/qdrant.yml` (vector DB, install today) + `files/anatomy/plugins/qdrant-base/` draft (default-collection bootstrap, Bone/Wing client glue, Prometheus scrape, Grafana dashboard slot, Wing /hub card) | n/a — new substrate |
+| 2 | Qdrant | 2 (app) | NEW Tier-2 manifest `apps/qdrant.yml` (vector DB, install today) + `files/anatomy/plugins/qdrant-base/` draft (default-collection bootstrap, Bone/Wing client glue, Prometheus scrape, Grafana dashboard slot, Wing /hub card) + LIVE Bone Python client + Wing PHP client + plist/compose env + Alloy scrape + Grafana dashboard JSON | n/a — new substrate |
+| 3 | Portainer | 1 (role) | Live REM-001 hardening in `templates/stacks/infra/docker-compose.yml.j2` (drop NODES/PLUGINS/SECRETS/CONFIGS/SWARM/SYSTEM Docker Swarm flags + gate EXEC + DISTRIBUTION via 2 toggles) + `files/anatomy/plugins/portainer-base/` draft (272-LOC post.yml harvest as declarative `api_calls.sequence`) | REM-001 |
+| 4 | Grafana | 1 (role) | Live mkcert CA conditional fix (mirrors Open WebUI 2026-05-03 morning regression class) + `files/anatomy/plugins/grafana-base/` README promoted with live-now map (every plugin block tagged with current pre-Q home) | A6.5 doctrine target |
+| 5 | Vaultwarden | 1 (role) | Live mkcert CA + entrypoint + extra_hosts conditional fix (3rd instance of the same regression class) + `files/anatomy/plugins/vaultwarden-base/` draft (FIRST `data_subjects: end_users` pilot — `contract` legal basis, `retention=-1`, DSAR endpoint, blank-vault preservation) | mkcert regression |
 
 **Doctrine status post-pilots:** workflow proven on both Tier-1 (role +
 plugin draft) and Tier-2 (app manifest + plugin draft). Plugin manifest

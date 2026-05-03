@@ -1,0 +1,226 @@
+# =============================================================================
+# vaultwarden-base — service plugin (DRAFT, fourth tune-and-thin pilot)
+#
+# Status: research draft, captured 2026-05-03 evening. NOT loaded by anything.
+# Purpose: harvest the small, well-isolated Vaultwarden role into the doctrine.
+# Vaultwarden is the FIRST pilot with `data_subjects: end_users` (Bitwarden
+# vault for operator's family / team) — proves the GDPR shape contract holds
+# for services that DO process third-party personal data, not just operator
+# infrastructure metadata.
+#
+# Companion live edit: same mkcert CA bundle conditional fix as Open WebUI +
+# Grafana (regression class surfaced 2026-05-03 morning). Vaultwarden's
+# entrypoint + extra_hosts also gated on tenant_domain_is_local to skip
+# unnecessary cert-store rebuild on public TLDs.
+# =============================================================================
+
+name: vaultwarden-base
+version: 0.1.0
+description: |
+  Wiring layer for Vaultwarden (Bitwarden-compatible personal password vault).
+  Captures Authentik OIDC vessel, GDPR Article 30 row with `end_users` data
+  subjects + `contract` legal basis + retention=-1 (vault is permanent
+  storage by design), Wing /hub deep-link card, admin-token rotation alarm.
+
+  Role `pazny.vaultwarden` keeps install-only responsibilities (data dir,
+  base compose with image+ports+volumes); SSO env block + entrypoint
+  conditional move into this manifest's compose_extension once A6.5 makes
+  loader real.
+upstream: https://github.com/dani-garcia/vaultwarden
+license: AGPL-3.0  # Vaultwarden itself; manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.vaultwarden
+  feature_flag: install_vaultwarden
+  variables:
+    - vaultwarden_domain
+    - vaultwarden_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+    - vaultwarden_admin_token
+
+# =============================================================================
+# AUTHENTIK — native OIDC client (Vaultwarden SSO_ENABLED=true)
+# =============================================================================
+
+authentik:
+  mode: native_oidc                          # SSO_AUTHORITY env, native button
+  client_id: nos-vaultwarden
+  client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
+  slug: vaultwarden
+  redirect_uris:
+    - "https://{{ vaultwarden_domain }}/identity/connect/oidc-signin"
+  launch_url: "https://{{ vaultwarden_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 3                                    # user — vault is end-user UI
+
+# =============================================================================
+# COMPOSE-EXTENSION — SSO env block + mkcert CA conditional
+# =============================================================================
+
+compose_extension:
+  template: templates/vaultwarden-base.compose.yml.j2
+  target_stack: iiab
+  target_service: vaultwarden
+  hardening_refs: []                         # no specific REM today
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "https://127.0.0.1:{{ vaultwarden_port }}/alive"
+    # Future post-A8: rotate admin_token via /admin/config API; today
+    # operator does it through `global_password_prefix` rotation +
+    # `ansible-playbook --tags vaultwarden`.
+  post_blank:
+    # CRITICAL: do NOT remove vaultwarden_data_dir on blank — vault DB +
+    # encrypted attachments are user-master-password-encrypted; losing
+    # them = irreversible loss of all stored credentials. Operator
+    # opts in by passing `vaultwarden_blank_destroys_vault: true`.
+    - conditional_remove_dir:
+        path: "{{ vaultwarden_data_dir }}"
+        when: "{{ vaultwarden_blank_destroys_vault | default(false) }}"
+
+# =============================================================================
+# OBSERVABILITY — Vaultwarden has no /metrics endpoint natively
+# =============================================================================
+# Workaround: Loki labels for log-based monitoring (failed-login alerts);
+# cadvisor handles container-level metrics.
+
+observability:
+  loki:
+    labels:
+      app: vaultwarden
+      stack: iiab
+      tier: "3"
+      data_class: secrets                    # NEW label class — drives
+                                             # access-control on log queries
+                                             # (only nos-admins can read)
+  metrics_of_interest:
+    - container_cpu_usage_seconds_total
+    - container_memory_working_set_bytes
+  grafana:
+    dashboards: []                           # Vaultwarden has its own UI
+  alerts:
+    - name: vaultwarden_admin_token_in_logs
+      description: |
+        Log scan: alert if Vaultwarden ever logs the admin token in clear.
+        Class-level guard against env-var leak on container restart.
+      query: '{app="vaultwarden"} |~ "ADMIN_TOKEN="'
+      severity: critical
+
+# =============================================================================
+# GDPR — Article 30 register row (FIRST end_users pilot)
+# =============================================================================
+# Vaultwarden is the first pilot with `data_subjects: end_users` because the
+# vault legitimately stores third-party personal data (family/team members
+# whose Bitwarden accounts the operator hosts). This drives:
+#   • TLS-from-data gate kicks in (apps_runner enforces TLS termination)
+#   • DSAR worker (D8 framework) reads `dsar_endpoint` for user-erasure
+#   • Wing /gdpr surfaces the row with appropriate severity
+#
+# Compare with portainer-base / qdrant-base (data_subjects: operators) — the
+# same plugin schema accommodates both shapes; the runtime gates differ.
+
+gdpr:
+  purpose: |
+    Hosts the operator's (and optionally family / team members') Bitwarden
+    vault — encrypted credentials, TOTP seeds, secure notes, encrypted file
+    attachments. Master password is operator-owned and never reaches the
+    server in clear; Vaultwarden stores only the master-password-encrypted
+    blob plus the OIDC link (when Authentik SSO is enabled).
+  legal_basis: contract
+  data_categories:
+    - encrypted_credentials                  # vault items (passwords, TOTP)
+    - master_password_hash                   # PBKDF2 hash of master password
+    - encrypted_attachments                  # secure file uploads
+    - oauth_session_data                     # Authentik OIDC sessions
+    - email                                  # account email (Bitwarden requirement)
+  data_subjects:
+    - operators
+    - end_users                              # family / team members
+  retention_days: -1                         # forever — vault IS the audit trail
+  processors: []                             # all-local; no cloud Bitwarden Premium
+  transfers_outside_eu: false
+  # DSAR endpoint: vaultwarden's /admin/users/<email>/delete API. Operator
+  # invokes via `wing-cli vault-erase --user <email>` (post-A8 conductor wires
+  # this; today it's a manual curl with admin token).
+  dsar_endpoint: "wing-cli vault-erase --user $DSAR_USER_EMAIL"
+  breach_severity_default: critical          # vault breach = max severity
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Vaultwarden"
+    icon: lock
+    url: "https://{{ vaultwarden_domain }}"
+    tier: 3
+    description: "Bitwarden-compatible personal vault"
+    health_check: "https://{{ vaultwarden_domain }}/alive"
+
+# =============================================================================
+# NOTIFICATIONS
+# =============================================================================
+
+notification:
+  on_admin_token_logged_in_clear:
+    # Triggered by the observability.alerts entry above
+    channels: [wing-inbox, ntfy]
+    severity: critical
+    template: notifications/admin-token-leaked.txt
+  on_failed_login_burst:
+    # Loki query: more than 10 failed logins from a single IP in 5 minutes
+    channels: [wing-inbox]
+    severity: high
+    template: notifications/failed-login-burst.txt
+
+# =============================================================================
+# HARVEST MAP — what already lives where (for the Track Q sweep)
+# =============================================================================
+# Surface today                                  | Block in this manifest
+# -----------------------------------------------|---------------------------------
+# roles/pazny.vaultwarden/templates/             |
+#  compose.yml.j2 env block:                     |
+#   SSO_ENABLED + SSO_CLIENT_* + SSO_AUTHORITY   | compose_extension template
+#   mkcert CA mount + update-ca-certificates     | compose_extension (LIVE conditional)
+#   extra_hosts authentik:host-gateway           | compose_extension (LIVE conditional)
+# default.config.yml authentik_oidc_apps:        |
+#   slug: vaultwarden                            | authentik (tendon)
+# (gap today): GDPR row with end_users           | gdpr (tendon, FIRST pilot of shape)
+# (gap today): Wing /hub card                    | ui-extension (tendon)
+# (gap today): admin-token-leak detector         | observability.alerts + notification
+# (gap today): DSAR endpoint                     | gdpr.dsar_endpoint (post-A8)
+# (gap today): blank-safe vault preservation     | lifecycle.post_blank.conditional_remove_dir
+#
+# Files that need to ship with this plugin once A6.5 makes loader real:
+#
+# files/anatomy/plugins/vaultwarden-base/
+# ├── plugin.yml                                  # this file
+# ├── README.md                                   # operator-facing
+# ├── templates/
+# │   └── vaultwarden-base.compose.yml.j2         # vessel: SSO env + mkcert conditional
+# ├── notifications/
+# │   ├── admin-token-leaked.txt
+# │   └── failed-login-burst.txt
+# └── tests/
+#     ├── test_blank_preserves_vault_by_default.py
+#     └── test_dsar_erase_endpoint.py

@@ -19,7 +19,10 @@ services:
 {% endif %}
     volumes:
       - {{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}:/data
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # Local TLDs only — mkcert CA bundle would shadow Vaultwarden's bundled
+      # Mozilla CA list and break Authentik LE cert validation on public TLDs
+      # (same regression class as Open WebUI + Grafana fixed 2026-05-03).
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
@@ -35,7 +38,12 @@ services:
       SSO_PKCE: "true"
       SSO_ONLY: "false"
 {% endif %}
-{% if install_authentik | default(false) %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # update-ca-certificates is needed only when we're injecting the mkcert
+    # root CA — on a public TLD it's a no-op since no CA is mounted, and the
+    # custom entrypoint would just delay startup with a useless trust-store
+    # rebuild. extra_hosts is also gated: on a public TLD Authentik resolves
+    # via real DNS, so the host-gateway alias is unnecessary.
     entrypoint: ["/bin/sh", "-c"]
     command: ["update-ca-certificates 2>/dev/null; exec /start.sh"]
     extra_hosts:
