@@ -45,6 +45,17 @@ services:
       # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
       # Umoznuje per-user auth a attribution pri volani MCP toolu.
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"
+      # ── Prompt-injection hardening (REM-054 + REM-055) ─────────────────────
+      # Default code-interpreter is `pyodide` (sandboxed in browser); jupyter
+      # mode would let LLM-generated code escape the import block via leaked
+      # _real_import reference (REM-054). Pin pyodide explicitly so a future
+      # config-merge accident doesn't flip to jupyter.
+      CODE_INTERPRETER_ENGINE: "pyodide"
+      # External tool-result re-injection enables multi-hop prompt injection
+      # (REM-055). Default 30 retries lets external data drive long chains;
+      # cap at 5 to bound the attack surface while keeping real workflows
+      # functional. Operators with high-trust tools can override via config.yml.
+      CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES: "{{ openwebui_max_tool_call_retries | default(5) }}"
 {% if install_mcp_gateway | default(false) %}
       # ── Auto-registrace mcpo MCP gateway jako tool server ──────────────────
       # OpenWebUI 0.8.x: TOOL_SERVER_CONNECTIONS se nacte pri prvnim startu
