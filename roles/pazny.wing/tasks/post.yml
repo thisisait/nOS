@@ -283,7 +283,7 @@
       ══════════════════════════════════════════════════════
        Wing — security-research dashboard (containerized) ready
       ══════════════════════════════════════════════════════
-       Image:    {{ wing_image }}  (built locally from files/project-wing/)
+       Image:    {{ wing_image }}  (built locally from files/anatomy/wing/)
        URL:      https://{{ wing_domain }}  (via nginx vhost)
        FPM:      127.0.0.1:{{ wing_port }} (loopback only)
        Source:   {{ wing_app_dir }}        (host, bind-mounted at same path)

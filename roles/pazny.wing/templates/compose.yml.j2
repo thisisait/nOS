@@ -3,7 +3,7 @@
 # Merged into `docker compose up iiab` in tasks/stacks/stack-up.yml via
 # ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Image is built locally from {{ playbook_dir }}/files/project-wing/Dockerfile.
+# Image is built locally from {{ playbook_dir }}/files/anatomy/wing/Dockerfile.
 # Source code is NOT in the image — it bind-mounts from the host at the same
 # absolute path so nginx-supplied SCRIPT_FILENAME values resolve inside FPM.
 #
@@ -19,7 +19,7 @@
 services:
   wing:
     build:
-      context: {{ playbook_dir }}/files/project-wing
+      context: {{ playbook_dir }}/files/anatomy/wing
       dockerfile: Dockerfile
       args:
         WING_UID: "{{ wing_container_uid }}"

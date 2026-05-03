@@ -99,11 +99,11 @@ What exists, what doesn't, what's the lock-in. Drawn from a 2026-05-01 audit.
 
 **Wing** (Tier-1, `iiab` stack, since Track A 2026-04-26)
 - Nette 8.3 PHP-FPM container + nginx sidecar
-- Source tree: `files/project-wing/Dockerfile` + `files/project-wing/app/config/*.neon` (committed); `files/project-wing/app/src/`, `www/`, `bin/` **NOT in repo** — rsync'd at deploy time from operator-side path
+- Source tree: `files/project-wing/` — **fully in repo** (106 tracked files: Dockerfile, NEON configs, app/, bin/, www/, tests/, composer.json). Build artifacts (`vendor/`, `temp/`, `log/`, runtime `data/wing.db*`) are gitignored. *Note 2026-05-03: earlier draft of this doc claimed app/src/www/bin were rsync'd from outside the repo — that was incorrect. Source IS committed; A2 reduces to a path-move into `files/anatomy/wing/`, no git submodule needed.*
 - DI services: 14 repositories registered (Component, ScanState, Remediation, Token, Pentest, Advisory, Patch, System, Event, Migration, Upgrade, Coexistence, Gdpr, BoneClient)
 - DB: SQLite at `~/wing/app/data/wing.db`; bootstrapped by `bin/init-db.php`, migrated by `bin/migrate-systems.php`
 - ~25 REST endpoints under `/api/v1/`, Bearer-token authenticated
-- **No OpenAPI spec committed.** API surface defined only in PHP controllers (which aren't in this repo).
+- **No OpenAPI spec committed.** API surface defined only in PHP controllers (which ARE in repo per the correction above; spec generation is A5 phase work).
 
 **Bone** (Tier-1, `infra` stack, since Track A 2026-04-26)
 - FastAPI 0.115 + Uvicorn, Python 3.13
@@ -132,7 +132,7 @@ What exists, what doesn't, what's the lock-in. Drawn from a 2026-05-01 audit.
 
 ### 3.3 Lock-in / brittle surfaces (resolved by this refactor)
 
-- **Wing PHP source not in repo** → resolved: git submodule under `external/wing/`, rendered into `~/wing/` by `pazny.anatomy` via `cp+jinja` (Wing self-update writes back to the submodule on operator approval).
+- ~~**Wing PHP source not in repo**~~ → **CORRECTED 2026-05-03**: Wing PHP source IS committed at `files/project-wing/` (106 files). The original doc draft was wrong about this. A2 phase rescoped from "git submodule under `external/wing/`" to "path-move into `files/anatomy/wing/`" — symmetric to A1.
 - **Bone bundles ansible-core 2.18-2.20 inside container** → resolved: Bone moves to host launchd daemon, uses operator's ansible-core 2.20.5 directly.
 - **wing.db cross-mount-written by Wing+Bone** → resolved: only Wing process writes; Bone POSTs events to Wing via existing HMAC channel, no shared mount.
 - **Bone callback HMAC secret rotates only on `blank=true`** → resolved: `migrations/2026-XX-rotate-bone-hmac.yml` recipe; rotation hook in conductor.
@@ -903,7 +903,7 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 |---|---|---|---|
 | **A0** | anatomize-skeleton | Create `files/anatomy/` skeleton dirs (empty); update `.gitignore`; update `ansible.cfg` library/module_utils paths (pointing at empty dirs initially — won't break since CI doesn't run Ansible-modules tests yet); commit. | 0.5 d |
 | **A1** | anatomize-move | Move existing dirs in batches: `migrations/` → `files/anatomy/migrations/`, `library/` → `files/anatomy/library/`, `module_utils/` → `files/anatomy/module_utils/`, `patches/` → `files/anatomy/patches/`. Update playbook `import_role`/`include_tasks` paths if any reference moved files. Move framework-internal docs from `/docs/` to `files/anatomy/docs/` per split rule (§4.2). Update `/CLAUDE.md` to reflect new paths. | 1 d |
-| **A2** | wing-submodule | Create `external/wing/` git submodule pointing at the Wing source repo (operator initializes the upstream repo URL). `pazny.anatomy/tasks/wing.yml` renders `~/wing/app/config/*.neon` from `files/anatomy/wing/config/*.neon.j2` via jinja, copies submodule source into `~/wing/app/`. Add `make wing-update` script to bump submodule + commit. Add CI job for submodule presence check. | 1 d |
+| **A2** | wing-move | **Rescoped 2026-05-03** (was 'wing-submodule' — see §3.1 correction). `git mv files/project-wing/* files/anatomy/wing/` (Dockerfile + app/ + bin/ + www/ + tests/ + composer.json + .gitignore + .dockerignore). Update `roles/pazny.wing/tasks/main.yml` rsync source path. Update Dockerfile build context references. Run blank to verify Wing container builds + serves from new path. Future submodule consideration deferred (Wing source authoring is part of THIS repo; if it ever spins out to its own repo we can add the submodule then). | 0.5 d |
 | **A3** | track-A-reversal | Decommission Wing+Bone containerization. Remove wing+wing-nginx from `iiab` compose, remove bone from `infra` compose. Rewrite `pazny.wing` to install PHP 8.3 via Homebrew + render `~/wing/` configs + manage `eu.thisisait.nos.wing` launchd plist. Rewrite `pazny.bone` to install Python venv at `~/bone/venv`, copy `files/anatomy/bone/*.py` to `~/bone/`, manage launchd plist. Add Traefik file-provider entries for `wing.<tld>` → `host.docker.internal:9000` with `authentik@file` middleware. Migration recipe `migrations/2026-XX-anatomy-host-revert.yml` for existing deploys (operator-blank acceptable since pre-prod). | 1 d |
 | **A4** | pulse-skeleton | New `roles/pazny.pulse/` thin role: install Python venv at `~/pulse/venv`, copy `files/anatomy/pulse/*` to `~/pulse/`, manage launchd plist. Implement Pulse daemon: tick loop (30s), reads `wing.db.pulse_jobs` via Wing API, fires due jobs, logs runs to `wing.db.pulse_runs`. **No agentic runs yet** — only non-agentic subprocess shape. New wing.db tables `pulse_jobs`, `pulse_runs` via schema migration. | 1 d |
 | **A5** | wing-exports | Write `files/anatomy/wing/bin/export-openapi.php` (introspects Nette router + presenter PHPDoc → OpenAPI 3.1 YAML). Write `files/anatomy/wing/bin/export-schema.php` (introspects wing.db at runtime → DDL). Commit outputs to `files/anatomy/skills/contracts/`. Add CI drift check that re-runs exports vs committed and diffs. | 1 d |
@@ -914,7 +914,7 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 | **A9** | notification-fanout | Notification dispatcher (Python module under `files/anatomy/wing/lib/notifications.py` — but Wing-PHP-side; Python module to be moved or rewritten as PHP). Wing `/inbox` is primary. ntfy: HTTP POST to ntfy container with topic `nos-critical`. Mail: SMTP to mailpit (Stalwart fallback when Track G ships). Templating uses notification template files from plugin manifest. Severity routing per manifest `notification:` block. | 1 d |
 | **A10** | audit-trail | Schema migration: add `actor_id` (FK to authentik clients), `actor_action_id` (UUID per action), `acted_at` to all wing.db write tables. Wing `/audit` view: filter by actor, by data category, by time range. GDPR Article 30 view auto-aggregates from `gdpr_processors` + `audit_log`. Per-agent Authentik blueprints (conductor + plugin-gitleaks for PoC) via Track B framework. | 1 d |
 
-**Total: 14.5 days** (was 12.5 base + 1.5 A6.5 + 0.5 A6 bump for 4-hook scope). Slack to 16-17 days realistic.
+**Total: 14.0 days** (was 14.5 — A2 rescoped from submodule 1d → path-move 0.5d after 2026-05-03 correction that Wing source IS in repo). Slack to 16 days realistic.
 
 ### 8.2 Parallelization (if operator wants multiple agents)
 

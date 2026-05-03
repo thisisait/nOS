@@ -7,7 +7,7 @@ Part of [nOS](../../README.md) Wave 2 role extraction pilot. First of three base
 ## What it does
 
 1. Creates the deployment directory tree (`~/wing/app/{data,temp,log}`, `~/wing/{repos,patches}`)
-2. Rsyncs `files/project-wing/` from the playbook into the deployment dir
+2. Rsyncs `files/anatomy/wing/` from the playbook into the deployment dir (moved from `files/project-wing/` in 2026-05-03 anatomy A2)
 3. Runs `composer install` with production flags
 4. Initializes the SQLite schema via `bin/init-db.php`
 5. On first run, migrates security advisory JSON data into SQLite via `bin/migrate.php`

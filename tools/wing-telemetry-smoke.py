@@ -124,7 +124,8 @@ def _wing_db_path() -> pathlib.Path:
         return home_runtime
     # Fallback to the rsync source (pre-Track-A path) — useful in dev when
     # Bone isn't running but the file still exists on disk.
-    return REPO / "files" / "project-wing" / "data" / "wing.db"
+    # Anatomy A2 (2026-05-03): files/project-wing/ → files/anatomy/wing/
+    return REPO / "files" / "anatomy" / "wing" / "data" / "wing.db"
 
 
 def _check_wing_db(run_id: str, timeout_s: float) -> tuple[bool, str | None, dict | None]:

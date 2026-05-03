@@ -4,7 +4,7 @@
 #
 # As of Track A (2026-04-26) Wing runs as the `wing` service inside the iiab
 # compose stack. nginx (host) talks FastCGI to it on 127.0.0.1:9000. The
-# wing source tree still lives on the host (rsync'd from files/project-wing/)
+# wing source tree still lives on the host (rsync'd from files/anatomy/wing/)
 # and is bind-mounted into the container at the SAME absolute path so
 # nginx-supplied SCRIPT_FILENAME values resolve correctly inside FPM.
 #
@@ -22,7 +22,7 @@ wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 # unless you also update the upstream block.
 wing_port: 9000
 
-# Container image is built locally from {{ playbook_dir }}/files/project-wing.
+# Container image is built locally from {{ playbook_dir }}/files/anatomy/wing.
 # The image deliberately contains no Wing source — see Dockerfile header for
 # the rationale. Tag is bumped manually when the Dockerfile changes.
 wing_image_tag: "local"

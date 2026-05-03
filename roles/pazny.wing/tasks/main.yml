@@ -28,7 +28,7 @@
 
 - name: "[pazny.wing] Rsync app source to host (read-only inside container)"
   ansible.posix.synchronize:
-    src: "{{ playbook_dir }}/files/project-wing/"
+    src: "{{ playbook_dir }}/files/anatomy/wing/"
     dest: "{{ wing_app_dir }}/"
     delete: true
     rsync_opts:

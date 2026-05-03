@@ -256,7 +256,7 @@ install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local 
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
 install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
-install_playwright_tests: false   # Playwright e2e tests under files/project-wing/tests (smoke + first-admin provisioning)
+install_playwright_tests: false   # Playwright e2e tests under files/anatomy/wing/tests (smoke + first-admin provisioning)
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
