@@ -35,6 +35,12 @@ services:
 	- App\Model\UpgradeRepository
 	- App\Model\CoexistenceRepository
 
+	# Pulse — scheduled-job catalog + run history (Anatomy P0.2, 2026-05-04).
+	# Tables pulse_jobs + pulse_runs declared in db/schema-extensions.sql
+	# (since A4 Pulse skeleton, 2026-05-03); presenter + repository added in
+	# P0.2. Required-by: App\Presenters\Api\PulsePresenter.
+	- App\Model\PulseRepository
+
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
 
