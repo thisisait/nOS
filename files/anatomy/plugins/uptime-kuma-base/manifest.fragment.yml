@@ -1,0 +1,18 @@
+# manifest.fragment.yml — uptime-kuma-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: uptime-kuma
+role: pazny.uptime_kuma
+feature_flag: install_uptime_kuma
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: uptime-kuma
+  tier: 3
+domain_var: uptime_kuma_domain
+port_var: uptime_kuma_port

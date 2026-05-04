@@ -1,0 +1,19 @@
+{# code-server-base — Traefik forward-auth labels for code-server.
+
+Renders into:
+  {{ stacks_dir }}/devops/overrides/code-server-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  code-server:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.code-server.rule=Host(`{{ code_server_domain }}`)"
+      - "traefik.http.routers.code-server.entrypoints=websecure"
+      - "traefik.http.routers.code-server.tls=true"
+      - "traefik.http.routers.code-server.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.code-server.loadbalancer.server.port={{ code_server_port }}"

@@ -1,0 +1,18 @@
+# manifest.fragment.yml — kiwix-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: kiwix
+role: pazny.kiwix
+feature_flag: install_kiwix
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: kiwix
+  tier: 4
+domain_var: kiwix_domain
+port_var: kiwix_port

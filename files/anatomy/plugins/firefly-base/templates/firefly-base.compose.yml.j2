@@ -1,0 +1,19 @@
+{# firefly-base — Traefik forward-auth labels for firefly.
+
+Renders into:
+  {{ stacks_dir }}/b2b/overrides/firefly-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  firefly:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.firefly.rule=Host(`{{ firefly_domain }}`)"
+      - "traefik.http.routers.firefly.entrypoints=websecure"
+      - "traefik.http.routers.firefly.tls=true"
+      - "traefik.http.routers.firefly.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.firefly.loadbalancer.server.port={{ firefly_port }}"

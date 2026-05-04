@@ -1,0 +1,19 @@
+{# puter-base — Traefik forward-auth labels for puter.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/puter-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  puter:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.puter.rule=Host(`{{ puter_domain }}`)"
+      - "traefik.http.routers.puter.entrypoints=websecure"
+      - "traefik.http.routers.puter.tls=true"
+      - "traefik.http.routers.puter.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.puter.loadbalancer.server.port={{ puter_port }}"

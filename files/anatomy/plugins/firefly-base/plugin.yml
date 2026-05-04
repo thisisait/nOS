@@ -1,0 +1,126 @@
+# =============================================================================
+# firefly-base — service plugin (Q2 proxy-auth batch, 2026-05-04)
+#
+# Status: live manifest. Wires `pazny.firefly` into the proxy-auth doctrine —
+# Authentik forward-auth via Traefik middleware (no native OIDC).
+#
+# Tier 2 (manager) per CLAUDE.md RBAC mapping. Forward-auth gates
+# access at the proxy layer; the service still renders its own login UI
+# (or, for stateless services, the Authentik session IS the auth).
+# =============================================================================
+
+name: firefly-base
+version: 0.1.0
+description: |
+  Firefly III — personal finance manager.
+
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware `authentik@file`). The role `pazny.firefly` keeps install-
+  only responsibilities (image, ports, volumes); this plugin owns the
+  Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
+  /hub deep-link card.
+upstream: https://www.firefly-iii.org/
+license: AGPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "firefly-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.firefly
+  feature_flag: install_firefly
+  variables:
+    - firefly_port
+    - firefly_domain
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 2 = manager)
+# =============================================================================
+# This service has NO native OIDC support — Authentik gates access at
+# the Traefik layer via the `authentik@file` middleware. RBAC tier
+# determines which Authentik group expression policy applies.
+
+authentik:
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  client_id: nos-firefly
+  client_secret: "{{ global_password_prefix }}_pw_oidc_firefly"
+  slug: firefly
+  tier: 2
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# =============================================================================
+compose_extension:
+  template: templates/firefly-base.compose.yml.j2
+  target_stack: b2b
+  target_service: firefly
+  hardening_refs: []
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ firefly_port }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: firefly
+      stack: b2b
+      tier: "2"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Operator-hosted personal finance manager. Forward-auth gate ensures only
+    Authentik-authenticated principals reach the service.
+  legal_basis: legitimate_interests
+  data_categories:
+    - transaction_history
+    - account_balances
+    - tags
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: -1
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Firefly III"
+    icon: dollar-sign
+    url: "https://{{ firefly_domain }}"
+    tier: 2
+    description: "Personal finance manager"

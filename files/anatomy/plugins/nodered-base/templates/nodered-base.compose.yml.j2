@@ -1,0 +1,19 @@
+{# nodered-base — Traefik forward-auth labels for nodered.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/nodered-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  nodered:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nodered.rule=Host(`{{ nodered_domain }}`)"
+      - "traefik.http.routers.nodered.entrypoints=websecure"
+      - "traefik.http.routers.nodered.tls=true"
+      - "traefik.http.routers.nodered.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.nodered.loadbalancer.server.port={{ nodered_port }}"

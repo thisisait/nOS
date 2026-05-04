@@ -1,0 +1,10 @@
+{# wing-base — Wing runs as a host launchd daemon (FrankenPHP), NOT in
+Docker. Traefik file-provider auto-derives the wing.<tld> route from
+state/manifest.yml + dynamic/services.yml.j2 with the authentik@file
+middleware. This compose-extension intentionally renders an empty
+`services: {}` block so the loader's render contract is satisfied
+without injecting Docker-specific shape on a host service.
+
+See docs/bones-and-wings-refactor.md §A3.5 — Wing host-revert.
+#}
+services: {}

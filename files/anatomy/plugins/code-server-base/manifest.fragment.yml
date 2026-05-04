@@ -1,0 +1,18 @@
+# manifest.fragment.yml — code-server-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: code-server
+role: pazny.code_server
+feature_flag: install_code_server
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: code-server
+  tier: 2
+domain_var: code_server_domain
+port_var: code_server_port

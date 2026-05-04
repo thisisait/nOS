@@ -1,0 +1,125 @@
+# =============================================================================
+# onlyoffice-base — service plugin (Q2 proxy-auth batch, 2026-05-04)
+#
+# Status: live manifest. Wires `pazny.onlyoffice` into the proxy-auth doctrine —
+# Authentik forward-auth via Traefik middleware (no native OIDC).
+#
+# Tier 3 (user) per CLAUDE.md RBAC mapping. Forward-auth gates
+# access at the proxy layer; the service still renders its own login UI
+# (or, for stateless services, the Authentik session IS the auth).
+# =============================================================================
+
+name: onlyoffice-base
+version: 0.1.0
+description: |
+  ONLYOFFICE Document Server — collaborative office editor backend.
+
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware `authentik@file`). The role `pazny.onlyoffice` keeps install-
+  only responsibilities (image, ports, volumes); this plugin owns the
+  Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
+  /hub deep-link card.
+upstream: https://www.onlyoffice.com/
+license: AGPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "onlyoffice-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.onlyoffice
+  feature_flag: install_onlyoffice
+  variables:
+    - onlyoffice_port
+    - onlyoffice_domain
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 3 = user)
+# =============================================================================
+# This service has NO native OIDC support — Authentik gates access at
+# the Traefik layer via the `authentik@file` middleware. RBAC tier
+# determines which Authentik group expression policy applies.
+
+authentik:
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  client_id: nos-onlyoffice
+  client_secret: "{{ global_password_prefix }}_pw_oidc_onlyoffice"
+  slug: onlyoffice
+  tier: 3
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# =============================================================================
+compose_extension:
+  template: templates/onlyoffice-base.compose.yml.j2
+  target_stack: b2b
+  target_service: onlyoffice
+  hardening_refs: []
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ onlyoffice_port }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: onlyoffice
+      stack: b2b
+      tier: "3"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Operator-hosted collaborative office editor backend. Forward-auth gate ensures only
+    Authentik-authenticated principals reach the service.
+  legal_basis: legitimate_interests
+  data_categories:
+    - document_edits
+    - collaboration_sessions
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "ONLYOFFICE"
+    icon: file-text
+    url: "https://{{ onlyoffice_domain }}"
+    tier: 3
+    description: "Collaborative office editor"
