@@ -21,6 +21,17 @@ declare(strict_types=1);
  *
  * Usage:
  *   php bin/export-openapi.php [--output=/path/to/file.yml]
+ *   php bin/export-openapi.php --check-summaries
+ *
+ * --check-summaries (Anatomy P0.4, 2026-05-04): run after writing the
+ * artifact, scan it for operations whose summary still falls back to
+ * `Presenter::actionX` (signal that the source presenter's class
+ * docblock doesn't follow the `METHOD path — desc` convention).
+ * Prints a per-endpoint report and exits 1 if any fallback is found.
+ * Phase 1 U9 + U10 cleanup workers use this to verify their docblock
+ * additions landed; the CI contracts-drift job keeps using the script
+ * without the flag (drift check is byte-stability, summary quality is
+ * a separate gate).
  */
 
 $args = [];
@@ -353,3 +364,52 @@ $header = "# AUTO-GENERATED — do not edit by hand.\n"
 file_put_contents($outPath, $header . yaml_emit($spec));
 
 echo "Wrote $outPath (" . count($paths) . " paths)\n";
+
+// -- Step 5 (optional): summary-quality check. ---------------------------
+// Phase 1 U9 + U10 workers cleanup presenter class docblocks; this flag
+// lets them verify zero fallback summaries remain after their changes.
+if (isset($args['check-summaries'])) {
+	$fallbacks = [];
+	foreach ($paths as $oaPath => $ops) {
+		foreach ($ops as $method => $op) {
+			$summary = (string) ($op['summary'] ?? '');
+			// Fallback marker is "$presenter::action$action" — see step 3
+			// where we set the summary to that string when no docblock
+			// match was found for the route.
+			if (str_contains($summary, '::action')) {
+				$fallbacks[] = sprintf(
+					'  %s %s  (presenter=%s, fallback summary=%s)',
+					strtoupper($method),
+					$oaPath,
+					(string) ($op['tags'][0] ?? '?'),
+					$summary
+				);
+			}
+		}
+	}
+	$total = 0;
+	foreach ($paths as $ops) {
+		$total += count($ops);
+	}
+	$cleanCount = $total - count($fallbacks);
+	fwrite(STDERR, sprintf(
+		"\n[check-summaries] %d/%d operations have real summaries from class docblocks.\n",
+		$cleanCount,
+		$total
+	));
+	if ($fallbacks) {
+		fwrite(STDERR, sprintf(
+			"[check-summaries] %d operations fell back to Presenter::actionX:\n",
+			count($fallbacks)
+		));
+		foreach ($fallbacks as $line) {
+			fwrite(STDERR, $line . "\n");
+		}
+		fwrite(STDERR, "\nFix: add a class-level docblock to each presenter listing its routes\n"
+			. "as `METHOD /path — short description` (one line per route+method).\n"
+			. "See files/anatomy/wing/app/Presenters/Api/EventsPresenter.php for the\n"
+			. "canonical reference. Re-run with --check-summaries to verify.\n");
+		exit(1);
+	}
+	fwrite(STDERR, "[check-summaries] OK — no fallback summaries.\n");
+}
