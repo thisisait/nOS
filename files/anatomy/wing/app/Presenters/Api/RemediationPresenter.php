@@ -6,6 +6,16 @@ namespace App\Presenters\Api;
 
 use App\Model\RemediationRepository;
 
+/**
+ * Remediation backlog: per-item CRUD, bulk status transitions, next-id allocation.
+ *
+ * GET  /api/v1/remediation                  — list remediation items (?status, ?severity, ?component, ?limit)
+ * GET  /api/v1/remediation/<id>             — fetch one remediation item
+ * POST /api/v1/remediation                  — create a remediation item
+ * PUT  /api/v1/remediation/<id>             — update a remediation item
+ * PUT  /api/v1/remediation/bulk-status      — bulk-update status for many ids
+ * GET  /api/v1/remediation/next-id          — allocate the next REM-XXX id
+ */
 final class RemediationPresenter extends BaseApiPresenter
 {
 	public function __construct(

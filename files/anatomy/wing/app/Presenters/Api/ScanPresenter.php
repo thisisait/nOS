@@ -6,6 +6,17 @@ namespace App\Presenters\Api;
 
 use App\Model\ScanStateRepository;
 
+/**
+ * Security-research scan-cycle state: per-cycle tracking, per-component status, rotation queue, probe completion.
+ *
+ * GET  /api/v1/scan/state                        — current scan state snapshot
+ * GET  /api/v1/scan/cycles                       — recent scan cycles (?limit)
+ * POST /api/v1/scan/cycle                        — start a new scan cycle
+ * PUT  /api/v1/scan/component/<id>               — update one component's scan record
+ * PUT  /api/v1/scan/config                       — update scan-cycle config
+ * PUT  /api/v1/scan/rotation                     — set the next-batch rotation queue
+ * POST /api/v1/scan/probe/<name>/complete        — mark a named probe as completed
+ */
 final class ScanPresenter extends BaseApiPresenter
 {
 	public function __construct(
