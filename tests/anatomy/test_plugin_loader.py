@@ -512,3 +512,197 @@ def test_render_dotted_path_missing_returns_skipped(tmp_path):
     results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
     assert results[0]["status"] == "ok"
     assert "skipped" in results[0]["note"]
+
+
+# ── P0.3 — inputs ctx exposure + authentik-base aggregator + render_dir ──
+
+
+def test_render_action_exposes_inputs_to_jinja_context(tmp_path):
+    """P0.3: source plugin's `inputs.<output_var>` is reachable from
+    Jinja templates rendered by hook actions. This is the load-bearing
+    contract that lets authentik-base's blueprint templates iterate
+    over harvested peer `authentik:` blocks."""
+    plugin_dir = make_plugin_dir(tmp_path, "src", basic_manifest(
+        "src",
+        provisioning={
+            "out": {
+                "template": "blueprint.j2",
+                "target": str(tmp_path / "out.yml"),
+            },
+        },
+        lifecycle={"pre_compose": [{"render": "provisioning.out"}]},
+    ))
+    (plugin_dir / "blueprint.j2").write_text(
+        "{% for c in inputs.clients | default([]) %}- {{ c.slug }}\n{% endfor %}"
+    )
+    plugins = load_plugins.discover(tmp_path)
+    # Inject inputs by hand (simulates run_aggregators having harvested).
+    plugins[0].inputs["clients"] = [
+        {"slug": "alpha", "tier": 1},
+        {"slug": "beta", "tier": 3},
+    ]
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    out = (tmp_path / "out.yml").read_text()
+    assert "- alpha" in out
+    assert "- beta" in out
+
+
+def test_render_action_exposes_plugin_manifest_to_jinja_context(tmp_path):
+    """plugin_manifest key in ctx lets templates read static metadata
+    (e.g. plugin version, type) without round-tripping operator vars."""
+    plugin_dir = make_plugin_dir(tmp_path, "meta", basic_manifest(
+        "meta",
+        version="2.5.7",
+        provisioning={
+            "out": {
+                "template": "ver.j2",
+                "target": str(tmp_path / "ver.txt"),
+            },
+        },
+        lifecycle={"pre_compose": [{"render": "provisioning.out"}]},
+    ))
+    (plugin_dir / "ver.j2").write_text("v={{ plugin_manifest.version }}\n")
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    assert (tmp_path / "ver.txt").read_text() == "v=2.5.7\n"
+
+
+def test_render_dir_exposes_inputs_to_each_rendered_file(tmp_path):
+    """render_dir iteration also gets inputs/plugin_manifest in ctx."""
+    plugin_dir = make_plugin_dir(tmp_path, "src", basic_manifest(
+        "src",
+        provisioning={
+            "blueprints": {
+                "source_dir": "tmpls",
+                "target_dir": str(tmp_path / "out"),
+            },
+        },
+        lifecycle={"pre_compose": [{"render_dir": "provisioning.blueprints"}]},
+    ))
+    src = plugin_dir / "tmpls"
+    src.mkdir()
+    (src / "a.yaml.j2").write_text(
+        "list: [{% for c in inputs.clients %}{{ c.slug }},{% endfor %}]\n"
+    )
+    (src / "b.txt").write_text("static\n")
+    plugins = load_plugins.discover(tmp_path)
+    plugins[0].inputs["clients"] = [{"slug": "x"}, {"slug": "y"}]
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    a = (tmp_path / "out" / "a.yaml").read_text()
+    assert "list: [x,y,]" in a
+    # Non-Jinja file passes through unchanged with .j2-strip rule
+    # (this file had no .j2 suffix → keeps full name).
+    assert (tmp_path / "out" / "b.txt").read_text() == "static\n"
+
+
+def test_authentik_base_real_manifest_validates():
+    """The committed plugin under files/anatomy/plugins/authentik-base
+    must validate against the JSON schema. Phase 0 P0.3 (2026-05-04)."""
+    plugins_root = REPO / "files/anatomy/plugins"
+    schema = load_plugins._load_schema(REPO)
+    plugins = load_plugins.discover(plugins_root)
+    auth = next((p for p in plugins if p.name == "authentik-base"), None)
+    assert auth is not None, "authentik-base plugin not discovered"
+    errs = load_plugins.validate_manifest(auth.manifest, schema)
+    assert errs == [], f"authentik-base validation errors: {errs}"
+
+
+def test_authentik_base_topo_order_runs_first():
+    """Every loaded plugin with an authentik: block must come AFTER
+    authentik-base in topological order (implicit DAG edge in
+    load_plugins.topological_order:194-198). Verify with a synthetic
+    consumer that has an authentik: block."""
+    plugins_root = REPO / "files/anatomy/plugins"
+    plugins = load_plugins.discover(plugins_root)
+    auth = next((p for p in plugins if p.name == "authentik-base"), None)
+    assert auth is not None
+    # Plant a synthetic in-memory consumer with an authentik block.
+    fake = load_plugins.Plugin(
+        name="fake-consumer",
+        path=plugins_root,  # path doesn't matter for this test
+        manifest={
+            "name": "fake-consumer",
+            "version": "0.1.0",
+            "type": ["service"],
+            "authentik": {
+                "client_id": "fake-cid",
+                "client_secret": "x",
+                "tier": 3,
+            },
+            "gdpr": {
+                "data_categories": ["t"], "data_subjects": ["o"],
+                "legal_basis": "legitimate_interests",
+                "retention_days": 1, "processors": [],
+            },
+        },
+        behavior=load_plugins.PluginBehavior.SERVICE,
+        requires={},
+        aggregates=[],
+    )
+    ordered = load_plugins.topological_order(plugins + [fake])
+    names = [p.name for p in ordered]
+    assert names.index("authentik-base") < names.index("fake-consumer"), (
+        f"authentik-base must run before fake-consumer: {names}"
+    )
+
+
+def test_authentik_base_aggregates_consumer_blocks():
+    """The aggregates: block on authentik-base harvests every peer
+    plugin's `authentik:` block into inputs.clients."""
+    plugins_root = REPO / "files/anatomy/plugins"
+    plugins = load_plugins.discover(plugins_root)
+    auth = next((p for p in plugins if p.name == "authentik-base"), None)
+    assert auth is not None
+    # Plant 2 synthetic consumers
+    fakes = []
+    for slug, tier in [("alpha", 1), ("bravo", 3)]:
+        fakes.append(load_plugins.Plugin(
+            name=f"fake-{slug}",
+            path=plugins_root,
+            manifest={
+                "name": f"fake-{slug}",
+                "version": "0.1.0",
+                "type": ["service"],
+                "authentik": {
+                    "slug": slug, "client_id": f"cid-{slug}",
+                    "client_secret": "secret", "tier": tier,
+                    "provider_type": "oauth2",
+                },
+                "gdpr": {
+                    "data_categories": ["t"], "data_subjects": ["o"],
+                    "legal_basis": "legitimate_interests",
+                    "retention_days": 1, "processors": [],
+                },
+            },
+            behavior=load_plugins.PluginBehavior.SERVICE,
+            requires={},
+            aggregates=[],
+        ))
+    plugin_set = plugins + fakes
+    load_plugins.run_aggregators(plugin_set)
+    auth = next(p for p in plugin_set if p.name == "authentik-base")
+    clients = auth.inputs.get("clients", [])
+    slugs = {c.get("slug") for c in clients if isinstance(c, dict)}
+    assert "alpha" in slugs
+    assert "bravo" in slugs
+
+
+def test_authentik_base_aggregator_picks_up_agent_profiles():
+    """aggregates declares agent_profile source for output_var=agent_clients —
+    A8 conductor + A7 gitleaks will use this once their agent profiles ship."""
+    plugins_root = REPO / "files/anatomy/plugins"
+    plugins = load_plugins.discover(plugins_root)
+    profiles = [
+        {"id": "conductor", "authentik": {"client_id": "nos-conductor",
+                                          "scopes": ["wing.read"]}},
+        {"id": "librarian"},  # no authentik block — should be ignored
+    ]
+    load_plugins.run_aggregators(plugins, agent_profiles=profiles)
+    auth = next((p for p in plugins if p.name == "authentik-base"), None)
+    assert auth is not None
+    agents = auth.inputs.get("agent_clients", [])
+    assert len(agents) == 1
+    assert agents[0]["client_id"] == "nos-conductor"

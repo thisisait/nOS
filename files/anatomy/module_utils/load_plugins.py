@@ -382,7 +382,27 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
     well-known keys. Unknown keys are recorded and ignored (forward-compat).
     Jinja2 rendering uses ``template_vars`` as context (passed from the
     Ansible module wrapper, typically operator's ``vars``).
+
+    The ctx passed to every action is an augmented copy of ``template_vars``
+    with two additional keys exposed by the loader:
+
+    - ``inputs``           — this plugin's aggregated harvest (set by
+                              ``run_aggregators`` for source plugins).
+                              Empty dict for non-source plugins.
+    - ``plugin_manifest``  — the plugin's own manifest dict, so templates
+                              can reference static metadata without an
+                              extra round-trip through the operator vars.
+
+    Both names are reserved — operator vars with the same names get
+    shadowed inside action ctx (collision is intentional: aggregator
+    plugins MUST see their harvest under a stable key).
     """
+    ctx = dict(template_vars)
+    # Anatomy P0.3 (2026-05-04): expose inputs + plugin metadata so
+    # source plugins (authentik-base) can render templates that iterate
+    # over the harvested ``inputs.clients`` list.
+    ctx["inputs"] = dict(plugin.inputs)
+    ctx["plugin_manifest"] = plugin.manifest
     summary: list[str] = []
     for raw in actions:
         if not isinstance(raw, dict) or len(raw) != 1:
@@ -390,7 +410,7 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
             continue
         action, param = next(iter(raw.items()))
         try:
-            note = _dispatch_action(plugin, action, param, template_vars)
+            note = _dispatch_action(plugin, action, param, ctx)
             summary.append(note)
         except Exception as e:                                    # noqa: BLE001
             summary.append(f"{action}:ERROR:{e}")

@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS admin user + RBAC groups ────────────────────────────────────────
+# Spravovano Ansible playbookem — NEEDITUJ rucne. Zmeny dej do
+# default.config.yml (authentik_default_groups, authentik_bootstrap_*) a
+# roles/pazny.authentik/templates/blueprints/00-admin-groups.yaml.j2.
+#
+# Blueprint se reaplykuje pri startu containeru a na kazdou zmenu tohoto
+# souboru. `password` pole na authentik_core.user je re-aplikovano na kazdy
+# reconcile → prefix rotation se propise do akadmin usera automaticky.
+
+version: 1
+metadata:
+  name: nos-admin-groups
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  # ── RBAC skupiny ─────────────────────────────────────────────────────────
+{% for g in authentik_default_groups | default([]) %}
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "{{ g.name }}"
+    attrs:
+      is_superuser: {{ (g.name in ['nos-providers', 'nos-admins']) | lower }}
+{% endfor %}
+
+  # ── Admin user (heslo reconverged pri kazdem reconcile) ──────────────────
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: akadmin
+    attrs:
+      name: "nOS Admin"
+      email: "{{ authentik_bootstrap_email | default(default_admin_email) }}"
+      password: "{{ authentik_bootstrap_password }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      groups:
+        - !Find [authentik_core.group, [name, nos-admins]]
+
+  # ── API token pro PDS bridge a dalsi automatizace ──────────────────────────
+  # Bridge script (bluesky_pds_bridge.yml) hleda token s identifier
+  # 'nos-api'. Bez nej PDS bridge preskoci s "token=chybi".
+  - model: authentik_core.token
+    state: present
+    identifiers:
+      identifier: nos-api
+    attrs:
+      user: !Find [authentik_core.user, [username, akadmin]]
+      intent: api
+      expiring: false
+      description: "nOS automation (PDS bridge, service provisioning)"
+
+  # ── Tester identita pro automatizovaný smoke + Playwright (Track G) ─────────
+  # nos-tester je dedikovaný účet pro headless ověřování auth flowů. Smoke
+  # tester pošle credentials přes Authentik flow executor a validuje 200
+  # response z chráněné aplikace — tím získáme reálný end-to-end důkaz, že
+  # služba odpovídá autorizovanému uživateli, ne jen že vrací 30x na /.
+  #
+  # Členství: všechny RBAC tier groups, takže může otestovat libovolnou
+  # aplikaci napříč tier-1/2/3/4. Audit-log v wing.db tagovaný
+  # `actor_id=nos-tester` aby se to v běžné statistice vyřešilo jako
+  # synthetický provoz.
+  #
+  # Heslo se re-aplikuje na každý reconcile (stejně jako akadmin) — rotace
+  # global_password_prefix automaticky promazává pak.
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: "{{ nos_tester_username | default('nos-tester') }}"
+    attrs:
+      name: "nOS Smoke Tester"
+      email: "{{ nos_tester_email | default('nos-tester@' + (tenant_domain | default('dev.local'))) }}"
+      password: "{{ nos_tester_password }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      attributes:
+        automated_test_account: true
+        purpose: "smoke + Playwright headless validation (Track G)"
+      groups:
+{% for g in (authentik_default_groups | default([])) %}
+        - !Find [authentik_core.group, [name, "{{ g.name }}"]]
+{% endfor %}

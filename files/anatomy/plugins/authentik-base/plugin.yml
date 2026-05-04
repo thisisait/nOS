@@ -1,0 +1,126 @@
+---
+# =============================================================================
+# authentik-base — service+aggregator plugin (Anatomy P0.3, 2026-05-04)
+#
+# Status: live. The P0 blocker that unblocks all of Q2 (per-plugin
+# `authentik:` blocks). Plugin loader's DAG resolver already implicitly
+# orders every plugin with an `authentik:` block AFTER authentik-base
+# (load_plugins.py:194-198), and `aggregates:` infrastructure already
+# harvests peer blocks into source plugins' `inputs[output_var]`
+# (load_plugins.py:229-258). What was missing: the source plugin itself.
+#
+# Pre-P0.3 shape:
+#   roles/pazny.authentik/templates/blueprints/{00,10,20,30}-*.yaml.j2
+#   roles/pazny.authentik/tasks/blueprints.yml — Ansible template tasks
+#
+# Post-P0.3 shape:
+#   files/anatomy/plugins/authentik-base/blueprints/{00,10,20,30}-*.yaml.j2
+#   plugin loader pre_compose hook renders them via render_dir.
+#   roles/pazny.authentik/tasks/blueprints.yml KEEPS RENDERING for now
+#   (Phase 2 C1+C5 deletes the role-side after Q2 lands per-plugin
+#   `authentik:` blocks across 35 services). Both render to the same
+#   target dir; templates are byte-identical → idempotent.
+#
+# Aggregator wiring (becomes load-bearing in Q2):
+#   For every peer plugin with an `authentik:` block, the loader harvests
+#   that block into authentik-base's inputs.clients. The 10-oidc-apps
+#   blueprint can then iterate over `inputs.clients` instead of (or in
+#   addition to) the central `authentik_oidc_apps` list. Migration is
+#   incremental — both sources merge until C1 deletes the central list.
+# =============================================================================
+
+name: authentik-base
+version: 0.1.0
+description: |
+  Wiring layer for Authentik (IdP / SSO foundation): bootstrap admin user
+  + RBAC groups, OIDC providers + applications, expression policies,
+  agent OAuth2 clients (machine-to-machine). Source plugin (aggregates
+  `authentik:` blocks from every loaded peer plugin into a merged
+  client list).
+upstream: https://goauthentik.io/
+license: MIT
+
+type:
+  - service
+
+requires:
+  role: pazny.authentik
+  feature_flag: install_authentik
+  variables:
+    - tenant_domain
+    - authentik_default_groups
+    - authentik_bootstrap_password
+    - authentik_bootstrap_email
+    - authentik_oidc_apps
+    - authentik_rbac_tiers
+    - authentik_app_tiers
+    - authentik_agent_clients
+    - authentik_agent_scopes
+    - nos_tester_username
+    - nos_tester_password
+
+# Aggregator: harvest every peer plugin's `authentik:` block into
+# inputs.clients (loader does this in run_aggregators). Q2 migration
+# replaces the central authentik_oidc_apps list with these per-plugin
+# blocks; until then both feed into 10-oidc-apps.yaml.j2 (the template
+# is conditional on which source has data).
+aggregates:
+  - from: consumer_block
+    block_path: authentik
+    output_var: clients
+  # Future (A8): agent profiles also declare authentik clients.
+  - from: agent_profile
+    block_path: authentik
+    output_var: agent_clients
+
+provisioning:
+  blueprints:
+    source_dir: blueprints
+    target_dir: "{{ stacks_dir }}/infra/authentik/blueprints"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ stacks_dir }}/infra/authentik/blueprints"
+    - render_dir: provisioning.blueprints
+  # No post_compose API calls — Authentik's blueprint engine reconciles
+  # automatically on container start AND on file change (inotify). The
+  # /api/v1/manage/blueprints/apply endpoint is invoked separately by
+  # the role's "Reapply authentik blueprints" handler when the renders
+  # change mid-run.
+  post_blank:
+    # Don't remove blueprints dir on blank — pazny.authentik's own
+    # blank-reset handles authentik state wipe (DB + config + bind
+    # mounts). Leaving an empty blueprints dir behind is fine.
+    []
+
+observability:
+  loki:
+    labels:
+      app: authentik
+      stack: infra
+      tier: "1"
+
+ui-extension:
+  hub_card:
+    title: "Authentik"
+    icon: lock
+    url: "https://auth.{{ tenant_domain | default('dev.local') }}"
+    tier: 1
+    description: "SSO / IdP — RBAC groups, OIDC providers, agent clients"
+    health_check: "/-/health/ready/"
+
+gdpr:
+  data_categories:
+    - authentication_credentials      # password hashes (akadmin, nos-tester)
+    - identity_metadata               # username, display name, email
+    - session_tokens                  # access/refresh tokens, API tokens
+    - audit_log_entries               # auth events (sign-in, group changes)
+  data_subjects:
+    - operators                       # akadmin, nos-tester
+    - end_users                       # tenant users (Tier 3/4 RBAC)
+    - automated_systems               # agent clients (Bone, Pulse, conductor)
+  legal_basis: contract               # auth is contractually required for service access
+  retention_days: -1                  # active accounts kept indefinitely; deletion via DSAR
+  processors:
+    - authentik
+  eu_residency: true
