@@ -1,0 +1,20 @@
+---
+# ==============================================================================
+# grafana-loki — state/manifest.yml fragment
+#
+# Composition plugins do not run their own container or bind a port, so they
+# do NOT contribute a `services:` row. Track Q1b decision: composition
+# plugins are listed under a sibling `compositions:` key (forthcoming). For
+# now this fragment is informational — `pazny.state_manager` ignores it.
+# When the manifest schema is extended, this fragment merges in verbatim.
+# ==============================================================================
+
+compositions:
+  - id: grafana-loki
+    type: composition
+    requires:
+      plugins: [grafana-base, loki-base]
+      feature_flag: install_observability
+    provides:
+      - grafana_datasource: loki
+    plugin_path: files/anatomy/plugins/grafana-loki
