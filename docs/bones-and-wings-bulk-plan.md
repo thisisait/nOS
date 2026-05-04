@@ -4,7 +4,7 @@
 >
 > **Primary sources:** `docs/active-work.md` for the live gate, `docs/bones-and-wings-refactor.md` for architecture and phase tracker, `files/anatomy/docs/plugin-loader-spec.md` for plugin-loader contracts, and `files/anatomy/docs/role-thinning-recipe.md` for Track Q migrations.
 >
-> **Current state:** A0, A1, A2, A3a, A4, and A6 foundation have landed. Next implementation is A3.5, then A5/A6.5, then A7/A8/A9/A10. Track Q starts only after A6.5 proves the doctrine on Grafana.
+> **Current state (2026-05-04 morning):** A0, A1, A2, A3a, A4, and A6 foundation have landed. Next implementation is A3.5, then A5/A6.5, then A7/A8/A9/A10. **Tune-and-thin doctrine validated on 5 pilots** (Woodpecker / Qdrant / Portainer / Grafana / Vaultwarden) under `files/anatomy/plugins/<service>-base/`; Lane D's plugin loader side-effects (`render_compose_extension`, `bootstrap_collections`, `register_*`, `import_grafana_dashboard`) remain the gate. Track Q can start incrementally after Lane D, OR per-role as each one is touched (current pattern: every role ladene this batch got harvested into a draft).
 
 ---
 
@@ -181,6 +181,17 @@ Use one branch for the bulk batch, but one logical commit per phase/surface:
 ## Lane D — A6.5 Grafana thin-role pilot + real plugin side effects
 
 **Owner:** one agent initially; split only after inventory is frozen.
+
+**Status (2026-05-04):** `files/anatomy/plugins/grafana-base/plugin.yml`
+draft promoted to **live-now map** — every block tagged with its
+current pre-Q home (which file/stanza realizes it today). All wiring
+already factored into the role compose env block + observability tasks
++ `authentik_oidc_apps`; Lane D narrows from "factor wiring out" to
+"make plugin loader actually consume the manifest". Same pattern was
+validated on 4 sibling drafts in this session
+(woodpecker-base, qdrant-base, portainer-base, vaultwarden-base) so
+the manifest schema is stable across all 5 plugin shapes before Lane D
+implementation starts.
 
 **Goal:** prove tendons/vessels doctrine by thinning `pazny.grafana` and making `grafana-base` perform real autowiring.
 

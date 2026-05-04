@@ -468,6 +468,22 @@ class CallbackModule(CallbackBase):
         env_url = os.environ.get("WING_EVENTS_URL", "")
         if not env_url and play_vars and play_vars.get("wing_events_url"):
             self._url = play_vars["wing_events_url"]
+        # Late SECRET resolution mirroring URL: if the operator set
+        # wing_events_hmac_secret at play scope (typical now that the
+        # 2026-05-03 fix removed it from ~/.nos/secrets.yml — its
+        # canonical home is default.config.yml as `{{ bone_secret }}`),
+        # prefer that over whatever __init__'s env-only fallback found.
+        # Env var WING_EVENTS_HMAC_SECRET still wins because it's the
+        # most explicit signal. Without this play-vars fallback the
+        # callback was POSTing to Bone with NO HMAC headers, Bone was
+        # rejecting with `missing HMAC headers`, and every per-task
+        # event was silently being captured only by the JSONL fallback
+        # while events.db saw zero rows from telemetry (only
+        # apps_runner's explicit HMAC POST landed). Surfaced 2026-05-04
+        # during sanity check after the live Qdrant verification.
+        env_secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "")
+        if not env_secret and play_vars and play_vars.get("wing_events_hmac_secret"):
+            self._secret = play_vars["wing_events_hmac_secret"]
         if self._http is None:
             self._http = HTTPTransport(url=self._url, secret=self._secret)
         if self._sqlite is None:

@@ -74,6 +74,16 @@
     # redirect → events vanished, apps_runner summary read "FAILED 308".
     # Going straight to localhost both fixes that and shaves the round-trip.
     wing_events_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/v1/events"
+    # HMAC secret the callback plugin signs every batch with. Bone verifies
+    # using the same value (BONE_SECRET / WING_EVENTS_HMAC_SECRET in its
+    # plist env). The default at default.config.yml level resolves to
+    # `{{ bone_secret }}`, which itself derives from
+    # `{{ global_password_prefix }}_pw_bone`. Surfacing the same value
+    # at play scope lets the callback plugin read it via play_vars
+    # without depending on operator's shell env or the legacy
+    # ~/.nos/secrets.yml fallback (the latter was wiped 2026-05-03 to
+    # close the prefix-rotation stale-secret bug).
+    wing_events_hmac_secret: "{{ wing_events_hmac_secret | default(bone_secret | default(global_password_prefix + '_pw_bone')) }}"
 
   pre_tasks:
     # ── Platform detection (Track C, 2026-04-26) ──────────────────────────

@@ -107,19 +107,48 @@ instead of re-doing inventory on each pass.
 | B — mem_limit/cpus sweep | ✅ DONE (was already done) | 41/51 roles already use `docker_mem_limit_*` convention; remaining 10 confirmed full-coverage on inspection (gaps were volumes / CLI helpers, not services). REM-006 reconciled. |
 | C — hardening (partial) | ✅ partial | Open WebUI prompt-injection mitigation (`CODE_INTERPRETER_ENGINE: pyodide` + `CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES: 5`). REM-054 + REM-055 resolved. |
 
-## 14 pending remediation items (post-session)
+## Operator wet-test verification — Qdrant pilot (2026-05-04 morning)
+
+Operator's full-blank run completed `ok=880 changed=276 failed=0` then a
+follow-up `--tags apps` run completed `ok=137 changed=16 failed=0`. Two
+inline fixes were committed during verification:
+
+| Commit | Fix |
+|---|---|
+| `a917885` | Drop `QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD=20000` env override — collided with image's default `config.yaml`, producing `duplicate field memmap_threshold` parse error and tight restart-loop |
+| `7a29ad3` | Replace `wget --spider` healthcheck with `bash -c ':>/dev/tcp/127.0.0.1/6333'` — `qdrant/qdrant:v1.13.4` image strips curl/wget; previous probe logged 955× `wget: not found` over 8h and gated apps post-hooks off |
+
+**Verified end-to-end on the second run** (post `7a29ad3`):
+
+| Surface | State |
+|---|---|
+| Qdrant container | ✅ healthy via `bash /dev/tcp` probe |
+| Wing `/systems` row | ✅ `app_qdrant` → `qdrant.apps.pazny.eu` |
+| GDPR row in `gdpr_processing` | ✅ `legitimate_interests`, retention 365d |
+| Bone `/api/v1/events` HMAC POSTs | ✅ 4× `app.deployed` accepted (HTTP 200) |
+| `~/.nos/events/playbook.jsonl` mirror | ✅ 4 entries appended |
+| Authentik proxy gate | auto-derived from `nginx.auth: proxy` (apps_runner) |
+| Apps stack rc | ✅ 0 (was 1 before healthcheck fix) |
+
+**Total session deliverable:** 5 tune-and-thin pilots (Woodpecker /
+Qdrant / Portainer / Grafana / Vaultwarden) + cross-cutting mkcert CA
+regression sweep across 14 roles + REM-001 + REM-002 closed + Qdrant
+end-to-end live wiring (Bone client, Wing client, Grafana dashboard,
+Prometheus scrape).
+
+## 12 pending remediation items (post-session)
 
 Three groups:
 
 ### Group D — Architectural (decision-required, schedule when operator has bandwidth)
 
-| ID | Severity | What | Effort |
-|---|---|---|---|
-| REM-001 | CRITICAL | Portainer docker-socket-proxy sidecar | 1-2 d |
-| REM-002 | CRITICAL | Woodpecker trusted repos feature (config + test) | 0.5 d |
-| REM-073 | HIGH | Uptime Kuma v1 → v2.2.1 major migration (breaking config schema) | 1-2 d |
-| REM-014/046 | CRITICAL | FreePBX upstream tag mapping research + pin | 0.5 d |
-| REM-044 | HIGH | Uptime Kuma admin SSRF — protocol-level mitigation (URL deny-list, no version) | 0.5 d |
+| ID | Severity | What | Effort | Status |
+|---|---|---|---|---|
+| ~~REM-001~~ | ~~CRITICAL~~ | ~~Portainer docker-socket-proxy sidecar~~ | ~~1-2 d~~ | ✅ **CLOSED** 2026-05-03 (commit `cfca6a0`): trim Swarm/SYSTEM/DISTRIBUTION/EXEC flags + 2 toggles for security-sensitive operators; bundled with portainer-base draft (272-LOC harvest) |
+| ~~REM-002~~ | ~~CRITICAL~~ | ~~Woodpecker trusted repos feature (config + test)~~ | ~~0.5 d~~ | ✅ **CLOSED** 2026-05-03 (commit `9b6544d`): `WOODPECKER_PLUGINS_PRIVILEGED=""` + `WOODPECKER_AUTHENTICATE_PUBLIC_REPOS=false`; bundled with woodpecker-base draft |
+| REM-073 | HIGH | Uptime Kuma v1 → v2.2.1 major migration (breaking config schema) | 1-2 d | pending |
+| REM-014/046 | CRITICAL | FreePBX upstream tag mapping research + pin | 0.5 d | pending |
+| REM-044 | HIGH | Uptime Kuma admin SSRF — protocol-level mitigation (URL deny-list, no version) | 0.5 d | pending |
 
 ### Group C-real — Hardening (real work, dedicated session)
 
@@ -172,7 +201,7 @@ shared-file locks, and wave gates for A3.5/A5/A6.5/A7-A10.
 
 | Surface | State |
 |---|---|
-| `git status` | clean, in sync with `origin/master` (security batch + sanity-check fix pushed 2026-05-03 evening) |
+| `git status` | clean; **9 commits ahead of `origin/master`** awaiting push (`eac1892..7a29ad3`): Qdrant pilot, live wiring, Portainer REM-001, Grafana mkcert, Vaultwarden first-end_users pilot, mkcert sweep across 11 roles, Qdrant MEMMAP fix, Qdrant healthcheck fix |
 | Last green blank | `ok=920 changed=282 failed=0` (2026-05-03 18:08, full blank) |
 | Last partial green | `ok=151 changed=12 failed=0` (2026-05-03 19:32, `--tags apps,wing,nginx,traefik`) |
 | Tier-1 services | all healthy; 51 systems registered in Wing /hub with clean IDs |

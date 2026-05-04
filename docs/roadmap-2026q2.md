@@ -795,7 +795,7 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 ### Track Q — Autowiring debt consolidation **(post-PoC, first-class follow-on, 2026-05-03 elevated)**
 
-**Status: blocked on bones&wings PoC A6.5 (Grafana thin-role pilot) — doctrine proof point.** 7 batches × 3-5 days each = 4-6 weeks total. Plan in `docs/bones-and-wings-refactor.md` §13.1.
+**Status: doctrine validated on 5 pilots 2026-05-03/04** (Woodpecker, Qdrant, Portainer, Grafana, Vaultwarden) under `files/anatomy/plugins/<service>-base/` — plugin manifest schema stable across Tier-1+role+peer-OAuth, Tier-2+new-substrate, Tier-1+API-driven-post (272-LOC harvest), Tier-1+observability-heavy, and Tier-1+`end_users`-GDPR shapes. Each draft includes a "harvest map" comment block (today's-surface → manifest-block) so the per-role Track Q sweep has a pre-built checklist. Lane D Grafana plugin loader side-effects implementation remains the **mass-migration gate**; per-role tune-and-thin (touch a role for any reason → harvest into draft) is the current incremental pattern. 7 batches × 3-5 days each = 4-6 weeks total at full Track Q tempo. Plan in `docs/bones-and-wings-refactor.md` §13.1; bulk-job coordination in `docs/bones-and-wings-bulk-plan.md`.
 
 **Doctrine** (refactor doc §1.1, "tendons & vessels"): every Tier-1 role post-Track-Q is install-only (defaults + main.yml + compose template + meta). All wiring lives in service + composition plugins under `files/anatomy/plugins/`. Net LOC delta projected: **-2000 to -3500** across ~50 distinct integrations.
 
