@@ -42,6 +42,21 @@ ansible-playbook main.yml --syntax-check
 
 ## Architecture
 
+### Anatomy — the structural backbone
+
+> **Doctrine source:** `docs/bones-and-wings-refactor.md` §1.1 + §6.
+
+The core of nOS is the **anatomy** — a layered metaphor for how the platform is wired:
+
+- **Bones** (`files/anatomy/bone/`) — Bone, the local FastAPI bridge between Ansible runs and Wing's SQLite store.
+- **Wings** (`files/anatomy/wing/`) — Wing, the Nette PHP security-research dashboard + state-framework UI.
+- **Pulse** (`files/anatomy/pulse/`) — Pulse daemon, the host-side scheduled-job runner.
+- **Veins** (carriers) — Bone↔Wing HTTP, callback telemetry, plugin-loader hook channels.
+- **Tendons** (cross-service wiring) — what each plugin's `lifecycle:` block declares (renders, dashboard provisioning, post-API setup).
+- **Nerves** *(TBD)* — agentic feedback loops: A8 conductor → Pulse jobs → A10 audit trail.
+
+When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
+
 ### Role-based service delivery (59 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
