@@ -83,7 +83,38 @@ async def _check_health(client: httpx.AsyncClient, svc: dict) -> dict:
 
 @app.get("/api/health")
 async def health():
-    """Aggregated health of all registered services."""
+    """Liveness probe — "is Bone itself responding?".
+
+    Anatomy P0.15 (2026-05-04): split from the previous aggregate. The old
+    /api/health did a fan-out HTTPS GET to every registered service's own
+    /api/health with a 5s per-service timeout, then asyncio.gather'd the
+    lot — wall clock = the slowest peer. With ~37 services in the registry
+    and several Tier-2 apps replying in 4-5s, /api/health routinely blew
+    past the smoke probe's 5s timeout → DEAD. That's a readiness check
+    masquerading as liveness (k8s anti-pattern).
+
+    The cheap O(1) liveness moved here. The aggregate moved to
+    /api/health/aggregate below. tools/nos-smoke.py + docker healthchecks
+    + launchd checks all want the cheap one — they want to know that Bone
+    itself answers HTTP, not that 37 downstream services are reachable.
+    Wing /timeline + future conductor self-tests use the aggregate.
+    """
+    return {
+        "status": "ok",
+        "uptime": round(time.time() - BOOT_TIME),
+        "auth_ready": _AUTH_READY,
+    }
+
+
+@app.get("/api/health/aggregate")
+async def health_aggregate():
+    """Aggregated health — fan-out to every registered service.
+
+    Pre-P0.15 this was /api/health. Kept fully compatible (same response
+    shape) under the new path for callers that actually want the cluster
+    view: Wing /timeline, conductor readiness gates, manual operator
+    sanity checks. NOT for smoke probes / healthchecks — see /api/health.
+    """
     services = _read_registry()
     if not services:
         return {"status": "ok", "services": [], "healthy": 0, "unhealthy": 0}
