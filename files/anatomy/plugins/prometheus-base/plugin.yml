@@ -1,0 +1,91 @@
+# =============================================================================
+# prometheus-base — service plugin (Track Q1 — observability batch, 2026-05-04)
+#
+# Status: live. First plugin past the A6.5 doctrine gate. Extracts the
+# Prometheus config + recording rules out of `roles/pazny.prometheus/`
+# coupling to `tasks/stacks/core-up.yml` rendering.
+#
+# Pre-Q1 shape:
+#   files/observability/prometheus/prometheus.yml         (master config)
+#   files/observability/prometheus/rules/*.yml            (5 alert rules + macos-compat)
+#   tasks/stacks/core-up.yml task `Deploy Prometheus configuration`
+#   tasks/stacks/core-up.yml task `Deploy Prometheus recording rules`
+#
+# Post-Q1 shape:
+#   files/anatomy/plugins/prometheus-base/provisioning/prometheus.yml.j2
+#   files/anatomy/plugins/prometheus-base/provisioning/rules/*.yml{,.j2}
+#   plugin loader pre_compose hook does the rendering — same target paths,
+#   one declarative manifest entry instead of two imperative tasks.
+# =============================================================================
+
+name: prometheus-base
+version: 0.1.0
+description: |
+  Wiring layer for Prometheus: master config (scrape jobs + retention) +
+  6 recording-rule files (macos-compat + infra/network/apps/security/backup).
+  Plugin loader renders all into the observability stack's config volume.
+upstream: https://prometheus.io/
+license: Apache-2.0
+
+type:
+  - service
+
+requires:
+  role: pazny.prometheus
+  feature_flag: install_observability
+  variables:
+    - prometheus_port
+    - tempo_otlp_grpc_port
+    - host_alias
+    - tenant_domain
+
+provisioning:
+  config:
+    template: provisioning/prometheus.yml.j2
+    target: "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
+  rules:
+    source_dir: provisioning/rules/
+    target_dir: "{{ stacks_dir }}/observability/prometheus/rules/"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ stacks_dir }}/observability/prometheus/rules"
+    - render: provisioning.config
+    - render_dir: provisioning.rules
+
+# Prometheus has its own `/-/healthy` endpoint but `/-/ready` is the
+# canonical liveness probe in the project. wait_health uses 60s default
+# which is enough for cold-start TSDB load on the M-series macbook.
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ prometheus_port | default(9090) }}/-/ready"
+        timeout: 60
+  post_blank:
+    - remove_dir: "{{ stacks_dir }}/observability/prometheus"
+
+observability:
+  loki:
+    labels:
+      app: prometheus
+      stack: observability
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - infrastructure_metrics
+    - hostname_labels
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 30                          # matches prometheus_retention default
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Prometheus"
+    icon: chart-line
+    url: "https://prometheus.{{ tenant_domain | default('dev.local') }}"
+    tier: 1
+    description: "Metrics + alerting"
+    health_check: "/-/ready"

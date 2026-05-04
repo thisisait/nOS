@@ -1,0 +1,84 @@
+# =============================================================================
+# tempo-base — service plugin (Track Q1 — observability batch, 2026-05-04)
+#
+# Status: live. Extracts Tempo's master config out of `tasks/stacks/core-up.yml`
+# rendering. Tempo is the trace backend (OTLP gRPC + HTTP receivers).
+#
+# Pre-Q1 shape:
+#   files/observability/tempo/tempo.yaml
+#   tasks/stacks/core-up.yml task `Deploy Tempo configuration`
+#
+# Post-Q1 shape:
+#   files/anatomy/plugins/tempo-base/provisioning/tempo.yaml.j2
+#   plugin loader pre_compose hook renders it.
+# =============================================================================
+
+name: tempo-base
+version: 0.1.0
+description: |
+  Wiring layer for Tempo (distributed tracing): master config with HTTP
+  + OTLP gRPC + OTLP HTTP receivers, local storage backend, retention.
+upstream: https://grafana.com/oss/tempo/
+license: AGPL-3.0
+
+type:
+  - service
+
+requires:
+  role: pazny.tempo
+  feature_flag: install_observability
+  variables:
+    - tempo_http_port
+    - tempo_otlp_grpc_port
+    - tempo_otlp_http_port
+    - host_alias
+    - tenant_domain
+
+provisioning:
+  config:
+    template: provisioning/tempo.yaml.j2
+    target: "{{ stacks_dir }}/observability/tempo/tempo.yaml"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ stacks_dir }}/observability/tempo"
+    - render: provisioning.config
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ tempo_http_port | default(3200) }}/ready"
+        timeout: 60
+  post_blank:
+    - remove_dir: "{{ stacks_dir }}/observability/tempo"
+
+observability:
+  loki:
+    labels:
+      app: tempo
+      stack: observability
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - trace_spans
+    - request_metadata     # spans may include user-agent, request paths
+  data_subjects:
+    - operators
+    - end_users
+  legal_basis: legitimate_interests
+  # Tempo retention defaults to 14d in our config; align here.
+  retention_days: 14
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Tempo"
+    icon: activity
+    url: "https://tempo.{{ tenant_domain | default('dev.local') }}"
+    tier: 1
+    description: "Distributed tracing"
+    health_check: "/ready"
+  # REM-036 (Tempo /status/config exposure) — vendor-blocked / accepted
+  # under "local storage, low blast radius" per Group V in active-work.
+  # Wing /hub card omits the Tempo dashboard URL fragment that points
+  # at /status/config to avoid embedded-link discovery.

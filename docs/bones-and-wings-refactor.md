@@ -1195,7 +1195,7 @@ The PoC ships the doctrine proof (A6.5: thin `pazny.grafana` + `grafana-base` se
 
 **Estimate:** 4-6 weeks total post-PoC, batched. Each batch is independently shippable; Q can pause mid-track without breaking anything.
 
-**Gate to start Q1:** PoC A6.5 exits green — i.e., the doctrine is proven on Grafana before generalization.
+**Gate to start Q1:** PoC A6.5 exits green — i.e., the doctrine is proven on Grafana before generalization. **MET 2026-05-04: A6.5 landed + Q1 partially landed in the same batch (prometheus-base + loki-base + tempo-base plugins live; alloy + 8-12 composition plugins remain for Q1b).**
 
 ---
 

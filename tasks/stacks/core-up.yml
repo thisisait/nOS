@@ -283,36 +283,13 @@
     path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"
     state: absent
 
-- name: "[Core] Deploy Prometheus configuration"
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/prometheus/prometheus.yml"
-    dest: "{{ stacks_dir }}/observability/prometheus/prometheus.yml"
-    mode: '0644'
-    force: true
-  when: install_observability | default(true)
-
-- name: "[Core] Deploy Prometheus recording rules (macOS compat)"
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/files/observability/prometheus/rules/macos-compat.yml"
-    dest: "{{ stacks_dir }}/observability/prometheus/rules/macos-compat.yml"
-    mode: '0644'
-  when: install_observability | default(true)
-
-- name: "[Core] Deploy Loki configuration"
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/loki/local-config.yaml"
-    dest: "{{ stacks_dir }}/observability/loki/local-config.yaml"
-    mode: '0644'
-    force: true
-  when: install_observability | default(true)
-
-- name: "[Core] Deploy Tempo configuration"
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/tempo/tempo.yaml"
-    dest: "{{ stacks_dir }}/observability/tempo/tempo.yaml"
-    mode: '0644'
-    force: true
-  when: install_observability | default(true)
+# Track Q1 (2026-05-04): Prometheus / Loki / Tempo / recording-rules config
+# rendering moved to the plugin loader. The loader's pre_compose hook (further
+# down) executes the equivalent `render` + `render_dir` actions reading from
+# files/anatomy/plugins/{prometheus,loki,tempo}-base/provisioning/. Same target
+# paths under {{ stacks_dir }}/observability/, single declarative manifest
+# entry per plugin instead of 4 imperative tasks here. Doctrine reference:
+# docs/bones-and-wings-refactor.md §1.1 + §13.1 Q1 batch.
 
 # Anatomy A6.5 (2026-05-04): Grafana datasources/dashboards provisioning
 # rendering moved to the plugin loader (grafana-base plugin). The loader's

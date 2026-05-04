@@ -444,6 +444,32 @@ def _dispatch_action(plugin: Plugin, action: str, param,
         changed = _render_file(src, dest, ctx)
         return f"render_compose_extension:{param}:{'changed' if changed else 'unchanged'} -> {dest}"
 
+    if action == "render_dir":
+        # `param` resolves to {source_dir, target_dir}. Renders every file
+        # in source_dir into target_dir, stripping any trailing `.j2`
+        # from the basename so config files land at their canonical
+        # extension. Idempotent: skip write when content unchanged.
+        spec = _resolve_path(plugin.manifest, str(param))
+        if not isinstance(spec, dict):
+            return f"render_dir:{param}:skipped(spec missing)"
+        src_dir = plugin.path / _render_string(spec.get("source_dir", ""), ctx)
+        dst_dir = pathlib.Path(_render_string(spec.get("target_dir", ""), ctx))
+        if not src_dir.is_dir():
+            return f"render_dir:{param}:skipped(no src dir @ {src_dir})"
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        rendered = 0
+        skipped = 0
+        for sf in sorted(src_dir.iterdir()):
+            if not sf.is_file():
+                continue
+            out_name = sf.name[:-3] if sf.name.endswith(".j2") else sf.name
+            df = dst_dir / out_name
+            if _render_file(sf, df, ctx):
+                rendered += 1
+            else:
+                skipped += 1
+        return f"render_dir:{param}:{rendered} rendered / {skipped} unchanged -> {dst_dir}"
+
     if action == "copy_dashboards":
         # `param` resolves to {source_dir, target_dir, files}.
         import shutil

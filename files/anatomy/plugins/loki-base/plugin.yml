@@ -1,0 +1,80 @@
+# =============================================================================
+# loki-base — service plugin (Track Q1 — observability batch, 2026-05-04)
+#
+# Status: live. Extracts Loki's master config (`local-config.yaml`) out of
+# `tasks/stacks/core-up.yml` rendering into a declarative plugin entry.
+#
+# Pre-Q1 shape:
+#   files/observability/loki/local-config.yaml
+#   tasks/stacks/core-up.yml task `Deploy Loki configuration`
+#
+# Post-Q1 shape:
+#   files/anatomy/plugins/loki-base/provisioning/local-config.yaml.j2
+#   plugin loader pre_compose hook renders it.
+# =============================================================================
+
+name: loki-base
+version: 0.1.0
+description: |
+  Wiring layer for Loki (log aggregation): master config with retention,
+  storage backend, schema config. Future Q1+ work extends this with per-
+  service log labels (already partially declared in plugin observability
+  blocks across woodpecker/qdrant/portainer/vaultwarden drafts).
+upstream: https://grafana.com/oss/loki/
+license: AGPL-3.0
+
+type:
+  - service
+
+requires:
+  role: pazny.loki
+  feature_flag: install_observability
+  variables:
+    - loki_port
+    - host_alias
+    - tenant_domain
+
+provisioning:
+  config:
+    template: provisioning/local-config.yaml.j2
+    target: "{{ stacks_dir }}/observability/loki/local-config.yaml"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ stacks_dir }}/observability/loki"
+    - render: provisioning.config
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ loki_port | default(3100) }}/ready"
+        timeout: 60
+  post_blank:
+    - remove_dir: "{{ stacks_dir }}/observability/loki"
+
+observability:
+  loki:
+    labels:
+      app: loki
+      stack: observability
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - log_lines
+    - hostname_labels
+    - request_metadata     # may include user agents, IPs from access logs
+  data_subjects:
+    - operators
+    - end_users            # end-user requests appear in nginx/Wing access logs
+  legal_basis: legitimate_interests
+  retention_days: 30       # logs retained per Loki schema_config retention
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Loki"
+    icon: file-text
+    url: "https://loki.{{ tenant_domain | default('dev.local') }}"
+    tier: 1
+    description: "Log aggregation"
+    health_check: "/ready"
