@@ -220,10 +220,23 @@ lifecycle:
 # Loader merges this into the canonical row at apply time.
 
 gdpr:
-  data_categories_added:
-    - "agent_prompt_context"          # conductor prompt embeddings may include op data
-    - "advisory_text"                 # CVE summaries, vendor advisories
-  processors_added: []                # all-local
+  # Plugin GDPR row tracks what the WIRING adds on top of apps/qdrant.yml's
+  # operational row. Loader treats plugin gdpr blocks as first-class (Q2
+  # migration deletes the central authentik_oidc_apps + dedupes; the same
+  # consolidation will dedupe Tier-2 manifest gdpr vs. plugin gdpr).
+  data_categories:
+    - agent_prompt_context            # conductor prompt embeddings may include op data
+    - advisory_text                   # CVE summaries, vendor advisories
+    - vector_metadata                 # collection names, point ids, payload schemas
+  data_subjects:
+    - operators
+    - automated_systems               # agent run summaries
+  legal_basis: legitimate_interests   # research / agent memory; not contract-bound
+  retention_days: 365                 # nightly Pulse rebuild expires older points
+  processors:
+    - qdrant
+  eu_residency: true
+  # Plugin-specific extensions (additionalProperties on gdpr is true).
   bone_redaction_required: true       # Bone MUST strip operator email before upsert
 
 # =============================================================================
@@ -254,24 +267,30 @@ notification:
     severity: high
 
 # =============================================================================
-# SCHEMA — wing.db tables this plugin owns
+# SCHEMA — wing.db tables this plugin owns (TODO: future loader feature)
 # =============================================================================
 # Tracks operator-visible per-collection stats so Wing's /vector-search view
 # can render without making N calls to Qdrant on every page load.
-
-schema:
-  tables:
-    qdrant_collections_cache:
-      columns:
-        name: TEXT PRIMARY KEY
-        points_count: INTEGER
-        vectors_count: INTEGER
-        last_synced_at: INTEGER       # epoch seconds
-        status: TEXT                  # green / yellow / red
-      refresh:
-        # Pulse job, every 5 min
-        cron: "*/5 * * * *"
-        ingest_endpoint: /api/v1/qdrant/sync_collections   # Wing route, not yet implemented
+#
+# Current schema expects an array of .sql migration paths; the inline DDL-
+# spec shape below is a richer future capability (loader generates the
+# migration SQL from the spec, ships it through the standard
+# wing/db/schema-extensions.sql path). When that lands, uncomment + add
+# the corresponding loader action. Today the qdrant_collections_cache
+# table doesn't exist, so the Wing /vector-search view is also TODO.
+#
+# schema:
+#   tables:
+#     qdrant_collections_cache:
+#       columns:
+#         name: TEXT PRIMARY KEY
+#         points_count: INTEGER
+#         vectors_count: INTEGER
+#         last_synced_at: INTEGER       # epoch seconds
+#         status: TEXT                  # green / yellow / red
+#       refresh:
+#         cron: "*/5 * * * *"
+#         ingest_endpoint: /api/v1/qdrant/sync_collections
 
 # =============================================================================
 # HARVEST MAP — what already lives where (for the Track Q sweep)

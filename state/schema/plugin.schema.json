@@ -31,11 +31,14 @@
     },
     "requires": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "role":          {"type": "string", "description": "Service plugin: which Tier-1 role must be installed."},
         "apps_manifest": {"type": "string", "description": "Composition-Tier-2 plugin: which apps/<name>.yml triggers this."},
+        "app":           {"type": "string", "description": "Tier-2 binding shorthand: plugin no-ops unless apps catalog enables this slug."},
         "plugin":        {"type": "array", "items": {"type": "string"}, "description": "DAG edges — plugins that must be loaded before this one."},
+        "peer_service":  {"type": "string", "description": "Cross-service binding: this plugin's role coexists with a sibling infra service (e.g. portainer-base ↔ docker_socket_proxy). Documentation-only today; loader doesn't enforce."},
+        "capability_consumers": {"type": "array", "items": {"type": "string"}, "description": "Components that need this plugin's substrate ready before they boot (e.g. qdrant-base capability_consumers: [bone, wing])."},
         "feature_flag":  {"type": "string", "description": "Ansible var name (e.g. install_observability) that gates activation."},
         "variables":     {"type": "array", "items": {"type": "string"}, "description": "Var names referenced by manifest Jinja — loader pre-checks they're defined."}
       }
@@ -68,11 +71,12 @@
     "compose_extension": {
       "type": "object",
       "required": ["template", "target_stack", "target_service"],
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "template":       {"type": "string", "description": "Path under plugin dir to a docker-compose extension Jinja template."},
         "target_stack":   {"type": "string", "enum": ["infra", "observability", "iiab", "devops", "b2b", "voip", "engineering", "data", "apps"]},
-        "target_service": {"type": "string", "description": "MUST match the role's compose template service name (V3 P2)."}
+        "target_service": {"type": "string", "description": "MUST match the role's compose template service name (V3 P2)."},
+        "hardening_refs": {"type": "array", "items": {"type": "string"}, "description": "REM-* IDs from docs/llm/security/scan-state.json that this compose extension implements (e.g. ['REM-001'] for portainer socket-proxy least-privilege)."}
       }
     },
     "provisioning": {"type": "object", "description": "Loader-specific shape — see grafana-base/plugin.yml for the canonical example."},

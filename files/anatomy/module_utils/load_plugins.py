@@ -825,8 +825,21 @@ def _main(argv: list[str]) -> int:
         # operator-y vars to surface filter / template issues like
         # the to_json + $labels issues uncovered by P0.6.
         tmp = pathlib.Path(tempfile.mkdtemp(prefix="anatomy-smoke-"))
+        # Mock the slice of ansible_facts that plugin templates actually
+        # touch. Plugins like grafana-base reference
+        # ``ansible_facts['env']['HOME']`` for host-side mount targets;
+        # without this mock those targets fall through to ``/`` and
+        # the render attempts to write under root → "Read-only file
+        # system" degradation in standalone smoke. Real Ansible blank
+        # fills ansible_facts via the setup module.
+        mock_home = str(tmp / "fake-home")
+        pathlib.Path(mock_home).mkdir(parents=True, exist_ok=True)
         template_vars = {
             "stacks_dir": str(tmp),
+            "ansible_facts": {
+                "env": {"HOME": mock_home, "USER": "smoke"},
+                "user_dir": mock_home,
+            },
             "tenant_domain": "smoke.local",
             "authentik_domain": "auth.smoke.local",
             "authentik_default_groups": [{"name": "nos-admins"}],
