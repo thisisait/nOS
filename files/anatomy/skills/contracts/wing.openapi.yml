@@ -898,6 +898,86 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/pulse_jobs/due:
+    get:
+      summary: 'list jobs whose next_fire_at <= now'
+      operationId: Pulse_jobsDue_get
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/pulse_runs:
+    post:
+      summary: Pulse claims a fired job (start row)
+      operationId: Pulse_runs_post
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/pulse_runs/{id}':
+    get:
+      summary: poll-after-trigger view of one run
+      operationId: Pulse_runs_get
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/pulse_runs/{id}/finish':
+    post:
+      summary: 'Pulse posts the run''s exit_code + tails'
+      operationId: Pulse_runFinish_post
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/remediation:
     get:
       summary: 'Remediation::actiondefault'

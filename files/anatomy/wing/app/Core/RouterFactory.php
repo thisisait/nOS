@@ -71,6 +71,12 @@ final class RouterFactory
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');
 		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
 
+		// Pulse — scheduled-job catalog + run history (Anatomy P0.2, 2026-05-04).
+		// Pulse polls /pulse_jobs/due, posts run start/finish to /pulse_runs.
+		$api->addRoute('api/v1/pulse_jobs/due', 'Pulse:jobsDue');
+		$api->addRoute('api/v1/pulse_runs/<id>/finish', 'Pulse:runFinish');
+		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
+
 		// GDPR Article 30 register (Track D, 2026-04-26).
 		$api->addRoute('api/v1/gdpr/processing[/<id>]', 'Gdpr:processing');
 		$api->addRoute('api/v1/gdpr/dsar[/<id>]', 'Gdpr:dsar');
