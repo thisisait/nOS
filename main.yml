@@ -93,6 +93,33 @@
     - import_tasks: tasks/_platform.yml
       tags: ['always', 'platform']
 
+    # ── Preflight: ensure host Python interpreter has plugin loader deps ───
+    # Anatomy P0.13 (2026-05-04): the plugin loader (nos_plugin_loader
+    # Ansible module) is pure Python and lazily imports jinja2 + pyyaml
+    # + jsonschema at first hook call. Some macOS Homebrew Python
+    # installs ship without these in site-packages — when Ansible's
+    # interpreter (operator's `ansible_python_interpreter` from
+    # inventory) is one of those, the loader silently degraded every
+    # plugin (status=degraded, no files written). Docker compose then
+    # bind-mounted the missing config files as DIRECTORIES → tempo /
+    # loki / prometheus crashed at startup. P0.9 added a fail-loud
+    # preflight inside run_hook(). This task is the proactive twin —
+    # auto-install the deps via pip --break-system-packages so the
+    # next blank doesn't need a manual install step.
+    #
+    # Idempotent: pip skips already-installed packages. The
+    # --break-system-packages flag is required for Homebrew Python on
+    # macOS (PEP 668); harmless on Linux Pythons (silently ignored).
+    - name: "[Preflight] Ensure host Python has plugin loader deps (jinja2, pyyaml, jsonschema)"
+      ansible.builtin.pip:
+        name:
+          - jinja2>=3.1
+          - pyyaml>=6.0
+          - jsonschema>=4.0
+        state: present
+        extra_args: "--break-system-packages"
+      tags: ['always', 'preflight']
+
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
     # Uses Ansible's own YAML loader via `include_vars` — no external Python
     # interpreter, no PyYAML dependency on the host (some Homebrew Python
