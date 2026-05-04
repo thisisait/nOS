@@ -99,8 +99,16 @@ traefik_skip_ids:
 # Service ids whose host-loopback bind is HTTPS (not HTTP). Traefik upstream
 # URL gets the https:// prefix and `serversTransport: noverify` so the
 # self-signed dev cert is tolerated.
-traefik_https_upstream_ids:
-  - code_server      # publishes 8443/tcp inside the container
+#
+# 2026-05-04: code_server REMOVED from this list. The LSIO image
+# (lscr.io/linuxserver/code-server) serves PLAIN HTTP on 8443 unless
+# `--cert` is passed via CLI. We don't pass it, so the upstream is
+# `http://nos-host:3009`, not https. Previous (incorrect) entry caused
+# Traefik to send a TLS handshake that the upstream answered with HTTP,
+# producing `tls_get_more_records: packet length too long` SSL errors
+# and a 502/404 user-visible state. Surfaced 2026-05-04 during operator
+# verification of code.pazny.eu.
+traefik_https_upstream_ids: []
 
 # Special-case routes that don't follow the manifest auto-derivation pattern.
 # Added to the rendered services.yml verbatim — bypass the manifest loop.

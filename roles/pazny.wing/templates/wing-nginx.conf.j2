@@ -33,9 +33,22 @@ http {
     access_log /var/log/nginx/access.log json;
 
     # PHP-FPM upstream — Wing FPM container on the iiab_net Docker network.
-    upstream wing_fpm {
-        server wing:9000;
-        keepalive 16;
+    #
+    # Docker-DNS resolver pinned to Docker Desktop's embedded DNS (127.0.0.11
+    # inside the container's network namespace). nginx resolves the upstream
+    # NAME at request time rather than caching the IP at startup, so a wing
+    # container recreate (new IP) doesn't strand wing-nginx with a stale
+    # `172.x.x.10` and 502s for hours. Surfaced 2026-05-04 after a full-blank
+    # recreate left wing-nginx pointed at the previous wing IP. `valid=10s`
+    # bounds the cache so re-resolution is cheap on busy paths.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+
+    # Variable-driven upstream forces re-resolution per request (per nginx
+    # docs: when fastcgi_pass uses a literal hostname, it's resolved once at
+    # config-load; using a variable forces dynamic lookup via the resolver).
+    map $host $wing_upstream {
+        default wing:9000;
     }
 
     server {
@@ -69,7 +82,10 @@ http {
         }
 
         location ~ \.php$ {
-            fastcgi_pass  wing_fpm;
+            # Variable upstream — see `resolver` block above; re-resolves per
+            # request via Docker DNS so wing-container IP changes propagate
+            # without a wing-nginx restart.
+            fastcgi_pass  $wing_upstream;
             fastcgi_index index.php;
             include       /etc/nginx/fastcgi_params;
             fastcgi_param SCRIPT_FILENAME  $realpath_root$fastcgi_script_name;

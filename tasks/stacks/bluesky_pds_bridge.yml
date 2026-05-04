@@ -90,13 +90,27 @@
     - _pds_bridge_ak_users.status | default(0) == 200
 
 - name: "[PDS Bridge] Build list of users to provision"
+  # Filters in order:
+  #   1. reject service_account type users — Authentik auto-generates these
+  #      with un-DNS-safe usernames like `ak-<App Name>-client_credentials`
+  #      (spaces + uppercase + underscores) which AT Protocol's handle regex
+  #      refuses. They have no business owning a PDS identity anyway.
+  #      Surfaced 2026-05-04 on `ak-nOS State Manager-client_credentials`.
+  #   2. drop the legacy `^ak-outpost` exact-match (covered by #1, kept as
+  #      belt-and-suspenders for any pre-Track-B install where `type` field
+  #      may not be present on the user record).
+  #   3. drop usernames that wouldn't pass AT Proto handle validation —
+  #      lowercase + alnum + hyphen only, must start with alnum. Cheaper to
+  #      reject here than to let `goat pds admin account create` choke later.
   ansible.builtin.set_fact:
     _pds_bridge_to_create: >-
       {{ _pds_bridge_eligible | default([])
-         | rejectattr('username', 'search', '^ak-outpost')
          | selectattr('username', 'defined')
          | list
          | select('mapping')
+         | rejectattr('type', 'equalto', 'service_account')
+         | rejectattr('username', 'search', '^ak-outpost')
+         | selectattr('username', 'match', '^[a-z0-9][a-z0-9-]*$')
          | list }}
   when: _pds_bridge_eligible | default([]) | length > 0
 

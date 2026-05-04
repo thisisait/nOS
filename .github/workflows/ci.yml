@@ -187,17 +187,23 @@ jobs:
           sudo rm -rf /Applications/Google\ Chrome.app
           sudo rm -rf /usr/local/bin/firefox
 
-      # Install into setup-python's hostedtoolcache python (writable to the
-      # runner user — no sudo needed). Sudo would reroute pip to root's user
-      # site or to a different python resolved by sudo's secure_path, missing
-      # the interpreter Ansible later targets via ANSIBLE_PYTHON_INTERPRETER.
+      # Install via the EXPLICIT setup-python python — `python3` in PATH
+      # resolves to /Library/Frameworks/Python.framework/.../bin/python3 on
+      # GitHub's macos-14/15 runners (the system framework install), NOT the
+      # hostedtoolcache python that ANSIBLE_PYTHON_INTERPRETER points at.
+      # Without this explicit path, pip lands packages in the wrong Python's
+      # site-packages and `nos_state` fails with `PyYAML required` despite
+      # the install step reporting success. Surfaced 2026-05-04 in CI run
+      # 25303198873.
       - name: Install test dependencies.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
-          # Sanity probe — fail fast here if pyyaml/jsonschema aren't where
-          # Ansible will look. Same path used in ANSIBLE_PYTHON_INTERPRETER.
-          python3 -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__)'
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          # Sanity probe — fail fast if pyyaml/jsonschema aren't reachable
+          # from the SAME interpreter Ansible will use at runtime.
+          "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
 
       - name: Set up the test environment.
         run: |
