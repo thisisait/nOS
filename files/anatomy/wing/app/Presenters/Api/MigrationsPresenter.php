@@ -7,11 +7,13 @@ namespace App\Presenters\Api;
 use App\Model\MigrationRepository;
 
 /**
+ * Migration catalog + lifecycle proxy — list / preview / apply / rollback.
+ *
  * GET  /api/v1/migrations             — list { applied, pending } (via BoxAPI)
- * GET  /api/v1/migrations/<id>        — full record
- * POST /api/v1/migrations/<id>/preview
- * POST /api/v1/migrations/<id>/apply
- * POST /api/v1/migrations/<id>/rollback
+ * GET  /api/v1/migrations/<id>        — full record for one migration
+ * POST /api/v1/migrations/<id>/preview  — BoxAPI dry-run, returns plan diff
+ * POST /api/v1/migrations/<id>/apply    — BoxAPI apply (honors body.dry_run)
+ * POST /api/v1/migrations/<id>/rollback — BoxAPI rollback to previous state
  *
  * All proxy to BoxAPI. Bearer token required.
  */

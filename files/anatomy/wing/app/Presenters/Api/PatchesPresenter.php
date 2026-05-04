@@ -7,6 +7,8 @@ namespace App\Presenters\Api;
 use App\Model\PatchRepository;
 
 /**
+ * Security patch catalog + lifecycle — list / detail / plan / apply / events.
+ *
  * GET  /api/v1/patches                       — list patches (filter: status, component_id, limit)
  * GET  /api/v1/patches/<id>                  — single patch detail
  * POST /api/v1/patches                       — create patch

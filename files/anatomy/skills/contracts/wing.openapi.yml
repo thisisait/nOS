@@ -61,7 +61,7 @@ paths:
             type: string
   /api/v1/coexistence:
     get:
-      summary: list tracks
+      summary: list tracks per service
       operationId: Coexistence_default_get
       tags:
         - Coexistence
@@ -77,9 +77,9 @@ paths:
       security:
         - BearerAuth: []
   '/api/v1/coexistence/{service}/cleanup/{tag}':
-    get:
-      summary: 'Coexistence::actioncleanup'
-      operationId: Coexistence_cleanup_get
+    post:
+      summary: tear down stale track (force flag)
+      operationId: Coexistence_cleanup_post
       tags:
         - Coexistence
       responses:
@@ -105,9 +105,9 @@ paths:
           schema:
             type: string
   '/api/v1/coexistence/{service}/cutover':
-    get:
-      summary: 'Coexistence::actioncutover'
-      operationId: Coexistence_cutover_get
+    post:
+      summary: atomic switch to target_tag
+      operationId: Coexistence_cutover_post
       tags:
         - Coexistence
       responses:
@@ -128,9 +128,9 @@ paths:
           schema:
             type: string
   '/api/v1/coexistence/{service}/provision':
-    get:
-      summary: 'Coexistence::actionprovision'
-      operationId: Coexistence_provision_get
+    post:
+      summary: spin up a second track on shifted port
+      operationId: Coexistence_provision_post
       tags:
         - Coexistence
       responses:
@@ -152,8 +152,24 @@ paths:
             type: string
   /api/v1/components:
     get:
-      summary: 'Components::actiondefault'
+      summary: 'list (filters: category, stack, priority)'
       operationId: Components_default_get
+      tags:
+        - Components
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: create (id + name required)
+      operationId: Components_default_post
       tags:
         - Components
       responses:
@@ -169,8 +185,30 @@ paths:
         - BearerAuth: []
   '/api/v1/components/{id}':
     get:
-      summary: 'Components::actiondefault'
+      summary: single component detail
       operationId: Components_default_get
+      tags:
+        - Components
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: update fields on an existing component
+      operationId: Components_default_put
       tags:
         - Components
       responses:
@@ -472,7 +510,7 @@ paths:
         - BearerAuth: []
   '/api/v1/migrations/{id}':
     get:
-      summary: full record
+      summary: full record for one migration
       operationId: Migrations_default_get
       tags:
         - Migrations
@@ -494,9 +532,9 @@ paths:
           schema:
             type: string
   '/api/v1/migrations/{id}/apply':
-    get:
-      summary: 'Migrations::actionapply'
-      operationId: Migrations_apply_get
+    post:
+      summary: BoxAPI apply (honors body.dry_run)
+      operationId: Migrations_apply_post
       tags:
         - Migrations
       responses:
@@ -517,9 +555,9 @@ paths:
           schema:
             type: string
   '/api/v1/migrations/{id}/preview':
-    get:
-      summary: 'Migrations::actionpreview'
-      operationId: Migrations_preview_get
+    post:
+      summary: BoxAPI dry-run, returns plan diff
+      operationId: Migrations_preview_post
       tags:
         - Migrations
       responses:
@@ -540,9 +578,9 @@ paths:
           schema:
             type: string
   '/api/v1/migrations/{id}/rollback':
-    get:
-      summary: 'Migrations::actionrollback'
-      operationId: Migrations_rollback_get
+    post:
+      summary: BoxAPI rollback to previous state
+      operationId: Migrations_rollback_post
       tags:
         - Migrations
       responses:
@@ -1185,7 +1223,7 @@ paths:
         - BearerAuth: []
   /api/v1/state:
     get:
-      summary: proxy BoxAPI ~/.nos/state.yml
+      summary: proxy BoxAPI ~/.nos/state.yml verbatim
       operationId: State_default_get
       tags:
         - State
@@ -1202,7 +1240,7 @@ paths:
         - BearerAuth: []
   /api/v1/state/services:
     get:
-      summary: subset
+      summary: services subset of state.yml
       operationId: State_services_get
       tags:
         - State
@@ -1219,7 +1257,7 @@ paths:
         - BearerAuth: []
   '/api/v1/state/services/{id}':
     get:
-      summary: one service
+      summary: single service entry
       operationId: State_services_get
       tags:
         - State
@@ -1242,7 +1280,7 @@ paths:
             type: string
   /api/v1/state/sync:
     post:
-      summary: refresh local SQLite mirrors from
+      summary: refresh SQLite mirrors from state.yml (idempotent)
       operationId: State_sync_post
       tags:
         - State

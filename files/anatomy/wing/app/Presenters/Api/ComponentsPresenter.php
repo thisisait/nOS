@@ -6,6 +6,14 @@ namespace App\Presenters\Api;
 
 use App\Model\ComponentRepository;
 
+/**
+ * Component registry CRUD — the canonical inventory of nOS services.
+ *
+ * GET  /api/v1/components        — list (filters: category, stack, priority)
+ * GET  /api/v1/components/<id>   — single component detail
+ * POST /api/v1/components        — create (id + name required)
+ * PUT  /api/v1/components/<id>   — update fields on an existing component
+ */
 final class ComponentsPresenter extends BaseApiPresenter
 {
 	public function __construct(

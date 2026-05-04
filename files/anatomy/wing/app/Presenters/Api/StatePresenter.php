@@ -10,13 +10,12 @@ use App\Model\MigrationRepository;
 use App\Model\PatchRepository;
 
 /**
- * GET  /api/v1/state                     — proxy BoxAPI ~/.nos/state.yml
- * GET  /api/v1/state/services            — subset
- * GET  /api/v1/state/services/<id>       — one service
- * POST /api/v1/state/sync                — refresh local SQLite mirrors from
- *                                          current state.yml (migrations_applied
- *                                          + patches_applied + coexistence_tracks).
- *                                          Idempotent.
+ * Runtime state surface — BoxAPI proxy + local SQLite mirror sync.
+ *
+ * GET  /api/v1/state                  — proxy BoxAPI ~/.nos/state.yml verbatim
+ * GET  /api/v1/state/services         — services subset of state.yml
+ * GET  /api/v1/state/services/<id>    — single service entry
+ * POST /api/v1/state/sync             — refresh SQLite mirrors from state.yml (idempotent)
  */
 final class StatePresenter extends BaseApiPresenter
 {
