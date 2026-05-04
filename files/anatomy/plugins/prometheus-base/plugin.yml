@@ -51,7 +51,12 @@ lifecycle:
   pre_compose:
     - ensure_dir: "{{ stacks_dir }}/observability/prometheus/rules"
     - render: provisioning.config
-    - render_dir: provisioning.rules
+    # Use copy_dir (NOT render_dir) — rule files contain Prometheus
+    # alert template syntax `{{ $labels.x }}` that collides with
+    # Jinja2's `{{ … }}`. P0.6 (2026-05-04) added copy_dir to handle
+    # this exact case; the .yml.j2 → .yml rename happened in the
+    # same batch.
+    - copy_dir: provisioning.rules
 
 # Prometheus has its own `/-/healthy` endpoint but `/-/ready` is the
 # canonical liveness probe in the project. wait_health uses 60s default

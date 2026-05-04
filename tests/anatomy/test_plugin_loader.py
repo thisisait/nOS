@@ -706,3 +706,199 @@ def test_authentik_base_aggregator_picks_up_agent_profiles():
     agents = auth.inputs.get("agent_clients", [])
     assert len(agents) == 1
     assert agents[0]["client_id"] == "nos-conductor"
+
+
+# ── P0.6 — Ansible-parity Jinja filter shim + copy_dir action ─────────
+
+
+def test_jinja_to_json_filter_renders():
+    """The to_json filter must work in plugin templates so blueprints
+    using `{{ list | to_json }}` (e.g. authentik-base's 20-rbac-policies)
+    don't fail with `No filter named 'to_json'`."""
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ items | to_json }}").render(items=["a", "b"])
+    assert out == '["a", "b"]'
+
+
+def test_jinja_to_nice_json_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ d | to_nice_json }}").render(d={"k": 1})
+    assert "    " in out  # indent=4
+    assert "k" in out
+
+
+def test_jinja_regex_replace_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string(
+        "{{ 'foo-bar-baz' | regex_replace('-', '_') }}"
+    ).render()
+    assert out == "foo_bar_baz"
+
+
+def test_jinja_b64encode_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ 'hello' | b64encode }}").render()
+    assert out == "aGVsbG8="
+
+
+def test_jinja_b64decode_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ 'aGVsbG8=' | b64decode }}").render()
+    assert out == "hello"
+
+
+def test_jinja_combine_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string(
+        "{{ ({'a': 1} | combine({'b': 2})) | to_json }}"
+    ).render()
+    assert '"a": 1' in out and '"b": 2' in out
+
+
+def test_jinja_bool_filter():
+    env = load_plugins._jinja_env()
+    cases = [("yes", "True"), ("no", "False"), ("true", "True"),
+             ("0", "False"), ("on", "True")]
+    for inp, expected in cases:
+        out = env.from_string("{{ x | bool }}").render(x=inp)
+        assert out == expected, f"{inp} → {out}"
+
+
+def test_jinja_to_yaml_filter():
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ d | to_yaml }}").render(d={"k": "v"})
+    assert "k: v" in out
+
+
+def test_jinja_mandatory_filter_passes_defined():
+    env = load_plugins._jinja_env()
+    out = env.from_string("{{ x | mandatory }}").render(x="present")
+    assert out == "present"
+
+
+def test_authentik_base_blueprints_render_clean(tmp_path):
+    """End-to-end: discover authentik-base + render its 4 blueprints to
+    a tmp dir. Validates filter shim + render_dir + inputs ctx all work
+    together. This mirrors what core-up.yml's pre_compose hook will do
+    during a blank."""
+    plugins = load_plugins.discover(REPO / "files/anatomy/plugins")
+    load_plugins.run_aggregators(plugins)
+    auth = next((p for p in plugins if p.name == "authentik-base"), None)
+    assert auth is not None
+
+    # Minimum vars to satisfy the 4 blueprint Jinja templates.
+    template_vars = {
+        "stacks_dir": str(tmp_path),
+        "tenant_domain": "dev.local",
+        "authentik_domain": "auth.dev.local",
+        "authentik_default_groups": [
+            {"name": "nos-admins"}, {"name": "nos-users"},
+        ],
+        "authentik_bootstrap_password": "test-pw",
+        "authentik_bootstrap_email": "admin@dev.local",
+        "default_admin_email": "admin@dev.local",
+        "authentik_oidc_apps": [],
+        "authentik_rbac_tiers": [
+            {"tier": 1, "name": "tier-admin", "groups": ["nos-admins"],
+             "description": "admin"},
+            {"tier": 3, "name": "tier-user", "groups": ["nos-users"],
+             "description": "user"},
+        ],
+        "authentik_app_tiers": {},
+        "authentik_agent_clients": [],
+        "authentik_agent_scopes": {},
+        "global_password_prefix": "loFas7",
+        "nos_tester_username": "nos-tester",
+        "nos_tester_password": "test-pw",
+        "nos_tester_email": "tester@dev.local",
+    }
+
+    # Run pre_compose hook ONLY for authentik-base (skip other plugins
+    # to keep the test isolated and avoid grafana-base's
+    # ansible_facts dependency).
+    load_plugins.run_hook("pre_compose", [auth], template_vars=template_vars)
+    assert auth.status == "loaded", f"unexpected status: {auth.status}"
+
+    # All 4 blueprints must land.
+    blueprints_dir = tmp_path / "infra/authentik/blueprints"
+    expected = ["00-admin-groups.yaml", "10-oidc-apps.yaml",
+                "20-rbac-policies.yaml", "30-agent-clients.yaml"]
+    for fname in expected:
+        f = blueprints_dir / fname
+        assert f.is_file(), f"missing blueprint: {f}"
+        content = f.read_text()
+        assert "version: 1" in content
+        # 20-rbac-policies uses to_json — verify it rendered without
+        # leaving raw Jinja syntax.
+        assert "{{" not in content, (
+            f"unrendered Jinja in {fname}:\n{content[:500]}"
+        )
+
+
+def test_copy_dir_action_no_jinja_evaluation(tmp_path):
+    """copy_dir must NOT evaluate Jinja in the source files. This is
+    the action that handles Prometheus alert rules (which contain
+    `{{ $labels.x }}` Prometheus template syntax) and similar."""
+    plugin_dir = make_plugin_dir(tmp_path, "p", basic_manifest(
+        "p",
+        provisioning={
+            "rules": {
+                "source_dir": "rules",
+                "target_dir": str(tmp_path / "out"),
+            },
+        },
+        lifecycle={"pre_compose": [{"copy_dir": "provisioning.rules"}]},
+    ))
+    src = plugin_dir / "rules"
+    src.mkdir()
+    # Prometheus alert content with $labels — would crash render_dir.
+    (src / "alert.yml").write_text(
+        "groups:\n"
+        "  - name: nginx\n"
+        "    rules:\n"
+        "      - alert: HighRate\n"
+        "        annotations:\n"
+        "          summary: \"5xx on {{ $labels.instance }}\"\n"
+    )
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    out = (tmp_path / "out" / "alert.yml").read_text()
+    # The $labels syntax must remain untouched.
+    assert "{{ $labels.instance }}" in out
+
+
+def test_copy_dir_action_idempotent(tmp_path):
+    """Second run with unchanged content reports 0 copied / N unchanged."""
+    plugin_dir = make_plugin_dir(tmp_path, "p", basic_manifest(
+        "p",
+        provisioning={
+            "rules": {"source_dir": "src", "target_dir": str(tmp_path / "dst")},
+        },
+        lifecycle={"pre_compose": [{"copy_dir": "provisioning.rules"}]},
+    ))
+    (plugin_dir / "src").mkdir()
+    (plugin_dir / "src" / "a.yml").write_text("a\n")
+    plugins = load_plugins.discover(tmp_path)
+    r1 = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    plugins2 = load_plugins.discover(tmp_path)
+    r2 = load_plugins.run_hook("pre_compose", plugins2, template_vars={})
+    assert "1 copied / 0 unchanged" in r1[0]["note"]
+    assert "0 copied / 1 unchanged" in r2[0]["note"]
+
+
+def test_copy_dir_action_skipped_when_source_missing(tmp_path):
+    plugin_dir = make_plugin_dir(tmp_path, "p", basic_manifest(
+        "p",
+        provisioning={
+            "rules": {
+                "source_dir": "missing-dir",
+                "target_dir": str(tmp_path / "out"),
+            },
+        },
+        lifecycle={"pre_compose": [{"copy_dir": "provisioning.rules"}]},
+    ))
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    assert "skipped" in results[0]["note"]

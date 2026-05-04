@@ -323,9 +323,23 @@ def _resolve_path(manifest: dict, dot_path: str) -> dict | list | str | None:
 def _jinja_env():
     """Return a lazy-imported jinja2 Environment configured to match
     Ansible's defaults closely enough for plugin manifests.
+
+    Ansible-parity filter shim (Anatomy P0.6, 2026-05-04): plugin
+    templates frequently call Ansible-specific filters (``to_json``,
+    ``regex_replace``, ``mandatory``, ``b64encode``, …). When the
+    loader fires hooks via the Ansible module wrapper these run inside
+    the Ansible process — but Jinja2 itself doesn't carry those
+    filters, so plain Environment() rendering fails on them. Without
+    this shim, every consumer plugin that uses Ansible-style filters
+    silently degrades the source plugin's render hook (the role-side
+    template task still works because Ansible's own Templater has
+    them, hiding the problem). We register the most common ones here
+    so plugin-side render produces byte-identical output to role-side
+    render — the load-bearing contract for the Phase 2 cutover when
+    role-side renders go away.
     """
     import jinja2
-    return jinja2.Environment(
+    env = jinja2.Environment(
         keep_trailing_newline=True,
         # `'{{ var }}'` in a YAML scalar is the lingua franca; preserve.
         autoescape=False,
@@ -334,6 +348,164 @@ def _jinja_env():
         # use ChainableUndefined so chained filters keep working.
         undefined=jinja2.ChainableUndefined,
     )
+    _register_ansible_filters(env)
+    return env
+
+
+def _register_ansible_filters(env) -> None:
+    """Register Ansible-equivalent Jinja filters on ``env``.
+
+    Coverage matches the filters actually used by current nOS
+    templates (rendered via ``grep -rEoh '\\| ?[a-z_]+' templates`` on
+    files/anatomy/plugins + roles/pazny.*/templates as of 2026-05-04).
+    Add more here as new plugin templates surface them.
+    """
+    import base64 as _b64
+    import json as _json
+    import re as _re
+
+    import yaml as _yaml
+
+    def _to_json(v, indent=None, sort_keys=False):
+        return _json.dumps(v, indent=indent, sort_keys=sort_keys, default=str)
+
+    def _to_nice_json(v, indent=4, sort_keys=True):
+        return _json.dumps(v, indent=indent, sort_keys=sort_keys, default=str)
+
+    def _from_json(s):
+        return _json.loads(s) if isinstance(s, (str, bytes)) else s
+
+    def _to_yaml(v, indent=2, default_flow_style=False):
+        return _yaml.safe_dump(v, indent=indent,
+                               default_flow_style=default_flow_style,
+                               sort_keys=False)
+
+    def _to_nice_yaml(v):
+        return _yaml.safe_dump(v, indent=2, default_flow_style=False,
+                               sort_keys=False)
+
+    def _from_yaml(s):
+        return _yaml.safe_load(s) if isinstance(s, (str, bytes)) else s
+
+    def _regex_replace(value, pattern, replace=""):
+        return _re.sub(pattern, replace, str(value))
+
+    def _regex_search(value, pattern):
+        m = _re.search(pattern, str(value))
+        return m.group(0) if m else None
+
+    def _regex_findall(value, pattern):
+        return _re.findall(pattern, str(value))
+
+    def _mandatory(value, msg=None):
+        # In Ansible: raise AnsibleFilterError if undefined. We translate
+        # Jinja2's ChainableUndefined into a ValueError so the loader can
+        # surface it via plugin status=degraded with the operator-supplied
+        # message.
+        import jinja2 as _j2
+        if isinstance(value, _j2.Undefined):
+            raise ValueError(msg or "mandatory filter: variable is undefined")
+        return value
+
+    def _b64encode(s, encoding="utf-8"):
+        if isinstance(s, str):
+            s = s.encode(encoding)
+        return _b64.b64encode(s).decode("ascii")
+
+    def _b64decode(s, encoding="utf-8"):
+        return _b64.b64decode(s).decode(encoding)
+
+    def _quote(s):
+        # Minimal shell-quote (Ansible's quote filter is shlex-based).
+        s = str(s)
+        return "'" + s.replace("'", "'\"'\"'") + "'"
+
+    def _bool_filter(value):
+        # Ansible's `bool` filter: truthy strings → True. Yes/no/true/false/1/0.
+        if isinstance(value, bool):
+            return value
+        if value in (None, "", 0):
+            return False
+        if isinstance(value, (int, float)):
+            return bool(value)
+        s = str(value).strip().lower()
+        return s in ("true", "yes", "y", "1", "on")
+
+    def _hash_filter(value, algo="sha1"):
+        import hashlib
+        h = hashlib.new(algo)
+        h.update(str(value).encode("utf-8"))
+        return h.hexdigest()
+
+    def _basename(path):
+        import os as _os
+        return _os.path.basename(str(path))
+
+    def _dirname(path):
+        import os as _os
+        return _os.path.dirname(str(path))
+
+    def _splitext(path):
+        import os as _os
+        return _os.path.splitext(str(path))
+
+    def _combine(*dicts, recursive=False):
+        # Ansible's combine. Shallow merge by default.
+        out: dict = {}
+        for d in dicts:
+            if not isinstance(d, dict):
+                continue
+            if recursive:
+                for k, v in d.items():
+                    if (k in out and isinstance(out[k], dict)
+                            and isinstance(v, dict)):
+                        out[k] = _combine(out[k], v, recursive=True)
+                    else:
+                        out[k] = v
+            else:
+                out.update(d)
+        return out
+
+    def _flatten_filter(seq, levels=None):
+        # Ansible's flatten: drop one level of nesting (or all if levels=None).
+        out = []
+        def _walk(items, depth):
+            for it in items:
+                if isinstance(it, list) and (levels is None or depth < levels):
+                    _walk(it, depth + 1)
+                else:
+                    out.append(it)
+        _walk(list(seq), 0)
+        return out
+
+    env.filters.update({
+        # Serialization
+        "to_json":       _to_json,
+        "to_nice_json":  _to_nice_json,
+        "from_json":     _from_json,
+        "to_yaml":       _to_yaml,
+        "to_nice_yaml":  _to_nice_yaml,
+        "from_yaml":     _from_yaml,
+        # Regex
+        "regex_replace": _regex_replace,
+        "regex_search":  _regex_search,
+        "regex_findall": _regex_findall,
+        # Type guards
+        "mandatory":     _mandatory,
+        "bool":          _bool_filter,
+        # Encoding
+        "b64encode":     _b64encode,
+        "b64decode":     _b64decode,
+        "quote":         _quote,
+        "hash":          _hash_filter,
+        # Path
+        "basename":      _basename,
+        "dirname":       _dirname,
+        "splitext":      _splitext,
+        # Collection
+        "combine":       _combine,
+        "flatten":       _flatten_filter,
+    })
 
 
 def _render_string(s: str, ctx: dict) -> str:
@@ -463,6 +635,37 @@ def _dispatch_action(plugin: Plugin, action: str, param,
             return f"render_compose_extension:{param}:skipped(no src @ {src})"
         changed = _render_file(src, dest, ctx)
         return f"render_compose_extension:{param}:{'changed' if changed else 'unchanged'} -> {dest}"
+
+    if action == "copy_dir":
+        # P0.6 (2026-05-04): copies a directory verbatim — NO Jinja
+        # rendering. Use this for files that contain `{{ … }}` syntax
+        # belonging to a NON-Ansible templating system (e.g. Prometheus
+        # alert annotations use `{{ $labels.x }}`, Grafana variables
+        # use `${var}` etc.). render_dir would try to evaluate those
+        # as Jinja2 expressions and fail. param: dotted path resolving
+        # to {source_dir, target_dir}.
+        import shutil
+        spec = _resolve_path(plugin.manifest, str(param))
+        if not isinstance(spec, dict):
+            return f"copy_dir:{param}:skipped(spec missing)"
+        src_dir = plugin.path / _render_string(spec.get("source_dir", ""), ctx)
+        dst_dir = pathlib.Path(_render_string(spec.get("target_dir", ""), ctx))
+        if not src_dir.is_dir():
+            return f"copy_dir:{param}:skipped(no src dir @ {src_dir})"
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        copied = 0
+        skipped = 0
+        for sf in sorted(src_dir.iterdir()):
+            if not sf.is_file():
+                continue
+            df = dst_dir / sf.name
+            # Idempotency: skip when content unchanged.
+            if df.is_file() and df.read_bytes() == sf.read_bytes():
+                skipped += 1
+                continue
+            shutil.copy2(sf, df)
+            copied += 1
+        return f"copy_dir:{param}:{copied} copied / {skipped} unchanged -> {dst_dir}"
 
     if action == "render_dir":
         # `param` resolves to {source_dir, target_dir}. Renders every file
