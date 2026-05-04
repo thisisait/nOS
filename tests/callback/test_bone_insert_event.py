@@ -60,7 +60,12 @@ def wing_db(tmp_path, monkeypatch):
     conn.executescript(EVENTS_DDL)
     conn.commit()
     conn.close()
-    monkeypatch.setattr(bone_events, "WING_DB", db_path)
+    # Anatomy P0.1b (2026-05-04): patch the env var that
+    # clients.wing._wing_db_path() reads on every connection. The
+    # legacy events.WING_DB module-level constant is now just a
+    # one-shot snapshot at import time — patching it has no effect on
+    # subsequent lookups.
+    monkeypatch.setenv("WING_DB_PATH", str(db_path))
     return db_path
 
 
@@ -162,7 +167,7 @@ def test_missing_optional_columns_become_null(wing_db):
 
 def test_db_not_ready_raises(tmp_path, monkeypatch):
     """Wing DB never initialised → callback gets transient 503, not 500."""
-    monkeypatch.setattr(bone_events, "WING_DB", tmp_path / "missing.db")
+    monkeypatch.setenv("WING_DB_PATH", str(tmp_path / "missing.db"))
     with pytest.raises(bone_events.WingDBNotReady):
         bone_events.insert_event(_payload())
 
@@ -180,3 +185,85 @@ def test_changed_field_normalisation(wing_db):
     finally:
         conn.close()
     assert rows == [("r1", 1), ("r2", 0), ("r3", None)]
+
+
+# ── P0.1b — query_events read path ─────────────────────────────────────
+
+
+from clients import wing as bone_wing  # noqa: E402
+
+
+def test_query_events_returns_inserted_rows(wing_db):
+    """Round-trip: insert via insert_event, read back via query_events."""
+    bone_events.insert_event(_payload(run_id="r1", type="task_ok"))
+    bone_events.insert_event(_payload(run_id="r2", type="task_changed",
+                                      patch_id="PATCH-1"))
+    rows = bone_wing.query_events(limit=10)
+    assert len(rows) == 2
+    # Newest first (ORDER BY id DESC).
+    assert rows[0]["run_id"] == "r2"
+    assert rows[0]["patch_id"] == "PATCH-1"
+    assert rows[1]["run_id"] == "r1"
+
+
+def test_query_events_filters_by_run_id(wing_db):
+    bone_events.insert_event(_payload(run_id="r-keep", type="task_ok"))
+    bone_events.insert_event(_payload(run_id="r-drop", type="task_ok"))
+    rows = bone_wing.query_events(run_id="r-keep")
+    assert len(rows) == 1
+    assert rows[0]["run_id"] == "r-keep"
+
+
+def test_query_events_filters_by_patch_id(wing_db):
+    bone_events.insert_event(_payload(run_id="r1", type="task_ok",
+                                      patch_id="PATCH-A"))
+    bone_events.insert_event(_payload(run_id="r2", type="task_ok",
+                                      patch_id="PATCH-B"))
+    bone_events.insert_event(_payload(run_id="r3", type="task_ok"))
+    rows = bone_wing.query_events(patch_id="PATCH-A")
+    assert len(rows) == 1
+    assert rows[0]["run_id"] == "r1"
+
+
+def test_query_events_limit_clamped(wing_db):
+    """limit=0 → 1, limit=99999 → 500."""
+    for i in range(10):
+        bone_events.insert_event(_payload(run_id=f"r{i}"))
+    assert len(bone_wing.query_events(limit=0)) == 1
+    # Capped at 500 even if more rows exist (we only inserted 10 here).
+    assert len(bone_wing.query_events(limit=99999)) == 10
+
+
+def test_query_events_raises_when_db_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("WING_DB_PATH", str(tmp_path / "missing.db"))
+    with pytest.raises(bone_wing.WingDBNotReady):
+        bone_wing.query_events()
+
+
+# ── P0.1b — CI lint: forbid sqlite3 hits to wing.db outside clients/wing.py ──
+
+
+def test_no_direct_sqlite3_to_wing_db_outside_clients_wing(tmp_path):
+    """Architectural invariant: only files/anatomy/bone/clients/wing.py
+    may open wing.db directly. If a future refactor switches the
+    transport to HTTP-via-Wing, the seam stays single-file."""
+    import re
+    bone_dir = REPO_ROOT / "files/anatomy/bone"
+    pattern = re.compile(r'sqlite3\.connect\b.*wing\.db', re.IGNORECASE)
+    offenders = []
+    for f in bone_dir.rglob("*.py"):
+        # Allow the centralized client to do it — that's its job.
+        if f.relative_to(bone_dir).as_posix() == "clients/wing.py":
+            continue
+        # Skip generated / cache files.
+        if "__pycache__" in f.parts:
+            continue
+        text = f.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if pattern.search(line):
+                offenders.append(f"{f}:{lineno}: {line.strip()}")
+    assert not offenders, (
+        "Direct sqlite3 access to wing.db detected outside "
+        "files/anatomy/bone/clients/wing.py:\n  " + "\n  ".join(offenders)
+        + "\n\nMove the access into clients/wing.py and import it."
+    )

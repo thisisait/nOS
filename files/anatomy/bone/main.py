@@ -525,46 +525,21 @@ async def events_list(
     """Paginated event query. Wing also serves its own /api/v1/events
     directly from SQLite — this route is a Bone-side convenience for CLI
     users.
+
+    Anatomy P0.1b (2026-05-04): direct sqlite3 access moved to
+    ``clients.wing.query_events``. CI lint enforces no
+    ``sqlite3.connect.*wing\\.db`` outside that module.
     """
     _require_framework()
-    import sqlite3
-    db_path = os.getenv(
-        "WING_DB_PATH",
-        os.path.expanduser(
-            "~/projects/nOS/files/project-wing/data/wing.db"
-        ),
+    from clients import wing as _wing
+    rows = _wing.query_events(
+        run_id=run_id,
+        type=type,
+        since=since,
+        migration_id=migration_id,
+        upgrade_id=upgrade_id,
+        limit=limit,
     )
-    conn = sqlite3.connect(db_path)
-    try:
-        clauses: list[str] = []
-        params: list = []
-        if run_id:
-            clauses.append("run_id = ?")
-            params.append(run_id)
-        if type:
-            clauses.append("type = ?")
-            params.append(type)
-        if since:
-            clauses.append("ts >= ?")
-            params.append(since)
-        if migration_id:
-            clauses.append("migration_id = ?")
-            params.append(migration_id)
-        if upgrade_id:
-            clauses.append("upgrade_id = ?")
-            params.append(upgrade_id)
-        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        limit = max(1, min(500, int(limit)))
-        cur = conn.execute(
-            f"SELECT id, ts, run_id, type, playbook, play, task, role, host,"
-            f" duration_ms, changed, result_json, migration_id, upgrade_id,"
-            f" coexist_svc FROM events {where} ORDER BY id DESC LIMIT ?",
-            (*params, limit),
-        )
-        cols = [c[0] for c in cur.description]
-        rows = [dict(zip(cols, row)) for row in cur.fetchall()]
-    finally:
-        conn.close()
     return {"items": rows, "count": len(rows)}
 
 

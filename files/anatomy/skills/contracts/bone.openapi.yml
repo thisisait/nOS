@@ -161,7 +161,14 @@ paths:
 
         directly from SQLite — this route is a Bone-side convenience for CLI
 
-        users.'
+        users.
+
+
+        Anatomy P0.1b (2026-05-04): direct sqlite3 access moved to
+
+        ``clients.wing.query_events``. CI lint enforces no
+
+        ``sqlite3.connect.*wing\.db`` outside that module.'
       operationId: events_list_api_events_get
       parameters:
       - in: query
