@@ -1,0 +1,13 @@
+# =============================================================================
+# manifest.fragment.yml — state/manifest.yml contribution
+# =============================================================================
+# Composition plugins do NOT add a top-level service row to state/manifest.yml.
+# They wire two existing service rows together; the manifest already lists
+# `grafana` (domain_var, port_var) and `prometheus` (domain_var, port_var)
+# via grafana-base and prometheus-base.
+#
+# This fragment is intentionally empty — it exists for parity with service
+# plugins so tooling that expects every plugin dir to carry a fragment
+# doesn't have to special-case compositions.
+# =============================================================================
+{}

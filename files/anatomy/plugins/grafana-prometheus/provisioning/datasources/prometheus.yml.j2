@@ -1,0 +1,28 @@
+# =============================================================================
+# Grafana datasource provisioning — Prometheus
+# Rendered by the grafana-prometheus composition plugin.
+# Manual edits will be overwritten on the next playbook run.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  # ── Prometheus — metrics ──────────────────────────────────────────────────
+  # Container-internal DNS: both Grafana and Prometheus run in the
+  # observability docker network and resolve each other by service name.
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:{{ prometheus_port | default(9090) }}
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      # Exemplar links jump Grafana from a Prometheus metric data point
+      # straight into the Tempo trace whose trace_id label matches. Wired
+      # by the grafana-tempo composition plugin (sibling).
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+    version: 1
+    editable: false
