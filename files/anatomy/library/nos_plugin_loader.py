@@ -55,6 +55,16 @@ options:
     required: false
     type: path
     default: ""
+  template_vars:
+    description: |
+      Jinja2 rendering context for action params (target paths, URLs) and
+      plugin templates (provisioning/Caddyfile/compose-extension). Pass
+      `template_vars: "{{ vars }}"` from the playbook task to surface the
+      operator's full var scope. Defaults to {} (loader still works for
+      action params with no `{{ ... }}` references).
+    required: false
+    type: dict
+    default: {}
 """
 
 RETURN = r"""
@@ -82,6 +92,7 @@ def main() -> None:
             "plugins_root": {"type": "path", "required": False, "default": ""},
             "agent_profiles_root": {"type": "path", "required": False,
                                     "default": ""},
+            "template_vars": {"type": "dict", "required": False, "default": {}},
         },
         supports_check_mode=True,
     )
@@ -111,7 +122,9 @@ def main() -> None:
         )
         return
     try:
-        results = load_plugins.run_hook(hook, plugins)
+        results = load_plugins.run_hook(
+            hook, plugins,
+            template_vars=module.params.get("template_vars") or {})
     except load_plugins.ValidationError as e:
         module.fail_json(msg=f"validation: {e}")
         return

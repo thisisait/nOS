@@ -352,3 +352,163 @@ def test_discover_real_plugins_dir_does_not_crash():
     for p in plugins:
         assert isinstance(p.name, str)
         assert len(p.name) > 0
+
+
+# ── A6.5 lifecycle action tests (render, copy_dashboards, wait_health) ──
+
+
+def test_render_action_emits_file_with_jinja_context(tmp_path):
+    """`render` resolves a manifest dotted path to {template, target} +
+    Jinja-renders the template with the operator's vars context."""
+    plugin_dir = make_plugin_dir(tmp_path, "rt", basic_manifest(
+        "rt",
+        provisioning={
+            "datasources": {
+                "template": "datasources.yml.j2",
+                "target": str(tmp_path / "out" / "datasources.yml"),
+            },
+        },
+        lifecycle={"pre_compose": [{"render": "provisioning.datasources"}]},
+    ))
+    (plugin_dir / "datasources.yml.j2").write_text("hello {{ who }}\n")
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook(
+        "pre_compose", plugins,
+        template_vars={"who": "world"},
+    )
+    assert results[0]["status"] == "ok"
+    out = tmp_path / "out" / "datasources.yml"
+    assert out.is_file()
+    assert out.read_text() == "hello world\n"
+
+
+def test_render_action_idempotent(tmp_path):
+    """Re-running render on identical input should be a no-op (file unchanged)."""
+    plugin_dir = make_plugin_dir(tmp_path, "rt", basic_manifest(
+        "rt",
+        provisioning={
+            "datasources": {
+                "template": "ds.j2",
+                "target": str(tmp_path / "ds.yml"),
+            },
+        },
+        lifecycle={"pre_compose": [{"render": "provisioning.datasources"}]},
+    ))
+    (plugin_dir / "ds.j2").write_text("static\n")
+    plugins = load_plugins.discover(tmp_path)
+    r1 = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    r2 = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert "changed" in r1[0]["note"]
+    assert "unchanged" in r2[0]["note"]
+
+
+def test_render_compose_extension_writes_to_stacks_overrides(tmp_path):
+    """`render_compose_extension` resolves template + writes to
+    {{ stacks_dir }}/<target_stack>/overrides/<plugin>.yml."""
+    plugin_dir = make_plugin_dir(tmp_path, "myplugin", basic_manifest(
+        "myplugin",
+        compose_extension={
+            "template": "ext.j2",
+            "target_stack": "obs",
+        },
+        lifecycle={"pre_compose": [
+            {"render_compose_extension": "compose_extension"}
+        ]},
+    ))
+    (plugin_dir / "ext.j2").write_text(
+        "services:\n  x:\n    env: {GREETING: \"{{ greeting }}\"}\n"
+    )
+    stacks_dir = tmp_path / "stacks"
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook(
+        "pre_compose", plugins,
+        template_vars={"greeting": "hi", "stacks_dir": str(stacks_dir)},
+    )
+    assert results[0]["status"] == "ok"
+    out = stacks_dir / "obs" / "overrides" / "myplugin.yml"
+    assert out.is_file()
+    assert "GREETING:" in out.read_text()
+    assert "hi" in out.read_text()
+
+
+def test_copy_dashboards_copies_listed_files(tmp_path):
+    plugin_dir = make_plugin_dir(tmp_path, "dash", basic_manifest(
+        "dash",
+        provisioning={
+            "dashboards": {
+                "source_dir": "dashboards/",
+                "target_dir": str(tmp_path / "out"),
+                "files": ["a.json", "b.json"],
+            },
+        },
+        lifecycle={"pre_compose": [{"copy_dashboards": "provisioning.dashboards"}]},
+    ))
+    (plugin_dir / "dashboards").mkdir()
+    (plugin_dir / "dashboards" / "a.json").write_text('{"a": 1}')
+    (plugin_dir / "dashboards" / "b.json").write_text('{"b": 2}')
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    assert (tmp_path / "out" / "a.json").read_text() == '{"a": 1}'
+    assert (tmp_path / "out" / "b.json").read_text() == '{"b": 2}'
+
+
+def test_copy_dashboards_idempotent(tmp_path):
+    """Second run with unchanged content should report 0/N updated."""
+    plugin_dir = make_plugin_dir(tmp_path, "dash", basic_manifest(
+        "dash",
+        provisioning={
+            "dashboards": {
+                "source_dir": "d/",
+                "target_dir": str(tmp_path / "out"),
+                "files": ["x.json"],
+            },
+        },
+        lifecycle={"pre_compose": [{"copy_dashboards": "provisioning.dashboards"}]},
+    ))
+    (plugin_dir / "d").mkdir()
+    (plugin_dir / "d" / "x.json").write_text('{"k": 1}')
+    plugins = load_plugins.discover(tmp_path)
+    r1 = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    r2 = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert "1/1 updated" in r1[0]["note"]
+    assert "0/1 updated" in r2[0]["note"]
+
+
+def test_wait_health_propagates_timeout(tmp_path):
+    """wait_health must raise (and post_compose hook degrade plugin) when
+    the URL never returns 200 within the timeout. Use an unreachable port
+    on localhost so the test is fast + deterministic."""
+    make_plugin_dir(tmp_path, "p", basic_manifest(
+        "p",
+        lifecycle={"post_compose": [
+            {"wait_health": {
+                "url": "http://127.0.0.1:1/never",
+                "timeout": 2,
+                "interval": 0.5,
+            }}
+        ]},
+    ))
+    plugins = load_plugins.discover(tmp_path)
+    import time
+    t0 = time.monotonic()
+    results = load_plugins.run_hook(
+        "post_compose", plugins, template_vars={},
+    )
+    elapsed = time.monotonic() - t0
+    # Connection refused on port 1 → ~immediate retry; 2s budget keeps CI fast.
+    assert elapsed < 5, f"wait_health blew the test budget: {elapsed}s"
+    # Hooks 2/3 mark plugin degraded (not failed) on action error.
+    assert results[0]["status"] == "degraded"
+
+
+def test_render_dotted_path_missing_returns_skipped(tmp_path):
+    """`render: provisioning.nonexistent` should not crash; just record skipped."""
+    make_plugin_dir(tmp_path, "p", basic_manifest(
+        "p",
+        lifecycle={"pre_compose": [{"render": "provisioning.nonexistent"}]},
+    ))
+    plugins = load_plugins.discover(tmp_path)
+    results = load_plugins.run_hook("pre_compose", plugins, template_vars={})
+    assert results[0]["status"] == "ok"
+    assert "skipped" in results[0]["note"]

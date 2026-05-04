@@ -1,8 +1,8 @@
 # bones & wings — refactor master plan
 
-> **Status:** IN FLIGHT 2026-05-04. Architecture decisions are resolved; phases A0, A1, A2, A3a, **A3.5**, A4, and A6 foundation have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.
+> **Status:** IN FLIGHT 2026-05-04. Architecture decisions are resolved; phases A0, A1, A2, A3a, **A3.5**, A4, A6 foundation, and **A6.5** have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.
 >
-> **Current gate:** A3.5 (Wing host-revert via FrankenPHP) landed 2026-05-04. Next slices are A5 (Wing/Bone OpenAPI + DDL exports) and A6.5 (Grafana thin-role pilot — doctrine proof gate for Track Q). Post-PoC expansion (additional plugins, additional agent profiles) remains incremental.
+> **Current gate:** A6.5 (Grafana thin-role pilot — doctrine proof) landed 2026-05-04. **Track Q is now unblocked.** Remaining PoC slices are A5 (Wing/Bone OpenAPI + DDL exports), A7 (gitleaks first-real plugin), A8 (conductor + agent runner), A9 (notifications), A10 (audit trail). Post-PoC expansion (additional plugins, additional agent profiles) remains incremental.
 >
 > **Reading order:** sections 1-3 are vision and current-state. Section 4 introduces the **anatomy reorg** (a major repo-level structural change). Section 5 is the **all-local architecture**. Section 6 is the **plugin system** — the core extension surface. Section 7 covers agent profiles with **conductor as primary**. Section 8 is the **PoC phase plan**. Sections 9-13 cover edge cases, notifications, audit, decisions, and out-of-scope.
 
@@ -1264,8 +1264,8 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 | A3.5 | ✅ DONE | Wing host-revert via FrankenPHP (2026-05-04). Replaces wing FPM container + wing-nginx sidecar pair with a single launchd daemon. roles/pazny.wing/ refactored (Track-A reversal cleanup + host composer + Caddyfile + plist + bootstrap); state/manifest.yml gets port_var=wing_port; Traefik services.yml.j2 drops the wing-special-case (now uniform `http://nos-host:9000`). Closes the wing-nginx stale-IP 502 bug class — no sidecar = no Docker DNS cache to go stale. | verify on operator's next blank |
 | A4 | ✅ DONE | Pulse launchd skeleton + subprocess runner + schema tables | Wing Pulse API missing; no production jobs registered |
 | A5 | ⏳ NOT STARTED | Wing/Bone OpenAPI + wing.db DDL exports | depends on stable Wing runtime enough for export tests |
-| A6 | ✅ DONE (foundation) | plugin schema, loader, DAG, aggregators, Ansible wrapper, hook wiring, tests | render/copy/wait/API side effects deferred to A6.5 |
-| A6.5 | ⏳ NOT STARTED | Grafana thin-role pilot + real `grafana-base` service plugin | doctrine proof gate for Track Q |
+| A6 | ✅ DONE | plugin schema, loader, DAG, aggregators, Ansible wrapper, hook wiring, tests. Render/copy/wait side effects landed with A6.5. | — |
+| A6.5 | ✅ DONE 2026-05-04 | Grafana thin-role pilot + real `grafana-base` service plugin. Loader implements `render`, `render_compose_extension`, `copy_dashboards`, `wait_health`, `conditional_remove_dir` actions backed by Jinja2. Manifest dotted-path resolver walks `provisioning.datasources`-style refs. Module wrapper passes `template_vars: "{{ vars }}"` through to action params + plugin templates. Grafana role thinned: provisioning artifacts (datasources/all.yml.j2 + dashboards/all.yml.j2 + 18 dashboard JSONs) moved to `files/anatomy/plugins/grafana-base/provisioning/`. OIDC env block + mkcert CA conditional + `GF_INSTALL_PLUGINS` + extra_hosts authentik moved to `templates/grafana-base.compose.yml.j2`. core-up.yml drops 2 datasource/dashboard-render tasks; observability.yml drops the in-repo dashboard enumerate+copy pair. 7 new tests (render w/ Jinja, render idempotency, render_compose_extension, copy_dashboards, copy_dashboards idempotency, wait_health timeout, dotted-path-missing). | **Track Q UNBLOCKED.** |
 | A7 | ⏳ NOT STARTED | gitleaks PoC plugin | depends on A6.5 side-effect support + Pulse API |
 | A8 | ⏳ NOT STARTED | conductor profile + agent runner + inbox/approvals | depends on A4/A5/A7 primitives |
 | A9 | ⏳ NOT STARTED | notification fanout | should follow inbox/approval shape |

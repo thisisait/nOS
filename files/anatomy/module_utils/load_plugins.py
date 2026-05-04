@@ -267,9 +267,15 @@ class HookResult(t.TypedDict):
     note: str
 
 
-def run_hook(name: str, plugins: list[Plugin]) -> list[HookResult]:
+def run_hook(name: str, plugins: list[Plugin],
+             template_vars: dict | None = None) -> list[HookResult]:
     """Execute the named lifecycle hook in topological order (or reverse for
     post_blank). Each plugin's actions are run by ``_run_actions``.
+
+    ``template_vars`` (optional) is the Jinja2 rendering context — the
+    Ansible module wrapper passes the playbook's `vars` dict so action
+    params containing ``{{ … }}`` (target paths, URLs, etc.) and plugin
+    Jinja templates render with the operator's full var scope.
     """
     if name not in {"pre_render", "pre_compose", "post_compose", "post_blank"}:
         raise ValueError(f"unknown hook: {name!r}")
@@ -284,7 +290,7 @@ def run_hook(name: str, plugins: list[Plugin]) -> list[HookResult]:
             continue
         actions = (p.manifest.get("lifecycle") or {}).get(name) or []
         try:
-            note = _run_actions(p, name, actions)
+            note = _run_actions(p, name, actions, template_vars or {})
             results.append({"plugin": p.name, "status": "ok", "note": note})
         except Exception as e:                        # noqa: BLE001
             # hooks 1/4 abort entire loader; hooks 2/3 mark plugin degraded
@@ -299,11 +305,83 @@ def run_hook(name: str, plugins: list[Plugin]) -> list[HookResult]:
     return results
 
 
-def _run_actions(plugin: Plugin, hook: str, actions: list) -> str:
+def _resolve_path(manifest: dict, dot_path: str) -> dict | list | str | None:
+    """Walk a dotted path into the manifest. ``provisioning.datasources``
+    becomes ``manifest['provisioning']['datasources']``. Returns None when
+    any segment is absent.
+    """
+    cur: t.Any = manifest
+    for segment in dot_path.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(segment)
+        if cur is None:
+            return None
+    return cur
+
+
+def _jinja_env():
+    """Return a lazy-imported jinja2 Environment configured to match
+    Ansible's defaults closely enough for plugin manifests.
+    """
+    import jinja2
+    return jinja2.Environment(
+        keep_trailing_newline=True,
+        # `'{{ var }}'` in a YAML scalar is the lingua franca; preserve.
+        autoescape=False,
+        # Strict undefined would be safer but breaks defaults like
+        # ``{{ var | default('x') }}`` when var is undefined upstream;
+        # use ChainableUndefined so chained filters keep working.
+        undefined=jinja2.ChainableUndefined,
+    )
+
+
+def _render_string(s: str, ctx: dict) -> str:
+    """Render a Jinja2 template string against the context."""
+    if "{{" not in s and "{%" not in s:
+        return s  # cheap fast-path
+    return _jinja_env().from_string(s).render(**ctx)
+
+
+def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
+    """Render src (Jinja2 template) → dest. Returns True if dest changed."""
+    src_text = src.read_text()
+    rendered = _jinja_env().from_string(src_text).render(**ctx)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.is_file() and dest.read_text() == rendered:
+        return False
+    dest.write_text(rendered)
+    return True
+
+
+def _wait_health(url: str, timeout: int = 60, interval: float = 2.0,
+                 expect_status: int = 200) -> bool:
+    """HTTP GET ``url`` until ``expect_status`` or timeout. Stdlib only."""
+    import time
+    import urllib.request
+    deadline = time.monotonic() + timeout
+    last_err = ""
+    while time.monotonic() < deadline:
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
+                if resp.status == expect_status:
+                    return True
+                last_err = f"http {resp.status}"
+        except Exception as e:                                    # noqa: BLE001
+            last_err = str(e)
+        time.sleep(interval)
+    raise RuntimeError(f"wait_health timeout after {timeout}s @ {url}: {last_err}")
+
+
+def _run_actions(plugin: Plugin, hook: str, actions: list,
+                 template_vars: dict) -> str:
     """Execute the action list for one plugin/hook.
 
     Each action is a dict of ``{action_key: param}`` — the loader interprets
     well-known keys. Unknown keys are recorded and ignored (forward-compat).
+    Jinja2 rendering uses ``template_vars`` as context (passed from the
+    Ansible module wrapper, typically operator's ``vars``).
     """
     summary: list[str] = []
     for raw in actions:
@@ -311,27 +389,115 @@ def _run_actions(plugin: Plugin, hook: str, actions: list) -> str:
             summary.append(f"skipped malformed action: {raw!r}")
             continue
         action, param = next(iter(raw.items()))
-        if action == "ensure_dir":
-            pathlib.Path(os.path.expandvars(str(param))).mkdir(
-                parents=True, exist_ok=True)
-            summary.append(f"ensure_dir:{param}")
-        elif action == "remove_dir":
-            p = pathlib.Path(os.path.expandvars(str(param)))
-            if p.is_dir():
-                # Use shutil.rmtree (recursive). Plugin is responsible for
-                # owning the path — loader doesn't double-check.
-                import shutil
-                shutil.rmtree(p, ignore_errors=True)
-            summary.append(f"remove_dir:{param}")
-        elif action in ("render", "render_compose_extension",
-                        "copy_dashboards", "wait_health"):
-            # Implementation deferred: these are the next-commit work
-            # (when first real plugin lands). For PoC we record the intent
-            # so the operator sees what would happen.
-            summary.append(f"{action}:deferred")
-        else:
-            summary.append(f"unknown:{action}")
+        try:
+            note = _dispatch_action(plugin, action, param, template_vars)
+            summary.append(note)
+        except Exception as e:                                    # noqa: BLE001
+            summary.append(f"{action}:ERROR:{e}")
+            raise
     return ", ".join(summary) if summary else "no-op"
+
+
+def _dispatch_action(plugin: Plugin, action: str, param,
+                     ctx: dict) -> str:
+    """Single-action dispatcher. Returns a one-line summary fragment."""
+    if action == "ensure_dir":
+        path = pathlib.Path(_render_string(str(param), ctx))
+        path.mkdir(parents=True, exist_ok=True)
+        return f"ensure_dir:{path}"
+
+    if action == "remove_dir":
+        import shutil
+        path = pathlib.Path(_render_string(str(param), ctx))
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+        return f"remove_dir:{path}"
+
+    if action == "render":
+        # `param` is a dotted path into the manifest (e.g.
+        # "provisioning.datasources") that resolves to {template, target}.
+        spec = _resolve_path(plugin.manifest, str(param))
+        if not isinstance(spec, dict) or "template" not in spec or "target" not in spec:
+            return f"render:{param}:skipped(spec missing template/target)"
+        src = plugin.path / _render_string(spec["template"], ctx)
+        dest = pathlib.Path(_render_string(spec["target"], ctx))
+        if not src.is_file():
+            return f"render:{param}:skipped(no src @ {src})"
+        changed = _render_file(src, dest, ctx)
+        return f"render:{param}:{'changed' if changed else 'unchanged'} -> {dest}"
+
+    if action == "render_compose_extension":
+        # `param` resolves to compose_extension block: {template, target_stack}.
+        spec = _resolve_path(plugin.manifest, str(param))
+        if not isinstance(spec, dict):
+            return f"render_compose_extension:{param}:skipped(spec missing)"
+        tmpl_rel = spec.get("template")
+        target_stack = spec.get("target_stack")
+        if not tmpl_rel or not target_stack:
+            return f"render_compose_extension:{param}:skipped(missing template/target_stack)"
+        src = plugin.path / _render_string(tmpl_rel, ctx)
+        # Target: {{ stacks_dir }}/<stack>/overrides/<plugin-name>.yml
+        stacks_dir = ctx.get("stacks_dir") or os.path.expanduser("~/stacks")
+        dest = pathlib.Path(stacks_dir) / target_stack / "overrides" / f"{plugin.name}.yml"
+        if not src.is_file():
+            return f"render_compose_extension:{param}:skipped(no src @ {src})"
+        changed = _render_file(src, dest, ctx)
+        return f"render_compose_extension:{param}:{'changed' if changed else 'unchanged'} -> {dest}"
+
+    if action == "copy_dashboards":
+        # `param` resolves to {source_dir, target_dir, files}.
+        import shutil
+        spec = _resolve_path(plugin.manifest, str(param))
+        if not isinstance(spec, dict):
+            return f"copy_dashboards:{param}:skipped(spec missing)"
+        src_dir = plugin.path / _render_string(spec.get("source_dir", ""), ctx)
+        dst_dir = pathlib.Path(_render_string(spec.get("target_dir", ""), ctx))
+        files = spec.get("files") or []
+        if not src_dir.is_dir() or not files:
+            return f"copy_dashboards:{param}:skipped(src dir or files missing)"
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        copied = 0
+        for fname in files:
+            sf = src_dir / fname
+            if sf.is_file():
+                df = dst_dir / fname
+                # Idempotency: skip if same content
+                if df.is_file() and df.read_bytes() == sf.read_bytes():
+                    continue
+                shutil.copy2(sf, df)
+                copied += 1
+        return f"copy_dashboards:{param}:{copied}/{len(files)} updated -> {dst_dir}"
+
+    if action == "wait_health":
+        # Accept both string-shorthand and dict-form params:
+        #   wait_health: "http://127.0.0.1:6333/healthz"          # default 60s
+        #   wait_health: { url: "...", timeout: 30, interval: 2 } # tunable
+        if isinstance(param, dict):
+            url = _render_string(str(param.get("url", "")), ctx)
+            timeout = int(param.get("timeout", 60))
+            interval = float(param.get("interval", 2.0))
+            expect_status = int(param.get("expect_status", 200))
+        else:
+            url = _render_string(str(param), ctx)
+            timeout, interval, expect_status = 60, 2.0, 200
+        ok = _wait_health(url, timeout=timeout, interval=interval,
+                          expect_status=expect_status)
+        return f"wait_health:{url}:{'ok' if ok else 'fail'}"
+
+    if action == "conditional_remove_dir":
+        # Vaultwarden uses this — skip when condition is false.
+        if not isinstance(param, dict):
+            return "conditional_remove_dir:skipped(malformed)"
+        path = pathlib.Path(_render_string(str(param.get("path", "")), ctx))
+        when = _render_string(str(param.get("when", "false")), ctx).strip().lower()
+        if when in ("true", "1", "yes"):
+            import shutil
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            return f"conditional_remove_dir:{path}:removed"
+        return f"conditional_remove_dir:{path}:preserved(when={when})"
+
+    return f"unknown:{action}"
 
 
 # ── CLI entry point ──────────────────────────────────────────────────────────

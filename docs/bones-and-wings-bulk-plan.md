@@ -4,7 +4,7 @@
 >
 > **Primary sources:** `docs/active-work.md` for the live gate, `docs/bones-and-wings-refactor.md` for architecture and phase tracker, `files/anatomy/docs/plugin-loader-spec.md` for plugin-loader contracts, and `files/anatomy/docs/role-thinning-recipe.md` for Track Q migrations.
 >
-> **Current state (2026-05-04 afternoon):** A0, A1, A2, A3a, **A3.5**, A4, and A6 foundation have landed. Next implementation is A5/A6.5, then A7/A8/A9/A10. **Tune-and-thin doctrine validated on 5 pilots** (Woodpecker / Qdrant / Portainer / Grafana / Vaultwarden) under `files/anatomy/plugins/<service>-base/`; Lane D's plugin loader side-effects (`render_compose_extension`, `bootstrap_collections`, `register_*`, `import_grafana_dashboard`) remain the gate. Track Q can start incrementally after Lane D, OR per-role as each one is touched (current pattern: every role ladene this batch got harvested into a draft).
+> **Current state (2026-05-04 evening):** A0, A1, A2, A3a, **A3.5**, A4, A6 foundation, and **A6.5** have landed. **Track Q is now UNBLOCKED.** Next implementation is A5 (contracts), A7 (gitleaks), A8/A9/A10 in parallel with the Track Q sweep. **Tune-and-thin doctrine validated on 5 pilots** (Woodpecker / Qdrant / Portainer / Grafana / Vaultwarden) under `files/anatomy/plugins/<service>-base/`; Lane D's plugin loader side-effects (`render_compose_extension`, `bootstrap_collections`, `register_*`, `import_grafana_dashboard`) remain the gate. Track Q can start incrementally after Lane D, OR per-role as each one is touched (current pattern: every role ladene this batch got harvested into a draft).
 
 ---
 
@@ -186,7 +186,21 @@ structurally closed — no sidecar = no Docker DNS cache to go stale.
 
 ---
 
-## Lane D — A6.5 Grafana thin-role pilot + real plugin side effects
+## Lane D — A6.5 Grafana thin-role pilot + real plugin side effects — ✅ DONE 2026-05-04
+
+**Status:** landed. Plugin loader actions (`render`, `render_compose_extension`,
+`copy_dashboards`, `wait_health`, `conditional_remove_dir`) implemented with
+Jinja2 backing. Manifest dotted-path resolver walks `provisioning.datasources`-
+style refs into the plugin manifest's nested dict. `nos_plugin_loader` Ansible
+module wrapper accepts `template_vars: "{{ vars }}"` and threads it through
+to action params + plugin templates. Grafana role thinned: provisioning
+artifacts moved into the plugin dir; OIDC env block + mkcert CA + plugin
+install + extra_hosts authentik moved to a compose-extension template.
+core-up.yml + observability.yml drop the obsoleted render/copy tasks.
+7 new tests added (48/48 anatomy suite green). **Track Q is now unblocked
+to proceed.**
+
+
 
 **Owner:** one agent initially; split only after inventory is frozen.
 

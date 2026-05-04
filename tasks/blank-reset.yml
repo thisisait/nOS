@@ -63,6 +63,7 @@
   nos_plugin_loader:
     hook: post_blank
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    template_vars: "{{ vars }}"
   tags: ['blank', 'reset', 'anatomy.plugins']
   failed_when: false  # blank must continue even if plugin cleanup misbehaves
 

@@ -104,7 +104,7 @@ provisioning:
   dashboards:
     source_dir: provisioning/dashboards/
     target_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/"
-    files:        # 17 dashboards from today's files/observability/grafana/provisioning/dashboards/
+    files:        # 18 dashboards moved from files/observability/grafana/provisioning/dashboards/ (A6.5)
       - 00-home.json
       - 10-infra.json
       - 11-docker.json
@@ -115,6 +115,7 @@ provisioning:
       - 21-wiki.json
       - 22-ai-agents.json
       - 23-chat.json
+      - 24-qdrant.json
       - 30-collab.json
       - 31-home-lab.json
       - 32-finance.json
@@ -139,6 +140,7 @@ lifecycle:
     # Before `docker compose up observability --wait`
     - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
     - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/dashboards"
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
     - render: provisioning.datasources
     - render: provisioning.dashboards_provider
     - copy_dashboards: provisioning.dashboards

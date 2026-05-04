@@ -61,9 +61,10 @@ files/anatomy/
 - **A3a — bone host-revert** ✅ this commit. Bone container → host launchd. Source moved files/bone/ → files/anatomy/bone/. New plist + venv install in pazny.bone role.
 - **A3.5 — wing host-revert** ✅ 2026-05-04. Wing FPM container + wing-nginx sidecar → host FrankenPHP launchd daemon (`eu.thisisait.nos.wing` on 127.0.0.1:9000). pazny.wing role refactored: Track-A reversal cleanup + Caddyfile + plist + bootstrap. Composer + DB init host-native; `wing-cli` profile retired. Traefik file-provider auto-derives `wing.<tld>` through the uniform host-mode path. Closes the wing-nginx stale-IP 502 bug class structurally.
 - **A4 — pulse skeleton** ✅ `b101a0d`. roles/pazny.pulse + Python source + 16 tests.
-- **A6 — plugin loader foundation** ✅ this commit. JSON Schema + Python loader + Ansible custom module + 4 lifecycle hooks wired into core-up.yml/blank-reset.yml + 25 tests. Hook side effects beyond filesystem primitives are deferred to A6.5.
+- **A6 — plugin loader foundation** ✅ this commit. JSON Schema + Python loader + Ansible custom module + 4 lifecycle hooks wired into core-up.yml/blank-reset.yml + 25 tests. Hook side effects beyond filesystem primitives landed with A6.5.
+- **A6.5 — Grafana thin-role pilot** ✅ 2026-05-04. Plugin loader gains real `render` / `render_compose_extension` / `copy_dashboards` / `wait_health` / `conditional_remove_dir` actions backed by Jinja2 + a manifest dotted-path resolver. `nos_plugin_loader` module wrapper now passes `template_vars: "{{ vars }}"` to render context. `pazny.grafana` thinned: provisioning artifacts (datasources/all.yml.j2 + dashboards/all.yml.j2 + 18 dashboard JSONs) moved to `files/anatomy/plugins/grafana-base/provisioning/`. OIDC env block + mkcert CA conditional + GF_INSTALL_PLUGINS + extra_hosts authentik moved to `templates/grafana-base.compose.yml.j2`. core-up.yml drops 2 datasource/dashboard render tasks; observability.yml drops the in-repo dashboard enumerate+copy pair. 48/48 anatomy tests green (+7 new for the new actions). **Track Q is now unblocked.**
 
-Remaining: A5 (Wing OpenAPI/DDL exports), A6.5
+Remaining: A5 (Wing OpenAPI/DDL exports),
 (Grafana thin-role pilot), A7 (gitleaks plugin), A8 (conductor + agent
 runner), A9 (notifications), A10 (audit trail).
 

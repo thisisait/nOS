@@ -1,16 +1,26 @@
 # =============================================================================
-# pazny.grafana — compose override fragment
-# Merged do `docker compose -p observability up` v tasks/stacks/core-up.yml
-# pres ansible.builtin.find nad {{ stacks_dir }}/observability/overrides/*.yml.
+# pazny.grafana — compose override fragment (thin install primitives only)
 #
-# Nedeklaruje top-level networks: — observability_net a
-# {{ stacks_shared_network }} jsou definovane v base
-# templates/stacks/observability/docker-compose.yml.j2.
+# Anatomy A6.5 (2026-05-04): role thinned per the tendons & vessels doctrine.
+# This template now carries ONLY the install-internal Grafana service block:
+#   • image / ports / volumes (data + provisioning mount + dashboards mount
+#     + Wing SQLite read-only mount)
+#   • core admin env (GF_SECURITY_ADMIN_*, GF_SERVER_DOMAIN/ROOT_URL,
+#     GF_ANALYTICS_*, GF_USERS_ALLOW_SIGN_UP, GF_SECURITY_ALLOW_EMBEDDING)
+#   • healthcheck / networks / mem_limit / logging
 #
-# Provisioning soubory (datasources/all.yml, dashboards/all.yml) jsou
-# stale renderovane z core-up.yml do {{ stacks_dir }}/observability/
-# grafana/provisioning/ — nebyly presunute do role files/, protoze
-# zavisi na play-level promennych (authentik_oidc_*, service registry).
+# All wiring (Authentik OIDC env, mkcert CA conditional, GF_INSTALL_PLUGINS,
+# extra_hosts authentik:host-gateway) moved to:
+#   files/anatomy/plugins/grafana-base/templates/grafana-base.compose.yml.j2
+# rendered by the plugin loader at pre_compose time.
+#
+# Provisioning files (datasources/all.yml, dashboards/all.yml, 18 dashboard
+# JSONs) moved to files/anatomy/plugins/grafana-base/provisioning/ —
+# rendered/copied by loader's `render` + `copy_dashboards` actions.
+#
+# Merged into `docker compose -p observability up` via the existing
+# overrides find loop (no orchestrator change). Compose merges this template
+# WITH the plugin's grafana-base.yml override automatically.
 # =============================================================================
 
 services:
@@ -36,16 +46,9 @@ services:
       # ingest on api.dev.local/api/v1/events).
       - {{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}:/var/lib/grafana/wing:ro
 {% endif %}
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # Local TLDs (.local/.lan/.test) use mkcert-issued certs; mount the
-      # mkcert root CA so Grafana's Go HTTP client validates Authentik's
-      # OIDC endpoint. On a PUBLIC TLD this mount must NOT happen — the
-      # mkcert CA bundle would shadow the system Mozilla CA list and break
-      # validation of Authentik's Let's Encrypt cert (same regression as
-      # Open WebUI hit on auth.pazny.eu, surfaced 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/grafana/mkcert-ca.crt:ro
-{% endif %}
     environment:
+      # Install-internal env (admin password, server domain, anti-telemetry).
+      # OIDC + mkcert CA + GF_INSTALL_PLUGINS moved to grafana-base plugin.
       GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"
       GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana') }}"
       GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
@@ -54,38 +57,6 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
-{% if install_wing | default(install_php | default(true)) %}
-      # Auto-install the community SQLite datasource plugin so dashboards
-      # (99-playbook et al.) can query Wing's events table directly.
-      # Signed community plugin; Grafana 11+ tolerates it without an extra
-      # allow_loading_unsigned_plugins entry.
-      GF_INSTALL_PLUGINS: "frser-sqlite-datasource"
-{% endif %}
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
-      GF_AUTH_GENERIC_OAUTH_NAME: "Authentik"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ authentik_oidc_grafana_client_id }}"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ authentik_oidc_grafana_client_secret }}"
-      GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
-      GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
-      GF_AUTH_GENERIC_OAUTH_API_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo"
-      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
-      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
-      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: "email"
-      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: "preferred_username"
-      GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
-      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'nos-admins') && 'Admin' || 'Viewer'"
-      GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC: "false"
-{% if tenant_domain_is_local | default(true) | bool %}
-      # Same conditional gate as the volume mount above — only present on
-      # mkcert-using local TLDs. Empty/absent on public TLD = Grafana uses
-      # its bundled Mozilla CA list to validate Authentik's LE cert.
-      GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: "/etc/grafana/mkcert-ca.crt"
-{% endif %}
-      GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/grafana/end-session/"
-{% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -94,9 +65,6 @@ services:
       start_period: 30s
     extra_hosts:
       - "host.docker.internal:host-gateway"
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
     networks:
       - observability_net
       - {{ stacks_shared_network }}

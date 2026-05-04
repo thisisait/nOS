@@ -33,6 +33,7 @@
   nos_plugin_loader:
     hook: pre_render
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    template_vars: "{{ vars }}"
   tags: ['anatomy', 'anatomy.plugins']
 
 # ── Flush handlers - nginx must listen on 443 before HTTPS services are verified ─
@@ -313,21 +314,13 @@
     force: true
   when: install_observability | default(true)
 
-- name: "[Core] Deploy Grafana datasources provisioning"
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/datasources/all.yml.j2"
-    dest: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
-    mode: '0644'
-    force: true
-  when: install_observability | default(true)
-
-- name: "[Core] Deploy Grafana dashboard provisioning config"
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/files/observability/grafana/provisioning/dashboards/all.yml.j2"
-    dest: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
-    mode: '0644'
-    force: true
-  when: install_observability | default(true)
+# Anatomy A6.5 (2026-05-04): Grafana datasources/dashboards provisioning
+# rendering moved to the plugin loader (grafana-base plugin). The loader's
+# pre_compose hook (further down in this file) now runs the equivalent
+# `render` actions reading from
+#   files/anatomy/plugins/grafana-base/provisioning/{datasources,dashboards}/all.yml.j2
+# Doctrine reference: docs/bones-and-wings-refactor.md §1.1 + Lane D in
+# docs/bones-and-wings-bulk-plan.md.
 
 - name: "[Core] Deploy blackbox-exporter configuration"
   ansible.builtin.copy:
@@ -393,6 +386,7 @@
   nos_plugin_loader:
     hook: pre_compose
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    template_vars: "{{ vars }}"
   tags: ['anatomy', 'anatomy.plugins']
 
 # Re-enumerate overrides after pre_compose hook may have rendered new fragments.
@@ -552,6 +546,7 @@
   nos_plugin_loader:
     hook: post_compose
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    template_vars: "{{ vars }}"
   tags: ['anatomy', 'anatomy.plugins']
 
 # ── Result ───────────────────────────────────────────────────────────────────

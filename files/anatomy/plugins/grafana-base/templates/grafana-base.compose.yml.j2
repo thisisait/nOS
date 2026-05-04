@@ -1,0 +1,60 @@
+# =============================================================================
+# grafana-base — compose-extension fragment (anatomy A6.5, 2026-05-04).
+#
+# Rendered by the plugin loader at pre_compose time into:
+#   {{ stacks_dir }}/observability/overrides/grafana-base.yml
+#
+# Compose-merged on top of the role's own override (roles/pazny.grafana/
+# templates/compose.yml.j2). The role keeps the IMAGE / PORTS / VOLUMES /
+# MEM_LIMIT install primitives; this fragment carries everything that is
+# WIRING (Authentik OIDC, mkcert CA conditional, signout redirect, plugins).
+#
+# Doctrine reference: docs/bones-and-wings-refactor.md §1.1 "tendons & vessels".
+# A6.5 is the doctrine proof-of-concept for the Track Q mass migration.
+# =============================================================================
+
+services:
+  grafana:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only. On a public TLD the system
+    # Mozilla CA list validates Authentik LE cleanly; mounting mkcert
+    # rootCA would shadow it. Same regression class as Open WebUI 2026-05-03.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/grafana/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+{% if grafana_dashboards | default([]) | length > 0 %}
+      # frser-sqlite-datasource is unsigned but operator opts in via the
+      # grafana_dashboards list (lookup of community dashboards). Without
+      # a non-empty list, leaving GF_INSTALL_PLUGINS unset keeps Grafana's
+      # default plugin allowlist tight.
+      GF_INSTALL_PLUGINS: "frser-sqlite-datasource"
+{% endif %}
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: "Authentik"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ authentik_oidc_grafana_client_id }}"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ authentik_oidc_grafana_client_secret }}"
+      GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      GF_AUTH_GENERIC_OAUTH_API_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo"
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: "email"
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: "preferred_username"
+      GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'nos-admins') && 'Admin' || 'Viewer'"
+      GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC: "false"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # mkcert CA conditional — see volume mount above.
+      GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: "/etc/grafana/mkcert-ca.crt"
+{% endif %}
+      GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/grafana/end-session/"
+    extra_hosts:
+      # Authentik OIDC endpoint resolves via host-gateway to the host's
+      # Traefik. Without this alias, Grafana's container-internal DNS would
+      # send the lookup to public DNS — breaks the local-TLD path entirely.
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}
