@@ -388,25 +388,27 @@
 
     # ── Hook 7: GDPR Article 30 register — upsert one row per app ───────────
     # Each apps/<name>.yml passes the parser only if it contains a complete
-    # `gdpr:` block. We forward that block to wing-cli/bin/upsert-gdpr.php
-    # via stdin (avoids writing a temp file on the controller). The PHP
-    # script wraps GdprRepository::upsertProcessing — same code path Wing's
-    # /gdpr UI uses. Idempotent: re-running on an already-onboarded app
-    # rewrites the row with the latest manifest values (operators can edit
-    # the manifest's gdpr block and re-run to update the register).
-    - name: "[Apps Post] Upsert GDPR processing rows (Wing CLI, one per app)"
+    # `gdpr:` block. We forward that block to bin/upsert-gdpr.php via stdin
+    # (avoids writing a temp file on the controller). The PHP script wraps
+    # GdprRepository::upsertProcessing — same code path Wing's /gdpr UI
+    # uses. Idempotent: re-running on an already-onboarded app rewrites the
+    # row with the latest manifest values.
+    #
+    # Anatomy P0.14 (2026-05-04): host-native PHP CLI. Pre-A3.5 this ran
+    # `docker compose run --rm wing-cli php bin/upsert-gdpr.php` against
+    # the iiab stack's wing-cli profile service. A3.5 retired the wing-cli
+    # profile when Wing moved to a FrankenPHP launchd daemon. We now call
+    # `php bin/upsert-gdpr.php` directly with chdir={{ wing_app_dir }},
+    # mirroring pazny.wing/tasks/post.yml's existing host-native pattern
+    # for bin/ingest-registry.php + bin/migrate-systems.php. Stdin pipe
+    # (`--json=-`) keeps shell module + printf; rest is plain `php`.
+    - name: "[Apps Post] Upsert GDPR processing rows (host PHP CLI, one per app)"
       ansible.builtin.shell:
         cmd: >-
           set -o pipefail;
           printf '%s' "$NOS_GDPR_JSON"
-          | {{ docker_bin | default('docker') }} compose
-          -f {{ stacks_dir }}/iiab/docker-compose.yml
-          -f {{ stacks_dir }}/iiab/overrides/wing.yml
-          -p iiab
-          run --rm -T
-          --workdir {{ wing_app_dir }}
-          wing-cli
-          php bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
+          | php bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
+        chdir: "{{ wing_app_dir }}"
         executable: /bin/bash
       environment:
         # NOT NULL fields in wing.db gdpr_processing that manifests don't
