@@ -23,6 +23,14 @@ services:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/grafana/mkcert-ca.crt:ro
 {% endif %}
     environment:
+      # Defensive placeholder (anatomy P0.12, 2026-05-04). Compose requires
+      # `environment:` to be a mapping — when all conditional blocks below
+      # render empty (install_authentik=false AND grafana_dashboards=[]),
+      # an unconditional placeholder keeps the YAML valid. The plugin
+      # loader's pre_compose render is also a no-op overlay on top of the
+      # role's compose template; this placeholder env var is harmless +
+      # surfaces the plugin's identity in `docker inspect grafana`.
+      _NOS_PLUGIN: "grafana-base"
 {% if grafana_dashboards | default([]) | length > 0 %}
       # frser-sqlite-datasource is unsigned but operator opts in via the
       # grafana_dashboards list (lookup of community dashboards). Without
