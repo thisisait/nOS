@@ -1,0 +1,19 @@
+# state/manifest.yml fragment — operator merges in Phase 2 C2.
+# Workers NEVER edit state/manifest.yml directly. See
+# files/anatomy/docs/role-thinning-recipe.md "Manifest fragment pattern".
+#
+# grafana-tempo is a composition plugin: it owns no Tier-1 service of its
+# own, no domain, no port. The loader records it via plugin discovery, but
+# state/manifest.yml is keyed on services (with domain_var + port_var).
+# Keep this fragment as a NOTE for the operator — they'll skip the merge
+# for this entry, or land it under a forthcoming `compositions:` section.
+- id: grafana-tempo
+  kind: composition
+  feature_flag: install_observability
+  requires_plugins:
+    - grafana-base
+    - tempo-base
+  notes: |
+    Composition plugin. No domain_var / port_var — wires Grafana → Tempo
+    via datasource provisioning. Operator: merge into state/manifest.yml
+    only once a `compositions:` section exists; otherwise leave as-is.
