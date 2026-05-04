@@ -1,0 +1,170 @@
+# =============================================================================
+# alloy-base — service plugin (Track Q1b — observability host-binary, 2026-05-04)
+#
+# Status: live. First non-Docker service plugin — validates the "host-binary"
+# shape (#6 in docs/bones-and-wings-refactor.md §1.1) used by anything
+# Homebrew-installed and `brew services`-managed (alloy today, future:
+# nginx + php-fpm if/when host-nginx is reconsidered, php-fpm exporter, …).
+#
+# Pre-Q1b shape:
+#   files/observability/alloy/config.alloy.j2          (monolithic 415-line config)
+#   tasks/observability.yml                            (brew install + render + brew services restart)
+#
+# Post-Q1b shape (this plugin):
+#   files/anatomy/plugins/alloy-base/templates/config.alloy.j2
+#     — minimal CORE config: logging + self-scrape + remote_write + loki.write +
+#       OTLP receiver. Everything else (host metrics, docker discovery, log
+#       tails) moves to composition plugins authored by U11-U13 in Phase 3:
+#         alloy-host-metrics    (prometheus.exporter.unix + scrapes for
+#                                cadvisor / postgres-exporter / mysqld /
+#                                redis / blackbox / nginx / php-fpm / qdrant)
+#         alloy-docker-metrics  (discovery.docker + loki.source.docker)
+#         alloy-syslog          (file_match + loki.source.file for nginx /
+#                                php-fpm / agents / homebrew-services logs)
+#       The composition plugins concatenate their River fragments INTO this
+#       base config at render time (Phase 3 introduces the loader's
+#       compose_river action; spec'd separately).
+#
+# Why "service" type and not a new "host-binary" enum value:
+#   The schema's `type` enum is closed (skill / service / composition /
+#   scheduled-job / ui-extension / notifier). Rather than widen the enum for
+#   one orthogonal axis (Docker vs. brew), we keep `type: [service]` and
+#   capture the host-binary nature in `host:` (this manifest) — `host:` is
+#   under additionalProperties and forward-compatible. The loader doesn't
+#   parse it today; the install task file wires it in via `import_role` from
+#   the eventual `pazny.alloy` thin role (Phase 2).
+#
+# Lifecycle scope today:
+#   pre_compose renders the master config to ~/.config/alloy/config.alloy.
+#   No post_compose wait_health (alloy's UI on :12345 is started by
+#   `brew services start alloy` outside this loader's purview — the install
+#   task handles that via Ansible's homebrew_services / shell modules).
+# =============================================================================
+
+name: alloy-base
+version: 0.1.0
+description: |
+  Wiring layer for Grafana Alloy (host-installed via Homebrew, run as a
+  brew service). Renders the minimal core config — logging, alloy self-
+  scrape, prometheus remote_write target, loki write target, OTLP
+  receiver. Composition plugins (alloy-host-metrics / alloy-docker-metrics
+  / alloy-syslog, U11-U13) extend this in Phase 3.
+upstream: https://grafana.com/oss/alloy/
+license: Apache-2.0
+
+type:
+  - service           # binds to a (future thin) role; not a Docker compose service
+
+# =============================================================================
+# REQUIRES — when does this plugin activate?
+# =============================================================================
+
+requires:
+  feature_flag: install_observability
+  host_command: brew                       # advisory — install task verifies
+  variables:
+    - alloy_ui_port                        # default 12345 (operator override-able)
+    - prometheus_port                      # remote_write target
+    - loki_port                            # loki.write target
+    - tempo_otlp_grpc_port                 # OTLP forwarder downstream
+    - alloy_otlp_grpc_port
+    - alloy_otlp_http_port
+    - observability_hostname
+
+# =============================================================================
+# HOST — host-binary metadata (forward-spec; loader doesn't parse today)
+# =============================================================================
+# Captures the brew-managed nature of this service so future loader actions
+# (e.g. `brew_install`, `brew_services_restart`) can be wired without a
+# schema change. For now the install task at lifecycle.install consumes
+# this manually.
+
+host:
+  package_manager: brew
+  formula: grafana-alloy
+  service_manager: brew_services
+  service_name: alloy
+  ui_port: 12345                           # localhost-only, no TLS, no SSO
+  config_dir: "{{ ansible_facts['env']['HOME'] }}/.config/alloy"
+  config_file: config.alloy
+
+# =============================================================================
+# PROVISIONING — render target for the master River config
+# =============================================================================
+
+provisioning:
+  config:
+    template: templates/config.alloy.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/.config/alloy/config.alloy"
+
+# =============================================================================
+# LIFECYCLE — declarative hooks (loader-driven) + custom install path
+# =============================================================================
+# Note: `lifecycle.install` is a forward-spec field (additionalProperties on
+# `lifecycle:` is `false` per schema, so the schema check rejects it). For
+# Phase 1 the install task is referenced from the README + manifest fragment
+# — Phase 2's thin `pazny.alloy` role will `import_tasks: tasks/install.yml`
+# from this plugin directory. Keeping the file alongside the manifest now
+# keeps the host-binary shape colocated.
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/.config/alloy"
+    - render: provisioning.config
+  # No post_compose: `brew services start alloy` runs in the install task,
+  # not in the docker-compose-up sequence. The plugin loader fires
+  # post_compose AFTER `docker compose up observability --wait`, which is
+  # too late for a host service that already needs to be up to scrape Prom.
+  post_blank:
+    # On `blank=true`, drop the rendered config but DO NOT `brew uninstall`
+    # alloy — the binary survives blanks (parallels how Docker images
+    # survive blanks, only data is wiped).
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/.config/alloy"
+
+# =============================================================================
+# OBSERVABILITY — alloy self-scrape labels (consumed by future alloy-host-metrics
+# composition or by prometheus-base scrape job inheritance)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: alloy
+      stack: observability
+      tier: "1"
+      mode: host                           # distinguishes from container services
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+# Alloy ships metrics + logs to Prom/Loki; the alloy process itself stores
+# nothing locally beyond a small WAL for retries. Data subjects are
+# operators (host-level metrics) and end-users (whose IPs/UAs land in
+# nginx/agent log lines that alloy tails — but those are minted by the
+# tailed services, alloy is a transit-only processor).
+
+gdpr:
+  data_categories:
+    - infrastructure_metrics
+    - log_lines_in_transit
+    - trace_spans_in_transit
+  data_subjects:
+    - operators
+    - end_users                            # transit-only; storage is loki/tempo
+  legal_basis: legitimate_interests
+  retention_days: 1                        # alloy WAL only, ~hours in practice
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# NOTES — files shipped with this plugin
+# =============================================================================
+#
+# files/anatomy/plugins/alloy-base/
+# ├── plugin.yml                   # this file
+# ├── README.md                    # operator-facing
+# ├── manifest.fragment.yml        # state/manifest.yml row (operator merges in Phase 2)
+# ├── tasks/
+# │   └── install.yml              # brew install + brew services start (Ansible)
+# └── templates/
+#     └── config.alloy.j2          # minimal core River config (no scrapes/tails)
