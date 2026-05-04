@@ -26,7 +26,17 @@
 wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
-wing_log_dir: "{{ ansible_facts['env']['HOME'] }}/wing/log"
+# Anatomy P0.10 (2026-05-04): wing_log_dir aligned with what
+# files/anatomy/wing/app/Bootstrap/Booting.php computes at runtime —
+# `dirname(__DIR__) . '/../log'`, which after rsync (src=files/anatomy/wing/,
+# dest=wing_app_dir) resolves to {{ wing_app_dir }}/log (e.g.
+# ~/wing/app/log). Pre-P0.10 default was {{ wing_runtime_dir }}/log
+# (one level higher). Mismatch surfaced when bin/ingest-registry.php
+# called from the role's post.yml hit "Logging directory '...' is not
+# found" — Tracy expected the Booting.php-computed path. The plist
+# template uses {{ wing_log_dir }} for stdout/stderr, so the launchd
+# stream files now also land alongside Tracy's exception logs.
+wing_log_dir: "{{ wing_app_dir }}/log"
 wing_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/wing"
 wing_caddyfile_path: "{{ wing_runtime_dir }}/Caddyfile"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
