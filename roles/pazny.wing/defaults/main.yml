@@ -1,12 +1,23 @@
 ---
 # ==============================================================================
-# pazny.wing — Nette PHP-FPM security-research dashboard.
+# pazny.wing — Nette security-research dashboard, host runtime via FrankenPHP.
 #
-# As of Track A (2026-04-26) Wing runs as the `wing` service inside the iiab
-# compose stack. nginx (host) talks FastCGI to it on 127.0.0.1:9000. The
-# wing source tree still lives on the host (rsync'd from files/anatomy/wing/)
-# and is bind-mounted into the container at the SAME absolute path so
-# nginx-supplied SCRIPT_FILENAME values resolve correctly inside FPM.
+# History:
+#   pre-2026-04-26 — host PHP-FPM (Homebrew php@8.3) + host nginx vhost
+#   2026-04-26 (Track A) — containerized: `wing` FPM service + `wing-nginx`
+#                          sidecar in the iiab compose stack
+#   2026-05-04 (Anatomy A3.5) — REVERSED back to host runtime, this time as
+#                          a single FrankenPHP launchd daemon. Eliminates the
+#                          wing-nginx sidecar entirely (FrankenPHP bundles
+#                          PHP runtime + Caddy HTTP server in one binary).
+#                          Mirrors A3a Bone host-revert (commit `7d31fd0..`).
+#                          Closes the wing-nginx stale-IP 502 bug class
+#                          surfaced 2026-05-04 — no sidecar = no Docker DNS
+#                          cache to go stale.
+#
+# Source tree: files/anatomy/wing/  (committed as of A2)
+# Runtime tree: ~/wing/{app,log,repos,patches}
+# launchd label: eu.thisisait.nos.wing
 #
 # Credentials (wing_api_token) stay in top-level default.credentials.yml so
 # prefix rotation via global_password_prefix works consistently.
@@ -15,30 +26,20 @@
 wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
+wing_log_dir: "{{ ansible_facts['env']['HOME'] }}/wing/log"
+wing_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/wing"
+wing_caddyfile_path: "{{ wing_runtime_dir }}/Caddyfile"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 
-# FPM listens on this loopback port; nginx upstream `php_fpm` (defined in
-# templates/nginx/nginx.conf) targets 127.0.0.1:9000. Don't change this
-# unless you also update the upstream block.
+# FrankenPHP listens on this loopback port. Traefik file provider routes
+# wing.<tld> → host.docker.internal:9000. Don't change unless you also
+# update state/manifest.yml port_var.
 wing_port: 9000
 
-# Container image is built locally from {{ playbook_dir }}/files/anatomy/wing.
-# The image deliberately contains no Wing source — see Dockerfile header for
-# the rationale. Tag is bumped manually when the Dockerfile changes.
-wing_image_tag: "local"
-wing_image: "nos-wing:{{ wing_image_tag }}"
+# launchd label for the FrankenPHP daemon. Mirrors Bone (A3a) + Pulse (A4)
+# under the eu.thisisait.nos.* namespace.
+wing_launchd_label: "eu.thisisait.nos.wing"
 
-# UID/GID the FPM process runs as inside the container. We use the HOST
-# user's UID (typically 501 on macOS, 1000 on Linux) because the wing
-# source + data dirs are bind-mounted from the host, and macOS Docker
-# Desktop's gRPC-FUSE filesystem proxy rejects writes when the container
-# UID doesn't match a real host user. Linux bind mounts simply require
-# the host directory to be writable by the same UID. Either way, mirroring
-# the host UID inside the container is the most portable answer — it
-# avoids the chown dance entirely.
-wing_container_uid: "{{ ansible_facts['user_uid'] | default(ansible_user_uid | default(501)) }}"
-wing_container_gid: "{{ ansible_facts['user_gid'] | default(ansible_user_gid | default(20)) }}"
-
-# Resource caps. Wing's hot path is small (single-tenant home lab), but
-# Nette + tracy can spike during cache warmup.
-wing_mem_limit: "512m"
+# FrankenPHP binary path (Homebrew default). The role installs this via
+# `community.general.homebrew` if missing — see tasks/main.yml.
+frankenphp_bin: "/opt/homebrew/bin/frankenphp"

@@ -1,8 +1,8 @@
 # bones & wings — refactor master plan
 
-> **Status:** IN FLIGHT 2026-05-03. Architecture decisions are resolved; phases A0, A1, A2, A3a, A4, and A6 foundation have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.
+> **Status:** IN FLIGHT 2026-05-04. Architecture decisions are resolved; phases A0, A1, A2, A3a, **A3.5**, A4, and A6 foundation have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.
 >
-> **Current gate:** the security-hardening batch must pass the operator full blank + wet-test gate before the next bones & wings implementation slice. After that, the next phase is A3.5 (Wing host-revert via FrankenPHP), then A5/A6.5. Post-PoC expansion (additional plugins, additional agent profiles) remains incremental.
+> **Current gate:** A3.5 (Wing host-revert via FrankenPHP) landed 2026-05-04. Next slices are A5 (Wing/Bone OpenAPI + DDL exports) and A6.5 (Grafana thin-role pilot — doctrine proof gate for Track Q). Post-PoC expansion (additional plugins, additional agent profiles) remains incremental.
 >
 > **Reading order:** sections 1-3 are vision and current-state. Section 4 introduces the **anatomy reorg** (a major repo-level structural change). Section 5 is the **all-local architecture**. Section 6 is the **plugin system** — the core extension surface. Section 7 covers agent profiles with **conductor as primary**. Section 8 is the **PoC phase plan**. Sections 9-13 cover edge cases, notifications, audit, decisions, and out-of-scope.
 
@@ -1261,7 +1261,7 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 | A1 | ✅ DONE | `migrations/`, `library/`, `module_utils/`, `patches`, internal docs moved under `files/anatomy/` | stale references may still exist in older docs; grep before editing |
 | A2 | ✅ DONE | Wing source moved to `files/anatomy/wing/`; no `external/wing` submodule for PoC | none |
 | A3a | ✅ DONE | Bone host launchd + Track-A container cleanup | verify wet after security batch |
-| A3.5 | ⏭ NEXT | Wing host-revert via FrankenPHP | gated on operator full blank + wet-test green unless explicitly waived |
+| A3.5 | ✅ DONE | Wing host-revert via FrankenPHP (2026-05-04). Replaces wing FPM container + wing-nginx sidecar pair with a single launchd daemon. roles/pazny.wing/ refactored (Track-A reversal cleanup + host composer + Caddyfile + plist + bootstrap); state/manifest.yml gets port_var=wing_port; Traefik services.yml.j2 drops the wing-special-case (now uniform `http://nos-host:9000`). Closes the wing-nginx stale-IP 502 bug class — no sidecar = no Docker DNS cache to go stale. | verify on operator's next blank |
 | A4 | ✅ DONE | Pulse launchd skeleton + subprocess runner + schema tables | Wing Pulse API missing; no production jobs registered |
 | A5 | ⏳ NOT STARTED | Wing/Bone OpenAPI + wing.db DDL exports | depends on stable Wing runtime enough for export tests |
 | A6 | ✅ DONE (foundation) | plugin schema, loader, DAG, aggregators, Ansible wrapper, hook wiring, tests | render/copy/wait/API side effects deferred to A6.5 |

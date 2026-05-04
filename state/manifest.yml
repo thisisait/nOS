@@ -761,6 +761,12 @@ services:
     install_flag: install_wing
     version_source: git_tag
     domain_var: wing_domain
+    # Anatomy A3.5 (2026-05-04): Wing now binds host:9000 as a FrankenPHP
+    # launchd daemon. port_var added so the Traefik file provider auto-
+    # derives `wing.<tld>` → `http://nos-host:9000` like every other
+    # host-mode service. Pre-A3.5 this was a special-case exception
+    # routing through the wing-nginx sidecar; that exception is gone.
+    port_var: wing_port
     data_path_var: wing_data_dir
 
   - id: bone

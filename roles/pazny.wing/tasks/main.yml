@@ -2,31 +2,118 @@
 # ==============================================================================
 # pazny.wing/tasks/main.yml — RENDER PHASE.
 #
-# Called from tasks/stacks/stack-up.yml BEFORE `docker compose up iiab`.
-# Synchronises Wing source from the playbook to the host (so the bind-mount
-# inside the wing container has actual code to serve), then renders the
-# compose-override fragment.
+# Anatomy A3.5 (2026-05-04): Wing now runs as a host launchd daemon backed by
+# FrankenPHP (single binary = PHP runtime + Caddy HTTP server). Replaces the
+# Track-A `wing` PHP-FPM container + `wing-nginx` sidecar pair. Mirrors A3a
+# Bone host-revert.
 #
-# The post-start phase (composer install + DB init + token reconverge +
-# legacy host-FPM teardown) runs in tasks/post.yml AFTER the iiab stack is up
-# — those tasks call `docker compose run --rm wing-cli` and need the wing
-# image to exist already (compose builds it on first `up`).
+# Steps:
+#   1. Track-A reversal cleanup — stop + remove legacy wing/wing-nginx
+#      containers, retire compose override, drop sidecar nginx config.
+#      Idempotent: no-ops on a fresh install.
+#   2. Ensure runtime directories exist.
+#   3. Install frankenphp via Homebrew (idempotent).
+#   4. Rsync app source from files/anatomy/wing/ to ~/wing/app/.
+#   5. Composer install (host-native — no docker run anymore).
+#   6. Render Caddyfile + launchd plist.
+#   7. Bootstrap launchd job.
+#
+# DB init + token reconverge stay in tasks/post.yml (called from
+# tasks/stacks/stack-up.yml after the iiab stack is up — keeps the same
+# ordering invariant; post.yml now runs everything host-native too).
 # ==============================================================================
 
-- name: "[pazny.wing] Ensure host directories exist (bind-mount targets)"
+- name: "[pazny.wing] Skip when install_wing: false"
+  ansible.builtin.meta: end_play
+  when: not (install_wing | default(true) | bool)
+
+# ── Track-A reversal cleanup ─────────────────────────────────────────────────
+# Stop + remove the wing + wing-nginx containers if they exist from a prior
+# (Track A) run. Idempotent: when no containers exist (fresh install or
+# already-reverted host), all four steps no-op. The compose-override fragment
+# is also removed so the next `docker compose up iiab` doesn't try to recreate
+# the containers.
+
+- name: "[pazny.wing] Track-A reversal — check if legacy wing containers exist"
+  ansible.builtin.shell: |
+    {{ docker_bin | default('/usr/local/bin/docker') }} ps -a \
+      --filter "name=^wing(-nginx)?$" --format "{{ '{{' }}.Names{{ '}}' }}"
+  register: _wing_container_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.wing] Track-A reversal — stop + remove legacy containers"
+  ansible.builtin.shell: |
+    {{ docker_bin | default('/usr/local/bin/docker') }} compose -p iiab stop wing wing-nginx 2>/dev/null || true
+    {{ docker_bin | default('/usr/local/bin/docker') }} rm -f wing wing-nginx 2>/dev/null || true
+  register: _wing_container_teardown
+  changed_when: (_wing_container_check.stdout | default('') | length) > 0
+  when: (_wing_container_check.stdout | default('') | length) > 0
+
+- name: "[pazny.wing] Track-A reversal — remove stale compose override"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/iiab/overrides/wing.yml"
+    state: absent
+
+- name: "[pazny.wing] Track-A reversal — remove stale wing-nginx sidecar config"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/wing/wing-nginx.conf"
+    state: absent
+
+# ── Runtime directories ──────────────────────────────────────────────────────
+
+- name: "[pazny.wing] Ensure runtime directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
+    - "{{ wing_runtime_dir }}"
     - "{{ wing_app_dir }}"
     - "{{ wing_data_dir }}"
     - "{{ wing_app_dir }}/temp"
-    - "{{ wing_app_dir }}/log"
-    - "{{ ansible_facts['env']['HOME'] }}/wing/repos"
-    - "{{ ansible_facts['env']['HOME'] }}/wing/patches"
+    - "{{ wing_log_dir }}"
+    - "{{ wing_runtime_dir }}/repos"
+    - "{{ wing_runtime_dir }}/patches"
+    - "{{ wing_runtime_dir }}/caddy-data"
+    - "{{ wing_runtime_dir }}/caddy-config"
 
-- name: "[pazny.wing] Rsync app source to host (read-only inside container)"
+# ── FrankenPHP runtime ───────────────────────────────────────────────────────
+# FrankenPHP lives in the dunglas/frankenphp tap (added globally via
+# default.config.yml's homebrew_taps list — pazny.mac.homebrew installs the
+# tap in pre-stack phase). The formula depends on shivammathur/php's php-zts
+# (also tapped). Both taps must exist before this task runs; if they're
+# missing, brew prints a clear error pointing at the tap name.
+
+- name: "[pazny.wing] Install frankenphp via Homebrew"
+  community.general.homebrew:
+    name: dunglas/frankenphp/frankenphp
+    state: present
+  register: _wing_frankenphp_install
+
+- name: "[pazny.wing] Stat frankenphp binary"
+  ansible.builtin.stat:
+    path: "{{ frankenphp_bin }}"
+  register: _wing_frankenphp_stat
+
+- name: "[pazny.wing] Refuse to continue when frankenphp binary missing"
+  ansible.builtin.fail:
+    msg: |
+      frankenphp binary not found at {{ frankenphp_bin }} after Homebrew
+      install. Possible causes:
+        - shivammathur/php tap missing (run: brew tap shivammathur/php)
+        - dunglas/frankenphp tap missing (run: brew tap dunglas/frankenphp)
+        - Homebrew Cellar at non-default path (set frankenphp_bin in config.yml)
+      Verify: brew list dunglas/frankenphp/frankenphp
+  when: not _wing_frankenphp_stat.stat.exists
+
+# ── App source sync ──────────────────────────────────────────────────────────
+# Same rsync pattern as before — Wing source lives in files/anatomy/wing/
+# (anatomy A2). The exclude list keeps gitignored runtime artefacts out of
+# the deploy target.
+
+- name: "[pazny.wing] Rsync app source to host"
   ansible.posix.synchronize:
     src: "{{ playbook_dir }}/files/anatomy/wing/"
     dest: "{{ wing_app_dir }}/"
@@ -45,27 +132,78 @@
   delegate_to: "{{ inventory_hostname }}"
   notify: Restart wing
 
-# Track A → as of 2026-04-26: container UID is bound to the host user's UID
-# (see wing_container_uid in defaults/main.yml) so files written by FPM
-# inside the container have correct ownership on the host without a chown
-# step. macOS Docker Desktop's filesystem proxy refuses writes when the
-# container UID doesn't match a real host user — anchoring container UID
-# to host UID sidesteps that entirely. On Linux (where bind-mount semantics
-# are direct UID-equivalence), it's also the simplest valid setup.
+# ── Composer install (host-native, no docker run) ────────────────────────────
+# Replaces the Track-A `docker compose run --rm wing-cli composer install`
+# pattern. The composer binary comes from Homebrew (already in
+# homebrew_installed_packages). Skip if vendor/ is fresh.
 
-- name: "[pazny.wing] Render compose-override fragment"
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ stacks_dir }}/iiab/overrides/wing.yml"
-    mode: '0600'
+- name: "[pazny.wing] Stat vendor/autoload.php"
+  ansible.builtin.stat:
+    path: "{{ wing_app_dir }}/vendor/autoload.php"
+  register: _wing_autoload_stat
+
+- name: "[pazny.wing] Stat composer.lock"
+  ansible.builtin.stat:
+    path: "{{ wing_app_dir }}/composer.lock"
+  register: _wing_lock_stat
+
+- name: "[pazny.wing] Run composer install (vendor missing or lock newer)"
+  ansible.builtin.command:
+    cmd: composer install --no-dev --optimize-autoloader --no-interaction
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_composer
+  changed_when: "'Nothing to install' not in (_wing_composer.stdout | default('')) or _wing_composer.rc != 0"
+  when: >
+    not _wing_autoload_stat.stat.exists
+    or (_wing_lock_stat.stat.exists
+        and _wing_autoload_stat.stat.mtime < _wing_lock_stat.stat.mtime)
   notify: Restart wing
 
-# nginx sidecar config for the FPM HTTP front. Lives at ~/wing/wing-nginx.conf
-# so it survives a wing_app_dir wipe.
-- name: "[pazny.wing] Render wing-nginx sidecar config"
+# ── Caddyfile + launchd plist ────────────────────────────────────────────────
+
+- name: "[pazny.wing] Render Caddyfile"
   ansible.builtin.template:
-    src: wing-nginx.conf.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/wing/wing-nginx.conf"
+    src: wing.Caddyfile.j2
+    dest: "{{ wing_caddyfile_path }}"
     mode: '0644'
-  when: wing_with_sidecar | default(true) | bool
   notify: Restart wing
+
+- name: "[pazny.wing] Render launchd plist"
+  ansible.builtin.template:
+    src: wing.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ wing_launchd_label }}.plist"
+    mode: '0644'
+  notify: Restart wing
+
+# ── Launchd bootstrap (idempotent) ───────────────────────────────────────────
+# Same pattern as A3a Bone + A4 Pulse. `launchctl print` returns 0 when the
+# job is registered; if so, kickstart -k for graceful restart on plist change.
+# Otherwise, bootstrap the agent into the user's launchd domain.
+
+- name: "[pazny.wing] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    PLIST=~/Library/LaunchAgents/{{ wing_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" >/dev/null 2>&1; then
+      launchctl kickstart -k "gui/${UID_NUM}/{{ wing_launchd_label }}"
+    else
+      launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+    fi
+  register: _wing_launchd_bootstrap
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.wing] Setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ════════════════════════════════════════════════════════════
+       pazny.wing — A3.5 host runtime via FrankenPHP
+      ════════════════════════════════════════════════════════════
+       Binary:       {{ frankenphp_bin }}
+       Caddyfile:    {{ wing_caddyfile_path }}
+       Plist:        ~/Library/LaunchAgents/{{ wing_launchd_label }}.plist
+       Bind:         127.0.0.1:{{ wing_port }}
+       Source:       {{ wing_app_dir }} (rsync from files/anatomy/wing/)
+       Logs:         {{ wing_log_dir }}/launchd.{out,err}.log
+       Traefik:      wing.{{ tenant_domain | default('dev.local') }} → host.docker.internal:{{ wing_port }}
+      ════════════════════════════════════════════════════════════

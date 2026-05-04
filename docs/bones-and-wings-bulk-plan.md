@@ -4,7 +4,7 @@
 >
 > **Primary sources:** `docs/active-work.md` for the live gate, `docs/bones-and-wings-refactor.md` for architecture and phase tracker, `files/anatomy/docs/plugin-loader-spec.md` for plugin-loader contracts, and `files/anatomy/docs/role-thinning-recipe.md` for Track Q migrations.
 >
-> **Current state (2026-05-04 morning):** A0, A1, A2, A3a, A4, and A6 foundation have landed. Next implementation is A3.5, then A5/A6.5, then A7/A8/A9/A10. **Tune-and-thin doctrine validated on 5 pilots** (Woodpecker / Qdrant / Portainer / Grafana / Vaultwarden) under `files/anatomy/plugins/<service>-base/`; Lane D's plugin loader side-effects (`render_compose_extension`, `bootstrap_collections`, `register_*`, `import_grafana_dashboard`) remain the gate. Track Q can start incrementally after Lane D, OR per-role as each one is touched (current pattern: every role ladene this batch got harvested into a draft).
+> **Current state (2026-05-04 afternoon):** A0, A1, A2, A3a, **A3.5**, A4, and A6 foundation have landed. Next implementation is A5/A6.5, then A7/A8/A9/A10. **Tune-and-thin doctrine validated on 5 pilots** (Woodpecker / Qdrant / Portainer / Grafana / Vaultwarden) under `files/anatomy/plugins/<service>-base/`; Lane D's plugin loader side-effects (`render_compose_extension`, `bootstrap_collections`, `register_*`, `import_grafana_dashboard`) remain the gate. Track Q can start incrementally after Lane D, OR per-role as each one is touched (current pattern: every role ladene this batch got harvested into a draft).
 
 ---
 
@@ -75,11 +75,19 @@ Use one branch for the bulk batch, but one logical commit per phase/surface:
 
 ## 2. Agent lanes
 
-## Lane A — A3.5 Wing host-revert via FrankenPHP
+## Lane A — A3.5 Wing host-revert via FrankenPHP — ✅ DONE 2026-05-04
+
+**Status:** landed in a single commit. Wing now runs as
+`eu.thisisait.nos.wing` launchd daemon backed by FrankenPHP (PHP 8.5 +
+Caddy 2.x in one binary). The wing FPM container + wing-nginx sidecar
+are reversed (Track-A teardown). Traefik file-provider auto-derives
+`wing.<tld>` → `http://nos-host:9000` via the same uniform code path as
+every other host-mode service. The wing-nginx stale-IP 502 bug class is
+structurally closed — no sidecar = no Docker DNS cache to go stale.
 
 **Owner:** one agent only.
 
-**Goal:** remove Wing container/FPM + nginx sidecar and run Wing as host FrankenPHP launchd service on `127.0.0.1:9000`.
+**Goal (achieved):** remove Wing container/FPM + nginx sidecar and run Wing as host FrankenPHP launchd service on `127.0.0.1:9000`.
 
 **Primary files:**
 

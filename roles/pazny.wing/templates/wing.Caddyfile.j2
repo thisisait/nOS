@@ -1,0 +1,73 @@
+# =============================================================================
+# wing.Caddyfile — FrankenPHP host runtime (anatomy A3.5, 2026-05-04)
+#
+# Replaces the wing-fpm container + wing-nginx sidecar pair. Runs as a launchd
+# daemon (`eu.thisisait.nos.wing`) listening on 127.0.0.1:9000. Traefik file
+# provider routes wing.<tld> → host.docker.internal:9000.
+#
+# Ansible-rendered. DO NOT edit ~/wing/Caddyfile manually — re-render via
+# `ansible-playbook main.yml -K --tags wing`.
+# =============================================================================
+
+{
+    # Caddy global options
+    auto_https off                         # TLS terminates at Traefik
+    admin off                              # no Caddy admin API
+    log {
+        output file {{ wing_log_dir }}/access.log
+        format json
+    }
+    # FrankenPHP block
+    frankenphp {
+        # num_threads default = 2× CPU cores; explicit cap keeps the Wing
+        # process from eating the M-series macbook on cold compose runs.
+        num_threads 4
+    }
+}
+
+# Loopback bind — Traefik reaches this via host.docker.internal:9000.
+:9000 {
+    root * {{ wing_app_dir }}/www
+    encode zstd gzip
+
+    # PHP routing — front-controller pattern (Wing is a Nette app).
+    # `php_server` is FrankenPHP's high-level shortcut: it wires up
+    # try_files for the URI, sets SCRIPT_FILENAME, and routes to the
+    # PHP module. Equivalent to the old nginx
+    # `try_files $uri $uri/ /index.php?$query_string;` + `fastcgi_pass`
+    # in one directive.
+    php_server {
+        # Pass Authentik's forward-auth headers (set by the Authentik
+        # outpost middleware in Traefik) through to PHP $_SERVER.
+        # Caddy doesn't have nginx's HTTP_X_AUTHENTIK_* mapping; in
+        # FrankenPHP, all incoming HTTP headers are exposed as
+        # HTTP_<NAME> on $_SERVER automatically (so X-Authentik-Username
+        # becomes HTTP_X_AUTHENTIK_USERNAME). No explicit fastcgi_param
+        # block needed.
+        index index.php
+    }
+
+    # Static asset cache headers — match the previous nginx behaviour.
+    @static {
+        path *.css *.js *.svg *.png *.jpg *.jpeg *.gif *.ico *.woff *.woff2
+    }
+    header @static Cache-Control "public, immutable, max-age=31536000"
+
+    # Security headers parity with the wing-nginx sidecar. Traefik's
+    # security-headers@file middleware also injects these one layer up,
+    # but redundant headers are harmless and protect against direct
+    # 127.0.0.1:9000 hits.
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        # Don't leak Caddy/FrankenPHP version
+        -Server
+    }
+
+    # Hide Wing's framework directories from web. Defense in depth — the
+    # `root * www` already restricts to the public dir, but nginx had this
+    # explicit block and we keep parity.
+    @hidden path /vendor/* /app/* /bin/* /config/* /data/* /log/* /temp/*
+    respond @hidden 404
+}

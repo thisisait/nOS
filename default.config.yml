@@ -462,7 +462,20 @@ homebrew_installed_packages:
   - protobuf
   - meson
 
-homebrew_taps: []
+# ── FrankenPHP — Wing host runtime (anatomy A3.5, 2026-05-04) ────────────────
+# FrankenPHP = single binary bundling Caddy HTTP server + PHP runtime + Mercure +
+# Vulcain. Replaces the wing PHP-FPM container + wing-nginx sidecar pair with a
+# host-native launchd daemon listening on 127.0.0.1:9000. Ships PHP 8.5 +
+# Caddy 2.x; Wing's composer.json minimum is PHP 8.3 — backward compatible.
+#
+# The frankenphp formula depends on shivammathur/php's php-zts (PHP-ZTS variant
+# required for FrankenPHP's worker mode). The shivammathur tap is added here
+# unconditionally — the formula itself only links if frankenphp is also in
+# `homebrew_installed_packages` AND install_wing is true (gate in
+# pazny.wing/tasks/main.yml).
+homebrew_taps:
+  - dunglas/frankenphp
+  - shivammathur/php
 
 homebrew_cask_appdir: /Applications
 homebrew_cask_accept_external_apps: true

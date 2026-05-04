@@ -383,12 +383,14 @@
       failed_when: false
 
     - name: Restart wing
-      # Container path (Track A, 2026-04-26): bounce the wing service in the
-      # iiab compose stack. Triggered by the wing role when source rsync
-      # changed or the compose-override fragment was rewritten.
-      ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
-        restart wing
+      # Anatomy A3.5 (2026-05-04): Wing now runs as a host launchd daemon
+      # backed by FrankenPHP (replaces the Track-A container + wing-nginx
+      # sidecar). `kickstart -k` reloads the plist's env + restarts gracefully
+      # so source rsync / Caddyfile / token reconverge changes propagate
+      # without a full bootstrap cycle.
+      ansible.builtin.shell: |
+        launchctl kickstart -k "gui/$(id -u)/{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}" 2>/dev/null || true
+      changed_when: true
       failed_when: false
 
     - name: Restart mariadb

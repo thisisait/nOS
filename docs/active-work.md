@@ -177,9 +177,9 @@ Phase status (per `docs/bones-and-wings-refactor.md` §8):
 | Phase | What | Status |
 |---|---|---|
 | A0–A4, A6 | skeleton + anatomize-move + bone host launchd + pulse + plugin loader | ✅ DONE |
-| **A3.5** | **wing host-revert via FrankenPHP** | NEXT after security batch |
+| **A3.5** | **wing host-revert via FrankenPHP** | ✅ DONE 2026-05-04 |
 | A5 | wing OpenAPI/DDL exports | not started |
-| A6.5 | Grafana thin-role pilot — doctrine proof | NEXT (post-A3.5) |
+| A6.5 | Grafana thin-role pilot — doctrine proof | NEXT |
 | A7 | gitleaks plugin (first real plugin via loader) | not started |
 | A8 | conductor agent + agent runner | not started |
 | A9 | notification fanout | not started |

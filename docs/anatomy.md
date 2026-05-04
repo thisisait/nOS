@@ -76,8 +76,8 @@ Formerly **Glasswing**. The read model. The place humans click to answer
 - **Vars prefix**: `wing_*`
 - **Env prefix**: `WING_*` (formerly `GLASSWING_*`)
 - **Callback plugin**: `callback_plugins/wing_telemetry.py`
-- **Service label**: `eu.thisisait.wing` (launchd)
-- **HTTP port**: `8070`
+- **Service label**: `eu.thisisait.nos.wing` (launchd, FrankenPHP daemon — anatomy A3.5, 2026-05-04)
+- **HTTP port**: `9000` (FrankenPHP bind on 127.0.0.1; Traefik routes wing.<tld> here via host.docker.internal:9000)
 - **Public hostname**: `wing.dev.local`
 - **API surface**: `/api/v1/events`, `/api/v1/state/*`,
   `/api/v1/migrations/*`, `/api/v1/upgrades/*`, `/api/v1/patches/*`,

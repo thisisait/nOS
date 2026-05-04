@@ -114,7 +114,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 - **Hermes** — cross-channel messaging gateway
 - **OpenCode** — agentic coding helper
 - **IIAB Terminal** — Python Textual TUI, SSH `ForceCommand` for the `home` user
-- **Wing** — security-research dashboard; source at `files/anatomy/wing/`, currently container/FPM sidecar, target A3.5 runtime is FrankenPHP via launchd
+- **Wing** — security-research dashboard; source at `files/anatomy/wing/`, host launchd as of anatomy A3.5 (FrankenPHP single binary)
 - **Bone** — local REST API bridge; source at `files/anatomy/bone/`, host launchd as of anatomy A3a
 - **Pulse** — scheduled-job daemon; source at `files/anatomy/pulse/`, host launchd skeleton as of anatomy A4
 
@@ -235,7 +235,7 @@ No code changes. The runner takes care of routing, secrets, and observability.
 - Jellyfin / Open WebUI: known upstream bugs on fresh DB init — first run may restart-loop until data regenerates.
 - Bluesky PDS federation not yet functional (the identity bridge creates accounts, but AT Protocol federation requires public DNS).
 - Pre-2026-04-22 installs carry legacy `devboxnos-*` Authentik group names, `com.devboxnos.*` launchd bundle IDs, and the `~/.devboxnos/` state directory. Rebrand complete in-repo; migration on existing hosts needs a blank reset (or manual rename of the Authentik groups + `launchctl bootout` of the old plists).
-- **Anatomy A3.5 — Wing host-revert (next B&W slice):** A3a (Bone) reverted to host launchd 2026-05-03; Wing host-revert deferred because Traefik can't speak FastCGI directly. **Decision 2026-05-03:** target FrankenPHP (single binary, native HTTP, eliminates wing-nginx sidecar entirely). Implementation pending; until then Wing stays containerized — A2 source-move at `files/anatomy/wing/` is preserved.
+- **Anatomy A3.5 — Wing host-revert ✅ DONE 2026-05-04:** Wing now runs as `eu.thisisait.nos.wing` launchd daemon backed by FrankenPHP (PHP 8.5 + Caddy 2.x in one binary). The wing FPM container + wing-nginx sidecar pair are gone. Traefik file-provider auto-derives `wing.<tld>` → `http://nos-host:9000` via the uniform host-mode code path. Closes the wing-nginx stale-IP 502 bug class structurally. FrankenPHP installed via Homebrew taps (`dunglas/frankenphp` + `shivammathur/php` for the php-zts dep). Composer + DB init now run host-native — `wing-cli` profile service retired.
 - **Track Q autowiring debt** (4-6 weeks, post-PoC): 30 of 71 `pazny.*` roles carry `tasks/post.yml` cross-service wiring totalling ~3000 LOC. Plan in `docs/bones-and-wings-refactor.md` §13.1 + `files/anatomy/docs/role-thinning-recipe.md`. Begins with Q1 (observability) once A6.5 Grafana thin-role pilot proves the doctrine.
 - **Drift baseline staleness (security scan):** `docs/llm/security/scan-state.json` last_full_scan field can drift (>14 days = drift hook starts complaining). Resolved long-term by conductor agent (A8 phase) auto-running scans on schedule; manual interim refresh: see `hooks/playbook-end.d/20-cve-drift-check.sh` output for the diagnostic format.
 - **Wing API endpoints for Pulse not yet implemented:** `/api/v1/pulse_jobs/due` and `/api/v1/pulse_runs/start|finish` are spec'd in `files/anatomy/docs/plugin-loader-spec.md` but missing PHP presenters in `files/anatomy/wing/app/Presenters/`. Pulse idle-tolerates 404 gracefully (warns once per minute, no crash-loop). Implementation lands alongside A7 (gitleaks plugin — first scheduled-job consumer).

@@ -88,7 +88,7 @@ http:
 
   services:
 {% for s in nos_manifest.services | default([]) %}
-{% if s.domain_var is defined and (s.port_var is defined or s.id == 'wing') and s.id not in (traefik_skip_ids | default([])) %}
+{% if s.domain_var is defined and s.port_var is defined and s.id not in (traefik_skip_ids | default([])) %}
 {% set _flag_value = lookup('vars', s.install_flag, default=false) %}
 {% if _flag_value is string %}
 {%   set _enabled = (_flag_value | lower) in ['true', '1', 'yes'] %}
@@ -96,25 +96,21 @@ http:
 {%   set _enabled = _flag_value | bool %}
 {% endif %}
 {% if _enabled %}
-{% if s.id == 'wing' %}{% set _port = 80 %}{% else %}{% set _port = lookup('vars', s.port_var, default=0) | int %}{% endif %}
-{% if not (_port in [80, 443] and s.id != 'wing') %}
+{% set _port = lookup('vars', s.port_var, default=0) | int %}
+{% if _port not in [80, 443] %}
 {% set _router = s.id | replace('_', '-') %}
 {% set _is_https = s.id in (traefik_https_upstream_ids | default([])) %}
 {% set _scheme = 'https' if _is_https else 'http' %}
-{% if s.id == 'wing' %}
     {{ _router }}:
       loadBalancer:
         servers:
-          # Wing FPM can't speak HTTP directly — use its nginx sidecar.
-          - url: "http://wing-nginx:80"
-{% else %}
-    {{ _router }}:
-      loadBalancer:
-        servers:
+          # Anatomy A3.5 (2026-05-04): wing is no longer a special case.
+          # FrankenPHP serves plain HTTP on host:9000; Traefik reaches it
+          # via host.docker.internal like every other host-mode service.
+          # Previous nginx-sidecar exception removed.
           - url: "{{ _scheme }}://nos-host:{{ _port }}"
 {% if _is_https %}
         serversTransport: "noverify@file"
-{% endif %}
 {% endif %}
 {% endif %}
 {% endif %}

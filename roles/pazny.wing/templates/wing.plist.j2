@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}</string>
+
+    <!--
+        FrankenPHP single-binary serving Wing. Replaces the Track-A
+        wing FPM container + wing-nginx sidecar pair. Anatomy A3.5
+        (2026-05-04). Listens on 127.0.0.1:{{ wing_port | default(9000) }};
+        Traefik routes wing.<tld> → host.docker.internal:9000.
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ frankenphp_bin | default('/opt/homebrew/bin/frankenphp') }}</string>
+        <string>run</string>
+        <string>--config</string>
+        <string>{{ wing_caddyfile_path }}</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ wing_app_dir }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+
+        <!-- FrankenPHP / Caddy data dir (state, certs cache, etc.). Caddy's
+             default is ~/Library/Application Support/Caddy — we route to a
+             role-managed path so blank-reset cleanup is deterministic. -->
+        <key>XDG_DATA_HOME</key>
+        <string>{{ wing_runtime_dir }}/caddy-data</string>
+        <key>XDG_CONFIG_HOME</key>
+        <string>{{ wing_runtime_dir }}/caddy-config</string>
+
+        <!-- Wing runtime config — read by app/Bootstrap.php / config/local.neon. -->
+        <key>WING_DATA_DIR</key>
+        <string>{{ wing_data_dir }}</string>
+        <key>WING_API_TOKEN</key>
+        <string>{{ wing_api_token | default('') }}</string>
+
+        <!-- Bone (host launchd at 127.0.0.1:{{ bone_port | default(8099) }}) is the
+             control-plane API Wing presenters proxy through. BONE_URL is
+             read by app/Model/BoneClient.php. -->
+        <key>BONE_URL</key>
+        <string>{{ bone_url | default('http://127.0.0.1:' + (bone_port | default(8099) | string)) }}</string>
+        <key>BONE_SECRET</key>
+        <string>{{ bone_secret | default('') }}</string>
+
+        <!-- Qdrant — Tier-2 vector DB at apps/qdrant.yml. Empty when
+             install_qdrant=false; QdrantClient.php returns 503 in that case. -->
+        <key>QDRANT_URL</key>
+        <string>{{ ('http://127.0.0.1:' + (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else '' }}</string>
+        <key>QDRANT_API_KEY_RO</key>
+        <string>{{ qdrant_api_key_ro | default('') }}</string>
+
+{% if install_authentik | default(false) %}
+        <!-- Authentik OIDC issuer — Wing presenters can mint operator JWTs
+             for cross-service calls (Bone, Qdrant via Bone). -->
+        <key>AUTHENTIK_OIDC_ISSUER</key>
+        <string>https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/</string>
+{% endif %}
+
+        <!-- Tenant / host config the role-thinning recipe expects to see
+             in the runtime env (Wing-side; Bone has its own copy). -->
+        <key>TENANT_DOMAIN</key>
+        <string>{{ tenant_domain | default('dev.local') }}</string>
+        <key>HOST_ALIAS</key>
+        <string>{{ host_alias | default('') }}</string>
+        <key>INSTANCE_NAME</key>
+        <string>{{ instance_name | default('nos') }}</string>
+    </dict>
+
+    <!-- launchd respawns on crash; ThrottleInterval prevents tight loops
+         (60s = same as A3a Bone). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ wing_log_dir }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ wing_log_dir }}/launchd.err.log</string>
+
+    <!-- Soft memory cap; FrankenPHP + 4 PHP threads + Wing's small SQLite
+         working set fits comfortably under 1G in steady state. -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>4096</integer>
+    </dict>
+</dict>
+</plist>
