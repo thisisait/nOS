@@ -27,3 +27,9 @@ ignore: |
   # need their own exclusion line. Files inside `roles/` are already
   # covered by the `roles` entry above.
   files/anatomy/plugins/*/templates/*.j2
+  # Auto-generated contract artifacts (Anatomy A5). They use PyYAML's
+  # safe_dump indentation, which differs from yamllint's default
+  # `indent-sequences: true (with extra space)` expectation. The
+  # contracts-drift CI job already validates byte-stability — running
+  # yamllint on top would add only noise.
+  files/anatomy/skills/contracts

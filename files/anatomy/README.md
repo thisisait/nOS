@@ -20,7 +20,7 @@ files/anatomy/
 ├── migrations/                                       # moved framework migrations (A1)
 ├── patches/                                          # moved patch artifacts (A1)
 ├── skills/
-│   └── contracts/                                    # A5 outputs land here
+│   └── contracts/                                    # A5 ✅ — bone.openapi.yml, wing.openapi.yml, wing.db-schema.sql
 ├── docs/
 │   ├── grafana-wiring-inventory.md                   # V3 — consumer-shape inventory (A6.5)
 │   ├── authentik-wiring-inventory.md                 # V4 — source/aggregator-shape inventory (Q2 prep)
@@ -63,11 +63,12 @@ files/anatomy/
 - **A4 — pulse skeleton** ✅ `b101a0d`. roles/pazny.pulse + Python source + 16 tests.
 - **A6 — plugin loader foundation** ✅ this commit. JSON Schema + Python loader + Ansible custom module + 4 lifecycle hooks wired into core-up.yml/blank-reset.yml + 25 tests. Hook side effects beyond filesystem primitives landed with A6.5.
 - **A6.5 — Grafana thin-role pilot** ✅ 2026-05-04. Plugin loader gains real `render` / `render_compose_extension` / `copy_dashboards` / `wait_health` / `conditional_remove_dir` actions backed by Jinja2 + a manifest dotted-path resolver. `nos_plugin_loader` module wrapper now passes `template_vars: "{{ vars }}"` to render context. `pazny.grafana` thinned: provisioning artifacts (datasources/all.yml.j2 + dashboards/all.yml.j2 + 18 dashboard JSONs) moved to `files/anatomy/plugins/grafana-base/provisioning/`. OIDC env block + mkcert CA conditional + GF_INSTALL_PLUGINS + extra_hosts authentik moved to `templates/grafana-base.compose.yml.j2`. core-up.yml drops 2 datasource/dashboard render tasks; observability.yml drops the in-repo dashboard enumerate+copy pair. 48/48 anatomy tests green (+7 new for the new actions). **Track Q is now unblocked.**
+- **A5 — contracts (Wing/Bone OpenAPI + Wing DDL)** ✅ 2026-05-04. Three export scripts: `bone/bin/export-openapi.py` (FastAPI `app.openapi()` → YAML, 30 paths), `wing/bin/export-openapi.php` (regex-parses `RouterFactory.php` + presenter class-level docblocks → OpenAPI 3.1, 61 paths — 24 with real summaries from docblocks, 41 fall back to `Presenter::actionX` when the class docblock doesn't follow the `METHOD path — summary` convention; that fallback is itself a quality signal for future presenter-docblock cleanup). `wing/bin/export-schema.php` (spawns `init-db.php` against a temp dir via `proc_open`, dumps `sqlite_master` → SQL DDL, 25 tables / 1 view / 32 indexes). Artifacts committed to `files/anatomy/skills/contracts/`. New CI job `contracts-drift` regenerates all three on every push and `diff -u`s against the committed artifacts — fails if any author landed an API/schema change without refreshing the contracts. Bone import path uses tolerant env-var defaults so the export runs in CI without Authentik reachable.
+
 - **Track Q1 — observability sweep partial** ✅ 2026-05-04 (same batch as A6.5). Plugin loader gains a sixth action `render_dir` (whole-directory render with .j2 → bare-name idempotent write). New plugins: `prometheus-base` (master config + 6 recording-rule files), `loki-base` (master config), `tempo-base` (master config). All 3 master configs + 6 prometheus rule files moved from `files/observability/<service>/` → `files/anatomy/plugins/<service>-base/provisioning/`. core-up.yml drops 4 imperative deploy tasks (Prometheus + recording-rules + Loki + Tempo) — replaced by 1 declarative manifest entry per plugin. 8 plugins now live (grafana-base + 4 sibling tune-and-thin drafts + 3 Q1 plugins). Remaining Q1: alloy host-side runtime (different pattern — Homebrew brew service, not docker) + 8-12 composition plugins (grafana-prometheus / grafana-loki / grafana-tempo cross-wiring) for Q1b.
 
-Remaining: A5 (Wing OpenAPI/DDL exports),
-(Grafana thin-role pilot), A7 (gitleaks plugin), A8 (conductor + agent
-runner), A9 (notifications), A10 (audit trail).
+Remaining: A7 (gitleaks plugin), A8 (conductor + agent runner),
+A9 (notifications), A10 (audit trail).
 
 ## Pointers
 

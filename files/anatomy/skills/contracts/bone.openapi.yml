@@ -1,0 +1,821 @@
+# AUTO-GENERATED — do not edit by hand.
+# Source: files/anatomy/bone/main.py (FastAPI app.openapi()).
+# Regenerate: python3 files/anatomy/bone/bin/export-openapi.py
+# CI drift check: .github/workflows/ci.yml — contracts-drift job.
+---
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  title: nOS Bone API
+  version: 0.2.0
+openapi: 3.1.0
+paths:
+  /api/coexistence:
+    get:
+      operationId: coexistence_list_api_coexistence_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Coexistence List
+  /api/coexistence/{service}/cleanup/{tag}:
+    post:
+      operationId: coexistence_cleanup_api_coexistence__service__cleanup__tag__post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: tag
+        required: true
+        schema:
+          title: Tag
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Cleanup
+  /api/coexistence/{service}/cutover:
+    post:
+      operationId: coexistence_cutover_api_coexistence__service__cutover_post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Cutover
+  /api/coexistence/{service}/provision:
+    post:
+      operationId: coexistence_provision_api_coexistence__service__provision_post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Provision
+  /api/events:
+    get:
+      description: 'Paginated event query. Wing also serves its own /api/v1/events
+
+        directly from SQLite — this route is a Bone-side convenience for CLI
+
+        users.'
+      operationId: events_list_api_events_get
+      parameters:
+      - in: query
+        name: run_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Run Id
+      - in: query
+        name: type
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Type
+      - in: query
+        name: since
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Since
+      - in: query
+        name: migration_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Migration Id
+      - in: query
+        name: upgrade_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Upgrade Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Events List
+    post:
+      description: 'HMAC-authenticated (not API-key) event ingestion from the callback
+
+        plugin. Writes directly to Wing''s events.db.'
+      operationId: events_ingest_api_events_post
+      parameters:
+      - in: header
+        name: x-wing-timestamp
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Timestamp
+          type: string
+      - in: header
+        name: x-wing-signature
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Signature
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Events Ingest
+  /api/health:
+    get:
+      description: Aggregated health of all registered services.
+      operationId: health_api_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Health
+  /api/migrations:
+    get:
+      operationId: migrations_list_api_migrations_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Migrations List
+  /api/migrations/{migration_id}:
+    get:
+      operationId: migrations_get_api_migrations__migration_id__get
+      parameters:
+      - in: path
+        name: migration_id
+        required: true
+        schema:
+          title: Migration Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Migrations Get
+  /api/migrations/{migration_id}/apply:
+    post:
+      operationId: migrations_apply_api_migrations__migration_id__apply_post
+      parameters:
+      - in: path
+        name: migration_id
+        required: true
+        schema:
+          title: Migration Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Migrations Apply
+  /api/migrations/{migration_id}/preview:
+    post:
+      operationId: migrations_preview_api_migrations__migration_id__preview_post
+      parameters:
+      - in: path
+        name: migration_id
+        required: true
+        schema:
+          title: Migration Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Migrations Preview
+  /api/migrations/{migration_id}/rollback:
+    post:
+      operationId: migrations_rollback_api_migrations__migration_id__rollback_post
+      parameters:
+      - in: path
+        name: migration_id
+        required: true
+        schema:
+          title: Migration Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Migrations Rollback
+  /api/patches:
+    get:
+      operationId: patches_list_api_patches_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Patches List
+  /api/patches/{patch_id}:
+    get:
+      operationId: patches_get_api_patches__patch_id__get
+      parameters:
+      - in: path
+        name: patch_id
+        required: true
+        schema:
+          title: Patch Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patches Get
+  /api/patches/{patch_id}/apply:
+    post:
+      operationId: patches_apply_api_patches__patch_id__apply_post
+      parameters:
+      - in: path
+        name: patch_id
+        required: true
+        schema:
+          title: Patch Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patches Apply
+  /api/patches/{patch_id}/plan:
+    post:
+      operationId: patches_plan_api_patches__patch_id__plan_post
+      parameters:
+      - in: path
+        name: patch_id
+        required: true
+        schema:
+          title: Patch Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patches Plan
+  /api/run-tag:
+    post:
+      description: Trigger ansible-playbook with a specific tag (requires API key).
+      operationId: run_tag_api_run_tag_post
+      parameters:
+      - in: query
+        name: tag
+        required: true
+        schema:
+          title: Tag
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Run Tag
+  /api/services:
+    get:
+      description: Return service-registry.json content.
+      operationId: services_api_services_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Services
+  /api/state:
+    get:
+      operationId: state_root_api_state_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: State Root
+    post:
+      description: 'Accept a state snapshot from pazny.state_manager (end-of-run report).
+
+
+        JWT scope `nos:state:write` is required (Track B, 2026-04-26). The
+
+        snapshot is already on disk in ~/.nos/state.yml that the role wrote
+
+        first, so this endpoint is mostly a "telemetry trigger" + "remote
+
+        operator can poke a state push without ssh" affordance.'
+      operationId: state_push_api_state_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: State Push
+  /api/state/services:
+    get:
+      operationId: state_services_api_state_services_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: State Services
+  /api/state/services/{service_id}:
+    get:
+      operationId: state_service_api_state_services__service_id__get
+      parameters:
+      - in: path
+        name: service_id
+        required: true
+        schema:
+          title: Service Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: State Service
+  /api/status:
+    get:
+      description: Box identity and basic status.
+      operationId: status_api_status_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Status
+  /api/upgrades:
+    get:
+      operationId: upgrades_matrix_api_upgrades_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Upgrades Matrix
+  /api/upgrades/{service}:
+    get:
+      operationId: upgrades_service_api_upgrades__service__get
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Upgrades Service
+  /api/upgrades/{service}/{recipe_id}:
+    get:
+      operationId: upgrades_recipe_api_upgrades__service___recipe_id__get
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: recipe_id
+        required: true
+        schema:
+          title: Recipe Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Upgrades Recipe
+  /api/upgrades/{service}/{recipe_id}/apply:
+    post:
+      operationId: upgrades_apply_api_upgrades__service___recipe_id__apply_post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: recipe_id
+        required: true
+        schema:
+          title: Recipe Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Upgrades Apply
+  /api/upgrades/{service}/{recipe_id}/plan:
+    post:
+      operationId: upgrades_plan_api_upgrades__service___recipe_id__plan_post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: recipe_id
+        required: true
+        schema:
+          title: Recipe Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Upgrades Plan
+  /api/v1/embeddings/health:
+    get:
+      description: Probe Qdrant /healthz — uniform path agents can use as a precondition.
+      operationId: embeddings_health_api_v1_embeddings_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Embeddings Health
+  /api/v1/embeddings/search:
+    post:
+      description: "k-NN search over a Qdrant collection.\n\nBody shape:\n  {\"collection\": \"agent_outputs\",\n   \"vector\"\
+        :  [..768..],\n   \"limit\":   10,                # optional, default 10\n   \"filter\":  {...} | null}      # optional\
+        \ Qdrant filter object"
+      operationId: embeddings_search_api_v1_embeddings_search_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Embeddings Search
+  /api/v1/embeddings/upsert:
+    post:
+      description: "Upsert N points into a Qdrant collection.\n\nBody shape:\n  {\"collection\": \"agent_outputs\",\n   \"\
+        points\": [{\"id\": \"...\", \"vector\": [..768..], \"payload\": {...}}, ...]}"
+      operationId: embeddings_upsert_api_v1_embeddings_upsert_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Embeddings Upsert
+  /api/v1/events:
+    post:
+      description: 'HMAC-authenticated (not API-key) event ingestion from the callback
+
+        plugin. Writes directly to Wing''s events.db.'
+      operationId: events_ingest_api_v1_events_post
+      parameters:
+      - in: header
+        name: x-wing-timestamp
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Timestamp
+          type: string
+      - in: header
+        name: x-wing-signature
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Signature
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Events Ingest

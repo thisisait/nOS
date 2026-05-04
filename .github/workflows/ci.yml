@@ -150,6 +150,60 @@ jobs:
         run: python3 -m pytest tests/apps/ -v
 
   # ──────────────────────────────────────────────────────────────────────────
+  # CONTRACTS DRIFT – regenerate Bone OpenAPI + Wing OpenAPI + Wing DDL
+  # and diff against the committed artifacts under
+  # files/anatomy/skills/contracts/. Anatomy A5 (2026-05-04) — surfaces
+  # API/schema drift the moment a presenter or migration lands without
+  # the artifact being refreshed.
+  # ──────────────────────────────────────────────────────────────────────────
+  contracts-drift:
+    name: Contracts drift check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Set up PHP 8.5.
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: sqlite3
+
+      - name: Install Bone Python deps (FastAPI for OpenAPI introspection).
+        run: |
+          pip3 install --upgrade pip
+          pip3 install -r files/anatomy/bone/requirements.txt
+
+      - name: Regenerate contracts.
+        run: |
+          mkdir -p /tmp/contracts-rebuild
+          python3 files/anatomy/bone/bin/export-openapi.py \
+            --output /tmp/contracts-rebuild/bone.openapi.yml
+          php files/anatomy/wing/bin/export-openapi.php \
+            --output=/tmp/contracts-rebuild/wing.openapi.yml
+          php files/anatomy/wing/bin/export-schema.php \
+            --output=/tmp/contracts-rebuild/wing.db-schema.sql
+
+      - name: Diff against committed artifacts.
+        run: |
+          set -e
+          fail=0
+          for f in bone.openapi.yml wing.openapi.yml wing.db-schema.sql; do
+            committed="files/anatomy/skills/contracts/$f"
+            rebuilt="/tmp/contracts-rebuild/$f"
+            if ! diff -u "$committed" "$rebuilt"; then
+              echo "::error::Drift detected in $f — regenerate via the export script and recommit."
+              fail=1
+            fi
+          done
+          exit "$fail"
+
+  # ──────────────────────────────────────────────────────────────────────────
   # INTEGRATION – full run on real macOS (slower, expensive)
   # Runs only on master/claude/** pushes, not on every PR commit
   # ──────────────────────────────────────────────────────────────────────────

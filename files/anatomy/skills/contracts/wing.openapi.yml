@@ -1,0 +1,1320 @@
+# AUTO-GENERATED — do not edit by hand.
+# Source: files/anatomy/wing/app/Core/RouterFactory.php +
+#         files/anatomy/wing/app/Presenters/Api/*Presenter.php docblocks.
+# Regenerate: php files/anatomy/wing/bin/export-openapi.php
+# CI drift check: .github/workflows/ci.yml — contracts-drift job.
+---
+openapi: 3.1.0
+info:
+  title: nOS Wing API
+  version: 0.2.0
+  description: Security-research dashboard + state/migration framework API. Auto-extracted from RouterFactory + presenter docblocks; request/response body schemas are not introspected.
+servers:
+  - url: 'http://127.0.0.1:9000'
+    description: Local FrankenPHP launchd daemon
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API token issued by Wing (api_tokens table).
+paths:
+  /api/v1/advisories:
+    get:
+      summary: 'Advisories::actiondefault'
+      operationId: Advisories_default_get
+      tags:
+        - Advisories
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/advisories/{id}':
+    get:
+      summary: 'Advisories::actiondefault'
+      operationId: Advisories_default_get
+      tags:
+        - Advisories
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/coexistence:
+    get:
+      summary: list tracks
+      operationId: Coexistence_default_get
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/coexistence/{service}/cleanup/{tag}':
+    get:
+      summary: 'Coexistence::actioncleanup'
+      operationId: Coexistence_cleanup_get
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/coexistence/{service}/cutover':
+    get:
+      summary: 'Coexistence::actioncutover'
+      operationId: Coexistence_cutover_get
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/coexistence/{service}/provision':
+    get:
+      summary: 'Coexistence::actionprovision'
+      operationId: Coexistence_provision_get
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/components:
+    get:
+      summary: 'Components::actiondefault'
+      operationId: Components_default_get
+      tags:
+        - Components
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/components/{id}':
+    get:
+      summary: 'Components::actiondefault'
+      operationId: Components_default_get
+      tags:
+        - Components
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/dashboard/summary:
+    get:
+      summary: 'Dashboard::actionsummary'
+      operationId: Dashboard_summary_get
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+  /api/v1/dashboard/timeline:
+    get:
+      summary: 'Dashboard::actiontimeline'
+      operationId: Dashboard_timeline_get
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/events:
+    get:
+      summary: 'paginated query (?run_id, ?type, ?since, ?limit).'
+      operationId: Events_default_get
+      tags:
+        - Events
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+    post:
+      summary: ingestion from the callback plugin. HMAC-protected.
+      operationId: Events_default_post
+      tags:
+        - Events
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+  /api/v1/gdpr/breaches:
+    get:
+      summary: 'Gdpr::actionbreaches'
+      operationId: Gdpr_breaches_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/gdpr/breaches/{id}':
+    get:
+      summary: 'Gdpr::actionbreaches'
+      operationId: Gdpr_breaches_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/gdpr/dsar:
+    get:
+      summary: 'Gdpr::actiondsar'
+      operationId: Gdpr_dsar_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/gdpr/dsar/{id}':
+    get:
+      summary: 'Gdpr::actiondsar'
+      operationId: Gdpr_dsar_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/gdpr/export.csv:
+    get:
+      summary: 'Gdpr::actionexportCsv'
+      operationId: Gdpr_exportCsv_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/gdpr/processing:
+    get:
+      summary: 'Gdpr::actionprocessing'
+      operationId: Gdpr_processing_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/gdpr/processing/{id}':
+    get:
+      summary: 'Gdpr::actionprocessing'
+      operationId: Gdpr_processing_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/hub/health:
+    get:
+      summary: probe all systems with a URL
+      operationId: Hub_health_get
+      tags:
+        - Hub
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+  /api/v1/hub/systems:
+    get:
+      summary: list all systems (flat, with filters)
+      operationId: Hub_systems_get
+      tags:
+        - Hub
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+    post:
+      summary: upsert a system
+      operationId: Hub_systems_post
+      tags:
+        - Hub
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+  '/api/v1/hub/systems/{id}':
+    get:
+      summary: single system detail
+      operationId: Hub_systems_get
+      tags:
+        - Hub
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/migrations:
+    get:
+      summary: list { applied, pending } (via BoxAPI)
+      operationId: Migrations_default_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/migrations/{id}':
+    get:
+      summary: full record
+      operationId: Migrations_default_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/migrations/{id}/apply':
+    get:
+      summary: 'Migrations::actionapply'
+      operationId: Migrations_apply_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/migrations/{id}/preview':
+    get:
+      summary: 'Migrations::actionpreview'
+      operationId: Migrations_preview_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/migrations/{id}/rollback':
+    get:
+      summary: 'Migrations::actionrollback'
+      operationId: Migrations_rollback_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/patches:
+    get:
+      summary: 'list patches (filter: status, component_id, limit)'
+      operationId: Patches_default_get
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: create patch
+      operationId: Patches_default_post
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/patches/history:
+    get:
+      summary: 'local patches_applied mirror (?patch_id=, ?component_id=, ?limit=)'
+      operationId: Patches_history_get
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/patches/{id}':
+    get:
+      summary: single patch detail
+      operationId: Patches_default_get
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: update patch
+      operationId: Patches_default_put
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/patches/{id}/apply':
+    post:
+      summary: BoxAPI apply (ansible --tags apply-patches)
+      operationId: Patches_apply_post
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/patches/{id}/events':
+    get:
+      summary: 'events emitted during this patch''s runs'
+      operationId: Patches_events_get
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/patches/{id}/plan':
+    post:
+      summary: BoxAPI dry-run (ansible --tags apply-patches --check)
+      operationId: Patches_plan_post
+      tags:
+        - Patches
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/pentest/findings/{id}':
+    get:
+      summary: 'Pentest::actionfindingUpdate'
+      operationId: Pentest_findingUpdate_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/pentest/patches:
+    get:
+      summary: 'Pentest::actionpatches'
+      operationId: Pentest_patches_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/pentest/patches/{id}':
+    get:
+      summary: 'Pentest::actionpatches'
+      operationId: Pentest_patches_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/pentest/targets:
+    get:
+      summary: 'Pentest::actiontargets'
+      operationId: Pentest_targets_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/pentest/targets/{id}':
+    get:
+      summary: 'Pentest::actiontargets'
+      operationId: Pentest_targets_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/pentest/targets/{id}/areas-planned':
+    get:
+      summary: 'Pentest::actionareasPlanned'
+      operationId: Pentest_areasPlanned_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/pentest/targets/{id}/areas-tested':
+    get:
+      summary: 'Pentest::actionareasTested'
+      operationId: Pentest_areasTested_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/pentest/targets/{id}/findings':
+    get:
+      summary: 'Pentest::actionfindings'
+      operationId: Pentest_findings_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/remediation:
+    get:
+      summary: 'Remediation::actiondefault'
+      operationId: Remediation_default_get
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/remediation/bulk-status:
+    get:
+      summary: 'Remediation::actionbulkStatus'
+      operationId: Remediation_bulkStatus_get
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/remediation/next-id:
+    get:
+      summary: 'Remediation::actionnextId'
+      operationId: Remediation_nextId_get
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/remediation/{id}':
+    get:
+      summary: 'Remediation::actiondefault'
+      operationId: Remediation_default_get
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/scan/component/{id}':
+    get:
+      summary: 'Scan::actioncomponent'
+      operationId: Scan_component_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/scan/config:
+    get:
+      summary: 'Scan::actionconfig'
+      operationId: Scan_config_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/scan/cycle:
+    get:
+      summary: 'Scan::actioncycle'
+      operationId: Scan_cycle_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/scan/cycles:
+    get:
+      summary: 'Scan::actioncycles'
+      operationId: Scan_cycles_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/scan/probe/{name}/complete':
+    get:
+      summary: 'Scan::actionprobeComplete'
+      operationId: Scan_probeComplete_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/scan/rotation:
+    get:
+      summary: 'Scan::actionrotation'
+      operationId: Scan_rotation_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/scan/state:
+    get:
+      summary: 'Scan::actionstate'
+      operationId: Scan_state_get
+      tags:
+        - Scan
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/state:
+    get:
+      summary: proxy BoxAPI ~/.nos/state.yml
+      operationId: State_default_get
+      tags:
+        - State
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/state/services:
+    get:
+      summary: subset
+      operationId: State_services_get
+      tags:
+        - State
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/state/services/{id}':
+    get:
+      summary: one service
+      operationId: State_services_get
+      tags:
+        - State
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/state/sync:
+    post:
+      summary: refresh local SQLite mirrors from
+      operationId: State_sync_post
+      tags:
+        - State
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/upgrades:
+    get:
+      summary: matrix
+      operationId: Upgrades_default_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/upgrades/history:
+    get:
+      summary: 'Upgrades::actionhistory'
+      operationId: Upgrades_history_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/upgrades/{service}':
+    get:
+      summary: recipes for service
+      operationId: Upgrades_service_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}':
+    get:
+      summary: single recipe detail
+      operationId: Upgrades_recipe_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/apply':
+    get:
+      summary: 'Upgrades::actionapply'
+      operationId: Upgrades_apply_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/plan':
+    get:
+      summary: 'Upgrades::actionplan'
+      operationId: Upgrades_plan_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
