@@ -792,6 +792,104 @@ def _main(argv: list[str]) -> int:
         for r in results:
             print(f"{r['plugin']}\t{r['status']}\t{r['note']}")
         return 0
+    if cmd == "smoke":
+        # P0.7 (2026-05-04): pre-blank validation. Discover all plugins,
+        # validate each manifest against the schema, run aggregators,
+        # fire pre_compose against a tmp stacks_dir. Report status table
+        # + exit non-zero if any plugin is in `failed` state. Operator
+        # runs this before `ansible-playbook -e blank=true` to catch
+        # plugin issues that would otherwise surface as silent
+        # degradation during the real blank.
+        #
+        # Usage:
+        #   python3 -m module_utils.load_plugins smoke [--root <path>]
+        import shutil
+        import tempfile
+        root = pathlib.Path(_arg(rest, "--root",
+                                  default="files/anatomy/plugins"))
+        if not root.is_dir():
+            print(f"plugins root not found: {root}", file=sys.stderr)
+            return 1
+        plugins = discover(root)
+        repo_root = _find_repo_root(root)
+        schema = _load_schema(repo_root) if repo_root else None
+        # Validate manifests up-front.
+        validation_errors: list[tuple[str, list[str]]] = []
+        for p in plugins:
+            errs = validate_manifest(p.manifest, schema)
+            if errs:
+                validation_errors.append((p.name, errs))
+        # Run aggregators (in-memory, no fs).
+        run_aggregators(plugins)
+        # Fire pre_compose against a tmp stacks_dir. Use realistic
+        # operator-y vars to surface filter / template issues like
+        # the to_json + $labels issues uncovered by P0.6.
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="anatomy-smoke-"))
+        template_vars = {
+            "stacks_dir": str(tmp),
+            "tenant_domain": "smoke.local",
+            "authentik_domain": "auth.smoke.local",
+            "authentik_default_groups": [{"name": "nos-admins"}],
+            "authentik_bootstrap_password": "smoke-pw",
+            "authentik_bootstrap_email": "admin@smoke.local",
+            "default_admin_email": "admin@smoke.local",
+            "authentik_oidc_apps": [],
+            "authentik_rbac_tiers": [],
+            "authentik_app_tiers": {},
+            "authentik_agent_clients": [],
+            "authentik_agent_scopes": {},
+            "global_password_prefix": "smoke",
+            "nos_tester_username": "nos-tester",
+            "nos_tester_password": "smoke-pw",
+            "nos_tester_email": "tester@smoke.local",
+            "apps_subdomain": "apps",
+        }
+        try:
+            results = run_hook("pre_compose", plugins,
+                               template_vars=template_vars)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        # Report.
+        print(f"=== {len(plugins)} plugin(s) discovered ===")
+        for p in plugins:
+            print(f"  {p.name:25s} {p.behavior.value}")
+        if validation_errors:
+            print()
+            print("=== Schema validation errors ===")
+            for name, errs in validation_errors:
+                print(f"  {name}:")
+                for e in errs[:3]:
+                    print(f"    - {e}")
+                if len(errs) > 3:
+                    print(f"    ... ({len(errs) - 3} more)")
+        else:
+            print()
+            print("Schema validation: OK")
+        print()
+        print("=== pre_compose hook smoke (tmp stacks_dir) ===")
+        ok = degraded = failed = 0
+        for r in results:
+            status = r["status"]
+            if status == "ok":
+                ok += 1
+            elif status == "degraded":
+                degraded += 1
+            elif status == "failed":
+                failed += 1
+            print(f"  {r['plugin']:25s} {status:10s} {r['note'][:80]}")
+        print()
+        print(f"Summary: {ok} ok, {degraded} degraded, "
+              f"{failed} failed, {len(validation_errors)} schema errors")
+        # Exit non-zero ONLY on `failed` plugins (real runtime crashes
+        # that would also break the blank). Schema errors + degraded
+        # state are reported but non-blocking — known-draft plugins
+        # (portainer/qdrant/vaultwarden/woodpecker) carry preexisting
+        # drift that Phase 1 cleans up; degraded state often comes
+        # from missing ansible_facts in this standalone smoke (real
+        # blank fills them via setup module).
+        if failed > 0:
+            return 1
+        return 0
     print(f"unknown command: {cmd!r}", file=sys.stderr)
     return 2
 
