@@ -17,10 +17,16 @@ from pathlib import Path
 from typing import Any
 
 HMAC_SECRET = os.getenv("WING_EVENTS_HMAC_SECRET", "")
+# Default fallback aligned with pazny.bone defaults (bone_wing_db_dir →
+# wing_data_dir → ~/wing/app/data) post-A2/A3.5. The pre-A2 path
+# ``~/projects/nOS/files/project-wing/data/wing.db`` was wiped when Wing
+# source moved to files/anatomy/wing/ and Wing started running as host
+# launchd. ``WING_DB_PATH`` env var (set by bone.plist) always wins at
+# runtime — this is just a sane local-dev fallback.
 WING_DB = Path(
     os.getenv(
         "WING_DB_PATH",
-        os.path.expanduser("~/projects/nOS/files/project-wing/data/wing.db"),
+        os.path.expanduser("~/wing/app/data/wing.db"),
     )
 )
 
@@ -106,8 +112,8 @@ def insert_event(payload: dict[str, Any]) -> int:
             INSERT INTO events
               (ts, run_id, type, playbook, play, task, role, host,
                duration_ms, changed, result_json,
-               migration_id, upgrade_id, coexist_svc)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               migration_id, upgrade_id, patch_id, coexist_svc)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["ts"],
@@ -123,6 +129,19 @@ def insert_event(payload: dict[str, Any]) -> int:
                 json.dumps(payload["result"]) if isinstance(payload.get("result"), dict) else None,
                 payload.get("migration_id"),
                 payload.get("upgrade_id"),
+                # Anatomy P0.1 fix (2026-05-04): patch_id was previously
+                # missing from the column list entirely, so every patch
+                # event correlation broke at the audit-trail seam. The
+                # callback plugin sets _current_patch_id when an apply-
+                # patches play tags an event, sends it as ``patch_id`` in
+                # the payload; we now insert it.
+                payload.get("patch_id"),
+                # Note on naming: the callback sends the field as
+                # ``coexistence_service`` (long form) but the column is
+                # ``coexist_svc`` (schema-extensions.sql). The mapping
+                # here is intentional — keep the verbose key in payloads
+                # for readability, persist the short form for column
+                # naming hygiene.
                 payload.get("coexistence_service"),
             ),
         )
