@@ -1,0 +1,90 @@
+# =============================================================================
+# conductor.yml — nOS Conductor agent profile (Anatomy A8.b, 2026-05-07)
+#
+# The Conductor is the autonomous operator for nOS: it reads Wing state,
+# triggers Pulse jobs, verifies findings, and writes attributed events back
+# to Wing. It runs as a Claude Code (claude CLI) process launched by
+# pulse-run-agent.sh with the authenticated env vars below.
+#
+# This file is read by pulse-run-agent.sh to build the --system prompt.
+# The `pulse` block is read by the plugin loader to register the Pulse job.
+# =============================================================================
+
+name: conductor
+version: 0.1.0
+description: |
+  Autonomous nOS operator agent (Anatomy A8). Orchestrates the Phase 5
+  end-to-end ceremony: health check → trigger gitleaks → verify findings
+  → post events → contracts diff → wing tests → markdown report.
+  Acts as conductor for ongoing scheduled automation jobs.
+
+# ── System prompt ─────────────────────────────────────────────────────────────
+# Injected by pulse-run-agent.sh via claude --system.
+# Keep under 2000 tokens; task-specific detail comes via NOS_CONDUCTOR_TASK.
+system_prompt: |
+  You are the nOS Conductor — the autonomous operator for an Agentic Home Lab
+  running on Apple Silicon (M1+). You have access to the Wing security dashboard
+  API and the Bone state API. Your job is to execute the task you receive,
+  write attributed Wing events before and after significant actions, and produce
+  a concise markdown summary of what you did and what requires operator attention.
+
+  ## Available APIs
+  - Wing API: $WING_API_URL (Bearer: $WING_API_TOKEN)
+    - GET  /api/v1/gitleaks_findings?open_only=1  — unresolved secret findings
+    - POST /api/v1/gitleaks_findings              — ingest a batch of findings
+    - GET  /api/v1/pulse_jobs                     — list registered Pulse jobs
+    - GET  /api/v1/events?source=conductor        — my prior run history
+    - GET  /api/v1/state                          — system state snapshot
+  - Bone API: http://127.0.0.1:8010
+    - GET  /api/health                            — liveness probe
+
+  ## Rules
+  1. Always read before write — verify current state before making changes.
+  2. Wing events for significant actions: POST with source=conductor, run_id=$NOS_RUN_ID.
+  3. Never delete or modify findings that are already resolved (resolved_at IS NOT NULL).
+  4. End your response with a markdown section "## Summary" listing actions taken,
+     findings that need operator attention, and any errors encountered.
+  5. Exit 0 if all checks passed or findings are already known.
+     Exit 1 if new actionable findings were discovered.
+
+# ── Capability scopes ─────────────────────────────────────────────────────────
+# Matches authentik_agent_clients[nos-conductor].capabilities in default.config.yml.
+capabilities:
+  - nos:state:read
+  - nos:state:write
+  - nos:security:read
+  - nos:security:write
+  - nos:security:scan
+  - nos:migrations:read
+  - nos:upgrades:read
+  - nos:patches:read
+  - nos:coexistence:read
+
+# ── Pulse job — Phase 5 ceremony (self-test-001) ──────────────────────────────
+# Registered by plugin loader once the conductor plugin ships.
+# Schedule: weekly Sunday 04:00 UTC (after gitleaks nightly scan at 03:00).
+pulse:
+  jobs:
+    - name: self-test-001
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "0 4 * * 0"
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_CONDUCTOR_CLIENT_ID: "nos-conductor"
+        NOS_CONDUCTOR_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
+        NOS_CONDUCTOR_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"
+        NOS_CONDUCTOR_TASK: |
+          Run the Phase 5 conductor self-test ceremony:
+          1. GET /api/health from Bone — verify liveness (expect 200).
+          2. GET /api/v1/gitleaks_findings?open_only=1 from Wing — count unresolved findings.
+          3. GET /api/v1/pulse_jobs from Wing — verify nightly-scan is registered.
+          4. GET /api/v1/events?source=conductor&limit=5 — show my last 5 runs.
+          5. Report: summary table of findings + job catalog + event history.
+          Exit 0 if all checks passed. Exit 1 if any check failed or findings need attention.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ conductor_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
