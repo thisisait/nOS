@@ -237,13 +237,13 @@ CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at   ON pulse_runs(fired_at);
 
 CREATE TABLE IF NOT EXISTS gitleaks_findings (
     id            TEXT PRIMARY KEY,             -- UUID4 generated Wing-side
-    fingerprint   TEXT NOT NULL,                -- gitleaks key: commit:file:line:rule_id
+    fingerprint   TEXT NOT NULL,                -- gitleaks key: commit_sha:file:line:rule_id
     rule_id       TEXT NOT NULL,                -- e.g. "generic-api-key", "aws-access-token"
     description   TEXT,                         -- human-readable from gitleaks rule
     secret_masked TEXT,                         -- first 4 + "…" + last 4 (never full secret)
     file_path     TEXT NOT NULL,
     line_start    INTEGER NOT NULL,
-    commit        TEXT,                         -- git SHA of introducing commit
+    commit_sha    TEXT,                         -- git SHA of introducing commit
     author        TEXT,                         -- git author name/email
     date          TEXT,                         -- ISO-8601 commit date
     severity      TEXT NOT NULL DEFAULT 'high', -- critical|high|medium|low|info

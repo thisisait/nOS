@@ -48,7 +48,7 @@
 					<td style="font-size:11px; word-break:break-all">{$f['file_path']}</td>
 					<td style="font-size:12px; text-align:right">{$f['line_start']}</td>
 					<td style="font-family:monospace; font-size:12px">{$f['secret_masked'] ?? 'N/A'}</td>
-					<td style="font-size:11px; font-family:monospace">{($f['commit'] ?? '')|substr:0:8}</td>
+					<td style="font-size:11px; font-family:monospace">{($f['commit_sha'] ?? '')|substr:0:8}</td>
 					<td style="font-size:12px">{$f['author'] ?? ''}</td>
 					<td style="font-size:11px; color:var(--text2)">{($f['scan_id'] ?? '')|substr:0:16}</td>
 					<td style="font-size:11px; color:var(--text2)">{($f['created_at'] ?? '')|substr:0:10}</td>

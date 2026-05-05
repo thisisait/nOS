@@ -99,7 +99,7 @@ final class GitleaksRepository
 				'secret_masked' => $f['secret_masked']  ?? null,
 				'file_path'     => $f['file_path']      ?? '',
 				'line_start'    => (int) ($f['line_start'] ?? 0),
-				'commit'        => $f['commit']         ?? null,
+				'commit_sha'    => $f['commit_sha'] ?? $f['commit'] ?? null,
 				'author'        => $f['author']         ?? null,
 				'date'          => $f['date']           ?? null,
 				'severity'      => $this->normalizeSeverity($f['severity'] ?? null),

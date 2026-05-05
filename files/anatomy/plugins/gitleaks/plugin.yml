@@ -81,7 +81,7 @@ schema:
             secret_masked TEXT,
             file_path     TEXT NOT NULL,
             line_start    INTEGER NOT NULL,
-            commit        TEXT,
+            commit_sha    TEXT,
             author        TEXT,
             date          TEXT,
             severity      TEXT NOT NULL DEFAULT 'high',
