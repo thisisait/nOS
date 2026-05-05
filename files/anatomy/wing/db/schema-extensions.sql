@@ -227,3 +227,34 @@ CREATE TABLE IF NOT EXISTS pulse_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_pulse_runs_job_id     ON pulse_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at   ON pulse_runs(fired_at);
+
+-- gitleaks_findings: secret-scanning findings ingested by the gitleaks plugin.
+-- Anatomy A7 (2026-05-06). The gitleaks plugin (files/anatomy/plugins/gitleaks/)
+-- runs nightly via Pulse (runner=subprocess) and POSTs findings in batch to
+-- /api/v1/gitleaks_findings. Wing deduplicates on fingerprint (gitleaks'
+-- unique key per commit+file+line+rule); resolved_at is preserved across
+-- re-scans. scan_id soft-FK → pulse_runs.run_id (NULL for ad-hoc runs).
+
+CREATE TABLE IF NOT EXISTS gitleaks_findings (
+    id            TEXT PRIMARY KEY,             -- UUID4 generated Wing-side
+    fingerprint   TEXT NOT NULL,                -- gitleaks key: commit:file:line:rule_id
+    rule_id       TEXT NOT NULL,                -- e.g. "generic-api-key", "aws-access-token"
+    description   TEXT,                         -- human-readable from gitleaks rule
+    secret_masked TEXT,                         -- first 4 + "…" + last 4 (never full secret)
+    file_path     TEXT NOT NULL,
+    line_start    INTEGER NOT NULL,
+    commit        TEXT,                         -- git SHA of introducing commit
+    author        TEXT,                         -- git author name/email
+    date          TEXT,                         -- ISO-8601 commit date
+    severity      TEXT NOT NULL DEFAULT 'high', -- critical|high|medium|low|info
+    repo_path     TEXT NOT NULL,                -- absolute path to scanned repo
+    scan_id       TEXT,                         -- soft FK → pulse_runs.run_id; NULL = ad-hoc
+    resolved_at   TEXT,                         -- NULL = open; set by operator action
+    resolved_by   TEXT,                         -- Authentik client_id or free-text note
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
+CREATE INDEX IF NOT EXISTS idx_gitleaks_rule_id           ON gitleaks_findings(rule_id);
+CREATE INDEX IF NOT EXISTS idx_gitleaks_severity          ON gitleaks_findings(severity, resolved_at);
+CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
