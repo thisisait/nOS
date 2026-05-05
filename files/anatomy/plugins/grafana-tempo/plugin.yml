@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# grafana-tempo — composition plugin (Phase 1 U4, 2026-05-04)
+#
+# Cross-wires grafana-base (datasource consumer) with tempo-base (the trace
+# backend). Provides Grafana with a Tempo datasource pointed at the in-cluster
+# tempo container's HTTP API, configured for trace-to-logs (Loki) and
+# trace-to-metrics (Prometheus) deep-linking via service map.
+#
+# This plugin validates plugin shape #7 (composition): it owns no service of
+# its own, only the wiring between two service plugins. The loader's DAG
+# resolver enforces that grafana-base + tempo-base activate first.
+#
+# Pre-Q1b shape (today): the Tempo datasource is rendered by grafana-base in a
+# combined `provisioning/datasources/all.yml.j2` (one file, three sources).
+# Post-Q1b: grafana-base ships only built-ins; each composition plugin emits
+# its own datasource fragment to a per-source provisioning path that Grafana
+# auto-discovers on startup.
+# =============================================================================
+
+name: grafana-tempo
+version: 0.1.0
+description: |
+  Wires Grafana to Tempo: provisions a Grafana datasource pointing at the
+  Tempo HTTP API, with service-map (Prometheus) + trace-to-logs (Loki)
+  deep-linking enabled.
+upstream: https://grafana.com/docs/grafana/latest/datasources/tempo/
+license: AGPL-3.0
+
+type:
+  - composition
+
+requires:
+  feature_flag: install_observability
+  plugin:
+    - grafana-base
+    - tempo-base
+  variables:
+    - tempo_http_port
+
+provisioning:
+  datasource:
+    template: provisioning/datasources/tempo.yml.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/tempo.yml"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
+    - render: provisioning.datasource
+  post_blank:
+    - remove_file: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/tempo.yml"
+
+# =============================================================================
+# GDPR — composition plugin owns no fresh data category, but the datasource
+# it provisions exposes Tempo's spans inside Grafana's UI. Inherit the
+# narrowest matching scope (operators-only access to traces).
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - trace_spans
+    - request_metadata
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 14
+  processors:
+    - grafana
+    - tempo
+  eu_residency: true
