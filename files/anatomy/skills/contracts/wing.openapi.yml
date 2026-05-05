@@ -496,6 +496,85 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/gitleaks_findings:
+    get:
+      summary: list findings
+      operationId: Gitleaks_default_get
+      tags:
+        - Gitleaks
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: batch ingest from skill
+      operationId: Gitleaks_default_post
+      tags:
+        - Gitleaks
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/gitleaks_findings/{id}':
+    get:
+      summary: single finding
+      operationId: Gitleaks_default_get
+      tags:
+        - Gitleaks
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/gitleaks_findings/{id}/resolve':
+    post:
+      summary: mark as resolved
+      operationId: Gitleaks_resolve_post
+      tags:
+        - Gitleaks
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/hub/health:
     get:
       summary: probe all systems with a URL
@@ -1060,6 +1139,39 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/pulse_jobs:
+    get:
+      summary: list all registered jobs (admin/debug)
+      operationId: Pulse_jobs_get
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: upsert a job (plugin loader post_compose hook)
+      operationId: Pulse_jobs_post
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   /api/v1/pulse_jobs/due:
     get:
       summary: 'list jobs whose next_fire_at <= now'
@@ -1077,6 +1189,29 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  '/api/v1/pulse_jobs/{id}':
+    get:
+      summary: 'single job by plugin_name:job_name id'
+      operationId: Pulse_jobs_get
+      tags:
+        - Pulse
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/pulse_runs:
     post:
       summary: Pulse claims a fired job (start row)
