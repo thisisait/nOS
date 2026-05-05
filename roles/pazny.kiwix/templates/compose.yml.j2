@@ -20,7 +20,20 @@ services:
 {% endif %}
     volumes:
       - {{ kiwix_data_dir }}:/data
-    command: /data/*.zim
+    # Docker Compose does not shell-expand globs in command: — /data/*.zim
+    # would be passed as a literal filename string, causing kiwix-serve to log
+    # "Unable to add the ZIM file '/data/*.zim'" on every startup.
+    # Override entrypoint so /bin/sh expands *.zim at container start.
+    # $$ → $ after Docker Compose variable interpolation ($$ZIMS → $ZIMS in shell).
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      ZIMS=$$(ls /data/*.zim 2>/dev/null)
+      if [ -n "$$ZIMS" ]; then
+        exec /usr/local/bin/kiwix-serve --port=8080 $$ZIMS
+      else
+        echo "No ZIM files in /data — add .zim files and restart the kiwix container"
+        exec sleep infinity
+      fi
     networks:
       - iiab_net
     logging:
