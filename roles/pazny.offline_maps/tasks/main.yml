@@ -36,12 +36,38 @@
     patterns: "*.mbtiles"
   register: _mbtiles_found
 
+- name: "[pazny.offline_maps] Download init MBTiles ({{ maps_init_mbtiles_dest }})"
+  ansible.builtin.get_url:
+    url: "{{ maps_init_mbtiles_url }}"
+    dest: "{{ maps_data_dir }}/{{ maps_init_mbtiles_dest }}"
+    mode: '0644'
+    timeout: 600
+  when:
+    - _mbtiles_found.matched == 0
+    - maps_init_mbtiles_url | default('') | length > 0
+  failed_when: false
+
+- name: "[pazny.offline_maps] Download configured MBTiles files"
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ maps_data_dir }}/{{ item.dest }}"
+    mode: '0644'
+    timeout: 3600
+  loop: "{{ maps_mbtiles_files | default([]) }}"
+  when: (maps_mbtiles_files | default([])) | length > 0
+  failed_when: false
+
+- name: "[pazny.offline_maps] Re-check for MBTiles files after downloads"
+  ansible.builtin.find:
+    paths: "{{ maps_data_dir }}"
+    patterns: "*.mbtiles"
+  register: _mbtiles_post
+
 - name: "[pazny.offline_maps] Create tileserver-gl configuration"
   ansible.builtin.copy:
     dest: "{{ maps_data_dir }}/config.json"
-    # Dynamic config: add a data entry only if MBTiles exist.
-    # Bez MBTiles tileserver spadne s "Not valid input file: /data/*.mbtiles".
-    # Download MBTiles via download-maps.sh and re-run the playbook.
+    # Without at least one .mbtiles the data block must be absent — tileserver-gl
+    # logs "Not valid input file: /data/*.mbtiles" and refuses to start otherwise.
     content: |
       {
         "options": {
@@ -52,7 +78,7 @@
             "mbtiles": "/data"
           }
         },
-        "styles": {}{% if _mbtiles_found.matched | default(0) > 0 %},
+        "styles": {}{% if _mbtiles_post.matched | default(0) > 0 %},
         "data": {
           "v3": {
             "mbtiles": "/data/*.mbtiles"
@@ -61,15 +87,6 @@
       }
     force: true
     mode: '0644'
-
-- name: "[pazny.offline_maps] Download MBTiles files"
-  ansible.builtin.get_url:
-    url: "{{ item.url }}"
-    dest: "{{ maps_data_dir }}/{{ item.dest }}"
-    mode: '0644'
-    timeout: 3600
-  loop: "{{ maps_mbtiles_files | default([]) }}"
-  when: (maps_mbtiles_files | default([])) | length > 0
 
 - name: "[pazny.offline_maps] Deploy nginx reverse proxy vhost"
   ansible.builtin.template:
@@ -93,20 +110,39 @@
     dest: "{{ maps_data_dir }}/download-maps.sh"
     content: |
       #!/usr/bin/env zsh
-      # Helper script for downloading map data
-      # Zdroje dat:
-      #   MapTiler Cloud (free tier):  https://cloud.maptiler.com/maps/
-      #   OpenMapTiles:                https://data.maptiler.com/downloads/
-      #   BBBike extracts:             https://download.bbbike.org/osm/
-      #   Geofabrik:                   https://download.geofabrik.de/
+      # Helper script for downloading MBTiles map data
+      # After download, re-run the playbook to update tileserver config.json.
       #
-      # Example - CZ from BBBike (freely available):
-      #   curl -L -o czech-republic.mbtiles \
-      #     "https://download.bbbike.org/osm/bbbike/Prague/Prague.osm.pbf"
-      #   # Then convert using: tippecanoe or tilemaker
+      # FREE SOURCES (no registration required):
+      #   OpenFreeMap — vector tiles, country/region extracts
+      #     https://openfreemap.org/
+      #   Natural Earth — world base map (zoom 0-6), ~30 MB
+      #     https://github.com/lukasmartinelli/naturalearthdata/releases
+      #
+      # CZECH REPUBLIC — small, under 300 MB:
+      #   1. Go to https://openfreemap.org/  → download the Czech Republic extract
+      #   2. Save as {{ maps_data_dir }}/czech-republic.mbtiles
+      #   3. Re-run: ansible-playbook main.yml -K --tags offline_maps
+      #
+      # MAPTILER (free tier, requires account):
+      #   https://cloud.maptiler.com/tiles/  → download OpenStreetMap regional tiles
+      #
+      # Usage:
+      #   ./download-maps.sh <url> <dest-filename>
+      set -euo pipefail
+      DATA_DIR="{{ maps_data_dir }}"
 
-      echo "See the comments in this file for map data sources."
-      echo "MBTiles dir: {{ maps_data_dir }}"
+      if [ $# -lt 2 ]; then
+        echo "Usage: $0 <url> <dest-filename>"
+        echo "Example: $0 https://example.com/czech-republic.mbtiles czech-republic.mbtiles"
+        exit 1
+      fi
+
+      URL="$1"
+      FILENAME="$2"
+      echo "Downloading: $URL -> $DATA_DIR/$FILENAME"
+      curl -L --progress-bar -o "$DATA_DIR/$FILENAME" "$URL"
+      echo "Done. Restart tileserver: docker compose -p iiab restart tileserver"
     mode: '0755'
 
 - name: "[pazny.offline_maps] Print installation info"

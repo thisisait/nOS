@@ -1018,8 +1018,8 @@ kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Put .zim file
 # See: https://download.kiwix.org/zim/
 # Init ZIM – a small file downloaded automatically so Kiwix starts.
 # Add larger ZIM files to kiwix_zim_files or download via download-zim.sh.
-kiwix_init_zim_url: "https://download.kiwix.org/zim/zimit/based.cooking_en_all_2026-02.zim"
-kiwix_init_zim_dest: "based-cooking.zim"
+kiwix_init_zim_url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
+kiwix_init_zim_dest: "wikipedia_en_top_mini.zim"
 
 kiwix_zim_files: []
 # Examples (add to config.yml):
@@ -1037,12 +1037,17 @@ maps_port: 8081                               # 8080 taken by Traefik dashboard
 maps_tileserver_version: "latest"                  # Docker image tag (maptiler/tileserver-gl)
 maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"        # Put .mbtiles files here
 
-# MBTiles files to download (empty = do not download automatically)
-# See: https://data.maptiler.com/downloads/ or https://openmaptiles.org/
+# Init MBTiles — small file downloaded automatically so tileserver starts.
+# Default: Zurich demo (~2 MB) from tileserver-gl test fixtures — proof of life.
+# Set to "" to disable; replace with Czech Republic or other region for real use.
+maps_init_mbtiles_url: "https://raw.githubusercontent.com/maptiler/tileserver-gl/master/test_fixtures/zurich_switzerland.mbtiles"
+maps_init_mbtiles_dest: "zurich_switzerland.mbtiles"
+
+# Additional MBTiles files to download (empty = do not download automatically)
+# Free Czech Republic source (no registration): https://openfreemap.org/
 maps_mbtiles_files: []
-# - url: "https://data.maptiler.com/downloads/europe/czech-republic/"
+# - url: "https://openfreemap.org/..."   # operator fills in after checking openfreemap.org
 #   dest: "czech-republic.mbtiles"
-#   # WARNING: Requires registration at maptiler.com (free tier available)
 
 # ==============================================================================
 # SHELL EXTRAS – Starship + aliases

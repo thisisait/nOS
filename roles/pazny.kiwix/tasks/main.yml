@@ -34,6 +34,7 @@
   when:
     - _kiwix_zims.matched == 0
     - kiwix_init_zim_url | default('') | length > 0
+  failed_when: false
 
 # Dalsi ZIM soubory (volitelne, z config.yml)
 - name: "[pazny.kiwix] Download configured ZIM files"
