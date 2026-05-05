@@ -72,10 +72,17 @@ final class RouterFactory
 		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
 
 		// Pulse — scheduled-job catalog + run history (Anatomy P0.2, 2026-05-04).
-		// Pulse polls /pulse_jobs/due, posts run start/finish to /pulse_runs.
+		// /pulse_jobs/due and /pulse_runs/<id>/finish must come before their
+		// general [/<id>] siblings — Nette is first-match-wins.
 		$api->addRoute('api/v1/pulse_jobs/due', 'Pulse:jobsDue');
+		$api->addRoute('api/v1/pulse_jobs[/<id>]', 'Pulse:jobs');         // A7: POST = upsert (loader), GET = list/get
 		$api->addRoute('api/v1/pulse_runs/<id>/finish', 'Pulse:runFinish');
 		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
+
+		// Gitleaks findings (Anatomy A7, 2026-05-06).
+		// resolve must come before the general [/<id>] route.
+		$api->addRoute('api/v1/gitleaks_findings/<id>/resolve', 'Gitleaks:resolve');
+		$api->addRoute('api/v1/gitleaks_findings[/<id>]', 'Gitleaks:default');
 
 		// GDPR Article 30 register (Track D, 2026-04-26).
 		$api->addRoute('api/v1/gdpr/processing[/<id>]', 'Gdpr:processing');
