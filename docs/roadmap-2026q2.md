@@ -907,6 +907,50 @@ specs in `docs/bones-and-wings-bulk-plan.md`.
 
 ---
 
+## Snapshot 2026-05-06 — D2 batch graduation
+
+D2 closed the role-side OIDC env duplication opened by D1.3. 12
+commits (`cddb7e0..7ceb18c`), 11 roles cleaned, 1 skipped (grafana
+already thinned in A6.5), 1 plugin template created (vaultwarden-base),
+all `authentik_oidc_*` helpers retired from `default.config.yml`.
+
+**Done in 12 commits (`cddb7e0..7ceb18c`):**
+- D2.1-D2.8 (`cddb7e0..13e31b7`) — bookstack, freescout, hedgedoc,
+  infisical, miniflux, n8n, open-webui, wordpress: drop role-side
+  OIDC env + mkcert CA volume + authentik extra_host (all moved to
+  plugin compose-extensions).
+- D2.9 (`e5dd556`) — gitlab: mkcert CA + extra_hosts moved to plugin;
+  OMNIBUS_CONFIG stays role-side (monolithic Ruby-string, Compose
+  file-merge replaces whole key, role alphabetically last → wins).
+- D2.10 (`5ae7f93`) — vaultwarden: plugin template created
+  (`vaultwarden-base.compose.yml.j2`) with inline credentials +
+  `update-ca-certificates` entrypoint; role drops all SSO env.
+- D2.11 (`7ceb18c`) — retire 24-line `authentik_oidc_*` helpers block
+  from `default.config.yml`; all consumers updated to inline values
+  (`nos-<slug>` / `{{ global_password_prefix }}_pw_oidc_<slug>`).
+
+**New doctrine — O20 (2026-05-06):** Compose file-merge last-writer-wins
+means a monolithic env var (`GITLAB_OMNIBUS_CONFIG`) cannot be split
+across override files. When splitting is structurally impossible, the
+role keeps the authoritative copy; the plugin handles only additive
+concerns (volume mounts, extra_hosts, `_NOS_PLUGIN` marker). Alphabetical
+sort of `ansible.builtin.find` determines winner — document the override
+order in the role header comment whenever non-obvious.
+
+**Gate state after D2:**
+- anatomy 68/68, callback 135/135 green.
+- `tools/aggregator-dry-run.py` exit 0: 0 aligned, 0 central-only,
+  36 plugin-only, 0 field-diffs.
+- `ansible-playbook main.yml --syntax-check` clean.
+- 43 plugins; SSO source-of-truth = per-plugin `authentik:` blocks.
+
+**Forward:** A5 (Wing OpenAPI/DDL exports) → A7 (gitleaks plugin) →
+A8 (conductor agent) → A10 (actor audit trail) → Phase 5 ceremony
+(first non-operator end-to-end write to wing.db). Punch list items
+4-12 in `docs/active-work.md`.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):

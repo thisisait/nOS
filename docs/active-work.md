@@ -5,50 +5,57 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-05 evening • after D-series Authentik refactor
-> + β1 SSO trichotomy + D2 outline prototype.
+> Last updated: 2026-05-06 • D2 batch complete (11 roles + grafana skip +
+> follow-up inline values + default.config.yml helpers retired).
 
 ---
 
-## Current track: **D2 + A5/A7-A10 ramp-up**
+## Current track: **A5/A7-A10 ramp-up** (D2 ✅ complete)
 
-Phase 1 multi-agent + D-series + β1 closed Track Q's structural arc:
-the central `authentik_oidc_apps` list was retired in D1.3, blueprint
-generation now flows from per-plugin `authentik:` blocks via the
-aggregator (`tools/aggregator-dry-run.py` gates correctness). Next
-arc is **A5 contracts → A7 gitleaks → A8 conductor → A10 audit →
+D-series + β1 closed Track Q's structural arc. D2 batch (12 items) closed
+the role-side OIDC duplication — all 11 target roles cleaned, grafana skipped
+(already thinned A6.5), vaultwarden plugin template created, gitlab OMNIBUS_CONFIG
+decision documented, `authentik_oidc_*` helpers retired from `default.config.yml`.
+Next arc is **A5 contracts → A7 gitleaks → A8 conductor → A10 audit →
 Phase 5 ceremony** (first non-operator-identity end-to-end write).
 
-### Last verified state (2026-05-05 evening)
+### Last verified state (2026-05-06)
 
-- **21 commits ahead of origin** (master @ `2324b6d`); operator push pending.
+- **11 commits ahead of origin** (master @ `7ceb18c`); operator push pending.
 - 68/68 anatomy tests + 135/135 callback tests green.
-- `python3 tools/aggregator-dry-run.py` exit 0: 34 aligned, 0
-  central-only, 2 plugin-only (qdrant + woodpecker), 0 field-diffs.
+- `python3 tools/aggregator-dry-run.py` exit 0: 0 aligned, 0 central-only,
+  36 plugin-only (D1.3 emptied central list), 0 field-diffs.
 - `ansible-playbook main.yml --syntax-check` clean.
-- 43 plugins live (incl. spacetimedb-base stub from D1.1).
-- Authentik blueprint render path: per-plugin `authentik:` block →
-  `authentik-base.inputs.clients` → `10-oidc-apps.yaml.j2` +
-  `20-rbac-policies.yaml.j2`. Tier-2 apps_runner extras still flow
-  through the empty-stub `authentik_oidc_apps` list (long-term:
-  extend aggregator with `from: app_manifest` source).
+- 43 plugins live; vaultwarden-base now has a real compose-extension template.
+- All `authentik_oidc_<svc>_client_id/_secret` helpers retired from
+  `default.config.yml`; plugin templates use inline values from plugin.yml.
+- SSO source-of-truth fully in per-plugin `authentik:` blocks (blueprint) +
+  plugin compose-extensions (container env). Role compose templates are clean.
 
-### What just landed (D-series + β1, 11 commits `fc43941..2324b6d`)
+### What just landed (D2 batch, 12 commits `cddb7e0..7ceb18c`)
 
 | Tag | Commit | Title |
 |---|---|---|
-| D3 | `fc43941` | aggregator dry-run + parity report |
-| D1.0 | `6256944` | flip 4 mis-classified plugin modes to native_oidc (erpnext / homeassistant / jellyfin / superset) |
-| β1.A | `74d2314` | header_oidc trichotomy + firefly reclassified |
-| β1.B | `067df9f` | Node-RED true native OIDC via passport-openidconnect |
-| β1.C/D | `c0d5ea1` | metabase OSS verdict + upstream PR roadmap |
-| D1.1 | `176edbb` | spacetimedb-base stub closes last C1 blocker |
-| D1.2 | `eea0e12` | blueprint pivots to inputs.clients (aggregator pre-render + feature_flag filter) |
-| D1.3 | `fd5081c` | retire central authentik_oidc_apps |
-| D1.4 | `06bccfc` | CLAUDE.md sync (3-bucket SSO trichotomy) |
-| D2 | `2324b6d` | outline prototype — drop role-side OIDC env (plugin authoritative) |
+| D2.1 | `cddb7e0` | bookstack — drop role-side OIDC env |
+| D2.2 | `2015507` | freescout — drop role-side OIDC env |
+| D2.3 | `aade539` | hedgedoc — drop role-side OIDC env |
+| D2.4 | `04efcf6` | infisical — drop role-side OIDC env |
+| D2.5 | `43b8db2` | miniflux — drop role-side OIDC env |
+| D2.6 | `819be5a` | n8n — drop role-side OIDC env |
+| D2.7 | `c0481f4` | open-webui — drop role-side OIDC env |
+| D2.8 | `13e31b7` | wordpress — drop role-side OIDC env |
+| D2.9 | `e5dd556` | gitlab — move mkcert CA + extra_hosts; retire dead OMNIBUS_CONFIG copy |
+| D2.10 | `5ae7f93` | vaultwarden — create plugin template + drop role-side SSO env |
+| D2.11 | `7ceb18c` | retire all authentik_oidc_* helpers from default.config.yml |
 
-### Doctrine docs born today
+**D2 doctrine finding:** gitlab's `GITLAB_OMNIBUS_CONFIG` is a monolithic Ruby-string
+env var; Compose file-merge replaces the whole key (last-writer wins, role alphabetically
+after plugin). Cannot split infra config from OIDC config across override files. Role
+keeps the full OMNIBUS_CONFIG; plugin handles only mkcert CA + extra_hosts + `_NOS_PLUGIN`.
+
+### Previous: D-series + β1 (11 commits `fc43941..2324b6d`)
+
+### Doctrine docs (born D-series + β1)
 
 - `docs/native-sso-survey.md` — β1 audit of every proxy-auth service
 - `docs/upstream-pr-opportunities.md` — FOSS contributions roadmap
@@ -63,9 +70,9 @@ Phase 5 ceremony** (first non-operator-identity end-to-end write).
 
 Numbered for the loop prompt; each line ≤ 2 sentences.
 
-1. **D2 batch 1** (8 clean-parity rolí) — replikuj outline pattern (commit `2324b6d`) na bookstack, freescout, hedgedoc, infisical, miniflux, n8n, open-webui, wordpress; po každé roli ověř `aggregator-dry-run.py` exit 0 + syntax-check.
-2. **D2 special-syntax** — grafana (plugin 20 envů > role 2: smazat 2 v roli), gitlab (`omniauth-openid-connect` env block), vaultwarden (`SSO_*` prefix env block).
-3. **D2 follow-up** — retire standalone `authentik_oidc_<svc>_client_id/_secret` helpers v `default.config.yml` po D2 (kompletně už nikdo nečte).
+~~1. **D2 batch 1** (8 clean-parity rolí) — done `cddb7e0..13e31b7`.~~
+~~2. **D2 special-syntax** — grafana (skip, A6.5 done), gitlab (mkcert+extra_hosts moved, OMNIBUS_CONFIG kept per doctrine), vaultwarden (plugin template created + role cleaned). Done `e5dd556`, `5ae7f93`.~~
+~~3. **D2 follow-up** — `authentik_oidc_*` helpers retired from `default.config.yml`; all plugin templates updated to inline values. Done `7ceb18c`.~~
 4. **A5 — Wing OpenAPI/DDL exports** — regenerate `files/anatomy/skills/contracts/{wing,bone}.openapi.yml` + `wing.db-schema.sql`, ověř `--check-summaries` v export-openapi.php (P0.4 advisory → error).
 5. **Pulse Wing endpoints** — `PulsePresenter.php` (`pulse_jobs/due` GET + `pulse_runs` POST start/finish); odblokuje A7 + ukončí Pulse 404 warn.
 6. **A7 — gitleaks plugin (skill+scheduled-job shape)** — `files/anatomy/plugins/gitleaks/{plugin.yml,skills/run-gitleaks.sh}` + Wing presenter pro `gitleaks_findings` table + Pulse trigger.
@@ -76,7 +83,8 @@ Numbered for the loop prompt; each line ≤ 2 sentences.
 11. **Phase 5 ceremony** — `conductor-self-test-001` Pulse one-shot job (8-step e2e: health → trigger gitleaks → verify findings → events → contracts diff → wing tests → markdown report); pass = první non-operator end-to-end write do wing.db.
 12. **Tier-2 aggregator path** — extend `run_aggregators` o `from: app_manifest` source, retire `authentik_oidc_apps: []` Tier-2 stub.
 
-KEEP role-side (don't touch in D2): firefly (header_oidc REMOTE_USER), nodered (β1.B), paperclip (staged toggle), uptime-kuma + spacetimedb (doc-only).
+**D2 residual** (nice-to-have, not blocking): freescout/erpnext/homeassistant/superset/nodered/
+paperclip role tasks still use `| default(...)` pattern on vars not in `default.config.yml` — inline when those roles get their own D2 pass.
 
 ---
 
@@ -84,12 +92,12 @@ KEEP role-side (don't touch in D2): firefly (header_oidc REMOTE_USER), nodered (
 
 | Surface | State |
 |---|---|
-| `git status` | clean; **21 commits ahead of `origin/master`** awaiting push |
-| Last verified | 2026-05-05 evening; tests + dry-run + syntax-check all green |
+| `git status` | clean; **11 commits ahead of `origin/master`** awaiting push |
+| Last verified | 2026-05-06; tests + dry-run + syntax-check all green |
 | Tier-1 services | 16/16 healthy via Traefik (200/302 → Authentik) |
-| Plugin loader | 43 plugins; aggregator harvests 34 → inputs.clients with feature_flag filter + Jinja pre-render |
-| Authentik blueprints | rendered by `authentik-base` plugin (D1.2 cutover); role-side templates retired |
-| Pulse | idle-tolerant, 404 on missing endpoints (Pulse Wing endpoints punch-item #5) |
+| Plugin loader | 43 plugins (vaultwarden-base now has compose-extension); aggregator 36 plugin-only, 0 field-diffs |
+| Authentik blueprints | rendered by `authentik-base` plugin (D1.2); role-side OIDC env fully retired (D2) |
+| Pulse | idle-tolerant, 404 on missing endpoints (punch-item #5) |
 | Test gates | anatomy 68/68, callback 135/135, aggregator-dry-run exit 0 |
 | Decision log | O1-O18 in `roadmap-2026q2.md` (append-only) |
 
