@@ -1,0 +1,126 @@
+{block title}Inbox{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">
+	Inbox
+	{if $findingCount > 0}
+		<span class="badge badge-critical" style="font-size:13px; margin-left:8px;">{$findingCount} unresolved</span>
+	{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Unresolved secret findings + conductor agent runs.
+</div>
+
+{* ── Gitleaks findings ──────────────────────────────────────────────────── *}
+<h3 style="font-size:15px; margin-bottom:10px;">Secret Findings</h3>
+
+{if !$findings}
+	<div class="empty" style="margin-bottom:32px;">No unresolved secret findings — clean.</div>
+{else}
+	<div class="filter-bar" style="margin-bottom:10px;">
+		<button class="filter-btn active" data-filter="severity" data-value="">All</button>
+		<button class="filter-btn" data-filter="severity" data-value="critical">Critical</button>
+		<button class="filter-btn" data-filter="severity" data-value="high">High</button>
+		<button class="filter-btn" data-filter="severity" data-value="medium">Medium</button>
+		<input type="text" class="filter-search" id="inboxSearch" placeholder="Search findings...">
+	</div>
+
+	<table class="rem-table" id="inboxTable" style="margin-bottom:32px;">
+		<thead>
+			<tr>
+				<th>Severity</th>
+				<th>Rule</th>
+				<th>File</th>
+				<th>Line</th>
+				<th>Secret (masked)</th>
+				<th>Commit</th>
+				<th>Author</th>
+				<th>Scan ID</th>
+				<th>Found</th>
+			</tr>
+		</thead>
+		<tbody id="inboxBody">
+			{foreach $findings as $f}
+				<tr data-severity="{$f['severity']|lower}"
+				    data-search="{$f['rule_id']|lower} {$f['file_path']|lower} {($f['author'] ?? '')|lower}">
+					<td><span class="badge badge-{$f['severity']|lower}">{$f['severity']}</span></td>
+					<td style="font-size:12px"><strong>{$f['rule_id']}</strong></td>
+					<td style="font-size:11px; word-break:break-all">{$f['file_path']}</td>
+					<td style="font-size:12px; text-align:right">{$f['line_start']}</td>
+					<td style="font-family:monospace; font-size:12px">{$f['secret_masked'] ?? 'N/A'}</td>
+					<td style="font-size:11px; font-family:monospace">{($f['commit'] ?? '')|substr:0:8}</td>
+					<td style="font-size:12px">{$f['author'] ?? ''}</td>
+					<td style="font-size:11px; color:var(--text2)">{($f['scan_id'] ?? '')|substr:0:16}</td>
+					<td style="font-size:11px; color:var(--text2)">{($f['created_at'] ?? '')|substr:0:10}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+
+	<p style="font-size:12px; color:var(--text2)">
+		Resolve a finding via:
+		<code>POST /api/v1/gitleaks_findings/{ldelim}id{rdelim}/resolve</code>
+	</p>
+{/if}
+
+{* ── Conductor runs ──────────────────────────────────────────────────────── *}
+<h3 style="font-size:15px; margin-bottom:10px; margin-top:32px;">Conductor Runs</h3>
+
+{if !$conductorEvents}
+	<div class="empty">No conductor runs recorded yet. The conductor agent (A8) posts events here.</div>
+{else}
+	<table class="rem-table" style="margin-bottom:16px;">
+		<thead>
+			<tr>
+				<th>Type</th>
+				<th>Run ID</th>
+				<th>Timestamp</th>
+				<th>Result</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $conductorEvents as $ev}
+				<tr>
+					<td><span class="badge badge-{$ev['type'] === 'agent_run_end' ? 'resolved' : 'pending'}">{$ev['type']}</span></td>
+					<td style="font-size:11px; font-family:monospace">{($ev['run_id'] ?? '')|substr:0:24}</td>
+					<td style="font-size:12px; color:var(--text2)">{($ev['ts'] ?? '')|substr:0:19}</td>
+					<td style="font-size:12px">
+						{if !empty($ev['result_json'])}
+							{var $res = $ev['result_json']|json_decode:true}
+							{if isset($res['exit_code'])}
+								exit={$res['exit_code']}
+								{if !empty($res['summary'])}&nbsp;· {$res['summary']|substr:0:80}{/if}
+							{/if}
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<script>
+(function () {
+	const rows = document.querySelectorAll('#inboxBody tr');
+	document.querySelectorAll('[data-filter="severity"]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			document.querySelectorAll('[data-filter="severity"]').forEach(b => b.classList.remove('active'));
+			btn.classList.add('active');
+			const val = btn.dataset.value;
+			rows.forEach(r => {
+				r.style.display = (!val || r.dataset.severity === val) ? '' : 'none';
+			});
+		});
+	});
+	const search = document.getElementById('inboxSearch');
+	if (search) {
+		search.addEventListener('input', () => {
+			const q = search.value.toLowerCase();
+			rows.forEach(r => {
+				r.style.display = (r.dataset.search || '').includes(q) ? '' : 'none';
+			});
+		});
+	}
+})();
+</script>
+{/block}
