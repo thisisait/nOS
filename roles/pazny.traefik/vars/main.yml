@@ -86,7 +86,6 @@ traefik_auth_modes:
   wing: proxy
   code_server: proxy
   ntfy: proxy               # has its own user DB but admin UI is gated
-  nodered: proxy
   firefly: proxy
   influxdb: proxy           # admin UI gated; token-based API still works
   mailpit: proxy            # admin tier
