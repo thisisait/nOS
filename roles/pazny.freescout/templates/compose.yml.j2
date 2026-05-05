@@ -9,10 +9,12 @@
 # FreeScout requires: MariaDB (from the infra stack, database + user created
 # by default.config.yml mariadb_databases / mariadb_users seed lists).
 #
-# Native OIDC (Authentik) is wired via the `freescout-oauth` community module
-# that is installed + enabled in tasks/post.yml. The env vars below are read
-# by that module when present; they are also used by our post.yml to seed the
-# oauth_module DB rows so the end-user does not have to fill in the UI form.
+# Native OIDC (Authentik) is wired via the `freescout-oauth` community module.
+#
+# D2 (2026-05-05): FREESCOUT_OIDC_* env vars + mkcert CA volume + authentik
+# extra_host MOVED to freescout-base plugin's compose-extension (files/anatomy/
+# plugins/freescout-base/templates/freescout-base.compose.yml.j2). Role keeps
+# install-only concerns: DB, SMTP relay, mailpit extra_host.
 # =============================================================================
 
 services:
@@ -27,10 +29,7 @@ services:
 {% endif %}
     volumes:
       - {{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}:/data
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + Authentik extra_host moved to freescout-base plugin (D2). #}
     environment:
       CONTAINER_NAME: freescout
       DB_HOST: mariadb
@@ -43,23 +42,7 @@ services:
       ADMIN_PASS: "{{ freescout_admin_password | default(global_password_prefix + '_pw_freescout') }}"
       TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
       ENABLE_SSL_PROXY: "TRUE"
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC via freescout-oauth module) ───────────────────
-      # These are read by the freescout-oauth module on bootstrap; the post.yml
-      # also persists them into the module's DB settings for headless install.
-      FREESCOUT_OIDC_ENABLED: "true"
-      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration"
-      FREESCOUT_OIDC_CLIENT_ID: "{{ authentik_oidc_freescout_client_id | default('nos-freescout') }}"
-      FREESCOUT_OIDC_CLIENT_SECRET: "{{ authentik_oidc_freescout_client_secret | default(global_password_prefix + '_pw_oidc_freescout') }}"
-      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/callback"
-      FREESCOUT_OIDC_SCOPES: "openid profile email"
-      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
-      FREESCOUT_OIDC_USERINFO_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
-      FREESCOUT_OIDC_LOGOUT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/end-session/"
-      FREESCOUT_OIDC_DISPLAY_NAME: "Authentik"
-      PHP_CURL_CAINFO: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% endif %}
+{# FREESCOUT_OIDC_* env moved to freescout-base plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -72,15 +55,11 @@ services:
       SMTP_ENCRYPTION: "null"
       MAIL_FROM_ADDRESS: "helpdesk@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
-{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
-    extra_hosts:
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
 {% if install_mailpit | default(false) %}
+    extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{% endif %}
+{# authentik extra_host moved to freescout-base plugin compose-extension (D2). #}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
