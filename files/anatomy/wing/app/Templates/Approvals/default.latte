@@ -1,0 +1,18 @@
+{block title}Approvals{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">Approvals</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:24px;">
+	Pending conductor approval requests. Populated by the A8 conductor agent.
+</div>
+
+<div class="empty">
+	No pending approvals.
+	<div style="margin-top:8px; font-size:12px; color:var(--text2)">
+		The conductor agent (A8) will push approval requests here before
+		taking actions with blast radius. A10 (actor audit migration) wires
+		<code>actor_id</code> + <code>actor_action_id</code> for cryptographic
+		attribution. Until then this queue is empty.
+	</div>
+</div>
+{/block}
