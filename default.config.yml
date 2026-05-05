@@ -85,8 +85,9 @@ acme_email: "{{ default_admin_email }}"
 acme_renewal_days: 60                     # Re-issue when cert expires within N days
 acme_staging: false                       # true → use LE staging endpoint (testing)
 # Cloudflare API token with "Zone:DNS:Edit" + "Zone:Zone:Read" — set in
-# credentials.yml as `acme_cloudflare_api_token`.
-acme_cloudflare_api_token: ""
+# credentials.yml as `acme_cloudflare_api_token`. Not defined here to
+# prevent the empty default silently shadowing a credentials.yml value
+# on machines where credentials.yml was just created (blank first run).
 
 # Hybrid mode — keep dnsmasq + /etc/resolver active even on a public TLD so
 # `*.pazny.eu` resolves to 127.0.0.1 locally while public DNS (Cloudflare)
