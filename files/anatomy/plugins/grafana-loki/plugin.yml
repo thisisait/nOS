@@ -1,0 +1,60 @@
+# =============================================================================
+# grafana-loki — composition plugin (Track Q1b cross-wiring batch, 2026-05-04)
+#
+# Wires loki-base (log aggregation) into grafana-base (visualization) via a
+# Grafana datasource provisioning fragment. Pure tendon: no service of its
+# own, no compose extension, no Authentik client. Activates only when both
+# sibling service plugins are loaded.
+#
+# Pre-Q1b shape:
+#   Loki datasource block hard-coded in
+#   files/anatomy/plugins/grafana-base/provisioning/datasources/all.yml.j2
+#
+# Post-Q1b shape (target):
+#   This plugin owns its datasource fragment; grafana-base aggregates the
+#   shards from every grafana-* composition plugin into all.yml at render
+#   time. For now the fragment is rendered as a sibling file under the
+#   datasources provisioning dir, which Grafana itself merges at boot.
+# =============================================================================
+
+name: grafana-loki
+version: 0.1.0
+description: |
+  Composition plugin: registers Loki as a Grafana datasource (uid=loki) so
+  the LGTM trace→log correlation in Tempo's `lokiSearch` and the derived-
+  field jump from Tempo trace_id → Loki log line works out of the box.
+upstream: https://grafana.com/oss/loki/
+license: AGPL-3.0
+
+type:
+  - composition
+
+requires:
+  plugin:
+    - grafana-base
+    - loki-base
+  feature_flag: install_observability
+  variables:
+    - loki_port
+
+provisioning:
+  datasource:
+    template: provisioning/datasources/loki.yml.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/loki.yml"
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
+    - render: provisioning.datasource
+  post_blank:
+    - remove_file: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/loki.yml"
+
+gdpr:
+  data_categories:
+    - log_query_metadata    # Grafana Explore queries against Loki
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 0          # this plugin stores nothing; horizon owned by loki-base
+  processors: []
+  eu_residency: true
