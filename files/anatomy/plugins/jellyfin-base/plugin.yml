@@ -46,6 +46,8 @@ authentik:
 # not in the service's environment. (Traefik file-provider derives the
 # `authentik@file` middleware attachment from state/manifest.yml.)
 
+  target_stack: iiab
+
 lifecycle:
   pre_compose: []
   post_compose:

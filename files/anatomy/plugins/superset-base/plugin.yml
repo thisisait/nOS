@@ -40,6 +40,8 @@ authentik:
   cookie_domain: ".{{ tenant_domain }}"
   tier: 2
 
+  target_stack: data
+
 lifecycle:
   pre_compose: []
   post_compose:

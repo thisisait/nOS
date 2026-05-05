@@ -43,7 +43,7 @@ authentik:
 
 compose_extension:
   template: templates/bookstack-base.compose.yml.j2
-  target_stack: iiab
+  target_stack: b2b
   target_service: bookstack
 
 lifecycle:

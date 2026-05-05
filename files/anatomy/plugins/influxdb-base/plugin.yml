@@ -63,7 +63,7 @@ authentik:
 # =============================================================================
 compose_extension:
   template: templates/influxdb-base.compose.yml.j2
-  target_stack: data
+  target_stack: observability
   target_service: influxdb
   hardening_refs: []
 

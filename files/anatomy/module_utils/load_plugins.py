@@ -307,10 +307,29 @@ def run_hook(name: str, plugins: list[Plugin],
     if name == "post_blank":
         ordered = list(reversed(ordered))
     results: list[HookResult] = []
+    tvars = template_vars or {}
     for p in ordered:
         if p.status in ("skipped", "failed"):
             results.append({"plugin": p.name, "status": p.status,
                             "note": "skipped due to prior status"})
+            continue
+        # Anatomy P1 (2026-05-05). Feature-flag gating closes a structural
+        # bug surfaced in blank #5: plugins like gitlab-base, hedgedoc-base,
+        # bookstack-base rendered their compose-extensions even when the
+        # operator had `install_<svc>: false`. The role-side compose.yml.j2
+        # is correctly gated (no override file written), but the plugin
+        # loader rendered an extension on top of a non-existent service →
+        # `service "X" has neither an image nor a build context specified:
+        # invalid compose project` → entire stack failed to come up.
+        # Resolution: if the manifest declares `requires.feature_flag: foo`
+        # AND `template_vars['foo']` is falsy, skip every action on this
+        # plugin for this hook. A flag that's *unset* in template_vars
+        # defaults to enabled (matches Ansible's `default(true)` filter
+        # convention used in tasks/stacks/core-up.yml).
+        flag = (p.requires or {}).get("feature_flag")
+        if flag and flag in tvars and not tvars.get(flag):
+            results.append({"plugin": p.name, "status": "skipped",
+                            "note": f"feature_flag {flag}=false"})
             continue
         actions = (p.manifest.get("lifecycle") or {}).get(name) or []
         try:

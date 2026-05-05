@@ -44,7 +44,7 @@ authentik:
 
 compose_extension:
   template: templates/hedgedoc-base.compose.yml.j2
-  target_stack: iiab
+  target_stack: b2b
   target_service: hedgedoc
 
 lifecycle:
