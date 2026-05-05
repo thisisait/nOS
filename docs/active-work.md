@@ -5,8 +5,8 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-07 • A8 batch complete (OpenClaw Wing onboarding,
-> conductor identity, pulse-run-agent.sh, conductor.yml, Wing /inbox + /approvals).
+> Last updated: 2026-05-07 • B1+B2 blind-spot fixes (OpenClaw Wing token +
+> conductor/gitleaks Pulse job registration wired into wing/post.yml).
 
 ---
 
@@ -25,18 +25,22 @@ enables cryptographic attribution of conductor's writes.
 
 ### Last verified state (2026-05-07)
 
-- **27 commits ahead of origin** (master @ `4974c53`); operator push pending.
-- 529/529 tests pass (68 anatomy + rest of suite), 5 skipped.
+- **30 commits ahead of origin** (master @ `433ac01`); operator push pending.
+- 135/135 tests pass (callback suite; anatomy 68/68 included), 5 skipped.
 - `python3 tools/aggregator-dry-run.py` exit 0: 0 field-diffs.
 - `ansible-playbook main.yml --syntax-check` clean.
-- Wing OpenAPI: 70 paths, 87/87 real summaries (no new API routes in A8 batch).
-- OpenClaw Wing API token provisioned; WING_API_URL/TOKEN in launchd + .zshrc.
+- **B1 fixed:** OpenClaw Wing api_tokens row now provisioned in `pazny.wing/post.yml`
+  (was in openclaw/tasks/post.yml which was never called — openclaw runs before stack-up).
+- **B2 fixed:** conductor + gitleaks Pulse jobs now registered via `ansible.builtin.uri`
+  in `pazny.wing/post.yml` (plugin loader does not process `pulse:` blocks).
+- Wing OpenAPI: 70 paths, 87/87 real summaries (no new API routes).
+- OpenClaw Wing API token wired in launchd + .zshrc; provisioned via wing/post.yml.
 - nos-conductor Authentik client + Wing `conductor` api_tokens row provisioned.
 - `pulse-run-agent.sh` at `files/anatomy/scripts/` — Authentik→claude→Wing events.
 - `conductor.yml` at `files/anatomy/agents/` — system prompt + self-test-001 Pulse job.
 - Wing `/inbox` live (unresolved gitleaks + conductor event history).
 - Wing `/approvals` stub live (wired, empty pending A10).
-- GitleaksRepository DI registration fix (A7 omission, `common.neon`).
+- **Playbook --blank run in progress** on operator machine (2026-05-07).
 
 ### What just landed (A8 batch, 7 commits `d1552dc..4974c53`)
 
@@ -108,6 +112,7 @@ Numbered for the loop prompt; each line ≤ 2 sentences.
 ~~9. **A8.a — pulse-run-agent.sh** — Authentik client_credentials → claude → Wing agent_run_start/end events. Done `872dbda`.~~
 ~~10. **A8.b — conductor agent profile** — `files/anatomy/agents/conductor.yml` (system prompt + Phase 5 Pulse job). Done `fc3671c`.~~
 ~~11. **A8.c — Wing /inbox + /approvals** — InboxPresenter (gitleaks open findings + conductor events) + ApprovalsPresenter stub. Done `cbf3d7c..4974c53`.~~
+~~11b. **B1+B2 blind-spot fixes** — OpenClaw Wing token moved to wing/post.yml; conductor+gitleaks Pulse jobs registered via Wing API in wing/post.yml. Done `433ac01`.~~
 12. **A10 — actor audit migration** — `actor_id` (FK authentik_clients) + `actor_action_id` (UUID) + `acted_at` na všech wing.db write tables + presenter updates v 2-3 batch.
 13. **Phase 5 ceremony** — `conductor-self-test-001` Pulse one-shot job (8-step e2e: health → trigger gitleaks → verify findings → events → contracts diff → wing tests → markdown report); pass = první non-operator end-to-end write do wing.db. **Pre-req: A10 must land first for actor attribution.**
 14. **Tier-2 aggregator path** — extend `run_aggregators` o `from: app_manifest` source, retire `authentik_oidc_apps: []` Tier-2 stub.
@@ -121,18 +126,18 @@ paperclip role tasks still use `| default(...)` pattern on vars not in `default.
 
 | Surface | State |
 |---|---|
-| `git status` | clean; **27 commits ahead of `origin/master`** awaiting push |
-| Last verified | 2026-05-07; 529/529 tests + dry-run + syntax-check all green |
-| Tier-1 services | 16/16 healthy via Traefik (200/302 → Authentik) |
+| `git status` | clean; **30 commits ahead of `origin/master`** awaiting push |
+| Last verified | 2026-05-07; 135/135 tests + dry-run + syntax-check all green |
+| Tier-1 services | --blank run in progress (2026-05-07) |
 | Plugin loader | 43 plugins + gitleaks (skill/scheduled-job); aggregator 36 plugin-only, 0 field-diffs |
 | Authentik blueprints | rendered by `authentik-base` plugin (D1.2); nos-conductor added to agent_clients (A8.a.0) |
-| Pulse | live — 4 endpoints; conductor self-test-001 job defined in conductor.yml (A8.b) |
-| Wing OpenAPI | 70 paths, 87/87 real summaries (no new API routes in A8 batch) |
+| Pulse | live — 4 endpoints; conductor + gitleaks jobs registered via wing/post.yml (B2) |
+| Wing OpenAPI | 70 paths, 87/87 real summaries |
 | Wing UI | /inbox (gitleaks + conductor events) + /approvals stub live (A8.c) |
-| OpenClaw | Wing API token provisioned; WING_API_URL/TOKEN in launchd + .zshrc |
-| Conductor | pulse-run-agent.sh + conductor.yml at `files/anatomy/` |
-| Test gates | 529/529 tests pass, aggregator-dry-run exit 0 |
-| Decision log | O1-O21 in `roadmap-2026q2.md` (append-only) |
+| OpenClaw | Wing API token wired; provisioned in wing/post.yml (B1 fix) |
+| Conductor | pulse-run-agent.sh + conductor.yml at `files/anatomy/`; Wing pulse job registered |
+| Test gates | 135/135 tests pass, aggregator-dry-run exit 0 |
+| Decision log | O1-O23 in `roadmap-2026q2.md` (append-only) |
 
 ---
 
