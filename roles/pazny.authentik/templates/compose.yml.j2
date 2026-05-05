@@ -117,6 +117,14 @@ services:
     networks:
       - infra_net
       - {{ stacks_shared_network }}
+    healthcheck:
+      # The upstream image ships a built-in healthcheck that fires immediately
+      # after start. On a blank run the worker must run DB migrations first;
+      # the check fails during that window and makes `docker compose up --wait`
+      # return rc=1 for the whole infra stack. A 120s start_period covers
+      # even slow cold-start migrations without silencing the healthcheck
+      # entirely — the worker is still marked unhealthy if it crashes later.
+      start_period: 120s
     logging:
       driver: "json-file"
       options:
