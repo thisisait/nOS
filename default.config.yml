@@ -1844,41 +1844,6 @@ authentik_app_tiers:
 # inputs.clients alongside Tier-1 plugins.
 authentik_oidc_apps: []
 
-# ── OIDC client_id / client_secret per-service helpers (D1.3 2026-05-05) ───
-# Pre-D1.3 these were derived via `selectattr` from the central
-# authentik_oidc_apps list (deleted below). They are now standalone — each
-# service has a deterministic client_id (`nos-<slug>`) and a secret derived
-# from `global_password_prefix`. Identical values to what the central list
-# produced at runtime, but compose templates no longer transitively depend
-# on a registry list. Source-of-truth has shifted to per-plugin authentik:
-# blocks; these helpers exist only because role-side compose.yml.j2 still
-# reads them. D2 removes the role-side blocks → these helpers become
-# unused and can be retired in a follow-up.
-authentik_oidc_grafana_client_id: "nos-grafana"
-authentik_oidc_grafana_client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
-authentik_oidc_outline_client_id: "nos-outline"
-authentik_oidc_outline_client_secret: "{{ global_password_prefix }}_pw_oidc_outline"
-authentik_oidc_openwebui_client_id: "nos-openwebui"
-authentik_oidc_openwebui_client_secret: "{{ global_password_prefix }}_pw_oidc_openwebui"
-authentik_oidc_gitea_client_id: "nos-gitea"
-authentik_oidc_gitea_client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
-authentik_oidc_portainer_client_id: "nos-portainer"
-authentik_oidc_portainer_client_secret: "{{ global_password_prefix }}_pw_oidc_portainer"
-authentik_oidc_nextcloud_client_id: "nos-nextcloud"
-authentik_oidc_nextcloud_client_secret: "{{ global_password_prefix }}_pw_oidc_nextcloud"
-authentik_oidc_gitlab_client_id: "nos-gitlab"
-authentik_oidc_gitlab_client_secret: "{{ global_password_prefix }}_pw_oidc_gitlab"
-authentik_oidc_miniflux_client_id: "nos-miniflux"
-authentik_oidc_miniflux_client_secret: "{{ global_password_prefix }}_pw_oidc_miniflux"
-authentik_oidc_hedgedoc_client_id: "nos-hedgedoc"
-authentik_oidc_hedgedoc_client_secret: "{{ global_password_prefix }}_pw_oidc_hedgedoc"
-authentik_oidc_bookstack_client_id: "nos-bookstack"
-authentik_oidc_bookstack_client_secret: "{{ global_password_prefix }}_pw_oidc_bookstack"
-authentik_oidc_n8n_client_id: "nos-n8n"
-authentik_oidc_n8n_client_secret: "{{ global_password_prefix }}_pw_oidc_n8n"
-authentik_oidc_vaultwarden_client_id: "nos-vaultwarden"
-authentik_oidc_vaultwarden_client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
-
 # ==============================================================================
 # AGENT IDENTITY — Authentik OIDC client_credentials (Track B, 2026-04-26)
 #

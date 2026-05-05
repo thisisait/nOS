@@ -42,8 +42,8 @@ services:
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
       GF_AUTH_GENERIC_OAUTH_NAME: "Authentik"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ authentik_oidc_grafana_client_id }}"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ authentik_oidc_grafana_client_secret }}"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "nos-grafana"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_grafana"
       GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"

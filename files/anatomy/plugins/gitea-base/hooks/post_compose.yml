@@ -87,8 +87,8 @@ sequence:
       name: authentik
       config:
         provider: openidConnect
-        client_id: "{{ authentik_oidc_gitea_client_id | default('nos-gitea') }}"
-        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        client_id: "nos-gitea"
+        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
         open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
 
   - id: update_authentik_source
@@ -104,7 +104,7 @@ sequence:
       password: "{{ gitea_admin_password }}"
     body:
       config:
-        client_id: "{{ authentik_oidc_gitea_client_id | default('nos-gitea') }}"
-        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        client_id: "nos-gitea"
+        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
         open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
     notify: Restart gitea

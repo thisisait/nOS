@@ -50,7 +50,7 @@ services:
         gitlab_rails['omniauth_enabled'] = true
         gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
         gitlab_rails['omniauth_block_auto_created_users'] = false
-        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
+        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: 'nos-gitlab', secret: '{{ global_password_prefix }}_pw_oidc_gitlab', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
 {% endif %}
 {# authentik extra_host moved to gitlab-base plugin compose-extension (D2). #}
     healthcheck:

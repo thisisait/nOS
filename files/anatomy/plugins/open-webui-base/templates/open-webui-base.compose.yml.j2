@@ -19,8 +19,8 @@ services:
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       ENABLE_OAUTH_SIGNUP: "true"
       OAUTH_PROVIDER_NAME: "Authentik"
-      OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
-      OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
+      OAUTH_CLIENT_ID: "nos-openwebui"
+      OAUTH_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_openwebui"
       OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/open-webui/.well-known/openid-configuration"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
       OAUTH_SCOPES: "openid profile email"

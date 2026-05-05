@@ -151,8 +151,8 @@ api_calls:
       auth_token_from: _admin_token.body.jwt
       body:
         OAuthSettings:
-          ClientID: "{{ authentik_oidc_portainer_client_id }}"
-          ClientSecret: "{{ authentik_oidc_portainer_client_secret }}"
+          ClientID: "nos-portainer"
+          ClientSecret: "{{ global_password_prefix }}_pw_oidc_portainer"
           AccessTokenURI: "https://{{ authentik_domain }}/application/o/token/"
           AuthorizationURI: "https://{{ authentik_domain }}/application/o/authorize/"
           ResourceURI: "https://{{ authentik_domain }}/application/o/userinfo/"

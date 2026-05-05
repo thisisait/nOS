@@ -27,8 +27,8 @@ services:
       _NOS_PLUGIN: "outline-base"
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      OIDC_CLIENT_ID: "{{ authentik_oidc_outline_client_id }}"
-      OIDC_CLIENT_SECRET: "{{ authentik_oidc_outline_client_secret }}"
+      OIDC_CLIENT_ID: "nos-outline"
+      OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_outline"
       OIDC_AUTH_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
       OIDC_TOKEN_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
       OIDC_USERINFO_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"

@@ -20,8 +20,8 @@ services:
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       N8N_AUTH_OIDC_ENABLED: "true"
-      N8N_AUTH_OIDC_CLIENT_ID: "{{ authentik_oidc_n8n_client_id }}"
-      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ authentik_oidc_n8n_client_secret }}"
+      N8N_AUTH_OIDC_CLIENT_ID: "nos-n8n"
+      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_n8n"
       N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/n8n/"
       N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
     extra_hosts:

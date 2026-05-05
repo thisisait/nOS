@@ -40,8 +40,8 @@
       name: "authentik"
       oauth2_config:
         provider: "openidConnect"
-        client_id: "{{ authentik_oidc_gitea_client_id }}"
-        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        client_id: "nos-gitea"
+        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
         open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
         scopes: ["openid", "profile", "email"]
     status_code: [200, 201]
@@ -64,8 +64,8 @@
       name: "authentik"
       oauth2_config:
         provider: "openidConnect"
-        client_id: "{{ authentik_oidc_gitea_client_id }}"
-        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        client_id: "nos-gitea"
+        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
         open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
         scopes: ["openid", "profile", "email"]
     status_code: [200, 204]
@@ -151,8 +151,8 @@
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ user_oidc:provider authentik
-    --clientid="{{ authentik_oidc_nextcloud_client_id }}"
-    --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+    --clientid="nos-nextcloud"
+    --clientsecret="{{ global_password_prefix }}_pw_oidc_nextcloud"
     --discoveryuri="https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/nextcloud/.well-known/openid-configuration"
     --mapping-uid="preferred_username"
     --mapping-email="email"
@@ -173,7 +173,7 @@
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
     php occ user_oidc:provider authentik
-    --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+    --clientsecret="{{ global_password_prefix }}_pw_oidc_nextcloud"
   register: _nc_oidc_update
   when:
     - install_nextcloud | default(false)

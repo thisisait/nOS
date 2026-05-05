@@ -60,8 +60,8 @@ sequence:
     user: www-data
     cmd: >
       php occ user_oidc:provider authentik
-      --clientid="{{ authentik_oidc_nextcloud_client_id | default('nos-nextcloud') }}"
-      --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+      --clientid="nos-nextcloud"
+      --clientsecret="{{ global_password_prefix }}_pw_oidc_nextcloud"
       --discoveryuri="https://{{ authentik_domain }}/application/o/nextcloud/.well-known/openid-configuration"
       --mapping-uid="preferred_username"
       --mapping-email="email"
@@ -78,5 +78,5 @@ sequence:
     user: www-data
     cmd: >
       php occ user_oidc:provider authentik
-      --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+      --clientsecret="{{ global_password_prefix }}_pw_oidc_nextcloud"
     notify: Restart nextcloud

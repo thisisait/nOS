@@ -19,8 +19,8 @@ services:
       # Infisical CE 0.60+: env vars seed the default OIDC config. The
       # organization-level OIDC attach still needs a post-API call — handled
       # by U8's native_oidc_api batch (post_compose lifecycle hook).
-      OIDC_CLIENT_ID: "{{ authentik_oidc_infisical_client_id | default('nos-infisical') }}"
-      OIDC_CLIENT_SECRET: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
+      OIDC_CLIENT_ID: "nos-infisical"
+      OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_infisical"
       OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
       OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
       OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
