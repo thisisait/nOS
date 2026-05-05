@@ -1,0 +1,17 @@
+---
+# Operator merges this into state/manifest.yml during Phase 2 C2.
+# Matches the existing entry at state/manifest.yml:452-463 with the
+# plugin pointer added; phase-2 sweep will reorder/normalize.
+- id: gitea
+  category: devops
+  stack: devops
+  install_flag: install_gitea
+  version_var: gitea_version
+  version_source: docker_image
+  image: gitea/gitea
+  domain_var: gitea_domain
+  port_var: gitea_port
+  data_path_var: gitea_data_dir
+  oidc: native
+  rbac_tier: 2
+  plugin: gitea-base                    # NEW (Phase 2 wires plugin → role)

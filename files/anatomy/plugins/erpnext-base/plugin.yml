@@ -1,0 +1,121 @@
+---
+# =============================================================================
+# erpnext-base — service plugin (Q2 OIDC API scaffold, U8, 2026-05-04)
+#
+# Status: SCAFFOLD. Loader has no `bench`/`docker_exec` runner yet; full
+# execution is Phase 2 C5. Until then, `roles/pazny.erpnext/tasks/post.yml`
+# (205 LOC) is the live wiring path.
+#
+# NOTE on SSO mode: per CLAUDE.md "IAM & SSO" → Proxy auth, ERPNext is gated
+# at the Traefik forward-auth layer (no native-OIDC button inside ERPNext).
+# This plugin therefore declares `provider_type: forward_auth` (not oauth2).
+# The post-compose API calls are NOT for OIDC — they're for bench-CLI
+# bootstrap (configurator retry + migrations + admin password reconverge),
+# which is the long pole of erpnext post.yml and the actual harvest target.
+# =============================================================================
+
+name: erpnext-base
+version: 0.1.0
+description: |
+  Wiring layer for ERPNext (Frappe + Maria + Redis). Captures the bench-CLI
+  sequence: configurator retry on first-run failure, idempotent
+  `bench migrate` with stale-lock cleanup, frontend+backend restart, and
+  Administrator password reconverge via `bench set-admin-password`.
+
+  Role `pazny.erpnext` keeps install-only responsibilities; the 205-LOC
+  post.yml moves into this manifest's `lifecycle.post_compose` once the
+  loader's docker_exec runner ships (Phase 2 C5).
+upstream: https://erpnext.com/
+license: GPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.erpnext
+  feature_flag: install_erpnext
+  variables:
+    - erpnext_domain
+    - erpnext_site_name
+    - erpnext_admin_password
+    - erpnext_data_dir
+    - mariadb_root_password
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — proxy auth (forward-auth gate; no app-level OIDC)
+# =============================================================================
+
+authentik:
+  provider_type: forward_auth
+  client_id: nos-erpnext
+  client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
+  slug: erpnext
+  launch_url: "https://{{ erpnext_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 2                                # manager — per CLAUDE.md RBAC
+
+# =============================================================================
+# LIFECYCLE — declares the contract; loader runner lands in Phase 2 C5
+# =============================================================================
+
+lifecycle:
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ erpnext_port | default(8001) }}/api/method/frappe.ping"
+    # TODO(C5): docker_exec runner with retry + lock-cleanup semantics; until
+    # then roles/pazny.erpnext/tasks/post.yml is authoritative.
+    - replay_api_calls: hooks/post_compose.yml
+
+  post_blank: []
+
+# =============================================================================
+# OBSERVABILITY
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: erpnext
+      stack: b2b
+      tier: "2"
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "ERPNext"
+    icon: briefcase
+    url: "https://{{ erpnext_domain }}"
+    tier: 2
+    description: "ERP / accounting / inventory"
+    health_check: "/api/method/frappe.ping"
+
+# =============================================================================
+# GDPR — Article 30 row
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - identity_metadata                  # employee names, emails
+    - financial_records                  # invoices, expenses, GL entries
+    - hr_data                            # payroll, employee records
+    - customer_data                      # CRM contacts, orders
+    - audit_log_entries
+  data_subjects:
+    - operators
+    - end_users                          # tenant employees / customers
+    - third_parties                      # customer contacts in CRM
+  legal_basis: contract
+  retention_days: 2555                   # 7y per typical accounting law
+  processors:
+    - erpnext
+    - mariadb
+  eu_residency: true
