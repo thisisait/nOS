@@ -58,6 +58,7 @@ authentik:
   slug: calibre-web
   name: 'Calibre-Web'
   enabled: "{{ install_calibreweb | default(false) }}"
+  launch_url: "https://{{ calibreweb_domain }}"
   tier: 3
 
 # =============================================================================

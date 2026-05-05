@@ -58,6 +58,7 @@ authentik:
   slug: mailpit
   name: 'Mailpit'
   enabled: "{{ install_mailpit | default(false) }}"
+  launch_url: "https://{{ mailpit_domain }}"
   tier: 1
 
 # =============================================================================

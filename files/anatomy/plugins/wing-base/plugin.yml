@@ -58,6 +58,7 @@ authentik:
   slug: wing
   name: 'Wing'
   enabled: "{{ install_wing | default(false) }}"
+  launch_url: "https://{{ wing_domain }}"
   tier: 1
 
 # =============================================================================

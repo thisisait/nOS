@@ -58,6 +58,7 @@ authentik:
   slug: influxdb
   name: 'InfluxDB'
   enabled: "{{ install_influxdb | default(false) }}"
+  launch_url: "https://{{ influxdb_domain }}"
   tier: 1
 
 # =============================================================================

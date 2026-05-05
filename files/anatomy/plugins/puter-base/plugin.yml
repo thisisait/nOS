@@ -58,6 +58,7 @@ authentik:
   slug: puter
   name: 'Puter'
   enabled: "{{ install_puter | default(false) }}"
+  launch_url: "https://{{ puter_domain }}"
   tier: 3
 
 # =============================================================================

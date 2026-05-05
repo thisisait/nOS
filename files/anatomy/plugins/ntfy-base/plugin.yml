@@ -58,6 +58,7 @@ authentik:
   slug: ntfy
   name: 'ntfy'
   enabled: "{{ install_ntfy | default(false) }}"
+  launch_url: "https://{{ ntfy_domain }}"
   tier: 3
 
 # =============================================================================

@@ -58,6 +58,7 @@ authentik:
   slug: paperclip
   name: 'Paperclip'
   enabled: "{{ install_paperclip | default(false) }}"
+  launch_url: "https://{{ paperclip_domain }}"
   tier: 2
 
 # =============================================================================

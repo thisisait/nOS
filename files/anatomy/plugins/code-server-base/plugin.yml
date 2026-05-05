@@ -58,6 +58,7 @@ authentik:
   slug: code-server
   name: 'code-server'
   enabled: "{{ install_code_server | default(false) }}"
+  launch_url: "https://{{ code_server_domain }}"
   tier: 2
 
 # =============================================================================

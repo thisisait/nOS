@@ -58,6 +58,7 @@ authentik:
   slug: uptime-kuma
   name: 'Uptime Kuma'
   enabled: "{{ install_uptime_kuma | default(false) }}"
+  launch_url: "https://{{ uptime_kuma_domain }}"
   tier: 3
 
 # =============================================================================

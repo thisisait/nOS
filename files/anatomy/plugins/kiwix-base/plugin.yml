@@ -58,6 +58,7 @@ authentik:
   slug: kiwix
   name: 'Kiwix'
   enabled: "{{ install_kiwix | default(false) }}"
+  launch_url: "https://{{ kiwix_domain }}"
   tier: 4
 
 # =============================================================================

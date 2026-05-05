@@ -58,6 +58,7 @@ authentik:
   slug: onlyoffice
   name: 'ONLYOFFICE'
   enabled: "{{ install_onlyoffice | default(false) }}"
+  launch_url: "https://{{ onlyoffice_domain }}"
   tier: 3
 
 # =============================================================================

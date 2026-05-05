@@ -38,7 +38,7 @@ entries:
 {% if c.enabled | default(false) | bool %}
 {%- set _type_legacy = c.type | default(none) -%}
 {%- set _mode = c.mode | default(c.provider_type) | default('native_oidc' if _type_legacy != 'proxy' else 'forward_auth') -%}
-{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] or _type_legacy == 'proxy' -%}
+{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc', 'proxy_auth'] or _type_legacy == 'proxy' -%}
 {%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
 {%- set _redirects = c.redirect_uris if (c.redirect_uris is iterable and c.redirect_uris is not string) else ([c.redirect_uris] if c.redirect_uris else []) -%}
 {%- set _launch = c.launch_url | default(c.external_host) | default('') -%}
@@ -60,11 +60,13 @@ entries:
       sub_mode: "hashed_user_id"
       include_claims_in_id_token: true
       issuer_mode: "per_provider"
-      redirect_uris:
+      redirect_uris:{% if not _redirects %} []
+{% else %}
+
 {% for r in _redirects %}
         - matching_mode: "strict"
           url: "{{ r }}"
-{% endfor %}
+{% endfor %}{% endif %}
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
@@ -120,7 +122,7 @@ entries:
 {% for c in _all_clients %}
 {%- set _type_legacy = c.type | default(none) -%}
 {%- set _mode = c.mode | default(c.provider_type) | default('native_oidc' if _type_legacy != 'proxy' else 'forward_auth') -%}
-{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] or _type_legacy == 'proxy' -%}
+{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc', 'proxy_auth'] or _type_legacy == 'proxy' -%}
 {%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
 {% if (c.enabled | default(false) | bool) and _is_proxy %}
         - !Find [authentik_providers_proxy.proxyprovider, [name, "{{ _name }}"]]

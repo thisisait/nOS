@@ -59,7 +59,8 @@ requires:
 # Mirrors today's `authentik_oidc_apps` proxy entry for woodpecker.
 
 authentik:
-  mode: proxy_auth                # NOT native OIDC — Woodpecker uses Gitea
+  mode: forward_auth              # NOT native OIDC — Woodpecker uses Gitea for app-level auth; Authentik gates the route
+  provider_type: forward_auth
   client_id: nos-woodpecker
   client_secret: "{{ global_password_prefix }}_pw_oidc_woodpecker"
   slug: woodpecker
