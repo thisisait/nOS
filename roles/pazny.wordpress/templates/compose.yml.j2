@@ -7,9 +7,13 @@
 # jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
 #
 # Authentik SSO: native OIDC via the `openid-connect-generic` WP plugin.
-# Settings are pushed through the mu-plugin oidc-bootstrap.php (auto-loaded
-# from wp-content/mu-plugins/). Client ID/secret are derived from the central
-# authentik_oidc_apps list via authentik_oidc_wordpress_* vars.
+# Settings are pushed through mu-plugin oidc-bootstrap.php (auto-loaded from
+# wp-content/mu-plugins/) which reads WP_OIDC_* env vars at `init`.
+#
+# D2 (2026-05-05): WP_OIDC_* env vars + mkcert CA volume + authentik extra_host
+# MOVED to wordpress-base plugin's compose-extension (files/anatomy/plugins/
+# wordpress-base/templates/wordpress-base.compose.yml.j2). Role keeps: DB,
+# table prefix, SMTP relay. mu-plugin mount stays here (install concern).
 # =============================================================================
 
 services:
@@ -22,34 +26,14 @@ services:
       - {{ wordpress_dir }}:/var/www/html
       # mu-plugin auto-loader: configures openid-connect-generic from env vars
       - {{ stacks_dir }}/iiab/wordpress/mu-plugins/oidc-bootstrap.php:/var/www/html/wp-content/mu-plugins/oidc-bootstrap.php:ro
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + Authentik extra_host moved to wordpress-base plugin (D2). #}
     environment:
       WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
       WORDPRESS_DB_USER: "{{ wordpress_db_user }}"
       WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
       WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
       WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC via openid-connect-generic) ──────────────────
-      # Read by wp-content/mu-plugins/oidc-bootstrap.php on every `init` and
-      # pushed into the openid_connect_generic_settings option (idempotent).
-      WP_OIDC_CLIENT_ID: "{{ authentik_oidc_wordpress_client_id | default('nos-wordpress') }}"
-      WP_OIDC_CLIENT_SECRET: "{{ authentik_oidc_wordpress_client_secret | default(global_password_prefix + '_pw_oidc_wordpress') }}"
-      WP_OIDC_ENDPOINT_LOGIN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      WP_OIDC_ENDPOINT_USERINFO: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
-      WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
-      WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/end-session/"
-      WP_OIDC_SCOPE: "openid profile email"
-      WP_OIDC_LOGIN_TYPE: "{{ wordpress_oidc_login_type | default('button') }}"
-      WP_OIDC_IDENTITY_KEY: "preferred_username"
-{% endif %}
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
+{# WP_OIDC_* env + authentik extra_host moved to wordpress-base plugin compose-extension (D2 2026-05-05). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
