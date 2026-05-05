@@ -135,11 +135,16 @@
 # directly. Wing must be running at this point (started by main.yml above,
 # docker compose stacks start before post.yml runs). B2 fix (2026-05-07).
 
-- name: "[pazny.wing] Wait for Wing API to be ready"
-  ansible.builtin.wait_for:
-    host: 127.0.0.1
-    port: "{{ wing_port | default(9000) }}"
-    timeout: 30
+- name: "[pazny.wing] Wait for Wing API health (hub/health 200, confirms DB init done)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/hub/health"
+    method: GET
+    status_code: 200
+  register: _wing_health
+  until: _wing_health.status == 200
+  retries: 12
+  delay: 5
+  failed_when: false
 
 - name: "[pazny.wing] Register gitleaks Pulse job (nightly-scan)"
   ansible.builtin.uri:
@@ -164,6 +169,9 @@
         GITLEAKS_MIN_SEVERITY: "medium"
     status_code: [200, 201]
   register: _gitleaks_job_reg
+  retries: 3
+  delay: 5
+  until: _gitleaks_job_reg.status in [200, 201]
   changed_when: _gitleaks_job_reg.status == 201
   no_log: true
 
@@ -200,6 +208,9 @@
         WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret }}"
     status_code: [200, 201]
   register: _conductor_job_reg
+  retries: 3
+  delay: 5
+  until: _conductor_job_reg.status in [200, 201]
   changed_when: _conductor_job_reg.status == 201
   no_log: true
 
