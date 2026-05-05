@@ -122,13 +122,17 @@ class PulseDaemon:
         if not isinstance(args, list):
             log.warning("job %s: args must be list, got %r", job_id, type(args))
             return False
+        env = job.get("env") or {}
+        if not isinstance(env, dict):
+            log.warning("job %s: env must be dict, got %r — ignoring", job_id, type(env))
+            env = {}
         timeout_s = float(job.get("max_runtime_s", 300))
         run_id = str(uuid.uuid4())
         # Spawn worker thread (subprocess.run blocks; we don't want to
         # block the tick loop while a 5-minute backup runs).
         t = threading.Thread(
             target=self._run_in_thread,
-            args=(job_id, run_id, command, args, timeout_s),
+            args=(job_id, run_id, command, args, timeout_s, env),
             name=f"pulse-run-{job_id[:8]}",
             daemon=False,  # don't kill mid-run on stop; drain instead
         )
@@ -138,7 +142,8 @@ class PulseDaemon:
         return True
 
     def _run_in_thread(self, job_id: str, run_id: str,
-                       command: str, args: list, timeout_s: float) -> None:
+                       command: str, args: list, timeout_s: float,
+                       env: dict[str, str] | None = None) -> None:
         thread = threading.current_thread()
         try:
             self.wing.post_run_start(job_id, run_id, _now_iso())
@@ -150,7 +155,7 @@ class PulseDaemon:
                                           stdout_tail="dry-run",
                                           stderr_tail="")
                 return
-            result = sp_runner.execute(command, args, timeout_s=timeout_s)
+            result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env or {})
             log.info("job %s done rc=%d dur=%.1fs timed_out=%s",
                      job_id, result.exit_code, result.duration_s, result.timed_out)
             self.wing.post_run_finish(
