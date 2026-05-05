@@ -3,8 +3,10 @@
 # pazny.nodered — Node-RED low-code flow automation (iiab compose stack)
 #
 # Filesystem-only storage (/data obsahuje flows.json, credentials, installed
-# nodes). No DB. SSO via Authentik forward_auth (proxy mode) — built-in
-# adminAuth is disabled in settings.js.
+# nodes). No DB. SSO via Authentik native OIDC (passport-openidconnect
+# adminAuth strategy in settings.js). Pre-β1.B this was forward_auth at the
+# nginx layer — flipping to native gives true SSO with per-user identity in
+# Node-RED instead of mere access control.
 # ==============================================================================
 
 nodered_version: "4.0.9"                              # stable multi-arch tag (nodered/node-red)
@@ -19,3 +21,15 @@ nodered_enable_projects: "true"                       # git-backed projects
 nodered_flows_file: "flows.json"
 nodered_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 nodered_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# β1.B (2026-05-05) — native OIDC via passport-openidconnect.
+# Node-RED's settings.js renders an adminAuth.strategy block when this is
+# true AND install_authentik=true. The passport-openidconnect npm package
+# is installed at first-boot via /data/package.json (Node-RED's entrypoint
+# runs `npm install` if package.json declares deps not already present in
+# /data/node_modules). Disabling falls back to no adminAuth (open editor;
+# operators relying on the previous Authentik forward_auth gate must set
+# install_nginx=true OR Traefik authentik@file middleware on the route).
+nodered_native_oidc_enabled: "{{ install_authentik | default(false) }}"
+nodered_passport_openidconnect_version: "0.1.2"   # latest stable (npm 2024-11)
+nodered_oidc_username_claim: "preferred_username" # Authentik default sub mode

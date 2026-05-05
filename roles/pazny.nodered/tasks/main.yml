@@ -3,9 +3,10 @@
 # pazny.nodered/tasks/main.yml
 #
 # Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
-# creates the data dir, renders settings.js (disables the built-in adminAuth,
-# spolehame se na Authentik forward_auth na nginx vrstve) a compose override
-# fragment do {{ stacks_dir }}/iiab/overrides/nodered.yml.
+# creates the data dir, renders settings.js (β1.B: native OIDC adminAuth via
+# passport-openidconnect when install_authentik=true), pre-seeds
+# /data/package.json so Node-RED's entrypoint installs the OIDC strategy
+# package on first boot, and writes the compose override fragment.
 #
 # Nginx vhost (templates/nginx/sites-available/nodered.conf) se renderuje
 # top-level nginx taskem a enabluje se symlinkem nize.
@@ -23,10 +24,21 @@
     mode: '0755'
   failed_when: false
 
-- name: "[pazny.nodered] Render settings.js (no adminAuth → gated by Authentik)"
+- name: "[pazny.nodered] Render settings.js (β1.B: native OIDC adminAuth)"
   ansible.builtin.template:
     src: settings.js.j2
     dest: "{{ nodered_data_dir }}/settings.js"
+    mode: '0644'
+  notify: Restart nodered
+
+# β1.B — pre-seed /data/package.json so Node-RED's entrypoint installs
+# `passport-openidconnect` into /data/node_modules on first boot (and on
+# version bumps). When OIDC is disabled the file renders with empty
+# deps — Node-RED's npm-install no-ops in that case.
+- name: "[pazny.nodered] Render /data/package.json (OIDC strategy deps)"
+  ansible.builtin.template:
+    src: package.json.j2
+    dest: "{{ nodered_data_dir }}/package.json"
     mode: '0644'
   notify: Restart nodered
 

@@ -1,25 +1,66 @@
 /**
- * Node-RED settings.js - rendered by the pazny.nodered role.
+ * Node-RED settings.js — rendered by the pazny.nodered role.
  *
- * adminAuth is INTENTIONALLY DISABLED - editor access is gated by the Authentik
- * forward_auth snippet in the nginx vhost (templates/nginx/sites-available/
- * nodered.conf). All requests flow through https://{{ nodered_domain }}
- * -> nginx -> Authentik check -> proxy_pass to 127.0.0.1:{{ nodered_port }}.
+ * β1.B (2026-05-05) — adminAuth uses passport-openidconnect when
+ * `install_authentik=true` AND `nodered_native_oidc_enabled=true`. The
+ * `passport-openidconnect` package is pre-seeded into /data/node_modules
+ * via /data/package.json (Node-RED's entrypoint installs missing deps on
+ * boot). When disabled, adminAuth is omitted (editor open) — operators
+ * relying on the pre-β1 forward_auth gate must keep install_nginx=true
+ * with the Authentik forward_auth snippet on the vhost.
  *
- * DO NOT EDIT MANUALLY - regenerated from settings.js.j2.
+ * DO NOT EDIT MANUALLY — regenerated from settings.js.j2.
  */
+{% set _oidc_on = (install_authentik | default(false)) and (nodered_native_oidc_enabled | default(false)) %}
+{% set _authentik_domain = authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) %}
+
 module.exports = {
     uiPort: process.env.PORT || 1880,
     mqttReconnectTime: 15000,
     serialReconnectTime: 15000,
     debugMaxLength: 1000,
-    // NO adminAuth -> gated by Authentik forward_auth at nginx layer
     httpAdminRoot: '/',
     httpNodeRoot: '/',
     httpStatic: '/data/static/',
     ui: { path: 'ui' },
     functionGlobalContext: {},
     exportGlobalContextKeys: false,
+{% if _oidc_on %}
+    // ── Authentik native OIDC (β1.B) ─────────────────────────────────────────
+    // Strategy + verify follow Node-RED docs §"OAuth/OpenID-based authentication".
+    // We grant `permissions: '*'` (full admin) to every authenticated user —
+    // RBAC granularity belongs in Authentik group expression policies (Tier 2 /
+    // manager group), not in Node-RED itself.
+    adminAuth: {
+        type: "strategy",
+        strategy: {
+            name: "openidconnect",
+            label: "Sign in with Authentik",
+            icon: "fa-cloud",
+            strategy: require("passport-openidconnect").Strategy,
+            options: {
+                issuer: "https://{{ _authentik_domain }}/application/o/nodered/",
+                authorizationURL: "https://{{ _authentik_domain }}/application/o/authorize/",
+                tokenURL: "https://{{ _authentik_domain }}/application/o/token/",
+                userInfoURL: "https://{{ _authentik_domain }}/application/o/userinfo/",
+                clientID: process.env.NODERED_OIDC_CLIENT_ID,
+                clientSecret: process.env.NODERED_OIDC_CLIENT_SECRET,
+                callbackURL: "https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy/callback",
+                scope: ["openid", "profile", "email"],
+                proxy: true,
+                verify: function(issuer, profile, done) {
+                    var username = profile.username
+                        || (profile._json && profile._json["{{ nodered_oidc_username_claim | default('preferred_username') }}"])
+                        || profile.id;
+                    return done(null, { username: username, permissions: '*' });
+                }
+            }
+        },
+        users: function(username) {
+            return Promise.resolve({ username: username, permissions: "*" });
+        }
+    },
+{% endif %}
     logging: {
         console: {
             level: "info",

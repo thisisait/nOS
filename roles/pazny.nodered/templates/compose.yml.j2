@@ -35,6 +35,14 @@ services:
 {% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
+{% if install_authentik | default(false) and (nodered_native_oidc_enabled | default(false)) %}
+      # ── Authentik native OIDC (β1.B 2026-05-05) ─────────────────────────
+      # Consumed by /data/settings.js's adminAuth.strategy block via
+      # passport-openidconnect. clientID + clientSecret read from env so
+      # secrets aren't baked into the static settings.js render.
+      NODERED_OIDC_CLIENT_ID: "{{ authentik_oidc_nodered_client_id | default('nos-nodered') }}"
+      NODERED_OIDC_CLIENT_SECRET: "{{ authentik_oidc_nodered_client_secret | default(global_password_prefix ~ '_pw_oidc_nodered') }}"
+{% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:1880/ 2>&1 || exit 1"]
       interval: 30s

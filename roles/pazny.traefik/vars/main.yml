@@ -65,8 +65,18 @@ traefik_auth_modes:
   freescout: oidc           # OAuth Module
   infisical: oidc           # /api/v1/sso/oidc/callback
   miniflux: oidc            # OAUTH2_PROVIDER=oidc
+  nodered: oidc             # β1.B 2026-05-05 — passport-openidconnect adminAuth
+                            # in /data/settings.js; service handles its own
+                            # OIDC redirect, no outpost needed.
 
   # ── Proxy (Authentik forward-auth via outpost) ─────────────────────────────
+  # Includes both:
+  #   - true forward-auth gates (uptime_kuma, kiwix, etc.): no per-user state
+  #     in service; Authentik session = "you're in".
+  #   - header_oidc services (firefly): outpost MUST stay in path so it
+  #     injects REMOTE_USER / REMOTE_EMAIL headers that the service uses to
+  #     auto-create the local account. β1.A doctrine: the proxy provider
+  #     entry in Authentik is required, so traefik_auth_mode stays `proxy`.
   metabase: proxy
   uptime_kuma: proxy
   calibre_web: proxy

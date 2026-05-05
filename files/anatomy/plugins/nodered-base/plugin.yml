@@ -1,12 +1,16 @@
 # =============================================================================
-# nodered-base — service plugin (Q2 proxy-auth batch, 2026-05-04)
+# nodered-base — service plugin (β1.B native OIDC, 2026-05-05)
 #
-# Status: live manifest. Wires `pazny.nodered` into the proxy-auth doctrine —
-# Authentik forward-auth via Traefik middleware (no native OIDC).
+# Pre-β1.B: Q2 proxy-auth batch shipped this as forward_auth (Authentik
+# gate at the proxy layer; Node-RED editor open behind it). β1.B
+# (2026-05-05) flipped to native_oidc by wiring passport-openidconnect
+# into /data/settings.js's `adminAuth.strategy` via the
+# `nodered_native_oidc_enabled` toggle in roles/pazny.nodered/defaults.
 #
-# Tier 2 (manager) per CLAUDE.md RBAC mapping. Forward-auth gates
-# access at the proxy layer; the service still renders its own login UI
-# (or, for stateless services, the Authentik session IS the auth).
+# Tier 2 (manager) per CLAUDE.md RBAC. Authentik creates an oauth2
+# provider; users sign in inside Node-RED with their Authentik identity
+# (full admin permissions — RBAC granularity belongs to Authentik
+# group expression policies, not Node-RED).
 # =============================================================================
 
 name: nodered-base
@@ -44,18 +48,27 @@ requires:
     - host_alias
 
 # =============================================================================
-# AUTHENTIK — proxy / forward-auth gate (Tier 2 = manager)
+# AUTHENTIK — native OIDC (passport-openidconnect adminAuth strategy)
 # =============================================================================
-# This service has NO native OIDC support — Authentik gates access at
-# the Traefik layer via the `authentik@file` middleware. RBAC tier
-# determines which Authentik group expression policy applies.
+# Node-RED's `adminAuth: { type: "strategy", ... }` consumes
+# passport-openidconnect (pre-seeded into /data/node_modules via
+# /data/package.json). The strategy reads NODERED_OIDC_CLIENT_ID +
+# NODERED_OIDC_CLIENT_SECRET from env (rendered from this block via the
+# role's compose template).
 
 authentik:
-  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
-  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  mode: native_oidc
+  provider_type: native_oidc
   client_id: nos-nodered
   client_secret: "{{ global_password_prefix }}_pw_oidc_nodered"
   slug: nodered
+  redirect_uris:
+    - "https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy/callback"
+  launch_url: "https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
   tier: 2
 
 # =============================================================================
