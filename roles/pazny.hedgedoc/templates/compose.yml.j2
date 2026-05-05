@@ -7,8 +7,11 @@
 # jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
 #
 # HedgeDoc vyzaduje: PostgreSQL (z infra stacku).
-# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
-# v default.config.yml pres derivovane authentik_oidc_hedgedoc_* promenne.
+#
+# D2 (2026-05-05): CMD_OAUTH2_* env vars + mkcert CA volume + authentik
+# extra_host MOVED to hedgedoc-base plugin's compose-extension (files/anatomy/
+# plugins/hedgedoc-base/templates/hedgedoc-base.compose.yml.j2). Role keeps
+# install-only concerns: DB, session, SMTP relay, mailpit extra_host.
 # Config reference: https://docs.hedgedoc.org/configuration/
 # =============================================================================
 
@@ -24,10 +27,7 @@ services:
 {% endif %}
     volumes:
       - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + Authentik extra_host moved to hedgedoc-base plugin (D2). #}
     environment:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
       CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
@@ -45,26 +45,7 @@ services:
       # ── CDN / uploads ──────────────────────────────────────────────────────
       CMD_USECDN: "false"
       CMD_UPLOADS_PATH: "/hedgedoc/public/uploads"
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC via CMD_OAUTH2_*) ──────────────────────────────
-      CMD_OAUTH2_PROVIDERNAME: "Authentik"
-      CMD_OAUTH2_CLIENT_ID: "{{ authentik_oidc_hedgedoc_client_id }}"
-      CMD_OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_hedgedoc_client_secret }}"
-      CMD_OAUTH2_AUTHORIZATION_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      CMD_OAUTH2_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
-      CMD_OAUTH2_USER_PROFILE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
-      CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: "preferred_username"
-      CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "name"
-      CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
-      CMD_OAUTH2_SCOPE: "openid profile email"
-{% if tenant_domain_is_local | default(true) | bool %}
-      # mkcert CA conditional — see volume mount comment above. NODE's HTTPS
-      # client uses Mozilla CA list by default; on public TLDs the LE chain
-      # validates without this override (and pointing at a missing file would
-      # fall through to the system store anyway, but cleaner to skip).
-      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% endif %}
-{% endif %}
+{# CMD_OAUTH2_* env + NODE_EXTRA_CA_CERTS moved to hedgedoc-base plugin (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -74,15 +55,11 @@ services:
       CMD_SMTP_SECURE: "false"
       CMD_SMTP_FROM: "hedgedoc@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
-{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
-    extra_hosts:
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
 {% if install_mailpit | default(false) %}
+    extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{% endif %}
+{# authentik extra_host moved to hedgedoc-base plugin compose-extension (D2). #}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
