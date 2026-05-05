@@ -111,6 +111,10 @@ final class RouterFactory
 		// GDPR browser route (Track D, 2026-04-26)
 		$router->addRoute('gdpr', 'Gdpr:default');
 
+		// Conductor inbox + approvals (Anatomy A8.c, 2026-05-07)
+		$router->addRoute('inbox', 'Inbox:default');
+		$router->addRoute('approvals', 'Approvals:default');
+
 		return $router;
 	}
 }

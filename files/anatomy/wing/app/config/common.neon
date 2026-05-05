@@ -41,6 +41,9 @@ services:
 	# P0.2. Required-by: App\Presenters\Api\PulsePresenter.
 	- App\Model\PulseRepository
 
+	# Gitleaks secret-scan findings (Anatomy A7, 2026-05-06).
+	- App\Model\GitleaksRepository
+
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
 
