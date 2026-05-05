@@ -5,32 +5,51 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-06 • D2 batch complete (11 roles + grafana skip +
-> follow-up inline values + default.config.yml helpers retired).
+> Last updated: 2026-05-06 • A5+A7 batch complete (contracts sync + gitleaks
+> plugin: schema, Wing presenter, Pulse job-reg endpoint, skill script,
+> daemon env fix).
 
 ---
 
-## Current track: **A5/A7-A10 ramp-up** (D2 ✅ complete)
+## Current track: **A8-A10 ramp-up** (D2 ✅ A5 ✅ A7 ✅ complete)
 
-D-series + β1 closed Track Q's structural arc. D2 batch (12 items) closed
-the role-side OIDC duplication — all 11 target roles cleaned, grafana skipped
-(already thinned A6.5), vaultwarden plugin template created, gitlab OMNIBUS_CONFIG
-decision documented, `authentik_oidc_*` helpers retired from `default.config.yml`.
-Next arc is **A5 contracts → A7 gitleaks → A8 conductor → A10 audit →
-Phase 5 ceremony** (first non-operator-identity end-to-end write).
+A5+A7 batch (7 commits `436db7d..d558e1b`) established the first end-to-end
+scheduled-job write path: gitleaks plugin → Pulse subprocess runner (env fix) →
+Wing gitleaks_findings table + presenter. Contracts synced from live sources
+(bone /api/health split + events.source column). Pulse job-registration endpoint
+live (`POST /api/v1/pulse_jobs`). OpenAPI now 70 paths, 87/87 real summaries.
+
+**Next arc: A8 conductor → A10 audit → Phase 5 ceremony** (first non-operator
+end-to-end write to wing.db). Note: OpenClaw must be a first-class Wing API
+consumer before A8 ships (see punch-item note on #7).
 
 ### Last verified state (2026-05-06)
 
-- **11 commits ahead of origin** (master @ `7ceb18c`); operator push pending.
-- 68/68 anatomy tests + 135/135 callback tests green.
-- `python3 tools/aggregator-dry-run.py` exit 0: 0 aligned, 0 central-only,
-  36 plugin-only (D1.3 emptied central list), 0 field-diffs.
+- **19 commits ahead of origin** (master @ `d558e1b`); operator push pending.
+- 529/529 tests pass (68 anatomy + rest of suite), 5 skipped.
+- `python3 tools/aggregator-dry-run.py` exit 0: 0 field-diffs.
 - `ansible-playbook main.yml --syntax-check` clean.
-- 43 plugins live; vaultwarden-base now has a real compose-extension template.
-- All `authentik_oidc_<svc>_client_id/_secret` helpers retired from
-  `default.config.yml`; plugin templates use inline values from plugin.yml.
-- SSO source-of-truth fully in per-plugin `authentik:` blocks (blueprint) +
-  plugin compose-extensions (container env). Role compose templates are clean.
+- Wing OpenAPI: 70 paths, 87/87 real summaries, `--check-summaries` exit 0.
+- `gitleaks_findings` table + Wing presenter + Pulse job-reg endpoint live.
+- gitleaks plugin manifest + nightly-scan skill at `files/anatomy/plugins/gitleaks/`.
+- Pulse daemon now passes `env_json` to subprocess runner (was silently dropped).
+
+### What just landed (A5+A7 batch, 7 commits `436db7d..d558e1b`)
+
+| Tag | Commit | Title |
+|---|---|---|
+| A5.1 | `436db7d` | fix(anatomy): A5 — sync contracts from live sources |
+| A7.1 | `bfe7629` | feat(wing): A7.1 — gitleaks_findings table + indexes |
+| A7.2+3 | `01feed5` | feat(wing): A7.2+A7.3 — GitleaksRepository + GitleaksPresenter + routes |
+| A7.4 | `0647796` | feat(wing): A7.4 — pulse_jobs upsert endpoint + job catalog methods |
+| A7.5 | `30f5d9f` | fix(pulse): A7.5 — pass job env_json to subprocess runner |
+| A7.6 | `775369e` | feat(gitleaks): A7.6 — plugin manifest + run-gitleaks.sh skill |
+| A7.7 | `d558e1b` | fix(anatomy): A7.7 — regenerate wing.openapi.yml (70 paths, 87/87) |
+
+**A7 notable finding:** `daemon._dispatch` was extracting `command + args` from
+the Wing job dict but silently dropping `env`. A skill that needs `WING_API_TOKEN`
+or `NOS_SCAN_DIR` from `env_json` would have run with an empty env — all skill
+scripts would have broken silently. Fixed in A7.5 before first consumer landed.
 
 ### What just landed (D2 batch, 12 commits `cddb7e0..7ceb18c`)
 
@@ -73,10 +92,10 @@ Numbered for the loop prompt; each line ≤ 2 sentences.
 ~~1. **D2 batch 1** (8 clean-parity rolí) — done `cddb7e0..13e31b7`.~~
 ~~2. **D2 special-syntax** — grafana (skip, A6.5 done), gitlab (mkcert+extra_hosts moved, OMNIBUS_CONFIG kept per doctrine), vaultwarden (plugin template created + role cleaned). Done `e5dd556`, `5ae7f93`.~~
 ~~3. **D2 follow-up** — `authentik_oidc_*` helpers retired from `default.config.yml`; all plugin templates updated to inline values. Done `7ceb18c`.~~
-4. **A5 — Wing OpenAPI/DDL exports** — regenerate `files/anatomy/skills/contracts/{wing,bone}.openapi.yml` + `wing.db-schema.sql`, ověř `--check-summaries` v export-openapi.php (P0.4 advisory → error).
-5. **Pulse Wing endpoints** — `PulsePresenter.php` (`pulse_jobs/due` GET + `pulse_runs` POST start/finish); odblokuje A7 + ukončí Pulse 404 warn.
-6. **A7 — gitleaks plugin (skill+scheduled-job shape)** — `files/anatomy/plugins/gitleaks/{plugin.yml,skills/run-gitleaks.sh}` + Wing presenter pro `gitleaks_findings` table + Pulse trigger.
-7. **A8.a — pulse-run-agent.sh** — `files/anatomy/scripts/pulse-run-agent.sh` (Authentik client_credentials → exec claude → POST /events s `actor_id=conductor`).
+~~4. **A5 — Wing OpenAPI/DDL exports** — done `436db7d`. bone + schema synced; --check-summaries 87/87 OK.~~
+~~5. **Pulse Wing endpoints** — done P0.2 (pre-batch); routes + PulsePresenter live. Pulse 404 warn resolved.~~
+~~6. **A7 — gitleaks plugin** — done `bfe7629..d558e1b`. schema + presenter + Pulse job-reg + plugin manifest + skill.~~
+7. **A8.a — pulse-run-agent.sh** — `files/anatomy/scripts/pulse-run-agent.sh` (Authentik client_credentials → exec claude → POST /events s `actor_id=conductor`). **Pre-req: audit OpenClaw's Wing API access — it is not fully onboarded; A8 must treat it as a first-class consumer (see next-batch note).**
 8. **A8.b — conductor agent profile** — `files/anatomy/agents/conductor.yml` (system prompt + capability scopes + schedule).
 9. **A8.c — Wing /inbox + /approvals views** — Latte presenters pro pending-approvals + drift reports + gitleaks findings.
 10. **A10 — actor audit migration** — `actor_id` (FK authentik_clients) + `actor_action_id` (UUID) + `acted_at` na všech wing.db write tables + presenter updates v 2-3 batch.
@@ -92,14 +111,15 @@ paperclip role tasks still use `| default(...)` pattern on vars not in `default.
 
 | Surface | State |
 |---|---|
-| `git status` | clean; **11 commits ahead of `origin/master`** awaiting push |
-| Last verified | 2026-05-06; tests + dry-run + syntax-check all green |
+| `git status` | clean; **19 commits ahead of `origin/master`** awaiting push |
+| Last verified | 2026-05-06; 529/529 tests + dry-run + syntax-check all green |
 | Tier-1 services | 16/16 healthy via Traefik (200/302 → Authentik) |
-| Plugin loader | 43 plugins (vaultwarden-base now has compose-extension); aggregator 36 plugin-only, 0 field-diffs |
+| Plugin loader | 43 plugins + gitleaks (skill/scheduled-job); aggregator 36 plugin-only, 0 field-diffs |
 | Authentik blueprints | rendered by `authentik-base` plugin (D1.2); role-side OIDC env fully retired (D2) |
-| Pulse | idle-tolerant, 404 on missing endpoints (punch-item #5) |
-| Test gates | anatomy 68/68, callback 135/135, aggregator-dry-run exit 0 |
-| Decision log | O1-O18 in `roadmap-2026q2.md` (append-only) |
+| Pulse | live — 4 endpoints; job-registration POST live; env pass-through fixed (A7.5) |
+| Wing OpenAPI | 70 paths, 87/87 real summaries, `--check-summaries` exit 0 |
+| Test gates | 529/529 tests pass, aggregator-dry-run exit 0 |
+| Decision log | O1-O20 in `roadmap-2026q2.md` (append-only) |
 
 ---
 

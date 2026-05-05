@@ -951,6 +951,51 @@ A8 (conductor agent) → A10 (actor audit trail) → Phase 5 ceremony
 
 ---
 
+## Snapshot 2026-05-06 — A5+A7 batch graduation
+
+**7 commits `436db7d..d558e1b`** — contracts sync + first scheduled-job plugin.
+
+| Tag | Commit | Title |
+|---|---|---|
+| A5.1 | `436db7d` | fix(anatomy): A5 — sync contracts from live sources |
+| A7.1 | `bfe7629` | feat(wing): gitleaks_findings table + indexes |
+| A7.2+3 | `01feed5` | feat(wing): GitleaksRepository + GitleaksPresenter + routes |
+| A7.4 | `0647796` | feat(wing): pulse_jobs upsert endpoint + job catalog methods |
+| A7.5 | `30f5d9f` | fix(pulse): pass job env_json to subprocess runner |
+| A7.6 | `775369e` | feat(gitleaks): plugin manifest + run-gitleaks.sh skill |
+| A7.7 | `d558e1b` | fix(anatomy): regenerate wing.openapi.yml (70 paths, 87/87) |
+
+**Gate state after A7:**
+- 529/529 tests pass (5 skipped); aggregator-dry-run exit 0, 0 field-diffs.
+- Wing OpenAPI 70 paths, 87/87 real summaries, `--check-summaries` exit 0.
+- Syntax-check clean.
+
+**New surfaces:**
+- `POST /api/v1/pulse_jobs` — job registration UPSERT (plugin loader post_compose hook).
+- `GET /api/v1/pulse_jobs[/<id>]` — job catalog read (admin/debug).
+- `GET/POST /api/v1/gitleaks_findings[/<id>]` + resolve endpoint.
+- `files/anatomy/plugins/gitleaks/` — first `skill + scheduled-job` plugin shape.
+- `files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh` — first skill script consumer.
+
+**New doctrine — O21 (2026-05-06): daemon env pass-through invariant.**
+Pulse `_dispatch` must propagate `env_json` from every Wing job dict to the
+subprocess runner. Without it, skill scripts run with an empty custom env —
+any secret or path injected via `env_json` is silently unreachable. Fixed in
+A7.5 before the first consumer landed. Invariant: any future runner (agent A8,
+container) must also propagate `env`.
+
+**OpenClaw pre-req for A8 (operator note, 2026-05-06):**
+OpenClaw is not yet fully onboarded into Wing's API. A8 (conductor agent +
+pulse-run-agent.sh) must design Wing bearer-token issuance and API surfaces
+with OpenClaw as a first-class consumer — not an afterthought. Audit
+OpenClaw's current auth path before starting A8.a.
+
+**Forward:** A8.a (pulse-run-agent.sh, OpenClaw Wing onboarding audit first) →
+A8.b (conductor agent profile) → A8.c (Wing /inbox + /approvals) →
+A10 (actor audit migration) → Phase 5 ceremony.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):
