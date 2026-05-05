@@ -5,6 +5,11 @@
 #
 # Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
 # jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
+#
+# D2 (2026-05-05): OIDC_CLIENT_ID/SECRET/DISCOVERY_URL/ISSUER/REDIRECT_URI env
+# vars + authentik extra_host MOVED to infisical-base plugin's compose-extension
+# (files/anatomy/plugins/infisical-base/templates/infisical-base.compose.yml.j2).
+# Role keeps install-only concerns: encryption keys, DB, Redis, SMTP relay.
 # =============================================================================
 
 services:
@@ -27,18 +32,7 @@ services:
       REDIS_URL: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379"
       SITE_URL: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       TELEMETRY_ENABLED: "false"
-{% if install_authentik | default(false) %}
-      # ── Native OIDC (Authentik) ─────────────────────────────────────────────
-      # Infisical CE 0.60+: env vars seed the default OIDC config.
-      # Organization-level OIDC still needs a post-start API pass to attach the
-      # provider to the default organization and flip `isActive=true` — handled
-      # by roles/pazny.infisical/tasks/post.yml when the orchestrator wires it.
-      OIDC_CLIENT_ID: "{{ authentik_oidc_infisical_client_id | default('nos-infisical') }}"
-      OIDC_CLIENT_SECRET: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
-      OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
-      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
-      OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
-{% endif %}
+{# OIDC_CLIENT_ID/SECRET/DISCOVERY/ISSUER/REDIRECT_URI moved to infisical-base plugin (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -49,15 +43,11 @@ services:
       SMTP_FROM_ADDRESS: "infisical@{{ tenant_domain | default('dev.local') }}"
       SMTP_FROM_NAME: "Infisical"
 {% endif %}
-{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
-    extra_hosts:
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
 {% if install_mailpit | default(false) %}
+    extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{% endif %}
+{# authentik extra_host moved to infisical-base plugin compose-extension (D2). #}
     networks:
       - infra_net
       - {{ stacks_shared_network }}
