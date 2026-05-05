@@ -7,10 +7,12 @@ namespace App\Presenters\Api;
 use App\Model\CoexistenceRepository;
 
 /**
- * GET  /api/v1/coexistence                              — list tracks
- * POST /api/v1/coexistence/<service>/provision
- * POST /api/v1/coexistence/<service>/cutover
- * POST /api/v1/coexistence/<service>/cleanup/<tag>
+ * Dual-version coexistence orchestrator — provision / cutover / cleanup tracks.
+ *
+ * GET  /api/v1/coexistence                              — list tracks per service
+ * POST /api/v1/coexistence/<service>/provision          — spin up a second track on shifted port
+ * POST /api/v1/coexistence/<service>/cutover            — atomic switch to target_tag
+ * POST /api/v1/coexistence/<service>/cleanup/<tag>      — tear down stale track (force flag)
  */
 final class CoexistencePresenter extends BaseApiPresenter
 {

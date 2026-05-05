@@ -1,0 +1,18 @@
+# manifest.fragment.yml — puter-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: puter
+role: pazny.puter
+feature_flag: install_puter
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: puter
+  tier: 3
+domain_var: puter_domain
+port_var: puter_port

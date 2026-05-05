@@ -1,0 +1,19 @@
+{# onlyoffice-base — Traefik forward-auth labels for onlyoffice.
+
+Renders into:
+  {{ stacks_dir }}/b2b/overrides/onlyoffice-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  onlyoffice:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.onlyoffice.rule=Host(`{{ onlyoffice_domain }}`)"
+      - "traefik.http.routers.onlyoffice.entrypoints=websecure"
+      - "traefik.http.routers.onlyoffice.tls=true"
+      - "traefik.http.routers.onlyoffice.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.onlyoffice.loadbalancer.server.port={{ onlyoffice_port }}"

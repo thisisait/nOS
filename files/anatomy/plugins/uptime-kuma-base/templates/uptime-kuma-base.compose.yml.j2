@@ -1,0 +1,19 @@
+{# uptime-kuma-base — Traefik forward-auth labels for uptime-kuma.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/uptime-kuma-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  uptime-kuma:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`{{ uptime_kuma_domain }}`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.tls=true"
+      - "traefik.http.routers.uptime-kuma.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port={{ uptime_kuma_port }}"

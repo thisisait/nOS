@@ -1,0 +1,19 @@
+{# paperclip-base — Traefik forward-auth labels for paperclip.
+
+Renders into:
+  {{ stacks_dir }}/devops/overrides/paperclip-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  paperclip:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperclip.rule=Host(`{{ paperclip_domain }}`)"
+      - "traefik.http.routers.paperclip.entrypoints=websecure"
+      - "traefik.http.routers.paperclip.tls=true"
+      - "traefik.http.routers.paperclip.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.paperclip.loadbalancer.server.port={{ paperclip_port }}"

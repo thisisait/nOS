@@ -1,0 +1,18 @@
+# manifest.fragment.yml — ntfy-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: ntfy
+role: pazny.ntfy
+feature_flag: install_ntfy
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: ntfy
+  tier: 3
+domain_var: ntfy_domain
+port_var: ntfy_port

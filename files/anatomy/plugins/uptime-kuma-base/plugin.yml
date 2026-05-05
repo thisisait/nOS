@@ -1,0 +1,124 @@
+# =============================================================================
+# uptime-kuma-base — service plugin (Q2 proxy-auth batch, 2026-05-04)
+#
+# Status: live manifest. Wires `pazny.uptime_kuma` into the proxy-auth doctrine —
+# Authentik forward-auth via Traefik middleware (no native OIDC).
+#
+# Tier 3 (user) per CLAUDE.md RBAC mapping. Forward-auth gates
+# access at the proxy layer; the service still renders its own login UI
+# (or, for stateless services, the Authentik session IS the auth).
+# =============================================================================
+
+name: uptime-kuma-base
+version: 0.1.0
+description: |
+  Uptime Kuma — service uptime monitoring dashboard.
+
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware `authentik@file`). The role `pazny.uptime_kuma` keeps install-
+  only responsibilities (image, ports, volumes); this plugin owns the
+  Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
+  /hub deep-link card.
+upstream: https://uptime.kuma.pet/
+license: AGPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "uptime-kuma-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.uptime_kuma
+  feature_flag: install_uptime_kuma
+  variables:
+    - uptime_kuma_port
+    - uptime_kuma_domain
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 3 = user)
+# =============================================================================
+# This service has NO native OIDC support — Authentik gates access at
+# the Traefik layer via the `authentik@file` middleware. RBAC tier
+# determines which Authentik group expression policy applies.
+
+authentik:
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  client_id: nos-uptime-kuma
+  client_secret: "{{ global_password_prefix }}_pw_oidc_uptime_kuma"
+  slug: uptime-kuma
+  tier: 3
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# =============================================================================
+compose_extension:
+  template: templates/uptime-kuma-base.compose.yml.j2
+  target_stack: iiab
+  target_service: uptime-kuma
+  hardening_refs: []
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ uptime_kuma_port }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: uptime-kuma
+      stack: iiab
+      tier: "3"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Operator-hosted service uptime monitoring dashboard. Forward-auth gate ensures only
+    Authentik-authenticated principals reach the service.
+  legal_basis: legitimate_interests
+  data_categories:
+    - monitor_status
+    - uptime_history
+    - oauth_session_data
+  data_subjects:
+    - operators
+  retention_days: 365
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Uptime Kuma"
+    icon: activity
+    url: "https://{{ uptime_kuma_domain }}"
+    tier: 3
+    description: "Service uptime monitoring"

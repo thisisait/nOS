@@ -1,0 +1,19 @@
+{# kiwix-base — Traefik forward-auth labels for kiwix.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/kiwix-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  kiwix:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kiwix.rule=Host(`{{ kiwix_domain }}`)"
+      - "traefik.http.routers.kiwix.entrypoints=websecure"
+      - "traefik.http.routers.kiwix.tls=true"
+      - "traefik.http.routers.kiwix.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.kiwix.loadbalancer.server.port={{ kiwix_port }}"

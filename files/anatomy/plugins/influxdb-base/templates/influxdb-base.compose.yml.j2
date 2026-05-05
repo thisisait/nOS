@@ -1,0 +1,19 @@
+{# influxdb-base — Traefik forward-auth labels for influxdb.
+
+Renders into:
+  {{ stacks_dir }}/data/overrides/influxdb-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  influxdb:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.influxdb.rule=Host(`{{ influxdb_domain }}`)"
+      - "traefik.http.routers.influxdb.entrypoints=websecure"
+      - "traefik.http.routers.influxdb.tls=true"
+      - "traefik.http.routers.influxdb.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.influxdb.loadbalancer.server.port={{ influxdb_port }}"

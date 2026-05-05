@@ -1,0 +1,18 @@
+# manifest.fragment.yml — influxdb-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: influxdb
+role: pazny.influxdb
+feature_flag: install_influxdb
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: influxdb
+  tier: 1
+domain_var: influxdb_domain
+port_var: influxdb_port

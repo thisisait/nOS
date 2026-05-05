@@ -1,0 +1,19 @@
+{# calibre-web-base — Traefik forward-auth labels for calibre-web.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/calibre-web-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  calibre-web:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calibre-web.rule=Host(`{{ calibreweb_domain }}`)"
+      - "traefik.http.routers.calibre-web.entrypoints=websecure"
+      - "traefik.http.routers.calibre-web.tls=true"
+      - "traefik.http.routers.calibre-web.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.calibre-web.loadbalancer.server.port={{ calibreweb_port }}"

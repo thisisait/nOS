@@ -1,0 +1,19 @@
+{# mailpit-base — Traefik forward-auth labels for mailpit.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/mailpit-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  mailpit:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailpit.rule=Host(`{{ mailpit_domain }}`)"
+      - "traefik.http.routers.mailpit.entrypoints=websecure"
+      - "traefik.http.routers.mailpit.tls=true"
+      - "traefik.http.routers.mailpit.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.mailpit.loadbalancer.server.port={{ mailpit_ui_port }}"

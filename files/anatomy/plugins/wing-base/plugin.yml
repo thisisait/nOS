@@ -1,0 +1,130 @@
+# =============================================================================
+# wing-base — service plugin (Q2 proxy-auth batch, 2026-05-04)
+#
+# Status: live manifest. Wires `pazny.wing` into the proxy-auth doctrine —
+# Authentik forward-auth via Traefik middleware (no native OIDC).
+#
+# Tier 1 (admin) per CLAUDE.md RBAC mapping. Forward-auth gates
+# access at the proxy layer; the service still renders its own login UI
+# (or, for stateless services, the Authentik session IS the auth).
+# =============================================================================
+
+name: wing-base
+version: 0.1.0
+description: |
+  Wing — security-research dashboard (FrankenPHP host daemon).
+
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware `authentik@file`). The role `pazny.wing` keeps install-
+  only responsibilities (image, ports, volumes); this plugin owns the
+  Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
+  /hub deep-link card.
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "wing-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.wing
+  feature_flag: install_wing
+  variables:
+    - wing_port
+    - wing_domain
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 1 = admin)
+# =============================================================================
+# This service has NO native OIDC support — Authentik gates access at
+# the Traefik layer via the `authentik@file` middleware. RBAC tier
+# determines which Authentik group expression policy applies.
+
+authentik:
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  client_id: nos-wing
+  client_secret: "{{ global_password_prefix }}_pw_oidc_wing"
+  slug: wing
+  tier: 1
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# =============================================================================
+# Wing runs as a host launchd daemon (FrankenPHP, anatomy A3.5)
+# — there is NO Docker stack to extend. Traefik file-provider
+# derives the wing.<tld> route from state/manifest.yml's
+# host-mode path; this plugin owns the proxy-auth gate + GDPR
+# row + Wing /hub card only. The compose template under
+# templates/wing-base.compose.yml.j2 is a sentinel (empty
+# services map) kept on disk for tooling that walks the
+# canonical plugin layout.
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    # No-op — Wing host launchd daemon is provisioned by
+    # roles/pazny.wing/tasks/main.yml (host launchd plist +
+    # FrankenPHP brew install). Plugin loader has no compose
+    # surface to render here.
+    - noop: true
+  post_compose:
+    # Wing readiness is the launchd KeepAlive contract.
+    - noop: true
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: wing
+      stack: host
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Operator-hosted security-research dashboard (FrankenPHP host daemon). Forward-auth gate ensures only
+    Authentik-authenticated principals reach the service.
+  legal_basis: legitimate_interests
+  data_categories:
+    - systems_inventory
+    - remediation_items
+    - audit_events
+    - oauth_session_data
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Wing"
+    icon: shield
+    url: "https://{{ wing_domain }}"
+    tier: 1
+    description: "Security research dashboard"

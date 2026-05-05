@@ -1,0 +1,19 @@
+{# ntfy-base — Traefik forward-auth labels for ntfy.
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/ntfy-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  ntfy:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ntfy.rule=Host(`{{ ntfy_domain }}`)"
+      - "traefik.http.routers.ntfy.entrypoints=websecure"
+      - "traefik.http.routers.ntfy.tls=true"
+      - "traefik.http.routers.ntfy.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.services.ntfy.loadbalancer.server.port={{ ntfy_port }}"
