@@ -1,0 +1,43 @@
+# =============================================================================
+# outline-base — compose-extension fragment (Track Q U5, Phase 1, 2026-05-04).
+#
+# Rendered by the plugin loader at pre_compose time into:
+#   {{ stacks_dir }}/b2b/overrides/outline-base.yml
+#
+# Compose-merged on top of the role's own override (roles/pazny.outline/
+# templates/compose.yml.j2). Carries Authentik native-OIDC env vessel +
+# mkcert CA volume conditional. Idempotent overlay — both the role AND
+# this fragment can render the same env keys until Phase 2 C1 removes the
+# role-side block.
+#
+# Doctrine reference: docs/bones-and-wings-refactor.md §1.1 "tendons & vessels".
+# Mkcert CA gate: CLAUDE.md "Mkcert CA regression class CLOSED 2026-05-03".
+# =============================================================================
+
+services:
+  outline:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # Defensive placeholder (anatomy P0.12) — keeps environment: a valid
+      # mapping when all conditional blocks render empty.
+      _NOS_PLUGIN: "outline-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      OIDC_CLIENT_ID: "{{ authentik_oidc_outline_client_id }}"
+      OIDC_CLIENT_SECRET: "{{ authentik_oidc_outline_client_secret }}"
+      OIDC_AUTH_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      OIDC_TOKEN_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      OIDC_USERINFO_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
+      OIDC_USERNAME_CLAIM: "preferred_username"
+      OIDC_DISPLAY_NAME: "Authentik"
+      OIDC_SCOPES: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

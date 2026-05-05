@@ -1,0 +1,70 @@
+# =============================================================================
+# n8n-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Replaces the `authentik_oidc_apps[slug=n8n]` row + the role-side
+# N8N_AUTH_OIDC_* env block. Phase 2 C1 deletes both.
+# =============================================================================
+
+name: n8n-base
+version: 0.1.0
+description: |
+  Wiring layer for n8n (workflow automation). Carries Authentik native-OIDC
+  env block (N8N_AUTH_OIDC_ENABLED + CLIENT_ID/SECRET + ISSUER) plus the
+  mkcert CA volume + NODE_EXTRA_CA_CERTS conditional.
+upstream: https://n8n.io/
+license: SUSTAINABLE-USE-1.0   # n8n upstream; manifest is repo-licensed
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.n8n
+  feature_flag: install_n8n
+  variables:
+    - n8n_domain
+    - n8n_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC client
+# =============================================================================
+
+authentik:
+  mode: native_oidc
+  client_id: nos-n8n
+  client_secret: "{{ global_password_prefix }}_pw_oidc_n8n"
+  slug: n8n
+  redirect_uris:
+    - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oauth2-credential/callback"
+    - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oidc/callback"
+  launch_url: "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 2   # manager — workflow author, integrations / secrets
+
+# =============================================================================
+# COMPOSE-EXTENSION
+# =============================================================================
+
+compose_extension:
+  template: templates/n8n-base.compose.yml.j2
+  target_stack: iiab
+  target_service: n8n
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ n8n_port | default(5678) }}/healthz"

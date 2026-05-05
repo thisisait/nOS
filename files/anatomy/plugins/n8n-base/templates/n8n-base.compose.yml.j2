@@ -1,0 +1,29 @@
+# =============================================================================
+# n8n-base — compose-extension fragment (Track Q U5, Phase 1).
+#
+# Rendered into {{ stacks_dir }}/iiab/overrides/n8n-base.yml at pre_compose.
+# Carries Authentik native-OIDC env vessel + mkcert CA mount conditional.
+# =============================================================================
+
+services:
+  n8n:
+{% if tenant_domain_is_local | default(true) | bool %}
+    # mkcert CA conditional — local TLDs only.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "n8n-base"
+{% if tenant_domain_is_local | default(true) | bool %}
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      N8N_AUTH_OIDC_ENABLED: "true"
+      N8N_AUTH_OIDC_CLIENT_ID: "{{ authentik_oidc_n8n_client_id }}"
+      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ authentik_oidc_n8n_client_secret }}"
+      N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/n8n/"
+      N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

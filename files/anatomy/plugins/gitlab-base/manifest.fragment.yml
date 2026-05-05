@@ -1,0 +1,16 @@
+# =============================================================================
+# gitlab-base — manifest fragment
+# =============================================================================
+
+services:
+  gitlab:
+    role: pazny.gitlab
+    feature_flag: install_gitlab
+    tier: 1
+    domain_var: gitlab_domain
+    port_var: gitlab_http_port
+    stack: devops
+    authentik:
+      slug: gitlab
+      mode: native_oidc
+      access_tier: 2

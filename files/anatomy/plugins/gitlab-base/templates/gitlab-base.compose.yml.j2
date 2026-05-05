@@ -1,0 +1,32 @@
+# =============================================================================
+# gitlab-base — compose-extension fragment (Track Q U5, Phase 1).
+#
+# Rendered into {{ stacks_dir }}/devops/overrides/gitlab-base.yml at
+# pre_compose. Carries Authentik omniauth_openid_connect DSL inside
+# GITLAB_OMNIBUS_CONFIG plus mkcert CA mount conditional.
+#
+# Until Phase 2 C1 deletes the role-side block, BOTH fragments render
+# GITLAB_OMNIBUS_CONFIG; Compose merges environment maps key-by-key and the
+# last-loaded override wins. Compose-override file order is alphabetical on
+# the find sort; both `gitlab.yml` and `gitlab-base.yml` carry the same DSL,
+# so the final container env is byte-equivalent either way.
+# =============================================================================
+
+services:
+  gitlab:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/gitlab/trusted-certs/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "gitlab-base"
+{% if install_authentik | default(false) %}
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['omniauth_enabled'] = true
+        gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+        gitlab_rails['omniauth_block_auto_created_users'] = false
+        gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: '{{ authentik_oidc_gitlab_client_id }}', secret: '{{ authentik_oidc_gitlab_client_secret }}', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

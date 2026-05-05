@@ -1,0 +1,16 @@
+# =============================================================================
+# open-webui-base — manifest fragment
+# =============================================================================
+
+services:
+  open_webui:
+    role: pazny.open_webui
+    feature_flag: install_openwebui
+    tier: 1
+    domain_var: openwebui_domain
+    port_var: openwebui_port
+    stack: iiab
+    authentik:
+      slug: open-webui
+      mode: native_oidc
+      access_tier: 3
