@@ -7,8 +7,15 @@
 # jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
 #
 # Outline vyzaduje: PostgreSQL + Redis (oboje z infra stacku).
-# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
-# v default.config.yml pres derivovane authentik_oidc_outline_* promenne.
+#
+# D2 (2026-05-05): Authentik OIDC wiring (OIDC_CLIENT_ID/SECRET/URIs +
+# mkcert CA volume + authentik extra_host) MOVED to outline-base plugin's
+# compose-extension (files/anatomy/plugins/outline-base/templates/
+# outline-base.compose.yml.j2). The plugin loader's pre_compose hook
+# renders it into {{ stacks_dir }}/b2b/overrides/outline-base.yml,
+# Docker Compose merges both override files. This role keeps non-Authentik
+# concerns: DATABASE_URL, REDIS_URL, FILE_STORAGE, SMTP relay, mailpit
+# extra_host.
 # =============================================================================
 
 services:
@@ -23,10 +30,6 @@ services:
 {% endif %}
     volumes:
       - {{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data') }}:/var/lib/outline/data
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
     environment:
       NODE_ENV: production
       SECRET_KEY: "{{ outline_secret_key | default(global_password_prefix + '_pw_outline_secret') }}"
@@ -39,20 +42,8 @@ services:
       FORCE_HTTPS: "false"
       FILE_STORAGE: local
       FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      OIDC_CLIENT_ID: "{{ authentik_oidc_outline_client_id }}"
-      OIDC_CLIENT_SECRET: "{{ authentik_oidc_outline_client_secret }}"
-      OIDC_AUTH_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      OIDC_TOKEN_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
-      OIDC_USERINFO_URI: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
-      OIDC_USERNAME_CLAIM: "preferred_username"
-      OIDC_DISPLAY_NAME: "Authentik"
-      OIDC_SCOPES: "openid profile email"
-{% if tenant_domain_is_local | default(true) | bool %}
-      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% endif %}
-{% endif %}
+{# OIDC env + mkcert CA volume + authentik extra_host moved to outline-base
+   plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -63,15 +54,11 @@ services:
       SMTP_TLS_CIPHERS: ""
       SMTP_SECURE: "false"
 {% endif %}
-{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
-    extra_hosts:
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
 {% if install_mailpit | default(false) %}
+    extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{% endif %}
+{# Authentik extra_host moved to outline-base plugin compose-extension (D2). #}
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/_health 2>&1 || exit 1"]
       interval: 30s
