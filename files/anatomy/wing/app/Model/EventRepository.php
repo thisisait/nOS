@@ -56,6 +56,13 @@ final class EventRepository
 			'upgrade_id'   => $payload['upgrade_id']   ?? null,
 			'patch_id'     => $payload['patch_id']     ?? null,
 			'coexist_svc'  => $payload['coexistence_service'] ?? null,
+			// Anatomy P1 (2026-05-05). Closes CLAUDE.md "Wing /events
+			// schema mismatch" tech debt — Bone POST handler accepted
+			// `source` in JSON but the INSERT silently dropped it.
+			// Free-text attribution hint pre-A10 ("callback" / "operator"
+			// / "agent:<n>"); A10 lands actor_id + actor_action_id for
+			// cryptographic attribution.
+			'source'       => $payload['source']       ?? null,
 		];
 
 		$this->db->table('events')->insert($row);
@@ -93,6 +100,9 @@ final class EventRepository
 		}
 		if (!empty($filters['coexist_svc'])) {
 			$query->where('coexist_svc', $filters['coexist_svc']);
+		}
+		if (!empty($filters['source'])) {
+			$query->where('source', $filters['source']);
 		}
 
 		$total = (clone $query)->count('*');

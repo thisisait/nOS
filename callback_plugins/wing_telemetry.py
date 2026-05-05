@@ -592,6 +592,14 @@ class CallbackModule(CallbackBase):
             "upgrade_id": self._current_upgrade_id,
             "patch_id": self._current_patch_id,
             "coexistence_service": self._current_coexistence_service,
+            # Anatomy P1 (2026-05-05). Pin source attribution at write
+            # time. Pre-fix the column existed in payloads (Bone accepted
+            # the field) but Bone's INSERT silently dropped it; analysts
+            # had to guess attribution from `task` text prefixes. Now the
+            # column lands; "callback" is the canonical value for the
+            # Ansible callback plugin, distinguished from "operator" (manual
+            # curl/API hits) and future "agent:<name>" rows from A8 conductor.
+            "source": "callback",
         }
         ev.update({k: v for k, v in fields.items() if v is not None
                    or k in ("result",)})

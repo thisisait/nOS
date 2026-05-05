@@ -343,6 +343,17 @@ $addMissingColumns($db, 'events', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_patch ON events(patch_id)');
 
+// events.source — Anatomy P1 (2026-05-05). Closes attribution gap in
+// CLAUDE.md "Wing /events table schema mismatch" tech-debt entry —
+// Bone's POST handler accepted `source` in JSON but silently dropped
+// it on insert; analysts had to guess attribution from `task` text
+// prefixes. Hint-level free text pre-A10 (where `actor_id` +
+// `actor_action_id` give cryptographic attribution).
+$addMissingColumns($db, 'events', [
+	'source' => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_events_source ON events(source)');
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

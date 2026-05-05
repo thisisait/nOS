@@ -22,6 +22,17 @@ CREATE TABLE IF NOT EXISTS events (
     upgrade_id    TEXT,
     patch_id      TEXT,
     coexist_svc   TEXT,
+    -- source: who wrote this event. Anatomy P1 (2026-05-05) closes the
+    -- pre-A8 attribution gap noted in CLAUDE.md "Wing /events table
+    -- schema mismatch" tech debt. Bone's POST handler accepted `source`
+    -- in JSON but silently dropped it on insert; analysts had to guess
+    -- attribution from `task` text prefixes. Common values:
+    --   "callback" — Ansible callback plugin (default for playbook runs)
+    --   "operator" — manual curl/API hit
+    --   "agent:<name>" — A8 conductor + future agent runs (with run id)
+    -- Pre-A10 this is hint-level; A10 lands `actor_id` (FK Authentik
+    -- client) + `actor_action_id` (UUID) for cryptographic attribution.
+    source        TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_run_id    ON events(run_id);
@@ -30,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_events_type      ON events(type);
 CREATE INDEX IF NOT EXISTS idx_events_migration ON events(migration_id);
 CREATE INDEX IF NOT EXISTS idx_events_upgrade   ON events(upgrade_id);
 CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
+CREATE INDEX IF NOT EXISTS idx_events_source    ON events(source);
 
 -- Migration history mirror. Source of truth lives in ~/.nos/state.yml; this
 -- table is a read cache populated via BoxAPI /api/state pushes.

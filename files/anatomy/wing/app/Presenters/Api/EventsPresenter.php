@@ -67,6 +67,10 @@ final class EventsPresenter extends BaseApiPresenter
 			'migration_id' => $this->getParameter('migration_id'),
 			'upgrade_id'   => $this->getParameter('upgrade_id'),
 			'coexist_svc'  => $this->getParameter('coexist_svc'),
+			// Anatomy P1 (2026-05-05): source filter — closes CLAUDE.md
+			// "Wing /events schema mismatch" tech debt. Free-text hint
+			// for attribution; A10 lands actor_id alongside.
+			'source'       => $this->getParameter('source'),
 		]);
 		$limit = (int) ($this->getParameter('limit') ?? 100);
 		$this->sendSuccess($this->events->query($filters, $limit));
