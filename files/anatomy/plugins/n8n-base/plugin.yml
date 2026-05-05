@@ -40,6 +40,8 @@ authentik:
   client_id: nos-n8n
   client_secret: "{{ global_password_prefix }}_pw_oidc_n8n"
   slug: n8n
+  name: 'n8n'
+  enabled: "{{ install_n8n | default(false) }}"
   redirect_uris:
     - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oauth2-credential/callback"
     - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oidc/callback"

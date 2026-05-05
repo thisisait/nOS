@@ -63,6 +63,8 @@ authentik:
   client_id: nos-woodpecker
   client_secret: "{{ global_password_prefix }}_pw_oidc_woodpecker"
   slug: woodpecker
+  name: 'Woodpecker CI'
+  enabled: "{{ install_woodpecker | default(false) }}"
   external_host: "https://{{ woodpecker_domain }}"
   internal_host: "http://woodpecker-server:8000"
   cookie_domain: ".{{ tenant_domain }}"

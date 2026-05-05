@@ -35,6 +35,8 @@ authentik:
   client_id: nos-miniflux
   client_secret: "{{ global_password_prefix }}_pw_oidc_miniflux"
   slug: miniflux
+  name: 'Miniflux'
+  enabled: "{{ install_miniflux | default(false) }}"
   redirect_uris:
     - "https://{{ miniflux_domain }}/oauth2/oidc/callback"
   launch_url: "https://{{ miniflux_domain }}"

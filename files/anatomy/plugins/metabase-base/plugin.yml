@@ -35,6 +35,8 @@ authentik:
   client_id: nos-metabase
   client_secret: "{{ global_password_prefix }}_pw_oidc_metabase"
   slug: metabase
+  name: 'Metabase'
+  enabled: "{{ install_metabase | default(false) }}"
   external_host: "https://{{ metabase_domain }}"
   internal_host: "http://metabase:{{ metabase_port }}"
   cookie_domain: ".{{ tenant_domain }}"

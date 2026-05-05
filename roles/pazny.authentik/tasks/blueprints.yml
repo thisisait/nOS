@@ -25,12 +25,12 @@
     mode: '0640'
   notify: Reapply authentik blueprints
 
-- name: "[pazny.authentik Blueprints] Render OAuth2 / proxy providers + applications"
-  ansible.builtin.template:
-    src: "blueprints/10-oidc-apps.yaml.j2"
-    dest: "{{ stacks_dir }}/infra/authentik/blueprints/10-oidc-apps.yaml"
-    mode: '0640'
-  notify: Reapply authentik blueprints
+# 10-oidc-apps.yaml is authoritative-rendered by authentik-base plugin
+# (D1.2 2026-05-05). The plugin's pre_compose hook iterates
+# inputs.clients (per-plugin authentik: blocks harvested by the
+# aggregator with feature_flag gating + Jinja pre-render). Role-side
+# template + task removed in the same commit. See
+# files/anatomy/plugins/authentik-base/blueprints/10-oidc-apps.yaml.j2.
 
 - name: "[pazny.authentik Blueprints] Render RBAC expression policies + bindings"
   ansible.builtin.template:

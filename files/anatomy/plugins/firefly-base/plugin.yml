@@ -69,6 +69,8 @@ authentik:
   client_id: nos-firefly
   client_secret: "{{ global_password_prefix }}_pw_oidc_firefly"
   slug: firefly
+  name: 'Firefly III'
+  enabled: "{{ install_firefly | default(false) }}"
   launch_url: "https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
   tier: 2
 

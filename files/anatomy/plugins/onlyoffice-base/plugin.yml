@@ -56,6 +56,8 @@ authentik:
   client_id: nos-onlyoffice
   client_secret: "{{ global_password_prefix }}_pw_oidc_onlyoffice"
   slug: onlyoffice
+  name: 'ONLYOFFICE'
+  enabled: "{{ install_onlyoffice | default(false) }}"
   tier: 3
 
 # =============================================================================

@@ -31,6 +31,8 @@ authentik:
   client_id: nos-bookstack
   client_secret: "{{ global_password_prefix }}_pw_oidc_bookstack"
   slug: bookstack
+  name: 'BookStack'
+  enabled: "{{ install_bookstack | default(false) }}"
   redirect_uris:
     - "https://{{ bookstack_domain }}/oidc/callback"
   launch_url: "https://{{ bookstack_domain }}"

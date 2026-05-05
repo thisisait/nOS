@@ -56,6 +56,8 @@ authentik:
   client_id: nos-kiwix
   client_secret: "{{ global_password_prefix }}_pw_oidc_kiwix"
   slug: kiwix
+  name: 'Kiwix'
+  enabled: "{{ install_kiwix | default(false) }}"
   tier: 4
 
 # =============================================================================

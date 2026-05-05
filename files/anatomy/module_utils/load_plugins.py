@@ -226,15 +226,48 @@ def topological_order(plugins: list[Plugin]) -> list[Plugin]:
 
 # ── Aggregator pattern (V4 SR-1) ─────────────────────────────────────────────
 
+def _deep_render(value, ctx: dict):
+    """Recursively render Jinja2 strings in nested dict/list values.
+
+    Anatomy D1.2 (2026-05-05): when run_aggregators harvests a peer
+    plugin's block (e.g. authentik:), strings like
+    ``"{{ install_outline | default(false) }}"`` would otherwise sit
+    in the source plugin's ``inputs[var]`` as literal Jinja text — the
+    consuming blueprint template wouldn't re-render them. Pre-rendering
+    here lets the blueprint treat ``c.enabled`` as a real boolean-ish
+    string, ``c.redirect_uris[0]`` as a real URL, etc.
+    """
+    if isinstance(value, str):
+        try:
+            return _render_string(value, ctx)
+        except Exception:
+            # Leave un-renderable strings (missing var refs etc.) in place
+            # — blueprint's Jinja filter chain handles defaults / coercions.
+            return value
+    if isinstance(value, dict):
+        return {k: _deep_render(v, ctx) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_deep_render(v, ctx) for v in value]
+    return value
+
+
 def run_aggregators(plugins: list[Plugin],
-                    agent_profiles: list[dict] | None = None) -> None:
+                    agent_profiles: list[dict] | None = None,
+                    template_vars: dict | None = None) -> None:
     """For every source plugin's `aggregates` block, harvest matching blocks
     from consumer plugins (and optionally agent profiles) into the source
     plugin's `inputs[output_var]`.
 
     Mutates ``plugins`` in place (sets each source plugin's `.inputs`).
+
+    D1.2 extensions:
+      - ``template_vars``: when provided, recursively pre-renders Jinja
+        strings inside harvested blocks, AND skips peer plugins whose
+        ``requires.feature_flag`` is set-to-False in template_vars
+        (disabled services don't pollute aggregated output).
     """
     agent_profiles = agent_profiles or []
+    tvars = template_vars or {}
     for source in plugins:
         for spec in source.aggregates:
             from_kind = spec.get("from")
@@ -247,13 +280,27 @@ def run_aggregators(plugins: list[Plugin],
                 for p in plugins:
                     if p.name == source.name:
                         continue
+                    # Feature-flag gate (D1.2): when running with
+                    # template_vars, skip peers whose feature_flag is off.
+                    flag = (p.requires or {}).get("feature_flag")
+                    if tvars and flag and flag in tvars and not tvars.get(flag):
+                        continue
                     block = p.manifest.get(block_path)
                     if isinstance(block, dict):
+                        if tvars:
+                            block = _deep_render(block, tvars)
+                        # Carry the slug forward even if the manifest's
+                        # block omits one (defensive — current schema
+                        # requires it for authentik:).
+                        block.setdefault("slug", p.name.replace("-base", ""))
+                        block.setdefault("plugin_name", p.name)
                         harvested.append(block)
             elif from_kind == "agent_profile":
                 for ap in agent_profiles:
                     block = ap.get(block_path)
                     if isinstance(block, dict):
+                        if tvars:
+                            block = _deep_render(block, tvars)
                         harvested.append(block)
             source.inputs[output_var] = harvested
 

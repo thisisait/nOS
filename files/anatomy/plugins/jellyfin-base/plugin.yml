@@ -39,6 +39,8 @@ authentik:
   client_id: nos-jellyfin
   client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
   slug: jellyfin
+  name: 'Jellyfin'
+  enabled: "{{ install_jellyfin | default(false) }}"
   redirect_uris:
     - "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/redirect/Authentik"
   launch_url: "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

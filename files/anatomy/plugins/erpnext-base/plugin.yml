@@ -56,6 +56,8 @@ authentik:
   client_id: nos-erpnext
   client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
   slug: erpnext
+  name: 'ERPNext'
+  enabled: "{{ install_erpnext | default(false) }}"
   redirect_uris:
     - "https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/method/frappe.integrations.oauth2_logins.custom?provider=Authentik"
   launch_url: "https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

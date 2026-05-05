@@ -57,6 +57,8 @@ authentik:
   client_id: nos-portainer
   client_secret: "{{ global_password_prefix }}_pw_oidc_portainer"
   slug: portainer
+  name: 'Portainer'
+  enabled: "{{ install_portainer | default(false) }}"
   redirect_uris:
     - "https://{{ portainer_domain }}"
   launch_url: "https://{{ portainer_domain }}"

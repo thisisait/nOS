@@ -33,6 +33,8 @@ authentik:
   client_id: nos-hedgedoc
   client_secret: "{{ global_password_prefix }}_pw_oidc_hedgedoc"
   slug: hedgedoc
+  name: 'HedgeDoc'
+  enabled: "{{ install_hedgedoc | default(false) }}"
   redirect_uris:
     - "https://{{ hedgedoc_domain }}/auth/oauth2/callback"
   launch_url: "https://{{ hedgedoc_domain }}"

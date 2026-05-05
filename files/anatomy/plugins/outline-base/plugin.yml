@@ -45,6 +45,8 @@ authentik:
   client_id: nos-outline
   client_secret: "{{ global_password_prefix }}_pw_oidc_outline"
   slug: outline
+  name: 'Outline'
+  enabled: "{{ install_outline | default(false) }}"
   redirect_uris:
     - "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc.callback"
   launch_url: "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

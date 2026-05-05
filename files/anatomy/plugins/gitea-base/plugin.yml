@@ -54,6 +54,8 @@ authentik:
   client_id: nos-gitea
   client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
   slug: gitea
+  name: 'Gitea'
+  enabled: "{{ install_gitea | default(false) }}"
   redirect_uris:
     - "https://{{ gitea_domain }}/user/oauth2/authentik/callback"
   launch_url: "https://{{ gitea_domain }}"

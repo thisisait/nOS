@@ -57,6 +57,8 @@ authentik:
   client_id: nos-grafana
   client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
   slug: grafana
+  name: 'Grafana'
+  enabled: "{{ install_observability | default(false) }}"
   redirect_uris:
     - "https://{{ grafana_domain }}/login/generic_oauth"
   launch_url: "https://{{ grafana_domain }}"

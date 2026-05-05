@@ -62,6 +62,8 @@ authentik:
   client_id: nos-nodered
   client_secret: "{{ global_password_prefix }}_pw_oidc_nodered"
   slug: nodered
+  name: 'Node-RED'
+  enabled: "{{ install_nodered | default(false) }}"
   redirect_uris:
     - "https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy/callback"
   launch_url: "https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

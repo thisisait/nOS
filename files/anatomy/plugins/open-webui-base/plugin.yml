@@ -42,6 +42,8 @@ authentik:
   client_id: nos-openwebui
   client_secret: "{{ global_password_prefix }}_pw_oidc_openwebui"
   slug: open-webui
+  name: 'Open WebUI'
+  enabled: "{{ install_openwebui | default(false) }}"
   redirect_uris:
     - "https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/oidc/callback"
   launch_url: "https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

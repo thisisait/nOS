@@ -34,6 +34,8 @@ authentik:
   client_id: nos-infisical
   client_secret: "{{ global_password_prefix }}_pw_oidc_infisical"
   slug: infisical
+  name: 'Infisical'
+  enabled: "{{ install_infisical | default(false) }}"
   redirect_uris:
     - "https://{{ infisical_domain }}/api/v1/sso/oidc/callback"
   launch_url: "https://{{ infisical_domain }}"

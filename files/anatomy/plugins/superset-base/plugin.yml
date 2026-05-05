@@ -36,6 +36,8 @@ authentik:
   client_id: nos-superset
   client_secret: "{{ global_password_prefix }}_pw_oidc_superset"
   slug: superset
+  name: 'Superset'
+  enabled: "{{ install_superset | default(false) }}"
   redirect_uris:
     - "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth-authorized/authentik"
   launch_url: "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

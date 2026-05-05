@@ -56,6 +56,8 @@ authentik:
   client_id: nos-paperclip
   client_secret: "{{ global_password_prefix }}_pw_oidc_paperclip"
   slug: paperclip
+  name: 'Paperclip'
+  enabled: "{{ install_paperclip | default(false) }}"
   tier: 2
 
 # =============================================================================

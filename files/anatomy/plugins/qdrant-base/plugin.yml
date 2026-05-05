@@ -67,6 +67,8 @@ authentik:
   client_id: nos-qdrant
   client_secret: "{{ global_password_prefix }}_pw_oidc_qdrant"
   slug: qdrant
+  name: 'Qdrant'
+  enabled: "{{ install_qdrant | default(false) }}"
   external_host: "https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}"
   internal_host: "http://qdrant:6333"
   cookie_domain: ".{{ tenant_domain }}"

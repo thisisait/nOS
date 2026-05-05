@@ -61,6 +61,8 @@ authentik:
   client_id: nos-homeassistant
   client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
   slug: homeassistant
+  name: 'Home Assistant'
+  enabled: "{{ install_homeassistant | default(false) }}"
   redirect_uris:
     - "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc/callback"
   launch_url: "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

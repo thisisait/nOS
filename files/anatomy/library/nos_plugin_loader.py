@@ -111,7 +111,14 @@ def main() -> None:
             if ap_yml.is_file():
                 with open(ap_yml) as fh:
                     agent_profiles.append(yaml.safe_load(fh) or {})
-    load_plugins.run_aggregators(plugins, agent_profiles=agent_profiles)
+    # D1.2 (2026-05-05): pass template_vars so aggregator can pre-render
+    # Jinja in harvested blocks AND skip peers whose feature_flag is
+    # disabled — the authentik-base aggregator relies on this to mirror
+    # the legacy authentik_oidc_apps `enabled: install_X` filtering.
+    load_plugins.run_aggregators(
+        plugins,
+        agent_profiles=agent_profiles,
+        template_vars=module.params.get("template_vars") or {})
     if module.check_mode:
         module.exit_json(
             changed=False,

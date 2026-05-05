@@ -56,6 +56,8 @@ authentik:
   client_id: nos-ntfy
   client_secret: "{{ global_password_prefix }}_pw_oidc_ntfy"
   slug: ntfy
+  name: 'ntfy'
+  enabled: "{{ install_ntfy | default(false) }}"
   tier: 3
 
 # =============================================================================

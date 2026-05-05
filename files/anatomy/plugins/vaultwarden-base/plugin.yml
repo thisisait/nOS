@@ -57,6 +57,8 @@ authentik:
   client_id: nos-vaultwarden
   client_secret: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
   slug: vaultwarden
+  name: 'Vaultwarden'
+  enabled: "{{ install_vaultwarden | default(false) }}"
   redirect_uris:
     - "https://{{ vaultwarden_domain }}/identity/connect/oidc-signin"
   launch_url: "https://{{ vaultwarden_domain }}"

@@ -47,6 +47,8 @@ authentik:
   client_id: nos-gitlab
   client_secret: "{{ global_password_prefix }}_pw_oidc_gitlab"
   slug: gitlab
+  name: 'GitLab'
+  enabled: "{{ install_gitlab | default(false) }}"
   redirect_uris:
     - "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback"
   launch_url: "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

@@ -46,6 +46,8 @@ authentik:
   client_id: nos-nextcloud
   client_secret: "{{ global_password_prefix }}_pw_oidc_nextcloud"
   slug: nextcloud
+  name: 'Nextcloud'
+  enabled: "{{ install_nextcloud | default(false) }}"
   redirect_uris:
     - "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/apps/user_oidc/code"
   launch_url: "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

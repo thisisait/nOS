@@ -37,6 +37,8 @@ authentik:
   client_id: nos-wordpress
   client_secret: "{{ global_password_prefix }}_pw_oidc_wordpress"
   slug: wordpress
+  name: 'WordPress'
+  enabled: "{{ install_wordpress | default(false) }}"
   redirect_uris:
     - "https://{{ wordpress_domain }}/wp-admin/admin-ajax.php?action=openid-connect-authorize"
   launch_url: "https://{{ wordpress_domain }}"

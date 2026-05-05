@@ -37,6 +37,8 @@ authentik:
   client_id: nos-freescout
   client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
   slug: freescout
+  name: 'FreeScout'
+  enabled: "{{ install_freescout | default(false) }}"
   redirect_uris:
     - "https://{{ freescout_domain }}/oauth/callback"
   launch_url: "https://{{ freescout_domain }}"

@@ -56,6 +56,8 @@ authentik:
   client_id: nos-code-server
   client_secret: "{{ global_password_prefix }}_pw_oidc_code_server"
   slug: code-server
+  name: 'code-server'
+  enabled: "{{ install_code_server | default(false) }}"
   tier: 2
 
 # =============================================================================

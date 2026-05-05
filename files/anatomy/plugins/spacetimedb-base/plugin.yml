@@ -61,6 +61,8 @@ authentik:
   client_id: nos-spacetimedb
   client_secret: "{{ global_password_prefix }}_pw_oidc_spacetimedb"
   slug: spacetimedb
+  name: 'SpacetimeDB'
+  enabled: "{{ install_spacetimedb | default(false) }}"
   launch_url: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
   tier: 1   # admin — DB control plane, narrow audience
 
