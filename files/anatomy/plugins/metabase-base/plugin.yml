@@ -1,0 +1,70 @@
+# =============================================================================
+# metabase-base — service plugin (Q2, U6 — pivoted to forward_auth).
+#
+# PIVOT NOTE: Metabase OSS does not support OIDC (SAML/JWT/OIDC live in
+# Metabase Enterprise / paid tier). Inspection of role compose template
+# confirms no AUTH/OIDC env vars. Pivot to forward_auth (matches U7 shape).
+# RBAC tier 2 (manager) per CLAUDE.md.
+# =============================================================================
+
+name: metabase-base
+version: 0.1.0
+description: |
+  Wiring layer for Metabase: Authentik forward-auth gate (Traefik
+  middleware), GDPR Article 30 row, /hub card. Metabase OSS has no
+  native OIDC; gate is access-control only.
+upstream: https://www.metabase.com/
+license: AGPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.metabase
+  feature_flag: install_metabase
+  variables:
+    - metabase_domain
+    - metabase_port
+    - tenant_domain
+    - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-metabase
+  client_secret: "{{ global_password_prefix }}_pw_oidc_metabase"
+  slug: metabase
+  external_host: "https://{{ metabase_domain }}"
+  internal_host: "http://metabase:{{ metabase_port }}"
+  cookie_domain: ".{{ tenant_domain }}"
+  tier: 2
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ metabase_port }}/api/health"
+
+gdpr:
+  purpose: |
+    Hosts the operator's Metabase BI dashboards. Stores question /
+    dashboard / collection metadata, query history, user accounts.
+  legal_basis: legitimate_interests
+  data_categories:
+    - dashboard_definitions
+    - query_history
+    - user_accounts
+  data_subjects:
+    - operators
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Metabase"
+    icon: pie-chart
+    url: "https://{{ metabase_domain }}"
+    tier: 2
+    description: "BI dashboards"
+    health_check: "https://{{ metabase_domain }}/api/health"

@@ -1,0 +1,15 @@
+# =============================================================================
+# jellyfin-base — compose-extension fragment (Q2 forward_auth pivot).
+#
+# Jellyfin OSS has no native OIDC env. The Authentik gate is enforced by
+# Traefik's `authentik@file` middleware (attached via state/manifest.yml's
+# authentik.mode=forward_auth derivation). This compose-extension exists
+# only to surface the plugin identity in `docker inspect jellyfin` and to
+# leave a hook for future Jellyfin-side env wiring (Sonarr/Radarr links etc).
+# =============================================================================
+
+services:
+  jellyfin:
+    environment:
+      # Defensive placeholder (anatomy P0.12).
+      _NOS_PLUGIN: "jellyfin-base"

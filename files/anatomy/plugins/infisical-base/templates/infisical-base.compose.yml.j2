@@ -1,0 +1,29 @@
+# =============================================================================
+# infisical-base — compose-extension fragment (Q2 native_oidc_env batch B).
+# Rendered into {{ stacks_dir }}/infra/overrides/infisical-base.yml.
+#
+# Infisical CE listens on TLS upstream on a public TLD; on a local TLD the
+# Authentik discovery doc resolves via mkcert. The role currently does not
+# mount mkcert CA into the Infisical container (Node-based runtime, see
+# wiring inventory) — keep parity here. Add NODE_EXTRA_CA_CERTS only if a
+# future regression in OIDC discovery on local TLDs surfaces.
+# =============================================================================
+
+services:
+  infisical:
+    environment:
+      # Defensive placeholder (anatomy P0.12).
+      _NOS_PLUGIN: "infisical-base"
+{% if install_authentik | default(false) %}
+      # ── Native OIDC (Authentik) ─────────────────────────────────────────────
+      # Infisical CE 0.60+: env vars seed the default OIDC config. The
+      # organization-level OIDC attach still needs a post-API call — handled
+      # by U8's native_oidc_api batch (post_compose lifecycle hook).
+      OIDC_CLIENT_ID: "{{ authentik_oidc_infisical_client_id | default('nos-infisical') }}"
+      OIDC_CLIENT_SECRET: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
+      OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
+      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
+      OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

@@ -1,0 +1,80 @@
+# =============================================================================
+# bookstack-base — service plugin (Q2 native_oidc_env batch B, U6).
+# Native OIDC via OIDC_* env vars (issuer-discovery). RBAC tier 3 (user).
+# =============================================================================
+
+name: bookstack-base
+version: 0.1.0
+description: |
+  Wiring layer for BookStack wiki: Authentik native-OIDC vessel,
+  mkcert CA mount conditional, GDPR Article 30 row, /hub card.
+upstream: https://www.bookstackapp.com/
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.bookstack
+  feature_flag: install_bookstack
+  variables:
+    - bookstack_domain
+    - bookstack_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-bookstack
+  client_secret: "{{ global_password_prefix }}_pw_oidc_bookstack"
+  slug: bookstack
+  redirect_uris:
+    - "https://{{ bookstack_domain }}/oidc/callback"
+  launch_url: "https://{{ bookstack_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+    - groups
+  tier: 3
+
+compose_extension:
+  template: templates/bookstack-base.compose.yml.j2
+  target_stack: iiab
+  target_service: bookstack
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ bookstack_port }}/login"
+
+gdpr:
+  purpose: |
+    Hosts the operator's BookStack wiki. Stores pages, page revisions,
+    user accounts, and the OIDC session link.
+  legal_basis: legitimate_interests
+  data_categories:
+    - wiki_content
+    - revision_history
+    - user_accounts
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "BookStack"
+    icon: book
+    url: "https://{{ bookstack_domain }}"
+    tier: 3
+    description: "Wiki / knowledge base"
+    health_check: "https://{{ bookstack_domain }}/login"

@@ -1,0 +1,82 @@
+# =============================================================================
+# infisical-base — service plugin (Q2 native_oidc_env batch B, U6).
+# Native OIDC via OIDC_DISCOVERY_URL + OIDC_CLIENT_*. Tier 1 (admin).
+#
+# Note: Infisical CE 0.60+ env vars seed the default OIDC config; org-level
+# OIDC attach still needs a post-API call (deferred to U8 native_oidc_api batch).
+# =============================================================================
+
+name: infisical-base
+version: 0.1.0
+description: |
+  Wiring layer for Infisical CE (central secrets vault): Authentik
+  native-OIDC vessel, GDPR Article 30 row, /hub card.
+upstream: https://infisical.com/
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.infisical
+  feature_flag: install_infisical
+  variables:
+    - infisical_domain
+    - infisical_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-infisical
+  client_secret: "{{ global_password_prefix }}_pw_oidc_infisical"
+  slug: infisical
+  redirect_uris:
+    - "https://{{ infisical_domain }}/api/v1/sso/oidc/callback"
+  launch_url: "https://{{ infisical_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 1
+
+compose_extension:
+  template: templates/infisical-base.compose.yml.j2
+  target_stack: infra
+  target_service: infisical
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ infisical_port }}/api/status"
+
+gdpr:
+  purpose: |
+    Hosts the operator's central secrets vault (Infisical CE). Stores
+    encrypted secrets, project metadata, audit logs, and OIDC session links.
+    Vault values are envelope-encrypted at rest.
+  legal_basis: legitimate_interests
+  data_categories:
+    - encrypted_secrets
+    - audit_logs
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors: []
+  eu_residency: true
+  breach_severity_default: critical
+
+ui-extension:
+  hub_card:
+    title: "Infisical"
+    icon: vault
+    url: "https://{{ infisical_domain }}"
+    tier: 1
+    description: "Central secrets vault"
+    health_check: "https://{{ infisical_domain }}/api/status"

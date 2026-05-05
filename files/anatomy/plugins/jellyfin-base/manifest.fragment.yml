@@ -1,0 +1,9 @@
+jellyfin:
+  tier: 4
+  domain_var: jellyfin_domain
+  port_var: jellyfin_port
+  feature_flag: install_jellyfin
+  authentik:
+    mode: forward_auth
+    slug: jellyfin
+    tier: 4

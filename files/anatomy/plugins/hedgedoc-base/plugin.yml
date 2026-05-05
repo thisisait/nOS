@@ -1,0 +1,80 @@
+# =============================================================================
+# hedgedoc-base — service plugin (Q2 native_oidc_env batch B, U6).
+# Native OIDC via CMD_OAUTH2_* env vars. NODE_EXTRA_CA_CERTS gated on local TLD.
+# RBAC tier 3 (user).
+# =============================================================================
+
+name: hedgedoc-base
+version: 0.1.0
+description: |
+  Wiring layer for HedgeDoc collaborative markdown: Authentik native-OIDC
+  vessel (CMD_OAUTH2_*), mkcert CA mount + NODE_EXTRA_CA_CERTS conditional,
+  GDPR Article 30 row, /hub card.
+upstream: https://hedgedoc.org/
+license: AGPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.hedgedoc
+  feature_flag: install_hedgedoc
+  variables:
+    - hedgedoc_domain
+    - hedgedoc_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-hedgedoc
+  client_secret: "{{ global_password_prefix }}_pw_oidc_hedgedoc"
+  slug: hedgedoc
+  redirect_uris:
+    - "https://{{ hedgedoc_domain }}/auth/oauth2/callback"
+  launch_url: "https://{{ hedgedoc_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 3
+
+compose_extension:
+  template: templates/hedgedoc-base.compose.yml.j2
+  target_stack: iiab
+  target_service: hedgedoc
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ hedgedoc_port }}/status"
+
+gdpr:
+  purpose: |
+    Hosts the operator's HedgeDoc collaborative markdown notes. Stores
+    documents, edit history, and OIDC session links.
+  legal_basis: legitimate_interests
+  data_categories:
+    - document_content
+    - edit_history
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "HedgeDoc"
+    icon: edit
+    url: "https://{{ hedgedoc_domain }}"
+    tier: 3
+    description: "Collaborative markdown editor"
+    health_check: "https://{{ hedgedoc_domain }}/status"

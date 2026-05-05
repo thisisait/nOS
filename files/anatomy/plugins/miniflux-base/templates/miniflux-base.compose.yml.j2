@@ -1,0 +1,28 @@
+# =============================================================================
+# miniflux-base — compose-extension fragment (Q2 native_oidc_env batch B).
+# Rendered into {{ stacks_dir }}/iiab/overrides/miniflux-base.yml.
+# =============================================================================
+
+services:
+  miniflux:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # Defensive placeholder (anatomy P0.12). Keeps environment: a valid
+      # mapping when every conditional block below renders empty.
+      _NOS_PLUGIN: "miniflux-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      OAUTH2_PROVIDER: "oidc"
+      OAUTH2_CLIENT_ID: "{{ authentik_oidc_miniflux_client_id | default('nos-miniflux') }}"
+      OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_miniflux_client_secret | default(global_password_prefix + '_pw_oidc_miniflux') }}"
+      OAUTH2_REDIRECT_URL: "https://{{ miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth2/oidc/callback"
+      OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/miniflux/"
+      OAUTH2_OIDC_PROVIDER_NAME: "Authentik"
+      OAUTH2_USER_CREATION: "1"
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

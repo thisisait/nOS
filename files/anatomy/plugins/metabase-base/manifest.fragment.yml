@@ -1,0 +1,9 @@
+metabase:
+  tier: 2
+  domain_var: metabase_domain
+  port_var: metabase_port
+  feature_flag: install_metabase
+  authentik:
+    mode: forward_auth
+    slug: metabase
+    tier: 2

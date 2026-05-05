@@ -1,0 +1,35 @@
+# =============================================================================
+# hedgedoc-base — compose-extension fragment (Q2 native_oidc_env batch B).
+# Rendered into {{ stacks_dir }}/iiab/overrides/hedgedoc-base.yml.
+# =============================================================================
+
+services:
+  hedgedoc:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # Defensive placeholder (anatomy P0.12).
+      _NOS_PLUGIN: "hedgedoc-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC via CMD_OAUTH2_*) ──────────────────────────────
+      CMD_OAUTH2_PROVIDERNAME: "Authentik"
+      CMD_OAUTH2_CLIENT_ID: "{{ authentik_oidc_hedgedoc_client_id | default('nos-hedgedoc') }}"
+      CMD_OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_hedgedoc_client_secret | default(global_password_prefix + '_pw_oidc_hedgedoc') }}"
+      CMD_OAUTH2_AUTHORIZATION_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      CMD_OAUTH2_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      CMD_OAUTH2_USER_PROFILE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
+      CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: "preferred_username"
+      CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "name"
+      CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
+      CMD_OAUTH2_SCOPE: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # mkcert CA conditional — Node's HTTPS client uses Mozilla CA list by
+      # default; on public TLDs the LE chain validates without this override.
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

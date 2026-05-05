@@ -75,3 +75,24 @@ lifecycle:
     - wait_health: "http://127.0.0.1:{{ nextcloud_port | default(8085) }}/status.php"
     # Future post-Q2: invoke `occ user_oidc:provider` here instead of in
     # the role's post.yml. For now the role keeps that responsibility.
+
+gdpr:
+  purpose: |
+    Hosts the operator's Nextcloud collaboration suite. Stores files,
+    contacts, calendars, talk messages, user accounts, and OIDC session
+    data. May process end-user uploads.
+  legal_basis: legitimate_interests
+  data_categories:
+    - file_storage
+    - contacts
+    - calendars
+    - chat_messages
+    - user_accounts
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true

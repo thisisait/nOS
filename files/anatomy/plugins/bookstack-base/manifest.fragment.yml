@@ -1,0 +1,9 @@
+bookstack:
+  tier: 3
+  domain_var: bookstack_domain
+  port_var: bookstack_port
+  feature_flag: install_bookstack
+  authentik:
+    mode: native_oidc
+    slug: bookstack
+    tier: 3

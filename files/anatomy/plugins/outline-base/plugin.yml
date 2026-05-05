@@ -72,3 +72,22 @@ lifecycle:
     - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ outline_port | default(3005) }}/_health"
+
+gdpr:
+  purpose: |
+    Hosts the operator's Outline collaborative wiki. Stores documents,
+    document revisions, comments, user accounts, and OIDC session data.
+  legal_basis: legitimate_interests
+  data_categories:
+    - wiki_content
+    - revision_history
+    - comments
+    - user_accounts
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true

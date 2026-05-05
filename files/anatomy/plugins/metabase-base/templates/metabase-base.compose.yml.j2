@@ -1,0 +1,9 @@
+# =============================================================================
+# metabase-base — compose-extension fragment (Q2 forward_auth pivot).
+# Forward-auth lives in Traefik file-provider; this fragment is identity-only.
+# =============================================================================
+
+services:
+  metabase:
+    environment:
+      _NOS_PLUGIN: "metabase-base"

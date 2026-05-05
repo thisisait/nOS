@@ -1,0 +1,9 @@
+hedgedoc:
+  tier: 3
+  domain_var: hedgedoc_domain
+  port_var: hedgedoc_port
+  feature_flag: install_hedgedoc
+  authentik:
+    mode: native_oidc
+    slug: hedgedoc
+    tier: 3

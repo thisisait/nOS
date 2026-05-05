@@ -1,0 +1,82 @@
+# =============================================================================
+# miniflux-base — service plugin (Q2 native_oidc_env batch B, U6).
+# Native OIDC via OAUTH2_* env vars. RBAC tier 3 (user).
+#
+# Worker U6 wrote README + manifest.fragment.yml + compose-extension template
+# but ran out of agent quota before generating plugin.yml. Operator-completed
+# from the bookstack-base shape (same batch, same shape).
+# =============================================================================
+
+name: miniflux-base
+version: 0.1.0
+description: |
+  Wiring layer for Miniflux RSS reader: Authentik native-OIDC vessel,
+  mkcert CA mount conditional, GDPR Article 30 row, /hub card.
+upstream: https://miniflux.app/
+license: Apache-2.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.miniflux
+  feature_flag: install_miniflux
+  variables:
+    - miniflux_domain
+    - miniflux_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-miniflux
+  client_secret: "{{ global_password_prefix }}_pw_oidc_miniflux"
+  slug: miniflux
+  redirect_uris:
+    - "https://{{ miniflux_domain }}/oauth2/oidc/callback"
+  launch_url: "https://{{ miniflux_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 3
+
+compose_extension:
+  template: templates/miniflux-base.compose.yml.j2
+  target_stack: iiab
+  target_service: miniflux
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ miniflux_port | default(3011) }}/healthcheck"
+
+gdpr:
+  purpose: |
+    Hosts the operator's RSS aggregator. Stores feed subscriptions,
+    read/unread state, starred items, and the OIDC session link.
+  legal_basis: legitimate_interests
+  data_categories:
+    - feed_subscriptions
+    - read_state
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Miniflux"
+    icon: rss
+    url: "https://{{ miniflux_domain }}"
+    tier: 3
+    description: "RSS aggregator"
+    health_check: "https://{{ miniflux_domain }}/healthcheck"

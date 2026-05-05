@@ -1,0 +1,9 @@
+infisical:
+  tier: 1
+  domain_var: infisical_domain
+  port_var: infisical_port
+  feature_flag: install_infisical
+  authentik:
+    mode: native_oidc
+    slug: infisical
+    tier: 1

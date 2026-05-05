@@ -1,0 +1,70 @@
+# =============================================================================
+# superset-base — service plugin (Q2, U6 — pivoted to forward_auth).
+#
+# PIVOT NOTE: Original U6 spec assumed native_oidc_env. Inspection of
+# roles/pazny.superset/templates/compose.yml.j2 shows no AUTH/OIDC/OAUTH env
+# vars (Superset's OIDC is configured via superset_config.py + Flask-AppBuilder,
+# not env). Superset is in CLAUDE.md proxy-auth list. Pivot to forward_auth
+# (matches U7 spec shape). RBAC tier 2 (manager) per CLAUDE.md.
+# =============================================================================
+
+name: superset-base
+version: 0.1.0
+description: |
+  Wiring layer for Apache Superset: Authentik forward-auth gate (Traefik
+  middleware), GDPR Article 30 row, /hub card.
+upstream: https://superset.apache.org/
+license: Apache-2.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.superset
+  feature_flag: install_superset
+  variables:
+    - superset_domain
+    - superset_port
+    - tenant_domain
+    - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-superset
+  client_secret: "{{ global_password_prefix }}_pw_oidc_superset"
+  slug: superset
+  external_host: "https://{{ superset_domain }}"
+  internal_host: "http://superset:{{ superset_port }}"
+  cookie_domain: ".{{ tenant_domain }}"
+  tier: 2
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ superset_port }}/health"
+
+gdpr:
+  purpose: |
+    Hosts the operator's BI dashboards (Apache Superset). Stores dataset
+    metadata, dashboard definitions, query history, and user sessions.
+  legal_basis: legitimate_interests
+  data_categories:
+    - dashboard_definitions
+    - query_history
+    - user_accounts
+  data_subjects:
+    - operators
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Superset"
+    icon: bar-chart
+    url: "https://{{ superset_domain }}"
+    tier: 2
+    description: "BI / data exploration"
+    health_check: "https://{{ superset_domain }}/health"

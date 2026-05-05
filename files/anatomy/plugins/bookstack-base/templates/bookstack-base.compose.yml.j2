@@ -1,0 +1,28 @@
+# =============================================================================
+# bookstack-base — compose-extension fragment (Q2 native_oidc_env batch B).
+# Rendered into {{ stacks_dir }}/iiab/overrides/bookstack-base.yml.
+# =============================================================================
+
+services:
+  bookstack:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "bookstack-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      AUTH_METHOD: "oidc"
+      OIDC_NAME: "Authentik"
+      OIDC_DISPLAY_NAME_CLAIMS: "name"
+      OIDC_CLIENT_ID: "{{ authentik_oidc_bookstack_client_id | default('nos-bookstack') }}"
+      OIDC_CLIENT_SECRET: "{{ authentik_oidc_bookstack_client_secret | default(global_password_prefix + '_pw_oidc_bookstack') }}"
+      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/bookstack/"
+      OIDC_ISSUER_DISCOVER: "true"
+      OIDC_USER_TO_GROUPS: "true"
+      OIDC_ADDITIONAL_SCOPES: "groups"
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

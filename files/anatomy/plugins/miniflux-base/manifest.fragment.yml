@@ -1,0 +1,9 @@
+miniflux:
+  tier: 3
+  domain_var: miniflux_domain
+  port_var: miniflux_port
+  feature_flag: install_miniflux
+  authentik:
+    mode: native_oidc
+    slug: miniflux
+    tier: 3

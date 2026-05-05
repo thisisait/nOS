@@ -1,0 +1,78 @@
+# =============================================================================
+# jellyfin-base — service plugin (Q2, U6 — pivoted to forward_auth).
+#
+# PIVOT NOTE: Original U6 spec assumed native_oidc_env. Inspection of
+# roles/pazny.jellyfin/templates/compose.yml.j2 shows ZERO Authentik OIDC env
+# vars (Jellyfin OSS does not support OIDC; the JellyAuth/SSO plugin is a
+# server-side install, not env-driven). Jellyfin is in CLAUDE.md proxy-auth
+# list. So this plugin uses `mode: forward_auth` (matches U7 spec shape).
+# RBAC tier 4 (guest) per CLAUDE.md.
+# =============================================================================
+
+name: jellyfin-base
+version: 0.1.0
+description: |
+  Wiring layer for Jellyfin media server: Authentik forward-auth gate
+  (Traefik middleware), GDPR Article 30 row, /hub card. No env-driven
+  native OIDC — Jellyfin OSS doesn't ship that.
+upstream: https://jellyfin.org/
+license: GPL-2.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.jellyfin
+  feature_flag: install_jellyfin
+  variables:
+    - jellyfin_domain
+    - jellyfin_port
+    - tenant_domain
+    - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-jellyfin
+  client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
+  slug: jellyfin
+  external_host: "https://{{ jellyfin_domain }}"
+  internal_host: "http://jellyfin:{{ jellyfin_port }}"
+  cookie_domain: ".{{ tenant_domain }}"
+  tier: 4
+
+# No compose_extension — forward_auth gate lives in Traefik dynamic config,
+# not in the service's environment. (Traefik file-provider derives the
+# `authentik@file` middleware attachment from state/manifest.yml.)
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ jellyfin_port }}/health"
+
+gdpr:
+  purpose: |
+    Hosts the operator's media library (movies / TV / music). Stores user
+    accounts (per-family-member profiles), watch history, and library
+    metadata.
+  legal_basis: legitimate_interests
+  data_categories:
+    - user_accounts
+    - watch_history
+    - media_metadata
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Jellyfin"
+    icon: tv
+    url: "https://{{ jellyfin_domain }}"
+    tier: 4
+    description: "Media server (movies / TV / music)"
+    health_check: "https://{{ jellyfin_domain }}/health"

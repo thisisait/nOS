@@ -1,0 +1,9 @@
+superset:
+  tier: 2
+  domain_var: superset_domain
+  port_var: superset_port
+  feature_flag: install_superset
+  authentik:
+    mode: forward_auth
+    slug: superset
+    tier: 2

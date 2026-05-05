@@ -1,0 +1,9 @@
+# =============================================================================
+# superset-base — compose-extension fragment (Q2 forward_auth pivot).
+# Forward-auth lives in Traefik file-provider; this fragment is identity-only.
+# =============================================================================
+
+services:
+  superset:
+    environment:
+      _NOS_PLUGIN: "superset-base"

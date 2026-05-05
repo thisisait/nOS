@@ -81,3 +81,22 @@ lifecycle:
     - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/"
+
+gdpr:
+  purpose: |
+    Hosts the operator's Home Assistant smart-home hub. Stores device
+    states, automations, sensor history, user accounts, and OIDC
+    session data. Telemetry from physical IoT devices stays on-host.
+  legal_basis: legitimate_interests
+  data_categories:
+    - device_telemetry
+    - sensor_history
+    - automation_definitions
+    - user_accounts
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - household_members
+  retention_days: 365
+  processors: []
+  eu_residency: true
