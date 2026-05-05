@@ -8,8 +8,11 @@
 #
 # BookStack requires: MariaDB (from the infra stack via shared_net) +
 # optionally Redis for cache/session/queue.
-# OIDC client_id/secret is read from the central authentik_oidc_apps list
-# in default.config.yml via derived authentik_oidc_bookstack_* variables.
+#
+# D2 (2026-05-05): Authentik OIDC wiring (AUTH_METHOD/OIDC_* env vars +
+# mkcert CA volume + authentik extra_host) MOVED to bookstack-base plugin's
+# compose-extension (files/anatomy/plugins/bookstack-base/templates/
+# bookstack-base.compose.yml.j2). Role keeps non-Authentik concerns only.
 # =============================================================================
 
 services:
@@ -24,10 +27,7 @@ services:
 {% endif %}
     volumes:
       - {{ bookstack_data_dir }}:/config
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + Authentik extra_host moved to bookstack-base plugin (D2). #}
     environment:
       PUID: "{{ bookstack_puid | default(1000) }}"
       PGID: "{{ bookstack_pgid | default(1000) }}"
@@ -46,18 +46,7 @@ services:
       QUEUE_CONNECTION: "redis"
       REDIS_SERVERS: "redis:6379:0:{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
 {% endif %}
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      AUTH_METHOD: "oidc"
-      OIDC_NAME: "Authentik"
-      OIDC_DISPLAY_NAME_CLAIMS: "name"
-      OIDC_CLIENT_ID: "{{ authentik_oidc_bookstack_client_id }}"
-      OIDC_CLIENT_SECRET: "{{ authentik_oidc_bookstack_client_secret }}"
-      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/bookstack/"
-      OIDC_ISSUER_DISCOVER: "true"
-      OIDC_USER_TO_GROUPS: "true"
-      OIDC_ADDITIONAL_SCOPES: "groups"
-{% endif %}
+{# OIDC env moved to bookstack-base plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -70,15 +59,11 @@ services:
       MAIL_FROM_NAME: "BookStack"
       MAIL_ENCRYPTION: ""
 {% endif %}
-{% if (install_authentik | default(false)) or (install_mailpit | default(false)) %}
-    extra_hosts:
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
 {% if install_mailpit | default(false) %}
+    extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{% endif %}
+{# authentik extra_host moved to bookstack-base plugin compose-extension (D2). #}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
