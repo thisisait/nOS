@@ -1013,17 +1013,19 @@ kiwix_port: 8888                           # Local kiwix-serve port
 kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/kiwix/kiwix-serve)
 kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Put .zim files here
 
-# ZIM files to download (empty = do not download automatically)
-# Sizes: Wikipedia CZ ~2GB, EN ~90GB, Gutenberg ~60GB
-# See: https://download.kiwix.org/zim/
-# Init ZIM – a small file downloaded automatically so Kiwix starts.
-# Add larger ZIM files to kiwix_zim_files or download via download-zim.sh.
-kiwix_init_zim_url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
-kiwix_init_zim_dest: "wikipedia_en_top_mini.zim"
+# Init ZIM — downloaded automatically on first blank run so Kiwix can start.
+# Empty = disabled (container starts in sleep-infinity mode; add ZIM files
+# manually via download-zim.sh or kiwix_zim_files below).
+# WARNING: large ZIMs (>50 MB) block the playbook for the full download duration.
+# Keep this pointing at something tiny, or leave empty and use kiwix_zim_files.
+kiwix_init_zim_url: ""
+kiwix_init_zim_dest: "init.zim"
 
+# ZIM files to download (empty = do not download automatically)
+# See: https://download.kiwix.org/zim/
 kiwix_zim_files: []
 # Examples (add to config.yml):
-# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2026-03.zim"
+# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
 #   dest: "wikipedia_en_top_mini.zim"    # ~315 MB
 # - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
 #   dest: "wikipedia_cs_mini.zim"        # ~500 MB

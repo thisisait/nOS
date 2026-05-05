@@ -16,8 +16,8 @@ kiwix_port: 8888
 kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"
 
-kiwix_init_zim_url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
-kiwix_init_zim_dest: "wikipedia_en_top_mini.zim"
+kiwix_init_zim_url: ""          # empty = no auto-download; set in config.yml if needed
+kiwix_init_zim_dest: "init.zim"
 
 kiwix_zim_files: []
 
