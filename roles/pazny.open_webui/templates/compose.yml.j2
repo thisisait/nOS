@@ -5,6 +5,13 @@
 #
 # Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
 # jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# D2 (2026-05-05): OAUTH_CLIENT_ID/SECRET + OPENID_PROVIDER_URL + ENABLE_OAUTH_
+# SIGNUP/MERGE + OAUTH_SCOPES + mkcert CA volume + REQUESTS_CA_BUNDLE/SSL_CERT_
+# FILE/AIOHTTP_CA env vars + authentik extra_host MOVED to open-webui-base
+# plugin's compose-extension (files/anatomy/plugins/open-webui-base/templates/
+# open-webui-base.compose.yml.j2). Role keeps: Ollama URL, auth/signup flags,
+# security hardening, MCP gateway, Anthropic connector, host-gateway.
 # =============================================================================
 
 services:
@@ -19,9 +26,7 @@ services:
 {% endif %}
     volumes:
       - {{ openwebui_data_dir }}:/app/backend/data
-{% if tenant_domain_is_local | default(true) | bool %}
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + CA env vars + Authentik OIDC moved to open-webui-base plugin (D2). #}
     environment:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
@@ -31,17 +36,7 @@ services:
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
-{% if tenant_domain_is_local | default(true) | bool %}
-      # On a local TLD (.local/.lan/.test) the only TLS cert in play is the
-      # mkcert one — point the bundle at it. On a public TLD we must NOT set
-      # this, otherwise Python httpx + Open WebUI can't validate LE certs
-      # against the system root store (the mkcert-only bundle would shadow
-      # the Mozilla CA list). Surfaced 2026-05-03 against auth.pazny.eu.
-      REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-      SSL_CERT_FILE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-      # ── MCP: akceptovat self-signed certy (mkcert) pri volani MCP serveru ──
-      AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% endif %}
+{# REQUESTS_CA_BUNDLE/SSL_CERT_FILE/AIOHTTP_CA (mkcert) moved to open-webui-base plugin (D2). #}
       # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
       # Umoznuje per-user auth a attribution pri volani MCP toolu.
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"
@@ -72,16 +67,7 @@ services:
       OPENAI_API_KEYS: "{{ openai_api_key | default('sk-placeholder') }};{{ anthropic_api_key }}"
       ENABLE_OPENAI_API: "true"
 {% endif %}
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      ENABLE_OAUTH_SIGNUP: "true"
-      OAUTH_PROVIDER_NAME: "Authentik"
-      OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
-      OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
-      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/open-webui/.well-known/openid-configuration"
-      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
-      OAUTH_SCOPES: "openid profile email"
-{% endif %}
+{# OAUTH_CLIENT_ID/SECRET + OPENID_PROVIDER_URL moved to open-webui-base plugin (D2 2026-05-05). #}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/api/config"]
       interval: 30s
@@ -90,9 +76,7 @@ services:
       start_period: 60s
     extra_hosts:
       - "host.docker.internal:host-gateway"
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
+{# authentik extra_host moved to open-webui-base plugin compose-extension (D2). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
