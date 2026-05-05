@@ -996,6 +996,43 @@ A10 (actor audit migration) → Phase 5 ceremony.
 
 ---
 
+## Snapshot 2026-05-07 — A8 batch graduation
+
+**Gate state:** 529/529 tests, aggregator 0 field-diffs, syntax-check clean.
+**27 commits ahead of origin/master** (operator push pending).
+
+| Surface | State |
+|---|---|
+| OpenClaw Wing | `openclaw_wing_api_token` provisioned; WING_API_URL/TOKEN in launchd + .zshrc |
+| Conductor identity | `conductor_wing_api_token` + `nos-conductor` Authentik client provisioned |
+| pulse-run-agent.sh | Authentik client_credentials → `claude --print` → Wing agent_run_start/end |
+| conductor.yml | System prompt + capability scopes + Phase 5 self-test-001 Pulse job |
+| Wing /inbox | Unresolved gitleaks findings + conductor event history |
+| Wing /approvals | Stub route wired; empty pending A10 actor audit |
+| Event types | `agent_run_start` / `agent_run_end` added to VALID_TYPES + schema |
+| DI fix | GitleaksRepository registered in common.neon (A7 omission) |
+
+**O22 — Wing DI registration invariant (2026-05-07):**
+Every new Wing repository class must be explicitly listed in
+`files/anatomy/wing/app/config/common.neon` under `services:`. Nette's DI
+container does NOT auto-discover classes; unregistered repositories cause
+resolution failures at runtime (silent until first request hits that route).
+Discovered when InboxPresenter needed GitleaksRepository (A7 omission).
+
+**O23 — Agent event type doctrine (2026-05-07):**
+Agent-emitted Wing events (not from Ansible callback plugin) use types
+`agent_run_start` / `agent_run_end`. These are separate from playbook lifecycle
+types and must NOT be added to `tests/callback/test_event_schema.py::EVENT_TYPES`
+(which only covers types the callback plugin emits). New agent event types:
+add to `VALID_TYPES` in EventRepository.php AND to `event.schema.json` enum.
+
+**Forward:** A10 (actor audit migration) → Phase 5 ceremony (conductor-self-test-001).
+A10 must land before Phase 5 — `actor_id` column is required for cryptographic
+attribution of conductor writes. Phase 5 pass = first non-operator end-to-end
+write to wing.db.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):
