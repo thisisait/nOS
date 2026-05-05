@@ -1,0 +1,109 @@
+# =============================================================================
+# grafana-prometheus — composition plugin (Track Q1b — observability batch)
+#
+# Status: live. First composition plugin past the A6.5 doctrine gate. Wires
+# two existing service plugins (grafana-base + prometheus-base) together by
+# emitting a Grafana datasource provisioning fragment that points Grafana at
+# the Prometheus service over the observability stack's internal network.
+#
+# Pre-Q1b shape:
+#   Datasource definition lived inline in
+#     files/anatomy/plugins/grafana-base/provisioning/datasources/all.yml.j2
+#   coupling grafana-base to the existence of a Prometheus peer.
+#
+# Post-Q1b shape:
+#   grafana-base owns ONLY its own provisioning index (apiVersion, plugin
+#   defaults). prometheus-base owns its master config. THIS plugin owns the
+#   cross-wiring — the datasource entry that names http://prometheus:<port>
+#   as a Grafana data source, with exemplar -> tempo trace_id linkage.
+#
+#   Plugin loader pre_compose hook renders the fragment into Grafana's
+#   provisioning/datasources/ directory alongside any other composition
+#   plugins (grafana-loki, grafana-tempo, grafana-wing).
+#
+# Why composition?
+#   Neither grafana-base nor prometheus-base alone "knows" about the other.
+#   The wiring is structural — it only makes sense when BOTH services are
+#   installed. Composition plugins encode that "two peers, one tendon"
+#   relationship without polluting either base manifest with peer-aware
+#   templating.
+# =============================================================================
+
+name: grafana-prometheus
+version: 0.1.0
+description: |
+  Composition plugin: emits a Grafana datasource provisioning fragment that
+  wires Grafana to the Prometheus peer in the observability stack. Activates
+  only when both grafana-base and prometheus-base are loaded and
+  install_observability is on.
+upstream: https://grafana.com/docs/grafana/latest/datasources/prometheus/
+license: AGPL-3.0  # follows the Grafana licensing of the consuming service
+
+type:
+  - composition
+
+# =============================================================================
+# REQUIRES — both peer plugins must load before this one
+# =============================================================================
+# DAG edges via requires.plugin ensure topological ordering: grafana-base and
+# prometheus-base run their pre_compose hooks (creating dirs, rendering the
+# datasource index, writing prometheus.yml) BEFORE this composition writes
+# the cross-wiring fragment into the same provisioning/datasources directory.
+
+requires:
+  plugin:
+    - grafana-base
+    - prometheus-base
+  feature_flag: install_observability
+  variables:
+    - prometheus_port
+
+# =============================================================================
+# PROVISIONING — datasource fragment dropped into Grafana's provisioning dir
+# =============================================================================
+# Grafana 9+ supports MULTIPLE files under provisioning/datasources/. Each
+# file's `datasources:` list is concatenated. By rendering this composition's
+# fragment as a sibling to grafana-base's `all.yml`, we add the Prometheus
+# datasource without editing the base file.
+#
+# Filename uses the plugin slug to keep ownership obvious during operator
+# debugging (`ls ~/observability/grafana/provisioning/datasources/` shows
+# which plugin contributed which datasource).
+
+provisioning:
+  datasource:
+    template: provisioning/datasources/prometheus.yml.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/grafana-prometheus.yml"
+
+# =============================================================================
+# LIFECYCLE HOOKS — render the fragment before grafana boots
+# =============================================================================
+# Topological order guarantees grafana-base + prometheus-base have already
+# ensured the parent dir exists and rendered their own fragments. This
+# composition only needs to render its own file.
+
+lifecycle:
+  pre_compose:
+    - render: provisioning.datasource
+  # No post_blank: grafana-base's post_blank wipes the entire
+  # ~/observability/grafana/provisioning tree (reverse topo order), which
+  # already removes this plugin's fragment. Adding a remove_file here would
+  # be a no-op (and the loader has no remove_file action today).
+
+# =============================================================================
+# GDPR — Article 30 row (compositions don't process new data, but the
+# parser refuses any manifest without a complete block)
+# =============================================================================
+# This composition adds NO new data categories beyond what grafana-base and
+# prometheus-base already declare. The retention horizon mirrors Prometheus's
+# (the source of the metrics being queried).
+
+gdpr:
+  data_categories:
+    - infrastructure_metrics       # piped through from prometheus-base
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 30               # matches prometheus_retention default
+  processors: []
+  eu_residency: true
