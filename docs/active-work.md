@@ -5,8 +5,8 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-07 • B1+B2 blind-spot fixes (OpenClaw Wing token +
-> conductor/gitleaks Pulse job registration wired into wing/post.yml).
+> Last updated: 2026-05-07 • B3 — stack_filter eliminates 33-min post_compose freeze;
+> ansible.cfg formatter (yaml callback + display_skipped_hosts=false).
 
 ---
 
@@ -25,7 +25,7 @@ enables cryptographic attribution of conductor's writes.
 
 ### Last verified state (2026-05-07)
 
-- **30 commits ahead of origin** (master @ `433ac01`); operator push pending.
+- **32 commits ahead of origin** (master @ `7e2026c`); operator push pending.
 - 135/135 tests pass (callback suite; anatomy 68/68 included), 5 skipped.
 - `python3 tools/aggregator-dry-run.py` exit 0: 0 field-diffs.
 - `ansible-playbook main.yml --syntax-check` clean.
@@ -113,6 +113,7 @@ Numbered for the loop prompt; each line ≤ 2 sentences.
 ~~10. **A8.b — conductor agent profile** — `files/anatomy/agents/conductor.yml` (system prompt + Phase 5 Pulse job). Done `fc3671c`.~~
 ~~11. **A8.c — Wing /inbox + /approvals** — InboxPresenter (gitleaks open findings + conductor events) + ApprovalsPresenter stub. Done `cbf3d7c..4974c53`.~~
 ~~11b. **B1+B2 blind-spot fixes** — OpenClaw Wing token moved to wing/post.yml; conductor+gitleaks Pulse jobs registered via Wing API in wing/post.yml. Done `433ac01`.~~
+~~11c. **B3 — stack_filter post_compose freeze** — `_plugin_stack()` resolver + `stack_filter` param in `run_hook()`; core-up.yml scoped to [infra, observability]; stack-up.yml adds second call after async join. `ansible.cfg`: yaml callback + display_skipped_hosts=false. Done `7e2026c`.~~
 12. **A10 — actor audit migration** — `actor_id` (FK authentik_clients) + `actor_action_id` (UUID) + `acted_at` na všech wing.db write tables + presenter updates v 2-3 batch.
 13. **Phase 5 ceremony** — `conductor-self-test-001` Pulse one-shot job (8-step e2e: health → trigger gitleaks → verify findings → events → contracts diff → wing tests → markdown report); pass = první non-operator end-to-end write do wing.db. **Pre-req: A10 must land first for actor attribution.**
 14. **Tier-2 aggregator path** — extend `run_aggregators` o `from: app_manifest` source, retire `authentik_oidc_apps: []` Tier-2 stub.
