@@ -138,11 +138,21 @@ the Q3 batch.
 
 ## Build sequence (Q1c → Q3 → Q4-Q7)
 
-| Phase | Roles | Trigger |
-|---|---|---|
-| **Q1c** | (none plugin-less; was all observability composition) | Done in Phase 1 |
-| **Q2** | 35 OIDC services | Done in Phase 1 (some post.yml still has hooks) |
-| **Q3** | bluesky_pds, mcp_gateway, spacetimedb + 4 substrate exceptions documented | Post-blank-#5 |
-| **Q4-Q7** | Comms / Content / Dev-CI / Misc tiers | Operator bandwidth |
+| Phase | Roles | Trigger | Status |
+|---|---|---|---|
+| **Q1c** | observability composition | Phase 1 | ✅ |
+| **Q2** | 35 OIDC services | Phase 1 | ✅ |
+| **D-series** | central `authentik_oidc_apps` retired; SSO trichotomy (`native_oidc / header_oidc / forward_auth`) | 2026-05-05 | ✅ — see `docs/native-sso-survey.md` + `docs/aggregator-parity-report.md` + `docs/upstream-pr-opportunities.md` |
+| **D2** | drop role-side OIDC env duplicates (12 rolí) | active | 🟡 — outline prototype `2324b6d`; 11 zbývá |
+| **Q3** | bluesky_pds, mcp_gateway (spacetimedb stub done) + 4 substrate exceptions | post-D2 | ⚪ |
+| **Q4-Q7** | Comms / Content / Dev-CI / Misc tiers | operator bandwidth | ⚪ |
+
+## D-series follow-ups (post-D2)
+
+- Retire `authentik_oidc_<svc>_client_id/_secret` standalone helpers in
+  `default.config.yml` once D2 finishes (no consumer left).
+- Extend `run_aggregators` with `from: app_manifest` source so Tier-2
+  apps land in `inputs.clients` alongside Tier-1 plugins (eliminates
+  the empty `authentik_oidc_apps: []` Tier-2 stub).
 
 This residue-analysis doc will be re-snapshotted after each Q-batch.

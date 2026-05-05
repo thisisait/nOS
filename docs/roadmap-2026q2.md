@@ -865,6 +865,48 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 ---
 
+## Snapshot 2026-05-05 — D-series + β1 graduation
+
+After 2026-05-04 Phase 1 multi-agent batch (Q1+Q2, 33 plugins) the
+structural arc kept moving: 2026-05-05 closed the central
+`authentik_oidc_apps` refactor (Phase 2 C1) + introduced the SSO
+trichotomy doctrine.
+
+**Done in 11 commits (`fc43941..2324b6d`):**
+- D3 (`fc43941`) — `tools/aggregator-dry-run.py` parity gate.
+- D1.0 (`6256944`) — flip 4 mis-classified plugin modes (erpnext,
+  homeassistant, jellyfin, superset) → native_oidc; runtime native at
+  the role-side (auth_oidc HACS plugin / Frappe Social Login Key /
+  Jellyfin SSO-Auth XML / Superset OAUTH_PROVIDERS).
+- β1.A (`74d2314`) — `header_oidc` doctrine bucket (Authentik outpost
+  forwards REMOTE_USER → service auto-creates user; true SSO without
+  per-app OIDC client). Firefly III reclassified.
+- β1.B (`067df9f`) — Node-RED true native OIDC via passport-openidconnect
+  adminAuth strategy; first non-trivial native SSO upgrade.
+- β1.C/D (`c0d5ea1`) — Metabase OSS verdict + `docs/upstream-pr-opportunities.md`
+  FOSS contribution roadmap.
+- D1.1 (`176edbb`) — spacetimedb-base stub, last C1 blocker closed.
+- D1.2 (`eea0e12`) — `run_aggregators(template_vars=...)` extension
+  (Jinja pre-render + feature_flag filter); blueprint 10-oidc-apps +
+  20-rbac-policies switched to iterate `inputs.clients`.
+- D1.3 (`fd5081c`) — central `authentik_oidc_apps` retired; empty
+  stub survives only as Tier-2 apps_runner channel.
+- D1.4 (`06bccfc`) — CLAUDE.md sync (3-bucket trichotomy doctrine).
+- D2 (`2324b6d`) — outline prototype: drop role-side OIDC env (plugin
+  compose-extension is authoritative).
+
+**Artifacts:** `docs/native-sso-survey.md`, `docs/upstream-pr-opportunities.md`,
+`docs/aggregator-parity-report.md`, `docs/multi-agent-batch.md`,
+`docs/track-q-residue-analysis.md`, `tools/aggregator-dry-run.py`,
+`tools/d12-annotate-plugins.py`.
+
+**Forward:** D2 batch (11 rolí), then A5 (Wing OpenAPI/DDL contracts),
+A7 (gitleaks plugin), A8 (conductor agent), A10 (audit trail), Phase
+5 ceremony (first non-operator end-to-end write to wing.db). Lane
+specs in `docs/bones-and-wings-bulk-plan.md`.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):
