@@ -95,9 +95,17 @@ compose_extension:
 # moves them at apply time to ~/observability/grafana/provisioning/.
 
 provisioning:
-  datasources:
-    template: provisioning/datasources/all.yml.j2
-    target: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
+  # Anatomy P1 (2026-05-05). Datasources moved to composition plugins:
+  #   - grafana-prometheus → datasources/grafana-prometheus.yml
+  #   - grafana-loki       → datasources/loki.yml
+  #   - grafana-tempo      → datasources/tempo.yml
+  # Pre-fix grafana-base bundled all three in `all.yml`, duplicating the
+  # composition plugins' Prometheus/Loki/Tempo declarations → Grafana
+  # provisioning blew up with "Only one datasource per organization can
+  # be marked as default" + duplicate uid. Removing the bundle here makes
+  # composition plugins authoritative; sites without composition plugins
+  # see no datasources (operator enables them by including the relevant
+  # composition plugin, which is now the explicit contract).
   dashboards_provider:
     template: provisioning/dashboards/all.yml.j2
     target: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
@@ -141,7 +149,6 @@ lifecycle:
     - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
     - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards"
     - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
-    - render: provisioning.datasources
     - render: provisioning.dashboards_provider
     - copy_dashboards: provisioning.dashboards
     - render_compose_extension: compose_extension
