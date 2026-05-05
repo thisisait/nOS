@@ -77,8 +77,8 @@ authentik:
 # `include_role: pazny.anatomy.loader` invocation pointing here.
 
 api_calls:
-  base_url: "https://127.0.0.1:{{ portainer_port }}"
-  tls_verify: false                       # Portainer self-signs on first start
+  base_url: "http://127.0.0.1:{{ portainer_port }}"
+  tls_verify: false
   retries:
     max: 30
     delay_seconds: 2
@@ -226,7 +226,7 @@ lifecycle:
   pre_compose:
     - render_compose_extension: compose_extension
   post_compose:
-    - wait_health: "https://127.0.0.1:{{ portainer_port }}/api/system/status"
+    - wait_health: "http://127.0.0.1:{{ portainer_port }}/api/system/status"
     - replay_api_calls: api_calls.sequence
   post_blank:
     - remove_dir: "{{ portainer_data_dir }}"
