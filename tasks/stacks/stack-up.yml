@@ -194,12 +194,10 @@
   failed_when: false
   changed_when: false
 
-# Normalise async result shape to match the legacy sequential loop:
-# downstream tasks expect _stack_results.results[i].item to be the stack
-# name string. async_status's loop_var is `async_job`, so the original
-# stack name lives at result.async_job.item — flatten it back here.
-# (Idiomatic Jinja/Ansible: for + set + append. No jmespath dependency.)
-- name: "[Stacks] Normalise parallel results to legacy shape"
+# Flatten async_status result shape: async_status.loop_var is `async_job`,
+# so the original stack name lives at r.async_job.item, not r.item.
+# Downstream tasks expect _stack_results.results[i].item = stack name string.
+- name: "[Stacks] Flatten async_status results (item = stack name)"
   ansible.builtin.set_fact:
     _stack_results:
       results: "{{ _normalised_acc }}"
