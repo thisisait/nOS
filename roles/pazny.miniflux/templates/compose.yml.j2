@@ -7,8 +7,11 @@
 # jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
 #
 # Miniflux vyzaduje: PostgreSQL (z infra stacku).
-# OIDC client_id/secret se cte z centralniho authentik_oidc_apps listu
-# v default.config.yml pres derivovane authentik_oidc_miniflux_* promenne.
+#
+# D2 (2026-05-05): OAUTH2_* env vars + mkcert CA volume + authentik extra_host
+# MOVED to miniflux-base plugin's compose-extension (files/anatomy/plugins/
+# miniflux-base/templates/miniflux-base.compose.yml.j2). Role keeps: DB, admin
+# seed, base URL, SMTP relay.
 # =============================================================================
 
 services:
@@ -21,11 +24,7 @@ services:
 {% else %}
       - "127.0.0.1:{{ miniflux_port | default(3011) }}:8080"
 {% endif %}
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-    volumes:
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + Authentik extra_host moved to miniflux-base plugin (D2). #}
     environment:
       DATABASE_URL: "postgres://{{ miniflux_db_user | default('miniflux') }}:{{ miniflux_db_password | default(global_password_prefix + '_pw_miniflux') }}@postgresql:5432/{{ miniflux_db_name | default('miniflux') }}?sslmode=disable"
       RUN_MIGRATIONS: "1"
@@ -37,17 +36,7 @@ services:
       LOG_LEVEL: "info"
       METRICS_COLLECTOR: "1"
       METRICS_ALLOWED_NETWORKS: "172.16.0.0/12"
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      OAUTH2_PROVIDER: "oidc"
-      OAUTH2_CLIENT_ID: "{{ authentik_oidc_miniflux_client_id }}"
-      OAUTH2_CLIENT_SECRET: "{{ authentik_oidc_miniflux_client_secret }}"
-      OAUTH2_REDIRECT_URL: "https://{{ miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth2/oidc/callback"
-      OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/miniflux/"
-      OAUTH2_OIDC_PROVIDER_NAME: "Authentik"
-      OAUTH2_USER_CREATION: "1"
-      DISABLE_LOCAL_AUTH: "0"
-{% endif %}
+{# OAUTH2_* env moved to miniflux-base plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit is on iiab_net — reachable by docker DNS as 'mailpit'.
@@ -57,10 +46,7 @@ services:
       SMTP_PASSWORD: ""
       SMTP_FROM: "miniflux@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
+{# authentik extra_host moved to miniflux-base plugin compose-extension (D2). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
