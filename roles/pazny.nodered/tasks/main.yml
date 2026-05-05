@@ -32,15 +32,28 @@
   notify: Restart nodered
 
 # β1.B — pre-seed /data/package.json so Node-RED's entrypoint installs
-# `passport-openidconnect` into /data/node_modules on first boot (and on
-# version bumps). When OIDC is disabled the file renders with empty
-# deps — Node-RED's npm-install no-ops in that case.
+# `passport-openidconnect` into /data/node_modules on first boot.
 - name: "[pazny.nodered] Render /data/package.json (OIDC strategy deps)"
   ansible.builtin.template:
     src: package.json.j2
     dest: "{{ nodered_data_dir }}/package.json"
     mode: '0644'
   notify: Restart nodered
+
+# β1.B — pre-install OIDC npm deps on the HOST before the container starts.
+# settings.js has a top-level require("passport-openidconnect") that runs
+# when Node-RED loads the config file — BEFORE the container's entrypoint
+# npm-install hook fires. Without this task the container crashes on first
+# boot with "Cannot find module 'passport-openidconnect'".
+- name: "[pazny.nodered] Pre-install OIDC npm deps into data dir (host npm)"
+  ansible.builtin.command:
+    cmd: npm install --prefer-offline
+    chdir: "{{ nodered_data_dir }}"
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  when: install_authentik | default(false) | bool
+  changed_when: false
+  failed_when: false
 
 - name: "[pazny.nodered] Render compose override fragment"
   ansible.builtin.template:
