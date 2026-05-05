@@ -20,7 +20,7 @@
   until: _bone_health.status | default(0) == 200
   failed_when: false  # don't abort the playbook — bone may still be warming up
 
-- name: "[pazny.bone] Health probe result"
+- name: "[pazny.bone] Await health probe result"
   ansible.builtin.debug:
     msg: |-
       {% if _bone_health.status | default(0) == 200 %}

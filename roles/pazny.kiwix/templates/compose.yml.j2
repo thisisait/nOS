@@ -24,16 +24,14 @@ services:
     # would be passed as a literal filename string, causing kiwix-serve to log
     # "Unable to add the ZIM file '/data/*.zim'" on every startup.
     # Override entrypoint so /bin/sh expands *.zim at container start.
-    # $$ → $ after Docker Compose variable interpolation ($$ZIMS → $ZIMS in shell).
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      ZIMS=$$(ls /data/*.zim 2>/dev/null)
-      if [ -n "$$ZIMS" ]; then
-        exec /usr/local/bin/kiwix-serve --port=8080 $$ZIMS
-      else
-        echo "No ZIM files in /data — add .zim files and restart the kiwix container"
-        exec sleep infinity
-      fi
+    # Must be a single string: block-scalar command: | gets split by newlines
+    # into separate argv elements when entrypoint is an array, so only the
+    # first line would run as the script (rest become $0,$1,...).
+    # $$ → $ after Docker Compose variable interpolation.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'ZIMS=$$(ls /data/*.zim 2>/dev/null); if [ -n "$$ZIMS" ]; then exec /usr/local/bin/kiwix-serve --port=8080 $$ZIMS; else echo "No ZIM files in /data -- add .zim files and restart"; exec sleep infinity; fi'
     networks:
       - iiab_net
     logging:

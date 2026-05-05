@@ -26,7 +26,7 @@ services:
     command:
       - >
         cd /home/frappe/frappe-bench/sites &&
-        [ -f common_site_config.json ] && echo "Already configured" && exit 0;
+        [ -f common_site_config.json ] && grep -q redis_queue common_site_config.json && echo "Already configured" && exit 0;
         echo '{}' > common_site_config.json &&
         echo 'frappe' > apps.txt &&
         bench set-config -g db_host mariadb &&
