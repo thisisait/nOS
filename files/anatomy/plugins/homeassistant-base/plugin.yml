@@ -1,11 +1,18 @@
 # =============================================================================
-# homeassistant-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+# homeassistant-base — service plugin (Track Q U5, Phase 1, D1.0 corrected
+# 2026-05-05).
 #
-# Replaces the `authentik_oidc_apps[slug=homeassistant]` row. Home Assistant
-# is gated by Authentik forward-auth at the Traefik / Nginx layer (access
-# control only) — there are NO OIDC env vars on the HA container today,
-# but the row exists to provision an Authentik OIDC client + redirect_uri
-# for operators who later wire HA's `auth_oidc_auth` integration.
+# Replaces the `authentik_oidc_apps[slug=homeassistant]` row. HA has TRUE
+# native OIDC via the `auth_oidc` HACS plugin
+# (christiaangoossens/hass-oidc-auth) installed by
+# roles/pazny.homeassistant/tasks/main.yml. The plugin reads client_id /
+# client_secret from secrets.yaml (not env) and wires HA's auth provider
+# chain through Authentik. → `mode: native_oidc`.
+#
+# Pre-D1.0 the plugin (and CLAUDE.md) labelled this forward_auth because
+# "no OIDC env in compose ≈ proxy" — wrong heuristic. Central
+# authentik_oidc_apps lists HA as oauth2 with redirect_uri
+# `/auth/oidc/callback`.
 #
 # Special: HA can run in `network_mode: host` (homeassistant_privileged=true
 # for mDNS/Bonjour). The compose-extension's extra_hosts only render in
@@ -41,16 +48,16 @@ requires:
     - global_password_prefix
 
 # =============================================================================
-# AUTHENTIK — OIDC client metadata (forward-auth + future native OIDC)
+# AUTHENTIK — native OIDC client metadata (auth_oidc HACS plugin)
 # =============================================================================
-# `mode: forward_auth` because that's how the running install actually
-# protects HA today (Authentik outpost in front of Traefik). The
-# redirect_uri / client_id / client_secret / scopes are still populated so
-# operators who later enable HA's experimental OIDC integration can flip
-# `mode: native_oidc` without re-provisioning the Authentik client.
+# `mode: native_oidc` because the role installs the auth_oidc HACS plugin
+# (christiaangoossens/hass-oidc-auth) and renders secrets.yaml with the
+# Authentik client credentials. Authentik creates an oauth2 provider; the
+# HA plugin consumes it. Pre-D1.0 mis-labelled forward_auth.
 
 authentik:
-  mode: forward_auth
+  mode: native_oidc
+  provider_type: native_oidc
   client_id: nos-homeassistant
   client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
   slug: homeassistant

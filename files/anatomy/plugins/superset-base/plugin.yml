@@ -1,11 +1,12 @@
 # =============================================================================
-# superset-base — service plugin (Q2, U6 — pivoted to forward_auth).
+# superset-base — service plugin (Q2, U6, D1.0 corrected 2026-05-05).
 #
-# PIVOT NOTE: Original U6 spec assumed native_oidc_env. Inspection of
-# roles/pazny.superset/templates/compose.yml.j2 shows no AUTH/OIDC/OAUTH env
-# vars (Superset's OIDC is configured via superset_config.py + Flask-AppBuilder,
-# not env). Superset is in CLAUDE.md proxy-auth list. Pivot to forward_auth
-# (matches U7 spec shape). RBAC tier 2 (manager) per CLAUDE.md.
+# CORRECTION (D1.0): U6 worker mis-classified as forward_auth because
+# "no OIDC env in compose = proxy". Superset's native OIDC is wired via
+# superset_config.py (Flask-AppBuilder OAUTH_PROVIDERS — file-based, not env)
+# rendered by roles/pazny.superset/templates/superset_config.py.j2. Central
+# authentik_oidc_apps lists Superset as oauth2 with redirect_uri
+# `/oauth-authorized/authentik`. → native_oidc. RBAC tier 2 per CLAUDE.md.
 # =============================================================================
 
 name: superset-base
@@ -30,17 +31,22 @@ requires:
     - host_alias
 
 authentik:
-  mode: forward_auth
-  provider_type: forward_auth
+  mode: native_oidc
+  provider_type: native_oidc
   client_id: nos-superset
   client_secret: "{{ global_password_prefix }}_pw_oidc_superset"
   slug: superset
-  external_host: "https://{{ superset_domain }}"
-  internal_host: "http://superset:{{ superset_port }}"
-  cookie_domain: ".{{ tenant_domain }}"
+  redirect_uris:
+    - "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth-authorized/authentik"
+  launch_url: "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
   tier: 2
 
-  target_stack: data
+# No compose_extension — OIDC is wired via superset_config.py rendered
+# by the role; no env-driven knobs to override.
 
 lifecycle:
   pre_compose: []

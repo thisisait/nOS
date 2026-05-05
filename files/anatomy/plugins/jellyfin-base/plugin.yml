@@ -1,11 +1,13 @@
 # =============================================================================
-# jellyfin-base — service plugin (Q2, U6 — pivoted to forward_auth).
+# jellyfin-base — service plugin (Q2, U6, D1.0 corrected 2026-05-05).
 #
-# PIVOT NOTE: Original U6 spec assumed native_oidc_env. Inspection of
-# roles/pazny.jellyfin/templates/compose.yml.j2 shows ZERO Authentik OIDC env
-# vars (Jellyfin OSS does not support OIDC; the JellyAuth/SSO plugin is a
-# server-side install, not env-driven). Jellyfin is in CLAUDE.md proxy-auth
-# list. So this plugin uses `mode: forward_auth` (matches U7 spec shape).
+# CORRECTION (D1.0): U6 worker mis-classified as forward_auth because the
+# heuristic was "no OIDC env in compose template = proxy". That's wrong for
+# Jellyfin: native SSO is wired via the SSO-Auth Jellyfin SERVER PLUGIN
+# (XML config at roles/pazny.jellyfin/templates/SSO-Auth.xml.j2), not env.
+# Central authentik_oidc_apps lists Jellyfin as oauth2 with redirect_uri
+# `/sso/OID/redirect/Authentik` — that's the SSO-Auth callback. Authentik
+# creates an oauth2 provider; Jellyfin server-plugin consumes it. → native_oidc.
 # RBAC tier 4 (guest) per CLAUDE.md.
 # =============================================================================
 
@@ -32,21 +34,24 @@ requires:
     - host_alias
 
 authentik:
-  mode: forward_auth
-  provider_type: forward_auth
+  mode: native_oidc
+  provider_type: native_oidc
   client_id: nos-jellyfin
   client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
   slug: jellyfin
-  external_host: "https://{{ jellyfin_domain }}"
-  internal_host: "http://jellyfin:{{ jellyfin_port }}"
-  cookie_domain: ".{{ tenant_domain }}"
+  redirect_uris:
+    - "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/redirect/Authentik"
+  launch_url: "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
   tier: 4
 
-# No compose_extension — forward_auth gate lives in Traefik dynamic config,
-# not in the service's environment. (Traefik file-provider derives the
-# `authentik@file` middleware attachment from state/manifest.yml.)
-
-  target_stack: iiab
+# No compose_extension — Jellyfin SSO is wired through the server-side
+# SSO-Auth plugin (XML config). The role manages the plugin install +
+# SSO-Auth.xml render. Plugin-self compose-extension would have nothing
+# to render.
 
 lifecycle:
   pre_compose: []
