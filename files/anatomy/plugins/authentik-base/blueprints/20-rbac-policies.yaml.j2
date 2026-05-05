@@ -33,15 +33,19 @@ entries:
       execution_logging: false
 {% endfor %}
 
-  # ── Policy bindings: app → tier policy ───────────────────────────────────
-{% for app in authentik_oidc_apps | default([]) %}
-{% if app.enabled | default(false) | bool %}
-{% set app_tier_num = authentik_app_tiers[app.slug] | default(3) %}
+  # ── Policy bindings: app → tier policy (D1.3 from inputs.clients ∪ apps) ──
+{% set _all_clients = (inputs.clients | default([])) + (authentik_oidc_apps | default([])) %}
+{% for c in _all_clients %}
+{% if c.enabled | default(false) | bool %}
+{# Per-plugin authentik: block carries tier directly. Fall back to
+   authentik_app_tiers map if the plugin omits it (legacy bridge until
+   every plugin manifest is fully populated). #}
+{% set app_tier_num = c.tier | default(authentik_app_tiers[c.slug] | default(3)) %}
 {% set tier_entry = (authentik_rbac_tiers | selectattr('tier', 'equalto', app_tier_num | int) | list | first) | default({'name': 'tier-user'}) %}
   - model: authentik_policies.policybinding
     state: present
     identifiers:
-      target: !Find [authentik_core.application, [slug, "{{ app.slug }}"]]
+      target: !Find [authentik_core.application, [slug, "{{ c.slug }}"]]
       order: 0
     attrs:
       policy: !Find [authentik_policies_expression.expressionpolicy, [name, "nos-{{ tier_entry.name }}"]]

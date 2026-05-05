@@ -27,14 +27,21 @@ metadata:
     managed-by: nos
     blueprint-version: "2"
 
+{# D1.3 (2026-05-05): merge Tier-1 plugin blocks (inputs.clients, post-Q2
+   per-plugin authentik:) with Tier-2 apps_runner extras (authentik_oidc_apps
+   list, runtime-built from apps/<name>.yml manifests). Same blueprint
+   handles both shapes — proven by aggregator-dry-run before the cutover. #}
+{% set _all_clients = (inputs.clients | default([])) + (authentik_oidc_apps | default([])) %}
+
 entries:
-{% for c in (inputs.clients | default([])) %}
+{% for c in _all_clients %}
 {% if c.enabled | default(false) | bool %}
-{%- set _mode = c.mode | default(c.provider_type) | default('native_oidc') -%}
-{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] -%}
+{%- set _type_legacy = c.type | default(none) -%}
+{%- set _mode = c.mode | default(c.provider_type) | default('native_oidc' if _type_legacy != 'proxy' else 'forward_auth') -%}
+{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] or _type_legacy == 'proxy' -%}
 {%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
 {%- set _redirects = c.redirect_uris if (c.redirect_uris is iterable and c.redirect_uris is not string) else ([c.redirect_uris] if c.redirect_uris else []) -%}
-{%- set _launch = c.launch_url | default('') -%}
+{%- set _launch = c.launch_url | default(c.external_host) | default('') -%}
 {% if not _is_proxy %}
   # ── {{ _name }} (OAuth2 / OIDC) ──
   - model: authentik_providers_oauth2.oauth2provider
@@ -110,9 +117,10 @@ entries:
       name: "authentik Embedded Outpost"
       type: "proxy"
       providers:
-{% for c in (inputs.clients | default([])) %}
-{%- set _mode = c.mode | default(c.provider_type) | default('native_oidc') -%}
-{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] -%}
+{% for c in _all_clients %}
+{%- set _type_legacy = c.type | default(none) -%}
+{%- set _mode = c.mode | default(c.provider_type) | default('native_oidc' if _type_legacy != 'proxy' else 'forward_auth') -%}
+{%- set _is_proxy = _mode in ['forward_auth', 'proxy', 'header_oidc'] or _type_legacy == 'proxy' -%}
 {%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
 {% if (c.enabled | default(false) | bool) and _is_proxy %}
         - !Find [authentik_providers_proxy.proxyprovider, [name, "{{ _name }}"]]

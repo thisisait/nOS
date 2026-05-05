@@ -51,7 +51,10 @@ requires:
     - authentik_default_groups
     - authentik_bootstrap_password
     - authentik_bootstrap_email
-    - authentik_oidc_apps
+    # authentik_oidc_apps removed as a hard requirement (D1.3 2026-05-05) —
+    # source-of-truth shifted to per-plugin authentik: blocks via the
+    # aggregator. The var still exists as an empty stub + Tier-2 apps_runner
+    # runtime channel; the blueprint merges both sources.
     - authentik_rbac_tiers
     - authentik_app_tiers
     - authentik_agent_clients
