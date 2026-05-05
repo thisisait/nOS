@@ -61,20 +61,20 @@
         dest: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
         mode: '0644'
 
-    - name: "[Apps Post] Re-ingest service-registry into Wing systems table"
-      ansible.builtin.shell: >
-        {{ docker_bin | default('docker') }} compose
-        -f {{ stacks_dir }}/iiab/docker-compose.yml
-        -f {{ stacks_dir }}/iiab/overrides/wing.yml
-        -p iiab
-        run --rm
-        --workdir {{ wing_app_dir }}
-        wing-cli
-        php bin/ingest-registry.php
-        --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+    - name: "[Apps Post] Re-ingest service-registry into Wing systems table (host PHP CLI)"
+      # Anatomy P0.14b (2026-05-05): host-native invocation, mirrors the
+      # P0.14 fix for the GDPR upsert task earlier in this file. Pre-fix
+      # this called `docker compose run --rm wing-cli php bin/ingest-
+      # registry.php`, but A3.5 retired the wing-cli profile service when
+      # Wing moved to a FrankenPHP launchd daemon. The task silently no-
+      # opped (failed_when: false), so Wing's systems table never picked
+      # up Tier-2 app entries from apps_runner — /hub showed stale data
+      # after every apps onboarding. Mirrors pazny.wing/tasks/post.yml's
+      # canonical host-native pattern (cmd: php bin/X.php, chdir).
+      ansible.builtin.command:
+        cmd: php bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+        chdir: "{{ wing_app_dir }}"
       register: _apps_wing_ingest
-      # changed_when uses the script's "Ingested N" output line — N>0 means
-      # something flipped. Same convention as roles/pazny.wing/tasks/post.yml.
       changed_when: >
         'Ingested' in (_apps_wing_ingest.stdout | default(''))
         and 'Ingested 0' not in (_apps_wing_ingest.stdout | default(''))

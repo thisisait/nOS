@@ -242,16 +242,12 @@ services:
     install_flag: install_observability
     version_var: alloy_version
     version_source: homebrew
+    brew_formula: grafana-alloy
     port_var: alloy_ui_port
     health_check:
       type: http
       url_template: "http://localhost:{{ alloy_ui_port | default(12345) }}/-/ready"
       expect_status: 200
-    # Homebrew formula declared in the plugin manifest at
-    # files/anatomy/plugins/alloy-base/plugin.yml (host_command: brew,
-    # formula: grafana-alloy). The state manifest schema does not yet
-    # accept a `formula:` field; extension lands when the state-manager
-    # brew shim is wired up (Phase 3 alongside U11-U13 alloy consumers).
 
   # ------------------------------------------------------------- iiab stack
   - id: wordpress
