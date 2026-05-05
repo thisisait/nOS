@@ -314,8 +314,23 @@ class HookResult(t.TypedDict):
     note: str
 
 
+def _plugin_stack(p: "Plugin") -> str | None:
+    """Return the Docker compose stack a plugin belongs to, or None.
+
+    Priority:
+    1. compose_extension.target_stack  — explicit stack for compose-override plugins
+    2. observability.loki.labels.stack — universal metadata label on every plugin
+    """
+    ce = p.manifest.get("compose_extension") or {}
+    if ce.get("target_stack"):
+        return ce["target_stack"]
+    labels = ((p.manifest.get("observability") or {}).get("loki") or {}).get("labels") or {}
+    return labels.get("stack")
+
+
 def run_hook(name: str, plugins: list[Plugin],
-             template_vars: dict | None = None) -> list[HookResult]:
+             template_vars: dict | None = None,
+             stack_filter: list[str] | None = None) -> list[HookResult]:
     """Execute the named lifecycle hook in topological order (or reverse for
     post_blank). Each plugin's actions are run by ``_run_actions``.
 
@@ -323,6 +338,10 @@ def run_hook(name: str, plugins: list[Plugin],
     Ansible module wrapper passes the playbook's `vars` dict so action
     params containing ``{{ … }}`` (target paths, URLs, etc.) and plugin
     Jinja templates render with the operator's full var scope.
+
+    ``stack_filter`` (optional) limits execution to plugins whose stack
+    matches one of the listed names. Plugins with no resolvable stack are
+    always included. Pass ``None`` (default) to run all plugins.
     """
     if name not in {"pre_render", "pre_compose", "post_compose", "post_blank"}:
         raise ValueError(f"unknown hook: {name!r}")
@@ -378,6 +397,12 @@ def run_hook(name: str, plugins: list[Plugin],
             results.append({"plugin": p.name, "status": "skipped",
                             "note": f"feature_flag {flag}=false"})
             continue
+        if stack_filter is not None:
+            pstack = _plugin_stack(p)
+            if pstack is not None and pstack not in stack_filter:
+                results.append({"plugin": p.name, "status": "skipped",
+                                "note": f"stack_filter: {pstack!r} not in {stack_filter}"})
+                continue
         actions = (p.manifest.get("lifecycle") or {}).get(name) or []
         try:
             note = _run_actions(p, name, actions, template_vars or {})

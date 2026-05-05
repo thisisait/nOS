@@ -93,6 +93,8 @@ def main() -> None:
             "agent_profiles_root": {"type": "path", "required": False,
                                     "default": ""},
             "template_vars": {"type": "dict", "required": False, "default": {}},
+            "stack_filter": {"type": "list", "elements": "str", "required": False,
+                             "default": None},
         },
         supports_check_mode=True,
     )
@@ -131,7 +133,8 @@ def main() -> None:
     try:
         results = load_plugins.run_hook(
             hook, plugins,
-            template_vars=module.params.get("template_vars") or {})
+            template_vars=module.params.get("template_vars") or {},
+            stack_filter=module.params.get("stack_filter") or None)
     except load_plugins.ValidationError as e:
         module.fail_json(msg=f"validation: {e}")
         return

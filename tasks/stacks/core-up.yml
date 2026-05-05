@@ -519,11 +519,14 @@
 # registrations (Wing routes, Pulse jobs, Grafana dashboards, GDPR row,
 # ntfy/mail templates). Wing/Pulse reload happens at most once per loader
 # run (debounced inside the loader).
-- name: "[Core] Plugin loader — post_compose hook"
+- name: "[Core] Plugin loader — post_compose hook (infra + observability only)"
   nos_plugin_loader:
     hook: post_compose
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
     template_vars: "{{ vars }}"
+    stack_filter:
+      - infra
+      - observability
   tags: ['anatomy', 'anatomy.plugins']
 
 # ── Result ───────────────────────────────────────────────────────────────────

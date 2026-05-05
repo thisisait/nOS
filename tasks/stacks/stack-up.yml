@@ -218,6 +218,27 @@
       {%- endfor -%}
       {{ out }}
 
+# ── Plugin loader — post_compose for all non-core stacks ────────────────────
+# Runs AFTER the parallel async_status join so every stack is confirmed up.
+# Complements the core-up.yml post_compose (infra + observability); handles
+# iiab / devops / b2b / data / voip / engineering / apps / host plugins.
+# Plugins without a resolvable stack are also included here (safe default).
+- name: "[Stacks] Plugin loader — post_compose hook (iiab / devops / b2b / data / …)"
+  nos_plugin_loader:
+    hook: post_compose
+    plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    template_vars: "{{ vars }}"
+    stack_filter:
+      - iiab
+      - devops
+      - b2b
+      - data
+      - voip
+      - engineering
+      - apps
+      - host
+  tags: ['anatomy', 'anatomy.plugins']
+
 # ── App-level setup - MUST run AFTER stacks start ───────────────────────────
 # Note: Authentik / Infisical / Bluesky PDS post-start already run in core-up.yml,
 # so they are not touched here.
