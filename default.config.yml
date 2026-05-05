@@ -1971,6 +1971,17 @@ authentik_agent_clients:
       - "nos:state:read"
       - "nos:security:read"
 
+  - name: "nOS Conductor"
+    slug: "nos-conductor"
+    client_id: "nos-conductor"
+    client_secret: "{{ global_password_prefix }}_pw_agent_conductor"
+    # Conductor agent (A8) — orchestrates the Phase 5 e2e ceremony and
+    # ongoing operator automation. Full operational + security scopes so
+    # it can read findings, trigger scans, and push approvals. Wing bearer
+    # token provisioned separately (conductor_wing_api_token) for the
+    # pulse-run-agent.sh script that execs claude with this identity.
+    capabilities: "{{ authentik_agent_scopes }}"
+
 # Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
 # during the cutover (NOT recommended — both sides should agree on JWT only).
 authentik_agent_token_validity: "hours=12"

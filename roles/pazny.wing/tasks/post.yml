@@ -81,10 +81,10 @@
     and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
 
 # ── API token reconverge ─────────────────────────────────────────────────────
-# Overwrites whatever token is in wing.db with the canonical wing_api_token
-# from credentials. Safe to repeat — the script is `INSERT OR REPLACE`.
+# Provisions named tokens for every first-class Wing consumer. Each gets its
+# own row so the audit trail carries a meaningful actor name. Idempotent.
 
-- name: "[pazny.wing] Reconverge API token from credentials (state-declarative)"
+- name: "[pazny.wing] Reconverge API token — ansible-provisioned (operator)"
   ansible.builtin.command:
     argv:
       - php
@@ -97,6 +97,21 @@
   changed_when: >
     'Created' in (_wing_token_result.stdout | default(''))
     or 'Updated' in (_wing_token_result.stdout | default(''))
+  no_log: true
+
+- name: "[pazny.wing] Reconverge API token — conductor (A8 Claude Code agent)"
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ conductor_wing_api_token }}
+      - --name=conductor
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_conductor_token
+  changed_when: >
+    'Created' in (_wing_conductor_token.stdout | default(''))
+    or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
 # ── Local .env for Playwright + Wing ─────────────────────────────────────────
