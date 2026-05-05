@@ -1,0 +1,111 @@
+# =============================================================================
+# spacetimedb-base — service plugin (D1.1, last C1 blocker, 2026-05-05)
+#
+# Closes the only `only_central` row in tools/aggregator-dry-run.py: pre-D1.1
+# spacetimedb existed in default.config.yml's authentik_oidc_apps as
+# type=proxy but had no plugin manifest, blocking C1 (delete central list).
+#
+# This is a minimal STUB. SpacetimeDB is a realtime DB with a binary
+# protocol — the Tier-1 surface is just the dashboard at /admin and module
+# publishing endpoints. End-user RBAC happens inside WASM modules via
+# ctx.sender.identity (cryptographic identity passport, not Authentik).
+# So the plugin only declares the proxy gate for the HTTP admin surface;
+# no app-level OIDC client makes sense.
+#
+# Q3 candidate per docs/track-q-residue-analysis.md — when SpacetimeDB
+# matures to ship a multi-tenant admin UI, revisit. Until then this stub
+# is sufficient: Authentik gates /admin via forward_auth, module-level
+# auth uses SpacetimeDB's own crypto identity. **Stay proxy permanently.**
+#
+# Doctrine refs:
+#   - docs/native-sso-survey.md (β1.A trichotomy)
+#   - docs/upstream-pr-opportunities.md (permanently-proxy table)
+# =============================================================================
+
+name: spacetimedb-base
+version: 0.1.0
+description: |
+  Wiring layer for SpacetimeDB realtime DB: Authentik forward-auth gate
+  for the HTTP admin surface (/admin), GDPR Article 30 row, /hub deep-link.
+  Module-level RBAC happens inside operator WASM modules via
+  ctx.sender.identity — out of nOS plugin scope.
+upstream: https://spacetimedb.com/
+license: BSL-1.1   # SpacetimeDB upstream; manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+_NOS_PLUGIN: "spacetimedb-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.spacetimedb
+  feature_flag: install_spacetimedb
+  variables:
+    - spacetimedb_domain
+    - spacetimedb_port
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — forward_auth (proxy gate; no per-user state in service)
+# =============================================================================
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-spacetimedb
+  client_secret: "{{ global_password_prefix }}_pw_oidc_spacetimedb"
+  slug: spacetimedb
+  launch_url: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  tier: 1   # admin — DB control plane, narrow audience
+
+# No compose_extension — Traefik file-provider derives the forward_auth
+# middleware attachment from state/manifest.yml's auth_mode column.
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}/admin"
+  post_blank: []
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Hosts the operator's SpacetimeDB realtime DB modules. Stores user-defined
+    tables, table rows, and the cryptographic identity (ctx.sender.identity)
+    of every module caller. Module-level data subject is operator-defined.
+  data_categories:
+    - module_state
+    - operator_identity
+  data_subjects:
+    - operator
+    - module_callers
+  legal_basis: legitimate_interests
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "SpacetimeDB"
+    icon: database
+    url: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    tier: 1
+    description: "Realtime DB control plane"
+    health_check: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/admin"
