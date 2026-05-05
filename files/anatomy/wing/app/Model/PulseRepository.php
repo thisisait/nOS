@@ -142,4 +142,84 @@ final class PulseRepository
 		$row = $this->db->table('pulse_runs')->get($runId);
 		return $row ? $row->toArray() : null;
 	}
+
+	// ── Job catalog (A7) ──────────────────────────────────────────────────
+
+	/**
+	 * Upsert a job registration from the plugin loader's post_compose hook.
+	 *
+	 * Idempotency key: id = "<plugin_name>:<job_name>".
+	 * On UPDATE: next_fire_at is preserved when the schedule is unchanged
+	 * (avoids resetting a mid-flight or imminently-scheduled job); set to
+	 * NULL (fire immediately) when the schedule changes.
+	 *
+	 * @param array{plugin_name: string, job_name: string, command: string, schedule: string, ...} $payload
+	 * @return array<string, mixed>  Full job row after upsert.
+	 */
+	public function upsertJob(array $payload): array
+	{
+		$id  = sprintf('%s:%s', $payload['plugin_name'], $payload['job_name']);
+		$now = date('c');
+
+		$fields = [
+			'plugin_name'    => $payload['plugin_name'],
+			'job_name'       => $payload['job_name'],
+			'runner'         => $payload['runner']          ?? 'subprocess',
+			'command'        => $payload['command'],
+			'args_json'      => json_encode($payload['args'] ?? [], JSON_UNESCAPED_SLASHES),
+			'env_json'       => json_encode($payload['env']  ?? [], JSON_UNESCAPED_SLASHES),
+			'schedule'       => $payload['schedule'],
+			'jitter_min'     => (int) ($payload['jitter_min']     ?? 0),
+			'max_runtime_s'  => (int) ($payload['max_runtime_s']  ?? 300),
+			'max_concurrent' => (int) ($payload['max_concurrent'] ?? 1),
+			'updated_at'     => $now,
+		];
+
+		$existing = $this->db->table('pulse_jobs')->get($id);
+		if ($existing) {
+			$update = $fields;
+			// Preserve next_fire_at when schedule is unchanged — don't reset
+			// a job that is already scheduled close to now or mid-flight.
+			if ($existing->schedule !== $payload['schedule']) {
+				$update['next_fire_at'] = null;
+			}
+			$this->db->table('pulse_jobs')->where('id', $id)->update($update);
+		} else {
+			$this->db->table('pulse_jobs')->insert([
+				'id'          => $id,
+				'next_fire_at' => null, // fires on first Pulse tick after registration
+				'created_at'  => $now,
+				...$fields,
+			]);
+		}
+
+		return $this->db->table('pulse_jobs')->get($id)->toArray();
+	}
+
+	/**
+	 * Fetch a single job by its composite id (plugin_name:job_name).
+	 */
+	public function getJob(string $id): ?array
+	{
+		$row = $this->db->table('pulse_jobs')->get($id);
+		return $row ? $row->toArray() : null;
+	}
+
+	/**
+	 * List all non-removed jobs, ordered by plugin then job name.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function listJobs(): array
+	{
+		return array_map(
+			fn($r) => $r->toArray(),
+			iterator_to_array(
+				$this->db->table('pulse_jobs')
+					->where('removed_at', null)
+					->order('plugin_name, job_name')
+					->fetchAll(),
+			),
+		);
+	}
 }
