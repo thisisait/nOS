@@ -42,6 +42,10 @@
     "upgrade_id":          { "type": ["string", "null"] },
     "patch_id":            { "type": ["string", "null"] },
     "coexistence_service": { "type": ["string", "null"] },
+    "source": {
+      "type": ["string", "null"],
+      "description": "Attribution hint for this event's writer. Anatomy P1 (2026-05-05). Free text pre-A10; canonical values: 'callback' (Ansible callback plugin), 'operator' (manual curl/API hit), 'agent:<name>' (A8 conductor + future agent runs). A10 lands cryptographic actor_id + actor_action_id alongside."
+    },
     "recap": {
       "type": ["object", "null"],
       "description": "Only present on playbook_end.",

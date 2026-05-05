@@ -48,6 +48,7 @@ CREATE TABLE events (
     upgrade_id    TEXT,
     patch_id      TEXT,
     coexist_svc   TEXT,
+    source        TEXT,                    -- Anatomy P1 (2026-05-05); attribution hint.
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
