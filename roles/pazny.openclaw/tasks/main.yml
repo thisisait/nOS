@@ -17,7 +17,7 @@
     state: directory
     mode: '0755'
 
-- name: "[Ollama] Set launchd env vars (models path + memory + KV cache)"
+- name: "[Ollama] Set launchd env vars (models path + memory + KV cache + Wing API)"
   ansible.builtin.command: "launchctl setenv {{ item.key }} {{ item.value }}"
   loop:
     - { key: "OLLAMA_MODELS", value: "{{ ollama_models_dir }}" }
@@ -27,9 +27,12 @@
     - { key: "OLLAMA_FLASH_ATTENTION", value: "{{ ollama_flash_attention | default(1) }}" }
     - { key: "OLLAMA_KV_CACHE_TYPE", value: "{{ ollama_kv_cache_type | default('q8_0') }}" }
     - { key: "OLLAMA_CONTEXT_LENGTH", value: "{{ ollama_context_length | default(32768) | string }}" }
+    - { key: "WING_API_URL", value: "http://127.0.0.1:9000" }
+    - { key: "WING_API_TOKEN", value: "{{ openclaw_wing_api_token }}" }
   loop_control:
     label: "{{ item.key }}={{ item.value }}"
   changed_when: false
+  no_log: "{{ item.key == 'WING_API_TOKEN' }}"
 
 - name: "[Ollama] Stop OpenClaw gateway (holds persistent Ollama connection)"
   ansible.builtin.command: pkill -f 'openclaw-gateway'
@@ -249,7 +252,7 @@
     dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/TOOLS.md"
     mode: '0644'
 
-- name: "[OpenClaw] Ensure OLLAMA_API_KEY in shell profile"
+- name: "[OpenClaw] Ensure OLLAMA_API_KEY + Wing API vars in shell profile"
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
     marker: "# {mark} OPENCLAW - ANSIBLE MANAGED"
@@ -261,6 +264,8 @@
       export OLLAMA_KEEP_ALIVE="{{ ollama_keep_alive | default('5m') }}"
       export OLLAMA_FLASH_ATTENTION="{{ ollama_flash_attention | default(1) }}"
       export OLLAMA_KV_CACHE_TYPE="{{ ollama_kv_cache_type | default('q8_0') }}"
+      export WING_API_URL="http://127.0.0.1:9000"
+      export WING_API_TOKEN="{{ openclaw_wing_api_token }}"
     create: true
 
 - name: "[OpenClaw] Secure openclaw config directory permissions"
