@@ -114,6 +114,95 @@
     or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — openclaw (B1: A8 agent, wing-side provisioning)"
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ openclaw_wing_api_token }}
+      - --name=openclaw
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_openclaw_token
+  changed_when: >
+    'Created' in (_wing_openclaw_token.stdout | default(''))
+    or 'Updated' in (_wing_openclaw_token.stdout | default(''))
+  no_log: true
+  when: install_openclaw | default(false)
+
+# ── Pulse job registration via Wing API ──────────────────────────────────────
+# Plugin loader does not yet process pulse: blocks — jobs are registered here
+# directly. Wing must be running at this point (started by main.yml above,
+# docker compose stacks start before post.yml runs). B2 fix (2026-05-07).
+
+- name: "[pazny.wing] Wait for Wing API to be ready"
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ wing_port | default(9000) }}"
+    timeout: 30
+
+- name: "[pazny.wing] Register gitleaks Pulse job (nightly-scan)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ wing_api_token }}"
+    body_format: json
+    body:
+      plugin_name: "gitleaks"
+      job_name: "nightly-scan"
+      command: "{{ playbook_dir }}/files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh"
+      runner: "subprocess"
+      schedule: "0 3 * * *"
+      jitter_min: 10
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        WING_API_URL: "http://127.0.0.1:{{ wing_port | default(9000) }}"
+        WING_API_TOKEN: "{{ wing_api_token }}"
+        NOS_SCAN_DIR: "{{ playbook_dir }}"
+        GITLEAKS_MIN_SEVERITY: "medium"
+    status_code: [200, 201]
+  register: _gitleaks_job_reg
+  changed_when: _gitleaks_job_reg.status == 201
+  no_log: true
+
+- name: "[pazny.wing] Register conductor Pulse job (self-test-001)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ wing_api_token }}"
+    body_format: json
+    body:
+      plugin_name: "conductor"
+      job_name: "self-test-001"
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      runner: "subprocess"
+      schedule: "0 4 * * 0"
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_CONDUCTOR_CLIENT_ID: "nos-conductor"
+        NOS_CONDUCTOR_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
+        NOS_CONDUCTOR_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"
+        NOS_CONDUCTOR_TASK: >-
+          Run the Phase 5 conductor self-test ceremony:
+          1. GET /api/health from Bone — verify liveness.
+          2. GET /api/v1/gitleaks_findings?open_only=1 — count unresolved findings.
+          3. GET /api/v1/pulse_jobs — verify nightly-scan is registered.
+          4. GET /api/v1/events?source=conductor&limit=5 — show last 5 runs.
+          5. Report summary table. Exit 0 if all checks passed, exit 1 if findings need attention.
+        WING_API_URL: "http://127.0.0.1:{{ wing_port | default(9000) }}"
+        WING_API_TOKEN: "{{ conductor_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret }}"
+    status_code: [200, 201]
+  register: _conductor_job_reg
+  changed_when: _conductor_job_reg.status == 201
+  no_log: true
+
 # ── Local .env for Playwright + Wing ─────────────────────────────────────────
 # Lives outside the bind-mount so it isn't part of the container payload.
 
