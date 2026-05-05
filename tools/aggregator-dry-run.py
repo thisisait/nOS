@@ -62,9 +62,21 @@ def normalize_central(apps: list[dict]) -> dict[str, dict]:
 
 
 def normalize_plugin(c: dict) -> dict:
-    """Plugin authentik block → comparable shape."""
+    """Plugin authentik block → comparable shape.
+
+    β1.A trichotomy:
+      native_oidc / oauth2 → blueprint emits oauth2provider
+      header_oidc          → blueprint emits proxy provider (outpost-injected
+                              REMOTE_USER) — same Authentik object as proxy
+                              forward_auth, different runtime semantics
+      forward_auth / proxy → blueprint emits proxy provider
+    For shape parity vs central authentik_oidc_apps (which has no
+    `header_oidc`), header_oidc maps to `proxy` here too. Doctrine
+    distinction lives in the manifest's `mode` field.
+    """
     mode = c.get("mode") or c.get("provider_type") or "native_oidc"
-    type_ = "proxy" if mode in ("forward_auth", "proxy_auth") else "oauth2"
+    type_ = "proxy" if mode in ("forward_auth", "proxy_auth", "proxy",
+                                "header_oidc") else "oauth2"
     redir = c.get("redirect_uris")
     if isinstance(redir, list):
         redir_list = list(redir)

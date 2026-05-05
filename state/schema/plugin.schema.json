@@ -83,12 +83,14 @@
     "authentik": {
       "type": "object",
       "additionalProperties": true,
+      "description": "OIDC client metadata. The plugin loader's authentik-base aggregator harvests these blocks and renders them into Authentik blueprints. See docs/native-sso-survey.md for the SSO trichotomy.",
       "properties": {
         "client_id":     {"type": "string"},
         "client_secret": {"type": "string"},
         "slug":          {"type": "string"},
         "tier":          {"type": "integer", "minimum": 1, "maximum": 4, "description": "Required if block present. RBAC tier 1 (admin) - 4 (guest)."},
-        "provider_type": {"type": "string", "enum": ["oauth2", "proxy", "forward_auth"]},
+        "mode":          {"type": "string", "enum": ["native_oidc", "header_oidc", "forward_auth"], "description": "nOS doctrine label (β1.A, 2026-05-05). native_oidc: service consumes OIDC at app level. header_oidc: Authentik proxy outpost forwards Remote-User/Remote-Email; service auto-creates user from headers (true SSO without OIDC client in service). forward_auth: pure access gate; no per-user state in service."},
+        "provider_type": {"type": "string", "enum": ["native_oidc", "header_oidc", "oauth2", "proxy", "forward_auth"], "description": "Schema-canonical alias of mode. `oauth2` ≡ `native_oidc`, `proxy` ≡ `forward_auth` for back-compat with central authentik_oidc_apps shape."},
         "scopes":        {"type": "array", "items": {"type": "string"}},
         "redirect_uris": {"type": "array", "items": {"type": "string"}},
         "launch_url":    {"type": "string"}

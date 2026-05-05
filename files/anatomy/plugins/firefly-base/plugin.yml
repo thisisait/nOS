@@ -44,18 +44,32 @@ requires:
     - host_alias
 
 # =============================================================================
-# AUTHENTIK — proxy / forward-auth gate (Tier 2 = manager)
+# AUTHENTIK — header_oidc (Authentik outpost → REMOTE_USER/REMOTE_EMAIL)
 # =============================================================================
-# This service has NO native OIDC support — Authentik gates access at
-# the Traefik layer via the `authentik@file` middleware. RBAC tier
-# determines which Authentik group expression policy applies.
+# Firefly III's `remote_user_guard` consumes REMOTE_USER + REMOTE_EMAIL
+# headers set by the Authentik proxy outpost (env block in
+# roles/pazny.firefly/templates/compose.yml.j2: AUTHENTICATION_GUARD /
+# AUTHENTICATION_GUARD_HEADER / AUTHENTICATION_GUARD_EMAIL).
+#
+# This is **header_oidc** in the β1.A trichotomy (docs/native-sso-survey.md):
+# Authentik authenticates the user, the outpost injects trusted headers,
+# Firefly auto-creates the local user account on first request. True SSO
+# from the user POV — they never see Firefly's own login screen — but
+# without a per-app OIDC client. It's NOT forward_auth (which is a pure
+# access gate without per-user provisioning).
+#
+# Upstream-PR-opportunity: Firefly III ships native OIDC in v6+ via
+# Sanctum, but it's `auth.json`-file-driven (not env-driven). A clean
+# upstream PR adding env-driven OIDC config would let nOS flip this
+# plugin to `mode: native_oidc`.
 
 authentik:
-  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
-  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  mode: header_oidc
+  provider_type: header_oidc
   client_id: nos-firefly
   client_secret: "{{ global_password_prefix }}_pw_oidc_firefly"
   slug: firefly
+  launch_url: "https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
   tier: 2
 
 # =============================================================================
