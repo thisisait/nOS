@@ -28,19 +28,6 @@
   changed_when: false
   failed_when: false
 
-- name: "[pazny.bluesky_pds Post] Generate invite code for admin"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p infra exec -T bluesky-pds
-    goat pds admin invite create
-    --pds-host http://localhost:3000
-    --admin-password "{{ bluesky_pds_admin_password }}" 2>&1
-  register: _pds_invite
-  when:
-    - _pds_health.status | default(0) == 200
-    - bluesky_pds_admin_handle not in (_pds_accounts.stdout | default(''))
-  changed_when: false
-  failed_when: false
-
 - name: "[pazny.bluesky_pds Post] Create admin account"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p infra exec -T bluesky-pds
@@ -49,8 +36,7 @@
     --admin-password "{{ bluesky_pds_admin_password }}"
     --handle "{{ bluesky_pds_admin_handle }}"
     --email "{{ bluesky_pds_admin_email }}"
-    --password "{{ bluesky_pds_admin_password }}"
-    {{ ('--invite-code ' ~ _pds_invite.stdout | trim) if (_pds_invite.stdout | default('') | trim | length > 0) else '' }} 2>&1
+    --password "{{ bluesky_pds_admin_password }}" 2>&1
   register: _pds_create
   when:
     - _pds_health.status | default(0) == 200
