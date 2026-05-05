@@ -1,0 +1,114 @@
+# =============================================================================
+# gitleaks — skill + scheduled-job plugin (Anatomy A7, 2026-05-06)
+#
+# First scheduled-job consumer — validates the end-to-end path:
+#   plugin manifest → Pulse job registration → subprocess runner →
+#   Wing /api/v1/gitleaks_findings ingest → operator view (A8.c inbox)
+#
+# Not a Docker service — gitleaks is a Homebrew binary on the host.
+# The scheduled job runs at 03:00 UTC daily via Pulse's subprocess runner.
+# =============================================================================
+
+name: gitleaks
+version: 0.1.0
+description: |
+  Secret-scanning plugin. Runs gitleaks nightly against the nOS repo
+  and ingests findings into Wing's gitleaks_findings table. Unresolved
+  findings surface in Wing /inbox (A8.c). Operator marks each finding
+  resolved from there.
+
+  Validates the plugin → Pulse → Wing write-path before the conductor
+  agent (A8) begins using it for automated approvals.
+upstream: https://github.com/gitleaks/gitleaks
+license: MIT
+
+type:
+  - skill
+  - scheduled-job
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  # gitleaks is installed unconditionally via the homebrew packages list in
+  # default.config.yml — no install_gitleaks flag needed.
+  variables:
+    - wing_api_token       # Wing API token (from default.credentials.yml)
+    - playbook_dir         # Ansible playbook_dir → repo root for NOS_SCAN_DIR
+
+# =============================================================================
+# PULSE JOB — registered by plugin loader post_compose hook via
+#   POST /api/v1/pulse_jobs  (idempotency key: gitleaks:nightly-scan)
+#
+# The loader expands Jinja vars before posting, so env values below are
+# resolved at registration time and stored verbatim in pulse_jobs.env_json.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: nightly-scan
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh"
+      schedule: "0 3 * * *"    # 03:00 UTC daily; jitter avoids exact-hour contention
+      jitter_min: 10
+      max_runtime_s: 600        # gitleaks on a large repo can take a few minutes
+      max_concurrent: 1
+      env:
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ wing_api_token }}"
+        NOS_SCAN_DIR: "{{ playbook_dir }}"
+        # Filter severity: only ingest findings at this level or above.
+        # Values: critical | high | medium | low | info (lowest = ingest everything)
+        GITLEAKS_MIN_SEVERITY: "medium"
+
+# =============================================================================
+# SCHEMA MIGRATION — applied by plugin loader hook 2 (idempotent DDL).
+# Duplicates schema-extensions.sql so plugin carries its own migration;
+# Wing's init-db.php ALSO applies schema-extensions.sql, so the table
+# will exist before the first Pulse run regardless of which path fires first.
+# =============================================================================
+
+schema:
+  migrations:
+    - description: "gitleaks_findings table + indexes"
+      sql: |
+        CREATE TABLE IF NOT EXISTS gitleaks_findings (
+            id            TEXT PRIMARY KEY,
+            fingerprint   TEXT NOT NULL,
+            rule_id       TEXT NOT NULL,
+            description   TEXT,
+            secret_masked TEXT,
+            file_path     TEXT NOT NULL,
+            line_start    INTEGER NOT NULL,
+            commit        TEXT,
+            author        TEXT,
+            date          TEXT,
+            severity      TEXT NOT NULL DEFAULT 'high',
+            repo_path     TEXT NOT NULL,
+            scan_id       TEXT,
+            resolved_at   TEXT,
+            resolved_by   TEXT,
+            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
+        CREATE INDEX IF NOT EXISTS idx_gitleaks_rule_id ON gitleaks_findings(rule_id);
+        CREATE INDEX IF NOT EXISTS idx_gitleaks_severity ON gitleaks_findings(severity, resolved_at);
+        CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id ON gitleaks_findings(scan_id);
+
+# =============================================================================
+# GDPR Article 30 — gitleaks processes operator-repo source metadata
+# =============================================================================
+
+gdpr:
+  purpose: "Secret detection in operator-managed source repositories (nOS repo)"
+  legal_basis: legitimate_interests
+  data_categories:
+    - source_code_metadata    # file paths, git author name, commit SHA
+    - partial_credentials     # secret_masked only: first 4 + '...' + last 4
+  data_subjects: operators
+  retention_days: 365
+  processors:
+    - gitleaks                # local Homebrew binary — no external data transfer
+  eu_residency: true
