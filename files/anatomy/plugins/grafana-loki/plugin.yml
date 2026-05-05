@@ -40,14 +40,14 @@ requires:
 provisioning:
   datasource:
     template: provisioning/datasources/loki.yml.j2
-    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/loki.yml"
+    target: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/loki.yml"
 
 lifecycle:
   pre_compose:
-    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
+    - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
     - render: provisioning.datasource
   post_blank:
-    - remove_file: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/loki.yml"
+    - remove_file: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/loki.yml"
 
 gdpr:
   data_categories:

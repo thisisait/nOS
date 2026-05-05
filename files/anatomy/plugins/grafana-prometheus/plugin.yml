@@ -73,7 +73,7 @@ requires:
 provisioning:
   datasource:
     template: provisioning/datasources/prometheus.yml.j2
-    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/grafana-prometheus.yml"
+    target: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/grafana-prometheus.yml"
 
 # =============================================================================
 # LIFECYCLE HOOKS — render the fragment before grafana boots

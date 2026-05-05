@@ -97,10 +97,10 @@ compose_extension:
 provisioning:
   datasources:
     template: provisioning/datasources/all.yml.j2
-    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources/all.yml"
+    target: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/all.yml"
   dashboards_provider:
     template: provisioning/dashboards/all.yml.j2
-    target: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/dashboards/all.yml"
+    target: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards/all.yml"
   dashboards:
     source_dir: provisioning/dashboards/
     target_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards/"
@@ -138,8 +138,8 @@ provisioning:
 lifecycle:
   pre_compose:
     # Before `docker compose up observability --wait`
-    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/datasources"
-    - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning/dashboards"
+    - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
+    - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/dashboards"
     - ensure_dir: "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"
     - render: provisioning.datasources
     - render: provisioning.dashboards_provider
@@ -152,7 +152,7 @@ lifecycle:
     # Admin-password-reset stays in pazny.grafana/tasks/post.yml (EC2)
   post_blank:
     # On `blank=true` runs — plugin cleans its data
-    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/observability/grafana/provisioning"
+    - remove_dir: "{{ stacks_dir }}/observability/grafana/provisioning"
     # Loader handles GDPR/audit row preservation per default policy
 
 # =============================================================================
