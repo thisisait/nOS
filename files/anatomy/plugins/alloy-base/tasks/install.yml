@@ -1,0 +1,61 @@
+---
+# alloy-base — Homebrew install + brew services lifecycle.
+#
+# Imported by the (Phase 2) thin `pazny.alloy` role:
+#   - import_tasks:
+#       file: "{{ playbook_dir }}/files/anatomy/plugins/alloy-base/tasks/install.yml"
+#
+# Until that role lands the operator wires this task file directly from
+# `tasks/observability.yml` during the Phase 2 cutover. For Phase 1 (this
+# unit's scope) the file exists as a contract — the plugin loader does NOT
+# call it; only the manifest's `pre_compose` is executed by the loader.
+#
+# Idempotency:
+#   - homebrew module is naturally idempotent (state=present is a no-op once
+#     installed)
+#   - brew services start: re-running on an already-running service is a
+#     no-op + 0 exit; we use `changed_when` to avoid spurious changed events
+#   - config render lives in the plugin manifest's `pre_compose` action;
+#     this task only restarts the service when that file changed (handler
+#     pattern; the controlling role drops the trigger via meta/main.yml or
+#     a top-level handler ref).
+
+- name: alloy | ensure Homebrew is on PATH
+  ansible.builtin.command: brew --version
+  register: alloy_brew_check
+  changed_when: false
+  failed_when: alloy_brew_check.rc != 0
+
+- name: alloy | install grafana-alloy formula
+  community.general.homebrew:
+    name: grafana-alloy
+    state: present
+  register: alloy_brew_install
+
+- name: alloy | ensure config dir exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/alloy"
+    state: directory
+    mode: "0755"
+
+# The plugin loader's pre_compose hook renders the config from the
+# plugin manifest's provisioning.config block — this file does NOT
+# duplicate the render. That single-source-of-truth is the whole
+# point of the plugin shape.
+
+- name: alloy | start (or restart on config change) brew service
+  ansible.builtin.command: "brew services restart alloy"
+  register: alloy_brew_restart
+  changed_when: "'Successfully started' in alloy_brew_restart.stdout
+                 or 'restarted' in alloy_brew_restart.stdout
+                 or 'Started' in alloy_brew_restart.stdout"
+
+- name: alloy | wait for the local UI / scrape endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ alloy_ui_port | default(12345) }}/-/ready"
+    status_code: 200
+    timeout: 5
+  register: alloy_ready
+  retries: 12
+  delay: 2
+  until: alloy_ready is succeeded
