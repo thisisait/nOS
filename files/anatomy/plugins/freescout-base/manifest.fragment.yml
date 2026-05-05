@@ -1,0 +1,9 @@
+freescout:
+  tier: 2
+  domain_var: freescout_domain
+  port_var: freescout_port
+  feature_flag: install_freescout
+  authentik:
+    mode: native_oidc
+    slug: freescout
+    tier: 2

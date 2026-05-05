@@ -1,0 +1,90 @@
+# =============================================================================
+# freescout-base — service plugin (Q2 native_oidc_env mop-up, P1).
+# Native OIDC via the freescout-oauth community module (env-driven).
+# RBAC tier 2 (manager — helpdesk staff).
+#
+# U8 worker had this slated as native_oidc_api (artisan CLI) but the role
+# already wires OIDC via env vars (FREESCOUT_OIDC_*) — env-based fits the
+# U5/U6 shape. Operator-completed in Phase 1 mop-up 2026-05-05.
+# =============================================================================
+
+name: freescout-base
+version: 0.1.0
+description: |
+  Wiring layer for FreeScout helpdesk: Authentik native-OIDC vessel via
+  the freescout-oauth community module (FREESCOUT_OIDC_* env vars),
+  mkcert CA mount conditional, GDPR Article 30 row, /hub card.
+upstream: https://freescout.net/
+license: AGPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.freescout
+  feature_flag: install_freescout
+  variables:
+    - freescout_domain
+    - freescout_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-freescout
+  client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
+  slug: freescout
+  redirect_uris:
+    - "https://{{ freescout_domain }}/oauth/callback"
+  launch_url: "https://{{ freescout_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 2
+
+compose_extension:
+  template: templates/freescout-base.compose.yml.j2
+  target_stack: b2b
+  target_service: freescout
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ freescout_port | default(8090) }}/"
+
+gdpr:
+  purpose: |
+    Hosts the operator's FreeScout helpdesk system. Stores customer
+    conversations, ticket history, internal notes, agent accounts, and
+    OIDC session data. Customer email content is processed for support
+    purposes (legitimate interests basis, contractual where the customer
+    has an active service agreement).
+  legal_basis: legitimate_interests
+  data_categories:
+    - support_conversations
+    - ticket_metadata
+    - customer_emails
+    - internal_notes
+    - user_accounts
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - support_agents
+    - end_users
+  retention_days: 1095   # 3 years — typical helpdesk retention horizon
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "FreeScout"
+    icon: ticket
+    url: "https://{{ freescout_domain }}"
+    tier: 2
+    description: "Helpdesk / customer support"
+    health_check: "https://{{ freescout_domain }}/"

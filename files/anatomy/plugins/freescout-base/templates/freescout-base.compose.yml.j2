@@ -1,0 +1,37 @@
+# =============================================================================
+# freescout-base — compose-extension fragment (Phase 1 mop-up, 2026-05-05).
+#
+# Rendered by the plugin loader at pre_compose time into:
+#   {{ stacks_dir }}/b2b/overrides/freescout-base.yml
+#
+# Compose-merged on top of the role's own override. Carries the
+# FREESCOUT_OIDC_* env vars + mkcert CA conditional. Role keeps install
+# primitives (image, ports, volumes, DB env).
+# =============================================================================
+
+services:
+  freescout:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # Defensive placeholder (P0.12 doctrine).
+      _NOS_PLUGIN: "freescout-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC via freescout-oauth module) ───────────────────
+      FREESCOUT_OIDC_ENABLED: "true"
+      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration"
+      FREESCOUT_OIDC_CLIENT_ID: "nos-freescout"
+      FREESCOUT_OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_freescout"
+      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain }}/oauth/callback"
+      FREESCOUT_OIDC_SCOPES: "openid profile email"
+      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+    extra_hosts:
+      # Authentik OIDC discovery endpoint resolves via host-gateway to the
+      # host's Traefik. Without this alias, container DNS would send the
+      # lookup to public DNS — breaks the local-TLD path.
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}
