@@ -6,6 +6,13 @@ namespace App\Presenters\Api;
 
 use App\Model\AdvisoryRepository;
 
+/**
+ * Security advisories: ingested daily-feed items with full text and listing filters.
+ *
+ * GET  /api/v1/advisories         — list advisories (?date, ?limit)
+ * GET  /api/v1/advisories/<id>    — fetch one advisory by id
+ * POST /api/v1/advisories         — ingest a new advisory record
+ */
 final class AdvisoriesPresenter extends BaseApiPresenter
 {
 	public function __construct(
