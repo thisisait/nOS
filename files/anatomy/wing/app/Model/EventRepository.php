@@ -23,6 +23,7 @@ final class EventRepository
 		'upgrade_start', 'upgrade_step_ok', 'upgrade_end',
 		'patch_start', 'patch_step_ok', 'patch_step_failed', 'patch_end',
 		'coexistence_provision', 'coexistence_cutover', 'coexistence_cleanup',
+		'agent_run_start', 'agent_run_end',
 	];
 
 	public function __construct(
