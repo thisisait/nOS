@@ -1,0 +1,41 @@
+# =============================================================================
+# vaultwarden-base — compose-extension fragment (D2 2026-05-05).
+#
+# Rendered into {{ stacks_dir }}/iiab/overrides/vaultwarden-base.yml at
+# pre_compose. Carries: SSO_* env vessel (native OIDC via Vaultwarden's
+# built-in SSO_ENABLED path) + mkcert CA volume conditional + custom
+# entrypoint for CA trust-store rebuild + authentik:host-gateway extra_host.
+#
+# All gates follow the mkcert regression class fix (2026-05-03):
+#   - CA volume + entrypoint + extra_hosts: install_authentik AND local TLD.
+#   - SSO env block: install_authentik only (LE public TLD works without CA).
+#
+# Vaultwarden SSO is special: the entrypoint runs update-ca-certificates
+# before exec /start.sh so the mkcert root CA lands in the container trust
+# store before the Rust TLS stack initialises. On a public TLD LE chain
+# validates without intervention; mounting a mkcert CA would shadow the
+# Mozilla bundle and break Authentik LE validation (same regression class).
+# =============================================================================
+
+services:
+  vaultwarden:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "vaultwarden-base"
+{% if install_authentik | default(false) %}
+      SSO_ENABLED: "true"
+      SSO_CLIENT_ID: "nos-vaultwarden"
+      SSO_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
+      SSO_AUTHORITY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/vaultwarden/"
+      SSO_PKCE: "true"
+      SSO_ONLY: "false"
+{% endif %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["update-ca-certificates 2>/dev/null; exec /start.sh"]
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

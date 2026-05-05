@@ -5,6 +5,12 @@
 #
 # Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
 # jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# D2 (2026-05-05): SSO_* env vars + mkcert CA volume + update-ca-certificates
+# entrypoint + authentik extra_host MOVED to vaultwarden-base plugin's compose-
+# extension (files/anatomy/plugins/vaultwarden-base/templates/vaultwarden-base.
+# compose.yml.j2). Role keeps install-only concerns: DOMAIN, signups, admin
+# token, WebSocket flag.
 # =============================================================================
 
 services:
@@ -19,36 +25,13 @@ services:
 {% endif %}
     volumes:
       - {{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}:/data
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # Local TLDs only — mkcert CA bundle would shadow Vaultwarden's bundled
-      # Mozilla CA list and break Authentik LE cert validation on public TLDs
-      # (same regression class as Open WebUI + Grafana fixed 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume + SSO env + entrypoint + extra_host moved to vaultwarden-base plugin (D2). #}
     environment:
       DOMAIN: "https://{{ vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       SIGNUPS_ALLOWED: "{{ vaultwarden_signups_allowed | default(false) | string | lower }}"
       ADMIN_TOKEN: "{{ vaultwarden_admin_token }}"
       WEBSOCKET_ENABLED: "true"
-{% if install_authentik | default(false) %}
-      SSO_ENABLED: "true"
-      SSO_CLIENT_ID: "{{ authentik_oidc_vaultwarden_client_id }}"
-      SSO_CLIENT_SECRET: "{{ authentik_oidc_vaultwarden_client_secret }}"
-      SSO_AUTHORITY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/vaultwarden/"
-      SSO_PKCE: "true"
-      SSO_ONLY: "false"
-{% endif %}
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-    # update-ca-certificates is needed only when we're injecting the mkcert
-    # root CA — on a public TLD it's a no-op since no CA is mounted, and the
-    # custom entrypoint would just delay startup with a useless trust-store
-    # rebuild. extra_hosts is also gated: on a public TLD Authentik resolves
-    # via real DNS, so the host-gateway alias is unnecessary.
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["update-ca-certificates 2>/dev/null; exec /start.sh"]
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
+{# SSO_* env + entrypoint + extra_host moved to vaultwarden-base plugin compose-extension (D2 2026-05-05). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
