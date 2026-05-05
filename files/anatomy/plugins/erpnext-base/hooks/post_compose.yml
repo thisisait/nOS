@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# erpnext-base / hooks/post_compose.yml
+#
+# Declarative post-compose sequence. Loader replays via `replay_api_calls`
+# once Phase 2 C5 lands the runner (bench is `runner: docker_exec`).
+# Mirrors roles/pazny.erpnext/tasks/post.yml byte-for-byte — the largest
+# bench-CLI harvest in the repo.
+# =============================================================================
+
+base_url: "http://127.0.0.1:{{ erpnext_port | default(8001) }}"
+tls_verify: false
+retries:
+  max: 30
+  delay_seconds: 4
+
+sequence:
+  # Phase 1 — diagnose configurator state
+  - id: check_configurator_exit
+    runner: docker_inspect
+    container: b2b-erpnext-configurator-1
+    select: .State.ExitCode
+    register: _erpnext_cfg_exit
+    failed_when: false                   # 999 if container missing
+
+  - id: check_site_config
+    runner: stat
+    path: "{{ erpnext_data_dir }}/{{ erpnext_site_name }}/site_config.json"
+    register: _erpnext_site_config
+
+  # Phase 2 — full retry path: site never created
+  - id: wait_mariadb_ready
+    when: >
+      _erpnext_cfg_exit.code != 0
+      and not _erpnext_site_config.exists
+    runner: docker_exec
+    container: mariadb
+    compose_project: infra
+    cmd: >
+      mariadb -u root -p{{ mariadb_root_password }} -e "SELECT 1"
+    retries: 15
+    delay_seconds: 4
+
+  - id: remove_stale_configurator
+    when: >
+      _erpnext_cfg_exit.code != 0
+      and not _erpnext_site_config.exists
+    runner: docker_rm
+    container: b2b-erpnext-configurator-1
+    force: true
+
+  - id: rerun_configurator
+    when: >
+      _erpnext_cfg_exit.code != 0
+      and not _erpnext_site_config.exists
+    runner: docker_compose_run
+    compose_project: b2b
+    service: erpnext-configurator
+    rm: true
+
+  # Phase 3 — partial-setup recovery: site exists, migration didn't finish
+  - id: bench_migrate_with_lock_cleanup
+    when: >
+      _erpnext_site_config.exists
+      and _erpnext_cfg_exit.code != 0
+    runner: docker_exec
+    container: erpnext-backend
+    compose_project: b2b
+    cmd: |
+      find /home/frappe/frappe-bench/sites -name "*.lock" -delete 2>/dev/null || true
+      bench --site {{ erpnext_site_name }} migrate
+    retries: 3
+    delay_seconds: 15
+    accept_substring_in_stdout: "Queued rebuilding of search index"
+
+  # Phase 4 — restart after fixups
+  - id: restart_services
+    when: >
+      _erpnext_cfg_exit.code == 0
+      or _erpnext_site_config.exists
+    runner: docker_compose_restart
+    compose_project: b2b
+    services:
+      - erpnext-frontend
+      - erpnext-backend
+
+  # Phase 5 — Administrator password reconverge (state-declarative UPDATE)
+  - id: reconverge_admin_password
+    when: "_erpnext_site_config.exists"
+    runner: docker_exec
+    container: erpnext-backend
+    compose_project: b2b
+    cmd: >
+      bench --site {{ erpnext_site_name }}
+      set-admin-password {{ erpnext_admin_password | quote }}
+
+  # Phase 6 — health probe
+  - id: verify_site_accessible
+    method: GET
+    path: /api/method/frappe.ping
+    headers:
+      Host: "{{ erpnext_site_name }}"
+    expect_status: [200, 403, 417]       # 417 = Guest disabled but stack alive

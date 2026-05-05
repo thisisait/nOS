@@ -1,0 +1,110 @@
+---
+# =============================================================================
+# gitea-base / hooks/post_compose.yml
+#
+# Declarative API-call sequence the plugin loader will replay once the
+# `replay_api_calls` runner lands (Phase 2 C5). Until then this file is
+# documentation: each entry mirrors a task in roles/pazny.gitea/tasks/post.yml
+# or tasks/stacks/authentik_service_post.yml so the harvest is byte-traceable.
+#
+# SHAPE: same as portainer-base/plugin.yml `api_calls` block — base_url +
+# tls_verify + retries + sequence[].
+# =============================================================================
+
+base_url: "http://127.0.0.1:{{ gitea_port | default(3003) }}"
+tls_verify: false                        # localhost loopback
+retries:
+  max: 30
+  delay_seconds: 2
+
+sequence:
+  # Phase 1 — admin bootstrap (CLI, not REST: Gitea has no admin-init API)
+  # Maps to roles/pazny.gitea/tasks/post.yml lines 13-71.
+  - id: wait_api_ready
+    method: GET
+    path: /api/v1/version
+    expect_status: 200
+    timeout_seconds: 60
+
+  - id: check_admin_exists
+    runner: docker_exec                  # CLI fallback for non-REST steps
+    container: gitea
+    compose_project: devops
+    cmd: >
+      gitea admin user list --admin
+    expect_substring: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+    register: _gitea_admin_exists
+
+  - id: create_admin
+    when: "_gitea_admin_exists.rc != 0"
+    runner: docker_exec
+    container: gitea
+    compose_project: devops
+    cmd: >
+      gitea admin user create
+      --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+      --password "{{ gitea_admin_password }}"
+      --email "{{ gitea_admin_email | default(gitea_admin_user + '@localhost') }}"
+      --admin --must-change-password=false
+
+  - id: reconverge_admin_password
+    when: "_gitea_admin_exists.rc == 0"
+    runner: docker_exec
+    container: gitea
+    compose_project: devops
+    cmd: >
+      gitea admin user change-password
+      --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+      --password "{{ gitea_admin_password }}"
+      --must-change-password=false
+    notify: Restart gitea
+
+  # Phase 2 — Authentik OAuth source via Admin API
+  # Maps to tasks/stacks/authentik_service_post.yml lines 1-79.
+  - id: list_oauth_sources
+    when: "install_authentik | bool"
+    method: GET
+    path: /api/v1/admin/identity-providers
+    auth:
+      type: basic
+      username: "{{ gitea_admin_user }}"
+      password: "{{ gitea_admin_password }}"
+    register: _gitea_oauth_sources
+
+  - id: create_authentik_source
+    when: >
+      install_authentik | bool
+      and _gitea_oauth_sources.status == 200
+      and (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | length) == 0
+    method: POST
+    path: /api/v1/admin/identity-providers
+    auth:
+      type: basic
+      username: "{{ gitea_admin_user }}"
+      password: "{{ gitea_admin_password }}"
+    body:
+      type: oauth2
+      name: authentik
+      config:
+        provider: openidConnect
+        client_id: "{{ authentik_oidc_gitea_client_id | default('nos-gitea') }}"
+        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
+
+  - id: update_authentik_source
+    when: >
+      install_authentik | bool
+      and _gitea_oauth_sources.status == 200
+      and (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | length) > 0
+    method: PATCH
+    path: "/api/v1/admin/identity-providers/{{ _gitea_ak_source_id }}"
+    auth:
+      type: basic
+      username: "{{ gitea_admin_user }}"
+      password: "{{ gitea_admin_password }}"
+    body:
+      config:
+        client_id: "{{ authentik_oidc_gitea_client_id | default('nos-gitea') }}"
+        client_secret: "{{ authentik_oidc_gitea_client_secret }}"
+        open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
+    notify: Restart gitea

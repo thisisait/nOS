@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# gitea-base — service plugin (Q2 OIDC API scaffold, U8, 2026-05-04)
+#
+# Status: SCAFFOLD. Declares the contract; the loader does not yet have a
+# `post_compose api_calls` runner. Phase 2 C5 finalizes execution; until then
+# `roles/pazny.gitea/tasks/post.yml` + `tasks/stacks/authentik_service_post.yml`
+# remain the live wiring path. This plugin is the harvest target.
+#
+# Tendons captured:
+#   • Admin user create + password reconverge   ← roles/pazny.gitea/tasks/post.yml
+#   • Authentik OAuth source create/update      ← tasks/stacks/authentik_service_post.yml:1-79
+#   • RBAC tier=2 (manager) per CLAUDE.md "RBAC" section
+# =============================================================================
+
+name: gitea-base
+version: 0.1.0
+description: |
+  Wiring layer for Gitea: idempotent admin bootstrap (`gitea admin user create`
+  + `change-password`) and Authentik OIDC OAuth-source registration via the
+  /api/v1/admin/identity-providers Admin API. Native OIDC — surfaces a
+  "Sign in with Authentik" button on Gitea's login page.
+
+  Role `pazny.gitea` keeps install-only responsibilities (data dir + compose
+  render). The 71-LOC post.yml + 79-LOC slice of authentik_service_post.yml
+  collapse into this manifest's `lifecycle.post_compose` once the loader's
+  api_calls runner ships (Phase 2 C5).
+upstream: https://about.gitea.com/
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.gitea
+  feature_flag: install_gitea
+  variables:
+    - gitea_domain
+    - gitea_port
+    - gitea_admin_user
+    - gitea_admin_password
+    - gitea_admin_email
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC (Gitea Admin API)
+# =============================================================================
+
+authentik:
+  provider_type: oauth2
+  client_id: nos-gitea
+  client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
+  slug: gitea
+  redirect_uris:
+    - "https://{{ gitea_domain }}/user/oauth2/authentik/callback"
+  launch_url: "https://{{ gitea_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 2                                # manager — per CLAUDE.md RBAC
+  post_setup: gitea_admin_api            # see hooks/post_compose.yml
+
+# =============================================================================
+# LIFECYCLE — declares the contract; loader runner lands in Phase 2 C5
+# =============================================================================
+
+lifecycle:
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/version"
+    # TODO(C5): loader gains `replay_api_calls` runner; until then the
+    # role-side post.yml + authentik_service_post.yml are authoritative.
+    # The hooks/post_compose.yml file in this dir documents the intended
+    # sequence in plugin-loader-spec format.
+    - replay_api_calls: hooks/post_compose.yml
+
+  post_blank: []
+
+# =============================================================================
+# OBSERVABILITY
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: gitea
+      stack: devops
+      tier: "2"
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Gitea"
+    icon: git
+    url: "https://{{ gitea_domain }}"
+    tier: 2
+    description: "Self-hosted Git service"
+    health_check: "/api/v1/version"
+
+# =============================================================================
+# GDPR — Article 30 row
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - identity_metadata                  # username, email, full name
+    - authentication_credentials         # password hash, OAuth tokens
+    - source_code                        # user-authored repos
+    - audit_log_entries                  # push events, login history
+  data_subjects:
+    - operators
+    - end_users                          # tenant developers (Tier 2 RBAC)
+  legal_basis: contract
+  retention_days: -1                     # active accounts kept; deletion via DSAR
+  processors:
+    - gitea
+  eu_residency: true
