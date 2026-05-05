@@ -1,0 +1,83 @@
+# =============================================================================
+# homeassistant-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Replaces the `authentik_oidc_apps[slug=homeassistant]` row. Home Assistant
+# is gated by Authentik forward-auth at the Traefik / Nginx layer (access
+# control only) — there are NO OIDC env vars on the HA container today,
+# but the row exists to provision an Authentik OIDC client + redirect_uri
+# for operators who later wire HA's `auth_oidc_auth` integration.
+#
+# Special: HA can run in `network_mode: host` (homeassistant_privileged=true
+# for mDNS/Bonjour). The compose-extension's extra_hosts only render in
+# bridge mode — host mode shares the host's /etc/hosts, so the alias is
+# unnecessary AND would conflict.
+# =============================================================================
+
+name: homeassistant-base
+version: 0.1.0
+description: |
+  Wiring layer for Home Assistant. Authentik integration is forward-auth at
+  the proxy layer today; this plugin carries the OIDC client metadata for
+  future native HA OIDC, plus the `extra_hosts authentik:host-gateway`
+  alias gated on bridge networking + `install_authentik`.
+upstream: https://www.home-assistant.io/
+license: Apache-2.0
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.homeassistant
+  feature_flag: install_homeassistant
+  variables:
+    - homeassistant_domain
+    - homeassistant_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — OIDC client metadata (forward-auth + future native OIDC)
+# =============================================================================
+# `mode: forward_auth` because that's how the running install actually
+# protects HA today (Authentik outpost in front of Traefik). The
+# redirect_uri / client_id / client_secret / scopes are still populated so
+# operators who later enable HA's experimental OIDC integration can flip
+# `mode: native_oidc` without re-provisioning the Authentik client.
+
+authentik:
+  mode: forward_auth
+  client_id: nos-homeassistant
+  client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
+  slug: homeassistant
+  redirect_uris:
+    - "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc/callback"
+  launch_url: "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 3   # user — household-facing UI
+
+# =============================================================================
+# COMPOSE-EXTENSION
+# =============================================================================
+
+compose_extension:
+  template: templates/homeassistant-base.compose.yml.j2
+  target_stack: iiab
+  target_service: homeassistant
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/"

@@ -1,0 +1,76 @@
+# =============================================================================
+# gitlab-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Replaces the `authentik_oidc_apps[slug=gitlab]` row + the role-side
+# omniauth providers block in GITLAB_OMNIBUS_CONFIG. Phase 2 C1 deletes both.
+#
+# Note: GitLab Omnibus configures OIDC via Ruby DSL inside GITLAB_OMNIBUS_CONFIG
+# (a multi-line env var). The compose-extension carries the same DSL block in
+# its own GITLAB_OMNIBUS_CONFIG; Compose merges environment maps key-by-key —
+# whichever fragment renders LAST wins for that key. Phase 2 C1 removes the
+# role-side rendering so this plugin is the single writer.
+# =============================================================================
+
+name: gitlab-base
+version: 0.1.0
+description: |
+  Wiring layer for GitLab CE. Carries Authentik omniauth_openid_connect
+  provider config (omniauth_enabled + omniauth_providers DSL) plus the
+  mkcert CA volume conditional and the extra_hosts authentik:host-gateway
+  alias.
+upstream: https://about.gitlab.com/install/ce-or-ee/
+license: MIT   # GitLab CE upstream; manifest is repo-licensed
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.gitlab
+  feature_flag: install_gitlab
+  variables:
+    - gitlab_domain
+    - gitlab_http_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC client (omniauth_openid_connect)
+# =============================================================================
+
+authentik:
+  mode: native_oidc
+  client_id: nos-gitlab
+  client_secret: "{{ global_password_prefix }}_pw_oidc_gitlab"
+  slug: gitlab
+  redirect_uris:
+    - "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback"
+  launch_url: "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 2   # manager — repo + CI admin
+
+# =============================================================================
+# COMPOSE-EXTENSION
+# =============================================================================
+
+compose_extension:
+  template: templates/gitlab-base.compose.yml.j2
+  target_stack: devops
+  target_service: gitlab
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"

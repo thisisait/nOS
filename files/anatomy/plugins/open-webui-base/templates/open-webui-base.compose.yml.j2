@@ -1,0 +1,36 @@
+# =============================================================================
+# open-webui-base — compose-extension fragment (Track Q U5, Phase 1).
+#
+# Rendered into {{ stacks_dir }}/iiab/overrides/open-webui-base.yml at
+# pre_compose. Carries Authentik native-OIDC env vessel + mkcert CA mount
+# conditional. Idempotent overlay alongside the role-side compose template.
+# =============================================================================
+
+services:
+  open-webui:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "open-webui-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
+      ENABLE_OAUTH_SIGNUP: "true"
+      OAUTH_PROVIDER_NAME: "Authentik"
+      OAUTH_CLIENT_ID: "{{ authentik_oidc_openwebui_client_id }}"
+      OAUTH_CLIENT_SECRET: "{{ authentik_oidc_openwebui_client_secret }}"
+      OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/open-webui/.well-known/openid-configuration"
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
+      OAUTH_SCOPES: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
+      # mkcert CA conditional — Python httpx + SSL bundle. On a public TLD
+      # we MUST NOT set these (system Mozilla list validates LE cleanly).
+      REQUESTS_CA_BUNDLE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+      SSL_CERT_FILE: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+      AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

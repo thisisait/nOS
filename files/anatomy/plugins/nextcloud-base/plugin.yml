@@ -1,0 +1,77 @@
+# =============================================================================
+# nextcloud-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Replaces the `authentik_oidc_apps[slug=nextcloud]` row. Nextcloud OIDC is
+# configured via the `occ` CLI (post_setup: nextcloud_occ in the central
+# list) — there are NO OIDC env vars on the compose service. The compose-
+# extension carries only the mkcert CA volume conditional + extra_hosts;
+# Phase 2 C1 removes the central row and the loader's authentik aggregator
+# starts emitting Nextcloud blueprint definitions from this manifest.
+# =============================================================================
+
+name: nextcloud-base
+version: 0.1.0
+description: |
+  Wiring layer for Nextcloud (file sync + collaboration). Authentik OIDC is
+  applied via `occ user_oidc` after the container is up (driven by the role's
+  post-tasks) — this plugin carries only the OIDC client metadata, mkcert CA
+  volume conditional, and the authentik host-gateway alias.
+upstream: https://nextcloud.com/
+license: AGPL-3.0
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.nextcloud
+  feature_flag: install_nextcloud
+  variables:
+    - nextcloud_domain
+    - nextcloud_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC client (configured via `occ user_oidc`)
+# =============================================================================
+
+authentik:
+  mode: native_oidc
+  post_setup: nextcloud_occ        # loader hands client_id+secret to occ CLI
+  client_id: nos-nextcloud
+  client_secret: "{{ global_password_prefix }}_pw_oidc_nextcloud"
+  slug: nextcloud
+  redirect_uris:
+    - "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/apps/user_oidc/code"
+  launch_url: "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 3   # user — files, contacts, calendar for end users
+
+# =============================================================================
+# COMPOSE-EXTENSION
+# =============================================================================
+
+compose_extension:
+  template: templates/nextcloud-base.compose.yml.j2
+  target_stack: iiab
+  target_service: nextcloud
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ nextcloud_port | default(8085) }}/status.php"
+    # Future post-Q2: invoke `occ user_oidc:provider` here instead of in
+    # the role's post.yml. For now the role keeps that responsibility.

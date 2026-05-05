@@ -1,0 +1,25 @@
+# =============================================================================
+# nextcloud-base — compose-extension fragment (Track Q U5, Phase 1).
+#
+# Rendered into {{ stacks_dir }}/iiab/overrides/nextcloud-base.yml at
+# pre_compose. Nextcloud OIDC is configured via `occ user_oidc` post-up,
+# NOT via env vars — this fragment carries only the mkcert CA mount
+# conditional + the authentik host-gateway alias (so occ can reach
+# Authentik over the configured hostname during provider registration).
+# =============================================================================
+
+services:
+  nextcloud:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only. Nextcloud's PHP curl trusts
+    # /usr/local/share/ca-certificates/* via the base image's
+    # update-ca-certificates entrypoint hook.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "nextcloud-base"
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

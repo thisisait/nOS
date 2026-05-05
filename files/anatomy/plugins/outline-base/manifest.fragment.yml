@@ -1,0 +1,19 @@
+# =============================================================================
+# outline-base — manifest fragment
+# Aggregated by the plugin loader (post-Q2) into state/manifest.yml. Names
+# the role + Tier-1 routing knobs the loader needs to derive Traefik file-
+# provider entries when the central manifest stops carrying them per-service.
+# =============================================================================
+
+services:
+  outline:
+    role: pazny.outline
+    feature_flag: install_outline
+    tier: 1
+    domain_var: outline_domain
+    port_var: outline_port
+    stack: b2b
+    authentik:
+      slug: outline
+      mode: native_oidc
+      access_tier: 3

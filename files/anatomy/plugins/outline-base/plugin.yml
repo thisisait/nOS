@@ -1,0 +1,74 @@
+# =============================================================================
+# outline-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Status: native-OIDC env vessel. Replaces the `authentik_oidc_apps` row for
+# the `outline` slug. Today both this plugin's compose-extension AND the
+# role-side env block render — Phase 2 C1 deletes the central list and the
+# role-side block, leaving only this manifest.
+#
+# Doctrine: docs/bones-and-wings-refactor.md §1.1 (tendons & vessels).
+# =============================================================================
+
+name: outline-base
+version: 0.1.0
+description: |
+  Wiring layer for Outline (collaborative wiki / docs). Carries Authentik
+  native-OIDC env block (OIDC_CLIENT_ID/SECRET + AUTH/TOKEN/USERINFO URIs +
+  scopes + NODE_EXTRA_CA_CERTS conditional) plus the mkcert CA volume
+  conditional. Role `pazny.outline` keeps install primitives.
+upstream: https://www.getoutline.com/
+license: BSL-1.1   # Outline upstream; manifest is repo-licensed
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.outline
+  feature_flag: install_outline
+  variables:
+    - outline_domain
+    - outline_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC client (replaces authentik_oidc_apps[slug=outline])
+# =============================================================================
+
+authentik:
+  mode: native_oidc
+  client_id: nos-outline
+  client_secret: "{{ global_password_prefix }}_pw_oidc_outline"
+  slug: outline
+  redirect_uris:
+    - "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc.callback"
+  launch_url: "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 3   # user — collaborative wiki for end users
+
+# =============================================================================
+# COMPOSE-EXTENSION — secondary docker-compose override (OIDC env + mkcert CA)
+# =============================================================================
+
+compose_extension:
+  template: templates/outline-base.compose.yml.j2
+  target_stack: b2b
+  target_service: outline
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ outline_port | default(3005) }}/_health"

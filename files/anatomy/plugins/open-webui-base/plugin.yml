@@ -1,0 +1,71 @@
+# =============================================================================
+# open-webui-base — service plugin (Track Q U5, Phase 1, 2026-05-04)
+#
+# Replaces the `authentik_oidc_apps[slug=open-webui]` row + the role-side
+# OAUTH_* env block. Phase 2 C1 deletes the central row + role env block.
+#
+# Doctrine: docs/bones-and-wings-refactor.md §1.1.
+# =============================================================================
+
+name: open-webui-base
+version: 0.1.0
+description: |
+  Wiring layer for Open WebUI (LLM frontend). Carries Authentik native-OIDC
+  env block (OAUTH_CLIENT_ID/SECRET + OPENID_PROVIDER_URL discovery + scopes)
+  plus the mkcert CA volume + REQUESTS_CA_BUNDLE / SSL_CERT_FILE conditional.
+upstream: https://github.com/open-webui/open-webui
+license: MIT
+
+type:
+  - service
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.open_webui
+  feature_flag: install_openwebui
+  variables:
+    - openwebui_domain
+    - openwebui_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+# =============================================================================
+# AUTHENTIK — native OIDC client
+# =============================================================================
+
+authentik:
+  mode: native_oidc
+  client_id: nos-openwebui
+  client_secret: "{{ global_password_prefix }}_pw_oidc_openwebui"
+  slug: open-webui
+  redirect_uris:
+    - "https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/oidc/callback"
+  launch_url: "https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 3   # user — LLM chat UI
+
+# =============================================================================
+# COMPOSE-EXTENSION
+# =============================================================================
+
+compose_extension:
+  template: templates/open-webui-base.compose.yml.j2
+  target_stack: iiab
+  target_service: open-webui
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/config"

@@ -1,0 +1,17 @@
+# =============================================================================
+# nextcloud-base — manifest fragment
+# =============================================================================
+
+services:
+  nextcloud:
+    role: pazny.nextcloud
+    feature_flag: install_nextcloud
+    tier: 1
+    domain_var: nextcloud_domain
+    port_var: nextcloud_port
+    stack: iiab
+    authentik:
+      slug: nextcloud
+      mode: native_oidc
+      post_setup: nextcloud_occ
+      access_tier: 3

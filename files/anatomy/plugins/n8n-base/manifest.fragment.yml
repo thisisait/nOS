@@ -1,0 +1,16 @@
+# =============================================================================
+# n8n-base — manifest fragment
+# =============================================================================
+
+services:
+  n8n:
+    role: pazny.n8n
+    feature_flag: install_n8n
+    tier: 1
+    domain_var: n8n_domain
+    port_var: n8n_port
+    stack: iiab
+    authentik:
+      slug: n8n
+      mode: native_oidc
+      access_tier: 2
