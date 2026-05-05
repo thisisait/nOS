@@ -67,15 +67,50 @@ def _read_registry() -> list[dict]:
 
 
 async def _check_health(client: httpx.AsyncClient, svc: dict) -> dict:
+    """Per-service liveness probe with two-stage fallback.
+
+    Anatomy P1 (2026-05-05). Pre-fix: hardcoded `<url>/api/health` →
+    16 of 36 services false-negatived because they don't expose that
+    path (Nextcloud answers `/status.php`, Authentik `/-/health/live/`,
+    Gitea `/`, Bluesky PDS `/xrpc/_health`, etc.). Aggregate reported
+    20/16 healthy/unhealthy on a healthy box.
+
+    Two-stage probe:
+      1. <url>/api/health with 4s timeout — services that DO expose it
+         (Bone, Wing) answer fast.
+      2. On 4xx (path missing) or any exception, fall back to <url>/ (root)
+         with 3s timeout. Treat any status < 500 as healthy: a 200/302
+         on root means the service is responding to HTTP.
+
+    A 5xx response or transport-level exception on BOTH stages → unhealthy.
+    A future per-service `health_path` field in service-registry.json
+    can short-circuit stage 1; deferred until A8 conductor needs the
+    distinction (this commit is enough for the operator-readable view).
+    """
     url = svc.get("url", "")
     if not url:
         return {**svc, "healthy": None, "error": "no url"}
-    health_url = url.rstrip("/") + "/api/health"
+    base = url.rstrip("/")
+
+    # Stage 1: try /api/health
     try:
-        resp = await client.get(health_url, timeout=5, follow_redirects=True)
-        return {**svc, "healthy": resp.status_code < 400}
+        resp = await client.get(base + "/api/health", timeout=4, follow_redirects=True)
+        if resp.status_code < 400:
+            return {**svc, "healthy": True, "probe": "/api/health"}
+    except Exception:  # noqa: BLE001
+        pass  # fall through to stage 2
+
+    # Stage 2: try root URL — accept anything < 500 as "service answers HTTP"
+    try:
+        resp = await client.get(base + "/", timeout=3, follow_redirects=True)
+        return {
+            **svc,
+            "healthy": resp.status_code < 500,
+            "probe": "/",
+            "status": resp.status_code,
+        }
     except Exception as exc:  # noqa: BLE001
-        return {**svc, "healthy": False, "error": str(exc)}
+        return {**svc, "healthy": False, "error": str(exc), "probe": "/"}
 
 
 # -- Endpoints ---------------------------------------------------------------
