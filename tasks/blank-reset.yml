@@ -30,12 +30,12 @@
     - external_storage_root | default('') | length > 0
 
 # ── 1. Confirmation ─────────────────────────────────────────────────────
-- name: "[BLANK] Confirm destructive operation"
+- name: "[BLANK/FLUSH] Confirm destructive operation"
   ansible.builtin.pause:
     prompt: |-
 
       ╔══════════════════════════════════════════════════════════════════════╗
-      ║  BLANK RESET - DELETE ALL DATA AND CONFIGURATIONS                  ║
+      ║  {{ "FLUSH" + (" DEEP" if _flush_deep | default(false) | bool else "") if (flush is defined) else "BLANK" }} RESET — DELETE ALL DATA AND CONFIGURATIONS      ║
       ║                                                                    ║
       ║  Will be deleted:                                                  ║
       ║    - All Docker containers and volumes                             ║
@@ -43,10 +43,12 @@
       ║    - Nginx configuration and SSL certificates                      ║
       ║    - Observability data (Grafana, Prometheus, Loki, Tempo)         ║
       ║    - Uptime Kuma monitors, Portainer settings                      ║
+      ║  {{ "- Docker images + build cache (flush=deep)" if _flush_deep | default(false) | bool else "(blank/flush=true: Docker images kept)" }}
       ║                                                                    ║
       ║  Will remain:                                                      ║
       ║    - ~/media/ (movies, music), ~/calibre/ (books)                  ║
-      ║    - ~/.ollama/ (models), Homebrew packages                        ║
+      ║    - ~/.ollama/ (models — add flush_ollama=true to wipe)           ║
+      ║    - Homebrew packages (deep cleans cache, keeps packages)         ║
       ║                                                                    ║
       ║  After reset the playbook reinstalls everything with clean data.   ║
       ╚══════════════════════════════════════════════════════════════════════╝

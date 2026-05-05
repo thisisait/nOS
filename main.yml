@@ -642,7 +642,23 @@
 
   tasks:
     # ──────────────────────────────────────────────────────────────────────────
-    # Blank reset - clean reinstall (ansible-playbook main.yml -K -e blank=true)
+    # flush normalisation — flush=true and flush=deep both promote to blank=true.
+    # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.
+    #
+    # Usage:
+    #   ansible-playbook main.yml -e flush=true    # clean reinstall (= blank=true)
+    #   ansible-playbook main.yml -e flush=deep    # blank + Docker images + caches
+    #   ansible-playbook main.yml -e flush=deep -e flush_ollama=true  # + Ollama wipe
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "[Flush] Normalise flush → blank (flush=true or flush=deep)"
+      ansible.builtin.set_fact:
+        blank: true
+        _flush_deep: "{{ flush | string | lower == 'deep' }}"
+      when: flush is defined and flush | string | lower in ['true', 'deep']
+      tags: ['always', 'flush', 'blank', 'reset']
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Blank / flush reset - clean reinstall
     # ──────────────────────────────────────────────────────────────────────────
     - name: "[Blank] Prompt for password prefix"
       ansible.builtin.pause:
@@ -732,6 +748,10 @@
     - import_tasks: tasks/blank-reset.yml
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
+
+    - import_tasks: tasks/flush-deep.yml
+      when: _flush_deep | default(false) | bool
+      tags: ['flush', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Restore — pull a dated backup from RustFS and replay it live.

@@ -1033,6 +1033,72 @@ write to wing.db.
 
 ---
 
+## Track Demo — demo mode (`-e demo_mode=true`)
+
+**Status: DESIGN CAPTURED — blocked on Track Q completion + A6.5 (real plugin loader)**
+
+### Motivation
+
+A single-flag way to seed all installed services with realistic example data.
+Useful for: live product demos, CI smoke tests, onboarding new operators, and
+testing that every service's OIDC + storage wiring actually works end-to-end.
+
+### Design
+
+**Flag:** `-e demo_mode=true` (default false). Runs a `post_demo` lifecycle phase
+after the full stack is up. No destructive side-effects: demo content is additive
+(doesn't overwrite production data on non-blank runs).
+
+**Carrier:** the existing anatomy plugin framework. Each plugin's `plugin.yml`
+gains a `demo:` block (parallel to `authentik:` and `observability:`):
+
+```yaml
+demo:
+  enabled: "{{ demo_mode | default(false) }}"
+  seed:
+    - create_user:   { name: demo,  email: "demo@{{ tenant_domain }}", role: user }
+    - create_doc:    { title: "Getting Started",  collection: Demo }
+    - create_import: { file: "seed/outline-demo.json" }
+```
+
+The plugin loader gains a new `post_demo` hook (called only when `demo_mode | bool`).
+The loader dispatches `seed:` steps to a per-plugin seed driver
+(`files/anatomy/plugins/<svc>-base/seed/`).
+
+**Per-service scope (initial batch):**
+
+| Service | Demo content |
+|---------|-------------|
+| Outline | "Getting Started" collection + 3 docs |
+| Gitea | demo-org / demo-repo with README |
+| Nextcloud | shared folder with sample files |
+| Grafana | "nOS Demo" dashboard (pre-annotated) |
+| n8n | example workflow (HTTP webhook → Ntfy) |
+| Kiwix | — (ZIM files are large; demo = just health check) |
+| Metabase | sample SQL question against InfluxDB |
+| Infisical | demo-project / demo-environment |
+
+### Dependencies
+
+1. **A6.5** — plugin loader must be real (not skeleton) before `post_demo` can execute
+2. **Track Q** — per-plugin `plugin.yml` files must exist for every service
+3. **Conductor A10** — demo runs could emit Wing audit events (nice to have)
+
+### Implementation plan
+
+1. Add `demo_mode: false` to `default.config.yml`
+2. Add `post_demo` hook to plugin loader (`load_plugins.py`)
+3. Extend `nos_plugin_loader` Ansible module with `hook: post_demo` support
+4. Add `demo:` blocks to all 33 Track-Q plugins (one multi-agent batch, ~2h)
+5. Add `tasks/stacks/demo-seed.yml` — calls `nos_plugin_loader hook: post_demo`
+   at the very end of `stack-up.yml` when `demo_mode | bool`
+6. Per-service seed drivers in `files/anatomy/plugins/<svc>-base/seed/`
+
+**Estimate:** 1 focused session after A6.5 + Track Q land. The bulk of the work
+is writing seed data, not the framework glue.
+
+---
+
 ## Appendix: stretch goals (post-Q2 / next-roadmap)
 
 These are valid ideas that don't fit current Q2 wave-2 (Tracks E-H):

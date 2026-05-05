@@ -1,0 +1,78 @@
+---
+# ==============================================================================
+# FLUSH: DEEP — extra cleanup on top of blank-reset.yml
+#
+# Run: ansible-playbook main.yml -K -e flush=deep
+#
+# What flush=deep adds beyond blank=true:
+#   - Docker: prune ALL images (not just stopped container residue)
+#   - Docker: prune build cache
+#   - Homebrew: stale package versions + download cache
+#   - npm / pip caches (silently skipped if not installed)
+#   - Ollama models — OPT-IN only (flush_ollama=true), default=false
+#
+# Use cases:
+#   - Simulate new hardware (fresh Mac, all images re-pull on next run)
+#   - Breach hard wipe (no service state, no pulled images, no build artefacts)
+#
+# Note: Homebrew packages and Docker Desktop are NOT removed — reinstalling
+# takes hours and is not needed for either use case above.
+# ==============================================================================
+
+- name: "[FLUSH:DEEP] Prune ALL Docker images"
+  ansible.builtin.shell: "{{ docker_bin }} image prune -af 2>&1 || true"
+  register: _flush_image_prune
+  changed_when: "'Deleted' in (_flush_image_prune.stdout | default(''))"
+  failed_when: false
+
+- name: "[FLUSH:DEEP] Prune Docker build cache"
+  ansible.builtin.shell: "{{ docker_bin }} builder prune -af 2>&1 || true"
+  failed_when: false
+  changed_when: false
+
+- name: "[FLUSH:DEEP] Homebrew cleanup (stale versions)"
+  ansible.builtin.shell: "brew cleanup -s 2>&1 || true"
+  environment:
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    PATH: "{{ homebrew_prefix }}/bin:/usr/bin:/bin"
+  failed_when: false
+  changed_when: false
+
+- name: "[FLUSH:DEEP] Remove Homebrew downloads cache"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/Caches/Homebrew"
+    state: absent
+  failed_when: false
+
+- name: "[FLUSH:DEEP] npm cache clean (skipped if npm absent)"
+  ansible.builtin.shell: |
+    NPM="{{ homebrew_prefix }}/bin/npm"
+    [ -x "$NPM" ] && "$NPM" cache clean --force 2>&1 || true
+  failed_when: false
+  changed_when: false
+
+- name: "[FLUSH:DEEP] pip cache purge (skipped if pip absent)"
+  ansible.builtin.shell: |
+    PIP="{{ homebrew_prefix }}/bin/pip3"
+    [ -x "$PIP" ] && "$PIP" cache purge 2>&1 || true
+  failed_when: false
+  changed_when: false
+
+# Ollama models are tens of GB — opt-in only.
+# The blank-reset explicitly preserves ~/.ollama/ to avoid re-downloading.
+# flush_ollama=true overrides that decision.
+- name: "[FLUSH:DEEP] Remove Ollama models (flush_ollama=true)"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.ollama"
+    state: absent
+  when: flush_ollama | default(false) | bool
+
+- name: "[FLUSH:DEEP] Deep flush complete"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       FLUSH:DEEP COMPLETE
+       Removed: all Docker images, build cache, Homebrew stale versions,
+       npm/pip caches{{ ", Ollama models" if flush_ollama | default(false) | bool else " (Ollama preserved — use flush_ollama=true to wipe)" }}.
+       Next playbook run will re-pull all Docker images — first startup is slower.
+      ══════════════════════════════════════════════════════════════════════
