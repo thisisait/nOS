@@ -13,6 +13,12 @@ use App\Model\PatchRepository;
 use App\Model\UpgradeRepository;
 use App\Model\CoexistenceRepository;
 
+/**
+ * GET /api/v1/dashboard/summary  — aggregated counters across components, scan, pentest, advisories
+ * GET /api/v1/dashboard/timeline — recent activity stream (events + state transitions, paginated)
+ *
+ * Public summary, bearer-gated timeline. Drives Wing's homepage tiles.
+ */
 final class DashboardPresenter extends BaseApiPresenter
 {
 	protected array $publicActions = ['summary'];

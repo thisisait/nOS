@@ -1,0 +1,82 @@
+---
+# =============================================================================
+# nextcloud-base / hooks/post_compose.yml
+#
+# Declarative post-compose sequence. Loader replays via `replay_api_calls`
+# once Phase 2 C5 lands the runner (occ CLI is `runner: docker_exec`).
+# Mirrors tasks/stacks/authentik_service_post.yml:103-184 byte-for-byte.
+# =============================================================================
+
+base_url: "https://{{ nextcloud_domain }}"
+tls_verify: false                        # localhost loopback w/ mkcert
+retries:
+  max: 30
+  delay_seconds: 4
+
+sequence:
+  # Phase 1 — verify container + readiness
+  - id: check_running
+    runner: docker_inspect
+    container: iiab-nextcloud-1
+    register: _nc_running
+    expect_state: running
+
+  # Phase 2 — install + enable user_oidc app (idempotent)
+  - id: install_user_oidc
+    when: "_nc_running.state == 'running'"
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: php occ app:install user_oidc
+    accept_substring_in_stdout: "already installed"
+
+  - id: enable_user_oidc
+    when: "_nc_running.state == 'running'"
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: php occ app:enable user_oidc
+    accept_substring_in_stdout: "already enabled"
+
+  # Phase 3 — provider register / reconverge
+  - id: list_providers
+    when: "_nc_running.state == 'running'"
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: php occ user_oidc:provider
+    register: _nc_oidc_check
+
+  - id: register_authentik_provider
+    when: >
+      _nc_running.state == 'running'
+      and 'authentik' not in _nc_oidc_check.stdout
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: >
+      php occ user_oidc:provider authentik
+      --clientid="{{ authentik_oidc_nextcloud_client_id | default('nos-nextcloud') }}"
+      --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+      --discoveryuri="https://{{ authentik_domain }}/application/o/nextcloud/.well-known/openid-configuration"
+      --mapping-uid="preferred_username"
+      --mapping-email="email"
+      --mapping-displayname="name"
+    notify: Restart nextcloud
+
+  - id: reconverge_provider_secret
+    when: >
+      _nc_running.state == 'running'
+      and 'authentik' in _nc_oidc_check.stdout
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: >
+      php occ user_oidc:provider authentik
+      --clientsecret="{{ authentik_oidc_nextcloud_client_secret }}"
+    notify: Restart nextcloud

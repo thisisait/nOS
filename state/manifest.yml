@@ -232,6 +232,27 @@ services:
       url_template: "http://localhost:{{ tempo_http_port }}/ready"
       expect_status: 200
 
+  # ── alloy (Anatomy P1, 2026-05-05) ────────────────────────────────────────
+  # Host-installed via Homebrew (`brew install grafana-alloy`), runs as a
+  # `brew services` daemon. NOT a Docker image — the only host-binary entry
+  # in the observability category. Plugin: files/anatomy/plugins/alloy-base/.
+  # No domain_var: alloy is loopback-only (no Traefik route auto-derived).
+  - id: alloy
+    category: observability
+    install_flag: install_observability
+    version_var: alloy_version
+    version_source: homebrew
+    port_var: alloy_ui_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ alloy_ui_port | default(12345) }}/-/ready"
+      expect_status: 200
+    # Homebrew formula declared in the plugin manifest at
+    # files/anatomy/plugins/alloy-base/plugin.yml (host_command: brew,
+    # formula: grafana-alloy). The state manifest schema does not yet
+    # accept a `formula:` field; extension lands when the state-manager
+    # brew shim is wired up (Phase 3 alongside U11-U13 alloy consumers).
+
   # ------------------------------------------------------------- iiab stack
   - id: wordpress
     category: cms

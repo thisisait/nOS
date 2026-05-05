@@ -1,0 +1,87 @@
+# =============================================================================
+# wordpress-base — service plugin (Q2 native_oidc_env batch B mop-up, P1).
+# Native OIDC via openid-connect-generic WP plugin (configured by mu-plugin
+# oidc-bootstrap.php from WP_OIDC_* env vars). RBAC tier 4 (guest).
+#
+# Worker U6 was scoped 8 plugins but ran out of agent quota at 7; this
+# plugin completes the batch (operator-authored 2026-05-05).
+# =============================================================================
+
+name: wordpress-base
+version: 0.1.0
+description: |
+  Wiring layer for WordPress: Authentik native-OIDC vessel via the
+  openid-connect-generic plugin (env-driven configuration through
+  mu-plugins/oidc-bootstrap.php), mkcert CA mount conditional, GDPR
+  Article 30 row, /hub card.
+upstream: https://wordpress.org/
+license: GPL-2.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.wordpress
+  feature_flag: install_wordpress
+  variables:
+    - wordpress_domain
+    - wordpress_port
+    - tenant_domain
+    - host_alias
+    - global_password_prefix
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-wordpress
+  client_secret: "{{ global_password_prefix }}_pw_oidc_wordpress"
+  slug: wordpress
+  redirect_uris:
+    - "https://{{ wordpress_domain }}/wp-admin/admin-ajax.php?action=openid-connect-authorize"
+  launch_url: "https://{{ wordpress_domain }}"
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 4
+
+compose_extension:
+  template: templates/wordpress-base.compose.yml.j2
+  target_stack: iiab
+  target_service: wordpress
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ wordpress_port | default(8084) }}/wp-login.php"
+
+gdpr:
+  purpose: |
+    Hosts the operator's WordPress site. Stores posts, pages, comments,
+    user accounts, and OIDC session data. Public-facing content may be
+    reachable to anonymous visitors (legitimate interests basis).
+  legal_basis: legitimate_interests
+  data_categories:
+    - blog_content
+    - comments
+    - user_accounts
+    - oauth_session_data
+    - email
+  data_subjects:
+    - operators
+    - end_users
+    - anonymous_visitors
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "WordPress"
+    icon: globe
+    url: "https://{{ wordpress_domain }}"
+    tier: 4
+    description: "Public website / blog"
+    health_check: "https://{{ wordpress_domain }}/wp-login.php"

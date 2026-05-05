@@ -7,12 +7,12 @@ namespace App\Presenters\Api;
 use App\Model\UpgradeRepository;
 
 /**
- * GET  /api/v1/upgrades                              — matrix
- * GET  /api/v1/upgrades/<service>                    — recipes for service
- * GET  /api/v1/upgrades/<service>/<recipe>           — single recipe detail
- * POST /api/v1/upgrades/<service>/<recipe>/plan
- * POST /api/v1/upgrades/<service>/<recipe>/apply
- * GET  /api/v1/upgrades/history[?service=X]          — local history mirror
+ * GET  /api/v1/upgrades                          — matrix of services with available upgrade recipes
+ * GET  /api/v1/upgrades/{service}                — list recipes for a single service
+ * GET  /api/v1/upgrades/{service}/{recipe}       — single recipe detail (steps + breaking_boundaries)
+ * POST /api/v1/upgrades/{service}/{recipe}/plan  — dry-run a recipe; returns the plan + diff
+ * POST /api/v1/upgrades/{service}/{recipe}/apply — execute a recipe; returns run_id + tail
+ * GET  /api/v1/upgrades/history                  — local history mirror (filterable by service)
  */
 final class UpgradesPresenter extends BaseApiPresenter
 {

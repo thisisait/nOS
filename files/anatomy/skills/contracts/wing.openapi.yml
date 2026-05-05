@@ -21,8 +21,24 @@ components:
 paths:
   /api/v1/advisories:
     get:
-      summary: 'Advisories::actiondefault'
+      summary: 'list advisories (?date, ?limit)'
       operationId: Advisories_default_get
+      tags:
+        - Advisories
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: ingest a new advisory record
+      operationId: Advisories_default_post
       tags:
         - Advisories
       responses:
@@ -38,7 +54,7 @@ paths:
         - BearerAuth: []
   '/api/v1/advisories/{id}':
     get:
-      summary: 'Advisories::actiondefault'
+      summary: fetch one advisory by id
       operationId: Advisories_default_get
       tags:
         - Advisories
@@ -230,7 +246,7 @@ paths:
             type: string
   /api/v1/dashboard/summary:
     get:
-      summary: 'Dashboard::actionsummary'
+      summary: aggregated counters across components, scan, pentest, advisories
       operationId: Dashboard_summary_get
       tags:
         - Dashboard
@@ -245,7 +261,7 @@ paths:
           description: Not found
   /api/v1/dashboard/timeline:
     get:
-      summary: 'Dashboard::actiontimeline'
+      summary: recent activity stream (events + state transitions, paginated)
       operationId: Dashboard_timeline_get
       tags:
         - Dashboard
@@ -291,8 +307,24 @@ paths:
           description: Not found
   /api/v1/gdpr/breaches:
     get:
-      summary: 'Gdpr::actionbreaches'
+      summary: list breach incidents (Article 33/34)
       operationId: Gdpr_breaches_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: log a new breach incident
+      operationId: Gdpr_breaches_post
       tags:
         - Gdpr
       responses:
@@ -308,7 +340,7 @@ paths:
         - BearerAuth: []
   '/api/v1/gdpr/breaches/{id}':
     get:
-      summary: 'Gdpr::actionbreaches'
+      summary: single breach incident detail
       operationId: Gdpr_breaches_get
       tags:
         - Gdpr
@@ -331,8 +363,24 @@ paths:
             type: string
   /api/v1/gdpr/dsar:
     get:
-      summary: 'Gdpr::actiondsar'
+      summary: list DSAR (data-subject access requests)
       operationId: Gdpr_dsar_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: file a new DSAR (operator-initiated)
+      operationId: Gdpr_dsar_post
       tags:
         - Gdpr
       responses:
@@ -348,7 +396,7 @@ paths:
         - BearerAuth: []
   '/api/v1/gdpr/dsar/{id}':
     get:
-      summary: 'Gdpr::actiondsar'
+      summary: single DSAR detail
       operationId: Gdpr_dsar_get
       tags:
         - Gdpr
@@ -371,7 +419,7 @@ paths:
             type: string
   /api/v1/gdpr/export.csv:
     get:
-      summary: 'Gdpr::actionexportCsv'
+      summary: CSV dump of the processing register (audit-friendly)
       operationId: Gdpr_exportCsv_get
       tags:
         - Gdpr
@@ -388,7 +436,7 @@ paths:
         - BearerAuth: []
   /api/v1/gdpr/processing:
     get:
-      summary: 'Gdpr::actionprocessing'
+      summary: list Article 30 processing register rows
       operationId: Gdpr_processing_get
       tags:
         - Gdpr
@@ -405,8 +453,30 @@ paths:
         - BearerAuth: []
   '/api/v1/gdpr/processing/{id}':
     get:
-      summary: 'Gdpr::actionprocessing'
+      summary: single processing record detail
       operationId: Gdpr_processing_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    post:
+      summary: upsert (idempotent) a processing record
+      operationId: Gdpr_processing_post
       tags:
         - Gdpr
       responses:
@@ -765,9 +835,9 @@ paths:
           schema:
             type: string
   '/api/v1/pentest/findings/{id}':
-    get:
-      summary: 'Pentest::actionfindingUpdate'
-      operationId: Pentest_findingUpdate_get
+    put:
+      summary: update a finding row
+      operationId: Pentest_findingUpdate_put
       tags:
         - Pentest
       responses:
@@ -789,7 +859,7 @@ paths:
             type: string
   /api/v1/pentest/patches:
     get:
-      summary: 'Pentest::actionpatches'
+      summary: list patches (legacy nested view)
       operationId: Pentest_patches_get
       tags:
         - Pentest
@@ -804,10 +874,26 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+    post:
+      summary: create a patch (legacy)
+      operationId: Pentest_patches_post
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   '/api/v1/pentest/patches/{id}':
-    get:
-      summary: 'Pentest::actionpatches'
-      operationId: Pentest_patches_get
+    put:
+      summary: update a patch (legacy)
+      operationId: Pentest_patches_put
       tags:
         - Pentest
       responses:
@@ -829,8 +915,24 @@ paths:
             type: string
   /api/v1/pentest/targets:
     get:
-      summary: 'Pentest::actiontargets'
+      summary: list pentest targets
       operationId: Pentest_targets_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+    post:
+      summary: create a pentest target
+      operationId: Pentest_targets_post
       tags:
         - Pentest
       responses:
@@ -846,8 +948,30 @@ paths:
         - BearerAuth: []
   '/api/v1/pentest/targets/{id}':
     get:
-      summary: 'Pentest::actiontargets'
+      summary: fetch one pentest target
       operationId: Pentest_targets_get
+      tags:
+        - Pentest
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: update a pentest target
+      operationId: Pentest_targets_put
       tags:
         - Pentest
       responses:
@@ -868,9 +992,9 @@ paths:
           schema:
             type: string
   '/api/v1/pentest/targets/{id}/areas-planned':
-    get:
-      summary: 'Pentest::actionareasPlanned'
-      operationId: Pentest_areasPlanned_get
+    post:
+      summary: add a planned area to a target
+      operationId: Pentest_areasPlanned_post
       tags:
         - Pentest
       responses:
@@ -891,9 +1015,9 @@ paths:
           schema:
             type: string
   '/api/v1/pentest/targets/{id}/areas-tested':
-    get:
-      summary: 'Pentest::actionareasTested'
-      operationId: Pentest_areasTested_get
+    post:
+      summary: log a tested area + result
+      operationId: Pentest_areasTested_post
       tags:
         - Pentest
       responses:
@@ -914,9 +1038,9 @@ paths:
           schema:
             type: string
   '/api/v1/pentest/targets/{id}/findings':
-    get:
-      summary: 'Pentest::actionfindings'
-      operationId: Pentest_findings_get
+    post:
+      summary: record a finding under a target
+      operationId: Pentest_findings_post
       tags:
         - Pentest
       responses:
@@ -1018,7 +1142,7 @@ paths:
             type: string
   /api/v1/remediation:
     get:
-      summary: 'Remediation::actiondefault'
+      summary: 'list remediation items (?status, ?severity, ?component, ?limit)'
       operationId: Remediation_default_get
       tags:
         - Remediation
@@ -1033,10 +1157,26 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+    post:
+      summary: create a remediation item
+      operationId: Remediation_default_post
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   /api/v1/remediation/bulk-status:
-    get:
-      summary: 'Remediation::actionbulkStatus'
-      operationId: Remediation_bulkStatus_get
+    put:
+      summary: bulk-update status for many ids
+      operationId: Remediation_bulkStatus_put
       tags:
         - Remediation
       responses:
@@ -1052,7 +1192,7 @@ paths:
         - BearerAuth: []
   /api/v1/remediation/next-id:
     get:
-      summary: 'Remediation::actionnextId'
+      summary: allocate the next REM-XXX id
       operationId: Remediation_nextId_get
       tags:
         - Remediation
@@ -1069,8 +1209,30 @@ paths:
         - BearerAuth: []
   '/api/v1/remediation/{id}':
     get:
-      summary: 'Remediation::actiondefault'
+      summary: fetch one remediation item
       operationId: Remediation_default_get
+      tags:
+        - Remediation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: update a remediation item
+      operationId: Remediation_default_put
       tags:
         - Remediation
       responses:
@@ -1091,9 +1253,9 @@ paths:
           schema:
             type: string
   '/api/v1/scan/component/{id}':
-    get:
-      summary: 'Scan::actioncomponent'
-      operationId: Scan_component_get
+    put:
+      summary: 'update one component''s scan record'
+      operationId: Scan_component_put
       tags:
         - Scan
       responses:
@@ -1114,9 +1276,9 @@ paths:
           schema:
             type: string
   /api/v1/scan/config:
-    get:
-      summary: 'Scan::actionconfig'
-      operationId: Scan_config_get
+    put:
+      summary: update scan-cycle config
+      operationId: Scan_config_put
       tags:
         - Scan
       responses:
@@ -1131,9 +1293,9 @@ paths:
       security:
         - BearerAuth: []
   /api/v1/scan/cycle:
-    get:
-      summary: 'Scan::actioncycle'
-      operationId: Scan_cycle_get
+    post:
+      summary: start a new scan cycle
+      operationId: Scan_cycle_post
       tags:
         - Scan
       responses:
@@ -1149,7 +1311,7 @@ paths:
         - BearerAuth: []
   /api/v1/scan/cycles:
     get:
-      summary: 'Scan::actioncycles'
+      summary: 'recent scan cycles (?limit)'
       operationId: Scan_cycles_get
       tags:
         - Scan
@@ -1165,9 +1327,9 @@ paths:
       security:
         - BearerAuth: []
   '/api/v1/scan/probe/{name}/complete':
-    get:
-      summary: 'Scan::actionprobeComplete'
-      operationId: Scan_probeComplete_get
+    post:
+      summary: mark a named probe as completed
+      operationId: Scan_probeComplete_post
       tags:
         - Scan
       responses:
@@ -1188,9 +1350,9 @@ paths:
           schema:
             type: string
   /api/v1/scan/rotation:
-    get:
-      summary: 'Scan::actionrotation'
-      operationId: Scan_rotation_get
+    put:
+      summary: set the next-batch rotation queue
+      operationId: Scan_rotation_put
       tags:
         - Scan
       responses:
@@ -1206,7 +1368,7 @@ paths:
         - BearerAuth: []
   /api/v1/scan/state:
     get:
-      summary: 'Scan::actionstate'
+      summary: current scan state snapshot
       operationId: Scan_state_get
       tags:
         - Scan
@@ -1297,7 +1459,7 @@ paths:
         - BearerAuth: []
   /api/v1/upgrades:
     get:
-      summary: matrix
+      summary: matrix of services with available upgrade recipes
       operationId: Upgrades_default_get
       tags:
         - Upgrades
@@ -1314,7 +1476,7 @@ paths:
         - BearerAuth: []
   /api/v1/upgrades/history:
     get:
-      summary: 'Upgrades::actionhistory'
+      summary: local history mirror (filterable by service)
       operationId: Upgrades_history_get
       tags:
         - Upgrades
@@ -1331,7 +1493,7 @@ paths:
         - BearerAuth: []
   '/api/v1/upgrades/{service}':
     get:
-      summary: recipes for service
+      summary: list recipes for a single service
       operationId: Upgrades_service_get
       tags:
         - Upgrades
@@ -1354,7 +1516,7 @@ paths:
             type: string
   '/api/v1/upgrades/{service}/{recipe}':
     get:
-      summary: single recipe detail
+      summary: single recipe detail (steps + breaking_boundaries)
       operationId: Upgrades_recipe_get
       tags:
         - Upgrades
@@ -1381,9 +1543,9 @@ paths:
           schema:
             type: string
   '/api/v1/upgrades/{service}/{recipe}/apply':
-    get:
-      summary: 'Upgrades::actionapply'
-      operationId: Upgrades_apply_get
+    post:
+      summary: execute a recipe; returns run_id + tail
+      operationId: Upgrades_apply_post
       tags:
         - Upgrades
       responses:
@@ -1409,9 +1571,9 @@ paths:
           schema:
             type: string
   '/api/v1/upgrades/{service}/{recipe}/plan':
-    get:
-      summary: 'Upgrades::actionplan'
-      operationId: Upgrades_plan_get
+    post:
+      summary: dry-run a recipe; returns the plan + diff
+      operationId: Upgrades_plan_post
       tags:
         - Upgrades
       responses:

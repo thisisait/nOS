@@ -1,0 +1,45 @@
+# =============================================================================
+# wordpress-base — compose-extension fragment (Phase 1 mop-up, 2026-05-05).
+#
+# Rendered by the plugin loader at pre_compose time into:
+#   {{ stacks_dir }}/iiab/overrides/wordpress-base.yml
+#
+# Compose-merged on top of the role's own override. The role keeps install
+# primitives (image / ports / volumes / DB env); this fragment carries
+# everything WIRING (Authentik OIDC env + mkcert CA conditional).
+# =============================================================================
+
+services:
+  wordpress:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only. Public-TLD path uses Mozilla
+    # CA bundle to validate Authentik LE; mounting mkcert rootCA would
+    # shadow it. Same regression class swept across 14 roles 2026-05-03.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      # Defensive placeholder (Anatomy P0.12 doctrine). Compose requires
+      # `environment:` to be a mapping — when install_authentik=false the
+      # block below renders empty; this unconditional placeholder keeps
+      # the YAML valid AND surfaces the plugin's identity in inspect.
+      _NOS_PLUGIN: "wordpress-base"
+{% if install_authentik | default(false) %}
+      # ── Authentik SSO (OIDC via openid-connect-generic) ──────────────────
+      # Read by wp-content/mu-plugins/oidc-bootstrap.php on every `init` and
+      # pushed into the openid_connect_generic_settings option (idempotent).
+      WP_OIDC_CLIENT_ID: "nos-wordpress"
+      WP_OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_wordpress"
+      WP_OIDC_ENDPOINT_LOGIN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
+      WP_OIDC_ENDPOINT_USERINFO: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
+      WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/end-session/"
+      WP_OIDC_SCOPE: "openid profile email"
+      WP_OIDC_LOGIN_TYPE: "{{ wordpress_oidc_login_type | default('button') }}"
+      WP_OIDC_IDENTITY_KEY: "preferred_username"
+    extra_hosts:
+      # Authentik OIDC endpoint resolves via host-gateway to the host's
+      # Traefik. Without this alias, WP's container-internal DNS would
+      # send the lookup to public DNS — breaks the local-TLD path entirely.
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

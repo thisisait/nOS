@@ -1,0 +1,9 @@
+wordpress:
+  tier: 4
+  domain_var: wordpress_domain
+  port_var: wordpress_port
+  feature_flag: install_wordpress
+  authentik:
+    mode: native_oidc
+    slug: wordpress
+    tier: 4

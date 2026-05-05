@@ -27,6 +27,22 @@ namespace App\Presenters\Api;
 
 use App\Model\GdprRepository;
 
+/**
+ * GET    /api/v1/gdpr/processing       — list Article 30 processing register rows
+ * GET    /api/v1/gdpr/processing/{id}  — single processing record detail
+ * POST   /api/v1/gdpr/processing/{id}  — upsert (idempotent) a processing record
+ * GET    /api/v1/gdpr/dsar             — list DSAR (data-subject access requests)
+ * GET    /api/v1/gdpr/dsar/{id}        — single DSAR detail
+ * POST   /api/v1/gdpr/dsar             — file a new DSAR (operator-initiated)
+ * GET    /api/v1/gdpr/breaches         — list breach incidents (Article 33/34)
+ * GET    /api/v1/gdpr/breaches/{id}    — single breach incident detail
+ * POST   /api/v1/gdpr/breaches         — log a new breach incident
+ * GET    /api/v1/gdpr/export.csv       — CSV dump of the processing register (audit-friendly)
+ *
+ * Auth: Wing API token (BaseApiPresenter::startup) on every action.
+ * Surfaces the GDPR Article 30 register that pazny.apps_runner upserts
+ * via bin/upsert-gdpr.php on each Tier-2 app deploy.
+ */
 final class GdprPresenter extends BaseApiPresenter
 {
     public function __construct(private GdprRepository $repo) {}
