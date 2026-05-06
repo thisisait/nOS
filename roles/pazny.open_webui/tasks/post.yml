@@ -17,7 +17,11 @@
   until: _owui_ready.status | default(0) == 200
   retries: 12
   delay: 10
-  failed_when: false
+  # Removed `failed_when: false` (2026-05-08): silent absorb here masked
+  # iiab-stack failures for ~25 min as `Wait for API (1 retries left)` loops.
+  # docker compose up --wait already gates stack health (see stack-up.yml
+  # fail-fast); if we still can't reach the port from the host, that's a
+  # genuine split-brain to surface, not paper over.
 
 - name: "[pazny.open_webui Post] Check if any user exists"
   ansible.builtin.uri:

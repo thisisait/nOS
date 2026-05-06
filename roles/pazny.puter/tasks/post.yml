@@ -37,7 +37,7 @@
   until: _puter_ready.status | default(0) == 200
   retries: 15
   delay: 10
-  failed_when: false
+  # Removed `failed_when: false` (2026-05-08) — see open_webui post.yml comment.
 
 - name: "[pazny.puter Post] Check if admin user exists"
   ansible.builtin.shell: >

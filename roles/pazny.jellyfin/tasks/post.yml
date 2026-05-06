@@ -20,7 +20,7 @@
   until: _jf_ready.status | default(0) == 200
   retries: 12
   delay: 10
-  failed_when: false
+  # Removed `failed_when: false` (2026-05-08) — see open_webui post.yml comment.
 
 - name: "[pazny.jellyfin Post] Check startup configuration state"
   ansible.builtin.uri:

@@ -167,7 +167,8 @@
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     {% for f in _stack_overrides_map[item] | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p "{{ item }}"
-    up -d --build --remove-orphans --wait --wait-timeout 120
+    --progress plain
+    up -d --build --remove-orphans --wait --wait-timeout 540
     {{ _docker_compose_pull | default('') }} 2>&1
   loop: "{{ _remaining_stacks }}"
   async: 600
@@ -215,6 +216,46 @@
         }) -%}
       {%- endfor -%}
       {{ out }}
+
+# ── Fail-fast on stack-up failures ──────────────────────────────────────────
+# Before the 2026-05-08 hardening, rc=1 from `docker compose up --wait` was
+# silently absorbed by `failed_when: false` on the async_status flatten —
+# the playbook then walked into post-tasks against missing containers and
+# burned ~25 min on `Connection refused` retries before the operator
+# noticed. Lesson: a stack failing to come up MUST surface immediately,
+# with the actual compose stdout/stderr in scope, not 20 minutes later as
+# "Wait for API (1 retries left)".
+- name: "[Stacks] Dump failed-stack output (visibility for rc!=0)"
+  ansible.builtin.debug:
+    msg: |
+      Stack '{{ r.item }}' failed (rc={{ r.rc }}, finished={{ r.finished }}).
+      ── stdout (last 40 lines) ──────────────────────────────────────────────
+      {{ (r.stdout_lines | default([]))[-40:] | join('\n') }}
+      ── stderr ──────────────────────────────────────────────────────────────
+      {{ r.stderr | default('(empty)') }}
+      ── diagnose with ───────────────────────────────────────────────────────
+      docker compose -p {{ r.item }} ps
+      docker compose -p {{ r.item }} logs --tail=200
+  loop: "{{ _stack_results.results }}"
+  loop_control:
+    loop_var: r
+    label: "{{ r.item }} (rc={{ r.rc }})"
+  when: r.rc | int != 0
+
+- name: "[Stacks] Assert all parallel stacks reached up --wait (fail-fast)"
+  ansible.builtin.fail:
+    msg: |
+      One or more stacks failed `docker compose up --wait` (rc != 0):
+        {% for r in _stack_results.results if r.rc | int != 0 %}
+        - {{ r.item }} (rc={{ r.rc }})
+        {% endfor %}
+      See the `[Stacks] Dump failed-stack output` task above for full
+      stdout/stderr. Common causes:
+        - --wait-timeout exceeded on cold blank (slow image build/pull)
+        - one container's healthcheck never goes Healthy (exec into it,
+          run `docker inspect <c> --format '{{ '{{' }} .State.Health {{ '}}' }}'`)
+        - compose file merge conflict (run `docker compose -p <stack> config`)
+  when: _stack_results.results | selectattr('rc', 'defined') | rejectattr('rc', 'equalto', 0) | list | length > 0
 
 # ── Plugin loader — post_compose for all non-core stacks ────────────────────
 # Runs AFTER the parallel async_status join so every stack is confirmed up.

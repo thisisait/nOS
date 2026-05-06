@@ -20,7 +20,7 @@
   until: _ha_ready.status | default(0) in [200, 302]
   retries: 20
   delay: 10
-  failed_when: false
+  # Removed `failed_when: false` (2026-05-08) — see open_webui post.yml comment.
 
 - name: "[pazny.homeassistant Post] Check onboarding status"
   ansible.builtin.uri:
