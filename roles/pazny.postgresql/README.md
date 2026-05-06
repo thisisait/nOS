@@ -1,6 +1,6 @@
 # pazny.postgresql
 
-Ansible role for deploying **PostgreSQL** as a compose override fragment in the nOS `infra` stack. Shared relational database for Authentik, Infisical, Outline, Metabase, Apache Superset, Paperclip, jsOS, and (historically) Mattermost.
+Ansible role for deploying **PostgreSQL** as a compose override fragment in the nOS `infra` stack. Shared relational database for Authentik, Infisical, Outline, Metabase, Apache Superset, Paperclip, and (historically) Mattermost / jsOS.
 
 Part of [nOS](../../README.md) Wave 2.2 infra-db-peers extraction (`pazny.mariadb`, **`pazny.postgresql`**, `pazny.redis`).
 
@@ -19,7 +19,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
    - Enables `pgcrypto` extension in `template1` (inherited by new DBs)
    - On `blank=true` reset, drops the existing service databases and roles before recreating them
    - Restarts Authentik + Infisical after a blank DROP so they re-bootstrap cleanly
-   - Creates service databases: `outline`, `metabase`, `superset`, plus (conditionally) `authentik`, `infisical`, `mattermost`, `paperclip`, `jsos`
+   - Creates service databases: `outline`, `metabase`, `superset`, plus (conditionally) `authentik`, `infisical`, `mattermost`, `paperclip`
    - Creates matching DB users with generated passwords
    - Enables `pgcrypto` in each service DB (required for bcrypt password hash reconverge in Metabase/Superset/n8n)
    - Grants all privileges + transfers ownership to each service user
@@ -43,7 +43,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
 | `postgresql_mem_limit` | `{{ docker_mem_limit_standard }}` | Defaults to `1g` |
 | `postgresql_cpus` | `{{ docker_cpus_standard }}` | Defaults to `1.0` |
 
-Service database/user/password triples (Authentik, Infisical, Outline, Metabase, Superset, Mattermost, Paperclip, jsOS) stay in the top-level `default.config.yml` / `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.
+Service database/user/password triples (Authentik, Infisical, Outline, Metabase, Superset, Mattermost, Paperclip) stay in the top-level `default.config.yml` / `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.
 
 ## Usage
 

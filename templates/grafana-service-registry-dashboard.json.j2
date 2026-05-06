@@ -124,9 +124,6 @@
 {% if install_paperclip | default(false) %}
 {% set _ = _cards.append(card("Paperclip", paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), paperclip_port | default(3006), "AI agent orchestration", "devops")) %}
 {% endif %}
-{% if install_jsos | default(false) %}
-{% set _ = _cards.append(card("jsOS", jsos_domain | default('jsos' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), jsos_port | default(8070), "Web desktop (OS.js)", "desktop")) %}
-{% endif %}
 {# ── Panel 2: Tier 2 table rows ─────────────────────────────────────────── #}
 {% set _rows = [] %}
 {% macro trow(name, ports, ttype, tstyle, stack, desc) %}

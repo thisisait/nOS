@@ -345,7 +345,6 @@ install_iiab_terminal: false      # TUI access via SSH for anyone on LAN [requir
 
 # ── Web desktop ───────────────────────────────────────────────────────────────
 install_puter: true              # Puter – cloud OS web desktop (multi-user, AI, iframe apps) [Docker]
-install_jsos: false               # jsOS – older alternative (OS.js v3) [requires: PostgreSQL, Redis Docker, Node.js]
 
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]
@@ -1691,27 +1690,6 @@ puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache for multi-user (MB)
 puter_admin_email: "{{ default_admin_email }}"
 puter_admin_password: "{{ global_password_prefix }}_pw_puter"
-
-# ==============================================================================
-# JSOS – web desktop (OS.js v3 + Bluesky AT Protocol auth)
-# Requires: install_postgresql: true, redis_docker: true, install_node: true
-# Optional: install_rustfs: true (per-user S3 buckets)
-# ==============================================================================
-
-jsos_domain: "jsos{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-jsos_port: 8070
-jsos_dir: "{{ ansible_facts['env']['HOME'] }}/projects/jsOs"
-jsos_session_secret: "{{ global_password_prefix }}_pw_jsos_session"
-jsos_db_name: "jsos"
-jsos_db_user: "jsos"
-jsos_db_password: "{{ global_password_prefix }}_pw_jsos"
-jsos_bluesky_pds_url: "https://bsky.social"     # Default PDS for authentication
-jsos_admin_handles: []                           # Bluesky handles with admin privileges
-# jsos_admin_handles:
-#   - "user.bsky.social"
-jsos_provision_s3_buckets: true                  # Create per-user S3 bucket in RustFS
-jsos_provision_databases: true                   # Create per-user PostgreSQL database
-jsos_provision_redis_namespace: true             # Assign per-user Redis key prefix
 
 # ==============================================================================
 # PAPERCLIP – multi-agent orchestration platform

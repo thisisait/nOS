@@ -32,35 +32,6 @@
   changed_when: _docker_login_add.rc == 0
   failed_when: false
 
-# ── 2. PM2 startup (jsOS) ────────────────────────────────────────────────────
-
-- name: "[Auto-start] Check if jsOS is running under PM2"
-  ansible.builtin.shell: |
-    set -o pipefail
-    pm2 list 2>/dev/null | grep -c "online" || echo "0"
-  args:
-    executable: /bin/bash
-  register: _pm2_status
-  changed_when: false
-  failed_when: false
-  check_mode: false
-  when: install_jsos | default(false) | bool
-
-- name: "[Auto-start] Save PM2 process list for resurrection on boot"
-  ansible.builtin.shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
-    nvm use default 2>/dev/null || true
-    pm2 save --force
-  args:
-    executable: /bin/zsh
-  when:
-    - install_jsos | default(false) | bool
-    - (_pm2_status.stdout | default('0') | int) > 0
-  register: _pm2_save
-  changed_when: _pm2_save.rc == 0
-  failed_when: false
-
 # ── 3. Docker container restart policy verification ─────────────────────────
 
 - name: "[Auto-start] Verify Docker containers have restart policy"
@@ -119,8 +90,5 @@
        Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy)
       {% if install_openclaw | default(false) | bool %}
        Ollama:             {{ 'custom LaunchAgent (env vars for SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else 'WARN brew plist (env vars lost after reboot)' }}
-      {% endif %}
-      {% if install_jsos | default(false) | bool %}
-       jsOS (PM2):         {{ 'resurrect list saved' if (_pm2_save.rc | default(1)) == 0 else 'PM2 inactive' }}
       {% endif %}
       ═══════════════════════════════════════════════════════════════════

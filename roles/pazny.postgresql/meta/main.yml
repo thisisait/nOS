@@ -12,7 +12,7 @@ galaxy_info:
         - all
 
 # No role dependencies — this role is the shared data base for
-# authentik/infisical/outline/metabase/superset/paperclip/jsos.
+# authentik/infisical/outline/metabase/superset/paperclip.
 # Orchestration (compose up sequencing, post-start sequence) lives in
 # tasks/stacks/core-up.yml.
 dependencies: []

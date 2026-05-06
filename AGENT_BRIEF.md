@@ -209,7 +209,7 @@ The vhost itself activates automatically via `tasks/nginx/` if the name = `<serv
 ## 6. Port Registry (avoid conflicts!)
 
 Check `grep -r "^<service>_port:" roles/` and `grep "ports:" templates/stacks/` for collisions. Use a **unique port 3xxx–9xxx** outside of:
-- 80/443 (nginx), 5432 (postgres), 3306 (mariadb), 6379 (redis), 3000 (grafana), 9000 (portainer), 9090 (prometheus), 3100 (loki), 3200 (tempo), 8070 (jsos), 8099 (bone)
+- 80/443 (nginx), 5432 (postgres), 3306 (mariadb), 6379 (redis), 3000 (grafana), 9000 (portainer), 9090 (prometheus), 3100 (loki), 3200 (tempo), 8099 (bone)
 - Taken: 3001 (gitea), 3005 (outline), 3006 (n8n), 3007 (paperclip), 3008 (freescout), 8000 (various), 8080/81/82, 8181 (calibre), 8123 (homeassistant), 9443 (portainer-ssl)
 
 ## 7. Post-start setup (optional — only if the service requires API/DB init)

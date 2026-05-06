@@ -61,7 +61,6 @@ Also gate the `when:` clause of the secret-regen block to include `install_influ
       when: >
         (install_authentik | default(false)) or
         (install_infisical | default(false)) or
-        (install_jsos | default(false)) or
         (install_erpnext | default(false)) or
         (install_outline | default(false)) or
         (install_superset | default(false)) or

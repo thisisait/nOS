@@ -75,7 +75,7 @@ roles/pazny.<service>/
 
 **Role invocation with tag inheritance:** `include_role` needs both `apply: { tags: [...] }` **and** `tags: [...]` on the task itself so CLI `--tags` filtering actually reaches the inner role tasks.
 
-**Non-Docker roles** (wing, jsos, openclaw, iiab_terminal, bone, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
+**Non-Docker roles** (wing, openclaw, iiab_terminal, bone, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
 
 ### Configuration layering (later overrides earlier)
 
@@ -91,7 +91,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 1. **Password-prefix prompt** (when `blank=true`)
 2. **Blank reset** — wipes Docker state, data dirs, and configs. Honors external-storage overrides via `tasks/stacks/external-paths.yml`, so data on `/Volumes/SSD1TB/` gets wiped rather than the empty `~/service` fallbacks.
 3. **Auto-enable dependencies** — flips on PostgreSQL, Redis, MariaDB based on which `install_*` flags are set.
-4. **Auto-generate secrets** — Outline, Bluesky, Authentik, Infisical, Vaultwarden, Paperclip, jsOS.
+4. **Auto-generate secrets** — Outline, Bluesky, Authentik, Infisical, Vaultwarden, Paperclip.
 5. **Host roles:** `osx-command-line-tools` → `pazny.mac.homebrew` → `pazny.dotfiles` → `pazny.mac.mas` → `pazny.mac.dock`.
 6. **Host tasks:** macOS system prefs → SSH / IIAB Terminal → language runtimes → Nginx → external storage.
 7. **`tasks/stacks/core-up.yml`** — `infra` + `observability` stacks (always first):
@@ -105,7 +105,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
    - Loop: `docker compose up <stack> --wait` per stack
    - Post-start roles: admin init, OIDC configuration, DB migrations, onboarding
    - Authentik service-side OIDC setup, Bluesky PDS bridge.
-10. **Post-provision:** stack-health verification → jsOS → service registry.
+10. **Post-provision:** stack-health verification → service registry.
 
 **Key invariant:** infra + observability are **always required, always first**. Post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki, and Tempo are online.
 
@@ -124,7 +124,6 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 
 ### Non-Docker applications
 
-- **jsOS** — web desktop (OS.js v3), Node.js via PM2 (port 8070)
 - **OpenClaw** — AI agent daemon via launchd, Ollama 0.19+ with the MLX backend
 - **Hermes** — cross-channel messaging gateway
 - **OpenCode** — agentic coding helper

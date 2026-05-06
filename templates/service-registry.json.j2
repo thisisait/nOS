@@ -369,21 +369,6 @@
   "description": "Multi-agent orchestration (OpenClaw, Claude Code)"
 }) %}
 {% endif %}
-{% if install_jsos | default(false) %}
-{% set _ = _services.append({
-  "name": "jsOS",
-  "category": "desktop",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_jsos",
-  "domain": jsos_domain | default('jsos' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
-  "port": jsos_port | default(8070),
-  "url": "https://" ~ (jsos_domain | default('jsos' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
-  "type": "node",
-  "stack": "native",
-  "description": "Web desktop with Bluesky auth"
-}) %}
-{% endif %}
 {% if install_wing | default(install_php | default(true)) %}
 {% set _ = _services.append({
   "name": "Wing",
@@ -794,7 +779,7 @@
 {% endfor %}
 {# Inject derived `id` field on every service entry. Avoids having to
    patch all 56 _services.append blocks above; consumers (Bone /api/services,
-   Wing SystemRepository::ingestRegistry, jsOS catalog) all expect an
+   Wing SystemRepository::ingestRegistry) all expect an
    `id` slug. Derivation: toggle_var with `install_` prefix stripped
    (mirrors the PHP fallback in SystemRepository.php). Apps-runner-supplied
    entries already carry their own `id` (e.g. `app_documenso`); we only

@@ -5,7 +5,7 @@
 #
 # Upstream is uniformly `http(s)://nos-host:<port>` because every Tier-1
 # Docker service publishes its primary port via host loopback in its
-# compose template. Host-side services (jsos, openclaw, hermes) work the
+# compose template. Host-side services (openclaw, hermes) work the
 # same way because nos-host:host-gateway resolves to the Docker host.
 #
 # Auth middleware comes from traefik_auth_modes in vars/main.yml:

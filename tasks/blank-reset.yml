@@ -317,9 +317,6 @@
         (install_bluesky_pds | default(false)) | ternary(
           [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
         +
-        (install_jsos | default(false)) | ternary(
-          [jsos_dir | default(ansible_facts['env']['HOME'] + '/projects/jsOs')], [])
-        +
         (install_paperclip | default(false)) | ternary(
           [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
         +

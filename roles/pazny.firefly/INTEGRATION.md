@@ -149,7 +149,6 @@ Extend the `Auto-enable Redis Docker for services that require it` condition:
 when: >
   (install_authentik | default(false)) or
   (install_infisical | default(false)) or
-  (install_jsos | default(false)) or
   (install_erpnext | default(false)) or
   (install_outline | default(false)) or
   (install_superset | default(false)) or

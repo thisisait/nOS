@@ -115,8 +115,8 @@ grouped into **8 Docker Compose stacks** that boot in dependency order.
 | **data** | 2 | Metabase, Apache Superset |
 
 Non-Docker services installed directly on the host: **OpenClaw** (launchd agent daemon),
-**jsOS** (Node.js webtop via PM2), **Wing** (Nette PHP security dashboard),
-**Bone** (local management REST bridge), **IIAB Terminal** (Python Textual TUI over SSH).
+**Wing** (Nette PHP security dashboard), **Bone** (local management REST bridge),
+**IIAB Terminal** (Python Textual TUI over SSH).
 
 ---
 
@@ -155,7 +155,7 @@ service by creating a role — no hand-edits to the base stack template.
 1. **Password prefix prompt** (on `blank=true`)
 2. **Blank reset** — wipes Docker, data dirs, external SSD paths
 3. **Auto-enable dependencies** — flips on MariaDB/PostgreSQL/Redis based on which services are on
-4. **Auto-generate secrets** — Outline, Bluesky, Authentik bootstrap token, Infisical, Vaultwarden, Paperclip, jsOS
+4. **Auto-generate secrets** — Outline, Bluesky, Authentik bootstrap token, Infisical, Vaultwarden, Paperclip
 5. **Host-level roles** — Xcode CLT → Homebrew → dotfiles → Mac App Store → Dock
 6. **Host tasks** — macOS defaults, SSH, language runtimes (PHP, Node, Python, Go, .NET, Bun), Nginx, external storage tiering
 7. **Core stacks up** — `infra` + `observability` (always required, always first)
@@ -166,7 +166,7 @@ service by creating a role — no hand-edits to the base stack template.
     validates them (GDPR Article 30 + TLS / SSO / EU-residency gates), renders
     a merged compose override, brings the apps stack up, fires observability
     hooks. See [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
-12. **Post-provision** — stack health verification, jsOS desktop, service registry
+12. **Post-provision** — stack health verification, service registry
 
 **Invariant:** post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical,
 Grafana, Loki, and Tempo are already online.
@@ -302,7 +302,6 @@ ansible-playbook main.yml -K --tags "TAG[,TAG…]"
 | `openclaw`, `hermes`, `ai` | AI agents |
 | `wing`, `security` | Wing security dashboard |
 | `iiab-terminal`, `ssh` | SSH + ForceCommand TUI |
-| `jsos`, `desktop` | jsOS webtop |
 | `bone`, `api` | Local FastAPI (structure / state / dispatcher) |
 | `dnsmasq`, `dns`, `network` | `*.<tld>` resolver |
 | `tailscale` | VPN |

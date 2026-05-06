@@ -90,7 +90,6 @@ traefik_auth_modes:
   influxdb: proxy           # admin UI gated; token-based API still works
   mailpit: proxy            # admin tier
   mcp_gateway: proxy
-  jsos: proxy
   openclaw: proxy
   hermes: proxy
   qgis_server: proxy
@@ -139,6 +138,5 @@ traefik_extra_routers: []
 # Docker compose template publishes its primary port via 127.0.0.1:<port>:<int>.
 # This map is informational; the template emits `nos-host:<port>` uniformly.
 traefik_host_services:
-  - jsos
   - openclaw
   - hermes

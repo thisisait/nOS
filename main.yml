@@ -480,15 +480,6 @@
       changed_when: false
       failed_when: false
 
-    - name: Restart jsos
-      ansible.builtin.shell: |
-        source {{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh && \
-        pm2 restart jsos 2>/dev/null || \
-        pm2 start {{ jsos_dir | default('~/projects/jsOs') }}/ecosystem.config.js
-        pm2 save --force
-      args:
-        executable: /bin/bash
-      failed_when: false
 
     - name: Restart authentik
       ansible.builtin.shell: >
@@ -786,7 +777,6 @@
       when: >
         (install_authentik | default(false)) or
         (install_infisical | default(false)) or
-        (install_jsos | default(false)) or
         (install_paperclip | default(false)) or
         (install_mattermost | default(false)) or
         (install_outline | default(false)) or
@@ -802,7 +792,6 @@
       when: >
         (install_authentik | default(false)) or
         (install_infisical | default(false)) or
-        (install_jsos | default(false)) or
         (install_erpnext | default(false)) or
         (install_outline | default(false)) or
         (install_superset | default(false)) or
@@ -825,7 +814,6 @@
         # invalidated all SSO sessions (Django SECRET_KEY = CSRF + session signing)
         vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
         paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        jsos_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         wing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
@@ -1214,18 +1202,6 @@
     # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml
       tags: ['iiab', 'stack', 'verify', 'stacks']
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # jsOS - web desktop (OS.js v3 + Bluesky auth + homelab integration)
-    # ──────────────────────────────────────────────────────────────────────────
-    - name: "jsOS (pazny.jsos role)"  # noqa: name[casing]
-      # noqa rationale: 'jsOS' is the project's brand name (deliberate
-      # lowercase 'j', uppercase 'OS'). Capitalising it would be
-      # misleading (the user-facing name is jsOS, not JsOS).
-      ansible.builtin.import_role:
-        name: pazny.jsos
-      when: install_jsos | default(false)
-      tags: ['jsos', 'desktop']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Service Registry - JSON catalog + Grafana dashboard

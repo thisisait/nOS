@@ -61,7 +61,6 @@ install_engineering_apps: false
 install_metabase: false
 install_superset: false
 install_bluesky_pds: false
-install_jsos: false              # Requires PostgreSQL + Redis Docker
 install_paperclip: false         # Requires PostgreSQL Docker
 install_authentik: false         # Requires PostgreSQL + Redis Docker
 install_infisical: false         # Requires PostgreSQL + Redis Docker

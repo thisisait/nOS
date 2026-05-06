@@ -735,18 +735,6 @@ services:
     data_path_var: mcpo_data_dir
 
   # ----------------------------------------------- non-Docker / host-native
-  - id: jsos
-    category: desktop
-    stack: null
-    install_flag: install_jsos
-    version_source: pm2
-    domain_var: jsos_domain
-    port_var: jsos_port
-    health_check:
-      type: http
-      url_template: "http://localhost:{{ jsos_port }}/"
-      expect_status: 200
-
   - id: openclaw
     category: agent
     stack: null
