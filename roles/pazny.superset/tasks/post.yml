@@ -5,23 +5,17 @@
 # Runs AFTER data stack startup (stack-up.yml).
 # ==============================================================================
 
-# Pre-check: TCP-connect from inside the Superset container to Postgres.
-# Cheap (a couple of system calls), so we can poll fast — saves the
-# ~25s python+gunicorn boot every time `superset db upgrade` retries
-# against an unreachable DB. This loop only fires while Postgres is
-# still settling; once it answers, the rest is a one-shot.
-- name: "[pazny.superset Post] Wait for Postgres reachable from Superset"
-  ansible.builtin.command: >
-    {{ docker_bin }} compose -p data exec -T superset
-    python -c "import socket; s=socket.socket(); s.settimeout(2);
-               s.connect(('postgresql', 5432)); s.close()"
-  register: _superset_pg_probe
-  retries: 30
-  delay: 2
-  until: _superset_pg_probe.rc == 0
-  changed_when: false
-  failed_when: false
-  when: not ansible_check_mode
+# Pre-check removed (2026-05-08): the previous version polled
+# `docker compose exec -T superset python -c "socket.connect(('postgresql', 5432))"`
+# 30× × 2s. It was meant to gate on Postgres readiness, but Postgres is
+# verified healthy in tasks/stacks/core-up.yml long before this task can
+# run; on cold blank the probe instead measured `docker exec` readiness
+# of Superset itself (gunicorn + SQLAlchemy bootstrap) and fired 60s of
+# noisy [ERROR] entries until exec attach started working — a false
+# negative that obscured real failures. The downstream `superset db
+# upgrade` already has its own retry (4 × 15s = 60s) and tolerates the
+# same exec-attach delay correctly, so the probe was both redundant and
+# misdiagnosing.
 
 - name: "[pazny.superset Post] Run Superset db upgrade"
   ansible.builtin.command: >
