@@ -13,7 +13,23 @@
 #
 # ERPNext data lives in the Docker named volume `b2b_erpnext_sites` (P0.1 VirtioFS
 # workaround), zadny host-side data dir se nevytvari.
+#
+# ⚠️  PARKED 2026-05-08 — non-working / experimental. Configurator + post.yml
+# pipeline kept as-is for future rework, but role-load is hard-blocked
+# unless the operator opts in with `erpnext_experimental_override: true`.
+# Reasons: blank-run instability (configurator timing, oneshot vs --wait,
+# bench migrate lock recovery), upstream churn between v15 minor versions,
+# and ongoing post-start retries that mask real failures.
 # ==============================================================================
+
+- name: "[pazny.erpnext] Hard guard — refuse to render unless experimental override is set"
+  ansible.builtin.fail:
+    msg: |-
+      ERPNext role is currently parked as non-working / experimental.
+      Set `erpnext_experimental_override: true` in config.yml to attempt
+      enable anyway (you accept blank-run instability + ongoing rework).
+      See roles/pazny.erpnext/README.md for status.
+  when: not (erpnext_experimental_override | default(false) | bool)
 
 - name: "[pazny.erpnext] Render compose override fragment"
   ansible.builtin.template:

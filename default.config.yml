@@ -320,7 +320,7 @@ install_homeassistant: false      # Home Assistant – home automation          
 install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
-install_erpnext: false            # ERPNext – CRM + ERP + HR + Accounting              [requires: MariaDB, Redis Docker]
+install_erpnext: false            # ⚠️  EXPERIMENTAL / NON-WORKING — see roles/pazny.erpnext/README.md (parked for rework, hard-blocked at role-load: requires erpnext_experimental_override: true to attempt enable)
 install_freescout: true          # FreeScout – helpdesk / ticketing                    [requires: MariaDB]
 install_mattermost: false        # Mattermost – REMOVED (no ARM64 FOSS image). DB/user retained for migration.
 install_outline: true            # Outline – team wiki / knowledge base                [requires: PostgreSQL, Redis Docker]

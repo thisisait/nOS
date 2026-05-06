@@ -1,5 +1,40 @@
 # pazny.erpnext
 
+> ## ⚠️  PARKED 2026-05-08 — non-working / experimental
+>
+> This role is **disabled by default and hard-blocked at role-load** to keep
+> blank runs reaching `failed=0`. Operators who want to attempt enable
+> regardless must opt in:
+>
+> ```yaml
+> # config.yml
+> install_erpnext: true
+> erpnext_experimental_override: true   # acknowledge instability
+> ```
+>
+> **Why parked:**
+>
+> - The configurator is a one-shot (`restart: "no"`) creating the Frappe
+>   site + bench config, but `bench new-site` periodically fails on cold
+>   blank with MariaDB connection races (mariadb is healthy but `bench` retry
+>   loop misjudges and gives up).
+> - Long post-start recovery pipeline (`tasks/post.yml` 205 LOC of
+>   "(try N) configurator retry / migration lock cleanup") masks real
+>   failures and slows blank runs by 5-10 min on cold cache.
+> - Upstream `frappe/erpnext:v15` minor versions occasionally break the
+>   configurator interface; we chase upstream rather than own the contract.
+> - SSO setup (Frappe Social Login Key) is an out-of-band post-API call
+>   sequence that doesn't fit the plugin loader's `replay_api_calls`
+>   pattern cleanly — a real Track-Q-style refactor is overdue.
+>
+> **Future rework:** when Track X+ stabilises, ERPNext can come back as
+> a proper plugin under `files/anatomy/plugins/erpnext-base/` with
+> `lifecycle.post_compose: replay_api_calls` doing the bench/Frappe API
+> work the role's post.yml currently does. Compose template + post.yml
+> stay in this dir as the foundation for that rework.
+
+---
+
 Ansible role for deploying **ERPNext** (Frappe framework) as a compose override fragment in the nOS `b2b` stack. Provides CRM, ERP, HR, and Accounting capabilities.
 
 Part of [nOS](../../README.md) Wave 2.2 role extraction.
