@@ -64,7 +64,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      # 180s (was 60s, 2026-05-08): on cold blank Outline goes through
+      # Node 22 boot + Postgres schema migration + Redis collab init +
+      # OIDC plugin registration before /_health responds 200. 60s wasn't
+      # enough — `docker compose up --wait` saw an early failed probe
+      # (FailingStreak=1 then healthy) and returned rc=1, tripping
+      # tasks/stacks/stack-up.yml's fail-fast assert with a transient
+      # "container b2b-outline-1 is unhealthy" message. By the time the
+      # operator inspected, the container was healthy. 180s tolerates
+      # the documented 90-120s cold cluster startup with margin.
+      start_period: 180s
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
