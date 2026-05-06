@@ -16,6 +16,17 @@ abstract class BaseApiPresenter extends Presenter
 	/** Override in subclasses to list actions that skip token auth */
 	protected array $publicActions = [];
 
+	/**
+	 * Validated token row from requireTokenAuth(). NULL if the action
+	 * is in $publicActions (HMAC-only path) or before startup() ran.
+	 * Field of interest: $validatedToken['name'] — the operator/agent
+	 * label (e.g. 'conductor', 'openclaw', 'ansible-provisioned'),
+	 * surfaced as actor_id on writes via getActorId() (X.1.b).
+	 *
+	 * @var array<string,mixed>|null
+	 */
+	protected ?array $validatedToken = null;
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -41,6 +52,23 @@ abstract class BaseApiPresenter extends Presenter
 		if (!$tokenData) {
 			$this->sendError('Invalid or inactive API token', 401);
 		}
+
+		$this->validatedToken = $tokenData;
+	}
+
+	/**
+	 * Resolve actor_id for A10 audit attribution (X.1.b, 2026-05-08).
+	 *
+	 * For Bearer-token writes the token row's `name` is the actor
+	 * identifier (e.g. 'conductor', 'openclaw'); writes default to
+	 * this when the payload doesn't override. For HMAC-only paths
+	 * (Bone forwarding agent events) callers provide actor_id in the
+	 * payload and this method returns null — the caller's value wins.
+	 */
+	protected function getActorId(): ?string
+	{
+		$name = $this->validatedToken['name'] ?? null;
+		return is_string($name) && $name !== '' ? $name : null;
 	}
 
 	protected function getJsonBody(): array

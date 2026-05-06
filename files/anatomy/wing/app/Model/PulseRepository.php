@@ -74,15 +74,20 @@ final class PulseRepository
 	 * after it decides to fire a job. Returns the row's run_id (echoed
 	 * from input — Pulse generates the UUID).
 	 *
-	 * @param array{run_id: string, job_id: string, fired_at?: string, actor_id?: string} $payload
+	 * @param array{run_id: string, job_id: string, fired_at?: string, actor_id?: string, actor_action_id?: string, acted_at?: string} $payload
 	 */
 	public function recordStart(array $payload): string
 	{
+		// X.1.a (2026-05-08): actor_action_id + acted_at are A10 audit
+		// columns; stored alongside actor_id so an agent's pulse run
+		// joins to the matching events table rows by actor_action_id.
 		$this->db->table('pulse_runs')->insert([
-			'run_id'   => $payload['run_id'],
-			'job_id'   => $payload['job_id'],
-			'fired_at' => $payload['fired_at'] ?? date('c'),
-			'actor_id' => $payload['actor_id'] ?? null,
+			'run_id'          => $payload['run_id'],
+			'job_id'          => $payload['job_id'],
+			'fired_at'        => $payload['fired_at'] ?? date('c'),
+			'actor_id'        => $payload['actor_id'] ?? null,
+			'actor_action_id' => $payload['actor_action_id'] ?? null,
+			'acted_at'        => $payload['acted_at'] ?? ($payload['fired_at'] ?? date('c')),
 		]);
 		// Bump pulse_jobs.last_fired_at so the catalog reflects activity
 		// even if the run never finishes (timeout / SIGKILL surface).

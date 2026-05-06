@@ -129,6 +129,18 @@ final class PulsePresenter extends BaseApiPresenter
 				$this->sendError("$required is required", 400);
 			}
 		}
+		// X.1.b (2026-05-08): default actor_id from the validated Bearer
+		// token's `name` field if the caller didn't provide one. Pulse
+		// runs without an explicit actor (most subprocess-runner jobs)
+		// inherit the daemon's identity; agent-runner jobs that already
+		// pass actor_id explicitly (pulse-run-agent.sh sets it from
+		// CLIENT_ID after Authentik auth) keep their value.
+		if (empty($body['actor_id'])) {
+			$autoActor = $this->getActorId();
+			if ($autoActor !== null) {
+				$body['actor_id'] = $autoActor;
+			}
+		}
 		try {
 			$runId = $this->pulse->recordStart($body);
 		} catch (\Throwable $e) {
