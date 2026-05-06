@@ -1,0 +1,71 @@
+# =============================================================================
+# pulse-base — Pulse scheduled-job catalog aggregator (Anatomy X.2, 2026-05-08)
+#
+# Source-plugin scaffold for the Pulse job registration path. Today's
+# wing/post.yml hardcodes registrations for gitleaks (plugin) + conductor
+# (agent profile) as two `ansible.builtin.uri` POSTs (~50 LOC each). This
+# plugin pins the data-driven contract:
+#
+#   - Every plugin manifest with a `pulse:` block (gitleaks today, future
+#     plugins anywhere) declares its scheduled jobs in one place.
+#   - Every agent profile under files/anatomy/agents/ with a `pulse:`
+#     block (conductor today, future agents) does the same.
+#   - This plugin's aggregator harvests both sources into inputs.jobs.
+#   - The renderer (wing/post.yml today, plugin loader's
+#     `replay_api_calls` action when it lands in C5) iterates inputs.jobs
+#     and POSTs each to /api/v1/pulse_jobs (idempotent upsert).
+#
+# Until C5 lands the loader's `replay_api_calls` action, the
+# registration loop lives in roles/pazny.wing/tasks/post.yml — but
+# data-driven from the harvested catalog (no more hardcoded blocks).
+# When C5 lands, the lifecycle.post_compose stub below activates and
+# wing/post.yml's loop retires.
+#
+# Doctrine pin: roles register install primitives (DB user, admin
+# password reconverge, container start). Plugins declare the contract
+# (Pulse job schedule, Authentik provider, GDPR seed). The plugin
+# loader's lifecycle hooks satisfy contracts at deploy time.
+# =============================================================================
+
+name: pulse-base
+version: "1.0.0"
+description: "Source plugin: aggregates pulse: blocks from plugins + agent profiles → Pulse job catalog."
+
+type:
+  - service-aggregator
+
+requires:
+  role: pazny.wing
+  feature_flag: install_pulse
+
+# Aggregator declarations — harvest pulse: blocks from peers + agents.
+# Both sources merge into inputs.jobs (X.3 made multi-source merge work).
+aggregates:
+  - from: consumer_block
+    block_path: pulse
+    output_var: jobs
+  - from: agent_profile
+    block_path: pulse
+    output_var: jobs   # appended (Tier-1 plugins + agents share one catalog)
+
+# =============================================================================
+# Lifecycle (forward-spec — activates when loader's replay_api_calls action
+# lands in C5). Today this stub is no-op; wing/post.yml's data-driven loop
+# does the registration. The contract below is the migration target.
+# =============================================================================
+lifecycle:
+  post_compose:
+    # TODO(C5): replace wing/post.yml's iteration with this action once
+    # the loader supports `replay_api_calls`. Iteration target:
+    # `inputs.jobs[].jobs[]` — each yields a POST /api/v1/pulse_jobs
+    # body (idempotent on (plugin_name, job_name)).
+    #   - replay_api_calls:
+    #       endpoint: "{{ wing_api_url }}/api/v1/pulse_jobs"
+    #       auth: "Bearer {{ wing_api_token }}"
+    #       items: "{{ inputs.jobs | map(attribute='jobs') | flatten }}"
+    #       idempotent_on: [plugin_name, job_name]
+    - noop: "data-driven Pulse registration is in roles/pazny.wing/tasks/post.yml until C5"
+
+# No compose extension — pulse-base is host-side; the actual Pulse daemon
+# lives at files/anatomy/pulse/ as a launchd service (A4 skeleton).
+# This plugin is purely an aggregator/contract-pinning artefact.

@@ -146,36 +146,55 @@
   delay: 5
   failed_when: false
 
-- name: "[pazny.wing] Register gitleaks Pulse job (nightly-scan)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
-    method: POST
-    headers:
-      Authorization: "Bearer {{ wing_api_token }}"
-    body_format: json
-    body:
-      plugin_name: "gitleaks"
-      job_name: "nightly-scan"
-      command: "{{ playbook_dir }}/files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh"
-      runner: "subprocess"
-      schedule: "0 3 * * *"
-      jitter_min: 10
-      max_runtime_s: 600
-      max_concurrent: 1
-      env:
-        WING_API_URL: "http://127.0.0.1:{{ wing_port | default(9000) }}"
-        WING_API_TOKEN: "{{ wing_api_token }}"
-        NOS_SCAN_DIR: "{{ playbook_dir }}"
-        GITLEAKS_MIN_SEVERITY: "medium"
-    status_code: [200, 201]
-  register: _gitleaks_job_reg
-  retries: 3
-  delay: 5
-  until: _gitleaks_job_reg.status in [200, 201]
-  changed_when: _gitleaks_job_reg.status == 201
-  no_log: true
+# ── Pulse job registration — data-driven from plugin manifests + agents ─────
+# X.2 (2026-05-08) refactor: the previous shape hardcoded two
+# `ansible.builtin.uri` blocks (gitleaks + conductor) at ~50 LOC each.
+# Source-of-truth is now each plugin's `pulse:` block (gitleaks/plugin.yml
+# already had it) + each agent profile's `pulse:` block (conductor.yml
+# already had it). The migration target is plugin loader's
+# `replay_api_calls` action (Lane C5 in the C-series roadmap); until that
+# lands, this loop is the bridge:
+#   1. Glob plugin + agent yamls.
+#   2. Extract `pulse.jobs[]` from each.
+#   3. POST each to /api/v1/pulse_jobs (idempotent on plugin_name+job_name).
+# pulse-base/plugin.yml pins the long-term contract (aggregator decl).
+- name: "[pazny.wing] Discover Pulse job catalog from plugin manifests + agent profiles"
+  ansible.builtin.shell: |
+    python3 <<'PY'
+    import json, glob, sys, yaml
+    catalog = []
+    sources = (
+        glob.glob('{{ playbook_dir }}/files/anatomy/plugins/*/plugin.yml')
+        + glob.glob('{{ playbook_dir }}/files/anatomy/agents/*.yml')
+    )
+    for path in sources:
+        try:
+            with open(path) as fh:
+                doc = yaml.safe_load(fh) or {}
+        except Exception:
+            continue
+        block = doc.get('pulse') or {}
+        for job in (block.get('jobs') or []):
+            catalog.append({
+                'source': path.split('/anatomy/')[-1],
+                'plugin_name': doc.get('name')
+                              or doc.get('agent_id')
+                              or path.split('/')[-1].replace('.yml', ''),
+                'job': job,
+            })
+    print(json.dumps(catalog))
+    PY
+  args:
+    executable: /bin/bash
+  register: _pulse_catalog_raw
+  changed_when: false
+  check_mode: false
 
-- name: "[pazny.wing] Register conductor Pulse job (self-test-001)"
+- name: "[pazny.wing] Parse Pulse job catalog"
+  ansible.builtin.set_fact:
+    _pulse_catalog: "{{ _pulse_catalog_raw.stdout | from_json }}"
+
+- name: "[pazny.wing] Register discovered Pulse jobs (idempotent upsert)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
     method: POST
@@ -183,35 +202,24 @@
       Authorization: "Bearer {{ wing_api_token }}"
     body_format: json
     body:
-      plugin_name: "conductor"
-      job_name: "self-test-001"
-      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
-      runner: "subprocess"
-      schedule: "0 4 * * 0"
-      jitter_min: 5
-      max_runtime_s: 300
-      max_concurrent: 1
-      env:
-        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
-        NOS_CONDUCTOR_CLIENT_ID: "nos-conductor"
-        NOS_CONDUCTOR_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
-        NOS_CONDUCTOR_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"
-        NOS_CONDUCTOR_TASK: >-
-          Run the Phase 5 conductor self-test ceremony:
-          1. GET /api/health from Bone — verify liveness.
-          2. GET /api/v1/gitleaks_findings?open_only=1 — count unresolved findings.
-          3. GET /api/v1/pulse_jobs — verify nightly-scan is registered.
-          4. GET /api/v1/events?source=conductor&limit=5 — show last 5 runs.
-          5. Report summary table. Exit 0 if all checks passed, exit 1 if findings need attention.
-        WING_API_URL: "http://127.0.0.1:{{ wing_port | default(9000) }}"
-        WING_API_TOKEN: "{{ conductor_wing_api_token }}"
-        WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret }}"
+      plugin_name: "{{ item.plugin_name | regex_replace('-base$', '') }}"
+      job_name: "{{ item.job.name }}"
+      command: "{{ item.job.command }}"
+      runner: "{{ item.job.runner | default('subprocess') }}"
+      schedule: "{{ item.job.schedule }}"
+      jitter_min: "{{ item.job.jitter_min | default(0) }}"
+      max_runtime_s: "{{ item.job.max_runtime_s | default(300) }}"
+      max_concurrent: "{{ item.job.max_concurrent | default(1) }}"
+      env: "{{ item.job.env | default({}) }}"
     status_code: [200, 201]
-  register: _conductor_job_reg
+  loop: "{{ _pulse_catalog }}"
+  loop_control:
+    label: "{{ item.plugin_name }}:{{ item.job.name }}"
+  register: _pulse_jobs_reg
   retries: 3
   delay: 5
-  until: _conductor_job_reg.status in [200, 201]
-  changed_when: _conductor_job_reg.status == 201
+  until: _pulse_jobs_reg.status in [200, 201]
+  changed_when: _pulse_jobs_reg.status == 201
   no_log: true
 
 # ── Local .env for Playwright + Wing ─────────────────────────────────────────
