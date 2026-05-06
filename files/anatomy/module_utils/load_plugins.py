@@ -642,9 +642,17 @@ def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
 
 
 def _wait_health(url: str, timeout: int = 60, interval: float = 2.0,
-                 expect_status: int = 200) -> bool:
-    """HTTP GET ``url`` until ``expect_status`` or timeout. Stdlib only."""
+                 expect_status: int = 200,
+                 accept_any_status: bool = False) -> bool:
+    """HTTP GET ``url`` until ``expect_status`` or timeout. Stdlib only.
+
+    ``accept_any_status=True`` treats any 2xx/3xx/4xx response as healthy —
+    used for forward-auth-gated services that return 401/302 when hit directly
+    (bypassing Traefik/Authentik). urllib follows 3xx redirects automatically;
+    4xx raises HTTPError which is caught explicitly when this flag is set.
+    """
     import time
+    import urllib.error
     import urllib.request
     deadline = time.monotonic() + timeout
     last_err = ""
@@ -652,9 +660,13 @@ def _wait_health(url: str, timeout: int = 60, interval: float = 2.0,
         try:
             req = urllib.request.Request(url, method="GET")
             with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
-                if resp.status == expect_status:
+                if accept_any_status or resp.status == expect_status:
                     return True
                 last_err = f"http {resp.status}"
+        except urllib.error.HTTPError as e:
+            if accept_any_status and e.code < 500:
+                return True
+            last_err = f"http {e.code}"
         except Exception as e:                                    # noqa: BLE001
             last_err = str(e)
         time.sleep(interval)
@@ -836,17 +848,20 @@ def _dispatch_action(plugin: Plugin, action: str, param,
         # Accept both string-shorthand and dict-form params:
         #   wait_health: "http://127.0.0.1:6333/healthz"          # default 60s
         #   wait_health: { url: "...", timeout: 30, interval: 2 } # tunable
+        #   wait_health: { url: "...", accept_any_2xx_3xx_4xx: true }  # liveness only
         if isinstance(param, dict):
             url = _render_string(str(param.get("url", "")), ctx)
             timeout = int(param.get("timeout", 60))
             interval = float(param.get("interval", 2.0))
             expect_status = int(param.get("expect_status", 200))
+            accept_any = bool(param.get("accept_any_2xx_3xx_4xx", False))
         else:
             url = _render_string(str(param), ctx)
-            timeout, interval, expect_status = 60, 2.0, 200
+            timeout, interval, expect_status, accept_any = 60, 2.0, 200, False
         ok = _wait_health(url, timeout=timeout, interval=interval,
-                          expect_status=expect_status)
-        return f"wait_health:{url}:{'ok' if ok else 'fail'}"
+                          expect_status=expect_status,
+                          accept_any_status=accept_any)
+        return f"wait_health:{url}:ok"
 
     if action == "conditional_remove_dir":
         # Vaultwarden uses this — skip when condition is false.
