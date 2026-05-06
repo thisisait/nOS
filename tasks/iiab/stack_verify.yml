@@ -60,7 +60,13 @@
     _headers: "{{ {'Host': _host_header} if _host_header | length > 0 else {} }}"
   register: _auto_http
   until: _auto_http.status | default(0) | int in (item.status | default(_probe_catalog._default_status))
-  retries: 12
+  # Per-probe retries override (X.4, 2026-05-08): some services have
+  # genuinely long cold-start (GitLab Omnibus = 3-5 min), and the
+  # default 12×10s = 120s window produces a noisy [ERROR] line plus
+  # SSL_WRONG_VERSION_NUMBER from in-flight nginx state. Catalog
+  # entries can declare `retries: N` to extend their probe window;
+  # default stays 12 so well-behaved services don't slow blank.
+  retries: "{{ item.retries | default(12) }}"
   delay: 10
   loop: "{{ _probe_catalog.health_probes | selectattr('proto', 'equalto', 'http') | rejectattr('onboarding', 'defined') | list }}"
   loop_control:

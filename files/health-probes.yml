@@ -102,6 +102,11 @@ health_probes:
     proto: http
     port_var: gitlab_http_port
     port_default: 8929
+    # GitLab Omnibus internal nginx serves TLS bytes during the boot
+    # phase before settling into HTTP-only mode, producing
+    # `[SSL: WRONG_VERSION_NUMBER]` against the default 120s probe
+    # window. 36×10s = 360s matches the documented 3-5 min cold start.
+    retries: 36
     hint: "docker compose -p devops logs gitlab (slow to boot ~3-5 min)"
 
   - slug: woodpecker
