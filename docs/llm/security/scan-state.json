@@ -4,14 +4,16 @@
   "last_advisory_check": "2026-04-11T18:00:00Z",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
   "scan_cycle": 14,
-  "scanner_version": "1.0.0",
+  "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
-    "schedule": "2x daily (06:00, 18:00)",
+    "schedule": "hourly",
     "strategy": "oldest_first",
     "cve_refresh_interval_hours": 24,
-    "misconfig_refresh_interval_days": 7,
-    "attack_probe_rotation_size": 8
+    "pentest_area_cooldown_hours": 12,
+    "attack_probe_rotation_size": 8,
+    "loki_push": "http://localhost:3100/loki/api/v1/push",
+    "bone_events": "http://127.0.0.1:8099/api/events"
   },
   "components": {
     "traefik": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:http2_smuggling+path_normalization", "findings_count": 5, "status": "scanned" },
@@ -52,7 +54,19 @@
     "tempo": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
     "alloy": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
     "qgis_server": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "dnsmasq": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" }
+    "dnsmasq": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
+    "bone": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy FastAPI bridge — localhost:8099" },
+    "wing": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy FrankenPHP dashboard — localhost:9000" },
+    "pulse": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy launchd job scheduler" },
+    "miniflux": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "nodered": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "hedgedoc": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "bookstack": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "firefly": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "onlyoffice": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "ntfy": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "mailpit": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
+    "spacetimedb": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "BSL 1.1, internal-SaaS use only" }
   },
   "rotation": {
     "next_batch": ["postgresql", "redis", "freepbx", "homeassistant", "bluesky_pds"],
