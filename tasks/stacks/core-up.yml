@@ -391,7 +391,8 @@
     -f "{{ stacks_dir }}/infra/docker-compose.yml"
     {% for f in _infra_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p infra
-    up -d --build --remove-orphans --wait --wait-timeout 120
+    --progress plain
+    up -d --build --remove-orphans --wait --wait-timeout 540
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_infra_result
   failed_when: false
@@ -433,7 +434,8 @@
     -f "{{ stacks_dir }}/observability/docker-compose.yml"
     {% for f in _observability_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p observability
-    up -d --build --remove-orphans --wait --wait-timeout 120
+    --progress plain
+    up -d --build --remove-orphans --wait --wait-timeout 540
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_obs_result
   failed_when: false
