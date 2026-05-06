@@ -24,6 +24,11 @@
   loop:
     - "{{ puter_config_dir | default(ansible_facts['env']['HOME'] + '/puter/config') }}"
     - "{{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data"
+    # Pre-create dynalite leveldb dir — dynalite()'s `path: ...` opens
+    # a leveldb at that exact path; if the dir doesn't exist it crashes
+    # mid-boot with `Error: Database is closed` (dynalite/db/index.js:265).
+    # Better-sqlite3 creates its own file but dynalite expects the dir.
+    - "{{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data/puter-ddb"
 
 - name: "[pazny.puter] Deploy config.json"
   ansible.builtin.template:

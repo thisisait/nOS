@@ -2,22 +2,53 @@
   "config_name": "{{ instance_name | default('nos') }}",
   "domain": "{{ puter_domain | default('os' + (_host_alias_seg | default('')) + '.' + (tenant_domain | default('dev.local'))) }}",
   "api_domain": "{{ puter_api_domain | default('api.' + (puter_domain | default('os' + (_host_alias_seg | default('')) + '.' + (tenant_domain | default('dev.local'))))) }}",
+  "_comment_static_hosting": "Empty disables Puter's createUserSubdomainRedirect middleware. Express's default subdomain offset (2) sees `os` in `os.pazny.eu` as a user subdomain and redirects every request to `${user_subdomain}.${static_hosting_domain}` (default: site.puter.localhost) — which we don't run, so all requests 302 into a black hole. Empty string makes hostRedirects.js:36 short-circuit to next() (createUserSubdomainRedirect at /opt/puter/dist/src/backend/core/http/middleware/hostRedirects.js).",
+  "static_hosting_domain": "",
+  "static_hosting_domain_alt": "",
+  "private_app_hosting_domain": "",
+  "private_app_hosting_domain_alt": "",
   "http_port": 4100,
   "pub_port": 443,
   "protocol": "https",
   "nginx_mode": true,
   "cookie_name": "puter_token",
   "jwt_secret": "{{ puter_jwt_secret | default(lookup('pipe', 'openssl rand -hex 32')) }}",
-  "services": {
-    "database": {
-      "engine": "sqlite",
-      "path": "puter-database.sqlite"
-    },
-    "file-cache": {
-      "disk_limit": {{ (puter_file_cache_mb | default(512)) * 1024 * 1024 }},
-      "disk_max_size": {{ (puter_file_cache_mb | default(512)) * 1024 * 1024 }},
-      "precache_size": {{ (puter_file_cache_mb | default(512)) * 1024 * 1024 }},
-      "path": "./file-cache"
+  "database": {
+    "engine": "sqlite",
+    "path": "/var/puter/puter-database.sqlite"
+  },
+  "s3": {
+    "localConfig": {
+      "dataDir": "/var/puter/fauxqs-data",
+      "s3StorageDir": "/var/puter/fauxqs-s3-data"
     }
+  },
+  "dynamo": {
+    "path": "/var/puter/puter-ddb"
   }
 }
+{# Schema notes (post-2026-05-08, after 4732f7e Dockerfile rewrite for new upstream):
+
+   The new upstream Puter (v2.5.x dist build at /opt/puter/config.default.json)
+   moved `database` and `s3` from `services.{database,file-cache}` to the
+   top level of config. The clients are instantiated via
+   `new ClientClass(this.#config)` (server.js:84) and read straight from
+   `this.config.database` / `this.config.s3` (no `services` unwrapping).
+   A nested override under `services.database` is silently ignored by
+   deep-merge — the runtime then falls through to the default
+   `database.path = "volatile/runtime/puter-database.sqlite"`, which
+   resolves under the read-only WORKDIR `/opt/puter` for the runtime
+   user `node` (uid 1000) and crashes with
+   `TypeError: Cannot open database because the directory does not exist`
+   at better-sqlite3/lib/database.js:65.
+
+   `file-cache` is removed from the schema entirely (no consumer in
+   /opt/puter/dist/src/backend) — keeping the old key was harmless but
+   pointless.
+
+   Absolute `/var/puter/...` is the bind-mounted data dir from the host
+   ({{ puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter') }}/data),
+   pre-created with mode 0755 in roles/pazny.puter/tasks/main.yml and owned by
+   `node:node` inside the container. Aligns with the absolute paths already
+   used by roles/pazny.puter/tasks/{post,apps}.yml (was a latent split-DB
+   bug pre-rewrite). #}
