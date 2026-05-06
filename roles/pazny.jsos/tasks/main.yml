@@ -69,6 +69,17 @@
 
 # ── 4. Copy custom server adapters ───────────────────────────────────────────
 
+# The pre-clone "Ensure data and log directories exist" loop creates
+# `src/server/adapters/`, but the "Clean non-git directory" task in §2
+# wipes `jsos_dir` whenever .git is missing (blank reset leaves empty
+# dirs). After a fresh clone of OS.js master, `src/server/adapters/`
+# is not part of upstream's tree — we have to re-create it before copy.
+- name: "[jsOS] Ensure adapters dir exists post-clone"
+  ansible.builtin.file:
+    path: "{{ jsos_dir }}/src/server/adapters"
+    state: directory
+    mode: '0755'
+
 - name: "[jsOS] Copy Bluesky auth adapter"
   ansible.builtin.copy:
     src: jsos/adapters/bluesky-auth.js
