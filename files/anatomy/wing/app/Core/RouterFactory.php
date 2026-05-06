@@ -115,6 +115,11 @@ final class RouterFactory
 		$router->addRoute('inbox', 'Inbox:default');
 		$router->addRoute('approvals', 'Approvals:default');
 
+		// A10.c / X.1.c (2026-05-08): actor-attributed event browser.
+		// Phase 5 ceremony pass criterion uses this view to verify the
+		// conductor self-test produced rows with actor_id=conductor.
+		$router->addRoute('audit', 'Audit:default');
+
 		return $router;
 	}
 }

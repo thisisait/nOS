@@ -1,0 +1,102 @@
+{block title}Audit{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">
+	Audit
+	{if $total > $limit}
+		<span class="badge" style="font-size:13px; margin-left:8px;">{$total} matched · showing {$limit}</span>
+	{else}
+		<span class="badge" style="font-size:13px; margin-left:8px;">{$total} events</span>
+	{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Actor-attributed event browser. Pre-A10 events have NULL actor_id —
+	they roll into the <code>&lt;unattributed&gt;</code> bucket below.
+	A10 forward-looking attribution: every conductor / Wing UI / plugin
+	write after the migration carries an actor_id.
+</div>
+
+{* ── Filter bar ──────────────────────────────────────────────────────── *}
+<form method="get" action="/audit" class="filter-bar" style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+	<input type="text" name="actor"  placeholder="actor (e.g. conductor)"  value="{$activeFilter['actor'] ?? ''}"  style="min-width:200px;">
+	<input type="text" name="action" placeholder="action (UUID)"           value="{$activeFilter['action'] ?? ''}" style="min-width:280px;">
+	<input type="text" name="type"   placeholder="type (e.g. agent_run_end)" value="{$activeFilter['type'] ?? ''}" style="min-width:180px;">
+	<input type="text" name="source" placeholder="source (callback / operator / agent:*)" value="{$activeFilter['source'] ?? ''}" style="min-width:240px;">
+	<input type="text" name="since"  placeholder="since (ISO-8601)"        value="{$activeFilter['since'] ?? ''}"  style="min-width:200px;">
+	<button type="submit" class="filter-btn active">Apply</button>
+	<a href="/audit" class="filter-btn">Reset</a>
+</form>
+
+{* ── Per-actor counts (facet badges) ─────────────────────────────────── *}
+{if $actorCounts}
+<div style="margin-bottom:20px;">
+	<span style="color:var(--text2); font-size:13px;">Actors in current window:</span>
+	{foreach $actorCounts as $actor => $count}
+		{var $isActive = $activeFilter['actor'] === $actor && $actor !== '<unattributed>'}
+		{var $linkActor = $actor === '<unattributed>' ? '' : $actor}
+		<a href="/audit?actor={$linkActor|urlEncode}"
+		   class="filter-btn {if $isActive}active{/if}"
+		   style="margin-left:6px; font-size:12px;">
+			{if $actor === '<unattributed>'}
+				<em>&lt;unattributed&gt;</em>
+			{else}
+				{$actor}
+			{/if}
+			<span class="badge" style="margin-left:4px;">{$count}</span>
+		</a>
+	{/foreach}
+</div>
+{/if}
+
+{* ── Event table ─────────────────────────────────────────────────────── *}
+{if !$items}
+	<div class="empty">No events match the current filter.</div>
+{else}
+	<table class="rem-table" style="margin-bottom:24px;">
+		<thead>
+			<tr>
+				<th style="width:155px;">Timestamp</th>
+				<th style="width:160px;">Actor</th>
+				<th style="width:130px;">Type</th>
+				<th style="width:90px;">Source</th>
+				<th style="width:240px;">Action ID</th>
+				<th>Detail</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $items as $row}
+				{var $actorId       = $row['actor_id']        ?? null}
+				{var $actorActionId = $row['actor_action_id'] ?? null}
+				<tr>
+					<td style="font-family:monospace; font-size:12px;">{$row['ts']}</td>
+					<td>
+						{if $actorId}
+							<a href="/audit?actor={$actorId|urlEncode}" style="color:var(--accent);">{$actorId}</a>
+						{else}
+							<em style="color:var(--text2);">&lt;unattributed&gt;</em>
+						{/if}
+					</td>
+					<td><code style="font-size:12px;">{$row['type']}</code></td>
+					<td style="color:var(--text2); font-size:12px;">{$row['source'] ?? '—'}</td>
+					<td style="font-family:monospace; font-size:11px;">
+						{if $actorActionId}
+							<a href="/audit?action={$actorActionId|urlEncode}" style="color:var(--accent);">{$actorActionId|truncate:13}</a>
+						{else}
+							—
+						{/if}
+					</td>
+					<td style="font-size:12px;">
+						{if !empty($row['task'])}
+							{$row['task']|truncate:120}
+						{elseif !empty($row['result_json'])}
+							<code>{$row['result_json']|truncate:120}</code>
+						{else}
+							—
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+{/block}
