@@ -33,7 +33,18 @@ if (!file_exists($dbPath)) {
 $db = new SQLite3($dbPath);
 $db->enableExceptions(true);
 $db->exec('PRAGMA journal_mode = WAL');
-$db->exec('PRAGMA foreign_keys = ON');
+// Foreign keys deliberately OFF during legacy JSON to SQLite import
+// (C10, 2026-05-08). Source files (versions.json + scan-state.json +
+// remediation-queue.json) accumulate over the project lifetime and
+// occasionally drift: scan-state.json may reference components no
+// longer present in versions.json (services renamed or retired). Pre
+// C10 the migration aborted on the first FK violation, surfacing as
+// "Migration FAILED: FOREIGN KEY constraint failed" after a partial
+// transaction. Orphaned rows in component_scan_state etc are harmless
+// (Wing UI uses LEFT JOINs; missing parents render as unknown). PRAGMA
+// flips back ON at the end so runtime writes via Wing presenters get
+// full FK checking.
+$db->exec('PRAGMA foreign_keys = OFF');
 
 // Check if already migrated
 $count = $db->querySingle('SELECT COUNT(*) FROM systems WHERE source = "components_db"');
@@ -357,7 +368,13 @@ try {
 } catch (\Throwable $e) {
 	$db->exec('ROLLBACK');
 	echo "Migration FAILED: " . $e->getMessage() . "\n";
+	// Re-enable FK enforcement before exit so any future re-run path
+	// inherits the strict mode, not the migration-time PRAGMA.
+	$db->exec('PRAGMA foreign_keys = ON');
+	$db->close();
 	exit(1);
 }
 
+// Restore FK enforcement for runtime writers (EventRepository et al).
+$db->exec('PRAGMA foreign_keys = ON');
 $db->close();
