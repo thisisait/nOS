@@ -71,6 +71,14 @@ aggregates:
   - from: consumer_block
     block_path: authentik
     output_var: clients
+  # X.3 (2026-05-08): Tier-2 apps emit `authentik:` blocks alongside
+  # Tier-1 plugins. The renderer iterates `inputs.clients` (which now
+  # contains both tiers) — proxy outpost gets a provider for every
+  # *.apps.<tld> domain, closing the 404-from-Authentik gap that
+  # documenso/qdrant/roundcube/twofauth were exhibiting.
+  - from: app_manifest
+    block_path: authentik
+    output_var: clients   # appended to the same list (Tier-1 + Tier-2)
   # Future (A8): agent profiles also declare authentik clients.
   - from: agent_profile
     block_path: authentik

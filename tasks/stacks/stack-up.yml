@@ -266,6 +266,8 @@
   nos_plugin_loader:
     hook: post_compose
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
+    apps_root: "{{ playbook_dir }}/apps"
+    agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
     template_vars: "{{ vars }}"
     stack_filter:
       - iiab

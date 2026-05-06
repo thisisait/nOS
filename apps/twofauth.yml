@@ -47,6 +47,21 @@ gdpr:
   processors: []
   transfers_outside_eu: false
 
+# ── SSO (Authentik forward-auth) ──────────────────────────────────────────────
+# X.3 (2026-05-08): see qdrant.yml for the aggregator path. 2FAuth has
+# native auth (TOTP secrets vault); forward-auth is the gate to the
+# vault itself. user-tier — per-operator authenticator.
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-twofauth
+  client_secret: "{{ global_password_prefix }}_pw_oidc_twofauth"
+  slug: twofauth
+  name: '2FAuth'
+  enabled: true
+  launch_url: "https://twofauth.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 3   # user-tier
+
 # ── Compose fragment — single container, SQLite, internal network ──────────
 compose:
   services:

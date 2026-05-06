@@ -253,12 +253,23 @@ def _deep_render(value, ctx: dict):
 
 def run_aggregators(plugins: list[Plugin],
                     agent_profiles: list[dict] | None = None,
+                    app_manifests: list[dict] | None = None,
                     template_vars: dict | None = None) -> None:
     """For every source plugin's `aggregates` block, harvest matching blocks
-    from consumer plugins (and optionally agent profiles) into the source
-    plugin's `inputs[output_var]`.
+    from consumer plugins (and optionally agent profiles / Tier-2 app
+    manifests) into the source plugin's `inputs[output_var]`.
 
     Mutates ``plugins`` in place (sets each source plugin's `.inputs`).
+
+    Sources:
+      - ``consumer_block`` (D1.2)  — peer plugin manifests
+      - ``agent_profile`` (D1.2)   — agents/<name>.yml
+      - ``app_manifest`` (X.3, 2026-05-08) — Tier-2 apps/<name>.yml.
+        Tier-2 apps that declare an `authentik:` block land in the
+        Authentik blueprint render alongside Tier-1 plugins, closing
+        the SSO outpost gap (was: documenso/qdrant/roundcube/twofauth
+        had Traefik routers but Authentik forward-auth returned 404
+        because the proxy outpost had no registered provider).
 
     D1.2 extensions:
       - ``template_vars``: when provided, recursively pre-renders Jinja
@@ -267,6 +278,7 @@ def run_aggregators(plugins: list[Plugin],
         (disabled services don't pollute aggregated output).
     """
     agent_profiles = agent_profiles or []
+    app_manifests = app_manifests or []
     tvars = template_vars or {}
     for source in plugins:
         for spec in source.aggregates:
@@ -302,7 +314,35 @@ def run_aggregators(plugins: list[Plugin],
                         if tvars:
                             block = _deep_render(block, tvars)
                         harvested.append(block)
-            source.inputs[output_var] = harvested
+            elif from_kind == "app_manifest":
+                # Tier-2 source. App manifests have shape:
+                #   meta:        { name, version, ... }
+                #   gdpr:        { ... }
+                #   compose:     { services: { ... } }
+                #   authentik:   { mode, slug, name, ... }   ← harvested
+                # The slug defaults to meta.name; tier=2 hint added so
+                # the blueprint renderer can split bookkeeping if it
+                # ever needs to (today both tiers fan into one list).
+                for app in app_manifests:
+                    block = app.get(block_path)
+                    if isinstance(block, dict):
+                        if tvars:
+                            block = _deep_render(block, tvars)
+                        meta = app.get("meta") or {}
+                        block.setdefault("slug", meta.get("name"))
+                        block.setdefault("plugin_name",
+                                         f"app:{meta.get('name')}")
+                        block.setdefault("tier", 2)
+                        harvested.append(block)
+            # Multiple aggregates specs that share the same output_var
+            # MERGE (Tier-1 plugin clients + Tier-2 app clients land in
+            # one list). Single-spec output_var assignment keeps its
+            # historical shape (assignment, not list-of-one).
+            existing = source.inputs.get(output_var)
+            if isinstance(existing, list):
+                source.inputs[output_var] = existing + harvested
+            else:
+                source.inputs[output_var] = harvested
 
 
 # ── Lifecycle hooks (PoC: skeleton — actual side-effects are no-ops when

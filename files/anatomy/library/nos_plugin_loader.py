@@ -55,6 +55,15 @@ options:
     required: false
     type: path
     default: ""
+  apps_root:
+    description: |
+      Optional directory of Tier-2 app manifests (apps/<name>.yml). When
+      provided, the aggregator's `from: app_manifest` source harvests
+      `authentik:` (and other declared) blocks from each app — closes the
+      Tier-1/Tier-2 SSO blueprint gap (X.3, 2026-05-08).
+    required: false
+    type: path
+    default: ""
   template_vars:
     description: |
       Jinja2 rendering context for action params (target paths, URLs) and
@@ -92,6 +101,7 @@ def main() -> None:
             "plugins_root": {"type": "path", "required": False, "default": ""},
             "agent_profiles_root": {"type": "path", "required": False,
                                     "default": ""},
+            "apps_root": {"type": "path", "required": False, "default": ""},
             "template_vars": {"type": "dict", "required": False, "default": {}},
             "stack_filter": {"type": "list", "elements": "str", "required": False,
                              "default": None},
@@ -113,6 +123,33 @@ def main() -> None:
             if ap_yml.is_file():
                 with open(ap_yml) as fh:
                     agent_profiles.append(yaml.safe_load(fh) or {})
+    # X.3 (2026-05-08): optional Tier-2 app-manifest harvest. Each
+    # apps/<name>.yml is a Tier-2 app spec; if a manifest declares an
+    # `authentik:` block, it lands in the authentik-base aggregator's
+    # `inputs.clients` alongside Tier-1 plugin blocks. Skip files whose
+    # name starts with `_` (e.g. _template.yml) or contains `.draft`.
+    app_manifests: list[dict] = []
+    apps_root = module.params.get("apps_root") or ""
+    if apps_root and pathlib.Path(apps_root).is_dir():
+        import yaml
+        for app_yml in sorted(pathlib.Path(apps_root).iterdir()):
+            name = app_yml.name
+            if not name.endswith(".yml") and not name.endswith(".yaml"):
+                continue
+            if name.startswith("_") or ".draft" in name:
+                continue
+            try:
+                with open(app_yml) as fh:
+                    parsed = yaml.safe_load(fh) or {}
+                if isinstance(parsed, dict):
+                    app_manifests.append(parsed)
+            except Exception:                                  # noqa: BLE001
+                # Tolerant load — a single malformed app file shouldn't
+                # break the entire blueprint render path. Apps_runner
+                # has its own strict parser (nos_app_parser) that
+                # surfaces parse errors with full diagnostics; here we
+                # just skip and let that path be the source of truth.
+                continue
     # D1.2 (2026-05-05): pass template_vars so aggregator can pre-render
     # Jinja in harvested blocks AND skip peers whose feature_flag is
     # disabled — the authentik-base aggregator relies on this to mirror
@@ -120,6 +157,7 @@ def main() -> None:
     load_plugins.run_aggregators(
         plugins,
         agent_profiles=agent_profiles,
+        app_manifests=app_manifests,
         template_vars=module.params.get("template_vars") or {})
     if module.check_mode:
         module.exit_json(

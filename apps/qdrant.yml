@@ -54,6 +54,24 @@ gdpr:
   processors: []                  # all-local; no managed-vector-DB SaaS
   transfers_outside_eu: false
 
+# ── SSO (Authentik forward-auth) ──────────────────────────────────────────────
+# X.3 (2026-05-08): Tier-2 apps emit `authentik:` blocks alongside Tier-1
+# plugins. The aggregator (load_plugins.py:run_aggregators with
+# from: app_manifest) harvests this block into authentik-base's
+# inputs.clients, where the 10-oidc-apps blueprint render picks it up.
+# Result: Authentik proxy outpost gets a registered provider for
+# qdrant.apps.<tld>; forward-auth no longer 404s for the Tier-2 host.
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-qdrant
+  client_secret: "{{ global_password_prefix }}_pw_oidc_qdrant"
+  slug: qdrant
+  name: 'Qdrant'
+  enabled: true
+  launch_url: "https://qdrant.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 1   # admin-tier (vector DB is sensitive substrate)
+
 # ── Compose fragment ──────────────────────────────────────────────────────────
 compose:
   services:

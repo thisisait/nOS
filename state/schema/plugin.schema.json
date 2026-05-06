@@ -51,7 +51,7 @@
         "required": ["from", "block_path", "output_var"],
         "additionalProperties": false,
         "properties": {
-          "from":       {"type": "string", "enum": ["consumer_block", "agent_profile"]},
+          "from":       {"type": "string", "enum": ["consumer_block", "agent_profile", "app_manifest"]},
           "block_path": {"type": "string", "description": "Top-level key in target manifests to harvest (e.g. 'authentik')."},
           "output_var": {"type": "string", "description": "Where to deposit the aggregated list on this plugin's inputs.<output_var>."}
         }

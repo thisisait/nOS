@@ -52,6 +52,21 @@ gdpr:
   processors: []
   transfers_outside_eu: false
 
+# ── SSO (Authentik forward-auth) ──────────────────────────────────────────────
+# X.3 (2026-05-08): see qdrant.yml for the aggregator path. Documenso has
+# its own login form (DocuSeal-like flow), so forward-auth is layered as
+# a coarse gate (admin-tier — handles signed contracts).
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-documenso
+  client_secret: "{{ global_password_prefix }}_pw_oidc_documenso"
+  slug: documenso
+  name: 'Documenso'
+  enabled: true
+  launch_url: "https://documenso.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 2   # manager-tier
+
 # ── Compose fragment ───────────────────────────────────────────────────────
 # Two services in one manifest:
 #   - documenso (app)        — Next.js, listens on 3000
