@@ -16,8 +16,10 @@ kiwix_port: 8888
 kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"
 
-kiwix_init_zim_url: ""          # empty = no auto-download; set in config.yml if needed
-kiwix_init_zim_dest: "init.zim"
+# Default to a tiny (~10 MB) demo ZIM so blank reaches a working Kiwix UI
+# without manual onboarding. Override or set to "" in config.yml to opt out.
+kiwix_init_zim_url: "https://download.kiwix.org/zim/other/alpinelinux_en_all_maxi_2026-04.zim"
+kiwix_init_zim_dest: "alpinelinux.zim"
 
 kiwix_zim_files: []
 
