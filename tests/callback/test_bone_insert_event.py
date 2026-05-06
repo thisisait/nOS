@@ -49,6 +49,9 @@ CREATE TABLE events (
     patch_id      TEXT,
     coexist_svc   TEXT,
     source        TEXT,                    -- Anatomy P1 (2026-05-05); attribution hint.
+    actor_id          TEXT,                -- A10 (2026-05-08); cryptographic attribution.
+    actor_action_id   TEXT,                -- A10; UUID grouping multi-event actions.
+    acted_at          TEXT,                -- A10; wall-clock time of the action.
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """

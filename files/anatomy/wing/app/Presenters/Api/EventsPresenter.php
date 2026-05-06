@@ -61,16 +61,22 @@ final class EventsPresenter extends BaseApiPresenter
 	private function listEvents(): void
 	{
 		$filters = array_filter([
-			'run_id'       => $this->getParameter('run_id'),
-			'type'         => $this->getParameter('type'),
-			'since'        => $this->getParameter('since'),
-			'migration_id' => $this->getParameter('migration_id'),
-			'upgrade_id'   => $this->getParameter('upgrade_id'),
-			'coexist_svc'  => $this->getParameter('coexist_svc'),
-			// Anatomy P1 (2026-05-05): source filter — closes CLAUDE.md
-			// "Wing /events schema mismatch" tech debt. Free-text hint
-			// for attribution; A10 lands actor_id alongside.
-			'source'       => $this->getParameter('source'),
+			'run_id'           => $this->getParameter('run_id'),
+			'type'             => $this->getParameter('type'),
+			'since'            => $this->getParameter('since'),
+			'migration_id'     => $this->getParameter('migration_id'),
+			'upgrade_id'       => $this->getParameter('upgrade_id'),
+			'coexist_svc'      => $this->getParameter('coexist_svc'),
+			// Anatomy P1 (2026-05-05): free-text channel label
+			// (callback / operator / agent:<name>).
+			'source'           => $this->getParameter('source'),
+			// A10 (2026-05-08): cryptographic attribution. Filtering by
+			// actor_id surfaces all events written by a specific
+			// Authentik client (e.g. ?actor_id=conductor for the
+			// conductor agent's full audit trail). actor_action_id
+			// groups events of one logical action (start + finish).
+			'actor_id'         => $this->getParameter('actor_id'),
+			'actor_action_id'  => $this->getParameter('actor_action_id'),
 		]);
 		$limit = (int) ($this->getParameter('limit') ?? 100);
 		$this->sendSuccess($this->events->query($filters, $limit));

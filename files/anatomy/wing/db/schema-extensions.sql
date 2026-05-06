@@ -30,9 +30,17 @@ CREATE TABLE IF NOT EXISTS events (
     --   "callback" — Ansible callback plugin (default for playbook runs)
     --   "operator" — manual curl/API hit
     --   "agent:<name>" — A8 conductor + future agent runs (with run id)
-    -- Pre-A10 this is hint-level; A10 lands `actor_id` (FK Authentik
-    -- client) + `actor_action_id` (UUID) for cryptographic attribution.
+    -- Pre-A10 `source` was hint-level free text; A10 (2026-05-08) adds
+    -- `actor_id` (Authentik client_id of the writer) + `actor_action_id`
+    -- (UUID per logical action — same UUID across multiple events that
+    -- belong to one logical operation, e.g. agent_run_start + run_end).
+    -- `source` stays as a coarse channel label; `actor_id` is the
+    -- cryptographic identity. Pulse runs that span multiple events
+    -- emit a stable actor_action_id from pulse-run-agent.sh.
     source        TEXT,
+    actor_id          TEXT,                  -- Authentik client_id (operator/agent/plugin)
+    actor_action_id   TEXT,                  -- UUID grouping events of one logical action
+    acted_at          TEXT,                  -- ISO-8601; usually = ts, kept separate for backfilled rows
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_run_id    ON events(run_id);
@@ -42,6 +50,8 @@ CREATE INDEX IF NOT EXISTS idx_events_migration ON events(migration_id);
 CREATE INDEX IF NOT EXISTS idx_events_upgrade   ON events(upgrade_id);
 CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
 CREATE INDEX IF NOT EXISTS idx_events_source    ON events(source);
+CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id);
+CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id);
 
 -- Migration history mirror. Source of truth lives in ~/.nos/state.yml; this
 -- table is a read cache populated via BoxAPI /api/state pushes.
@@ -222,11 +232,14 @@ CREATE TABLE IF NOT EXISTS pulse_runs (
     stdout_tail     TEXT,                             -- last 2000 chars
     stderr_tail     TEXT,
     actor_id        TEXT,                             -- Authentik client_id of pulse instance
+    actor_action_id TEXT,                             -- A10: UUID grouping start/finish events with this run
+    acted_at        TEXT,                             -- A10: wall-clock time the action was initiated (usually = fired_at)
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX IF NOT EXISTS idx_pulse_runs_job_id     ON pulse_runs(job_id);
-CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at   ON pulse_runs(fired_at);
+CREATE INDEX IF NOT EXISTS idx_pulse_runs_job_id            ON pulse_runs(job_id);
+CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at          ON pulse_runs(fired_at);
+CREATE INDEX IF NOT EXISTS idx_pulse_runs_actor_action_id   ON pulse_runs(actor_action_id);
 
 -- gitleaks_findings: secret-scanning findings ingested by the gitleaks plugin.
 -- Anatomy A7 (2026-05-06). The gitleaks plugin (files/anatomy/plugins/gitleaks/)

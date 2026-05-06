@@ -347,12 +347,41 @@ $db->exec('CREATE INDEX IF NOT EXISTS idx_events_patch ON events(patch_id)');
 // CLAUDE.md "Wing /events table schema mismatch" tech-debt entry —
 // Bone's POST handler accepted `source` in JSON but silently dropped
 // it on insert; analysts had to guess attribution from `task` text
-// prefixes. Hint-level free text pre-A10 (where `actor_id` +
-// `actor_action_id` give cryptographic attribution).
+// prefixes. Hint-level free text pre-A10.
 $addMissingColumns($db, 'events', [
 	'source' => 'TEXT',
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_source ON events(source)');
+
+// events.{actor_id,actor_action_id,acted_at} — A10 actor audit (2026-05-08).
+// Cryptographic attribution: `actor_id` is the Authentik client_id of the
+// writer (operator / agent / plugin); `actor_action_id` is a UUID
+// grouping events that belong to one logical action (e.g. agent_run_start
+// + agent_run_end emitted by the same conductor run share an
+// actor_action_id). `acted_at` is the wall-clock time of the action
+// (usually = ts, but kept separate so backfilled events can record
+// when the row was inserted vs when the action happened). Existing DBs
+// get the columns NULL-able; pre-A10 rows stay NULL — A10 is forward-
+// looking attribution, not retroactive.
+$addMissingColumns($db, 'events', [
+	'actor_id'        => 'TEXT',
+	'actor_action_id' => 'TEXT',
+	'acted_at'        => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id)');
+
+// pulse_runs.{actor_action_id,acted_at} — pulse_runs already carries
+// actor_id (from schema-extensions.sql:234), but lacks the action
+// grouping + wall-clock fields. Adding them here aligns pulse_runs
+// with events so a Pulse-driven agent run produces correlatable rows
+// in both tables (start/finish events in `events` share the
+// actor_action_id with the pulse_runs row).
+$addMissingColumns($db, 'pulse_runs', [
+	'actor_action_id' => 'TEXT',
+	'acted_at'        => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_pulse_runs_actor_action_id ON pulse_runs(actor_action_id)');
 
 $db->close();
 

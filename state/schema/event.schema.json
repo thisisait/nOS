@@ -45,7 +45,20 @@
     "coexistence_service": { "type": ["string", "null"] },
     "source": {
       "type": ["string", "null"],
-      "description": "Attribution hint for this event's writer. Anatomy P1 (2026-05-05). Free text pre-A10; canonical values: 'callback' (Ansible callback plugin), 'operator' (manual curl/API hit), 'agent:<name>' (A8 conductor + future agent runs). A10 lands cryptographic actor_id + actor_action_id alongside."
+      "description": "Attribution hint for this event's writer (Anatomy P1, 2026-05-05). Free-text channel label; canonical values: 'callback' (Ansible callback plugin), 'operator' (manual curl/API hit), 'agent:<name>' (A8 conductor + future agent runs). Complements A10 actor_id."
+    },
+    "actor_id": {
+      "type": ["string", "null"],
+      "description": "Authentik client_id of the writer (operator / agent / plugin). A10 cryptographic actor audit (2026-05-08). Required for non-callback writes after A10 finalises; pre-A10 callback events leave NULL."
+    },
+    "actor_action_id": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^$",
+      "description": "UUID grouping events that belong to one logical action (e.g. agent_run_start + agent_run_end of one conductor pulse run share an actor_action_id, joined to pulse_runs.actor_action_id)."
+    },
+    "acted_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 wall-clock time the action was initiated. Usually = ts; kept separate so backfilled events can record the original action time vs row insert time."
     },
     "recap": {
       "type": ["object", "null"],

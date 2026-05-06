@@ -60,10 +60,20 @@ final class EventRepository
 			// Anatomy P1 (2026-05-05). Closes CLAUDE.md "Wing /events
 			// schema mismatch" tech debt — Bone POST handler accepted
 			// `source` in JSON but the INSERT silently dropped it.
-			// Free-text attribution hint pre-A10 ("callback" / "operator"
-			// / "agent:<n>"); A10 lands actor_id + actor_action_id for
-			// cryptographic attribution.
-			'source'       => $payload['source']       ?? null,
+			// Free-text attribution hint ("callback" / "operator" /
+			// "agent:<n>") complementing A10 actor_id below.
+			'source'           => $payload['source']           ?? null,
+			// A10 actor audit (2026-05-08). actor_id = Authentik client_id
+			// of the writer (operator / agent / plugin). actor_action_id =
+			// UUID grouping events that belong to one logical action
+			// (e.g. agent_run_start + agent_run_end emitted by the same
+			// conductor pulse run share an actor_action_id with the
+			// pulse_runs row). acted_at = wall-clock time of the action;
+			// usually = ts but kept separate so backfilled rows can record
+			// the original action time vs row insert time.
+			'actor_id'         => $payload['actor_id']         ?? null,
+			'actor_action_id'  => $payload['actor_action_id']  ?? null,
+			'acted_at'         => $payload['acted_at']         ?? null,
 		];
 
 		$this->db->table('events')->insert($row);
@@ -104,6 +114,12 @@ final class EventRepository
 		}
 		if (!empty($filters['source'])) {
 			$query->where('source', $filters['source']);
+		}
+		if (!empty($filters['actor_id'])) {
+			$query->where('actor_id', $filters['actor_id']);
+		}
+		if (!empty($filters['actor_action_id'])) {
+			$query->where('actor_action_id', $filters['actor_action_id']);
 		}
 
 		$total = (clone $query)->count('*');

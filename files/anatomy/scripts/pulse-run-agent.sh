@@ -41,6 +41,20 @@ WING_EVENTS_HMAC_SECRET="${WING_EVENTS_HMAC_SECRET:-}"
 
 RUN_ID="conductor-${PULSE_RUN_ID:-manual-$(date +%s)}"
 
+# A10 actor audit (2026-05-08): actor_id = the Authentik client_id we
+# authenticate as; actor_action_id = a UUID that groups all events of
+# THIS pulse run (start + end + anything Claude itself emits via Wing
+# events API). UUID via Python (always available on macOS) — falls back
+# to RUN_ID-derived hex if python3 missing.
+ACTOR_ID="${CLIENT_ID}"
+if command -v python3 &>/dev/null; then
+    ACTOR_ACTION_ID=$(python3 -c 'import uuid; print(uuid.uuid4())')
+else
+    # RFC4122 v4 shape, deterministic-looking — sufficient for grouping.
+    ACTOR_ACTION_ID=$(printf '%s' "$RUN_ID-$(date +%s%N)" | shasum -a 256 \
+        | awk '{print substr($1,1,8)"-"substr($1,9,4)"-"substr($1,13,4)"-"substr($1,17,4)"-"substr($1,21,12)}')
+fi
+
 # ── Validation ────────────────────────────────────────────────────────────────
 
 _die() { echo "ERROR: $*" >&2; exit 2; }
@@ -119,8 +133,9 @@ echo "INFO: Authentik token acquired for $CLIENT_ID"
 # ── Wing: agent_run_start ─────────────────────────────────────────────────────
 
 TS_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_start","run_id":"%s","source":"conductor","task":"%s"}' \
-    "$TS_NOW" "$RUN_ID" "$(echo "$TASK_PROMPT" | head -c 120 | tr '"\\' "  ")")"
+_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_start","run_id":"%s","source":"conductor","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","task":"%s"}' \
+    "$TS_NOW" "$RUN_ID" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_NOW" \
+    "$(echo "$TASK_PROMPT" | head -c 120 | tr '"\\' "  ")")"
 
 echo "INFO: starting conductor (run_id=$RUN_ID)"
 
@@ -160,8 +175,10 @@ fi
 
 TS_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200 | tr '"\\' "  ")
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"conductor","result":{"exit_code":%d,"summary":"%s"}}' \
-    "$TS_END" "$RUN_ID" "$CLAUDE_EXIT" "$RESULT_SUMMARY")"
+# Same actor_action_id as start → events join in pulse_runs.actor_action_id.
+_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"conductor","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","result":{"exit_code":%d,"summary":"%s"}}' \
+    "$TS_END" "$RUN_ID" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_END" \
+    "$CLAUDE_EXIT" "$RESULT_SUMMARY")"
 
 echo "INFO: conductor finished (exit=$CLAUDE_EXIT)"
 exit "$CLAUDE_EXIT"

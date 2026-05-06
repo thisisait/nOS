@@ -78,8 +78,14 @@ def insert_event(payload: dict[str, Any]) -> int:
       Closes CLAUDE.md "Wing /events table schema mismatch" tech debt:
       Bone's POST handler had been accepting `source` in JSON for ages
       but dropping it silently on INSERT. Free-text hint-level
-      attribution ("callback" / "operator" / "agent:<name>"); A10 will
-      land cryptographic actor_id + actor_action_id alongside.
+      attribution ("callback" / "operator" / "agent:<name>") complements
+      A10 actor_id below.
+    - payload['actor_id'] / payload['actor_action_id'] / payload['acted_at']
+      → A10 actor audit (2026-05-08). actor_id = Authentik client_id of
+      the writer; actor_action_id = UUID grouping events of one logical
+      action (e.g. agent_run_start + agent_run_end share one); acted_at =
+      wall-clock time of the action (usually = ts). Pre-A10 callbacks
+      leave these NULL — backwards compatible.
     """
     with _open() as conn:
         cur = conn.execute(
@@ -87,8 +93,9 @@ def insert_event(payload: dict[str, Any]) -> int:
             INSERT INTO events
               (ts, run_id, type, playbook, play, task, role, host,
                duration_ms, changed, result_json,
-               migration_id, upgrade_id, patch_id, coexist_svc, source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               migration_id, upgrade_id, patch_id, coexist_svc, source,
+               actor_id, actor_action_id, acted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["ts"],
@@ -107,6 +114,9 @@ def insert_event(payload: dict[str, Any]) -> int:
                 payload.get("patch_id"),
                 payload.get("coexistence_service"),
                 payload.get("source"),
+                payload.get("actor_id"),
+                payload.get("actor_action_id"),
+                payload.get("acted_at"),
             ),
         )
         conn.commit()
@@ -126,6 +136,8 @@ def query_events(
     patch_id: str | None = None,
     coexist_svc: str | None = None,
     source: str | None = None,
+    actor_id: str | None = None,
+    actor_action_id: str | None = None,
     limit: int = 100,
 ) -> list[dict[str, Any]]:
     """Paginated event query. Returns rows as dicts (cursor-style).
@@ -133,9 +145,12 @@ def query_events(
     Filters with None are skipped. ``limit`` is clamped to [1, 500].
     SQL is parameterized — every filter goes through ``?`` placeholders.
 
-    The ``source`` filter (Anatomy P1, 2026-05-05) lets analysts split
-    callback-driven events from operator/agent ones. Free-text hint pre-
-    A10 — see clients/wing.py::insert_event() docstring for values.
+    Free-text ``source`` filter (Anatomy P1) splits callback-driven from
+    operator/agent events at the channel level. ``actor_id`` /
+    ``actor_action_id`` (A10, 2026-05-08) provide cryptographic
+    attribution: actor_id = Authentik client_id; actor_action_id = UUID
+    grouping multi-event logical actions (e.g. agent_run_start +
+    agent_run_end of one conductor pulse run share an actor_action_id).
     """
     clauses: list[str] = []
     params: list[Any] = []
@@ -163,6 +178,12 @@ def query_events(
     if source is not None:
         clauses.append("source = ?")
         params.append(source)
+    if actor_id is not None:
+        clauses.append("actor_id = ?")
+        params.append(actor_id)
+    if actor_action_id is not None:
+        clauses.append("actor_action_id = ?")
+        params.append(actor_action_id)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     limit = max(1, min(500, int(limit)))
@@ -171,7 +192,7 @@ def query_events(
         cur = conn.execute(
             "SELECT id, ts, run_id, type, playbook, play, task, role, host, "
             "duration_ms, changed, result_json, migration_id, upgrade_id, "
-            "patch_id, coexist_svc, source "
+            "patch_id, coexist_svc, source, actor_id, actor_action_id, acted_at "
             f"FROM events {where} ORDER BY id DESC LIMIT ?",
             (*params, limit),
         )
