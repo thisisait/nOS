@@ -59,6 +59,15 @@ services:
   erpnext-backend:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
     restart: unless-stopped
+    # Wait for one-shot configurator (creates site + bench-config) to exit 0.
+    # Without this, `docker compose up --wait` (parallel start) marks the
+    # configurator's exited(0) state as a service failure (returns rc=1)
+    # and the stack-up fail-fast assert (tasks/stacks/stack-up.yml:240)
+    # blocks the entire b2b stack. service_completed_successfully tells
+    # compose this is the expected shape.
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
     volumes:
       - erpnext_sites:/home/frappe/frappe-bench/sites
     environment:
@@ -98,6 +107,9 @@ services:
   erpnext-frontend:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
     restart: unless-stopped
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
     command: nginx-entrypoint.sh
     ports:
 {% if services_lan_access | default(false) %}
@@ -128,6 +140,9 @@ services:
   erpnext-queue-short:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
     restart: unless-stopped
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
     command: bench worker --queue short
     volumes:
       - erpnext_sites:/home/frappe/frappe-bench/sites
@@ -152,6 +167,9 @@ services:
   erpnext-queue-long:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
     restart: unless-stopped
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
     command: bench worker --queue long
     volumes:
       - erpnext_sites:/home/frappe/frappe-bench/sites
@@ -176,6 +194,9 @@ services:
   erpnext-scheduler:
     image: frappe/erpnext:{{ erpnext_version | default('v15') }}
     restart: unless-stopped
+    depends_on:
+      erpnext-configurator:
+        condition: service_completed_successfully
     command: bench schedule
     volumes:
       - erpnext_sites:/home/frappe/frappe-bench/sites
