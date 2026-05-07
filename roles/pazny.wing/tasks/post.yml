@@ -159,60 +159,23 @@
 #   3. POST each to /api/v1/pulse_jobs (idempotent on plugin_name+job_name).
 # pulse-base/plugin.yml pins the long-term contract (aggregator decl).
 - name: "[pazny.wing] Discover Pulse job catalog from plugin manifests + agent profiles"
-  ansible.builtin.shell: |
-    python3 <<'PY'
-    import json, glob, sys, yaml
-    # Plugin manifests carry Jinja tokens like `{{ playbook_dir }}` and
-    # `{{ global_password_prefix }}_pw_*` in command/env strings — they're
-    # authored as templates, not literals. Pulse stores the rendered
-    # command in pulse_jobs.command and execs it directly (no Jinja
-    # engine at fire-time). We must therefore expand the tokens BEFORE
-    # POSTing to Wing, otherwise Pulse later forks `bash {{ playbook_dir }}/...`
-    # which exits 127 ("command not found"). Surfaced live 2026-05-07
-    # when the conductor self-test job auto-fired with rc=127.
-    SUBSTITUTIONS = {
-        '{{ playbook_dir }}': '{{ playbook_dir }}',
-        '{{ authentik_domain }}': '{{ authentik_domain | default("auth." ~ tenant_domain) }}',
-        '{{ tenant_domain }}': '{{ tenant_domain | default("dev.local") }}',
-        '{{ global_password_prefix }}': '{{ global_password_prefix }}',
-        '{{ wing_api_token }}': '{{ wing_api_token }}',
-        '{{ conductor_wing_api_token }}': '{{ conductor_wing_api_token }}',
-        '{{ bone_secret }}': '{{ bone_secret }}',
-    }
-    def _expand(value):
-        if isinstance(value, str):
-            for token, replacement in SUBSTITUTIONS.items():
-                value = value.replace(token, replacement)
-            return value
-        if isinstance(value, dict):
-            return {k: _expand(v) for k, v in value.items()}
-        if isinstance(value, list):
-            return [_expand(v) for v in value]
-        return value
-    catalog = []
-    sources = (
-        glob.glob('{{ playbook_dir }}/files/anatomy/plugins/*/plugin.yml')
-        + glob.glob('{{ playbook_dir }}/files/anatomy/agents/*.yml')
-    )
-    for path in sources:
-        try:
-            with open(path) as fh:
-                doc = yaml.safe_load(fh) or {}
-        except Exception:
-            continue
-        block = doc.get('pulse') or {}
-        for job in (block.get('jobs') or []):
-            catalog.append({
-                'source': path.split('/anatomy/')[-1],
-                'plugin_name': doc.get('name')
-                              or doc.get('agent_id')
-                              or path.split('/')[-1].replace('.yml', ''),
-                'job': _expand(job),
-            })
-    print(json.dumps(catalog))
-    PY
-  args:
-    executable: /bin/bash
+  # Standalone Python script lives at files/anatomy/scripts/discover-pulse-catalog.py.
+  # We deliberately avoid inline-Python-in-heredoc here: Ansible Jinja-templates
+  # the entire shell body before bash sees it, and Jinja braces inside a Python
+  # dict literal break the argument splitter ("failed at splitting arguments,
+  # either an unbalanced jinja2 block or quotes" — observed live 2026-05-07).
+  # Substitution values are fed via env vars so the script source carries
+  # literal `{{ playbook_dir }}` strings as dict keys without any templating.
+  ansible.builtin.command:
+    cmd: "python3 {{ playbook_dir }}/files/anatomy/scripts/discover-pulse-catalog.py"
+  environment:
+    NOS_PLAYBOOK_DIR: "{{ playbook_dir }}"
+    NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
+    NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+    NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"
+    NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
+    NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
+    NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false
