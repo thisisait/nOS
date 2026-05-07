@@ -110,4 +110,26 @@
 	<pre style="margin:0; font-size:12px; white-space:pre-wrap;">{$session['error_json']}</pre>
 </div>
 
+{*
+  Auto-refresh while the session is still running (operator-trigger UX).
+  Plain reload on a fixed interval — small, no dependencies, no API auth
+  needed since the page itself is gated by Authentik forward-auth. Stops
+  refreshing once the server-rendered status is terminal (idle / terminated).
+  Operator can scroll/select text between ticks; reload preserves anchors.
+
+  We do NOT inject status into the script (avoids escaping pitfalls). The
+  Latte n:if guard in the surrounding block guarantees this script only
+  renders when the status is non-terminal, so an unconditional reload is
+  correct — the next page render either omits the script (terminal) or
+  schedules the next reload.
+*}
+{if in_array($session['status'], ['pending', 'running', 'starting'], true)}
+<script>
+(function () {
+	var INTERVAL_MS = 3000;
+	setTimeout(function () { window.location.reload(); }, INTERVAL_MS);
+})();
+</script>
+{/if}
+
 {/block}

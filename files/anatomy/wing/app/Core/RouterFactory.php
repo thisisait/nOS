@@ -141,10 +141,15 @@ final class RouterFactory
 		// Browser views: /agents (catalog), /agents/<name> (detail),
 		// /agents/<name>/sessions/<uuid> (deep-dive). API surface:
 		// /api/v1/agents/* + /api/v1/agent-sessions/<uuid>.
+		// Specific routes BEFORE the catch-all <name> form so the matcher
+		// hits the verb form first (Nette is first-match-wins).
 		$router->addRoute('agents/<name>/sessions/<id>', 'Agents:session');
+		$router->addRoute('agents/<name>/start', 'Agents:start');
 		$router->addRoute('agents/<name>', 'Agents:detail');
 		$router->addRoute('agents', 'Agents:default');
 		$api->addRoute('api/v1/agents[/<name>]', 'Agents:default');
+		// /api/v1/agents/<name>/sessions accepts both GET (list) and POST
+		// (operator-trigger spawn — A14 follow-up, 2026-05-07).
 		$api->addRoute('api/v1/agents/<name>/sessions', 'Agents:sessions');
 		$api->addRoute('api/v1/agent-sessions/<uuid>', 'AgentSessions:default');
 

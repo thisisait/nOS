@@ -72,6 +72,12 @@ final class Runner
 	 * @param ?string $userPrompt  optional initial user message
 	 * @param ?string $vaultName   optional vault to resolve credentials from
 	 * @param ?string $triggerId   pulse_runs.run_id or webhook event id
+	 * @param ?string $sessionUuid optional pre-allocated session UUID. The
+	 *                operator-trigger API path generates the UUID before
+	 *                spawning this runner so it can return 202 with the
+	 *                UUID immediately and the operator can poll
+	 *                /api/v1/agent-sessions/<uuid> straight away. NULL =
+	 *                self-allocate (Pulse / direct CLI / webhook paths).
 	 * @return RunResult
 	 */
 	public function run(
@@ -81,6 +87,7 @@ final class Runner
 		string $trigger = 'operator',
 		?string $triggerId = null,
 		?string $actorId = null,
+		?string $sessionUuid = null,
 	): RunResult {
 		$agent = $this->loader->load($agentName);
 		$tools = $this->tools->forAgent($agent);
@@ -91,7 +98,7 @@ final class Runner
 			$this->credentials->bindVault($vault !== null ? (int) $vault['id'] : null);
 		}
 
-		$sessionUuid = self::uuid();
+		$sessionUuid = $sessionUuid ?? self::uuid();
 		$traceId = TraceContext::newTraceId();
 		$rootSpanId = TraceContext::newSpanId();
 		$startNanos = self::now();

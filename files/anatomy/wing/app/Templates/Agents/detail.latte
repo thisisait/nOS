@@ -51,6 +51,38 @@
 	</div>
 </div>
 
+{*
+  Operator-trigger panel (A14 follow-up, 2026-05-07).
+  Standard form POST to AgentsPresenter::actionStart, which proxies the
+  bearer-protected API endpoint /api/v1/agents/<name>/sessions and redirects
+  to the session deep-dive view. The bearer token never touches the browser.
+*}
+<div style="padding:16px; border:1px solid var(--border); border-radius:8px; margin-bottom:24px; background:var(--bg2, transparent);">
+	<h3 style="margin:0 0 12px; font-size:13px; color:var(--text2);">Start new session</h3>
+	<form method="post" action="{plink Agents:start, name => $agent->name}" style="display:flex; flex-direction:column; gap:8px; max-width:680px;">
+		<label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text2);">
+			Prompt (optional — falls back to agent's built-in default)
+			<textarea name="prompt" rows="2" placeholder="Optional initial user message"
+				style="font-family:monospace; font-size:12px; padding:6px; border:1px solid var(--border); border-radius:4px; resize:vertical;"></textarea>
+		</label>
+		<label n:if="!empty($vaultsAvailable)" style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text2);">
+			Vault (optional)
+			<select name="vault" style="padding:6px; border:1px solid var(--border); border-radius:4px;">
+				<option value="">— no vault —</option>
+				<option n:foreach="$vaultsAvailable as $v" value="{$v['name']}">{$v['name']}</option>
+			</select>
+		</label>
+		<div>
+			<button type="submit" style="padding:6px 14px; border:1px solid var(--border); border-radius:4px; background:var(--accent, #3b82f6); color:white; font-size:12px; cursor:pointer;">
+				Start session
+			</button>
+			<span style="margin-left:8px; font-size:11px; color:var(--text2);">
+				Spawns <code>php bin/run-agent.php</code> as a non-blocking child; you'll be redirected to the live session view.
+			</span>
+		</div>
+	</form>
+</div>
+
 <h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Recent sessions</h3>
 {if $sessions}
 <table class="table" style="width:100%; border-collapse:collapse;">
