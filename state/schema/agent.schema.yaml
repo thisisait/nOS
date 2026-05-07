@@ -101,9 +101,13 @@ properties:
       max_concurrent_threads:
         type: integer
         minimum: 1
-        maximum: 10
-        default: 1
-        description: "Hard cap on parallel sub-agent threads. Homelab default 1."
+        maximum: 16
+        default: 4
+        description: |
+          Cap on parallel sub-agent threads (Coordinator::runWithChildren).
+          ProcessPool clamps silently into [1, 16]. Default 4 is the
+          A14-multiagent-followup baseline; bump for batch consolidation
+          jobs (Dreams / Pulse fan-out) where more parallelism helps.
   outcomes:
     type: object
     additionalProperties: false

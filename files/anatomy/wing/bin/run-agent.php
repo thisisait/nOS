@@ -7,6 +7,25 @@ declare(strict_types=1);
  *
  *   php bin/run-agent.php --agent=conductor [--prompt=...] [--vault=...] [--trigger=pulse] [--trigger-id=...] [--session-uuid=...]
  *
+ * Multi-agent extras (when spawned by Coordinator::runWithChildren):
+ *   [--parent-thread-uuid=UUID]  primary thread of the coordinator session.
+ *                                Echoed back into the child's exit summary so
+ *                                the coordinator can persist the cross-process
+ *                                join into agent_threads.stop_reason.
+ *   [--thread-uuid=UUID]         the agent_threads row the coordinator
+ *                                pre-created for this child (status=pending).
+ *                                Echoed back so the coordinator can flip it
+ *                                to idle/error/terminated on exit.
+ *   [--actor=ID]                 actor_id propagated to the child's session
+ *                                (must match the bearer token's name when
+ *                                spawned from the API surface).
+ *
+ * The child runner does NOT mutate the parent's agent_sessions row directly;
+ * the parent owns that. The child runs its own Runner::run() lifecycle and
+ * prints the summary on stdout — the coordinator parses it. The audit-trail
+ * lineage joins via agent_threads.parent_thread_uuid (coordinator-written)
+ * + the child's own agent_sessions row (this script writes it via Runner).
+ *
  * Exit codes:
  *   0  session ended idle / outcome satisfied
  *   1  session terminated with error
@@ -16,8 +35,9 @@ declare(strict_types=1);
  * directly during dev. The Wing /api/v1/agents/<name>/sessions POST presenter
  * spawns it via proc_open array form, passing --session-uuid so the 202
  * response can hand back the UUID before the child has booted enough to
- * write its own row. The full lineage lands in agent_sessions / events /
- * Tempo regardless of caller.
+ * write its own row. Coordinator spawns it as a child for parallel sub-agent
+ * dispatch via the same proc_open array form. The full lineage lands in
+ * agent_sessions / events / Tempo regardless of caller.
  */
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -28,7 +48,10 @@ use Nette\Bootstrap\Configurator;
 
 $opts = parseArgs($argv);
 if (empty($opts['agent'])) {
-	fwrite(STDERR, "Usage: php bin/run-agent.php --agent=NAME [--prompt=TEXT] [--vault=NAME] [--trigger=pulse|webhook|operator] [--trigger-id=ID] [--session-uuid=UUID]\n");
+	fwrite(STDERR, "Usage: php bin/run-agent.php --agent=NAME [--prompt=TEXT] [--vault=NAME]"
+		. " [--trigger=pulse|webhook|operator|coordinator] [--trigger-id=ID]"
+		. " [--session-uuid=UUID] [--parent-thread-uuid=UUID] [--thread-uuid=UUID]"
+		. " [--actor=ID]\n");
 	exit(2);
 }
 
@@ -43,6 +66,15 @@ if (!empty($opts['session-uuid'])) {
 		exit(2);
 	}
 }
+
+// Multi-agent context — these args are accepted but their persistence is the
+// COORDINATOR's responsibility. The child runner echoes them back into the
+// summary stdout so the coordinator can fold the cross-process linkage into
+// agent_threads. NEVER echo secrets here; we only pass identifiers.
+$multiagentContext = [
+	'parent_thread_uuid' => $opts['parent-thread-uuid'] ?? null,
+	'thread_uuid'        => $opts['thread-uuid'] ?? null,
+];
 
 $configurator = new Configurator();
 $configurator->setTempDirectory(__DIR__ . '/../temp');
@@ -82,6 +114,13 @@ $summary = [
 	'tokens' => ['input' => $result->tokensInput, 'output' => $result->tokensOutput],
 	'error' => $result->error,
 ];
+// When spawned as a coordinator child, echo the multi-agent context back so
+// the parent can join its pre-created agent_threads row to this child's
+// agent_sessions.uuid without an extra query. Only IDENTIFIERS — never echo
+// prompts, vault names, or env values that could leak through audit logs.
+if ($multiagentContext['thread_uuid'] !== null || $multiagentContext['parent_thread_uuid'] !== null) {
+	$summary['multiagent'] = array_filter($multiagentContext, static fn ($v) => $v !== null);
+}
 echo json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 exit($result->error === null ? 0 : 1);
 

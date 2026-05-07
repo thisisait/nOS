@@ -108,9 +108,14 @@ final class AgentLoader
 				isset($rosterRaw['version']) ? (int) $rosterRaw['version'] : null,
 			);
 		}
-		$maxThreads = (int) ($raw['multiagent']['max_concurrent_threads'] ?? 1);
-		if ($maxThreads < 1 || $maxThreads > 10) {
-			throw new AgentLoadException("max_concurrent_threads must be 1..10; got {$maxThreads}");
+		// Default 4 (A14 multi-agent-followup baseline). Hard cap 16 — beyond
+		// that you want a queue runner (Pulse), not in-process parallelism.
+		// ProcessPool clamps silently as a defense-in-depth, but the loader
+		// still rejects out-of-range values so agent.yml authors get a clear
+		// error message instead of a silent clamp.
+		$maxThreads = (int) ($raw['multiagent']['max_concurrent_threads'] ?? 4);
+		if ($maxThreads < 1 || $maxThreads > 16) {
+			throw new AgentLoadException("max_concurrent_threads must be 1..16; got {$maxThreads}");
 		}
 
 		// Outcomes
