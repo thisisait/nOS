@@ -38,6 +38,13 @@ final class EventRepository
 		// `WHERE actor_action_id=?`. Decision payload carries
 		// `result_json: {verdict: "approve"|"reject", operator_username, note}`.
 		'agent_approval_request', 'agent_approval_decision',
+		// Big-red-button platform halt (A12 — /admin emergency control, 2026-05-07).
+		//   admin_emergency_halt     — Tier-1 operator halts all Pulse cron firing
+		//   admin_emergency_resume   — Tier-1 operator resumes after halt
+		// Both share actor_action_id (one halt-resume cycle = one UUID); the halt
+		// row's result_json records {jobs_affected, operator_username, note?}, the
+		// resume row records {jobs_unhalted, operator_username, note?}.
+		'admin_emergency_halt', 'admin_emergency_resume',
 	];
 
 	public function __construct(

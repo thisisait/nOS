@@ -278,4 +278,94 @@ final class PulseRepository
 			),
 		);
 	}
+
+	// ── Emergency halt (A12 — /admin big-red-button, 2026-05-07) ─────────
+	//
+	// Sentinel prefix in pulse_jobs.paused_reason — operator-set "manual:*"
+	// pauses must NOT be auto-resumed when the operator clicks Resume after
+	// emergency halt. Only halt-set pauses (with this prefix) are eligible
+	// for the bulk un-pause.
+	private const HALT_REASON_PREFIX = 'emergency-halt:';
+
+	/**
+	 * Pause every currently-unpaused job. Returns the number of jobs that
+	 * actually transitioned (already-paused jobs are NOT touched —
+	 * preserves the operator's manual pause intent across halt cycles).
+	 *
+	 * The reason field encodes "who halted, when" so the resume sweep
+	 * can target only halt-set pauses without disturbing manual ones.
+	 */
+	public function emergencyHaltAll(string $operator): int
+	{
+		$now = date('c');
+		$reason = self::HALT_REASON_PREFIX . $operator . ':' . $now;
+
+		$affected = $this->db->table('pulse_jobs')
+			->where('paused', 0)
+			->where('removed_at', null)
+			->update([
+				'paused'        => 1,
+				'paused_reason' => $reason,
+				'updated_at'    => $now,
+			]);
+		return (int) $affected;
+	}
+
+	/**
+	 * Resume only the jobs paused by an emergency halt (paused_reason
+	 * starts with the sentinel prefix). Manual pauses (paused_reason
+	 * starting with 'manual:' or anything else) are NOT touched.
+	 */
+	public function emergencyResumeAll(): int
+	{
+		$now = date('c');
+		$pattern = self::HALT_REASON_PREFIX . '%';
+
+		$affected = $this->db->table('pulse_jobs')
+			->where('paused', 1)
+			->where('paused_reason LIKE ?', $pattern)
+			->where('removed_at', null)
+			->update([
+				'paused'        => 0,
+				'paused_reason' => null,
+				'updated_at'    => $now,
+			]);
+		return (int) $affected;
+	}
+
+	/**
+	 * Whether at least one job is currently in emergency-halted state.
+	 * Used by the layout header to decide whether to show the red banner.
+	 */
+	public function isEmergencyHaltActive(): bool
+	{
+		$pattern = self::HALT_REASON_PREFIX . '%';
+		return (bool) $this->db->table('pulse_jobs')
+			->where('paused', 1)
+			->where('paused_reason LIKE ?', $pattern)
+			->where('removed_at', null)
+			->count('*');
+	}
+
+	/**
+	 * Counts for the /admin status page: unpaused / emergency-halted /
+	 * manually paused / total. The four buckets sum to total, so the
+	 * page can render an accurate by-state breakdown without a second
+	 * query.
+	 *
+	 * @return array{unpaused: int, emergency_halted: int, manually_paused: int, total: int}
+	 */
+	public function jobStateCounts(): array
+	{
+		$pattern = self::HALT_REASON_PREFIX . '%';
+		$tbl = fn() => $this->db->table('pulse_jobs')->where('removed_at', null);
+		return [
+			'unpaused'         => (int) $tbl()->where('paused', 0)->count('*'),
+			'emergency_halted' => (int) $tbl()->where('paused', 1)
+				->where('paused_reason LIKE ?', $pattern)->count('*'),
+			'manually_paused'  => (int) $tbl()->where('paused', 1)
+				->where('paused_reason NOT LIKE ?', $pattern)->count('*'),
+			'total'            => (int) $tbl()->count('*'),
+		];
+	}
 }

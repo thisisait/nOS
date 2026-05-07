@@ -35,6 +35,11 @@
 	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals <span class="tab-key">8</span></a>
 	<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">9</span></a>
 	<a class="tab{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">6</span></a>
+	{* A12: Admin tab only visible to nos-providers (Tier-1). Server-side
+	   guard in AdminPresenter::requireSuperAdmin is the actual gate. *}
+	{if $isSuperAdmin}
+		<a class="tab{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin" style="margin-left:auto; color:#d11; font-weight:600;">Admin</a>
+	{/if}
 </div>
 
 <div class="container">

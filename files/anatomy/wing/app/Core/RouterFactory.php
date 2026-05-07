@@ -127,6 +127,13 @@ final class RouterFactory
 		// conductor self-test produced rows with actor_id=conductor.
 		$router->addRoute('audit', 'Audit:default');
 
+		// A12 (2026-05-07): Tier-1 platform control panel (big-red-button
+		// emergency halt of all Pulse cron firing). Specific routes BEFORE
+		// the catch-all 'admin' so the matcher hits the verb form first.
+		$router->addRoute('admin/halt', 'Admin:halt');
+		$router->addRoute('admin/resume', 'Admin:resume');
+		$router->addRoute('admin', 'Admin:default');
+
 		return $router;
 	}
 }
