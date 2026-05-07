@@ -2,6 +2,7 @@
   "name": "nos/wing",
   "description": "Wing — nOS security research dashboard (formerly Wing)",
   "type": "project",
+  "license": "AGPL-3.0-only",
   "require": {
     "php": ">=8.3",
     "nette/application": "^3.2",

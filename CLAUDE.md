@@ -242,7 +242,34 @@ No code changes. The runner takes care of routing, secrets, and observability.
 - **yamllint:** max line length 180 (warning)
 - **ansible-lint:** skips `schema[meta]`, `role-name`, `fqcn`, `name[missing]`, `no-changed-when`, `risky-file-permissions`, `yaml`
 
-## Documentation Language
+## Lockfile discipline
+
+**`composer.json` and `composer.lock` are always in sync. Same for any future Python lock (Pulse / Bone).**
+
+Editing `files/anatomy/wing/composer.json` directly without running `composer update` ships a broken commit — the playbook's `pazny.wing/tasks/main.yml` task `[pazny.wing] Run composer install` exits 4 with a cryptic *"lock file is not up to date"* trace deep in a blank run. Two gates catch this BEFORE the playbook does:
+
+1. **Pytest gate** — `tests/anatomy/test_lockfile_sync.py` runs `composer validate --strict --no-check-publish` against the wing tree. CI runs it on every PR/push (composer is installed in the `pytest` job). Local: `python3 -m pytest tests/anatomy/test_lockfile_sync.py`.
+2. **Operator-side pre-flight** — `pazny.wing/tasks/main.yml` runs the same `composer validate` *immediately before* the install task. If lock is stale, the playbook fails at the validate step with a clear diagnosis.
+
+Adding a Wing dep:
+
+```bash
+cd files/anatomy/wing
+composer require <package> --no-install   # updates BOTH composer.json + composer.lock
+git add composer.json composer.lock
+```
+
+Or for a manual edit you already made:
+
+```bash
+cd files/anatomy/wing
+composer update <package> --no-install     # regenerates lock entry only
+git add composer.lock
+```
+
+Never edit `composer.json` and commit without `composer.lock` updates. Same principle applies to any future `pyproject.toml` / `requirements.lock` for Pulse + Bone — when those gain explicit lock files, mirror these gates.
+
+## Known Tech Debt
 
 `README.md`, `TLDR.md`, inline comments, and task names are in **English**. The Czech-language legacy has been retired as part of the `nOS` rebrand. If you find residual Czech strings, translate them.
 

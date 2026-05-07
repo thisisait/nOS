@@ -147,6 +147,23 @@
     path: "{{ wing_app_dir }}/composer.lock"
   register: _wing_lock_stat
 
+# Pre-flight (2026-05-07): catch composer.json/composer.lock drift BEFORE
+# `composer install` exits 4 with a cryptic "lock file is not up to date"
+# trace deep in the playbook. `composer validate --strict` fails fast with
+# the SAME diagnosis but at a place the operator can actually act on
+# (right before the install task, with the CWD already set). The
+# matching pytest in tests/test_lockfile_sync.py is the CI gate that
+# stops a drifted commit landing in the first place; this is the
+# operator-side belt to that suspenders.
+- name: "[pazny.wing] Pre-flight — composer validate --strict (lockfile sync gate)"
+  ansible.builtin.command:
+    cmd: composer validate --strict --no-check-publish
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_composer_validate
+  changed_when: false
+  failed_when: _wing_composer_validate.rc != 0
+  when: _wing_lock_stat.stat.exists
+
 - name: "[pazny.wing] Run composer install (vendor missing or lock newer)"
   ansible.builtin.command:
     cmd: composer install --no-dev --optimize-autoloader --no-interaction

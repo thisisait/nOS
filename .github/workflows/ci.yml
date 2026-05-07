@@ -114,6 +114,20 @@ jobs:
         with:
           python-version: '3.13'
 
+      # PHP + composer needed by tests/anatomy/test_lockfile_sync.py.
+      # The test gates files/anatomy/wing/{composer.json,composer.lock}
+      # drift — added 2026-05-07 after a lockfile-only commit shipped
+      # without re-running `composer update` and broke the operator's
+      # next playbook run. Without composer in PATH the test self-skips
+      # (Homebrew dev path) — the CI runner explicitly installs it so
+      # the gate is binding here.
+      - name: Set up PHP + composer.
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
       - name: Install test dependencies.
         run: pip3 install pytest pyyaml jsonschema httpx
 
