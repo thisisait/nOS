@@ -31,6 +31,13 @@ final class EventRepository
 		// falls back to `task_ok` and loses semantic clarity in the audit
 		// trail (caught during the 2026-05-07 first ceremony).
 		'conductor_self_test_step', 'conductor_report',
+		// Agent approval workflow (A11 — /approvals UI, 2026-05-07).
+		//   agent_approval_request   — agent posts before high-blast-radius action
+		//   agent_approval_decision  — operator clicks Approve / Reject in /approvals
+		// Both share `actor_action_id` so a request + its decision pair via
+		// `WHERE actor_action_id=?`. Decision payload carries
+		// `result_json: {verdict: "approve"|"reject", operator_username, note}`.
+		'agent_approval_request', 'agent_approval_decision',
 	];
 
 	public function __construct(
@@ -142,6 +149,71 @@ final class EventRepository
 		}
 
 		return ['items' => $items, 'total' => $total];
+	}
+
+	/**
+	 * List `agent_approval_request` events that have NOT yet been paired
+	 * with an `agent_approval_decision` row (matched by actor_action_id).
+	 * Newest first. Used by the /approvals UI (A11, 2026-05-07).
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function listPendingApprovals(int $limit = 50): array
+	{
+		$limit = max(1, min(200, $limit));
+		// Subquery: actor_action_id values that already have a decision.
+		$decided = $this->db->table('events')
+			->where('type', 'agent_approval_decision')
+			->select('actor_action_id');
+		$decidedIds = [];
+		foreach ($decided->fetchAll() as $row) {
+			$decidedIds[$row->actor_action_id] = true;
+		}
+
+		$rows = [];
+		foreach (
+			$this->db->table('events')
+				->where('type', 'agent_approval_request')
+				->order('id DESC')
+				->limit($limit)
+				->fetchAll() as $row
+		) {
+			if (isset($decidedIds[$row->actor_action_id])) {
+				continue;
+			}
+			$item = $row->toArray();
+			if (!empty($item['result_json'])) {
+				$item['result'] = json_decode($item['result_json'], true);
+			}
+			$rows[] = $item;
+		}
+		return $rows;
+	}
+
+	/**
+	 * Recent decisions (last N), newest first. For the /approvals history
+	 * panel beneath the pending queue.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function listRecentDecisions(int $limit = 20): array
+	{
+		$limit = max(1, min(100, $limit));
+		$rows = [];
+		foreach (
+			$this->db->table('events')
+				->where('type', 'agent_approval_decision')
+				->order('id DESC')
+				->limit($limit)
+				->fetchAll() as $row
+		) {
+			$item = $row->toArray();
+			if (!empty($item['result_json'])) {
+				$item['result'] = json_decode($item['result_json'], true);
+			}
+			$rows[] = $item;
+		}
+		return $rows;
 	}
 
 	/**

@@ -113,6 +113,13 @@ final class RouterFactory
 
 		// Conductor inbox + approvals (Anatomy A8.c, 2026-05-07)
 		$router->addRoute('inbox', 'Inbox:default');
+		// A11 (2026-05-07): operator clicks Approve/Reject in /approvals.
+		// Each maps to ApprovalsPresenter::actionApprove / actionReject($actionId)
+		// which posts an agent_approval_decision event and redirects back.
+		// Specific routes BEFORE the catch-all `approvals` so the matcher
+		// hits the parameterized form first.
+		$router->addRoute('approvals/approve/<actionId>', 'Approvals:approve');
+		$router->addRoute('approvals/reject/<actionId>', 'Approvals:reject');
 		$router->addRoute('approvals', 'Approvals:default');
 
 		// A10.c / X.1.c (2026-05-08): actor-attributed event browser.
