@@ -43,6 +43,25 @@ final class AgentsPresenter extends BasePresenter
 	) {
 	}
 
+	/**
+	 * Tier-1 RBAC gate (BasePresenter::requireSuperAdmin). Mirrors
+	 * AdminPresenter / ApprovalsPresenter — every action on this presenter
+	 * (read AND write) requires nos-providers membership. actionStart is
+	 * particularly sensitive: it forwards a server-side cURL with the
+	 * daemon's WING_API_TOKEN to the bearer-protected API endpoint, so a
+	 * caller who reaches it gains agent-runner authority under daemon
+	 * credentials. Authentik forward-auth already gates wing.<tld> to
+	 * Tier-1 (default.config.yml::authentik_app_tiers wing: 1) — this
+	 * gate is the in-Wing defence-in-depth layer per A13.7 doctrine.
+	 *
+	 * Pinned by tests/anatomy/test_security_presenter_gates.py.
+	 */
+	public function startup(): void
+	{
+		parent::startup();
+		$this->requireSuperAdmin();
+	}
+
 	public function renderDefault(): void
 	{
 		$this->template->agents = $this->buildCatalog();

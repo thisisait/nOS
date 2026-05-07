@@ -56,6 +56,16 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         PRESENTERS / "ApprovalsPresenter.php",
         ["actionApprove", "actionReject"],
     ),
+    (
+        # Browser-side AgentsPresenter (NOT the Api/ one). actionStart proxies
+        # POST /api/v1/agents/<name>/sessions with the daemon's WING_API_TOKEN
+        # — without the requireSuperAdmin gate, any authenticated wing user
+        # gains agent-runner authority under daemon credentials. Added 2026-
+        # 05-07 after security-review surfaced the gap (A13.7-class issue).
+        "AgentsPresenter",
+        PRESENTERS / "AgentsPresenter.php",
+        ["actionStart"],
+    ),
 ]
 
 
