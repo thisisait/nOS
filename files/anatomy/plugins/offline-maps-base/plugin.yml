@@ -1,0 +1,75 @@
+# =============================================================================
+# offline-maps-base — service plugin (Track Q5 — content batch, 2026-05-07)
+#
+# Status: live. Wires `pazny.offline_maps` (tileserver-gl + MBTiles) into
+# the plugin loader so it picks up health probes, observability labels,
+# GDPR Article 30 row, and Wing /hub deep-link card without role-side
+# imperatives.
+#
+# tileserver-gl serves vector + raster MBTiles offline (Wikipedia-style
+# offline-first content delivery — cf. iiab stack mission). Default
+# fixture is the tileserver-gl Zurich demo (~2 MB); operators replace
+# it with their own MBTiles via `maps_mbtiles_files`.
+#
+# SSO posture: forward_auth at the Traefik layer. tileserver-gl has no
+# native OIDC. No `authentik:` block here (Track Q5 doctrine).
+# =============================================================================
+
+name: offline-maps-base
+version: 0.1.0
+description: |
+  Wiring layer for tileserver-gl: offline vector + raster map tiles served
+  from MBTiles archives. Forward-auth gated at the Traefik proxy; no
+  app-level authentication.
+upstream: https://github.com/maptiler/tileserver-gl
+license: BSD-3-Clause
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.offline_maps
+  feature_flag: install_offline_maps
+  variables:
+    - maps_port
+    - maps_domain
+    - tenant_domain
+    - host_alias
+
+lifecycle:
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ maps_port | default(8070) }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+  post_blank:
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/maps"
+
+observability:
+  loki:
+    labels:
+      app: tileserver
+      stack: iiab
+      tier: "3"
+
+gdpr:
+  data_categories:
+    - tile_request_logs              # bbox / zoom / tile coords requested
+    - hostname_labels
+  data_subjects:
+    - operators
+    - end_users                      # browser clients viewing offline maps
+  legal_basis: legitimate_interests
+  retention_days: 30
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Offline Maps"
+    icon: map
+    url: "https://{{ maps_domain }}/"
+    tier: 3
+    description: "Offline vector + raster map tiles (MBTiles)"
+    health_check: "/"

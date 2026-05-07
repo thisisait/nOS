@@ -1,0 +1,79 @@
+# =============================================================================
+# mcp-gateway-base — service plugin (Track Q5 — content batch, 2026-05-07)
+#
+# Status: live. Wires `pazny.mcp_gateway` (mcpo — MCP-to-OpenAPI proxy) into
+# the plugin loader so it picks up health probes, observability labels, GDPR
+# Article 30 row, and Wing /hub deep-link card without role-side imperatives.
+#
+# mcpo bridges multiple MCP servers (time, memory, fetch, filesystem, git,
+# postgres, grafana) into a single OpenAPI surface that OpenWebUI consumes
+# via TOOL_SERVER_CONNECTIONS. The Grafana MCP runs as a sibling SSE
+# container (see compose.yml.j2 in the role).
+#
+# SSO posture: forward_auth at the Traefik layer (see compose-extension in
+# `pazny.traefik`). mcpo itself authenticates OpenWebUI via the bearer
+# `--api-key` flag — there is no app-level OIDC. No `authentik:` block
+# here (Track Q5 doctrine: forward-auth services are gated by the
+# operator's Traefik labels, not by per-plugin OIDC clients).
+# =============================================================================
+
+name: mcp-gateway-base
+version: 0.1.0
+description: |
+  Wiring layer for mcpo (MCP-to-OpenAPI proxy). Surfaces 7 MCP servers
+  (time, memory, fetch, filesystem, git, postgres, grafana) as a unified
+  OpenAPI endpoint for OpenWebUI tool integrations. Bearer-key auth at the
+  app level; forward-auth gated at the Traefik proxy.
+upstream: https://github.com/open-webui/mcpo
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.mcp_gateway
+  feature_flag: install_mcp_gateway
+  variables:
+    - mcpo_port
+    - mcpo_domain
+    - tenant_domain
+    - host_alias
+
+lifecycle:
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ mcpo_port | default(8765) }}/docs"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # /docs may 401 behind bearer; that's healthy
+  post_blank:
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/mcpo"
+
+observability:
+  loki:
+    labels:
+      app: mcpo
+      stack: iiab
+      tier: "3"
+
+gdpr:
+  data_categories:
+    - mcp_request_metadata           # tool invocations + parameters
+    - filesystem_access_logs         # read-only paths exposed by filesystem MCP
+    - git_repo_access_logs           # local repo reads via git MCP
+  data_subjects:
+    - operators
+    - automated_systems              # OpenWebUI agents proxying through mcpo
+  legal_basis: legitimate_interests
+  retention_days: 30
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "MCP Gateway"
+    icon: plug
+    url: "https://{{ mcpo_domain }}/docs"
+    tier: 3
+    description: "MCP-to-OpenAPI proxy for OpenWebUI"
+    health_check: "/docs"

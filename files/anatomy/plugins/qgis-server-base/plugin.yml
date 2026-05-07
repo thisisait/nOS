@@ -1,0 +1,74 @@
+# =============================================================================
+# qgis-server-base — service plugin (Track Q5 — content batch, 2026-05-07)
+#
+# Status: live. Wires `pazny.qgis_server` (kartoza/qgis-server) into the
+# plugin loader so it picks up health probes, observability labels, GDPR
+# Article 30 row, and Wing /hub deep-link card without role-side imperatives.
+#
+# QGIS Server publishes WMS / WFS / WCS endpoints from QGIS project files
+# under `~/qgis/projects/`. The kartoza image is amd64-only — on ARM64
+# Mac it runs via Rosetta emulation (`platform: linux/amd64`).
+#
+# SSO posture: NO SSO (per CLAUDE.md trichotomy — QGIS is in the
+# "No SSO" bucket alongside FreePBX). The OGC endpoints (WMS GetMap,
+# WFS GetFeature) are stateless and authenticated only at the Traefik
+# perimeter (network-level access control). No `authentik:` block.
+# =============================================================================
+
+name: qgis-server-base
+version: 0.1.0
+description: |
+  Wiring layer for QGIS Server (OGC WMS / WFS / WCS endpoints from QGIS
+  project files). No SSO (OGC clients consume the service directly);
+  network-level access control at the Traefik perimeter.
+upstream: https://docs.qgis.org/latest/en/docs/server_manual/
+license: GPL-2.0-or-later
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.qgis_server
+  feature_flag: install_qgis_server
+  variables:
+    - qgis_port
+    - tenant_domain
+    - host_alias
+
+lifecycle:
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ qgis_port | default(8071) }}/"
+        timeout: 90                  # amd64 emulation cold-start is slow
+        accept_any_2xx_3xx_4xx: true # QGIS root path returns 500 without ?MAP=; healthy
+  post_blank:
+    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
+
+observability:
+  loki:
+    labels:
+      app: qgis-server
+      stack: engineering
+      tier: "3"
+
+gdpr:
+  data_categories:
+    - ogc_request_logs               # WMS GetMap / WFS GetFeature parameters
+    - hostname_labels
+  data_subjects:
+    - operators
+    - automated_systems              # GIS clients consuming OGC endpoints
+  legal_basis: legitimate_interests
+  retention_days: 30
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "QGIS Server"
+    icon: map-pin
+    url: "https://qgis{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}/"
+    tier: 3
+    description: "OGC WMS / WFS / WCS map server (no SSO)"
+    health_check: "/"
