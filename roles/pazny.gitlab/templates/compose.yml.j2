@@ -2,17 +2,6 @@
 # pazny.gitlab — compose override fragment
 # Merged into `docker compose -p devops up` by tasks/stacks/stack-up.yml via
 # ansible.builtin.find across {{ stacks_dir }}/devops/overrides/*.yml.
-#
-# Does not declare top-level networks: — devops_net and {{ stacks_shared_network }}
-# are defined in base templates/stacks/devops/docker-compose.yml.j2.
-#
-# D2 (2026-05-05): mkcert CA volume mount + authentik extra_host MOVED to
-# gitlab-base plugin's compose-extension. GITLAB_OMNIBUS_CONFIG stays here
-# because it is a monolithic Ruby-string env var (Compose file-merge replaces
-# the whole key; can't split infra config from OIDC config across files).
-# The plugin.yml authentik: block drives the Authentik blueprint. Extra
-# complexity note: `gitlab-base.yml` < `gitlab.yml` alphabetically so role
-# file wins the OMNIBUS_CONFIG merge; plugin's version was dead code pre-D2.
 # =============================================================================
 
 services:

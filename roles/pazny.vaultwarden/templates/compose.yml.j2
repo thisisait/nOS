@@ -2,15 +2,6 @@
 # pazny.vaultwarden — compose override fragment
 # Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
-#
-# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
-#
-# D2 (2026-05-05): SSO_* env vars + mkcert CA volume + update-ca-certificates
-# entrypoint + authentik extra_host MOVED to vaultwarden-base plugin's compose-
-# extension (files/anatomy/plugins/vaultwarden-base/templates/vaultwarden-base.
-# compose.yml.j2). Role keeps install-only concerns: DOMAIN, signups, admin
-# token, WebSocket flag.
 # =============================================================================
 
 services:

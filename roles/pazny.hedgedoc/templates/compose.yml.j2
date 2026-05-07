@@ -2,17 +2,6 @@
 # pazny.hedgedoc — compose override fragment
 # Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
-#
-# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
-#
-# HedgeDoc vyzaduje: PostgreSQL (z infra stacku).
-#
-# D2 (2026-05-05): CMD_OAUTH2_* env vars + mkcert CA volume + authentik
-# extra_host MOVED to hedgedoc-base plugin's compose-extension (files/anatomy/
-# plugins/hedgedoc-base/templates/hedgedoc-base.compose.yml.j2). Role keeps
-# install-only concerns: DB, session, SMTP relay, mailpit extra_host.
-# Config reference: https://docs.hedgedoc.org/configuration/
 # =============================================================================
 
 services:

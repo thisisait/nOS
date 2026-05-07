@@ -2,16 +2,6 @@
 # pazny.miniflux — compose override fragment
 # Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
-#
-# Neredeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
-#
-# Miniflux vyzaduje: PostgreSQL (z infra stacku).
-#
-# D2 (2026-05-05): OAUTH2_* env vars + mkcert CA volume + authentik extra_host
-# MOVED to miniflux-base plugin's compose-extension (files/anatomy/plugins/
-# miniflux-base/templates/miniflux-base.compose.yml.j2). Role keeps: DB, admin
-# seed, base URL, SMTP relay.
 # =============================================================================
 
 services:

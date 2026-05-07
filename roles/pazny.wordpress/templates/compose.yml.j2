@@ -2,18 +2,6 @@
 # pazny.wordpress — compose override fragment
 # Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
-#
-# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
-#
-# Authentik SSO: native OIDC via the `openid-connect-generic` WP plugin.
-# Settings are pushed through mu-plugin oidc-bootstrap.php (auto-loaded from
-# wp-content/mu-plugins/) which reads WP_OIDC_* env vars at `init`.
-#
-# D2 (2026-05-05): WP_OIDC_* env vars + mkcert CA volume + authentik extra_host
-# MOVED to wordpress-base plugin's compose-extension (files/anatomy/plugins/
-# wordpress-base/templates/wordpress-base.compose.yml.j2). Role keeps: DB,
-# table prefix, SMTP relay. mu-plugin mount stays here (install concern).
 # =============================================================================
 
 services:

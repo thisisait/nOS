@@ -2,14 +2,6 @@
 # pazny.infisical — compose override fragment
 # Merged do `docker compose -p infra up` v tasks/stacks/core-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/infra/overrides/*.yml.
-#
-# Nedeklaruje top-level networks: — infra_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/infra/docker-compose.yml.j2.
-#
-# D2 (2026-05-05): OIDC_CLIENT_ID/SECRET/DISCOVERY_URL/ISSUER/REDIRECT_URI env
-# vars + authentik extra_host MOVED to infisical-base plugin's compose-extension
-# (files/anatomy/plugins/infisical-base/templates/infisical-base.compose.yml.j2).
-# Role keeps install-only concerns: encryption keys, DB, Redis, SMTP relay.
 # =============================================================================
 
 services:

@@ -2,14 +2,6 @@
 # pazny.n8n — compose override fragment
 # Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
-#
-# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
-#
-# D2 (2026-05-05): N8N_AUTH_OIDC_* env vars + mkcert CA volume (tenant_domain_
-# is_local gate) + NODE_EXTRA_CA_CERTS + authentik extra_host MOVED to n8n-base
-# plugin's compose-extension (files/anatomy/plugins/n8n-base/templates/
-# n8n-base.compose.yml.j2). Role keeps: host/port/webhook, timezone, SMTP.
 # =============================================================================
 
 services:

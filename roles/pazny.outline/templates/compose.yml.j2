@@ -2,20 +2,6 @@
 # pazny.outline — compose override fragment
 # Merged do `docker compose up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/b2b/overrides/*.yml.
-#
-# Neredeklaruje top-level networks: — b2b_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/b2b/docker-compose.yml.j2.
-#
-# Outline vyzaduje: PostgreSQL + Redis (oboje z infra stacku).
-#
-# D2 (2026-05-05): Authentik OIDC wiring (OIDC_CLIENT_ID/SECRET/URIs +
-# mkcert CA volume + authentik extra_host) MOVED to outline-base plugin's
-# compose-extension (files/anatomy/plugins/outline-base/templates/
-# outline-base.compose.yml.j2). The plugin loader's pre_compose hook
-# renders it into {{ stacks_dir }}/b2b/overrides/outline-base.yml,
-# Docker Compose merges both override files. This role keeps non-Authentik
-# concerns: DATABASE_URL, REDIS_URL, FILE_STORAGE, SMTP relay, mailpit
-# extra_host.
 # =============================================================================
 
 services:

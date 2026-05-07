@@ -2,19 +2,6 @@
 # pazny.freescout — compose override fragment
 # Merged into `docker compose up` in tasks/stacks/stack-up.yml via
 # ansible.builtin.find over {{ stacks_dir }}/b2b/overrides/*.yml.
-#
-# Does NOT redeclare top-level networks: — b2b_net and {{ stacks_shared_network }}
-# are defined in the base templates/stacks/b2b/docker-compose.yml.j2.
-#
-# FreeScout requires: MariaDB (from the infra stack, database + user created
-# by default.config.yml mariadb_databases / mariadb_users seed lists).
-#
-# Native OIDC (Authentik) is wired via the `freescout-oauth` community module.
-#
-# D2 (2026-05-05): FREESCOUT_OIDC_* env vars + mkcert CA volume + authentik
-# extra_host MOVED to freescout-base plugin's compose-extension (files/anatomy/
-# plugins/freescout-base/templates/freescout-base.compose.yml.j2). Role keeps
-# install-only concerns: DB, SMTP relay, mailpit extra_host.
 # =============================================================================
 
 services:

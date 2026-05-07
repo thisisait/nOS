@@ -199,10 +199,12 @@ and [docs/framework-plan.md](docs/framework-plan.md) for the authoritative spec.
 
 ## SSO & RBAC
 
-Single sign-on is not optional in `nOS` — every service is fronted by Authentik at
-`auth.<tld>` (default `auth.dev.local`). The `authentik_oidc_apps` list in
-`default.config.yml` is the single source of truth; post-start tasks auto-provision
-OIDC providers and applications for every enabled service.
+Single sign-on is not optional in `nOS` — most services are fronted by Authentik at
+`auth.<tld>` (default `auth.dev.local`). Each Tier-1 plugin under
+`files/anatomy/plugins/<svc>-base/plugin.yml` carries its own `authentik:` block;
+the `authentik-base` aggregator harvests them into `inputs.clients` and the plugin
+loader renders them into the live Authentik blueprint at deploy time. Post-start
+tasks auto-provision OIDC providers and applications for every enabled service.
 
 ### Integration modes
 
@@ -342,16 +344,25 @@ fallback directories.
 
 ## Adding a new service
 
-1. Scaffold the role under `roles/pazny.<service>/` following the compose-override pattern.
-2. Wire it into the right stack orchestrator (`tasks/stacks/core-up.yml` or `stack-up.yml`) with
-   `include_role` — remember both `apply: { tags: […] }` **and** `tags: […]` on the task so
-   `--tags` filtering works.
-3. Add `install_<service>: false` to `default.config.yml`.
-4. (OIDC) Append an entry to `authentik_oidc_apps` and reference `{{ authentik_oidc_apps[N].client_id }}`
-   in the compose template. (Proxy auth) Add an nginx vhost template and set an `authentik_app_tiers` entry.
-5. (Nginx) Drop a vhost into `templates/nginx/sites-available/`.
+**Tier-1 (full role + plugin):**
 
-The role is discoverable by the orchestrator the moment it renders a file into `~/stacks/<stack>/overrides/`.
+1. Scaffold the role under `roles/pazny.<service>/` following the compose-override pattern.
+2. Wire it into the right stack orchestrator (`tasks/stacks/core-up.yml` or `stack-up.yml`)
+   with `include_role` — remember both `apply: { tags: […] }` **and** `tags: […]` on the
+   task so `--tags` filtering works.
+3. Add `install_<service>: false` to `default.config.yml`.
+4. Create `files/anatomy/plugins/<service>-base/plugin.yml` with an `authentik:` block
+   (mirror an existing sibling such as `grafana-base/plugin.yml`). The plugin loader
+   harvests it into the Authentik blueprint automatically.
+5. Add a row to `state/manifest.yml` with `domain_var` + `port_var` so Traefik's
+   file-provider auto-routes the service.
+
+**Tier-2 (manifest-only — no role):** drop a YAML at `apps/<service>.yml` and re-run the
+playbook. See [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md) for the
+GDPR-gated manifest schema and Coolify import flow.
+
+The full doctrine for both paths lives in [CLAUDE.md](CLAUDE.md) §Adding a new
+Docker service.
 
 ---
 

@@ -104,7 +104,9 @@ Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` 
 4. **Wave D** (large setups): `moodle`, `kolibri`, `openemr`, `invoiceninja`, `dolibarr`  —  pending
 5. **Wave E** (low priority): `joomla`, `wallos`, `farmos`  —  pending
 
-Each Wave = 1 PR from a `cc/*` worktree onto `master` (the `dev` branch was retired 2026-04-16). Open the next worktree from fresh `master` after the previous wave merges.
+Each Wave = a multi-agent batch under the `worktree-agent-*` doctrine
+(see [docs/multi-agent-batch.md](docs/multi-agent-batch.md)) merging onto `master`.
+Open the next batch from fresh `master` after the previous wave merges.
 
 ---
 

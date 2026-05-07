@@ -2,16 +2,6 @@
 # pazny.open_webui — compose override fragment
 # Merged do `docker compose up iiab` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
-#
-# Nedeklaruje top-level networks: — iiab_net a {{ stacks_shared_network }}
-# jsou definovane v base templates/stacks/iiab/docker-compose.yml.j2.
-#
-# D2 (2026-05-05): OAUTH_CLIENT_ID/SECRET + OPENID_PROVIDER_URL + ENABLE_OAUTH_
-# SIGNUP/MERGE + OAUTH_SCOPES + mkcert CA volume + REQUESTS_CA_BUNDLE/SSL_CERT_
-# FILE/AIOHTTP_CA env vars + authentik extra_host MOVED to open-webui-base
-# plugin's compose-extension (files/anatomy/plugins/open-webui-base/templates/
-# open-webui-base.compose.yml.j2). Role keeps: Ollama URL, auth/signup flags,
-# security hardening, MCP gateway, Anthropic connector, host-gateway.
 # =============================================================================
 
 services:

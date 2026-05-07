@@ -2,17 +2,6 @@
 # pazny.bookstack — compose override fragment
 # Merged into `docker compose up b2b` by tasks/stacks/stack-up.yml via
 # ansible.builtin.find across {{ stacks_dir }}/b2b/overrides/*.yml.
-#
-# Does not declare top-level networks: — b2b_net and {{ stacks_shared_network }}
-# are defined in base templates/stacks/b2b/docker-compose.yml.j2.
-#
-# BookStack requires: MariaDB (from the infra stack via shared_net) +
-# optionally Redis for cache/session/queue.
-#
-# D2 (2026-05-05): Authentik OIDC wiring (AUTH_METHOD/OIDC_* env vars +
-# mkcert CA volume + authentik extra_host) MOVED to bookstack-base plugin's
-# compose-extension (files/anatomy/plugins/bookstack-base/templates/
-# bookstack-base.compose.yml.j2). Role keeps non-Authentik concerns only.
 # =============================================================================
 
 services:
