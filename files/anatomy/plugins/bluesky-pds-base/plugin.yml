@@ -1,0 +1,81 @@
+# =============================================================================
+# bluesky-pds-base — service plugin (Track Q3 — storage + DB batch, 2026-05-07)
+#
+# Bluesky AT Protocol Personal Data Server. Lives in the infra compose stack.
+# Identity bridge from Authentik → PDS account auto-provision is cross-service
+# orchestration in tasks/stacks/bluesky_pds_bridge.yml — NOT in this manifest;
+# the bridge stays role-side until a future Q-batch harvests it.
+#
+# AT Protocol identity is its own thing — handles like @user.bsky.<tld> are
+# AT-native (DID-backed), not OIDC clients. So no `authentik:` block here:
+# operators don't "Sign in with Authentik" to the PDS; the bridge mints
+# AT accounts when Authentik users get created.
+#
+# Wing /hub card surfaces the OAuth login URL (PDS exposes its own
+# AT-native auth on /xrpc); operator-facing endpoint, not Authentik.
+# =============================================================================
+
+name: bluesky-pds-base
+version: 0.1.0
+description: |
+  Wiring layer for Bluesky PDS (AT Protocol Personal Data Server): identity
+  + repo + blob substrate for AT-native handles (@user.bsky.<tld>). Pinned
+  to 0.4. Federation toggled via bluesky_pds_public_federation when on a
+  public TLD with DNS + ACME wildcard.
+upstream: https://atproto.com/
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.bluesky_pds
+  feature_flag: install_bluesky_pds
+  variables:
+    - bluesky_pds_hostname
+    - bluesky_pds_port
+    - bluesky_pds_data_dir
+    - tenant_domain
+
+lifecycle:
+  post_compose:
+    # PDS exposes /xrpc/_health — returns 200 once the SQLite repo + blobstore
+    # subsystems load. The role's compose-level healthcheck already pings
+    # this; the plugin-level wait_health gives the loader a single contract
+    # to surface failures into the Wing telemetry stream.
+    - wait_health:
+        url: "http://127.0.0.1:{{ bluesky_pds_port | default(2583) }}/xrpc/_health"
+        timeout: 60
+  post_blank:
+    - remove_dir: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}"
+
+observability:
+  loki:
+    labels:
+      app: bluesky-pds
+      stack: infra
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - at_protocol_identities        # DID + handle records
+    - social_repository_content     # posts, likes, follows, etc.
+    - object_storage_blobs          # uploaded media
+    - account_credentials           # PDS-local password hashes (admin + bridged users)
+  data_subjects:
+    - operators
+    - end_users                     # tenants who get bridged AT accounts
+  legal_basis: legitimate_interests
+  retention_days: -1                # social repository — operator-managed lifecycle
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Bluesky PDS"
+    icon: at-sign
+    url: "https://{{ bluesky_pds_hostname }}"
+    tier: 3
+    description: "AT Protocol identity + posts"
+    health_check: "/xrpc/_health"

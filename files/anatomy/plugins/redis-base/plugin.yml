@@ -1,0 +1,62 @@
+# =============================================================================
+# redis-base — service plugin (Track Q3 — storage + DB batch, 2026-05-07)
+#
+# Headless infra substrate. Backs Authentik (server + worker session cache),
+# n8n, and any other Redis-backed consumer. Lives in the infra compose stack
+# alongside Postgres + MariaDB.
+#
+# Feature-flag oddity: this role is gated by `redis_docker`, not
+# `install_redis`. nOS coexists a Homebrew-native Redis (default) with a
+# Dockerized one — the toggle picks which path is active for cross-stack
+# Docker consumers. When `redis_docker: true`, this plugin lights up.
+# =============================================================================
+
+name: redis-base
+version: 0.1.0
+description: |
+  Wiring layer for Redis 7.4 in the infra compose stack: shared in-memory
+  cache + pubsub substrate for Authentik (server + worker), n8n, and any
+  other Redis-backed consumer. Pinned to 7.4.6-alpine for CVE-2025-49844
+  (RediShell RCE).
+upstream: https://redis.io/
+license: BSD-3-Clause
+
+type:
+  - service
+
+requires:
+  role: pazny.redis
+  feature_flag: redis_docker
+  variables:
+    - redis_port
+    - redis_data_dir
+    - global_password_prefix
+
+lifecycle:
+  post_compose:
+    # Redis has no HTTP endpoint. Liveness is `redis-cli -a <pw> ping`
+    # baked into the compose-level healthcheck (interval 10s, retries 5).
+    # The plugin loader treats post_compose: noop as "the role's
+    # healthcheck is the contract".
+    - noop: "TCP-only service; liveness via redis-cli ping in compose healthcheck"
+  post_blank:
+    - remove_dir: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}"
+
+observability:
+  loki:
+    labels:
+      app: redis
+      stack: infra
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - cache_data                    # transient session blobs, ephemeral
+    - oauth_session_data            # Authentik session cache lives here
+  data_subjects:
+    - operators
+    - end_users                     # session keys for downstream service users
+  legal_basis: legitimate_interests
+  retention_days: 1                 # AOF rotates fast; nothing is durable beyond a day in practice
+  processors: []
+  eu_residency: true

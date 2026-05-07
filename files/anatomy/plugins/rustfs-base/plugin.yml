@@ -1,0 +1,79 @@
+# =============================================================================
+# rustfs-base — service plugin (Track Q3 — storage + DB batch, 2026-05-07)
+#
+# RustFS — Rust-implemented S3-compatible drop-in for MinIO. Lives in the
+# iiab compose stack (not infra) per current default — backs the nightly
+# backup target + any S3-API consumer (Outline blob store, future
+# Bluesky blobstore, etc.).
+#
+# Has a real web console at fs.<tld> (port 9001) — operators get a
+# Wing /hub card. App-level identity is access_key / secret_key, not OIDC,
+# so no `authentik:` block. Native OIDC support landed upstream in
+# alpha.91+ but the operator-blocking work to wire it (org claim mapping,
+# bucket policy attach) is queued separately.
+# =============================================================================
+
+name: rustfs-base
+version: 0.1.0
+description: |
+  Wiring layer for RustFS (Rust S3-compatible drop-in for MinIO): nightly
+  backup destination + S3-API consumer substrate. Console at fs.<tld>;
+  S3 endpoint at the api port. Pinned to 1.0.0-alpha.93 for CVE-2025-68926
+  + alpha.91 multipart auth hardening + OIDC claim matching fix.
+upstream: https://rustfs.com/
+license: Apache-2.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.rustfs
+  feature_flag: install_rustfs
+  variables:
+    - rustfs_domain
+    - rustfs_api_port
+    - rustfs_console_port
+    - rustfs_data_dir
+    - tenant_domain
+    - host_alias
+
+lifecycle:
+  post_compose:
+    # RustFS exposes /health on the S3 API port (NOT the console port).
+    # MinIO-style /minio/health/live is NOT implemented in alpha.x.
+    # The role's compose-level healthcheck pings /health internally;
+    # this plugin-level wait_health gives the loader a single contract
+    # to surface failures into the Wing telemetry stream.
+    - wait_health:
+        url: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}/health"
+        timeout: 60
+  post_blank:
+    - remove_dir: "{{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data') }}"
+
+observability:
+  loki:
+    labels:
+      app: rustfs
+      stack: iiab
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - object_storage_blobs          # backup tarballs, blob-store contents
+    - access_logs                   # S3 GET/PUT request log
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 90                # backup retention; per-bucket lifecycle policies tighten
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "RustFS"
+    icon: hard-drive
+    url: "https://{{ rustfs_domain }}"
+    tier: 1
+    description: "S3-compatible object storage"
+    health_check: "/health"

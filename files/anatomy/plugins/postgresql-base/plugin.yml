@@ -1,0 +1,68 @@
+# =============================================================================
+# postgresql-base — service plugin (Track Q3 — storage + DB batch, 2026-05-07)
+#
+# Headless infra substrate. Backs Authentik, Outline, HedgeDoc, Miniflux,
+# BookStack, Wing/Bone telemetry — anything in nOS that wants Postgres.
+# Auto-enabled by main.yml whenever a consumer flips its install_* on.
+#
+# No app-level OIDC: Postgres is a TCP service consumed by other services
+# via DSN, not by humans through HTTPS. No Wing /hub card either — operator
+# inspects via psql / Portainer / Grafana exporter.
+# =============================================================================
+
+name: postgresql-base
+version: 0.1.0
+description: |
+  Wiring layer for PostgreSQL 16 in the infra compose stack: shared OLTP
+  substrate for Authentik, Outline, HedgeDoc, Miniflux, BookStack and
+  any future Postgres-backed consumer. Tuned for the M-series Authentik
+  pool-leak (max_connections=600 + idle_session_timeout=5min).
+upstream: https://www.postgresql.org/
+license: PostgreSQL
+
+type:
+  - service
+
+requires:
+  role: pazny.postgresql
+  feature_flag: install_postgresql
+  variables:
+    - postgresql_port
+    - postgresql_root_user
+    - postgresql_data_dir
+    - postgresql_max_connections
+    - global_password_prefix
+
+lifecycle:
+  # No config-file rendering today — Postgres reads its tuning from the
+  # `command:` block in the role's compose.yml.j2. The plugin holds the
+  # contract; if a future Q-batch extracts a postgresql.conf, it lands in
+  # provisioning: + a render step here.
+  post_compose:
+    # Postgres has no HTTP endpoint. Liveness is `pg_isready` baked into the
+    # compose-level healthcheck (interval 10s, retries 10, start_period 15s).
+    # The plugin loader treats post_compose: noop as "the role's healthcheck
+    # is the contract" and moves on.
+    - noop: "TCP-only service; liveness via pg_isready in compose healthcheck"
+  post_blank:
+    - remove_dir: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}"
+
+observability:
+  loki:
+    labels:
+      app: postgresql
+      stack: infra
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - application_user_data         # whatever each consumer service stores
+    - audit_logs
+    - oauth_session_data            # Authentik sessions live here
+  data_subjects:
+    - operators
+    - end_users                     # downstream services may have end-user rows
+  legal_basis: legitimate_interests
+  retention_days: -1                # data lifetime owned by the consuming service
+  processors: []
+  eu_residency: true

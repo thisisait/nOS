@@ -1,0 +1,64 @@
+# =============================================================================
+# mariadb-base — service plugin (Track Q3 — storage + DB batch, 2026-05-07)
+#
+# Headless infra substrate. Backs WordPress, Nextcloud, FreeScout, BookStack
+# and any other MariaDB-backed consumer. Lives in the infra compose stack
+# alongside Postgres + Redis.
+#
+# Note: data lives in a Docker NAMED VOLUME (mariadb_data), not a host
+# bind-mount, to dodge the Apple Silicon VirtIOFS InnoDB FK-ALTER crash.
+# See roles/pazny.mariadb/templates/compose.yml.j2 for the full archaeology.
+# =============================================================================
+
+name: mariadb-base
+version: 0.1.0
+description: |
+  Wiring layer for MariaDB 11.8 in the infra compose stack: shared MySQL
+  substrate for WordPress, Nextcloud, FreeScout, BookStack and any other
+  MariaDB-backed consumer. Performance-tuned for Apple Silicon (named
+  volume + skip-doublewrite + fsync flush method).
+upstream: https://mariadb.org/
+license: GPL-2.0
+
+type:
+  - service
+
+requires:
+  role: pazny.mariadb
+  feature_flag: install_mariadb
+  variables:
+    - mariadb_port
+    - mariadb_data_dir
+    - global_password_prefix
+
+lifecycle:
+  post_compose:
+    # MariaDB has no HTTP endpoint. Liveness is `healthcheck.sh --connect
+    # --innodb_initialized` baked into the compose-level healthcheck
+    # (interval 10s, retries 10, start_period 30s). The plugin loader
+    # treats post_compose: noop as "the role's healthcheck is the contract".
+    - noop: "TCP-only service; liveness via mariadb-healthcheck.sh in compose healthcheck"
+  post_blank:
+    # Named volume, not a bind-mount — `docker compose down --volumes`
+    # in tasks/blank-reset.yml drops mariadb_data; nothing for the plugin
+    # to remove on the host side.
+    - noop: "data lives in named volume mariadb_data; blank-reset wipes via compose down --volumes"
+
+observability:
+  loki:
+    labels:
+      app: mariadb
+      stack: infra
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - application_user_data         # each consumer service's user/content rows
+    - audit_logs
+  data_subjects:
+    - operators
+    - end_users                     # WordPress / Nextcloud / FreeScout end users
+  legal_basis: legitimate_interests
+  retention_days: -1                # data lifetime owned by the consuming service
+  processors: []
+  eu_residency: true
