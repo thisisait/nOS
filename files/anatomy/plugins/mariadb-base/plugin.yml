@@ -31,18 +31,13 @@ requires:
     - mariadb_data_dir
     - global_password_prefix
 
-lifecycle:
-  post_compose:
-    # MariaDB has no HTTP endpoint. Liveness is `healthcheck.sh --connect
-    # --innodb_initialized` baked into the compose-level healthcheck
-    # (interval 10s, retries 10, start_period 30s). The plugin loader
-    # treats post_compose: noop as "the role's healthcheck is the contract".
-    - noop: "TCP-only service; liveness via mariadb-healthcheck.sh in compose healthcheck"
-  post_blank:
-    # Named volume, not a bind-mount — `docker compose down --volumes`
-    # in tasks/blank-reset.yml drops mariadb_data; nothing for the plugin
-    # to remove on the host side.
-    - noop: "data lives in named volume mariadb_data; blank-reset wipes via compose down --volumes"
+# No lifecycle hooks: MariaDB is TCP-only, liveness is
+# `healthcheck.sh --connect --innodb_initialized` baked into the
+# compose-level healthcheck (interval 10s, retries 10, start_period 30s).
+# Data lives in a Docker NAMED VOLUME (mariadb_data) — `docker compose
+# down --volumes` in tasks/blank-reset.yml wipes it; nothing for the
+# plugin to remove on the host side. Same shape as alloy-base /
+# watchtower-base.
 
 observability:
   loki:

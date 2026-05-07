@@ -38,12 +38,11 @@ lifecycle:
   # `command:` block in the role's compose.yml.j2. The plugin holds the
   # contract; if a future Q-batch extracts a postgresql.conf, it lands in
   # provisioning: + a render step here.
-  post_compose:
-    # Postgres has no HTTP endpoint. Liveness is `pg_isready` baked into the
-    # compose-level healthcheck (interval 10s, retries 10, start_period 15s).
-    # The plugin loader treats post_compose: noop as "the role's healthcheck
-    # is the contract" and moves on.
-    - noop: "TCP-only service; liveness via pg_isready in compose healthcheck"
+  #
+  # No post_compose: TCP-only service; liveness is `pg_isready` baked into
+  # the compose-level healthcheck (interval 10s, retries 10, start_period 15s).
+  # The role's healthcheck is the contract — alloy-base / watchtower-base
+  # use the same shape (omit post_compose entirely when no HTTP probe).
   post_blank:
     - remove_dir: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}"
 

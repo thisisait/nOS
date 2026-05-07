@@ -33,12 +33,10 @@ requires:
     - global_password_prefix
 
 lifecycle:
-  post_compose:
-    # Redis has no HTTP endpoint. Liveness is `redis-cli -a <pw> ping`
-    # baked into the compose-level healthcheck (interval 10s, retries 5).
-    # The plugin loader treats post_compose: noop as "the role's
-    # healthcheck is the contract".
-    - noop: "TCP-only service; liveness via redis-cli ping in compose healthcheck"
+  # No post_compose: TCP-only service; liveness is `redis-cli -a <pw> ping`
+  # baked into the compose-level healthcheck (interval 10s, retries 5).
+  # The role's healthcheck is the contract — alloy-base / watchtower-base
+  # use the same shape (omit post_compose entirely when no HTTP probe).
   post_blank:
     - remove_dir: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}"
 
