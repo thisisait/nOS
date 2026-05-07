@@ -117,6 +117,20 @@ smoke_endpoints:
     when: "install_bluesky_pds | default(false)"
     note: "Bluesky PDS direct loopback (Traefik routing pending)"
 
+  # GitLab is documented as slow-start (3-5 min cold). The role's
+  # health-probes.yml already has retries: 36 for the wait-for, but
+  # the smoke runner's default 5s per-request timeout is too tight
+  # when GitLab Omnibus's internal nginx is mid-boot — surfaced live
+  # 2026-05-07 as a smoke TimeoutError despite the service responding
+  # 302 in <100ms moments later. 30s matches the documented worst-case
+  # Omnibus internal-proxy latency.
+  - id: gitlab
+    url: "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
+    expect: [200, 301, 302, 308]
+    when: "install_gitlab | default(false)"
+    timeout: 30
+    note: "GitLab Omnibus — slow first-boot (3-5 min); long timeout"
+
   # ── Tier-2 apps (populated by apps_runner once it lands) ──────────────────
   # Apps_runner appends entries here automatically per onboarded
   # apps/<name>.yml manifest; left empty by default.

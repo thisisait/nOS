@@ -1,19 +1,27 @@
-{# nodered-base — Traefik forward-auth labels for nodered.
+{# nodered-base — compose-extension stub (β1.B native_oidc, refactored 2026-05-07).
 
-Renders into:
-  {{ stacks_dir }}/iiab/overrides/nodered-base.yml
+   Pre-β1.B this template emitted Traefik docker-provider labels with
+   `authentik@file` forward-auth middleware. β1.B (2026-05-05) flipped
+   Node-RED to native_oidc (passport-openidconnect adminAuth wired into
+   /data/settings.js inside the role). The role-emitted Traefik labels
+   then COLLIDED with the file-provider entry derived from
+   state/manifest.yml — duplicate routers with same Host rule, one with
+   `authentik@file` and one without, Traefik picked nondeterministically
+   → 404 (smoke probe failure 2026-05-07 12:25).
 
-Docker Compose merges this with the role's primary override fragment.
-The `authentik@file` middleware lives in the Traefik file provider
-(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
-plugin only wires services INTO that middleware.
+   Fix (2026-05-07): for native_oidc services, file-provider's auto-derived
+   router (state/manifest.yml + traefik_auth_modes:nodered=oidc → no
+   middleware) is the canonical route. Plugin compose-extensions must NOT
+   emit Traefik labels for Tier-1 services.
+
+   This file remains as an _NOS_PLUGIN env stub (anatomy P0.12) so the
+   plugin identity surfaces in `docker inspect`. CI gate
+   tests/anatomy/test_native_oidc_no_authentik_middleware.py blocks any
+   future re-introduction of the authentik@file label class.
 #}
 services:
   nodered:
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nodered.rule=Host(`{{ nodered_domain }}`)"
-      - "traefik.http.routers.nodered.entrypoints=websecure"
-      - "traefik.http.routers.nodered.tls=true"
-      - "traefik.http.routers.nodered.middlewares=authentik@file,security-headers@file,compress@file"
-      - "traefik.http.services.nodered.loadbalancer.server.port={{ nodered_port }}"
+    environment:
+      # Defensive sentinel — pin the plugin slug for any tool that
+      # introspects containers via `docker inspect` (P0.12 doctrine).
+      _NOS_PLUGIN: "nodered-base"
