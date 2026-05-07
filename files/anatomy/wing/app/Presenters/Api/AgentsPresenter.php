@@ -7,7 +7,6 @@ namespace App\Presenters\Api;
 use App\AgentKit\AgentLoader;
 use App\AgentKit\AgentLoadException;
 use App\Model\AgentSessionRepository;
-use Nette\Application\UI\Presenter;
 
 /**
  * Wing /api/v1/agents — REST surface over the agent catalog + session lineage.
@@ -15,31 +14,25 @@ use Nette\Application\UI\Presenter;
  *   GET  /api/v1/agents                         — list on-disk agents
  *   GET  /api/v1/agents/<name>                  — single agent config (parsed YAML view)
  *   GET  /api/v1/agents/<name>/sessions         — session list for one agent
- *   GET  /api/v1/agent-sessions/<uuid>          — single session lineage (threads + iterations)
  *
- * Read-only here. Run-trigger lands in a follow-up (POST /api/v1/agents/<name>/sessions)
- * once the launchd-spawned-runner-from-Wing path is wired without blocking the
- * presenter.
+ * Auth: bearer token (api_tokens table). Inherited from BaseApiPresenter
+ * via requireTokenAuth() — the canonical Wing pattern. A14.1 (2026-05-07)
+ * security review found the original A14 implementation only checked the
+ * `Bearer ` prefix without validating against api_tokens; switching to the
+ * BaseApiPresenter inheritance closes that bypass.
  *
- * Auth: bearer token (api_tokens table). Anonymous access denied.
+ * Read-only here. Run-trigger lands in a follow-up. WHEN that endpoint
+ * is added, MUST derive `actor_id` from $this->validatedToken['name']
+ * (via getActorId()) — never accept a client-supplied actor_id in the
+ * request payload, mirroring the X.1.b pattern Pulse already uses.
  */
-final class AgentsPresenter extends Presenter
+final class AgentsPresenter extends BaseApiPresenter
 {
 	public function __construct(
 		private AgentLoader $loader,
 		private AgentSessionRepository $sessions,
 	) {
-	}
-
-	public function startup(): void
-	{
-		parent::startup();
-		// Bearer-token auth — same gate as other api/v1 read endpoints.
-		// Public-action exception surfaces only on /metrics.
-		$header = $this->getHttpRequest()->getHeader('Authorization');
-		if (!is_string($header) || !str_starts_with($header, 'Bearer ')) {
-			$this->sendJson(['error' => 'unauthorized'], 401);
-		}
+		parent::__construct();
 	}
 
 	public function actionDefault(?string $name = null): void
@@ -65,15 +58,15 @@ final class AgentsPresenter extends Presenter
 					$out[] = ['name' => $n, 'error' => $exc->getMessage()];
 				}
 			}
-			$this->sendJson(['data' => $out, 'total' => count($out)]);
-			return;
+			$this->sendSuccess(['data' => $out, 'total' => count($out)]);
 		}
+
 		try {
 			$a = $this->loader->load($name);
 		} catch (AgentLoadException $exc) {
-			$this->sendJson(['error' => $exc->getMessage()], 404);
+			$this->sendError($exc->getMessage(), 404);
 		}
-		$this->sendJson([
+		$this->sendSuccess([
 			'name' => $a->name,
 			'version' => $a->version,
 			'description' => $a->description,
@@ -102,12 +95,6 @@ final class AgentsPresenter extends Presenter
 	public function actionSessions(string $name): void
 	{
 		$rows = $this->sessions->listRecent(100, $name);
-		$this->sendJson(['data' => $rows, 'total' => count($rows)]);
-	}
-
-	private function sendJson(array $payload, int $status = 200): never
-	{
-		$this->getHttpResponse()->setCode($status);
-		$this->sendResponse(new \Nette\Application\Responses\JsonResponse($payload));
+		$this->sendSuccess(['data' => $rows, 'total' => count($rows)]);
 	}
 }

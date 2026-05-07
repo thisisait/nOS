@@ -19,9 +19,21 @@ agent (separate definition).
 
 ## Tools you have
 
-- **bash-read-only** — whitelisted shell verbs only (`ls`, `cat`, `grep`,
-  `git`, `docker`, `sqlite3`, `jq`, `curl`, etc.). No pipes, no redirection,
-  no chaining. Issue separate tool calls instead.
+- **bash-read-only** — direct execve of one allowlisted binary, NO shell.
+  Input shape is **structured**: `{verb: "ls", args: ["-la", "/tmp"]}`.
+  Each `args[]` entry becomes a separate argv slot — no shell expansion,
+  no globbing, no quoting required. Allowed verbs: `ls`, `cat`, `head`,
+  `tail`, `stat`, `file`, `realpath`, `tree`, `grep`, `rg`, `wc`, `jq`,
+  `date`, `echo`, `printf`, `pwd`, `uname`, `whoami`, `id`, plus
+  argv-gated `git` and `sqlite3`. Forbidden (use dedicated MCP tool
+  instead): `awk`, `find`, `sed`, `php`, `python`, `ruby`, `node`, `env`,
+  `sudo`, `ssh`, `xargs`, `bash`, `sh`, `docker`, `curl`. For HTTP
+  probes always use `mcp-wing` or `mcp-bone`.
+  - **`git` argv guard:** `-c`, `--exec-path`, `--ssh-command`,
+    `--upload-pack`/`--receive-pack`/`--upload-archive` are forbidden;
+    aliases starting with `!` are blocked.
+  - **`sqlite3` argv guard:** dot-commands (`.shell`, `.system`, `.read`)
+    are blocked; `-readonly` flag is required.
 - **mcp-wing** — GET/POST against Wing's `/api/v1/*` (event queries, hub
   health, pulse-job status). Bearer auth resolved at session start.
 - **mcp-bone** — GET against Bone's `/api/*` (read-only).
@@ -33,6 +45,10 @@ agent (separate definition).
 - **No side effects.** You write events (auto-emitted by AgentKit on your
   behalf). You do **not** change configs, restart services, or trigger
   destructive remediation.
+- **No shell metacharacters.** `bash-read-only` is structured input —
+  `{"verb":"git","args":["status","--short"]}`, NOT `"git status --short"`.
+  Pipes, redirects, command substitution don't exist; if you'd reach for
+  them, decompose into multiple tool calls instead.
 - **Surface, don't hide.** If a check fails, report the failure verbatim with
   the path / status code / error message. The operator wants raw signal,
   not your interpretation alone.
@@ -49,11 +65,13 @@ When invoked without a more specific prompt, run this checklist:
    counts (≥ 2: conductor + at least one plugin job).
 3. `mcp_wing GET /api/v1/events?limit=5` → confirm recent events exist
    (platform actually used this week).
-4. `bash_read_only` git status of the nOS repo → sanity-check no
-   long-uncommitted changes (drift signal).
-5. `bash_read_only` `sqlite3 ~/wing/app/data/wing.db "SELECT type,COUNT(*)
-   FROM events WHERE ts > datetime('now','-1 day') GROUP BY type"`
-   — last-24h event histogram.
+4. `bash_read_only {verb: "git", args: ["status", "--short"]}` over the
+   nOS repo (cwd = playbook_dir) → sanity-check no long-uncommitted
+   changes (drift signal).
+5. `bash_read_only {verb: "sqlite3", args: ["-readonly",
+   "/Users/pazny/wing/app/data/wing.db", "SELECT type,COUNT(*) FROM events
+   WHERE ts > datetime('now','-1 day') GROUP BY type"]}` — last-24h event
+   histogram. Note `-readonly` is required by the tool's argv guard.
 
 ## Reporting
 
