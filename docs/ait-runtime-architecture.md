@@ -172,11 +172,18 @@ GET /grafana/explore?datasource=tempo&query=<trace_id>
 
 1. If a vault is bound (via `--vault=<name>` in `bin/run-agent.php`), look up `agent_credentials` row matching scope. Decode `secret_ref`:
    - `env:VAR_NAME` → `getenv(VAR_NAME)`
-   - `infisical:/path` → reserved (B4 wires it to Infisical CLI; today returns null)
+   - `infisical:/path` → `InfisicalClient::fetch(path)` shells out to the operator's Infisical CLI (Track B U-B-Vault, 2026-05-07)
 2. Fallback: env-var by deterministic name (`anthropic-api` → `ANTHROPIC_API_KEY`, etc.)
 3. Otherwise null. Caller decides whether that's fatal.
 
 Plaintext is **never** stored in `agent_credentials.secret_ref`. The column is a pointer.
+
+**Infisical CLI invocation contract** (locked by `tests/anatomy/test_agentkit_infisical_vault.py`):
+- Path is validated against `^/[A-Za-z0-9_/-]+$` BEFORE any subprocess. Bad paths reject with `null` and the error_log line does NOT echo the bad input (it could be attacker-controlled via Tier-2 manifests).
+- `proc_open` uses the **array form** (`proc_open([$bin, "secrets", "get", $name, "--path", $parent, "--plain", "--silent"], ...)`) — string form delegates to `/bin/sh -c` (A14.1 RCE class) and is forbidden.
+- `proc_open` env_vars allowlist: `PATH, HOME, LANG, LC_ALL, LC_CTYPE, TZ, PWD, TMPDIR, INFISICAL_TOKEN`. Nothing else — `ANTHROPIC_API_KEY`, `WING_API_TOKEN`, `BONE_SECRET`, `WING_EVENTS_HMAC_SECRET`, `OPENCLAW_API_KEY` are NEVER forwarded to the spawned CLI.
+- Resolved values are cached at `CredentialResolver` instance level for the SESSION lifetime only. `bindVault(null)` drops the cache. The cache is `private array` (not `static`) so sessions get isolated caches. Never persists to disk.
+- CLI not on `PATH`? `fetch()` returns `null` + logs once per process: "infisical CLI not on PATH; falling back to env". The caller (resolver) then walks the env-var fallback. Operators install via `brew install infisical/get-cli/infisical`; an `INFISICAL_BIN` env var overrides the Homebrew/usr-local probe order.
 
 ---
 
@@ -283,5 +290,5 @@ A regression that breaks any of these turns CI red before merge.
 - **Multi-agent process pool** — Coordinator currently runs sub-agents sequentially. A future iteration spawns parallel processes (capped at `max_concurrent_threads`) with primary-thread event proxy, mirroring Anthropic's full multi-agent surface.
 - **Dreams** (memory consolidation) — scheduled job that reads recent `agent_sessions` + an existing memory store, produces a deduplicated output store. Uses the same Runner code path with a special "dreaming" tool roster.
 - **Operator-trigger UI** — SHIPPED 2026-05-07 (Track B). `POST /api/v1/agents/<name>/sessions` (bearer auth) generates `session_uuid` server-side, spawns `php bin/run-agent.php` via `proc_open` array form (no shell), and returns 202 immediately. The Wing detail page (`/agents/<name>`) carries a "Start new session" form that proxies through `AgentsPresenter::actionStart` so the bearer token never touches browser HTML; on success the operator is redirected to `/agents/<name>/sessions/<uuid>` which auto-refreshes every 3s while status is `pending` / `running` / `starting`. Contract pinned by `tests/anatomy/test_agentkit_operator_trigger.py` (9 tests covering POST-only, actor_id derivation, proc_open array form, 202 shape, route ordering, run-agent.php --session-uuid forwarding).
-- **Vault refresh from Infisical** — wire `infisical:/path` secret_ref scheme so credential rotation propagates without restart.
+- ~~**Vault refresh from Infisical**~~ — `infisical:/path` secret_ref scheme **SHIPPED Track B U-B-Vault, 2026-05-07** (see Vault model section above). Re-resolution per session means rotated values pick up automatically when a new session opens; long-running sessions still see the value resolved at session-open time (acceptable trade-off — agents are short-lived by design).
 - **Per-agent webhook auto-fan-out** — agent.yml gains a `subscribe:` block to register the agent itself as a webhook receiver for events it cares about, enabling event-driven loops.
