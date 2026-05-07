@@ -62,10 +62,17 @@ class WingClient:
         except Exception as e:  # noqa: BLE001 — JSON parse fragility
             log.warning("list_due_jobs: JSON parse error %s", e)
             return []
-        if not isinstance(data, list):
-            log.warning("list_due_jobs: expected list, got %r", type(data))
-            return []
-        return data
+        # Wing response shape (2026-05-07): {"generated_at": "...",
+        # "jobs": [...]}. The dict wrapper lets future Wing versions add
+        # metadata (e.g. catalog_version, hmac signature) without breaking
+        # the contract. Pulse only needs the list.
+        if isinstance(data, dict) and isinstance(data.get("jobs"), list):
+            return data["jobs"]
+        if isinstance(data, list):
+            # Tolerate the older un-wrapped shape for the cutover window.
+            return data
+        log.warning("list_due_jobs: unexpected payload shape %r", type(data))
+        return []
 
     # ── Run lifecycle ───────────────────────────────────────────────────
 

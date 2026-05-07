@@ -23,7 +23,7 @@ final class HubPresenter extends BaseApiPresenter
 	/** @inject */
 	public SystemRepository $systems;
 
-	public function actionSystems(string $id = null): void
+	public function actionSystems(?string $id = null): void
 	{
 		if ($id !== null) {
 			$this->requireMethod('GET');

@@ -24,6 +24,13 @@ final class EventRepository
 		'patch_start', 'patch_step_ok', 'patch_step_failed', 'patch_end',
 		'coexistence_provision', 'coexistence_cutover', 'coexistence_cleanup',
 		'agent_run_start', 'agent_run_end',
+		// Conductor-emitted introspection events (A8 + Phase 5, 2026-05-07).
+		// agent_run_start/end bookend the runner's subprocess lifecycle;
+		// these are what the conductor itself writes between them as it walks
+		// through a Pulse-fired task. Without this whitelist the conductor
+		// falls back to `task_ok` and loses semantic clarity in the audit
+		// trail (caught during the 2026-05-07 first ceremony).
+		'conductor_self_test_step', 'conductor_report',
 	];
 
 	public function __construct(

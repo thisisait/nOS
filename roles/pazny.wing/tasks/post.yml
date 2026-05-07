@@ -162,6 +162,33 @@
   ansible.builtin.shell: |
     python3 <<'PY'
     import json, glob, sys, yaml
+    # Plugin manifests carry Jinja tokens like `{{ playbook_dir }}` and
+    # `{{ global_password_prefix }}_pw_*` in command/env strings — they're
+    # authored as templates, not literals. Pulse stores the rendered
+    # command in pulse_jobs.command and execs it directly (no Jinja
+    # engine at fire-time). We must therefore expand the tokens BEFORE
+    # POSTing to Wing, otherwise Pulse later forks `bash {{ playbook_dir }}/...`
+    # which exits 127 ("command not found"). Surfaced live 2026-05-07
+    # when the conductor self-test job auto-fired with rc=127.
+    SUBSTITUTIONS = {
+        '{{ playbook_dir }}': '{{ playbook_dir }}',
+        '{{ authentik_domain }}': '{{ authentik_domain | default("auth." ~ tenant_domain) }}',
+        '{{ tenant_domain }}': '{{ tenant_domain | default("dev.local") }}',
+        '{{ global_password_prefix }}': '{{ global_password_prefix }}',
+        '{{ wing_api_token }}': '{{ wing_api_token }}',
+        '{{ conductor_wing_api_token }}': '{{ conductor_wing_api_token }}',
+        '{{ bone_secret }}': '{{ bone_secret }}',
+    }
+    def _expand(value):
+        if isinstance(value, str):
+            for token, replacement in SUBSTITUTIONS.items():
+                value = value.replace(token, replacement)
+            return value
+        if isinstance(value, dict):
+            return {k: _expand(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [_expand(v) for v in value]
+        return value
     catalog = []
     sources = (
         glob.glob('{{ playbook_dir }}/files/anatomy/plugins/*/plugin.yml')
@@ -180,7 +207,7 @@
                 'plugin_name': doc.get('name')
                               or doc.get('agent_id')
                               or path.split('/')[-1].replace('.yml', ''),
-                'job': job,
+                'job': _expand(job),
             })
     print(json.dumps(catalog))
     PY
