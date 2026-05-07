@@ -1,0 +1,83 @@
+# =============================================================================
+# watchtower-base — service plugin (Track Q7 — edge / ops batch, 2026-05-07)
+#
+# Status: live. Container watcher that scans Docker Hub on a cron schedule
+# (default 04:30 daily) for image-tag drift across the fleet. Notify-only
+# by default — surfaces stale images in Mailpit; operator promotes via
+# upgrade recipes (`upgrades/<service>.yml`). When
+# watchtower_auto_apply: true is set per-host, watchtower also pulls +
+# recreates labelled stateless services.
+#
+# IMPORTANT: this plugin does NOT carry an `authentik:` block. Watchtower
+# is a host-side daemon with no UI — it has no login surface to gate.
+# It does NOT carry a `ui-extension.hub_card` either: Mailpit's inbox is
+# the operator-facing surface (notifications email-relayed via
+# WATCHTOWER_NOTIFICATIONS=email), so a /hub deep-link to watchtower
+# itself would land on a 404. Mirror the prometheus-base headless-infra
+# shape but skip the hub_card.
+# =============================================================================
+
+name: watchtower-base
+version: 0.1.0
+description: |
+  Wiring layer for Watchtower (Docker image drift watcher). Polls Docker
+  Hub on a cron schedule, looking for newer image tags than what's
+  running. Default mode notify-only: surfaces stale images via Mailpit
+  email so the operator can promote them through upgrade recipes.
+  Per-host opt-in (watchtower_auto_apply) flips it to apply mode for
+  labelled stateless services. Active fork (nickfedor/watchtower) tracks
+  current Docker APIs after the upstream containrrr archive in 2023.
+upstream: https://github.com/nickfedor/watchtower
+license: Apache-2.0
+
+type:
+  - service
+
+requires:
+  role: pazny.watchtower
+  feature_flag: install_watchtower
+  variables:
+    - watchtower_image
+    - watchtower_data_dir
+    - watchtower_schedule
+    - watchtower_mode
+    - watchtower_label_enable_only
+    - watchtower_notifications
+    - watchtower_notification_email_from
+    - watchtower_notification_email_to
+    - watchtower_notification_email_server
+    - watchtower_notification_email_port
+    - tenant_domain
+
+lifecycle:
+  # Watchtower has no HTTP health endpoint (no /healthz, no /ping — it's a
+  # cron daemon, not a service-mesh component). The container's own
+  # restart-loop on a missing Docker socket + Docker Compose's healthcheck
+  # exit-code on the binary itself is the only liveness signal — there's
+  # nothing for the plugin loader to wait on. Mirror the alloy-base /
+  # alloy-{docker,host}-metrics pattern: `lifecycle:` exists for
+  # post_blank cleanup, no post_compose hook at all.
+  post_blank:
+    - remove_dir: "{{ watchtower_data_dir }}"
+
+observability:
+  loki:
+    labels:
+      app: watchtower
+      stack: iiab
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - container_metadata        # image names, tags, IDs, restart counts
+    - update_event_logs         # what got pulled, when, success/failure
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 30            # log rotation: max-size 10m, max-file 3
+  processors: []
+  eu_residency: true
+
+# No ui-extension.hub_card — watchtower has no web UI. Operator
+# interacts with it through Mailpit (notifications) and Grafana
+# (Loki labels above) only.

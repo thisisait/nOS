@@ -1,0 +1,94 @@
+# =============================================================================
+# traefik-base — service plugin (Track Q7 — edge / ops batch, 2026-05-07)
+#
+# Status: live. Edge reverse proxy that binds 80/443 and front-fronts every
+# Tier-1 (file provider) + Tier-2 (Docker provider) HTTP service in the
+# fleet. Authoritative contract for the SSO/middleware layer is
+# documented in `docs/traefik-primary-proxy.md` — that doc is the
+# operator-facing source of truth; this manifest just declares Traefik's
+# wiring as a plugin manifest so the loader can health-gate and surface
+# the service in /hub like any other Tier-1 component.
+#
+# IMPORTANT: this plugin does NOT carry an `authentik:` block. Traefik IS
+# the SSO front-proxy — it consumes the `authentik@file` middleware
+# defined in {{ traefik_dynamic_dir }}/middlewares.yml; it does NOT
+# itself act as an OIDC client. Adding an authentik: block here would
+# (a) chain Authentik's own forward-auth in front of Traefik (logical
+# circularity — the gate would gate itself), and (b) try to register a
+# nos-traefik OIDC client that no upstream consumes. Mirror the
+# prometheus-base headless-infra shape instead.
+# =============================================================================
+
+name: traefik-base
+version: 0.1.0
+description: |
+  Wiring layer for Traefik (edge reverse proxy). Two providers: file
+  provider serves Tier-1 services from a YAML auto-derived from
+  state/manifest.yml; Docker provider serves Tier-2 apps via labels on
+  the apps stack. Authentik forward-auth is a file-provider middleware
+  (authentik@file) that Tier-1 routers + Tier-2 labels reference. See
+  docs/traefik-primary-proxy.md for the full SSO/middleware contract.
+upstream: https://traefik.io/
+license: MIT
+
+type:
+  - service
+
+requires:
+  role: pazny.traefik
+  feature_flag: install_traefik
+  variables:
+    - traefik_domain
+    - traefik_http_port
+    - traefik_https_port
+    - traefik_dashboard_port
+    - traefik_image_version
+    - traefik_config_dir
+    - traefik_dynamic_dir
+    - traefik_certs_dir
+    - traefik_log_dir
+    - tenant_domain
+    - host_alias
+
+lifecycle:
+  # Traefik's own static + dynamic config trees are still rendered by
+  # roles/pazny.traefik (traefik.yml + conf.d/services.yml +
+  # conf.d/middlewares.yml). The plugin loader's job here is the
+  # post-compose health gate so downstream Tier-1 plugins can assume
+  # the edge is live before they probe their own upstreams.
+  post_compose:
+    - wait_health:
+        # Traefik exposes /ping on the dashboard port (api.insecure on
+        # 127.0.0.1:8082). 60s start_period covers cold-start static-
+        # config parse + provider warm-up on the M-series macbook.
+        url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/ping"
+        timeout: 60
+
+observability:
+  loki:
+    labels:
+      app: traefik
+      stack: infra
+      tier: "1"
+
+gdpr:
+  data_categories:
+    - request_metadata          # access logs: method, path, status, latency
+    - client_ip_addresses       # source IPs in access + error logs
+    - user_agent_strings        # access log User-Agent header
+  data_subjects:
+    - operators
+    - end_users                 # any HTTP client reaching the edge
+  legal_basis: legitimate_interests
+  retention_days: 30            # access log rotation matches Loki retention
+  processors: []
+  eu_residency: true
+
+ui-extension:
+  hub_card:
+    title: "Traefik"
+    icon: shuffle
+    url: "https://{{ traefik_domain | default('traefik.' ~ (tenant_domain | default('dev.local'))) }}"
+    tier: 1
+    description: "Edge proxy + dashboard"
+    health_check: "/ping"
