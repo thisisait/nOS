@@ -59,6 +59,9 @@ final class AgentsPresenter extends BaseApiPresenter
 				}
 			}
 			$this->sendSuccess(['data' => $out, 'total' => count($out)]);
+			return;   // belt-and-suspenders — sendSuccess is `: never`, but if a
+			          // refactor weakens the contract this prevents fall-through
+			          // to the named-agent branch below (A14.2 hardening).
 		}
 
 		try {

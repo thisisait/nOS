@@ -186,7 +186,9 @@ def test_bash_tool_git_argv_guard(bash_tool_src):
 
 def test_bash_tool_sqlite3_argv_guard(bash_tool_src):
     """sqlite3 dot-commands escape the SQL evaluator. Argv guard rejects
-    args starting with . AND requires -readonly."""
+    args starting with . AND requires -readonly. A14.2 also blocks
+    -init / -A / -zip — init scripts can carry dot-commands even with
+    -readonly on the DB; -A/-zip is a sqlar write primitive."""
     sqlite_branch = re.search(
         r"\$verb\s*===\s*['\"]sqlite3['\"](.+?)(?=\$verb\s*===|return null;\s*\}\s*\}|\Z)",
         bash_tool_src, re.DOTALL,
@@ -201,3 +203,36 @@ def test_bash_tool_sqlite3_argv_guard(bash_tool_src):
     assert "-readonly" in sqlite_body, (
         "guardArgs() sqlite3 branch does not require -readonly flag"
     )
+    # A14.2 additions
+    for required_block in ('-init', '-A', '-zip'):
+        assert f"'{required_block}'" in sqlite_body, (
+            f"guardArgs() sqlite3 branch does not block {required_block!r} "
+            "(A14.2 hardening — init script / sqlar write primitive)"
+        )
+
+
+def test_bash_tool_proc_open_uses_minimal_env(bash_tool_src):
+    """A14.2 hardening: proc_open() passes an explicit minimal env so the
+    spawned child does NOT inherit FrankenPHP's full environment. Without
+    this, ANTHROPIC_API_KEY / WING_API_TOKEN / BONE_SECRET are visible to
+    every spawned tool."""
+    assert "minimalEnv()" in bash_tool_src, (
+        "BashReadOnlyTool.php no longer calls minimalEnv() — A14.2 regression"
+    )
+    # proc_open is called as proc_open($argv, $descriptors, $pipes, null, $env)
+    assert re.search(r"proc_open\s*\([^)]*,\s*\$env\s*\)", bash_tool_src), (
+        "proc_open() in BashReadOnlyTool.php no longer receives an explicit "
+        "env arg. A14.2 hardening regression — child inherits secrets without it."
+    )
+    # Whitelist must include PATH (verb resolution).
+    assert "'PATH'" in bash_tool_src, (
+        "minimalEnv() must include 'PATH' or proc_open cannot resolve verbs"
+    )
+    # Whitelist must NOT include any secret-bearing var name.
+    forbidden = ['ANTHROPIC_API_KEY', 'WING_API_TOKEN', 'BONE_SECRET',
+                 'WING_EVENTS_HMAC_SECRET', 'OPENCLAW_API_KEY']
+    for name in forbidden:
+        assert f"'{name}'" not in bash_tool_src, (
+            f"BashReadOnlyTool.php whitelists {name} in the spawned-child env. "
+            "Remove it — the child must not see secrets."
+        )

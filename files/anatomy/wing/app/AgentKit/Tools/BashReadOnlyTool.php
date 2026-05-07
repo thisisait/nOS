@@ -168,13 +168,21 @@ final class BashReadOnlyTool implements ToolInterface
 
         // Array-form proc_open: PHP exec()s the binary directly,
         // /bin/sh is NEVER spawned. Confirmed PHP 7.4+ on POSIX.
+        //
+        // A14.2 hardening: pass an EXPLICIT minimal environment instead of
+        // inheriting FrankenPHP's full env. The wing daemon's env carries
+        // ANTHROPIC_API_KEY / WING_API_TOKEN / BONE_SECRET; the spawned
+        // child has no business seeing those. minimalEnv() whitelists
+        // PATH/HOME/LANG/LC_ALL/LC_CTYPE/TZ/PWD/TMPDIR — anything else a
+        // legitimate verb needs gets added explicitly here in code review.
         $argv = array_merge([$verb], $args);
         $descriptors = [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
         ];
-        $proc = proc_open($argv, $descriptors, $pipes);
+        $env = $this->minimalEnv();
+        $proc = proc_open($argv, $descriptors, $pipes, null, $env);
         if (!is_resource($proc)) {
             return ToolResult::error('failed to spawn process for verb ' . $verb);
         }
@@ -234,6 +242,31 @@ final class BashReadOnlyTool implements ToolInterface
     }
 
     /**
+     * Whitelisted env vars passed to the spawned process. Everything
+     * else (incl. secrets like ANTHROPIC_API_KEY / WING_API_TOKEN /
+     * BONE_SECRET) is dropped. A14.2 hardening — see proc_open() call
+     * site for rationale.
+     *
+     * @return array<string, string>
+     */
+    private function minimalEnv(): array
+    {
+        $allowed = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'LC_CTYPE', 'TZ', 'PWD', 'TMPDIR'];
+        $env = [];
+        foreach ($allowed as $name) {
+            $value = getenv($name);
+            if (is_string($value) && $value !== '') {
+                $env[$name] = $value;
+            }
+        }
+        // PATH must always exist or proc_open can't resolve the verb.
+        if (!isset($env['PATH'])) {
+            $env['PATH'] = '/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin';
+        }
+        return $env;
+    }
+
+    /**
      * Per-verb argv allowlist. Returns null on success, error string on
      * rejection. The conductor's self-test only needs `git status / log`
      * and `sqlite3 -readonly` SELECT queries; everything beyond that is
@@ -273,6 +306,12 @@ final class BashReadOnlyTool implements ToolInterface
         if ($verb === 'sqlite3') {
             // Refuse dot-commands (.shell, .system, .read, .import, ...).
             // Force `-readonly` so the agent cannot mutate wing.db.
+            //
+            // A14.2 hardening — also block flags that load init scripts or
+            // engage the archive (sqlar) subsystem, both of which could
+            // become exploit vectors if a future tool ever grants write
+            // access to a known-path file. Cheap to add now, structurally
+            // correct.
             $hasReadonly = false;
             foreach ($args as $i => $a) {
                 if (str_starts_with($a, '.')) {
@@ -281,6 +320,22 @@ final class BashReadOnlyTool implements ToolInterface
                 }
                 if ($a === '-cmd' || $a === '--cmd') {
                     return "sqlite3: arg #{$i} is -cmd (sqlite3 dot-commands via -cmd blocked)";
+                }
+                // A14.2: block init-script flags. -init <file> runs the file at
+                // startup, and that file can contain dot-commands (.shell etc.)
+                // even with -readonly on the DB.
+                if ($a === '-init' || $a === '--init') {
+                    return "sqlite3: arg #{$i} is -init (init scripts blocked; A14.2)";
+                }
+                // A14.2: block sqlar archive mode flags. -A engages the archive
+                // subsystem which can write filesystem files when used with
+                // -c/-x/-u; sqlar create/extract/update is a write primitive.
+                if ($a === '-A' || $a === '--archive') {
+                    return "sqlite3: arg #{$i} is -A/--archive (sqlar disabled; A14.2)";
+                }
+                // A14.2: block zip alias for the same reason.
+                if ($a === '-zip' || $a === '--zip') {
+                    return "sqlite3: arg #{$i} is -zip (zip subsystem disabled; A14.2)";
                 }
                 if ($a === '-readonly' || $a === '--readonly') {
                     $hasReadonly = true;
