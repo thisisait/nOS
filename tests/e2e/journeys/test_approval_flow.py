@@ -78,6 +78,27 @@ def _http_get(path: str, headers: dict | None = None,
         return 0, str(e), ""
 
 
+def _http_post(path: str, headers: dict | None = None,
+               follow: bool = False) -> tuple[int, str, str]:
+    """POST helper added for A13.7 — state-changing actions are POST-only.
+    Empty body is fine (the action data lives in the URL path)."""
+    req = urllib.request.Request(WING_URL + path, headers=headers or {},
+                                 method="POST", data=b"")
+    if not follow:
+        class _NR(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *a, **kw): return None
+        opener = urllib.request.build_opener(_NR())
+    else:
+        opener = urllib.request.build_opener()
+    try:
+        r = opener.open(req, timeout=5)
+        return r.status, r.read().decode("utf-8", "replace"), r.headers.get("Location", "")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace"), e.headers.get("Location", "") if e.headers else ""
+    except (urllib.error.URLError, OSError) as e:
+        return 0, str(e), ""
+
+
 @pytest.fixture(autouse=True)
 def _require_wing():
     s, _, _ = _http_get("/api/v1/events?limit=1")
@@ -119,14 +140,22 @@ def test_approval_flow_request_to_decision(journey):
             s.note = "request landed in events"
 
         with j.step("operator_clicks_approve") as s:
-            status, _, loc = _http_get(
+            # A13.7 (2026-05-07): /approvals/approve/* is now POST-only +
+            # super-admin gated. Send X-Authentik-Groups so the gate accepts
+            # us, and use POST so requirePostMethod() passes.
+            status, _, loc = _http_post(
                 f"/approvals/approve/{action_id}",
-                headers={"X-Authentik-Username": TEST_OPERATOR},
+                headers={
+                    "X-Authentik-Username": TEST_OPERATOR,
+                    "X-Authentik-Groups": "nos-providers",
+                },
                 follow=False,
             )
-            assert status == 302, f"approve action expected 302, got {status}"
+            assert status in (302, 303), (
+                f"approve action expected 302/303, got {status}"
+            )
             assert "/approvals" in loc, f"expected redirect to /approvals, got {loc}"
-            s.note = f"302 → {loc}"
+            s.note = f"{status} → {loc}"
 
         # Decision event lands async via Wing internal HMAC POST; settle
         time.sleep(0.5)

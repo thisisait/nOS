@@ -19,6 +19,12 @@ use App\Model\EventRepository;
  * (rather than calling the repository directly) keeps every approval row
  * identical in shape and audit semantics to any other event write —
  * single canonical write path.
+ *
+ * Authorization (A13.7, 2026-05-07): Tier-1 super-admin only. Original
+ * A11 implementation shipped without a tier check — security review
+ * raised it as HIGH (any authenticated Authentik user, including tier-4
+ * nos-guests, could rubber-stamp agent actions). Both the startup() gate
+ * and the POST-only method gate close that vector.
  */
 final class ApprovalsPresenter extends BasePresenter
 {
@@ -27,6 +33,16 @@ final class ApprovalsPresenter extends BasePresenter
 	public function __construct(
 		private EventRepository $events,
 	) {
+	}
+
+	public function startup(): void
+	{
+		parent::startup();
+		// Tier-1 RBAC gate. Decisions on agent approval requests authorize
+		// high-blast-radius operations; the conductor (A8) treats a decision
+		// row as final. Tier-1 only. Read-only render path is also gated
+		// (no information leak from listing pending decisions to non-admins).
+		$this->requireSuperAdmin();
 	}
 
 	public function renderDefault(): void
@@ -41,12 +57,15 @@ final class ApprovalsPresenter extends BasePresenter
 
 	public function actionApprove(string $actionId): void
 	{
+		// A13.7 — POST-only. Template uses <form method="post">.
+		$this->requirePostMethod();
 		$this->postDecision($actionId, 'approve');
 		$this->redirect('Approvals:default');
 	}
 
 	public function actionReject(string $actionId): void
 	{
+		$this->requirePostMethod();
 		$this->postDecision($actionId, 'reject');
 		$this->redirect('Approvals:default');
 	}

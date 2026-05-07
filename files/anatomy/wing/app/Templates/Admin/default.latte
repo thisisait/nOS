@@ -46,10 +46,13 @@
 			{$halted} job{if $halted !== 1}s{/if} paused with reason
 			<code>emergency-halt:*</code>. No new Pulse fires until you click Resume.
 		</div>
-		<a href="/admin/resume" class="btn" style="background:#0a8; color:#fff; padding:12px 24px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;"
-			onclick="return confirm('Resume Pulse — lift the emergency halt for {$halted} job{if $halted !== 1}s{/if}?');">
-			▶ Resume Pulse
-		</a>
+		{* A13.7 — POST-only form (was <a href>); closes GET-CSRF vector. *}
+		<form method="post" action="/admin/resume" style="display:inline;"
+			onsubmit="return confirm('Resume Pulse — lift the emergency halt for {$halted} job{if $halted !== 1}s{/if}?');">
+			<button type="submit" class="btn" style="background:#0a8; color:#fff; padding:12px 24px; font-weight:600; border-radius:6px; border:none; cursor:pointer; font-size:14px;">
+				▶ Resume Pulse
+			</button>
+		</form>
 	{else}
 		<h3 style="margin:0 0 12px; font-size:14px;">Platform is running normally</h3>
 		<div style="color:var(--text2); font-size:13px; margin-bottom:16px;">
@@ -58,10 +61,13 @@
 			started misbehaving or you need to freeze automation during a maintenance
 			window.
 		</div>
-		<a href="/admin/halt" class="btn" style="background:#d11; color:#fff; padding:12px 24px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;"
-			onclick="return confirm('HALT Pulse — pause all {$running} active job{if $running !== 1}s{/if} immediately. In-flight runs continue until their max_runtime_s cap. OK to proceed?');">
-			🛑 HALT all Pulse jobs
-		</a>
+		{* A13.7 — POST-only form (was <a href>); closes GET-CSRF vector. *}
+		<form method="post" action="/admin/halt" style="display:inline;"
+			onsubmit="return confirm('HALT Pulse — pause all {$running} active job{if $running !== 1}s{/if} immediately. In-flight runs continue until their max_runtime_s cap. OK to proceed?');">
+			<button type="submit" class="btn" style="background:#d11; color:#fff; padding:12px 24px; font-weight:600; border-radius:6px; border:none; cursor:pointer; font-size:14px;">
+				🛑 HALT all Pulse jobs
+			</button>
+		</form>
 	{/if}
 </div>
 

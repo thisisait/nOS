@@ -42,8 +42,16 @@
 			</td>
 			<td style="padding:8px; font-size:11px; color:var(--text2);">{$req[run_id]|truncate:24,''}</td>
 			<td style="padding:8px; text-align:right; white-space:nowrap;">
-				<a href="{plink Approvals:approve, actionId => $req[actor_action_id]}" class="btn btn-primary" style="margin-right:6px;">Approve</a>
-				<a href="{plink Approvals:reject, actionId => $req[actor_action_id]}" class="btn">Reject</a>
+				{* A13.7 — POST-only forms (were <a href>); closes GET-CSRF + ensures no
+				   browser pre-fetch / link-scanner can rubber-stamp an approval. *}
+				<form method="post" action="{plink Approvals:approve, actionId => $req[actor_action_id]}" style="display:inline; margin-right:6px;"
+					onsubmit="return confirm('Approve agent action {$req[actor_action_id]|truncate:24,''}?');">
+					<button type="submit" class="btn btn-primary" style="border:none; cursor:pointer;">Approve</button>
+				</form>
+				<form method="post" action="{plink Approvals:reject, actionId => $req[actor_action_id]}" style="display:inline;"
+					onsubmit="return confirm('Reject agent action {$req[actor_action_id]|truncate:24,''}?');">
+					<button type="submit" class="btn" style="border:none; cursor:pointer;">Reject</button>
+				</form>
 			</td>
 		</tr>
 		</tbody>

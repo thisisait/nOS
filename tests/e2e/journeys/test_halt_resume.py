@@ -84,14 +84,15 @@ def test_halt_and_resume_audit_chain(journey):
                 pre = conn.execute(
                     "SELECT COUNT(*) FROM pulse_jobs WHERE paused=0 AND removed_at IS NULL"
                 ).fetchone()[0]
+            # A13.7 (2026-05-07): /admin/halt is now POST-only.
             status, _, loc = _http(
-                "GET", "/admin/halt",
+                "POST", "/admin/halt",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",
                 },
             )
-            assert status == 302, f"expected 302 redirect, got {status}"
+            assert status in (302, 303), f"expected 302/303 redirect, got {status}"
             assert "/admin" in loc, f"redirect should go to /admin, got {loc}"
             with sqlite3.connect(WING_DB) as conn:
                 emergency = conn.execute(
@@ -111,14 +112,15 @@ def test_halt_and_resume_audit_chain(journey):
                     "AND paused_reason NOT LIKE 'emergency-halt:%' "
                     "AND paused_reason IS NOT NULL"
                 ).fetchone()[0]
+            # A13.7 — /admin/resume is now POST-only.
             status, _, _ = _http(
-                "GET", "/admin/resume",
+                "POST", "/admin/resume",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",
                 },
             )
-            assert status == 302, f"expected 302, got {status}"
+            assert status in (302, 303), f"expected 302/303, got {status}"
             with sqlite3.connect(WING_DB) as conn:
                 emergency_post = conn.execute(
                     "SELECT COUNT(*) FROM pulse_jobs WHERE paused=1 "

@@ -26,8 +26,6 @@ final class AdminPresenter extends BasePresenter
 {
 	protected string $activeTab = 'admin';
 
-	private const REQUIRED_GROUP = 'nos-providers';
-
 	public function __construct(
 		private PulseRepository $pulse,
 		private EventRepository $events,
@@ -37,6 +35,9 @@ final class AdminPresenter extends BasePresenter
 	public function startup(): void
 	{
 		parent::startup();
+		// Tier-1 RBAC gate (BasePresenter::requireSuperAdmin) — server-side
+		// authorization boundary. The @layout.latte hides the Admin tab for
+		// non-Tier-1 users, but UI-hiding is cosmetic only.
 		$this->requireSuperAdmin();
 	}
 
@@ -56,6 +57,9 @@ final class AdminPresenter extends BasePresenter
 
 	public function actionHalt(): void
 	{
+		// A13.7 (2026-05-07): POST-only — closes the GET-CSRF / phishing-link
+		// vector raised in the security review. Template uses a <form method="post">.
+		$this->requirePostMethod();
 		$operator = $this->operatorId();
 		$affected = $this->pulse->emergencyHaltAll($operator);
 		$this->postAuditEvent(
@@ -67,6 +71,7 @@ final class AdminPresenter extends BasePresenter
 
 	public function actionResume(): void
 	{
+		$this->requirePostMethod();   // A13.7 — see actionHalt comment.
 		$operator = $this->operatorId();
 		$affected = $this->pulse->emergencyResumeAll();
 		$this->postAuditEvent(
@@ -76,28 +81,7 @@ final class AdminPresenter extends BasePresenter
 		$this->redirect('Admin:default');
 	}
 
-	// -- Authorization --------------------------------------------------
-
-	/**
-	 * Reject the request unless the forward-auth header includes the
-	 * Tier-1 RBAC group. Wing's @layout.latte hides the button entirely
-	 * for non-Tier-1 users, but the server-side check is the actual gate.
-	 */
-	private function requireSuperAdmin(): void
-	{
-		$groups = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Groups') ?? '');
-		// Authentik passes groups as a delimiter-joined string; the canonical
-		// form in nOS is pipe-delimited via the "Authentik Groups" mapping
-		// (Stage > Property mappings > "Provide Groups"). Tolerate comma /
-		// pipe / whitespace so a config drift doesn't lock out a real admin.
-		$tokens = preg_split('/[\\s,|]+/', $groups, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-		if (!in_array(self::REQUIRED_GROUP, $tokens, true)) {
-			$this->error(
-				'Forbidden -- Tier-1 administrator role required (' . self::REQUIRED_GROUP . ').',
-				403,
-			);
-		}
-	}
+	// -- Helpers --------------------------------------------------------
 
 	private function operatorId(): string
 	{
