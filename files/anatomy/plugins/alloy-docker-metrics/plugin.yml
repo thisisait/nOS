@@ -1,0 +1,80 @@
+# =============================================================================
+# alloy-docker-metrics — composition plugin (Phase 3 U12, 2026-05-07)
+#
+# Wires alloy-base + prometheus-base + loki-base by emitting a Grafana
+# Alloy River fragment that discovers Docker containers via the daemon
+# socket, scrapes their cAdvisor-style metrics into Prometheus, and tails
+# their stdout/stderr into Loki.
+#
+# Status: structure-landed. River fragment renders into
+# ~/.config/alloy/conf.d/<plugin>.river. Activation depends on the same
+# Phase 3 launch-flag change as alloy-host-metrics — see README.
+# =============================================================================
+
+name: alloy-docker-metrics
+version: 0.1.0
+description: |
+  Composition plugin: discovers running Docker containers via the daemon
+  socket, scrapes per-container metrics (cAdvisor labels), and tails
+  container logs into Loki. Forwards metrics to alloy-base
+  prometheus.remote_write.default and logs to loki.write.default.
+upstream: https://grafana.com/docs/alloy/latest/reference/components/discovery.docker/
+license: AGPL-3.0
+
+type:
+  - composition
+
+# =============================================================================
+# REQUIRES — three peer plugins must load before this one
+# =============================================================================
+# Loki is required because this plugin emits a loki.source.docker block.
+# Without loki-base loaded, the loki.write.default sink doesn't exist and
+# Alloy refuses to start.
+
+requires:
+  plugin:
+    - alloy-base
+    - prometheus-base
+    - loki-base
+  feature_flag: install_observability
+  variables:
+    - prometheus_port
+    - loki_port
+
+# =============================================================================
+# PROVISIONING — River fragment dropped into Alloy's conf.d directory
+# =============================================================================
+
+provisioning:
+  river:
+    template: templates/docker-metrics.river.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/.config/alloy/conf.d/docker-metrics.river"
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render: provisioning.river
+
+# =============================================================================
+# GDPR — Article 30 row
+# =============================================================================
+# Container logs may incidentally contain GDPR-relevant content (e.g. an
+# nginx access log captures client IPs). The retention horizon mirrors
+# loki-base; data subjects include any end users whose requests transit a
+# logged container. Operators are expected to redact at the source (e.g.
+# nginx anonymize_ip).
+
+gdpr:
+  data_categories:
+    - infrastructure_metrics       # docker_container_* prom metrics
+    - container_logs               # incidental — see redaction note above
+  data_subjects:
+    - operators
+    - end_users                    # via container access logs
+  legal_basis: legitimate_interests
+  retention_days: 7                # short — log volume is high
+  processors: []
+  eu_residency: true

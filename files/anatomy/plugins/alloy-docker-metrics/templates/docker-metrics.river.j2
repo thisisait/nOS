@@ -1,0 +1,62 @@
+// =============================================================================
+// alloy-docker-metrics — River fragment
+// Rendered by the alloy-docker-metrics composition plugin.
+// Manual edits will be overwritten on the next playbook run.
+// =============================================================================
+
+// ── discovery.docker — find running containers via Docker socket ─────────────
+// Docker Desktop on macOS exposes the daemon at /var/run/docker.sock; on
+// Linux the same path. Alloy reads container metadata (labels, image,
+// state) and emits a target list keyed by container id.
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "30s"
+}
+
+// Relabel container metadata into useful Prometheus labels:
+//   __meta_docker_container_name      → container
+//   __meta_docker_container_label_*   → kept as-is (compose project, service)
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+// ── prometheus.exporter.cadvisor — per-container metrics ──────────────────────
+// cAdvisor-equivalent. Surfaces CPU / mem / network / blkio per container.
+// Alloy ships a built-in cadvisor exporter component.
+prometheus.exporter.cadvisor "docker" {
+  docker_host  = "unix:///var/run/docker.sock"
+  store_container_labels = true
+}
+
+prometheus.scrape "docker" {
+  targets         = prometheus.exporter.cadvisor.docker.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  job_name        = "docker"
+  scrape_interval = "30s"
+}
+
+// ── loki.source.docker — tail container stdout/stderr ────────────────────────
+// Streams container logs into Loki. The relabel rules above attach
+// `container`, `compose_project`, `compose_service` labels so operators
+// can filter Loki queries by stack and service:
+//   {compose_project="b2b", compose_service="outline"}
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.containers.output
+  forward_to    = [loki.write.default.receiver]
+  refresh_interval = "30s"
+}

@@ -1,0 +1,77 @@
+# =============================================================================
+# alloy-syslog — composition plugin (Phase 3 U13, 2026-05-07)
+#
+# Wires alloy-base + loki-base by emitting a Grafana Alloy River fragment
+# that tails host-side log files (nginx access/error, php-fpm, agent runs,
+# brew services stdout) into Loki.
+#
+# "syslog" is a misnomer in macOS context — there's no /var/log/syslog.
+# The plugin tails files. The slug is kept for parity with
+# `alloy-syslog` in the original Phase 3 plan and signals "host log
+# tailing" semantically.
+#
+# Status: structure-landed. Activation gate identical to siblings.
+# =============================================================================
+
+name: alloy-syslog
+version: 0.1.0
+description: |
+  Composition plugin: tails host-side log files into Loki via
+  local.file_match + loki.source.file. Covers nginx (when host nginx is
+  enabled), php-fpm (Wing FrankenPHP access log), Bone, Pulse, OpenClaw,
+  and Homebrew services stdout. Forwards to alloy-base loki.write.default.
+upstream: https://grafana.com/docs/alloy/latest/reference/components/loki.source.file/
+license: AGPL-3.0
+
+type:
+  - composition
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  plugin:
+    - alloy-base
+    - loki-base
+  feature_flag: install_observability
+  variables:
+    - loki_port
+
+# =============================================================================
+# PROVISIONING — River fragment dropped into Alloy's conf.d directory
+# =============================================================================
+
+provisioning:
+  river:
+    template: templates/syslog.river.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/.config/alloy/conf.d/syslog.river"
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render: provisioning.river
+
+# =============================================================================
+# GDPR — Article 30 row
+# =============================================================================
+# Host log tailing has the highest GDPR surface of the three alloy
+# compositions: nginx access logs (when host nginx is on) capture client
+# IPs; Wing/Bone may log operator UI requests with parameters; agent
+# (conductor / openclaw) logs may capture parts of prompts. Operators
+# must enable redaction at each source — alloy doesn't redact in transit.
+
+gdpr:
+  data_categories:
+    - operational_logs             # nginx, php-fpm access + error
+    - audit_trail_logs             # Bone, Wing, Pulse, agent runs
+  data_subjects:
+    - operators
+    - end_users                    # via host nginx access logs
+  legal_basis: legitimate_interests
+  retention_days: 14
+  processors: []
+  eu_residency: true

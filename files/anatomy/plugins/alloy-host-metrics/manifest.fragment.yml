@@ -1,0 +1,8 @@
+# =============================================================================
+# manifest.fragment.yml — state/manifest.yml contribution
+# =============================================================================
+# Compositions don't add a top-level service row. The manifest already lists
+# `alloy` (via alloy-base) and `prometheus` (via prometheus-base); this
+# plugin only wires them together via a River fragment.
+# =============================================================================
+{}

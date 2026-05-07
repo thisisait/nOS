@@ -1,0 +1,30 @@
+// =============================================================================
+// alloy-host-metrics — River fragment
+// Rendered by the alloy-host-metrics composition plugin.
+// Manual edits will be overwritten on the next playbook run.
+// =============================================================================
+
+// ── prometheus.exporter.unix — host-level metrics ─────────────────────────────
+// Equivalent of node_exporter for Alloy. Exposes CPU, memory, disk, network,
+// filesystem usage, load average, and the standard /proc collectors. Default
+// collectors are documented at:
+//   https://grafana.com/docs/alloy/latest/reference/components/prometheus.exporter.unix/
+prometheus.exporter.unix "host" {
+  // Defaults are sensible for macOS / Linux operator hosts. Operators who
+  // want to disable noisy collectors (textfile, mdadm, etc.) can override
+  // by editing this fragment AFTER the playbook lands it — but those edits
+  // will be reverted on the next run. Long-term path is `set_collectors:`
+  // in alloy_host_metrics_extra_config (defaults/main.yml of pazny.alloy).
+}
+
+// ── Scrape that exporter and forward to remote_write ──────────────────────────
+// Targets are auto-discovered from the prometheus.exporter.unix component.
+// `prometheus.remote_write.default` is defined in alloy-base/templates/
+// config.alloy.j2 (the core config). This is a pure structural reference —
+// every composition plugin's metrics path lands at the same sink.
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  job_name        = "host"
+  scrape_interval = "15s"
+}

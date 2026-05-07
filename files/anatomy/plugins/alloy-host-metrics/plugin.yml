@@ -1,0 +1,93 @@
+# =============================================================================
+# alloy-host-metrics — composition plugin (Phase 3 U11, 2026-05-07)
+#
+# Wires alloy-base + prometheus-base by emitting a Grafana Alloy River
+# fragment that scrapes host-level metrics (prometheus.exporter.unix +
+# scrape) and forwards them to the alloy-base remote_write default.
+#
+# Status: structure-landed. River fragment renders into
+# ~/.config/alloy/conf.d/<plugin>.river. Activation requires the Phase 3
+# loader's `compose_river` action (or a one-line alloy launch flag change
+# in `pazny.alloy` to scan conf.d/) — both spec'd in alloy-base/README.md.
+# Until then this fragment is dormant on disk; composition shape is
+# provable and the wiring contract is committed.
+#
+# Pre-Q1b shape (retired):
+#   files/observability/alloy/config.alloy.j2 carried the unix exporter
+#   block inline alongside docker discovery + log tails (~415 lines total).
+#
+# Post-Q1b shape (this plugin):
+#   alloy-base owns ONLY the minimal core (logging + self-scrape +
+#   remote_write + loki.write + OTLP receiver). THIS plugin owns the
+#   structural cross-wiring: "if alloy is installed AND prometheus is the
+#   metrics sink, then expose the unix host-level metrics".
+# =============================================================================
+
+name: alloy-host-metrics
+version: 0.1.0
+description: |
+  Composition plugin: scrapes host-level metrics (CPU, memory, disk, network,
+  filesystems) via prometheus.exporter.unix and forwards them to the
+  alloy-base prometheus.remote_write.default sink. Activates only when
+  alloy-base + prometheus-base are loaded.
+upstream: https://grafana.com/docs/alloy/latest/reference/components/prometheus.exporter.unix/
+license: AGPL-3.0  # follows the consuming services
+
+type:
+  - composition
+
+# =============================================================================
+# REQUIRES — both peer plugins must load before this one
+# =============================================================================
+
+requires:
+  plugin:
+    - alloy-base
+    - prometheus-base
+  feature_flag: install_observability
+  variables:
+    - prometheus_port
+    - alloy_ui_port
+
+# =============================================================================
+# PROVISIONING — River fragment dropped into Alloy's conf.d directory
+# =============================================================================
+# Filename uses the plugin slug to keep ownership obvious during operator
+# debugging (`ls ~/.config/alloy/conf.d/` shows which plugin contributed
+# which fragment).
+#
+# Alloy supports multi-file config via launch arg
+# (`alloy run config.alloy conf.d/`); the brew services launchd plist
+# needs that flag — TODO in Phase 3 alongside the loader's `compose_river`.
+
+provisioning:
+  river:
+    template: templates/host-metrics.river.j2
+    target: "{{ ansible_facts['env']['HOME'] }}/.config/alloy/conf.d/host-metrics.river"
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+# Topological order ensures alloy-base + prometheus-base have rendered
+# their core configs before this fragment lands on disk.
+
+lifecycle:
+  pre_compose:
+    - render: provisioning.river
+
+# =============================================================================
+# GDPR — Article 30 row
+# =============================================================================
+# Compositions add NO new data categories beyond what the peer plugins
+# already declare. This plugin's data (host CPU / mem / disk metrics) flows
+# through prometheus-base's existing retention horizon.
+
+gdpr:
+  data_categories:
+    - infrastructure_metrics       # host-level — CPU, memory, disk, network
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 30               # matches prometheus_retention default
+  processors: []
+  eu_residency: true

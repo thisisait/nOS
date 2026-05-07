@@ -1,0 +1,63 @@
+// =============================================================================
+// alloy-syslog — River fragment
+// Rendered by the alloy-syslog composition plugin.
+// Manual edits will be overwritten on the next playbook run.
+// =============================================================================
+
+// ── nginx (host) ──────────────────────────────────────────────────────────────
+// Optional — only meaningful when install_nginx=true. The file_match below
+// is harmless when the files don't exist (Alloy logs a warning + skips).
+local.file_match "nginx" {
+  path_targets = [
+    {__path__ = "/opt/homebrew/var/log/nginx/access.log", job = "nginx", stream = "access"},
+    {__path__ = "/opt/homebrew/var/log/nginx/error.log",  job = "nginx", stream = "error"},
+  ]
+}
+loki.source.file "nginx" {
+  targets    = local.file_match.nginx.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// ── Wing (FrankenPHP, Caddy access log) ──────────────────────────────────────
+local.file_match "wing" {
+  path_targets = [
+    {__path__ = "/Users/pazny/wing/log/access.log", job = "wing", stream = "access"},
+  ]
+}
+loki.source.file "wing" {
+  targets    = local.file_match.wing.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// ── Bone, Pulse, OpenClaw (host launchd daemons) ─────────────────────────────
+// Each daemon writes its launchd stdout/stderr to a fixed path declared
+// in its plist. Tail all of them into Loki under a single `daemon` job
+// label, distinguished by `service`.
+local.file_match "daemons" {
+  path_targets = [
+    {__path__ = "/Users/pazny/bone/log/launchd.out.log",     job = "daemon", service = "bone",     stream = "stdout"},
+    {__path__ = "/Users/pazny/bone/log/launchd.err.log",     job = "daemon", service = "bone",     stream = "stderr"},
+    {__path__ = "/Users/pazny/pulse/log/pulse.log",          job = "daemon", service = "pulse",    stream = "app"},
+    {__path__ = "/Users/pazny/pulse/log/launchd.err.log",    job = "daemon", service = "pulse",    stream = "stderr"},
+    {__path__ = "/Users/pazny/openclaw/log/launchd.out.log", job = "daemon", service = "openclaw", stream = "stdout"},
+    {__path__ = "/Users/pazny/openclaw/log/launchd.err.log", job = "daemon", service = "openclaw", stream = "stderr"},
+  ]
+}
+loki.source.file "daemons" {
+  targets    = local.file_match.daemons.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// ── Conductor agent runs (per-Pulse-fire stdout/stderr capture) ──────────────
+// pulse-run-agent.sh writes a per-run log to ~/.nos/conductor/<run_id>.log
+// (planned — A8 follow-up). When that lands, this glob auto-tails. Until
+// then it's a no-op match (Alloy tolerates empty globs).
+local.file_match "conductor_runs" {
+  path_targets = [
+    {__path__ = "/Users/pazny/.nos/conductor/*.log", job = "agent", agent = "conductor"},
+  ]
+}
+loki.source.file "conductor_runs" {
+  targets    = local.file_match.conductor_runs.targets
+  forward_to = [loki.write.default.receiver]
+}
