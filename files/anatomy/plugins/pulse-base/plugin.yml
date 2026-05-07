@@ -32,7 +32,7 @@ version: "1.0.0"
 description: "Source plugin: aggregates pulse: blocks from plugins + agent profiles → Pulse job catalog."
 
 type:
-  - service-aggregator
+  - composition           # aggregates pulse: blocks from peer plugins + agent profiles
 
 requires:
   role: pazny.wing
@@ -70,3 +70,23 @@ aggregates:
 # No compose extension — pulse-base is host-side; the actual Pulse daemon
 # lives at files/anatomy/pulse/ as a launchd service (A4 skeleton).
 # This plugin is purely an aggregator/contract-pinning artefact.
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+# pulse-base itself stores no user-facing data; it harvests pulse: blocks
+# from peer plugins/agents into the inputs.jobs catalog and hands them to
+# wing/post.yml (or, post-C5, the loader's replay_api_calls runner) for
+# registration into the Pulse daemon's wing.db tables. The downstream
+# `agent_pulse_jobs` rows it produces ARE covered — see wing-base's gdpr
+# row for that storage contract. This block satisfies the loader's
+# required-fields contract for aggregator plugins.
+gdpr:
+  data_categories:
+    - aggregated_job_metadata     # plugin_name, job_name, schedule, command
+  data_subjects:
+    - operators                   # only the operator authors / triggers jobs
+  legal_basis: legitimate_interests
+  retention_days: -1              # job catalog lives as long as pulse does
+  processors: []
+  eu_residency: true

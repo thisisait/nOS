@@ -465,6 +465,28 @@ services:
     oidc: proxy
     rbac_tier: 1
 
+  - id: smtp_stalwart
+    category: mail
+    stack: infra
+    install_flag: install_smtp_stalwart
+    version_var: stalwart_version
+    version_source: docker_image
+    image: stalwartlabs/mail-server
+    domain_var: stalwart_domain
+    port_var: stalwart_port_smtp       # 25 = MTA; 465/587 = submission; 993 = IMAPS
+    data_path_var: stalwart_data_dir
+    oidc: none                         # SASL via Stalwart's native DB; webadmin OIDC behind feature flag
+
+  - id: watchtower
+    category: monitoring
+    stack: iiab
+    install_flag: install_watchtower
+    version_var: watchtower_image      # pinned via image tag (no separate _version var today)
+    version_source: docker_image
+    image: nickfedor/watchtower
+    data_path_var: watchtower_data_dir
+    oidc: none                         # no UI; emits notifications via mailpit/SMTP relay
+
   # ------------------------------------------------------------ devops stack
   - id: gitea
     category: devops
