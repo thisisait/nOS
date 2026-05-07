@@ -49,22 +49,23 @@ aggregates:
     output_var: jobs   # appended (Tier-1 plugins + agents share one catalog)
 
 # =============================================================================
-# Lifecycle (forward-spec — activates when loader's replay_api_calls action
-# lands in C5). Today this stub is no-op; wing/post.yml's data-driven loop
-# does the registration. The contract below is the migration target.
+# Lifecycle — none today. Pulse job registration runs imperatively from
+# roles/pazny.wing/tasks/post.yml (data-driven iteration over the harvested
+# inputs.jobs). When the loader gains a `replay_api_calls` action (C5
+# phase, forward-spec), the post.yml loop retires and this lifecycle block
+# returns with:
+#
+#   post_compose:
+#     - replay_api_calls:
+#         endpoint: "{{ wing_api_url }}/api/v1/pulse_jobs"
+#         auth: "Bearer {{ wing_api_token }}"
+#         items: "{{ inputs.jobs | map(attribute='jobs') | flatten }}"
+#         idempotent_on: [plugin_name, job_name]
+#
+# Until then: no lifecycle hooks. Same canonical shape as alloy-base /
+# watchtower-base — omit hooks entirely when there's nothing for the
+# loader to do, rather than emitting unknown:noop telemetry on every run.
 # =============================================================================
-lifecycle:
-  post_compose:
-    # TODO(C5): replace wing/post.yml's iteration with this action once
-    # the loader supports `replay_api_calls`. Iteration target:
-    # `inputs.jobs[].jobs[]` — each yields a POST /api/v1/pulse_jobs
-    # body (idempotent on (plugin_name, job_name)).
-    #   - replay_api_calls:
-    #       endpoint: "{{ wing_api_url }}/api/v1/pulse_jobs"
-    #       auth: "Bearer {{ wing_api_token }}"
-    #       items: "{{ inputs.jobs | map(attribute='jobs') | flatten }}"
-    #       idempotent_on: [plugin_name, job_name]
-    - noop: "data-driven Pulse registration is in roles/pazny.wing/tasks/post.yml until C5"
 
 # No compose extension — pulse-base is host-side; the actual Pulse daemon
 # lives at files/anatomy/pulse/ as a launchd service (A4 skeleton).

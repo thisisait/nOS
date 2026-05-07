@@ -76,17 +76,12 @@ authentik:
 # =============================================================================
 # LIFECYCLE HOOKS
 # =============================================================================
-
-lifecycle:
-  pre_compose:
-    # No-op — Wing host launchd daemon is provisioned by
-    # roles/pazny.wing/tasks/main.yml (host launchd plist +
-    # FrankenPHP brew install). Plugin loader has no compose
-    # surface to render here.
-    - noop: true
-  post_compose:
-    # Wing readiness is the launchd KeepAlive contract.
-    - noop: true
+# No pre_compose / post_compose: Wing is a host launchd daemon provisioned
+# by roles/pazny.wing/tasks/main.yml (FrankenPHP brew install + launchd plist).
+# Plugin loader has no compose surface to render. Readiness is the launchd
+# KeepAlive contract, not an HTTP probe. Same shape as alloy-base /
+# watchtower-base — omit lifecycle hooks entirely when there's nothing for
+# the loader to do.
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)

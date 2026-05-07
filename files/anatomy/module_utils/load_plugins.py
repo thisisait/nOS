@@ -772,6 +772,17 @@ def _dispatch_action(plugin: Plugin, action: str, param,
             shutil.rmtree(path, ignore_errors=True)
         return f"remove_dir:{path}"
 
+    if action == "remove_file":
+        # File-level cleanup (post_blank). Use this when a plugin's render
+        # output is a single file inside a directory owned by a peer plugin
+        # (e.g. composition plugins drop a file into the grafana-base
+        # provisioning dir — the peer's remove_dir would race the
+        # composition plugin's wipe). Idempotent: missing file is success.
+        path = pathlib.Path(_render_string(str(param), ctx))
+        if path.is_file():
+            path.unlink()
+        return f"remove_file:{path}"
+
     if action == "render":
         # `param` is a dotted path into the manifest (e.g.
         # "provisioning.datasources") that resolves to {template, target}.
