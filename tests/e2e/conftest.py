@@ -30,9 +30,11 @@ signs callback events with.
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import hmac
 import json
+import logging
 import os
 import time
 import urllib.error
@@ -43,6 +45,22 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 import pytest
+
+# A13.6 ephemeral SSO tester identity (Vrstva A.5).
+# Imports are guarded so the existing journeys (smoke / plugin_contract /
+# halt_resume / approval_flow) keep working even if Authentik is offline —
+# the tester_identity fixture is the only thing that requires it.
+try:
+    from .lib.tester_identity import (
+        TesterIdentity,
+        provision_tester,
+        teardown_tester,
+        sweep_orphans,
+    )
+    _IDENTITY_LIB_AVAILABLE = True
+except ImportError as _import_exc:  # pragma: no cover — dev/CI env without requests/yaml
+    _IDENTITY_LIB_AVAILABLE = False
+    _IDENTITY_IMPORT_ERROR = _import_exc
 
 
 # ── Configuration ────────────────────────────────────────────────────
@@ -209,3 +227,92 @@ def journey():
                 },
             })
     return _factory
+
+
+# ── A13.6 Ephemeral tester identity ─────────────────────────────────
+#
+# Every test that needs SSO-authenticated traffic asks for ``tester_identity``;
+# pytest hands back a freshly-provisioned per-tier user, valid for the test's
+# lifetime. Teardown deletes the user + revokes the Wing token. atexit handler
+# is the safety net for crashed runs (sweeps anything still alive at the end
+# of the pytest process).
+#
+# Usage:
+#
+#   @pytest.mark.parametrize("tester_identity", ["provider"], indirect=True)
+#   def test_admin_route(tester_identity):
+#       ...
+#
+#   @pytest.mark.parametrize("tester_identity",
+#                            ["provider", "manager", "user", "guest"],
+#                            indirect=True)
+#   def test_rbac_matrix(tester_identity, expected_status):
+#       ...
+
+# Track every ID we created during this pytest process so the atexit safety
+# net only deletes things WE made — never touches the static blueprint user.
+_PROVISIONED: list["TesterIdentity"] = []
+
+
+@pytest.fixture
+def tester_identity(request):
+    """Provision a per-test ephemeral SSO identity in the requested RBAC tier.
+
+    Parametrize indirectly with the tier name (``provider``/``manager``/
+    ``user``/``guest``). Default tier is ``user`` if no param supplied.
+    """
+    if not _IDENTITY_LIB_AVAILABLE:
+        pytest.skip(f"tester identity lib unavailable: {_IDENTITY_IMPORT_ERROR}")
+
+    tier = getattr(request, "param", "user")
+    try:
+        identity = provision_tester(tier)
+    except Exception as exc:  # noqa: BLE001 — pytest-skip on infra failure, not test failure
+        pytest.skip(f"cannot provision tester identity (tier={tier}): {exc}")
+        return  # unreachable, pytest.skip raises
+
+    _PROVISIONED.append(identity)
+    try:
+        yield identity
+    finally:
+        try:
+            teardown_tester(identity)
+        finally:
+            try:
+                _PROVISIONED.remove(identity)
+            except ValueError:
+                pass
+
+
+def _atexit_sweep_provisioned():
+    """Best-effort cleanup of identities we EXPLICITLY tracked in this
+    process. Catches: hard kills (SIGKILL), pytest-internal crashes,
+    fixture-teardown exceptions that swallowed the cleanup.
+
+    SCOPED to ``_PROVISIONED`` only — we used to also call ``sweep_orphans()``
+    here as a belt-and-suspenders catch-all, but the A13.6 incident (2026-05-07)
+    showed that a bug in ``list_users_by_prefix``'s server-side filter can
+    bypass the prefix scoping and DELETE arbitrary users. Lesson: NEVER auto-
+    sweep on atexit. Only delete things we minted in *this* process — those
+    are unambiguously ours. Crashes that strand identities are recovered by
+    operator-invoked ``files/anatomy/scripts/sweep-orphan-testers.py``, which
+    requires explicit human action and runs the multi-layer prefix safety check.
+
+    Logs but never raises — atexit is past the point of useful failure.
+    """
+    if not _IDENTITY_LIB_AVAILABLE:
+        return
+    log = logging.getLogger("nos.e2e.atexit")
+    if _PROVISIONED:
+        log.warning("atexit: %d ephemeral testers still alive — sweeping "
+                    "ONLY tracked identities (no orphan sweep)",
+                    len(_PROVISIONED))
+        for identity in list(_PROVISIONED):
+            try:
+                teardown_tester(identity)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("atexit teardown failed for %s: %s",
+                            identity.username, exc)
+
+
+atexit.register(_atexit_sweep_provisioned)
