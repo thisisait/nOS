@@ -1,0 +1,101 @@
+{block title}Agents{/block}
+
+{block content}
+<h2 style="margin-bottom:4px; font-size:18px;">AIT — Agentic IT runtime</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:24px;">
+	Versioned agent configurations under <code>files/anatomy/agents/</code>.
+	Each session pins one agent version + one model URI; full lineage in
+	<code>agent_sessions</code> + W3C trace exported to Tempo.
+</div>
+
+<h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Catalog</h3>
+{if $agents}
+<table class="table" style="width:100%; border-collapse:collapse; margin-bottom:32px;">
+	<thead>
+		<tr>
+			<th style="text-align:left; padding:8px;">Name</th>
+			<th style="text-align:left; padding:8px;">Version</th>
+			<th style="text-align:left; padding:8px;">Description</th>
+			<th style="text-align:left; padding:8px;">Model</th>
+			<th style="text-align:left; padding:8px;">Topology</th>
+			<th style="text-align:left; padding:8px;">Outcome</th>
+			<th style="text-align:right; padding:8px;">Recent runs</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$agents as $a" style="border-top:1px solid var(--border);">
+			<td style="padding:8px;">
+				<a href="{plink Agents:detail, name => $a[name]}"><code>{$a[name]}</code></a>
+			</td>
+			<td style="padding:8px; font-family:monospace;">v{$a[version]}</td>
+			<td style="padding:8px; max-width:380px; color:var(--text2); font-size:12px;">
+				{if $a[error]}<span style="color:#d11;">⚠ {$a[error]|truncate:80}</span>
+				{else}{$a[description]|truncate:120}{/if}
+			</td>
+			<td style="padding:8px; font-family:monospace; font-size:12px;">{$a[model_primary]|truncate:30}</td>
+			<td style="padding:8px;">
+				<span n:class="
+					'badge',
+					$a[multiagent_type] === 'coordinator' ? 'badge-success'
+				">{$a[multiagent_type]}</span>
+			</td>
+			<td style="padding:8px;">
+				{if $a[has_outcome]}<span class="badge badge-primary">rubric</span>
+				{else}—{/if}
+			</td>
+			<td style="padding:8px; text-align:right; font-family:monospace;">{$a[sessions_recent]}</td>
+		</tr>
+	</tbody>
+</table>
+{else}
+<div class="empty" style="padding:24px; border:1px solid var(--border); border-radius:8px; text-align:center; color:var(--text2);">
+	No agents on disk. Drop a <code>files/anatomy/agents/&lt;name&gt;/agent.yml</code>
+	and refresh.
+</div>
+{/if}
+
+<h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Recent sessions (across all agents)</h3>
+{if $recent}
+<table class="table" style="width:100%; border-collapse:collapse;">
+	<thead>
+		<tr>
+			<th style="text-align:left; padding:8px;">Started</th>
+			<th style="text-align:left; padding:8px;">Agent</th>
+			<th style="text-align:left; padding:8px;">Model</th>
+			<th style="text-align:left; padding:8px;">Trigger</th>
+			<th style="text-align:left; padding:8px;">Status</th>
+			<th style="text-align:left; padding:8px;">Stop reason</th>
+			<th style="text-align:right; padding:8px;">Tokens</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$recent as $s" style="border-top:1px solid var(--border);">
+			<td style="padding:8px; white-space:nowrap; font-size:12px; color:var(--text2);">{$s['started_at']|truncate:19,''}</td>
+			<td style="padding:8px;">
+				<a href="{plink Agents:session, name => $s['agent_name'], id => $s['uuid']}"><code>{$s['agent_name']}</code></a>
+				<small style="color:var(--text2);">v{$s['agent_version']}</small>
+			</td>
+			<td style="padding:8px; font-family:monospace; font-size:11px;">{$s['model_uri']|truncate:24}</td>
+			<td style="padding:8px;"><code>{$s['trigger']}</code></td>
+			<td style="padding:8px;">
+				<span n:class="
+					'badge',
+					$s['status'] === 'idle' ? 'badge-success',
+					$s['status'] === 'running' ? 'badge-primary',
+					$s['status'] === 'terminated' ? 'badge-danger'
+				">{$s['status']}</span>
+			</td>
+			<td style="padding:8px; font-family:monospace; font-size:11px;">{$s['stop_reason'] ?? '—'}</td>
+			<td style="padding:8px; text-align:right; font-family:monospace; font-size:12px;">
+				{($s['tokens_input'] ?? 0)} / {($s['tokens_output'] ?? 0)}
+			</td>
+		</tr>
+	</tbody>
+</table>
+{else}
+<div class="empty" style="padding:16px; color:var(--text2); text-align:center;">
+	No sessions yet. Trigger a run via <code>php bin/run-agent.php --agent=&lt;name&gt;</code>.
+</div>
+{/if}
+
+{/block}

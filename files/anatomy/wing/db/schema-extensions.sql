@@ -271,3 +271,142 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gitleaks_fingerprint ON gitleaks_findings(f
 CREATE INDEX IF NOT EXISTS idx_gitleaks_rule_id           ON gitleaks_findings(rule_id);
 CREATE INDEX IF NOT EXISTS idx_gitleaks_severity          ON gitleaks_findings(severity, resolved_at);
 CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
+
+-- ============================================================================
+-- AgentKit — AIT runtime (Anatomy A14, 2026-05-07)
+-- ============================================================================
+-- Five tables for the platform-agnostic, audit-first agent runtime. Every row
+-- here corresponds to a real LLM-call lineage: who decided, what they decided,
+-- what they did, what came out. Joinable to events.actor_action_id so the
+-- A10 actor audit story stays unified across operator + agent + Pulse runs.
+--
+-- Naming convention (locked by tests/anatomy/test_agentkit_naming.py):
+--   * Tables prefixed agent_*
+--   * UUIDs in `uuid` columns; integer PKs everywhere for join speed
+--   * trace_id / span_id columns are W3C Trace Context (32-hex / 16-hex)
+--   * actor_id mirrors events.actor_id; actor_action_id groups all events
+--     emitted within one agent session
+
+-- agent_sessions: one row per agent invocation (Pulse-fired, webhook-fired,
+-- operator-fired). Mirrors Anthropic Managed Agents `session` semantics but
+-- everything stays in wing.db so OpenClaw / future local LLMs slot in.
+CREATE TABLE IF NOT EXISTS agent_sessions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,             -- A10 actor_action_id
+    agent_name      TEXT NOT NULL,                    -- matches files/anatomy/agents/<name>/
+    agent_version   INTEGER NOT NULL,                 -- pinned at session start
+    status          TEXT NOT NULL,                    -- pending | running | idle | terminated
+    trigger         TEXT NOT NULL,                    -- pulse | webhook | operator
+    trigger_id      TEXT,                             -- pulse_run_id or webhook event uuid
+    actor_id        TEXT NOT NULL,                    -- 'agent:<name>' for self, else operator
+    trace_id        TEXT NOT NULL,                    -- W3C Trace Context (32 hex chars)
+    model_uri       TEXT NOT NULL,                    -- e.g. anthropic-claude-opus-4-7
+    outcome_id      TEXT,                             -- present iff outcome-driven session
+    outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | failed | interrupted
+    started_at      TEXT NOT NULL,
+    ended_at        TEXT,
+    stop_reason     TEXT,                             -- end_turn | max_tokens | tool_use | error | interrupted
+    tokens_input    INTEGER,
+    tokens_output   INTEGER,
+    tokens_cache_read INTEGER,
+    result_json     TEXT,                             -- terminal payload + summary
+    error_json      TEXT,                             -- present iff status=terminated with error
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent_name ON agent_sessions(agent_name);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_status     ON agent_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_trigger    ON agent_sessions(trigger, trigger_id);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_started_at ON agent_sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_trace_id   ON agent_sessions(trace_id);
+
+-- agent_threads: child threads spawned by a coordinator. Solo agents have one
+-- thread (the primary); coordinators may spawn multiple. Mirrors Anthropic's
+-- session_thread; parent_thread_uuid is null for the primary thread.
+CREATE TABLE IF NOT EXISTS agent_threads (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                TEXT NOT NULL UNIQUE,
+    session_uuid        TEXT NOT NULL,
+    parent_thread_uuid  TEXT,                         -- null for primary
+    agent_name          TEXT NOT NULL,
+    agent_version       INTEGER NOT NULL,
+    role                TEXT NOT NULL,                -- primary | child
+    status              TEXT NOT NULL,                -- pending | running | idle | terminated
+    trace_id            TEXT NOT NULL,
+    span_id             TEXT NOT NULL,                -- 16 hex chars, parent for all LLM-call spans
+    started_at          TEXT NOT NULL,
+    ended_at            TEXT,
+    stop_reason         TEXT,
+    tokens_input        INTEGER,
+    tokens_output       INTEGER,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_threads_session ON agent_threads(session_uuid);
+CREATE INDEX IF NOT EXISTS idx_agent_threads_parent  ON agent_threads(parent_thread_uuid);
+CREATE INDEX IF NOT EXISTS idx_agent_threads_status  ON agent_threads(status);
+
+-- agent_iterations: outcome-driven iteration loop. One row per grader call.
+-- Empty for non-outcome sessions. iteration is 0-indexed; max defined by
+-- agent.yml::outcomes.max_iterations.
+CREATE TABLE IF NOT EXISTS agent_iterations (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_uuid    TEXT NOT NULL,
+    iteration       INTEGER NOT NULL,                 -- 0-indexed
+    grader_result   TEXT NOT NULL,                    -- satisfied | needs_revision | failed
+    grader_feedback TEXT,                             -- markdown bullets
+    grader_model    TEXT NOT NULL,
+    duration_ms     INTEGER,
+    tokens_input    INTEGER,
+    tokens_output   INTEGER,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_iterations    ON agent_iterations(session_uuid, iteration);
+CREATE INDEX IF NOT EXISTS idx_agent_iterations_result   ON agent_iterations(grader_result);
+
+-- agent_vaults: per-purpose credential bag. Borrowed from Anthropic Managed
+-- Agents pattern, scoped to nOS. Plaintext NEVER stored here — secret_ref
+-- is a pointer (Infisical path or env var name) resolved at session-open
+-- time by App\AgentKit\Vault\CredentialResolver.
+CREATE TABLE IF NOT EXISTS agent_vaults (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,
+    name            TEXT NOT NULL UNIQUE,             -- e.g. "conductor-default", "code-reviewer-org-acme"
+    display_name    TEXT NOT NULL,
+    metadata_json   TEXT NOT NULL DEFAULT '{}',
+    archived_at     TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS agent_credentials (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    vault_id        INTEGER NOT NULL,
+    scope           TEXT NOT NULL,                    -- anthropic-api | mcp-wing | mcp-bone | infisical | …
+    display_name    TEXT NOT NULL,
+    secret_ref      TEXT NOT NULL,                    -- "env:ANTHROPIC_API_KEY" or "infisical:/wing/anthropic-api"
+    expires_at      TEXT,
+    archived_at     TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (vault_id) REFERENCES agent_vaults(id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_credentials   ON agent_credentials(vault_id, scope);
+CREATE INDEX IF NOT EXISTS idx_agent_credentials_scope    ON agent_credentials(scope);
+
+-- agent_subscriptions: outbound webhook receivers. Wing fires HMAC-signed
+-- POSTs on agent lifecycle events; subscribers acknowledge with 2xx.
+-- Mirrors Anthropic webhooks shape (event.id / event.type / data.id /
+-- data.type) so external tooling that supports Anthropic webhooks already
+-- understands ours.
+CREATE TABLE IF NOT EXISTS agent_subscriptions (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                    TEXT NOT NULL UNIQUE,
+    url                     TEXT NOT NULL,            -- HTTPS only at runtime gate
+    event_types             TEXT NOT NULL,            -- comma-separated whitelist
+    signing_secret          TEXT NOT NULL,            -- whsec_... 32 random bytes hex
+    enabled                 INTEGER NOT NULL DEFAULT 1,
+    consecutive_failures    INTEGER NOT NULL DEFAULT 0,
+    last_attempted_at       TEXT,
+    last_succeeded_at       TEXT,
+    disabled_reason         TEXT,
+    created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_subscriptions_enabled ON agent_subscriptions(enabled);

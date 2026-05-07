@@ -1,0 +1,103 @@
+{block title}Agent {$agent->name}{/block}
+
+{block content}
+<h2 style="margin-bottom:4px; font-size:18px;">
+	<code>{$agent->name}</code>
+	<span style="font-size:12px; color:var(--text2); font-weight:normal;">v{$agent->version}</span>
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:24px; max-width:680px;">
+	{$agent->description}
+</div>
+
+<div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap;">
+	<div style="flex:1; min-width:240px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">Model (primary)</div>
+		<div style="font-family:monospace; font-size:14px; margin-top:4px;">{$agent->modelPrimaryUri}</div>
+		<div style="font-size:11px; color:var(--text2); margin-top:6px;">
+			Fallback: <code>{$agent->modelFallbackUri ?? '—'}</code>
+		</div>
+	</div>
+	<div style="flex:1; min-width:240px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">Topology</div>
+		<div style="font-size:14px; margin-top:4px;">{$agent->multiagentType}</div>
+		<div n:if="$agent->isCoordinator()" style="font-size:11px; color:var(--text2); margin-top:6px;">
+			Roster: {foreach $agent->roster as $r}<code>{$r->name}</code>{sep}, {/sep}{/foreach}
+		</div>
+	</div>
+	<div style="flex:1; min-width:240px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">Outcome</div>
+		<div style="font-size:14px; margin-top:4px;">
+			{if $agent->hasOutcome()}rubric ({$agent->maxIterations} iters max)
+			{else}—{/if}
+		</div>
+		<div n:if="$agent->hasOutcome()" style="font-size:11px; color:var(--text2); margin-top:6px;">
+			<code>{$agent->rubric->sourcePath|basename}</code>
+		</div>
+	</div>
+</div>
+
+<div style="padding:16px; border:1px solid var(--border); border-radius:8px; margin-bottom:24px;">
+	<h3 style="margin:0 0 8px; font-size:13px; color:var(--text2);">Capability scopes</h3>
+	<div>
+		{foreach $agent->capabilityScopes as $scope}
+			<span style="display:inline-block; margin:2px 4px 2px 0; padding:2px 8px; border:1px solid var(--border); border-radius:4px; font-family:monospace; font-size:11px;">
+				{$scope}
+			</span>
+		{/foreach}
+	</div>
+	<div style="margin-top:8px; font-size:11px; color:var(--text2);">
+		PII classification: <code>{$agent->piiClassification}</code> ·
+		Tools: {foreach $agent->tools as $t}<code>{$t->id}</code>{sep}, {/sep}{/foreach}
+	</div>
+</div>
+
+<h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Recent sessions</h3>
+{if $sessions}
+<table class="table" style="width:100%; border-collapse:collapse;">
+	<thead>
+		<tr>
+			<th style="text-align:left; padding:8px;">Started</th>
+			<th style="text-align:left; padding:8px;">Trigger</th>
+			<th style="text-align:left; padding:8px;">Status</th>
+			<th style="text-align:left; padding:8px;">Stop reason</th>
+			<th style="text-align:left; padding:8px;">Outcome</th>
+			<th style="text-align:right; padding:8px;">Tokens</th>
+			<th style="text-align:left; padding:8px;">Trace</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$sessions as $s" style="border-top:1px solid var(--border);">
+			<td style="padding:8px; white-space:nowrap; font-size:12px; color:var(--text2);">{$s['started_at']|truncate:19,''}</td>
+			<td style="padding:8px;"><code>{$s['trigger']}</code></td>
+			<td style="padding:8px;">
+				<span n:class="
+					'badge',
+					$s['status'] === 'idle' ? 'badge-success',
+					$s['status'] === 'running' ? 'badge-primary',
+					$s['status'] === 'terminated' ? 'badge-danger'
+				">{$s['status']}</span>
+			</td>
+			<td style="padding:8px; font-family:monospace; font-size:11px;">{$s['stop_reason'] ?? '—'}</td>
+			<td style="padding:8px;">
+				{if !empty($s['outcome_result'])}
+					<span n:class="
+						'badge',
+						$s['outcome_result'] === 'satisfied' ? 'badge-success',
+						$s['outcome_result'] === 'failed' ? 'badge-danger'
+					">{$s['outcome_result']}</span>
+				{else}—{/if}
+			</td>
+			<td style="padding:8px; text-align:right; font-family:monospace; font-size:12px;">
+				{($s['tokens_input'] ?? 0)} / {($s['tokens_output'] ?? 0)}
+			</td>
+			<td style="padding:8px;">
+				<a href="{plink Agents:session, name => $s['agent_name'], id => $s['uuid']}">view</a>
+			</td>
+		</tr>
+	</tbody>
+</table>
+{else}
+<div class="empty" style="padding:16px; color:var(--text2);">No sessions yet for this agent.</div>
+{/if}
+
+{/block}

@@ -57,6 +57,21 @@ final class EventRepository
 		// Aggregated by /api/v1/metrics into Prometheus counters/histograms
 		// and surfaced in Grafana dashboard 40-e2e-journeys.
 		'e2e_journey_start', 'e2e_journey_step', 'e2e_journey_end',
+		// AgentKit lifecycle (A14 — AIT runtime, 2026-05-07). Every agent
+		// session emits start + end; coordinator sessions also emit thread_*
+		// events, outcome-driven sessions emit iteration events. Every event's
+		// actor_action_id == agent_sessions.uuid so a SELECT joins the lineage.
+		// Tools used by the agent emit agent_tool_use; LLM call counts surface
+		// in agent_session_end.result_json.tokens.
+		'agent_session_start', 'agent_session_end',
+		'agent_thread_start', 'agent_thread_end',
+		'agent_iteration_start', 'agent_iteration_end',
+		'agent_tool_use', 'agent_tool_result',
+		'agent_message',          // primary thread observation of LLM output
+		'agent_grader_decision',  // satisfied | needs_revision | failed
+		'agent_webhook_dispatch', // outbound webhook fired
+		'agent_webhook_receipt',  // inbound webhook ack from subscriber
+		'agent_vault_resolved',   // credential pulled at session start (no plaintext)
 	];
 
 	public function __construct(

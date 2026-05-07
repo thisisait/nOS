@@ -1,0 +1,164 @@
+# JSON Schema for files/anatomy/agents/<name>/agent.yml
+# Anatomy A14 — AgentKit runtime (2026-05-07).
+#
+# Validated by tests/anatomy/test_agent_schema.py on every CI push.
+# Runtime loader (App\AgentKit\AgentLoader) re-validates at agent load time
+# so a bad agent.yml can never reach the LLM.
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://nos.thisisait.eu/schema/agent.yml"
+title: "AIT Agent Definition"
+type: object
+additionalProperties: false
+required:
+  - name
+  - version
+  - description
+  - model
+  - audit
+properties:
+  name:
+    type: string
+    pattern: "^[a-z][a-z0-9-]{1,38}[a-z0-9]$"
+    description: |
+      Stable identifier matching the agent's directory name under
+      files/anatomy/agents/. Lowercase + dashes only.
+  version:
+    type: integer
+    minimum: 1
+    description: "Bumped on every breaking change to system prompt or tool roster."
+  description:
+    type: string
+    minLength: 16
+    description: "One-paragraph human description for the /agents UI + audit trail."
+  model:
+    type: object
+    additionalProperties: false
+    required:
+      - primary
+    properties:
+      primary:
+        type: string
+        # URI scheme: <provider>-<model-id>, dashes throughout.
+        pattern: "^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$"
+        description: |
+          URI of the primary LLM backend. Format <provider>-<model>.
+          Known providers: anthropic, openclaw, openai, local.
+          Examples: anthropic-claude-opus-4-7, openclaw-qwen-coder-32b.
+      fallback:
+        type: string
+        pattern: "^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$"
+        description: |
+          Fallback URI used when primary fails (rate-limited, network error,
+          model unavailable). The protocol is platform-agnostic so an
+          openclaw fallback for an anthropic primary is safe.
+  system_prompt_path:
+    type: string
+    description: |
+      Path relative to the agent.yml directory. Markdown loaded verbatim
+      and passed as the LLM `system` parameter. If absent, no system prompt
+      is set (agent runs with default model behaviour).
+  tools:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          enum:
+            - bash-read-only
+            - bash-write
+            - mcp-wing
+            - mcp-bone
+            - mcp-pulse
+        config:
+          type: object
+          description: "Tool-specific config; opaque to the schema."
+  multiagent:
+    type: object
+    additionalProperties: false
+    required: [type]
+    properties:
+      type:
+        type: string
+        enum: [solo, coordinator]
+      roster:
+        type: array
+        description: "Names of agents this coordinator may delegate to."
+        items:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              pattern: "^[a-z][a-z0-9-]{1,38}[a-z0-9]$"
+            version:
+              type: integer
+              minimum: 1
+              description: "Pin to a specific version, else latest is used."
+      max_concurrent_threads:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 1
+        description: "Hard cap on parallel sub-agent threads. Homelab default 1."
+  outcomes:
+    type: object
+    additionalProperties: false
+    properties:
+      rubric_path:
+        type: string
+        description: "Markdown rubric, relative to agent.yml dir."
+      max_iterations:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 3
+  audit:
+    type: object
+    additionalProperties: false
+    required:
+      - capability_scopes
+      - pii_classification
+    properties:
+      capability_scopes:
+        type: array
+        items:
+          type: string
+          # Scopes match Authentik client scopes + custom nOS verbs.
+          pattern: "^[a-z][a-z._-]+$"
+        description: |
+          What this agent is authorised to do. Scope strings appear in
+          every audit event so the trail is grep-able. Examples:
+          wing.read, wing.write, events.write, mcp.tool_use,
+          bash.read, network.outbound.
+      pii_classification:
+        type: string
+        enum: [none, low, high]
+        description: |
+          GDPR Article 35 hint. `high` blocks anthropic-* primary (forces
+          local fallback) when nos_strict_pii_routing is true.
+  vault:
+    type: object
+    additionalProperties: false
+    properties:
+      required_credentials:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [scope]
+          properties:
+            scope:
+              type: string
+              # Examples: anthropic-api, mcp-wing, mcp-bone, infisical
+              pattern: "^[a-z][a-z0-9-]+$"
+            optional:
+              type: boolean
+              default: false
+  metadata:
+    type: object
+    additionalProperties: true
+    description: "Free-form key/value pairs, surfaced in Wing /agents UI."

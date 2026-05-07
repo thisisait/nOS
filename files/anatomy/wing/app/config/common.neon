@@ -52,3 +52,36 @@ services:
 	# write path goes through Bone /api/v1/embeddings/upsert so all writes
 	# carry actor attribution).
 	- App\Model\QdrantClient
+
+	# AgentKit — AIT runtime (Anatomy A14, 2026-05-07).
+	# Repositories
+	- App\Model\AgentSessionRepository
+	- App\Model\AgentVaultRepository
+	- App\Model\AgentSubscriptionRepository
+
+	# AgentKit core services
+	- App\AgentKit\AgentLoader(%appDir%/../../agents)
+	- App\AgentKit\Vault\CredentialResolver
+	- App\AgentKit\LLMClient\Factory
+	- App\AgentKit\Telemetry\AuditEmitter
+	- App\AgentKit\Telemetry\OtelExporter
+	- App\AgentKit\Webhook\WebhookDispatcher
+
+	# AgentKit tool registry (assembled via factory so we can inject HTTP + tokens)
+	- factory: App\AgentKit\Tools\ToolRegistry
+	  setup:
+		- register(@App\AgentKit\Tools\BashReadOnlyTool)
+		- register(@App\AgentKit\Tools\McpWingTool)
+		- register(@App\AgentKit\Tools\McpBoneTool)
+
+	# Tools
+	- App\AgentKit\Tools\BashReadOnlyTool
+	- App\AgentKit\Tools\McpWingTool
+	- App\AgentKit\Tools\McpBoneTool
+
+	# Shared HTTP client for tools + adapters
+	- GuzzleHttp\Client
+
+	# Runner + Coordinator
+	- App\AgentKit\Runner
+	- App\AgentKit\Coordinator

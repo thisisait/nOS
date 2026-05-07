@@ -137,6 +137,17 @@ final class RouterFactory
 		$router->addRoute('admin/resume', 'Admin:resume');
 		$router->addRoute('admin', 'Admin:default');
 
+		// AgentKit — AIT runtime (Anatomy A14, 2026-05-07).
+		// Browser views: /agents (catalog), /agents/<name> (detail),
+		// /agents/<name>/sessions/<uuid> (deep-dive). API surface:
+		// /api/v1/agents/* + /api/v1/agent-sessions/<uuid>.
+		$router->addRoute('agents/<name>/sessions/<id>', 'Agents:session');
+		$router->addRoute('agents/<name>', 'Agents:detail');
+		$router->addRoute('agents', 'Agents:default');
+		$api->addRoute('api/v1/agents[/<name>]', 'Agents:default');
+		$api->addRoute('api/v1/agents/<name>/sessions', 'Agents:sessions');
+		$api->addRoute('api/v1/agent-sessions/<uuid>', 'AgentSessions:default');
+
 		return $router;
 	}
 }

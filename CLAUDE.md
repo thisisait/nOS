@@ -300,3 +300,35 @@ Never edit `composer.json` and commit without `composer.lock` updates. Same prin
 - **Forward-auth vs. native-OIDC SSO**: services with `200 OK` on Traefik route (e.g., Gitea, Portainer, HedgeDoc) are NOT bypassing SSO — they have **native OIDC** with their own login page that surfaces a "Sign in with Authentik" button. Forward-auth (Traefik middleware `authentik@file`) is used for services WITHOUT app-level OIDC support. Don't try to add `authentik@file` middleware on top of native-OIDC services — operator gets a double-login UX for no security benefit.
 - **Wing /events table schema mismatch — CLOSED 2026-05-05 (Anatomy P1):** the `events` table now carries a `source TEXT` column + index. Schema-extensions.sql declares it; init-db.php's idempotent ALTER sweep adds it to pre-existing DBs. Bone's `clients/wing.py::insert_event` reads `payload['source']` and writes the column; `query_events` accepts it as a filter. Wing's EventRepository + EventsPresenter mirror both. Callback plugin pins `source: "callback"` at write time. Free-text hint pre-A10 — A10 lands `actor_id` (FK Authentik clients) + `actor_action_id` (UUID) for cryptographic attribution alongside.
 - **E2E ephemeral SSO tester identity — A13.6 (2026-05-07):** Vrstva A.5 lands a per-test SSO-authenticated identity layer at `tests/e2e/lib/`. Every Playwright/pytest journey requesting `tester_identity(tier)` gets a freshly-minted random `nos-tester-e2e-<8hex>` Authentik user, scoped to exactly one RBAC tier group, with a fresh Wing API token. Per-test fixture teardown + conftest atexit hook + standalone `files/anatomy/scripts/sweep-orphan-testers.py` form three lines of cleanup defense. Static blueprint user `nos-tester` (member of all groups) survives unchanged for legacy smoke probes; the ephemeral prefix `nos-tester-e2e-` is distinct so orphan-sweep never touches it. Anatomy gate `tests/anatomy/test_tester_identity_lib.py` (7 tests, no network) pins lib contracts on every push. Authoritative guide: `docs/e2e-tester-identity.md`. New journeys: `tests/e2e/journeys/test_operator_login.py` (full SSO chain) + `test_rbac_admin.py` (parametrized over 4 tiers, asserts /admin allow/deny matrix). Operator dev-bootstrap: copy `nos-api` token from Authentik UI → `~/.nos/secrets.yml::authentik_bootstrap_token`. **Pending:** Pulse cron `e2e-tester-orphan-sweep` (24h belt-and-suspenders) — defer; per-test teardown + atexit already cover steady state. Wing API token bootstrap-from-akadmin-password — defer; manual UI export is fine for solo-operator dev.
+
+## AIT — AgentKit runtime (Anatomy A14, 2026-05-07)
+
+Self-hosted, platform-agnostic, audit-first agent runtime. Lives under `files/anatomy/wing/app/AgentKit/` (PHP, namespace `App\AgentKit\*`). Borrows the Anthropic Managed Agents conceptual surface — agent / session / thread / outcome / vault / webhook — but every byte of state lives in `wing.db` so OpenClaw / future local LLMs swap in via a one-line URI change in `agent.yml`. Authoritative guide: `docs/ait-runtime-architecture.md`.
+
+**Key contracts (locked by anatomy CI gates):**
+
+- **Agent definition** = `files/anatomy/agents/<name>/{agent.yml, system.md, rubric.md}`. `agent.yml` validated against `state/schema/agent.schema.yaml` on every push by `tests/anatomy/test_agent_schema.py`. Name pattern `^[a-z][a-z0-9-]{1,38}[a-z0-9]$`, lower+dashes only.
+- **Model URI scheme** = `<provider>-<model-id>`, dashes throughout (e.g. `anthropic-claude-opus-4-7`, `openclaw-qwen-coder-32b`). Pinned by `App\AgentKit\AgentLoader::isValidModelUri` + the schema regex + `tests/anatomy/test_agentkit_naming.py::test_uri_scheme_uses_dash_separator`.
+- **LLMClient interface** has exactly 2 methods (`identifier()`, `send()`). Surface drift caught by `test_llm_client_protocol_is_minimal`. Both `AnthropicAdapter` (uses `anthropic-ai/sdk` composer dep) and `OpenClawAdapter` (HTTP to `OPENCLAW_BASE_URL`) honor the protocol.
+- **Tables** (in `files/anatomy/wing/db/schema-extensions.sql`): `agent_sessions`, `agent_threads`, `agent_iterations`, `agent_vaults`, `agent_credentials`, `agent_subscriptions`. Verified by `test_all_agentkit_tables_declared`.
+- **Audit lineage**: every LLM call → `events` row + OTel span + token tally in `agent_sessions`. `actor_action_id == agent_sessions.uuid` so a single `SELECT WHERE actor_action_id=?` reconstructs the entire run. 12 new event types (`agent_session_*`, `agent_thread_*`, `agent_iteration_*`, `agent_tool_use`, `agent_tool_result`, `agent_message`, `agent_grader_decision`, `agent_webhook_dispatch`, `agent_vault_resolved`).
+- **OTel**: `App\AgentKit\Telemetry\OtelExporter` POSTs JSON spans to Alloy on `127.0.0.1:4318` (host config already opens both 4317 gRPC + 4318 HTTP). Service name `nos.agentkit`. Trace_id stored in `agent_sessions.trace_id` for Tempo deep-link from Wing /agents UI.
+- **Vault**: `agent_credentials.secret_ref` is NEVER plaintext — it's a pointer (`env:VAR_NAME` or `infisical:/path`) resolved by `CredentialResolver` at session-open time. Plaintext only lives in function-local memory inside the adapter call.
+- **Outcome iteration**: agents with `outcomes.rubric_path` enter the iteration loop — separate Grader LLM call returns strict-JSON `{result, feedback}`, runs in isolated context window. Max 3 iterations default, 10 max.
+- **Webhooks (outbound)**: `WebhookDispatcher` fires HMAC-signed POSTs in Standard Webhooks v1 shape. Auto-disable after 20 consecutive failures.
+
+**Composer deps added** (lockfile-sync gate enforces both committed): `anthropic-ai/sdk` (official), `open-telemetry/sdk` + `exporter-otlp` (official OTel PHP), `symfony/yaml`, `guzzlehttp/guzzle`.
+
+**Runtime entry points:**
+- CLI: `php files/anatomy/wing/bin/run-agent.php --agent=<name> [--prompt=...] [--vault=...] [--trigger=pulse|webhook|operator]`. Returns JSON summary, exit 0 on idle/satisfied, 1 on terminated, 2 on config error.
+- Browser UI: `/agents` (catalog), `/agents/<name>` (detail), `/agents/<name>/sessions/<uuid>` (deep dive with threads + iterations + Tempo trace link).
+- API: `GET /api/v1/agents`, `GET /api/v1/agents/<name>`, `GET /api/v1/agents/<name>/sessions`, `GET /api/v1/agent-sessions/<uuid>` (bearer auth).
+
+**First agent shipped: `conductor`** (`files/anatomy/agents/conductor/`). System prompt + rubric describe the self-test ceremony — `mcp_wing GET /api/v1/hub/health`, `mcp_wing GET /api/v1/pulse_jobs`, etc. Conductor reports under markdown heading `## Conductor report` with sections `Health`, `Findings`, `Recommendations for operator`. Grader scores against `rubric.md` (evidence-discipline + structural).
+
+**Out-of-scope, deferred (post-A14):**
+- Multi-agent process pool (Coordinator currently runs sub-agents sequentially)
+- Dreams (memory consolidation across past sessions)
+- Operator-trigger UI button (today: CLI only)
+- Vault refresh from Infisical (today: env-var fallback works)
+- Per-agent webhook auto-fan-out for event-driven loops

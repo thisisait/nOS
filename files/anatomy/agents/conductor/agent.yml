@@ -1,0 +1,49 @@
+name: conductor
+version: 1
+description: |
+  nOS conductor — first non-operator-identity agent. Runs after each playbook
+  blank+converge to verify the platform end-to-end. Pulse-fired weekly (Sun
+  04:00 UTC) for ongoing drift detection. Walks: hub health, pulse trigger,
+  events query, OpenAPI drift, wing test suite. Posts a markdown report
+  back into events as type=conductor_report. First A8 ceremony pass criterion
+  is that THIS agent successfully completes a full self-test cycle and the
+  resulting wing.db rows pass the Phase-5 verification gate.
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+  - id: mcp-bone
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - wing.read
+    - bone.read
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+    - scope: mcp-bone
+
+metadata:
+  ait_phase: A8
+  ceremony_role: first-non-operator-write

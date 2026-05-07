@@ -1,0 +1,113 @@
+{block title}Session {$session['uuid']|truncate:8,''}{/block}
+
+{block content}
+<div style="color:var(--text2); font-size:12px; margin-bottom:8px;">
+	<a href="{plink Agents:detail, name => $session['agent_name']}">&larr; {$session['agent_name']} v{$session['agent_version']}</a>
+</div>
+<h2 style="margin-bottom:4px; font-size:18px;">Session <code>{$session['uuid']|truncate:8,''}</code></h2>
+
+<div style="display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap;">
+	<div style="flex:1; min-width:200px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:10px; color:var(--text2); text-transform:uppercase;">Status</div>
+		<div style="font-size:18px; margin-top:4px;">
+			<span n:class="
+				'badge',
+				$session['status'] === 'idle' ? 'badge-success',
+				$session['status'] === 'running' ? 'badge-primary',
+				$session['status'] === 'terminated' ? 'badge-danger'
+			">{$session['status']}</span>
+		</div>
+		<div style="font-size:11px; color:var(--text2); margin-top:6px;">stop: <code>{$session['stop_reason'] ?? '—'}</code></div>
+	</div>
+	<div style="flex:1; min-width:200px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:10px; color:var(--text2); text-transform:uppercase;">Trigger</div>
+		<div style="font-size:14px; margin-top:4px;"><code>{$session['trigger']}</code></div>
+		<div style="font-size:11px; color:var(--text2); margin-top:6px;">id: <code>{$session['trigger_id'] ?? '—'}</code></div>
+	</div>
+	<div style="flex:1; min-width:200px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:10px; color:var(--text2); text-transform:uppercase;">Model</div>
+		<div style="font-size:13px; font-family:monospace; margin-top:4px;">{$session['model_uri']}</div>
+	</div>
+	<div style="flex:1; min-width:200px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+		<div style="font-size:10px; color:var(--text2); text-transform:uppercase;">Tokens (in / out)</div>
+		<div style="font-size:18px; font-family:monospace; margin-top:4px;">
+			{($session['tokens_input'] ?? 0)} / {($session['tokens_output'] ?? 0)}
+		</div>
+	</div>
+</div>
+
+<div style="margin-bottom:16px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+	<div style="font-size:11px; color:var(--text2); text-transform:uppercase;">W3C trace</div>
+	<div style="font-family:monospace; font-size:13px; margin-top:4px;">{$session['trace_id']}</div>
+	<div style="font-size:11px; color:var(--text2); margin-top:6px;">
+		Search this trace_id in Tempo via Grafana Explore (links land when Grafana datasource is provisioned).
+	</div>
+</div>
+
+<h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Threads ({count($threads)})</h3>
+{if $threads}
+<table class="table" style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+	<thead>
+		<tr>
+			<th style="text-align:left; padding:8px;">Role</th>
+			<th style="text-align:left; padding:8px;">Agent</th>
+			<th style="text-align:left; padding:8px;">Started</th>
+			<th style="text-align:left; padding:8px;">Status</th>
+			<th style="text-align:right; padding:8px;">Tokens</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$threads as $t" style="border-top:1px solid var(--border);">
+			<td style="padding:8px;"><code>{$t['role']}</code></td>
+			<td style="padding:8px;"><code>{$t['agent_name']}</code> <small style="color:var(--text2);">v{$t['agent_version']}</small></td>
+			<td style="padding:8px; white-space:nowrap; font-size:12px; color:var(--text2);">{$t['started_at']|truncate:19,''}</td>
+			<td style="padding:8px;">
+				<span n:class="
+					'badge',
+					$t['status'] === 'idle' ? 'badge-success',
+					$t['status'] === 'running' ? 'badge-primary'
+				">{$t['status']}</span>
+			</td>
+			<td style="padding:8px; text-align:right; font-family:monospace; font-size:12px;">
+				{($t['tokens_input'] ?? 0)} / {($t['tokens_output'] ?? 0)}
+			</td>
+		</tr>
+	</tbody>
+</table>
+{/if}
+
+{if $iterations}
+<h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Outcome iterations ({count($iterations)})</h3>
+<table class="table" style="width:100%; border-collapse:collapse;">
+	<thead>
+		<tr>
+			<th style="text-align:left; padding:8px;">#</th>
+			<th style="text-align:left; padding:8px;">Result</th>
+			<th style="text-align:left; padding:8px;">Feedback</th>
+			<th style="text-align:right; padding:8px;">Duration (ms)</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$iterations as $it" style="border-top:1px solid var(--border);">
+			<td style="padding:8px; font-family:monospace;">{$it['iteration']}</td>
+			<td style="padding:8px;">
+				<span n:class="
+					'badge',
+					$it['grader_result'] === 'satisfied' ? 'badge-success',
+					$it['grader_result'] === 'needs_revision' ? 'badge-primary',
+					$it['grader_result'] === 'failed' ? 'badge-danger'
+				">{$it['grader_result']}</span>
+			</td>
+			<td style="padding:8px; max-width:580px; font-size:12px; white-space:pre-wrap;">{$it['grader_feedback']|truncate:600}</td>
+			<td style="padding:8px; text-align:right; font-family:monospace;">{$it['duration_ms']}</td>
+		</tr>
+	</tbody>
+</table>
+{/if}
+
+<div n:if="$session['error_json']" style="margin-top:24px; padding:16px; border:1px solid #d11; border-radius:8px; background:rgba(221,17,17,0.08);">
+	<h3 style="margin:0 0 8px; font-size:14px; color:#d11;">Error</h3>
+	<pre style="margin:0; font-size:12px; white-space:pre-wrap;">{$session['error_json']}</pre>
+</div>
+
+{/block}

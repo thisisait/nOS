@@ -34,6 +34,10 @@
 	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox <span class="tab-key">7</span></a>
 	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals <span class="tab-key">8</span></a>
 	<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">9</span></a>
+	{* A14: Agents tab — AIT runtime catalog + session lineage. Read-only
+	   for any authenticated user; running an agent goes through the CLI or
+	   a future operator-tier UI button. *}
+	<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents</a>
 	<a class="tab{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">6</span></a>
 	{* A12: Admin tab only visible to nos-providers (Tier-1). Server-side
 	   guard in AdminPresenter::requireSuperAdmin is the actual gate. *}
