@@ -45,6 +45,18 @@ final class EventRepository
 		// row's result_json records {jobs_affected, operator_username, note?}, the
 		// resume row records {jobs_unhalted, operator_username, note?}.
 		'admin_emergency_halt', 'admin_emergency_resume',
+		// E2E journey telemetry (A13 — non-interactive end-to-end testing, 2026-05-07).
+		//   e2e_journey_start  — fixture setup, one per journey run
+		//   e2e_journey_step   — each named step within the journey (HTTP call,
+		//                         DB query, etc.), result_json carries
+		//                         {step, status, duration_ms, note?}
+		//   e2e_journey_end    — fixture teardown, result_json carries
+		//                         {steps, passed, failed, duration_ms_total}
+		// All three share `actor_action_id` (one journey run = one UUID) so a
+		// SELECT WHERE actor_action_id=? reconstructs the whole journey.
+		// Aggregated by /api/v1/metrics into Prometheus counters/histograms
+		// and surfaced in Grafana dashboard 40-e2e-journeys.
+		'e2e_journey_start', 'e2e_journey_step', 'e2e_journey_end',
 	];
 
 	public function __construct(
