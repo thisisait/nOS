@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use Cron\CronExpression;
 use Nette\Database\Explorer;
 
 /**
@@ -12,13 +13,18 @@ use Nette\Database\Explorer;
  * Tables ``pulse_jobs`` + ``pulse_runs`` are defined in
  * ``files/anatomy/wing/db/schema-extensions.sql:176-219``. The Pulse
  * daemon (``files/anatomy/pulse/``) polls Wing for due jobs, fires
- * them, and posts run_start + run_finish. Cron-expression parsing for
- * server-side ``next_fire_at`` recomputation is deferred — the MVP
- * advances by a flat fallback interval; A7 (gitleaks) lands real cron.
+ * them, and posts run_start + run_finish. Server-side ``next_fire_at``
+ * recomputation uses dragonmantank/cron-expression (added 2026-05-07
+ * in the systematic Variant-A finalize sweep) — falls back to a flat
+ * advance only when the schedule string can't be parsed.
  */
 final class PulseRepository
 {
-	/** Default next-fire advance when no cron parser is wired. */
+	/**
+	 * Used only when CronExpression rejects the schedule string —
+	 * keeps the job from being stuck "due" every poll, which would
+	 * spam the runner. Real cron parsing is the primary path.
+	 */
 	private const FALLBACK_ADVANCE_SECONDS = 3600;
 
 	public function __construct(
@@ -125,18 +131,53 @@ final class PulseRepository
 		];
 		$this->db->table('pulse_runs')->where('run_id', $runId)->update($update);
 
-		// Advance parent job's next_fire_at. MVP: flat fallback. Real
-		// cron parsing (and respect for jitter_min) follows in A7.
-		$nextIso = date('c', time() + self::FALLBACK_ADVANCE_SECONDS);
+		// Advance parent job's next_fire_at by parsing the cron schedule.
+		// Without this, jobs whose next_fire_at would otherwise be NULL
+		// (e.g. fresh upserts, or runs that finish after a Wing restart)
+		// stay perpetually "due" and re-fire every Pulse tick — observed
+		// live 2026-05-07 as a 30-second-spam loop until both jobs were
+		// manually paused.
+		$job = $this->db->table('pulse_jobs')->get($run->job_id);
+		$nextIso = $this->computeNextFireAt(
+			$job ? (string) $job->schedule : '',
+			(int) ($job->jitter_min ?? 0),
+		);
 		$this->db->table('pulse_jobs')
 			->where('id', $run->job_id)
 			->update([
 				'next_fire_at' => $nextIso,
+				'last_fired_at' => $update['finished_at'],
 				'updated_at'   => $nowIso,
 			]);
 
 		$run = $this->db->table('pulse_runs')->get($runId);
 		return $run ? $run->toArray() : null;
+	}
+
+	/**
+	 * Compute next_fire_at from a 5-field crontab string (minute hour
+	 * day-of-month month day-of-week). Falls back to FALLBACK_ADVANCE_SECONDS
+	 * when the schedule string can't be parsed (so the job doesn't get
+	 * stuck "due" — that would re-fire every Pulse tick).
+	 *
+	 * jitter_min adds a uniform-random 0..jitter_min minutes to the cron
+	 * timestamp so a herd of jobs scheduled at the same minute don't all
+	 * fire simultaneously. Pulse already adds its own ThrottleInterval;
+	 * this is the wing-side stagger for the catalog.
+	 */
+	private function computeNextFireAt(string $schedule, int $jitterMin = 0): string
+	{
+		$now = time();
+		try {
+			$cron = new CronExpression($schedule);
+			$next = $cron->getNextRunDate('@' . $now)->getTimestamp();
+		} catch (\Throwable) {
+			$next = $now + self::FALLBACK_ADVANCE_SECONDS;
+		}
+		if ($jitterMin > 0) {
+			$next += random_int(0, $jitterMin * 60);
+		}
+		return date('c', $next);
 	}
 
 	/**
@@ -180,19 +221,29 @@ final class PulseRepository
 			'updated_at'     => $now,
 		];
 
+		// Compute next_fire_at from the schedule string. Used for fresh
+		// inserts AND when an existing job's schedule changed (to retire
+		// the stale scheduled time). Without this, NULL → "due every
+		// tick" → spam loop (live-observed 2026-05-07 before the cron
+		// parser landed).
+		$initialNext = $this->computeNextFireAt(
+			$payload['schedule'],
+			(int) ($payload['jitter_min'] ?? 0),
+		);
+
 		$existing = $this->db->table('pulse_jobs')->get($id);
 		if ($existing) {
 			$update = $fields;
 			// Preserve next_fire_at when schedule is unchanged — don't reset
 			// a job that is already scheduled close to now or mid-flight.
 			if ($existing->schedule !== $payload['schedule']) {
-				$update['next_fire_at'] = null;
+				$update['next_fire_at'] = $initialNext;
 			}
 			$this->db->table('pulse_jobs')->where('id', $id)->update($update);
 		} else {
 			$this->db->table('pulse_jobs')->insert([
 				'id'          => $id,
-				'next_fire_at' => null, // fires on first Pulse tick after registration
+				'next_fire_at' => $initialNext,
 				'created_at'  => $now,
 				...$fields,
 			]);

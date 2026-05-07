@@ -14,7 +14,8 @@
     "nette/utils": "^4.0",
     "latte/latte": "^3.0",
     "tracy/tracy": "^2.10",
-    "nette/robot-loader": "^4.0"
+    "nette/robot-loader": "^4.0",
+    "dragonmantank/cron-expression": "^3.4"
   },
   "autoload": {
     "psr-4": {

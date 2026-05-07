@@ -63,3 +63,36 @@
   changed_when: false
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bridge NVM-installed CLIs into the homebrew-prefix PATH so launchd daemons
+# (Bone, Pulse, Wing, OpenClaw) — which start without the operator's shell
+# config — can resolve them. Surfaced live 2026-05-07 when Pulse subprocess-
+# forked pulse-run-agent.sh under launchd's minimal PATH and `command -v
+# claude` failed → runner exited rc=2 before any Wing event landed.
+#
+# We symlink only the small set of CLIs that get invoked from launchd
+# subprocess context — claude is the canonical case (conductor agent).
+# Keep the list short on purpose; everything else stays NVM-isolated.
+# ──────────────────────────────────────────────────────────────────────────────
+- name: Detect NVM-installed claude CLI path
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default >/dev/null 2>&1
+    command -v claude || true
+  args:
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  register: _claude_path
+  changed_when: false
+  check_mode: false
+
+- name: Symlink claude into homebrew_prefix/bin (PATH-bridge for launchd)
+  ansible.builtin.file:
+    src: "{{ _claude_path.stdout | trim }}"
+    dest: "{{ homebrew_prefix }}/bin/claude"
+    state: link
+    force: true
+  when: _claude_path.stdout | trim | length > 0

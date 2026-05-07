@@ -78,7 +78,10 @@ class WingClient:
 
     def post_run_start(self, job_id: str, run_id: str,
                        fired_at_iso: str) -> bool:
-        return self._post("/api/v1/pulse_runs/start", {
+        # Wing PulsePresenter::actionRuns dispatches POST /pulse_runs (no
+        # /start suffix) → recordStart. The earlier /start path was a
+        # misalignment with the spec'd contract, surfaced 2026-05-07.
+        return self._post("/api/v1/pulse_runs", {
             "job_id": job_id,
             "run_id": run_id,
             "fired_at": fired_at_iso,
@@ -87,8 +90,12 @@ class WingClient:
     def post_run_finish(self, run_id: str, *, finished_at_iso: str,
                         exit_code: int, stdout_tail: str = "",
                         stderr_tail: str = "") -> bool:
-        return self._post("/api/v1/pulse_runs/finish", {
-            "run_id": run_id,
+        # Wing PulsePresenter::actionRunFinish takes the run_id in the
+        # URL path, not the body: POST /pulse_runs/<run_id>/finish. This
+        # is also the call that triggers Wing's recordFinish() to advance
+        # pulse_jobs.next_fire_at — so the URL drift was double-bad: 0
+        # finish rows AND 0 cron advancement (jobs stayed NULL → "due").
+        return self._post(f"/api/v1/pulse_runs/{run_id}/finish", {
             "finished_at": finished_at_iso,
             "exit_code": exit_code,
             "stdout_tail": stdout_tail[-2000:],
