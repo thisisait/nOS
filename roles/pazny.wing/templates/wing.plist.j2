@@ -51,6 +51,13 @@
         <key>BONE_SECRET</key>
         <string>{{ bone_secret | default('') }}</string>
 
+        <!-- HMAC secret for /api/v1/events POST (callback plugin + conductor
+             agent_run_start/end events). Same value as BONE_SECRET — Bone
+             signs outbound, Wing verifies inbound. EventsPresenter::checkHmac()
+             reads this via getenv(). Without it, every /events POST → 500. -->
+        <key>WING_EVENTS_HMAC_SECRET</key>
+        <string>{{ wing_events_hmac_secret | default(bone_secret) | default('') }}</string>
+
         <!-- Qdrant — Tier-2 vector DB at apps/qdrant.yml. Empty when
              install_qdrant=false; QdrantClient.php returns 503 in that case. -->
         <key>QDRANT_URL</key>

@@ -97,7 +97,7 @@ final class ServiceRegistry
 		curl_exec($handle);
 		$code = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
 		$errno = curl_errno($handle);
-		curl_close($handle);
+		// curl_close() removed: no-op since PHP 8.0, deprecation in 8.5.
 		$ms = (int) round((microtime(true) - $start) * 1000);
 
 		// 2xx/3xx/401/403 (auth gate) = up — the service is answering

@@ -116,7 +116,7 @@ TOKEN_RESP=$(curl -sS -w "\n%{http_code}" \
     --data-urlencode "client_secret=${CLIENT_SECRET}" \
     "${TOKEN_URL}" 2>&1) || _die "curl to Authentik failed"
 
-TOKEN_BODY=$(echo "$TOKEN_RESP" | head -n -1)
+TOKEN_BODY=$(echo "$TOKEN_RESP" | sed '$d')   # all lines except the last (portable; macOS BSD head lacks `-n -N`)
 TOKEN_CODE=$(echo "$TOKEN_RESP" | tail -n 1)
 
 if [[ "$TOKEN_CODE" != "200" ]]; then
@@ -124,7 +124,10 @@ if [[ "$TOKEN_CODE" != "200" ]]; then
     exit 2
 fi
 
-AUTHENTIK_TOKEN=$(echo "$TOKEN_BODY" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+# Authentik returns the field with a space after the colon (`"access_token": "..."`)
+# whereas a tighter regex without the space would silently miss it. Use python3 (which
+# we already require for the UUID) for a robust JSON parse.
+AUTHENTIK_TOKEN=$(echo "$TOKEN_BODY" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("access_token",""))')
 if [[ -z "$AUTHENTIK_TOKEN" ]]; then
     _die "Authentik returned no access_token"
 fi
@@ -152,11 +155,17 @@ if [[ -n "$CONDUCTOR_PROFILE" && -f "$CONDUCTOR_PROFILE" ]]; then
         | tail -n +2 \
         | sed 's/^  //' \
         | sed '/^[a-z_]*:/q' \
-        | head -n -1)
+        | sed '$d')   # drop the trailing 'next-key:' line that ended the slice
 fi
 
-CLAUDE_ARGS=(--print)
-[[ -n "$SYSTEM_PROMPT" ]] && CLAUDE_ARGS+=(--system "$SYSTEM_PROMPT")
+CLAUDE_ARGS=(--print --permission-mode bypassPermissions)
+# claude CLI 2.x flag is `--system-prompt` (not `--system`).
+# `--permission-mode bypassPermissions`: the runner is a non-interactive
+# subprocess; we cannot answer permission prompts. The conductor is
+# already gated by Authentik client_credentials + Wing bearer scope —
+# permission gating at the inner-claude layer is redundant and blocks
+# every Bash/curl call the ceremony needs.
+[[ -n "$SYSTEM_PROMPT" ]] && CLAUDE_ARGS+=(--system-prompt "$SYSTEM_PROMPT")
 
 CLAUDE_OUTPUT=$(
     WING_API_URL="$WING_API_URL" \

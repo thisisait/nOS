@@ -59,7 +59,7 @@ class QdrantClient
 		$out  = curl_exec($ch);
 		$code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$err  = curl_error($ch);
-		curl_close($ch);
+		// curl_close() removed: no-op since PHP 8.0, deprecation in 8.5.
 
 		if ($out === false) {
 			return ['status' => 0, 'body' => json_encode(['error' => $err ?: 'curl failed', 'status' => 0])];

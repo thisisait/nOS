@@ -69,7 +69,7 @@ class BoneClient
 		$raw = curl_exec($ch);
 		$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$err = curl_error($ch);
-		curl_close($ch);
+		// curl_close() removed: no-op since PHP 8.0 (resource → object), deprecation in 8.5.
 
 		if ($raw === false || $status === 0) {
 			return [

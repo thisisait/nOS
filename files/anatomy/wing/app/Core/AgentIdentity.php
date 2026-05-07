@@ -164,7 +164,7 @@ final class AgentIdentity
         $resp = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $err = curl_error($ch);
-        curl_close($ch);
+        // curl_close() removed: no-op since PHP 8.0, deprecation in 8.5.
 
         if ($resp === false) {
             throw new RuntimeException("Authentik unreachable: {$err}");

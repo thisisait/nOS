@@ -184,7 +184,7 @@ final class SystemRepository
 		curl_exec($handle);
 		$code = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
 		$errno = curl_errno($handle);
-		curl_close($handle);
+		// curl_close() removed: no-op since PHP 8.0, deprecation in 8.5.
 		$ms = (int) round((microtime(true) - $start) * 1000);
 
 		$status = ($code >= 200 && $code < 500 && $errno === 0) ? 'up' : 'down';
