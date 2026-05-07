@@ -1,0 +1,150 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Non-interactive end-to-end journey runs (Anatomy A13). Each journey is a pytest-driven HTTP/SQL flow that emits e2e_journey_start/step/end events into Wing's events table. This dashboard renders pass/fail trend, step durations, and per-run drill-down from wing.db via frser-sqlite-datasource. Source: tests/e2e/journeys/test_*.py.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "E2E journeys — what this is",
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+      "options": {
+        "mode": "markdown",
+        "content": "Each row in the panels below represents one **journey run** — a `pytest tests/e2e/journeys/test_*.py` invocation that walks a real user-flow (operator login, conductor self-test, approval click, halt-resume, plugin contract check). Steps emit `e2e_journey_step` events; the journey wraps with `e2e_journey_start` + `e2e_journey_end`. Failures are visible by step. Drill into a specific run by clicking its `actor_action_id` in the *Recent runs* table and pasting it into Wing `/audit?actor_action_id=…` — every step row is queryable by that UUID."
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Runs last 24h",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 4},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT COUNT(*) AS runs FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day')",
+        "queryText":    "SELECT COUNT(*) AS runs FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day')",
+        "timeColumns": []
+      }],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Failed runs 24h",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 4},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT COUNT(*) AS failed FROM events WHERE type='e2e_journey_end' AND json_extract(result_json,'$.status')='failed' AND ts >= datetime('now','-1 day')",
+        "queryText":    "SELECT COUNT(*) AS failed FROM events WHERE type='e2e_journey_end' AND json_extract(result_json,'$.status')='failed' AND ts >= datetime('now','-1 day')",
+        "timeColumns": []
+      }],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Avg duration 24h",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 4},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT CAST(AVG(CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER)) AS INTEGER) AS avg_ms FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day')",
+        "queryText":    "SELECT CAST(AVG(CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER)) AS INTEGER) AS avg_ms FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day')",
+        "timeColumns": []
+      }],
+      "fieldConfig": {"defaults": {"unit": "ms", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5000}, {"color": "red", "value": 30000}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "table",
+      "id": 5,
+      "title": "Pass/fail per journey (24h)",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.status') AS status, COUNT(*) AS runs, CAST(AVG(CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER)) AS INTEGER) AS avg_ms FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day') GROUP BY journey, status ORDER BY journey, status",
+        "queryText":    "SELECT json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.status') AS status, COUNT(*) AS runs, CAST(AVG(CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER)) AS INTEGER) AS avg_ms FROM events WHERE type='e2e_journey_end' AND ts >= datetime('now','-1 day') GROUP BY journey, status ORDER BY journey, status",
+        "timeColumns": []
+      }],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [
+        {"matcher": {"id": "byName", "options": "status"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-text"}}, {"id": "mappings", "value": [{"type": "value", "options": {"ok": {"color": "green", "text": "ok"}, "failed": {"color": "red", "text": "failed"}}}]}]},
+        {"matcher": {"id": "byName", "options": "avg_ms"}, "properties": [{"id": "unit", "value": "ms"}]}
+      ]},
+      "options": {}
+    },
+    {
+      "type": "table",
+      "id": 6,
+      "title": "Recent runs (last 20)",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT ts, json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.status') AS status, json_extract(result_json,'$.passed') AS passed, json_extract(result_json,'$.failed') AS failed, CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER) AS duration_ms, actor_action_id FROM events WHERE type='e2e_journey_end' ORDER BY id DESC LIMIT 20",
+        "queryText":    "SELECT ts, json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.status') AS status, json_extract(result_json,'$.passed') AS passed, json_extract(result_json,'$.failed') AS failed, CAST(json_extract(result_json,'$.duration_ms_total') AS INTEGER) AS duration_ms, actor_action_id FROM events WHERE type='e2e_journey_end' ORDER BY id DESC LIMIT 20",
+        "timeColumns": ["ts"]
+      }],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [
+        {"matcher": {"id": "byName", "options": "status"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-text"}}, {"id": "mappings", "value": [{"type": "value", "options": {"ok": {"color": "green", "text": "ok"}, "failed": {"color": "red", "text": "failed"}}}]}]},
+        {"matcher": {"id": "byName", "options": "duration_ms"}, "properties": [{"id": "unit", "value": "ms"}]}
+      ]},
+      "options": {}
+    },
+    {
+      "type": "table",
+      "id": 7,
+      "title": "Step latencies (last 50 step events)",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 20},
+      "targets": [{
+        "refId": "A",
+        "queryType": "table",
+        "rawQueryText": "SELECT ts, json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.step') AS step, json_extract(result_json,'$.status') AS status, CAST(json_extract(result_json,'$.duration_ms') AS INTEGER) AS duration_ms, json_extract(result_json,'$.note') AS note, json_extract(result_json,'$.error') AS error FROM events WHERE type='e2e_journey_step' ORDER BY id DESC LIMIT 50",
+        "queryText":    "SELECT ts, json_extract(result_json,'$.journey') AS journey, json_extract(result_json,'$.step') AS step, json_extract(result_json,'$.status') AS status, CAST(json_extract(result_json,'$.duration_ms') AS INTEGER) AS duration_ms, json_extract(result_json,'$.note') AS note, json_extract(result_json,'$.error') AS error FROM events WHERE type='e2e_journey_step' ORDER BY id DESC LIMIT 50",
+        "timeColumns": ["ts"]
+      }],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [
+        {"matcher": {"id": "byName", "options": "status"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-text"}}, {"id": "mappings", "value": [{"type": "value", "options": {"ok": {"color": "green", "text": "ok"}, "failed": {"color": "red", "text": "failed"}}}]}]},
+        {"matcher": {"id": "byName", "options": "duration_ms"}, "properties": [{"id": "unit", "value": "ms"}]}
+      ]},
+      "options": {}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["e2e", "anatomy", "auto-research"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "E2E Journeys",
+  "uid": "nos-e2e-journeys",
+  "version": 1,
+  "weekStart": ""
+}
