@@ -410,3 +410,32 @@ CREATE TABLE IF NOT EXISTS agent_subscriptions (
     updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_agent_subscriptions_enabled ON agent_subscriptions(enabled);
+
+-- agent_memory_stores: deduplicated memory entries produced by the Dreams
+-- consolidation cycle (post-A14 follow-up B-Dreams, 2026-05-07). Each row is
+-- one consolidated memory fact for an agent — a markdown / text body distilled
+-- from recent agent_sessions. The dream cycle (bin/dream-agent.php) reads the
+-- last N sessions for an agent + the current store, runs the agent under a
+-- restricted "dream" tool roster (read-only — no bash, no mcp_wing write
+-- endpoints), and produces an updated, deduplicated store.
+--
+-- Plaintext: memory entries are NOT secrets. They DO carry task context that
+-- can include operator notes, so telemetry SHOULD log only (uuid, title,
+-- length) — never the full body. Same sensitivity profile as event text.
+--
+-- source_session_uuid soft-FKs agent_sessions.uuid (the session that produced
+-- or last updated the entry). trace_id is the W3C trace_id for cross-link
+-- with Tempo.
+CREATE TABLE IF NOT EXISTS agent_memory_stores (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                TEXT NOT NULL UNIQUE,
+    agent_name          TEXT NOT NULL,
+    title               TEXT NOT NULL,
+    content             TEXT NOT NULL,            -- markdown / text body
+    source_session_uuid TEXT,                     -- session that produced/updated this entry
+    trace_id            TEXT,                     -- W3C trace_id for cross-link
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent_name ON agent_memory_stores (agent_name);
+CREATE INDEX IF NOT EXISTS idx_memory_updated    ON agent_memory_stores (updated_at);

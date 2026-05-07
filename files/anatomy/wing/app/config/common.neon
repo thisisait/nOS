@@ -58,6 +58,8 @@ services:
 	- App\Model\AgentSessionRepository
 	- App\Model\AgentVaultRepository
 	- App\Model\AgentSubscriptionRepository
+	# Dreams memory store (post-A14 follow-up B-Dreams, 2026-05-07).
+	- App\Model\AgentMemoryStoreRepository
 
 	# AgentKit core services
 	- App\AgentKit\AgentLoader(%appDir%/../../agents)
@@ -91,3 +93,7 @@ services:
 	# Runner + Coordinator
 	- App\AgentKit\Runner
 	- App\AgentKit\Coordinator
+
+	# Dreams (memory consolidation, post-A14 follow-up B-Dreams, 2026-05-07).
+	- App\AgentKit\Memory\MemoryStore
+	- App\AgentKit\Memory\Dreamer

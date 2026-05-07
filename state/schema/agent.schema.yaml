@@ -211,6 +211,46 @@ properties:
             How the upstream event flows into the new agent run. Today
             only `prompt` is implemented; `vault` is reserved for the
             B4 vault-refresh follow-up.
+  dream:
+    type: object
+    additionalProperties: false
+    description: |
+      Dreams (memory consolidation, post-A14). Optional. When `enabled: true`
+      this agent participates in the dream cycle — bin/dream-agent.php reads
+      recent agent_sessions for this agent + the current agent_memory_stores
+      entries, runs the agent under the restricted `tool_roster` below, and
+      writes a deduplicated output store. The roster MUST be a strict subset
+      of read-only tools (no bash, no mcp_wing write endpoints) — the dream
+      Runner refuses to invoke any tool not in this list, by structural
+      enforcement (App\AgentKit\Memory\Dreamer).
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Default false. Dream cycle skips agents that haven't explicitly
+          opted in — keeps the cycle's blast radius narrow.
+      tool_roster:
+        type: array
+        description: |
+          Tool ids the agent is allowed to invoke during a dream cycle.
+          MUST be a subset of read-only tools (mcp-wing-read, mcp-bone-read).
+          The Runner enforces the restriction at session-open time; a tool
+          outside the roster returns is_error=true with a refusal message.
+        items:
+          type: string
+          enum:
+            - mcp-wing-read
+            - mcp-bone-read
+      max_entries:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+        description: |
+          Soft cap on the number of memory entries this agent's store
+          holds at the end of a dream cycle. The Dreamer prunes oldest
+          first when the store exceeds this number.
   metadata:
     type: object
     additionalProperties: true

@@ -20,6 +20,7 @@ use App\AgentKit\Tools\ToolInterface;
 use App\AgentKit\Tools\ToolRegistry;
 use App\AgentKit\Vault\CredentialResolver;
 use App\AgentKit\Webhook\WebhookDispatcher;
+use App\Model\AgentMemoryStoreRepository;
 use App\Model\AgentSessionRepository;
 use App\Model\AgentVaultRepository;
 
@@ -62,6 +63,13 @@ final class Runner
 		private readonly OtelExporter $otel,
 		private readonly WebhookDispatcher $webhooks,
 		private readonly AgentLoader $loader,
+		// Optional, post-A14: Dreams (memory consolidation). When the
+		// repository is wired (DI auto-resolves it), loadMemoryContext()
+		// can pull recent entries; absent injection means run() never
+		// touches memory state and the existing tool-use loop is byte-
+		// identical to A14. Optional default keeps Runner direct-
+		// construction backwards compatible.
+		private readonly ?AgentMemoryStoreRepository $memoryStore = null,
 	) {
 	}
 
@@ -674,6 +682,41 @@ final class Runner
 	private static function now(): int
 	{
 		return (int) (microtime(true) * 1_000_000_000);
+	}
+
+	/**
+	 * Load recent memory entries for an agent (Dreams, post-A14).
+	 *
+	 * APPENDED AT END OF CLASS by design — the multi-worker batch contract
+	 * (U-B-Dreams ↔ U-B-MA scope partition) keeps Runner.php diff-orthogonal
+	 * to anything U-B-MA might add to run() / runOutcomeLoop / runToolUseLoop
+	 * higher up in the file. Caller (Runner::run() consumers, OR
+	 * bin/dream-agent.php) decides whether to inject the entries into the
+	 * system prompt; this method is read-only and side-effect-free.
+	 *
+	 * Telemetry: NEVER log full content — memory entries are not secrets,
+	 * but they DO carry task context that may include operator notes (same
+	 * sensitivity profile as event text). Callers that surface entries in
+	 * spans / events should redact to (uuid, title, length).
+	 *
+	 * Returns an empty array when no AgentMemoryStoreRepository is wired
+	 * (older bootstraps, tests that construct Runner without the optional
+	 * dep) — graceful degradation, not an error.
+	 *
+	 * @return array<int, array<string, mixed>>  recent entries, most-recent first
+	 */
+	public function loadMemoryContext(?string $agentName, int $limit = 5): array
+	{
+		if ($this->memoryStore === null) {
+			return [];
+		}
+		if ($agentName === null || $agentName === '') {
+			return [];
+		}
+		if ($limit < 1) {
+			return [];
+		}
+		return $this->memoryStore->listRecent($agentName, $limit);
 	}
 }
 
