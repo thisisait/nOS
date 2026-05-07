@@ -332,6 +332,11 @@
          (install_authentik | default(false)) or (install_infisical | default(false)) or
          (install_spacetimedb | default(false)) or (install_bone | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
+  # tags: always ensures partial runs (e.g. `--tags traefik,authentik`)
+  # still set this fact — every conditional task downstream gates on it
+  # (line 404+ via `when: _core_infra_enabled | bool`); without `always`
+  # those tasks raise "_core_infra_enabled is undefined" mid-run.
+  tags: ['always']
 
 # ── Enumerate per-role compose overrides (Wave 2 role extraction) ───────────
 # Each pazny.<svc> role renders its compose fragment into
