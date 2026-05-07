@@ -628,6 +628,15 @@ php_composer_packages:
 
 # ── Wing Security Dashboard ─────────────────────────────────────────────
 wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+# wing_port MUST be at top level (not just role default) — the Traefik
+# file-provider template (roles/pazny.traefik/templates/dynamic/services.yml.j2)
+# resolves it via `lookup('vars', s.port_var)` from PLAY scope, which
+# only sees top-level config vars + role defaults of currently-included
+# roles. The Traefik render runs in pre_compose hook (host scope, no
+# pazny.wing inclusion), so role-local wing_port=9000 was invisible →
+# rendered upstream URL was `http://nos-host:0` and wing.<tld> 502'd
+# at the Traefik upstream layer (C11, 2026-05-08).
+wing_port: 9000
 wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"

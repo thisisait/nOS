@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-08T12:00:00Z",
+  "generated_at": "2026-05-07T02:07:40Z",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -445,8 +445,7 @@
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
       "scan_cycle": 1
-    }
-    ,
+    },
     {
       "id": "REM-028",
       "finding_ref": "CVE-2026-gitea-template-traversal",
@@ -820,8 +819,7 @@
       "confidence": "high",
       "found_at": "2026-04-10T06:00:00Z",
       "scan_cycle": 6
-    }
-    ,
+    },
     {
       "id": "REM-051",
       "finding_ref": "CVE-2026-33660",
@@ -933,8 +931,7 @@
       "confidence": "medium",
       "found_at": "2026-04-08T20:00:00Z",
       "scan_cycle": 7
-    }
-    ,
+    },
     {
       "id": "REM-056",
       "finding_ref": "CVE-2026-22805",
@@ -1254,8 +1251,7 @@
       "confidence": "medium",
       "found_at": "2026-04-11T18:00:00Z",
       "scan_cycle": 13
-    }
-    ,
+    },
     {
       "id": "REM-078",
       "finding_ref": "CVE-2026-27880",
@@ -1309,14 +1305,102 @@
       "confidence": "high",
       "found_at": "2026-04-11T18:00:00Z",
       "scan_cycle": 14
+    },
+    {
+      "id": "REM-081",
+      "finding_ref": "CVE-2026-27808",
+      "component": "mailpit",
+      "severity": "MEDIUM",
+      "current_version": "v1.20",
+      "fix_version": "v1.29.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "SSRF via Link Check API allows probing internal IPs/hostnames. Affects <=1.29.1. Bump roles/pazny.mailpit/defaults/main.yml: mailpit_version v1.20 -> v1.29.7.",
+      "status": "pending",
+      "auto_fixable": true,
+      "source": "https://github.com/axllent/mailpit/security/advisories/GHSA-mpf7-p9x7-96r3",
+      "confidence": "high",
+      "found_at": "2026-05-07T02:07:40Z",
+      "scan_cycle": 14
+    },
+    {
+      "id": "REM-082",
+      "finding_ref": "CVE-2026-23845",
+      "component": "mailpit",
+      "severity": "MEDIUM",
+      "current_version": "v1.20",
+      "fix_version": "v1.29.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "SSRF via HTML Check API allows probing internal IPs. Affects <=1.28.2. Bump mailpit_version to v1.29.7.",
+      "status": "pending",
+      "auto_fixable": true,
+      "source": "https://github.com/advisories/GHSA-6jxm-fv7w-rw5j",
+      "confidence": "high",
+      "found_at": "2026-05-07T02:07:40Z",
+      "scan_cycle": 14
+    },
+    {
+      "id": "REM-083",
+      "finding_ref": "CVE-2026-23829",
+      "component": "mailpit",
+      "severity": "MEDIUM",
+      "current_version": "v1.20",
+      "fix_version": "v1.29.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "SMTP Header Injection (CRLF) via insufficient regex on RCPT TO/MAIL FROM. Affects <=1.28.2. Bump mailpit_version to v1.29.7.",
+      "status": "pending",
+      "auto_fixable": true,
+      "source": "https://github.com/advisories/GHSA-54wq-72mp-cq7c",
+      "confidence": "high",
+      "found_at": "2026-05-07T02:07:40Z",
+      "scan_cycle": 14
+    },
+    {
+      "id": "REM-084",
+      "finding_ref": "CVE-2026-22689",
+      "component": "mailpit",
+      "severity": "MEDIUM",
+      "current_version": "v1.20",
+      "fix_version": "v1.29.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "Cross-Site WebSocket Hijacking (CSWSH) — WebSocket server lacks Origin validation; any origin can read all email messages. Affects <=1.28.1. HIGH-IMPACT for nOS since dev mailboxes leak password reset tokens. Bump to v1.29.7.",
+      "status": "pending",
+      "auto_fixable": true,
+      "source": "https://github.com/advisories/GHSA-524m-q5m7-79mm",
+      "confidence": "high",
+      "found_at": "2026-05-07T02:07:40Z",
+      "scan_cycle": 14
+    },
+    {
+      "id": "REM-085",
+      "finding_ref": "CVE-2026-21859",
+      "component": "mailpit",
+      "severity": "MEDIUM",
+      "current_version": "v1.20",
+      "fix_version": "v1.29.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "SSRF via /proxy endpoint allows probing internal services. Affects <=1.28.0. Bump mailpit_version to v1.29.7.",
+      "status": "pending",
+      "auto_fixable": true,
+      "source": "https://github.com/axllent/mailpit/security/advisories/GHSA-8v65-47jx-7mfr",
+      "confidence": "high",
+      "found_at": "2026-05-07T02:07:40Z",
+      "scan_cycle": 14
     }
   ],
   "summary": {
-    "total_items": 80,
-    "by_severity": { "CRITICAL": 25, "HIGH": 36, "MEDIUM": 18, "LOW": 1 },
-    "by_status": { "pending": 52, "resolved": 28 },
-    "auto_fixable": 62,
-    "manual_review_required": 18,
-    "note": "Scan cycle 14. CVE re-scan: authentik, n8n, nextcloud, metabase, grafana — all at fix versions. REM-013/016/021 resolved (version bumps applied). 3 new items added (REM-078–080, all pre-resolved). Pentest: authentik expression policy code injection — no_findings."
+    "total_items": 85,
+    "by_severity": {
+      "CRITICAL": 27,
+      "HIGH": 34,
+      "MEDIUM": 23,
+      "LOW": 1
+    },
+    "by_status": {
+      "pending": 59,
+      "resolved": 26
+    },
+    "auto_fixable": 70,
+    "manual_review_required": 15,
+    "note": "Cycle 14 — Inspector Claw added 5 mailpit CVE remediations (v1.20 → v1.29.7). All 5 affect deployed version: 4× SSRF, 1× CSWSH (auth bypass — high practical impact since dev mailboxes leak password reset tokens), 1× SMTP CRLF."
   }
 }

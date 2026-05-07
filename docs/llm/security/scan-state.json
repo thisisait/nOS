@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-04-11T18:00:00Z",
-  "last_advisory_check": "2026-04-11T18:00:00Z",
+  "last_full_scan": "2026-05-07T02:16:12Z",
+  "last_advisory_check": "2026-05-07T02:16:12Z",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 14,
+  "scan_cycle": 15,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -16,71 +16,481 @@
     "bone_events": "http://127.0.0.1:8099/api/events"
   },
   "components": {
-    "traefik": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:http2_smuggling+path_normalization", "findings_count": 5, "status": "scanned" },
-    "nginx": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-10T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "authentik": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:expression_policy_code_injection", "findings_count": 5, "status": "scanned" },
-    "grafana": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "portainer": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-10T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "gitlab": { "last_checked": "2026-04-09T18:00:00Z", "last_cve_scan": "2026-04-09T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "gitea": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-10T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "ssrf_vector_analysis", "findings_count": 1, "status": "scanned" },
-    "nextcloud": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "wordpress": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "n8n": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:expression_language_injection", "findings_count": 10, "status": "scanned" },
-    "openwebui": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-10T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:sse_injection_post_cve_2025_64496", "findings_count": 5, "status": "scanned" },
-    "erpnext": { "last_checked": "2026-04-10T06:00:00Z", "last_cve_scan": "2026-04-10T06:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 4, "status": "scanned" },
-    "vaultwarden": { "last_checked": "2026-04-10T06:00:00Z", "last_cve_scan": "2026-04-10T06:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "freepbx": { "last_checked": "2026-04-09T18:00:00Z", "last_cve_scan": "2026-04-09T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "mariadb": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-10T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "postgresql": { "last_checked": "2026-04-09T18:00:00Z", "last_cve_scan": "2026-04-09T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "redis": { "last_checked": "2026-04-10T12:00:00Z", "last_cve_scan": "2026-04-09T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:resp_protocol_fuzzing+lua_sandbox", "findings_count": 2, "status": "scanned" },
-    "ollama": { "last_checked": "2026-04-10T06:00:00Z", "last_cve_scan": "2026-04-10T06:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "infisical": { "last_checked": "2026-04-10T18:00:00Z", "last_cve_scan": "2026-04-10T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "metabase": { "last_checked": "2026-04-11T18:00:00Z", "last_cve_scan": "2026-04-11T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "ssrf_vector_analysis", "findings_count": 3, "status": "scanned" },
-    "superset": { "last_checked": "2026-04-10T18:00:00Z", "last_cve_scan": "2026-04-10T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "ssrf_vector_analysis", "findings_count": 2, "status": "scanned" },
-    "outline": { "last_checked": "2026-04-10T18:00:00Z", "last_cve_scan": "2026-04-10T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "freescout": { "last_checked": "2026-04-10T18:00:00Z", "last_cve_scan": "2026-04-10T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 4, "status": "scanned" },
-    "woodpecker": { "last_checked": "2026-04-10T18:00:00Z", "last_cve_scan": "2026-04-10T18:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "jellyfin": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 2, "status": "scanned" },
-    "homeassistant": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 5, "status": "scanned" },
-    "uptime_kuma": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "ssrf_vector_analysis", "findings_count": 3, "status": "scanned" },
-    "calibreweb": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "kiwix": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "bluesky_pds": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "puter": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "paperclip": { "last_checked": "2026-04-10T06:00:00Z", "last_cve_scan": "2026-04-10T06:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "rustfs": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": "pentest:grpc_token_validation", "findings_count": 5, "status": "scanned" },
-    "tileserver": { "last_checked": "2026-04-10T06:00:00Z", "last_cve_scan": "2026-04-10T06:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "loki": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "tempo": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "alloy": { "last_checked": "2026-04-11T12:00:00Z", "last_cve_scan": "2026-04-11T12:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "qgis_server": { "last_checked": "2026-04-09T22:00:00Z", "last_cve_scan": "2026-04-09T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 1, "status": "scanned" },
-    "dnsmasq": { "last_checked": "2026-04-10T22:00:00Z", "last_cve_scan": "2026-04-10T22:00:00Z", "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "scanned" },
-    "bone": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy FastAPI bridge — localhost:8099" },
-    "wing": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy FrankenPHP dashboard — localhost:9000" },
-    "pulse": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "nOS anatomy launchd job scheduler" },
-    "miniflux": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "nodered": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "hedgedoc": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "bookstack": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "firefly": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "onlyoffice": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "ntfy": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "mailpit": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending" },
-    "spacetimedb": { "last_checked": null, "last_cve_scan": null, "last_misconfig_scan": null, "last_attack_probe": null, "findings_count": 0, "status": "pending", "notes": "BSL 1.1, internal-SaaS use only" }
+    "traefik": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:http2_smuggling+path_normalization",
+      "findings_count": 5,
+      "status": "scanned"
+    },
+    "nginx": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-10T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "authentik": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:expression_policy_code_injection",
+      "findings_count": 5,
+      "status": "scanned"
+    },
+    "grafana": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "portainer": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-10T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "gitlab": {
+      "last_checked": "2026-04-09T18:00:00Z",
+      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "gitea": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-10T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "ssrf_vector_analysis",
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "nextcloud": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "wordpress": {
+      "last_checked": "2026-04-09T22:00:00Z",
+      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "n8n": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:expression_language_injection",
+      "findings_count": 10,
+      "status": "scanned"
+    },
+    "openwebui": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-10T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:sse_injection_post_cve_2025_64496",
+      "findings_count": 5,
+      "status": "scanned"
+    },
+    "erpnext": {
+      "last_checked": "2026-04-10T06:00:00Z",
+      "last_cve_scan": "2026-04-10T06:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 4,
+      "status": "scanned"
+    },
+    "vaultwarden": {
+      "last_checked": "2026-04-10T06:00:00Z",
+      "last_cve_scan": "2026-04-10T06:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "freepbx": {
+      "last_checked": "2026-04-09T18:00:00Z",
+      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "mariadb": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-10T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "postgresql": {
+      "last_checked": "2026-04-09T18:00:00Z",
+      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "redis": {
+      "last_checked": "2026-04-10T12:00:00Z",
+      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:resp_protocol_fuzzing+lua_sandbox",
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "ollama": {
+      "last_checked": "2026-04-10T06:00:00Z",
+      "last_cve_scan": "2026-04-10T06:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "infisical": {
+      "last_checked": "2026-04-10T18:00:00Z",
+      "last_cve_scan": "2026-04-10T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "metabase": {
+      "last_checked": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "ssrf_vector_analysis",
+      "findings_count": 3,
+      "status": "scanned"
+    },
+    "superset": {
+      "last_checked": "2026-04-10T18:00:00Z",
+      "last_cve_scan": "2026-04-10T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "ssrf_vector_analysis",
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "outline": {
+      "last_checked": "2026-04-10T18:00:00Z",
+      "last_cve_scan": "2026-04-10T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "freescout": {
+      "last_checked": "2026-04-10T18:00:00Z",
+      "last_cve_scan": "2026-04-10T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 4,
+      "status": "scanned"
+    },
+    "woodpecker": {
+      "last_checked": "2026-04-10T18:00:00Z",
+      "last_cve_scan": "2026-04-10T18:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "jellyfin": {
+      "last_checked": "2026-04-10T22:00:00Z",
+      "last_cve_scan": "2026-04-10T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 2,
+      "status": "scanned"
+    },
+    "homeassistant": {
+      "last_checked": "2026-04-09T22:00:00Z",
+      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 5,
+      "status": "scanned"
+    },
+    "uptime_kuma": {
+      "last_checked": "2026-04-10T22:00:00Z",
+      "last_cve_scan": "2026-04-10T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "ssrf_vector_analysis",
+      "findings_count": 3,
+      "status": "scanned"
+    },
+    "calibreweb": {
+      "last_checked": "2026-04-10T22:00:00Z",
+      "last_cve_scan": "2026-04-10T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "kiwix": {
+      "last_checked": "2026-04-11T12:00:00Z",
+      "last_cve_scan": "2026-04-11T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "bluesky_pds": {
+      "last_checked": "2026-04-09T22:00:00Z",
+      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "puter": {
+      "last_checked": "2026-04-11T12:00:00Z",
+      "last_cve_scan": "2026-04-11T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "paperclip": {
+      "last_checked": "2026-04-10T06:00:00Z",
+      "last_cve_scan": "2026-04-10T06:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "rustfs": {
+      "last_checked": "2026-04-09T22:00:00Z",
+      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": "pentest:grpc_token_validation",
+      "findings_count": 5,
+      "status": "scanned"
+    },
+    "tileserver": {
+      "last_checked": "2026-04-10T06:00:00Z",
+      "last_cve_scan": "2026-04-10T06:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "loki": {
+      "last_checked": "2026-04-10T22:00:00Z",
+      "last_cve_scan": "2026-04-10T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "tempo": {
+      "last_checked": "2026-04-11T12:00:00Z",
+      "last_cve_scan": "2026-04-11T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "alloy": {
+      "last_checked": "2026-04-11T12:00:00Z",
+      "last_cve_scan": "2026-04-11T12:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "qgis_server": {
+      "last_checked": "2026-04-09T22:00:00Z",
+      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 1,
+      "status": "scanned"
+    },
+    "dnsmasq": {
+      "last_checked": "2026-04-10T22:00:00Z",
+      "last_cve_scan": "2026-04-10T22:00:00Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "bone": {
+      "last_checked": null,
+      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned",
+      "notes": "nOS anatomy FastAPI bridge — localhost:8099"
+    },
+    "wing": {
+      "last_checked": null,
+      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned",
+      "notes": "nOS anatomy FrankenPHP dashboard — localhost:9000"
+    },
+    "pulse": {
+      "last_checked": null,
+      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned",
+      "notes": "nOS anatomy launchd job scheduler"
+    },
+    "miniflux": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "nodered": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "hedgedoc": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "bookstack": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "firefly": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "onlyoffice": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "ntfy": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending"
+    },
+    "mailpit": {
+      "last_checked": null,
+      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "scanned"
+    },
+    "spacetimedb": {
+      "last_checked": null,
+      "last_cve_scan": null,
+      "last_misconfig_scan": null,
+      "last_attack_probe": null,
+      "findings_count": 0,
+      "status": "pending",
+      "notes": "BSL 1.1, internal-SaaS use only"
+    },
+    "postgres": {
+      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "status": "scanned"
+    }
   },
   "rotation": {
-    "next_batch": ["postgresql", "redis", "freepbx", "homeassistant", "bluesky_pds"],
+    "next_batch": [
+      "postgresql",
+      "redis",
+      "freepbx",
+      "homeassistant",
+      "bluesky_pds"
+    ],
     "strategy": "oldest_first"
   },
   "attack_probe_schedule": [
-    { "cycle_mod": 0, "name": "unauthenticated_endpoint_scan", "description": "Scan for endpoints accessible without authentication" },
-    { "cycle_mod": 1, "name": "version_header_leakage", "description": "Check HTTP response headers for version disclosure" },
-    { "cycle_mod": 2, "name": "default_credentials_test", "description": "Test admin panels for default/weak credentials" },
-    { "cycle_mod": 3, "name": "ssrf_vector_analysis", "description": "Analyze internal network paths for SSRF potential", "last_run": "2026-04-08T18:00:00Z", "findings": 6 },
-    { "cycle_mod": 4, "name": "docker_escape_paths", "description": "Check socket-mounted services for container escape vectors" },
-    { "cycle_mod": 5, "name": "tls_crypto_weakness", "description": "Verify TLS configuration and inter-service encryption" },
-    { "cycle_mod": 6, "name": "resource_exhaustion_vectors", "description": "Identify services without resource limits vulnerable to DoS" },
-    { "cycle_mod": 7, "name": "supply_chain_freshness", "description": "Check image age, CVE delta, and registry trust" }
+    {
+      "cycle_mod": 0,
+      "name": "unauthenticated_endpoint_scan",
+      "description": "Scan for endpoints accessible without authentication"
+    },
+    {
+      "cycle_mod": 1,
+      "name": "version_header_leakage",
+      "description": "Check HTTP response headers for version disclosure"
+    },
+    {
+      "cycle_mod": 2,
+      "name": "default_credentials_test",
+      "description": "Test admin panels for default/weak credentials"
+    },
+    {
+      "cycle_mod": 3,
+      "name": "ssrf_vector_analysis",
+      "description": "Analyze internal network paths for SSRF potential",
+      "last_run": "2026-04-08T18:00:00Z",
+      "findings": 6
+    },
+    {
+      "cycle_mod": 4,
+      "name": "docker_escape_paths",
+      "description": "Check socket-mounted services for container escape vectors"
+    },
+    {
+      "cycle_mod": 5,
+      "name": "tls_crypto_weakness",
+      "description": "Verify TLS configuration and inter-service encryption"
+    },
+    {
+      "cycle_mod": 6,
+      "name": "resource_exhaustion_vectors",
+      "description": "Identify services without resource limits vulnerable to DoS",
+      "last_run": "2026-05-07T02:15:18Z",
+      "findings": 0,
+      "note": "All 62 nOS-managed (compose) containers have both mem_limit + cpu limits set — REM-004 sweep effective. 3 ad-hoc hashicorp/terraform-mcp-server:0.4.0 containers running unlimited (Claude Code MCP runtime, out of nOS scope; oldest 2026-05-03)"
+    },
+    {
+      "cycle_mod": 7,
+      "name": "supply_chain_freshness",
+      "description": "Check image age, CVE delta, and registry trust"
+    }
   ],
-  "attack_probes_completed": ["ssrf_vector_analysis"]
+  "attack_probes_completed": [
+    "ssrf_vector_analysis"
+  ]
 }

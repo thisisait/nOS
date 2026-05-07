@@ -1,0 +1,87 @@
+# =============================================================================
+# openclaw-base — service plugin (C11, 2026-05-08)
+#
+# Wires `pazny.openclaw` (host launchd daemon + Ollama MLX backend) into the
+# proxy-auth doctrine. Without this manifest the Traefik router for
+# claw.<tld> existed (auto-derived from state/manifest.yml's openclaw
+# entry with domain_var + port_var) but Authentik forward-auth had no
+# registered Provider for that Host header → outpost returned 404.
+#
+# Tier 1 (admin) — OpenClaw exposes the operator's local LLM gateway and
+# the embedded Ollama API; treat as admin-tier surface even when the
+# gateway itself is read-only, because Tier 1 = "platform plumbing the
+# operator owns" in nOS RBAC. RBAC tier is configurable per service
+# via `authentik_app_tiers` in default.config.yml.
+# =============================================================================
+
+name: openclaw-base
+version: 0.1.0
+description: |
+  OpenClaw — local AI agent daemon (launchd-managed Node.js gateway) backed
+  by Ollama 0.19+ with the MLX backend.
+
+  This plugin owns the wiring layer: Traefik forward-auth gate, Authentik
+  provider registration, GDPR Article 30 row. The role pazny.openclaw owns
+  the install primitives (Homebrew taps, Ollama models, launchd plist).
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0
+
+type:
+  - service
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "openclaw-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.openclaw
+  feature_flag: install_openclaw
+  variables:
+    - openclaw_domain
+    - openclaw_gateway_port
+    - tenant_domain
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 1 = admin)
+# =============================================================================
+# OpenClaw has NO native OIDC support — its host-side Node.js gateway
+# is operator-personal infra. Authentik gates access at the Traefik
+# layer via the `authentik@file` middleware. After this plugin lands,
+# Authentik blueprint render (10-oidc-apps.yaml.j2) creates a Proxy
+# Provider with redirect_uri → claw.<tld>/outpost.goauthentik.io/callback,
+# the embedded outpost binds to it, and forward-auth no longer 404s.
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-openclaw
+  client_secret: "{{ global_password_prefix }}_pw_oidc_openclaw"
+  slug: openclaw
+  name: 'OpenClaw'
+  enabled: "{{ install_openclaw | default(false) }}"
+  launch_url: "https://{{ openclaw_domain }}"
+  tier: 1   # admin tier — operator's personal AI infra
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+gdpr:
+  purpose: |
+    OpenClaw is the operator's local LLM gateway. It receives prompts from
+    the operator (via Hermes / Wing / direct curl), forwards them to Ollama
+    (running on the same host with MLX backend), and returns generated
+    text. No prompts or completions persist beyond the active request
+    unless the caller explicitly POSTs to Wing /events with source=agent:*
+    (in which case A10 actor_id audit applies).
+  legal_basis: "legitimate_interests"
+  data_categories:
+    - "operator_prompts"           # request bodies passed through to Ollama
+    - "agent_run_metadata"         # if events POSTed to Wing post-run
+  data_subjects:
+    - "operators"                  # the operator interacting with the gateway
+  retention_days: 0                # no persistent storage in OpenClaw itself
+  processors: []                   # all-local; Ollama runs on the same host
+  transfers_outside_eu: false
