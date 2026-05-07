@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AgentKit;
 
 use App\AgentKit\Outcome\Rubric;
+use App\AgentKit\Webhook\SubscriptionRegistrar;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -16,11 +17,18 @@ use Symfony\Component\Yaml\Yaml;
  *
  * Throws AgentLoadException on any structural problem. The runner converts
  * that to a terminal session error with status='terminated'.
+ *
+ * Side effect on load: if a SubscriptionRegistrar collaborator is wired
+ * (production Nette DI does this; unit tests typically don't), every
+ * subscribe: entry parsed out of agent.yml is upserted into
+ * agent_subscriptions. The upsert is idempotent — re-loading the same
+ * agent does not duplicate rows, and operator-modified rows are kept.
  */
 final class AgentLoader
 {
 	public function __construct(
 		private readonly string $agentsRoot,
+		private readonly ?SubscriptionRegistrar $subscriptionRegistrar = null,
 	) {
 	}
 
@@ -144,7 +152,44 @@ final class AgentLoader
 			);
 		}
 
-		return new Agent(
+		// subscribe: per-agent webhook auto-fan-out. Optional. SubscriptionRegistrar
+		// turns each spec into an idempotent agent_subscriptions row at boot time;
+		// WebhookDispatcher evaluates the filter map at fire time.
+		$subscriptions = [];
+		foreach (($raw['subscribe'] ?? []) as $i => $subRaw) {
+			if (!is_array($subRaw)) {
+				throw new AgentLoadException("agent.yml subscribe[{$i}] must be a mapping");
+			}
+			$eventType = $subRaw['event_type'] ?? null;
+			if (!is_string($eventType) || $eventType === '') {
+				throw new AgentLoadException("agent.yml subscribe[{$i}].event_type missing or not a string");
+			}
+			$filterRaw = $subRaw['filter'] ?? [];
+			if (!is_array($filterRaw)) {
+				throw new AgentLoadException("agent.yml subscribe[{$i}].filter must be a mapping");
+			}
+			// Exact-string equality only. Reject anything that isn't a string.
+			$filter = [];
+			foreach ($filterRaw as $k => $v) {
+				if (!is_string($k) || !is_string($v)) {
+					throw new AgentLoadException(
+						"agent.yml subscribe[{$i}].filter must map string => string "
+						. "(no regex/glob/eval — got " . gettype($v) . ")"
+					);
+				}
+				$filter[$k] = $v;
+			}
+			$triggerArg = $subRaw['trigger_arg'] ?? 'prompt';
+			if (!in_array($triggerArg, ['prompt', 'vault'], true)) {
+				throw new AgentLoadException(
+					"agent.yml subscribe[{$i}].trigger_arg must be prompt|vault; got "
+					. var_export($triggerArg, true)
+				);
+			}
+			$subscriptions[] = new SubscriptionSpec($eventType, $filter, $triggerArg);
+		}
+
+		$agent = new Agent(
 			name: $raw['name'],
 			version: (int) $raw['version'],
 			description: (string) $raw['description'],
@@ -160,9 +205,20 @@ final class AgentLoader
 			capabilityScopes: array_values($capabilityScopes),
 			piiClassification: $piiClass,
 			requiredCredentials: $requiredCreds,
+			subscriptions: $subscriptions,
 			metadata: (array) ($raw['metadata'] ?? []),
 			sourceDir: $dir,
 		);
+
+		// Idempotent webhook registration — only when wired in production.
+		// Tests that load Agent value objects without a DB collaborator
+		// stay pure; operator-running Wing converges agent_subscriptions
+		// rows on every AgentLoader::load().
+		if ($this->subscriptionRegistrar !== null && $subscriptions !== []) {
+			$this->subscriptionRegistrar->registerForAgent($agent);
+		}
+
+		return $agent;
 	}
 
 	/**

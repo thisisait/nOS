@@ -200,6 +200,32 @@ Plaintext is **never** stored in `agent_credentials.secret_ref`. The column is a
 
 External tools that already speak Anthropic webhooks (or any Standard Webhooks consumer) understand AgentKit's outbound shape unchanged.
 
+### Per-agent fan-out (post-A14, shipped)
+
+An agent's `agent.yml` may declare a `subscribe:` block to register
+itself as a webhook receiver for events it cares about. Each entry
+becomes one row in `agent_subscriptions` whose URL points back at the
+Wing-internal operator-trigger endpoint `POST /api/v1/agents/<name>/sessions`:
+
+```yaml
+subscribe:
+  - event_type: agent_session_end
+    filter:
+      agent_name: gitleaks         # only fan out for THIS upstream
+    trigger_arg: prompt            # how the event flows in (prompt|vault)
+```
+
+Pipeline:
+
+1. `AgentLoader::load()` parses `subscribe:` into `SubscriptionSpec[]` on the `Agent` value object.
+2. `SubscriptionRegistrar::registerForAgent()` is called once per load — idempotent: a reconverge does not duplicate rows.
+3. When an event fires, `WebhookDispatcher::fire()` walks the matching subscriptions; for internal-fan-out URLs (those carrying `/api/v1/agents/<name>/sessions`) it applies a **self-loop guard** — refuses to fan out an event back to the agent that produced it (`upstream agent_name === target agent name` → silent skip, no failure-counter increment).
+4. Filter values are compared with **strict string equality** — no regex, no glob, no eval. The schema enforces this by restricting `filter`'s `additionalProperties` to `type: string` only.
+
+Anatomy CI gates pinning the contract: `tests/anatomy/test_agentkit_webhook_fanout.py` (≥5 checks covering schema acceptance, idempotent registration, self-loop guard, exact-string filter, and DI wiring).
+
+**Cutover note (active):** the operator-trigger endpoint `POST /api/v1/agents/<name>/sessions` lands in the parallel B-UI worker batch. Until that ships, fan-outs return 4xx and the dispatcher's retry+auto-disable logic absorbs the gap (20 consecutive failures → row disabled; operator re-enables once the endpoint exists). Agents declaring `subscribe:` blocks before the endpoint is live should expect their fan-outs to auto-disable.
+
 ---
 
 ## How to use
@@ -289,6 +315,6 @@ A regression that breaks any of these turns CI red before merge.
 
 - **Multi-agent process pool** — Coordinator currently runs sub-agents sequentially. A future iteration spawns parallel processes (capped at `max_concurrent_threads`) with primary-thread event proxy, mirroring Anthropic's full multi-agent surface.
 - **Dreams** (memory consolidation) — scheduled job that reads recent `agent_sessions` + an existing memory store, produces a deduplicated output store. Uses the same Runner code path with a special "dreaming" tool roster.
-- **Operator-trigger UI** — SHIPPED 2026-05-07 (Track B). `POST /api/v1/agents/<name>/sessions` (bearer auth) generates `session_uuid` server-side, spawns `php bin/run-agent.php` via `proc_open` array form (no shell), and returns 202 immediately. The Wing detail page (`/agents/<name>`) carries a "Start new session" form that proxies through `AgentsPresenter::actionStart` so the bearer token never touches browser HTML; on success the operator is redirected to `/agents/<name>/sessions/<uuid>` which auto-refreshes every 3s while status is `pending` / `running` / `starting`. Contract pinned by `tests/anatomy/test_agentkit_operator_trigger.py` (9 tests covering POST-only, actor_id derivation, proc_open array form, 202 shape, route ordering, run-agent.php --session-uuid forwarding).
-- ~~**Vault refresh from Infisical**~~ — `infisical:/path` secret_ref scheme **SHIPPED Track B U-B-Vault, 2026-05-07** (see Vault model section above). Re-resolution per session means rotated values pick up automatically when a new session opens; long-running sessions still see the value resolved at session-open time (acceptable trade-off — agents are short-lived by design).
-- **Per-agent webhook auto-fan-out** — agent.yml gains a `subscribe:` block to register the agent itself as a webhook receiver for events it cares about, enabling event-driven loops.
+- ~~**Operator-trigger UI**~~ — **SHIPPED 2026-05-07** (Track B U-B-UI). `POST /api/v1/agents/<name>/sessions` (bearer auth) generates `session_uuid` server-side, spawns `php bin/run-agent.php` via `proc_open` array form (no shell), and returns 202 immediately. The Wing detail page (`/agents/<name>`) carries a "Start new session" form that proxies through `AgentsPresenter::actionStart` so the bearer token never touches browser HTML; on success the operator is redirected to `/agents/<name>/sessions/<uuid>` which auto-refreshes every 3s while status is `pending` / `running` / `starting`. Contract pinned by `tests/anatomy/test_agentkit_operator_trigger.py` (9 tests).
+- ~~**Vault refresh from Infisical**~~ — `infisical:/path` secret_ref scheme **SHIPPED 2026-05-07** (Track B U-B-Vault — see Vault model section above). Re-resolution per session means rotated values pick up automatically when a new session opens; long-running sessions still see the value resolved at session-open time (acceptable trade-off — agents are short-lived by design).
+- ~~**Per-agent webhook auto-fan-out**~~ — **SHIPPED 2026-05-07** (Track B U-B-Webhook). agent.yml `subscribe:` block + `SubscriptionRegistrar` idempotent registration + dispatcher self-loop guard. See "Per-agent fan-out" subsection above. Contract pinned by `tests/anatomy/test_agentkit_webhook_fanout.py` (10 tests).

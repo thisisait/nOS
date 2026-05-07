@@ -15,6 +15,13 @@ use App\Model\AgentSubscriptionRepository;
  *
  * Retry: 3 attempts with exponential backoff (200ms, 1s, 5s).
  * Auto-disable: 20 consecutive failures -> agent_subscriptions.enabled = 0.
+ *
+ * Per-agent fan-out (post-A14): subscriptions whose URL is internal
+ * (matches SubscriptionRegistrar::isInternalAgentSubscription) are
+ * filtered using SubscriptionFilter; the dispatcher refuses to fan out
+ * an event back to the same agent that produced it (self-loop guard).
+ * Filter values are compared with strict === — no regex, no glob, no
+ * eval. Tested in tests/anatomy/test_agentkit_webhook_fanout.py.
  */
 final class WebhookDispatcher
 {
@@ -45,9 +52,46 @@ final class WebhookDispatcher
         ];
         $body = (string) json_encode($envelope, JSON_UNESCAPED_SLASHES);
 
+        $upstreamAgent = $this->extractUpstreamAgentName($data);
+
         foreach ($subs as $sub) {
+            $url = (string) $sub['url'];
+
+            // Self-loop guard: an internal fan-out subscription targeting
+            // the agent that just produced the event must NOT be re-fired.
+            // Without this, an agent emitting agent_session_end would
+            // immediately spawn a fresh run of itself — runaway loop.
+            // The check is structural (URL shape via the registrar's
+            // INTERNAL_URL_MARKER), NOT a string match on event payload,
+            // so external operator-registered URLs that happen to mention
+            // an agent name pass through unaffected.
+            if (SubscriptionRegistrar::isInternalAgentSubscription($url)) {
+                $targetAgent = SubscriptionRegistrar::agentNameFromInternalUrl($url);
+                if ($targetAgent !== null && $upstreamAgent !== null && $targetAgent === $upstreamAgent) {
+                    // Same agent — refuse fan-out. Don't increment failure
+                    // counters; this is a deliberate skip, not a delivery
+                    // attempt that failed.
+                    continue;
+                }
+            }
+
             $this->dispatchOne($sub, $body);
         }
+    }
+
+    /**
+     * Best-effort upstream-agent extraction from an event payload. Today
+     * the agent_session_* events ship `agent_name` in their data block;
+     * future event families may move this out, in which case extend
+     * here. Always returns null for "no clear upstream agent" — callers
+     * (the self-loop guard) treat null as "no guard match".
+     *
+     * @param array<string, mixed> $data
+     */
+    private function extractUpstreamAgentName(array $data): ?string
+    {
+        $name = $data['agent_name'] ?? null;
+        return is_string($name) && $name !== '' ? $name : null;
     }
 
     /**

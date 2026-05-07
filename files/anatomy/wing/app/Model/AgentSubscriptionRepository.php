@@ -98,4 +98,19 @@ final class AgentSubscriptionRepository
 		}
 		return $out;
 	}
+
+	/**
+	 * Idempotent lookup by URL. Returns the row id or null. Used by
+	 * SubscriptionRegistrar so re-running AgentLoader::load() during a
+	 * reconverge does not double-register the same internal fan-out
+	 * receiver.
+	 */
+	public function findIdByUrl(string $url): ?int
+	{
+		$row = $this->db->table('agent_subscriptions')->where('url', $url)->fetch();
+		if ($row === null) {
+			return null;
+		}
+		return (int) $row->id;
+	}
 }

@@ -158,6 +158,55 @@ properties:
             optional:
               type: boolean
               default: false
+  subscribe:
+    type: array
+    description: |
+      Per-agent webhook auto-fan-out (post-A14). Each entry registers the
+      agent itself as a webhook receiver for one event type. When an event
+      fires whose `data` matches the optional `filter:` map (exact-string
+      equality, no regex/glob/eval), WebhookDispatcher POSTs to the
+      Wing-internal operator-trigger endpoint to launch a fresh run of THIS
+      agent. The dispatcher refuses to fan out to the agent that produced
+      the originating event (self-loop guard) — mass-action loops require
+      explicit operator intervention.
+    items:
+      type: object
+      additionalProperties: false
+      required: [event_type]
+      properties:
+        event_type:
+          type: string
+          # Only A14 agent_* event types are valid fan-out triggers today.
+          # Extend as needed when new event families are added.
+          enum:
+            - agent_session_start
+            - agent_session_end
+            - agent_thread_start
+            - agent_thread_end
+            - agent_iteration_start
+            - agent_iteration_end
+            - agent_tool_use
+            - agent_tool_result
+            - agent_message
+            - agent_grader_decision
+            - agent_webhook_dispatch
+            - agent_vault_resolved
+        filter:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of event-payload field name → expected exact-string value.
+            ALL declared keys must match for the fan-out to fire. No regex,
+            no glob, no eval — values are compared with strict ===.
+        trigger_arg:
+          type: string
+          enum: [prompt, vault]
+          default: prompt
+          description: |
+            How the upstream event flows into the new agent run. Today
+            only `prompt` is implemented; `vault` is reserved for the
+            B4 vault-refresh follow-up.
   metadata:
     type: object
     additionalProperties: true

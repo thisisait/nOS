@@ -67,6 +67,12 @@ services:
 	- App\AgentKit\Telemetry\OtelExporter
 	- App\AgentKit\Webhook\WebhookDispatcher
 
+	# Per-agent webhook auto-fan-out (post-A14). The registrar URL points
+	# at the Wing-internal operator-trigger endpoint that B-UI is landing
+	# in the same milestone; until that ships, fan-outs return non-2xx
+	# and the dispatcher's retry+auto-disable logic absorbs the cutover.
+	- App\AgentKit\Webhook\SubscriptionRegistrar(@App\Model\AgentSubscriptionRepository, 'http://127.0.0.1:9000')
+
 	# AgentKit tool registry (assembled via factory so we can inject HTTP + tokens)
 	- factory: App\AgentKit\Tools\ToolRegistry
 	  setup:

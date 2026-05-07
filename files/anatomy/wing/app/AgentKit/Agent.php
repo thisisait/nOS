@@ -32,6 +32,7 @@ final class Agent
 	 * @param array<int, string> $capabilityScopes
 	 * @param string $piiClassification      'none' | 'low' | 'high'
 	 * @param array<int, VaultRequirement> $requiredCredentials
+	 * @param array<int, SubscriptionSpec> $subscriptions  per-agent webhook fan-out
 	 * @param array<string, mixed> $metadata
 	 * @param string $sourceDir              absolute path to agent's directory
 	 */
@@ -51,6 +52,7 @@ final class Agent
 		public readonly array $capabilityScopes,
 		public readonly string $piiClassification,
 		public readonly array $requiredCredentials,
+		public readonly array $subscriptions,
 		public readonly array $metadata,
 		public readonly string $sourceDir,
 	) {
@@ -104,6 +106,29 @@ final class VaultRequirement
 	public function __construct(
 		public readonly string $scope,
 		public readonly bool $optional = false,
+	) {
+	}
+}
+
+/**
+ * One subscribe: entry. Declares that the owning agent wants to be re-run
+ * whenever an event of $eventType is dispatched whose payload exactly
+ * matches every (key, value) pair in $filter. SubscriptionRegistrar maps
+ * each spec onto a row in agent_subscriptions; WebhookDispatcher applies
+ * the filter at fire-time and refuses self-loops by inspecting payload.
+ *
+ * `filter` uses **exact-string equality only** — no regex, no glob, no
+ * eval. Locked by tests/anatomy/test_agentkit_webhook_fanout.py.
+ */
+final class SubscriptionSpec
+{
+	/**
+	 * @param array<string, string> $filter  payload-field => expected-value
+	 */
+	public function __construct(
+		public readonly string $eventType,
+		public readonly array $filter = [],
+		public readonly string $triggerArg = 'prompt',
 	) {
 	}
 }
