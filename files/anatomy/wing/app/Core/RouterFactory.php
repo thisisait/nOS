@@ -46,6 +46,9 @@ final class RouterFactory
 		// State & Migration Framework API (agent 7)
 		// Events: POST = ingestion (HMAC), GET = paginated query (bearer).
 		$api->addRoute('api/v1/events', 'Events:default');
+		// A13.2 (2026-05-07): Prometheus metrics surface scraped by Alloy.
+		// Anonymous read; bound to 127.0.0.1:9000 only (Caddyfile).
+		$api->addRoute('api/v1/metrics', 'Metrics:default');
 		$api->addRoute('api/v1/state/services[/<id>]', 'State:services');
 		$api->addRoute('api/v1/state/sync', 'State:sync');
 		$api->addRoute('api/v1/state', 'State:default');
