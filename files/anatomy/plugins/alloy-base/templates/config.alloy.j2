@@ -88,3 +88,25 @@ otelcol.exporter.otlp "tempo" {
     }
   }
 }
+
+{% if install_wing | default(true) %}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WING METRICS — A13.4 (2026-05-07)
+// ─────────────────────────────────────────────────────────────────────────────
+// Wing's /api/v1/metrics presenter exposes wing.db aggregates in Prometheus
+// format (e2e journeys, pulse_jobs state). Anonymous endpoint bound to
+// 127.0.0.1:9000 — Alloy scrapes via loopback. The conductor agent and any
+// downstream automation can consume the same metrics from Prometheus
+// (e.g. PromQL alerts on `nos_e2e_journey_runs_total{status="failed"}`).
+
+prometheus.scrape "wing" {
+  targets = [{
+    __address__ = "localhost:{{ wing_port | default(9000) }}",
+    __metrics_path__ = "/api/v1/metrics",
+  }]
+  forward_to      = [prometheus.remote_write.default.receiver]
+  job_name        = "wing"
+  scrape_interval = "30s"
+}
+{% endif %}
