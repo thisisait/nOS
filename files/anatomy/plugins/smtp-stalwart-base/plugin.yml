@@ -1,0 +1,133 @@
+# =============================================================================
+# smtp-stalwart-base — service plugin (Track Q4 — comms batch, 2026-05-07)
+#
+# Status: live manifest. Wires `pazny.smtp_stalwart` (Stalwart Mail Server in
+# the infra compose stack) into the plugin loader contract.
+#
+# Stalwart speaks raw SMTP (25/465/587), IMAP (993), and JMAP — protocols
+# that cannot be trampolined through Authentik OAuth without breaking MUA
+# compatibility. The plugin therefore declares NO `authentik:` block; the
+# webadmin Traefik route + middleware live entirely on the role side
+# (`roles/pazny.smtp_stalwart/templates/compose.yml.j2`) and remain the
+# operator's choice. End-user identity is the SMTP/IMAP credential pair
+# stored inside Stalwart's own user DB. Authentik OIDC for the webadmin
+# is gated behind `stalwart_authentik_oidc: false` (Track G phase 3, Stalwart
+# 0.13+) and is intentionally NOT plugin-aggregated yet.
+#
+# Mirrors the prometheus-base shape: headless infrastructure substrate,
+# wait_health on the webadmin port, GDPR row + Wing /hub deep-link.
+# =============================================================================
+
+name: smtp-stalwart-base
+version: 0.1.0
+description: |
+  Wiring layer for Stalwart Mail Server (Rust-based all-in-one SMTP +
+  IMAP/POP3 + JMAP). Production replacement for Mailpit (which stays as
+  the dev capture sink). Listens on 25/465/587 (SMTP), 993 (IMAPS), and
+  serves a webadmin behind Traefik on `stalwart_domain`.
+
+  No `authentik:` block — mail protocols use SASL with Stalwart's own
+  user DB; the webadmin's Authentik wrapping lives role-side and is
+  guarded by the `stalwart_authentik_oidc` toggle (Track G phase 3).
+  Plugin remains substrate-only: GDPR Article 30 row, Loki labels,
+  Wing /hub card, webadmin liveness probe.
+upstream: https://stalw.art/
+license: AGPL-3.0   # Stalwart upstream (dual MIT/AGPL); manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "smtp-stalwart-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.smtp_stalwart
+  feature_flag: install_smtp_stalwart
+  variables:
+    - stalwart_domain
+    - stalwart_port_smtp
+    - stalwart_port_smtps
+    - stalwart_port_submission
+    - stalwart_port_imap
+    - stalwart_data_dir
+    - stalwart_admin_username
+    - tenant_domain
+    - host_alias
+
+# No `authentik:` block — see header. Mail protocols stay on Stalwart's
+# native SASL stack. Webadmin OIDC lives behind a role-side toggle.
+
+# No `compose_extension:` — the role's compose template is complete
+# (ports + volumes + Traefik webadmin labels). Plugin doesn't extend it.
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    # Stalwart's webadmin lives on internal :8080 inside the container;
+    # the role doesn't publish that port to the host (Traefik is the
+    # entry point). Use the SMTP port (25) as a TCP-level liveness
+    # probe — accept_any_2xx_3xx_4xx so the SMTP greeting banner
+    # ("220 …") doesn't trip the HTTP probe path. The loader's
+    # wait_health TCP fallback handles the non-HTTP case.
+    - wait_health:
+        url: "http://127.0.0.1:{{ stalwart_port_smtp | default(25) }}/"
+        timeout: 90
+        accept_any_2xx_3xx_4xx: true
+  post_blank: []
+
+# =============================================================================
+# OBSERVABILITY — Loki labels
+# =============================================================================
+# Stalwart exposes a Prometheus /metrics endpoint on the webadmin port
+# (8080 internal) post-0.10. Scrape config will land in a follow-up
+# Q-track once the webadmin is reachable inside the observability net.
+# Today only Loki labels — log lines come from the container's stderr.
+
+observability:
+  loki:
+    labels:
+      app: smtp-stalwart
+      stack: infra
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - mailbox_contents            # message bodies + attachments at rest
+    - smtp_envelope_metadata      # MAIL FROM / RCPT TO / Received headers
+    - mailbox_credentials         # SMTP/IMAP password hashes in Stalwart DB
+    - delivery_logs               # queue + bounce + DKIM/SPF/DMARC results
+  data_subjects:
+    - operators
+    - mailbox_owners              # tenants with SMTP/IMAP accounts
+    - external_correspondents     # senders + recipients on inbound/outbound flows
+  legal_basis: legitimate_interests
+  retention_days: 365             # mailbox retention; queue/bounce log shorter
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Stalwart Mail"
+    icon: mail
+    url: "https://{{ stalwart_domain | default('mail' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    tier: 1
+    description: "SMTP/IMAP/JMAP mail server admin"
+    health_check: "/"

@@ -1,0 +1,120 @@
+# =============================================================================
+# freepbx-base — service plugin (Track Q4 — comms batch, 2026-05-07)
+#
+# Status: live manifest. Wires `pazny.freepbx` (FreePBX + Asterisk PBX in the
+# voip compose stack) into the plugin loader contract.
+#
+# Per CLAUDE.md "No SSO: FreePBX" — the PBX exposes a self-managed admin
+# webUI (its own auth) and SIP/IAX2/RTP signaling that cannot be wrapped
+# by an OAuth gate without breaking soft-phone compatibility. The plugin
+# therefore declares NO `authentik:` block. End-user identity is the
+# Asterisk extension number, not an Authentik subject.
+#
+# Mirrors the prometheus-base shape: headless infrastructure substrate,
+# wait_health on the HTTP admin port, GDPR row + Wing /hub deep-link.
+# =============================================================================
+
+name: freepbx-base
+version: 0.1.0
+description: |
+  Wiring layer for FreePBX (Asterisk-based PBX): admin webUI on
+  freepbx_port, SIP signaling on 5060, IAX2 on 4569, RTP media on
+  10000-10100. Dialplan + extension data lives in MariaDB (asterisk DB).
+
+  No app-level OIDC — voice protocols can't trampoline through OAuth.
+  Authentik gate would block SIP/RTP traffic and break soft-phone
+  registration. End-user identity is the Asterisk extension number,
+  not an Authentik subject. Tier-1 admin webUI is reachable via the
+  Traefik file-provider router (no forward-auth middleware), per the
+  state/manifest.yml row that omits `auth_mode`.
+upstream: https://www.freepbx.org/
+license: GPL-3.0   # FreePBX upstream; manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "freepbx-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.freepbx
+  feature_flag: install_freepbx
+  variables:
+    - freepbx_domain
+    - freepbx_port
+    - freepbx_sip_port
+    - freepbx_iax_port
+    - freepbx_rtp_start
+    - freepbx_rtp_end
+    - freepbx_data_dir
+    - tenant_domain
+    - host_alias
+
+# No `authentik:` block — see header. FreePBX is intentionally outside
+# the SSO trichotomy; it predates OAuth and uses Asterisk extension
+# auth for SIP/IAX, plus a self-managed PHP webUI session for /admin.
+
+# No `compose_extension:` — the role's compose template is complete
+# (ports + volumes + env vars). Plugin doesn't extend it.
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
+
+lifecycle:
+  pre_compose: []
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ freepbx_port | default(8088) }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # FreePBX webUI redirects to /admin (302)
+  post_blank: []
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (FreePBX has no native /metrics endpoint)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: freepbx
+      stack: voip
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - call_metadata               # CDRs: caller/callee numbers, duration, codec
+    - voicemail_recordings        # WAV/sln files in /var/spool/asterisk/voicemail
+    - extension_credentials       # SIP secrets, hashed in asterisk DB
+    - dialplan_state              # extension routing rules (operator-authored)
+  data_subjects:
+    - operators                   # PBX admins
+    - extension_users             # SIP/IAX endpoint owners
+    - external_callers            # inbound call numbers (CDR retention)
+  legal_basis: legitimate_interests
+  retention_days: 90              # CDR rotation; voicemail per operator policy
+  processors: []
+  eu_residency: true
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "FreePBX"
+    icon: phone
+    url: "https://{{ freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    tier: 1
+    description: "PBX admin (Asterisk dialplan, extensions, CDR)"
+    health_check: "/"
