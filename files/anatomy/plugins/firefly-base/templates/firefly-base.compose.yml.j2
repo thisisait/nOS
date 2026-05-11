@@ -17,3 +17,7 @@ services:
       - "traefik.http.routers.firefly.tls=true"
       - "traefik.http.routers.firefly.middlewares=authentik@file,security-headers@file,compress@file"
       - "traefik.http.services.firefly.loadbalancer.server.port={{ firefly_port }}"
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

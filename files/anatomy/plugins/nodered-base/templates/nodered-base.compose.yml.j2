@@ -21,7 +21,19 @@
 #}
 services:
   nodered:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/ssl/certs/mkcert-rootCA.pem:ro
+{% endif %}
     environment:
       # Defensive sentinel — pin the plugin slug for any tool that
       # introspects containers via `docker inspect` (P0.12 doctrine).
       _NOS_PLUGIN: "nodered-base"
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      NODE_EXTRA_CA_CERTS: "/etc/ssl/certs/mkcert-rootCA.pem"
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

@@ -10,6 +10,11 @@ plugin only wires services INTO that middleware.
 #}
 services:
   code-server:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/ssl/certs/mkcert-rootCA.pem:ro
+{% endif %}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.code-server.rule=Host(`{{ code_server_domain }}`)"
@@ -17,3 +22,7 @@ services:
       - "traefik.http.routers.code-server.tls=true"
       - "traefik.http.routers.code-server.middlewares=authentik@file,security-headers@file,compress@file"
       - "traefik.http.services.code-server.loadbalancer.server.port={{ code_server_port }}"
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

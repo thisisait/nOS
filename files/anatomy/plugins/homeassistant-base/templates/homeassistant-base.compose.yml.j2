@@ -1,0 +1,18 @@
+{# homeassistant-base — compose-extension fragment (D2).
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/homeassistant-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+
+extra_hosts are gated on bridge networking (homeassistant_privileged=false)
+because host-mode containers share the host's /etc/hosts — the alias is
+unnecessary AND would conflict.
+#}
+services:
+  homeassistant:
+{% if install_authentik | default(false) and not (homeassistant_privileged | default(false)) %}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

@@ -23,10 +23,7 @@ services:
     volumes:
       - {{ code_server_data_dir }}:/config
       - {{ code_server_workspace_dir }}:/config/workspace
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+{# mkcert CA volume moved to code-server-base plugin compose-extension (D2). #}
     environment:
       PUID: "{{ code_server_puid | default(1000) }}"
       PGID: "{{ code_server_pgid | default(1000) }}"
@@ -44,10 +41,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
+{# authentik extra_host moved to code-server-base plugin compose-extension (D2). #}
     networks:
       - devops_net
       - {{ stacks_shared_network }}
