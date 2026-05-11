@@ -20,10 +20,6 @@ services:
     volumes:
       - {{ woodpecker_data_dir }}:/var/lib/woodpecker
     environment:
-      WOODPECKER_GITEA: "true"
-      WOODPECKER_GITEA_URL: "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-      WOODPECKER_GITEA_CLIENT: "{{ woodpecker_gitea_client | default('') }}"
-      WOODPECKER_GITEA_SECRET: "{{ woodpecker_gitea_secret | default('') }}"
       WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
       WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       WOODPECKER_OPEN: "{{ woodpecker_open_registration | default(false) | string | lower }}"
@@ -41,11 +37,6 @@ services:
       # so when the post-Q1 alloy-base plugin lands the scrape, the token is
       # already in place (no compose restart needed).
       WOODPECKER_PROMETHEUS_AUTH_TOKEN: "{{ woodpecker_prom_token | default(global_password_prefix + '_pw_wp_prom') }}"
-    extra_hosts:
-      - "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% if install_authentik | default(false) %}
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
     networks:
       - devops_net
       - {{ stacks_shared_network }}
