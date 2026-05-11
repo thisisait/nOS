@@ -31,9 +31,9 @@ services:
         echo 'frappe' > apps.txt &&
         bench set-config -g db_host mariadb &&
         bench set-config -g db_port 3306 &&
-        bench set-config -g redis_cache redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0 &&
-        bench set-config -g redis_queue redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1 &&
-        bench set-config -g redis_socketio redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2 &&
+        bench set-config -g redis_cache redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0 &&
+        bench set-config -g redis_queue redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1 &&
+        bench set-config -g redis_socketio redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/2 &&
         bench new-site {{ erpnext_site_name | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
         --no-mariadb-socket
         --db-root-username=root
@@ -48,8 +48,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
-      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+      REDIS_CACHE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -75,9 +75,9 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
-      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
-      REDIS_SOCKETIO: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/2"
+      REDIS_CACHE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1"
+      REDIS_SOCKETIO: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/2"
       SOCKETIO_PORT: "9000"
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
@@ -151,8 +151,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
-      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+      REDIS_CACHE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -178,8 +178,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
-      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+      REDIS_CACHE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1"
     networks:
       - b2b_net
       - {{ stacks_shared_network }}
@@ -205,8 +205,8 @@ services:
       DB_PORT: "3306"
       DB_ROOT_USER: root
       DB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
-      REDIS_CACHE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/0"
-      REDIS_QUEUE: "redis://:{{ redis_password | default(global_password_prefix + '_pw_redis') }}@redis:6379/1"
+      REDIS_CACHE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/0"
+      REDIS_QUEUE: "redis://:{{ (redis_password | default(global_password_prefix + '_pw_redis')) | urlencode }}@redis:6379/1"
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (scheduler fires queued emails) ───────────────
       MAIL_SERVER: "host.docker.internal"

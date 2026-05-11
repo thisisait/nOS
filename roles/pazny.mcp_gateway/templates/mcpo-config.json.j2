@@ -17,7 +17,7 @@
 {%   set _ = servers.append('    "git": {\n      "command": "uvx",\n      "args": ["mcp-server-git", "--repository", "/data/repos"]\n    }') %}
 {% endif %}
 {% if mcp_enable_postgres | default(true) %}
-{%   set _ = servers.append('    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://' + mcp_postgres_user + ':' + mcp_postgres_password + '@postgresql:5432/' + mcp_postgres_database + '"]\n    }') %}
+{%   set _ = servers.append('    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://' + mcp_postgres_user + ':' + (mcp_postgres_password | urlencode) + '@postgresql:5432/' + mcp_postgres_database + '"]\n    }') %}
 {% endif %}
 {% if mcp_enable_grafana | default(true) %}
 {%   set _ = servers.append('    "grafana": {\n      "type": "sse",\n      "url": "http://mcp-grafana:8000/sse"\n    }') %}

@@ -19,7 +19,7 @@ services:
 {# mkcert CA volume + Authentik extra_host moved to hedgedoc-base plugin (D2). #}
     environment:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
-      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
+      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc')) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
       # ── Public URL / protocol ──────────────────────────────────────────────
       CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       CMD_URL_ADDPORT: "false"

@@ -97,7 +97,7 @@ services:
     ports:
       - "127.0.0.1:{{ postgres_exporter_port | default(9187) }}:9187"
     environment:
-      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}@postgresql:5432/postgres?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(global_password_prefix + '_pw_postgresql')) | urlencode }}@postgresql:5432/postgres?sslmode=disable"
       PG_EXPORTER_EXTEND_QUERY_PATH: ""
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
