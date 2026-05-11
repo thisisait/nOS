@@ -4,9 +4,12 @@
 *.retry
 roles/*
 !roles/pazny.*
-config.yml
-credentials.yml
-.credentials.yml
+# Operator's root-level config.yml / credentials.yml only — `/` anchor prevents
+# this from swallowing committed files like files/observability/blackbox/config.yml
+# (2026-05-11: ate the blackbox baseline config until anchored).
+/config.yml
+/credentials.yml
+/.credentials.yml
 .venv
 .remember/*
 vision.md
