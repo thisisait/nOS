@@ -64,7 +64,7 @@
     -C {{ homebrew_prefix }}/bin nginx-prometheus-exporter
   when:
     - not nginx_exporter_binary_stat.stat.exists
-    - "'/tmp/nginx-prometheus-exporter_' ~ nginx_prometheus_exporter_version ~ '_darwin.tar.gz' is file"
+    - "('/tmp/nginx-prometheus-exporter_' ~ nginx_prometheus_exporter_version ~ '_darwin.tar.gz') is file"
 
 - name: Check if php-fpm_exporter binary is already installed
   ansible.builtin.stat:
@@ -88,7 +88,7 @@
   when:
     - alloy_scrape_phpfpm | default(true)
     - not (phpfpm_exporter_binary_stat.stat.exists | default(false))
-    - "'/tmp/php-fpm_exporter_' ~ phpfpm_exporter_version ~ '_darwin.tar.gz' is file"
+    - "('/tmp/php-fpm_exporter_' ~ phpfpm_exporter_version ~ '_darwin.tar.gz') is file"
 
 # ── Host-side: launchd plists for exporters ──────────────────────────────────
 
