@@ -1,4 +1,9 @@
 ---
+# DISSOLUTION PLAN (Phase 2 C5): This file dissolves into
+# files/anatomy/plugins/erpnext-base/ lifecycl.post_compose once the plugin
+# loader gains a `replay_api_calls` runner with docker_exec + http support.
+# Until C5 lands, this file remains the authoritative wiring path.
+#
 # ==============================================================================
 # pazny.erpnext/tasks/post.yml
 #

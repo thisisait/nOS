@@ -1,4 +1,12 @@
 ---
+# DISSOLUTION PLAN (Phase 2 C5): This file dissolves into
+# files/anatomy/plugins/paperclip-base/ lifecycl.post_compose once the plugin
+# loader gains a `replay_api_calls` runner with docker_exec + http support.
+# Until C5 lands, this file remains the authoritative wiring path.
+#
+# NOTE: paperclip-base plugin does NOT exist yet — must be created before
+# dissolution can proceed. Until then, this file is the sole wiring path.
+#
 # ==============================================================================
 # pazny.paperclip/tasks/post.yml — allowed hostname registration + CEO bootstrap
 #

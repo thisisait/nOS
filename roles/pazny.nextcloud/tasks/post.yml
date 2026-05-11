@@ -1,4 +1,12 @@
 ---
+# DISSOLUTION PLAN (Phase 2 C5): This file dissolves into
+# files/anatomy/plugins/nextcloud-base/ lifecycl.post_compose once the plugin
+# loader gains a `replay_api_calls` runner with docker_exec + http support.
+# Until C5 lands, this file remains the authoritative wiring path.
+#
+# NOTE: Overlaps with tasks/stacks/authentik_service_post.yml:103-184
+# (OIDC provider registration). Both must be re-homed into the plugin.
+#
 # ==============================================================================
 # pazny.nextcloud/tasks/post.yml — sync configuration after container start
 # Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
