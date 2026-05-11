@@ -1,0 +1,131 @@
+---
+# ==============================================================================
+# pazny.infisical/tasks/seed.yml — org + projects + secrets bootstrap.
+#
+# Runs AFTER post.yml's readiness probe + KMS self-heal. Idempotent on every
+# playbook run: bootstrap fires once (CLI errors if admin already exists), then
+# project ensure + secret upsert run every time so Infisical mirrors the
+# canonical Ansible state (push-every-run policy).
+#
+# Skip when:
+#   - install_infisical is false (no Infisical to talk to)
+#   - infisical_seed_enabled is false (operator opted out)
+#   - readiness probe failed (Infisical not reachable; KMS self-heal already
+#     printed a diagnostic; seeding can't proceed)
+# ==============================================================================
+
+- name: "[pazny.infisical Seed] Skip when readiness probe failed"
+  ansible.builtin.debug:
+    msg: "Infisical seed skipped — server not reachable (status={{ _infisical_health.status | default(0) }})."
+  when: _infisical_health.status | default(0) != 200
+
+- name: "[pazny.infisical Seed] Compose config payload"
+  ansible.builtin.set_fact:
+    _infisical_seed_payload:
+      domain: "http://127.0.0.1:{{ infisical_port | default(8075) }}"
+      org_name: "{{ infisical_org_name | default('nOS') }}"
+      admin_email: "{{ infisical_admin_email }}"
+      admin_password: "{{ infisical_admin_password }}"
+      admin_token: "{{ infisical_admin_token | default('') }}"
+      projects: "{{ nos_infisical_projects | default([]) }}"
+  when: _infisical_health.status | default(0) == 200
+  no_log: true
+
+# We write the payload to a tempfile (mode 0600) instead of passing on the
+# command line — secret values would otherwise show in `ps` output for the
+# brief lifetime of the subprocess. Tempfile lives in /tmp under operator's
+# UID and is removed in the cleanup block below.
+- name: "[pazny.infisical Seed] Create tempfile for seed payload"
+  ansible.builtin.tempfile:
+    state: file
+    suffix: .infisical-seed.json
+  register: _infisical_seed_tmp
+  when: _infisical_health.status | default(0) == 200
+
+- name: "[pazny.infisical Seed] Write payload to tempfile (0600)"
+  ansible.builtin.copy:
+    content: "{{ _infisical_seed_payload | to_json }}"
+    dest: "{{ _infisical_seed_tmp.path }}"
+    mode: '0600'
+  when: _infisical_health.status | default(0) == 200
+  no_log: true
+
+- name: "[pazny.infisical Seed] Run seeder (bootstrap → projects → secrets upsert)"
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/opt/homebrew/bin/python3') }}"
+      - "{{ role_path }}/files/seed.py"
+      - "--config"
+      - "{{ _infisical_seed_tmp.path }}"
+  register: _infisical_seed_run
+  # changed = bootstrap fired OR at least one project was newly created OR
+  # any secret transitioned (created or updated). Naive substring check is
+  # cheap and avoids depending on community.general json_query.
+  changed_when:
+    - "'\"bootstrapped\": true' in (_infisical_seed_run.stdout | default(''))
+       or '\"state\": \"created\"' in (_infisical_seed_run.stdout | default(''))
+       or '\"created\"' in (_infisical_seed_run.stdout | default(''))"
+  failed_when: false
+  when: _infisical_health.status | default(0) == 200
+  no_log: true
+
+# Parse seeder output once (cheap, idempotent) and surface to set_fact so
+# downstream tasks (token persistence, status report) read structured data
+# instead of re-parsing JSON.
+- name: "[pazny.infisical Seed] Parse seeder result"
+  ansible.builtin.set_fact:
+    _infisical_seed_result: "{{ (_infisical_seed_run.stdout | default('{}')) | from_json }}"
+  when:
+    - _infisical_health.status | default(0) == 200
+    - _infisical_seed_run is defined
+    - _infisical_seed_run.stdout is defined
+
+# Capture freshly-bootstrapped token into Ansible's var namespace so the
+# subsequent Persist runtime secrets task writes it to ~/.nos/secrets.yml
+# (next run loads it back and the seeder skips bootstrap).
+- name: "[pazny.infisical Seed] Persist fresh admin token to var scope"
+  ansible.builtin.set_fact:
+    infisical_admin_token: "{{ _infisical_seed_result.token }}"
+  when:
+    - _infisical_seed_result is defined
+    - (_infisical_seed_result.token | default('')) | length > 0
+  no_log: true
+
+- name: "[pazny.infisical Seed] Re-persist ~/.nos/secrets.yml with admin token"
+  ansible.builtin.template:
+    src: "secrets.yml.j2"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    mode: '0600'
+  when:
+    - _infisical_seed_result is defined
+    - (_infisical_seed_result.bootstrapped | default(false)) | bool
+  no_log: true
+
+- name: "[pazny.infisical Seed] Status"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       Infisical seed
+      ══════════════════════════════════════════════════════
+       Org:           {{ infisical_org_name | default('nOS') }}
+       Bootstrapped:  {{ _infisical_seed_result.bootstrapped | default(false) }}
+      {% for slug, info in (_infisical_seed_result.projects | default({})).items() %}
+       {{ slug | ljust(20) }} state={{ info.state }} env={{ info.env | default('?') }} secrets={{ info.secrets | default({}) | length }}{% if info.secrets | default({}) | dict2items | rejectattr('value','match','^(updated|created)$') | list | length > 0 %} ⚠ {{ info.secrets | dict2items | rejectattr('value','match','^(updated|created)$') | map(attribute='key') | list }}{% endif %}
+      {% endfor %}
+      {% if _infisical_seed_result.errors | default([]) | length > 0 %}
+       Errors:
+      {% for err in _infisical_seed_result.errors %}
+         - {{ err }}
+      {% endfor %}
+      {% endif %}
+      ══════════════════════════════════════════════════════
+  when:
+    - _infisical_seed_result is defined
+
+- name: "[pazny.infisical Seed] Clean up tempfile"
+  ansible.builtin.file:
+    path: "{{ _infisical_seed_tmp.path }}"
+    state: absent
+  when:
+    - _infisical_seed_tmp is defined
+    - _infisical_seed_tmp.path is defined

@@ -461,6 +461,11 @@ homebrew_installed_packages:
   - openblas
   - protobuf
   - meson
+  # Infisical CLI — used by roles/pazny.infisical/tasks/seed.yml to run
+  # `infisical bootstrap` on a fresh CE instance, returning a machine
+  # identity token used for the rest of the org/project/secret seed flow.
+  # Tap: `infisical/get-cli` (added below).
+  - infisical
 
 # ── FrankenPHP — Wing host runtime (anatomy A3.5, 2026-05-04) ────────────────
 # FrankenPHP = single binary bundling Caddy HTTP server + PHP runtime + Mercure +
@@ -476,6 +481,7 @@ homebrew_installed_packages:
 homebrew_taps:
   - dunglas/frankenphp
   - shivammathur/php
+  - infisical/get-cli       # required by `- infisical` formula above
 
 homebrew_cask_appdir: /Applications
 homebrew_cask_accept_external_apps: true
@@ -2005,6 +2011,83 @@ infisical_db_name: "infisical"
 infisical_db_user: "infisical"
 infisical_db_password: "{{ global_password_prefix }}_pw_infisical_db"
 infisical_disable_signup: true                     # Admin creates all users
+
+# ── Seed: org + projects + secrets (pazny.infisical/tasks/seed.yml) ──────────
+# After Infisical is healthy, `seed.yml` bootstraps an admin user + organization
+# via `infisical bootstrap` CLI, then creates a project tree and pushes the
+# operator's secrets (from secrets.yml + this config) into each project.
+#
+# Push policy: "every run" — values are templated from Ansible vars on each
+# playbook run, so Infisical mirrors the canonical Ansible state. PATCH first,
+# POST on 404. Override `nos_infisical_projects` in config.yml to extend.
+infisical_org_name: "nOS"
+infisical_seed_enabled: "{{ install_infisical | default(false) | bool }}"
+
+nos_infisical_projects:
+  - slug: nos-platform
+    name: "nOS Platform"
+    description: "Operator-wide tokens, signing secrets, API keys"
+    secrets:
+      WING_API_TOKEN: "{{ wing_api_token | default('') }}"
+      BONE_SECRET: "{{ bone_secret | default(global_password_prefix + '_pw_bone') }}"
+      VAULTWARDEN_ADMIN_TOKEN: "{{ vaultwarden_admin_token | default('') }}"
+      PAPERCLIP_AUTH_SECRET: "{{ paperclip_auth_secret | default('') }}"
+      ACME_CLOUDFLARE_API_TOKEN: "{{ acme_cloudflare_api_token | default('') }}"
+
+  - slug: nos-databases
+    name: "nOS Databases"
+    description: "Root passwords for PostgreSQL, MariaDB, Redis"
+    secrets:
+      POSTGRESQL_ROOT_PASSWORD: "{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}"
+      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}"
+      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      INFISICAL_DB_PASSWORD: "{{ infisical_db_password }}"
+      AUTHENTIK_DB_PASSWORD: "{{ authentik_db_password | default(global_password_prefix + '_pw_authentik_db') }}"
+      OUTLINE_DB_PASSWORD: "{{ outline_db_password | default(global_password_prefix + '_pw_outline') }}"
+      HEDGEDOC_DB_PASSWORD: "{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}"
+      MINIFLUX_DB_PASSWORD: "{{ miniflux_db_password | default(global_password_prefix + '_pw_miniflux') }}"
+      PAPERCLIP_DB_PASSWORD: "{{ paperclip_db_password | default(global_password_prefix + '_pw_paperclip') }}"
+
+  - slug: nos-identity
+    name: "nOS Identity & SSO"
+    description: "Authentik admin + per-service OIDC client_secret values"
+    secrets:
+      AKADMIN_PASSWORD: "{{ akadmin_password | default(global_password_prefix + '_pw_akadmin') }}"
+      AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key | default('') }}"
+      INFISICAL_ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
+      INFISICAL_AUTH_SECRET: "{{ infisical_auth_secret }}"
+      OIDC_OUTLINE: "{{ authentik_oidc_outline_client_secret | default(global_password_prefix + '_pw_oidc_outline') }}"
+      OIDC_GRAFANA: "{{ authentik_oidc_grafana_client_secret | default(global_password_prefix + '_pw_oidc_grafana') }}"
+      OIDC_INFISICAL: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
+      OIDC_PORTAINER: "{{ authentik_oidc_portainer_client_secret | default(global_password_prefix + '_pw_oidc_portainer') }}"
+      OIDC_NEXTCLOUD: "{{ authentik_oidc_nextcloud_client_secret | default(global_password_prefix + '_pw_oidc_nextcloud') }}"
+      OIDC_GITEA: "{{ authentik_oidc_gitea_client_secret | default(global_password_prefix + '_pw_oidc_gitea') }}"
+      OIDC_OPENWEBUI: "{{ authentik_oidc_openwebui_client_secret | default(global_password_prefix + '_pw_oidc_openwebui') }}"
+      OIDC_N8N: "{{ authentik_oidc_n8n_client_secret | default(global_password_prefix + '_pw_oidc_n8n') }}"
+
+  - slug: nos-apps
+    name: "nOS Applications"
+    description: "Per-app encryption keys + admin passwords"
+    secrets:
+      OUTLINE_SECRET_KEY: "{{ outline_secret_key | default('') }}"
+      OUTLINE_UTILS_SECRET: "{{ outline_utils_secret | default('') }}"
+      FIREFLY_APP_KEY: "{{ firefly_app_key | default('') }}"
+      BOOKSTACK_APP_KEY: "{{ bookstack_app_key | default('') }}"
+      ONLYOFFICE_JWT_SECRET: "{{ onlyoffice_jwt_secret | default('') }}"
+      HEDGEDOC_SESSION_SECRET: "{{ hedgedoc_session_secret | default('') }}"
+      BLUESKY_PDS_JWT_SECRET: "{{ bluesky_pds_jwt_secret | default('') }}"
+      BLUESKY_PDS_ROTATION_KEY: "{{ bluesky_pds_rotation_key | default('') }}"
+      WORDPRESS_ADMIN_PASSWORD: "{{ wordpress_admin_password | default(global_password_prefix + '_pw_wordpress_admin') }}"
+      NEXTCLOUD_ADMIN_PASSWORD: "{{ nextcloud_admin_password | default(global_password_prefix + '_pw_nextcloud_admin') }}"
+      GITEA_ADMIN_PASSWORD: "{{ gitea_admin_password | default(global_password_prefix + '_pw_gitea_admin') }}"
+      PORTAINER_ADMIN_PASSWORD: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer_admin') }}"
+
+  - slug: nos-observability
+    name: "nOS Observability"
+    description: "Grafana admin, InfluxDB token, exporter credentials"
+    secrets:
+      GRAFANA_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana_admin') }}"
+      INFLUXDB_ADMIN_TOKEN: "{{ influxdb_admin_token | default('') }}"
 
 # ==============================================================================
 # VAULTWARDEN – Personal Password Vault (Bitwarden-compatible)

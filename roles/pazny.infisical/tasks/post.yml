@@ -84,3 +84,12 @@
       {% if (_infisical_kms_error_count.stdout | default('0') | int) > 0 -%}
       | KMS self-heal: triggered (orphaned root key dropped, re-seeded)
       {%- endif %}
+
+# ── Seed: org + projects + secrets ───────────────────────────────────────────
+# Bootstrap admin user + organization on first run, then ensure project tree
+# and upsert secrets every run. Gated on `infisical_seed_enabled` (defaults to
+# install_infisical). Source-of-truth values come from Ansible vars; Infisical
+# is a derived projection of canonical state.
+- name: "[pazny.infisical Post] Seed org + projects + secrets"
+  ansible.builtin.include_tasks: seed.yml
+  when: infisical_seed_enabled | default(install_infisical | default(false)) | bool
