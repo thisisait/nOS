@@ -757,6 +757,43 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
     return ", ".join(summary) if summary else "no-op"
 
 
+def _is_safe_destructive_path(rendered: str) -> bool:
+    """Refuse paths that would wipe the playbook root, system roots, or
+    a shallow path inside a user/volume. Triggered by `remove_dir` /
+    `remove_file`.
+
+    Incident root cause (2026-05-11): ChainableUndefined renders missing
+    Jinja vars as the empty string. `Path("")` resolves to `Path(".")`,
+    and `shutil.rmtree(".", ignore_errors=True)` wipes the CWD — which
+    during a playbook run is the playbook's source tree. Guard contract:
+
+      - Path MUST be an absolute path under `/Users/<user>/` (the
+        operator's home) or `/Volumes/<volume>/` (an external SSD).
+      - Path MUST have at least 3 segments (so `/Users/<user>` and
+        `/Volumes/<vol>` themselves are refused — only their children).
+
+    Everything else (empty, relative, `/`, `/etc`, `/opt/...`, …) is
+    refused. The legitimate plugin actions in the tree all template a
+    well-formed `<HOME>/<service>` or `<external_storage_root>/<svc>`
+    path, so this contract is wide enough for real use and tight enough
+    to make undefined-var bugs loud-fail instead of catastrophic.
+    """
+    if rendered is None:
+        return False
+    stripped = rendered.strip()
+    if not stripped or not stripped.startswith("/"):
+        return False
+    # Reject path traversal even from absolute paths.
+    if ".." in stripped.split("/"):
+        return False
+    parts = [p for p in stripped.split("/") if p]
+    if len(parts) < 3:
+        return False
+    if parts[0] not in ("Users", "Volumes"):
+        return False
+    return True
+
+
 def _dispatch_action(plugin: Plugin, action: str, param,
                      ctx: dict) -> str:
     """Single-action dispatcher. Returns a one-line summary fragment."""
@@ -767,7 +804,16 @@ def _dispatch_action(plugin: Plugin, action: str, param,
 
     if action == "remove_dir":
         import shutil
-        path = pathlib.Path(_render_string(str(param), ctx))
+        rendered = _render_string(str(param), ctx)
+        # SAFETY GUARD (2026-05-11 incident): ChainableUndefined makes
+        # undefined Jinja vars render as the empty string. `Path("")` =
+        # `Path(".")` = the CWD = the playbook root. `shutil.rmtree(".",
+        # ignore_errors=True)` then wipes the playbook source. Refuse
+        # any path that's empty, relative, or one of the well-known
+        # "this is definitely not a data dir" sentinels.
+        if not _is_safe_destructive_path(rendered):
+            return f"remove_dir:REFUSED unsafe path {rendered!r}"
+        path = pathlib.Path(rendered)
         if path.is_dir():
             shutil.rmtree(path, ignore_errors=True)
         return f"remove_dir:{path}"
@@ -778,7 +824,10 @@ def _dispatch_action(plugin: Plugin, action: str, param,
         # (e.g. composition plugins drop a file into the grafana-base
         # provisioning dir — the peer's remove_dir would race the
         # composition plugin's wipe). Idempotent: missing file is success.
-        path = pathlib.Path(_render_string(str(param), ctx))
+        rendered = _render_string(str(param), ctx)
+        if not _is_safe_destructive_path(rendered):
+            return f"remove_file:REFUSED unsafe path {rendered!r}"
+        path = pathlib.Path(rendered)
         if path.is_file():
             path.unlink()
         return f"remove_file:{path}"
