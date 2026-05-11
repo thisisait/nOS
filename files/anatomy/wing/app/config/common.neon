@@ -78,9 +78,9 @@ services:
 	# AgentKit tool registry (assembled via factory so we can inject HTTP + tokens)
 	- factory: App\AgentKit\Tools\ToolRegistry
 	  setup:
-		- register(@App\AgentKit\Tools\BashReadOnlyTool)
-		- register(@App\AgentKit\Tools\McpWingTool)
-		- register(@App\AgentKit\Tools\McpBoneTool)
+	    - register(@App\AgentKit\Tools\BashReadOnlyTool)
+	    - register(@App\AgentKit\Tools\McpWingTool)
+	    - register(@App\AgentKit\Tools\McpBoneTool)
 
 	# Tools
 	- App\AgentKit\Tools\BashReadOnlyTool

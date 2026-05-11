@@ -134,8 +134,27 @@
 
 # ── Composer install (host-native, no docker run) ────────────────────────────
 # Replaces the Track-A `docker compose run --rm wing-cli composer install`
-# pattern. The composer binary comes from Homebrew (already in
-# homebrew_installed_packages). Skip if vendor/ is fresh.
+# pattern.
+#
+# 2026-05-11 — `composer` is NOT installed via Homebrew. The `composer`
+# formula pulls `php` as a hard dep, and `brew link php` collides with
+# `php-zts` (which frankenphp requires; both formulas own the same
+# `/opt/homebrew/bin/php`, `/opt/homebrew/include/php/TSRM/*`, …). We
+# install composer.phar directly into /opt/homebrew/bin/composer — it's
+# a single PHP script that runs against whatever `php` is on PATH (i.e.
+# php-zts), so no symlink conflict.
+- name: "[pazny.wing] Stat composer binary"
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/bin/composer"
+  register: _composer_stat
+
+- name: "[pazny.wing] Download composer.phar (official installer)"
+  ansible.builtin.get_url:
+    url: "https://getcomposer.org/composer-stable.phar"
+    dest: "{{ homebrew_prefix }}/bin/composer"
+    mode: '0755'
+    force: false
+  when: not _composer_stat.stat.exists
 
 - name: "[pazny.wing] Stat vendor/autoload.php"
   ansible.builtin.stat:
