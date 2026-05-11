@@ -13,7 +13,7 @@ One `ansible-playbook` run, ~20 minutes on an M4 Pro:
 
 | Layer | What |
 |---|---|
-| **Host** | Homebrew (~80 CLI + ~30 GUI casks), dotfiles, macOS defaults, dnsmasq for `*.dev.local`, mkcert CA, Nginx reverse proxy with vhost templates for PHP / Node / Python / Go / static |
+| **Host** | Homebrew (~80 CLI + ~30 GUI casks), dotfiles, macOS defaults, dnsmasq for `*.dev.local`, mkcert CA, Traefik reverse proxy (Nginx opt-in fallback via `install_nginx: true`) |
 | **Runtimes** | PHP 8.3 + Composer, Node.js (NVM) + npm/pnpm/yarn, Bun, Python 3.13 (pyenv), Go, .NET |
 | **Core stack** (always on) | MariaDB, PostgreSQL, Redis, Traefik, Portainer, Authentik (server + worker), Infisical, Bluesky PDS |
 | **Observability** (always on) | Grafana, Prometheus, Loki, Tempo, Alloy (unified collector) |
@@ -75,30 +75,30 @@ Mandatory external-SSD format: **APFS Case-Sensitive** (or HFS+ Journaled Case-S
 ## Run
 
 ```bash
-# Full install (prompts for sudo)
-ansible-playbook main.yml -K
+# Full install (sudo prompt via vars_prompt — no -K needed)
+ansible-playbook main.yml
 
 # Clean reinstall — wipes ALL data and secrets, prompts for a new prefix
-ansible-playbook main.yml -K -e blank=true
+ansible-playbook main.yml -e blank=true
 
 # Syntax only
 ansible-playbook main.yml --syntax-check
 
 # Dry run
-ansible-playbook main.yml -K --check
+ansible-playbook main.yml --check
 ```
 
-Sudo is needed for: `/etc/resolver/<tld>` (dnsmasq), system SSH/Samba/VNC services (if enabled), and writes to `/etc/hosts`.
+Sudo is handled via vars_prompt (nos_sudo_password) — no -K flag needed.
 
 ### Tags — selective runs
 
 ```bash
-ansible-playbook main.yml -K --tags "core,observability"
-ansible-playbook main.yml -K --tags "nginx"
-ansible-playbook main.yml -K --tags "openclaw,ai"
-ansible-playbook main.yml -K --tags "external-storage,storage"
-ansible-playbook main.yml -K --tags "iiab"
-ansible-playbook main.yml -K --tags "macos-defaults,osx"
+ansible-playbook main.yml --tags "core,observability"
+ansible-playbook main.yml --tags "nginx"
+ansible-playbook main.yml --tags "openclaw,ai"
+ansible-playbook main.yml --tags "external-storage,storage"
+ansible-playbook main.yml --tags "iiab"
+ansible-playbook main.yml --tags "macos-defaults,osx"
 ```
 
 Full tag list: see README.md § *Tags & selective runs*.
@@ -123,7 +123,7 @@ brew services list
 # DNS resolves on the loopback
 dig grafana.dev.local @127.0.0.1          # -> 127.0.0.1
 
-# Nginx serves HTTPS via mkcert
+# Traefik serves HTTPS via mkcert
 curl -fsSL https://portainer.dev.local > /dev/null
 
 # Grafana login
@@ -173,15 +173,15 @@ docker compose -f ~/stacks/iiab/docker-compose.yml ps
 | Grafana dashboard import 412 | Expected — dashboard already exists |
 | Docker container restart-loops | `docker logs <container>` — Jellyfin / Open WebUI can restart-loop until first DB init completes |
 | ERPNext first-run migration fails | Auto-retry implemented in `erpnext_post.yml`; otherwise re-run the playbook |
-| Permission denied during become | Forgot `-K` / `--ask-become-pass` |
+| Permission denied during become | sudo prompt was skipped — re-run and enter the password at the vars_prompt |
 
 The playbook is **idempotent** — re-run it. Completed steps report `ok`, new work reports `changed`.
 
 ### Jump straight to a task
 
 ```bash
-ansible-playbook main.yml -K --start-at-task="Kiwix | Pull Docker image"
-ansible-playbook main.yml -K --tags "kiwix"
+ansible-playbook main.yml --start-at-task="Kiwix | Pull Docker image"
+ansible-playbook main.yml --tags "kiwix"
 ```
 
 ---
@@ -202,7 +202,7 @@ ansible-playbook main.yml -K --tags "kiwix"
 
 | Service | Port | Domain |
 |---|---|---|
-| Nginx | 80 / 443 | `*.dev.local` |
+| Traefik | 80 / 443 | `*.dev.local` |
 | Grafana | 3000 | `grafana.dev.local` |
 | Uptime Kuma | 3001 | `uptime.dev.local` |
 | Gitea | 3003 (HTTP) / 2222 (SSH) | `git.dev.local` |
@@ -242,11 +242,11 @@ nOS/
 ├── default.credentials.yml          # secret templates (committed)
 ├── config.yml  credentials.yml      # your overrides (gitignored)
 ├── requirements.yml                 # Galaxy dependencies
-├── roles/pazny.<service>/           # 57 roles, one per service
-├── tasks/stacks/                    # core-up.yml, stack-up.yml, post-start hooks
+├── roles/pazny.<service>/           # 71 roles, one per service
+├── tasks/stacks/                    # core-up.yml, stack-up.yml, apps-up.yml
 ├── tasks/                           # nginx, runtimes, macOS defaults, backup, heartbeat...
 ├── templates/                       # base compose stacks, Nginx vhosts
-├── files/                           # static assets (Grafana dashboards, openclaw, wing)
+├── files/anatomy/                   # Bone/Wing/Pulse source, 63 plugins, agents, library, migrations
 └── docs/                            # architecture notes, fleet-architecture.md
 ```
 

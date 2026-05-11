@@ -1298,17 +1298,6 @@
       tags: ['service-registry', 'registry']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Bone – local FastAPI service (structure / state / dispatcher).
-    # Former BoxAPI. See docs/anatomy.md for the organ metaphor.
-    #
-    # As of Track A (2026-04-26) Bone runs as a container in the `infra`
-    # compose stack, not a host launchd process. The render + post-start
-    # tasks now live in tasks/stacks/core-up.yml alongside MariaDB / Postgres
-    # / Authentik so they all come up together. This block stays as a
-    # documentary anchor; the actual wiring is upstream.
-    # ──────────────────────────────────────────────────────────────────────────
-
-    # ──────────────────────────────────────────────────────────────────────────
     # Heartbeat – fleet reporting daemon
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/heartbeat.yml
@@ -1328,15 +1317,6 @@
     - import_tasks: tasks/vulnerability-scan.yml
       when: configure_vulnerability_scan | default(false)
       tags: ['vulnscan']
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Wing - Security Research Dashboard (Nette PHP-FPM + SQLite)
-    #
-    # As of Track A (2026-04-26) Wing runs as the `wing` service in the iiab
-    # compose stack, not via Homebrew php-fpm. Render + post tasks now live
-    # in tasks/stacks/stack-up.yml alongside other iiab services. This block
-    # is a documentary anchor; the actual wiring is upstream.
-    # ──────────────────────────────────────────────────────────────────────────
 
     # ──────────────────────────────────────────────────────────────────────────
     # Export/Import – hardware migration (run only with --tags)

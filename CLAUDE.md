@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~46 Docker services organized into 59 Ansible roles under the `pazny.*` namespace, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), an AI agent (OpenClaw + Ollama MLX), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 71 Ansible roles under the `pazny.*` namespace, 63 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -25,16 +25,16 @@ An OS-agnostic "all-in-one PC" under the brand **This is AIT** (working engine n
 ## Key Commands
 
 ```bash
-# Full playbook run (prompts for sudo + password prefix)
-ansible-playbook main.yml -K
+# Full playbook run (sudo prompt via vars_prompt — no -K needed)
+ansible-playbook main.yml
 
-# Clean reinstall (wipes data, resets all services, prompts for a new password prefix)
-ansible-playbook main.yml -K -e blank=true
+# Clean reinstall (wipes data, resets all services, prompts for a new prefix)
+ansible-playbook main.yml -e blank=true
 
 # Run a specific component by tag
-ansible-playbook main.yml -K --tags "stacks,nginx"
-ansible-playbook main.yml -K --tags "observability"
-ansible-playbook main.yml -K --tags "ssh,iiab-terminal"
+ansible-playbook main.yml --tags "stacks,nginx"
+ansible-playbook main.yml --tags "observability"
+ansible-playbook main.yml --tags "ssh,iiab-terminal"
 
 # Syntax validation
 ansible-playbook main.yml --syntax-check
@@ -57,7 +57,7 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
-### Role-based service delivery (59 roles under `pazny.*`)
+### Role-based service delivery (71 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
@@ -116,6 +116,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo |
 | **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
+| **apps** | Tier-2 manifest-driven apps (apps_runner — Documenso, 2FAuth, Qdrant, Roundcube) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **voip** | FreePBX (Asterisk) |
@@ -131,6 +132,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 - **Wing** — security-research dashboard; source at `files/anatomy/wing/`, host launchd as of anatomy A3.5 (FrankenPHP single binary)
 - **Bone** — local REST API bridge; source at `files/anatomy/bone/`, host launchd as of anatomy A3a
 - **Pulse** — scheduled-job daemon; source at `files/anatomy/pulse/`, host launchd skeleton as of anatomy A4
+- **Conductor** — autonomous DevOps agent; profile at `files/anatomy/agents/conductor/`, first-class Wing consumer as of A8
 
 ### IAM & SSO (Authentik)
 
@@ -228,7 +230,7 @@ Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.m
 cp apps/_template.yml apps/myapp.yml
 $EDITOR apps/myapp.yml          # fill meta + gdpr + compose blocks
 python3 -m module_utils.nos_app_parser apps/myapp.yml   # smoke-parse
-ansible-playbook main.yml -K
+ansible-playbook main.yml
 ```
 
 No code changes. The runner takes care of routing, secrets, and observability.

@@ -1,7 +1,12 @@
 ---
 # ==============================================================================
-# BACKUP - automated encrypted backups via Restic
-# Creates the repo, dumps databases, runs the backup, sets up the launchd schedule
+# BACKUP — legacy Restic-based encrypted backups (host-level).
+#
+# NOTE: This is the OLD backup path using `configure_backup` + `restic_*` vars.
+# The CURRENT primary backup is `pazny.backup` role (install_backup flag) which
+# dumps DBs + volumes + Authentik blueprints to RustFS via launchd.
+# Keep both paths available — Restic supports off-site repos (S3, SFTP) that
+# RustFS does not. Operators choose one or both.
 # ==============================================================================
 
 - name: "[Backup] Verify restic is installed"
