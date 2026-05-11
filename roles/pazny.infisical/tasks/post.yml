@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# pazny.infisical/tasks/post.yml — wait na ready + info.
+# pazny.infisical/tasks/post.yml — wait na ready + info + KMS self-heal.
 # ==============================================================================
 
 - name: "[pazny.infisical Post] Wait for server to be ready"
@@ -14,6 +14,66 @@
   until: _infisical_health.status | default(0) == 200
   failed_when: false
 
+# ── KMS self-heal block ─────────────────────────────────────────────────────
+# Symptom (2026-05-11): on the very first blank=true run, Infisical can
+# end up with a `kms_root_config` row whose `encryptedRootKey` is NOT
+# decryptable by the current ENCRYPTION_KEY. Manual openssl brute-force
+# against six derivation candidates (utf-8, hex, padded placeholder,
+# SHA-256 variants) all FAIL — proving the seed used yet-another value
+# we can't reconstruct from current state. Without intervention the
+# container restart-loops forever with `Decipheriv.final` raising
+# "Unsupported state or unable to authenticate data".
+#
+# Self-heal contract: when the initial readiness probe failed AND the
+# container logs contain the KMS decrypt signature, drop the orphaned
+# row, restart the container, re-probe. KMS root has no user data
+# (it's the wrapping key for everything else; on a fresh install only
+# Infisical's seed migration has touched it). Drop is therefore safe
+# pre-first-user. After truncate, Infisical's startup re-seeds with
+# the current ENCRYPTION_KEY → decrypt works.
+- name: "[pazny.infisical Post] Self-heal — fetch container logs to detect KMS decrypt failure"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ docker_bin }} logs --tail 200 infra-infisical-1 2>&1 \
+      | grep -c 'Unsupported state or unable to authenticate data' || echo 0
+  args:
+    executable: /bin/bash
+  register: _infisical_kms_error_count
+  when: _infisical_health.status | default(0) != 200
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.infisical Post] Self-heal — drop unrecoverable kms_root_config + restart container"
+  when:
+    - _infisical_health.status | default(0) != 200
+    - (_infisical_kms_error_count.stdout | default('0') | int) > 0
+  block:
+    - name: "[pazny.infisical Post] Self-heal — TRUNCATE kms_root_config"
+      ansible.builtin.shell: |
+        {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d infisical -c "TRUNCATE kms_root_config;"
+      register: _infisical_kms_truncate
+      changed_when: "'TRUNCATE TABLE' in (_infisical_kms_truncate.stdout | default(''))"
+      failed_when: _infisical_kms_truncate.rc != 0
+
+    - name: "[pazny.infisical Post] Self-heal — restart Infisical container"
+      ansible.builtin.command:
+        argv:
+          - "{{ docker_bin }}"
+          - restart
+          - infra-infisical-1
+      changed_when: true
+
+    - name: "[pazny.infisical Post] Self-heal — re-probe readiness"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ infisical_port | default(8075) }}/api/status"
+        status_code: [200]
+        timeout: 10
+      register: _infisical_health
+      retries: 20
+      delay: 5
+      until: _infisical_health.status | default(0) == 200
+      failed_when: false
+
 - name: "[pazny.infisical Post] Status"
   ansible.builtin.debug:
     msg: >-
@@ -21,3 +81,6 @@
       else 'UNAVAILABLE - docker logs infra-infisical-1' }}
       | Dashboard: https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
       | Signup: first user = admin
+      {% if (_infisical_kms_error_count.stdout | default('0') | int) > 0 -%}
+      | KMS self-heal: triggered (orphaned root key dropped, re-seeded)
+      {%- endif %}
