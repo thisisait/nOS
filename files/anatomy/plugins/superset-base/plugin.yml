@@ -47,11 +47,14 @@ authentik:
     - email
   tier: 2
 
-# No compose_extension — OIDC is wired via superset_config.py rendered
-# by the role; no env-driven knobs to override.
+compose_extension:
+  template: templates/superset-base.compose.yml.j2
+  target_stack: data
+  target_service: superset
 
 lifecycle:
-  pre_compose: []
+  pre_compose:
+    - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ superset_port }}/health"
 

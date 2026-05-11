@@ -1,9 +1,13 @@
 # =============================================================================
-# superset-base — compose-extension fragment (Q2 forward_auth pivot).
-# Forward-auth lives in Traefik file-provider; this fragment is identity-only.
+# superset-base — compose-extension fragment.
+# Rendered into {{ stacks_dir }}/data/overrides/superset-base.yml.
 # =============================================================================
 
 services:
   superset:
     environment:
       _NOS_PLUGIN: "superset-base"
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}

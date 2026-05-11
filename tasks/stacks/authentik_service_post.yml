@@ -4,6 +4,14 @@
 # Configures services that do not support OIDC via env vars
 # Runs after stack-up (providers/applications already exist in Authentik - reconcile
 # via blueprints in tasks/stacks/authentik_blueprints.yml)
+#
+# DISSOLUTION PLAN (Phase 2 C5): This file dissolves into per-plugin
+# post_compose hooks once the plugin loader gains a `replay_api_calls`
+# runner with docker_exec support.
+#   • Gitea OAuth2 (lines 11-79)  → gitea-base/lifecycle.post_compose
+#   • Portainer verify (lines 85-101) → portainer-base/lifecycle.post_compose
+#   • Nextcloud OIDC (lines 105-184)  → nextcloud-base/lifecycle.post_compose
+# Until C5 lands, this file remains the authoritative wiring path.
 # ==============================================================================
 
 # ── Gitea: register OAuth2 source via Admin API ─────────────────────────────
