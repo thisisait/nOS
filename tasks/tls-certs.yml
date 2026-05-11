@@ -47,6 +47,21 @@
         CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
       changed_when: false
 
+    # `mkcert -install` ran under sudo against a CAROOT inside the operator's
+    # HOME so the system trust store gets the CA, but the resulting
+    # rootCA.pem + rootCA-key.pem land root-owned. Subsequent `mkcert`
+    # invocations (cert generation below) run as the operator and fail with
+    # `open .../rootCA-key.pem: permission denied`. Reclaim ownership so
+    # the user can read the key for cert signing.
+    - name: "[mkcert] Reclaim CAROOT ownership for the operator"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+        state: directory
+        owner: "{{ ansible_facts['env']['USER'] }}"
+        group: staff
+        recurse: true
+      become: true
+
     - name: "[mkcert] Build list of required SSL SANs"
       ansible.builtin.set_fact:
         # Wildcards include host_alias segment when set:

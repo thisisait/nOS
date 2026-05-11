@@ -107,17 +107,90 @@
     # auto-install the deps via pip --break-system-packages so the
     # next blank doesn't need a manual install step.
     #
-    # Idempotent: pip skips already-installed packages. The
-    # --break-system-packages flag is required for Homebrew Python on
-    # macOS (PEP 668); harmless on Linux Pythons (silently ignored).
-    - name: "[Preflight] Ensure host Python has plugin loader deps (jinja2, pyyaml, jsonschema)"
+    # Idempotent: pip skips already-installed packages. `--break-system-packages`
+    # is required for Homebrew Python (PEP 668); harmless on Linux.
+    #
+    # 2026-05-10 — `jsonschema` REMOVED from this list. It was strictly
+    # optional (load_plugins.py and nos_migrate_engine.py both have
+    # ImportError fallbacks), but its transitive C-extension dep
+    # `rpds-py` lands at `/opt/homebrew/lib/python3.14/site-packages/rpds/`
+    # — exactly where Homebrew's `rpds-py` formula wants to symlink when
+    # `semgrep` (pulled by the brew package list) is installed. The
+    # collision broke `brew link rpds-py` and cascaded to a semgrep
+    # install failure. Dropping jsonschema from this preflight removes
+    # the conflict at its source.
+    - name: "[Preflight] Ensure host Python has plugin loader deps (jinja2, pyyaml)"
       ansible.builtin.pip:
         name:
           - jinja2>=3.1
           - pyyaml>=6.0
-          - jsonschema>=4.0
         state: present
         extra_args: "--break-system-packages"
+      tags: ['always', 'preflight']
+
+    # ── One-time correction for hosts where a previous playbook run
+    # installed jsonschema + its C-extension dep tree at system-site,
+    # blocking Homebrew formula links (rpds-py is the load-bearing one,
+    # pulled by `brew install semgrep`). pip-uninstall is a no-op when
+    # the package is absent, so this is safe to keep around.
+    - name: "[Preflight] Uninstall pip-managed jsonschema dep tree (frees /opt/homebrew/lib/python3.14/site-packages for Homebrew)"
+      ansible.builtin.pip:
+        name:
+          - jsonschema
+          - jsonschema-specifications
+          - referencing
+          - rpds-py
+          - attrs
+        state: absent
+        extra_args: "--break-system-packages"
+      failed_when: false
+      tags: ['always', 'preflight']
+
+    # ── Heal broken Homebrew links from a prior semgrep install where
+    # rpds-py was poured into the Cellar but `brew link` aborted on the
+    # pip-occupied site-packages dir. After the pip-uninstall above has
+    # cleared the path, this task runs `brew link --overwrite` for any
+    # rpds-py / jsonschema-specifications / referencing / attrs cellars
+    # that exist but aren't linked. No-ops on hosts that don't have the
+    # broken state (Cellar dir absent → loop body skips). Runs only when
+    # Homebrew exists (Apple Silicon path).
+    - name: "[Preflight] Heal broken Homebrew links (rpds-py et al)"
+      ansible.builtin.shell: |
+        set -e
+        for pkg in rpds-py jsonschema-specifications referencing attrs; do
+          if [ -d "/opt/homebrew/Cellar/$pkg" ] && [ ! -L "/opt/homebrew/opt/$pkg" ]; then
+            /opt/homebrew/bin/brew link --overwrite "$pkg" || true
+          fi
+        done
+      when: ansible_os_family == 'Darwin'
+      changed_when: false
+      failed_when: false
+      tags: ['always', 'preflight']
+
+    # ── ALSO install on Apple's CommandLineTools Python (/usr/bin/python3) ──
+    # On macOS hosts where Xcode CLT is present (Homebrew install requires
+    # it, so it's universal in practice), Ansible's auto-discovery picks
+    # /usr/bin/python3 (Apple Python 3.9) as the interpreter for CUSTOM
+    # modules under `library = ./files/anatomy/library` — even when the
+    # inventory and play vars pin /opt/homebrew/bin/python3. Our pip task
+    # above lands deps on Homebrew Python, but `nos_state` then crashes
+    # on `import yaml` because Apple Python's site-packages is empty.
+    #
+    # Rather than fight Ansible's interpreter dispatch (we tried inventory
+    # + play-vars + ansible.cfg pins, all swallowed for custom modules),
+    # we install pyyaml + jinja2 on BOTH interpreters via --user. Whatever
+    # Ansible picks, the import works. Idempotent. Apple Python's pip is
+    # PEP 668-free so no --break-system-packages is needed; --user lands
+    # files at ~/Library/Python/3.9/lib/python/site-packages/ which Apple
+    # Python's sys.path includes by default.
+    - name: "[Preflight] Mirror plugin-loader deps onto Apple Python (covers Ansible's interpreter discovery)"
+      ansible.builtin.shell: |
+        if [ -x /usr/bin/python3 ] && [ "/usr/bin/python3" != "/opt/homebrew/bin/python3" ]; then
+          /usr/bin/python3 -m pip install --user --quiet --disable-pip-version-check 'pyyaml>=6.0' 'jinja2>=3.1' 2>&1
+        fi
+      register: _apple_python_deps
+      changed_when: "'Successfully installed' in (_apple_python_deps.stdout | default(''))"
+      when: ansible_os_family == 'Darwin'
       tags: ['always', 'preflight']
 
     # ── Preflight: fail fast on malformed YAML in any config file ──────────
@@ -260,24 +333,14 @@
         - install_traefik | default(true) | bool
       tags: ['always', 'preflight']
 
-    # ── State & Migration Framework: orchestrator (runs before roles) ────────
-    # Reads ~/.nos/state.yml, evaluates migrations/*.yml, applies any that
-    # gate true and have not been recorded as applied. Idempotent — if
-    # nothing pending, the orchestrator is a no-op. See docs/framework-plan.md.
-    - name: "[Framework] Pre-migrate (load state + apply pending migrations)"
-      ansible.builtin.import_tasks: tasks/pre-migrate.yml
-      tags: ['migrate']
-
-    # ── Apply a single patch recipe (explicit opt-in via --tags apply-patches)
-    # Skipped on a normal playbook run because of the 'never' tag — invoked
-    # either manually (ansible-playbook ... --tags apply-patches -e patch_id=PATCH-001)
-    # or from Bone /api/patches/<id>/apply which subprocesses ansible-playbook
-    # with that tag. The when-guard prevents accidental runs if someone adds
-    # 'apply-patches' to a broader tag group.
-    - name: "[Framework] Apply a single patch recipe (opt-in)"
-      ansible.builtin.import_tasks: tasks/apply-patches.yml
-      when: patch_id is defined and (patch_id | length) > 0
-      tags: ['apply-patches', 'never']
+    # NOTE: State & Migration Framework orchestrator (pre-migrate.yml) runs
+    # at the very top of `tasks:` (after roles installed Homebrew). On a fresh
+    # machine, pre_tasks runs before pazny.mac.homebrew has guaranteed
+    # /opt/homebrew/bin/python3 + its site-packages — so nos_state custom
+    # modules crash on `import yaml`. Moved from pre_tasks (line ~267 prior
+    # to 2026-05-10) into tasks: to inherit the post-Homebrew runtime.
+    # apply-patches.yml moved alongside for cohesion (state-framework ops
+    # belong together).
 
     - name: Include credentials overrides.
       include_vars: "{{ item }}"
@@ -632,6 +695,31 @@
       tags: ['hardening', 'linux', 'security']
 
   tasks:
+    # ── State & Migration Framework: orchestrator (runs after host roles) ────
+    # Reads ~/.nos/state.yml, evaluates migrations/*.yml, applies any that
+    # gate true and have not been recorded as applied. Idempotent — if
+    # nothing pending, the orchestrator is a no-op. See docs/framework-plan.md.
+    #
+    # Moved from pre_tasks (2026-05-10): pre_tasks runs BEFORE pazny.mac.homebrew,
+    # so on a fresh Apple Silicon machine `nos_state` (custom Ansible module)
+    # was dispatched against an interpreter whose site-packages had no PyYAML —
+    # despite the preflight pip install in pre_tasks landing it elsewhere. By
+    # running here, we inherit a fully-provisioned Homebrew Python.
+    - name: "[Framework] Pre-migrate (load state + apply pending migrations)"
+      ansible.builtin.import_tasks: tasks/pre-migrate.yml
+      tags: ['migrate']
+
+    # ── Apply a single patch recipe (explicit opt-in via --tags apply-patches)
+    # Skipped on a normal playbook run because of the 'never' tag — invoked
+    # either manually (ansible-playbook ... --tags apply-patches -e patch_id=PATCH-001)
+    # or from Bone /api/patches/<id>/apply which subprocesses ansible-playbook
+    # with that tag. The when-guard prevents accidental runs if someone adds
+    # 'apply-patches' to a broader tag group.
+    - name: "[Framework] Apply a single patch recipe (opt-in)"
+      ansible.builtin.import_tasks: tasks/apply-patches.yml
+      when: patch_id is defined and (patch_id | length) > 0
+      tags: ['apply-patches', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.

@@ -434,11 +434,24 @@
       check_mode: false
       when: homebrew_upgrade_all_packages | default(false) | bool
 
+    # Shelled out from community.general.homebrew on 2026-05-11: ansible-core
+    # 2.20.5 + Python 3.14 + community.general 12.6.0 trips a
+    # `Module result deserialization failed: Unknown profile name
+    # 'module_legacy_m2c'` on this module's return — the brew upgrade itself
+    # succeeds, only the JSON-tagged return profile is unknown to 2.20.x.
+    # Direct `brew update && brew upgrade` is consistent with the install
+    # path above (also shell-based) and removes the deserialization surface.
     - name: Upgrade all homebrew packages (if configured).
-      homebrew:
-        update_homebrew: true
-        upgrade_all: true
-      when: homebrew_upgrade_all_packages
+      ansible.builtin.shell: |
+        set -e
+        brew update
+        brew upgrade
+      environment:
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+        HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      register: _brew_upgrade_all
+      changed_when: "'already up-to-date' not in (_brew_upgrade_all.stdout | default('')).lower()"
+      when: homebrew_upgrade_all_packages | default(false) | bool
       notify:
         - Clear homebrew cache
 
