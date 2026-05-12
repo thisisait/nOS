@@ -73,10 +73,6 @@ authentik:
 lifecycle:
   post_compose:
     - wait_health: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/version"
-    # TODO(C5): loader gains `replay_api_calls` runner; until then the
-    # role-side post.yml + authentik_service_post.yml are authoritative.
-    # The hooks/post_compose.yml file in this dir documents the intended
-    # sequence in plugin-loader-spec format.
     - replay_api_calls: hooks/post_compose.yml
 
   post_blank: []

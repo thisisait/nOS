@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# freescout-base / hooks/post_compose.yml
+#
+# Declarative post-compose sequence. Loader replays via `replay_api_calls`
+# now that Phase 2 C5 ships the runner with docker_exec + http support.
+# Mirrors roles/pazny.freescout/tasks/post.yml byte-for-byte.
+# =============================================================================
+
+base_url: "http://127.0.0.1:{{ freescout_port | default(8090) }}"
+tls_verify: false
+retries:
+  max: 30
+  delay_seconds: 4
+
+sequence:
+  # Phase 1 — admin user bootstrap (idempotent: detect → create OR reconverge)
+  - id: check_admin_exists
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: >
+      php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->count();"
+    register: _fs_user_check
+    accept_substring_in_stdout: "0"       # 0 = no user yet, >0 = exists
+
+  - id: create_admin_user
+    when: "_fs_user_check.stdout | trim == '0'"
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: >
+      php artisan freescout:create-user
+      --role=admin
+      --firstName="{{ freescout_admin_first_name | default('Admin') }}"
+      --lastName="{{ freescout_admin_last_name | default('nOS') }}"
+      --email="{{ freescout_admin_email | default(default_admin_email) }}"
+      --password="{{ freescout_admin_password }}"
+
+  - id: reconverge_admin_password
+    when: "_fs_user_check.stdout | trim != '0'"
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: >
+      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+    accept_substring_in_stdout: "UPDATED"
+
+  # Phase 2 — Native OIDC via freescout-oauth community module
+  - id: clone_oauth_module
+    when: "install_authentik | bool"
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: |
+      set -e
+      cd /var/www/html/Modules 2>/dev/null || cd /data/Modules
+      if [ ! -d OAuth ]; then
+        git clone --depth 1 https://github.com/freescout-help-desk/oauth.git OAuth || \
+        git clone --depth 1 https://github.com/tiredofit/freescout-module-oauth.git OAuth
+      fi
+      chown -R www-data:www-data OAuth 2>/dev/null || true
+    accept_substring_in_stdout: "Cloning"
+
+  - id: enable_oauth_module
+    when: "install_authentik | bool"
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: |
+      php artisan module:enable OAuth 2>&1 || true
+      php artisan freescout:clear-cache 2>&1 || php artisan cache:clear 2>&1 || true
+
+  - id: persist_oidc_config
+    when: "install_authentik | bool"
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: >
+      php artisan tinker --execute="
+        \$cfg=[
+          'oauth.provider'=>'oidc',
+          'oauth.enabled'=>'1',
+          'oauth.client_id'=>'nos-freescout',
+          'oauth.client_secret'=>'{{ global_password_prefix }}_pw_oidc_freescout',
+          'oauth.authorize_url'=>'https://{{ authentik_domain }}/application/o/authorize/',
+          'oauth.token_url'=>'https://{{ authentik_domain }}/application/o/token/',
+          'oauth.userinfo_url'=>'https://{{ authentik_domain }}/application/o/userinfo/',
+          'oauth.logout_url'=>'https://{{ authentik_domain }}/application/o/freescout/end-session/',
+          'oauth.discovery_url'=>'https://{{ authentik_domain }}/application/o/freescout/.well-known/openid-configuration',
+          'oauth.redirect_uri'=>'https://{{ freescout_domain }}/oauth/callback',
+          'oauth.scopes'=>'openid profile email',
+          'oauth.display_name'=>'Authentik',
+          'oauth.auto_create_user'=>'1',
+          'oauth.email_claim'=>'email',
+          'oauth.name_claim'=>'name',
+        ];
+        foreach(\$cfg as \$k=>\$v){ \\Option::set(\$k,\$v); }
+        echo 'OIDC_PERSISTED';
+      "
+    accept_substring_in_stdout: "OIDC_PERSISTED"

@@ -58,6 +58,7 @@ lifecycle:
     - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ freescout_port | default(8090) }}/"
+    - replay_api_calls: hooks/post_compose.yml
 
 gdpr:
   purpose: |

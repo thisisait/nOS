@@ -1,0 +1,36 @@
+---
+# =============================================================================
+# spacetimedb-base / hooks/post_compose.yml
+#
+# Declarative post-compose sequence. Loader replays via `replay_api_calls`
+# now that Phase 2 C5 ships the runner with docker_exec + http support.
+# Mirrors roles/pazny.spacetimedb/tasks/post.yml.
+#
+# SpacetimeDB has no admin-password concept — auth is JWT signed by the
+# keypair generated in tasks/main.yml. The "admin init" therefore reduces
+# to verifying the server is healthy and the container is running.
+# Host-side CLI install (`spacetime` binary + server alias) remains a
+# role-side task — it's not a docker_exec operation.
+# =============================================================================
+
+base_url: "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}"
+tls_verify: false
+retries:
+  max: 30
+  delay_seconds: 4
+
+sequence:
+  # Phase 1 — verify container state
+  - id: check_container_running
+    runner: docker_inspect
+    container: infra-spacetimedb-1
+    register: _spacetimedb_container
+    expect_state: running
+
+  # Phase 2 — health probe (idempotent; already covered by wait_health)
+  - id: verify_ping_endpoint
+    when: "_spacetimedb_container.state == 'running'"
+    method: GET
+    path: /v1/ping
+    expect_status: [200, 204]
+    timeout_seconds: 10

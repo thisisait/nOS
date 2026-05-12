@@ -77,6 +77,7 @@ lifecycle:
   pre_compose: []
   post_compose:
     - wait_health: "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}/admin"
+    - replay_api_calls: hooks/post_compose.yml
   post_blank: []
 
 # =============================================================================

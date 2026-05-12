@@ -1,0 +1,95 @@
+---
+# =============================================================================
+# wordpress-base / hooks/post_compose.yml
+#
+# Declarative post-compose sequence. Loader replays via `replay_api_calls`
+# now that Phase 2 C5 ships the runner with docker_exec + http support.
+# Mirrors roles/pazny.wordpress/tasks/post.yml byte-for-byte.
+# =============================================================================
+
+base_url: "http://127.0.0.1:{{ wordpress_port | default(8084) }}"
+tls_verify: false
+retries:
+  max: 30
+  delay_seconds: 4
+
+sequence:
+  # Phase 1 — check container state
+  - id: check_container_running
+    runner: docker_inspect
+    container: iiab-wordpress-1
+    register: _wp_container
+    expect_state: running
+
+  # Phase 2 — WordPress core install (first-run only) + admin reconverge
+  - id: check_wp_installed
+    when: "_wp_container.state == 'running'"
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: wp core is-installed --allow-root
+    register: _wp_installed
+
+  - id: install_wp_cli
+    when: >
+      _wp_container.state == 'running'
+      and _wp_installed.rc != 0
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: |
+      curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+      && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp
+
+  - id: wp_core_install
+    when: >
+      _wp_container.state == 'running'
+      and _wp_installed.rc != 0
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      wp core install --allow-root
+      --url="https://{{ wordpress_domain }}"
+      --title="Dev WordPress"
+      --admin_user="{{ wordpress_admin_user | default('admin') }}"
+      --admin_password="{{ wordpress_admin_password }}"
+      --admin_email="{{ wordpress_admin_email | default(default_admin_email) }}"
+      --skip-email
+
+  - id: reconverge_admin_password
+    when: >
+      _wp_container.state == 'running'
+      and _wp_installed.rc == 0
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      wp user update {{ wordpress_admin_user | default('admin') }}
+      --user_pass={{ wordpress_admin_password | quote }}
+      --allow-root
+    accept_substring_in_stdout: "Success"
+
+  # Phase 3 — Native OIDC: install + activate openid-connect-generic plugin
+  - id: check_oidc_plugin_active
+    when: >
+      install_authentik | bool
+      and _wp_container.state == 'running'
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: wp plugin is-active daggerhart-openid-connect-generic --allow-root
+    register: _wp_oidc_active
+
+  - id: install_oidc_plugin
+    when: >
+      install_authentik | bool
+      and _wp_container.state == 'running'
+      and _wp_oidc_active.rc != 0
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      wp plugin install daggerhart-openid-connect-generic
+      --activate --allow-root
+    accept_substring_in_stdout: "Plugin installed successfully"

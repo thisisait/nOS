@@ -74,8 +74,6 @@ authentik:
 lifecycle:
   post_compose:
     - wait_health: "http://127.0.0.1:{{ erpnext_port | default(8001) }}/api/method/frappe.ping"
-    # TODO(C5): docker_exec runner with retry + lock-cleanup semantics; until
-    # then roles/pazny.erpnext/tasks/post.yml is authoritative.
     - replay_api_calls: hooks/post_compose.yml
 
   post_blank: []

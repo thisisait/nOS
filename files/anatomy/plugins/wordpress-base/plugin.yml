@@ -58,6 +58,7 @@ lifecycle:
     - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ wordpress_port | default(8084) }}/wp-login.php"
+    - replay_api_calls: hooks/post_compose.yml
 
 gdpr:
   purpose: |

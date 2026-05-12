@@ -75,15 +75,6 @@ lifecycle:
     - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ nextcloud_port | default(8085) }}/status.php"
-    # Anatomy P1 mop-up (2026-05-05): U8 worker shipped a declarative
-    # post_compose API-call sequence at hooks/post_compose.yml mirroring
-    # tasks/stacks/authentik_service_post.yml:103-184 (occ user_oidc
-    # provider register, settings reconverge, client_secret rotation).
-    # Loader's `replay_api_calls` runner with docker_exec support lands
-    # in Phase 2 C5; until then roles/pazny.nextcloud/tasks/post.yml +
-    # tasks/stacks/authentik_service_post.yml are the live wiring path.
-    # The hook file is the contract — a future blank with C5 runner
-    # in place will execute it.
     - replay_api_calls: hooks/post_compose.yml
 
 gdpr:

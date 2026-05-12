@@ -32,8 +32,11 @@ import glob as _glob
 import json
 import os
 import pathlib
+import subprocess
 import sys
 import typing as t
+import urllib.request
+import urllib.error
 
 import yaml
 
@@ -976,7 +979,265 @@ def _dispatch_action(plugin: Plugin, action: str, param,
             return f"conditional_remove_dir:{path}:removed"
         return f"conditional_remove_dir:{path}:preserved(when={when})"
 
+    if action == "replay_api_calls":
+        # Phase 2 C5 (2026-05-11): replay a declarative API-call sequence.
+        # `param` can be:
+        #   1. A file path relative to the plugin dir (e.g. "hooks/post_compose.yml")
+        #   2. A dotted path into the manifest (e.g. "api_calls.sequence")
+        # Supports HTTP (GET/POST/PATCH/PUT) + docker_exec + docker_inspect.
+        if isinstance(param, str) and (param.endswith(".yml") or param.endswith(".yaml")):
+            seq_path = plugin.path / _render_string(param, ctx)
+            return _replay_api_calls(seq_path, ctx)
+        # Manifest dotted path: resolve then replay inline
+        resolved = _resolve_path(plugin.manifest, str(param)) if isinstance(param, str) else param
+        if isinstance(resolved, list):
+            return _replay_api_sequence(resolved, ctx)
+        if isinstance(resolved, dict) and "sequence" in resolved:
+            return _replay_api_calls_from_dict(resolved, ctx)
+        return f"replay_api_calls:{param}:skipped(no sequence found)"
+
     return f"unknown:{action}"
+
+
+# ── replay_api_calls runner (Phase 2 C5, 2026-05-11) ──────────────────────────
+
+def _replay_api_calls(seq_path: pathlib.Path, ctx: dict) -> str:
+    """Replay a declarative API-call sequence from a YAML file.
+
+    The file declares ``base_url``, ``tls_verify``, ``retries``, and a
+    ``sequence`` of steps. Each step can be an HTTP call or a docker
+    exec/inspect command. Conditions (``when``) gate execution; results
+    can be stored in a ``register`` for later steps to reference.
+    """
+    if not seq_path.is_file():
+        return f"replay_api_calls:skipped(no file @ {seq_path})"
+    with open(seq_path) as fh:
+        doc = yaml.safe_load(fh) or {}
+    return _replay_api_calls_from_dict(doc, ctx)
+
+
+def _replay_api_calls_from_dict(doc: dict, ctx: dict) -> str:
+    """Replay from an already-parsed dict with base_url/sequence."""
+    base_url = _render_string(str(doc.get("base_url", "")), ctx)
+    tls_verify = doc.get("tls_verify", True)
+    retries_cfg = doc.get("retries") or {}
+    max_retries = int(retries_cfg.get("max", 5))
+    delay = float(retries_cfg.get("delay_seconds", 2))
+    sequence = doc.get("sequence") or []
+    return _replay_api_sequence(sequence, ctx, base_url, tls_verify,
+                                max_retries, delay)
+
+
+def _replay_api_sequence(sequence: list, ctx: dict,
+                         base_url: str = "",
+                         tls_verify: bool = True,
+                         max_retries: int = 5,
+                         delay: float = 2.0) -> str:
+    """Execute a list of API-call steps."""
+    if not sequence:
+        return "replay_api_calls:empty sequence"
+
+    registers: dict[str, t.Any] = {}
+    executed = 0
+    skipped = 0
+    errors: list[str] = []
+    for step in sequence:
+        if not isinstance(step, dict):
+            continue
+        sid = step.get("id", "?")
+        # Evaluate condition
+        when_expr = step.get("when")
+        if when_expr:
+            cond = _eval_condition(when_expr, registers, ctx)
+            if not cond:
+                skipped += 1
+                continue
+        # Determine runner
+        runner = step.get("runner", "http")
+        try:
+            if runner == "http":
+                result = _http_call(step, base_url, tls_verify, registers, ctx,
+                                    max_retries, delay)
+            elif runner == "docker_exec":
+                result = _docker_exec(step, registers, ctx)
+            elif runner == "docker_inspect":
+                result = _docker_inspect(step, registers, ctx)
+            else:
+                errors.append(f"{sid}:unknown runner {runner!r}")
+                continue
+        except Exception as e:
+            errors.append(f"{sid}:{e}")
+            continue
+
+        executed += 1
+        # Register result
+        reg_name = step.get("register")
+        if reg_name:
+            registers[reg_name] = result
+
+    summary = f"replay_api_calls:{executed} executed / {skipped} skipped"
+    if errors:
+        summary += f" / ERRORS: {'; '.join(errors)}"
+    return summary
+
+
+def _eval_condition(expr: str, registers: dict, ctx: dict) -> bool:
+    """Evaluate a ``when`` condition using Jinja2.
+
+    Registers are exposed as top-level variables in the template context
+    alongside the loader's ``ctx`` (template_vars + inputs + plugin_manifest).
+    Simple conditions like ``install_authentik | bool`` or
+    ``_nc_running.state == 'running'`` are rendered and then evaluated
+    as Python booleans.
+    """
+    import jinja2
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    merged = dict(ctx)
+    merged.update(registers)
+    try:
+        rendered = env.from_string("{{ " + expr + " }}").render(**merged).strip()
+    except jinja2.UndefinedError:
+        return False
+    # Evaluate rendered result
+    if rendered.lower() in ("true", "1", "yes"):
+        return True
+    if rendered.lower() in ("false", "0", "no", ""):
+        return False
+    # Jinja2 `| bool` returns "True"/"False" strings
+    if rendered == "True":
+        return True
+    if rendered == "False":
+        return False
+    # Truthy fallback
+    return bool(rendered)
+
+
+def _http_call(step: dict, base_url: str, tls_verify: bool,
+               registers: dict, ctx: dict,
+               max_retries: int, delay: float) -> dict:
+    """Execute a single HTTP step. Returns {status, body, headers}."""
+    method = (step.get("method") or "GET").upper()
+    path = _render_string(str(step.get("path", "/")), {**ctx, **registers})
+    url = base_url.rstrip("/") + "/" + path.lstrip("/")
+    expect_status = step.get("expect_status", 200)
+    body = step.get("body")
+    auth = step.get("auth") or {}
+    timeout = step.get("timeout_seconds", 30)
+
+    # Build request
+    data = None
+    headers = {"Accept": "application/json"}
+    if body and method in ("POST", "PATCH", "PUT"):
+        rendered_body = _render_value(body, {**ctx, **registers})
+        data = json.dumps(rendered_body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    # Auth
+    if auth.get("type") == "basic":
+        import base64
+        user = _render_string(str(auth.get("username", "")), {**ctx, **registers})
+        pwd = _render_string(str(auth.get("password", "")), {**ctx, **registers})
+        creds = base64.b64encode(f"{user}:{pwd}".encode()).decode()
+        headers["Authorization"] = f"Basic {creds}"
+
+    # Retry loop
+    import time
+    import ssl
+    ctx_ssl = None if tls_verify else ssl._create_unverified_context()
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx_ssl) as resp:
+                status = resp.status
+                resp_body = resp.read().decode("utf-8", errors="replace")
+                resp_headers = dict(resp.headers)
+                try:
+                    parsed = json.loads(resp_body) if resp_body else {}
+                except json.JSONDecodeError:
+                    parsed = {"raw": resp_body}
+                if status == expect_status or (200 <= status < 300 and expect_status == 200):
+                    return {"status": status, "body": parsed, "headers": resp_headers,
+                            "raw": resp_body, "rc": 0 if 200 <= status < 300 else 1}
+                last_err = f"HTTP {status} (expected {expect_status})"
+        except urllib.error.HTTPError as e:
+            status = e.code
+            try:
+                body_text = e.read().decode("utf-8", errors="replace")
+                parsed = json.loads(body_text) if body_text else {}
+            except Exception:
+                parsed = {"raw": str(e)}
+            if status == expect_status:
+                return {"status": status, "body": parsed, "rc": 1}
+            last_err = f"HTTP {status} (expected {expect_status})"
+        except Exception as e:
+            last_err = str(e)
+        if attempt < max_retries:
+            time.sleep(delay)
+    raise RuntimeError(f"http_call {method} {url}: {last_err}")
+
+
+def _docker_exec(step: dict, registers: dict, ctx: dict) -> dict:
+    """Execute a command inside a Docker container via ``docker compose exec``."""
+    container = _render_string(str(step.get("container", "")), {**ctx, **registers})
+    compose_project = _render_string(str(step.get("compose_project", "")),
+                                     {**ctx, **registers})
+    cmd = _render_string(str(step.get("cmd", "")), {**ctx, **registers})
+    user = step.get("user")
+    accept_substr = step.get("accept_substring_in_stdout", "")
+
+    stacks_dir = ctx.get("stacks_dir") or os.path.expanduser("~/stacks")
+    compose_file = f"{stacks_dir}/{compose_project}/docker-compose.yml"
+
+    argv = ["docker", "compose", "-f", compose_file, "-p", compose_project,
+            "exec", "-T"]
+    if user:
+        argv.extend(["-u", str(user)])
+    argv.append(container)
+    # Split cmd into argv parts (shell-like)
+    argv.extend(cmd.split())
+
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=120)
+        rc = proc.returncode
+        stdout = proc.stdout or ""
+        stderr = proc.stderr or ""
+        # If accept_substring is set and found, treat as success
+        if accept_substr and accept_substr in stdout:
+            rc = 0
+        return {"rc": rc, "stdout": stdout, "stderr": stderr,
+                "state": "running" if rc == 0 else "failed"}
+    except subprocess.TimeoutExpired:
+        return {"rc": 124, "stdout": "", "stderr": "timeout",
+                "state": "timeout"}
+    except FileNotFoundError:
+        return {"rc": 127, "stdout": "", "stderr": "docker not found",
+                "state": "docker_missing"}
+
+
+def _docker_inspect(step: dict, registers: dict, ctx: dict) -> dict:
+    """Inspect a Docker container's state."""
+    container = _render_string(str(step.get("container", "")), {**ctx, **registers})
+    expect_state = step.get("expect_state", "running")
+    try:
+        proc = subprocess.run(
+            ["docker", "inspect", container,
+             "--format", "{{.State.Status}}"],
+            capture_output=True, text=True, timeout=10)
+        state = (proc.stdout or "").strip()
+        return {"state": state, "rc": 0 if state == expect_state else 1}
+    except Exception as e:
+        return {"state": "error", "rc": 1, "error": str(e)}
+
+
+def _render_value(value, ctx: dict) -> t.Any:
+    """Recursively render Jinja2 strings in dicts/lists/strings."""
+    if isinstance(value, str):
+        return _render_string(value, ctx)
+    if isinstance(value, dict):
+        return {k: _render_value(v, ctx) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_render_value(v, ctx) for v in value]
+    return value
 
 
 # ── CLI entry point ──────────────────────────────────────────────────────────
