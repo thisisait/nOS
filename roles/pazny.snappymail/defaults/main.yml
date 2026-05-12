@@ -1,0 +1,45 @@
+---
+# ==============================================================================
+# pazny.snappymail — SnappyMail webmail frontend (iiab compose stack)
+#
+# Track: Tier-1 webmail role. SnappyMail is a modern, fast, PHP-based
+# webmail client — the successor to RainLoop. Connects to IMAP/SMTP servers
+# (defaults to Stalwart when installed). Stateless: no database required;
+# all config lives in the data directory.
+#
+# Upstream: https://snappymail.eu/
+# Docker:   djmaze/snappymail (Alpine + nginx + PHP-FPM)
+#
+# SSO: forward_auth via Authentik (Traefik middleware gate). Users log into
+#      their IMAP accounts inside SnappyMail — Authentik only gates access
+#      to the webmail UI. No per-user identity flows into SnappyMail.
+# ==============================================================================
+
+# Toggle — disabled by default. Enable alongside install_smtp_stalwart for
+# a production mail stack, or with install_mailpit for dev capture.
+install_snappymail: false
+
+# Docker image. djmaze/snappymail:latest is the official image (Alpine,
+# nginx + PHP-FPM 8.2). Pin a digest or tag for reproducibility.
+snappymail_image: "djmaze/snappymail:latest"
+
+# Domain — separate from mail.<tld> (which is the SMTP/IMAP server).
+# webmail.<tld> is the webmail UI frontend.
+snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+# Host port — 3008 is next in the 3000 range after 3007 (HedgeDoc).
+snappymail_port: 3008
+
+# Data directory — persists admin settings, plugins, and cache.
+# SnappyMail is stateless (no DB); everything is in this directory.
+snappymail_data_dir: "{{ ansible_facts['env']['HOME'] }}/snappymail"
+
+# Resource limits — lightweight PHP app, generous for a webmail client.
+snappymail_mem_limit: "{{ docker_mem_limit_light | default('256m') }}"
+snappymail_cpus: "{{ docker_cpus_light | default('0.3') }}"
+
+# Default IMAP/SMTP server host — set to stalwart_domain when stalwart is
+# installed. These are presented as defaults on the SnappyMail login page
+# (configured via admin panel, not environment variables).
+snappymail_default_imap_host: "{{ stalwart_domain | default('mail' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+snappymail_default_smtp_host: "{{ stalwart_domain | default('mail' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

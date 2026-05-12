@@ -1,0 +1,18 @@
+# manifest.fragment.yml — snappymail-base
+#
+# Snippet that the plugin loader's manifest-aggregator merges into
+# state/manifest.yml under the corresponding `services[]` row. This
+# advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (authoritative consumer:
+# roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: snappymail
+role: pazny.snappymail
+feature_flag: install_snappymail
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: snappymail
+  tier: 3
+domain_var: snappymail_domain
+port_var: snappymail_port

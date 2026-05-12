@@ -1,0 +1,48 @@
+# =============================================================================
+# pazny.snappymail — compose override fragment
+# Merged into `docker compose up` via tasks/stacks/stack-up.yml through
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# SnappyMail runs nginx + PHP-FPM inside a single Alpine container.
+# Internal port is 8888 (nginx listen). Traefik handles TLS termination
+# and Authentik forward-auth gating.
+#
+# No environment variables for IMAP/SMTP defaults — those are configured
+# via the SnappyMail admin panel at /?admin after first deployment.
+# =============================================================================
+
+services:
+  snappymail:
+    image: {{ snappymail_image }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ snappymail_port }}:8888"
+{% else %}
+      - "127.0.0.1:{{ snappymail_port }}:8888"
+{% endif %}
+    volumes:
+      - {{ snappymail_data_dir }}:/snappymail/data
+    environment:
+      # SnappyMail has no built-in env-var configuration for IMAP/SMTP
+      # defaults. The admin panel at /?admin is the canonical config
+      # surface. These env vars are informational / reserved for future
+      # upstream support.
+      SNAPPYMAIL_DEFAULT_IMAP_HOST: "{{ snappymail_default_imap_host }}"
+      SNAPPYMAIL_DEFAULT_SMTP_HOST: "{{ snappymail_default_smtp_host }}"
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ snappymail_mem_limit }}
+    cpus: {{ snappymail_cpus }}

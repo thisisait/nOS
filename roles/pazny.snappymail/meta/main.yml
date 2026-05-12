@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: snappymail
+  namespace: pazny
+  author: Pázny
+  description: SnappyMail webmail frontend in Docker compose override (nOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# No role dependencies — SnappyMail is stateless (no DB). Connects to
+# external IMAP/SMTP servers (defaults to Stalwart when installed).
+dependencies: []
+
+collections: []

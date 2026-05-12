@@ -1,0 +1,136 @@
+# =============================================================================
+# snappymail-base — service plugin (Track mail batch)
+#
+# Status: live manifest. Wires `pazny.snappymail` into the proxy-auth doctrine —
+# Authentik forward-auth via Traefik middleware (no native OIDC).
+#
+# SnappyMail is a webmail frontend — users log into their IMAP accounts
+# inside the application. Authentik gates access at the proxy layer
+# (forward_auth). No per-user identity flows into SnappyMail from Authentik;
+# the IMAP account is the user's identity inside the webmail client.
+#
+# Tier 3 (user) per CLAUDE.md RBAC mapping.
+# =============================================================================
+
+name: snappymail-base
+version: 0.1.0
+description: |
+  SnappyMail — modern, fast PHP webmail client (successor to RainLoop).
+
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware `authentik@file`). The role `pazny.snappymail` keeps
+  install-only responsibilities (image, ports, volumes); this plugin owns the
+  Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
+  /hub deep-link card.
+upstream: https://snappymail.eu/
+license: AGPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "snappymail-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.snappymail
+  feature_flag: install_snappymail
+  variables:
+    - snappymail_port
+    - snappymail_domain
+    - snappymail_data_dir
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — proxy / forward-auth gate (Tier 3 = user)
+# =============================================================================
+# This service has NO native OIDC support — Authentik gates access at
+# the Traefik layer via the `authentik@file` middleware. Users log into
+# their IMAP accounts inside SnappyMail. RBAC tier determines which
+# Authentik group expression policy applies.
+
+authentik:
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
+  client_id: nos-snappymail
+  client_secret: "{{ global_password_prefix }}_pw_oidc_snappymail"
+  slug: snappymail
+  name: 'SnappyMail'
+  enabled: "{{ install_snappymail | default(false) }}"
+  launch_url: "https://{{ snappymail_domain }}"
+  tier: 3
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# =============================================================================
+compose_extension:
+  template: templates/snappymail-base.compose.yml.j2
+  target_stack: iiab
+  target_service: snappymail
+  hardening_refs: []
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ snappymail_port }}/"
+        timeout: 60
+        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: snappymail
+      stack: iiab
+      tier: "3"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Operator-hosted webmail client (SnappyMail). Forward-auth gate ensures only
+    Authentik-authenticated principals reach the webmail UI. IMAP/SMTP credentials
+    are stored in SnappyMail's data directory and used to connect to the upstream
+    mail server (Stalwart).
+  legal_basis: legitimate_interests
+  data_categories:
+    - imap_smtp_credentials
+    - webmail_session_data
+    - oauth_session_data
+    - email_cache_metadata
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "SnappyMail"
+    icon: mail
+    url: "https://{{ snappymail_domain }}"
+    tier: 3
+    description: "Webmail client (IMAP/SMTP)"

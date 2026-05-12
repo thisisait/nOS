@@ -315,6 +315,7 @@ install_calibreweb: true         # Calibre-Web – ebook server                [
 install_ntfy: false               # ntfy – push notifications server [Docker]
 install_miniflux: false           # Miniflux – RSS reader [Docker, requires: PostgreSQL]
 install_nodered: false            # Node-RED – flow automation [Docker]
+install_snappymail: false         # SnappyMail – webmail frontend (IMAP/SMTP client)          [Docker]
 install_traefik: true            # Traefik – edge reverse proxy (file + Docker providers) [Docker]
 install_homeassistant: false      # Home Assistant – home automation                        [Docker]
 install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
@@ -1362,6 +1363,15 @@ calibreweb_port: 8083
 calibreweb_version: "0.6.26"   # lscr.io/linuxserver/calibre-web
 calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"   # Calibre library
 calibreweb_timezone: "Europe/Prague"
+
+# ==============================================================================
+# IIAB – SNAPPYMAIL (webmail frontend)
+# ==============================================================================
+
+snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+snappymail_port: 3008
+snappymail_image: "djmaze/snappymail:latest"
+snappymail_data_dir: "{{ ansible_facts['env']['HOME'] }}/snappymail"
 
 # ==============================================================================
 # TAILSCALE – WireGuard mesh VPN

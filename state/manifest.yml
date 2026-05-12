@@ -487,6 +487,18 @@ services:
     data_path_var: watchtower_data_dir
     oidc: none                         # no UI; emits notifications via mailpit/SMTP relay
 
+  - id: snappymail
+    category: mail
+    stack: iiab
+    install_flag: install_snappymail
+    version_source: docker_image
+    image: djmaze/snappymail
+    domain_var: snappymail_domain
+    port_var: snappymail_port
+    data_path_var: snappymail_data_dir
+    oidc: proxy
+    rbac_tier: 3
+
   # ------------------------------------------------------------ devops stack
   - id: gitea
     category: devops
