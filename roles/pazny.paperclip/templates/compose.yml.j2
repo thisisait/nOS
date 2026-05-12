@@ -19,10 +19,6 @@ services:
 {% endif %}
     volumes:
       - {{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}:/paperclip
-{% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) and (tenant_domain_is_local | default(true) | bool) %}
-      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
     environment:
       HOST: "0.0.0.0"
       PORT: "3100"
@@ -39,32 +35,6 @@ services:
       # every playbook run and invalidates all active sessions.
       BETTER_AUTH_SECRET: "{{ paperclip_auth_secret | default(global_password_prefix ~ '_pw_paperclip_auth') }}"
       BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
-{% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) %}
-      # ── Authentik SSO (native OIDC via BetterAuth genericOAuth plugin) ─────
-      # NOTE (Sprint 2c, 2026-04-22): The upstream Paperclip image does NOT
-      # currently honour these env vars — BetterAuth's generic-OAuth plugin
-      # must be registered in application code, not via env. These are
-      # staged for when upstream adds env-driven OIDC config (or nOS forks
-      # Paperclip to wire BetterAuth's genericOAuth provider from env).
-      # Access control is therefore enforced at the Nginx layer via the
-      # Authentik forward_auth outpost (proxy auth + RBAC tier).
-      # Toggle `paperclip_native_oidc_enabled: true` to surface the env vars
-      # for a fork / future upstream version.
-      BETTER_AUTH_OIDC_ENABLED: "true"
-      BETTER_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/paperclip/"
-      BETTER_AUTH_OIDC_CLIENT_ID: "{{ authentik_oidc_paperclip_client_id | default('nos-paperclip') }}"
-      BETTER_AUTH_OIDC_CLIENT_SECRET: "{{ authentik_oidc_paperclip_client_secret | default(global_password_prefix ~ '_pw_oidc_paperclip') }}"
-      BETTER_AUTH_OIDC_REDIRECT_URI: "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/auth/oauth/oidc/callback"
-      BETTER_AUTH_OIDC_DISPLAY_NAME: "Authentik"
-      BETTER_AUTH_OIDC_SCOPES: "openid profile email"
-{% if tenant_domain_is_local | default(true) | bool %}
-      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
-{% endif %}
-{% endif %}
-{% if install_authentik | default(false) %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3100/ || exit 1"]
       interval: 15s

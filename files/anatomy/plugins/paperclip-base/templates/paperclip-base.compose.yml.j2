@@ -17,3 +17,26 @@ services:
       - "traefik.http.routers.paperclip.tls=true"
       - "traefik.http.routers.paperclip.middlewares=authentik@file,security-headers@file,compress@file"
       - "traefik.http.services.paperclip.loadbalancer.server.port={{ paperclip_port }}"
+{% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) and (tenant_domain_is_local | default(true) | bool) %}
+    volumes:
+      # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+{% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) %}
+    environment:
+      # ── Authentik SSO (native OIDC via BetterAuth genericOAuth plugin) ─────
+      BETTER_AUTH_OIDC_ENABLED: "true"
+      BETTER_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/paperclip/"
+      BETTER_AUTH_OIDC_CLIENT_ID: "{{ authentik_oidc_paperclip_client_id | default('nos-paperclip') }}"
+      BETTER_AUTH_OIDC_CLIENT_SECRET: "{{ authentik_oidc_paperclip_client_secret | default(global_password_prefix ~ '_pw_oidc_paperclip') }}"
+      BETTER_AUTH_OIDC_REDIRECT_URI: "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/auth/oauth/oidc/callback"
+      BETTER_AUTH_OIDC_DISPLAY_NAME: "Authentik"
+      BETTER_AUTH_OIDC_SCOPES: "openid profile email"
+{% if tenant_domain_is_local | default(true) | bool %}
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+{% endif %}
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}
