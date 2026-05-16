@@ -1627,7 +1627,7 @@ freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
 freepbx_iax_port: 4569                 # IAX2 protocol
 freepbx_rtp_start: 10000              # RTP media start port
 freepbx_rtp_end: 10100                # RTP media end port
-freepbx_version: "latest"   # TODO: pin to verified tiredofit/freepbx tag — REM-014/046 CRITICAL CVEs (CVSS 10.0/9.3); upstream pkg version-mapping unclear without `docker run --rm tiredofit/freepbx env | grep VERSION`
+freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/freepbx Docker image abandoned upstream 2022-04-30; latest published tag is 5.2.0 (2022). No maintained ARM64 FOSS alternative. CRITICAL CVEs (CVSS 10.0/9.3) UNFIXABLE in this image — operators running freepbx accept the risk. Track docs/llm/security/remediation-queue.json items REM-014/046 for status changes.
 freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
