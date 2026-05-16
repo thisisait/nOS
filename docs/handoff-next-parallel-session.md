@@ -54,13 +54,13 @@ Two parallel tracks. Pick whichever the operator scopes; ideally both.
 
 ### Track A — Tier-1 plugin refactor: Q3 / Q4 / Q5 / Q6 / Q7
 
-Current state of the **Track Q autowiring** work:
+Current state of the **Track Q autowiring** work (as scoped at session start; all shipped 2026-05-07, see header):
 - **Q1 + Q2 done** in earlier D-series (33 plugins shipped, central `authentik_oidc_apps` retired).
-- **Q3 (Storage + DB)** — TODO. Targets: PostgreSQL, MariaDB, Redis, RustFS, Bluesky PDS storage, Infisical-storage. Most are Tier-1 substrates that other plugins depend on.
-- **Q4 (Comms)** — TODO. Targets: ntfy, mailpit, FreePBX, Hermes, Bluesky PDS, Bluesky bridge.
-- **Q5 (Content)** — TODO. Targets: Jellyfin, Kiwix, Calibre-Web, Tile-server, QGIS Server, Open WebUI, MCP Gateway, Outline, HedgeDoc, BookStack, WordPress, Nextcloud, Miniflux, Vaultwarden, Home Assistant.
-- **Q6 (Dev/CI)** — TODO. Targets: Gitea, GitLab, Woodpecker, code-server, Paperclip.
-- **Q7 (Misc)** — TODO. Targets: Uptime Kuma, Watchtower, Authentik (server + worker), Traefik, Portainer, OnlyOffice, Puter, Superset, Metabase, ERPNext, FreeScout, Firefly III, n8n, Node-RED, Mailpit, twofauth, OpenClaw, InfluxDB.
+- **Q3 (Storage + DB)** — ✅ DONE 2026-05-07. Shipped base manifests: postgresql, mariadb, redis, rustfs, bluesky-pds.
+- **Q4 (Comms)** — ✅ DONE 2026-05-07. Shipped: freepbx, smtp-stalwart. ntfy/mailpit folded into other quadrants.
+- **Q5 (Content)** — ✅ DONE 2026-05-07. Shipped: mcp-gateway, offline-maps, qgis-server (plus content services covered by D2 thin-role batch).
+- **Q6 (Dev/CI)** — ✅ DONE via D2 batch (woodpecker/paperclip/superset/n8n/nodered thinned; plugin compose-extension is live render path).
+- **Q7 (Edge + ops)** — ✅ DONE 2026-05-07. Shipped: traefik, watchtower. Loader now discovers 63 plugins total.
 
 **Same plugin shape as Q2** (proven, no new architecture). Per plugin:
 1. Create `files/anatomy/plugins/<name>-base/{plugin.yml, README.md}` mirroring an existing Q2 sibling (e.g., `files/anatomy/plugins/grafana-base/plugin.yml`).

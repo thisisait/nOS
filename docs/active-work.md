@@ -6,7 +6,8 @@
 > (multi-lane coordination plan).
 >
 > Last updated: 2026-05-16 • doc-refresh after A10/A11/A12/A13.x/A14 all
-> shipped + Mattermost purge + Playwright SSO e2e wiring.
+> shipped + Mattermost purge + Playwright SSO e2e wiring + punch #5 doc
+> drift cleanup.
 
 ---
 
@@ -79,9 +80,13 @@ the previous snapshot all completed — see git log between `7e2026c` and
    now, so the obsolete onboarding flows were deleted in commit
    following 2026-05-16. `TODO.md:40` + 3 role READMEs updated to point
    at the plugin manifest instead.~~ DONE.
-5. **Doc drift** — `bones-and-wings-refactor.md` Appendix B still marks
+5. ~~**Doc drift** — `bones-and-wings-refactor.md` Appendix B still marks
    A7/A8/A10 NOT STARTED (all shipped). `handoff-next-parallel-session.md`
-   Track A says Q3-Q7 TODO (shipped). Update or replace.
+   Track A says Q3-Q7 TODO (shipped). Update or replace.~~ DONE 2026-05-16:
+   verified Appendix B already correct (A7/A8/A10 DONE; only A9 NOT
+   STARTED, accurate); added inline ✅ DONE markers to Q3-Q7 lines in
+   `handoff-next-parallel-session.md` body so the body matches its own
+   header.
 6. **D2 residual** (nice-to-have, not blocking): freescout / erpnext /
    homeassistant / superset / nodered / paperclip role tasks still use
    `| default(...)` pattern on vars not in `default.config.yml`.
