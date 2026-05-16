@@ -7,21 +7,20 @@
 >
 > Last updated: 2026-05-16 • doc-refresh after A10/A11/A12/A13.x/A14 all
 > shipped + Mattermost purge + Playwright SSO e2e wiring + punch #5 doc
-> drift cleanup.
+> drift cleanup + A9 notification fanout shipped.
 
 ---
 
-## Current track: **Phase 5 ceremony + A9 notification fanout**
+## Current track: **Phase 5 ceremony**
 
-A1–A8, A10, A11, A12, A13.x, A14 are all **DONE**. The remaining big
-milestone is **Phase 5** — first non-operator end-to-end write to
+A1–A8, A9, A10, A11, A12, A13.x, A14 are all **DONE**. The remaining
+big milestone is **Phase 5** — first non-operator end-to-end write to
 `wing.db` via the `conductor-self-test-001` Pulse job. Pre-requisites
-(A10 actor audit, A8 conductor pipeline, Pulse jobs registered) all
-landed; the final gate is an operator-driven ceremony run.
+(A10 actor audit, A8 conductor pipeline, A9 notification fanout, Pulse
+jobs registered) all landed; the final gate is an operator-driven
+ceremony run.
 
 **Parallel pending work:**
-* **A9 — notification fanout** (bones-and-wings §Appendix B) — follows
-  the inbox/approvals shape; not started.
 * **Tier-2 aggregator path** — extend `run_aggregators` with
   `from: app_manifest` source so Tier-2 apps land in `inputs.clients`
   alongside Tier-1; retire the `authentik_oidc_apps: []` Tier-2 stub.
@@ -43,6 +42,7 @@ landed; the final gate is an operator-driven ceremony run.
 
 | Area | Highlights |
 |---|---|
+| **Notification fanout (A9)** | New table `wing.db.notifications`; NotificationRepository; Bone POST/GET `/api/v1/notifications` (HMAC); InboxPresenter promoted to operator-attention surface with mark-read; PHP CLI dispatch worker (`bin/dispatch-notifications.php`) registered as per-minute Pulse subprocess job; aggregator harvests per-plugin `notification:` blocks into a routing JSON sidecar Bone reads at insert time; gitleaks plugin is first consumer; 13 anatomy gates + authoritative guide `files/anatomy/docs/notification-fanout.md`. |
 | **AgentKit (A14)** | Runtime shipped + 5 deferred follow-ups closed (multi-agent pool, dreams, webhook auto-fan-out, operator-trigger UI, Infisical vault refresh). RBAC gates A13.7 + A14.1 + A14.2 security review rounds. |
 | **Approvals (A11)** | `/approvals` approve/reject flow promoted from stub to working presenter with HMAC audit trail. |
 | **Platform halt (A12)** | "Big red button" — operator can halt all agent runs via Wing UI; Bone propagates the gate to Pulse runner. |
@@ -65,8 +65,11 @@ the previous snapshot all completed — see git log between `7e2026c` and
    one-shot job (8-step e2e: health → trigger gitleaks → verify findings
    → events → contracts diff → wing tests → markdown report). Pass =
    first non-operator end-to-end write to `wing.db`. Pre-reqs all done.
-2. **A9 — notification fanout** — bones-and-wings §Appendix B; follow
-   inbox/approvals shape. Not started.
+2. ~~**A9 — notification fanout** — bones-and-wings §Appendix B; follow
+   inbox/approvals shape. Not started.~~ DONE 2026-05-16: A9.1
+   (schema + NotificationRepository) → A9.6 (anatomy gates + doc). See
+   `files/anatomy/docs/notification-fanout.md` and commits
+   `95bba82..b6aa9e7`.
 3. ~~**Tier-2 aggregator path** — extend `run_aggregators` with
    `from: app_manifest` source.~~ DONE in `cf69ead` (X.3) — Tier-1 and
    Tier-2 SSO flow through the same plugin aggregator now. The empty
@@ -111,7 +114,7 @@ the previous snapshot all completed — see git log between `7e2026c` and
 | Plugin loader | 63 plugins (Q1–Q7 + D1+D2 complete) |
 | Authentik blueprints | rendered by `authentik-base` plugin aggregator; per-plugin `authentik:` blocks are SoT (post-D1.3) |
 | Pulse | 4 endpoints live; conductor + gitleaks Pulse jobs registered |
-| Wing OpenAPI | 70 paths, /inbox + /approvals + /audit + /halt + /agents live |
+| Wing OpenAPI | 70 paths, /inbox + /approvals + /audit + /halt + /agents live (notifications surfaces via Bone POST/GET, see `notification-fanout.md`) |
 | Playwright e2e | 14 passed / 7 skipped (opt-in services) / 0 failed; ephemeral SSO identity per run |
 | Conductor | pulse-run-agent.sh + conductor.yml profile; awaits Phase 5 ceremony |
 | AgentKit | runtime live at `files/anatomy/wing/app/AgentKit/`; first agent = conductor |
