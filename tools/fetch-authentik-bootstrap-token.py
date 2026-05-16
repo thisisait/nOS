@@ -16,6 +16,20 @@ invocation), not as part of ``ansible-playbook main.yml``. Tokens flow
 *outwards* from Authentik to the operator's workstation, never inwards
 from a versioned file into the playbook's source-of-truth.
 
+Why docker-exec, not the Authentik API
+---------------------------------------
+The earlier draft of this script drove ``/api/v3/flows/executor/`` with
+the akadmin password and tried to read ``/api/v3/core/tokens/`` with the
+returned session cookie. Authentik refuses that path — the
+``/core/tokens/`` admin endpoints require a token-authenticated request,
+not a cookie-authenticated one, and the only token that satisfies that
+is the very token we are trying to retrieve. Bootstrap circularity.
+
+``docker exec <auth-server> ak shell`` short-circuits the chicken-and-egg
+problem: we read the token straight out of the Authentik database via
+Django ORM. The container's own service account has unrestricted DB
+access, no API auth dance needed.
+
 Usage
 -----
 
@@ -25,152 +39,93 @@ Usage
     # Stdout-only (CI / piping)
     python3 tools/fetch-authentik-bootstrap-token.py --output -
 
-    # Custom file
-    python3 tools/fetch-authentik-bootstrap-token.py --output /tmp/tok.yml
-
-Password discovery (in order)
------------------------------
-
-    1. ``--password <p>`` flag
-    2. ``--password -`` (read from stdin, one line)
-    3. ``AUTHENTIK_BOOTSTRAP_PASSWORD`` env var
-    4. Compute from ``{global_password_prefix}_pw_authentik_admin`` by
-       reading ``credentials.yml`` / ``config.yml`` (matches the playbook's
-       jinja template at default.credentials.yml:authentik_bootstrap_password).
-    5. Interactive prompt (only if stdin is a TTY).
-
-URL discovery
--------------
-
-    1. ``--url <u>`` flag
-    2. ``AUTHENTIK_BOOTSTRAP_URL`` env var
-    3. ``http://127.0.0.1:9003`` (loopback default; matches authentik_port).
+    # Different identifier or container
+    python3 tools/fetch-authentik-bootstrap-token.py --identifier custom-tok
+    python3 tools/fetch-authentik-bootstrap-token.py --container nos-authentik-server
 """
 
 from __future__ import annotations
 
 import argparse
-import getpass
-import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-import requests
-import urllib3
-import yaml
 
-
-DEFAULT_URL = "http://127.0.0.1:9003"
-DEFAULT_FLOW_SLUG = "default-authentication-flow"
 DEFAULT_SECRETS_PATH = os.path.expanduser("~/.nos/secrets.yml")
-DEFAULT_USERNAME = "akadmin"
 TOKEN_IDENTIFIER = "nos-api"
 TOKEN_KEY_NAME = "authentik_bootstrap_token"
 
-
-# ── Password discovery ────────────────────────────────────────────────────
-
-
-def _read_yaml(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    try:
-        with path.open("r") as fh:
-            data = yaml.safe_load(fh)
-        return data if isinstance(data, dict) else {}
-    except (IOError, OSError, yaml.YAMLError):
-        return {}
+# Candidate container names (probed in order). The first one matching a
+# running container wins. Operators with non-standard compose project
+# names can pass ``--container`` explicitly.
+DEFAULT_CONTAINER_CANDIDATES = (
+    "infra-authentik-server-1",
+    "nos-authentik-server",
+    "authentik-server",
+)
 
 
-def _resolve_password(repo_root: Path, cli_value: str | None) -> str:
-    """Apply the documented precedence chain."""
-    if cli_value == "-":
-        line = sys.stdin.readline().rstrip("\n")
-        if not line:
-            raise SystemExit("ERROR: --password - was set but stdin was empty")
-        return line
-    if cli_value:
-        return cli_value
-
-    env = os.environ.get("AUTHENTIK_BOOTSTRAP_PASSWORD")
-    if env:
-        return env
-
-    # Compute from {prefix}_pw_authentik_admin (matches default.credentials.yml).
-    # Operator-side config.yml's prefix wins over credentials.yml in the
-    # playbook's vars_files order (config last). Mirror that here so the
-    # script computes the SAME value the playbook fed Authentik.
-    config = _read_yaml(repo_root / "config.yml")
-    credentials = _read_yaml(repo_root / "credentials.yml")
-    prefix = config.get("global_password_prefix") or credentials.get("global_password_prefix")
-    if prefix:
-        return f"{prefix}_pw_authentik_admin"
-
-    if sys.stdin.isatty():
-        return getpass.getpass(f"akadmin password (for {DEFAULT_USERNAME}@Authentik): ")
-
-    raise SystemExit(
-        "ERROR: cannot resolve akadmin password. Pass --password, set "
-        "AUTHENTIK_BOOTSTRAP_PASSWORD, or ensure global_password_prefix is "
-        f"defined in config.yml / credentials.yml at {repo_root}."
-    )
+# ── Container discovery ───────────────────────────────────────────────────
 
 
-# ── Authentik flow login ──────────────────────────────────────────────────
-
-
-class FlowLoginError(RuntimeError):
+class ContainerNotFoundError(RuntimeError):
     pass
 
 
-def _flow_login(base_url: str, username: str, password: str,
-                flow_slug: str, timeout_s: float = 15,
-                verify_tls: bool = False) -> requests.Session:
-    """Drive the Authentik flow executor headlessly. Mirrors
-    ``tests/e2e/lib/authentik_login.py`` but self-contained so this CLI has
-    no test-tree imports.
-    """
-    if not verify_tls:
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    flow_url = f"{base_url}/api/v3/flows/executor/{flow_slug}/"
-    sess = requests.Session()
-    sess.headers.update({
-        "User-Agent": "nos-fetch-bootstrap-token/1.0",
-        "Accept": "application/json",
-    })
-
-    def _stage(payload: dict, label: str) -> dict:
-        try:
-            r = sess.post(flow_url, json=payload, timeout=timeout_s, verify=verify_tls)
-        except requests.RequestException as exc:
-            raise FlowLoginError(f"{label}: request failed: {exc}") from exc
-        if r.status_code >= 400:
-            raise FlowLoginError(f"{label}: HTTP {r.status_code}: {r.text[:200]}")
-        try:
-            return r.json() if r.content else {}
-        except (ValueError, requests.JSONDecodeError):
-            return {}
-
-    # Prime the flow (sets the cookie).
+def _list_running_containers() -> list[str]:
+    """Return all running Docker container names. Empty list if docker
+    is missing or daemon is down (we treat both as ``not available``)."""
     try:
-        sess.get(flow_url, timeout=timeout_s, verify=verify_tls)
-    except requests.RequestException as exc:
-        raise FlowLoginError(f"flow prime failed: {exc}") from exc
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
-    body = _stage({"uid_field": username}, "identification")
-    if isinstance(body, dict) and "deny" in body.get("component", ""):
-        raise FlowLoginError(f"identification denied: {body.get('component')}")
 
-    body = _stage({"password": password}, "password")
-    component = body.get("component", "") if isinstance(body, dict) else ""
-    if "deny" in component or "access-denied" in component:
-        raise FlowLoginError(f"password denied: component={component}")
+def _resolve_container(explicit: str | None) -> str:
+    """Pick an Authentik server container to exec into."""
+    running = _list_running_containers()
+    if not running:
+        raise ContainerNotFoundError(
+            "no running Docker containers found. Is the daemon up? "
+            "Has the playbook deployed the infra stack?"
+        )
 
-    sess.verify = verify_tls
-    return sess
+    if explicit:
+        if explicit in running:
+            return explicit
+        raise ContainerNotFoundError(
+            f"container {explicit!r} not running. Running containers: "
+            f"{', '.join(running) or '(none)'}"
+        )
+
+    for candidate in DEFAULT_CONTAINER_CANDIDATES:
+        if candidate in running:
+            return candidate
+
+    # Fuzzy fallback — any container whose name matches *authentik*server*.
+    fuzzy = [c for c in running if "authentik" in c and "server" in c]
+    if len(fuzzy) == 1:
+        return fuzzy[0]
+    if len(fuzzy) > 1:
+        raise ContainerNotFoundError(
+            f"multiple Authentik server containers found: {fuzzy}. "
+            "Pass --container <name> to disambiguate."
+        )
+
+    raise ContainerNotFoundError(
+        "no Authentik server container found. Tried: "
+        f"{', '.join(DEFAULT_CONTAINER_CANDIDATES)}. "
+        f"Running: {', '.join(running)}."
+    )
 
 
 # ── Token retrieval ───────────────────────────────────────────────────────
@@ -180,38 +135,56 @@ class TokenFetchError(RuntimeError):
     pass
 
 
-def _fetch_token_key(sess: requests.Session, base_url: str,
-                     identifier: str, timeout_s: float = 10) -> str:
-    """List → pk → view_key. Two round-trips because the list endpoint omits
-    the secret; only ``/view_key/`` returns it."""
-    list_url = f"{base_url}/api/v3/core/tokens/?identifier={identifier}"
-    r = sess.get(list_url, timeout=timeout_s)
-    if r.status_code != 200:
-        raise TokenFetchError(f"list tokens HTTP {r.status_code}: {r.text[:200]}")
-    results = r.json().get("results", [])
-    if not results:
+# Sentinel prefix on the line carrying the secret value. The shell wraps
+# output with structured log JSON, so we mark our own line with a unique
+# token and grep it back out — avoids fragile last-line parsing.
+_SENTINEL = "NOS_TOKEN_OUT:"
+
+
+def _fetch_token_from_container(container: str, identifier: str,
+                                timeout_s: float = 30) -> str:
+    """Exec ``ak shell`` inside the Authentik server container, read the
+    Token row by identifier via Django ORM, print the key wrapped in our
+    sentinel marker, parse it back out.
+    """
+    snippet = (
+        "from authentik.core.models import Token\n"
+        f"t = Token.objects.filter(identifier='{identifier}').first()\n"
+        f"print('{_SENTINEL}', t.key if t else 'NOT_FOUND')\n"
+    )
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "-i", container, "ak", "shell", "-c", snippet],
+            capture_output=True, text=True, timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TokenFetchError(
+            f"ak shell timed out after {timeout_s}s — Authentik may be "
+            f"starting up or under load: {exc}"
+        ) from exc
+
+    if result.returncode != 0:
+        raise TokenFetchError(
+            f"ak shell exited {result.returncode}: {result.stderr[-500:]}"
+        )
+
+    # Authentik wraps stdout in structured JSON log lines. Find our
+    # sentinel marker and pull the value off the same line.
+    match = re.search(rf"{re.escape(_SENTINEL)}\s+(\S+)", result.stdout)
+    if not match:
+        raise TokenFetchError(
+            f"sentinel {_SENTINEL!r} not found in ak shell output. "
+            f"Tail: {result.stdout[-500:]}"
+        )
+
+    value = match.group(1).strip()
+    if value == "NOT_FOUND":
         raise TokenFetchError(
             f"no token with identifier={identifier!r} found in Authentik. "
-            "Has the playbook applied roles/pazny.authentik blueprints?"
+            "Has the playbook applied roles/pazny.authentik's "
+            "00-admin-groups.yaml.j2 blueprint?"
         )
-    # The Authentik token PK is a UUID string, but the API uses the
-    # ``identifier`` directly as the URL slug on /view_key/. Try both —
-    # identifier-as-slug is more idiomatic per Authentik docs.
-    view_url = f"{base_url}/api/v3/core/tokens/{identifier}/view_key/"
-    r = sess.get(view_url, timeout=timeout_s)
-    if r.status_code != 200:
-        # Fallback: try the pk directly
-        pk = results[0].get("pk") or results[0].get("identifier")
-        view_url = f"{base_url}/api/v3/core/tokens/{pk}/view_key/"
-        r = sess.get(view_url, timeout=timeout_s)
-        if r.status_code != 200:
-            raise TokenFetchError(
-                f"view_key for {identifier} HTTP {r.status_code}: {r.text[:200]}"
-            )
-    key = r.json().get("key")
-    if not key:
-        raise TokenFetchError(f"view_key response missing 'key': {r.text[:200]}")
-    return key
+    return value
 
 
 # ── secrets.yml write ─────────────────────────────────────────────────────
@@ -223,11 +196,12 @@ _KEY_LINE_RE = re.compile(rf"^{re.escape(TOKEN_KEY_NAME)}\s*:.*$", re.MULTILINE)
 def _write_secret(secrets_path: str, token: str) -> str:
     """Idempotently upsert ``authentik_bootstrap_token: "<token>"`` into the
     target file. Returns a short status string (``replaced`` / ``appended`` /
-    ``created``).
+    ``created`` / ``unchanged``).
 
-    Uses plain-text manipulation rather than ruamel/yaml round-trip to avoid
-    re-quoting unrelated values or reformatting the operator's hand-curated
-    file. The key/value shape is fixed and predictable.
+    Plain-text upsert rather than ruamel/yaml round-trip — avoids re-quoting
+    unrelated values or reformatting the operator's hand-curated file. The
+    key/value shape is predictable enough that a regex is safer than a
+    full YAML parse.
     """
     path = Path(secrets_path)
     new_line = f'{TOKEN_KEY_NAME}: "{token}"'
@@ -260,21 +234,9 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--url", default=os.environ.get("AUTHENTIK_BOOTSTRAP_URL", DEFAULT_URL),
-        help=f"Authentik base URL (default: {DEFAULT_URL})",
-    )
-    parser.add_argument(
-        "--username", default=DEFAULT_USERNAME,
-        help=f"Authentik admin username (default: {DEFAULT_USERNAME})",
-    )
-    parser.add_argument(
-        "--password", default=None,
-        help="Admin password. Pass '-' to read from stdin. "
-             "Otherwise resolved from env / config — see docstring.",
-    )
-    parser.add_argument(
-        "--flow-slug", default=DEFAULT_FLOW_SLUG,
-        help=f"Authentication flow slug (default: {DEFAULT_FLOW_SLUG})",
+        "--container", default=None,
+        help=("Authentik server container name. Auto-discovered from "
+              + ", ".join(DEFAULT_CONTAINER_CANDIDATES) + " if omitted."),
     )
     parser.add_argument(
         "--identifier", default=TOKEN_IDENTIFIER,
@@ -286,44 +248,34 @@ def main() -> int:
               "use '-' for stdout-only)"),
     )
     parser.add_argument(
-        "--verify-tls", action="store_true",
-        help="Verify TLS certs (default: off, matches mkcert dev setup)",
+        "--timeout", type=float, default=30,
+        help="Max seconds to wait for ak shell to respond (default: 30)",
     )
     args = parser.parse_args()
 
-    repo_root = Path(__file__).resolve().parent.parent
-    password = _resolve_password(repo_root, args.password)
-    base_url = args.url.rstrip("/")
-
-    print(f"[fetch-bootstrap-token] logging in as {args.username}@{base_url}…",
-          file=sys.stderr)
     try:
-        sess = _flow_login(
-            base_url=base_url, username=args.username, password=password,
-            flow_slug=args.flow_slug, verify_tls=args.verify_tls,
-        )
-    except FlowLoginError as exc:
-        print(f"ERROR: login failed: {exc}", file=sys.stderr)
+        container = _resolve_container(args.container)
+    except ContainerNotFoundError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
-    print(f"[fetch-bootstrap-token] retrieving token '{args.identifier}'…",
-          file=sys.stderr)
+    print(f"[fetch-bootstrap-token] reading '{args.identifier}' from "
+          f"container '{container}'…", file=sys.stderr)
     try:
-        token = _fetch_token_key(sess, base_url, args.identifier)
+        token = _fetch_token_from_container(
+            container, args.identifier, timeout_s=args.timeout,
+        )
     except TokenFetchError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
     if args.output == "-":
-        # Plain key=value for shell piping (operator uses `eval "$(...)"`-style),
-        # but we keep YAML shape because that's what the spec docs reference.
         sys.stdout.write(f'{TOKEN_KEY_NAME}: "{token}"\n')
         return 0
 
     status = _write_secret(args.output, token)
     print(f"[fetch-bootstrap-token] {args.output}: {status} "
-          f"({TOKEN_KEY_NAME}=*** (len={len(token)}))",
-          file=sys.stderr)
+          f"({TOKEN_KEY_NAME}=*** (len={len(token)}))", file=sys.stderr)
     return 0
 
 
