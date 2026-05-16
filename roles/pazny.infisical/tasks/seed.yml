@@ -110,7 +110,7 @@
        Org:           {{ infisical_org_name | default('nOS') }}
        Bootstrapped:  {{ _infisical_seed_result.bootstrapped | default(false) }}
       {% for slug, info in (_infisical_seed_result.projects | default({})).items() %}
-       {{ slug | ljust(20) }} state={{ info.state }} env={{ info.env | default('?') }} secrets={{ info.secrets | default({}) | length }}{% if info.secrets | default({}) | dict2items | rejectattr('value','match','^(updated|created)$') | list | length > 0 %} ⚠ {{ info.secrets | dict2items | rejectattr('value','match','^(updated|created)$') | map(attribute='key') | list }}{% endif %}
+       {{ '%-20s' | format(slug) }} state={{ info.state }} env={{ info.env | default('?') }} secrets={{ info.secrets | default({}) | length }}{% if info.secrets | default({}) | dict2items | rejectattr('value','match','^(updated|created)$') | list | length > 0 %} ⚠ {{ info.secrets | dict2items | rejectattr('value','match','^(updated|created)$') | map(attribute='key') | list }}{% endif %}
       {% endfor %}
       {% if _infisical_seed_result.errors | default([]) | length > 0 %}
        Errors:
