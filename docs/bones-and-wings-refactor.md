@@ -1253,7 +1253,7 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 
 ## Appendix B — Implementation tracking
 
-**Live tracker updated 2026-05-03 evening.** `docs/active-work.md` remains the session-entry pointer; this appendix tracks only the bones & wings phase state.
+**Live tracker updated 2026-05-16.** `docs/active-work.md` remains the session-entry pointer; this appendix tracks only the bones & wings phase state.
 
 | Phase | Status | Landed / next action | Open issues |
 |---|---|---|---|
@@ -1262,15 +1262,19 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 | A2 | ✅ DONE | Wing source moved to `files/anatomy/wing/`; no `external/wing` submodule for PoC | none |
 | A3a | ✅ DONE | Bone host launchd + Track-A container cleanup | verify wet after security batch |
 | A3.5 | ✅ DONE | Wing host-revert via FrankenPHP (2026-05-04). Replaces wing FPM container + wing-nginx sidecar pair with a single launchd daemon. roles/pazny.wing/ refactored (Track-A reversal cleanup + host composer + Caddyfile + plist + bootstrap); state/manifest.yml gets port_var=wing_port; Traefik services.yml.j2 drops the wing-special-case (now uniform `http://nos-host:9000`). Closes the wing-nginx stale-IP 502 bug class — no sidecar = no Docker DNS cache to go stale. | verify on operator's next blank |
-| A4 | ✅ DONE | Pulse launchd skeleton + subprocess runner + schema tables | Wing Pulse API missing; no production jobs registered |
+| A4 | ✅ DONE | Pulse launchd skeleton + subprocess runner + schema tables | Wing Pulse API endpoints landed P0.2 |
 | A5 | ✅ DONE 2026-05-04 | Wing/Bone OpenAPI + wing.db DDL exports + CI drift check | — |
 | A6 | ✅ DONE | plugin schema, loader, DAG, aggregators, Ansible wrapper, hook wiring, tests. Render/copy/wait side effects landed with A6.5. | — |
 | A6.5 | ✅ DONE 2026-05-04 | Grafana thin-role pilot + real `grafana-base` service plugin. Loader implements `render`, `render_compose_extension`, `copy_dashboards`, `wait_health`, `conditional_remove_dir` actions backed by Jinja2. Manifest dotted-path resolver walks `provisioning.datasources`-style refs. Module wrapper passes `template_vars: "{{ vars }}"` through to action params + plugin templates. Grafana role thinned: provisioning artifacts (datasources/all.yml.j2 + dashboards/all.yml.j2 + 18 dashboard JSONs) moved to `files/anatomy/plugins/grafana-base/provisioning/`. OIDC env block + mkcert CA conditional + `GF_INSTALL_PLUGINS` + extra_hosts authentik moved to `templates/grafana-base.compose.yml.j2`. core-up.yml drops 2 datasource/dashboard-render tasks; observability.yml drops the in-repo dashboard enumerate+copy pair. 7 new tests (render w/ Jinja, render idempotency, render_compose_extension, copy_dashboards, copy_dashboards idempotency, wait_health timeout, dotted-path-missing). | **Track Q UNBLOCKED.** |
-| A7 | ⏳ NOT STARTED | gitleaks PoC plugin | depends on A6.5 side-effect support + Pulse API |
-| A8 | ⏳ NOT STARTED | conductor profile + agent runner + inbox/approvals | depends on A4/A5/A7 primitives |
+| A7 | ✅ DONE 2026-05-05 | gitleaks PoC plugin — schema + presenter + Pulse job-reg + plugin manifest + skill (`bfe7629..d558e1b`) | — |
+| A8 | ✅ DONE 2026-05-07 | conductor profile + agent runner + Wing /inbox + /approvals (`d1552dc..4974c53`); OpenClaw + nos-conductor Wing tokens, pulse-run-agent.sh | — |
 | A9 | ⏳ NOT STARTED | notification fanout | should follow inbox/approval shape |
-| A10 | ⏳ NOT STARTED | audit trail + per-actor write tagging | must be complete before calling the platform compliant |
+| A10 | ✅ DONE 2026-05-07 | `actor_id` + `actor_action_id` columns on events + pulse_runs + agent_sessions; auto-attribution callback plugin; `/audit` presenter (X-series commits) | — |
+| A11 | ✅ DONE | `/approvals` approve/reject flow promoted from stub to working presenter with HMAC audit | — |
+| A12 | ✅ DONE | platform-halt big-red-button — operator can halt all agent runs via Wing UI | — |
+| A13.x | ✅ DONE 2026-05-07/16 | E2E suite (A13.1 telemetry, A13.5 3 journeys, A13.6 ephemeral SSO, A13.7 RBAC gates); Playwright wired to ephemeral SSO 2026-05-16 | Pulse cron `e2e-tester-orphan-sweep` deferred (per-test teardown + atexit cover steady state) |
+| A14 | ✅ DONE 2026-05-07 | AgentKit runtime (`files/anatomy/wing/app/AgentKit/`); 5 follow-ups closed in A14.1/A14.2 + security review rounds | — |
 
 ---
 
-*Last revision: 2026-05-03 evening — status tracker refreshed after A0-A4+A6 foundation and security-hardening gate audit.*
+*Last revision: 2026-05-16 — refreshed after A7–A14 + A13.x cascade all shipped. Only A9 (notification fanout) remains pending in this track.*

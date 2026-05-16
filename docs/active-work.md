@@ -5,121 +5,87 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-07 • B3 — stack_filter eliminates 33-min post_compose freeze;
-> ansible.cfg formatter (yaml callback + display_skipped_hosts=false).
+> Last updated: 2026-05-16 • doc-refresh after A10/A11/A12/A13.x/A14 all
+> shipped + Mattermost purge + Playwright SSO e2e wiring.
 
 ---
 
-## Current track: **A10 + Phase 5** (D2 ✅ A5 ✅ A7 ✅ A8 ✅ complete)
+## Current track: **Phase 5 ceremony + A9 notification fanout**
 
-A8 batch (7 commits `d1552dc..4974c53`) delivered the full conductor pipeline:
-OpenClaw first-class Wing consumer (dedicated api_token + env injection), nos-conductor
-Authentik client + Wing token, pulse-run-agent.sh (Authentik→claude→Wing events),
-conductor.yml agent profile (system prompt + Phase 5 self-test-001 Pulse job),
-Wing /inbox (unresolved gitleaks + conductor runs) + /approvals stub.
-Also fixes: GitleaksRepository missing from common.neon DI config (A7 omission).
+A1–A8, A10, A11, A12, A13.x, A14 are all **DONE**. The remaining big
+milestone is **Phase 5** — first non-operator end-to-end write to
+`wing.db` via the `conductor-self-test-001` Pulse job. Pre-requisites
+(A10 actor audit, A8 conductor pipeline, Pulse jobs registered) all
+landed; the final gate is an operator-driven ceremony run.
 
-**Next arc: A10 actor audit + Phase 5 ceremony** (first non-operator
-end-to-end write to wing.db). A10 must land before Phase 5 — actor_id column
-enables cryptographic attribution of conductor's writes.
+**Parallel pending work:**
+* **A9 — notification fanout** (bones-and-wings §Appendix B) — follows
+  the inbox/approvals shape; not started.
+* **Tier-2 aggregator path** — extend `run_aggregators` with
+  `from: app_manifest` source so Tier-2 apps land in `inputs.clients`
+  alongside Tier-1; retire the `authentik_oidc_apps: []` Tier-2 stub.
+* **Linux port** (`docs/linux-port.md`) — Ubuntu LTS target; deferred
+  until Phase 5 lands.
 
-### Last verified state (2026-05-07)
+### Last verified state (2026-05-16)
 
-- **32 commits ahead of origin** (master @ `7e2026c`); operator push pending.
-- 135/135 tests pass (callback suite; anatomy 68/68 included), 5 skipped.
-- `python3 tools/aggregator-dry-run.py` exit 0: 0 field-diffs.
+- **`git status`** clean after current session's commits.
+- Playwright e2e suite: 14 passed / 7 skipped / 0 failed against
+  `pazny.eu` in 43s; ephemeral SSO tester provisioned + revoked per run.
+- Smoke probe (post-playbook): 31/32 OK (Nextcloud 500 — separate issue).
 - `ansible-playbook main.yml --syntax-check` clean.
-- **B1 fixed:** OpenClaw Wing api_tokens row now provisioned in `pazny.wing/post.yml`
-  (was in openclaw/tasks/post.yml which was never called — openclaw runs before stack-up).
-- **B2 fixed:** conductor + gitleaks Pulse jobs now registered via `ansible.builtin.uri`
-  in `pazny.wing/post.yml` (plugin loader does not process `pulse:` blocks).
-- Wing OpenAPI: 70 paths, 87/87 real summaries (no new API routes).
-- OpenClaw Wing API token wired in launchd + .zshrc; provisioned via wing/post.yml.
-- nos-conductor Authentik client + Wing `conductor` api_tokens row provisioned.
-- `pulse-run-agent.sh` at `files/anatomy/scripts/` — Authentik→claude→Wing events.
-- `conductor.yml` at `files/anatomy/agents/` — system prompt + self-test-001 Pulse job.
-- Wing `/inbox` live (unresolved gitleaks + conductor event history).
-- Wing `/approvals` stub live (wired, empty pending A10).
-- **Playbook --blank run in progress** on operator machine (2026-05-07).
+- Coexistence tests 16/16 pass after Mattermost sentinel swap.
+- `python3 tools/fetch-authentik-bootstrap-token.py` works (docker-exec
+  primary path; auto-discovers `infra-authentik-server-1`).
 
-### What just landed (A8 batch, 7 commits `d1552dc..4974c53`)
+### What landed since 2026-05-07
 
-| Tag | Commit | Title |
-|---|---|---|
-| Pre.1 | `d1552dc` | feat(openclaw): Pre.1 — Wing API onboarding for OpenClaw agent |
-| A8.a.0 | `009b734` | feat(anatomy): A8.a.0 — conductor identity (Wing token + Authentik client) |
-| A8.a | `872dbda` | feat(anatomy): A8.a — pulse-run-agent.sh + agent_run_start/end event types |
-| A8.b | `fc3671c` | feat(anatomy): A8.b — conductor agent profile (system prompt + Pulse job) |
-| A8.c.1 | `cbf3d7c` | feat(wing): A8.c.1 — /inbox presenter + Latte template |
-| A8.c.1s | `23d70a1` | feat(wing): A8.c.1 supplement — Inbox template + layout nav tabs |
-| A8.c.2 | `4974c53` | feat(wing): A8.c.2 — /approvals stub presenter + template |
-
-**A8 notable finding:** `GitleaksRepository` was not registered in Wing's DI
-config (`common.neon`) — first live call to `/api/v1/gitleaks_findings` would have
-thrown a Nette DI resolution error. Fixed in A8.c.1. Pattern: every new repository
-class must be explicitly listed in `common.neon` under `services:`.
-
-**New doctrine (agent event types):** Wing's `VALID_TYPES` and `event.schema.json`
-now include `agent_run_start` / `agent_run_end` — emitted by agents, not the callback
-plugin. The type enum expansion makes them first-class alongside Ansible lifecycle types.
-
-### What just landed (D2 batch, 12 commits `cddb7e0..7ceb18c`)
-
-| Tag | Commit | Title |
-|---|---|---|
-| D2.1 | `cddb7e0` | bookstack — drop role-side OIDC env |
-| D2.2 | `2015507` | freescout — drop role-side OIDC env |
-| D2.3 | `aade539` | hedgedoc — drop role-side OIDC env |
-| D2.4 | `04efcf6` | infisical — drop role-side OIDC env |
-| D2.5 | `43b8db2` | miniflux — drop role-side OIDC env |
-| D2.6 | `819be5a` | n8n — drop role-side OIDC env |
-| D2.7 | `c0481f4` | open-webui — drop role-side OIDC env |
-| D2.8 | `13e31b7` | wordpress — drop role-side OIDC env |
-| D2.9 | `e5dd556` | gitlab — move mkcert CA + extra_hosts; retire dead OMNIBUS_CONFIG copy |
-| D2.10 | `5ae7f93` | vaultwarden — create plugin template + drop role-side SSO env |
-| D2.11 | `7ceb18c` | retire all authentik_oidc_* helpers from default.config.yml |
-
-**D2 doctrine finding:** gitlab's `GITLAB_OMNIBUS_CONFIG` is a monolithic Ruby-string
-env var; Compose file-merge replaces the whole key (last-writer wins, role alphabetically
-after plugin). Cannot split infra config from OIDC config across override files. Role
-keeps the full OMNIBUS_CONFIG; plugin handles only mkcert CA + extra_hosts + `_NOS_PLUGIN`.
-
-### Previous: D-series + β1 (11 commits `fc43941..2324b6d`)
-
-### Doctrine docs (born D-series + β1)
-
-- `docs/native-sso-survey.md` — β1 audit of every proxy-auth service
-- `docs/upstream-pr-opportunities.md` — FOSS contributions roadmap
-- `docs/aggregator-parity-report.md` — D3 dry-run baseline
-- `docs/multi-agent-batch.md` — coordinator pattern from Phase 1 retro
-- `docs/track-q-residue-analysis.md` — 7 plugin-less roles + verdict
-- Tools: `tools/aggregator-dry-run.py` (gating), `tools/d12-annotate-plugins.py`
+| Area | Highlights |
+|---|---|
+| **AgentKit (A14)** | Runtime shipped + 5 deferred follow-ups closed (multi-agent pool, dreams, webhook auto-fan-out, operator-trigger UI, Infisical vault refresh). RBAC gates A13.7 + A14.1 + A14.2 security review rounds. |
+| **Approvals (A11)** | `/approvals` approve/reject flow promoted from stub to working presenter with HMAC audit trail. |
+| **Platform halt (A12)** | "Big red button" — operator can halt all agent runs via Wing UI; Bone propagates the gate to Pulse runner. |
+| **E2E (A13.x)** | A13.1 telemetry foundation + A13.5 three real journeys (plugin_contract, halt_resume, approval_flow) + A13.6 ephemeral SSO tester layer + A13.7 RBAC presenter gates. **Playwright suite migrated to ephemeral SSO (2026-05-16)**. |
+| **Actor audit (A10/X-series)** | `actor_id` + `actor_action_id` columns on events + pulse_runs + agent_sessions; presenter `/audit` view; auto-attribution from callback plugin. |
+| **Plugin system (Track Q complete)** | Q3–Q7 base manifests (12 substrates) + D2 batch (13 roles thinned). Loader discovers 63 plugins. |
+| **SnappyMail** | New Tier-1 role — webmail frontend for Stalwart. |
+| **Tooling** | `tools/fetch-authentik-bootstrap-token.py` (operator-side bootstrap closer); `tools/e2e-auth-helper.py` (Playwright globalSetup helper). |
+| **Cleanup** | Mattermost vars + DB scaffolding purged (no ARM64 FOSS image after 3+ years); Infisical seed.yml ljust filter bug fixed. |
 
 ---
 
 ## Punch list
 
-Numbered for the loop prompt; each line ≤ 2 sentences.
+Numbered for the loop prompt; each line ≤ 2 sentences. Items 1–11 from
+the previous snapshot all completed — see git log between `7e2026c` and
+`5f9c0a7` for the trail.
 
-~~1. **D2 batch 1** (8 clean-parity rolí) — done `cddb7e0..13e31b7`.~~
-~~2. **D2 special-syntax** — grafana (skip, A6.5 done), gitlab (mkcert+extra_hosts moved, OMNIBUS_CONFIG kept per doctrine), vaultwarden (plugin template created + role cleaned). Done `e5dd556`, `5ae7f93`.~~
-~~3. **D2 follow-up** — `authentik_oidc_*` helpers retired from `default.config.yml`; all plugin templates updated to inline values. Done `7ceb18c`.~~
-~~4. **A5 — Wing OpenAPI/DDL exports** — done `436db7d`. bone + schema synced; --check-summaries 87/87 OK.~~
-~~5. **Pulse Wing endpoints** — done P0.2 (pre-batch); routes + PulsePresenter live. Pulse 404 warn resolved.~~
-~~6. **A7 — gitleaks plugin** — done `bfe7629..d558e1b`. schema + presenter + Pulse job-reg + plugin manifest + skill.~~
-~~7. **Pre.1 — OpenClaw Wing onboarding** — `openclaw_wing_api_token` + `post.yml` + env injection. Done `d1552dc`.~~
-~~8. **A8.a.0 — conductor identity** — `conductor_wing_api_token` + `nos-conductor` Authentik client + Wing provisioning. Done `009b734`.~~
-~~9. **A8.a — pulse-run-agent.sh** — Authentik client_credentials → claude → Wing agent_run_start/end events. Done `872dbda`.~~
-~~10. **A8.b — conductor agent profile** — `files/anatomy/agents/conductor.yml` (system prompt + Phase 5 Pulse job). Done `fc3671c`.~~
-~~11. **A8.c — Wing /inbox + /approvals** — InboxPresenter (gitleaks open findings + conductor events) + ApprovalsPresenter stub. Done `cbf3d7c..4974c53`.~~
-~~11b. **B1+B2 blind-spot fixes** — OpenClaw Wing token moved to wing/post.yml; conductor+gitleaks Pulse jobs registered via Wing API in wing/post.yml. Done `433ac01`.~~
-~~11c. **B3 — stack_filter post_compose freeze** — `_plugin_stack()` resolver + `stack_filter` param in `run_hook()`; core-up.yml scoped to [infra, observability]; stack-up.yml adds second call after async join. `ansible.cfg`: yaml callback + display_skipped_hosts=false. Done `7e2026c`.~~
-12. **A10 — actor audit migration** — `actor_id` (FK authentik_clients) + `actor_action_id` (UUID) + `acted_at` na všech wing.db write tables + presenter updates v 2-3 batch.
-13. **Phase 5 ceremony** — `conductor-self-test-001` Pulse one-shot job (8-step e2e: health → trigger gitleaks → verify findings → events → contracts diff → wing tests → markdown report); pass = první non-operator end-to-end write do wing.db. **Pre-req: A10 must land first for actor attribution.**
-14. **Tier-2 aggregator path** — extend `run_aggregators` o `from: app_manifest` source, retire `authentik_oidc_apps: []` Tier-2 stub.
-
-**D2 residual** (nice-to-have, not blocking): freescout/erpnext/homeassistant/superset/nodered/
-paperclip role tasks still use `| default(...)` pattern on vars not in `default.config.yml` — inline when those roles get their own D2 pass.
+1. **Phase 5 ceremony** — operator runs `conductor-self-test-001` Pulse
+   one-shot job (8-step e2e: health → trigger gitleaks → verify findings
+   → events → contracts diff → wing tests → markdown report). Pass =
+   first non-operator end-to-end write to `wing.db`. Pre-reqs all done.
+2. **A9 — notification fanout** — bones-and-wings §Appendix B; follow
+   inbox/approvals shape. Not started.
+3. **Tier-2 aggregator path** — extend `run_aggregators` with
+   `from: app_manifest` source; retire the empty `authentik_oidc_apps`
+   Tier-2 stub. Partial landing in commit `cf69ead` — verify.
+4. **INTEGRATION.md migration** — 9× role `INTEGRATION.md` files still
+   instruct adding rows to the retired central `authentik_oidc_apps`
+   list. Post-D1.3 doctrine is per-plugin `authentik:` block in
+   `files/anatomy/plugins/<svc>-base/plugin.yml`. Migrate (or delete if
+   the role is now auto-wired). Also 10× role README + `TODO.md:40`.
+5. **Doc drift** — `bones-and-wings-refactor.md` Appendix B still marks
+   A7/A8/A10 NOT STARTED (all shipped). `handoff-next-parallel-session.md`
+   Track A says Q3-Q7 TODO (shipped). Update or replace.
+6. **D2 residual** (nice-to-have, not blocking): freescout / erpnext /
+   homeassistant / superset / nodered / paperclip role tasks still use
+   `| default(...)` pattern on vars not in `default.config.yml`.
+7. **One-shot migration scripts** — `tools/d12-annotate-plugins.py` +
+   `tools/aggregator-dry-run.py` shipped D1.x. Verify if still wired
+   into CI; if not, delete.
+8. **Security backlog** — 12 pending `remediation_items` rows; Phase A
+   (CVE pins) → B (mem/cpu limits) → C (hardening) → D (architectural).
+   Vendor-blocked: Open WebUI ZDI CVEs, RustFS gRPC sigverify.
 
 ---
 
@@ -127,18 +93,17 @@ paperclip role tasks still use `| default(...)` pattern on vars not in `default.
 
 | Surface | State |
 |---|---|
-| `git status` | clean; **30 commits ahead of `origin/master`** awaiting push |
-| Last verified | 2026-05-07; 135/135 tests + dry-run + syntax-check all green |
-| Tier-1 services | --blank run in progress (2026-05-07) |
-| Plugin loader | 43 plugins + gitleaks (skill/scheduled-job); aggregator 36 plugin-only, 0 field-diffs |
-| Authentik blueprints | rendered by `authentik-base` plugin (D1.2); nos-conductor added to agent_clients (A8.a.0) |
-| Pulse | live — 4 endpoints; conductor + gitleaks jobs registered via wing/post.yml (B2) |
-| Wing OpenAPI | 70 paths, 87/87 real summaries |
-| Wing UI | /inbox (gitleaks + conductor events) + /approvals stub live (A8.c) |
-| OpenClaw | Wing API token wired; provisioned in wing/post.yml (B1 fix) |
-| Conductor | pulse-run-agent.sh + conductor.yml at `files/anatomy/`; Wing pulse job registered |
-| Test gates | 135/135 tests pass, aggregator-dry-run exit 0 |
-| Decision log | O1-O23 in `roadmap-2026q2.md` (append-only) |
+| `git status` | clean (one floating `nos_tester_password` template change pending operator decision) |
+| Last verified | 2026-05-16; Playwright + smoke + coexistence + syntax-check all green |
+| Tier-1 services | smoke probe: 31/32 OK on pazny.eu (Nextcloud 500 separate) |
+| Plugin loader | 63 plugins (Q1–Q7 + D1+D2 complete) |
+| Authentik blueprints | rendered by `authentik-base` plugin aggregator; per-plugin `authentik:` blocks are SoT (post-D1.3) |
+| Pulse | 4 endpoints live; conductor + gitleaks Pulse jobs registered |
+| Wing OpenAPI | 70 paths, /inbox + /approvals + /audit + /halt + /agents live |
+| Playwright e2e | 14 passed / 7 skipped (opt-in services) / 0 failed; ephemeral SSO identity per run |
+| Conductor | pulse-run-agent.sh + conductor.yml profile; awaits Phase 5 ceremony |
+| AgentKit | runtime live at `files/anatomy/wing/app/AgentKit/`; first agent = conductor |
+| Decision log | O1–O23 in `roadmap-2026q2.md` (append-only) |
 
 ---
 
@@ -148,6 +113,6 @@ After every meaningful work session:
 
 1. Update **Last verified state** + snapshot table.
 2. Cross-strike completed punch-list items + add follow-ups.
-3. If a phase landed, append entry to **What just landed** + log the
+3. If a phase landed, append a row to **What landed since …** + log the
    decision in `roadmap-2026q2.md` if it changed direction.
 4. Commit `docs(roadmap): refresh active-work pointer`.

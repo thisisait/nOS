@@ -1,5 +1,15 @@
 # Handoff — next big parallel session
 
+> **Status (refreshed 2026-05-16): SESSION COMPLETED.** The work scoped
+> in this handoff has shipped:
+> * **Track A (Q3–Q7 Tier-1 plugin refactor)** — DONE 2026-05-07.
+>   Loader now discovers 63 plugins (12 new base manifests + D2 batch).
+> * **Track B (AgentKit follow-ups)** — DONE.
+> * **Track C (Phase 5 ceremony)** — IN-FLIGHT, awaits operator-driven run.
+>
+> See [`docs/active-work.md`](active-work.md) for the current pointer.
+> This file is kept as the as-shipped record of the session's intent.
+
 **Read this first. Then load `CLAUDE.md` and `docs/multi-agent-batch.md` before spawning workers.**
 
 This document hands off the nOS roadmap to the next session. It assumes you (the next Claude) start fresh and need the full context to pick up cleanly. Date written: 2026-05-07 evening, after A14.2.
