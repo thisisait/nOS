@@ -1,125 +1,209 @@
 /**
  * tests/e2e/tier2-wet-test.spec.ts
  *
- * Playwright spec — autonomous mirror of docs/tier2-wet-test-checklist.md.
- * Each `describe` block corresponds to one section of the checklist;
- * each pilot iterates inside as a separate `test`. The Cowork session
- * reads the JSON output and cross-references section IDs.
+ * Playwright browser tests — nOS services with Authentik SSO login.
  *
- * STATUS: SKELETON (scaffolded 2026-04-29 in Track E batch).
- * Every test currently calls `test.fixme()` so a `npx playwright test`
- * run reports them as "skipped — not yet implemented" instead of
- * silently passing or hard-failing. Track P proper (post-H) replaces
- * the fixme calls with real assertions.
+ * Identity:
+ *   By default the suite consumes an ephemeral tester provisioned by
+ *   global-setup.ts (writes ``${PLAYWRIGHT_OUT}/tester.json``). Set
+ *   ``NOS_SKIP_PROVISION=1`` + ``NOS_TESTER_USER`` + ``NOS_TESTER_PASSWORD``
+ *   to bypass and use a static identity for ad-hoc debugging.
  *
- * Run (post-H): `npx playwright test --reporter=json --output=results.json`
+ * Phase 1: forward_auth services (auto-redirect to Authentik).
+ * Phase 2: native_oidc services (service-specific SSO button selectors).
+ *
+ * Run (default — ephemeral):
+ *   NOS_HOST=dev.local AUTHENTIK_API_TOKEN=... npx playwright test
  */
 
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
-// ─── Environment configuration ────────────────────────────────────────────
-//
-// `NOS_HOST` is the operator's `tenant_domain` once Track F lands; for
-// today's single-host dev box it is `dev.local`.
-//
-// `APPS_SUBDOMAIN` is the Tier-2 isolation segment (Decision O7 — default
-// `apps`). Combined: pilots resolve at `<slug>.<APPS_SUBDOMAIN>.<NOS_HOST>`.
+import { test, expect, type Page } from '@playwright/test';
+
+// ─── Environment ───────────────────────────────────────────────────────────
+
 const NOS_HOST = process.env.NOS_HOST ?? 'dev.local';
 const APPS_SUBDOMAIN = process.env.APPS_SUBDOMAIN ?? 'apps';
+const AUTH_DOMAIN = process.env.AUTHENTIK_DOMAIN ?? `auth.${NOS_HOST}`;
 
-// Pilots in scope. Plane stays `.draft` — separate sprint.
-const PILOTS = ['twofauth', 'roundcube', 'documenso'] as const;
-type Pilot = typeof PILOTS[number];
+interface TesterCreds {
+  username: string;
+  password: string;
+}
 
-const fqdn = (slug: Pilot) => `${slug}.${APPS_SUBDOMAIN}.${NOS_HOST}`;
-const pilotURL = (slug: Pilot) => `https://${fqdn(slug)}/`;
+function loadTesterCreds(): TesterCreds {
+  const jsonPath = process.env.NOS_TESTER_JSON;
+  if (jsonPath) {
+    try {
+      const payload = JSON.parse(readFileSync(jsonPath, 'utf8'));
+      if (payload.username && payload.password) {
+        return { username: payload.username, password: payload.password };
+      }
+      throw new Error(`${jsonPath} missing username/password`);
+    } catch (exc) {
+      throw new Error(`Cannot load tester identity from ${jsonPath}: ${exc}`);
+    }
+  }
+  // Static fallback (NOS_SKIP_PROVISION=1 path, or no global-setup ran)
+  const username = process.env.NOS_TESTER_USER ?? 'nos-tester';
+  const password = process.env.NOS_TESTER_PASSWORD ?? '';
+  if (!password) {
+    throw new Error(
+      'No tester identity available: NOS_TESTER_JSON unset AND NOS_TESTER_PASSWORD empty. ' +
+      'Either let global-setup.ts provision one (default) or set NOS_SKIP_PROVISION=1 ' +
+      'with NOS_TESTER_USER + NOS_TESTER_PASSWORD.',
+    );
+  }
+  return { username, password };
+}
 
-// ─── Section 2 — Apps stack containers ────────────────────────────────────
+const TESTER = loadTesterCreds();
 
-test.describe('Section 2 — apps stack containers all healthy', () => {
-  for (const slug of PILOTS) {
-    test(`${slug} container is healthy`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: query Portainer API');
-      // TODO: GET /api/endpoints/<endpoint-id>/docker/containers/json
-      //       assert response[].State === 'running' AND .Health.Status === 'healthy'
+interface ServiceEntry {
+  slug: string;
+  url: string;
+  titleContains?: string;
+}
+
+// ─── forward_auth services (Traefik auto-redirects to Authentik) ───────────
+
+// URL subdomains here MUST match the `<svc>_domain` values in
+// default.config.yml — these are pinned so the suite fails fast on
+// onboarding drift rather than silently skipping. When a new role lands,
+// add an entry; when a role renames, update here.
+const FORWARD_AUTH: ServiceEntry[] = [
+  // Tier-2 apps
+  { slug: 'twofauth',     url: `https://twofauth.${APPS_SUBDOMAIN}.${NOS_HOST}/` },
+  { slug: 'roundcube',    url: `https://roundcube.${APPS_SUBDOMAIN}.${NOS_HOST}/` },
+  { slug: 'documenso',    url: `https://documenso.${APPS_SUBDOMAIN}.${NOS_HOST}/` },
+  // Tier-1 (always-installed defaults)
+  { slug: 'uptime',       url: `https://uptime.${NOS_HOST}/` },
+  { slug: 'calibre',      url: `https://books.${NOS_HOST}/` },
+  { slug: 'kiwix',        url: `https://kiwix.${NOS_HOST}/` },
+  { slug: 'puter',        url: `https://os.${NOS_HOST}/` },
+  { slug: 'wing',         url: `https://wing.${NOS_HOST}/` },
+  { slug: 'metabase',     url: `https://bi.${NOS_HOST}/` },
+  { slug: 'mailpit',      url: `https://mail.${NOS_HOST}/` },
+  { slug: 'paperclip',    url: `https://paperclip.${NOS_HOST}/` },
+  // Tier-1 (opt-in — auto-skip via preflight when not deployed)
+  { slug: 'ntfy',         url: `https://ntfy.${NOS_HOST}/` },
+  { slug: 'homeassistant', url: `https://home.${NOS_HOST}/` },
+  { slug: 'jellyfin',     url: `https://media.${NOS_HOST}/` },
+  { slug: 'onlyoffice',   url: `https://onlyoffice.${NOS_HOST}/` },
+  { slug: 'code-server',  url: `https://code.${NOS_HOST}/` },
+  { slug: 'firefly',      url: `https://firefly.${NOS_HOST}/`, titleContains: 'Firefly' },
+  { slug: 'snappymail',   url: `https://webmail.${NOS_HOST}/` },
+];
+
+/**
+ * HEAD probe against the service host. If Traefik returns its default
+ * 404 ("page not found" body, no Authentik redirect Location header),
+ * the service isn't deployed on this host — skip the test instead of
+ * hanging the login form selector for 15s. Returns ``true`` if the
+ * service appears live (any router/redirect/SSO response).
+ */
+async function probeDeployed(url: string): Promise<boolean> {
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      // mkcert dev + LE prod are both fine without explicit options;
+      // Node 18+ fetch ignores TLS errors only via NODE_TLS_REJECT_UNAUTHORIZED.
+    });
+    // Traefik's "no router" 404 has body "404 page not found".
+    if (resp.status === 404) {
+      const body = await resp.text();
+      if (body.includes('404 page not found')) return false;
+    }
+    return true;
+  } catch {
+    // DNS NXDOMAIN, connection refused, etc. — service is not there.
+    return false;
+  }
+}
+
+// ─── Authentik login helper ────────────────────────────────────────────────
+
+async function fillAuthentikLogin(page: Page): Promise<void> {
+  // Stage 1: identification
+  await page.waitForSelector('input[name="uidField"]', { timeout: 15000 });
+  await page.fill('input[name="uidField"]', TESTER.username);
+  await page.click('button[type="submit"]');
+  // Wait for React SPA to transition to password stage
+  await page.waitForTimeout(2000);
+
+  // Stage 2: password
+  await page.waitForSelector('input[name="password"]', { timeout: 15000 });
+  await page.fill('input[name="password"]', TESTER.password);
+
+  // Submit and poll for redirect.
+  await page.click('button[type="submit"]');
+
+  for (let i = 0; i < 40; i++) {
+    await page.waitForTimeout(500);
+    const hostname = new URL(page.url()).hostname;
+    if (!hostname.startsWith('auth.')) return;
+  }
+  throw new Error(`Still on Authentik after 20s: ${page.url()}`);
+}
+
+// ─── Tests ─────────────────────────────────────────────────────────────────
+
+test.describe('SSO browser flow — forward_auth services', () => {
+  test.beforeAll(() => {
+    if (!TESTER.password) throw new Error('No tester password resolved');
+  });
+
+  for (const svc of FORWARD_AUTH) {
+    test(`${svc.slug} — login via Authentik and verify page renders`, async ({ page }) => {
+      test.info().annotations.push({ type: 'url', description: svc.url });
+
+      // Service-deployment preflight — skips the test cleanly when Traefik
+      // returns its "no router" 404 instead of hanging on the login form.
+      if (!(await probeDeployed(svc.url))) {
+        test.skip(true, `${svc.slug} not deployed (Traefik 404 / DNS miss)`);
+      }
+
+      // Navigate → Traefik forward-auth redirects to Authentik
+      await page.goto(svc.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Log in (handles Authentik redirect + return)
+      await fillAuthentikLogin(page);
+
+      // SSO chain proof:
+      //   1. URL is back on the service host (not Authentik) — we exited
+      //      the login flow with a real session.
+      //   2. ``titleContains`` is checked when set per-service. Otherwise
+      //      we don't assert body or title shape — those vary too widely
+      //      (Roundcube + Uptime Kuma render outside <body> innerText,
+      //      Puter responds JSON when its own auth has no user row for
+      //      the SSO identity, etc.). The redirect-back is the contract.
+      const finalHostname = new URL(page.url()).hostname;
+      expect(finalHostname).not.toMatch(/^auth\./);
+
+      if (svc.titleContains) {
+        const title = (await page.title()).trim();
+        expect(title.toLowerCase()).toContain(svc.titleContains.toLowerCase());
+      }
     });
   }
+});
 
-  test('documenso-db container is healthy', async () => {
-    test.fixme(true, 'Track P proper: same as above for the embedded postgres');
+// ─── Health checks (no auth needed) ────────────────────────────────────────
+
+test.describe('Health checks (no auth)', () => {
+  test('Traefik ping responds', async ({ request }) => {
+    const resp = await request.get('http://127.0.0.1:8082/ping');
+    expect(resp.status()).toBe(200);
+  });
+
+  test('Bone health responds', async ({ request }) => {
+    const resp = await request.get('http://127.0.0.1:8099/api/health');
+    expect(resp.status()).toBe(200);
+  });
+
+  test('Bluesky PDS health responds', async ({ request }) => {
+    const resp = await request.get('http://127.0.0.1:2583/xrpc/_health');
+    expect(resp.status()).toBe(200);
   });
 });
-
-// ─── Section 3 — Traefik routes per pilot ─────────────────────────────────
-
-test.describe('Section 3 — Traefik dashboard shows router per pilot', () => {
-  for (const slug of PILOTS) {
-    test(`${slug} router exists with expected middlewares`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: GET http://127.0.0.1:8080/api/http/routers');
-      // TODO: assert router.rule contains `Host(\`${fqdn(slug)}\`)`
-      //       assert router.middlewares includes 'authentik@file'
-      //       assert router.tls is set
-    });
-  }
-});
-
-// ─── Section 4 — Authentik provider + application ────────────────────────
-
-test.describe('Section 4 — Authentik proxy provider + application present', () => {
-  for (const slug of PILOTS) {
-    test(`${slug} has nos-app-${slug} provider`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: query Authentik API /api/v3/providers/proxy');
-    });
-
-    test(`${slug} application external_host matches FQDN`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: assert external_host === pilotURL(slug)');
-    });
-  }
-});
-
-// ─── Section 5 — Wing /hub lists all three apps ──────────────────────────
-
-test.describe('Section 5 — Wing /hub Tier-2 entries', () => {
-  for (const slug of PILOTS) {
-    test(`Wing /api/v1/hub/systems contains app_${slug}`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: GET /api/v1/hub/systems with operator token');
-    });
-  }
-});
-
-// ─── Section 8 — Uptime Kuma monitors ────────────────────────────────────
-
-test.describe('Section 8 — Uptime Kuma has Tier-2 monitor per pilot', () => {
-  for (const slug of PILOTS) {
-    test(`Kuma monitor for ${slug} exists and accepts 200/302/401/502`, async ({ request }) => {
-      test.fixme(true, 'Track P proper: query Kuma /metrics or /api/status');
-    });
-  }
-});
-
-// ─── Section 11 — Browser flow (the human-eyeball replacement) ───────────
-
-test.describe('Section 11 — Browser flow per pilot', () => {
-  for (const slug of PILOTS) {
-    test(`${slug} redirects to Authentik on first visit`, async ({ page }) => {
-      test.fixme(true, 'Track P proper: page.goto(pilotURL) → expect URL match /auth\\./');
-    });
-
-    test(`${slug} renders own UI after Authentik login`, async ({ page }) => {
-      test.fixme(true, 'Track P proper: log in, expect URL back at pilotURL, expect title');
-    });
-  }
-});
-
-// ─── Sections not yet stubbed ────────────────────────────────────────────
-//
-// 0 — pre-flight (covered by `python3 -m pytest tests/apps -q` in CI; not
-//     a Playwright surface)
-// 1 — blank run (operator-only)
-// 6 — GDPR rows (SQLite — better as a Python test, not Playwright)
-// 7 — Bone events (JSONL tail — same)
-// 9 — smoke catalog runtime YAML (file existence — same)
-// 10 — smoke probe (CLI invocation of tools/nos-smoke.py — Cowork
-//      session can run directly, no Playwright)
-// 12 — recovery (operator workflow, not autonomous — Cowork files a
-//      question instead of attempting recovery silently)

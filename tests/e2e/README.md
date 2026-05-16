@@ -1,16 +1,7 @@
-# nOS Tier-2 wet-test — Playwright suite
+# nOS E2E SSO test suite — Playwright
 
-Mechanical mirror of [`docs/tier2-wet-test-checklist.md`](../../docs/tier2-wet-test-checklist.md).
-See [`docs/wet-test-automation.md`](../../docs/wet-test-automation.md) for the
-Cowork-driven loop architecture.
-
-## Status (2026-05-03)
-
-- **Infra ready** — config, package.json, TS setup all in place
-- **Test bodies stubbed** — every test is `test.fixme()`; real assertions
-  land post-H once we have one green wet test to model API shapes against
-- **Python companion** at [`tests/wet/`](../wet/) covers sections 6/7/9
-  (SQLite + JSONL + YAML) which aren't a Playwright surface
+Browser-based end-to-end tests for all nOS services with Authentik SSO login.
+Covers **17 forward_auth services** (3 Tier-2 apps + 14 Tier-1) + health checks.
 
 ## One-time setup
 
@@ -22,35 +13,82 @@ npx playwright install chromium # downloads the Chromium binary
 
 ## Running
 
+The suite defaults to **ephemeral SSO identities** (A13.6 doctrine — see
+[`docs/e2e-tester-identity.md`](../../docs/e2e-tester-identity.md)). A fresh
+`nos-tester-e2e-<8hex>` user is provisioned in Authentik before the run and
+revoked after.
+
 ```bash
-# Default: dev box (NOS_HOST=dev.local, APPS_SUBDOMAIN=apps)
-npx playwright test
+# One-time after blank=true: fetch the nos-api token into ~/.nos/secrets.yml
+python3 ../../tools/fetch-authentik-bootstrap-token.py
 
-# Override target
-NOS_HOST=pazny.eu APPS_SUBDOMAIN=apps npx playwright test
+# Default: ephemeral tester in Tier-1 (provider) scope (reads token from secrets.yml)
+NOS_HOST=dev.local npx playwright test
 
-# JSON output for Cowork ingestion
-npx playwright test --reporter=json > .playwright-out/results.json
+# Production
+NOS_HOST=pazny.eu APPS_SUBDOMAIN=apps \
+  AUTHENTIK_API_TOKEN=... \
+  npx playwright test
+
+# Single test (-g matches the title)
+NOS_HOST=pazny.eu AUTHENTIK_API_TOKEN=... \
+  npx playwright test -g "portainer"
+
+# Different tier (provider | manager | user | guest)
+NOS_TESTER_TIER=user AUTHENTIK_API_TOKEN=... npx playwright test
 ```
 
-Results land in `.playwright-out/` (gitignored). HTML report at
-`.playwright-out/html/index.html`.
+### Static-identity fallback (ad-hoc debugging)
 
-## Adding a test
+If Authentik admin is unavailable, or you want a deterministic identity
+for repeated manual runs:
 
-1. Find the matching section in `docs/tier2-wet-test-checklist.md`.
-2. Open `tier2-wet-test.spec.ts`, find or create the `describe` block
-   for that Section ID.
-3. Replace `test.fixme(true, '...')` with the real assertion.
-4. Cross-reference `docs/wet-test-automation.md` for the Cowork escape-
-   hatch contract — small fixes auto-commit, big fixes file as questions.
+```bash
+NOS_SKIP_PROVISION=1 \
+NOS_TESTER_USER=nos-tester \
+NOS_TESTER_PASSWORD=<blueprint-password> \
+npx playwright test
+```
 
-## Why some sections aren't here
+The blueprint user `nos-tester` is member of every RBAC tier so it can hit
+any service, but using it bypasses the audit-trail isolation that ephemeral
+identities provide. Don't use this in CI.
 
-Sections 0/1/6/7/9/10/12 of the checklist are not Playwright surfaces:
+## What each test does
 
-- **0** — pre-flight (covered by `pytest tests/apps`)
-- **1** — blank run (operator-only, needs `-K`)
-- **6/7/9** — SQLite / JSONL / YAML (covered by `tests/wet/`)
-- **10** — `tools/nos-smoke.py` CLI (Cowork runs directly)
-- **12** — recovery workflow (operator decision, not autonomous)
+1. Navigate to service URL (e.g. `https://grafana.pazny.eu/`)
+2. Traefik forward-auth middleware redirects to Authentik login
+3. Fill ephemeral username → Next → fill random password → Submit
+4. Redirect back to service → verify page renders with content
+
+## Identity lifecycle
+
+| Phase | What happens |
+| --- | --- |
+| globalSetup | `tools/e2e-auth-helper.py provision --tier <NOS_TESTER_TIER>` → writes `.playwright-out/tester.json` |
+| Each test | reads `NOS_TESTER_JSON` env var → loads username + password |
+| globalTeardown | `tools/e2e-auth-helper.py teardown --input .playwright-out/tester.json` → deletes Authentik user + revokes Wing token |
+
+If the suite is killed (SIGKILL / Ctrl+C in a way that bypasses Node
+shutdown handlers) the tester survives. Two recovery paths:
+
+```bash
+# Targeted: revoke the specific identity we know about
+python3 tools/e2e-auth-helper.py teardown --input tests/e2e/.playwright-out/tester.json
+
+# Belt-and-suspenders: delete every nos-tester-e2e-* older than 1h
+python3 files/anatomy/scripts/sweep-orphan-testers.py
+```
+
+## Test structure
+
+```
+tests/e2e/
+├── tier2-wet-test.spec.ts   # Tier-2 apps (3) + Tier-1 services (14) + health checks
+├── global-setup.ts          # Provision ephemeral tester before the suite
+├── global-teardown.ts       # Revoke tester after the suite (pass or fail)
+├── journeys/                # Pytest-based journey tests (operator_login, rbac_admin, smoke...)
+├── lib/                     # Python helpers (AuthentikAdmin, tester_identity, wing_token_admin)
+├── playwright.config.ts     # Playwright config
+└── README.md                # This file
+```

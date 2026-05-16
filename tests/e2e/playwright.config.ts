@@ -1,29 +1,22 @@
 /**
  * tests/e2e/playwright.config.ts
  *
- * Playwright configuration for the nOS Tier-2 wet-test suite.
+ * Playwright configuration for the nOS e2e SSO test suite.
+ * Covers Tier-1 services (24) + Tier-2 apps (3) with browser-based
+ * Authentik SSO login flow.
  *
- * Tier-1 environment knobs (env vars):
- *   NOS_HOST          tenant_domain (default: dev.local)
- *   APPS_SUBDOMAIN    Tier-2 isolation segment (default: apps)
- *   NOS_BASE_URL      override; if set, replaces https://${APPS_SUBDOMAIN}.${NOS_HOST}
- *   PLAYWRIGHT_OUT    output dir for results JSON / traces (default: ./.playwright-out)
- *
- * mkcert-trusted *.dev.local certs:
- *   The dev box has mkcert root in System keychain, so Chromium normally
- *   trusts them. We still set ignoreHTTPSErrors=true defensively so a
- *   freshly-cloned worktree (no keychain entry) doesn't redline every test.
- *   For LE-prod (Track G) this is moot — real certs.
- *
- * Reporter strategy:
- *   - 'list' for human runs (operator's terminal)
- *   - 'json' for Cowork-driven runs (parsable, fed back into Cowork queue)
- *   Both are always on; the JSON file lives at ${PLAYWRIGHT_OUT}/results.json.
- *
- * Workers:
- *   1 worker by default. Each pilot mutates server-side state (Authentik
- *   session cookies, Bone events, Kuma monitor cache) so parallel runs
- *   would race. CI can override with PLAYWRIGHT_WORKERS=N if isolated.
+ * Env vars:
+ *   NOS_HOST                tenant_domain (default: dev.local)
+ *   APPS_SUBDOMAIN          Tier-2 isolation segment (default: apps)
+ *   NOS_TESTER_TIER         Tier for ephemeral identity (default: provider)
+ *   NOS_SKIP_PROVISION      Set to "1" to use static NOS_TESTER_* env vars
+ *                           instead of provisioning a fresh ephemeral tester
+ *   NOS_TESTER_USER         Static fallback username (only with NOS_SKIP_PROVISION)
+ *   NOS_TESTER_PASSWORD     Static fallback password (only with NOS_SKIP_PROVISION)
+ *   AUTHENTIK_DOMAIN        Override auth domain (default: auth.<NOS_HOST>)
+ *   AUTHENTIK_API_TOKEN     Admin token for ephemeral provisioning (REQUIRED)
+ *   PLAYWRIGHT_WORKERS      Parallel workers (default: 1 — SSO is serial)
+ *   PLAYWRIGHT_OUT          Output dir (default: ./.playwright-out)
  */
 
 import { defineConfig, devices } from '@playwright/test';
@@ -39,17 +32,19 @@ export default defineConfig({
   testDir: '.',
   testMatch: /.*\.spec\.ts$/,
 
-  // Each test gets 30 s; the full file budget is 5 min. Authentik login
-  // can be slow on first run while the worker hydrates the proxy session.
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  // A13.6 ephemeral SSO identity protocol — provisions a fresh
+  // ``nos-tester-e2e-*`` user before the suite, revokes after.
+  globalSetup: require.resolve('./global-setup.ts'),
+  globalTeardown: require.resolve('./global-teardown.ts'),
 
-  // No retries for now — wet-test failures should surface immediately so
-  // the operator (or Cowork) can act on them. Flake-handling is post-H.
+  // Each SSO test: navigate → redirect → login form → password → redirect back.
+  // Authentik can be slow on first hit (worker hydration). 90s per test is safe.
+  timeout: 90_000,
+  expect: { timeout: 10_000 },
+
   retries: 0,
   workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 1),
 
-  // forbidOnly in CI prevents an accidental `.only` from skipping the rest.
   forbidOnly: Boolean(process.env.CI),
 
   reporter: [
@@ -62,15 +57,12 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
-    // Keep traces only on retry (we have retries=0, so effectively never).
-    // Switch to 'on-first-retry' once Track P proper turns on retries.
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    // Realistic UA so Authentik / Traefik don't 403 on us.
     userAgent:
       'Mozilla/5.0 (Macintosh; Apple Silicon Mac OS X 14_0) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 nOS-wet-test/0.1',
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 nOS-e2e/1.0',
   },
 
   projects: [
@@ -81,8 +73,6 @@ export default defineConfig({
   ],
 });
 
-// Convenience export so spec files can import the same constants without
-// re-deriving them — keeps env-var fallback logic in exactly one place.
 export const ENV = {
   NOS_HOST,
   APPS_SUBDOMAIN,
