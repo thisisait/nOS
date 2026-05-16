@@ -66,9 +66,13 @@ the previous snapshot all completed — see git log between `7e2026c` and
    first non-operator end-to-end write to `wing.db`. Pre-reqs all done.
 2. **A9 — notification fanout** — bones-and-wings §Appendix B; follow
    inbox/approvals shape. Not started.
-3. **Tier-2 aggregator path** — extend `run_aggregators` with
-   `from: app_manifest` source; retire the empty `authentik_oidc_apps`
-   Tier-2 stub. Partial landing in commit `cf69ead` — verify.
+3. ~~**Tier-2 aggregator path** — extend `run_aggregators` with
+   `from: app_manifest` source.~~ DONE in `cf69ead` (X.3) — Tier-1 and
+   Tier-2 SSO flow through the same plugin aggregator now. The empty
+   `authentik_oidc_apps: []` stub remains as defensive default. Follow-up
+   (deferred — needs wet smoke): `roles/pazny.apps_runner/tasks/post.yml`
+   still mutates `authentik_oidc_apps` + `authentik_app_tiers` via
+   `set_fact` (lines 91-125), which is duplicate work post-cf69ead.
 4. ~~**INTEGRATION.md migration** — 9× role `INTEGRATION.md` files instructed
    adding rows to the retired central `authentik_oidc_apps` list. All
    roles are auto-wired via `files/anatomy/plugins/<svc>-base/plugin.yml`
@@ -81,9 +85,11 @@ the previous snapshot all completed — see git log between `7e2026c` and
 6. **D2 residual** (nice-to-have, not blocking): freescout / erpnext /
    homeassistant / superset / nodered / paperclip role tasks still use
    `| default(...)` pattern on vars not in `default.config.yml`.
-7. **One-shot migration scripts** — `tools/d12-annotate-plugins.py` +
-   `tools/aggregator-dry-run.py` shipped D1.x. Verify if still wired
-   into CI; if not, delete.
+7. ~~**One-shot migration scripts** — `tools/d12-annotate-plugins.py` +
+   `tools/aggregator-dry-run.py` shipped D1.x.~~ Verified 2026-05-16:
+   `aggregator-dry-run.py` is the active CI gate inside
+   `tests/e2e/journeys/test_plugin_contract.py`; `d12-annotate-plugins.py`
+   is idempotent and harmless — keep as utility.
 8. **Security backlog** — 12 pending `remediation_items` rows; Phase A
    (CVE pins) → B (mem/cpu limits) → C (hardening) → D (architectural).
    Vendor-blocked: Open WebUI ZDI CVEs, RustFS gRPC sigverify.

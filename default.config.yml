@@ -1495,15 +1495,16 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # would only have role defaults loaded for services they're actively running
 # include_role on. Lifting the port numbers up here makes the lookup succeed
 # and avoids the "default(80) → infinite loop on Traefik's own :80" footgun.
-# Domain hostname overrides — must match the value baked into authentik_oidc_apps
-# entries below. The Traefik file-provider falls back to '<id>.<tld>' when these
-# aren't defined, which would mismatch Authentik's redirect_uris and break SSO.
+# Domain hostname overrides — must match the value rendered inside each
+# plugin's authentik: block (e.g. files/anatomy/plugins/<svc>-base/plugin.yml).
+# The Traefik file-provider falls back to '<id>.<tld>' when these aren't defined,
+# which would mismatch Authentik's redirect_uris and break SSO.
 miniflux_domain: "rss{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 code_server_domain: "code{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 # Wave A/B service domains (added 2026-05-03 — without top-level definition,
-# nos-smoke catalog auto-derive skips them because vars_dict.get('<svc>_domain')
+# nos-smoke catalog auto-derive skipped them because vars_dict.get('<svc>_domain')
 # returned None even though the var was used inside Jinja default(...) filters
-# in authentik_oidc_apps. Surfaced during pazny.eu prod blank — 8 healthy
+# in plugin authentik: blocks. Surfaced during pazny.eu prod blank — 8 healthy
 # Wave A/B services were silently absent from the smoke output.)
 ntfy_domain: "ntfy{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 nodered_domain: "nodered{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"

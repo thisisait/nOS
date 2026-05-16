@@ -123,7 +123,8 @@
 
 # Persist OIDC settings into the options table. The freescout-oauth module
 # reads keys prefixed `oauth.*`; we upsert via tinker for idempotency so the
-# values always match the current authentik_oidc_apps + credentials state.
+# values always match the freescout-base plugin's authentik: block + the
+# credentials.yml state.
 - name: "[pazny.freescout Post][OIDC] Persist OIDC config (tinker UPSERT)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout \

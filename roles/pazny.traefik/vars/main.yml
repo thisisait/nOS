@@ -22,10 +22,11 @@
 # ==============================================================================
 
 #
-# Source of truth for native-OIDC vs proxy-auth: authentik_oidc_apps in
-# default.config.yml. Entries with `redirect_uris:` get an OAuth2 provider
-# (= service handles its own login); entries with `external_host:` +
-# `type: "proxy"` get a Proxy provider (= forward_auth via outpost).
+# Source of truth for native-OIDC vs proxy-auth: per-plugin `authentik:` block
+# in files/anatomy/plugins/<svc>-base/plugin.yml. Blocks with `mode: native_oidc`
+# get an OAuth2 provider (= service handles its own login); blocks with
+# `mode: forward_auth` get a Proxy provider (= forward_auth via outpost).
+# `mode: header_oidc` is a proxy provider that also stamps Remote-User headers.
 #
 # Matching the wrong mode here breaks login two ways:
 #   - oidc service marked as 'proxy' → Authentik outpost has no proxy

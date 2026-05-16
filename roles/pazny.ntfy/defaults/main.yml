@@ -3,8 +3,9 @@
 # pazny.ntfy — ntfy (self-hosted push notifications server, iiab compose stack)
 #
 # The service stores no secrets in default.credentials.yml — all authorization
-# goes through Authentik forward auth (proxy type in authentik_oidc_apps). ntfy
-# holds its own ACL in cache.db, but Authentik decides access to the web UI.
+# goes through Authentik forward auth (mode: forward_auth in the ntfy-base
+# plugin's authentik: block). ntfy holds its own ACL in cache.db, but
+# Authentik decides access to the web UI.
 # ==============================================================================
 
 ntfy_version: "v2.21.0"                               # https://github.com/binwiederhier/ntfy/releases
