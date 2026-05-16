@@ -19,7 +19,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
    - Enables `pgcrypto` extension in `template1` (inherited by new DBs)
    - On `blank=true` reset, drops the existing service databases and roles before recreating them
    - Restarts Authentik + Infisical after a blank DROP so they re-bootstrap cleanly
-   - Creates service databases: `outline`, `metabase`, `superset`, plus (conditionally) `authentik`, `infisical`, `mattermost`, `paperclip`
+   - Creates service databases: `outline`, `metabase`, `superset`, plus (conditionally) `authentik`, `infisical`, `paperclip`
    - Creates matching DB users with generated passwords
    - Enables `pgcrypto` in each service DB (required for bcrypt password hash reconverge in Metabase/Superset/n8n)
    - Grants all privileges + transfers ownership to each service user
@@ -43,7 +43,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
 | `postgresql_mem_limit` | `{{ docker_mem_limit_standard }}` | Defaults to `1g` |
 | `postgresql_cpus` | `{{ docker_cpus_standard }}` | Defaults to `1.0` |
 
-Service database/user/password triples (Authentik, Infisical, Outline, Metabase, Superset, Mattermost, Paperclip) stay in the top-level `default.config.yml` / `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.
+Service database/user/password triples (Authentik, Infisical, Outline, Metabase, Superset, Paperclip) stay in the top-level `default.config.yml` / `default.credentials.yml` so the blank-reset prefix rotation pattern continues to work.
 
 ## Usage
 

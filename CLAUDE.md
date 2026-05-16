@@ -284,7 +284,7 @@ Never edit `composer.json` and commit without `composer.lock` updates. Same prin
 ## Known Tech Debt
 
 - **ansible-core 2.24 jump (future):** Track J Phase 4 (commit `85b933b`) migrated `ansible_env` → `ansible_facts['env']` (9 occurrences); Track H Phases 1-6 (commits `6767e56..23d970b`) pinned the rest of the surface to 2.20 and verified forward-compat under 2.21.0rc1 (sandbox install, syntax + tests + ansible-lint production profile all clean). When upstream ships 2.24 stable, the actual upgrade is a single `requirements.yml` floor bump + collection version review + 1 blank — ~4 hours, not a Track. Floor today: ansible-core 2.20.5 (operator + CI matrix).
-- Mattermost removed (no ARM64 FOSS image); config retained for the future.
+- Mattermost removed (no ARM64 FOSS image). Vars + DB scaffolding purged 2026-05-16.
 - ERPNext migration occasionally fails on the first blank run (auto-retry implemented in `erpnext_post.yml`).
 - Jellyfin / Open WebUI: known upstream bugs on fresh DB init — first run may restart-loop until data regenerates.
 - Bluesky PDS federation not yet functional (the identity bridge creates accounts, but AT Protocol federation requires public DNS).

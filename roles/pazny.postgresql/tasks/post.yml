@@ -43,7 +43,6 @@
        + ((install_superset | default(false)) | ternary([superset_db_name | default('superset')], []))
        + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
        + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
-       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
        + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
@@ -88,7 +87,6 @@
        + ((install_superset | default(false)) | ternary([superset_db_user | default('superset')], []))
        + ((install_authentik | default(false)) | ternary([authentik_db_user | default('authentik')], []))
        + ((install_infisical | default(false)) | ternary([infisical_db_user | default('infisical')], []))
-       + ((install_mattermost | default(false)) | ternary([mattermost_db_user | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary([paperclip_db_user | default('paperclip')], []))
        + ((install_miniflux | default(false)) | ternary([miniflux_db_user | default('miniflux')], []))
        + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_user | default('hedgedoc')], []))
@@ -114,7 +112,6 @@
        + ((install_superset | default(false)) | ternary([superset_db_name | default('superset')], []))
        + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
        + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
-       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
        + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
@@ -150,8 +147,6 @@
          [{'user': authentik_db_user | default('authentik'), 'pass': authentik_db_password | default(global_password_prefix + '_pw_authentik_db')}], []))
        + ((install_infisical | default(false)) | ternary(
          [{'user': infisical_db_user | default('infisical'), 'pass': infisical_db_password | default(global_password_prefix + '_pw_infisical_db')}], []))
-       + ((install_mattermost | default(false)) | ternary(
-         [{'user': mattermost_db_user | default('mattermost'), 'pass': mattermost_db_password | default(global_password_prefix + '_pw_mattermost')}], []))
        + ((install_paperclip | default(false)) | ternary(
          [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(global_password_prefix + '_pw_paperclip')}], []))
        + ((install_miniflux | default(false)) | ternary(
@@ -180,7 +175,6 @@
        + ((install_superset | default(false)) | ternary([superset_db_name | default('superset')], []))
        + ((install_authentik | default(false)) | ternary([authentik_db_name | default('authentik')], []))
        + ((install_infisical | default(false)) | ternary([infisical_db_name | default('infisical')], []))
-       + ((install_mattermost | default(false)) | ternary([mattermost_db_name | default('mattermost')], []))
        + ((install_paperclip | default(false)) | ternary(['paperclip'], []))
        + ((install_miniflux | default(false)) | ternary([miniflux_db_name | default('miniflux')], []))
        + ((install_hedgedoc | default(false)) | ternary([hedgedoc_db_name | default('hedgedoc')], []))
@@ -210,8 +204,6 @@
          [{'db': authentik_db_name | default('authentik'), 'user': authentik_db_user | default('authentik')}], []))
        + ((install_infisical | default(false)) | ternary(
          [{'db': infisical_db_name | default('infisical'), 'user': infisical_db_user | default('infisical')}], []))
-       + ((install_mattermost | default(false)) | ternary(
-         [{'db': mattermost_db_name | default('mattermost'), 'user': mattermost_db_user | default('mattermost')}], []))
        + ((install_paperclip | default(false)) | ternary(
          [{'db': 'paperclip', 'user': paperclip_db_user | default('paperclip')}], []))
        + ((install_miniflux | default(false)) | ternary(

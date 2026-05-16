@@ -166,7 +166,10 @@ def test_provision_refuses_non_empty_data_dir_without_force(tmp_env):
 
 
 def test_provision_unsupported_service_rejected(tmp_env):
-    result = lib.run_action(_base_params(tmp_env, service="mattermost"),
+    # Any service-name not in the coexistence module's supported list should
+    # be rejected. We use a sentinel name (not a real service) so this test
+    # survives future role additions / removals.
+    result = lib.run_action(_base_params(tmp_env, service="nonexistent-service"),
                             ctx={"port_probe": _no_port_in_use})
     assert result.get("failed") is True
 

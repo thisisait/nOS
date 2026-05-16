@@ -298,9 +298,6 @@
         (install_freescout | default(false)) | ternary(
           [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
         +
-        (install_mattermost | default(false)) | ternary(
-          [mattermost_data_dir | default(ansible_facts['env']['HOME'] + '/mattermost')], [])
-        +
         (install_outline | default(false)) | ternary(
           [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
         +

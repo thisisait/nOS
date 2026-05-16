@@ -12,7 +12,6 @@ Add next to the other B2B toggles (around line 144–149):
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
 install_erpnext: false
 install_freescout: true
-install_mattermost: true
 install_outline: true
 install_firefly: false          # Firefly III - personal finance manager    [requires: MariaDB, Redis Docker]
 ```

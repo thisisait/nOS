@@ -323,7 +323,6 @@ install_rustfs: true             # RustFS – S3-compatible object storage (drop
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
 install_erpnext: false            # ⚠️  EXPERIMENTAL / NON-WORKING — see roles/pazny.erpnext/README.md (parked for rework, hard-blocked at role-load: requires erpnext_experimental_override: true to attempt enable)
 install_freescout: true          # FreeScout – helpdesk / ticketing                    [requires: MariaDB]
-install_mattermost: false        # Mattermost – REMOVED (no ARM64 FOSS image). DB/user retained for migration.
 install_outline: true            # Outline – team wiki / knowledge base                [requires: PostgreSQL, Redis Docker]
 install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker, requires: PostgreSQL]
 install_bookstack: false          # BookStack – wiki platform [Docker, requires: MariaDB]
@@ -922,7 +921,7 @@ mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data persistence outside the container
 
 # ==============================================================================
-# INFRA – POSTGRESQL (shared DB for Mattermost, Outline, Metabase, Superset)
+# INFRA – POSTGRESQL (shared DB for Authentik, Infisical, Outline, Metabase, Superset, Paperclip)
 # ==============================================================================
 
 install_postgresql: false
@@ -1599,20 +1598,6 @@ freescout_admin_first_name: "Admin"
 freescout_admin_last_name: "nOS"
 authentik_oidc_freescout_client_id: "nos-freescout"
 authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
-
-# ==============================================================================
-# B2B – MATTERMOST (team chat)
-# Requires: install_postgresql: true
-# ==============================================================================
-
-mattermost_domain: "chat{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-mattermost_port: 8065
-mattermost_version: "latest"
-mattermost_data_dir: "{{ ansible_facts['env']['HOME'] }}/mattermost"
-mattermost_db_name: "mattermost"
-mattermost_db_user: "mattermost"
-mattermost_db_password: "{{ global_password_prefix }}_pw_mattermost"
-mattermost_timezone: "Europe/Prague"
 
 # ==============================================================================
 # B2B – OUTLINE (team wiki / knowledge base)

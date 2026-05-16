@@ -844,7 +844,7 @@
       tags: ['restore', 'never']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Auto-enable dependencies (ERPNext → MariaDB+Redis, Mattermost → PostgreSQL, atd.)
+    # Auto-enable dependencies (ERPNext → MariaDB+Redis, Outline → PostgreSQL, atd.)
     # ──────────────────────────────────────────────────────────────────────────
     - name: Auto-enable MariaDB for services that require it
       ansible.builtin.set_fact:
@@ -866,7 +866,6 @@
         (install_authentik | default(false)) or
         (install_infisical | default(false)) or
         (install_paperclip | default(false)) or
-        (install_mattermost | default(false)) or
         (install_outline | default(false)) or
         (install_metabase | default(false)) or
         (install_superset | default(false)) or

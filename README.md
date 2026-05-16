@@ -431,7 +431,7 @@ nOS/
 - Bluesky PDS federation needs public DNS to be fully functional (account bridge works locally)
 - ERPNext first-run migration sometimes fails; `erpnext_post.yml` has an auto-retry
 - Jellyfin / Open WebUI may restart-loop on first DB init until data regenerates — expected
-- Mattermost removed (no ARM64 FOSS image); config retained for future
+- Mattermost removed (no ARM64 FOSS image)
 
 ---
 
