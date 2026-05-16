@@ -273,6 +273,51 @@ CREATE INDEX IF NOT EXISTS idx_gitleaks_severity          ON gitleaks_findings(s
 CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
 
 -- ============================================================================
+-- Notifications — operator-attention fanout (Anatomy A9, 2026-05-16)
+-- ============================================================================
+-- One row per notification. Wing /inbox renders unread rows for the target
+-- actor; the dispatch worker (bin/dispatch-notifications.php) reads pending
+-- rows where the channel is listed but the *_dispatched_at column is NULL,
+-- delivers per channel, and writes back the timestamp.
+--
+-- Severity routing comes from the originating plugin/agent manifest's
+-- `notification:` block; the aggregator (A9.5) precomputes the channel list
+-- at emission time so the dispatcher stays dumb. Default for any emission
+-- without a manifest mapping is wing-inbox-only (severity-agnostic).
+--
+-- A10 actor audit: actor_id + actor_action_id mirror events; a single
+-- agent_action_id groups the source event (e.g. gitleaks_finding_high) with
+-- its derived notification(s) so /audit reconstructs the lineage.
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                TEXT NOT NULL UNIQUE,           -- UUID4 minted at insert
+    severity            TEXT NOT NULL,                  -- critical|high|medium|low|info
+    title               TEXT NOT NULL,                  -- one-line subject (shown in inbox list)
+    body                TEXT,                           -- markdown / plain text detail
+    actor_id            TEXT,                           -- A10: who emitted (operator / agent:<name> / plugin:<slug>)
+    actor_action_id     TEXT,                           -- A10: groups with source event
+    target_actor_id     TEXT NOT NULL DEFAULT 'operator', -- whom to notify (Authentik client_id or 'operator')
+    origin_plugin       TEXT,                           -- plugin slug if plugin-emitted
+    origin_agent        TEXT,                           -- agent name if agent-emitted
+    source_event_id     INTEGER,                        -- soft FK events.id for audit deep-link
+    channels_json       TEXT NOT NULL DEFAULT '["wing-inbox"]',  -- JSON array: subset of [wing-inbox, ntfy, mail]
+    wing_inbox_read_at  TEXT,                           -- NULL = unread; mark-read action sets this
+    ntfy_dispatched_at  TEXT,                           -- NULL = pending (only meaningful if "ntfy" in channels)
+    ntfy_error          TEXT,
+    mail_dispatched_at  TEXT,
+    mail_error          TEXT,
+    metadata_json       TEXT NOT NULL DEFAULT '{}',     -- per-channel hints (ntfy click URL, mail recipients override, ...)
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread       ON notifications(target_actor_id, wing_inbox_read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_severity     ON notifications(severity);
+CREATE INDEX IF NOT EXISTS idx_notifications_actor_action ON notifications(actor_action_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at   ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_ntfy_pending ON notifications(ntfy_dispatched_at) WHERE ntfy_dispatched_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_mail_pending ON notifications(mail_dispatched_at) WHERE mail_dispatched_at IS NULL;
+
+-- ============================================================================
 -- AgentKit — AIT runtime (Anatomy A14, 2026-05-07)
 -- ============================================================================
 -- Five tables for the platform-agnostic, audit-first agent runtime. Every row

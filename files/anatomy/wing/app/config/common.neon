@@ -44,6 +44,11 @@ services:
 	# Gitleaks secret-scan findings (Anatomy A7, 2026-05-06).
 	- App\Model\GitleaksRepository
 
+	# Operator-attention notifications (Anatomy A9, 2026-05-16).
+	# Bone /api/v1/notifications inserts here; /inbox renders; dispatch
+	# worker (bin/dispatch-notifications.php) flushes ntfy/mail channels.
+	- App\Model\NotificationRepository
+
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
 
