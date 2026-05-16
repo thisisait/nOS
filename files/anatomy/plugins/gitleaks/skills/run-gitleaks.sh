@@ -178,6 +178,60 @@ SKIPPED=$(echo "$HTTP_BODY"  | jq -r '.skipped  // 0')
 
 echo "INFO: Wing ingest complete — inserted=$INSERTED skipped=$SKIPPED"
 
+# ── Notification fanout (Anatomy A9, 2026-05-16) ──────────────────────────────
+# When new findings landed, emit ONE summary notification per scan run.
+# Channels are resolved by Bone's routing fallback against gitleaks'
+# severity block (on_critical → wing-inbox+ntfy+mail; on_high → +ntfy;
+# on_medium → inbox only). Skipping when WING_EVENTS_HMAC_SECRET unset
+# (manual runs without the plist env still ingest, just don't notify).
+
+if [[ "$INSERTED" -gt 0 && -n "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
+    # Highest severity among the newly inserted findings — drives routing.
+    MAX_SEV=$(echo "$FINDINGS_JSON" | jq -r '
+        def rank: {"critical":0,"high":1,"medium":2,"low":3,"info":4};
+        map(rank[.severity]) | min as $best
+        | if $best == 0 then "critical"
+          elif $best == 1 then "high"
+          elif $best == 2 then "medium"
+          elif $best == 3 then "low"
+          else "info" end
+    ')
+    # Build a short markdown body: top-3 findings + count.
+    BODY_MD=$(echo "$FINDINGS_JSON" | jq -r --arg total "$INSERTED" '
+        "**" + $total + " new finding(s)**\n\n" +
+        (.[0:3] | map("- `\(.severity)` " + .rule_id + " @ " + .file_path + ":" + (.line_start|tostring)) | join("\n")) +
+        (if (. | length) > 3 then "\n\n…and " + ((. | length) - 3 | tostring) + " more." else "" end)
+    ')
+    NOTIF_BODY=$(jq -n \
+        --arg sev "$MAX_SEV" \
+        --arg title "Gitleaks: $INSERTED new secret finding(s)" \
+        --arg body "$BODY_MD" \
+        --arg scan_id "$SCAN_ID" \
+        --arg scan_dir "$SCAN_DIR" \
+        '{severity: $sev, title: $title, body: $body,
+          origin_plugin: "gitleaks", actor_id: "plugin:gitleaks",
+          actor_action_id: $scan_id,
+          metadata: {scan_dir: $scan_dir, scan_id: $scan_id}}')
+    NOTIF_BODY_COMPACT=$(echo "$NOTIF_BODY" | jq -c .)
+    TS=$(date +%s)
+    SIG=$(printf '%s.%s' "$TS" "$NOTIF_BODY_COMPACT" \
+          | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
+          | awk '{print $2}')
+    BONE_URL="${BONE_API_URL:-http://127.0.0.1:9000}"
+    NOTIF_CODE=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -X POST \
+        -H "X-Wing-Timestamp: $TS" \
+        -H "X-Wing-Signature: $SIG" \
+        -H "Content-Type: application/json" \
+        -d "$NOTIF_BODY_COMPACT" \
+        "$BONE_URL/api/v1/notifications" 2>&1 || echo "000")
+    if [[ "$NOTIF_CODE" == "200" || "$NOTIF_CODE" == "201" ]]; then
+        echo "INFO: notification emitted (severity=$MAX_SEV)"
+    else
+        echo "WARN: notification POST returned HTTP $NOTIF_CODE — findings ingested OK, audit only" >&2
+    fi
+fi
+
 if [[ "$INSERTED" -gt 0 ]]; then
     echo "WARN: $INSERTED new secret finding(s) — operator review needed"
     exit 1

@@ -57,6 +57,12 @@ pulse:
       env:
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ wing_api_token }}"
+        # A9 (2026-05-16): HMAC secret for emitting notifications via Bone's
+        # /api/v1/notifications endpoint after a scan finds new secrets.
+        # When unset the skill ingests findings but skips notification emit
+        # (manual runs without plist env still work).
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret | default('') }}"
+        BONE_API_URL: "http://127.0.0.1:9000"
         NOS_SCAN_DIR: "{{ playbook_dir }}"
         # Filter severity: only ingest findings at this level or above.
         # Values: critical | high | medium | low | info (lowest = ingest everything)
