@@ -210,6 +210,58 @@ def test_gitleaks_skill_emits_notification():
     assert "BONE_API_URL" in env
 
 
+def test_conductor_profile_declares_notification_routing():
+    """Second live consumer (agent path): conductor agent profile pins
+    its severity routing so pulse-run-agent.sh failures escalate."""
+    profile = yaml.safe_load(
+        (REPO / "files/anatomy/agents/conductor.yml").read_text()
+    )
+    notif = profile.get("notification") or {}
+    assert notif.get("on_critical") == ["wing-inbox", "ntfy", "mail"]
+    assert notif.get("on_high") == ["wing-inbox", "ntfy"]
+    assert notif.get("on_medium") == ["wing-inbox"]
+
+
+def test_pulse_run_agent_emits_notification_on_failure():
+    """The conductor runner posts a notification when CLAUDE_EXIT != 0.
+    Mirrors the gitleaks contract — Bone HMAC + origin_agent + severity
+    mapped to exit-code class.
+    """
+    script = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    assert "_post_wing_notification" in script
+    assert "/api/v1/notifications" in script
+    assert 'origin_agent: "conductor"' in script
+    # Exit-class → severity map.
+    assert 'NOTIF_SEV="critical"' in script
+    assert 'NOTIF_SEV="high"' in script
+    assert '"$CLAUDE_EXIT" -ne 0' in script
+
+
+def test_aggregator_agent_profile_sets_slug(tmp_path):
+    """A9.5 fix: agent_profile branch of the aggregator must stamp slug
+    + plugin_name so the rendered routing JSON has a stable key Bone can
+    look up via origin_agent.
+    """
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "plugin.yml").write_text(yaml.safe_dump({
+        "name": "src", "version": "0.1.0", "type": ["service"],
+        "aggregates": [{"from": "agent_profile",
+                        "block_path": "notification",
+                        "output_var": "agents"}],
+        "gdpr": {"data_categories": ["test"], "data_subjects": ["operator"],
+                 "legal_basis": "legitimate_interests", "retention_days": 365,
+                 "processors": []},
+    }))
+    plugins = load_plugins.discover(tmp_path)
+    profiles = [{"name": "conductor",
+                 "notification": {"on_critical": ["mail"], "on_high": []}}]
+    load_plugins.run_aggregators(plugins, agent_profiles=profiles)
+    routed = plugins[0].inputs.get("agents") or []
+    assert len(routed) == 1
+    assert routed[0]["slug"] == "conductor"
+    assert routed[0]["plugin_name"] == "conductor"
+
+
 def test_aggregator_harvests_notification_blocks(tmp_path):
     """End-to-end aggregator smoke — wing-base picks up peer blocks."""
     (tmp_path / "wing-base").mkdir()

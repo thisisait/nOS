@@ -316,6 +316,16 @@ def run_aggregators(plugins: list[Plugin],
                     if isinstance(block, dict):
                         if tvars:
                             block = _deep_render(block, tvars)
+                        # A9.5 (2026-05-16): mirror the consumer_block path
+                        # — agent profiles also need a stable slug so the
+                        # routing JSON has a key that Bone can look up via
+                        # origin_agent. Without this, every harvested agent
+                        # block keys as 'unknown' and notification routing
+                        # silently falls through to wing-inbox-only.
+                        agent_name = ap.get("name")
+                        if agent_name:
+                            block.setdefault("slug", agent_name)
+                            block.setdefault("plugin_name", agent_name)
                         harvested.append(block)
             elif from_kind == "app_manifest":
                 # Tier-2 source. App manifests have shape:

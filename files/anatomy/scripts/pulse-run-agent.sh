@@ -103,6 +103,35 @@ _post_wing_event() {
     fi
 }
 
+# POST a Bone notification with HMAC auth (Anatomy A9, 2026-05-16). Args:
+# <severity> <title> <body_markdown>. Channels resolved by Bone via the
+# conductor agent_profile's notification: routing block.
+_post_wing_notification() {
+    local sev="$1" title="$2" body_md="$3"
+    local payload ts sig
+    payload=$(jq -nc \
+        --arg sev "$sev" --arg title "$title" --arg body "$body_md" \
+        --arg actor "$ACTOR_ID" --arg action_id "$ACTOR_ACTION_ID" \
+        '{severity: $sev, title: $title, body: $body,
+          origin_agent: "conductor", actor_id: ("agent:" + $actor),
+          actor_action_id: $action_id}')
+    ts=$(date +%s)
+    sig=$(printf '%s.%s' "$ts" "$payload" \
+          | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
+          | awk '{print $2}')
+    local code
+    code=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -X POST \
+        -H "X-Wing-Timestamp: $ts" \
+        -H "X-Wing-Signature: $sig" \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        "$WING_API_URL/api/v1/notifications" 2>&1 || echo "000")
+    if [[ "$code" != "200" && "$code" != "201" ]]; then
+        echo "WARN: notification POST returned HTTP $code" >&2
+    fi
+}
+
 # ── Authentik client_credentials ─────────────────────────────────────────────
 
 TOKEN_URL="${AUTHENTIK_URL%/}/application/o/token/"
@@ -188,6 +217,23 @@ RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200 | tr '"\\' " 
 _post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"conductor","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","result":{"exit_code":%d,"summary":"%s"}}' \
     "$TS_END" "$RUN_ID" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_END" \
     "$CLAUDE_EXIT" "$RESULT_SUMMARY")"
+
+# ── A9 notification on non-zero exit ──────────────────────────────────────────
+# Exit 1 = conductor reported actionable findings (operator review).
+# Exit ≥2 = environment / auth / Wing error (operator must investigate).
+# Channels resolved by Bone via the conductor agent profile's notification
+# routing block (high/critical fan out to ntfy + mail per the routing).
+if [[ "$CLAUDE_EXIT" -ne 0 ]]; then
+    if [[ "$CLAUDE_EXIT" -ge 2 ]]; then
+        NOTIF_SEV="critical"
+    else
+        NOTIF_SEV="high"
+    fi
+    NOTIF_TITLE="Conductor self-test exit=$CLAUDE_EXIT (run=$RUN_ID)"
+    NOTIF_BODY=$(printf '**run_id:** %s\n**task:** %s\n**exit:** %d\n\n```\n%s\n```' \
+        "$RUN_ID" "${TASK_PROMPT:0:120}" "$CLAUDE_EXIT" "$(echo "${CLAUDE_OUTPUT:-}" | tail -10)")
+    _post_wing_notification "$NOTIF_SEV" "$NOTIF_TITLE" "$NOTIF_BODY"
+fi
 
 echo "INFO: conductor finished (exit=$CLAUDE_EXIT)"
 exit "$CLAUDE_EXIT"

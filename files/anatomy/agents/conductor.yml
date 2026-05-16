@@ -47,6 +47,19 @@ system_prompt: |
   5. Exit 0 if all checks passed or findings are already known.
      Exit 1 if new actionable findings were discovered.
 
+# ── Notification routing (Anatomy A9.5, 2026-05-16) ──────────────────────────
+# When pulse-run-agent.sh detects a non-zero conductor exit, it POSTs one
+# summary notification to Bone /api/v1/notifications with severity = high
+# (CLAUDE_EXIT == 1, conductor reported actionable findings) or critical
+# (CLAUDE_EXIT >= 2, environment/auth error). Bone's clients/wing.py looks
+# up this routing block via the wing-base aggregator and resolves channels.
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
 # ── Capability scopes ─────────────────────────────────────────────────────────
 # Matches authentik_agent_clients[nos-conductor].capabilities in default.config.yml.
 capabilities:
