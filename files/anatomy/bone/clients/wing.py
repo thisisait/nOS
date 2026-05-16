@@ -198,3 +198,145 @@ def query_events(
         )
         cols = [c[0] for c in cur.description]
         return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+# ── Notifications (Anatomy A9, 2026-05-16) ─────────────────────────────
+#
+# Mirrors the events shape: insert + query, single-seam access to
+# wing.db.notifications. Bone /api/v1/notifications POST inserts here;
+# the dispatch worker (Wing CLI bin/dispatch-notifications.php) does the
+# per-channel flush directly against wing.db so there's no Bone round-trip
+# for ntfy/mail delivery.
+
+
+def _new_uuid4() -> str:
+    """UUID4 — local helper so Bone's only crypto dep stays hmac/random."""
+    import uuid
+    return str(uuid.uuid4())
+
+
+_VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
+_VALID_CHANNELS = {"wing-inbox", "ntfy", "mail"}
+
+
+def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
+    """Insert a notification row. Returns (id, uuid).
+
+    Caller (Bone POST handler) does the HMAC + schema check; this is the
+    last-defense whitelist (severity + channels). Title required, body
+    optional. channels defaults to ["wing-inbox"] when missing/empty.
+
+    A10 actor audit: actor_id + actor_action_id are stored as-passed.
+    source_event_id (soft FK events.id) lets /inbox deep-link the
+    originating event row when a notification is event-derived.
+    """
+    severity = payload.get("severity") or "info"
+    if severity not in _VALID_SEVERITIES:
+        raise ValueError(f"invalid severity: {severity}")
+
+    channels = payload.get("channels") or ["wing-inbox"]
+    if not isinstance(channels, list) or not channels:
+        channels = ["wing-inbox"]
+    channels = list(dict.fromkeys(channels))  # de-dupe preserving order
+    for ch in channels:
+        if ch not in _VALID_CHANNELS:
+            raise ValueError(f"invalid channel: {ch}")
+
+    title = payload.get("title") or ""
+    if not title:
+        raise ValueError("title is required")
+
+    metadata = payload.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        raise ValueError("metadata must be an object")
+
+    uuid_ = payload.get("uuid") or _new_uuid4()
+
+    with _open() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO notifications
+              (uuid, severity, title, body,
+               actor_id, actor_action_id, target_actor_id,
+               origin_plugin, origin_agent, source_event_id,
+               channels_json, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                uuid_,
+                severity,
+                title,
+                payload.get("body"),
+                payload.get("actor_id"),
+                payload.get("actor_action_id"),
+                payload.get("target_actor_id") or "operator",
+                payload.get("origin_plugin"),
+                payload.get("origin_agent"),
+                int(payload["source_event_id"]) if payload.get("source_event_id") is not None else None,
+                json.dumps(channels),
+                json.dumps(metadata),
+            ),
+        )
+        conn.commit()
+        return int(cur.lastrowid or 0), uuid_
+
+
+def query_notifications(
+    *,
+    target_actor_id: str = "operator",
+    severity: str | None = None,
+    unread_only: bool = False,
+    since: str | None = None,
+    actor_action_id: str | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """Paginated notification query. Same shape as query_events.
+
+    Filters with None/False are skipped. ``limit`` is clamped to [1, 500].
+    Parameterized — all filters go through ``?`` placeholders.
+    """
+    clauses: list[str] = ["target_actor_id = ?"]
+    params: list[Any] = [target_actor_id]
+
+    if severity is not None:
+        clauses.append("severity = ?")
+        params.append(severity)
+    if unread_only:
+        clauses.append("wing_inbox_read_at IS NULL")
+    if since is not None:
+        clauses.append("created_at >= ?")
+        params.append(since)
+    if actor_action_id is not None:
+        clauses.append("actor_action_id = ?")
+        params.append(actor_action_id)
+
+    where = f"WHERE {' AND '.join(clauses)}"
+    limit = max(1, min(500, int(limit)))
+
+    with _open() as conn:
+        cur = conn.execute(
+            "SELECT id, uuid, severity, title, body, "
+            "actor_id, actor_action_id, target_actor_id, "
+            "origin_plugin, origin_agent, source_event_id, "
+            "channels_json, wing_inbox_read_at, "
+            "ntfy_dispatched_at, ntfy_error, "
+            "mail_dispatched_at, mail_error, "
+            "metadata_json, created_at "
+            f"FROM notifications {where} ORDER BY id DESC LIMIT ?",
+            (*params, limit),
+        )
+        cols = [c[0] for c in cur.description]
+        rows = []
+        for raw in cur.fetchall():
+            row = dict(zip(cols, raw))
+            # Decode JSON columns for convenience.
+            try:
+                row["channels"] = json.loads(row.pop("channels_json") or "[]")
+            except json.JSONDecodeError:
+                row["channels"] = []
+            try:
+                row["metadata"] = json.loads(row.pop("metadata_json") or "{}")
+            except json.JSONDecodeError:
+                row["metadata"] = {}
+            rows.append(row)
+        return rows

@@ -256,6 +256,7 @@ try:  # noqa: SIM105
     import patches as _nos_patches  # type: ignore
     import coexistence as _nos_coexistence  # type: ignore
     import events as _nos_events  # type: ignore
+    import notifications as _nos_notifications  # type: ignore
     _FRAMEWORK_READY = True
 except Exception as _framework_err:  # noqa: BLE001
     _FRAMEWORK_READY = False
@@ -604,6 +605,101 @@ async def events_list(
         since=since,
         migration_id=migration_id,
         upgrade_id=upgrade_id,
+        limit=limit,
+    )
+    return {"items": rows, "count": len(rows)}
+
+
+# ---- /api/v1/notifications (Anatomy A9, 2026-05-16) -----------------------
+# Operator-attention fanout. Plugins + agents POST a notification with
+# severity + title + channel routing; Wing inserts into wing.db.notifications.
+# Reads happen Wing-side (NotificationRepository); this endpoint exists so
+# external emitters (Pulse-fired scripts, AgentKit runner, manual curl) have
+# a single HMAC-authenticated write seam — matches /api/v1/events shape.
+
+
+@app.post("/api/v1/notifications")
+async def notifications_ingest(
+    x_wing_timestamp: str = Header(default=""),
+    x_wing_signature: str = Header(default=""),
+    body: dict | None = None,
+):
+    """HMAC-authenticated notification ingestion. Writes wing.db.notifications.
+
+    Body shape:
+      severity: critical|high|medium|low|info   (required)
+      title:    str                              (required, ≤500 chars)
+      body:     str                              (optional, markdown)
+      channels: [wing-inbox|ntfy|mail]           (optional, default [wing-inbox])
+      target_actor_id: str                       (optional, default "operator")
+      actor_id, actor_action_id:                 (optional, A10 audit lineage)
+      origin_plugin, origin_agent:               (optional, attribution hints)
+      source_event_id: int                       (optional, soft FK events.id)
+      metadata: object                           (optional, per-channel hints)
+
+    Batches accepted as {"notifications": [...]}; single-object payloads
+    also accepted for hand-curl tests.
+    """
+    _require_framework()
+    raw = json.dumps(body or {}, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ok, err = _nos_notifications.verify_hmac(
+        x_wing_timestamp, x_wing_signature, raw
+    )
+    if not ok:
+        raise HTTPException(status_code=401, detail=f"HMAC check failed: {err}")
+
+    payload = body or {}
+    if "notifications" in payload and isinstance(payload["notifications"], list):
+        items = payload["notifications"]
+    else:
+        items = [payload]
+
+    accepted: list[dict] = []
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400,
+                                detail=f"notifications[{idx}]: not a JSON object")
+        verr = _nos_notifications.validate_payload(item)
+        if verr is not None:
+            raise HTTPException(status_code=400,
+                                detail=f"notifications[{idx}]: {verr}")
+        try:
+            row_id, uuid_ = _nos_notifications.insert_notification(item)
+            accepted.append({"id": row_id, "uuid": uuid_})
+        except _nos_events.WingDBNotReady as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+        except ValueError as exc:
+            raise HTTPException(status_code=400,
+                                detail=f"notifications[{idx}]: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=500,
+                                detail=f"notifications[{idx}] insert failed: {exc}")
+    return {"accepted": True, "count": len(accepted), "items": accepted}
+
+
+@app.get("/api/v1/notifications")
+async def notifications_list(
+    target_actor_id: str = "operator",
+    severity: str | None = None,
+    unread_only: bool = False,
+    since: str | None = None,
+    actor_action_id: str | None = None,
+    limit: int = 100,
+    _=Depends(require_scope("nos:state:read")),
+):
+    """Paginated notification query — convenience for CLI users + dispatch
+    worker scripts that want to check what's pending without opening
+    sqlite3 directly. Wing's /inbox UI reads via the Wing-side
+    NotificationRepository, not this route.
+    """
+    _require_framework()
+    from clients import wing as _wing
+    rows = _wing.query_notifications(
+        target_actor_id=target_actor_id,
+        severity=severity,
+        unread_only=unread_only,
+        since=since,
+        actor_action_id=actor_action_id,
         limit=limit,
     )
     return {"items": rows, "count": len(rows)}
