@@ -5,7 +5,7 @@
 # Credentials (firefly_db_password, firefly_app_key) live in
 # default.credentials.yml — centralized for prefix rotation.
 # firefly_app_key is the Laravel APP_KEY (base64:<32b>) — auto-generated
-# by main.yml on the first blank=true run (see INTEGRATION.md).
+# by main.yml on the first blank=true run.
 #
 # Firefly III uses the remote_user_guard pattern: Authentik handles authentication
 # proxy outpost via nginx auth_request, Firefly receives the REMOTE_USER header.

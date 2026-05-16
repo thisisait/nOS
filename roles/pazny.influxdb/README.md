@@ -51,7 +51,7 @@ From `tasks/stacks/core-up.yml`, gated on `install_influxdb`:
   tags: ['influxdb', 'observability']
 ```
 
-See `INTEGRATION.md` for full wiring instructions.
+Auto-wired via `files/anatomy/plugins/influxdb-base/plugin.yml`. Flip `install_influxdb: true` and re-run the playbook.
 
 ## Future work
 

@@ -17,7 +17,7 @@ Single invocation from `tasks/stacks/stack-up.yml`:
 ## Requirements
 
 - Docker Desktop for Mac (ARM64)
-- `install_mariadb: true` — MariaDB is the primary datastore; the `firefly` database + user are auto-provisioned by `pazny.mariadb/tasks/post.yml` (see INTEGRATION.md)
+- `install_mariadb: true` — MariaDB is the primary datastore; the `firefly` database + user are auto-provisioned by `pazny.mariadb/tasks/post.yml`
 - `redis_docker: true` — session / cache driver
 - `stacks_shared_network` defined at the play level
 - `install_authentik: true` (recommended) — enables the `remote_user_guard` env vars and nginx forward-auth include
@@ -44,7 +44,7 @@ Single invocation from `tasks/stacks/stack-up.yml`:
 Stay in `default.credentials.yml`:
 
 - `firefly_db_password` — MariaDB user password
-- `firefly_app_key` — Laravel `APP_KEY` (`base64:<32b>`). Auto-generated on `blank=true` runs via `main.yml` (see INTEGRATION.md). **Changing this invalidates on-disk encrypted data.**
+- `firefly_app_key` — Laravel `APP_KEY` (`base64:<32b>`). Auto-generated on `blank=true` runs via `main.yml`. **Changing this invalidates on-disk encrypted data.**
 
 ## SSO (Authentik)
 
@@ -60,7 +60,7 @@ Access-tier: **Tier 2 (manager)** — finance data is sensitive. See `authentik_
 
 ## Integration points
 
-See **`INTEGRATION.md`** for the exact `default.config.yml` / `default.credentials.yml` / `main.yml` / `tasks/stacks/core-up.yml` / `tasks/stacks/stack-up.yml` edits required to wire the role in.
+Auto-wired via `files/anatomy/plugins/firefly-base/plugin.yml` (compose extension + Authentik `header_oidc` block + Traefik route). Flipping `install_firefly: true` in `config.yml` is the only operator action required.
 
 ## Smoke test
 

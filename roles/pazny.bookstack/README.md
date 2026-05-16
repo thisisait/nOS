@@ -12,4 +12,4 @@ BookStack wiki platform (library/book/chapter structure) as a Docker compose ove
 
 The role renders the compose override to `{{ stacks_dir }}/b2b/overrides/bookstack.yml`, which `tasks/stacks/stack-up.yml` picks up via `find` and passes as a `-f` flag to `docker compose up b2b`.
 
-For the full integration checklist (install toggle, authentik_oidc_apps, mariadb_databases, nginx vhost, secrets) see `INTEGRATION.md`.
+Integration is auto-wired via `files/anatomy/plugins/bookstack-base/plugin.yml` (compose extension, Authentik OIDC client, RBAC tier, Traefik route). Flipping `install_bookstack: true` is the only operator action needed.

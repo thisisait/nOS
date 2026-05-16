@@ -69,11 +69,12 @@ the previous snapshot all completed — see git log between `7e2026c` and
 3. **Tier-2 aggregator path** — extend `run_aggregators` with
    `from: app_manifest` source; retire the empty `authentik_oidc_apps`
    Tier-2 stub. Partial landing in commit `cf69ead` — verify.
-4. **INTEGRATION.md migration** — 9× role `INTEGRATION.md` files still
-   instruct adding rows to the retired central `authentik_oidc_apps`
-   list. Post-D1.3 doctrine is per-plugin `authentik:` block in
-   `files/anatomy/plugins/<svc>-base/plugin.yml`. Migrate (or delete if
-   the role is now auto-wired). Also 10× role README + `TODO.md:40`.
+4. ~~**INTEGRATION.md migration** — 9× role `INTEGRATION.md` files instructed
+   adding rows to the retired central `authentik_oidc_apps` list. All
+   roles are auto-wired via `files/anatomy/plugins/<svc>-base/plugin.yml`
+   now, so the obsolete onboarding flows were deleted in commit
+   following 2026-05-16. `TODO.md:40` + 3 role READMEs updated to point
+   at the plugin manifest instead.~~ DONE.
 5. **Doc drift** — `bones-and-wings-refactor.md` Appendix B still marks
    A7/A8/A10 NOT STARTED (all shipped). `handoff-next-parallel-session.md`
    Track A says Q3-Q7 TODO (shipped). Update or replace.

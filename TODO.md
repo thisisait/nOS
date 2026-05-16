@@ -37,7 +37,7 @@ roles/pazny.<service>/
   tasks/post.yml         # (opt.) admin init, OIDC config, DB migrations
   templates/compose.yml.j2
 ```
-Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` toggle in `default.config.yml` + (optionally) nginx vhost + `authentik_oidc_apps` entry.
+Wire-up: `include_role` in `core-up.yml` / `stack-up.yml` + `install_<service>` toggle in `default.config.yml` + (optionally) nginx vhost + a per-plugin `authentik:` block in `files/anatomy/plugins/<svc>-base/plugin.yml` (post-D1.3 doctrine; the central `authentik_oidc_apps` list was retired 2026-05-05).
 
 ### Priority 1 — Infra / DevOps (extend existing devops stack)  —  ✅ DONE (Wave A)
 
