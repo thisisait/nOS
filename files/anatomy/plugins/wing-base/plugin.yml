@@ -84,6 +84,34 @@ authentik:
 # the loader to do.
 
 # =============================================================================
+# PULSE JOB — notification dispatch worker (Anatomy A9, 2026-05-16)
+#
+# Flushes the wing.db.notifications table to ntfy + mail. Idempotent —
+# per-row dispatched_at marker is the lock; partial failures stamp the
+# error column and re-try on the next tick (Pulse polls every minute).
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: dispatch-notifications
+      runner: subprocess
+      command: "/opt/homebrew/bin/php"
+      args:
+        - "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/bin/dispatch-notifications.php"
+      schedule: "* * * * *"        # every minute; cheap when queue is empty
+      jitter_min: 0
+      max_runtime_s: 30
+      max_concurrent: 1
+      env:
+        WING_DB_PATH: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/wing.db"
+        NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
+        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
+        MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"
+        MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
+        MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
+        DISPATCH_BATCH_LIMIT: "50"
+
+# =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
 # =============================================================================
 

@@ -1,0 +1,296 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Wing notification dispatch worker (Anatomy A9, 2026-05-16).
+ *
+ * Reads pending notifications from wing.db (channels_json contains "ntfy" or
+ * "mail" AND the matching *_dispatched_at column is NULL), delivers them, and
+ * stamps the per-channel dispatched_at + error column on the row.
+ *
+ * Designed for Pulse-eligible execution (runner=subprocess, every minute by
+ * default) — idempotent, partial-failure-safe, no lock files (per-row
+ * dispatched_at marker is the lock).
+ *
+ * Channels:
+ *   ntfy  — HTTP POST to NTFY_URL/nos-<severity> with title + body
+ *   mail  — Raw SMTP to MAIL_HOST:MAIL_PORT (dev-mode: no TLS, no auth,
+ *           targeted at mailpit). Stalwart TLS path is future work — the
+ *           script no-ops with a clear log if MAIL_HOST is empty.
+ *
+ * Env vars (read at startup):
+ *   WING_DB_PATH           default: ~/wing/app/data/wing.db
+ *   NTFY_URL               default: http://127.0.0.1:2586    (empty = skip)
+ *   MAIL_HOST              default: 127.0.0.1                (empty = skip)
+ *   MAIL_PORT              default: 1025
+ *   MAIL_FROM              default: wing@dev.local
+ *   MAIL_RECIPIENT         required if MAIL_HOST set (operator address)
+ *   DISPATCH_BATCH_LIMIT   default: 50 per channel per run
+ *   DISPATCH_DRY_RUN       1 = log only, do not deliver, do not stamp
+ *
+ * Exit codes:
+ *   0  — clean run (zero or more deliveries, no fatal errors)
+ *   1  — fatal: schema missing, DB unreadable
+ *   2  — partial: at least one delivery failed (notification stamped with
+ *        error, but the run completed — Pulse re-tries on next tick)
+ */
+
+$wingDb = getenv('WING_DB_PATH') ?: ($_SERVER['HOME'] . '/wing/app/data/wing.db');
+$ntfyUrl = getenv('NTFY_URL') ?: 'http://127.0.0.1:2586';
+$mailHost = getenv('MAIL_HOST') ?: '127.0.0.1';
+$mailPort = (int) (getenv('MAIL_PORT') ?: 1025);
+$mailFrom = getenv('MAIL_FROM') ?: 'wing@dev.local';
+$mailRecipient = getenv('MAIL_RECIPIENT') ?: '';
+$batchLimit = (int) (getenv('DISPATCH_BATCH_LIMIT') ?: 50);
+$dryRun = (getenv('DISPATCH_DRY_RUN') === '1');
+
+if (!file_exists($wingDb)) {
+	fwrite(STDERR, "fatal: wing.db not found at {$wingDb}\n");
+	exit(1);
+}
+
+try {
+	$db = new SQLite3($wingDb);
+	$db->enableExceptions(true);
+} catch (\Throwable $exc) {
+	fwrite(STDERR, "fatal: cannot open wing.db: {$exc->getMessage()}\n");
+	exit(1);
+}
+
+$partial = false;
+$delivered = ['ntfy' => 0, 'mail' => 0];
+$failed    = ['ntfy' => 0, 'mail' => 0];
+
+/**
+ * Fetch pending rows for a channel — the channel must appear in
+ * channels_json AND the per-channel dispatched_at column must be NULL.
+ */
+function fetch_pending(SQLite3 $db, string $channel, int $limit): array
+{
+	$col = $channel === 'ntfy' ? 'ntfy_dispatched_at' : 'mail_dispatched_at';
+	$stmt = $db->prepare("
+		SELECT id, uuid, severity, title, body, channels_json, metadata_json,
+		       actor_id, origin_plugin, origin_agent, created_at
+		  FROM notifications
+		 WHERE {$col} IS NULL
+		   AND channels_json LIKE :pattern
+		 ORDER BY id ASC
+		 LIMIT :limit
+	");
+	$stmt->bindValue(':pattern', '%"' . $channel . '"%', SQLITE3_TEXT);
+	$stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+	$res = $stmt->execute();
+	$rows = [];
+	while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+		$r['channels'] = json_decode($r['channels_json'] ?? '[]', true) ?: [];
+		$r['metadata'] = json_decode($r['metadata_json'] ?? '{}', true) ?: [];
+		$rows[] = $r;
+	}
+	return $rows;
+}
+
+function mark_dispatched(SQLite3 $db, string $uuid, string $channel, ?string $error): void
+{
+	$tsCol  = $channel === 'ntfy' ? 'ntfy_dispatched_at' : 'mail_dispatched_at';
+	$errCol = $channel === 'ntfy' ? 'ntfy_error'         : 'mail_error';
+	$now = gmdate('c');
+	if ($error === null || $error === '') {
+		$stmt = $db->prepare("UPDATE notifications SET {$tsCol} = :ts WHERE uuid = :uuid");
+		$stmt->bindValue(':ts', $now, SQLITE3_TEXT);
+	} else {
+		$stmt = $db->prepare("UPDATE notifications SET {$tsCol} = :ts, {$errCol} = :err WHERE uuid = :uuid");
+		$stmt->bindValue(':ts', $now, SQLITE3_TEXT);
+		$stmt->bindValue(':err', substr($error, 0, 500), SQLITE3_TEXT);
+	}
+	$stmt->bindValue(':uuid', $uuid, SQLITE3_TEXT);
+	$stmt->execute();
+}
+
+/**
+ * Deliver one notification to ntfy. Topic = nos-<severity>. Title + body
+ * become the ntfy headers/body. Returns null on success, error string on
+ * failure.
+ */
+function deliver_ntfy(array $row, string $baseUrl): ?string
+{
+	$topic = 'nos-' . strtolower($row['severity']);
+	$url = rtrim($baseUrl, '/') . '/' . rawurlencode($topic);
+
+	$priority = match (strtolower($row['severity'])) {
+		'critical' => '5',
+		'high'     => '4',
+		'medium'   => '3',
+		'low'      => '2',
+		default    => '1',
+	};
+
+	$tagMap = ['critical' => 'rotating_light', 'high' => 'warning', 'medium' => 'large_orange_diamond', 'low' => 'information_source', 'info' => 'speech_balloon'];
+	$tag = $tagMap[strtolower($row['severity'])] ?? 'speech_balloon';
+
+	$headers = [
+		'Title: ' . substr($row['title'], 0, 250),
+		'Priority: ' . $priority,
+		'Tags: ' . $tag,
+	];
+	$click = $row['metadata']['click_url'] ?? null;
+	if ($click) {
+		$headers[] = 'Click: ' . $click;
+	}
+
+	$ch = curl_init($url);
+	curl_setopt_array($ch, [
+		CURLOPT_RETURNTRANSFER => true,
+		CURLOPT_POST           => true,
+		CURLOPT_POSTFIELDS     => (string) ($row['body'] ?? ''),
+		CURLOPT_HTTPHEADER     => $headers,
+		CURLOPT_TIMEOUT        => 5,
+		CURLOPT_CONNECTTIMEOUT => 3,
+	]);
+	$resp = curl_exec($ch);
+	$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$cerr   = curl_error($ch);
+	curl_close($ch);
+
+	if ($resp === false || $status === 0) {
+		return "ntfy unreachable at {$url}: {$cerr}";
+	}
+	if ($status >= 400) {
+		return "ntfy HTTP {$status}: " . substr((string) $resp, 0, 200);
+	}
+	return null;
+}
+
+/**
+ * Deliver one notification via raw SMTP. No TLS, no auth — targeted at the
+ * mailpit dev sink. Returns null on success, error string on failure.
+ *
+ * Stalwart-over-TLS path is future work; if MAIL_HOST is on a non-loopback
+ * address operators must front it with something that strips/handles TLS
+ * (or wait for the Stalwart-aware rewrite). This script intentionally stays
+ * thin so the dispatch loop remains debuggable.
+ */
+function deliver_mail(array $row, string $host, int $port, string $from, string $recipient): ?string
+{
+	if ($recipient === '') {
+		return 'MAIL_RECIPIENT env var is empty';
+	}
+	$errno = 0;
+	$errstr = '';
+	$sock = @fsockopen($host, $port, $errno, $errstr, 5);
+	if (!$sock) {
+		return "SMTP connect failed {$host}:{$port}: {$errstr}";
+	}
+	stream_set_timeout($sock, 5);
+
+	$expect = function (string $expectedPrefix) use ($sock): ?string {
+		$line = fgets($sock, 1024);
+		if ($line === false) {
+			return 'SMTP read timed out';
+		}
+		if (strpos($line, $expectedPrefix) !== 0) {
+			return 'SMTP unexpected reply: ' . trim($line);
+		}
+		return null;
+	};
+
+	$send = function (string $line) use ($sock): void {
+		fwrite($sock, $line . "\r\n");
+	};
+
+	if (($err = $expect('220')) !== null) { fclose($sock); return $err; }
+	$send('EHLO wing.localhost');
+	// Drain multi-line 250 reply.
+	while (($line = fgets($sock, 1024)) !== false) {
+		if (preg_match('/^\d{3} /', $line)) break;
+	}
+	$send('MAIL FROM:<' . $from . '>');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('RCPT TO:<' . $recipient . '>');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('DATA');
+	if (($err = $expect('354')) !== null) { fclose($sock); return $err; }
+
+	$subject = '[nOS][' . strtoupper($row['severity']) . '] ' . substr($row['title'], 0, 200);
+	$bodyText = ($row['body'] ?? '');
+	$origin = '';
+	if (!empty($row['origin_plugin'])) {
+		$origin = 'plugin:' . $row['origin_plugin'];
+	} elseif (!empty($row['origin_agent'])) {
+		$origin = 'agent:' . $row['origin_agent'];
+	} elseif (!empty($row['actor_id'])) {
+		$origin = $row['actor_id'];
+	}
+
+	$msg = "From: nOS Wing <{$from}>\r\n";
+	$msg .= "To: <{$recipient}>\r\n";
+	$msg .= "Subject: {$subject}\r\n";
+	$msg .= "X-NOS-Severity: {$row['severity']}\r\n";
+	$msg .= "X-NOS-Origin: {$origin}\r\n";
+	$msg .= "X-NOS-Notification-UUID: {$row['uuid']}\r\n";
+	$msg .= "Content-Type: text/plain; charset=utf-8\r\n";
+	$msg .= "\r\n";
+	$msg .= $bodyText;
+	// SMTP dot-stuffing — escape leading dots so "." on its own line stays an end marker.
+	$msg = preg_replace('/^\./m', '..', $msg);
+	$send($msg);
+	$send('.');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('QUIT');
+	fclose($sock);
+	return null;
+}
+
+// ── Process ntfy channel ────────────────────────────────────────────────
+if ($ntfyUrl === '') {
+	echo "ntfy: skipped (NTFY_URL empty)\n";
+} else {
+	$rows = fetch_pending($db, 'ntfy', $batchLimit);
+	echo "ntfy: " . count($rows) . " pending\n";
+	foreach ($rows as $row) {
+		if ($dryRun) {
+			echo "  DRYRUN ntfy {$row['uuid']} [{$row['severity']}] {$row['title']}\n";
+			continue;
+		}
+		$err = deliver_ntfy($row, $ntfyUrl);
+		mark_dispatched($db, $row['uuid'], 'ntfy', $err);
+		if ($err === null) {
+			$delivered['ntfy']++;
+			echo "  OK ntfy {$row['uuid']}\n";
+		} else {
+			$failed['ntfy']++;
+			$partial = true;
+			echo "  FAIL ntfy {$row['uuid']}: {$err}\n";
+		}
+	}
+}
+
+// ── Process mail channel ────────────────────────────────────────────────
+if ($mailHost === '' || $mailRecipient === '') {
+	echo "mail: skipped (MAIL_HOST or MAIL_RECIPIENT empty)\n";
+} else {
+	$rows = fetch_pending($db, 'mail', $batchLimit);
+	echo "mail: " . count($rows) . " pending\n";
+	foreach ($rows as $row) {
+		if ($dryRun) {
+			echo "  DRYRUN mail {$row['uuid']} [{$row['severity']}] {$row['title']}\n";
+			continue;
+		}
+		$err = deliver_mail($row, $mailHost, $mailPort, $mailFrom, $mailRecipient);
+		mark_dispatched($db, $row['uuid'], 'mail', $err);
+		if ($err === null) {
+			$delivered['mail']++;
+			echo "  OK mail {$row['uuid']}\n";
+		} else {
+			$failed['mail']++;
+			$partial = true;
+			echo "  FAIL mail {$row['uuid']}: {$err}\n";
+		}
+	}
+}
+
+$db->close();
+
+echo "summary: delivered ntfy={$delivered['ntfy']} mail={$delivered['mail']}; failed ntfy={$failed['ntfy']} mail={$failed['mail']}\n";
+
+exit($partial ? 2 : 0);
