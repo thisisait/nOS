@@ -3,13 +3,79 @@
 {block content}
 <h2 style="margin-bottom: 4px; font-size: 18px;">
 	Inbox
+	{if $unreadCount > 0}
+		<span class="badge badge-critical" style="font-size:13px; margin-left:8px;">{$unreadCount} unread</span>
+	{/if}
 	{if $findingCount > 0}
-		<span class="badge badge-critical" style="font-size:13px; margin-left:8px;">{$findingCount} unresolved</span>
+		<span class="badge badge-warning" style="font-size:13px; margin-left:8px;">{$findingCount} findings</span>
 	{/if}
 </h2>
 <div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
-	Unresolved secret findings + conductor agent runs.
+	Operator-attention notifications + unresolved secret findings + conductor agent runs.
 </div>
+
+{* ── Notifications (A9 — operator-attention fanout, 2026-05-16) ─────────── *}
+<h3 style="font-size:15px; margin-bottom:10px;">Notifications</h3>
+
+<div class="filter-bar" style="margin-bottom:10px;">
+	<a class="filter-btn {if !$severityFilter}active{/if}" href="{plink Inbox:default, severity => null, unreadOnly => $unreadOnly}">All</a>
+	<a class="filter-btn {if $severityFilter === 'critical'}active{/if}" href="{plink Inbox:default, severity => 'critical', unreadOnly => $unreadOnly}">Critical</a>
+	<a class="filter-btn {if $severityFilter === 'high'}active{/if}"     href="{plink Inbox:default, severity => 'high',     unreadOnly => $unreadOnly}">High</a>
+	<a class="filter-btn {if $severityFilter === 'medium'}active{/if}"   href="{plink Inbox:default, severity => 'medium',   unreadOnly => $unreadOnly}">Medium</a>
+	<a class="filter-btn {if $severityFilter === 'low'}active{/if}"      href="{plink Inbox:default, severity => 'low',      unreadOnly => $unreadOnly}">Low</a>
+	<a class="filter-btn {if $severityFilter === 'info'}active{/if}"     href="{plink Inbox:default, severity => 'info',     unreadOnly => $unreadOnly}">Info</a>
+	<a class="filter-btn" style="margin-left:auto;" href="{plink Inbox:default, severity => $severityFilter, unreadOnly => !$unreadOnly}">
+		{$unreadOnly ? 'Show read too' : 'Unread only'}
+	</a>
+</div>
+
+{if !$notifications}
+	<div class="empty" style="margin-bottom:32px;">
+		{if $unreadOnly}No unread notifications.{else}No notifications match the current filter.{/if}
+	</div>
+{else}
+	<table class="rem-table" style="margin-bottom:32px;">
+		<thead>
+			<tr>
+				<th>Severity</th>
+				<th>Title</th>
+				<th>Source</th>
+				<th>Channels</th>
+				<th>Created</th>
+				<th>Action</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $notifications as $n}
+				<tr style="{if $n['wing_inbox_read_at']}opacity:0.6;{/if}">
+					<td><span class="badge badge-{$n['severity']|lower}">{$n['severity']}</span></td>
+					<td>
+						<div style="font-size:13px;">{$n['title']}</div>
+						{if !empty($n['body'])}
+							<div style="font-size:11px; color:var(--text2); margin-top:2px; max-width:480px; overflow:hidden; text-overflow:ellipsis;">{$n['body']|substr:0:240}{if strlen($n['body']) > 240}…{/if}</div>
+						{/if}
+					</td>
+					<td style="font-size:11px; color:var(--text2)">
+						{if !empty($n['origin_plugin'])}plugin:{$n['origin_plugin']}{/if}
+						{if !empty($n['origin_agent'])}agent:{$n['origin_agent']}{/if}
+						{if empty($n['origin_plugin']) && empty($n['origin_agent']) && !empty($n['actor_id'])}{$n['actor_id']}{/if}
+					</td>
+					<td style="font-size:11px; color:var(--text2)">{implode(', ', $n['channels'] ?? [])}</td>
+					<td style="font-size:11px; color:var(--text2)">{($n['created_at'] ?? '')|substr:0:19}</td>
+					<td>
+						{if !$n['wing_inbox_read_at']}
+							<form method="post" action="{plink Inbox:markRead, uuid => $n['uuid']}" style="display:inline;">
+								<button type="submit" class="btn btn-small">Mark read</button>
+							</form>
+						{else}
+							<span style="font-size:11px; color:var(--text2)">read {($n['wing_inbox_read_at'] ?? '')|substr:11:8}</span>
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
 
 {* ── Gitleaks findings ──────────────────────────────────────────────────── *}
 <h3 style="font-size:15px; margin-bottom:10px;">Secret Findings</h3>
