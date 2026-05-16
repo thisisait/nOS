@@ -98,6 +98,24 @@ schema:
         CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id ON gitleaks_findings(scan_id);
 
 # =============================================================================
+# NOTIFICATIONS — severity → channel routing (Anatomy A9.5, 2026-05-16)
+#
+# Plugin emits a notification per ingested finding (POST /api/v1/notifications
+# from skills/run-gitleaks.sh). When the emit call omits explicit channels,
+# Bone's clients/wing.py reads notification-routing.json (rendered by
+# wing-base aggregator) and resolves the channel list via the severity
+# key below. Critical/high page the operator; medium goes silent inbox;
+# low/info are dropped on-the-floor.
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# =============================================================================
 # GDPR Article 30 — gitleaks processes operator-repo source metadata
 # =============================================================================
 

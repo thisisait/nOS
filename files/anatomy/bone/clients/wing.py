@@ -219,12 +219,68 @@ _VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 _VALID_CHANNELS = {"wing-inbox", "ntfy", "mail"}
 
 
+def _routing_path() -> Path:
+    """Sidecar location for the plugin-aggregator-rendered routing map."""
+    return _wing_db_path().parent / "notification-routing.json"
+
+
+def _load_routing() -> dict[str, dict[str, list[str]]]:
+    """Read the routing sidecar produced by wing-base post_compose.
+
+    Returns a dict keyed by plugin slug; missing file = empty map (callers
+    fall through to the default ["wing-inbox"] channel).
+    """
+    p = _routing_path()
+    if not p.is_file():
+        return {}
+    try:
+        data = json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data.get("entries") or {}
+
+
+def _lookup_channels(origin_plugin: str | None, origin_agent: str | None, severity: str) -> list[str] | None:
+    """Look up channel routing for (origin, severity). Returns None when
+    no entry matches — caller falls back to ["wing-inbox"].
+    """
+    key = None
+    if origin_plugin:
+        # Match plugin.yml names like "gitleaks" or "wing-base"; aggregator
+        # stores both `plugin_name` (e.g. "wing-base") and `slug`
+        # (e.g. "wing") — match by whichever the caller passed.
+        key = origin_plugin
+    elif origin_agent:
+        # Agent profiles' notification routing also lands in the routing
+        # JSON; aggregator key is the agent name (e.g. "conductor").
+        key = origin_agent
+    if not key:
+        return None
+    entries = _load_routing()
+    entry = entries.get(key) or entries.get(f"{key}-base")
+    if not isinstance(entry, dict):
+        return None
+    field = f"on_{severity}"
+    channels = entry.get(field)
+    if not isinstance(channels, list):
+        return None
+    return [c for c in channels if isinstance(c, str)]
+
+
 def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
     """Insert a notification row. Returns (id, uuid).
 
     Caller (Bone POST handler) does the HMAC + schema check; this is the
     last-defense whitelist (severity + channels). Title required, body
-    optional. channels defaults to ["wing-inbox"] when missing/empty.
+    optional.
+
+    Channel resolution order:
+      1. Explicit ``channels:`` in payload (always wins)
+      2. Aggregator-rendered routing for the emitter's origin_plugin /
+         origin_agent + severity (read from notification-routing.json)
+      3. Default ["wing-inbox"]
 
     A10 actor audit: actor_id + actor_action_id are stored as-passed.
     source_event_id (soft FK events.id) lets /inbox deep-link the
@@ -234,7 +290,16 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
     if severity not in _VALID_SEVERITIES:
         raise ValueError(f"invalid severity: {severity}")
 
-    channels = payload.get("channels") or ["wing-inbox"]
+    channels = payload.get("channels")
+    if channels is None or (isinstance(channels, list) and not channels):
+        # Aggregator-fallback: ask the routing sidecar before defaulting.
+        routed = _lookup_channels(
+            payload.get("origin_plugin"),
+            payload.get("origin_agent"),
+            severity,
+        )
+        channels = routed if routed else ["wing-inbox"]
+
     if not isinstance(channels, list) or not channels:
         channels = ["wing-inbox"]
     channels = list(dict.fromkeys(channels))  # de-dupe preserving order

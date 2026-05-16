@@ -76,12 +76,49 @@ authentik:
 # =============================================================================
 # LIFECYCLE HOOKS
 # =============================================================================
-# No pre_compose / post_compose: Wing is a host launchd daemon provisioned
-# by roles/pazny.wing/tasks/main.yml (FrankenPHP brew install + launchd plist).
-# Plugin loader has no compose surface to render. Readiness is the launchd
-# KeepAlive contract, not an HTTP probe. Same shape as alloy-base /
-# watchtower-base — omit lifecycle hooks entirely when there's nothing for
-# the loader to do.
+# Wing itself is a host launchd daemon (FrankenPHP) provisioned by
+# roles/pazny.wing/tasks/main.yml — no Docker compose surface. The single
+# post_compose action below renders the A9.5 notification-routing sidecar
+# (derived from peer plugins' `notification:` blocks); see the AGGREGATES
+# block for the harvest spec. Readiness for the daemon itself is the
+# launchd KeepAlive contract, not an HTTP probe.
+
+# =============================================================================
+# AGGREGATES — notification routing (Anatomy A9.5, 2026-05-16)
+#
+# Harvest every peer plugin's `notification:` block into
+# inputs.notification_routing. Each entry is a per-severity → channel-list
+# map; the post_compose action below renders the flat list into a JSON
+# sidecar Wing reads at runtime, and Bone's notification insert path
+# falls back to the routing when the emitter omits explicit channels.
+#
+# A plugin opts in by adding to its manifest:
+#   notification:
+#     on_critical: [wing-inbox, ntfy, mail]
+#     on_high:     [wing-inbox, ntfy]
+#     on_medium:   [wing-inbox]
+#     on_low:      []
+#     on_info:     []
+# =============================================================================
+
+aggregates:
+  - from: consumer_block
+    block_path: notification
+    output_var: notification_routing
+  - from: agent_profile
+    block_path: notification
+    output_var: notification_routing
+
+# Render target for the routing sidecar (read by Bone's clients/wing.py at
+# notification-insert time when the emitter omits explicit channels).
+provisioning:
+  notification_routing:
+    template: templates/notification-routing.json.j2
+    target: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/notification-routing.json"
+
+lifecycle:
+  post_compose:
+    - render: provisioning.notification_routing
 
 # =============================================================================
 # PULSE JOB — notification dispatch worker (Anatomy A9, 2026-05-16)
