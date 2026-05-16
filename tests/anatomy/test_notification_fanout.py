@@ -184,6 +184,32 @@ def test_gitleaks_declares_notification_routing():
     assert notif.get("on_info") == []
 
 
+def test_gitleaks_skill_emits_notification():
+    """First live consumer: gitleaks skill POSTs a notification after
+    a successful ingest with INSERTED > 0. Pin the contract so a future
+    refactor can't silently drop the emit.
+    """
+    script = (REPO / "files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh").read_text()
+    # Conditional emit gate present.
+    assert 'WING_EVENTS_HMAC_SECRET' in script
+    assert '"$INSERTED" -gt 0' in script
+    # Posts to the right endpoint with HMAC.
+    assert '/api/v1/notifications' in script
+    assert 'X-Wing-Timestamp' in script
+    assert 'X-Wing-Signature' in script
+    # Origin attribution stays consistent with the routing-block plugin name.
+    assert 'origin_plugin: "gitleaks"' in script or 'origin_plugin": "gitleaks"' in script
+    # And the plugin manifest exports the HMAC secret + bone URL to the env.
+    manifest = yaml.safe_load(
+        (REPO / "files/anatomy/plugins/gitleaks/plugin.yml").read_text()
+    )
+    job = next(j for j in (manifest.get("pulse") or {}).get("jobs", [])
+               if j.get("name") == "nightly-scan")
+    env = job.get("env") or {}
+    assert "WING_EVENTS_HMAC_SECRET" in env
+    assert "BONE_API_URL" in env
+
+
 def test_aggregator_harvests_notification_blocks(tmp_path):
     """End-to-end aggregator smoke — wing-base picks up peer blocks."""
     (tmp_path / "wing-base").mkdir()
