@@ -326,6 +326,41 @@ def test_wing_plist_propagates_tenant_slugs():
     assert "tenants_extra" in src
 
 
+# ── Router wiring ────────────────────────────────────────────────────────
+
+
+def test_router_factory_mounts_users_routes():
+    """RouterFactory must mount all six /users routes — without them
+    Nette returns 404 even when the presenter + templates are present.
+    Surfaced live during the first browser smoke (2026-05-17): /users
+    rendered 404 until the router was updated. Specific routes
+    (verb forms) MUST come before the catch-all `users` route so the
+    first-match-wins router hits POST handlers + parameterized views
+    first."""
+    src = (REPO / "files/anatomy/wing/app/Core/RouterFactory.php").read_text()
+    required = [
+        "'users/invite-create', 'Users:inviteCreate'",
+        "'users/invite', 'Users:invite'",
+        "'users/created', 'Users:created'",
+        "'users/invitations', 'Users:invitations'",
+        "'users/revoke', 'Users:revoke'",
+        "'users', 'Users:default'",
+    ]
+    for needle in required:
+        assert needle in src, f"RouterFactory missing route: {needle}"
+
+    # First-match ordering — catch-all must come last.
+    default_pos = src.find("'users', 'Users:default'")
+    for verb in ("users/invite-create", "users/invite", "users/created",
+                 "users/invitations", "users/revoke"):
+        verb_pos = src.find(f"'{verb}'")
+        assert verb_pos >= 0
+        assert verb_pos < default_pos, (
+            f"route '{verb}' declared AFTER the catch-all 'users' — "
+            f"first-match-wins router will never reach it"
+        )
+
+
 # ── Tier-1 SSO doctrine alignment ────────────────────────────────────────
 
 

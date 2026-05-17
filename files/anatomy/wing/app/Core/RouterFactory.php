@@ -153,6 +153,19 @@ final class RouterFactory
 		$api->addRoute('api/v1/agents/<name>/sessions', 'Agents:sessions');
 		$api->addRoute('api/v1/agent-sessions/<uuid>', 'AgentSessions:default');
 
+		// Users + Invitations console (Anatomy A15, 2026-05-17). Tier-1
+		// only (UsersPresenter::startup gates the whole presenter). Mounts
+		// the four browser views + the two POST mutators. Specific routes
+		// (POST handlers + the parameterized 'created' view) BEFORE the
+		// catch-all default so the first-match-wins router hits the verb
+		// forms first.
+		$router->addRoute('users/invite-create', 'Users:inviteCreate');
+		$router->addRoute('users/invite', 'Users:invite');
+		$router->addRoute('users/created', 'Users:created');
+		$router->addRoute('users/invitations', 'Users:invitations');
+		$router->addRoute('users/revoke', 'Users:revoke');
+		$router->addRoute('users', 'Users:default');
+
 		return $router;
 	}
 }
