@@ -4,11 +4,23 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\Model\EventRepository;
+use App\Model\NotificationRepository;
 use Nette\Application\UI\Presenter;
 
 abstract class BasePresenter extends Presenter
 {
 	protected string $activeTab = 'overview';
+
+	// W4 (2026-05-17): @inject populates every BasePresenter subclass without
+	// touching constructors. Used by beforeRender() to populate the top-nav
+	// unread/pending badges. Public-with-@inject is the Nette idiom for
+	// "cross-cutting concerns BasePresenter wants to add."
+	/** @inject */
+	public NotificationRepository $notificationsForBadge;
+
+	/** @inject */
+	public EventRepository $eventsForBadge;
 
 	public function beforeRender(): void
 	{
@@ -39,6 +51,22 @@ abstract class BasePresenter extends Presenter
 		// fall back to a sensible dev default rather than dying when the env
 		// is empty on a fresh-bootstrap dev box.
 		$this->template->authentikDomain = getenv('AUTHENTIK_DOMAIN') ?: 'auth.dev.local';
+
+		// W4 (2026-05-17): live unread/pending counts for the Inbox +
+		// Approvals tab badges. Both repos are cheap to query (countUnread
+		// is a single COUNT(*); countPendingApprovals scans the pending
+		// queue capped at 200). Failures are swallowed — a missing DB
+		// shouldn't blow up every page render; the badges just hide.
+		try {
+			$this->template->unreadInboxCount = $this->notificationsForBadge->countUnread();
+		} catch (\Throwable) {
+			$this->template->unreadInboxCount = 0;
+		}
+		try {
+			$this->template->pendingApprovalsCount = $this->eventsForBadge->countPendingApprovals();
+		} catch (\Throwable) {
+			$this->template->pendingApprovalsCount = 0;
+		}
 	}
 
 	// ── Authorization helpers (A13.7, 2026-05-07) ─────────────────────────

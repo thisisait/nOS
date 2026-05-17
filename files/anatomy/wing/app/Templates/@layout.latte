@@ -36,8 +36,8 @@
 
 	{* Operate — daily attention surfaces *}
 	<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
-	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox <span class="tab-key">2</span></a>
-	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals <span class="tab-key">3</span></a>
+	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox{if ($unreadInboxCount ?? 0) > 0} <span class="tab-count" aria-label="unread notifications">{$unreadInboxCount}</span>{/if} <span class="tab-key">2</span></a>
+	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals{if ($pendingApprovalsCount ?? 0) > 0} <span class="tab-count" aria-label="pending approvals">{$pendingApprovalsCount}</span>{/if} <span class="tab-key">3</span></a>
 
 	{* Insights — look-back / audit trail *}
 	<a class="tab tab-sep{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Dashboard <span class="tab-key">4</span></a>
@@ -67,5 +67,6 @@
 </div>
 
 <script src="/assets/dashboard.js"></script>
+<script src="/assets/keyboard-nav.js?v={$basePath}" defer></script>
 </body>
 </html>

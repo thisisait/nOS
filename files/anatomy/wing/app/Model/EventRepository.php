@@ -225,6 +225,41 @@ final class EventRepository
 	}
 
 	/**
+	 * Count requests that haven't been decided yet. Cheaper than
+	 * listPendingApprovals when the caller only needs a badge number
+	 * (used by BasePresenter to populate the Approvals tab count).
+	 *
+	 * Capped at the same 200 limit as listPendingApprovals so a runaway
+	 * pending queue can't make the per-request render cost unbounded —
+	 * 200+ is "many" either way.
+	 */
+	public function countPendingApprovals(): int
+	{
+		$decidedIds = [];
+		foreach (
+			$this->db->table('events')
+				->where('type', 'agent_approval_decision')
+				->select('actor_action_id')
+				->fetchAll() as $row
+		) {
+			$decidedIds[$row->actor_action_id] = true;
+		}
+		$count = 0;
+		foreach (
+			$this->db->table('events')
+				->where('type', 'agent_approval_request')
+				->order('id DESC')
+				->limit(200)
+				->fetchAll() as $row
+		) {
+			if (!isset($decidedIds[$row->actor_action_id])) {
+				$count++;
+			}
+		}
+		return $count;
+	}
+
+	/**
 	 * Recent decisions (last N), newest first. For the /approvals history
 	 * panel beneath the pending queue.
 	 *
