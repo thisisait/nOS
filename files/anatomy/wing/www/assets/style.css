@@ -25,6 +25,17 @@ a { color: var(--accent); text-decoration: none; }
 .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 .tab .tab-key { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 10px; background: var(--surface2); border-radius: 3px; margin-left: 6px; color: var(--text2); }
 .tab-badge { position: absolute; top: 6px; right: 4px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 0 4px; }
+/* W1 — group separators between top-nav sections. `.tab-sep` draws a
+   thin vertical divider via ::before so the DOM stays semantically flat
+   but the eye reads grouped sections (Operate · Insights · Security ·
+   Platform · Help/Admin). */
+.tab-sep::before { content: ""; display: inline-block; width: 1px; height: 18px; background: var(--border); margin-right: 16px; vertical-align: middle; }
+.tab-right { margin-left: auto; }
+.tab-admin { color: var(--red); font-weight: 600; }
+.tab-admin.active { border-bottom-color: var(--red); color: var(--red); }
+/* W4 unread-count slot (wired in W4). Live count of unread inbox /
+   pending approvals rows; hidden when zero. */
+.tab-count { display: inline-block; min-width: 18px; padding: 0 5px; height: 16px; line-height: 16px; text-align: center; font-size: 10px; font-weight: 700; background: var(--red); color: var(--bg); border-radius: 8px; margin-left: 6px; }
 
 /* Container */
 .container { max-width: 1400px; margin: 0 auto; padding: 24px; }

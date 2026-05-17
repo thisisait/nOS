@@ -25,24 +25,36 @@
 </div>
 
 <div class="tabs" id="tabs">
-	<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">0</span></a>
-	<a class="tab{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Overview <span class="tab-key">1</span></a>
-	<a class="tab{if $activeTab === 'timeline'} active{/if}" href="/dashboard#timeline" data-tab="timeline">Timeline <span class="tab-key">2</span></a>
-	<a class="tab{if $activeTab === 'components'} active{/if}" href="/dashboard#components" data-tab="components">Components <span class="tab-key">3</span></a>
-	<a class="tab{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">4</span></a>
-	<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">5</span></a>
-	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox <span class="tab-key">7</span></a>
-	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals <span class="tab-key">8</span></a>
-	<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">9</span></a>
-	{* A14: Agents tab — AIT runtime catalog + session lineage. Read-only
-	   for any authenticated user; running an agent goes through the CLI or
-	   a future operator-tier UI button. *}
-	<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents</a>
-	<a class="tab{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">6</span></a>
-	{* A12: Admin tab only visible to nos-providers (Tier-1). Server-side
-	   guard in AdminPresenter::requireSuperAdmin is the actual gate. *}
+	{* W1 Information Architecture (2026-05-17): 5 visual groups instead of
+	   12-tab flat soup. Group separators are pure CSS (.tab-sep ::before
+	   border-left). Numeric tab-key chips renumbered to reflect new order;
+	   the chip hint will become wired keyboard nav in W4. *}
+
+	{* Operate — daily attention surfaces *}
+	<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
+	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox <span class="tab-key">2</span></a>
+	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals <span class="tab-key">3</span></a>
+
+	{* Insights — look-back / audit trail *}
+	<a class="tab tab-sep{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Dashboard <span class="tab-key">4</span></a>
+	<a class="tab{if $activeTab === 'timeline'} active{/if}" href="/timeline" data-tab="timeline">Timeline <span class="tab-key">5</span></a>
+	<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">6</span></a>
+	<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents <span class="tab-key">7</span></a>
+
+	{* Security — findings + remediation + GDPR register *}
+	<a class="tab tab-sep{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">8</span></a>
+	<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">9</span></a>
+	<a class="tab{if $activeTab === 'gdpr'} active{/if}" href="/gdpr" data-tab="gdpr">GDPR</a>
+
+	{* Platform — state-change machinery (migrations, upgrades, coexistence) *}
+	<a class="tab tab-sep{if $activeTab === 'migrations'} active{/if}" href="/migrations" data-tab="migrations">Migrations</a>
+	<a class="tab{if $activeTab === 'upgrades'} active{/if}" href="/upgrades" data-tab="upgrades">Upgrades</a>
+	<a class="tab{if $activeTab === 'coexistence'} active{/if}" href="/coexistence" data-tab="coexistence">Coexistence</a>
+
+	{* Right-aligned: help (always visible) + admin (Tier-1 super-admin only) *}
+	<a class="tab tab-right tab-sep{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">0</span></a>
 	{if $isSuperAdmin}
-		<a class="tab{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin" style="margin-left:auto; color:#d11; font-weight:600;">Admin</a>
+		<a class="tab tab-admin{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin">Admin</a>
 	{/if}
 </div>
 
