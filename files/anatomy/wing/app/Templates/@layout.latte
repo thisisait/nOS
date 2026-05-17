@@ -50,10 +50,14 @@
 	<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">9</span></a>
 	<a class="tab{if $activeTab === 'gdpr'} active{/if}" href="/gdpr" data-tab="gdpr">GDPR</a>
 
-	{* Platform — state-change machinery (migrations, upgrades, coexistence) *}
+	{* Platform — state-change machinery (migrations, upgrades, coexistence) +
+	   identity (users + invitations, Tier-1 only) *}
 	<a class="tab tab-sep{if $activeTab === 'migrations'} active{/if}" href="/migrations" data-tab="migrations">Migrations</a>
 	<a class="tab{if $activeTab === 'upgrades'} active{/if}" href="/upgrades" data-tab="upgrades">Upgrades</a>
 	<a class="tab{if $activeTab === 'coexistence'} active{/if}" href="/coexistence" data-tab="coexistence">Coexistence</a>
+	{if $isSuperAdmin}
+		<a class="tab{if $activeTab === 'users'} active{/if}" href="/users" data-tab="users">Users</a>
+	{/if}
 
 	{* Right-aligned: help (always visible) + admin (Tier-1 super-admin only) *}
 	<a class="tab tab-right tab-sep{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">0</span></a>

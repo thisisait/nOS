@@ -76,6 +76,21 @@
              promotes it to a template var populated from this env. -->
         <key>AUTHENTIK_DOMAIN</key>
         <string>{{ authentik_domain }}</string>
+        <!-- A15 (2026-05-17): admin-API bearer token used by the /users
+             presenter (AuthentikClient) to list users / groups / apps and
+             create invitations. Provisioned by tools/fetch-authentik-
+             bootstrap-token.py into ~/.nos/secrets.yml. Optional — when
+             empty the /users page renders a one-line operator hint
+             instead of bleeding raw 401s. -->
+        <key>AUTHENTIK_BOOTSTRAP_TOKEN</key>
+        <string>{{ authentik_bootstrap_token | default('') }}</string>
+        <!-- A15 (2026-05-17): comma-separated extra tenant slugs surfaced
+             in the invite form's tenant <select>. Default tenant is
+             always present; this adds optional tenant-scoped overlays
+             (binds invitees to nos-tenant-<slug>-<tier> groups in
+             addition to the global tier). -->
+        <key>TENANT_SLUGS</key>
+        <string>{{ (tenants_extra | default([])) | join(',') }}</string>
 {% endif %}
 
         <!-- Tenant / host config the role-thinning recipe expects to see

@@ -1,0 +1,87 @@
+{block title}Invitations{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">
+	Issued invitations
+	{if $invitations}
+		<span class="badge badge-info" style="font-size:13px; margin-left:8px;">{count($invitations)}</span>
+	{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Every invitation issued through Wing. Audit trail persists locally even after
+	Authentik garbage-collects single-use rows on redemption.
+</div>
+
+<div style="margin-bottom:16px;display:flex;gap:10px;">
+	<a href="{plink Users:invite}" class="btn-primary" style="padding:6px 14px;">+ Invite user</a>
+	<a href="{plink Users:default}" class="filter-btn">Back to users</a>
+</div>
+
+{if !$invitations}
+	<div class="empty">No invitations have been issued yet.</div>
+{else}
+	<table class="rem-table">
+		<thead>
+			<tr>
+				<th>State</th>
+				<th>Tenant</th>
+				<th>Hint</th>
+				<th>Groups</th>
+				<th>Apps</th>
+				<th>Issued</th>
+				<th>Expires</th>
+				<th>By</th>
+				<th>Action</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $invitations as $i}
+				{var $state = !empty($i['redeemed_at']) ? 'redeemed' : (!empty($i['revoked_at']) ? 'revoked' : ($i['expires_at'] < date('c') ? 'expired' : 'pending'))}
+				<tr style="{if $state !== 'pending'}opacity:0.7;{/if}">
+					<td>
+						{if $state === 'pending'}<span class="badge badge-info" style="font-size:11px;">pending</span>
+						{elseif $state === 'redeemed'}<span class="badge badge-success" style="font-size:11px;">redeemed</span>
+						{elseif $state === 'revoked'}<span class="badge" style="font-size:11px;background:var(--bg2);">revoked</span>
+						{else}<span class="badge badge-warning" style="font-size:11px;">expired</span>
+						{/if}
+					</td>
+					<td><code>{$i['tenant']}</code></td>
+					<td>
+						{if $i['email_hint']}<div style="font-size:12px;">{$i['email_hint']}</div>{/if}
+						{if $i['name_hint']}<div style="font-size:11px;color:var(--text3);">{$i['name_hint']}</div>{/if}
+						{if !$i['email_hint'] && !$i['name_hint']}<span style="color:var(--text3);font-size:12px;">—</span>{/if}
+					</td>
+					<td>
+						{foreach $i['target_groups'] as $g}
+							<span class="badge badge-info" style="font-size:11px;">{$g|substr:4}</span>
+						{/foreach}
+					</td>
+					<td>
+						{if $i['target_apps']}
+							{foreach $i['target_apps'] as $a}
+								<span class="badge" style="font-size:11px;background:var(--bg2);">{$a['slug']}</span>
+							{/foreach}
+						{else}
+							<span style="color:var(--text3);font-size:12px;">—</span>
+						{/if}
+					</td>
+					<td style="font-size:12px;color:var(--text2);">{$i['created_at']}</td>
+					<td style="font-size:12px;color:var(--text2);">{$i['expires_at']}</td>
+					<td style="font-size:12px;"><code>{$i['actor_id']}</code></td>
+					<td>
+						{if $state === 'pending'}
+							<form method="post" action="{plink Users:revoke}" style="display:inline;">
+								<input type="hidden" name="invitation_pk" value="{$i['invitation_pk']}">
+								<button type="submit" onclick="return confirm('Revoke this invitation? The shareable URL will stop working immediately.')" style="background:none;border:1px solid var(--border-danger);color:var(--text-danger);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Revoke</button>
+							</form>
+						{else}
+							<span style="color:var(--text3);font-size:12px;">—</span>
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+{/block}

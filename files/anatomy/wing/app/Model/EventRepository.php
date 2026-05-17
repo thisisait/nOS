@@ -72,6 +72,13 @@ final class EventRepository
 		'agent_webhook_dispatch', // outbound webhook fired
 		'agent_webhook_receipt',  // inbound webhook ack from subscriber
 		'agent_vault_resolved',   // credential pulled at session start (no plaintext)
+		// User invitations (A15 — operator-issued Authentik invites, 2026-05-17).
+		//   user_invitation_issued   — operator mints an invitation from /users/invite
+		//   user_invitation_revoked  — operator revokes an outstanding (unredeemed) invitation
+		// Issue-row's result_json carries {invitation_uuid, invitation_pk, tenant,
+		// target_groups, target_apps, expires_at}. Revoke-row carries
+		// {invitation_pk, invitation_uuid}. Both rows source='wing'.
+		'user_invitation_issued', 'user_invitation_revoked',
 	];
 
 	public function __construct(

@@ -1,0 +1,53 @@
+{block title}Invitation created{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">Invitation minted</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Share the URL below with the invitee. The link is single-use and expires at
+	<code>{$invite['expires_at']}</code>.
+</div>
+
+<div style="background:var(--bg-success);padding:18px;border-radius:6px;border:1px solid var(--border-success);margin-bottom:20px;">
+	<div style="font-size:13px;color:var(--text2);margin-bottom:6px;">Shareable invitation URL</div>
+	<div style="display:flex;gap:10px;align-items:center;">
+		<input id="inviteUrl" type="text" readonly value="{$invite['invitation_url']}" style="flex:1;padding:8px 10px;font-family:var(--font-mono);font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+		<button type="button" class="btn-primary" data-action="copy-invite-url" style="padding:8px 14px;">Copy</button>
+	</div>
+</div>
+
+<table class="rem-table" style="margin-bottom:20px;">
+	<tbody>
+		<tr><th style="width:200px;">Wing invitation UUID</th><td><code>{$invite['uuid']}</code></td></tr>
+		<tr><th>Authentik invitation PK</th><td><code>{$invite['invitation_pk']}</code></td></tr>
+		<tr><th>Tenant</th><td><code>{$invite['tenant']}</code></td></tr>
+		<tr><th>Target groups</th><td>
+			{foreach $invite['target_groups'] as $g}
+				<span class="badge badge-info" style="font-size:11px;">{$g}</span>
+			{/foreach}
+		</td></tr>
+		<tr><th>Target applications</th><td>
+			{if $invite['target_apps']}
+				{foreach $invite['target_apps'] as $a}
+					<span class="badge" style="font-size:11px;background:var(--bg2);">{$a['slug']}{if !empty($a['role'])} · {$a['role']}{/if}</span>
+				{/foreach}
+			{else}
+				<span style="color:var(--text3);font-size:12px;">— all tier-permitted apps —</span>
+			{/if}
+		</td></tr>
+		<tr><th>Email hint</th><td>{$invite['email_hint'] ?? '—'}</td></tr>
+		<tr><th>Name hint</th><td>{$invite['name_hint'] ?? '—'}</td></tr>
+		<tr><th>Issued by</th><td><code>{$invite['actor_id']}</code></td></tr>
+		<tr><th>Issued at</th><td>{$invite['created_at']}</td></tr>
+		<tr><th>Expires at</th><td>{$invite['expires_at']}</td></tr>
+	</tbody>
+</table>
+
+<div style="display:flex;gap:10px;">
+	<a href="{plink Users:invite}" class="btn-primary" style="padding:8px 14px;">+ Mint another</a>
+	<a href="{plink Users:invitations}" class="filter-btn">View all invitations</a>
+	<a href="{plink Users:default}" style="color:var(--text2);padding:8px;">Back to users</a>
+</div>
+
+<script src="/assets/users-invite-copy.js?v={$basePath}" defer></script>
+
+{/block}

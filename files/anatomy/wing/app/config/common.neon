@@ -49,6 +49,15 @@ services:
 	# worker (bin/dispatch-notifications.php) flushes ntfy/mail channels.
 	- App\Model\NotificationRepository
 
+	# Identity console — Authentik admin client + invitation audit trail
+	# (Anatomy A15, 2026-05-17). AuthentikClient pulls the bearer token
+	# from AUTHENTIK_BOOTSTRAP_TOKEN env (provisioned by
+	# tools/fetch-authentik-bootstrap-token.py); UserInvitationRepository
+	# is the local audit table even after Authentik garbage-collects
+	# single-use invitations on redemption.
+	- App\Model\AuthentikClient
+	- App\Model\UserInvitationRepository
+
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
 

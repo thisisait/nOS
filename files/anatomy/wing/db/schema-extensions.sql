@@ -328,6 +328,51 @@ CREATE INDEX IF NOT EXISTS idx_notifications_mail_pending ON notifications(mail_
 CREATE INDEX IF NOT EXISTS idx_notifications_mail_digest  ON notifications(mail_digest_window) WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL;
 
 -- ============================================================================
+-- User invitations (Anatomy A15, 2026-05-17)
+-- ============================================================================
+-- Operator-issued Authentik invitations with per-invite app + tier metadata.
+-- One row per invite minted from Wing's /users/invite UI. The invite is
+-- created on the Authentik side via POST /api/v3/stages/invitation/invitations/;
+-- the Authentik-side primary-key (UUID) lives in invitation_pk and the
+-- shareable URL in invitation_url. fixed_data on the Authentik invitation
+-- carries the target_groups list so the enrollment flow's group-bind
+-- expression policy can attach the new user to the right RBAC tier(s) +
+-- per-tenant scopes during signup.
+--
+-- target_apps_json + target_groups_json are persisted here separately
+-- (rather than only on the Authentik side) so /users/invitations can
+-- show an operator-readable audit trail even if the invite was redeemed,
+-- expired, or revoked on the Authentik side. actor_id holds the
+-- operator's Authentik client_id (from forward-auth headers); A10
+-- lineage applies.
+
+CREATE TABLE IF NOT EXISTS user_invitations (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                TEXT NOT NULL UNIQUE,           -- local UUID4 minted at insert
+    invitation_pk       TEXT NOT NULL UNIQUE,           -- Authentik invitation primary key (UUID)
+    invitation_url      TEXT NOT NULL,                  -- full https://auth.<tld>/if/flow/.../?itoken=<pk>
+    email_hint          TEXT,                           -- optional recipient hint (display only)
+    name_hint           TEXT,                           -- optional display name for the invite (UI surface)
+    tenant              TEXT NOT NULL DEFAULT 'default',-- multi-tenant slug; one Authentik install can host multiple
+    target_groups_json  TEXT NOT NULL DEFAULT '[]',     -- JSON array of Authentik group names (RBAC tier(s))
+    target_apps_json    TEXT NOT NULL DEFAULT '[]',     -- JSON array of {slug, role} objects; informational
+    expires_at          TEXT NOT NULL,                  -- ISO8601 absolute expiry; Authentik enforces
+    single_use          INTEGER NOT NULL DEFAULT 1,     -- mirrors Authentik invitation.single_use
+    redeemed_at         TEXT,                           -- NULL until /api/v3 webhook (or operator) marks redeemed
+    redeemed_user_pk    TEXT,                           -- Authentik user PK of the redeemer (if known)
+    revoked_at          TEXT,                           -- NULL until operator revokes (deletes Authentik side)
+    actor_id            TEXT NOT NULL,                  -- A10: operator who issued the invite
+    actor_action_id     TEXT,                           -- A10: groups with /events row of the issue action
+    metadata_json       TEXT NOT NULL DEFAULT '{}',     -- free-form (e.g. inviter note, source presenter)
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_user_inv_actor       ON user_invitations(actor_id);
+CREATE INDEX IF NOT EXISTS idx_user_inv_tenant      ON user_invitations(tenant);
+CREATE INDEX IF NOT EXISTS idx_user_inv_expires     ON user_invitations(expires_at) WHERE redeemed_at IS NULL AND revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_user_inv_redeemed    ON user_invitations(redeemed_at);
+CREATE INDEX IF NOT EXISTS idx_user_inv_created     ON user_invitations(created_at);
+
+-- ============================================================================
 -- AgentKit — AIT runtime (Anatomy A14, 2026-05-07)
 -- ============================================================================
 -- Five tables for the platform-agnostic, audit-first agent runtime. Every row

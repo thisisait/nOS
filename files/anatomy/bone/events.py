@@ -61,6 +61,12 @@ VALID_TYPES = {
     "agent_run_start", "agent_run_end",
     "conductor_self_test_step", "conductor_report",
     "remediator_report",
+    # ── A15 user invitations (operator-issued Authentik invites, 2026-05-17) ─
+    # Wing-side UsersPresenter emits both rows directly via EventRepository
+    # so they don't traverse Bone in practice; the entries here keep the
+    # whitelists aligned so a future Bone POST proxying the same event
+    # type (e.g. webhook-driven redemption notification) doesn't 400.
+    "user_invitation_issued", "user_invitation_revoked",
 }
 
 

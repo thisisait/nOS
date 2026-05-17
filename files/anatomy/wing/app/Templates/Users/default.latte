@@ -1,0 +1,84 @@
+{block title}Users{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">
+	Users
+	{if $users}
+		<span class="badge badge-info" style="font-size:13px; margin-left:8px;">{count($users)}</span>
+	{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Every Authentik identity, decorated with the RBAC tier(s) + tenant scope(s).
+	Tier-1 super-admin gated — operator-only.
+</div>
+
+<div class="filter-bar" style="margin-bottom:16px;">
+	<form method="get" action="{plink Users:default}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+		<input type="search" name="search" value="{$search}" placeholder="Search by username / email / name…" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;min-width:260px;">
+		<button type="submit" class="btn-primary" style="padding:6px 14px;">Search</button>
+		{if $search}<a href="{plink Users:default}" class="filter-btn">Reset</a>{/if}
+		<a href="{plink Users:invite}" class="btn-primary" style="margin-left:auto;padding:6px 14px;">+ Invite user</a>
+		<a href="{plink Users:invitations}" class="filter-btn">View issued invitations</a>
+	</form>
+</div>
+
+{if !$authentikConfigured}
+	<div class="empty" style="background:var(--bg-warning);padding:16px;border-radius:6px;border:1px solid var(--border-warning);">
+		<strong>Authentik bootstrap token not configured.</strong><br>
+		Run <code>python3 tools/fetch-authentik-bootstrap-token.py</code> on the playbook host
+		to provision the <code>nos-api</code> token into <code>~/.nos/secrets.yml</code>,
+		then re-run the playbook. Without it, Wing can't reach the Authentik admin API.
+	</div>
+{elseif $error}
+	<div class="empty" style="background:var(--bg-error);padding:16px;border-radius:6px;border:1px solid var(--border-error);">
+		<strong>Authentik request failed.</strong><br>
+		<code style="white-space:pre-wrap;">{$error}</code>
+	</div>
+{elseif !$users}
+	<div class="empty">No users match the current filter.</div>
+{else}
+	<table class="rem-table">
+		<thead>
+			<tr>
+				<th>Username</th>
+				<th>Name</th>
+				<th>Email</th>
+				<th>RBAC tier</th>
+				<th>Tenants</th>
+				<th>Last login</th>
+				<th>Active</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $users as $u}
+				<tr>
+					<td><code>{$u['username']}</code></td>
+					<td>{$u['name'] ?? ''}</td>
+					<td style="color:var(--text2);font-size:12px;">{$u['email'] ?? ''}</td>
+					<td>
+						{if $u['_tiers']}
+							{foreach $u['_tiers'] as $t}
+								<span class="badge {if $t === 'nos-providers' || $t === 'nos-admins'}badge-critical{elseif $t === 'nos-managers'}badge-warning{else}badge-info{/if}" style="font-size:11px;">{$t|substr:4}</span>
+							{/foreach}
+						{else}
+							<span style="color:var(--text3);font-size:12px;">— no tier —</span>
+						{/if}
+					</td>
+					<td>
+						{if $u['_tenants']}
+							{foreach $u['_tenants'] as $tg}
+								<span class="badge" style="font-size:11px;background:var(--bg2);">{$tg}</span>
+							{/foreach}
+						{else}
+							<span style="color:var(--text3);font-size:12px;">default</span>
+						{/if}
+					</td>
+					<td style="color:var(--text2);font-size:12px;">{$u['last_login'] ?? '—'}</td>
+					<td>{if !empty($u['is_active'])}<span style="color:var(--text-ok);">✓</span>{else}<span style="color:var(--text-danger);">✗</span>{/if}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+{/block}

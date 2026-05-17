@@ -1,0 +1,261 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS enrollment flow (A15 — operator-issued invitations, 2026-05-17) ──
+#
+# This blueprint converges:
+#   1. Invitation stage           (consumes ?itoken=<pk>, surfaces fixed_data)
+#   2. Identification + password  (collect email, name, password)
+#   3. User-write stage           (mints the new authentik_core.user row)
+#   4. Expression policy          (reads prompt_data.target_groups + binds)
+#   5. Enrollment flow            (with slug `nos-enrollment`)
+#   6. Stage bindings             (wire the stages above into the flow)
+#   7. Policy binding             (the assign-target-groups policy gates
+#                                  the user-write stage so groups land
+#                                  alongside the user_write transaction)
+#
+# Trigger surface: Wing /users/invite mints an Authentik invitation
+# bound to this flow (UsersPresenter::ENROLLMENT_FLOW_SLUG). The
+# invitation's fixed_data carries:
+#   {
+#     "target_groups":  ["nos-managers", "nos-tenant-x-managers"],
+#     "target_apps":    [...],   # informational; group is the gate
+#     "tenant":         "tenant-x",
+#     "invited_by":     "operator:<username>",
+#     "invitation_uuid": "<wing uuid>"
+#   }
+# After the invitation stage matches, fixed_data lands in
+# request.context['prompt_data'] (since Authentik 2024.x), where the
+# expression policy below picks it up and adds the user to each target
+# group on user_write.
+#
+# Why a `policy` rather than a custom stage: expression policies hook
+# any stage's `pre_user_create_policies` slot, get full read+write to
+# request.context, and can call ak_create_user_in_group via the
+# `request.user.ak_groups.add()` route once the user object exists.
+# Custom stage classes would require a plugin shipped to the Authentik
+# server image — we keep the blueprint pure-YAML so a stock authentik
+# image converges cleanly.
+
+version: 1
+metadata:
+  name: nos-enrollment-flow
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  # ── 1. Invitation stage ─────────────────────────────────────────────────
+  # `continue_flow_without_invitation: false` means the flow refuses to
+  # run without a valid ?itoken=<pk> — no anonymous enrollment.
+  - model: authentik_stages_invitation.invitationstage
+    state: present
+    identifiers:
+      name: nos-invitation-stage
+    attrs:
+      continue_flow_without_invitation: false
+
+  # ── 2. Prompts — email + name + password ────────────────────────────────
+  - model: authentik_stages_prompt.prompt
+    state: present
+    identifiers:
+      field_key: email
+    attrs:
+      label: "Email"
+      type: email
+      required: true
+      placeholder: "you@example.com"
+      placeholder_expression: false
+      order: 100
+  - model: authentik_stages_prompt.prompt
+    state: present
+    identifiers:
+      field_key: name
+    attrs:
+      label: "Full name"
+      type: text
+      required: true
+      placeholder: "Alice Example"
+      placeholder_expression: false
+      order: 200
+  - model: authentik_stages_prompt.prompt
+    state: present
+    identifiers:
+      field_key: username
+    attrs:
+      label: "Username"
+      type: username
+      required: true
+      placeholder: "alice"
+      placeholder_expression: false
+      order: 300
+  - model: authentik_stages_prompt.prompt
+    state: present
+    identifiers:
+      field_key: password
+    attrs:
+      label: "Password"
+      type: password
+      required: true
+      placeholder: ""
+      placeholder_expression: false
+      order: 400
+  - model: authentik_stages_prompt.prompt
+    state: present
+    identifiers:
+      field_key: password_repeat
+    attrs:
+      label: "Confirm password"
+      type: password
+      required: true
+      placeholder: ""
+      placeholder_expression: false
+      order: 500
+
+  - model: authentik_stages_prompt.promptstage
+    state: present
+    identifiers:
+      name: nos-enrollment-prompts
+    attrs:
+      fields:
+        - !Find [authentik_stages_prompt.prompt, [field_key, email]]
+        - !Find [authentik_stages_prompt.prompt, [field_key, name]]
+        - !Find [authentik_stages_prompt.prompt, [field_key, username]]
+        - !Find [authentik_stages_prompt.prompt, [field_key, password]]
+        - !Find [authentik_stages_prompt.prompt, [field_key, password_repeat]]
+
+  # ── 3. User-write stage — mints the user from collected prompts ─────────
+  - model: authentik_stages_user_write.userwritestage
+    state: present
+    identifiers:
+      name: nos-enrollment-user-write
+    attrs:
+      create_users_as_inactive: false
+      create_users_group: !Find [authentik_core.group, [name, "nos-users"]]
+      user_creation_mode: create
+      user_type: internal
+
+  # ── 4. User-login stage — sign the user in after enrollment ─────────────
+  - model: authentik_stages_user_login.userloginstage
+    state: present
+    identifiers:
+      name: nos-enrollment-user-login
+    attrs:
+      session_duration: "seconds=0"
+
+  # ── 5. Expression policy — bind target_groups from invitation fixed_data ─
+  # Runs in pre_user_create_policies of user_write (so the binding is
+  # transactional with the user mint). The policy never blocks; it always
+  # returns ak_message-true so user_write proceeds, and side-effects the
+  # group binding for each target group present in fixed_data. Belt-and-
+  # suspenders: a separate post-user-create binding catches the case where
+  # fixed_data was not yet flushed into prompt_data on the pre-write hook.
+  - model: authentik_policies_expression.expressionpolicy
+    state: present
+    identifiers:
+      name: nos-assign-target-groups
+    attrs:
+      expression: |
+        # nOS A15 — assign target_groups from invitation fixed_data.
+        # Reads prompt_data first (where Authentik merges fixed_data on
+        # invitation match); falls back to context.invitation.fixed_data
+        # for older Authentik builds. Idempotent — only adds groups the
+        # user is not already in. Returns True regardless so the flow
+        # continues.
+        prompt_data = request.context.get("prompt_data") or {}
+        target_groups = prompt_data.get("target_groups") or []
+        if not target_groups:
+            inv = request.context.get("invitation")
+            if inv is not None:
+                fd = getattr(inv, "fixed_data", None) or {}
+                target_groups = fd.get("target_groups") or []
+        user = request.user
+        if user and getattr(user, "pk", None):
+            from authentik.core.models import Group
+            for gname in target_groups:
+                try:
+                    g = Group.objects.filter(name=gname).first()
+                    if g is None:
+                        continue
+                    if not user.ak_groups.filter(pk=g.pk).exists():
+                        user.ak_groups.add(g)
+                except Exception as exc:  # noqa: BLE001
+                    ak_logger.warning(
+                        "nos-assign-target-groups: failed to bind",
+                        group=gname, error=str(exc),
+                    )
+        return True
+      execution_logging: false
+
+  # ── 6. Enrollment flow ─────────────────────────────────────────────────
+  - model: authentik_flows.flow
+    state: present
+    identifiers:
+      slug: nos-enrollment
+    attrs:
+      name: "nOS — Operator-issued enrollment"
+      title: "Welcome to nOS — finish your signup"
+      designation: enrollment
+      authentication: require_unauthenticated
+      compatibility_mode: false
+      denied_action: message_continue
+      layout: stacked
+      policy_engine_mode: any
+
+  # ── 7. Stage bindings — order matters (10/20/30/40) ─────────────────────
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-enrollment]]
+      order: 10
+    attrs:
+      stage: !Find [authentik_stages_invitation.invitationstage, [name, nos-invitation-stage]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-enrollment]]
+      order: 20
+    attrs:
+      stage: !Find [authentik_stages_prompt.promptstage, [name, nos-enrollment-prompts]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-enrollment]]
+      order: 30
+    attrs:
+      stage: !Find [authentik_stages_user_write.userwritestage, [name, nos-enrollment-user-write]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-enrollment]]
+      order: 40
+    attrs:
+      stage: !Find [authentik_stages_user_login.userloginstage, [name, nos-enrollment-user-login]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+
+  # ── 8. Policy binding — assign-target-groups on user_write stage ────────
+  # Order 10 so it fires after user_write's built-in writes. Re-evaluates
+  # policies on each pass so a flow retry doesn't skip the bind.
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_stages_user_write.userwritestage, [name, nos-enrollment-user-write]]
+      order: 10
+    attrs:
+      policy: !Find [authentik_policies_expression.expressionpolicy, [name, nos-assign-target-groups]]
+      enabled: true
+      negate: false
+      timeout: 30

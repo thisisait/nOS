@@ -1,0 +1,121 @@
+{block title}Invite user{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">Invite user</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Mints an Authentik invitation bound to the <code>{$enrollmentFlowSlug}</code> enrollment flow.
+	Inviting picks tier + tenant + an optional per-app role overlay; the new user is bound
+	to the selected groups during signup via a fixed-data → expression-policy chain.
+</div>
+
+{if !$authentikConfigured}
+	<div class="empty" style="background:var(--bg-warning);padding:16px;border-radius:6px;border:1px solid var(--border-warning);">
+		<strong>Authentik bootstrap token not configured.</strong>
+		Run <code>tools/fetch-authentik-bootstrap-token.py</code> first.
+	</div>
+{elseif !($enrollmentFlowReady ?? true)}
+	<div class="empty" style="background:var(--bg-warning);padding:16px;border-radius:6px;border:1px solid var(--border-warning);">
+		<strong>Enrollment flow <code>{$enrollmentFlowSlug}</code> not present in Authentik.</strong><br>
+		The blueprint <code>40-enrollment-flow.yaml</code> ships the flow + the
+		<em>assign-target-groups</em> expression policy that consumes
+		<code>prompt_data.target_groups</code>. Re-run the playbook to converge
+		it, then return to this page.
+	</div>
+{elseif $error}
+	<div class="empty" style="background:var(--bg-error);padding:16px;border-radius:6px;border:1px solid var(--border-error);">
+		<strong>Authentik request failed.</strong><br>
+		<code style="white-space:pre-wrap;">{$error}</code>
+	</div>
+{else}
+
+<form method="post" action="{plink Users:inviteCreate}" style="max-width:780px;">
+
+	<fieldset style="border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:16px;">
+		<legend style="font-weight:600;padding:0 6px;">Recipient (optional, display-only)</legend>
+		<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+			<label style="display:flex;flex-direction:column;gap:4px;">
+				<span style="font-size:13px;color:var(--text2);">Email hint</span>
+				<input type="email" name="email_hint" placeholder="alice@example.com" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;">
+			</label>
+			<label style="display:flex;flex-direction:column;gap:4px;">
+				<span style="font-size:13px;color:var(--text2);">Name hint</span>
+				<input type="text" name="name_hint" placeholder="Alice (Marketing)" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;">
+			</label>
+		</div>
+		<div style="font-size:12px;color:var(--text3);margin-top:8px;">
+			Hints surface in the audit table only — the new user can sign up with any email + name
+			they choose during enrollment.
+		</div>
+	</fieldset>
+
+	<fieldset style="border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:16px;">
+		<legend style="font-weight:600;padding:0 6px;">Identity scope</legend>
+		<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+			<label style="display:flex;flex-direction:column;gap:4px;">
+				<span style="font-size:13px;color:var(--text2);">RBAC tier</span>
+				<select name="tier" required style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;">
+					{foreach $rbacTiers as $g => $label}
+						<option value="{$g}" {if $g === 'nos-users'}selected{/if}>{$label}</option>
+					{/foreach}
+				</select>
+			</label>
+			<label style="display:flex;flex-direction:column;gap:4px;">
+				<span style="font-size:13px;color:var(--text2);">Tenant</span>
+				<select name="tenant" required style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;">
+					{foreach $tenants as $t}
+						<option value="{$t}">{$t}</option>
+					{/foreach}
+				</select>
+			</label>
+		</div>
+		<div style="font-size:12px;color:var(--text3);margin-top:8px;">
+			Selecting a non-<code>default</code> tenant additively binds the user to
+			<code>nos-tenant-&lt;tenant&gt;-&lt;tier&gt;</code> in addition to the base tier group.
+			Configure extra tenants via <code>TENANT_SLUGS</code> env (comma-separated).
+		</div>
+	</fieldset>
+
+	<fieldset style="border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:16px;">
+		<legend style="font-weight:600;padding:0 6px;">Application access</legend>
+		{if !$apps}
+			<div style="color:var(--text2);font-size:13px;">No applications registered in Authentik.</div>
+		{else}
+			<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+				Check applications the invitee should land in. Per-app role override is
+				informational (the RBAC tier above is the actual authorization boundary —
+				per-app role hints surface in the audit table and onboarding materials).
+			</div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:10px;">
+				{foreach $apps as $a}
+					<label style="display:flex;align-items:center;gap:8px;padding:4px;">
+						<input type="checkbox" name="apps[]" value="{$a['slug']}">
+						<div style="display:flex;flex-direction:column;">
+							<span style="font-weight:500;">{$a['name'] ?? $a['slug']}</span>
+							<code style="font-size:11px;color:var(--text3);">{$a['slug']}</code>
+						</div>
+					</label>
+				{/foreach}
+			</div>
+		{/if}
+	</fieldset>
+
+	<fieldset style="border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:16px;">
+		<legend style="font-weight:600;padding:0 6px;">Expiry</legend>
+		<label style="display:flex;flex-direction:column;gap:4px;max-width:240px;">
+			<span style="font-size:13px;color:var(--text2);">Time-to-live (hours)</span>
+			<input type="number" name="ttl_hours" value="{$defaultTtlHours}" min="1" max="720" required style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;">
+		</label>
+		<div style="font-size:12px;color:var(--text3);margin-top:8px;">
+			Default 72h. Max 30 days. Single-use — the invitation auto-cleans up after redemption.
+		</div>
+	</fieldset>
+
+	<div style="display:flex;gap:10px;align-items:center;">
+		<button type="submit" class="btn-primary" style="padding:8px 18px;">Mint invitation</button>
+		<a href="{plink Users:default}" style="color:var(--text2);">Cancel</a>
+	</div>
+</form>
+
+{/if}
+
+{/block}
