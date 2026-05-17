@@ -4,6 +4,10 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>{ifset title}{include title} | {/ifset}Wing — nOS operator console</title>
+	{* W2 (2026-05-17): tokens.css loaded first — single source of truth
+	   for colors, spacing, radii, fonts, plus utility classes that every
+	   page can rely on. style.css + per-page CSS still load below. *}
+	<link rel="stylesheet" href="/assets/tokens.css?v={$basePath}">
 	<link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>

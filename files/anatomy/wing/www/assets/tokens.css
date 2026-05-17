@@ -1,0 +1,135 @@
+/* ============================================================================
+ * Wing design tokens (W2, 2026-05-17).
+ *
+ * Single source of truth for visual primitives across every Wing surface.
+ * Loaded BEFORE every other stylesheet so per-page CSS can rely on these
+ * variables + utility classes without re-declaring them.
+ *
+ * Token taxonomy:
+ *   --color-*    semantic color slots (bg, surface, text, accent, severity)
+ *   --space-*    spacing scale (4/8/12/16/24/32 px)
+ *   --radius-*   corner radius scale (3/6/8/12 px)
+ *   --font-*     font stacks (sans + mono)
+ *   --shadow-*   elevation shadows
+ *
+ * Legacy aliases (--bg, --surface, --text, etc.) stay defined for back-compat
+ * with the 7 pre-W2 CSS files that already reference them. The plan is to
+ * migrate per-page CSS to the semantic --color-* names over time; the
+ * aliases let that happen incrementally rather than as a flag-day rewrite.
+ * ============================================================================
+ */
+
+:root {
+	/* ── Colors ─────────────────────────────────────────────────────────── */
+	--color-bg:        #0d1117;
+	--color-surface:   #161b22;
+	--color-surface2:  #21262d;
+	--color-border:    #30363d;
+	--color-text:      #e6edf3;
+	--color-text2:     #8b949e;
+	--color-accent:    #58a6ff;
+	--color-success:   #3fb950;
+	--color-danger:    #f85149;
+	--color-warning:   #d29922;
+	--color-purple:    #bc8cff;
+	--color-cyan:      #39d2c0;
+	--color-yellow:    #e3b341;
+
+	/* Severity scale — referenced by .badge-* + .sev-* + sev/finding tables. */
+	--color-severity-critical: var(--color-danger);
+	--color-severity-high:     var(--color-warning);
+	--color-severity-medium:   var(--color-accent);
+	--color-severity-low:      var(--color-cyan);
+	--color-severity-info:     var(--color-text2);
+
+	/* ── Spacing scale (4-px base) ──────────────────────────────────────── */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 12px;
+	--space-lg: 16px;
+	--space-xl: 24px;
+	--space-2xl: 32px;
+
+	/* ── Radii ──────────────────────────────────────────────────────────── */
+	--radius-sm: 3px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+	--radius-xl: 12px;
+	--radius-pill: 999px;
+
+	/* ── Fonts ──────────────────────────────────────────────────────────── */
+	--font-sans: -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+	--font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+
+	/* ── Shadows ────────────────────────────────────────────────────────── */
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, .25);
+	--shadow-md: 0 2px 10px rgba(0, 0, 0, .35);
+	--shadow-accent: 0 2px 10px rgba(88, 166, 255, .08);
+
+	/* ── Legacy aliases (back-compat with pre-W2 per-page CSS) ──────────── */
+	--bg:       var(--color-bg);
+	--surface:  var(--color-surface);
+	--surface2: var(--color-surface2);
+	--border:   var(--color-border);
+	--text:     var(--color-text);
+	--text2:    var(--color-text2);
+	--accent:   var(--color-accent);
+	--green:    var(--color-success);
+	--red:      var(--color-danger);
+	--orange:   var(--color-warning);
+	--purple:   var(--color-purple);
+	--cyan:     var(--color-cyan);
+	--yellow:   var(--color-yellow);
+}
+
+/* ============================================================================
+ * Utility classes
+ *
+ * Lightweight one-shots that compose into bigger components. Pre-W2 these
+ * patterns were re-declared inline in templates (`style="font-size:12px;
+ * color: var(--text2)"`) — moving them here means template diff churn
+ * stops growing and operators get a stable visual grammar.
+ * ============================================================================
+ */
+
+/* Text helpers */
+.text-muted { color: var(--color-text2); }
+.text-mono { font-family: var(--font-mono); }
+.text-small { font-size: 12px; }
+.text-tiny { font-size: 11px; }
+.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Flex helpers */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+
+/* Spacing helpers */
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+/* Empty-state — used across Inbox / Approvals / GDPR / Pentest / Audit etc.
+   Replaces ad-hoc `<div class="empty">` styles that were re-declared per
+   page. Lives here so every page surface has a uniform "nothing to see"
+   experience. */
+.empty-state {
+	background: var(--color-surface);
+	border: 1px dashed var(--color-border);
+	border-radius: var(--radius-lg);
+	padding: var(--space-2xl);
+	text-align: center;
+	color: var(--color-text2);
+	font-size: 13px;
+}
+.empty-state .empty-state-title { color: var(--color-text); font-size: 15px; font-weight: 600; margin-bottom: var(--space-xs); }
+.empty-state .empty-state-hint { color: var(--color-text2); font-size: 12px; margin-top: var(--space-sm); }
