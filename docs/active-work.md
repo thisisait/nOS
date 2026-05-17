@@ -5,43 +5,61 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-16 • doc-refresh after A10/A11/A12/A13.x/A14 all
-> shipped + Mattermost purge + Playwright SSO e2e wiring + punch #5 doc
-> drift cleanup + A9 notification fanout shipped.
+> Last updated: 2026-05-17 • Phase 5 ceremony milestone CLOSED. A9
+> fanout + daily-digest + Remediator agent + Phase 5 CLI all shipped;
+> 27 commits pushed to origin/master (`826c406..3fec16b`).
 
 ---
 
-## Current track: **Phase 5 ceremony**
+## Current track: **Wing UI revision (proposed — pending operator approval)**
 
-A1–A8, A9, A10, A11, A12, A13.x, A14 are all **DONE**. The remaining
-big milestone is **Phase 5** — first non-operator end-to-end write to
-`wing.db` via the `conductor-self-test-001` Pulse job. Pre-requisites
-(A10 actor audit, A8 conductor pipeline, A9 notification fanout, Pulse
-jobs registered) all landed; the final gate is an operator-driven
-ceremony run.
+A1–A14 are all **DONE**, including A9 fanout, A9.2 daily-digest mail,
+A9.3 Remediator agent, and the **Phase 5 ceremony milestone — CLOSED
+2026-05-17**: conductor-self-test-001 ran via `tools/run-phase5-ceremony.sh`,
+exit 0, agent_run_start + agent_run_end with shared
+`actor_action_id=b01de576-7498-4b3f-bd2a-9b155b3f1a8b`. First
+non-operator-identity end-to-end write to `wing.db` proven.
+
+**Next big track:** Wing UI revision. The PHP/Latte/CSS surface grew
+organically across A8 → A14 and is now incoherent: 17 presenters, 7
+unmoduled CSS files (832 LOC), inline `<script>` + `<style>` in
+templates, mixed Czech/English, hardcoded `auth.dev.local` in the
+layout, stale subtitle, no shared filter-bar partial. Proposed phases:
+W1 Information Architecture · W2 Design system · W3 Template cleanup
+· W4 Operator UX upgrades. See conversation 2026-05-17 for the full
+proposal text; awaiting operator approval before opening tasks.
 
 **Parallel pending work:**
 * **Tier-2 aggregator path** — extend `run_aggregators` with
   `from: app_manifest` source so Tier-2 apps land in `inputs.clients`
   alongside Tier-1; retire the `authentik_oidc_apps: []` Tier-2 stub.
-* **Linux port** (`docs/linux-port.md`) — Ubuntu LTS target; deferred
-  until Phase 5 lands.
+* **Linux port** (`docs/linux-port.md`) — Ubuntu LTS target; deferred.
 
-### Last verified state (2026-05-16)
+### Last verified state (2026-05-17)
 
-- **`git status`** clean after current session's commits.
-- Playwright e2e suite: 14 passed / 7 skipped / 0 failed against
-  `pazny.eu` in 43s; ephemeral SSO tester provisioned + revoked per run.
-- Smoke probe (post-playbook): 31/32 OK (Nextcloud 500 — separate issue).
-- `ansible-playbook main.yml --syntax-check` clean.
-- Coexistence tests 16/16 pass after Mattermost sentinel swap.
-- `python3 tools/fetch-authentik-bootstrap-token.py` works (docker-exec
-  primary path; auto-discovers `infra-authentik-server-1`).
+- **`git status`** clean, 0 commits ahead after the 27-commit batch
+  pushed today (`826c406..3fec16b` on origin/master).
+- **Anatomy gates:** 227/227 green.
+- **ansible-playbook main.yml --syntax-check:** clean.
+- **Smoke probe (post-playbook):** 32/32 OK (Nextcloud 500 was the
+  duplicate-prefix drift class — closed by Nextcloud post.yml
+  pre-bootstrap config.php sed-patch).
+- **wing.db event lineage:** 7 agent-attributed rows from this session
+  — 2× `agent_run_start` + 3× `agent_run_end` + 2× `conductor_report`,
+  spanning the conductor + remediator identities with cryptographic
+  `actor_id` + `actor_action_id` attribution (A10 audit trail proven
+  end-to-end).
+- **Per-minute Pulse jobs:** `wing:dispatch-notifications` exit 0
+  every minute since 13:09 UTC (post args[] fix).
+- **Bone HMAC POSTs:** working end-to-end after the canonical-JSON
+  + openssl-NF + launchd bootout-not-kickstart fix bundle.
 
 ### What landed since 2026-05-07
 
 | Area | Highlights |
 |---|---|
+| **Phase 5 ceremony (2026-05-17)** | First non-operator-identity e2e write to `wing.db` proven. Conductor self-test ran on demand via `tools/run-phase5-ceremony.sh`, exit 0, two events with shared `actor_action_id`. Active-work punch #1 CLOSED. |
+| **Post-Phase-5 incident-driven fixes (2026-05-17)** | Live remediator surfaced 7 latent bugs in its first triage report: (1) Wing api_tokens missing `remediator` row; (2) discover-pulse-catalog.py substitution table missing `{{ remediator_wing_api_token }}` + `{{ wing_app_dir }}` + `{{ wing_home }}`; (3) wing-base dispatch jobs referenced `wing_home/bin/` but script lives in `wing_app_dir/bin/`; (4) Bone `events.py` VALID_TYPES whitelist missing `agent_run_start/end` + `conductor_report` + `remediator_report`; (5) bash printf-built JSON bodies non-canonical → Bone HMAC validation fails (fix: build via `jq --sort-keys -c`); (6) `awk '{print $2}'` extracts empty hash on openssl 3.x (fix: `$NF`); (7) `launchctl kickstart -k` doesn't re-read EnvironmentVariables — launchd caches them (fix: bootout + bootstrap in handlers for bone/openclaw/wing). Plus Nextcloud post.yml pre-bootstrap config.php sed-patch (self-heals dbpassword drift without `blank=true`). 5 new anatomy gates pin the canonical-JSON + openssl-NF + ApprovalsPresenter canonicalize contracts. |
 | **Remediator agent (A9.3)** | Read-only security-finding triage agent. AgentKit profile at `files/anatomy/agents/remediator/`, Pulse profile at `files/anatomy/agents/remediator.yml`. Authentik `nos-remediator` client wired with READ-ONLY caps only (anatomy gate enforces no `write` / `scan`). `tools/run-remediator.sh` on-demand wrapper produces a markdown report with `GREEN/REVIEW/RED` verdict. Genericized `pulse-run-agent.sh` to `NOS_AGENT_*` env (backward-compat aliases). 17 anatomy gates + `docs/remediator-agent.md`. |
 | **A9 daily-digest mail (A9.2)** | `mail_digest_window` schema column + ALTER sweep; dispatch worker has severity-floor (`DISPATCH_MAIL_DIGEST_FLOOR`, default `medium`) — at/below queues, above immediates; `DISPATCH_DIGEST_FLUSH=1` daily worker aggregates queue into ONE summary email grouped by severity; new `dispatch-notifications-digest` Pulse cron (default 09:00 UTC); `mail_digest_floor` + `mail_digest_cron` in default.config.yml. 5 new gates. |
 | **Notification fanout (A9)** | New table `wing.db.notifications`; NotificationRepository; Bone POST/GET `/api/v1/notifications` (HMAC); InboxPresenter promoted to operator-attention surface with mark-read; PHP CLI dispatch worker (`bin/dispatch-notifications.php`) registered as per-minute Pulse subprocess job; aggregator harvests per-plugin `notification:` blocks into a routing JSON sidecar Bone reads at insert time; gitleaks plugin is first consumer; 13 anatomy gates + authoritative guide `files/anatomy/docs/notification-fanout.md`. |
@@ -64,14 +82,15 @@ Numbered for the loop prompt; each line ≤ 2 sentences. Items 1–11 from
 the previous snapshot all completed — see git log between `7e2026c` and
 `5f9c0a7` for the trail.
 
-1. **Phase 5 ceremony** — `bash tools/run-phase5-ceremony.sh` fires the
+1. ~~**Phase 5 ceremony** — `bash tools/run-phase5-ceremony.sh` fires the
    conductor self-test on demand. Pre-flight (Bone health + pulse_jobs
    row + Authentik probe) + env resolution from `pulse_jobs.env_json`
    (no secrets re-read) + post-flight `event_delta`/`notif_delta` +
    markdown report (`~/.nos/phase5-report-<ts>.md`). Pass = exit 0 AND
-   ≥2 conductor events written. Authoritative guide:
-   `docs/phase5-ceremony.md`. CLI shipped 2026-05-17; first operator
-   wet-run still TODO.
+   ≥2 conductor events written.~~ DONE 2026-05-17: ceremony exit 0,
+   `actor_action_id=b01de576-7498-4b3f-bd2a-9b155b3f1a8b`, both
+   `agent_run_start` + `agent_run_end` events landed. Authoritative
+   guide: `docs/phase5-ceremony.md`.
 2. ~~**A9 — notification fanout** — bones-and-wings §Appendix B; follow
    inbox/approvals shape. Not started.~~ DONE 2026-05-16: A9.1
    (schema + NotificationRepository) → A9.6 (anatomy gates + doc). See
