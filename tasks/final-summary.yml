@@ -97,4 +97,45 @@
         Services via ports: http://{{ tailscale_hostname }}:<port>
       {% endif %}
 
+      {# ── A16 (2026-05-17): CI autowire token reminder ────────────────────── #}
+      {% set _need_gitea_token = (install_gitea_autowire_nos | default(false) | bool) and (gitea_api_token | default('') | length == 0) %}
+      {% set _need_wp_token    = (install_woodpecker_autowire_nos | default(false) | bool) and (woodpecker_api_token | default('') | length == 0) %}
+      {% set _have_authentik_bootstrap = (authentik_bootstrap_token | default('') | length > 0) %}
+      {% if _need_gitea_token or _need_wp_token or ((install_wing | default(true) | bool) and (install_authentik | default(false) | bool) and not _have_authentik_bootstrap) %}
+      ── OPERATOR ACTION REQUIRED — MISSING TOKENS ─────────────────────────────
+
+      {% if (install_wing | default(true) | bool) and (install_authentik | default(false) | bool) and not _have_authentik_bootstrap %}
+        Authentik bootstrap token   (powers Wing /users + invitation minting)
+
+          1. Open       https://{{ authentik_domain | default('auth.dev.local') }}/if/admin/#/identity/tokens
+          2. Find       nos-api   →   "Copy Key"
+          3. Run        python3 tools/fetch-authentik-bootstrap-token.py
+                        (or paste the value as authentik_bootstrap_token in ~/.nos/secrets.yml)
+          4. Re-run     ansible-playbook main.yml --tags wing
+
+      {% endif %}
+      {% if _need_gitea_token %}
+        Gitea API token             (powers nOS repo + GitHub pull-mirror autowiring)
+
+          1. Open       https://{{ gitea_domain | default('git.dev.local') }}/-/user/settings/applications
+          2. Click      "Generate New Token"
+                        Name: nos-autowire
+                        Scopes: write:repository, write:admin
+          3. Paste into credentials.yml:
+                        gitea_api_token: "<token>"
+
+      {% endif %}
+      {% if _need_wp_token %}
+        Woodpecker API token        (powers nOS repo activation in CI)
+
+          1. Open       https://{{ woodpecker_domain | default('ci.dev.local') }}/user
+          2. Copy the "Personal Access Token" displayed at the top of the page
+          3. Paste into credentials.yml:
+                        woodpecker_api_token: "<token>"
+
+      {% endif %}
+        After provisioning, re-run the playbook (only the affected tags is
+        enough): ansible-playbook main.yml --tags wing,gitea,woodpecker
+
+      {% endif %}
       ═══════════════════════════════════════════════════════════════════════════

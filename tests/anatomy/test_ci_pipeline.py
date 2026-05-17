@@ -150,3 +150,35 @@ def test_stack_up_wires_woodpecker_post():
 	src = (REPO / "tasks/stacks/stack-up.yml").read_text()
 	assert "pazny.woodpecker post" in src
 	assert "tasks_from: post.yml" in src and "name: pazny.woodpecker" in src
+
+
+# ── End-of-playbook token reminder ───────────────────────────────────────
+
+
+def test_final_summary_carries_token_hint_section():
+	"""final-summary.yml MUST surface a calibrated operator hint when any
+	of the three high-impact tokens is missing (authentik_bootstrap_token
+	when wing+authentik installed; gitea_api_token / woodpecker_api_token
+	when the matching autowire toggle is on). Catches a regression where
+	the hint section was accidentally removed."""
+	src = (REPO / "tasks/final-summary.yml").read_text()
+	assert "OPERATOR ACTION REQUIRED — MISSING TOKENS" in src
+	# All three tokens must be referenced.
+	assert "authentik_bootstrap_token" in src
+	assert "gitea_api_token" in src
+	assert "woodpecker_api_token" in src
+	# Hint must point to fetch-authentik-bootstrap-token.py — the
+	# canonical operator path documented in tools/.
+	assert "fetch-authentik-bootstrap-token.py" in src
+
+
+def test_final_summary_hint_is_conditional_not_unconditional():
+	"""Hint must only fire when something is missing — otherwise it
+	noise-pollutes every successful playbook completion. Pinned via
+	the presence of the conditional set blocks."""
+	src = (REPO / "tasks/final-summary.yml").read_text()
+	assert "_need_gitea_token" in src
+	assert "_need_wp_token" in src
+	# The wrapping `{% if _need_gitea_token or _need_wp_token or ...%}`
+	# must include the authentik bootstrap path too.
+	assert "_have_authentik_bootstrap" in src
