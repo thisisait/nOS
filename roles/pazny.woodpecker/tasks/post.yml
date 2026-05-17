@@ -1,0 +1,11 @@
+---
+# ==============================================================================
+# pazny.woodpecker/tasks/post.yml — entrypoint for post-start tasks
+#
+# Called from tasks/stacks/stack-up.yml after `docker compose up devops --wait`.
+# Conditionally pulls in post-repo.yml when install_woodpecker_autowire_nos=true.
+# ==============================================================================
+
+- name: "[pazny.woodpecker Post] Wire nOS repo into Woodpecker"
+  ansible.builtin.include_tasks: post-repo.yml
+  when: install_woodpecker_autowire_nos | default(false) | bool

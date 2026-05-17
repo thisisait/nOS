@@ -308,6 +308,7 @@
 - { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
 # DevOps post-start
 - { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
+- { name: "[Stacks] pazny.woodpecker post", ansible.builtin.include_role: { name: pazny.woodpecker, tasks_from: post.yml, apply: { tags: ['woodpecker'] } }, when: "install_woodpecker | default(false)", tags: ['woodpecker'] }
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
 
 # ── Authentik OIDC: service-side configuration (Gitea API, Nextcloud occ) ───

@@ -1,0 +1,77 @@
+---
+# ==============================================================================
+# pazny.gitea/tasks/post-repo.yml — nOS repo + GitHub pull-mirror
+#
+# Idempotently creates the `thisisait/nOS` repo in the local Gitea instance
+# and configures it as a pull-mirror from the GitHub origin. After the
+# mirror lands, every push to GitHub auto-syncs into Gitea, which in turn
+# fires the Woodpecker pipeline (post-repo.yml in pazny.woodpecker).
+#
+# Required vars (operator-provisioned in credentials.yml before the first
+# run that toggles install_gitea_autowire_nos=true):
+#   * gitea_api_token       — admin API token (Settings → Applications →
+#                              Generate New Token in Gitea UI)
+#
+# Optional vars (defaults in pazny.gitea/defaults/main.yml):
+#   * gitea_nos_repo_owner  — default: same as gitea_admin_user
+#   * gitea_nos_repo_name   — default: 'nOS'
+#   * gitea_nos_repo_clone_url — default: GitHub origin
+#   * gitea_nos_repo_private  — default: true
+#
+# Called from tasks/main.yml only when both install_gitea=true AND
+# install_gitea_autowire_nos=true (gated so operators who don't want the
+# mirror don't get one).
+# ==============================================================================
+
+- name: "[pazny.gitea Post Repo] Ensure gitea_api_token is set"
+  ansible.builtin.fail:
+    msg: |
+      install_gitea_autowire_nos=true requires gitea_api_token in
+      credentials.yml. Provision it via Gitea UI:
+        Profile → Settings → Applications → Generate New Token
+        Scope: write:repository, write:admin
+  when: gitea_api_token | default('') | length == 0
+
+- name: "[pazny.gitea Post Repo] Check if nOS repo already exists"
+  ansible.builtin.uri:
+    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    method: GET
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+    status_code: [200, 404]
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  register: _gitea_repo_check
+  changed_when: false
+
+- name: "[pazny.gitea Post Repo] Create + pull-mirror repo (first run only)"
+  ansible.builtin.uri:
+    url: "https://{{ gitea_domain }}/api/v1/repos/migrate"
+    method: POST
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      clone_addr: "{{ gitea_nos_repo_clone_url }}"
+      repo_name: "{{ gitea_nos_repo_name }}"
+      repo_owner: "{{ gitea_nos_repo_owner }}"
+      mirror: true
+      mirror_interval: "{{ gitea_nos_repo_mirror_interval | default('10m0s') }}"
+      private: "{{ gitea_nos_repo_private | default(true) | bool }}"
+      description: "nOS playbook — auto-mirror from GitHub (A16, 2026-05-17)"
+      service: "git"
+    status_code: 201
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  when: _gitea_repo_check.status == 404
+  register: _gitea_repo_create
+
+- name: "[pazny.gitea Post Repo] Force initial mirror sync (first run only)"
+  ansible.builtin.uri:
+    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}/mirror-sync"
+    method: POST
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+    status_code: [200, 202]
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  when: _gitea_repo_create.changed | default(false)
+  changed_when: true

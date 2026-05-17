@@ -20,3 +20,11 @@ woodpecker_open_registration: false
 woodpecker_max_workflows: 4             # Max paralelnich pipeline runu na agenta
 woodpecker_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 woodpecker_agent_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+
+# ── A16 (2026-05-17): nOS repo activation autowiring ───────────────────
+# When install_woodpecker_autowire_nos=true, the playbook calls the
+# Woodpecker activate-repo API after Gitea creates the mirror. Once
+# active, every Gitea webhook fires the .woodpecker.yml pipeline.
+install_woodpecker_autowire_nos: false
+woodpecker_nos_repo_owner: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+woodpecker_nos_repo_name: "nOS"

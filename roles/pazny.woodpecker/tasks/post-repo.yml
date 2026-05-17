@@ -1,0 +1,61 @@
+---
+# ==============================================================================
+# pazny.woodpecker/tasks/post-repo.yml — activate nOS repo in Woodpecker
+#
+# Woodpecker discovers Gitea repos via its OAuth2 integration but each repo
+# is dormant until explicitly activated. Activation enables webhook delivery
+# (Gitea push → Woodpecker pipeline run) and surfaces the repo in the
+# Woodpecker UI.
+#
+# Required vars:
+#   * woodpecker_api_token — admin API token (Woodpecker UI →
+#                            User Settings → Personal Access Tokens)
+#
+# Optional vars:
+#   * woodpecker_nos_repo_owner  — default: same as gitea_admin_user
+#   * woodpecker_nos_repo_name   — default: 'nOS'
+#
+# Idempotent: the activate endpoint returns 409 if the repo is already
+# active; we treat that as success.
+# ==============================================================================
+
+- name: "[pazny.woodpecker Post Repo] Ensure woodpecker_api_token is set"
+  ansible.builtin.fail:
+    msg: |
+      install_woodpecker_autowire_nos=true requires woodpecker_api_token
+      in credentials.yml. Provision it via Woodpecker UI:
+        User Settings → Personal Access Tokens → Generate New Token
+  when: woodpecker_api_token | default('') | length == 0
+
+- name: "[pazny.woodpecker Post Repo] Discover Gitea forge_remote_id"
+  ansible.builtin.uri:
+    url: "https://{{ gitea_domain }}/api/v1/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
+    method: GET
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+    status_code: 200
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  register: _woodpecker_gitea_repo
+  changed_when: false
+
+- name: "[pazny.woodpecker Post Repo] Check if repo is already activated"
+  ansible.builtin.uri:
+    url: "https://{{ woodpecker_domain }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ woodpecker_api_token }}"
+    status_code: [200, 404]
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  register: _woodpecker_repo_check
+  changed_when: false
+
+- name: "[pazny.woodpecker Post Repo] Activate nOS repo (first run only)"
+  ansible.builtin.uri:
+    url: "https://{{ woodpecker_domain }}/api/repos?forge_remote_id={{ _woodpecker_gitea_repo.json.id }}"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ woodpecker_api_token }}"
+    status_code: [200, 201, 409]
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  when: _woodpecker_repo_check.status == 404
+  changed_when: true
