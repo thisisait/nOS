@@ -26,7 +26,7 @@
 					{var $kind = 'changed'}
 				{/if}
 				<div class="wes-row" data-kind="{$kind}">
-					<span class="wes-ts">{$ev['ts']|substr:11:8}</span>
+					<span class="wes-ts">{$ev['ts']|substr:11,8}</span>
 					<span class="wes-type kind-{$kind}">{$ev['type']}</span>
 					<span class="wes-msg">{$ev['task'] ?? $ev['migration_id'] ?? $ev['upgrade_id'] ?? ''}</span>
 				</div>
