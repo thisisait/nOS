@@ -40,10 +40,25 @@ final class RemediationPresenter extends BaseApiPresenter
 		if (empty($body['ids']) || empty($body['status'])) {
 			$this->sendError('ids and status are required');
 		}
+		// Security (2026-05-17): resolved_by is ALWAYS the validated bearer
+		// token identity. Pre-this, the endpoint trusted `$body['resolved_by']`
+		// — same class of attribution-spoofing bug as GitleaksPresenter::
+		// actionResolve had. Reject body-supplied attribution explicitly.
+		if (isset($body['resolved_by'])) {
+			$this->sendError(
+				'resolved_by is not accepted in the request body — it is ' .
+				'derived from the validated bearer token identity',
+				400,
+			);
+		}
+		$actorId = $this->getActorId();
+		if (!$actorId) {
+			$this->sendError('actor_id unavailable — token validation drift', 500);
+		}
 		$count = $this->repo->bulkUpdateStatus(
 			$body['ids'],
 			$body['status'],
-			$body['resolved_by'] ?? null,
+			$actorId,
 		);
 		$this->sendSuccess(['updated' => $count]);
 	}

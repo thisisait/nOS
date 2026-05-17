@@ -50,7 +50,13 @@ requires:
 # =============================================================================
 
 authentik:
-  provider_type: oauth2
+  # 2026-05-17: normalized from provider_type=oauth2 to the canonical
+  # native_oidc mode. Functionally identical (blueprint already routes
+  # everything non-proxy through the oauth2provider branch), but the
+  # canonical-set anatomy gate now refuses any non-canonical mode label
+  # so the per-CLAUDE.md mode-trichotomy stays single-spelling.
+  mode: native_oidc
+  provider_type: native_oidc
   client_id: nos-gitea
   client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
   slug: gitea

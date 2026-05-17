@@ -54,12 +54,37 @@ final class GitleaksPresenter extends BaseApiPresenter
 
 	/**
 	 * POST /api/v1/gitleaks_findings/<id>/resolve
+	 *
+	 * Security (2026-05-17): `resolved_by` is ALWAYS derived from the
+	 * validated bearer-token identity via `$this->getActorId()`. Pre-this
+	 * the endpoint accepted `$body['resolved_by']` — a client-supplied
+	 * string with no cryptographic tie to the caller — which let any agent
+	 * holding a Wing token resolve a finding under an arbitrary attribution
+	 * (e.g. an LLM-driven remediator could write `resolved_by: 'operator'`
+	 * and the audit trail would believe it). Surfaced by the SSO doctrine
+	 * audit; same gate-pattern as AgentsPresenter::actionStart (A14.1).
+	 *
+	 * Defence in depth: if the caller sends `resolved_by` in the body, we
+	 * REJECT the request rather than silently ignore — that way a future
+	 * refactor can't flip back to body-trust without tripping this check.
 	 */
 	public function actionResolve(string $id): void
 	{
 		$this->requireMethod('POST');
 		$body = $this->getJsonBody();
-		$ok   = $this->gitleaks->resolve($id, $body['resolved_by'] ?? null);
+		if (isset($body['resolved_by'])) {
+			$this->sendError(
+				'resolved_by is not accepted in the request body — it is ' .
+				'derived from the validated bearer token identity to prevent ' .
+				'attribution spoofing',
+				400,
+			);
+		}
+		$actorId = $this->getActorId();
+		if (!$actorId) {
+			$this->sendError('actor_id unavailable — token validation drift', 500);
+		}
+		$ok = $this->gitleaks->resolve($id, $actorId);
 		if (!$ok) {
 			$this->sendError('Finding not found or already resolved', 404);
 		}

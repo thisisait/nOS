@@ -63,7 +63,12 @@ requires:
 # `authentik_oidc_apps` list has a single home for the OIDC client + slug.
 
 authentik:
-  mode: proxy_auth
+  # 2026-05-17: normalized from mode=proxy_auth to canonical forward_auth.
+  # The blueprint's _is_proxy check already accepts both spellings, but the
+  # canonical-set anatomy gate now refuses anything outside
+  # {native_oidc, header_oidc, forward_auth, none}.
+  mode: forward_auth
+  provider_type: forward_auth
   client_id: nos-qdrant
   client_secret: "{{ global_password_prefix }}_pw_oidc_qdrant"
   slug: qdrant
