@@ -52,7 +52,7 @@
 					<td>
 						<div style="font-size:13px;">{$n['title']}</div>
 						{if !empty($n['body'])}
-							<div style="font-size:11px; color:var(--text2); margin-top:2px; max-width:480px; overflow:hidden; text-overflow:ellipsis;">{$n['body']|substr:0:240}{if strlen($n['body']) > 240}…{/if}</div>
+							<div style="font-size:11px; color:var(--text2); margin-top:2px; max-width:480px; overflow:hidden; text-overflow:ellipsis;">{$n['body']|substr:0,240}{if strlen($n['body']) > 240}…{/if}</div>
 						{/if}
 					</td>
 					<td style="font-size:11px; color:var(--text2)">
@@ -61,14 +61,14 @@
 						{if empty($n['origin_plugin']) && empty($n['origin_agent']) && !empty($n['actor_id'])}{$n['actor_id']}{/if}
 					</td>
 					<td style="font-size:11px; color:var(--text2)">{implode(', ', $n['channels'] ?? [])}</td>
-					<td style="font-size:11px; color:var(--text2)">{($n['created_at'] ?? '')|substr:0:19}</td>
+					<td style="font-size:11px; color:var(--text2)">{($n['created_at'] ?? '')|substr:0,19}</td>
 					<td>
 						{if !$n['wing_inbox_read_at']}
 							<form method="post" action="{plink Inbox:markRead, uuid => $n['uuid']}" style="display:inline;">
 								<button type="submit" class="btn btn-small">Mark read</button>
 							</form>
 						{else}
-							<span style="font-size:11px; color:var(--text2)">read {($n['wing_inbox_read_at'] ?? '')|substr:11:8}</span>
+							<span style="font-size:11px; color:var(--text2)">read {($n['wing_inbox_read_at'] ?? '')|substr:11,8}</span>
 						{/if}
 					</td>
 				</tr>
@@ -114,10 +114,10 @@
 					<td style="font-size:11px; word-break:break-all">{$f['file_path']}</td>
 					<td style="font-size:12px; text-align:right">{$f['line_start']}</td>
 					<td style="font-family:monospace; font-size:12px">{$f['secret_masked'] ?? 'N/A'}</td>
-					<td style="font-size:11px; font-family:monospace">{($f['commit_sha'] ?? '')|substr:0:8}</td>
+					<td style="font-size:11px; font-family:monospace">{($f['commit_sha'] ?? '')|substr:0,8}</td>
 					<td style="font-size:12px">{$f['author'] ?? ''}</td>
-					<td style="font-size:11px; color:var(--text2)">{($f['scan_id'] ?? '')|substr:0:16}</td>
-					<td style="font-size:11px; color:var(--text2)">{($f['created_at'] ?? '')|substr:0:10}</td>
+					<td style="font-size:11px; color:var(--text2)">{($f['scan_id'] ?? '')|substr:0,16}</td>
+					<td style="font-size:11px; color:var(--text2)">{($f['created_at'] ?? '')|substr:0,10}</td>
 				</tr>
 			{/foreach}
 		</tbody>
@@ -125,7 +125,7 @@
 
 	<p style="font-size:12px; color:var(--text2)">
 		Resolve a finding via:
-		<code>POST /api/v1/gitleaks_findings/{ldelim}id{rdelim}/resolve</code>
+		<code>POST /api/v1/gitleaks_findings/&#123;id&#125;/resolve</code>
 	</p>
 {/if}
 
@@ -148,14 +148,14 @@
 			{foreach $conductorEvents as $ev}
 				<tr>
 					<td><span class="badge badge-{$ev['type'] === 'agent_run_end' ? 'resolved' : 'pending'}">{$ev['type']}</span></td>
-					<td style="font-size:11px; font-family:monospace">{($ev['run_id'] ?? '')|substr:0:24}</td>
-					<td style="font-size:12px; color:var(--text2)">{($ev['ts'] ?? '')|substr:0:19}</td>
+					<td style="font-size:11px; font-family:monospace">{($ev['run_id'] ?? '')|substr:0,24}</td>
+					<td style="font-size:12px; color:var(--text2)">{($ev['ts'] ?? '')|substr:0,19}</td>
 					<td style="font-size:12px">
 						{if !empty($ev['result_json'])}
-							{var $res = $ev['result_json']|json_decode:true}
+							{var $res = json_decode($ev['result_json'], true)}
 							{if isset($res['exit_code'])}
 								exit={$res['exit_code']}
-								{if !empty($res['summary'])}&nbsp;· {$res['summary']|substr:0:80}{/if}
+								{if !empty($res['summary'])}&nbsp;· {$res['summary']|substr:0,80}{/if}
 							{/if}
 						{/if}
 					</td>

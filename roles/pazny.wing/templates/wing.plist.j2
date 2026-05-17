@@ -69,7 +69,13 @@
         <!-- Authentik OIDC issuer — Wing presenters can mint operator JWTs
              for cross-service calls (Bone, Qdrant via Bone). -->
         <key>AUTHENTIK_OIDC_ISSUER</key>
-        <string>https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/</string>
+        <string>https://{{ authentik_domain }}/</string>
+        <!-- W3 (2026-05-17): bare domain used by BasePresenter for the
+             layout's end-session link (`Logout` in the top nav). Pre-W3
+             the layout had `https://auth.dev.local/...` hardcoded; W3
+             promotes it to a template var populated from this env. -->
+        <key>AUTHENTIK_DOMAIN</key>
+        <string>{{ authentik_domain }}</string>
 {% endif %}
 
         <!-- Tenant / host config the role-thinning recipe expects to see
