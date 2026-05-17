@@ -180,6 +180,10 @@ $statements = [
 		language        TEXT,
 		attack_surface  TEXT,
 		status          TEXT NOT NULL DEFAULT 'planned',
+		-- A10 attribution (2026-05-17). Operator or inspektor agent. Filled
+		-- via getActorId() in the PentestPresenter create + update paths;
+		-- old rows stay NULL.
+		created_by      TEXT,
 		created_at      TEXT NOT NULL DEFAULT (datetime('now')),
 		updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 	)",
@@ -230,6 +234,16 @@ $statements = [
 		disclosure_status       TEXT DEFAULT 'not_reported',
 		upstream_issue          TEXT,
 		patch_pr                TEXT,
+		-- A10 direct attribution (2026-05-17, A9.4): who discovered + who resolved.
+		-- Pre-this only indirect via target_id → pentest_targets (which itself
+		-- didn't carry attribution). Inspektor's runner (deferred) will write
+		-- discovered_by='agent:inspektor'; operator + remediator close
+		-- findings via /api/v1/pentest/findings/<id>/resolve with the bearer-
+		-- token-derived actor_id (same canonical pattern as
+		-- GitleaksPresenter::actionResolve post-2026-05-17 security fix).
+		discovered_by           TEXT,
+		resolved_at             TEXT,
+		resolved_by             TEXT,
 		nos_mitigation    TEXT,
 		remediation             TEXT,
 		found_at                TEXT NOT NULL DEFAULT (datetime('now')),
@@ -396,6 +410,26 @@ $addMissingColumns($db, 'pulse_runs', [
 	'acted_at'        => 'TEXT',
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_pulse_runs_actor_action_id ON pulse_runs(actor_action_id)');
+
+// pentest_findings + pentest_targets direct attribution (A9.4, 2026-05-17).
+// Pre-this, pentest had only indirect attribution (finding → target_id →
+// pentest_targets, which itself had no created_by). The inspektor agent's
+// runner (deferred until trivy/grype/nuclei substrates land) will write
+// `discovered_by='agent:inspektor'`; operator + remediator close findings
+// via /api/v1/pentest/findings/<id>/resolve which uses the bearer-token-
+// derived actor_id (same pattern as the 2026-05-17 GitleaksPresenter +
+// RemediationPresenter security fix).
+$addMissingColumns($db, 'pentest_findings', [
+	'discovered_by' => 'TEXT',
+	'resolved_at'   => 'TEXT',
+	'resolved_by'   => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_pf_discovered_by ON pentest_findings(discovered_by)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_pf_resolved_at ON pentest_findings(resolved_at) WHERE resolved_at IS NULL');
+$addMissingColumns($db, 'pentest_targets', [
+	'created_by' => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_pt_created_by ON pentest_targets(created_by)');
 
 $db->close();
 

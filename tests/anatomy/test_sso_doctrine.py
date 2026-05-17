@@ -125,6 +125,30 @@ def test_plugin_clients_have_consistent_naming():
 # ── A10 actor_id coverage ──────────────────────────────────────────────
 
 
+def test_pentest_tables_carry_direct_attribution():
+    """A9.4 follow-on (2026-05-17): pentest_findings + pentest_targets
+    now carry direct actor_id columns (discovered_by / resolved_by /
+    created_by) so 'who found this vuln?' answers in one SELECT instead
+    of the legacy target_id soft-FK chain. Backbone for the deferred
+    inspektor runner."""
+    src = (REPO / "files/anatomy/wing/bin/init-db.php").read_text()
+    # pentest_findings carries the new columns in the CREATE TABLE.
+    pf_start = src.find("CREATE TABLE IF NOT EXISTS pentest_findings")
+    pf_end = src.find(")\",", pf_start)
+    pf_block = src[pf_start:pf_end]
+    for col in ("discovered_by", "resolved_at", "resolved_by"):
+        assert col in pf_block, f"pentest_findings missing {col}"
+    # pentest_targets carries created_by.
+    pt_start = src.find("CREATE TABLE IF NOT EXISTS pentest_targets")
+    pt_end = src.find(")\",", pt_start)
+    pt_block = src[pt_start:pt_end]
+    assert "created_by" in pt_block
+    # ALTER sweep migrates legacy DBs (pre-A9.4) — must be present so
+    # the operator's existing wing.db doesn't need a blank reset.
+    assert "addMissingColumns($db, 'pentest_findings'" in src
+    assert "addMissingColumns($db, 'pentest_targets'" in src
+
+
 def test_attribution_tables_carry_actor_id():
     """The five core 'who-did-what' tables — events, pulse_runs,
     notifications, agent_sessions — MUST carry actor_id. These are the
