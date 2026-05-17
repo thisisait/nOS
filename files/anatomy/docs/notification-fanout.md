@@ -332,9 +332,44 @@ hyphen + underscore, 2-50 chars). Pinned by Bone's `validate_payload`
 + the `test_bone_validate_payload_accepts_template_or_title` anatomy
 gate.
 
+## Stalwart TLS / AUTH LOGIN (2026-05-17)
+
+When `install_smtp_stalwart: true`, the dispatch worker speaks SMTP
+submission with STARTTLS + AUTH LOGIN against Stalwart's port 587
+instead of raw SMTP against mailpit's 1025. The wing-base plugin
+manifest flips the env vars automatically — operator config doesn't
+need to know about the SMTP dance.
+
+Env vars (auto-rendered by the wing-base plugin from Ansible state):
+
+| Var | Mailpit mode | Stalwart mode |
+|---|---|---|
+| `MAIL_HOST` | `127.0.0.1` | `127.0.0.1` |
+| `MAIL_PORT` | `1025` | `587` (submission) |
+| `MAIL_TLS_MODE` | `none` | `starttls` |
+| `MAIL_USERNAME` | `""` | `admin` (stalwart_admin_username) |
+| `MAIL_PASSWORD` | `""` | `stalwart_admin_password` |
+| `MAIL_TLS_VERIFY` | `1` | `1` (or `0` for self-signed dev) |
+
+Implicit-TLS port 465 is also supported — set `MAIL_TLS_MODE=implicit`
+and `MAIL_PORT=465`. Useful if you front Stalwart with a TLS-terminating
+proxy that mandates pre-handshake TLS.
+
+The TLS dance lives in `_smtp_open_session()` (single helper used by
+both `deliver_mail` and `deliver_mail_digest`):
+
+1. Connect via `stream_socket_client` — `tcp://` for raw + STARTTLS,
+   `tls://` for implicit.
+2. Read 220 greeting.
+3. EHLO.
+4. If STARTTLS mode: send `STARTTLS`, expect 220, upgrade with
+   `stream_socket_enable_crypto`, re-EHLO.
+5. If username+password present: `AUTH LOGIN`, base64'd creds, expect 235.
+6. Return socket to caller; MAIL FROM / RCPT TO / DATA continues normally.
+
 ## Out of scope (post-A9)
 
-* Stalwart TLS SMTP path (Track G follow-on).
+* (Stalwart TLS path landed 2026-05-17 — was in this list.)
 * Per-recipient routing (today `target_actor_id` is honored but always
   `operator` in practice).
 * Webhook-fanout duplicate-suppression (per-notification idempotency key).

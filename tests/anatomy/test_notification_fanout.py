@@ -181,6 +181,47 @@ def test_init_db_alters_in_mail_digest_window():
     assert "'mail_digest_window' => 'TEXT'" in src
 
 
+def test_dispatch_worker_supports_tls_modes():
+    """2026-05-17 (Stalwart TLS path): the worker speaks raw SMTP for
+    mailpit (TLS_MODE=none) AND STARTTLS / implicit-TLS for Stalwart
+    submission ports, with AUTH LOGIN when credentials are supplied.
+    Both deliver_mail + deliver_mail_digest share the new
+    _smtp_open_session helper so the TLS dance is single-sourced."""
+    src = (REPO / "files/anatomy/wing/bin/dispatch-notifications.php").read_text()
+    assert "_smtp_open_session" in src
+    assert "MAIL_TLS_MODE" in src
+    assert "MAIL_USERNAME" in src
+    assert "MAIL_PASSWORD" in src
+    assert "MAIL_TLS_VERIFY" in src
+    # The three modes the helper recognizes.
+    assert "'starttls'" in src or '"starttls"' in src
+    assert "'implicit'" in src or '"implicit"' in src
+    # STARTTLS upgrade calls stream_socket_enable_crypto.
+    assert "stream_socket_enable_crypto" in src
+    # AUTH LOGIN with base64 username + password.
+    assert "AUTH LOGIN" in src
+    assert "base64_encode" in src
+
+
+def test_wing_base_wires_stalwart_when_enabled():
+    """wing-base plugin.yml's two Pulse jobs (per-minute + digest) must
+    flip MAIL_TLS_MODE / MAIL_PORT / MAIL_USERNAME / MAIL_PASSWORD to
+    Stalwart-compatible values when install_smtp_stalwart is true.
+    Pre-this both jobs hardcoded mailpit-style raw SMTP on 1025."""
+    import yaml
+    manifest = yaml.safe_load(
+        (REPO / "files/anatomy/plugins/wing-base/plugin.yml").read_text()
+    )
+    jobs = manifest["pulse"]["jobs"]
+    for job in jobs:
+        env = job.get("env") or {}
+        assert "MAIL_TLS_MODE" in env, f"{job['name']} missing MAIL_TLS_MODE"
+        assert "install_smtp_stalwart" in env["MAIL_TLS_MODE"]
+        assert "stalwart_port_submission" in env.get("MAIL_PORT", "")
+        assert "stalwart_admin_username" in env.get("MAIL_USERNAME", "")
+        assert "stalwart_admin_password" in env.get("MAIL_PASSWORD", "")
+
+
 def test_dispatch_worker_handles_digest_path():
     """Dispatch worker has the three new code paths: digest-floor queue
     decision, fetch_digest_queue helper, deliver_mail_digest aggregator.

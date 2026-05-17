@@ -45,6 +45,20 @@ $mailRecipient = getenv('MAIL_RECIPIENT') ?: '';
 $batchLimit = (int) (getenv('DISPATCH_BATCH_LIMIT') ?: 50);
 $dryRun = (getenv('DISPATCH_DRY_RUN') === '1');
 
+// 2026-05-17: TLS + auth support for Stalwart (Track G production mail).
+// MAIL_TLS_MODE:
+//   none      — raw SMTP (default; mailpit dev sink)
+//   starttls  — EHLO → STARTTLS → wrap socket → EHLO → AUTH LOGIN
+//                 (Stalwart submission port 587)
+//   implicit  — wrap socket BEFORE EHLO → AUTH LOGIN
+//                 (Stalwart SMTPS port 465)
+// MAIL_USERNAME / MAIL_PASSWORD — used in AUTH LOGIN when TLS mode set.
+// MAIL_TLS_VERIFY (default "1") — set to "0" only for self-signed dev certs.
+$mailTlsMode = strtolower(getenv('MAIL_TLS_MODE') ?: 'none');
+$mailUsername = getenv('MAIL_USERNAME') ?: '';
+$mailPassword = getenv('MAIL_PASSWORD') ?: '';
+$mailTlsVerify = (getenv('MAIL_TLS_VERIFY') ?: '1') !== '0';
+
 // A9 daily-digest (2026-05-17): rows at severity ≤ DIGEST_FLOOR with `mail`
 // in channels get queued via mail_digest_window instead of immediate-sent.
 // The separate daily worker (run via DISPATCH_DIGEST_FLUSH=1) batches them
@@ -174,18 +188,18 @@ function fetch_digest_queue(SQLite3 $db, int $limit = 500): array
  */
 function deliver_mail_digest(array $rows, string $host, int $port, string $from, string $recipient): ?string
 {
+	global $mailTlsMode, $mailUsername, $mailPassword, $mailTlsVerify;
 	if ($recipient === '') {
 		return 'MAIL_RECIPIENT env var is empty';
 	}
 	if (!$rows) {
 		return null;
 	}
-	$errno = 0;
-	$errstr = '';
-	$sock = @fsockopen($host, $port, $errno, $errstr, 5);
-	if (!$sock) {
-		return "SMTP connect failed {$host}:{$port}: {$errstr}";
+	$sockOrErr = _smtp_open_session($host, $port, $mailTlsMode, $mailUsername, $mailPassword, $mailTlsVerify);
+	if (is_string($sockOrErr)) {
+		return $sockOrErr;
 	}
+	$sock = $sockOrErr;
 	stream_set_timeout($sock, 5);
 
 	$expect = function (string $expectedPrefix) use ($sock): ?string {
@@ -196,11 +210,6 @@ function deliver_mail_digest(array $rows, string $host, int $port, string $from,
 	};
 	$send = function (string $line) use ($sock): void { fwrite($sock, $line . "\r\n"); };
 
-	if (($err = $expect('220')) !== null) { fclose($sock); return $err; }
-	$send('EHLO wing.localhost');
-	while (($line = fgets($sock, 1024)) !== false) {
-		if (preg_match('/^\d{3} /', $line)) break;
-	}
 	$send('MAIL FROM:<' . $from . '>');
 	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
 	$send('RCPT TO:<' . $recipient . '>');
@@ -320,14 +329,56 @@ function deliver_ntfy(array $row, string $baseUrl): ?string
  * (or wait for the Stalwart-aware rewrite). This script intentionally stays
  * thin so the dispatch loop remains debuggable.
  */
-function deliver_mail(array $row, string $host, int $port, string $from, string $recipient): ?string
-{
-	if ($recipient === '') {
-		return 'MAIL_RECIPIENT env var is empty';
-	}
+/**
+ * Open an SMTP socket and complete pre-MAIL setup: 220 greeting, EHLO,
+ * optional STARTTLS upgrade, optional AUTH LOGIN. Returns the socket on
+ * success, or a string error message on failure. Callers must
+ * `fclose($sock)` themselves when done.
+ *
+ * 2026-05-17: Track G follow-on — adds Stalwart-compatible
+ * starttls (587) + implicit (465) TLS + AUTH LOGIN support. Pre-this
+ * the worker only spoke raw SMTP for the mailpit dev sink. Mode
+ * resolution lives at module-load time (see $mailTlsMode / $mailUsername
+ * / $mailPassword / $mailTlsVerify globals).
+ *
+ * @return resource|string  Socket resource on success; error string on failure.
+ */
+function _smtp_open_session(
+	string $host,
+	int $port,
+	string $tlsMode,        // 'none' | 'starttls' | 'implicit'
+	string $username,
+	string $password,
+	bool $tlsVerify,
+) {
 	$errno = 0;
 	$errstr = '';
-	$sock = @fsockopen($host, $port, $errno, $errstr, 5);
+	$transport = $tlsMode === 'implicit' ? "tls://{$host}" : $host;
+	$ctxOpts = [];
+	if ($tlsMode !== 'none' && !$tlsVerify) {
+		$ctxOpts['ssl'] = [
+			'verify_peer' => false,
+			'verify_peer_name' => false,
+			'allow_self_signed' => true,
+		];
+	}
+	$ctx = stream_context_create($ctxOpts);
+	$sock = @stream_socket_client(
+		"tcp://{$transport}:{$port}",
+		$errno, $errstr, 5,
+		STREAM_CLIENT_CONNECT,
+		$ctx,
+	);
+	if (!$sock && $tlsMode === 'implicit') {
+		// Retry via the tls:// transport syntax (some PHP builds want it
+		// in the URI rather than as a context flag).
+		$sock = @stream_socket_client(
+			"tls://{$host}:{$port}",
+			$errno, $errstr, 5,
+			STREAM_CLIENT_CONNECT,
+			$ctx,
+		);
+	}
 	if (!$sock) {
 		return "SMTP connect failed {$host}:{$port}: {$errstr}";
 	}
@@ -335,25 +386,68 @@ function deliver_mail(array $row, string $host, int $port, string $from, string 
 
 	$expect = function (string $expectedPrefix) use ($sock): ?string {
 		$line = fgets($sock, 1024);
-		if ($line === false) {
-			return 'SMTP read timed out';
-		}
-		if (strpos($line, $expectedPrefix) !== 0) {
-			return 'SMTP unexpected reply: ' . trim($line);
-		}
+		if ($line === false) return 'SMTP read timed out';
+		if (strpos($line, $expectedPrefix) !== 0) return 'SMTP unexpected reply: ' . trim($line);
 		return null;
 	};
-
 	$send = function (string $line) use ($sock): void {
 		fwrite($sock, $line . "\r\n");
+	};
+	$drain250 = function () use ($sock): void {
+		while (($line = fgets($sock, 1024)) !== false) {
+			if (preg_match('/^\d{3} /', $line)) break;
+		}
 	};
 
 	if (($err = $expect('220')) !== null) { fclose($sock); return $err; }
 	$send('EHLO wing.localhost');
-	// Drain multi-line 250 reply.
-	while (($line = fgets($sock, 1024)) !== false) {
-		if (preg_match('/^\d{3} /', $line)) break;
+	$drain250();
+
+	if ($tlsMode === 'starttls') {
+		$send('STARTTLS');
+		if (($err = $expect('220')) !== null) { fclose($sock); return $err; }
+		$ok = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+		if (!$ok) { fclose($sock); return 'STARTTLS upgrade failed'; }
+		$send('EHLO wing.localhost');
+		$drain250();
 	}
+
+	if ($tlsMode !== 'none' && $username !== '' && $password !== '') {
+		$send('AUTH LOGIN');
+		if (($err = $expect('334')) !== null) { fclose($sock); return $err; }
+		$send(base64_encode($username));
+		if (($err = $expect('334')) !== null) { fclose($sock); return $err; }
+		$send(base64_encode($password));
+		if (($err = $expect('235')) !== null) { fclose($sock); return "AUTH LOGIN: {$err}"; }
+	}
+
+	return $sock;
+}
+
+
+function deliver_mail(array $row, string $host, int $port, string $from, string $recipient): ?string
+{
+	global $mailTlsMode, $mailUsername, $mailPassword, $mailTlsVerify;
+	if ($recipient === '') {
+		return 'MAIL_RECIPIENT env var is empty';
+	}
+	$sockOrErr = _smtp_open_session($host, $port, $mailTlsMode, $mailUsername, $mailPassword, $mailTlsVerify);
+	if (is_string($sockOrErr)) {
+		return $sockOrErr;
+	}
+	$sock = $sockOrErr;
+	stream_set_timeout($sock, 5);
+
+	$expect = function (string $expectedPrefix) use ($sock): ?string {
+		$line = fgets($sock, 1024);
+		if ($line === false) return 'SMTP read timed out';
+		if (strpos($line, $expectedPrefix) !== 0) return 'SMTP unexpected reply: ' . trim($line);
+		return null;
+	};
+	$send = function (string $line) use ($sock): void {
+		fwrite($sock, $line . "\r\n");
+	};
+
 	$send('MAIL FROM:<' . $from . '>');
 	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
 	$send('RCPT TO:<' . $recipient . '>');

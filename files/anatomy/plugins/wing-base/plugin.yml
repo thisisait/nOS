@@ -142,8 +142,18 @@ pulse:
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
-        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
-        MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"
+        # Mail target — Stalwart (production) when install_smtp_stalwart is on,
+        # else mailpit (dev sink). The TLS_MODE + USERNAME + PASSWORD trio
+        # tells the dispatch worker which SMTP dance to do; mailpit is raw
+        # SMTP, Stalwart requires STARTTLS on submission port 587 + AUTH LOGIN.
+        # See files/anatomy/wing/bin/dispatch-notifications.php::_smtp_open_session.
+        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) or install_smtp_stalwart | default(false) else '' }}"
+        MAIL_PORT: "{{ stalwart_port_submission | default(587) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
+        MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
+        MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
+        MAIL_PASSWORD: "{{ stalwart_admin_password if install_smtp_stalwart | default(false) else '' }}"
+        # Operators with a self-signed dev cert can set mail_tls_verify=false.
+        MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
         MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
         MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
         DISPATCH_BATCH_LIMIT: "50"
@@ -169,8 +179,12 @@ pulse:
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: ""               # digest job is mail-only
-        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
-        MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"
+        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) or install_smtp_stalwart | default(false) else '' }}"
+        MAIL_PORT: "{{ stalwart_port_submission | default(587) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
+        MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
+        MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
+        MAIL_PASSWORD: "{{ stalwart_admin_password if install_smtp_stalwart | default(false) else '' }}"
+        MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
         MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
         MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
         DISPATCH_DIGEST_FLUSH: "1"
