@@ -441,8 +441,8 @@ The repo is public. The category isn't written yet. Help us define it.
 
 - Star the repo → it's how open source gets found
 - File issues with real traces — `docker compose logs`, `ansible-playbook -vv`
-- PRs follow Conventional Commits (`feat:`, `fix:`, `refactor:`…). No `Co-Authored-By`, no `--author`.
-- Primary branch is `master`. Short-lived `feat/*` / `fix/*` branches merge back via FF or PR.
+- PRs follow Conventional Commits (`feat:`, `fix:`, `refactor:`…). No `Co-Authored-By`, no `--author`. Subject ≤ 50 chars, body bullets ≤ 6 lines.
+- **Branch model:** `feat/<name>` → `dev` (FF from CLI) → `master` (PR + FF only, locked on GitHub + local Gitea mirror). Tags `v<semver>` cut from `master`. Don't push directly to `master`.
 
 ---
 

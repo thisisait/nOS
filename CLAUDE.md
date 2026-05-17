@@ -10,13 +10,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git Workflow
 
-**Development happens on `master`.** The `dev` branch was retired 2026-04-16. Short-lived `feat/*` / `fix/*` branches branch off `master` and merge back via fast-forward or PR. Create worktrees on top of `master`. Never resurrect `dev`.
+Three long-lived branches (`feat → dev → master`), revived 2026-05-17 after the `master`-only flow proved hard to gate once contributors arrive:
+
+- **`master`** — release-ready trunk. **Protected: PR-only, fast-forward only, branch lock active on both GitHub and the local Gitea mirror.** Direct push refused. Release tags `v<semver>` live here.
+- **`dev`** — integration branch. `feat/*` and `fix/*` merge here via fast-forward (CLI is fine, no PR required). `dev → master` happens via PR.
+- **`feat/<short-name>`, `fix/<short-name>`** — short-lived, off `dev`. Squash WIP before merge.
+- **`pzny`** — operator's local cross-feature workspace. Mirrors to local Gitea only (where Woodpecker runs the auto-deploy pipeline); never pushed to GitHub.
+
+Worktrees branch off `dev` by default now (was `master`). The 2026-04-16 "never resurrect dev" rule is **superseded** — the three-tier flow is now load-bearing.
 
 ## Commit Convention
 
 - Format: **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.)
 - **No Co-Authored-By, no `--author` flag, no author-name override.** Git populates the author from `git config` automatically.
-- Commit messages: concise, English, imperative. Body optional.
+- **Subject ≤ 50 chars** (Conventional Commits soft limit). Hard cap 72.
+- **Body: bullets, ≤ 6 lines.** Surgeon-tone — tendon touched, symptom, structural fix, gate that pins it. No multi-paragraph essays; deeper "why" goes in the PR description.
 
 ## Vision
 
