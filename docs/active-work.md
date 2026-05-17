@@ -5,13 +5,13 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-17 • Phase 5 ceremony milestone CLOSED. A9
-> fanout + daily-digest + Remediator agent + Phase 5 CLI all shipped;
-> 27 commits pushed to origin/master (`826c406..3fec16b`).
+> Last updated: 2026-05-17 (evening) • Phase 5 ceremony CLOSED + Wing
+> UI revision SHIPPED (W3+W1+W2+W4). 32 commits pushed to origin/master
+> (`826c406..22600df`). 253/253 anatomy gates green.
 
 ---
 
-## Current track: **Wing UI revision (proposed — pending operator approval)**
+## Current track: **steady-state — A1–A14 + Phase 5 + Wing UI revision all DONE**
 
 A1–A14 are all **DONE**, including A9 fanout, A9.2 daily-digest mail,
 A9.3 Remediator agent, and the **Phase 5 ceremony milestone — CLOSED
@@ -20,14 +20,25 @@ exit 0, agent_run_start + agent_run_end with shared
 `actor_action_id=b01de576-7498-4b3f-bd2a-9b155b3f1a8b`. First
 non-operator-identity end-to-end write to `wing.db` proven.
 
-**Next big track:** Wing UI revision. The PHP/Latte/CSS surface grew
-organically across A8 → A14 and is now incoherent: 17 presenters, 7
-unmoduled CSS files (832 LOC), inline `<script>` + `<style>` in
-templates, mixed Czech/English, hardcoded `auth.dev.local` in the
-layout, stale subtitle, no shared filter-bar partial. Proposed phases:
-W1 Information Architecture · W2 Design system · W3 Template cleanup
-· W4 Operator UX upgrades. See conversation 2026-05-17 for the full
-proposal text; awaiting operator approval before opening tasks.
+**Wing UI revision — SHIPPED 2026-05-17** (`7f25f30..22600df`, 4 commits):
+* **W3 template hygiene** — inline `<script>`/`<style>` extraction,
+  `lang="cs"` → `"en"`, hardcoded `auth.dev.local` → `$authentikDomain`,
+  stale subtitle refresh. 7 anatomy gates.
+* **W1 Information Architecture** — 5 visual groups (Operate · Insights
+  · Security · Platform · Help/Admin) replacing the 12-flat-tab soup.
+  Fragment-anchor tabs retired; Migrations/Upgrades/Coexistence/GDPR
+  promoted from "presenter-but-no-nav" to first-class entries. 5 gates.
+* **W2 Design tokens** — `tokens.css` (loaded first across the layout +
+  Homepage) carries the semantic --color-* / --space-* / --radius-* /
+  --font-* / --shadow-* scales + utility classes (.text-muted, .flex,
+  .empty-state, ...). Legacy aliases preserved for the 6 pre-W2 per-page
+  CSS files. 7 gates.
+* **W4 Operator UX** — live unread/pending badges (Inbox + Approvals
+  tabs); keyboard navigation wired (digit keys walk the .tab-key chips
+  → tab href); `countPendingApprovals()` helper for cheap badge counts;
+  defensive try/catch around per-render badge queries. 7 gates.
+
+Total: 26 new anatomy gates locking the Wing surface (253/253 green).
 
 **Parallel pending work:**
 * **Tier-2 aggregator path** — extend `run_aggregators` with
@@ -58,6 +69,7 @@ proposal text; awaiting operator approval before opening tasks.
 
 | Area | Highlights |
 |---|---|
+| **Wing UI revision (2026-05-17)** | 4-phase consolidation: W3 hygiene (inline-script extraction, lang fixes, hardcoded-domain purge), W1 IA (5 grouped sections + fragment-tab retirement), W2 design tokens (semantic --color-* / --space-* / --radius-* scales + utility classes), W4 UX (live Inbox+Approvals badges + global keyboard nav). 26 new anatomy gates. |
 | **Phase 5 ceremony (2026-05-17)** | First non-operator-identity e2e write to `wing.db` proven. Conductor self-test ran on demand via `tools/run-phase5-ceremony.sh`, exit 0, two events with shared `actor_action_id`. Active-work punch #1 CLOSED. |
 | **Post-Phase-5 incident-driven fixes (2026-05-17)** | Live remediator surfaced 7 latent bugs in its first triage report: (1) Wing api_tokens missing `remediator` row; (2) discover-pulse-catalog.py substitution table missing `{{ remediator_wing_api_token }}` + `{{ wing_app_dir }}` + `{{ wing_home }}`; (3) wing-base dispatch jobs referenced `wing_home/bin/` but script lives in `wing_app_dir/bin/`; (4) Bone `events.py` VALID_TYPES whitelist missing `agent_run_start/end` + `conductor_report` + `remediator_report`; (5) bash printf-built JSON bodies non-canonical → Bone HMAC validation fails (fix: build via `jq --sort-keys -c`); (6) `awk '{print $2}'` extracts empty hash on openssl 3.x (fix: `$NF`); (7) `launchctl kickstart -k` doesn't re-read EnvironmentVariables — launchd caches them (fix: bootout + bootstrap in handlers for bone/openclaw/wing). Plus Nextcloud post.yml pre-bootstrap config.php sed-patch (self-heals dbpassword drift without `blank=true`). 5 new anatomy gates pin the canonical-JSON + openssl-NF + ApprovalsPresenter canonicalize contracts. |
 | **Remediator agent (A9.3)** | Read-only security-finding triage agent. AgentKit profile at `files/anatomy/agents/remediator/`, Pulse profile at `files/anatomy/agents/remediator.yml`. Authentik `nos-remediator` client wired with READ-ONLY caps only (anatomy gate enforces no `write` / `scan`). `tools/run-remediator.sh` on-demand wrapper produces a markdown report with `GREEN/REVIEW/RED` verdict. Genericized `pulse-run-agent.sh` to `NOS_AGENT_*` env (backward-compat aliases). 17 anatomy gates + `docs/remediator-agent.md`. |
