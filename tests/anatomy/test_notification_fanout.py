@@ -282,14 +282,19 @@ def test_conductor_profile_declares_notification_routing():
 
 
 def test_pulse_run_agent_emits_notification_on_failure():
-    """The conductor runner posts a notification when CLAUDE_EXIT != 0.
+    """The pulse-run-agent.sh runner posts a notification when CLAUDE_EXIT != 0.
     Mirrors the gitleaks contract — Bone HMAC + origin_agent + severity
-    mapped to exit-code class.
+    mapped to exit-code class. Post-A9.3 the runner is generic across
+    agents, so origin_agent is the dynamic $AGENT_NAME rather than a
+    hardcoded "conductor".
     """
     script = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
     assert "_post_wing_notification" in script
     assert "/api/v1/notifications" in script
-    assert 'origin_agent: "conductor"' in script
+    # A9.3: origin_agent is dynamic ($AGENT_NAME variable), no longer
+    # hardcoded. The HMAC body builds it via jq from --arg agent.
+    assert "origin_agent: $agent" in script
+    assert 'AGENT_NAME' in script
     # Exit-class → severity map.
     assert 'NOTIF_SEV="critical"' in script
     assert 'NOTIF_SEV="high"' in script

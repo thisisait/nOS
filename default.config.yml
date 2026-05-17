@@ -2026,6 +2026,21 @@ authentik_agent_clients:
     # pulse-run-agent.sh script that execs claude with this identity.
     capabilities: "{{ authentik_agent_scopes }}"
 
+  - name: "nOS Remediator"
+    slug: "nos-remediator"
+    client_id: "nos-remediator"
+    client_secret: "{{ global_password_prefix }}_pw_agent_remediator"
+    # Remediator agent (A9.3, 2026-05-17) — read-only security-finding
+    # triage. Reads findings + file context, proposes ONE remediation per
+    # finding, emits markdown report event + summary notification.
+    # Explicitly NO nos:security:write — operator decides what to apply.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+
 # Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
 # during the cutover (NOT recommended — both sides should agree on JWT only).
 authentik_agent_token_validity: "hours=12"

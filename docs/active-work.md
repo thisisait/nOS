@@ -42,7 +42,10 @@ ceremony run.
 
 | Area | Highlights |
 |---|---|
+| **Remediator agent (A9.3)** | Read-only security-finding triage agent. AgentKit profile at `files/anatomy/agents/remediator/`, Pulse profile at `files/anatomy/agents/remediator.yml`. Authentik `nos-remediator` client wired with READ-ONLY caps only (anatomy gate enforces no `write` / `scan`). `tools/run-remediator.sh` on-demand wrapper produces a markdown report with `GREEN/REVIEW/RED` verdict. Genericized `pulse-run-agent.sh` to `NOS_AGENT_*` env (backward-compat aliases). 17 anatomy gates + `docs/remediator-agent.md`. |
+| **A9 daily-digest mail (A9.2)** | `mail_digest_window` schema column + ALTER sweep; dispatch worker has severity-floor (`DISPATCH_MAIL_DIGEST_FLOOR`, default `medium`) — at/below queues, above immediates; `DISPATCH_DIGEST_FLUSH=1` daily worker aggregates queue into ONE summary email grouped by severity; new `dispatch-notifications-digest` Pulse cron (default 09:00 UTC); `mail_digest_floor` + `mail_digest_cron` in default.config.yml. 5 new gates. |
 | **Notification fanout (A9)** | New table `wing.db.notifications`; NotificationRepository; Bone POST/GET `/api/v1/notifications` (HMAC); InboxPresenter promoted to operator-attention surface with mark-read; PHP CLI dispatch worker (`bin/dispatch-notifications.php`) registered as per-minute Pulse subprocess job; aggregator harvests per-plugin `notification:` blocks into a routing JSON sidecar Bone reads at insert time; gitleaks plugin is first consumer; 13 anatomy gates + authoritative guide `files/anatomy/docs/notification-fanout.md`. |
+| **D2 residual cleanup** | Promoted 12 vars (erpnext_data_dir, nodered runtime defaults, nodered+superset OIDC client_id/secret) to default.config.yml; dropped `\| default(...)` chains from 14 role tasks/templates so nos-smoke catalog auto-derive sees them. Closes punch #6. |
 | **AgentKit (A14)** | Runtime shipped + 5 deferred follow-ups closed (multi-agent pool, dreams, webhook auto-fan-out, operator-trigger UI, Infisical vault refresh). RBAC gates A13.7 + A14.1 + A14.2 security review rounds. |
 | **Approvals (A11)** | `/approvals` approve/reject flow promoted from stub to working presenter with HMAC audit trail. |
 | **Platform halt (A12)** | "Big red button" — operator can halt all agent runs via Wing UI; Bone propagates the gate to Pulse runner. |
@@ -94,9 +97,10 @@ the previous snapshot all completed — see git log between `7e2026c` and
    STARTED, accurate); added inline ✅ DONE markers to Q3-Q7 lines in
    `handoff-next-parallel-session.md` body so the body matches its own
    header.
-6. **D2 residual** (nice-to-have, not blocking): freescout / erpnext /
+6. ~~**D2 residual** (nice-to-have, not blocking): freescout / erpnext /
    homeassistant / superset / nodered / paperclip role tasks still use
-   `| default(...)` pattern on vars not in `default.config.yml`.
+   `| default(...)` pattern on vars not in `default.config.yml`.~~
+   DONE 2026-05-17 (`c64c397`).
 7. ~~**One-shot migration scripts** — `tools/d12-annotate-plugins.py` +
    `tools/aggregator-dry-run.py` shipped D1.x.~~ Verified 2026-05-16:
    `aggregator-dry-run.py` is the active CI gate inside

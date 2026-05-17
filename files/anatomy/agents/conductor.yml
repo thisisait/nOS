@@ -87,10 +87,13 @@ pulse:
       max_concurrent: 1
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
-        NOS_CONDUCTOR_CLIENT_ID: "nos-conductor"
-        NOS_CONDUCTOR_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
-        NOS_CONDUCTOR_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"
-        NOS_CONDUCTOR_TASK: |
+        # Genericized A9.3 (2026-05-17). Both NOS_AGENT_* and NOS_CONDUCTOR_*
+        # work in the runner; new agents only set NOS_AGENT_*.
+        NOS_AGENT_NAME: "conductor"
+        NOS_AGENT_CLIENT_ID: "nos-conductor"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"
+        NOS_AGENT_TASK: |
           Run the Phase 5 conductor self-test ceremony:
           1. GET /api/health from Bone — verify liveness (expect 200).
           2. GET /api/v1/gitleaks_findings?open_only=1 from Wing — count unresolved findings.

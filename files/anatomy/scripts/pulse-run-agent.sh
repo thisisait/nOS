@@ -1,45 +1,51 @@
 #!/usr/bin/env bash
 # =============================================================================
-# pulse-run-agent.sh — conductor agent runner (Anatomy A8.a, 2026-05-07)
+# pulse-run-agent.sh — generic agent runner (Anatomy A8.a, 2026-05-07;
+#   genericized A9.3 2026-05-17 from conductor-only to NOS_AGENT_*).
 #
 # Called by Pulse as a subprocess job. Flow:
-#   1. Authenticate to Authentik (client_credentials) → conductor identity.
-#   2. POST Wing agent_run_start event (HMAC-signed, source=conductor).
-#   3. Run `claude` with the conductor profile + Wing API env vars.
+#   1. Authenticate to Authentik (client_credentials) → agent identity.
+#   2. POST Wing agent_run_start event (HMAC-signed, source=<agent_name>).
+#   3. Run `claude` with the agent profile + Wing API env vars.
 #   4. POST Wing agent_run_end event with exit status.
+#   5. On non-zero exit, fire A9 notification (high/critical per exit class).
 #
-# Env vars (injected via Pulse job env_json — see conductor plugin.yml):
+# Env vars (injected via Pulse job env_json — see <agent>.yml). Reads
+# NOS_AGENT_* first, falls back to NOS_CONDUCTOR_* for backward compat
+# (so the existing conductor Pulse job keeps working unchanged):
 #   NOS_AUTHENTIK_URL              — e.g. https://auth.dev.local
-#   NOS_CONDUCTOR_CLIENT_ID        — nos-conductor (default)
-#   NOS_CONDUCTOR_CLIENT_SECRET    — {{ global_password_prefix }}_pw_agent_conductor
-#   NOS_CONDUCTOR_PROFILE          — Path to conductor.yml agent profile
-#   NOS_CONDUCTOR_TASK             — Task prompt for this run (required)
+#   NOS_AGENT_NAME                 — e.g. conductor / remediator (default: conductor)
+#   NOS_AGENT_CLIENT_ID            — Authentik client_id (default: nos-<agent_name>)
+#   NOS_AGENT_CLIENT_SECRET        — Authentik client_secret (required)
+#   NOS_AGENT_PROFILE              — Path to <agent>.yml profile
+#   NOS_AGENT_TASK                 — Task prompt for this run (required)
 #   WING_API_URL                   — http://127.0.0.1:9000 (default)
-#   WING_API_TOKEN                 — {{ conductor_wing_api_token }}
+#   WING_API_TOKEN                 — Wing bearer for the agent
 #   WING_EVENTS_HMAC_SECRET        — {{ bone_secret }} (= wing_events_hmac_secret)
 #   PULSE_RUN_ID                   — Set by Pulse daemon
 #
 # Exit codes:
-#   0 — conductor completed successfully
-#   1 — conductor reported failure or partial result
+#   0 — agent completed successfully
+#   1 — agent reported actionable findings (operator review needed)
 #   2 — environment/auth/Wing error (check stderr)
 # =============================================================================
 
 set -euo pipefail
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# ── Config (NOS_AGENT_* with NOS_CONDUCTOR_* fallback) ───────────────────────
 
 AUTHENTIK_URL="${NOS_AUTHENTIK_URL:-}"
-CLIENT_ID="${NOS_CONDUCTOR_CLIENT_ID:-nos-conductor}"
-CLIENT_SECRET="${NOS_CONDUCTOR_CLIENT_SECRET:-}"
-CONDUCTOR_PROFILE="${NOS_CONDUCTOR_PROFILE:-}"
-TASK_PROMPT="${NOS_CONDUCTOR_TASK:-}"
+AGENT_NAME="${NOS_AGENT_NAME:-conductor}"
+CLIENT_ID="${NOS_AGENT_CLIENT_ID:-${NOS_CONDUCTOR_CLIENT_ID:-nos-${AGENT_NAME}}}"
+CLIENT_SECRET="${NOS_AGENT_CLIENT_SECRET:-${NOS_CONDUCTOR_CLIENT_SECRET:-}}"
+AGENT_PROFILE="${NOS_AGENT_PROFILE:-${NOS_CONDUCTOR_PROFILE:-}}"
+TASK_PROMPT="${NOS_AGENT_TASK:-${NOS_CONDUCTOR_TASK:-}}"
 
 WING_API_URL="${WING_API_URL:-http://127.0.0.1:9000}"
 WING_API_TOKEN="${WING_API_TOKEN:-}"
 WING_EVENTS_HMAC_SECRET="${WING_EVENTS_HMAC_SECRET:-}"
 
-RUN_ID="conductor-${PULSE_RUN_ID:-manual-$(date +%s)}"
+RUN_ID="${AGENT_NAME}-${PULSE_RUN_ID:-manual-$(date +%s)}"
 
 # A10 actor audit (2026-05-08): actor_id = the Authentik client_id we
 # authenticate as; actor_action_id = a UUID that groups all events of
@@ -60,10 +66,10 @@ fi
 _die() { echo "ERROR: $*" >&2; exit 2; }
 
 [[ -z "$AUTHENTIK_URL" ]]        && _die "NOS_AUTHENTIK_URL is not set"
-[[ -z "$CLIENT_SECRET" ]]        && _die "NOS_CONDUCTOR_CLIENT_SECRET is not set"
+[[ -z "$CLIENT_SECRET" ]]        && _die "NOS_AGENT_CLIENT_SECRET (or NOS_CONDUCTOR_CLIENT_SECRET) is not set"
 [[ -z "$WING_API_TOKEN" ]]       && _die "WING_API_TOKEN is not set"
 [[ -z "$WING_EVENTS_HMAC_SECRET" ]] && _die "WING_EVENTS_HMAC_SECRET is not set"
-[[ -z "$TASK_PROMPT" ]]          && _die "NOS_CONDUCTOR_TASK is not set"
+[[ -z "$TASK_PROMPT" ]]          && _die "NOS_AGENT_TASK (or NOS_CONDUCTOR_TASK) is not set"
 
 if ! command -v claude &>/dev/null; then
     _die "claude CLI not found in PATH"
@@ -105,15 +111,17 @@ _post_wing_event() {
 
 # POST a Bone notification with HMAC auth (Anatomy A9, 2026-05-16). Args:
 # <severity> <title> <body_markdown>. Channels resolved by Bone via the
-# conductor agent_profile's notification: routing block.
+# agent profile's notification: routing block (looked up by origin_agent
+# == AGENT_NAME).
 _post_wing_notification() {
     local sev="$1" title="$2" body_md="$3"
     local payload ts sig
     payload=$(jq -nc \
         --arg sev "$sev" --arg title "$title" --arg body "$body_md" \
+        --arg agent "$AGENT_NAME" \
         --arg actor "$ACTOR_ID" --arg action_id "$ACTOR_ACTION_ID" \
         '{severity: $sev, title: $title, body: $body,
-          origin_agent: "conductor", actor_id: ("agent:" + $actor),
+          origin_agent: $agent, actor_id: ("agent:" + $actor),
           actor_action_id: $action_id}')
     ts=$(date +%s)
     sig=$(printf '%s.%s' "$ts" "$payload" \
@@ -165,11 +173,11 @@ echo "INFO: Authentik token acquired for $CLIENT_ID"
 # ── Wing: agent_run_start ─────────────────────────────────────────────────────
 
 TS_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_start","run_id":"%s","source":"conductor","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","task":"%s"}' \
-    "$TS_NOW" "$RUN_ID" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_NOW" \
+_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_start","run_id":"%s","source":"%s","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","task":"%s"}' \
+    "$TS_NOW" "$RUN_ID" "$AGENT_NAME" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_NOW" \
     "$(echo "$TASK_PROMPT" | head -c 120 | tr '"\\' "  ")")"
 
-echo "INFO: starting conductor (run_id=$RUN_ID)"
+echo "INFO: starting ${AGENT_NAME} (run_id=$RUN_ID)"
 
 # ── Run claude ────────────────────────────────────────────────────────────────
 
@@ -178,9 +186,9 @@ CLAUDE_OUTPUT=""
 
 # Build system prompt from profile if provided.
 SYSTEM_PROMPT=""
-if [[ -n "$CONDUCTOR_PROFILE" && -f "$CONDUCTOR_PROFILE" ]]; then
+if [[ -n "$AGENT_PROFILE" && -f "$AGENT_PROFILE" ]]; then
     # Extract system_prompt field from YAML (simple grep; no yq dependency).
-    SYSTEM_PROMPT=$(grep -A 9999 '^system_prompt:' "$CONDUCTOR_PROFILE" \
+    SYSTEM_PROMPT=$(grep -A 9999 '^system_prompt:' "$AGENT_PROFILE" \
         | tail -n +2 \
         | sed 's/^  //' \
         | sed '/^[a-z_]*:/q' \
@@ -214,8 +222,8 @@ fi
 TS_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200 | tr '"\\' "  ")
 # Same actor_action_id as start → events join in pulse_runs.actor_action_id.
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"conductor","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","result":{"exit_code":%d,"summary":"%s"}}' \
-    "$TS_END" "$RUN_ID" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_END" \
+_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"%s","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","result":{"exit_code":%d,"summary":"%s"}}' \
+    "$TS_END" "$RUN_ID" "$AGENT_NAME" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_END" \
     "$CLAUDE_EXIT" "$RESULT_SUMMARY")"
 
 # ── A9 notification on non-zero exit ──────────────────────────────────────────
@@ -229,11 +237,11 @@ if [[ "$CLAUDE_EXIT" -ne 0 ]]; then
     else
         NOTIF_SEV="high"
     fi
-    NOTIF_TITLE="Conductor self-test exit=$CLAUDE_EXIT (run=$RUN_ID)"
+    NOTIF_TITLE="${AGENT_NAME^} exit=$CLAUDE_EXIT (run=$RUN_ID)"
     NOTIF_BODY=$(printf '**run_id:** %s\n**task:** %s\n**exit:** %d\n\n```\n%s\n```' \
         "$RUN_ID" "${TASK_PROMPT:0:120}" "$CLAUDE_EXIT" "$(echo "${CLAUDE_OUTPUT:-}" | tail -10)")
     _post_wing_notification "$NOTIF_SEV" "$NOTIF_TITLE" "$NOTIF_BODY"
 fi
 
-echo "INFO: conductor finished (exit=$CLAUDE_EXIT)"
+echo "INFO: ${AGENT_NAME} finished (exit=$CLAUDE_EXIT)"
 exit "$CLAUDE_EXIT"

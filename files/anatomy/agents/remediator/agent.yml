@@ -1,0 +1,52 @@
+name: remediator
+version: 1
+description: |
+  nOS remediator — proposes (does NOT auto-apply) fixes for open security
+  findings. Reads gitleaks_findings + remediation_items, fetches file
+  context, and produces a markdown remediation report with one specific
+  recommendation per finding. Operator decides what to apply.
+
+  Distinct from the conductor:
+    - Conductor verifies platform health end-to-end (read-only diagnostics).
+    - Remediator focuses on security findings (read-only proposals).
+  Both write events; neither modifies repo files or marks findings
+  resolved without operator action.
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+  - id: mcp-bone
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - wing.read
+    - bone.read
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+    - scope: mcp-bone
+
+metadata:
+  ait_phase: A9.3
+  ceremony_role: security-finding-triage
