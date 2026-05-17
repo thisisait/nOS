@@ -69,3 +69,8 @@
   failed_when: false
   check_mode: false
   notify: Restart gitea
+
+# ── A16 (2026-05-17): autowire nOS repo + GitHub pull-mirror ──────────────
+- name: "[pazny.gitea Post] Wire nOS repo + GitHub pull-mirror"
+  ansible.builtin.include_tasks: post-repo.yml
+  when: install_gitea_autowire_nos | default(false) | bool

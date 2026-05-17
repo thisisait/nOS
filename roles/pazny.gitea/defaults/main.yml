@@ -17,3 +17,15 @@ gitea_admin_email: ""
 gitea_disable_registration: false       # true = only admins can add users
 gitea_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 gitea_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# ── A16 (2026-05-17): nOS repo + GitHub pull-mirror autowiring ─────────
+# When install_gitea_autowire_nos=true (set in config.yml), Gitea
+# auto-creates the nOS repo as a pull-mirror from GitHub. The mirror
+# polls GitHub every gitea_nos_repo_mirror_interval and pushes the
+# new HEAD into Gitea, which fires the Woodpecker pipeline.
+install_gitea_autowire_nos: false
+gitea_nos_repo_owner: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+gitea_nos_repo_name: "nOS"
+gitea_nos_repo_clone_url: "https://github.com/thisisait/nOS.git"
+gitea_nos_repo_mirror_interval: "10m0s"
+gitea_nos_repo_private: true

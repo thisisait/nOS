@@ -1,0 +1,78 @@
+# nOS — Woodpecker CI pipeline (Anatomy A16, 2026-05-17)
+#
+# Runs on every push to any branch from the Gitea mirror. Four required
+# stages (composer, php-lint, pytest, ansible-syntax); one optional
+# stage (notify) for dev/pzny pushes that posts a CI-green notification
+# into Wing /inbox so the operator-attention queue surfaces it.
+#
+# Pipeline runs entirely in containers — no host filesystem access, no
+# deploy step in this iteration. Deploy is operator-triggered via
+# `ansible-playbook main.yml --tags <stack>` after CI goes green.
+#
+# Secret 'wing_api_token' is optional — if not configured in Woodpecker
+# the notify step is gracefully skipped. Set via the Woodpecker UI
+# (Repo → Settings → Secrets) once the wing API surface has minted a
+# pipeline-scoped token (Authentik OIDC client, scopes nos:notifications).
+
+when:
+  - event: push
+  - event: pull_request
+
+steps:
+  composer-validate:
+    image: composer:2
+    pull: true
+    commands:
+      - cd files/anatomy/wing
+      - composer validate --strict --no-check-publish
+      - composer install --no-progress --no-interaction --no-scripts
+
+  php-lint:
+    image: php:8.5-cli-alpine
+    pull: true
+    commands:
+      - find files/anatomy/wing/app files/anatomy/wing/bin -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
+
+  pytest-anatomy:
+    image: python:3.11-slim
+    pull: true
+    commands:
+      - pip install --quiet --no-cache-dir pytest pyyaml
+      - python -m pytest tests/anatomy/ -q --tb=short
+
+  ansible-syntax:
+    image: python:3.11-slim
+    pull: true
+    commands:
+      - pip install --quiet --no-cache-dir 'ansible-core>=2.20,<2.22'
+      - ansible-galaxy collection install --upgrade community.general community.docker community.mysql ansible.posix
+      - ansible-playbook main.yml --syntax-check
+
+  notify-green:
+    image: curlimages/curl:latest
+    pull: true
+    when:
+      - event: push
+        branch:
+          - dev
+          - pzny
+    commands:
+      - |
+        if [ -z "$$WING_API_TOKEN" ]; then
+          echo "wing_api_token secret not configured — skipping notify"
+          exit 0
+        fi
+        BODY=$(printf '{"severity":"info","title":"CI green: %s","body":"commit %s\\nauthor: %s\\n%s","channels":["wing-inbox"]}' \
+          "$$CI_COMMIT_BRANCH" "$$CI_COMMIT_SHA" "$$CI_COMMIT_AUTHOR" "$$CI_COMMIT_MESSAGE")
+        curl -sf -X POST \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $$WING_API_TOKEN" \
+          --data "$$BODY" \
+          "$$WING_API_URL/api/v1/notifications" \
+          || echo "notify failed (non-fatal)"
+    environment:
+      WING_API_URL:
+        from_secret: wing_api_url
+    secrets:
+      - wing_api_token
+      - wing_api_url
