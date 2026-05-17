@@ -72,6 +72,30 @@ def test_remediator_pulse_profile_exists():
     assert "remediator is on-demand" in (job.get("paused_reason") or "")
 
 
+def test_pulse_jobs_upsert_propagates_args_and_paused():
+    """A9.4-fixup (2026-05-17): the Ansible POST body to /api/v1/pulse_jobs
+    MUST forward both args[] and paused/paused_reason — previously they
+    were silently dropped, leaving wing:dispatch-notifications with
+    args_json=[] (and `php` execing with no script).
+    """
+    src = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    # Body keys (under the pulse_jobs upsert task).
+    assert "args: " in src and "item.job.args" in src
+    assert "paused:" in src and "item.job.paused" in src
+    assert "paused_reason:" in src and "item.job.paused_reason" in src
+
+
+def test_pulse_repository_persists_paused_on_first_insert():
+    """PulseRepository::upsertJob must honor manifest's paused-by-default
+    on first insert but preserve operator manual-pause state on updates
+    (re-running playbook shouldn't silently un-pause a job)."""
+    src = (REPO / "files/anatomy/wing/app/Model/PulseRepository.php").read_text()
+    # First-insert branch writes the field unconditionally.
+    assert "array_key_exists('paused', $payload)" in src
+    # Update branch only writes when manifest explicitly pauses.
+    assert "$payload['paused'] === 1" in src or "(int) $payload['paused'] === 1" in src
+
+
 def test_remediator_pulse_profile_uses_nos_agent_env():
     profile = yaml.safe_load(
         (REPO / "files/anatomy/agents/remediator.yml").read_text()

@@ -201,6 +201,19 @@
       max_runtime_s: "{{ item.job.max_runtime_s | default(300) }}"
       max_concurrent: "{{ item.job.max_concurrent | default(1) }}"
       env: "{{ item.job.env | default({}) }}"
+      # A9.4 (2026-05-17): args[] propagation. Wing dispatch jobs use
+      # `command: php` + `args: [<script>]` shape; previously the
+      # POST body dropped args silently and Pulse forked `php` with no
+      # script. Surfaced live 2026-05-17 on the first re-run after the
+      # A9 batch landed (wing:dispatch-notifications stored args_json=[]).
+      args: "{{ item.job.args | default([]) }}"
+      # A9.3 (2026-05-17): paused-by-default support. Remediator opts
+      # paused=true so it never auto-fires; operator uses
+      # tools/run-remediator.sh for on-demand triage. Repository upsert
+      # honors paused/paused_reason on FIRST insert; preserves operator
+      # manual pause state on subsequent updates.
+      paused: "{{ (item.job.paused | default(false)) | bool | ternary(1, 0) }}"
+      paused_reason: "{{ item.job.paused_reason | default(omit) }}"
     status_code: [200, 201]
   loop: "{{ _pulse_catalog }}"
   loop_control:

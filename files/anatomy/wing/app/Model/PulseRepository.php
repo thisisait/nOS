@@ -239,14 +239,35 @@ final class PulseRepository
 			if ($existing->schedule !== $payload['schedule']) {
 				$update['next_fire_at'] = $initialNext;
 			}
+			// A9.3 (2026-05-17): paused-state is operator-manageable
+			// (`/halt` + manual /admin/pause), so re-runs of the playbook
+			// MUST NOT silently un-pause a job the operator paused. Only
+			// touch `paused`/`paused_reason` if the manifest explicitly
+			// declares a value (paused=true) AND the existing state
+			// disagrees. Manifest paused=false at update time → no-op.
+			if (array_key_exists('paused', $payload) && (int) $payload['paused'] === 1) {
+				$update['paused'] = 1;
+				if (array_key_exists('paused_reason', $payload)) {
+					$update['paused_reason'] = $payload['paused_reason'];
+				}
+			}
 			$this->db->table('pulse_jobs')->where('id', $id)->update($update);
 		} else {
-			$this->db->table('pulse_jobs')->insert([
-				'id'          => $id,
+			$insert = [
+				'id'           => $id,
 				'next_fire_at' => $initialNext,
-				'created_at'  => $now,
+				'created_at'   => $now,
 				...$fields,
-			]);
+			];
+			// First-insert: honor manifest's paused-by-default. After this
+			// the operator owns the toggle (see update branch above).
+			if (array_key_exists('paused', $payload)) {
+				$insert['paused'] = (int) $payload['paused'];
+			}
+			if (array_key_exists('paused_reason', $payload)) {
+				$insert['paused_reason'] = $payload['paused_reason'];
+			}
+			$this->db->table('pulse_jobs')->insert($insert);
 		}
 
 		return $this->db->table('pulse_jobs')->get($id)->toArray();
