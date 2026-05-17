@@ -212,11 +212,16 @@ if [[ "$INSERTED" -gt 0 && -n "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
           origin_plugin: "gitleaks", actor_id: "plugin:gitleaks",
           actor_action_id: $scan_id,
           metadata: {scan_dir: $scan_dir, scan_id: $scan_id}}')
-    NOTIF_BODY_COMPACT=$(echo "$NOTIF_BODY" | jq -c .)
+    # Canonical form (sort_keys + compact) so Bone's HMAC verifier matches.
+    # Bone re-canonicalizes the parsed dict via Python json.dumps with
+    # separators=(',',':') + sort_keys=True before computing the expected
+    # signature. See files/anatomy/scripts/pulse-run-agent.sh's
+    # _post_wing_event docstring for the live 2026-05-17 401 incident.
+    NOTIF_BODY_COMPACT=$(echo "$NOTIF_BODY" | jq --sort-keys -c .)
     TS=$(date +%s)
     SIG=$(printf '%s.%s' "$TS" "$NOTIF_BODY_COMPACT" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
-          | awk '{print $2}')
+          | awk '{print $NF}')   # openssl 3.x emits just <hex>; 1.x emits "(stdin)= <hex>"
     BONE_URL="${BONE_API_URL:-http://127.0.0.1:9000}"
     NOTIF_CODE=$(curl -sS -o /dev/null -w "%{http_code}" \
         -X POST \

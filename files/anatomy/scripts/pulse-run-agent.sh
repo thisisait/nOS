@@ -84,6 +84,17 @@ fi
 # ── HMAC helper ───────────────────────────────────────────────────────────────
 
 # POST a Wing event with HMAC auth. Args: <json_body>
+#
+# IMPORTANT: body MUST be canonical JSON (sorted keys, no whitespace). Bone's
+# HMAC verifier re-canonicalizes the parsed dict via Python
+# `json.dumps(body, separators=(',',':'), sort_keys=True)` before computing
+# the expected HMAC. If the bash-built body has a different key order or
+# whitespace shape, signatures never match and Bone returns 401 silently.
+# Surfaced live 2026-05-17 — every pulse-run-agent.sh agent_run_start/end
+# was 401'ing because the printf'd JSON wasn't key-sorted.
+#
+# Callers should build the body with `jq --sort-keys -c` to guarantee canonical
+# form (see agent_run_start / agent_run_end builders below).
 _post_wing_event() {
     local body="$1"
     local ts
@@ -91,7 +102,7 @@ _post_wing_event() {
     local sig
     sig=$(printf '%s.%s' "$ts" "$body" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
-          | awk '{print $2}')
+          | awk '{print $NF}')
 
     local resp
     resp=$(curl -sS -w "\n%{http_code}" \
@@ -116,7 +127,7 @@ _post_wing_event() {
 _post_wing_notification() {
     local sev="$1" title="$2" body_md="$3"
     local payload ts sig
-    payload=$(jq -nc \
+    payload=$(jq --sort-keys -nc \
         --arg sev "$sev" --arg title "$title" --arg body "$body_md" \
         --arg agent "$AGENT_NAME" \
         --arg actor "$ACTOR_ID" --arg action_id "$ACTOR_ACTION_ID" \
@@ -126,7 +137,7 @@ _post_wing_notification() {
     ts=$(date +%s)
     sig=$(printf '%s.%s' "$ts" "$payload" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
-          | awk '{print $2}')
+          | awk '{print $NF}')
     local code
     code=$(curl -sS -o /dev/null -w "%{http_code}" \
         -X POST \
@@ -173,9 +184,20 @@ echo "INFO: Authentik token acquired for $CLIENT_ID"
 # ── Wing: agent_run_start ─────────────────────────────────────────────────────
 
 TS_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_start","run_id":"%s","source":"%s","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","task":"%s"}' \
-    "$TS_NOW" "$RUN_ID" "$AGENT_NAME" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_NOW" \
-    "$(echo "$TASK_PROMPT" | head -c 120 | tr '"\\' "  ")")"
+# Build canonical (sort_keys + compact) JSON via jq so Bone's HMAC
+# verifier matches. Safe-escapes the task prompt too — printf-based
+# inline JSON would break on backslashes / quotes / unicode.
+TASK_PREVIEW=$(echo "$TASK_PROMPT" | head -c 120 | tr -d '\n')
+_post_wing_event "$(jq --sort-keys -nc \
+    --arg ts "$TS_NOW" \
+    --arg run_id "$RUN_ID" \
+    --arg src "$AGENT_NAME" \
+    --arg actor_id "$ACTOR_ID" \
+    --arg action_id "$ACTOR_ACTION_ID" \
+    --arg task "$TASK_PREVIEW" \
+    '{ts:$ts, type:"agent_run_start", run_id:$run_id, source:$src,
+      actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
+      task:$task}')"
 
 echo "INFO: starting ${AGENT_NAME} (run_id=$RUN_ID)"
 
@@ -220,11 +242,21 @@ fi
 # ── Wing: agent_run_end ───────────────────────────────────────────────────────
 
 TS_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200 | tr '"\\' "  ")
+RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200)
 # Same actor_action_id as start → events join in pulse_runs.actor_action_id.
-_post_wing_event "$(printf '{"ts":"%s","type":"agent_run_end","run_id":"%s","source":"%s","actor_id":"%s","actor_action_id":"%s","acted_at":"%s","result":{"exit_code":%d,"summary":"%s"}}' \
-    "$TS_END" "$RUN_ID" "$AGENT_NAME" "$ACTOR_ID" "$ACTOR_ACTION_ID" "$TS_END" \
-    "$CLAUDE_EXIT" "$RESULT_SUMMARY")"
+# Canonical JSON via jq (see _post_wing_event docstring for the Bone HMAC
+# canonicalization contract).
+_post_wing_event "$(jq --sort-keys -nc \
+    --arg ts "$TS_END" \
+    --arg run_id "$RUN_ID" \
+    --arg src "$AGENT_NAME" \
+    --arg actor_id "$ACTOR_ID" \
+    --arg action_id "$ACTOR_ACTION_ID" \
+    --argjson exit_code "$CLAUDE_EXIT" \
+    --arg summary "$RESULT_SUMMARY" \
+    '{ts:$ts, type:"agent_run_end", run_id:$run_id, source:$src,
+      actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
+      result:{exit_code:$exit_code, summary:$summary}}')"
 
 # ── A9 notification on non-zero exit ──────────────────────────────────────────
 # Exit 1 = conductor reported actionable findings (operator review).
