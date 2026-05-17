@@ -19,6 +19,63 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # ── Generic pulse-run-agent.sh contract ────────────────────────────────
 
 
+def test_pulse_run_agent_hmac_uses_canonical_json():
+    """A9.3-fixup (2026-05-17): bash-built HMAC bodies must be canonical
+    JSON (sort_keys + compact). Bone re-canonicalizes the parsed dict
+    via Python json.dumps(separators=(',',':'), sort_keys=True) before
+    re-computing the expected HMAC, so a printf-built unsorted body
+    produces a signature that never matches and Bone 401's silently.
+    """
+    src = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    # The two callers that build agent_run_start/end bodies must use
+    # jq --sort-keys, not printf '...'.
+    assert "jq --sort-keys -nc" in src
+    # The _post_wing_notification helper also sorts.
+    assert "jq --sort-keys -nc" in src  # appears at least twice
+    # And no printf-based JSON construction for HMAC-signed bodies remains.
+    # (Allow printf in the HMAC-signature line itself — that's just
+    # ts.body concatenation.)
+    json_printf_count = sum(
+        1 for line in src.splitlines()
+        if 'printf' in line
+        and ('agent_run_start' in line or 'agent_run_end' in line)
+    )
+    assert json_printf_count == 0, (
+        "pulse-run-agent.sh still has printf-based agent_run_* JSON bodies; "
+        "they're not canonical and 401 against Bone")
+
+
+def test_pulse_run_agent_awk_uses_last_field():
+    """A9.3-fixup (2026-05-17): openssl 3.x emits just <hex>; openssl 1.x
+    emits '(stdin)= <hex>'. `awk '{print $2}'` works for 1.x but returns
+    empty string on 3.x → SIG header empty → Wing returns 'Missing HMAC
+    headers'. `$NF` works for both.
+    """
+    src = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    # No bare `$2` extraction of openssl output.
+    for line in src.splitlines():
+        if 'openssl' in line:
+            continue  # skip the openssl pipe lines themselves
+        if "awk '{print $2}'" in line:
+            raise AssertionError(
+                f"pulse-run-agent.sh still extracts openssl hash via $2 "
+                f"(breaks on openssl 3.x): {line.strip()}"
+            )
+    # Positive: $NF must appear at least once (one awk per HMAC builder).
+    assert "awk '{print $NF}'" in src
+
+
+def test_approvals_presenter_canonicalizes_payload():
+    """A11 ApprovalsPresenter signed `json_encode($payload)` directly,
+    which doesn't sort keys. Same Bone-canonicalization mismatch as the
+    bash side — operator approvals would 401 silently."""
+    src = (REPO / "files/anatomy/wing/app/Presenters/ApprovalsPresenter.php").read_text()
+    assert "self::canonicalize" in src
+    assert "ksort" in src
+    # Don't ship a naked json_encode($payload) in the signing path.
+    assert "$body = json_encode($payload)" not in src
+
+
 def test_pulse_run_agent_reads_nos_agent_env():
     """The runner accepts NOS_AGENT_* env (canonical post-A9.3) and
     falls back to NOS_CONDUCTOR_* for backward compat with existing
@@ -33,8 +90,11 @@ def test_pulse_run_agent_reads_nos_agent_env():
     # Backward-compat aliases (conductor's existing env still works).
     assert "NOS_CONDUCTOR_CLIENT_ID" in src
     assert "NOS_CONDUCTOR_CLIENT_SECRET" in src
-    # AGENT_NAME drives the source/origin tagging.
-    assert 'source":"%s"' in src   # printf into agent_run_start/end events
+    # AGENT_NAME drives the source/origin tagging. Post-A9.3-fixup the
+    # event body is built via jq --sort-keys (canonical JSON for Bone HMAC
+    # match), so the source field appears as `source:$src` rather than
+    # the earlier printf '%s' shape.
+    assert "source:$src" in src
     assert "$AGENT_NAME" in src
 
 
