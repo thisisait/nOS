@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# nOS git pre-push hook — branch protection guard.
+#
+# Active when this checkout runs:
+#     git config core.hooksPath tools/git-hooks
+#
+# Two rules:
+#   1. `pzny` branch is local-cross-feature; it may push ONLY to a
+#      remote named `gitea` (the operator's local Gitea mirror, which
+#      drives the Woodpecker auto-deploy pipeline). Pushing pzny to
+#      `origin` (GitHub) is refused.
+#   2. Direct push to `master` is refused regardless of remote — master
+#      moves only via PR merge on the remote side (branch protection on
+#      GitHub + Gitea enforces it server-side; this hook is the local
+#      belt to that server-side suspenders).
+#
+# Bypass for emergencies: `git push --no-verify` skips this hook (don't
+# use it casually — it bypasses every local pre-push check).
+
+set -euo pipefail
+
+remote="$1"
+url="$2"
+
+# Read each "<local_ref> <local_sha> <remote_ref> <remote_sha>" line from stdin.
+while read -r local_ref local_sha remote_ref remote_sha; do
+	# Skip deletions (local_sha = all zeros).
+	if [[ "$local_sha" =~ ^0+$ ]]; then
+		continue
+	fi
+
+	# Extract the branch name from refs/heads/<name>.
+	branch="${local_ref#refs/heads/}"
+
+	case "$branch" in
+		master)
+			cat >&2 <<-EOF
+				✖ pre-push refused: direct push to master is locked.
+
+				master moves via PR from dev (FF only). See CLAUDE.md §Git Workflow.
+
+				If you really need to bypass (urgent hotfix): git push --no-verify
+				— but you'll still hit the server-side branch protection.
+			EOF
+			exit 1
+			;;
+		pzny)
+			if [[ "$remote" != "gitea" ]]; then
+				cat >&2 <<-EOF
+					✖ pre-push refused: pzny may push only to the 'gitea' remote.
+
+					pzny is the operator's local cross-feature workspace — it stays off
+					the public GitHub mirror. Configure your local Gitea as remote
+					'gitea' before pushing pzny:
+
+					    git remote add gitea https://gitea.<tld>/thisisait/nOS.git
+					    git push gitea pzny
+
+					Current push target: $remote ($url)
+				EOF
+				exit 1
+			fi
+			;;
+	esac
+done
+
+exit 0
