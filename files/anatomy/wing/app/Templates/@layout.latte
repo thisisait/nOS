@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{ifset title}{include title} | {/ifset}Wing — NOS Security Research Dashboard</title>
+	<title>{ifset title}{include title} | {/ifset}Wing — nOS operator console</title>
 	<link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
@@ -11,15 +11,15 @@
 <div class="header">
 	<div class="header-left">
 		<div>
-			<h1><a href="/" style="color:inherit">Wing</a> <span style="color:var(--text2); font-weight:400">NOS Security Research</span></h1>
-			<div class="subtitle">FOSS vulnerability monitoring, autonomous pentesting, upstream patch development</div>
+			<h1><a href="/" style="color:inherit">Wing</a> <span style="color:var(--text2); font-weight:400">nOS operator console</span></h1>
+			<div class="subtitle">Inbox · agents · audit · security findings · platform state</div>
 		</div>
 	</div>
 	<div class="header-right">
 		<span id="headerStatus"></span>
 		{if $isAuthenticated}
 			<span style="color:var(--text2);font-size:12px">{$authName ?? $authUser}</span>
-			<a href="https://auth.dev.local/application/o/wing/end-session/" style="font-size:12px;color:var(--text2);margin-left:4px">Odhlasit</a>
+			<a href="https://{$authentikDomain}/application/o/wing/end-session/" style="font-size:12px;color:var(--text2);margin-left:4px">Logout</a>
 		{/if}
 	</div>
 </div>

@@ -124,12 +124,7 @@
   schedules the next reload.
 *}
 {if in_array($session['status'], ['pending', 'running', 'starting'], true)}
-<script>
-(function () {
-	var INTERVAL_MS = 3000;
-	setTimeout(function () { window.location.reload(); }, INTERVAL_MS);
-})();
-</script>
+<script src="/assets/agent-session-poll.js?v={$basePath}" defer></script>
 {/if}
 
 {/block}

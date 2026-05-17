@@ -31,6 +31,14 @@ abstract class BasePresenter extends Presenter
 		// in BasePresenter::requireSuperAdmin() (called from each presenter's
 		// startup()) — this flag is purely for UI visibility.
 		$this->template->isSuperAdmin = $this->callerHasGroup('nos-providers');
+
+		// W3 (2026-05-17): authentik_domain for the layout's logout link.
+		// Was hardcoded to `auth.dev.local`, which broke on every public-TLD
+		// install (pazny.eu, etc.). Read AUTHENTIK_DOMAIN env (set by the
+		// wing launchd plist + propagated through pazny.wing's .env render);
+		// fall back to a sensible dev default rather than dying when the env
+		// is empty on a fresh-bootstrap dev box.
+		$this->template->authentikDomain = getenv('AUTHENTIK_DOMAIN') ?: 'auth.dev.local';
 	}
 
 	// ── Authorization helpers (A13.7, 2026-05-07) ─────────────────────────
