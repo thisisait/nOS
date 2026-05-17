@@ -61,10 +61,14 @@ Numbered for the loop prompt; each line ≤ 2 sentences. Items 1–11 from
 the previous snapshot all completed — see git log between `7e2026c` and
 `5f9c0a7` for the trail.
 
-1. **Phase 5 ceremony** — operator runs `conductor-self-test-001` Pulse
-   one-shot job (8-step e2e: health → trigger gitleaks → verify findings
-   → events → contracts diff → wing tests → markdown report). Pass =
-   first non-operator end-to-end write to `wing.db`. Pre-reqs all done.
+1. **Phase 5 ceremony** — `bash tools/run-phase5-ceremony.sh` fires the
+   conductor self-test on demand. Pre-flight (Bone health + pulse_jobs
+   row + Authentik probe) + env resolution from `pulse_jobs.env_json`
+   (no secrets re-read) + post-flight `event_delta`/`notif_delta` +
+   markdown report (`~/.nos/phase5-report-<ts>.md`). Pass = exit 0 AND
+   ≥2 conductor events written. Authoritative guide:
+   `docs/phase5-ceremony.md`. CLI shipped 2026-05-17; first operator
+   wet-run still TODO.
 2. ~~**A9 — notification fanout** — bones-and-wings §Appendix B; follow
    inbox/approvals shape. Not started.~~ DONE 2026-05-16: A9.1
    (schema + NotificationRepository) → A9.6 (anatomy gates + doc). See
@@ -116,7 +120,7 @@ the previous snapshot all completed — see git log between `7e2026c` and
 | Pulse | 4 endpoints live; conductor + gitleaks Pulse jobs registered |
 | Wing OpenAPI | 70 paths, /inbox + /approvals + /audit + /halt + /agents live (notifications surfaces via Bone POST/GET, see `notification-fanout.md`) |
 | Playwright e2e | 14 passed / 7 skipped (opt-in services) / 0 failed; ephemeral SSO identity per run |
-| Conductor | pulse-run-agent.sh + conductor.yml profile; awaits Phase 5 ceremony |
+| Conductor | pulse-run-agent.sh + conductor.yml profile; A9 emit on non-zero exit; on-demand via `tools/run-phase5-ceremony.sh` |
 | AgentKit | runtime live at `files/anatomy/wing/app/AgentKit/`; first agent = conductor |
 | Decision log | O1–O23 in `roadmap-2026q2.md` (append-only) |
 
