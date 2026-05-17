@@ -101,7 +101,7 @@ final class ApprovalsPresenter extends BasePresenter
 		// expected HMAC, so a naive json_encode($payload) produces a
 		// signature that never matches and Bone 401's silently. Surfaced
 		// 2026-05-17 by the remediator agent's triage report.
-		$body = json_encode(self::canonicalize($payload), JSON_UNESCAPED_SLASHES);
+		$body = json_encode(self::canonicalizeJson($payload), JSON_UNESCAPED_SLASHES);
 		$ts   = (string) time();
 		$sig  = hash_hmac('sha256', $ts . '.' . $body, $secret);
 
@@ -130,12 +130,12 @@ final class ApprovalsPresenter extends BasePresenter
 	 * @param mixed $value
 	 * @return mixed
 	 */
-	private static function canonicalize(mixed $value): mixed
+	private static function canonicalizeJson(mixed $value): mixed
 	{
 		if (is_array($value)) {
 			// Detect associative vs list (PHP arrays are both).
 			$isList = array_is_list($value);
-			$value = array_map([self::class, 'canonicalize'], $value);
+			$value = array_map([self::class, 'canonicalizeJson'], $value);
 			if (!$isList) {
 				ksort($value);
 			}
