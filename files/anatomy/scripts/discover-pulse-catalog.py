@@ -66,11 +66,15 @@ def _build_substitutions() -> dict[str, str]:
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
         "{{ wing_api_token }}":           _env("NOS_WING_API_TOKEN"),
         "{{ conductor_wing_api_token }}": _env("NOS_CONDUCTOR_WING_API_TOKEN"),
+        "{{ remediator_wing_api_token }}": _env("NOS_REMEDIATOR_WING_API_TOKEN"),
         "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
         # A9.4-fixup (2026-05-17): wing-base dispatch jobs reference
-        # {{ wing_home }} in args[] and env values (e.g. WING_DB_PATH).
-        # Substitution → ~/wing expanded by Ansible at task time.
+        # {{ wing_home }} in env (WING_DB_PATH) and {{ wing_app_dir }}
+        # in args[] (dispatch-notifications.php lives under app/bin/,
+        # NOT ~/wing/bin/). Both substitutions populated from Ansible
+        # at task time.
         "{{ wing_home }}":                _env("NOS_WING_HOME"),
+        "{{ wing_app_dir }}":             _env("NOS_WING_APP_DIR"),
     }
 
 

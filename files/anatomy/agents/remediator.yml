@@ -113,5 +113,9 @@ pulse:
           Exit 0 if zero open findings. Exit 1 if any findings need
           operator review (default for non-empty list).
         WING_API_URL: "http://127.0.0.1:9000"
-        WING_API_TOKEN: "{{ remediator_wing_api_token | default(conductor_wing_api_token) }}"
+        # NOTE: discover-pulse-catalog.py is a dumb substring substituter, not
+        # a Jinja engine — it can't expand `| default(...)` chains. Use a
+        # bare {{ var }} for which the substitution table carries an entry.
+        # remediator_wing_api_token is declared in default.credentials.yml.
+        WING_API_TOKEN: "{{ remediator_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

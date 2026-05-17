@@ -114,6 +114,26 @@
     or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — remediator (A9.3 triage agent)"
+  # Sister to the conductor token — same pattern, separate identity for
+  # actor-attribution. Without this row in api_tokens, the remediator's
+  # POST /api/v1/events + GET /api/v1/gitleaks_findings calls return 401
+  # ("Invalid or inactive API token"). Surfaced live 2026-05-17 during
+  # the first non-operator remediator run.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ remediator_wing_api_token }}
+      - --name=remediator
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_remediator_token
+  changed_when: >
+    'Created' in (_wing_remediator_token.stdout | default(''))
+    or 'Updated' in (_wing_remediator_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — openclaw (B1: A8 agent, wing-side provisioning)"
   ansible.builtin.command:
     argv:
@@ -175,12 +195,14 @@
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"
     NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
     NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
+    NOS_REMEDIATOR_WING_API_TOKEN: "{{ remediator_wing_api_token | default('') }}"
     NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
     # A9.4-fixup (2026-05-17): wing-base Pulse jobs reference {{ wing_home }}
     # in args[] and env values. Without the substitution, Pulse would
     # fork `/opt/homebrew/bin/php "{{ wing_home }}/bin/..."` and crash
     # with "Could not open input file" 1× per minute.
     NOS_WING_HOME: "{{ wing_home }}"
+    NOS_WING_APP_DIR: "{{ wing_app_dir }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

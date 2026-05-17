@@ -134,7 +134,7 @@ pulse:
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
-        - "{{ wing_home }}/bin/dispatch-notifications.php"
+        - "{{ wing_app_dir }}/bin/dispatch-notifications.php"
       schedule: "* * * * *"        # every minute; cheap when queue is empty
       jitter_min: 0
       max_runtime_s: 30
@@ -161,7 +161,7 @@ pulse:
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
-        - "{{ wing_home }}/bin/dispatch-notifications.php"
+        - "{{ wing_app_dir }}/bin/dispatch-notifications.php"
       schedule: "{{ mail_digest_cron | default('0 9 * * *') }}"
       jitter_min: 5
       max_runtime_s: 60

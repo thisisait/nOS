@@ -48,6 +48,19 @@ VALID_TYPES = {
     "app.deployed",              # one event per onboarded apps/<name>.yml
                                  # manifest after compose up succeeds
     "app.removed",               # operator-triggered tear-down of a Tier-2 app
+    # ── A8 conductor + A9.3 remediator agent runs ─────────────────────────
+    # agent_run_start / agent_run_end bookend every pulse-run-agent.sh
+    # invocation (conductor OR remediator, since A9.3 genericized the
+    # runner). conductor_report / remediator_report carry the final
+    # markdown body in result_json; Wing's EventRepository whitelist
+    # already accepts these (see Wing's PHP VALID_TYPES). Wing-side
+    # whitelist and Bone-side whitelist MUST agree — the agent runner
+    # POSTs through Bone, so missing entries here turned the live
+    # remediator's report-write into a silent 400 (surfaced 2026-05-17
+    # during the first non-operator remediator run).
+    "agent_run_start", "agent_run_end",
+    "conductor_self_test_step", "conductor_report",
+    "remediator_report",
 }
 
 

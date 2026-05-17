@@ -473,13 +473,23 @@
       failed_when: false
 
     - name: Restart wing
-      # Anatomy A3.5 (2026-05-04): Wing now runs as a host launchd daemon
-      # backed by FrankenPHP (replaces the Track-A container + wing-nginx
-      # sidecar). `kickstart -k` reloads the plist's env + restarts gracefully
-      # so source rsync / Caddyfile / token reconverge changes propagate
-      # without a full bootstrap cycle.
+      # Anatomy A3.5 (2026-05-04): Wing runs as a host launchd daemon
+      # (FrankenPHP, host-mode).
+      # 2026-05-17: full unload + reload (was: kickstart -k). `kickstart -k`
+      # only re-spawns the process — launchd caches the plist's
+      # EnvironmentVariables block from the original `bootstrap` call, so
+      # a rotated WING_API_TOKEN / bone_secret in the plist DOES land on
+      # disk but the running Wing keeps the stale value. Bootout+bootstrap
+      # forces launchd to re-read the env block. See bone/handlers/main.yml
+      # for the canonical write-up + the live remediator-surfaced 2026-05-17
+      # incident that motivated the fix.
       ansible.builtin.shell: |
-        launchctl kickstart -k "gui/$(id -u)/{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}" 2>/dev/null || true
+        LABEL="{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
+        PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+        UID_NUM=$(id -u)
+        launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
       changed_when: true
       failed_when: false
 

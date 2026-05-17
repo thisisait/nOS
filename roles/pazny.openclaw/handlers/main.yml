@@ -6,6 +6,15 @@
 # but the definition stays for role independence.
 
 - name: Restart openclaw
-  ansible.builtin.command: >
-    launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.openclaw.agent"
+  # 2026-05-17: full unload + reload (was: kickstart -k). kickstart only
+  # re-spawns the process; launchd caches EnvironmentVariables from the
+  # original bootstrap. Secret rotations would leave openclaw with stale
+  # credentials. Canonical write-up in roles/pazny.bone/handlers/main.yml.
+  ansible.builtin.shell: |
+    LABEL="com.openclaw.agent"
+    PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+    UID_NUM="{{ ansible_facts['user_uid'] }}"
+    launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+    sleep 1
+    launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
   failed_when: false

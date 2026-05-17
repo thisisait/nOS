@@ -11,6 +11,23 @@
 # Now: launchctl kickstart graceful-reload via -k flag.
 
 - name: Restart bone
+  # NOTE 2026-05-17: `kickstart -k` only re-spawns the process; it does NOT
+  # re-read the EnvironmentVariables block from the plist. launchd caches
+  # the env-block from the original `bootstrap` call. So if a secret in
+  # the plist (e.g. WING_EVENTS_HMAC_SECRET when global_password_prefix
+  # rotates) changes, kickstart silently re-spawns with the STALE env and
+  # Bone keeps using the old HMAC — every event/notification POST returns
+  # 401 invalid signature until the operator manually bootouts.
+  #
+  # Fix: full unload + reload. `bootout` returns non-zero when the service
+  # isn't loaded (e.g. fresh install), so we `|| true` and rely on
+  # `bootstrap` to do the right thing in both cases. Surfaced live on
+  # pazny.eu 2026-05-17 during the first non-operator remediator run.
   ansible.builtin.shell: |
-    launchctl kickstart -k "gui/$(id -u)/{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}" 2>/dev/null || true
+    LABEL="{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
+    PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+    UID_NUM=$(id -u)
+    launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+    sleep 1
+    launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
   changed_when: true
