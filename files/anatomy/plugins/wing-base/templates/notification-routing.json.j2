@@ -29,7 +29,8 @@
       "on_high":     {{ (e.on_high     | default([], true)) | to_json }},
       "on_medium":   {{ (e.on_medium   | default([], true)) | to_json }},
       "on_low":      {{ (e.on_low      | default([], true)) | to_json }},
-      "on_info":     {{ (e.on_info     | default([], true)) | to_json }}
+      "on_info":     {{ (e.on_info     | default([], true)) | to_json }},
+      "templates":   {{ (e.templates   | default({}, true)) | to_json }}
     }
 {%- endfor %}
   }

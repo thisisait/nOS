@@ -269,18 +269,64 @@ def _lookup_channels(origin_plugin: str | None, origin_agent: str | None, severi
     return [c for c in channels if isinstance(c, str)]
 
 
+def _lookup_template(origin_plugin: str | None, origin_agent: str | None, name: str) -> dict[str, str] | None:
+    """Look up `templates[name]` for the emitter's origin. Returns
+    `{"title": "...", "body": "..."}` or None if no match.
+
+    Used by `insert_notification` when the payload carries
+    `template: <name>` + `context: <dict>` instead of literal
+    `title` + `body`. The two strings get string.Template-rendered
+    against `context` at insert time.
+    """
+    import string
+    key = origin_plugin or origin_agent
+    if not key:
+        return None
+    entries = _load_routing()
+    entry = entries.get(key) or entries.get(f"{key}-base")
+    if not isinstance(entry, dict):
+        return None
+    templates = entry.get("templates")
+    if not isinstance(templates, dict):
+        return None
+    tpl = templates.get(name)
+    if not isinstance(tpl, dict):
+        return None
+    return tpl
+
+
+def _render_template_string(s: str, context: dict[str, Any]) -> str:
+    """Render `$var` / `${var}` placeholders via string.Template.safe_substitute
+    (missing keys remain as the literal `${missing}` rather than raising).
+    Returns the rendered string. Returns the input unchanged if `s` is
+    falsy."""
+    import string
+    if not s:
+        return s
+    return string.Template(s).safe_substitute(context or {})
+
+
 def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
     """Insert a notification row. Returns (id, uuid).
 
     Caller (Bone POST handler) does the HMAC + schema check; this is the
-    last-defense whitelist (severity + channels). Title required, body
-    optional.
+    last-defense whitelist (severity + channels). Title required (either
+    literal or via template), body optional.
 
     Channel resolution order:
       1. Explicit ``channels:`` in payload (always wins)
       2. Aggregator-rendered routing for the emitter's origin_plugin /
          origin_agent + severity (read from notification-routing.json)
       3. Default ["wing-inbox"]
+
+    Title/body resolution order (2026-05-17):
+      1. Explicit ``title`` + ``body`` in payload (literal strings)
+      2. ``template: <name>`` + ``context: <dict>`` → resolve via plugin
+         manifest's notification.templates.<name> rendered with context
+         using string.Template ($var / ${var} syntax). Originating from
+         the emitter's plugin/agent (via origin_plugin/origin_agent).
+      Either path is acceptable; the second avoids per-emitter title-body
+      string-building boilerplate.
 
     A10 actor audit: actor_id + actor_action_id are stored as-passed.
     source_event_id (soft FK events.id) lets /inbox deep-link the
@@ -289,6 +335,33 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
     severity = payload.get("severity") or "info"
     if severity not in _VALID_SEVERITIES:
         raise ValueError(f"invalid severity: {severity}")
+
+    # Title/body resolution — literal wins; otherwise resolve from
+    # plugin manifest's notification.templates map via origin_plugin /
+    # origin_agent + context dict.
+    title = payload.get("title")
+    body = payload.get("body")
+    template_name = payload.get("template")
+    if not title and template_name:
+        ctx = payload.get("context") or {}
+        if not isinstance(ctx, dict):
+            raise ValueError("context must be an object")
+        tpl = _lookup_template(
+            payload.get("origin_plugin"),
+            payload.get("origin_agent"),
+            template_name,
+        )
+        if tpl is None:
+            raise ValueError(
+                f"template {template_name!r} not found in routing sidecar "
+                f"for origin_plugin/origin_agent — emitter must either "
+                f"supply title+body literally or declare the template in "
+                f"the plugin manifest's notification.templates map"
+            )
+        title = _render_template_string(tpl.get("title", ""), ctx)
+        body = _render_template_string(tpl.get("body", ""), ctx)
+        # Carry the rendered values back into payload for the INSERT below.
+        payload = {**payload, "title": title, "body": body}
 
     channels = payload.get("channels")
     if channels is None or (isinstance(channels, list) and not channels):

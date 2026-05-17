@@ -196,19 +196,25 @@ if [[ "$INSERTED" -gt 0 && -n "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
           elif $best == 3 then "low"
           else "info" end
     ')
-    # Build a short markdown body: top-3 findings + count.
-    BODY_MD=$(echo "$FINDINGS_JSON" | jq -r --arg total "$INSERTED" '
-        "**" + $total + " new finding(s)**\n\n" +
+    # Build top-3 finding markdown for the template context. The plugin
+    # manifest's `notification.templates.new_findings` resolves
+    # `${top_findings_md}` against this value (and `${count}`/`${scan_dir}`
+    # against the other context keys). Bone renders the strings via
+    # string.Template.safe_substitute at insert time — no per-emitter
+    # title-body building boilerplate.
+    TOP_FINDINGS_MD=$(echo "$FINDINGS_JSON" | jq -r '
         (.[0:3] | map("- `\(.severity)` " + .rule_id + " @ " + .file_path + ":" + (.line_start|tostring)) | join("\n")) +
         (if (. | length) > 3 then "\n\n…and " + ((. | length) - 3 | tostring) + " more." else "" end)
     ')
     NOTIF_BODY=$(jq -n \
         --arg sev "$MAX_SEV" \
-        --arg title "Gitleaks: $INSERTED new secret finding(s)" \
-        --arg body "$BODY_MD" \
+        --arg tpl "new_findings" \
+        --arg count "$INSERTED" \
         --arg scan_id "$SCAN_ID" \
         --arg scan_dir "$SCAN_DIR" \
-        '{severity: $sev, title: $title, body: $body,
+        --arg top "$TOP_FINDINGS_MD" \
+        '{severity: $sev, template: $tpl,
+          context: {count: $count, scan_dir: $scan_dir, top_findings_md: $top},
           origin_plugin: "gitleaks", actor_id: "plugin:gitleaks",
           actor_action_id: $scan_id,
           metadata: {scan_dir: $scan_dir, scan_id: $scan_id}}')

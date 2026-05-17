@@ -17,6 +17,7 @@ the Wing-side NotificationRepository — no Bone round-trip for reads.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from events import verify_hmac as _verify_hmac  # re-use the events HMAC helper
@@ -32,10 +33,10 @@ VALID_CHANNELS = {"wing-inbox", "ntfy", "mail"}
 def validate_payload(payload: dict[str, Any]) -> str | None:
     """Return error message if invalid, None if OK.
 
-    Mandatory: severity, title. Optional: body, channels (default
-    ["wing-inbox"]), target_actor_id (default "operator"), actor_id,
-    actor_action_id, origin_plugin, origin_agent, source_event_id,
-    metadata (dict).
+    Mandatory: severity AND (title OR template). Optional: body,
+    context (dict, used with template), channels (default ["wing-inbox"]),
+    target_actor_id (default "operator"), actor_id, actor_action_id,
+    origin_plugin, origin_agent, source_event_id, metadata (dict).
     """
     severity = payload.get("severity")
     if not severity:
@@ -44,10 +45,26 @@ def validate_payload(payload: dict[str, Any]) -> str | None:
         return f"invalid severity: {severity}"
 
     title = payload.get("title")
-    if not title or not isinstance(title, str):
-        return "missing or non-string required field: title"
-    if len(title) > 500:
+    template_name = payload.get("template")
+    # 2026-05-17: emitters may send `template: <name>` + `context: <dict>`
+    # INSTEAD of literal title+body. Bone resolves the template via the
+    # plugin manifest's notification.templates map (rendered into the
+    # routing sidecar by the wing-base aggregator). One of the two
+    # must be present; both is allowed (literal wins).
+    if not title and not template_name:
+        return "missing required field: title (or template+context)"
+    if title is not None and not isinstance(title, str):
+        return "title must be a string"
+    if title is not None and len(title) > 500:
         return "title exceeds 500-char limit"
+    if template_name is not None:
+        if not isinstance(template_name, str):
+            return "template must be a string"
+        if not re.match(r"^[a-z0-9][a-z0-9_-]{0,48}[a-z0-9]$", template_name):
+            return f"template name {template_name!r} fails [a-z0-9][a-z0-9_-]+ pattern"
+        context = payload.get("context")
+        if context is not None and not isinstance(context, dict):
+            return "context must be an object"
 
     body = payload.get("body")
     if body is not None and not isinstance(body, str):

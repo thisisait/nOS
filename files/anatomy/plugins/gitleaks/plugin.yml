@@ -120,6 +120,18 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+  # Named title/body templates. Emitter sends `template: new_findings` +
+  # `context: {count, scan_dir, top_findings_md}` instead of building the
+  # strings inline. Placeholders use Python string.Template syntax
+  # ($var / ${var}) — distinct from Latte/Jinja {{ var }} to avoid
+  # accidental double-evaluation.
+  templates:
+    new_findings:
+      title: "Gitleaks: $count new secret finding(s)"
+      body: |
+        **$count new finding(s)** in $scan_dir
+
+        $top_findings_md
 
 # =============================================================================
 # GDPR Article 30 — gitleaks processes operator-repo source metadata

@@ -278,14 +278,70 @@ clean no-op (zero queued rows).
 | `mail_digest_floor` | `medium` | Severity at-or-below which mail batches into digest |
 | `mail_digest_cron` | `0 9 * * *` | Pulse cron expression for the daily flush |
 
+## Per-plugin templates (2026-05-17)
+
+Plugins MAY declare named title/body templates in the same `notification:`
+block. Emitters then POST `{template: <name>, context: {...}}` instead
+of building literal title/body strings. Bone resolves the template via
+the aggregator routing sidecar and renders with Python `string.Template`
+(`$var` / `${var}` syntax — distinct from Latte/Jinja `{{ var }}` to
+prevent double-evaluation at routing-render time).
+
+Manifest shape:
+
+```yaml
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+  templates:
+    new_findings:
+      title: "Gitleaks: $count new secret finding(s)"
+      body: |
+        **$count new finding(s)** in $scan_dir
+
+        $top_findings_md
+```
+
+Emitter (bash):
+
+```bash
+NOTIF_BODY=$(jq -n \
+    --arg sev "$MAX_SEV" --arg tpl "new_findings" \
+    --arg count "$INSERTED" --arg scan_dir "$SCAN_DIR" \
+    --arg top "$TOP_FINDINGS_MD" \
+    '{severity: $sev, template: $tpl,
+      context: {count: $count, scan_dir: $scan_dir, top_findings_md: $top},
+      origin_plugin: "gitleaks", actor_id: "plugin:gitleaks"}')
+```
+
+Resolution path inside Bone (`clients/wing.py`):
+
+1. If payload has `title` literally → use it.
+2. Else if payload has `template: name` + optional `context: {...}` →
+   `_lookup_template(origin_plugin/origin_agent, name)` reads the routing
+   sidecar, fetches the template strings, then `string.Template(s)
+   .safe_substitute(context)` renders each.
+3. Missing context keys leave the literal `${missing}` in place rather
+   than erroring — safer than hard-failing the emit.
+
+Template name pattern: `^[a-z0-9][a-z0-9_-]+[a-z0-9]$` (alphanum +
+hyphen + underscore, 2-50 chars). Pinned by Bone's `validate_payload`
++ the `test_bone_validate_payload_accepts_template_or_title` anatomy
+gate.
+
 ## Out of scope (post-A9)
 
 * Stalwart TLS SMTP path (Track G follow-on).
-* Notification templates per plugin (today `title`/`body` are emitter-supplied).
 * Per-recipient routing (today `target_actor_id` is honored but always
   `operator` in practice).
 * Webhook-fanout duplicate-suppression (per-notification idempotency key).
 * Time-window-aware digest (e.g. "send digest only if M+ rows pending").
+* Conditional / loop logic in templates — `string.Template` is
+  intentionally minimal; emitters that need conditionals build the
+  rendered string and POST `title`/`body` literally.
 
 These can be added incrementally; the table + repository + dispatch worker
 are stable.
