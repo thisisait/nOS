@@ -111,10 +111,14 @@ the previous snapshot all completed — see git log between `7e2026c` and
 3. ~~**Tier-2 aggregator path** — extend `run_aggregators` with
    `from: app_manifest` source.~~ DONE in `cf69ead` (X.3) — Tier-1 and
    Tier-2 SSO flow through the same plugin aggregator now. The empty
-   `authentik_oidc_apps: []` stub remains as defensive default. Follow-up
-   (deferred — needs wet smoke): `roles/pazny.apps_runner/tasks/post.yml`
+   `authentik_oidc_apps: []` stub remains as defensive default.
+   ~~Follow-up (deferred — needs wet smoke): `roles/pazny.apps_runner/tasks/post.yml`
    still mutates `authentik_oidc_apps` + `authentik_app_tiers` via
-   `set_fact` (lines 91-125), which is duplicate work post-cf69ead.
+   `set_fact` (lines 91-125), which is duplicate work post-cf69ead.~~
+   DONE 2026-05-17: legacy `set_fact` extensions deleted; aggregator's
+   `from: app_manifest` branch now also reads tier from `nginx.rbac_tier`
+   so blueprints get the correct per-app tier without a separate map.
+   3 anatomy gates in `test_apps_runner_aggregator_cutover.py`.
 4. ~~**INTEGRATION.md migration** — 9× role `INTEGRATION.md` files instructed
    adding rows to the retired central `authentik_oidc_apps` list. All
    roles are auto-wired via `files/anatomy/plugins/<svc>-base/plugin.yml`

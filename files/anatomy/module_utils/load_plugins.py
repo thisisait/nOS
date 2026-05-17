@@ -332,20 +332,34 @@ def run_aggregators(plugins: list[Plugin],
                 #   meta:        { name, version, ... }
                 #   gdpr:        { ... }
                 #   compose:     { services: { ... } }
+                #   nginx:       { auth, rbac_tier, ... }   ← tier source
                 #   authentik:   { mode, slug, name, ... }   ← harvested
-                # The slug defaults to meta.name; tier=2 hint added so
-                # the blueprint renderer can split bookkeeping if it
-                # ever needs to (today both tiers fan into one list).
+                # 2026-05-17: aggregator now reads `tier` from
+                # `authentik.tier` first (forward-compat), then falls back
+                # to `nginx.rbac_tier` (where every existing apps/*.yml
+                # actually stores it today — see apps/qdrant.yml +
+                # apps/twofauth.yml), then defaults to 2. This retires the
+                # need for `apps_runner/tasks/post.yml` to do its own
+                # `authentik_app_tiers` set_fact extension — the value
+                # lands inside the harvested block where 20-rbac-policies
+                # template already reads it via `c.tier`.
                 for app in app_manifests:
                     block = app.get(block_path)
                     if isinstance(block, dict):
                         if tvars:
                             block = _deep_render(block, tvars)
                         meta = app.get("meta") or {}
+                        nginx = app.get("nginx") or {}
                         block.setdefault("slug", meta.get("name"))
                         block.setdefault("plugin_name",
                                          f"app:{meta.get('name')}")
-                        block.setdefault("tier", 2)
+                        # Tier resolution order: authentik.tier → nginx.rbac_tier
+                        # → 2 (most permissive default for Tier-2 community
+                        # apps). Each step is a `setdefault`, so an explicit
+                        # authentik.tier in the manifest is sticky.
+                        if "tier" not in block:
+                            tier = nginx.get("rbac_tier")
+                            block["tier"] = tier if tier is not None else 2
                         harvested.append(block)
             # Multiple aggregates specs that share the same output_var
             # MERGE (Tier-1 plugin clients + Tier-2 app clients land in

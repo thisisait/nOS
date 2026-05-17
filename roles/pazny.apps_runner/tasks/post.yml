@@ -11,13 +11,13 @@
 #   2. Wing systems table refresh (re-runs bin/ingest-registry.php — the same
 #      script the wing role uses; Tier-2 entries flow through the unchanged
 #      ingestion path now that step 1 added them)
-#   3. Authentik blueprint reconverge (extends authentik_oidc_apps with the
-#      Tier-2 entries that asked for proxy/oidc, then re-includes
-#      pazny.authentik tasks_from: blueprints.yml + meta: flush_handlers
-#      — the render task notifies "Reapply authentik blueprints" handler
-#      which runs `ak apply_blueprint` against the live container.
-#      Idempotent because the blueprint pipeline is INSERT-OR-UPDATE
-#      keyed on slug.)
+#   3. Authentik blueprint reconverge (2026-05-17: simplified — the
+#      Tier-2 apps land in authentik-base's inputs.clients via the X.3
+#      aggregator path. This step only triggers the blueprint re-render
+#      + flush, no more set_fact mutation of authentik_oidc_apps /
+#      authentik_app_tiers. Tier comes from the aggregator's read of
+#      nginx.rbac_tier; idempotent because the blueprint pipeline is
+#      INSERT-OR-UPDATE keyed on slug.)
 #   4. Bone HMAC-signed `app.deployed` event — one POST /api/v1/events per
 #      onboarded app, X-Wing-Signature = sha256=<hex> over the body
 #   5. Portainer apps endpoint registration (handled by pazny.portainer post
@@ -82,60 +82,41 @@
       when: install_wing | default(true) | bool
 
     # ── Hook 3: Authentik blueprint reconverge ──────────────────────────────
-    # Tier-2 apps with auth_mode=proxy|oidc declare an `authentik_entry` block
-    # (nos_apps_render._authentik_entry). Append those to the global
-    # authentik_oidc_apps list, then re-run pazny.authentik tasks_from:
-    # blueprints.yml + flush handlers — the blueprint pipeline
-    # (templates/blueprints/10-oidc-apps.yaml.j2) is keyed on slug, so
-    # INSERT-OR-UPDATE is the natural semantic.
-    - name: "[Apps Post] Compute Authentik extras (proxy/oidc Tier-2 apps)"
+    # Tier-2 apps with auth_mode=proxy|oidc are picked up by the X.3
+    # aggregator path: `run_aggregators` reads every apps/*.yml and harvests
+    # the manifest's `authentik:` block into the authentik-base plugin's
+    # `inputs.clients` list (same target as Tier-1 plugins). The blueprint
+    # templates (10-oidc-apps.yaml.j2 + 20-rbac-policies.yaml.j2) iterate
+    # that merged list — see active-work punch #3 + the 2026-05-17 cleanup
+    # commit. Pre-cleanup this file also `set_fact`'d
+    # `authentik_oidc_apps` + `authentik_app_tiers` to extend Tier-2 entries
+    # into the legacy central lists, which produced DUPLICATE blueprint
+    # rows once X.3 landed (each Tier-2 app appeared via inputs.clients AND
+    # via authentik_oidc_apps).
+    #
+    # We still trigger the blueprint reconverge here (the aggregator runs
+    # during the plugin loader hook earlier in the play, but the
+    # blueprints.yml task render is what notifies the "Reapply authentik
+    # blueprints" handler). The gating condition is now "Tier-2 apps
+    # exist with auth_mode in [proxy, oidc]" — a presence test, not an
+    # extra-list builder.
+    - name: "[Apps Post] Detect Tier-2 apps that need Authentik wiring"
       ansible.builtin.set_fact:
-        _apps_authentik_extras: >-
-          {{ _apps_render.apps
-             | selectattr('authentik_entry', 'defined')
-             | rejectattr('authentik_entry', 'equalto', None)
-             | map(attribute='authentik_entry')
-             | list }}
-
-    - name: "[Apps Post] Extend authentik_oidc_apps with Tier-2 entries"
-      ansible.builtin.set_fact:
-        authentik_oidc_apps: >-
-          {{ (authentik_oidc_apps | default([])) + _apps_authentik_extras }}
-      when: (_apps_authentik_extras | length) > 0
-
-    # Build Tier-2 RBAC tier mapping from per-app rbac_tier (drives the
-    # authentik_app_tiers dict consumed by templates/blueprints/20-rbac-
-    # policies.yaml.j2). Each Tier-2 app gets its slug → tier-int entry
-    # so the existing RBAC pipeline (groups → expression policies) covers
-    # them without per-app authoring.
-    - name: "[Apps Post] Compute Tier-2 RBAC tier mapping"
-      ansible.builtin.set_fact:
-        _apps_rbac_tier_map: >-
-          {{ dict(_apps_render.apps
+        _apps_has_authentik_consumers: >-
+          {{ (_apps_render.apps
               | selectattr('auth_mode', 'in', ['proxy', 'oidc'])
-              | map(attribute='id') | map('replace', '_', '-')
-              | zip(_apps_render.apps
-                    | selectattr('auth_mode', 'in', ['proxy', 'oidc'])
-                    | map(attribute='rbac_tier'))) }}
+              | list | length) > 0 }}
 
-    - name: "[Apps Post] Extend authentik_app_tiers with Tier-2 mappings"
-      ansible.builtin.set_fact:
-        authentik_app_tiers: >-
-          {{ (authentik_app_tiers | default({})) | combine(_apps_rbac_tier_map) }}
-      when: (_apps_rbac_tier_map | length) > 0
-
-    # Re-render the blueprint TEMPLATES with the freshly-extended
-    # authentik_oidc_apps + authentik_app_tiers vars (the two set_fact
-    # tasks above merged the Tier-2 entries into them). The render task
-    # in pazny.authentik/tasks/blueprints.yml has `notify: Reapply
-    # authentik blueprints` on each template — when the file content
-    # changes, the play-level handler in main.yml fires and runs
+    # Re-render the blueprint TEMPLATES (already harvested via aggregator
+    # `inputs.clients`). The render task in pazny.authentik/tasks/blueprints.yml
+    # has `notify: Reapply authentik blueprints` on each template — when the
+    # file content changes, the play-level handler in main.yml fires
     # `ak apply_blueprint` for all three blueprints.
     #
     # NOTE: previously this called `tasks_from: post.yml` which only
-    # contains a health probe (Wait + Health), NOT the blueprint render
-    # — so the Tier-2 OIDC/Proxy providers never made it into Authentik
-    # and Traefik's authentik@file middleware returned 404 for every
+    # contains a health probe (Wait + Health), NOT the blueprint render —
+    # so the Tier-2 OIDC/Proxy providers never made it into Authentik and
+    # Traefik's authentik@file middleware returned 404 for every
     # *.apps.<tld> request. blueprints.yml is the right entry-point;
     # post.yml is for read-only confirmations.
     - name: "[Apps Post] Reconverge Authentik blueprints (Tier-2 OIDC/Proxy providers)"
@@ -147,7 +128,7 @@
       when:
         - apps_runner_reconverge_blueprints | default(true) | bool
         - install_authentik | default(false) | bool
-        - (_apps_authentik_extras | length) > 0
+        - _apps_has_authentik_consumers | bool
       tags: ['authentik', 'iam', 'apps']
 
     # Force the "Reapply authentik blueprints" handler (play-level, in
@@ -160,7 +141,7 @@
       when:
         - apps_runner_reconverge_blueprints | default(true) | bool
         - install_authentik | default(false) | bool
-        - (_apps_authentik_extras | length) > 0
+        - _apps_has_authentik_consumers | bool
       tags: ['authentik', 'iam', 'apps']
 
     # ── Hook 4: Bone HMAC-signed app.deployed events ────────────────────────
@@ -472,7 +453,7 @@
           ══════════════════════════════════════════════════════════════════
            Apps onboarded:    {{ _apps_render.apps | length }}
            Service registry:  {{ apps_extra_services | length }} entry/-ies appended
-           Authentik:         {{ _apps_authentik_extras | length }} provider(s) reconverged
+           Authentik:         {{ (_apps_render.apps | selectattr('auth_mode', 'in', ['proxy', 'oidc']) | list | length) }} provider(s) wired via aggregator
            Bone events:       {{ 'sent (HTTP ' ~ (_apps_bone_post.status | default('?')) ~ ')' if install_bone | default(true) else 'skipped (bone disabled)' }}
            Kuma monitors:     {{ _kuma_manifest_apps | length }} probe(s) registered
            GDPR rows:         {{ (_apps_gdpr_upserts.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0) | list | length) }} upserted
