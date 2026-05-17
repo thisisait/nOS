@@ -99,9 +99,17 @@
   #   2. drop the legacy `^ak-outpost` exact-match (covered by #1, kept as
   #      belt-and-suspenders for any pre-Track-B install where `type` field
   #      may not be present on the user record).
-  #   3. drop usernames that wouldn't pass AT Proto handle validation —
-  #      lowercase + alnum + hyphen only, must start with alnum. Cheaper to
-  #      reject here than to let `goat pds admin account create` choke later.
+  #   3. drop `nos-tester-e2e-*` ephemeral A13.6 testers — they get
+  #      auto-cleaned up by sweep_orphans / per-test teardown / atexit, so
+  #      a stable Bluesky identity makes no sense. Bonus: their 24-char
+  #      username portion exceeds Bluesky PDS's handle length limit, so
+  #      trying to provision throws `InvalidHandle: Handle too long`.
+  #      Surfaced 2026-05-17 on `nos-tester-e2e-a5e51b63`.
+  #   4. drop usernames that wouldn't pass AT Proto handle validation —
+  #      lowercase + alnum + hyphen only, must start with alnum, and
+  #      length floor of 20 chars (Bluesky PDS-internal handle limit
+  #      <= 20; conservative pre-flight reject is cheaper than letting
+  #      goat CLI reject with stderr we'd then have to parse).
   ansible.builtin.set_fact:
     _pds_bridge_to_create: >-
       {{ _pds_bridge_eligible | default([])
@@ -110,7 +118,8 @@
          | select('mapping')
          | rejectattr('type', 'equalto', 'service_account')
          | rejectattr('username', 'search', '^ak-outpost')
-         | selectattr('username', 'match', '^[a-z0-9][a-z0-9-]*$')
+         | rejectattr('username', 'search', '^nos-tester-e2e-')
+         | selectattr('username', 'match', '^[a-z0-9][a-z0-9-]{0,19}$')
          | list }}
   when: _pds_bridge_eligible | default([]) | length > 0
 
@@ -181,12 +190,18 @@
   when: _pds_bridge_new_users | default([]) | length > 0
   changed_when: "'did:' in (_pds_bridge_created.stdout | default(''))"
   # Real error guard: treat output as failure UNLESS either (a) a DID was
-  # returned (success), or (b) the handle is already taken (idempotent).
+  # returned (success), (b) the handle is already taken (idempotent), or
+  # (c) the handle is invalid per AT Proto / Bluesky-internal rules
+  # (skip-with-log: an ephemeral or otherwise-unprovisionable identity
+  # shouldn't abort the whole playbook — the step-4 filter SHOULD catch
+  # these, but accepting `InvalidHandle:` as a recognized class makes the
+  # bridge robust to future Bluesky tightenings of the rule).
   failed_when:
     - _pds_bridge_created is defined
     - _pds_bridge_created.rc is defined
     - _pds_bridge_created.rc != 0
     - "'did:' not in (_pds_bridge_created.stdout | default(''))"
+    - "'InvalidHandle' not in (_pds_bridge_created.stdout | default(''))"
     - "'already' not in (_pds_bridge_created.stdout | default('') | lower)"
 
 # ── 6. Summary ──────────────────────────────────────────────────────────────
