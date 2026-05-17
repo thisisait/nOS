@@ -1,7 +1,12 @@
 {block title}Remediation{/block}
 
 {block content}
-<h2 style="margin-bottom: 16px; font-size: 18px;">Remediation Queue</h2>
+<h2 class="mb-xs" style="font-size: 18px;">Remediation queue</h2>
+<div class="text-muted text-small mb-lg">
+	CVE pins, hardening tasks, and architectural follow-ups. The remediator
+	agent (A9.3) walks open rows on demand via
+	<code>bash tools/run-remediator.sh</code> and posts a markdown report.
+</div>
 
 <div class="filter-bar">
 	<button class="filter-btn active" data-filter="status" data-value="">All</button>
@@ -44,6 +49,14 @@
 </table>
 
 {if !$items['items']}
-	<div class="empty">No remediation items</div>
+	<div class="empty-state">
+		<div class="empty-state-title">No remediation items</div>
+		<div class="empty-state-hint">
+			The remediation queue is empty. New rows land here from automated
+			scans (gitleaks, version-pin audits) and operator-filed manual
+			items. Run <code>bash tools/run-remediator.sh</code> to trigger
+			an on-demand triage.
+		</div>
+	</div>
 {/if}
 {/block}

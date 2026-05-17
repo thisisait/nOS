@@ -106,9 +106,9 @@
 {/foreach}
 
 {if empty($byStack)}
-	<div class="empty">
-		<p style="font-size:16px;color:var(--text);margin-bottom:8px">No systems registered</p>
-		<p>Run <code>php bin/ingest-registry.php</code> to import from service-registry.json</p>
+	<div class="empty-state">
+		<div class="empty-state-title">No systems registered</div>
+		<div class="empty-state-hint">Run <code>php bin/ingest-registry.php</code> to import from service-registry.json.</div>
 	</div>
 {/if}
 

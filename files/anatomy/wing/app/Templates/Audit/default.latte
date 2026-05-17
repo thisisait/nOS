@@ -50,7 +50,14 @@
 
 {* ── Event table ─────────────────────────────────────────────────────── *}
 {if !$items}
-	<div class="empty">No events match the current filter.</div>
+	<div class="empty-state">
+		<div class="empty-state-title">No events match the current filter.</div>
+		<div class="empty-state-hint">
+			Try widening the time window or clearing the actor / type filters.
+			Pre-A10 events have NULL actor_id; the <em>&lt;unattributed&gt;</em>
+			facet groups those rows together.
+		</div>
+	</div>
 {else}
 	<table class="rem-table" style="margin-bottom:24px;">
 		<thead>

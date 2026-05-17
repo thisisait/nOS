@@ -48,9 +48,12 @@
 	</tbody>
 </table>
 {else}
-<div class="empty" style="padding:24px; border:1px solid var(--border); border-radius:8px; text-align:center; color:var(--text2);">
-	No agents on disk. Drop a <code>files/anatomy/agents/&lt;name&gt;/agent.yml</code>
-	and refresh.
+<div class="empty-state">
+	<div class="empty-state-title">No agents on disk</div>
+	<div class="empty-state-hint">
+		Drop a <code>files/anatomy/agents/&lt;name&gt;/agent.yml</code> and refresh.
+		See <code>files/anatomy/agents/conductor/</code> as the canonical reference.
+	</div>
 </div>
 {/if}
 
@@ -93,8 +96,13 @@
 	</tbody>
 </table>
 {else}
-<div class="empty" style="padding:16px; color:var(--text2); text-align:center;">
-	No sessions yet. Trigger a run via <code>php bin/run-agent.php --agent=&lt;name&gt;</code>.
+<div class="empty-state">
+	<div class="empty-state-title">No sessions yet</div>
+	<div class="empty-state-hint">
+		Trigger a run via <code>php bin/run-agent.php --agent=&lt;name&gt;</code>
+		or use the operator wrappers <code>tools/run-phase5-ceremony.sh</code> /
+		<code>tools/run-remediator.sh</code>.
+	</div>
 </div>
 {/if}
 
