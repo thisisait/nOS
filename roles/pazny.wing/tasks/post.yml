@@ -114,6 +114,25 @@
     or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — scout (A9.4 drift-visibility agent)"
+  # Read-only drift detector. Same provision-token.php pattern as conductor +
+  # remediator; the Authentik client (nos-scout) was already pre-provisioned
+  # in default.config.yml::authentik_agent_clients, this hook just adds the
+  # matching api_tokens row Wing checks at request time.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ scout_wing_api_token }}
+      - --name=scout
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_scout_token
+  changed_when: >
+    'Created' in (_wing_scout_token.stdout | default(''))
+    or 'Updated' in (_wing_scout_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — remediator (A9.3 triage agent)"
   # Sister to the conductor token — same pattern, separate identity for
   # actor-attribution. Without this row in api_tokens, the remediator's
@@ -196,6 +215,7 @@
     NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
     NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
     NOS_REMEDIATOR_WING_API_TOKEN: "{{ remediator_wing_api_token | default('') }}"
+    NOS_SCOUT_WING_API_TOKEN: "{{ scout_wing_api_token | default('') }}"
     NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
     # A9.4-fixup (2026-05-17): wing-base Pulse jobs reference {{ wing_home }}
     # in args[] and env values. Without the substitution, Pulse would

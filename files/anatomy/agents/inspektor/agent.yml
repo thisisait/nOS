@@ -1,0 +1,60 @@
+name: inspektor
+version: 1
+description: |
+  nOS inspektor — pentest agent. Surveys the platform's security
+  posture: triggers scan substrates (gitleaks, future trivy/grype/nuclei),
+  analyzes findings, proposes pentest paths. Distinct from remediator
+  (remediator triages findings someone else surfaced; inspektor
+  surfaces them in the first place).
+
+  **STATUS: contract-only (2026-05-17).** The AgentKit profile is
+  shipped so the catalog under /agents displays the spec, but no Pulse
+  runner exists yet — inspektor needs scan substrates beyond gitleaks
+  (trivy / grype / nuclei) before its task list is meaningful.
+  Triggering on this profile via the CLI returns an "awaiting tooling"
+  message rather than running an empty loop. The Authentik client
+  `nos-inspektor` is pre-provisioned and reserved.
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+  - id: mcp-bone
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - wing.read
+    - wing.write
+    - bone.read
+    - events.write
+    - audit.read
+    - security.scan
+    - pentest.execute
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+    - scope: mcp-bone
+
+metadata:
+  ait_phase: A9.4-contract-only
+  ceremony_role: pentest-survey
+  runner_status: deferred
+  deferred_reason: needs trivy / grype / nuclei substrate integration

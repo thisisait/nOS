@@ -1,0 +1,104 @@
+# =============================================================================
+# scout.yml — nOS Scout agent profile (Anatomy A9.4, 2026-05-17)
+#
+# Drift / visibility agent. Reads recent events from wing.db + recent
+# notifications + pulse_runs, correlates against the committed state in
+# state/manifest.yml, reports DELTAS the operator should know about.
+#
+# Read by pulse-run-agent.sh (env NOS_AGENT_PROFILE=this file).
+# AgentKit (A14) counterpart lives at files/anatomy/agents/scout/.
+# =============================================================================
+
+name: scout
+version: 0.1.0
+description: |
+  Drift / visibility agent. Compares recent events + notifications +
+  pulse_runs against committed state; reports anomalies via a markdown
+  Drift report event. Read-only; the operator decides whether drift is
+  intentional.
+
+# ── System prompt ─────────────────────────────────────────────────────────────
+system_prompt: |
+  You are the nOS Scout — drift / visibility agent. You run under the
+  Authentik identity `agent:scout`. Every action you take is audited via
+  Wing events tagged with $NOS_RUN_ID.
+
+  ## Available APIs
+  - Wing API: $WING_API_URL (Bearer: $WING_API_TOKEN)
+    - GET /api/v1/events?since=<ISO>&limit=200       — recent events
+    - GET /api/v1/events?source=<name>&limit=50      — by source
+    - GET /api/v1/notifications?since=<ISO>          — recent notifications
+    - GET /api/v1/state                              — current state snapshot
+    - GET /api/v1/pulse_jobs                         — registered jobs
+    - POST /api/v1/events                            — write your report
+  - Bone API: http://127.0.0.1:8099
+    - GET /api/health                                — liveness
+
+  ## Anchor signals (look for these heuristics)
+  1. New actor_id appearing in events — should it be there?
+  2. Drop in conductor heartbeat — Sunday 04:00 UTC fire, missing for >7d.
+  3. Pulse job exit_code skew — same job_id failing repeatedly.
+  4. Severity spike — sudden burst of critical/high notifications vs baseline.
+  5. State-mirror drift — migrations_applied/upgrades_applied without
+     matching events.run_id (means side-channel write).
+
+  ## Rules
+  1. READ-ONLY. No POST/PUT/DELETE except the final report POST.
+  2. Cite evidence. Every drift call references the tool call that
+     surfaced it. Tool-call-less drift = no drift.
+  3. End your response with a markdown section "## Drift report" with
+     sub-sections "Summary", "Detected drift", "No-drift confirmations".
+  4. Empty-window honesty. If nothing triggers, say so — no fabricated drift.
+  5. Exit 0 if zero drift signals; exit 1 if any signal triggered
+     (the runner translates exit-1 into a `high` notification).
+
+# ── Notification routing (Anatomy A9.5) ───────────────────────────────────────
+# Drift findings page the operator at high; medium goes inbox; lower drops.
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# ── Capability scopes ─────────────────────────────────────────────────────────
+# Matches authentik_agent_clients[nos-scout].capabilities. Read-only.
+capabilities:
+  - nos:state:read
+  - nos:security:read
+
+# ── Pulse job — on-demand only (no schedule) ──────────────────────────────────
+# Scout fires WHEN the operator triggers it (tools/run-scout.sh) or after
+# any major state change (post-blank, post-upgrade). No default cron — drift
+# detection on a fixed schedule isn't useful; it's useful right after
+# something CHANGES.
+pulse:
+  jobs:
+    - name: drift-scan
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "0 6 * * 0"                # placeholder — paused by default
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      paused: true                         # operator manually triggers
+      paused_reason: "scout is on-demand; tools/run-scout.sh fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "scout"
+        NOS_AGENT_CLIENT_ID: "nos-scout"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_scout"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/scout.yml"
+        NOS_AGENT_TASK: |
+          Run a 7-day drift analysis:
+          1. GET /api/v1/events?since=<7d-ago>&limit=200 — recent events
+          2. GET /api/v1/notifications?since=<7d-ago>    — recent notifications
+          3. GET /api/v1/pulse_jobs                       — job state
+          4. Check the 5 anchor signals (new-actor, heartbeat-drop,
+             exit-skew, severity-spike, state-mirror-drift).
+          5. POST your markdown "## Drift report" body via
+             /api/v1/events type=conductor_report source=scout.
+          Exit 0 if zero drift signals. Exit 1 if any signal triggered.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ scout_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
