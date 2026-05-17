@@ -1521,6 +1521,21 @@ onlyoffice_domain: "onlyoffice{{ _host_alias_seg }}.{{ tenant_domain | default('
 influxdb_domain: "influxdb{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 nodered_port: 1880
+# Node-RED runtime defaults (D2 promotion, 2026-05-17): previously these
+# lived only as `| default(...)` chains inside the compose template, which
+# made operator overrides invisible to nos-smoke + config introspection.
+nodered_uid: 1000
+nodered_gid: 1000
+nodered_timezone: "Europe/Prague"
+nodered_flows_file: "flows.json"
+nodered_enable_safe_mode: "false"
+nodered_enable_projects: "true"
+# Native OIDC opt-in (β1.B 2026-05-05 — passport-openidconnect path).
+# When true, the compose template wires NODERED_OIDC_* env + mounts the
+# mkcert root CA; otherwise Traefik forward-auth gates the service.
+nodered_native_oidc_enabled: false
+authentik_oidc_nodered_client_id: "nos-nodered"
+authentik_oidc_nodered_client_secret: "{{ global_password_prefix }}_pw_oidc_nodered"
 ntfy_port: 2586
 miniflux_port: 3011
 code_server_port: 3009                  # container 8443 (HTTPS) — Traefik upstream is https://nos-host:3009
@@ -1579,6 +1594,11 @@ erpnext_admin_password: "{{ global_password_prefix }}_pw_erpnext"
 # Site name follows erpnext_domain (host_alias + tenant_domain aware).
 erpnext_site_name: "{{ erpnext_domain }}"
 erpnext_experimental_override: false
+# Bind-mount target for the ERPNext sites volume. The Docker named volume
+# `b2b_erpnext_sites` is the live storage; this var is referenced by
+# tasks/post.yml when reading site_config.json + bench migrate. Operators
+# pointing external storage at sites use this override.
+erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
 authentik_oidc_erpnext_client_id: "nos-erpnext"
 authentik_oidc_erpnext_client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
 
@@ -1677,6 +1697,8 @@ superset_db_password: "{{ global_password_prefix }}_pw_superset"
 superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
 superset_admin_email: "{{ default_admin_email }}"
 superset_admin_password: "{{ global_password_prefix }}_pw_superset"
+authentik_oidc_superset_client_id: "nos-superset"
+authentik_oidc_superset_client_secret: "{{ global_password_prefix }}_pw_oidc_superset"
 
 # ==============================================================================
 # INFRA – BLUESKY PDS (AT Protocol Personal Data Server)

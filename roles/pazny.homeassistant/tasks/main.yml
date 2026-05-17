@@ -20,13 +20,13 @@
 
 - name: "[pazny.homeassistant] Ensure config directory exists"
   ansible.builtin.file:
-    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
+    path: "{{ homeassistant_config_dir }}"
     state: directory
     mode: '0755'
 
 - name: "[pazny.homeassistant] Ensure configuration.yaml exists"
   ansible.builtin.copy:
-    dest: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/configuration.yaml"
+    dest: "{{ homeassistant_config_dir }}/configuration.yaml"
     content: |
       # Home Assistant - base config (managed by Ansible)
       default_config:
@@ -35,7 +35,7 @@
 
 - name: "[pazny.homeassistant] Configure trusted_proxies for nginx reverse proxy"
   ansible.builtin.blockinfile:
-    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/configuration.yaml"
+    path: "{{ homeassistant_config_dir }}/configuration.yaml"
     marker: "# {mark} ANSIBLE MANAGED - trusted_proxies"
     block: |
       http:
@@ -54,37 +54,37 @@
 
 - name: "[pazny.homeassistant] Ensure custom_components directory exists (OIDC)"
   ansible.builtin.file:
-    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/custom_components"
+    path: "{{ homeassistant_config_dir }}/custom_components"
     state: directory
     mode: '0755'
-  when: install_authentik | default(false)
+  when: install_authentik
 
 - name: "[pazny.homeassistant] Check whether auth_oidc plugin is already installed"
   ansible.builtin.stat:
-    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/custom_components/auth_oidc/manifest.json"
+    path: "{{ homeassistant_config_dir }}/custom_components/auth_oidc/manifest.json"
   register: _ha_oidc_manifest
-  when: install_authentik | default(false)
+  when: install_authentik
 
 - name: "[pazny.homeassistant] Download auth_oidc plugin release"
   ansible.builtin.get_url:
-    url: "https://github.com/christiaangoossens/hass-oidc-auth/archive/refs/tags/v{{ homeassistant_auth_oidc_version | default('0.9.0') }}.tar.gz"
-    dest: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/_auth_oidc.tar.gz"
+    url: "https://github.com/christiaangoossens/hass-oidc-auth/archive/refs/tags/v{{ homeassistant_auth_oidc_version }}.tar.gz"
+    dest: "{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
     mode: '0644'
     timeout: 30
   register: _ha_oidc_dl
   when:
-    - install_authentik | default(false)
+    - install_authentik
     - not (_ha_oidc_manifest.stat.exists | default(false))
   failed_when: false
 
 - name: "[pazny.homeassistant] Extract auth_oidc plugin"
   ansible.builtin.unarchive:
-    src: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/_auth_oidc.tar.gz"
-    dest: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/"
+    src: "{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
+    dest: "{{ homeassistant_config_dir }}/"
     remote_src: true
-    creates: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version | default('0.9.0') }}"
+    creates: "{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}"
   when:
-    - install_authentik | default(false)
+    - install_authentik
     - _ha_oidc_dl is defined
     - _ha_oidc_dl.status_code is defined
     - _ha_oidc_dl.status_code in [200, 304] or _ha_oidc_dl.changed | default(false)
@@ -93,47 +93,47 @@
 - name: "[pazny.homeassistant] Move auth_oidc to custom_components/"
   ansible.builtin.shell: |
     set -e
-    SRC="{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version | default('0.9.0') }}/custom_components/auth_oidc"
-    DST="{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/custom_components/auth_oidc"
+    SRC="{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}/custom_components/auth_oidc"
+    DST="{{ homeassistant_config_dir }}/custom_components/auth_oidc"
     if [ -d "$SRC" ] && [ ! -d "$DST" ]; then
       mv "$SRC" "$DST"
     fi
-    rm -rf "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version | default('0.9.0') }}"
-    rm -f "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/_auth_oidc.tar.gz"
+    rm -rf "{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}"
+    rm -f "{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
   args:
-    creates: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/custom_components/auth_oidc/manifest.json"
+    creates: "{{ homeassistant_config_dir }}/custom_components/auth_oidc/manifest.json"
   when:
-    - install_authentik | default(false)
+    - install_authentik
     - not (_ha_oidc_manifest.stat.exists | default(false))
   failed_when: false
   notify: Restart homeassistant
 
 - name: "[pazny.homeassistant] Render secrets.yaml for OIDC credentials"
   ansible.builtin.copy:
-    dest: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/secrets.yaml"
+    dest: "{{ homeassistant_config_dir }}/secrets.yaml"
     content: |
       # Home Assistant secrets (managed by Ansible)
-      oidc_client_id: "{{ authentik_oidc_homeassistant_client_id | default('nos-homeassistant') }}"
-      oidc_client_secret: "{{ authentik_oidc_homeassistant_client_secret | default(global_password_prefix + '_pw_oidc_homeassistant') }}"
+      oidc_client_id: "{{ authentik_oidc_homeassistant_client_id }}"
+      oidc_client_secret: "{{ authentik_oidc_homeassistant_client_secret }}"
     mode: '0600'
-  when: install_authentik | default(false)
+  when: install_authentik
   notify: Restart homeassistant
 
 - name: "[pazny.homeassistant] Inject auth_oidc block into configuration.yaml"
   ansible.builtin.blockinfile:
-    path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}/configuration.yaml"
+    path: "{{ homeassistant_config_dir }}/configuration.yaml"
     marker: "# {mark} ANSIBLE MANAGED - auth_oidc"
     block: |
       auth_oidc:
         client_id: !secret oidc_client_id
         client_secret: !secret oidc_client_secret
-        discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/homeassistant/.well-known/openid-configuration"
+        discovery_url: "https://{{ authentik_domain }}/application/o/homeassistant/.well-known/openid-configuration"
         display_name: "Authentik"
         features:
           automatic_user_linking: true
           automatic_person_creation: true
     create: true
-  when: install_authentik | default(false)
+  when: install_authentik
   notify: Restart homeassistant
 
 - name: "[pazny.homeassistant] Render compose override fragment"

@@ -9,32 +9,32 @@
 
 services:
   paperclip:
-    image: ghcr.io/paperclipai/paperclip:{{ paperclip_version | default('latest') }}
+    image: ghcr.io/paperclipai/paperclip:{{ paperclip_version }}
     restart: unless-stopped
     ports:
-{% if services_lan_access | default(false) %}
-      - "{{ paperclip_port | default(3006) }}:3100"
+{% if services_lan_access %}
+      - "{{ paperclip_port }}:3100"
 {% else %}
-      - "127.0.0.1:{{ paperclip_port | default(3006) }}:3100"
+      - "127.0.0.1:{{ paperclip_port }}:3100"
 {% endif %}
     volumes:
-      - {{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}:/paperclip
+      - {{ paperclip_data_dir }}:/paperclip
     environment:
       HOST: "0.0.0.0"
       PORT: "3100"
-      DATABASE_URL: "postgresql://{{ paperclip_db_user | default('paperclip') }}:{{ (paperclip_db_password | default(global_password_prefix + '_pw_paperclip')) | urlencode }}@postgresql:5432/{{ paperclip_db_name | default('paperclip') }}"
+      DATABASE_URL: "postgresql://{{ paperclip_db_user }}:{{ (paperclip_db_password) | urlencode }}@postgresql:5432/{{ paperclip_db_name }}"
       PAPERCLIP_HOME: "/paperclip"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       # OpenClaw gateway URL — declared in defaults/main.yml and
       # default.config.yml but previously never injected into the container
       # (dead variable). Wire it up so Paperclip can reach the agent.
-      PAPERCLIP_OPENCLAW_URL: "{{ paperclip_openclaw_url | default('http://host.docker.internal:' ~ (openclaw_gateway_port | default(18789))) }}"
+      PAPERCLIP_OPENCLAW_URL: "{{ paperclip_openclaw_url }}"
       # BetterAuth session signing key. Default derives from the deterministic
       # global_password_prefix (see default.config.yml) — must NOT fall back to
       # lookup('pipe', 'openssl rand ...') because that re-rolls the secret on
       # every playbook run and invalidates all active sessions.
-      BETTER_AUTH_SECRET: "{{ paperclip_auth_secret | default(global_password_prefix ~ '_pw_paperclip_auth') }}"
-      BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
+      BETTER_AUTH_SECRET: "{{ paperclip_auth_secret }}"
+      BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3100/ || exit 1"]
       interval: 15s
@@ -50,4 +50,4 @@ services:
         max-size: "20m"
         max-file: "5"
     mem_limit: {{ paperclip_mem_limit | default(docker_mem_limit_standard) }}
-    cpus: {{ docker_cpus_standard | default('1.0') }}
+    cpus: {{ docker_cpus_standard }}

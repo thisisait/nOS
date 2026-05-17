@@ -14,29 +14,29 @@ services:
   nodered:
     image: nodered/node-red:{{ nodered_version | default('4.0.9') }}
     restart: unless-stopped
-    user: "{{ nodered_uid | default(1000) }}:{{ nodered_gid | default(1000) }}"
+    user: "{{ nodered_uid }}:{{ nodered_gid }}"
     ports:
-{% if services_lan_access | default(false) %}
-      - "{{ nodered_port | default(1880) }}:1880"
+{% if services_lan_access %}
+      - "{{ nodered_port }}:1880"
 {% else %}
-      - "127.0.0.1:{{ nodered_port | default(1880) }}:1880"
+      - "127.0.0.1:{{ nodered_port }}:1880"
 {% endif %}
     volumes:
       - {{ nodered_data_dir }}:/data
 {# mkcert CA volume + NODE_EXTRA_CA_CERTS moved to nodered-base plugin compose-extension (D2). #}
     environment:
-      TZ: "{{ nodered_timezone | default('Europe/Prague') }}"
-      FLOWS: "{{ nodered_flows_file | default('flows.json') }}"
-      NODE_RED_ENABLE_SAFE_MODE: "{{ nodered_enable_safe_mode | default('false') }}"
-      NODE_RED_ENABLE_PROJECTS: "{{ nodered_enable_projects | default('true') }}"
+      TZ: "{{ nodered_timezone }}"
+      FLOWS: "{{ nodered_flows_file }}"
+      NODE_RED_ENABLE_SAFE_MODE: "{{ nodered_enable_safe_mode }}"
+      NODE_RED_ENABLE_PROJECTS: "{{ nodered_enable_projects }}"
 {# NODE_EXTRA_CA_CERTS moved to nodered-base plugin compose-extension (D2). #}
-{% if install_authentik | default(false) and (nodered_native_oidc_enabled | default(false)) %}
+{% if install_authentik and nodered_native_oidc_enabled %}
       # ── Authentik native OIDC (β1.B 2026-05-05) ─────────────────────────
       # Consumed by /data/settings.js's adminAuth.strategy block via
       # passport-openidconnect. clientID + clientSecret read from env so
       # secrets aren't baked into the static settings.js render.
-      NODERED_OIDC_CLIENT_ID: "{{ authentik_oidc_nodered_client_id | default('nos-nodered') }}"
-      NODERED_OIDC_CLIENT_SECRET: "{{ authentik_oidc_nodered_client_secret | default(global_password_prefix ~ '_pw_oidc_nodered') }}"
+      NODERED_OIDC_CLIENT_ID: "{{ authentik_oidc_nodered_client_id }}"
+      NODERED_OIDC_CLIENT_SECRET: "{{ authentik_oidc_nodered_client_secret }}"
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:1880/ 2>&1 || exit 1"]

@@ -13,7 +13,7 @@
 
 - name: "[pazny.freescout] Ensure data directory exists"
   ansible.builtin.file:
-    path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}"
+    path: "{{ freescout_data_dir }}"
     state: directory
     mode: '0755'
 

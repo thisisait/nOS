@@ -12,7 +12,7 @@
 
 - name: "[pazny.homeassistant Post] Wait for API"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/"
     method: GET
     timeout: 5
     status_code: [200, 302]
@@ -24,7 +24,7 @@
 
 - name: "[pazny.homeassistant Post] Check onboarding status"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding"
     method: GET
     timeout: 10
     status_code: [200]
@@ -34,14 +34,14 @@
 
 - name: "[pazny.homeassistant Post] Create owner account (first-run only)"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/users"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/users"
     method: POST
     body_format: json
     body:
-      client_id: "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
-      name: "{{ homeassistant_admin_name | default('Admin') }}"
-      username: "{{ homeassistant_admin_user | default('admin') }}"
-      password: "{{ homeassistant_admin_password | default(global_password_prefix + '_pw_homeassistant') }}"
+      client_id: "https://{{ homeassistant_domain }}/"
+      name: "{{ homeassistant_admin_name }}"
+      username: "{{ homeassistant_admin_user }}"
+      password: "{{ homeassistant_admin_password }}"
       language: "en"
     status_code: [200]
     timeout: 10
@@ -59,8 +59,8 @@
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p iiab exec -T homeassistant \
       hass --script auth --config /config change_password \
-      {{ homeassistant_admin_user | default('admin') }} \
-      {{ (homeassistant_admin_password | default(global_password_prefix + '_pw_homeassistant')) | quote }} 2>&1
+      {{ homeassistant_admin_user }} \
+      {{ (homeassistant_admin_password) | quote }} 2>&1
   register: _ha_pw_update
   when:
     - _ha_onboarding.json is defined
@@ -71,7 +71,7 @@
 
 - name: "[pazny.homeassistant Post] Set core config (timezone, location)"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/core_config"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/core_config"
     method: POST
     body_format: json
     headers:
@@ -85,7 +85,7 @@
 
 - name: "[pazny.homeassistant Post] Skip analytics"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/analytics"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/analytics"
     method: POST
     body_format: json
     headers:
@@ -99,14 +99,14 @@
 
 - name: "[pazny.homeassistant Post] Complete onboarding (skip integrations)"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port | default(8123) }}/api/onboarding/integration"
+    url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/integration"
     method: POST
     body_format: json
     headers:
       Authorization: "Bearer {{ _ha_user_create.json.auth_code | default('') }}"
     body:
-      client_id: "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
-      redirect_uri: "https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      client_id: "https://{{ homeassistant_domain }}/"
+      redirect_uri: "https://{{ homeassistant_domain }}"
     status_code: [200]
     timeout: 10
   when:

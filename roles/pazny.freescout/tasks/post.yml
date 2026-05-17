@@ -18,7 +18,7 @@
 
 - name: "[pazny.freescout Post] Wait for service"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ freescout_port | default(8090) }}/"
+    url: "http://127.0.0.1:{{ freescout_port }}/"
     method: GET
     timeout: 5
     status_code: [200, 302, 500]
@@ -32,7 +32,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
     exec -T freescout
-    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->count();"
+    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email }}')->count();"
     2>/dev/null || echo "0"
   register: _fs_user_check
   changed_when: false
@@ -46,9 +46,9 @@
     exec -T freescout
     php artisan freescout:create-user
     --role=admin
-    --firstName="{{ freescout_admin_first_name | default('Admin') }}"
-    --lastName="{{ freescout_admin_last_name | default('nOS') }}"
-    --email="{{ freescout_admin_email | default(default_admin_email) }}"
+    --firstName="{{ freescout_admin_first_name }}"
+    --lastName="{{ freescout_admin_last_name }}"
+    --email="{{ freescout_admin_email }}"
     --password="{{ freescout_admin_password }}"
     2>&1 || true
   when:
@@ -64,7 +64,7 @@
 - name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout \
-      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
     - (_fs_user_check.stdout | default('0') | trim) != '0'
@@ -83,7 +83,7 @@
 
 - name: "[pazny.freescout Post][OIDC] Check if OAuth module directory exists"
   ansible.builtin.stat:
-    path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}/Modules/OAuth/module.json"
+    path: "{{ freescout_data_dir }}/Modules/OAuth/module.json"
   register: _fs_oauth_stat
   when: install_authentik | default(false)
 
@@ -132,14 +132,14 @@
         \$cfg=[
           'oauth.provider'=>'oidc',
           'oauth.enabled'=>'1',
-          'oauth.client_id'=>'{{ authentik_oidc_freescout_client_id | default('nos-freescout') }}',
-          'oauth.client_secret'=>'{{ authentik_oidc_freescout_client_secret | default(global_password_prefix + '_pw_oidc_freescout') }}',
+          'oauth.client_id'=>'{{ authentik_oidc_freescout_client_id }}',
+          'oauth.client_secret'=>'{{ authentik_oidc_freescout_client_secret }}',
           'oauth.authorize_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/',
           'oauth.token_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/',
           'oauth.userinfo_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/',
           'oauth.logout_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/end-session/',
           'oauth.discovery_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration',
-          'oauth.redirect_uri'=>'https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/callback',
+          'oauth.redirect_uri'=>'https://{{ freescout_domain }}/oauth/callback',
           'oauth.scopes'=>'openid profile email',
           'oauth.display_name'=>'Authentik',
           'oauth.auto_create_user'=>'1',

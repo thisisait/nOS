@@ -6,31 +6,31 @@
 
 services:
   freescout:
-    image: tiredofit/freescout:{{ freescout_version | default('latest') }}
+    image: tiredofit/freescout:{{ freescout_version }}
     restart: unless-stopped
     ports:
-{% if services_lan_access | default(false) %}
-      - "{{ freescout_port | default(8090) }}:80"
+{% if services_lan_access %}
+      - "{{ freescout_port }}:80"
 {% else %}
-      - "127.0.0.1:{{ freescout_port | default(8090) }}:80"
+      - "127.0.0.1:{{ freescout_port }}:80"
 {% endif %}
     volumes:
-      - {{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data') }}:/data
+      - {{ freescout_data_dir }}:/data
 {# mkcert CA volume + Authentik extra_host moved to freescout-base plugin (D2). #}
     environment:
       CONTAINER_NAME: freescout
       DB_HOST: mariadb
       DB_PORT: "3306"
-      DB_NAME: "{{ freescout_db_name | default('freescout') }}"
-      DB_USER: "{{ freescout_db_user | default('freescout') }}"
-      DB_PASS: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
-      SITE_URL: "https://{{ freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-      ADMIN_EMAIL: "{{ freescout_admin_email | default(default_admin_email) }}"
-      ADMIN_PASS: "{{ freescout_admin_password | default(global_password_prefix + '_pw_freescout') }}"
-      TIMEZONE: "{{ freescout_timezone | default('Europe/Prague') }}"
+      DB_NAME: "{{ freescout_db_name }}"
+      DB_USER: "{{ freescout_db_user }}"
+      DB_PASS: "{{ freescout_db_password }}"
+      SITE_URL: "https://{{ freescout_domain }}"
+      ADMIN_EMAIL: "{{ freescout_admin_email }}"
+      ADMIN_PASS: "{{ freescout_admin_password }}"
+      TIMEZONE: "{{ freescout_timezone }}"
       ENABLE_SSL_PROXY: "TRUE"
 {# FREESCOUT_OIDC_* env moved to freescout-base plugin compose-extension (D2 2026-05-05). #}
-{% if install_mailpit | default(false) %}
+{% if install_mailpit %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
       # Switches MODE_MAIL away from the image's bundled postfix-relay default.
@@ -40,9 +40,9 @@ services:
       SMTP_USERNAME: ""
       SMTP_PASSWORD: ""
       SMTP_ENCRYPTION: "null"
-      MAIL_FROM_ADDRESS: "helpdesk@{{ tenant_domain | default('dev.local') }}"
+      MAIL_FROM_ADDRESS: "helpdesk@{{ tenant_domain }}"
 {% endif %}
-{% if install_mailpit | default(false) %}
+{% if install_mailpit %}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
@@ -56,4 +56,4 @@ services:
         max-size: "20m"
         max-file: "5"
     mem_limit: {{ freescout_mem_limit | default(docker_mem_limit_light) }}
-    cpus: {{ freescout_cpus | default(docker_cpus_light | default('0.5')) }}
+    cpus: {{ freescout_cpus | default(docker_cpus_light) }}
