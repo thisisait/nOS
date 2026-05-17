@@ -140,6 +140,65 @@ def test_wing_base_registers_dispatch_pulse_job():
     assert job["runner"] == "subprocess"
     # Per-minute cadence — empty queue is cheap, partial failures retry fast.
     assert job["schedule"] == "* * * * *"
+    # A9 daily-digest knob exposed via env.
+    assert "DISPATCH_MAIL_DIGEST_FLOOR" in job.get("env", {})
+
+
+def test_wing_base_registers_digest_flush_pulse_job():
+    """A9 daily-digest companion (2026-05-17): a daily Pulse job calls the
+    same dispatch script with DISPATCH_DIGEST_FLUSH=1 to batch queued rows
+    into one summary email.
+    """
+    manifest = yaml.safe_load(
+        (REPO / "files/anatomy/plugins/wing-base/plugin.yml").read_text()
+    )
+    jobs = (manifest.get("pulse") or {}).get("jobs") or []
+    names = [j.get("name") for j in jobs]
+    assert "dispatch-notifications-digest" in names, names
+    job = next(j for j in jobs if j["name"] == "dispatch-notifications-digest")
+    assert job["runner"] == "subprocess"
+    env = job.get("env") or {}
+    assert env.get("DISPATCH_DIGEST_FLUSH") == "1"
+    # Schedule defaults to 09:00 UTC daily but accepts operator override.
+    assert "mail_digest_cron" in job["schedule"] or job["schedule"] == "0 9 * * *"
+
+
+def test_notifications_schema_carries_mail_digest_window():
+    """A9 daily-digest schema (2026-05-17): per-row queue marker column +
+    partial index for cheap pending-flush queries.
+    """
+    sql = (REPO / "files/anatomy/wing/db/schema-extensions.sql").read_text()
+    assert "mail_digest_window" in sql
+    assert "idx_notifications_mail_digest" in sql
+
+
+def test_init_db_alters_in_mail_digest_window():
+    """Existing wing.db installs from pre-2026-05-17 cutover get the
+    column added by init-db.php's idempotent ALTER sweep.
+    """
+    src = (REPO / "files/anatomy/wing/bin/init-db.php").read_text()
+    assert "$addMissingColumns($db, 'notifications'" in src
+    assert "'mail_digest_window' => 'TEXT'" in src
+
+
+def test_dispatch_worker_handles_digest_path():
+    """Dispatch worker has the three new code paths: digest-floor queue
+    decision, fetch_digest_queue helper, deliver_mail_digest aggregator.
+    """
+    src = (REPO / "files/anatomy/wing/bin/dispatch-notifications.php").read_text()
+    assert "DISPATCH_MAIL_DIGEST_FLOOR" in src
+    assert "DISPATCH_DIGEST_FLUSH" in src
+    assert "queue_for_digest" in src
+    assert "fetch_digest_queue" in src
+    assert "deliver_mail_digest" in src
+    # The per-minute mail SELECT must exclude already-queued rows.
+    assert "mail_digest_window IS NULL" in src
+
+
+def test_default_config_exposes_digest_knobs():
+    cfg = (REPO / "default.config.yml").read_text()
+    assert "mail_digest_floor:" in cfg
+    assert "mail_digest_cron:" in cfg
 
 
 # ── Aggregator wiring (A9.5) ───────────────────────────────────────────

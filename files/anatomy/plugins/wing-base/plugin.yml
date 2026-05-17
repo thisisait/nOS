@@ -147,6 +147,33 @@ pulse:
         MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
         MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
         DISPATCH_BATCH_LIMIT: "50"
+        # A9 daily-digest (2026-05-17): severities AT OR BELOW this floor
+        # ("medium" → medium+low+info) queue for digest instead of immediate
+        # mail. Critical/high stay immediate. Set to "none" to disable
+        # digest behavior entirely (every severity fires immediate).
+        DISPATCH_MAIL_DIGEST_FLOOR: "{{ mail_digest_floor | default('medium') }}"
+    # ── A9 daily-digest flush ─────────────────────────────────────────────
+    # Companion to dispatch-notifications. Once a day (09:00 UTC by default)
+    # batches every row queued via mail_digest_window into ONE summary email.
+    # Set mail_digest_floor: none in operator config to disable; this job
+    # then no-ops cleanly when the digest queue is always empty.
+    - name: dispatch-notifications-digest
+      runner: subprocess
+      command: "/opt/homebrew/bin/php"
+      args:
+        - "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/bin/dispatch-notifications.php"
+      schedule: "{{ mail_digest_cron | default('0 9 * * *') }}"
+      jitter_min: 5
+      max_runtime_s: 60
+      max_concurrent: 1
+      env:
+        WING_DB_PATH: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/wing.db"
+        NTFY_URL: ""               # digest job is mail-only
+        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
+        MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"
+        MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
+        MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
+        DISPATCH_DIGEST_FLUSH: "1"
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)

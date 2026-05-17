@@ -128,6 +128,18 @@ bone_secret: "{{ global_password_prefix }}_pw_bone"
 # random bytes — see docs/secrets-hardening.md once it lands).
 wing_events_hmac_secret: "{{ bone_secret }}"
 
+# ── Notification dispatch (Anatomy A9 — wing.db.notifications fanout) ───────
+# `mail_digest_floor`: severities at-or-below this rank get queued for the
+# daily digest mail instead of one-immediate-mail-per-event. The minute-tick
+# dispatch worker still fires critical/high immediately; medium/low/info
+# (with this default) batch into the 09:00 UTC summary. Set to "none" to
+# disable digest behavior (every severity fires immediate — pre-A9-daily
+# behavior). Set to "critical" to put EVERYTHING into the digest.
+# Ranking: critical < high < medium < low < info (less severe → larger rank).
+mail_digest_floor: "medium"
+# Cron expression for the digest flush job. Defaults to 09:00 UTC daily.
+mail_digest_cron: "0 9 * * *"
+
 # ── Pulse (host launchd — scheduled-job daemon, A4 of bones-and-wings) ───────
 # Local Python daemon that polls Wing API for due jobs and fires them.
 # A4 PoC (2026-05-03): non-agentic only; agent runner lands in A8.

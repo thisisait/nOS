@@ -214,14 +214,78 @@ $client->post('/api/v1/notifications', [
 * `gitleaks` plugin (first consumer) pins critical→3-channel + on_low/on_info=[].
 * End-to-end aggregator smoke against synthetic peers.
 
+## Daily-digest mail (A9.2, 2026-05-17)
+
+To avoid mailbox spam during burst-events (e.g. a Gitleaks-finding flurry
+after an audit-PR merge), low-severity mail notifications batch into ONE
+daily summary email instead of N immediate dispatches.
+
+**Severity floor** (`mail_digest_floor` in `default.config.yml`,
+default `medium`):
+
+| Severity vs floor | Per-minute worker action |
+|---|---|
+| Above floor (`critical`, `high`) | Immediate SMTP — same as pre-A9.2 |
+| At/below floor (`medium`, `low`, `info`) | Stamp `mail_digest_window`, leave `mail_dispatched_at` NULL |
+
+A second Pulse job (`dispatch-notifications-digest`, schedule
+`mail_digest_cron` — default `0 9 * * *`) invokes the same dispatch script
+with `DISPATCH_DIGEST_FLUSH=1`. It reads every row where
+`mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL`, sends ONE
+aggregated email grouped by severity, then stamps `mail_dispatched_at` on
+each row atomically.
+
+### Aggregated email format
+
+```
+Subject: [nOS] Daily digest: <N> notification(s) — YYYY-MM-DD
+From:    nOS Wing <wing@<tld>>
+X-NOS-Digest: 1
+X-NOS-Digest-Count: <N>
+
+nOS notification digest — YYYY-MM-DD HH:MM:SS UTC
+<N> notifications across this window.
+
+── MEDIUM (3) ────────────────
+  [2026-05-16 23:14:01] Gitleaks: 2 new finding(s) (by plugin:gitleaks)
+    Fingerprint a1b2c3...; commit deadbeef; line 42
+  [2026-05-17 06:22:18] ERPNext maintenance window expired (by plugin:erpnext)
+
+── LOW (2) ───────────────────
+  …
+─── End of digest ───
+Open Wing /inbox to mark items read.
+```
+
+### Failure handling
+
+Digest-flush failure (SMTP unreachable, recipient rejected) stamps the
+`mail_error` column on every queued row but leaves `mail_dispatched_at`
+NULL — the next daily flush retries the entire batch. The per-minute
+worker excludes already-queued rows (`mail_digest_window IS NOT NULL`)
+so digest failures don't trigger immediate-mail fallback.
+
+### Disabling
+
+Set `mail_digest_floor: "none"` in `config.yml` — the per-minute worker
+then fires every severity immediately and the daily flush job is a
+clean no-op (zero queued rows).
+
+### Operator knobs
+
+| Var | Default | Purpose |
+|---|---|---|
+| `mail_digest_floor` | `medium` | Severity at-or-below which mail batches into digest |
+| `mail_digest_cron` | `0 9 * * *` | Pulse cron expression for the daily flush |
+
 ## Out of scope (post-A9)
 
 * Stalwart TLS SMTP path (Track G follow-on).
-* Daily-digest mail (currently each notification is its own email).
 * Notification templates per plugin (today `title`/`body` are emitter-supplied).
 * Per-recipient routing (today `target_actor_id` is honored but always
   `operator` in practice).
 * Webhook-fanout duplicate-suppression (per-notification idempotency key).
+* Time-window-aware digest (e.g. "send digest only if M+ rows pending").
 
 These can be added incrementally; the table + repository + dispatch worker
 are stable.

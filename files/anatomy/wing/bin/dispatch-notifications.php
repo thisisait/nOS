@@ -45,6 +45,19 @@ $mailRecipient = getenv('MAIL_RECIPIENT') ?: '';
 $batchLimit = (int) (getenv('DISPATCH_BATCH_LIMIT') ?: 50);
 $dryRun = (getenv('DISPATCH_DRY_RUN') === '1');
 
+// A9 daily-digest (2026-05-17): rows at severity ≤ DIGEST_FLOOR with `mail`
+// in channels get queued via mail_digest_window instead of immediate-sent.
+// The separate daily worker (run via DISPATCH_DIGEST_FLUSH=1) batches them
+// into one summary email. Severities ABOVE the floor always fire immediate.
+// Floor `none` disables digest behavior (all mail fires immediate — pre-A9
+// daily-digest behavior).
+$digestFloor = strtolower(getenv('DISPATCH_MAIL_DIGEST_FLOOR') ?: 'medium');
+$digestFlushMode = (getenv('DISPATCH_DIGEST_FLUSH') === '1');
+
+$severityRank = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3, 'info' => 4];
+$digestFloorRank = $severityRank[$digestFloor] ?? -1;  // -1 = digest disabled
+// Sanity: if operator passes "none" or unknown, treat as -1 (no digest).
+
 if (!file_exists($wingDb)) {
 	fwrite(STDERR, "fatal: wing.db not found at {$wingDb}\n");
 	exit(1);
@@ -65,16 +78,21 @@ $failed    = ['ntfy' => 0, 'mail' => 0];
 /**
  * Fetch pending rows for a channel — the channel must appear in
  * channels_json AND the per-channel dispatched_at column must be NULL.
+ *
+ * For the mail channel additionally excludes rows already queued for the
+ * daily digest (mail_digest_window IS NOT NULL) so the per-minute worker
+ * doesn't re-process them.
  */
 function fetch_pending(SQLite3 $db, string $channel, int $limit): array
 {
 	$col = $channel === 'ntfy' ? 'ntfy_dispatched_at' : 'mail_dispatched_at';
+	$digestExclusion = $channel === 'mail' ? ' AND mail_digest_window IS NULL' : '';
 	$stmt = $db->prepare("
 		SELECT id, uuid, severity, title, body, channels_json, metadata_json,
 		       actor_id, origin_plugin, origin_agent, created_at
 		  FROM notifications
 		 WHERE {$col} IS NULL
-		   AND channels_json LIKE :pattern
+		   AND channels_json LIKE :pattern{$digestExclusion}
 		 ORDER BY id ASC
 		 LIMIT :limit
 	");
@@ -105,6 +123,138 @@ function mark_dispatched(SQLite3 $db, string $uuid, string $channel, ?string $er
 	}
 	$stmt->bindValue(':uuid', $uuid, SQLITE3_TEXT);
 	$stmt->execute();
+}
+
+/**
+ * Queue a row for daily-digest mail (A9 daily-digest, 2026-05-17). Stamps
+ * mail_digest_window with the queue-entry time; mail_dispatched_at stays
+ * NULL until the digest worker flushes the queue.
+ */
+function queue_for_digest(SQLite3 $db, string $uuid): void
+{
+	$stmt = $db->prepare(
+		"UPDATE notifications SET mail_digest_window = :ts
+		 WHERE uuid = :uuid AND mail_digest_window IS NULL AND mail_dispatched_at IS NULL"
+	);
+	$stmt->bindValue(':ts', gmdate('c'), SQLITE3_TEXT);
+	$stmt->bindValue(':uuid', $uuid, SQLITE3_TEXT);
+	$stmt->execute();
+}
+
+/**
+ * Read every row queued for digest mail (mail_digest_window IS NOT NULL,
+ * mail_dispatched_at IS NULL). The digest flush worker batches these.
+ * @return array<int,array<string,mixed>>
+ */
+function fetch_digest_queue(SQLite3 $db, int $limit = 500): array
+{
+	$stmt = $db->prepare("
+		SELECT id, uuid, severity, title, body, channels_json, metadata_json,
+		       actor_id, origin_plugin, origin_agent, created_at, mail_digest_window
+		  FROM notifications
+		 WHERE mail_digest_window IS NOT NULL
+		   AND mail_dispatched_at IS NULL
+		 ORDER BY id ASC
+		 LIMIT :limit
+	");
+	$stmt->bindValue(':limit', $limit, SQLITE3_INTEGER);
+	$res = $stmt->execute();
+	$rows = [];
+	while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+		$r['channels'] = json_decode($r['channels_json'] ?? '[]', true) ?: [];
+		$r['metadata'] = json_decode($r['metadata_json'] ?? '{}', true) ?: [];
+		$rows[] = $r;
+	}
+	return $rows;
+}
+
+/**
+ * Deliver an aggregated digest mail. One SMTP transaction → one email
+ * summarizing N notifications grouped by severity. Returns null on success.
+ */
+function deliver_mail_digest(array $rows, string $host, int $port, string $from, string $recipient): ?string
+{
+	if ($recipient === '') {
+		return 'MAIL_RECIPIENT env var is empty';
+	}
+	if (!$rows) {
+		return null;
+	}
+	$errno = 0;
+	$errstr = '';
+	$sock = @fsockopen($host, $port, $errno, $errstr, 5);
+	if (!$sock) {
+		return "SMTP connect failed {$host}:{$port}: {$errstr}";
+	}
+	stream_set_timeout($sock, 5);
+
+	$expect = function (string $expectedPrefix) use ($sock): ?string {
+		$line = fgets($sock, 1024);
+		if ($line === false) return 'SMTP read timed out';
+		if (strpos($line, $expectedPrefix) !== 0) return 'SMTP unexpected reply: ' . trim($line);
+		return null;
+	};
+	$send = function (string $line) use ($sock): void { fwrite($sock, $line . "\r\n"); };
+
+	if (($err = $expect('220')) !== null) { fclose($sock); return $err; }
+	$send('EHLO wing.localhost');
+	while (($line = fgets($sock, 1024)) !== false) {
+		if (preg_match('/^\d{3} /', $line)) break;
+	}
+	$send('MAIL FROM:<' . $from . '>');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('RCPT TO:<' . $recipient . '>');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('DATA');
+	if (($err = $expect('354')) !== null) { fclose($sock); return $err; }
+
+	// Group rows by severity for readable summary.
+	$bySev = [];
+	foreach ($rows as $r) {
+		$bySev[$r['severity']][] = $r;
+	}
+	$severityOrder = ['critical', 'high', 'medium', 'low', 'info'];
+
+	$total = count($rows);
+	$subject = "[nOS] Daily digest: {$total} notification(s) — " . date('Y-m-d');
+
+	$body = "nOS notification digest — " . gmdate('Y-m-d H:i:s') . " UTC\n";
+	$body .= "{$total} notifications across this window.\n\n";
+	foreach ($severityOrder as $sev) {
+		if (empty($bySev[$sev])) continue;
+		$body .= "── " . strtoupper($sev) . " (" . count($bySev[$sev]) . ") ────────────────\n";
+		foreach ($bySev[$sev] as $r) {
+			$origin = !empty($r['origin_plugin']) ? "plugin:{$r['origin_plugin']}"
+			       : (!empty($r['origin_agent'])  ? "agent:{$r['origin_agent']}"
+			       : ($r['actor_id'] ?? 'unknown'));
+			$ts = substr((string) $r['created_at'], 0, 19);
+			$body .= "  [{$ts}] {$r['title']} (by {$origin})\n";
+			if (!empty($r['body'])) {
+				$summary = trim(preg_replace('/\s+/', ' ', (string) $r['body']));
+				if (strlen($summary) > 200) $summary = substr($summary, 0, 200) . '…';
+				$body .= "    " . $summary . "\n";
+			}
+		}
+		$body .= "\n";
+	}
+	$body .= "─── End of digest ───\n";
+	$body .= "Open Wing /inbox to mark items read.\n";
+
+	$msg = "From: nOS Wing <{$from}>\r\n";
+	$msg .= "To: <{$recipient}>\r\n";
+	$msg .= "Subject: {$subject}\r\n";
+	$msg .= "X-NOS-Digest: 1\r\n";
+	$msg .= "X-NOS-Digest-Count: {$total}\r\n";
+	$msg .= "Content-Type: text/plain; charset=utf-8\r\n";
+	$msg .= "\r\n";
+	$msg .= $body;
+	$msg = preg_replace('/^\./m', '..', $msg);
+	$send($msg);
+	$send('.');
+	if (($err = $expect('250')) !== null) { fclose($sock); return $err; }
+	$send('QUIT');
+	fclose($sock);
+	return null;
 }
 
 /**
@@ -266,12 +416,67 @@ if ($ntfyUrl === '') {
 }
 
 // ── Process mail channel ────────────────────────────────────────────────
+// Two modes:
+//   * normal (default) — split pending mail rows by severity. Rows above
+//     DISPATCH_MAIL_DIGEST_FLOOR fire immediately; the rest get queued
+//     via mail_digest_window for the daily digest flush.
+//   * digest-flush (DISPATCH_DIGEST_FLUSH=1) — read every row with
+//     mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL,
+//     send ONE aggregated email, stamp all rows as dispatched at once.
+//     This is the daily cron path.
 if ($mailHost === '' || $mailRecipient === '') {
 	echo "mail: skipped (MAIL_HOST or MAIL_RECIPIENT empty)\n";
+} elseif ($digestFlushMode) {
+	$rows = fetch_digest_queue($db, 500);
+	echo "mail-digest: " . count($rows) . " queued row(s)\n";
+	if (count($rows) === 0) {
+		echo "  no digest queue to flush\n";
+	} elseif ($dryRun) {
+		foreach ($rows as $row) {
+			echo "  DRYRUN digest-include {$row['uuid']} [{$row['severity']}] {$row['title']}\n";
+		}
+	} else {
+		$err = deliver_mail_digest($rows, $mailHost, $mailPort, $mailFrom, $mailRecipient);
+		if ($err === null) {
+			foreach ($rows as $row) {
+				mark_dispatched($db, $row['uuid'], 'mail', null);
+				$delivered['mail']++;
+			}
+			echo "  OK digest dispatched (" . count($rows) . " rows)\n";
+		} else {
+			// Failure: mark all rows with the error but don't set dispatched_at
+			// so they roll into the next digest attempt. Stamp each row's
+			// mail_error explicitly via a single statement per row.
+			$stmt = $db->prepare("UPDATE notifications SET mail_error = :err WHERE uuid = :uuid");
+			foreach ($rows as $row) {
+				$stmt->bindValue(':err', substr($err, 0, 500), SQLITE3_TEXT);
+				$stmt->bindValue(':uuid', $row['uuid'], SQLITE3_TEXT);
+				$stmt->execute();
+				$stmt->reset();
+				$failed['mail']++;
+			}
+			$partial = true;
+			echo "  FAIL digest: {$err}\n";
+		}
+	}
 } else {
 	$rows = fetch_pending($db, 'mail', $batchLimit);
-	echo "mail: " . count($rows) . " pending\n";
+	echo "mail: " . count($rows) . " pending (digest_floor={$digestFloor})\n";
 	foreach ($rows as $row) {
+		$rowRank = $severityRank[$row['severity']] ?? 4;
+		// `rowRank > digestFloorRank` means the row's severity ranks LOWER
+		// (less severe) than the floor → queue for digest. Equal-floor rows
+		// digest too (floor name describes the highest severity that gets
+		// digested — e.g. floor=medium means medium+low+info digest).
+		if ($digestFloorRank >= 0 && $rowRank >= $digestFloorRank) {
+			if ($dryRun) {
+				echo "  DRYRUN queue-digest {$row['uuid']} [{$row['severity']}] {$row['title']}\n";
+			} else {
+				queue_for_digest($db, $row['uuid']);
+				echo "  QUEUE mail {$row['uuid']} → digest\n";
+			}
+			continue;
+		}
 		if ($dryRun) {
 			echo "  DRYRUN mail {$row['uuid']} [{$row['severity']}] {$row['title']}\n";
 			continue;

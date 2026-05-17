@@ -371,6 +371,20 @@ $addMissingColumns($db, 'events', [
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id)');
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id)');
 
+// notifications.mail_digest_window — A9 daily-digest mail (2026-05-17).
+// Pre-existing DBs from the A9.1 cutover (without daily-digest support)
+// need the column ALTER'd in so the dispatch worker's digest-floor logic
+// can stamp it. The CREATE TABLE IF NOT EXISTS above is a no-op on
+// existing tables, so this sweep is the migration vehicle.
+$addMissingColumns($db, 'notifications', [
+    'mail_digest_window' => 'TEXT',
+]);
+$db->exec(
+    'CREATE INDEX IF NOT EXISTS idx_notifications_mail_digest '
+    . 'ON notifications(mail_digest_window) '
+    . 'WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL'
+);
+
 // pulse_runs.{actor_action_id,acted_at} — pulse_runs already carries
 // actor_id (from schema-extensions.sql:234), but lacks the action
 // grouping + wall-clock fields. Adding them here aligns pulse_runs

@@ -307,6 +307,15 @@ CREATE TABLE IF NOT EXISTS notifications (
     ntfy_error          TEXT,
     mail_dispatched_at  TEXT,
     mail_error          TEXT,
+    -- A9 daily-digest mail (2026-05-17): when the per-minute worker decides
+    -- a row belongs in the digest queue (severity ≤ DISPATCH_MAIL_DIGEST_FLOOR
+    -- AND `mail` ∈ channels), it stamps this column with the queue-entry time
+    -- and leaves mail_dispatched_at NULL. The daily digest worker batches
+    -- every row where mail_digest_window IS NOT NULL AND mail_dispatched_at
+    -- IS NULL into ONE summary email and sets mail_dispatched_at for the
+    -- whole batch at once. Immediate-dispatch rows (severity > floor) leave
+    -- this NULL and get stamped directly.
+    mail_digest_window  TEXT,
     metadata_json       TEXT NOT NULL DEFAULT '{}',     -- per-channel hints (ntfy click URL, mail recipients override, ...)
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -316,6 +325,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_actor_action ON notifications(actor
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at   ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_ntfy_pending ON notifications(ntfy_dispatched_at) WHERE ntfy_dispatched_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_mail_pending ON notifications(mail_dispatched_at) WHERE mail_dispatched_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_mail_digest  ON notifications(mail_digest_window) WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL;
 
 -- ============================================================================
 -- AgentKit — AIT runtime (Anatomy A14, 2026-05-07)
