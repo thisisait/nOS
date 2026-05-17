@@ -30,7 +30,66 @@
   check_mode: false
 
 # ── DB password sync ─────────────────────────────────────────────────────
-- name: "[pazny.nextcloud Post] Get current DB password from config.php"
+# Pre-bootstrap path (2026-05-17): when config.php's dbpassword has
+# drifted from the effective resolved value (e.g. operator rotated
+# `global_password_prefix` between runs, or the operator config layer
+# defines a duplicate prefix that shadows differently than before),
+# Nextcloud crash-loops with "Access denied for user 'nextcloud'" on
+# every request — including the `occ` CLI, which bootstraps the same
+# DB connection before doing anything else. The chicken-and-egg of
+# "update password via occ ↔ occ can't start because of bad password"
+# is broken here: read the file directly, sed-patch it, then let the
+# normal occ-based reconvergence below catch any drift the
+# pre-bootstrap edit didn't cover (e.g. running config.php elsewhere).
+#
+# This is the canonical way to recover Nextcloud from a password-drift
+# stuck state without losing data — the alternative is `blank=true`,
+# which wipes the operator's files. Surfaced live 2026-05-17 on
+# pazny.eu with config.yml.global_password_prefix=kloFas9 +
+# credentials.yml.global_password_prefix=kloFas7 (credentials.yml wins
+# at runtime, so the in-DB user used kloFas7_pw_nextcloud, but
+# config.php from a previous run stored kloFas9_pw_nextcloud).
+- name: "[pazny.nextcloud Post] Pre-bootstrap: sync config.php dbpassword (file edit)"
+  ansible.builtin.shell: |
+    PHP_FILE="{{ nextcloud_dir }}/config/config.php"
+    if [[ ! -f "$PHP_FILE" ]]; then
+      echo "NO_CONFIG"
+      exit 0
+    fi
+    CURRENT=$(grep -oE "'dbpassword' => '[^']+'" "$PHP_FILE" | sed -E "s/^'dbpassword' => '([^']+)'$/\1/" | head -1)
+    EXPECTED="{{ nextcloud_db_password }}"
+    if [[ -z "$CURRENT" ]]; then
+      echo "NO_DBPASSWORD_LINE"
+      exit 0
+    fi
+    if [[ "$CURRENT" == "$EXPECTED" ]]; then
+      echo "IN_SYNC"
+      exit 0
+    fi
+    # Drift detected — sed-patch in place. macOS sed needs the empty -i arg.
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i "" "s|'dbpassword' => '$CURRENT'|'dbpassword' => '$EXPECTED'|" "$PHP_FILE"
+    else
+        sed -i "s|'dbpassword' => '$CURRENT'|'dbpassword' => '$EXPECTED'|" "$PHP_FILE"
+    fi
+    echo "PATCHED: ${CURRENT:0:4}…${CURRENT: -4} -> ${EXPECTED:0:4}…${EXPECTED: -4}"
+  args:
+    executable: /bin/bash
+  register: _nc_prebootstrap
+  changed_when: "'PATCHED:' in (_nc_prebootstrap.stdout | default(''))"
+  failed_when: false
+  no_log: false  # mask is in code; safe to surface result
+
+- name: "[pazny.nextcloud Post] Pre-bootstrap result"
+  ansible.builtin.debug:
+    msg: "config.php dbpassword sync → {{ _nc_prebootstrap.stdout | default('?') }}"
+  when: _nc_prebootstrap is defined
+
+# If we patched the file, Nextcloud picks up the new value on the next
+# HTTP request (config.php is require'd on every request). No container
+# restart needed; the chicken-and-egg is resolved.
+
+- name: "[pazny.nextcloud Post] Get current DB password from config.php (via occ)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
     exec -T -u www-data nextcloud
@@ -41,7 +100,7 @@
   check_mode: false
   when: _nc_container.stdout | default('') | length > 0
 
-- name: "[pazny.nextcloud Post] Update DB password in config.php"
+- name: "[pazny.nextcloud Post] Update DB password in config.php (via occ)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
     exec -T -u www-data nextcloud

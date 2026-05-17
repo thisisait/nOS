@@ -114,7 +114,7 @@ aggregates:
 provisioning:
   notification_routing:
     template: templates/notification-routing.json.j2
-    target: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/notification-routing.json"
+    target: "{{ wing_home }}/app/data/notification-routing.json"
 
 lifecycle:
   post_compose:
@@ -134,13 +134,13 @@ pulse:
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
-        - "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/bin/dispatch-notifications.php"
+        - "{{ wing_home }}/bin/dispatch-notifications.php"
       schedule: "* * * * *"        # every minute; cheap when queue is empty
       jitter_min: 0
       max_runtime_s: 30
       max_concurrent: 1
       env:
-        WING_DB_PATH: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/wing.db"
+        WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
         MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
         MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"
@@ -161,13 +161,13 @@ pulse:
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
-        - "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/bin/dispatch-notifications.php"
+        - "{{ wing_home }}/bin/dispatch-notifications.php"
       schedule: "{{ mail_digest_cron | default('0 9 * * *') }}"
       jitter_min: 5
       max_runtime_s: 60
       max_concurrent: 1
       env:
-        WING_DB_PATH: "{{ wing_home | default(ansible_facts.env.HOME ~ '/wing') }}/app/data/wing.db"
+        WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: ""               # digest job is mail-only
         MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) else '' }}"
         MAIL_PORT: "{{ mailpit_smtp_port | default(1025) }}"

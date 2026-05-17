@@ -655,7 +655,8 @@ wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default
 # rendered upstream URL was `http://nos-host:0` and wing.<tld> 502'd
 # at the Traefik upstream layer (C11, 2026-05-08).
 wing_port: 9000
-wing_app_dir: "{{ ansible_facts['env']['HOME'] }}/wing/app"
+wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
+wing_app_dir: "{{ wing_home }}/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 

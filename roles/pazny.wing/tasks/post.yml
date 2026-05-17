@@ -176,6 +176,11 @@
     NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
     NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
     NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
+    # A9.4-fixup (2026-05-17): wing-base Pulse jobs reference {{ wing_home }}
+    # in args[] and env values. Without the substitution, Pulse would
+    # fork `/opt/homebrew/bin/php "{{ wing_home }}/bin/..."` and crash
+    # with "Could not open input file" 1× per minute.
+    NOS_WING_HOME: "{{ wing_home }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

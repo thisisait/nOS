@@ -67,6 +67,10 @@ def _build_substitutions() -> dict[str, str]:
         "{{ wing_api_token }}":           _env("NOS_WING_API_TOKEN"),
         "{{ conductor_wing_api_token }}": _env("NOS_CONDUCTOR_WING_API_TOKEN"),
         "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
+        # A9.4-fixup (2026-05-17): wing-base dispatch jobs reference
+        # {{ wing_home }} in args[] and env values (e.g. WING_DB_PATH).
+        # Substitution → ~/wing expanded by Ansible at task time.
+        "{{ wing_home }}":                _env("NOS_WING_HOME"),
     }
 
 
