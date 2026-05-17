@@ -1,62 +1,107 @@
-{block title}Overview{/block}
+{block title}Dashboard{/block}
 
 {block content}
-<div id="tab-overview" class="tab-content active">
-	<div class="stats" id="statsGrid">
-		<div class="stat">
-			<div class="label">Scan Cycle</div>
-			<div class="value" id="statCycle">{$state['latest_cycle'] ?? 0}</div>
-			<div class="sub">{$state['config']['schedule'] ?? '2x daily'}</div>
-		</div>
-		<div class="stat">
-			<div class="label">Components</div>
-			<div class="value">{count($components)}</div>
-			<div class="sub">monitored services</div>
-		</div>
-		<div class="stat">
-			<div class="label">Pending Issues</div>
-			<div class="value" style="color: var(--orange)">{$pendingCount}</div>
-			<div class="sub">{$resolvedCount} resolved</div>
-		</div>
-		<div class="stat">
-			<div class="label">Pentest Coverage</div>
-			<div class="value" style="color: var(--purple)">{$coveragePct}%</div>
-			<div class="sub">{$areasTested}/{$areasTotal} areas</div>
+
+{* Dashboard — flat single-view layout (W4 follow-up 2026-05-17).
+   Pre-W4 the page carried 3 in-page tab-content blocks (Overview /
+   Timeline / Components) with JS-toggled visibility, BUT the top-nav
+   fragment-tabs that drove the toggle were retired in W1. Result was
+   3 sections rendering simultaneously and a literal "Components moved
+   to Hub" dead surface. This rewrite makes Dashboard what it should
+   be: a single coherent snapshot of platform + security health. *}
+
+{* ── Stat row (4 KPI cards) ────────────────────────────────────────── *}
+<div class="stats">
+	<div class="stat">
+		<div class="label">Scan cycle</div>
+		<div class="value">{$state['latest_cycle'] ?? 0}</div>
+		<div class="sub">{$state['config']['schedule'] ?? '2× daily'}</div>
+	</div>
+	<div class="stat">
+		<div class="label">Components</div>
+		<div class="value">{count($components)}</div>
+		<div class="sub">monitored services</div>
+	</div>
+	<div class="stat">
+		<div class="label">Pending issues</div>
+		<div class="value" style="color: var(--color-warning)">{$pendingCount}</div>
+		<div class="sub">{$resolvedCount} resolved</div>
+	</div>
+	<div class="stat">
+		<div class="label">Pentest coverage</div>
+		<div class="value" style="color: var(--color-purple)">{$coveragePct}%</div>
+		<div class="sub">{$areasTested}/{$areasTotal} areas</div>
+	</div>
+</div>
+
+{* ── Operator attention summary (W4 follow-up) ─────────────────────── *}
+{* Surfaces the same counts as the top-nav tab-count bubbles, but with
+   context + deep-links. Zero-count rows hide via {if} guards so a quiet
+   inbox doesn't show empty placeholders. *}
+{if ($unreadInboxCount ?? 0) > 0 || ($pendingApprovalsCount ?? 0) > 0}
+	<div class="chart-container mt-md">
+		<h3>Operator attention</h3>
+		<div class="flex gap-lg flex-wrap">
+			{if ($unreadInboxCount ?? 0) > 0}
+				<a class="stat" style="display:block; text-decoration:none; min-width:200px;" href="/inbox">
+					<div class="label">Unread notifications</div>
+					<div class="value" style="color: var(--color-warning)">{$unreadInboxCount}</div>
+					<div class="sub">Open Inbox →</div>
+				</a>
+			{/if}
+			{if ($pendingApprovalsCount ?? 0) > 0}
+				<a class="stat" style="display:block; text-decoration:none; min-width:200px;" href="/approvals">
+					<div class="label">Pending approvals</div>
+					<div class="value" style="color: var(--color-danger)">{$pendingApprovalsCount}</div>
+					<div class="sub">Tier-1 review queue →</div>
+				</a>
+			{/if}
 		</div>
 	</div>
+{/if}
 
-	<div class="two-col">
-		<div class="chart-container">
-			<h3>Next Batch</h3>
-			<div class="next-batch" id="nextBatch">
-				{if isset($state['next_batch']) && $state['next_batch']}
-					{foreach $state['next_batch'] as $comp}
-						<span class="next-batch-item">{$comp}</span>
-					{/foreach}
-				{else}
-					<span style="color: var(--text2)">No batch scheduled</span>
-				{/if}
-			</div>
+{* ── Operational two-column: next-batch + pentest targets ──────────── *}
+<div class="two-col mt-md">
+	<div class="chart-container">
+		<h3>Next scan batch</h3>
+		<div class="next-batch">
+			{if isset($state['next_batch']) && $state['next_batch']}
+				{foreach $state['next_batch'] as $comp}
+					<span class="next-batch-item">{$comp}</span>
+				{/foreach}
+			{else}
+				<span class="text-muted text-small">No batch scheduled</span>
+			{/if}
 		</div>
-		<div class="chart-container">
-			<h3>Pentest Targets</h3>
+	</div>
+	<div class="chart-container">
+		<h3>Pentest target coverage</h3>
+		{if !$targets}
+			<div class="text-muted text-small">No pentest targets defined yet.</div>
+		{else}
 			{foreach $targets as $target}
 				<div class="chart-bar-row">
 					<span class="chart-bar-label">{$target['id']}</span>
 					<div class="chart-bar-track">
 						{var $total = ($target['areas_tested_count'] ?? 0) + ($target['areas_planned_count'] ?? 0)}
 						{var $pct = $total > 0 ? round(($target['areas_tested_count'] ?? 0) / $total * 100) : 0}
-						<div class="chart-bar-segment" style="width:{$pct}%; background: var(--green)"></div>
+						<div class="chart-bar-segment" style="width:{$pct}%; background: var(--color-success)"></div>
 						<span class="chart-bar-value">{$pct}%</span>
 					</div>
 				</div>
 			{/foreach}
-		</div>
+		{/if}
 	</div>
 </div>
 
-<div id="tab-timeline" class="tab-content">
-	<h2 style="margin-bottom: 16px; font-size: 18px;">Advisory Timeline</h2>
+{* ── Recent advisories (flat list, no in-page tab) ─────────────────── *}
+<h3 class="mt-lg mb-md" style="font-size:15px;">Recent advisories</h3>
+{if !$advisories}
+	<div class="empty-state">
+		<div class="empty-state-title">No advisories yet</div>
+		<div class="empty-state-hint">Security advisories land here as the conductor + inspektor agents emit them; nothing pending right now.</div>
+	</div>
+{else}
 	{foreach $advisories as $adv}
 		<div class="card">
 			<div class="card-header" onclick="this.nextElementSibling.classList.toggle('open')">
@@ -64,22 +109,13 @@
 				<strong>{$adv['filename']}</strong>
 				{if $adv['has_critical']}<span class="badge badge-critical">CRITICAL</span>{/if}
 				{if $adv['has_pentest']}<span class="badge badge-pentest">PENTEST</span>{/if}
-				<span style="margin-left:auto; color:var(--text2); font-size:12px">{$adv['date']}</span>
+				<span class="text-muted text-small" style="margin-left:auto">{$adv['date']}</span>
 			</div>
 			<div class="card-body">
 				<pre>{$adv['title'] ?? 'Advisory report'}</pre>
 			</div>
 		</div>
 	{/foreach}
-	{if !$advisories}
-		<div class="empty">No advisories yet</div>
-	{/if}
-</div>
+{/if}
 
-<div id="tab-components" class="tab-content">
-	<div class="empty" style="padding:40px">
-		<p style="font-size:15px;color:var(--text);margin-bottom:8px">Components moved to Hub</p>
-		<p style="color:var(--text2)">All systems and components are now managed in the <a href="/hub">Hub dashboard</a>.</p>
-	</div>
-</div>
 {/block}

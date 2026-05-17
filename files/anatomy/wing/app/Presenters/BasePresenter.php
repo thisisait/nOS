@@ -37,12 +37,15 @@ abstract class BasePresenter extends Presenter
 		$this->template->authGroups = $request->getHeader('X-Authentik-Groups');
 		$this->template->isAuthenticated = (bool) $this->template->authUser;
 
-		// A12 (2026-05-07): expose Tier-1 super-admin flag to the layout
-		// so the header can show the Admin tab + the big-red-button only
-		// to operators in the nos-providers group. Server-side guards live
-		// in BasePresenter::requireSuperAdmin() (called from each presenter's
-		// startup()) — this flag is purely for UI visibility.
-		$this->template->isSuperAdmin = $this->callerHasGroup('nos-providers');
+		// A12 (2026-05-07, updated 2026-05-17): expose Tier-1 super-admin
+		// flag to the layout so the header can show the Admin tab + the
+		// big-red-button only to operators in nos-providers OR nos-admins
+		// (per CLAUDE.md RBAC table — both are Tier-1). Server-side guards
+		// live in BasePresenter::requireSuperAdmin() (called from each
+		// privileged presenter's startup()) — this flag is purely for UI
+		// visibility.
+		$this->template->isSuperAdmin = $this->callerHasGroup('nos-providers')
+			|| $this->callerHasGroup('nos-admins');
 
 		// W3 (2026-05-17): authentik_domain for the layout's logout link.
 		// Was hardcoded to `auth.dev.local`, which broke on every public-TLD
@@ -111,16 +114,29 @@ abstract class BasePresenter extends Presenter
 
 	/**
 	 * Tier-1 super-admin gate. Used by AdminPresenter (big-red-button halt /
-	 * resume) and ApprovalsPresenter (rubber-stamp queue for agent actions).
+	 * resume), ApprovalsPresenter (rubber-stamp queue for agent actions),
+	 * and AgentsPresenter (AgentKit runtime catalog).
 	 *
-	 * The constant ``nos-providers`` is duplicated here intentionally rather
-	 * than imported from default.config.yml — it's a hard contract pinned by
-	 * the anatomy gate ``test_security_admin_gate_unchanged`` so a config
-	 * rename can't silently bypass the boundary.
+	 * Per the CLAUDE.md RBAC table, **Tier-1 = `nos-providers` OR
+	 * `nos-admins`** (both groups). Pre-2026-05-17 this gate only
+	 * accepted `nos-providers`, which 403'd every operator whose
+	 * identity (e.g. `akadmin`) was provisioned with `nos-admins`
+	 * instead. Surfaced live on pazny.eu when the operator hit
+	 * /approvals + /agents and got 403 despite being a super-admin.
+	 *
+	 * The two group names stay duplicated here (not imported from
+	 * default.config.yml) — they're a hard security contract pinned
+	 * by the anatomy gate `test_security_admin_gate_unchanged` so a
+	 * config rename can't silently bypass the boundary.
 	 */
 	protected function requireSuperAdmin(): void
 	{
-		$this->requireGroup('nos-providers');
+		if (!$this->callerHasGroup('nos-providers') && !$this->callerHasGroup('nos-admins')) {
+			$this->error(
+				'Forbidden -- Tier-1 super-admin membership (nos-providers or nos-admins) required.',
+				403,
+			);
+		}
 	}
 
 	/**

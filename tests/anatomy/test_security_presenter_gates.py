@@ -85,21 +85,29 @@ def test_base_presenter_exposes_required_helpers():
         assert helper in src, f"BasePresenter missing helper: {helper}"
 
 
-def test_super_admin_gate_pins_correct_group():
-    """``requireSuperAdmin`` must gate on literal ``nos-providers`` —
-    drifts in ``default.config.yml`` are caught explicitly because this
-    test forces a code change in lock-step.
+def test_super_admin_gate_pins_correct_groups():
+    """``requireSuperAdmin`` must gate on the **two** Tier-1 group
+    literals per CLAUDE.md RBAC table: ``nos-providers`` AND
+    ``nos-admins``. Pre-2026-05-17 the gate only accepted
+    ``nos-providers``, which 403'd every operator whose identity (e.g.
+    ``akadmin``) was provisioned in ``nos-admins`` instead. Drifts in
+    ``default.config.yml`` are caught explicitly because this test
+    forces a code change in lock-step.
     """
     src = BASE_PRESENTER.read_text()
     # Find the requireSuperAdmin body
     m = re.search(
-        r"protected function requireSuperAdmin\(\)[^{]*\{(.+?)\}",
+        r"protected function requireSuperAdmin\(\)[^{]*\{(.+?)\n\s*\}",
         src, re.DOTALL,
     )
     assert m, "requireSuperAdmin body not parseable"
     body = m.group(1)
     assert "'nos-providers'" in body or '"nos-providers"' in body, (
-        "requireSuperAdmin no longer gates on 'nos-providers' literal"
+        "requireSuperAdmin no longer references 'nos-providers' literal"
+    )
+    assert "'nos-admins'" in body or '"nos-admins"' in body, (
+        "requireSuperAdmin no longer references 'nos-admins' literal — "
+        "both groups are Tier-1 per CLAUDE.md RBAC table"
     )
 
 

@@ -99,3 +99,26 @@ def test_style_css_carries_separator_rules():
     assert ".tab-admin" in css
     # W4 unread-count slot pre-declared (wiring lands in W4).
     assert ".tab-count" in css
+
+
+def test_dashboard_no_dead_in_page_tabs():
+    """Dashboard rewrite (2026-05-17): the pre-rewrite template carried
+    3 in-page tab-content blocks (`tab-overview` / `tab-timeline` /
+    `tab-components`) toggled by JS driven by the now-retired
+    /dashboard#... fragment-anchor top-nav tabs. With the top-nav
+    drivers gone (W1), all 3 sections rendered simultaneously and the
+    'Components moved to Hub' dead surface stayed visible. The flat
+    rewrite drops the `tab-content` soup. Pin so a refactor can't
+    re-introduce the dead structure."""
+    dashboard = REPO / "files/anatomy/wing/app/Templates/Dashboard/default.latte"
+    src = dashboard.read_text()
+    assert 'id="tab-overview"' not in src
+    assert 'id="tab-timeline"' not in src
+    assert 'id="tab-components"' not in src
+    assert "Components moved to Hub" not in src
+    # New coherent sections present.
+    assert "Operator attention" in src
+    assert "Next scan batch" in src
+    assert "Pentest target coverage" in src
+    assert "Recent advisories" in src
+    assert "empty-state" in src   # uses the W2 utility component
