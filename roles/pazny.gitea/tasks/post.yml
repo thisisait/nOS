@@ -24,7 +24,7 @@
   ansible.builtin.shell: |
     set -o pipefail
     {{ docker_bin }} compose -p devops \
-      exec -T gitea gitea admin user list --admin 2>/dev/null \
+      exec -T -u git gitea gitea admin user list --admin 2>/dev/null \
       | grep -q "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
   args:
     executable: /bin/bash
@@ -34,10 +34,24 @@
   check_mode: false
   when: _gitea_container.stdout | default('') | length > 0
 
+# Sanity: surface the admin-list output so a future regression doesn't get
+# silently swallowed by failed_when:false (the 2026-05-17 -u git bug took
+# 2 days to surface because the role couldn't fail-loud).
+- name: "[pazny.gitea Post] Diagnose admin-list call (warn-on-fail)"
+  ansible.builtin.fail:
+    msg: |
+      gitea admin user list failed inside the container — likely a
+      Gitea CLI permission issue. Without this check, the admin user
+      provisioning is a no-op and login fails forever. Output:
+      {{ _gitea_admin_exists.stderr | default('(no stderr)') }}
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - _gitea_admin_exists.rc | default(0) not in [0, 1]   # 0 = found, 1 = grep miss; anything else is real failure
+
 - name: "[pazny.gitea Post] Create admin user (first-run only)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops
-    exec -T gitea gitea admin user create
+    exec -T -u git gitea gitea admin user create
     --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
     --password "{{ gitea_admin_password }}"
     --email "{{ gitea_admin_email | default(gitea_admin_user | default(ansible_facts['user_id']) + '@localhost') }}"
@@ -58,7 +72,7 @@
 - name: "[pazny.gitea Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops
-    exec -T gitea gitea admin user change-password
+    exec -T -u git gitea gitea admin user change-password
     --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
     --password "{{ gitea_admin_password }}"
     --must-change-password=false
