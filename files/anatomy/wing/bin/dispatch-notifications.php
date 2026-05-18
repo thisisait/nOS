@@ -309,7 +309,8 @@ function deliver_ntfy(array $row, string $baseUrl): ?string
 	$resp = curl_exec($ch);
 	$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	$cerr   = curl_error($ch);
-	curl_close($ch);
+	// curl_close() deprecated in PHP 8.5 (no-op since 8.0). Let $ch fall out of scope.
+	unset($ch);
 
 	if ($resp === false || $status === 0) {
 		return "ntfy unreachable at {$url}: {$cerr}";

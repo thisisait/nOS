@@ -258,7 +258,11 @@ final class AuthentikClient
 		$raw = curl_exec($ch);
 		$code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$err = curl_error($ch);
-		curl_close($ch);
+		// PHP 8.0+ closes the handle on $ch destruction; curl_close() was
+		// deprecated in 8.5 and raises E_DEPRECATED which FrankenPHP's strict
+		// reporting bubbles up as a 500. Letting $ch fall out of scope is
+		// the canonical close.
+		unset($ch);
 
 		if ($raw === false) {
 			throw new RuntimeException("Authentik {$method} {$path}: curl error: {$err}");
