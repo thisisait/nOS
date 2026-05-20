@@ -37,6 +37,10 @@ def test_deploy_trigger_presenter_present():
 
 
 def test_deploy_trigger_presenter_php_syntax_clean():
+	import shutil
+	import pytest
+	if shutil.which("php") is None:
+		pytest.skip("php binary not on PATH — CI pytest-only image; local dev has php")
 	r = subprocess.run(["php", "-l", str(PRESENTER)], capture_output=True, text=True)
 	assert r.returncode == 0, r.stderr
 
