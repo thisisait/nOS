@@ -153,6 +153,11 @@ final class RouterFactory
 		$api->addRoute('api/v1/agents/<name>/sessions', 'Agents:sessions');
 		$api->addRoute('api/v1/agent-sessions/<uuid>', 'AgentSessions:default');
 
+		// A17 (2026-05-20): CI deploy trigger — HMAC-auth POST that
+		// spawns `ansible-playbook --tags <allowlisted>` after a green
+		// pipeline. Branch + tag allowlists enforced in the presenter.
+		$api->addRoute('api/v1/deploy-trigger', 'DeployTrigger:default');
+
 		// Users + Invitations console (Anatomy A15, 2026-05-17). Tier-1
 		// only (UsersPresenter::startup gates the whole presenter). Mounts
 		// the four browser views + the two POST mutators. Specific routes
