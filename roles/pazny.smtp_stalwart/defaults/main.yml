@@ -28,34 +28,47 @@
 # Mailpit (install_mailpit: true) handles local-dev capture in the meantime.
 install_smtp_stalwart: false
 
-# Pinned to v0.11.8 (latest as of 2026-05-03; previous v0.13.6 pin was a
-# future-version typo from Track G scaffolding that surfaced on first wet
-# activation — image not in registry, infra compose-up aborted, mariadb +
-# everything else couldn't start). Bump as new tags ship.
-stalwart_image: "stalwartlabs/mail-server:v0.11.8"
+# Stalwart v0.16.6 (2026-05-20 latest). v0.16.0 (2026-04-20) was a major
+# rewrite: image name changed (mail-server → stalwart), TOML config →
+# config.json, REST management API replaced with JMAP at /jmap, volume
+# layout reshuffled (/opt/stalwart-mail/{etc,logs,queue} → /etc/stalwart
+# + /var/lib/stalwart), MAIL_* env vars replaced with STALWART_*.
+# Wing's invite flow consumes the JMAP API via Principal/set methodCalls
+# (see App\Model\StalwartProvisioner).
+stalwart_image: "stalwartlabs/stalwart:v0.16.6"
 stalwart_data_dir: "{{ ansible_facts['env']['HOME'] }}/stalwart"
 
 # Public hostname for the mail server. Defaults to mail.<tenant_domain>.
 stalwart_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
-# Port mappings — all bind to the host (0.0.0.0) so the router can forward
-# to them. Override `stalwart_lan_only: true` to bind only on 127.0.0.1
-# (useful for Tailscale-only deployments — funnel does the public exposure).
+# Port mappings — mail protocols bind to the host (0.0.0.0) so the router
+# can forward to them. Override `stalwart_lan_only: true` to bind only on
+# 127.0.0.1 (useful for Tailscale-only deployments — funnel does public exposure).
 stalwart_lan_only: false
 stalwart_port_smtp:    25     # MTA — incoming mail
 stalwart_port_smtps:   465    # implicit TLS submission
 stalwart_port_submission: 587 # STARTTLS submission
 stalwart_port_imap:    993    # IMAPS
+# v0.16 also serves IMAP/POP3 on 143/110/995 + Sieve on 4190 internally;
+# expose only if the operator needs them on the host.
 
-# Admin user — created on first boot. Password rotates with global prefix.
+# WebAdmin + management API. Stalwart's HTTP admin (port 8080 inside the
+# container) serves both /admin UI and the /jmap management endpoint.
+# Published to 127.0.0.1 so Wing (host launchd) can reach JMAP without
+# going through Traefik + public TLS.
+stalwart_port_admin:  8080    # webadmin (HTTP) — Wing reaches /jmap here
+# Wing's StalwartProvisioner reads STALWART_API_URL = http://127.0.0.1:<port>/jmap.
+
+# Admin user — STALWART_RECOVERY_ADMIN env pre-pins this on first boot
+# (no temporary console-printed password, no manual wizard step). Password
+# rotates with global prefix; lives in default.credentials.yml.
 stalwart_admin_username: "admin"
-# stalwart_admin_password lives in default.credentials.yml
 
 # Resource limits — Stalwart's Rust footprint is small; default to 512MB.
 stalwart_mem_limit: "{{ docker_mem_limit_standard | default('512m') }}"
 stalwart_cpus: "{{ docker_cpus_light | default('0.5') }}"
 
-# Authentik OIDC integration (post-PoC; Stalwart 0.13+ supports OIDC for
+# Authentik OIDC integration (post-PoC; Stalwart 0.16+ supports OIDC for
 # admin webui + IMAP SASL OAUTHBEARER). Disabled until Track G phase 3.
 stalwart_authentik_oidc: false
 

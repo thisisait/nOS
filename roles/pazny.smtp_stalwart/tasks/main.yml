@@ -24,10 +24,11 @@
     state: directory
     mode: '0755'
   loop:
+    # v0.16 layout — config.json lives in etc/, queue + logs + blob store
+    # under var/. Replaces the v0.11 etc/+logs/+queue/ trio.
     - "{{ stalwart_data_dir }}"
     - "{{ stalwart_data_dir }}/etc"
-    - "{{ stalwart_data_dir }}/logs"
-    - "{{ stalwart_data_dir }}/queue"
+    - "{{ stalwart_data_dir }}/var"
 
 - name: "[pazny.smtp_stalwart] Render compose override fragment"
   ansible.builtin.template:
@@ -40,21 +41,30 @@
   ansible.builtin.debug:
     msg: |-
       ════════════════════════════════════════════════════════════════════
-       pazny.smtp_stalwart — scaffold rendered
+       pazny.smtp_stalwart — scaffold rendered ({{ stalwart_image }})
       ════════════════════════════════════════════════════════════════════
        Mail host:    {{ stalwart_domain }}
-       Webadmin:     https://{{ stalwart_domain }}/admin (post-deploy)
+       Webadmin:     https://{{ stalwart_domain }}/admin (public via Traefik)
+       JMAP API:     http://127.0.0.1:{{ stalwart_port_admin }}/jmap (Wing reaches here)
        SMTP submit:  smtps://{{ stalwart_domain }}:{{ stalwart_port_smtps }}
        IMAP:         imaps://{{ stalwart_domain }}:{{ stalwart_port_imap }}
-       Admin user:   {{ stalwart_admin_username }}
-       Data dir:     {{ stalwart_data_dir }}
+       Admin user:   {{ stalwart_admin_username }} (STALWART_RECOVERY_ADMIN-pinned)
+       Data dir:     {{ stalwart_data_dir }} (etc/ + var/)
 
-       NEXT (operator):
+       NEXT (operator, v0.16+ first-boot):
          1. Open Cloudflare DNS → add MX <td> → mail.<td>, A mail.<td> → IP
          2. Wait for cert via pazny.acme (--tags acme)
-         3. Open https://{{ stalwart_domain }}/admin, paste DKIM key into CF
-            (Stalwart auto-generates first key on first run)
-         4. Test send:    swaks --to <you>@gmail.com --server {{ stalwart_domain }}
-         5. Test receive: swaks --to test@{{ tenant_domain }}
+         3. Open https://{{ stalwart_domain }}/admin — login with the
+            STALWART_RECOVERY_ADMIN credentials above. Bootstrap wizard
+            walks through domain + DKIM + TLS cert paths (mounted at
+            /etc/stalwart/certs/ when tenant is public). Wizard generates
+            /etc/stalwart/config.json.
+         4. Paste DKIM key (from wizard) into CF DNS.
+         5. Test send:    swaks --to <you>@gmail.com --server {{ stalwart_domain }}
+         6. Test receive: swaks --to test@{{ tenant_domain }}
                                 --server external-mta-of-your-choice
+
+       Cesta B (invite flow): Wing's StalwartProvisioner uses the JMAP
+       endpoint above to create mailboxes during operator-driven invites.
+       See docs/invite-provisioning.md.
       ════════════════════════════════════════════════════════════════════
