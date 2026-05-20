@@ -3,7 +3,7 @@
 #
 # Wraps `git push <args>` so that, after a successful push to GitHub
 # origin, the operator's local Gitea mirror is forced to re-fetch
-# immediately. Eliminates the up-to-10-minute poll delay between
+# immediately. Eliminates the up-to-1-minute poll delay between
 # GitHub push and the Woodpecker pipeline firing.
 #
 # Usage:
@@ -15,14 +15,18 @@
 # Configuration (auto-discovered from this clone):
 #   * gitea_api_token   — from <repo>/credentials.yml::gitea_api_token
 #                          (preferred) or ~/.nos/secrets.yml
-#   * gitea_domain      — derived from <repo>/credentials.yml/config.yml
-#                          or env GITEA_DOMAIN; defaults to git.<tenant>
+#   * gitea_domain      — from <repo>/credentials.yml/config.yml or env
+#                          GITEA_DOMAIN; falls back to git.<tenant_domain>
 #
 # Skips mirror-sync gracefully (with a one-line warning) when the token
 # is missing or the Gitea API is unreachable — the underlying `git push`
 # still succeeds, just with the legacy 1-min poll fallback.
 
-set -euo pipefail
+# `set -eu` only — NO pipefail. We use `grep | sed | head` chains for
+# config parsing and grep legitimately returns 1 on no-match (which
+# pipefail would propagate to the whole substitution, aborting under
+# set -e). The explicit fallbacks below handle missing values.
+set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -37,8 +41,15 @@ for arg in "$@"; do
 done
 
 # 1. Run the git push first; abort everything if it fails.
-echo "→ git push ${GIT_ARGS[*]:-}"
-git -C "$REPO_DIR" push "${GIT_ARGS[@]:-}"
+#    Empty array expansion in bash produces a literal '' arg, which git
+#    rejects as "bad repository". Branch on array size to avoid it.
+if [ "${#GIT_ARGS[@]}" -gt 0 ]; then
+	echo "→ git push ${GIT_ARGS[*]}"
+	git -C "$REPO_DIR" push "${GIT_ARGS[@]}"
+else
+	echo "→ git push"
+	git -C "$REPO_DIR" push
+fi
 PUSH_STATUS=$?
 if [ $PUSH_STATUS -ne 0 ]; then
 	exit $PUSH_STATUS
@@ -49,68 +60,61 @@ if [ "$SKIP_SYNC" -eq 1 ]; then
 	exit 0
 fi
 
-# 2. Resolve gitea_api_token + gitea_domain from local config files.
-#    Search order (first hit wins): repo credentials.yml, repo config.yml,
-#    ~/.nos/secrets.yml, env vars.
+# 2. yaml_lookup <key> <file>... — emit FIRST plain-scalar value for
+#    <key> across the listed YAML files, SKIPPING any value that
+#    contains `{{` (= unresolved Jinja template; default.config.yml
+#    uses these and would poison the lookup if accepted). `grep -h`
+#    strips the filename prefix that grep prepends for multi-file
+#    inputs. Empty stdout when no file has a plain literal for the
+#    key — caller picks the fallback.
+yaml_lookup() {
+	local key="$1"; shift
+	local v
+	for f in "$@"; do
+		[ -f "$f" ] || continue
+		v=$(grep -h -E "^${key}:" "$f" 2>/dev/null \
+			| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+			| grep -vE '\{\{' \
+			| head -1 || true)
+		if [ -n "${v:-}" ]; then
+			printf '%s' "$v"
+			return 0
+		fi
+	done
+	return 0  # empty stdout when missing — keep set -e happy
+}
 
-token=""
-for f in \
+token=$(yaml_lookup gitea_api_token \
 	"$REPO_DIR/credentials.yml" \
 	"$REPO_DIR/config.yml" \
-	"$HOME/.nos/secrets.yml"
-do
-	[ -f "$f" ] || continue
-	v=$(grep -E '^gitea_api_token:' "$f" 2>/dev/null \
-		| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
-		| head -1)
-	if [ -n "$v" ] && [ "$v" != "" ]; then
-		token="$v"
-		break
-	fi
-done
-if [ -z "${token}" ] && [ -n "${GITEA_API_TOKEN:-}" ]; then
+	"$HOME/.nos/secrets.yml")
+if [ -z "$token" ] && [ -n "${GITEA_API_TOKEN:-}" ]; then
 	token="$GITEA_API_TOKEN"
 fi
 
 domain="${GITEA_DOMAIN:-}"
 if [ -z "$domain" ]; then
-	for f in \
+	domain=$(yaml_lookup gitea_domain \
 		"$REPO_DIR/credentials.yml" \
-		"$REPO_DIR/config.yml" \
-		"$REPO_DIR/default.config.yml"
-	do
-		[ -f "$f" ] || continue
-		v=$(grep -E '^gitea_domain:' "$f" 2>/dev/null \
-			| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
-			| head -1)
-		if [ -n "$v" ]; then
-			domain="$v"
-			break
-		fi
-	done
+		"$REPO_DIR/config.yml")
 fi
-# Fall back: derive from tenant_domain
+# Fall back: derive from tenant_domain (works for the default
+# `git.<tld>` shape used in pazny.gitea/defaults/main.yml).
 if [ -z "$domain" ]; then
-	tenant=$(grep -E '^tenant_domain:' "$REPO_DIR/config.yml" 2>/dev/null \
-		| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
-		| head -1)
+	tenant=$(yaml_lookup tenant_domain "$REPO_DIR/config.yml")
 	if [ -n "$tenant" ]; then
 		domain="git.$tenant"
 	fi
 fi
 
-owner=$(grep -E '^gitea_nos_repo_owner:' \
+owner=$(yaml_lookup gitea_nos_repo_owner \
 	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
-	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml" 2>/dev/null \
-	| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
-	| head -1)
+	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml")
 [ -z "$owner" ] && owner="${USER:-$(whoami)}"
 
-name=$(grep -E '^gitea_nos_repo_name:' \
+name=$(yaml_lookup gitea_nos_repo_name \
 	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
-	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml" 2>/dev/null \
-	| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
-	| head -1)
+	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml")
 [ -z "$name" ] && name="nOS"
 
 if [ -z "$token" ] || [ -z "$domain" ]; then

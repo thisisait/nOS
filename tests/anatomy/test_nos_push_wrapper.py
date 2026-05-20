@@ -54,6 +54,19 @@ def test_nos_push_does_not_skip_underlying_push():
 	)
 
 
+def test_nos_push_handles_empty_args_array():
+	"""Empty GIT_ARGS array must NOT expand to a literal '' that git
+	rejects as 'bad repository'. Pinned after the 2026-05-20 first
+	live-test regression where `nos-push --skip-sync` (no other args)
+	fell into `git push ''`. Fix: branch on array length."""
+	src = (REPO / "tools/nos-push").read_text()
+	# Look for the array-length branch — either form is acceptable.
+	assert ('${#GIT_ARGS[@]}' in src and '-gt 0' in src), (
+		"nos-push must branch on `${#GIT_ARGS[@]}` to avoid empty-array "
+		"expansion producing literal '' arg to git push"
+	)
+
+
 def test_nos_push_handles_missing_token_gracefully():
 	"""Operator's first push might happen before gitea_api_token is
 	provisioned. Wrapper must NOT fail in that case — push still
