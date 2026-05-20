@@ -83,6 +83,8 @@ roles/pazny.<service>/
 
 **Role invocation with tag inheritance:** `include_role` needs both `apply: { tags: [...] }` **and** `tags: [...]` on the task itself so CLI `--tags` filtering actually reaches the inner role tasks.
 
+**`--tags <svc>` compose-up auto-fire (A17, 2026-05-20):** every task in the compose-up flow (`tasks/stacks/{core,stack}-up.yml`) carries `tags: ['stacks'|'core', 'always']`. Running `ansible-playbook main.yml --tags woodpecker` therefore renders the override AND recreates the container in one shot. Opt out with `--skip-tags stacks` (or `--skip-tags core`) when you want a render-only pass.
+
 **Non-Docker roles** (wing, openclaw, iiab_terminal, bone, hermes, opencode, backup, state_manager, dotfiles, `mac.*`): wired via `import_role` in `main.yml` — these install directly on the host, not through Docker Compose.
 
 ### Configuration layering (later overrides earlier)
