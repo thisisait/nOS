@@ -36,18 +36,25 @@ Wing UsersPresenter::actionInviteCreate
   ├── 1. POST Authentik /api/v3/stages/invitation/invitations/  ✅ (A15, baseline)
   │       └── creates invitation stage with fixed_data.target_groups + apps
   │
-  ├── 2. maybeProvisionCredentials($emailHint, ...)              ⭐ A18 new
+  ├── 2. maybeProvisionCredentials($emailHint, $tenant, ...)     ⭐ A18 new
   │       │
-  │       ├── 2a. InfisicalClient.createUserFolder('alice')      [if isConfigured]
-  │       │        POST /api/v2/folders  (idempotent: /users + /users/alice)
+  │       ├── 2.0 PREFLIGHT — InfisicalClient.listUserSecrets($tenant, 'alice')
+  │       │        If non-empty → emit user_invitation_provisioning_skipped
+  │       │        event and bail out (re-invite idempotency, security C4).
+  │       │
+  │       ├── 2a. InfisicalClient.createUserFolder($tenant, 'alice')
+  │       │        POST /api/v2/folders  (idempotent: /users + /users/<tenant>
+  │       │        + /users/<tenant>/alice)
   │       │
   │       ├── 2b. generateMailboxPassword()  → 24-char URL-safe
   │       │
-  │       ├── 2c. InfisicalClient.upsertSecret('alice', 'mailbox_password', $pw)
+  │       ├── 2c. InfisicalClient.upsertSecret($tenant, 'alice', 'mailbox_password', $pw)
   │       │        POST /api/v3/secrets/raw/mailbox_password (+ PATCH fallback)
   │       │
-  │       └── 2d. StalwartProvisioner.createMailbox('alice', 'pazny.eu', $pw)
-  │                POST /jmap   methodCalls=[["Principal/set",{create:...},"c0"]]
+  │       └── 2d. StalwartProvisioner.createMailbox('alice', $mailDomain, $pw)
+  │                POST 127.0.0.1:8080/jmap  methodCalls=[["Principal/set", ...]]
+  │                $mailDomain comes from TENANT_DOMAIN env (operator's
+  │                configured mail domain), NOT from email_hint's @-suffix.
   │
   ├── 3. events.insert(type='user_invitation_provisioned', ...)
   │       └── audit row with infisical_done / stalwart_done / errors[]
@@ -64,6 +71,27 @@ USER opens URL → picks own Authentik password → Authentik creates the user
 USER retrieves mailbox password from Infisical share UI (operator gives them
 the link or a one-shot tokenized URL from Infisical's "share secret" feature)
 ```
+
+## Security model (post-2026-05-20 hardening pass)
+
+The flow above absorbed seven security findings before going live:
+
+| Code | Severity | Mitigation |
+|---|---|---|
+| **C1** | 🔴 Critical | Wing / Bone / Pulse plists are mode `0600`. They embed admin tokens (Infisical, Stalwart, Authentik bootstrap, Bone HMAC, deploy HMAC). 0644 would leak the whole credential surface to peer processes (Spotlight indexers, third-party backup agents, Full-Disk-Access apps). Pinned by `tests/anatomy/test_invite_provisioning.py::test_anatomy_plist_files_locked_to_0600`. |
+| **C2** | 🔴 Critical | Stalwart's Traefik route is scoped to `PathPrefix(/admin)`. Without that, the same `Host(mail.<tld>)` rule would expose `/jmap` publicly behind forward-auth — and forward-auth gates ACCESS, not AUTHORIZATION, so any Tier-4 guest with a valid Authentik session could brute-force Basic-auth against admin creds. Wing reaches `/jmap` via `127.0.0.1:<stalwart_port_admin>` only. |
+| **C3** | 🔴 Critical | Infisical paths are tenant-namespaced: `/users/<tenant>/<localPart>/<key>`. Two tenants inviting different humans named "alice" can't overwrite each other's `mailbox_password`. |
+| **C4** | 🔴 Critical | Idempotency preflight: `InfisicalClient.listUserSecrets()` runs BEFORE any password generation. If the user folder already holds secrets, we emit a `user_invitation_provisioning_skipped` event and bail — prevents the "generate new pw, Infisical accepts, Stalwart rejects (already exists), user locked out" failure mode. |
+| **C5** | 🟠 High | Username regex tightened to reject `..` substrings (RFC 5321 forbids consecutive dots anyway). Belt-and-suspenders: presenter, InfisicalClient, StalwartProvisioner all check. |
+| **C6** | 🟠 High | Upstream response bodies are stripped from RuntimeException messages. Stalwart's `notCreated` echoes the existing principal's email (peer-user PII) — we collapse it to a calibrated `reason=<type>` slug. Both clients' generic error paths replace `substr($raw, 0, 500)` with `"HTTP <code> (body suppressed; check <svc> logs)"`. UsersPresenter additionally `sanitizeErrorMessage()`s anything stashed in `provisioning_json`. |
+| **C7** | 🟠 High | Stalwart mailbox domain comes from `TENANT_DOMAIN` env, NOT from `email_hint`'s @-suffix. `email_hint` is just where the operator might forward the enrollment URL to (gmail.com is valid); the mailbox itself always lives on the operator's configured mail domain. |
+
+### Known limitations (deferred)
+
+- **No CSRF token** on `/users/invite-create` POST. The form is hand-rolled (not Nette UI Form) and BasePresenter only validates HTTP method. Mitigation today: the form is gated by `requireSuperAdmin()` (super-admin operators are trusted), but a malicious page combined with a logged-in operator session could mint invitations. **Status:** queued for a follow-up commit (Nette session-token middleware in BasePresenter).
+- **Infisical admin token is not scoped.** Wing uses the full `infisical_admin_token` from `default.credentials.yml`. A Wing RCE = full vault compromise. **Status:** queued — needs a scoped Infisical machine identity (write-only on `/users/*`).
+- **No rate limit on `/users/invite-create`.** Combined with the CSRF gap, a compromised super-admin session could spam invites. **Status:** low priority while super-admins are trusted; revisit when A14 agent flows can call presenters.
+- **Race condition window remains.** Two concurrent invites for the same `localPart` within the millisecond gap between `listUserSecrets` (returns empty) and `upsertSecret` (writes) could still drift. Mitigation: super-admin operators are typically a single human; revisit if Pulse-driven auto-invites land.
 
 ## Configuration knobs
 

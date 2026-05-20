@@ -146,13 +146,27 @@ final class StalwartProvisioner
 		}
 		$args = $first[1];
 
-		// notCreated is the Stalwart error path — surface the reason.
+		// notCreated is the Stalwart error path. Stalwart echoes the
+		// existing principal's `name` and other metadata in $err which
+		// would leak peer-user identities into the caller's exception →
+		// Wing /events row → /audit log → launchd.err.log. Surface a
+		// calibrated reason code instead. The full $err is available in
+		// Stalwart's own logs for the operator to inspect privately.
 		$notCreated = $args['notCreated'] ?? null;
 		if (is_array($notCreated) && isset($notCreated['m0'])) {
 			$err = $notCreated['m0'];
-			$desc = is_array($err) ? json_encode($err) : (string) $err;
+			$reason = 'unknown';
+			if (is_array($err) && isset($err['type'])) {
+				// Accept only Stalwart's canonical JMAP error type slugs
+				// (alphabetic + underscore). Reject anything else as
+				// `unknown` so we never echo back free-form text.
+				$type = (string) $err['type'];
+				if (preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/', $type)) {
+					$reason = $type;
+				}
+			}
 			throw new RuntimeException(
-				"StalwartProvisioner: Principal/set notCreated for {$email}: {$desc}",
+				"StalwartProvisioner: Principal/set notCreated (reason={$reason})",
 			);
 		}
 
@@ -183,11 +197,18 @@ final class StalwartProvisioner
 	 * tightens this to the username slug (≤64 chars, alnum + . _ -). Same
 	 * pattern InfisicalClient uses so a single username flows through both
 	 * paths without re-validation downstream.
+	 *
+	 * Tightened 2026-05-20: rejects `..` substring (RFC 5321 forbids
+	 * consecutive dots in the local-part anyway, and downstream consumers
+	 * could canonicalize `..` as parent traversal).
 	 */
 	private function assertLocalPartSafe(string $local): void
 	{
 		if ($local === '' || !preg_match('/^[a-z0-9][a-z0-9._-]{0,62}$/', $local)) {
-			throw new RuntimeException("StalwartProvisioner: unsafe local-part: {$local}");
+			throw new RuntimeException("StalwartProvisioner: unsafe local-part");
+		}
+		if (str_contains($local, '..')) {
+			throw new RuntimeException("StalwartProvisioner: unsafe local-part (consecutive dots)");
 		}
 	}
 
@@ -237,14 +258,19 @@ final class StalwartProvisioner
 			throw new RuntimeException("Stalwart JMAP curl error: {$err}");
 		}
 		if ($code >= 400) {
+			// Drop the body — Stalwart's notCreated response can echo
+			// existing principal names (i.e. other users' emails); we
+			// must not let that propagate into Wing's /events row +
+			// /audit log + host launchd.err.log. The HTTP code is
+			// enough for diagnostics; full response in Stalwart's logs.
 			throw new RuntimeException(
-				"Stalwart JMAP HTTP {$code}: " . substr((string) $raw, 0, 500),
+				"Stalwart JMAP HTTP {$code} (body suppressed; check Stalwart logs)",
 			);
 		}
 		$decoded = json_decode((string) $raw, true);
 		if (!is_array($decoded)) {
 			throw new RuntimeException(
-				'Stalwart JMAP: non-JSON response: ' . substr((string) $raw, 0, 200),
+				'Stalwart JMAP: non-JSON response (body suppressed)',
 			);
 		}
 		return $decoded;
