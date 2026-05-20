@@ -50,6 +50,13 @@ steps:
   ansible-syntax:
     image: python:3.13-slim
     pull: true
+    environment:
+      # ansible.cfg is ignored when CWD is world-writable (Docker default
+      # 0777). Set library/module_utils explicitly via env so the custom
+      # nos_state / nos_migrate modules resolve even without ansible.cfg.
+      ANSIBLE_LIBRARY: files/anatomy/library
+      ANSIBLE_MODULE_UTILS: files/anatomy/module_utils
+      ANSIBLE_ROLES_PATH: ./roles
     commands:
       - pip install --quiet --no-cache-dir 'ansible-core>=2.20,<2.22'
       # Install both roles AND collections from the single requirements.yml
