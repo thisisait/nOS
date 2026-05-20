@@ -17,7 +17,6 @@ services:
       - {{ gitlab_config_dir }}:/etc/gitlab
       - {{ ansible_facts['env']['HOME'] }}/gitlab-logs:/var/log/gitlab
       - {{ gitlab_data_dir }}:/var/opt/gitlab
-{# mkcert CA volume + authentik extra_host moved to gitlab-base plugin (D2). #}
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}'
@@ -41,7 +40,6 @@ services:
         gitlab_rails['omniauth_block_auto_created_users'] = false
         gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', client_options: { identifier: 'nos-gitlab', secret: '{{ global_password_prefix }}_pw_oidc_gitlab', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
 {% endif %}
-{# authentik extra_host moved to gitlab-base plugin compose-extension (D2). #}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:80/-/readiness || exit 1"]
       interval: 30s

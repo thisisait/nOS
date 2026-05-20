@@ -14,7 +14,6 @@ services:
 {% else %}
       - "127.0.0.1:{{ miniflux_port | default(3011) }}:8080"
 {% endif %}
-{# mkcert CA volume + Authentik extra_host moved to miniflux-base plugin (D2). #}
     environment:
       DATABASE_URL: "postgres://{{ miniflux_db_user | default('miniflux') }}:{{ (miniflux_db_password | default(global_password_prefix + '_pw_miniflux')) | urlencode }}@postgresql:5432/{{ miniflux_db_name | default('miniflux') }}?sslmode=disable"
       RUN_MIGRATIONS: "1"
@@ -26,7 +25,6 @@ services:
       LOG_LEVEL: "info"
       METRICS_COLLECTOR: "1"
       METRICS_ALLOWED_NETWORKS: "172.16.0.0/12"
-{# OAUTH2_* env moved to miniflux-base plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit is on iiab_net — reachable by docker DNS as 'mailpit'.
@@ -36,7 +34,6 @@ services:
       SMTP_PASSWORD: ""
       SMTP_FROM: "miniflux@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
-{# authentik extra_host moved to miniflux-base plugin compose-extension (D2). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

@@ -30,7 +30,6 @@ services:
       - /tmp
     environment:
       TZ: "{{ homeassistant_timezone | default('Europe/Prague') }}"
-{# authentik extra_host moved to homeassistant-base plugin compose-extension (D2). #}
     logging:
       driver: "json-file"
       options:

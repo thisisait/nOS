@@ -16,13 +16,11 @@ services:
 {% endif %}
     volumes:
       - {{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}:/data
-{# mkcert CA volume + SSO env + entrypoint + extra_host moved to vaultwarden-base plugin (D2). #}
     environment:
       DOMAIN: "https://{{ vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       SIGNUPS_ALLOWED: "{{ vaultwarden_signups_allowed | default(false) | string | lower }}"
       ADMIN_TOKEN: "{{ vaultwarden_admin_token }}"
       WEBSOCKET_ENABLED: "true"
-{# SSO_* env + entrypoint + extra_host moved to vaultwarden-base plugin compose-extension (D2 2026-05-05). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

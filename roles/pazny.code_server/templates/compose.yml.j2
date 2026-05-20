@@ -23,7 +23,6 @@ services:
     volumes:
       - {{ code_server_data_dir }}:/config
       - {{ code_server_workspace_dir }}:/config/workspace
-{# mkcert CA volume moved to code-server-base plugin compose-extension (D2). #}
     environment:
       PUID: "{{ code_server_puid | default(1000) }}"
       PGID: "{{ code_server_pgid | default(1000) }}"
@@ -41,7 +40,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
-{# authentik extra_host moved to code-server-base plugin compose-extension (D2). #}
     networks:
       - devops_net
       - {{ stacks_shared_network }}

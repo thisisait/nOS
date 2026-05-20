@@ -16,7 +16,6 @@ services:
 {% endif %}
     volumes:
       - {{ openwebui_data_dir }}:/app/backend/data
-{# mkcert CA volume + CA env vars + Authentik OIDC moved to open-webui-base plugin (D2). #}
     environment:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
@@ -26,7 +25,6 @@ services:
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
-{# REQUESTS_CA_BUNDLE/SSL_CERT_FILE/AIOHTTP_CA (mkcert) moved to open-webui-base plugin (D2). #}
       # ── MCP: forward user identity + chat ID to MCP servers (0.8.0+) ───────
       # Umoznuje per-user auth a attribution pri volani MCP toolu.
       ENABLE_FORWARD_USER_INFO_HEADERS: "true"
@@ -57,7 +55,6 @@ services:
       OPENAI_API_KEYS: "{{ openai_api_key | default('sk-placeholder') }};{{ anthropic_api_key }}"
       ENABLE_OPENAI_API: "true"
 {% endif %}
-{# OAUTH_CLIENT_ID/SECRET + OPENID_PROVIDER_URL moved to open-webui-base plugin (D2 2026-05-05). #}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/api/config"]
       interval: 30s
@@ -66,7 +63,6 @@ services:
       start_period: 60s
     extra_hosts:
       - "host.docker.internal:host-gateway"
-{# authentik extra_host moved to open-webui-base plugin compose-extension (D2). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
