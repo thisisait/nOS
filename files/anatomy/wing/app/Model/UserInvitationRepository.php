@@ -151,6 +151,23 @@ final class UserInvitationRepository
 		);
 	}
 
+	/**
+	 * Stash the Cesta B (A18) Infisical + Stalwart provisioning result for
+	 * the given invitation row id. Idempotent: subsequent calls overwrite
+	 * the snapshot. Schema column `provisioning_json` was added 2026-05-20.
+	 *
+	 * @param int                                       $rowId
+	 * @param array<string,mixed>                       $result
+	 */
+	public function setProvisioningResult(int $rowId, array $result): void
+	{
+		$this->db->query(
+			'UPDATE user_invitations SET provisioning_json = ? WHERE id = ?',
+			json_encode($result, JSON_THROW_ON_ERROR),
+			$rowId,
+		);
+	}
+
 	private static function uuid4(): string
 	{
 		$bytes = random_bytes(16);

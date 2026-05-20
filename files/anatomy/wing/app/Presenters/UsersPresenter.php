@@ -6,6 +6,8 @@ namespace App\Presenters;
 
 use App\Model\AuthentikClient;
 use App\Model\EventRepository;
+use App\Model\InfisicalClient;
+use App\Model\StalwartProvisioner;
 use App\Model\UserInvitationRepository;
 use Nette\Application\BadRequestException;
 use RuntimeException;
@@ -57,6 +59,8 @@ final class UsersPresenter extends BasePresenter
 		private AuthentikClient $authentik,
 		private UserInvitationRepository $invitations,
 		private EventRepository $events,
+		private InfisicalClient $infisical,
+		private StalwartProvisioner $stalwart,
 	) {
 	}
 
@@ -304,7 +308,143 @@ final class UsersPresenter extends BasePresenter
 			// user_invitations row already captures the action.
 		}
 
+		// A18 (2026-05-20) — Cesta B Hybrid extension. When the operator
+		// supplied an email_hint AND the provisioning toggle is on, also:
+		//   1. Create an Infisical /users/<localPart>/ folder
+		//   2. Generate a mailbox password
+		//   3. Push the mailbox password into Infisical
+		//   4. Provision the Stalwart mailbox via JMAP
+		// Each step is best-effort — Authentik invitation already succeeded,
+		// so we never block on a downstream failure; we record an event +
+		// stash the result on the invitations row so the /users/created
+		// landing page can show the operator what was actually provisioned.
+		// See docs/invite-provisioning.md for the full contract.
+		$this->maybeProvisionCredentials(
+			$emailHint,
+			$tenant,
+			$invitationUuid,
+			$rowId,
+			$actorId,
+			$actorActionId,
+		);
+
 		$this->redirect('Users:created', ['uuid' => $invitationUuid]);
+	}
+
+	/**
+	 * Cesta B Hybrid: side-effects after Authentik invitation lands. Skips
+	 * silently when (a) `nos_invite_provisioning_enabled` toggle is off,
+	 * (b) operator didn't supply an email_hint (no anchor for username),
+	 * or (c) neither downstream client is configured. Each downstream
+	 * failure is logged via /events but never propagated — the invitation
+	 * itself is the contract.
+	 */
+	private function maybeProvisionCredentials(
+		string $emailHint,
+		string $tenant,
+		string $invitationUuid,
+		int $invitationRowId,
+		string $actorId,
+		string $actorActionId,
+	): void {
+		if (getenv('NOS_INVITE_PROVISIONING_ENABLED') !== '1') {
+			return;
+		}
+		if ($emailHint === '' || !str_contains($emailHint, '@')) {
+			return;
+		}
+		[$localPart, $domain] = explode('@', $emailHint, 2);
+		$localPart = strtolower(trim($localPart));
+		$domain = strtolower(trim($domain));
+		if (!preg_match('/^[a-z0-9][a-z0-9._-]{0,62}$/', $localPart)) {
+			return;
+		}
+
+		$result = [
+			'username'       => $localPart,
+			'domain'         => $domain,
+			'infisical_done' => false,
+			'stalwart_done'  => false,
+			'stalwart_id'    => null,
+			'errors'         => [],
+		];
+
+		// Step 1+2: Infisical folder + mailbox-password secret upsert.
+		$mailboxPassword = null;
+		if ($this->infisical->isConfigured()) {
+			try {
+				$this->infisical->createUserFolder($localPart);
+				$mailboxPassword = self::generateMailboxPassword();
+				$this->infisical->upsertSecret($localPart, 'mailbox_password', $mailboxPassword);
+				$result['infisical_done'] = true;
+			} catch (RuntimeException $e) {
+				$result['errors'][] = 'infisical: ' . $e->getMessage();
+				$mailboxPassword = null;
+			}
+		}
+
+		// Step 3: Stalwart mailbox via JMAP. Skip when (a) Stalwart not
+		// configured, (b) Infisical step failed so we have no password to
+		// reuse, (c) we somehow ended up without a password (defensive).
+		if ($this->stalwart->isConfigured() && $mailboxPassword !== null) {
+			try {
+				$result['stalwart_id'] = $this->stalwart->createMailbox(
+					$localPart,
+					$domain,
+					$mailboxPassword,
+				);
+				$result['stalwart_done'] = true;
+			} catch (RuntimeException $e) {
+				$result['errors'][] = 'stalwart: ' . $e->getMessage();
+			}
+		}
+
+		// Stash a single event capturing the full result (success and
+		// partial-success cases both visible in /audit timeline).
+		try {
+			$this->events->insert([
+				'type'            => 'user_invitation_provisioned',
+				'task'            => sprintf(
+					'Provisioning for %s@%s (infisical=%s stalwart=%s)',
+					$localPart,
+					$domain,
+					$result['infisical_done'] ? 'ok' : 'skip',
+					$result['stalwart_done'] ? 'ok' : 'skip',
+				),
+				'source'          => 'wing',
+				'actor_id'        => $actorId,
+				'actor_action_id' => $actorActionId,
+				'result'          => $result + [
+					'invitation_uuid'    => $invitationUuid,
+					'wing_invitation_id' => $invitationRowId,
+				],
+			]);
+		} catch (\Throwable) {
+		}
+
+		// Repository back-update so /users/created can render the summary.
+		try {
+			$this->invitations->setProvisioningResult($invitationRowId, $result);
+		} catch (\Throwable) {
+		}
+	}
+
+	/**
+	 * 24-char URL-safe random password. Crypto-strong (random_bytes), no
+	 * ambiguous chars (no 0/O/1/l/I). Operator never sees it — the value
+	 * goes straight into Infisical for the end-user to retrieve via the
+	 * Infisical share UI.
+	 */
+	private static function generateMailboxPassword(): string
+	{
+		$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+		$len = strlen($alphabet);
+		$out = '';
+		$bytes = random_bytes(24);
+		for ($i = 0; $i < 24; $i++) {
+			$out .= $alphabet[ord($bytes[$i]) % $len];
+		}
+		return $out;
 	}
 
 	// ── /users/created — shareable URL ───────────────────────────────────
@@ -317,6 +457,9 @@ final class UsersPresenter extends BasePresenter
 		}
 		$row['target_groups'] = json_decode((string) ($row['target_groups_json'] ?? '[]'), true) ?: [];
 		$row['target_apps']   = json_decode((string) ($row['target_apps_json']   ?? '[]'), true) ?: [];
+		// A18 — Cesta B provisioning snapshot. Empty {} for pre-A18 rows
+		// and for invitations issued without an email_hint (no anchor).
+		$row['provisioning'] = json_decode((string) ($row['provisioning_json'] ?? '{}'), true) ?: [];
 		$this->template->invite = $row;
 	}
 
