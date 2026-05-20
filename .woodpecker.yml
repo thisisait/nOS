@@ -37,7 +37,12 @@ steps:
     image: python:3.11-slim
     pull: true
     commands:
-      - pip install --quiet --no-cache-dir pytest pyyaml
+      # pytest + pyyaml = anatomy test runner + yaml-based gates
+      # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
+      #   imports the pulse package which depends on httpx)
+      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx
+      # Install pulse as editable so its package imports resolve in test
+      - pip install --quiet --no-cache-dir -e files/anatomy/pulse
       - python -m pytest tests/anatomy/ -q --tb=short
 
   ansible-syntax:
@@ -73,6 +78,5 @@ steps:
     environment:
       WING_API_URL:
         from_secret: wing_api_url
-    secrets:
-      - wing_api_token
-      - wing_api_url
+      WING_API_TOKEN:
+        from_secret: wing_api_token
