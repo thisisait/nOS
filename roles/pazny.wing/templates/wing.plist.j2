@@ -113,6 +113,46 @@
         <string>{{ host_alias | default('') }}</string>
         <key>INSTANCE_NAME</key>
         <string>{{ instance_name | default('nos') }}</string>
+
+        <!-- A18 (2026-05-20): Cesta B Hybrid invite-flow extension.
+             Master toggle — set "1" to have UsersPresenter::actionInviteCreate
+             also push per-user credentials to Infisical + provision the
+             Stalwart mailbox after the Authentik invitation is minted.
+             Off by default so legacy installs aren't surprised; flip
+             via `nos_invite_provisioning_enabled: true` in config.yml
+             once both Infisical + Stalwart are healthy. -->
+        <key>NOS_INVITE_PROVISIONING_ENABLED</key>
+        <string>{{ '1' if (nos_invite_provisioning_enabled | default(false) | bool) else '' }}</string>
+
+{% if install_infisical | default(false) %}
+        <!-- Infisical REST endpoint (Wing-side write path). Wing's
+             InfisicalClient creates per-user folders + upserts mailbox
+             passwords here. Read path (AgentKit) still goes via the
+             infisical CLI. Empty INFISICAL_API_TOKEN → isConfigured()
+             returns false, presenter degrades gracefully. -->
+        <key>INFISICAL_API_URL</key>
+        <string>{{ infisical_api_url | default('http://127.0.0.1:' + (infisical_port | default(8075) | string)) }}</string>
+        <key>INFISICAL_API_TOKEN</key>
+        <string>{{ infisical_admin_token | default('') }}</string>
+        <key>INFISICAL_USERS_PROJECT_ID</key>
+        <string>{{ infisical_users_project_id | default('') }}</string>
+        <key>INFISICAL_USERS_ENVIRONMENT</key>
+        <string>{{ infisical_users_environment | default('prod') }}</string>
+{% endif %}
+
+{% if install_smtp_stalwart | default(false) %}
+        <!-- Stalwart JMAP endpoint. Wing's StalwartProvisioner does
+             Principal/set methodCalls here. Bound to 127.0.0.1 by the
+             role (compose template publishes stalwart_port_admin only
+             to localhost). Empty STALWART_ADMIN_PASSWORD → isConfigured()
+             returns false. -->
+        <key>STALWART_API_URL</key>
+        <string>{{ stalwart_api_url | default('http://127.0.0.1:' + (stalwart_port_admin | default(8080) | string)) }}</string>
+        <key>STALWART_ADMIN_USER</key>
+        <string>{{ stalwart_admin_username | default('admin') }}</string>
+        <key>STALWART_ADMIN_PASSWORD</key>
+        <string>{{ stalwart_admin_password | default('') }}</string>
+{% endif %}
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops
