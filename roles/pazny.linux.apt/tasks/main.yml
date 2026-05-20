@@ -19,5 +19,4 @@
     msg: |
       pazny.linux.apt is a Phase-1 scaffolding stub.
       No packages will be installed on this run.
-      Track the Linux port progress in docs/agent-operable-nos.md.
   when: ansible_os_family in ['Debian', 'RedHat']
