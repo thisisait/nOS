@@ -431,6 +431,14 @@ $addMissingColumns($db, 'pentest_targets', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_pt_created_by ON pentest_targets(created_by)');
 
+// user_invitations.provisioning_json — A18 Cesta B (2026-05-20). Snapshot
+// of the Infisical folder + Stalwart mailbox provisioning result so the
+// /users/created landing page can show what was auto-provisioned. Pre-A18
+// rows stay '{}'.
+$addMissingColumns($db, 'user_invitations', [
+	'provisioning_json' => "TEXT NOT NULL DEFAULT '{}'",
+]);
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

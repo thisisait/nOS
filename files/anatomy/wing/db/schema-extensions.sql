@@ -364,6 +364,7 @@ CREATE TABLE IF NOT EXISTS user_invitations (
     actor_id            TEXT NOT NULL,                  -- A10: operator who issued the invite
     actor_action_id     TEXT,                           -- A10: groups with /events row of the issue action
     metadata_json       TEXT NOT NULL DEFAULT '{}',     -- free-form (e.g. inviter note, source presenter)
+    provisioning_json   TEXT NOT NULL DEFAULT '{}',     -- A18 Cesta B: Infisical + Stalwart provisioning result snapshot
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_user_inv_actor       ON user_invitations(actor_id);

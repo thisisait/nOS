@@ -58,6 +58,14 @@ services:
 	- App\Model\AuthentikClient
 	- App\Model\UserInvitationRepository
 
+	# A18 (2026-05-20) — Cesta B Hybrid invite-flow extension. InfisicalClient
+	# writes per-user credential folders; StalwartProvisioner mints mailboxes
+	# via JMAP. Both gate on env-driven isConfigured() so a bare install
+	# (no Infisical / no Stalwart) degrades gracefully — Authentik invitation
+	# still completes, the extras simply skip.
+	- App\Model\InfisicalClient
+	- App\Model\StalwartProvisioner
+
 	# GDPR Article 30 register (Track D, 2026-04-26)
 	- App\Model\GdprRepository
 
