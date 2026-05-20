@@ -61,7 +61,7 @@ nOS/
 │   └── README.md
 │
 ├── tasks/
-│   ├── pre-migrate.yml                         [agent 1]  # orchestrator, imported from main.yml (WIRE-UP PENDING)
+│   ├── pre-migrate.yml                         [agent 1]  # orchestrator, imported from main.yml::pre_tasks
 │   ├── upgrade-engine.yml                      [agent 6]  # per-service upgrade executor
 │   ├── coexistence-provision.yml               [agent 5]
 │   ├── coexistence-cutover.yml                 [agent 5]
