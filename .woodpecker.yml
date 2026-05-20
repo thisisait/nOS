@@ -14,9 +14,9 @@
 # (Repo → Settings → Secrets) once the wing API surface has minted a
 # pipeline-scoped token (Authentik OIDC client, scopes nos:notifications).
 
-when:
-  - event: push
-  - event: pull_request
+# Top-level when removed (2026-05-20): manual triggers (event=manual) and
+# cron events would be filtered out otherwise. Per-step `when:` blocks below
+# still gate the notify-green step to push/pzny branches only.
 
 steps:
   composer-validate:
