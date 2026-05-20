@@ -238,7 +238,7 @@ def test_layout_carries_users_nav_entry_gated():
 def test_di_registers_authentik_client_and_repository():
     """Both services must be registered in common.neon so Nette can
     inject them into UsersPresenter without manual bootstrap."""
-    src = (WING / "app/Config/common.neon").read_text()
+    src = (WING / "app/config/common.neon").read_text()
     assert "App\\Model\\AuthentikClient" in src
     assert "App\\Model\\UserInvitationRepository" in src
 

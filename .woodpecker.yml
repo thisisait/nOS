@@ -40,7 +40,9 @@ steps:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
       # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
       #   imports the pulse package which depends on httpx)
-      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx
+      # jinja2 + jsonschema = plugin loader render tests
+      # requests = tester_identity lib (tests/e2e/lib/authentik_admin.py)
+      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests
       # Install pulse as editable so its package imports resolve in test
       - pip install --quiet --no-cache-dir -e files/anatomy/pulse
       - python -m pytest tests/anatomy/ -q --tb=short
