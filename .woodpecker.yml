@@ -52,7 +52,12 @@ steps:
     pull: true
     commands:
       - pip install --quiet --no-cache-dir 'ansible-core>=2.20,<2.22'
-      - ansible-galaxy collection install --upgrade community.general community.docker community.mysql ansible.posix
+      # Install both roles AND collections from the single requirements.yml
+      # (Galaxy roles like elliotweiser.osx-command-line-tools + collections
+      # like community.general). Without the role install the playbook
+      # syntax-check fails on the `roles: - role:` block in main.yml.
+      - ansible-galaxy role install -r requirements.yml
+      - ansible-galaxy collection install -r requirements.yml
       - ansible-playbook main.yml --syntax-check
 
   # notify-green removed 2026-05-20 — Woodpecker v3 resolves from_secret at
