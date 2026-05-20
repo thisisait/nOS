@@ -18,21 +18,32 @@ services:
       - "{{ _bind }}{{ stalwart_port_smtps }}:465"
       - "{{ _bind }}{{ stalwart_port_submission }}:587"
       - "{{ _bind }}{{ stalwart_port_imap }}:993"
+      # WebAdmin + JMAP management API. Always 127.0.0.1 — Wing (host launchd)
+      # reaches /jmap here; public access is via Traefik route below.
+      - "127.0.0.1:{{ stalwart_port_admin }}:8080"
     environment:
-      # First-boot bootstrap. Stalwart reads etc/config.toml after first run;
-      # these envs only seed the initial install.
-      MAIL_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
-      MAIL_HOSTNAME: "{{ stalwart_domain }}"
-      MAIL_ADMIN_USER: "{{ stalwart_admin_username }}"
-      MAIL_ADMIN_PASS: "{{ stalwart_admin_password }}"
+      # First-boot bootstrap (v0.16+). STALWART_RECOVERY_ADMIN pre-pins
+      # the admin credential so the playbook skips the WebUI wizard +
+      # the "temporary password printed to console" step. Format:
+      # "<user>:<password>". After first boot Stalwart writes /etc/stalwart/
+      # config.json and the env var is no longer consulted (except as a
+      # break-glass override on subsequent boots in recovery mode).
+      STALWART_RECOVERY_ADMIN: "{{ stalwart_admin_username }}:{{ stalwart_admin_password }}"
+      # PUBLIC_URL — Stalwart uses this for self-referencing links in the
+      # webadmin UI + OIDC callback paths. Traefik fronts the same host.
+      STALWART_PUBLIC_URL: "https://{{ stalwart_domain }}"
     volumes:
-      - {{ stalwart_data_dir }}/etc:/opt/stalwart-mail/etc
-      - {{ stalwart_data_dir }}/logs:/opt/stalwart-mail/logs
-      - {{ stalwart_data_dir }}/queue:/opt/stalwart-mail/data
+      # v0.16 layout — config + data are two top-level dirs (was 3 under
+      # /opt/stalwart-mail/ in v0.11). Host paths kept under stalwart_data_dir
+      # for blank-reset symmetry.
+      - {{ stalwart_data_dir }}/etc:/etc/stalwart
+      - {{ stalwart_data_dir }}/var:/var/lib/stalwart
 {% if not (tenant_domain_is_local | default(true) | bool) %}
-      # Wildcard cert from pazny.acme — Stalwart reads PEM directly.
-      - {{ stalwart_tls_cert_path }}:/opt/stalwart-mail/etc/cert.pem:ro
-      - {{ stalwart_tls_cert_key }}:/opt/stalwart-mail/etc/key.pem:ro
+      # Wildcard cert from pazny.acme — Stalwart reads PEM directly via
+      # config.json::server.listener.*.tls.{certificate,private-key} pointing
+      # at these mount paths (operator wires it once in the WebUI wizard).
+      - {{ stalwart_tls_cert_path }}:/etc/stalwart/certs/cert.pem:ro
+      - {{ stalwart_tls_cert_key }}:/etc/stalwart/certs/key.pem:ro
 {% endif %}
     networks:
       - infra_net

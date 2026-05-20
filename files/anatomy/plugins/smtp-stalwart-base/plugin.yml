@@ -55,6 +55,7 @@ requires:
     - stalwart_port_smtps
     - stalwart_port_submission
     - stalwart_port_imap
+    - stalwart_port_admin             # v0.16: 127.0.0.1:8080 → /jmap (Wing reaches here)
     - stalwart_data_dir
     - stalwart_admin_username
     - tenant_domain
