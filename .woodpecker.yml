@@ -34,7 +34,7 @@ steps:
       - find files/anatomy/wing/app files/anatomy/wing/bin -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 
   pytest-anatomy:
-    image: python:3.11-slim
+    image: python:3.13-slim
     pull: true
     commands:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
@@ -46,7 +46,7 @@ steps:
       - python -m pytest tests/anatomy/ -q --tb=short
 
   ansible-syntax:
-    image: python:3.11-slim
+    image: python:3.13-slim
     pull: true
     commands:
       - pip install --quiet --no-cache-dir 'ansible-core>=2.20,<2.22'
