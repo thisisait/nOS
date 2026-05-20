@@ -133,26 +133,75 @@ If either is absent, the notify step prints a one-line skip message and
 exits 0 — pipeline stays green. Configure via Woodpecker UI: Repo
 Settings → Secrets → New Secret, restrict to events `push`.
 
-## Deploy is operator-triggered (by design, for now)
+## Auto-deploy on `dev` (A17, 2026-05-20)
 
-The pipeline does **not** SSH into the host or rsync into `~/wing/app/`,
-`~/bone/`, etc. Two reasons:
+When CI goes green on a `dev` push AND the commit message carries a
+`deploy-tags:` footer, the pipeline's last step posts to Wing's
+`/api/v1/deploy-trigger` (HMAC-signed). Wing validates, spawns
+`ansible-playbook main.yml --tags <tags>` as a detached subprocess, and
+returns 202. Completion notification lands in Wing `/inbox`.
 
-1. **Security** — granting the agent container write access to host
-   playbook artefacts is a real blast-radius increase. The current
-   manual step (`ansible-playbook main.yml --tags <stack>` after CI
-   goes green) keeps the deploy decision human-gated.
+### How to ship a change with auto-deploy
 
-2. **Idempotence** — the playbook IS the deploy mechanism. A separate
-   "deploy" step in CI would duplicate logic that already lives in the
-   role tasks (composer install, init-db, launchd bootout/bootstrap).
-   When we eventually automate, we'll call the playbook itself from CI,
-   not reimplement its steps.
+```bash
+git commit -m "feat(wing): add tenant filter
 
-When this changes (post-A16), it'll be a separate `deploy:` stage
-gated on `branch == dev` or `branch == pzny` with a host-side trigger
-endpoint (Wing `/api/v1/deploy-trigger` HMAC) firing
-`ansible-playbook main.yml --tags <stack>` as a subprocess.
+deploy-tags: wing"
+tools/nos-push origin dev
+```
+
+The footer `deploy-tags: wing` triggers auto-deploy of the `wing` tag
+after CI passes. Multiple comma-separated tags allowed:
+`deploy-tags: wing,bone,gitea`. **No footer = no auto-deploy** — safe
+default for docs / test commits.
+
+### Security model (defense in depth)
+
+1. **HMAC** (`NOS_DEPLOY_HMAC_SECRET`) — pipeline signs; Wing verifies
+2. **±5-min timestamp window** — captured signatures can't be replayed
+3. **Branch allowlist** — only `dev` and `pzny` auto-deploy. `master`
+   is operator-manual (linear history is the audit boundary)
+4. **Tag allowlist** — only roles that do NOT need sudo are accepted.
+   Tags like `homebrew`, `dotfiles`, `mac.*`, `autostart`, `ssh`,
+   `secrets` are explicitly REJECTED. Allowlist source-of-truth:
+   `DeployTriggerPresenter::ALLOWED_TAGS`
+5. **Concurrency lock** — `tools/deploy-from-ci.sh` uses an mkdir-based
+   lock; second trigger while deploying → "skipped, lock held"
+6. **UUID-tracked logs** — `~/.nos/deploys/<uuid>.log` per deploy;
+   notification in `/inbox` links to it
+
+### Operator secret provisioning
+
+Two secrets must exist in Woodpecker UI:
+
+| Secret name              | Value                                                |
+|--------------------------|------------------------------------------------------|
+| `wing_deploy_url`        | `https://wing.<tld>/api/v1/deploy-trigger`           |
+| `nos_deploy_hmac_secret` | Same value as `NOS_DEPLOY_HMAC_SECRET` env on Wing   |
+
+Wing's env is set by `pazny.wing/templates/wing.plist.j2` from the
+`nos_deploy_hmac_secret` var (default:
+`{{ global_password_prefix }}_pw_deploy_hmac`). Copy that resolved value
+into the Woodpecker secret. **Restrict the secret to events: push** so
+pull-request pipelines from forks can't read it.
+
+### Manual smoke (without going through CI)
+
+```bash
+TS=$(date +%s)
+UUID=$(uuidgen | tr 'A-Z' 'a-z')
+SECRET="$(grep nos_deploy_hmac_secret ~/.nos/secrets.yml | cut -d'"' -f2)"
+BODY=$(printf '{"branch":"dev","commit":"%s","deploy_uuid":"%s","source":"manual","tags":["wing"],"ts":%s}' \
+  "$(git rev-parse HEAD)" "$UUID" "$TS")
+SIG=$(printf '%s.%s' "$TS" "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $NF}')
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Wing-Timestamp: $TS" \
+  -H "X-Wing-Signature: $SIG" \
+  --data "$BODY" \
+  https://wing.<tld>/api/v1/deploy-trigger
+# Expect 202 + {deploy_uuid, log_path}
+# Tail: ~/.nos/deploys/<uuid>.log
+```
 
 ## Branch policy
 
