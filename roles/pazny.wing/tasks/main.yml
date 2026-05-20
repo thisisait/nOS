@@ -208,7 +208,16 @@
   ansible.builtin.template:
     src: wing.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ wing_launchd_label }}.plist"
-    mode: '0644'
+    # 0600: the plist embeds AUTHENTIK_BOOTSTRAP_TOKEN, INFISICAL_API_TOKEN,
+    # STALWART_ADMIN_PASSWORD, BONE_SECRET, NOS_DEPLOY_HMAC_SECRET,
+    # WING_API_TOKEN, WING_EVENTS_HMAC_SECRET — admin-level credentials
+    # for every connected service. Anything more permissive lets peer
+    # processes (Spotlight indexers, third-party backup agents, other
+    # launchd jobs running as the same user, anyone with Full Disk
+    # Access) walk away with the full credential surface. launchctl
+    # reads the file ONCE at bootstrap; 0600 doesn't interfere with the
+    # bootstrap or with later "Restart wing" handler kicks.
+    mode: '0600'
   notify: Restart wing
 
 # ── Launchd bootstrap (idempotent) ───────────────────────────────────────────
