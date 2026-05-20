@@ -83,6 +83,10 @@ def test_gitleaks_skill_uses_template_emit():
 def test_end_to_end_template_resolution(tmp_path):
     """Drive the full chain: aggregator → routing JSON → Bone insert
     with template+context → DB row with rendered title+body."""
+    import shutil
+    import pytest
+    if shutil.which("php") is None:
+        pytest.skip("php binary not on PATH — skipping E2E (CI containers run pytest-only image)")
     sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
     sys.path.insert(0, str(REPO / "files/anatomy/bone"))
     import importlib
