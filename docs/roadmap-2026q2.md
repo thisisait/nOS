@@ -5,31 +5,62 @@
 > below are retained for context and may describe pre-2026-05-03 states that
 > have since been superseded.
 >
-> Last updated: 2026-05-03 evening • commit: post-A6 plugin-loader (`717c446`) • by: pazny+claude
->
-> **Q2 wave 1 (Tracks A-D) DONE.** Q2 wave 2 ALL DONE 2026-05-01 → 2026-05-03:
->
-> | Track | Status | Commits |
-> |---|---|---|
-> | E — Tier-2 apps_runner wet test | ✅ DONE 2026-04-30 | 3 recovery |
-> | J — Tech debt cleanup | ✅ DONE 2026-05-01 | 6 |
-> | H — ansible-core 2.20+ tightening | ✅ DONE 2026-05-01 | 7 |
-> | F — Dynamic instance_tld + per-host alias | ✅ DONE 2026-05-01 | 16 |
-> | G — Cloudflare proxy + LE production | ✅ DONE wet 2026-05-03 | scaffold + 6 prod-cutover fixes |
->
-> **Q2 wave 3 — Bones & Wings refactor** in flight 2026-05-03. Plan in
-> [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).
-> Phases A0+A1+A2+A3a+A4+A6 landed (12 commits 2026-05-03 morning + afternoon).
-> After the security-hardening full-blank gate, Phase A3.5 (Wing host-revert
-> via FrankenPHP) is next; then A5/A6.5 validate contracts and the Track Q
-> "tendons & vessels" doctrine. **Operator's runbook pointer:**
-> [`docs/active-work.md`](active-work.md).
-> Parallel implementation coordination lives in
-> [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md).
->
-> **Q2 wave 4 — Track Q autowiring debt consolidation** is post-PoC.
-> See §"Track Q" below + the bones-and-wings refactor doc §13.1 for the
-> 7-batch plan covering all 71 `pazny.*` roles.
+> Last updated: 2026-05-20 • commit: post-A17 deploy-trigger + Wing daemon hardening • by: pazny+claude
+
+## Q2 2026 status — post-A17 retrospective (2026-05-20)
+
+All four Q2 waves shipped. The roadmap further below documents the original
+plan; the table below documents what actually landed.
+
+| Wave | Plan | Outcome |
+|---|---|---|
+| **Wave 1** — Tracks A-D | Containerize Bone+Wing, agent identity, Linux infra, ANSSI hardening | ✅ DONE 2026-04 |
+| **Wave 2** — Tracks E-J | Tier-2 apps_runner, tech debt cleanup, ansible-core 2.20+, dynamic TLD, Cloudflare LE | ✅ DONE 2026-05-01 → 2026-05-03 |
+| **Wave 3** — Bones & Wings refactor (A0-A17) | Plugin loader, callback plugin, Wing host-revert, role thinning, autowiring | ✅ DONE 2026-05-03 → 2026-05-20 |
+| **Wave 4** — Track Q autowiring | 7-batch consolidation of 71 `pazny.*` roles into per-plugin manifests | ✅ DONE 2026-05-05 → 2026-05-07 (63 plugins live) |
+
+### Wave 3 (Bones & Wings) anatomy retrospective
+
+| Letter | Ship date | Pointer |
+|---|---|---|
+| A0–A6 foundation | 2026-05-03 | `docs/bones-and-wings-refactor.md` |
+| A3.5 Wing host-revert (FrankenPHP) | 2026-05-04 | CLAUDE.md / non-Docker Architecture |
+| A6.5 Grafana thin-role pilot | 2026-05-04 | `files/anatomy/docs/role-thinning-recipe.md` |
+| A7 gitleaks plugin (first scheduled-job consumer) | shipped pre-A14 | `files/anatomy/plugins/gitleaks-*/` |
+| A8 conductor agent (full runner) | 2026-05-07 | `files/anatomy/agents/conductor/` |
+| A9 notification fanout (A9.1–A9.5) | 2026-05-16 → 2026-05-17 | `files/anatomy/docs/notification-fanout.md` |
+| A10 audit trail (actor_id + actor_action_id) | 2026-05-05 | `docs/sso-and-attribution.md` |
+| A13.6 E2E ephemeral SSO tester identity | 2026-05-07 | `docs/e2e-tester-identity.md` |
+| A14 AgentKit runtime | 2026-05-07 | `docs/ait-runtime-architecture.md` |
+| A15 Users + Invitations console | 2026-05-15+ | `roles/pazny.wing/templates/wing.plist.j2` |
+| A16 Woodpecker CI autowiring | 2026-05-17 | `roles/pazny.woodpecker/tasks/post-repo.yml` |
+| A17 Stack-up tags + nos-push + deploy-trigger + Wing daemon hardening | 2026-05-20 | commits `5c16a05..d87efef` |
+
+### Wave 4 (Track Q) retrospective
+
+- **Q1–Q2** (Phase 1 multi-agent batch, 2026-05-05): 33 plugins shipped (composition + native_oidc/forward_auth wirings)
+- **D1.0–D1.4** (2026-05-05): central `authentik_oidc_apps` retirement; SSO trichotomy doctrine; β1.A firefly→header_oidc; β1.B nodered→native_oidc
+- **Q3+Q4+Q5+Q7** (Phase 2 4-worker batch, 2026-05-07): 12 headless-infra base manifests for the last role-only services
+- **D2** (2026-05-05 → 2026-05-20): role compose templates carry zero OIDC env / mkcert CA / authentik extra_host blocks; plugin compose-extensions are the live render path. Stale breadcrumbs scrubbed 2026-05-20.
+
+**Loader currently discovers 63 plugins.** Per-plugin `authentik:` blocks are
+the SSO source-of-truth; the central list survives only as an empty Tier-2
+apps_runner stub.
+
+### Open backlog (post-A17 → Q3 candidates)
+
+- Stalwart admin REST API spike → invite flow extension (auto-provision mailbox + push creds to Infisical)
+- Inspektor + Librarian agent runners (waiting on trivy/grype/nuclei substrate + Qdrant corpus pipeline)
+- A8 conductor scheduled drift scans (closes the security-scan staleness gap)
+- Upstream OIDC PRs queued in `docs/upstream-pr-opportunities.md`
+
+---
+
+## Historical roadmap (pre-2026-05-03)
+
+Everything below is preserved for archaeology. The actual ship status is in
+the table above. Track A–G sections describe original scope; for "what
+actually happened", follow the commit history per anatomy letter.
 
 ## Mission (in 3 sentences)
 
