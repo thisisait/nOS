@@ -1,5 +1,9 @@
 # Local CI — Gitea mirror + Woodpecker pipeline (A16, 2026-05-17)
 
+> **Status (2026-05-20):** end-to-end live on pazny.eu. First pipeline run
+> ignited by this exact paragraph — GitHub `dev` push → Gitea mirror (10 min
+> poll OR force-sync via API) → Woodpecker pipeline → 4 test stages.
+
 Self-hosted CI that mirrors GitHub → local Gitea on a 10-minute pull
 interval, then fires the `.woodpecker.yml` pipeline on every push. Four
 required test stages, one optional notification stage. No host-side

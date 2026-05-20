@@ -38,6 +38,20 @@
   register: _woodpecker_gitea_repo
   changed_when: false
 
+- name: "[pazny.woodpecker Post Repo] Refresh forge cache (sync Gitea repo list)"
+  # On a fresh install Woodpecker hasn't yet pulled the operator's repo
+  # list from Gitea — so a bare /api/repos?forge_remote_id=<id> activate
+  # returns "forge repo not found". POST /api/user/repos?flush=true tells
+  # Woodpecker to re-query Gitea and rebuild the available-repos cache.
+  ansible.builtin.uri:
+    url: "https://{{ woodpecker_domain }}/api/user/repos?all=true&flush=true"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ woodpecker_api_token }}"
+    status_code: [200, 204]
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  changed_when: true
+
 - name: "[pazny.woodpecker Post Repo] Check if repo is already activated"
   ansible.builtin.uri:
     url: "https://{{ woodpecker_domain }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"

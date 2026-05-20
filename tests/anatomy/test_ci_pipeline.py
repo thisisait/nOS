@@ -113,6 +113,19 @@ def test_woodpecker_post_repo_task_present():
 	assert "Check if repo is already activated" in src
 	# Activation uses forge_remote_id query param (Woodpecker v3 convention).
 	assert "forge_remote_id" in src
+	# A16 (2026-05-20): forge cache must be refreshed BEFORE activate —
+	# on first run Woodpecker doesn't know about Gitea repos yet so the
+	# activate POST would 404. flush=true forces a Gitea sync first.
+	assert "flush=true" in src
+	# The refresh task MUST come BEFORE the activate POST so the order
+	# is correct on fresh installs. Match on the real URL line (not the
+	# explanation comment, which mentions /api/repos?forge_remote_id too).
+	refresh_pos = src.find("flush=true")
+	activate_pos = src.find('url: "https://{{ woodpecker_domain }}/api/repos?forge_remote_id')
+	assert 0 < refresh_pos < activate_pos, (
+		"refresh task must precede activate task — order matters on "
+		"fresh installs (Woodpecker repo cache is empty)"
+	)
 
 
 def test_woodpecker_post_yml_present():
