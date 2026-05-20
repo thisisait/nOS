@@ -345,7 +345,15 @@
 # up` command below. Empty directory = fallback to base compose file (backward
 # compatible with pre-Wave2 state).
 
+# A17 (2026-05-20): same `tags: ['core', 'always']` rationale as the
+# matching block in tasks/stacks/stack-up.yml. Per-service tags
+# (`--tags traefik`, `--tags grafana`) trigger the role's render task
+# but, without `always` on the override-enumerate + compose-up flow,
+# the running container is never recreated. Operators can skip with
+# `--skip-tags core`.
+
 - name: "[Core] Enumerate infra compose overrides"
+  tags: ['core', 'always']
   ansible.builtin.find:
     paths: "{{ stacks_dir }}/infra/overrides"
     patterns: "*.yml"
@@ -354,6 +362,7 @@
   check_mode: false
 
 - name: "[Core] Enumerate observability compose overrides"
+  tags: ['core', 'always']
   ansible.builtin.find:
     paths: "{{ stacks_dir }}/observability/overrides"
     patterns: "*.yml"
@@ -377,6 +386,7 @@
 
 # Re-enumerate overrides after pre_compose hook may have rendered new fragments.
 - name: "[Core] Re-enumerate infra compose overrides (after plugin loader)"
+  tags: ['core', 'always']
   ansible.builtin.find:
     paths: "{{ stacks_dir }}/infra/overrides"
     patterns: "*.yml"
@@ -385,6 +395,7 @@
   check_mode: false
 
 - name: "[Core] Re-enumerate observability compose overrides (after plugin loader)"
+  tags: ['core', 'always']
   ansible.builtin.find:
     paths: "{{ stacks_dir }}/observability/overrides"
     patterns: "*.yml"
@@ -395,6 +406,7 @@
 # ── Start INFRA stack first (DB must be ready before anything else) ─────────
 
 - name: "[Core] Start INFRA stack (docker compose up --wait)"
+  tags: ['core', 'always']
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/infra/docker-compose.yml"
@@ -409,6 +421,7 @@
   when: _core_infra_enabled | bool
 
 - name: "[Core] Infra stack result"
+  tags: ['core', 'always']
   ansible.builtin.debug:
     msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_infra_result is defined and _core_infra_result.rc is defined
@@ -438,6 +451,7 @@
 # ── Start OBSERVABILITY stack (DB and configs ready) ────────────────────────
 
 - name: "[Core] Start OBSERVABILITY stack (docker compose up --wait)"
+  tags: ['core', 'always']
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/observability/docker-compose.yml"
@@ -452,6 +466,7 @@
   when: _core_observability_enabled | bool
 
 - name: "[Core] Observability stack result"
+  tags: ['core', 'always']
   ansible.builtin.debug:
     msg: "observability: rc={{ _core_obs_result.rc | default('?') }} {{ (_core_obs_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_obs_result is defined and _core_obs_result.rc is defined

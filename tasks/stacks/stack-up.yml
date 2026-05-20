@@ -110,8 +110,20 @@
 - { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
 
 # ── Build list of REMAINING stacks (without infra/observability) ────────────
+#
+# A17 (2026-05-20): every task below this banner carries `tags: ['stacks',
+# 'always']`. Reason: per-service role tags (`tags: ['woodpecker']`,
+# `tags: ['gitea']`, …) trigger the role's render task — which writes
+# a new compose override — but WITHOUT a matching `compose up` invocation
+# the running container is never recreated. So `ansible-playbook --tags
+# woodpecker` looked like it did something (new override on disk) but
+# the live container kept the stale env (took 2 days to surface during
+# the A16 first-run on 2026-05-20). Marking the compose-up flow with
+# `always` makes `--tags <svc>` actually deliver the change. Operators
+# can still opt out with `--skip-tags stacks`.
 
 - name: "[Stacks] Build list of remaining (non-core) active stacks"
+  tags: ['stacks', 'always']
   ansible.builtin.set_fact:
     _remaining_stacks: >-
       {{
@@ -135,6 +147,7 @@
 # (backward compatible with pre-Wave2 state).
 
 - name: "[Stacks] Enumerate compose overrides per remaining stack"
+  tags: ['stacks', 'always']
   ansible.builtin.find:
     paths: "{{ stacks_dir }}/{{ item }}/overrides"
     patterns: "*.yml"
@@ -146,6 +159,7 @@
     label: "{{ item }}"
 
 - name: "[Stacks] Build stack name -> overrides list map"
+  tags: ['stacks', 'always']
   ansible.builtin.set_fact:
     _stack_overrides_map: >-
       {{
@@ -163,6 +177,7 @@
 # async_status polls every 10s for up to 60 retries (10 min total).
 
 - name: "[Stacks] Fire docker compose up --wait per stack (async, parallel)"
+  tags: ['stacks', 'always']
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
@@ -183,6 +198,7 @@
     label: "{{ item }}"
 
 - name: "[Stacks] Wait for parallel stack-up jobs to finish"
+  tags: ['stacks', 'always']
   ansible.builtin.async_status:
     jid: "{{ async_job.ansible_job_id }}"
   loop: "{{ _stack_jobs.results }}"
@@ -200,6 +216,7 @@
 # so the original stack name lives at r.async_job.item, not r.item.
 # Downstream tasks expect _stack_results.results[i].item = stack name string.
 - name: "[Stacks] Flatten async_status results (item = stack name)"
+  tags: ['stacks', 'always']
   ansible.builtin.set_fact:
     _stack_results:
       results: "{{ _normalised_acc }}"
@@ -227,6 +244,7 @@
 # with the actual compose stdout/stderr in scope, not 20 minutes later as
 # "Wait for API (1 retries left)".
 - name: "[Stacks] Dump failed-stack output (visibility for rc!=0)"
+  tags: ['stacks', 'always']
   ansible.builtin.debug:
     msg: |
       Stack '{{ r.item }}' failed (rc={{ r.rc }}, finished={{ r.finished }}).
@@ -244,6 +262,7 @@
   when: r.rc | int != 0
 
 - name: "[Stacks] Assert all parallel stacks reached up --wait (fail-fast)"
+  tags: ['stacks', 'always']
   ansible.builtin.fail:
     msg: |
       One or more stacks failed `docker compose up --wait` (rc != 0):
