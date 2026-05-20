@@ -1,148 +1,105 @@
-# Native SSO Survey — proxy-auth services (β work, 2026-05-05)
+# Native SSO Survey — proxy-auth services
 
-> Companion to D1 (aggregator parity). Audits which currently-proxy-auth
-> services in nOS could be upgraded to **native OIDC** with Authentik —
-> giving operators true SSO (auto-provisioned user accounts + role
-> mapping inside the service) instead of just access control at the
-> outpost.
+> **Updated 2026-05-20** — post-β1 status pass. Original audit shipped
+> 2026-05-05 to plan the β1.A/B/C work; this revision marks what
+> actually landed vs. what's still in the backlog.
 >
-> Source of truth for "currently proxy": `default.config.yml`
-> `authentik_oidc_apps` entries with `type: "proxy"`.
+> Audits which currently-proxy-auth services in nOS could be upgraded
+> to **native OIDC** with Authentik — giving operators true SSO
+> (auto-provisioned user accounts + role mapping inside the service)
+> instead of just access control at the outpost.
+>
+> Source of truth for the current bucket of each service:
+> per-plugin `authentik.mode:` in `files/anatomy/plugins/<svc>-base/plugin.yml`.
+> The central `authentik_oidc_apps` list in `default.config.yml` was
+> retired in D1.3 (2026-05-05) and survives only as an empty Tier-2
+> apps_runner channel.
 
-## Verdict matrix
+## Verdict matrix (post-β1 state)
 
-| Service | Image | Upstream OIDC | Cost | Recommend |
+| Service | Image | Today's mode | Native-OIDC verdict | Status |
 |---|---|---|---|---|
-| **uptime-kuma** | `louislam/uptime-kuma:1` | v1.x: NO. v2.x beta: YES (env-driven OIDC) | Bump to v2 when stable + env block | **Defer** — wait for v2 stable |
-| **calibre-web** | `lscr.io/linuxserver/calibre-web` | Native OAuth2 (Github/Google only, no generic OIDC) | LSIO image patch needed | **Stay proxy** |
-| **kiwix** | static reader | NO auth model upstream | n/a | **Stay proxy** |
-| **paperclip** | `ghcr.io/paperclipai/paperclip` | Custom; check our fork | unknown | **Investigate (1 hr)** |
-| **puter** | `nos/puter` (our build) | Plugin-based; needs a Puter OIDC plugin | High (write a Puter plugin) | **Defer** — out of D1 scope |
-| **wing** | host launchd | Native OIDC (built-in Nette\Security plus our wing-base proxy gate today) | Wing app code change | **Defer** — Wing 2.0 work |
-| **code-server** | `lscr.io/linuxserver/code-server` | NO direct OIDC (only basic password). LSIO doesn't ship OIDC. | Need a sidecar (oauth2-proxy) | **Stay proxy** |
-| **ntfy** | `binwiederhier/ntfy` | NO native OIDC (basic auth + tokens only) | n/a | **Stay proxy** |
-| **nodered** | `nodered/node-red:4.x` | Yes via `node-red-contrib-auth-keycloak` or custom strategy in settings.js | Medium — settings.js patch + secret env | **Candidate (β1)** |
-| **firefly** | `fireflyiii/core:6.x` | Native OIDC since v5.6 — env-driven (`STATIC_CRON_TOKEN`, `LOGIN_PROVIDER=remote_user_guard` already used; OIDC mode via `REMOTE_USER` headers OR full OIDC via `LOGIN_PROVIDER=eloquent` + custom IDP) | Low — env block | **Candidate (β1)** |
-| **influxdb** | `influxdb:2.7` | InfluxDB OSS 2.x: NO native OIDC (Cloud only). Enterprise: yes. | n/a for OSS | **Stay proxy** |
-| **onlyoffice** | `onlyoffice/documentserver:9.x` | JWT-based (server-to-server only); no end-user OIDC | n/a | **Stay proxy** |
-| **mailpit** | `axllent/mailpit` | Dev tool, basic auth only | n/a | **Stay proxy** |
-| **metabase** | (already configured native, mis-marked proxy?) | Native OIDC (Pro) / OAuth (free) | Already done in role | **Investigate (1 hr)** — central says proxy but redirect_uri suggests native |
-| **spacetimedb** | DB; not user-facing | n/a | n/a | **Stay proxy** (or skip auth) |
+| **firefly** | `fireflyiii/core:6.x` | `header_oidc` | `LOGIN_PROVIDER=remote_user_guard` injects identity via Authentik outpost headers. True SSO from user POV (auto-creates the account), just not via OAuth2 protocol. | ✅ **β1.A shipped 2026-05-05** — reclassified `header_oidc` |
+| **nodered** | `nodered/node-red:4.x` | `native_oidc` | `passport-openidconnect` wired into `/data/settings.js::adminAuth.strategy`. Toggle: `nodered_native_oidc_enabled` (default true). | ✅ **β1.B shipped 2026-05-05** |
+| **metabase** | `metabase/metabase:0.50+` | `forward_auth` | OAuth/SAML in Metabase OSS is paywall-gated (Pro tier). Community issue [#28195](https://github.com/metabase/metabase/issues/28195) tracks demand. | ❌ **β1.C deferred** — license-gated upstream |
+| **uptime-kuma** | `louislam/uptime-kuma:1` | `forward_auth` | v1.x no OIDC. v2.x beta has env-driven OIDC. | ⏳ **Defer** — await v2 stable |
+| **calibre-web** | `lscr.io/linuxserver/calibre-web` | `forward_auth` | OAuth2 limited to Github + Google fixed clients (no generic OIDC). | ⏳ **Upstream PR queued** — see `upstream-pr-opportunities.md` |
+| **kiwix** | static reader | `forward_auth` | No auth model upstream. | ✅ **Stay proxy permanently** — no per-user state |
+| **paperclip** | own fork | `forward_auth` | Plugin manifest explicitly declares "no native OIDC support". | ⏳ **Upstream PR queued** |
+| **puter** | `nos/puter` | `forward_auth` | Plugin-based; would need a Puter OIDC plugin (TS). | ⏳ **Defer** — write a Puter plugin |
+| **wing** | host launchd | `forward_auth` | Wing has built-in Nette\Security; today gated by proxy outpost. Native OIDC = Wing 2.0 work. | ⏳ **Defer** — Wing 2.0 |
+| **code-server** | `lscr.io/linuxserver/code-server` | `forward_auth` | Coder OSS supports `--auth oauth-proxy` but LSIO image strips it. | ⏳ **Upstream PR queued** |
+| **ntfy** | `binwiederhier/ntfy` | `forward_auth` | Only basic auth + tokens upstream; maintainer has OIDC on roadmap. | ⏳ **Upstream PR queued** |
+| **onlyoffice** | `onlyoffice/documentserver:9.x` | `forward_auth` | DocServer is a render backend (B2B JWT). No end-user app. | ✅ **Stay proxy permanently** |
+| **influxdb (OSS)** | `influxdb:2.7` | `forward_auth` | OIDC is Enterprise-gated. | ✅ **Stay proxy permanently** (until licensing pivot) |
+| **mailpit** | `axllent/mailpit` | `forward_auth` | Dev SMTP capture; multi-user OIDC is out of scope upstream. | ✅ **Stay proxy permanently** |
+| **spacetimedb** | DB binary protocol | `forward_auth` | No end-user web UI. | ✅ **Stay proxy permanently** |
+| **openclaw** | host launchd | `forward_auth` | Local LLM gateway; admin-only surface. | ✅ Tier-1 admin proxy |
+| **qdrant** | `qdrant/qdrant:v1.13.x` | `forward_auth` | Vector DB; no per-user state. | ✅ **Stay proxy permanently** |
+| **snappymail** | `djmaze/snappymail-docker` | `forward_auth` | Webmail; IMAP account = identity inside the app. | ✅ Tier-3 proxy (correct mode) |
+| **woodpecker** | `woodpeckerci/server:v3.x` | `forward_auth` (over Gitea-OAuth app-auth) | App-level auth is Gitea OAuth; Authentik gates the route. Stacked but intentional. | ✅ Working as designed |
 
-## Concrete β1 targets (recommended)
+## β1 retrospective (shipped 2026-05-05)
 
-These three have **clean upstream OIDC support** and small implementation cost:
+### β1.A — `firefly` → `header_oidc` ✅
 
-### β1.a — `firefly-iii` native OIDC
+Reclassified rather than rewired. The Authentik proxy outpost already
+injects `Remote-User` / `Remote-Email` headers, and Firefly's
+`LOGIN_PROVIDER=remote_user_guard` auto-creates the user from those
+headers. This IS native SSO from the user's POV (no login screen,
+identity flows from Authentik) — just not via OAuth2 protocol. The
+new `header_oidc` doctrine bucket captures that distinction.
 
-- Image already on `version-6.2.21` (post-5.6 OIDC-capable).
-- Today: `LOGIN_PROVIDER=remote_user_guard` (header-based via Authentik
-  outpost). Migrate to true OIDC by setting:
-  ```yaml
-  LOGIN_PROVIDER: eloquent           # builtin user table
-  AUTHENTIK_OIDC_DISCOVERY_URL: ...  # NB: Firefly doesn't ship native OIDC env vars yet
-  ```
-- **Caveat:** Firefly's "OIDC" is actually OAuth2-server mode (Firefly
-  *acts as* an OAuth provider). True OIDC consumer mode is via
-  `auth.json` Sanctum config, not env. **Verdict: not as easy as it
-  looks. Mark as research-needed (1 hr) before promoting.**
-- Realistic path: extend the existing `remote_user_guard` setup —
-  Authentik outpost already injects `Remote-User` / `Remote-Email`
-  headers, and Firefly auto-creates the user. This IS native SSO from
-  the user's POV (no Firefly login screen, identity from Authentik) —
-  just not via OAuth2 protocol. The current "proxy" classification in
-  central undersells it; recommend **renaming `firefly` to
-  `mode: header_oidc`** (a new doctrine bucket) rather than rewiring.
+### β1.B — `node-red` → `native_oidc` ✅
 
-### β1.b — `node-red` native OIDC
+First non-trivial native SSO upgrade — formerly `forward_auth`-only.
+Implementation: `passport-openidconnect` pre-seeded into
+`/data/node_modules` via `/data/package.json`; the strategy reads
+`NODERED_OIDC_CLIENT_ID` + `NODERED_OIDC_CLIENT_SECRET` from env
+(rendered by `nodered-base` plugin compose-extension). Toggle:
+`nodered_native_oidc_enabled` (defaults `true`).
 
-- Node-RED's `settings.js` accepts a `passport`-strategy block:
-  ```js
-  adminAuth: {
-    type: "strategy",
-    strategy: {
-      name: "openidconnect",
-      label: "Sign in with Authentik",
-      strategy: require("passport-openidconnect"),
-      options: {
-        issuer: "https://auth.<tld>/application/o/nodered/",
-        authorizationURL: ".../authorize/",
-        tokenURL: ".../token/",
-        userInfoURL: ".../userinfo/",
-        clientID: "nos-nodered",
-        clientSecret: "...",
-        callbackURL: "https://nodered.<tld>/auth/strategy/callback",
-        scope: "openid profile email"
-      },
-      verify: function(token, profile, done){ done(null, profile) }
-    },
-    users: ...
-  }
-  ```
-- Cost: render `settings.js` from a template, mount via `-v`, install
-  `passport-openidconnect` in the container OR a sidecar.
-- Image `nodered/node-red:4.x` ships passport built-in; we'd need to
-  add `passport-openidconnect` via a pre-start `npm install --prefix
-  /data` step.
-- Realistic estimate: **~2 hr** + 1 blank verify.
-- **Verdict: viable β1 target.**
+### β1.C — `metabase` ❌ deferred
 
-### β1.c — `metabase` native OIDC (verify existing)
+Verification spike (2026-05-05) confirmed: Metabase OSS does NOT
+expose `/admin/settings/authentication` OIDC options — paywall-gated
+in Metabase Pro. Issue [#28195](https://github.com/metabase/metabase/issues/28195)
+tracks community demand. No upstream PR will land this on the OSS
+license; community fork would be required. Marked as permanently
+proxy unless that landscape changes.
 
-- Central says `type: "proxy"` AND has redirect_uri `/auth/sso/oidc`.
-  Contradiction. The role's compose.yml.j2 grep found NO OIDC env.
-  But Metabase 0.50+ supports `MB_JWT_*` and `MB_OIDC_*` envs
-  (Enterprise feature, possibly behind a license).
-- Realistic next step: **30-min verification spike** — does our running
-  Metabase have the OIDC option in /admin/settings/authentication, or
-  is that license-gated?
-- If OSS: viable β1 target (~1 hr env block + role tweak).
-- If license-gated: stay proxy, fix central to remove the misleading
-  redirect_uri.
+### β1.D — Doctrine bucket added ✅
 
-## Concrete β1 NON-targets
+The trichotomy (`native_oidc` / `header_oidc` / `forward_auth`) was
+formalized in CLAUDE.md and pinned by anatomy gates
+(`tests/anatomy/test_sso_doctrine.py`). The plugin schema accepts
+exactly these three values; non-canonical labels are rejected.
 
-These should **explicitly stay proxy** (document + close the door):
-- `kiwix` — no upstream auth model
-- `mailpit` — dev tool, basic auth only
-- `ntfy` — token-based, no OIDC roadmap
-- `onlyoffice` — JWT server-to-server only
-- `influxdb` (OSS) — Enterprise-only OIDC
-- `code-server` (LSIO image) — no upstream OIDC, needs sidecar (out of scope)
-- `calibre-web` — only Github/Google OAuth2, no generic OIDC
+## Still queued (post-β1 backlog)
 
-For these, **the current proxy-auth gate IS native SSO** from the
-operator's POV: Authentik authenticates the user, sets a cookie, the
-service trusts the upstream and serves content. There's no "user
-account inside the service" to provision because there's no per-user
-state worth provisioning.
+These services have legitimate paths to native OIDC but require
+either upstream changes or non-trivial scaffolding. Tracked in
+[`upstream-pr-opportunities.md`](upstream-pr-opportunities.md).
 
-## Recommended action sequence
+- **calibre-web** — PR generic OIDC discovery to `cps/oauth.py`
+- **code-server (LSIO)** — PR LSIO Dockerfile to forward Coder `--auth oauth-proxy` flags
+- **ntfy** — PR OIDC verifier to `auth/auth_user.go` (maintainer indicated openness)
+- **firefly post-β1.A** — env-driven OIDC PR upstream would let us drop the REMOTE_USER guard
+- **paperclip** — upstream needs an OIDC scaffold first (our fork has none)
+- **puter** — write an Authentik OIDC plugin (TS, plugin architecture)
+- **wing** — Wing 2.0 work; replace proxy gate with native Nette\Security flow
 
-1. **Re-classify proxy-only-because-no-OIDC services** — add a
-   `mode: header_oidc` bucket to the plugin schema (Authentik proxy
-   outpost forwards `Remote-User`/`Remote-Email` headers; service
-   auto-creates user from header). Apply to: `firefly`, `paperclip`,
-   `wordpress` (it has both modes today). This makes the plugin
-   metadata semantically correct without changing runtime behaviour.
-2. **β1.b node-red** — implement true native OIDC via passport
-   strategy (~2 hr).
-3. **β1.c metabase verification spike** — 30 min; promote to β1
-   target if OSS supports it, else mark "stay proxy" with reasoning.
-4. **β1.a firefly** — research, then either implement true OIDC OR
-   reclassify as `header_oidc` per #1.
-5. **Defer to backlog:** uptime-kuma (await v2 stable), puter (write
-   plugin), wing (Wing 2.0).
+## Permanently proxy (no semantic basis for native OIDC)
 
-## Doctrine update needed
+These services have no per-user state worth provisioning. The current
+proxy-auth gate IS the right answer.
 
-`CLAUDE.md` currently has a binary "Native OIDC vs Proxy auth" split.
-β survey shows three real buckets:
+- **kiwix** — static content reader
+- **mailpit** — dev SMTP capture
+- **onlyoffice** — B2B JWT (DocServer is a render backend, not an end-user app)
+- **spacetimedb** — DB binary protocol, no UI
+- **influxdb (OSS)** — Enterprise-gated, not policy decision (could move if licensing pivots)
+- **qdrant** — vector DB, no per-user state
 
-- **`native_oidc`** — service consumes OIDC at app level (oauth2 / OIDC client)
-- **`header_oidc`** — proxy outpost forwards trusted headers (user
-  auto-provisioned in the service, but no OIDC client inside service)
-- **`forward_auth`** — pure access gate, no per-user state in service
-
-Today only the first two grant true SSO; the third grants access
-control. Updating CLAUDE.md to surface the trichotomy is a D1.4 follow-up.
+For these, document the reason in the plugin manifest's
+`_NOS_PROXY_REASON` sentinel so future audits don't try to "fix" them.
