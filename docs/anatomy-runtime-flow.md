@@ -354,8 +354,8 @@ If you have 30 minutes, read these in order:
    pulse_runs roundtrip.
 4. `files/anatomy/agents/conductor.yml` — system prompt, capabilities,
    Pulse job declaration.
-5. `docs/agent-operable-nos.md` — the doctrine that frames why all the
-   above exists.
+5. `docs/ait-runtime-architecture.md` — the AIT / AgentKit runtime
+   architecture that frames why all the above exists.
 
 If you only have 5 minutes, read this file. If you only have 1 minute,
 read the TL;DR at the top.
