@@ -2082,6 +2082,26 @@ infisical_disable_signup: true                     # Admin creates all users
 infisical_org_name: "nOS"
 infisical_seed_enabled: "{{ install_infisical | default(false) | bool }}"
 
+# ── Invite-flow Cesta B Hybrid (A18, 2026-05-20) ──────────────────────────
+# Wing's UsersPresenter::actionInviteCreate optionally pushes per-user
+# credentials to Infisical (folder under /users/<name>/) AND provisions
+# a Stalwart mailbox via JMAP after the Authentik invitation lands.
+# See docs/invite-provisioning.md for the full contract.
+#
+# Off by default — flip true once Infisical is seeded AND Stalwart is
+# running. Each downstream is independently isConfigured()-gated, so the
+# extension degrades gracefully if either piece isn't live.
+nos_invite_provisioning_enabled: false
+# The Infisical project ID that holds per-user folders. Empty by default;
+# operator fills in after first install by either:
+#   • Running `infisical projects list` and copying the UUID for slug
+#     "nos-users" (auto-created by the seed.py run), OR
+#   • Adding a per-host override in config.yml.
+# When empty, Wing skips Infisical writes (Stalwart provisioning still
+# runs if STALWART_ADMIN_PASSWORD is set).
+infisical_users_project_id: ""
+infisical_users_environment: "prod"
+
 nos_infisical_projects:
   - slug: nos-platform
     name: "nOS Platform"
@@ -2092,6 +2112,11 @@ nos_infisical_projects:
       VAULTWARDEN_ADMIN_TOKEN: "{{ vaultwarden_admin_token | default('') }}"
       PAPERCLIP_AUTH_SECRET: "{{ paperclip_auth_secret | default('') }}"
       ACME_CLOUDFLARE_API_TOKEN: "{{ acme_cloudflare_api_token | default('') }}"
+
+  - slug: nos-users
+    name: "nOS Users"
+    description: "Per-user credentials provisioned by the Wing invite flow (Cesta B, A18)."
+    secrets: {}                # Wing writes children dynamically under /users/<name>/
 
   - slug: nos-databases
     name: "nOS Databases"
