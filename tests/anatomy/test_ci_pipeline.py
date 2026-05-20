@@ -22,12 +22,12 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
 def test_woodpecker_yml_present():
-	p = REPO / ".woodpecker.yml"
+	p = REPO / ".woodpecker/tests.yml"
 	assert p.is_file(), ".woodpecker.yml missing"
 
 
 def test_woodpecker_yml_parses_as_yaml():
-	data = yaml.safe_load((REPO / ".woodpecker.yml").read_text())
+	data = yaml.safe_load((REPO / ".woodpecker/tests.yml").read_text())
 	assert isinstance(data, dict)
 	assert "steps" in data, "pipeline missing 'steps' top-level key"
 
@@ -37,7 +37,7 @@ def test_woodpecker_pipeline_carries_required_test_steps():
 	validate, php -l, pytest, ansible syntax) on every push. Missing
 	one of these is the difference between "CI green" and "actually
 	tested" — pin it here so a future PR can't quietly drop a step."""
-	data = yaml.safe_load((REPO / ".woodpecker.yml").read_text())
+	data = yaml.safe_load((REPO / ".woodpecker/tests.yml").read_text())
 	steps = data["steps"]
 	required = {"composer-validate", "php-lint", "pytest-anatomy", "ansible-syntax"}
 	missing = required - set(steps.keys())
@@ -45,7 +45,7 @@ def test_woodpecker_pipeline_carries_required_test_steps():
 
 
 def test_pytest_step_runs_anatomy_tests():
-	data = yaml.safe_load((REPO / ".woodpecker.yml").read_text())
+	data = yaml.safe_load((REPO / ".woodpecker/tests.yml").read_text())
 	step = data["steps"]["pytest-anatomy"]
 	cmds = "\n".join(step.get("commands", []))
 	assert "tests/anatomy/" in cmds
@@ -55,7 +55,7 @@ def test_ansible_syntax_step_uses_pinned_floor():
 	"""ansible-core floor MUST match requirements.yml (2.20.x today).
 	A pipeline running 2.18 against a playbook tested on 2.20 would
 	produce false-negatives."""
-	data = yaml.safe_load((REPO / ".woodpecker.yml").read_text())
+	data = yaml.safe_load((REPO / ".woodpecker/tests.yml").read_text())
 	step = data["steps"]["ansible-syntax"]
 	cmds = "\n".join(step.get("commands", []))
 	assert "ansible-core" in cmds

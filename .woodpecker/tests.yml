@@ -67,58 +67,9 @@ steps:
       - ansible-galaxy collection install -r requirements.yml
       - ansible-playbook main.yml --syntax-check
 
-  # notify-green removed 2026-05-20 — Woodpecker v3 resolves from_secret at
-  # parse time, so missing secrets fail the WHOLE pipeline before any step
-  # runs. Re-add as a separate workflow file (.woodpecker/notify.yml) once
-  # the `wing_api_token` + `wing_api_url` secrets are provisioned via the
-  # Woodpecker UI (Repo Settings → Secrets, restrict to dev+pzny branches).
-
-  # ── A17 deploy-trigger (auto-deploy to host on dev push) ───────────────
-  # Fires after all test stages succeed AND only on dev branch (master is
-  # always operator-manual; pzny pushes don't reach this pipeline since
-  # they don't hit GitHub). Computes which tags to deploy from the
-  # commit message footer `deploy-tags: a,b,c` — empty = skip deploy.
-  # Wing's /api/v1/deploy-trigger enforces a strict tag allowlist; a
-  # malformed footer that lists a non-allowlisted tag returns 403 and
-  # the deploy step fails — pipeline reports failure to operator.
-  deploy-trigger:
-    image: curlimages/curl:latest
-    pull: true
-    when:
-      - event: push
-        branch: dev
-    environment:
-      WING_DEPLOY_URL:
-        from_secret: wing_deploy_url
-      NOS_DEPLOY_HMAC_SECRET:
-        from_secret: nos_deploy_hmac_secret
-    commands:
-      - |
-        # Extract `deploy-tags:` footer line. Empty → no deploy.
-        TAGS=$(printf '%s' "$$CI_COMMIT_MESSAGE" | grep -m1 -oE 'deploy-tags:[ ]*[a-z0-9_,-]+' | sed -E 's/^deploy-tags:[ ]*//' | tr -d ' ' || true)
-        if [ -z "$$TAGS" ]; then
-          echo "no deploy-tags footer in commit message — skipping auto-deploy"
-          exit 0
-        fi
-        DEPLOY_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || apk add --no-cache util-linux >/dev/null 2>&1 && uuidgen)
-        TS=$(date +%s)
-        # Build canonical-JSON body (alphabetically sorted keys, no whitespace).
-        BODY=$(printf '{"branch":"%s","commit":"%s","deploy_uuid":"%s","source":"woodpecker","tags":[%s],"ts":%s}' \
-          "$$CI_COMMIT_BRANCH" "$$CI_COMMIT_SHA" "$$DEPLOY_UUID" \
-          "$(echo "$$TAGS" | tr ',' '\n' | awk '{printf "%s\"%s\"", (NR>1?",":""), $$0}')" \
-          "$$TS")
-        SIG=$(printf '%s.%s' "$$TS" "$$BODY" | openssl dgst -sha256 -hmac "$$NOS_DEPLOY_HMAC_SECRET" -hex | awk '{print $$NF}')
-        echo "→ POST $$WING_DEPLOY_URL  deploy_uuid=$$DEPLOY_UUID tags=$$TAGS"
-        HTTP_CODE=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
-          -X POST \
-          -H 'Content-Type: application/json' \
-          -H "X-Wing-Timestamp: $$TS" \
-          -H "X-Wing-Signature: $$SIG" \
-          --data "$$BODY" \
-          "$$WING_DEPLOY_URL")
-        echo "HTTP $$HTTP_CODE"
-        cat /tmp/resp.json
-        case "$$HTTP_CODE" in
-          202) echo "→ deploy spawned on host (subprocess detached)" ;;
-          *) echo "→ deploy refused"; exit 1 ;;
-        esac
+  # notify-green + deploy-trigger live in separate workflow files
+  # (.woodpecker/notify.yml, .woodpecker/deploy.yml). Woodpecker v3
+  # resolves `from_secret` at parse time, so a missing secret would
+  # fail the WHOLE pipeline. Splitting into per-workflow files isolates
+  # the failure to that workflow — tests stay green even if secrets
+  # haven't been provisioned yet.

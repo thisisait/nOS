@@ -26,7 +26,7 @@ import subprocess
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/DeployTriggerPresenter.php"
 WRAPPER = REPO / "tools/deploy-from-ci.sh"
-WOODPECKER = REPO / ".woodpecker.yml"
+WOODPECKER = REPO / ".woodpecker/deploy.yml"
 
 
 # ── Wing presenter ──────────────────────────────────────────────────────

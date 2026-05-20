@@ -1,0 +1,80 @@
+# nOS — Woodpecker deploy workflow (Anatomy A17, 2026-05-20)
+#
+# Fires after a green test workflow on the dev branch ONLY. Reads the
+# commit message footer `deploy-tags: a,b,c` and POSTs an HMAC-signed
+# request to Wing /api/v1/deploy-trigger. Wing validates + spawns
+# `ansible-playbook --tags <tags>` as a detached subprocess; completion
+# notification lands in Wing /inbox.
+#
+# Required Woodpecker secrets (Repo Settings → Secrets, restrict to
+# `events: push` so PR pipelines from forks can't read them):
+#   * wing_deploy_url        — https://wing.<tld>/api/v1/deploy-trigger
+#   * nos_deploy_hmac_secret — matching NOS_DEPLOY_HMAC_SECRET env on Wing
+#
+# If either secret is missing, ONLY this workflow fails to parse — the
+# test workflow (.woodpecker/tests.yml) is unaffected. That's the whole
+# reason we split it out.
+#
+# `depends_on: [tests]` makes deploy wait for the test workflow to
+# complete; combined with `runs_on: [success]`, deploy only fires when
+# tests are green.
+
+when:
+  - event: push
+    branch: dev
+
+depends_on:
+  - tests
+
+runs_on:
+  - success
+
+steps:
+  deploy-trigger:
+    image: curlimages/curl:latest
+    pull: true
+    environment:
+      WING_DEPLOY_URL:
+        from_secret: wing_deploy_url
+      NOS_DEPLOY_HMAC_SECRET:
+        from_secret: nos_deploy_hmac_secret
+    commands:
+      - |
+        set -eu
+        # Extract `deploy-tags:` footer line. Empty → no deploy.
+        TAGS=$(printf '%s' "$$CI_COMMIT_MESSAGE" \
+          | grep -m1 -oE 'deploy-tags:[ ]*[a-z0-9_,-]+' \
+          | sed -E 's/^deploy-tags:[ ]*//' \
+          | tr -d ' ' || true)
+        if [ -z "$${TAGS:-}" ]; then
+          echo "no deploy-tags footer in commit message — skipping auto-deploy"
+          exit 0
+        fi
+        DEPLOY_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null \
+          || { apk add --no-cache util-linux >/dev/null 2>&1; uuidgen; })
+        TS=$(date +%s)
+        # Canonical JSON: alphabetically sorted keys, no whitespace.
+        TAGS_JSON=$(printf '%s' "$$TAGS" \
+          | tr ',' '\n' \
+          | awk '{printf "%s\"%s\"", (NR>1?",":""), $$0}')
+        BODY=$(printf '{"branch":"%s","commit":"%s","deploy_uuid":"%s","source":"woodpecker","tags":[%s],"ts":%s}' \
+          "$$CI_COMMIT_BRANCH" "$$CI_COMMIT_SHA" "$$DEPLOY_UUID" \
+          "$$TAGS_JSON" "$$TS")
+        SIG=$(printf '%s.%s' "$$TS" "$$BODY" \
+          | openssl dgst -sha256 -hmac "$$NOS_DEPLOY_HMAC_SECRET" -hex \
+          | awk '{print $$NF}')
+        echo "→ POST $$WING_DEPLOY_URL  deploy_uuid=$$DEPLOY_UUID tags=$$TAGS"
+        HTTP_CODE=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
+          --max-time 10 \
+          -X POST \
+          -H 'Content-Type: application/json' \
+          -H "X-Wing-Timestamp: $$TS" \
+          -H "X-Wing-Signature: $$SIG" \
+          --data "$$BODY" \
+          "$$WING_DEPLOY_URL" || echo "000")
+        echo "HTTP $$HTTP_CODE"
+        cat /tmp/resp.json 2>/dev/null || true
+        case "$$HTTP_CODE" in
+          202) echo "→ deploy spawned on host (subprocess detached)" ;;
+          *)   echo "→ deploy refused (HTTP $$HTTP_CODE)"; exit 1 ;;
+        esac
