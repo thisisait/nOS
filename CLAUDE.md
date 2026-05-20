@@ -332,6 +332,7 @@ Closed epics, archived here so future archaeology has a starting point. Authorit
 - **A15 Users + Invitations console** (2026-05-15+) — operator-facing /users page; `AUTHENTIK_BOOTSTRAP_TOKEN` env in `roles/pazny.wing/templates/wing.plist.j2`.
 - **A16 Woodpecker CI autowiring** (2026-05-17) — Gitea repo creation + Woodpecker activation are playbook-managed.
 - **A17 Stack-up tags + nos-push + deploy-trigger + Wing daemon hardening** (2026-05-20) — see commits `5c16a05..d87efef`.
+- **A18 Invite-flow Cesta B (Infisical + Stalwart)** (2026-05-20) — `UsersPresenter::actionInviteCreate` optionally provisions per-user credentials into Infisical (`/users/<name>/`) and a Stalwart mailbox via JMAP after the Authentik invitation lands. Bundles Stalwart v0.11.8 → v0.16.6 upgrade (REST → JMAP API). See `docs/invite-provisioning.md`.
 
 ## AIT — AgentKit runtime (Anatomy A14, 2026-05-07)
 
