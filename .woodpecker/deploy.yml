@@ -22,12 +22,10 @@
 when:
   - event: push
     branch: dev
+    status: [success]
 
 depends_on:
   - tests
-
-runs_on:
-  - success
 
 steps:
   deploy-trigger:
