@@ -483,15 +483,39 @@
       # forces launchd to re-read the env block. See bone/handlers/main.yml
       # for the canonical write-up + the live remediator-surfaced 2026-05-17
       # incident that motivated the fix.
+      # A17 (2026-05-20): post-bootstrap health probe — fail-loud if the
+      # daemon doesn't bind {{ wing_port }} within ~10s. Pre-A17 a silent
+      # bootstrap failure was hidden by `failed_when: false`; surfaced
+      # 2026-05-18 when wing.pazny.eu was 502 despite a green playbook.
       ansible.builtin.shell: |
         LABEL="{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
         PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
         UID_NUM=$(id -u)
+        WING_PORT="{{ wing_port | default(9000) }}"
         launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
         sleep 1
         launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        # Probe for daemon liveness — any HTTP response (incl. 401/403)
+        # proves the daemon is bound. Up to 20×0.5s before giving up.
+        for i in $(seq 1 20); do
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 1 \
+                 "http://127.0.0.1:${WING_PORT}/" 2>/dev/null || echo "000")
+          if [ "$code" != "000" ]; then
+            echo "wing daemon up after ${i} probes (HTTP $code)"
+            exit 0
+          fi
+          sleep 0.5
+        done
+        echo "FAIL: wing daemon did not bind ${WING_PORT} within 10s after bootstrap"
+        echo "=== launchctl print ==="
+        launchctl print "gui/${UID_NUM}/${LABEL}" 2>&1 \
+          | grep -E "state |last exit code|stderr path|pid" | head -8 || true
+        echo "=== launchd.err.log tail ==="
+        tail -15 "{{ wing_log_dir | default((wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')) + '/log') }}/launchd.err.log" 2>/dev/null || echo "(no err log)"
+        exit 1
       changed_when: true
-      failed_when: false
+      # failed_when intentionally NOT set — A17 surfaces dead daemons
+      # via non-zero exit; pre-A17 `failed_when: false` was the bug.
 
     - name: Restart mariadb
       ansible.builtin.shell: >
