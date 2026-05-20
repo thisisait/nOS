@@ -45,7 +45,9 @@ steps:
       - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests
       # Install pulse as editable so its package imports resolve in test
       - pip install --quiet --no-cache-dir -e files/anatomy/pulse
-      - python -m pytest tests/anatomy/ -q --tb=short
+      # -rA summary lists FAIL/SKIP/ERROR at the very end so even a
+      # truncated CI log still reports the critical info.
+      - python -m pytest tests/anatomy/ --tb=long -rA
 
   ansible-syntax:
     image: python:3.13-slim
