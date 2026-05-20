@@ -33,9 +33,9 @@ services:
       # webadmin UI + OIDC callback paths. Traefik fronts the same host.
       STALWART_PUBLIC_URL: "https://{{ stalwart_domain }}"
     volumes:
-      # v0.16 layout — config + data are two top-level dirs (was 3 under
-      # /opt/stalwart-mail/ in v0.11). Host paths kept under stalwart_data_dir
-      # for blank-reset symmetry.
+      # v0.16 layout — config + data are two top-level dirs (was 3 dirs
+      # under a single tree pre-rewrite). Host paths kept under
+      # stalwart_data_dir for blank-reset symmetry.
       - {{ stalwart_data_dir }}/etc:/etc/stalwart
       - {{ stalwart_data_dir }}/var:/var/lib/stalwart
 {% if not (tenant_domain_is_local | default(true) | bool) %}
