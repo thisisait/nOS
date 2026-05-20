@@ -53,30 +53,8 @@ steps:
       - ansible-galaxy collection install --upgrade community.general community.docker community.mysql ansible.posix
       - ansible-playbook main.yml --syntax-check
 
-  notify-green:
-    image: curlimages/curl:latest
-    pull: true
-    when:
-      - event: push
-        branch:
-          - dev
-          - pzny
-    commands:
-      - |
-        if [ -z "$$WING_API_TOKEN" ]; then
-          echo "wing_api_token secret not configured — skipping notify"
-          exit 0
-        fi
-        BODY=$(printf '{"severity":"info","title":"CI green: %s","body":"commit %s\\nauthor: %s\\n%s","channels":["wing-inbox"]}' \
-          "$$CI_COMMIT_BRANCH" "$$CI_COMMIT_SHA" "$$CI_COMMIT_AUTHOR" "$$CI_COMMIT_MESSAGE")
-        curl -sf -X POST \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $$WING_API_TOKEN" \
-          --data "$$BODY" \
-          "$$WING_API_URL/api/v1/notifications" \
-          || echo "notify failed (non-fatal)"
-    environment:
-      WING_API_URL:
-        from_secret: wing_api_url
-      WING_API_TOKEN:
-        from_secret: wing_api_token
+  # notify-green removed 2026-05-20 — Woodpecker v3 resolves from_secret at
+  # parse time, so missing secrets fail the WHOLE pipeline before any step
+  # runs. Re-add as a separate workflow file (.woodpecker/notify.yml) once
+  # the `wing_api_token` + `wing_api_url` secrets are provisioned via the
+  # Woodpecker UI (Repo Settings → Secrets, restrict to dev+pzny branches).
