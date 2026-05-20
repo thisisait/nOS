@@ -215,6 +215,15 @@
 # Same pattern as A3a Bone + A4 Pulse. `launchctl print` returns 0 when the
 # job is registered; if so, kickstart -k for graceful restart on plist change.
 # Otherwise, bootstrap the agent into the user's launchd domain.
+#
+# A17 (2026-05-20) hardening: post-bootstrap health probe with fail-loud
+# diagnostic. Pre-A17 the bootstrap was `failed_when: false` so a
+# plist syntax error / port conflict / missing dep silently left the
+# daemon down — surfaced live 2026-05-18 when wing.pazny.eu was 502
+# despite green playbook run. New behavior: probe `http://127.0.0.1:
+# {{ wing_port }}/` 20× with 0.5s intervals; if all 20 fail, dump
+# `launchctl print` output to the playbook log AND fail the play.
+# Operators see the root cause immediately, not 2 days later.
 
 - name: "[pazny.wing] Bootstrap launchd job (idempotent)"
   ansible.builtin.shell: |
@@ -228,6 +237,48 @@
   register: _wing_launchd_bootstrap
   changed_when: true
   failed_when: false
+
+- name: "[pazny.wing] Wait for daemon to bind {{ wing_port }} (health probe)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port }}/"
+    method: GET
+    status_code: [200, 301, 302, 401, 403]  # any sign of life — auth-gated paths return 401/403
+    timeout: 2
+  register: _wing_post_bootstrap_probe
+  retries: 20
+  delay: 1
+  until: _wing_post_bootstrap_probe.status | default(0) | int > 0
+  failed_when: false
+
+- name: "[pazny.wing] Diagnose dead daemon (only if probe never landed)"
+  ansible.builtin.shell: |
+    UID_NUM=$(id -u)
+    echo "=== launchctl print ==="
+    launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" 2>&1 | grep -E "state |last exit code|stdout|stderr|pid" | head -10 || true
+    echo ""
+    echo "=== last 20 lines of launchd.err.log ==="
+    tail -20 "{{ wing_log_dir }}/launchd.err.log" 2>/dev/null || echo "(no stderr log)"
+    echo ""
+    echo "=== port {{ wing_port }} listener ==="
+    lsof -nP -iTCP:{{ wing_port }} -sTCP:LISTEN 2>&1 | head -5 || echo "(port not bound)"
+  register: _wing_diagnose
+  changed_when: false
+  when: _wing_post_bootstrap_probe.status | default(0) | int == 0
+
+- name: "[pazny.wing] Fail-loud if daemon never came up"
+  ansible.builtin.fail:
+    msg: |
+      Wing daemon did not bind 127.0.0.1:{{ wing_port }} within 20 seconds
+      after launchctl bootstrap. Diagnostic:
+      {{ _wing_diagnose.stdout | default('(diagnose task skipped)') }}
+
+      Common causes:
+        - plist syntax error (validate with `plutil -lint`)
+        - port {{ wing_port }} already bound by another process
+        - FrankenPHP missing / wrong path (check {{ frankenphp_bin }})
+        - app/Bootstrap.php composer autoload failure (check
+          {{ wing_log_dir }}/launchd.err.log for fatal PHP errors)
+  when: _wing_post_bootstrap_probe.status | default(0) | int == 0
 
 - name: "[pazny.wing] Setup summary"
   ansible.builtin.debug:
