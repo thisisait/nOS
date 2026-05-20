@@ -78,6 +78,23 @@ def test_infisical_client_validates_username():
 	)
 
 
+def test_infisical_client_rejects_consecutive_dots():
+	"""Security review C5 (2026-05-20): the character-class regex alone
+	allows `a..b` — could collide with downstream consumers that path-
+	canonicalize `..` as parent traversal. Reject outright."""
+	src = INFISICAL.read_text()
+	assert "str_contains($username, '..')" in src
+
+
+def test_infisical_client_validates_tenant():
+	"""Security review C3 (2026-05-20): tenant goes into the secret path
+	(`/users/<tenant>/<username>`), so a malicious tenant slug like
+	`../escape` would be a path-injection vector. Tighten matching the
+	presenter's tenant regex."""
+	src = INFISICAL.read_text()
+	assert "assertTenantSafe" in src
+
+
 def test_infisical_client_three_public_methods():
 	"""Surface must stay small: createUserFolder, upsertSecret,
 	listUserSecrets, isConfigured. Adding more risks turning this into a
@@ -88,6 +105,29 @@ def test_infisical_client_three_public_methods():
 	assert set(publics) - {"__construct"} == {
 		"isConfigured", "createUserFolder", "upsertSecret", "listUserSecrets",
 	}, f"unexpected public methods: {publics}"
+
+
+def test_infisical_client_methods_take_tenant_param():
+	"""Security review C3: path is `/users/<tenant>/<username>` — every
+	write method must accept tenant as the first arg so cross-tenant
+	collision is impossible by construction."""
+	src = INFISICAL.read_text()
+	assert "public function createUserFolder(string $tenant, string $username)" in src
+	assert "public function upsertSecret(string $tenant, string $username, string $key, string $value)" in src
+	assert "public function listUserSecrets(string $tenant, string $username)" in src
+
+
+def test_infisical_client_suppresses_response_body_in_exceptions():
+	"""Security review C6: raw response body fragments must NOT propagate
+	into RuntimeException messages — they can include peer-tenant
+	metadata or other users' secret names that would flow into Wing's
+	/events row + launchd.err.log."""
+	src = INFISICAL.read_text()
+	# Must NOT include `substr((string) $raw, 0, 500)` in any error path.
+	assert "substr((string) $raw, 0, 500)" not in src
+	# Must reference the redacted-body marker so future PRs that re-add
+	# raw bodies fail this gate visibly.
+	assert "body suppressed" in src
 
 
 # ── Wing PHP — StalwartProvisioner ──────────────────────────────────────
@@ -145,6 +185,28 @@ def test_stalwart_provisioner_validates_password_min_length():
 	assert "strlen($password) < 12" in src
 
 
+def test_stalwart_provisioner_rejects_consecutive_dots():
+	"""Security review C5: RFC 5321 forbids `..` in local-part anyway,
+	and downstream consumers could canonicalize as parent traversal."""
+	src = STALWART.read_text()
+	assert "str_contains($local, '..')" in src
+
+
+def test_stalwart_provisioner_suppresses_response_body():
+	"""Security review C6: Stalwart's notCreated response echoes the
+	existing principal's `name` — leaking peer-user emails into Wing
+	logs. Sanitize."""
+	src = STALWART.read_text()
+	# Raw response slice must NOT be in any error path.
+	assert "substr((string) $raw, 0, 500)" not in src
+	# notCreated path must use the calibrated `reason=<type>` form
+	# rather than echoing the whole error object.
+	assert "reason=" in src
+	# Must reject any free-form error type — only allow the canonical
+	# alphabetic slug.
+	assert "preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/'" in src
+
+
 # ── UsersPresenter wiring ────────────────────────────────────────────────
 
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/UsersPresenter.php"
@@ -200,6 +262,65 @@ def test_users_presenter_emits_provisioned_event():
 	"""user_invitation_provisioned event is the audit-trail join point."""
 	src = PRESENTER.read_text()
 	assert "'user_invitation_provisioned'" in src
+
+
+def test_users_presenter_idempotency_preflight():
+	"""Security review C4: before provisioning, query Infisical for
+	existing user secrets — if any are present, this is a re-invite and
+	we must skip the whole block (otherwise we generate a new password
+	that orphans the existing Stalwart mailbox)."""
+	src = PRESENTER.read_text()
+	# Must call listUserSecrets before the create/upsert pair.
+	assert "listUserSecrets($tenant, $localPart)" in src
+	# Must emit the dedicated skip event on re-invite.
+	assert "'user_invitation_provisioning_skipped'" in src
+	# `already_provisioned` must be the skip reason slug.
+	assert "'already_provisioned'" in src
+
+
+def test_users_presenter_namespaces_by_tenant():
+	"""Security review C3: Infisical paths are `/users/<tenant>/<user>/`,
+	never the old flat `/users/<user>/`. Every call site must pass
+	$tenant explicitly so cross-tenant collision is impossible."""
+	src = PRESENTER.read_text()
+	# All three Infisical calls must pass $tenant as the first arg.
+	assert "createUserFolder($tenant, $localPart)" in src
+	assert "upsertSecret($tenant, $localPart, 'mailbox_password'" in src
+
+
+def test_users_presenter_uses_tenant_domain_env_for_mailbox():
+	"""Security review C7: the Stalwart mailbox domain MUST come from
+	the operator's configured mail domain (TENANT_DOMAIN env), NOT from
+	email_hint's @-suffix — email_hint is just where the operator might
+	forward the enrollment URL to (gmail.com etc.), the mailbox itself
+	lives on the local mail domain."""
+	src = PRESENTER.read_text()
+	# Must read TENANT_DOMAIN, not split email_hint's domain part.
+	assert "getenv('TENANT_DOMAIN')" in src
+	# Must pass that var to createMailbox, not `$domain` from email_hint.
+	assert "$this->stalwart->createMailbox(" in src
+	# The old buggy pattern (using email-hint domain) must be gone.
+	# Confirm the call site reads $mailboxDomain (the env-sourced one).
+	assert "$mailboxDomain" in src
+
+
+def test_users_presenter_sanitizes_error_messages():
+	"""Security review C6: even though the underlying clients redact,
+	defense-in-depth strips any non-whitelisted chars from the error
+	messages before stashing them in provisioning_json / events row."""
+	src = PRESENTER.read_text()
+	assert "sanitizeErrorMessage" in src
+	# The whitelist must allow only printable safe chars; anything else
+	# collapses to a generic placeholder.
+	assert "preg_replace" in src
+	assert "(redacted)" in src
+
+
+def test_users_presenter_no_localpart_dot_dot():
+	"""Local-part with `..` is rejected at the presenter level too, so
+	the InfisicalClient/StalwartProvisioner regexes are belt-and-suspenders."""
+	src = PRESENTER.read_text()
+	assert "str_contains($localPart, '..')" in src
 
 
 # ── Schema + idempotent ALTER ────────────────────────────────────────────
@@ -316,6 +437,47 @@ def test_stalwart_compose_uses_v016_env_vars():
 	assert "STALWART_PUBLIC_URL" in src
 	assert "MAIL_ADMIN_USER" not in src
 	assert "MAIL_ADMIN_PASS" not in src
+
+
+def test_stalwart_compose_traefik_route_scoped_to_admin_path():
+	"""Security review C2 (2026-05-20): the public Traefik router must
+	carry `PathPrefix(/admin)` so the JMAP management endpoint stays
+	internal-only. Without this, forward-auth gates ACCESS only — any
+	Tier-4 guest (Kiwix/Jellyfin user) lands on /jmap with a valid
+	Authentik session and can brute-force the admin Basic-auth at HTTP
+	speed. Wing reaches /jmap via 127.0.0.1:<stalwart_port_admin>,
+	never publicly."""
+	src = (REPO / "roles/pazny.smtp_stalwart/templates/compose.yml.j2").read_text()
+	# The route rule must include the admin-path scope alongside Host(...).
+	assert "PathPrefix(`/admin`)" in src
+	# And the Host alone (no path constraint) must NOT match — that
+	# would defeat the whole point.
+	m = re.search(
+		r"routers\.smtp-stalwart-webadmin\.rule=Host\([^)]+\)(\s*&&\s*PathPrefix\(`[^`]+`\))?",
+		src,
+	)
+	assert m and m.group(1), \
+		"Stalwart webadmin route must combine Host() with a PathPrefix() — Host-only exposes /jmap publicly"
+
+
+def test_anatomy_plist_files_locked_to_0600():
+	"""Security review C1 (2026-05-20): Wing / Bone / Pulse plists embed
+	admin tokens (Infisical, Stalwart, Authentik bootstrap, Bone HMAC,
+	deploy HMAC). 0644 lets any peer process (Spotlight, backup agents,
+	other launchd jobs, Full-Disk-Access apps) read the whole credential
+	surface. Pin 0600 for all three so a regression is loud."""
+	for role in ("wing", "bone", "pulse"):
+		main_yml = REPO / f"roles/pazny.{role}/tasks/main.yml"
+		src = main_yml.read_text()
+		# Find the launchd-plist render task and confirm its mode.
+		m = re.search(
+			r"src:\s*" + role + r"\.plist\.j2.*?mode:\s*'(\d+)'",
+			src,
+			re.DOTALL,
+		)
+		assert m, f"pazny.{role}/tasks/main.yml: launchd plist render task not found or has no mode"
+		assert m.group(1) == "0600", \
+			f"pazny.{role}/tasks/main.yml: plist mode must be 0600 (got {m.group(1)})"
 
 
 def test_stalwart_compose_uses_v016_volume_layout():

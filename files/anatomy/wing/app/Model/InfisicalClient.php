@@ -30,21 +30,22 @@ use RuntimeException;
  *     Mixing the two would either widen the agent-runtime auth or leave
  *     the presenter without write reach.
  *
- * Path layout for per-user credentials:
+ * Path layout for per-user credentials (tenant-scoped to prevent cross-
+ * tenant credential collision — security review 2026-05-20):
  *
- *     <project> / <environment> / users / <username> / <secret_key>
+ *     <project> / <environment> / users / <tenant> / <username> / <secret_key>
  *
  * Examples:
  *
- *     /users/alice/mailbox_password
- *     /users/alice/bsky_handle           (future)
- *     /users/alice/service_xyz_token     (future)
+ *     /users/default/alice/mailbox_password
+ *     /users/tenant-a/alice/mailbox_password        (different user, different tenant)
+ *     /users/default/alice/bsky_handle              (future)
  *
  * Scope (intentionally small — grows when the invite flow needs more):
- *   * createUserFolder(username)   — POST /api/v2/folders (idempotent)
- *   * upsertSecret(user, key, val) — POST /api/v3/secrets/raw/<key> +
- *                                    PATCH fallback (mirrors seed.py)
- *   * listUserSecrets(username)    — GET /api/v3/secrets/raw?secretPath=...
+ *   * createUserFolder(tenant, user)        — POST /api/v2/folders (idempotent)
+ *   * upsertSecret(tenant, user, key, val)  — POST /api/v3/secrets/raw/<key> +
+ *                                              PATCH fallback (mirrors seed.py)
+ *   * listUserSecrets(tenant, user)         — GET /api/v3/secrets/raw?secretPath=...
  *
  * Graceful degradation: when isConfigured() == false (token missing or
  * project not set), every method throws RuntimeException with a calibrated
@@ -88,39 +89,38 @@ final class InfisicalClient
 	// ── Writes ───────────────────────────────────────────────────────────
 
 	/**
-	 * Ensure a `/users/<username>` folder exists inside the configured
-	 * project + environment. Idempotent: returns silently if the folder
-	 * already exists (Infisical returns HTTP 200 with the existing folder
-	 * on duplicate create).
-	 *
-	 * Parent `/users` folder is also auto-created on first invite.
+	 * Ensure a `/users/<tenant>/<username>` folder exists inside the
+	 * configured project + environment. Idempotent: returns silently if
+	 * the folder already exists. Lazily creates the parent path
+	 * (`/users` → `/users/<tenant>`) on first invite per tenant.
 	 */
-	public function createUserFolder(string $username): void
+	public function createUserFolder(string $tenant, string $username): void
 	{
 		$this->assertConfigured();
+		$this->assertTenantSafe($tenant);
 		$this->assertUsernameSafe($username);
 
-		// Step 1: ensure /users parent exists. The seeder doesn't create it;
-		// we do it lazily here to keep the surface idempotent.
+		// Step 1: /users parent.
 		$this->createFolderIfMissing(self::USERS_FOLDER, '/');
-
-		// Step 2: create /users/<username>.
-		$this->createFolderIfMissing($username, '/' . self::USERS_FOLDER);
+		// Step 2: /users/<tenant>.
+		$this->createFolderIfMissing($tenant, '/' . self::USERS_FOLDER);
+		// Step 3: /users/<tenant>/<username>.
+		$this->createFolderIfMissing($username, '/' . self::USERS_FOLDER . '/' . $tenant);
 	}
 
 	/**
-	 * Write (or overwrite) a secret at `/users/<username>/<key>`.
+	 * Write (or overwrite) a secret at `/users/<tenant>/<username>/<key>`.
 	 * Mirrors seed.py's upsert pattern: POST first; on 4xx (already
-	 * exists), PATCH the existing value. Returns the final secret value
-	 * the API echoed back.
+	 * exists), PATCH the existing value.
 	 */
-	public function upsertSecret(string $username, string $key, string $value): void
+	public function upsertSecret(string $tenant, string $username, string $key, string $value): void
 	{
 		$this->assertConfigured();
+		$this->assertTenantSafe($tenant);
 		$this->assertUsernameSafe($username);
 		$this->assertSecretKeySafe($key);
 
-		$path = '/' . self::USERS_FOLDER . '/' . $username;
+		$path = $this->userPath($tenant, $username);
 		$body = [
 			'workspaceId' => $this->projectId,
 			'environment' => $this->environment,
@@ -139,19 +139,24 @@ final class InfisicalClient
 	// ── Reads ────────────────────────────────────────────────────────────
 
 	/**
-	 * List secret keys present under `/users/<username>/`. Does NOT return
-	 * values — the UI shows the operator which credentials have been
-	 * provisioned, but the actual values are fetched via the Infisical
-	 * webadmin or CLI (operator-only consumption path).
+	 * List secret keys present under `/users/<tenant>/<username>/`. Does
+	 * NOT return values — the UI shows the operator which credentials
+	 * have been provisioned, but the actual values are fetched via the
+	 * Infisical webadmin or CLI (operator-only consumption path). Used
+	 * for the invite-flow idempotency preflight: if any secrets exist
+	 * already, the operator is re-inviting and we skip the whole
+	 * provisioning block (avoids password drift between Infisical and
+	 * Stalwart).
 	 *
 	 * @return list<string> secret key names
 	 */
-	public function listUserSecrets(string $username): array
+	public function listUserSecrets(string $tenant, string $username): array
 	{
 		$this->assertConfigured();
+		$this->assertTenantSafe($tenant);
 		$this->assertUsernameSafe($username);
 
-		$path = '/' . self::USERS_FOLDER . '/' . $username;
+		$path = $this->userPath($tenant, $username);
 		$query = http_build_query([
 			'workspaceId' => $this->projectId,
 			'environment' => $this->environment,
@@ -170,6 +175,11 @@ final class InfisicalClient
 			}
 		}
 		return $keys;
+	}
+
+	private function userPath(string $tenant, string $username): string
+	{
+		return '/' . self::USERS_FOLDER . '/' . $tenant . '/' . $username;
 	}
 
 	// ── Internals ────────────────────────────────────────────────────────
@@ -209,11 +219,31 @@ final class InfisicalClient
 	 * Username goes into Infisical paths + Bone audit events; reject anything
 	 * that could escape the path (slash, traversal, control chars). Mirrors
 	 * the Authentik invitation flow's slug rules.
+	 *
+	 * Tightened 2026-05-20: rejects `..` substring outright. The character-
+	 * class regex alone allows `a..b` (security review C5); a downstream
+	 * consumer that path-canonicalizes could treat that as parent traversal.
 	 */
 	private function assertUsernameSafe(string $username): void
 	{
 		if ($username === '' || !preg_match('/^[a-z0-9][a-z0-9._-]{0,62}$/', $username)) {
-			throw new RuntimeException("InfisicalClient: unsafe username: {$username}");
+			throw new RuntimeException("InfisicalClient: unsafe username");
+		}
+		if (str_contains($username, '..')) {
+			throw new RuntimeException("InfisicalClient: unsafe username (consecutive dots)");
+		}
+	}
+
+	/**
+	 * Tenant slug matches the presenter's tenant regex
+	 * (UsersPresenter::actionInviteCreate). Allow `default` + any slug
+	 * shaped like `tenant-a`. Required to prevent path injection through
+	 * a malicious tenant slug.
+	 */
+	private function assertTenantSafe(string $tenant): void
+	{
+		if ($tenant === '' || !preg_match('/^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]?$/', $tenant)) {
+			throw new RuntimeException("InfisicalClient: unsafe tenant slug");
 		}
 	}
 
@@ -279,11 +309,17 @@ final class InfisicalClient
 		}
 		$decoded = json_decode((string) $raw, true);
 		if (!is_array($decoded)) {
-			$decoded = ['raw' => substr((string) $raw, 0, 500)];
+			// Drop the body — it could contain peer-tenant metadata or
+			// other users' secret names that would propagate into the
+			// caller's exception → /events row → /audit log → host
+			// launchd.err.log. The HTTP code alone is enough for the
+			// operator to diagnose; the raw body lives in Infisical's
+			// own logs for forensic recovery.
+			$decoded = ['raw_suppressed' => true];
 		}
 		if ($code >= 400 && !in_array($code, $allowErrorCodes, true)) {
 			throw new RuntimeException(
-				"Infisical {$method} {$path}: HTTP {$code}: " . substr((string) $raw, 0, 500),
+				"Infisical {$method} {$path}: HTTP {$code} (body suppressed; check Infisical logs)",
 			);
 		}
 		return [$code, $decoded];

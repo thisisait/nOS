@@ -338,6 +338,22 @@ final class UsersPresenter extends BasePresenter
 	 * or (c) neither downstream client is configured. Each downstream
 	 * failure is logged via /events but never propagated — the invitation
 	 * itself is the contract.
+	 *
+	 * Path layout (security review 2026-05-20):
+	 *   * Infisical: `/users/<tenant>/<localPart>/<secret_key>` — tenant
+	 *     namespace prevents cross-tenant credential collision
+	 *   * Stalwart mailbox: `<localPart>@<tenant_mail_domain>` — the
+	 *     mailbox domain comes from TENANT_DOMAIN env (the operator's
+	 *     configured mail domain), NOT from `email_hint`'s @-suffix
+	 *     which is just where the invitation enrollment URL might be
+	 *     emailed (gmail.com is fine for that)
+	 *
+	 * Idempotency: if Infisical already has any secrets under the
+	 * `/users/<tenant>/<localPart>/` path, this is a re-invite — skip
+	 * the whole block to avoid (a) generating a fresh password that
+	 * overwrites the live one in Infisical, then (b) Stalwart returning
+	 * notCreated and leaving Stalwart on the OLD password (user locked
+	 * out of their mailbox).
 	 */
 	private function maybeProvisionCredentials(
 		string $emailHint,
@@ -353,32 +369,67 @@ final class UsersPresenter extends BasePresenter
 		if ($emailHint === '' || !str_contains($emailHint, '@')) {
 			return;
 		}
-		[$localPart, $domain] = explode('@', $emailHint, 2);
+		// Local-part anchors the username; email_hint's @-suffix is the
+		// recipient address (where the operator might forward the enrollment
+		// URL to) and is irrelevant for the mailbox domain.
+		[$localPart, $_recipientDomain] = explode('@', $emailHint, 2);
 		$localPart = strtolower(trim($localPart));
-		$domain = strtolower(trim($domain));
 		if (!preg_match('/^[a-z0-9][a-z0-9._-]{0,62}$/', $localPart)) {
 			return;
 		}
+		if (str_contains($localPart, '..')) {
+			return;
+		}
+		// Mailbox lives on the operator's configured mail domain (TENANT_DOMAIN
+		// in the launchd env, set by roles/pazny.wing/templates/wing.plist.j2
+		// from default.config.yml::tenant_domain). Defaults to dev.local so the
+		// presenter doesn't crash on a misconfigured install.
+		$mailboxDomain = strtolower(trim((string) (getenv('TENANT_DOMAIN') ?: 'dev.local')));
 
 		$result = [
 			'username'       => $localPart,
-			'domain'         => $domain,
+			'tenant'         => $tenant,
+			'mail_domain'    => $mailboxDomain,
 			'infisical_done' => false,
 			'stalwart_done'  => false,
 			'stalwart_id'    => null,
+			'skipped_reason' => null,
 			'errors'         => [],
 		];
+
+		// Idempotency preflight: if the Infisical folder already holds any
+		// secrets, this is a re-invite — bail out before generating a new
+		// password that would orphan the existing mailbox.
+		if ($this->infisical->isConfigured()) {
+			try {
+				$existing = $this->infisical->listUserSecrets($tenant, $localPart);
+				if (count($existing) > 0) {
+					$result['skipped_reason'] = 'already_provisioned';
+					$this->emitProvisioningEvent(
+						'user_invitation_provisioning_skipped',
+						$result, $invitationUuid, $invitationRowId,
+						$actorId, $actorActionId,
+					);
+					$this->stashProvisioningResult($invitationRowId, $result);
+					return;
+				}
+			} catch (RuntimeException) {
+				// preflight is best-effort; if Infisical is unreachable we
+				// proceed with the normal flow and let the error trickle
+				// through as a regular provisioning failure.
+			}
+		}
 
 		// Step 1+2: Infisical folder + mailbox-password secret upsert.
 		$mailboxPassword = null;
 		if ($this->infisical->isConfigured()) {
 			try {
-				$this->infisical->createUserFolder($localPart);
+				$this->infisical->createUserFolder($tenant, $localPart);
 				$mailboxPassword = self::generateMailboxPassword();
-				$this->infisical->upsertSecret($localPart, 'mailbox_password', $mailboxPassword);
+				$this->infisical->upsertSecret($tenant, $localPart, 'mailbox_password', $mailboxPassword);
 				$result['infisical_done'] = true;
 			} catch (RuntimeException $e) {
-				$result['errors'][] = 'infisical: ' . $e->getMessage();
+				$result['errors'][] = 'infisical: ' . self::sanitizeErrorMessage($e->getMessage());
 				$mailboxPassword = null;
 			}
 		}
@@ -390,24 +441,39 @@ final class UsersPresenter extends BasePresenter
 			try {
 				$result['stalwart_id'] = $this->stalwart->createMailbox(
 					$localPart,
-					$domain,
+					$mailboxDomain,
 					$mailboxPassword,
 				);
 				$result['stalwart_done'] = true;
 			} catch (RuntimeException $e) {
-				$result['errors'][] = 'stalwart: ' . $e->getMessage();
+				$result['errors'][] = 'stalwart: ' . self::sanitizeErrorMessage($e->getMessage());
 			}
 		}
 
-		// Stash a single event capturing the full result (success and
-		// partial-success cases both visible in /audit timeline).
+		$this->emitProvisioningEvent(
+			'user_invitation_provisioned',
+			$result, $invitationUuid, $invitationRowId,
+			$actorId, $actorActionId,
+		);
+		$this->stashProvisioningResult($invitationRowId, $result);
+	}
+
+	private function emitProvisioningEvent(
+		string $type,
+		array $result,
+		string $invitationUuid,
+		int $invitationRowId,
+		string $actorId,
+		string $actorActionId,
+	): void {
 		try {
 			$this->events->insert([
-				'type'            => 'user_invitation_provisioned',
+				'type'            => $type,
 				'task'            => sprintf(
-					'Provisioning for %s@%s (infisical=%s stalwart=%s)',
-					$localPart,
-					$domain,
+					'Provisioning for %s@%s tenant=%s (infisical=%s stalwart=%s)',
+					$result['username'],
+					$result['mail_domain'],
+					$result['tenant'],
 					$result['infisical_done'] ? 'ok' : 'skip',
 					$result['stalwart_done'] ? 'ok' : 'skip',
 				),
@@ -421,12 +487,36 @@ final class UsersPresenter extends BasePresenter
 			]);
 		} catch (\Throwable) {
 		}
+	}
 
-		// Repository back-update so /users/created can render the summary.
+	private function stashProvisioningResult(int $rowId, array $result): void
+	{
 		try {
-			$this->invitations->setProvisioningResult($invitationRowId, $result);
+			$this->invitations->setProvisioningResult($rowId, $result);
 		} catch (\Throwable) {
 		}
+	}
+
+	/**
+	 * Strip any free-form text that could carry peer-user data from a
+	 * downstream RuntimeException. Both InfisicalClient + StalwartProvisioner
+	 * already redact response bodies, but defense-in-depth: tolerate only
+	 * a calibrated character set before stashing the message in
+	 * `provisioning_json` / the /events row. Anything we can't whitelist
+	 * collapses to a generic placeholder.
+	 */
+	private static function sanitizeErrorMessage(string $msg): string
+	{
+		// Allow letters, digits, dot, colon, dash, underscore, space,
+		// slash, parens, equals — enough for "HTTP 409 (body suppressed)"
+		// or "notCreated (reason=alreadyExists)" but not for raw payload
+		// fragments.
+		$safe = preg_replace('/[^A-Za-z0-9 .,:_\\-\\/()=]/', '', $msg);
+		// Cap at 200 chars; anything longer is almost certainly noise.
+		if (strlen($safe) > 200) {
+			$safe = substr($safe, 0, 200) . '…';
+		}
+		return $safe !== '' ? $safe : '(redacted)';
 	}
 
 	/**
