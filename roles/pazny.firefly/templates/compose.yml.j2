@@ -81,7 +81,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 180s      # up from 90s; first-boot migrations on a slow MariaDB can take 60-120s
-{# authentik extra_host moved to firefly-base plugin compose-extension (D2). #}
 {% if install_mailpit | default(false) %}
     extra_hosts:
       - "host.docker.internal:host-gateway"

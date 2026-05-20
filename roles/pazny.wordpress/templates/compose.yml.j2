@@ -14,14 +14,12 @@ services:
       - {{ wordpress_dir }}:/var/www/html
       # mu-plugin auto-loader: configures openid-connect-generic from env vars
       - {{ stacks_dir }}/iiab/wordpress/mu-plugins/oidc-bootstrap.php:/var/www/html/wp-content/mu-plugins/oidc-bootstrap.php:ro
-{# mkcert CA volume + Authentik extra_host moved to wordpress-base plugin (D2). #}
     environment:
       WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
       WORDPRESS_DB_USER: "{{ wordpress_db_user }}"
       WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
       WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
       WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
-{# WP_OIDC_* env + authentik extra_host moved to wordpress-base plugin compose-extension (D2 2026-05-05). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

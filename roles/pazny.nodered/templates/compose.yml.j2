@@ -23,13 +23,11 @@ services:
 {% endif %}
     volumes:
       - {{ nodered_data_dir }}:/data
-{# mkcert CA volume + NODE_EXTRA_CA_CERTS moved to nodered-base plugin compose-extension (D2). #}
     environment:
       TZ: "{{ nodered_timezone }}"
       FLOWS: "{{ nodered_flows_file }}"
       NODE_RED_ENABLE_SAFE_MODE: "{{ nodered_enable_safe_mode }}"
       NODE_RED_ENABLE_PROJECTS: "{{ nodered_enable_projects }}"
-{# NODE_EXTRA_CA_CERTS moved to nodered-base plugin compose-extension (D2). #}
 {% if install_authentik and nodered_native_oidc_enabled %}
       # ── Authentik native OIDC (β1.B 2026-05-05) ─────────────────────────
       # Consumed by /data/settings.js's adminAuth.strategy block via
@@ -44,7 +42,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 90s
-{# authentik extra_host moved to nodered-base plugin compose-extension (D2). #}
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

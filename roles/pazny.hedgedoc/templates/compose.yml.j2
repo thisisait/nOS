@@ -16,7 +16,6 @@ services:
 {% endif %}
     volumes:
       - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
-{# mkcert CA volume + Authentik extra_host moved to hedgedoc-base plugin (D2). #}
     environment:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
       CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc')) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
@@ -34,7 +33,6 @@ services:
       # ── CDN / uploads ──────────────────────────────────────────────────────
       CMD_USECDN: "false"
       CMD_UPLOADS_PATH: "/hedgedoc/public/uploads"
-{# CMD_OAUTH2_* env + NODE_EXTRA_CA_CERTS moved to hedgedoc-base plugin (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -48,7 +46,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{# authentik extra_host moved to hedgedoc-base plugin compose-extension (D2). #}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

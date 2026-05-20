@@ -16,7 +16,6 @@ services:
 {% endif %}
     volumes:
       - {{ freescout_data_dir }}:/data
-{# mkcert CA volume + Authentik extra_host moved to freescout-base plugin (D2). #}
     environment:
       CONTAINER_NAME: freescout
       DB_HOST: mariadb
@@ -29,7 +28,6 @@ services:
       ADMIN_PASS: "{{ freescout_admin_password }}"
       TIMEZONE: "{{ freescout_timezone }}"
       ENABLE_SSL_PROXY: "TRUE"
-{# FREESCOUT_OIDC_* env moved to freescout-base plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -46,7 +44,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{# authentik extra_host moved to freescout-base plugin compose-extension (D2). #}
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

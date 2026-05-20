@@ -28,8 +28,6 @@ services:
       FORCE_HTTPS: "false"
       FILE_STORAGE: local
       FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
-{# OIDC env + mkcert CA volume + authentik extra_host moved to outline-base
-   plugin compose-extension (D2 2026-05-05). #}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
       # Mailpit lives on iiab_net only; reach it via host-gateway.
@@ -44,7 +42,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
-{# Authentik extra_host moved to outline-base plugin compose-extension (D2). #}
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/_health 2>&1 || exit 1"]
       interval: 30s
