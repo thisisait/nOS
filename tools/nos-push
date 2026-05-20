@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# nos-push — git push + instant Gitea mirror-sync (A17, 2026-05-20).
+#
+# Wraps `git push <args>` so that, after a successful push to GitHub
+# origin, the operator's local Gitea mirror is forced to re-fetch
+# immediately. Eliminates the up-to-10-minute poll delay between
+# GitHub push and the Woodpecker pipeline firing.
+#
+# Usage:
+#   tools/nos-push                       # → git push origin <current-branch>
+#   tools/nos-push origin dev            # → git push origin dev
+#   tools/nos-push --force-with-lease    # → git push --force-with-lease
+#   tools/nos-push --skip-sync           # → git push only; no mirror trigger
+#
+# Configuration (auto-discovered from this clone):
+#   * gitea_api_token   — from <repo>/credentials.yml::gitea_api_token
+#                          (preferred) or ~/.nos/secrets.yml
+#   * gitea_domain      — derived from <repo>/credentials.yml/config.yml
+#                          or env GITEA_DOMAIN; defaults to git.<tenant>
+#
+# Skips mirror-sync gracefully (with a one-line warning) when the token
+# is missing or the Gitea API is unreachable — the underlying `git push`
+# still succeeds, just with the legacy 1-min poll fallback.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+SKIP_SYNC=0
+GIT_ARGS=()
+for arg in "$@"; do
+	case "$arg" in
+		--skip-sync) SKIP_SYNC=1 ;;
+		*) GIT_ARGS+=("$arg") ;;
+	esac
+done
+
+# 1. Run the git push first; abort everything if it fails.
+echo "→ git push ${GIT_ARGS[*]:-}"
+git -C "$REPO_DIR" push "${GIT_ARGS[@]:-}"
+PUSH_STATUS=$?
+if [ $PUSH_STATUS -ne 0 ]; then
+	exit $PUSH_STATUS
+fi
+
+if [ "$SKIP_SYNC" -eq 1 ]; then
+	echo "→ mirror-sync skipped (--skip-sync)"
+	exit 0
+fi
+
+# 2. Resolve gitea_api_token + gitea_domain from local config files.
+#    Search order (first hit wins): repo credentials.yml, repo config.yml,
+#    ~/.nos/secrets.yml, env vars.
+
+token=""
+for f in \
+	"$REPO_DIR/credentials.yml" \
+	"$REPO_DIR/config.yml" \
+	"$HOME/.nos/secrets.yml"
+do
+	[ -f "$f" ] || continue
+	v=$(grep -E '^gitea_api_token:' "$f" 2>/dev/null \
+		| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+		| head -1)
+	if [ -n "$v" ] && [ "$v" != "" ]; then
+		token="$v"
+		break
+	fi
+done
+if [ -z "${token}" ] && [ -n "${GITEA_API_TOKEN:-}" ]; then
+	token="$GITEA_API_TOKEN"
+fi
+
+domain="${GITEA_DOMAIN:-}"
+if [ -z "$domain" ]; then
+	for f in \
+		"$REPO_DIR/credentials.yml" \
+		"$REPO_DIR/config.yml" \
+		"$REPO_DIR/default.config.yml"
+	do
+		[ -f "$f" ] || continue
+		v=$(grep -E '^gitea_domain:' "$f" 2>/dev/null \
+			| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+			| head -1)
+		if [ -n "$v" ]; then
+			domain="$v"
+			break
+		fi
+	done
+fi
+# Fall back: derive from tenant_domain
+if [ -z "$domain" ]; then
+	tenant=$(grep -E '^tenant_domain:' "$REPO_DIR/config.yml" 2>/dev/null \
+		| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+		| head -1)
+	if [ -n "$tenant" ]; then
+		domain="git.$tenant"
+	fi
+fi
+
+owner=$(grep -E '^gitea_nos_repo_owner:' \
+	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
+	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml" 2>/dev/null \
+	| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+	| head -1)
+[ -z "$owner" ] && owner="${USER:-$(whoami)}"
+
+name=$(grep -E '^gitea_nos_repo_name:' \
+	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
+	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml" 2>/dev/null \
+	| sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+	| head -1)
+[ -z "$name" ] && name="nOS"
+
+if [ -z "$token" ] || [ -z "$domain" ]; then
+	echo "→ mirror-sync skipped: missing gitea_api_token or gitea_domain"
+	echo "  (push succeeded — Gitea will auto-poll within ~1 min)"
+	exit 0
+fi
+
+# 3. Fire the mirror-sync.
+url="https://${domain}/api/v1/repos/${owner}/${name}/mirror-sync"
+code=$(curl -s -o /dev/null -w '%{http_code}' \
+	-X POST -H "Authorization: token ${token}" \
+	--max-time 5 \
+	"$url" || echo "000")
+
+case "$code" in
+	200|202)
+		echo "→ mirror-sync triggered (Gitea will fetch within seconds)"
+		;;
+	000)
+		echo "→ mirror-sync: Gitea unreachable (network/cert?) — push still ok"
+		;;
+	*)
+		echo "→ mirror-sync: HTTP ${code} from ${url} — push still ok"
+		;;
+esac

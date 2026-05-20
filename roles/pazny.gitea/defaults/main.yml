@@ -27,5 +27,5 @@ install_gitea_autowire_nos: false
 gitea_nos_repo_owner: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
 gitea_nos_repo_name: "nOS"
 gitea_nos_repo_clone_url: "https://github.com/thisisait/nOS.git"
-gitea_nos_repo_mirror_interval: "10m0s"
+gitea_nos_repo_mirror_interval: "1m0s"  # A17: 1-minute fallback poll; tools/nos-push triggers instant sync via API
 gitea_nos_repo_private: true

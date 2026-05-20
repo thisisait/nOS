@@ -75,3 +75,22 @@
     validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
   when: _gitea_repo_create.changed | default(false)
   changed_when: true
+
+# A17 (2026-05-20): reconverge mirror_interval on EXISTING repos so a
+# default-value bump in pazny.gitea defaults (10m → 1m) takes effect
+# without operator manually editing the repo in Gitea UI. PATCH endpoint
+# is idempotent — setting the same value twice is a no-op.
+- name: "[pazny.gitea Post Repo] Reconverge mirror_interval (UPDATE leg)"
+  ansible.builtin.uri:
+    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    method: PATCH
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      mirror_interval: "{{ gitea_nos_repo_mirror_interval }}"
+    status_code: 200
+    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
+  when: _gitea_repo_check.status == 200
+  changed_when: false  # idempotent; we can't cheaply detect actual drift

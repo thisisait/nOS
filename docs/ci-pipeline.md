@@ -1,8 +1,28 @@
 # Local CI — Gitea mirror + Woodpecker pipeline (A16, 2026-05-17)
 
 > **Status (2026-05-20):** end-to-end live on pazny.eu. First pipeline run
-> ignited by this exact paragraph — GitHub `dev` push → Gitea mirror (10 min
-> poll OR force-sync via API) → Woodpecker pipeline → 4 test stages.
+> ignited by the A16 cosmetic commit — GitHub push → Gitea mirror →
+> Woodpecker pipeline → 5 test stages, all green.
+>
+> **A17 (2026-05-20):** mirror auto-trigger. Default poll interval cut to
+> **1 minute** (was 10 min), and `tools/nos-push` triggers Gitea mirror-sync
+> via API immediately after every successful `git push` — pipeline now
+> fires within ~2 seconds of the push completing.
+
+## Pushing — use `tools/nos-push`, not raw `git push`
+
+```bash
+tools/nos-push                       # push current branch to origin + sync
+tools/nos-push origin dev            # push dev explicitly
+tools/nos-push --force-with-lease    # safe force push
+tools/nos-push --skip-sync           # opt out of mirror trigger (raw push)
+```
+
+The wrapper still uses your normal `git config` (remote name, credentials,
+hooks). It just adds the `POST /api/v1/repos/<owner>/<repo>/mirror-sync`
+call after a successful push. Failures in the sync call are non-fatal —
+the underlying push always succeeds first, and the 1-min Gitea poll
+covers raw `git push` as a safety net.
 
 Self-hosted CI that mirrors GitHub → local Gitea on a 10-minute pull
 interval, then fires the `.woodpecker.yml` pipeline on every push. Four
