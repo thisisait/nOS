@@ -114,7 +114,10 @@
   ansible.builtin.template:
     src: bone.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ bone_launchd_label }}.plist"
-    mode: '0644'
+    # 0600: plist embeds BONE_SECRET (HMAC seed for every API call) +
+    # WING_API_TOKEN. Same threat model as the Wing plist — peer
+    # processes / backup agents must not be able to read these.
+    mode: '0600'
   notify: Restart bone
 
 - name: "[pazny.bone] Bootstrap launchd job (idempotent)"

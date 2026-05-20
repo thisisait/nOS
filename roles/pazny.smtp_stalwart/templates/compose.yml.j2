@@ -51,8 +51,17 @@ services:
     labels:
       # Webadmin via Traefik (HTTPS). Stalwart's webadmin lives on internal
       # port 8080; Traefik fronts it at https://{{ stalwart_domain }}/admin.
+      #
+      # SECURITY: scope the public router to `/admin` ONLY. Without the
+      # PathPrefix matcher, the same Host rule would also expose the
+      # management `/jmap` endpoint publicly behind forward-auth — and
+      # forward-auth gates ACCESS, not AUTHORIZATION, so any Tier-4 guest
+      # (Kiwix/Jellyfin user) would land on /jmap with a valid Authentik
+      # session and could brute-force Basic-auth against the admin creds.
+      # Wing reaches /jmap via the role's 127.0.0.1:{{ stalwart_port_admin }}
+      # bind which is NEVER exposed publicly.
       - "traefik.enable=true"
-      - "traefik.http.routers.smtp-stalwart-webadmin.rule=Host(`{{ stalwart_domain }}`)"
+      - "traefik.http.routers.smtp-stalwart-webadmin.rule=Host(`{{ stalwart_domain }}`) && PathPrefix(`/admin`)"
       - "traefik.http.routers.smtp-stalwart-webadmin.entrypoints=websecure"
       - "traefik.http.routers.smtp-stalwart-webadmin.tls=true"
       - "traefik.http.routers.smtp-stalwart-webadmin.middlewares=authentik@file,security-headers@file,compress@file"

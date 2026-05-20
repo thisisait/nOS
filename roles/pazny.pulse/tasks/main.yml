@@ -54,7 +54,9 @@
   ansible.builtin.template:
     src: pulse.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_launchd_label }}.plist"
-    mode: '0644'
+    # 0600: plist may embed BONE_SECRET / WING_API_TOKEN for Pulse jobs
+    # that hit the local API. Apply the same lock-down as Wing + Bone.
+    mode: '0600'
   notify: Reload pulse launchd
 
 - name: "[pazny.pulse] Bootstrap launchd job (idempotent)"
