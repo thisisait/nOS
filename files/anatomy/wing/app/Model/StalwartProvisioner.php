@@ -76,7 +76,11 @@ final class StalwartProvisioner
 		?string $adminUser = null,
 		?string $adminPassword = null,
 	) {
-		$apiUrl = $apiUrl ?? (getenv('STALWART_API_URL') ?: 'http://127.0.0.1:8080');
+		// Default port 8088 (matches roles/pazny.smtp_stalwart/defaults/
+		// main.yml::stalwart_port_admin). 8080 conflicts with cAdvisor on
+		// the observability stack; Stalwart's container-internal port is
+		// still 8080 but the host bind is 8088.
+		$apiUrl = $apiUrl ?? (getenv('STALWART_API_URL') ?: 'http://127.0.0.1:8088');
 		$this->baseUrl = rtrim($apiUrl, '/');
 		$this->adminUser = $adminUser ?? (getenv('STALWART_ADMIN_USER') ?: '');
 		$this->adminPassword = $adminPassword ?? (getenv('STALWART_ADMIN_PASSWORD') ?: '');

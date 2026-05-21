@@ -413,11 +413,31 @@ def test_stalwart_role_pinned_to_v0_16_or_newer():
 
 
 def test_stalwart_role_exposes_admin_port_for_wing():
-	"""Wing reaches /jmap on stalwart_port_admin (defaults 8080). The
-	default must be declared so wing.plist.j2's `default(8080)` lines
-	up with what compose.yml.j2 actually publishes."""
+	"""Wing reaches /jmap on stalwart_port_admin. The default must be
+	declared so wing.plist.j2's Jinja default lines up with what
+	compose.yml.j2 actually publishes."""
 	src = (REPO / "roles/pazny.smtp_stalwart/defaults/main.yml").read_text()
 	assert "stalwart_port_admin:" in src
+
+
+def test_stalwart_admin_port_default_does_not_collide_with_cadvisor():
+	"""Operator's first blank 2026-05-21 crashed on `Bind for 127.0.0.1:
+	8080 failed: port is already allocated` — cAdvisor in the observability
+	stack already holds 8080. Stalwart's container-internal port stays 8080
+	(fixed upstream); only the host bind moves to a free port. Pin a
+	non-8080 default + ensure the wing.plist.j2 Jinja fallback matches."""
+	defaults = (REPO / "roles/pazny.smtp_stalwart/defaults/main.yml").read_text()
+	# Default must NOT be 8080 (cAdvisor collision).
+	m = re.search(r"^stalwart_port_admin:\s*(\d+)", defaults, re.MULTILINE)
+	assert m, "stalwart_port_admin default not declared"
+	port = int(m.group(1))
+	assert port != 8080, f"stalwart_port_admin default {port} collides with cAdvisor on the observability stack"
+	# wing.plist.j2's Jinja fallback (kept in sync so an operator override
+	# of stalwart_port_admin propagates but a missing var doesn't default
+	# back to 8080).
+	plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
+	assert f"default({port}) | string" in plist, \
+		f"wing.plist.j2 fallback must match stalwart_port_admin default ({port})"
 
 
 def test_stalwart_compose_publishes_admin_port_to_localhost():
