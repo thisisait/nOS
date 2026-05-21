@@ -39,11 +39,17 @@ services:
       - {{ stalwart_data_dir }}/etc:/etc/stalwart
       - {{ stalwart_data_dir }}/var:/var/lib/stalwart
 {% if not (tenant_domain_is_local | default(true) | bool) %}
-      # Wildcard cert from pazny.acme — Stalwart reads PEM directly via
-      # config.json::server.listener.*.tls.{certificate,private-key} pointing
-      # at these mount paths (operator wires it once in the WebUI wizard).
-      - {{ stalwart_tls_cert_path }}:/etc/stalwart/certs/cert.pem:ro
-      - {{ stalwart_tls_cert_key }}:/etc/stalwart/certs/key.pem:ro
+      # Wildcard cert from pazny.acme. Mounted at TOP-LEVEL /certs/ —
+      # NOT inside /etc/stalwart — because Docker Desktop's virtiofs on
+      # macOS cannot resolve nested file binds (cert.pem at
+      # /etc/stalwart/certs/cert.pem would sit inside the /etc/stalwart
+      # bind above, and virtiofs throws "mountpoint outside of rootfs"
+      # at container start). Tracked upstream:
+      # https://github.com/docker/for-mac/issues/4936. Operator wires
+      # the WebUI bootstrap wizard to reference /certs/cert.pem +
+      # /certs/key.pem in config.json's TLS listener section.
+      - {{ stalwart_tls_cert_path }}:/certs/cert.pem:ro
+      - {{ stalwart_tls_cert_key }}:/certs/key.pem:ro
 {% endif %}
     networks:
       - infra_net

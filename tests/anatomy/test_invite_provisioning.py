@@ -488,3 +488,20 @@ def test_stalwart_compose_uses_v016_volume_layout():
 	assert ":/etc/stalwart" in src
 	assert ":/var/lib/stalwart" in src
 	assert "/opt/stalwart-mail" not in src
+
+
+def test_stalwart_compose_cert_mounts_are_top_level():
+	"""Stalwart blank crash 2026-05-21: cert mount inside /etc/stalwart
+	binds (e.g. `/etc/stalwart/certs/cert.pem`) crashed virtiofs on
+	Docker Desktop macOS with "mountpoint outside of rootfs". Certs MUST
+	mount at a top-level container path that doesn't sit inside another
+	bind. We chose `/certs/` — Stalwart's config.json TLS listener
+	references those paths directly (operator wires once in the bootstrap
+	wizard). Tracked upstream: docker/for-mac#4936."""
+	src = (REPO / "roles/pazny.smtp_stalwart/templates/compose.yml.j2").read_text()
+	# Old (broken) pattern must NOT be present:
+	assert ":/etc/stalwart/certs/" not in src, \
+		"cert mounts inside /etc/stalwart trigger virtiofs nested-bind crash"
+	# New (fixed) pattern must be present (gated on public TLD as before):
+	assert ":/certs/cert.pem:ro" in src
+	assert ":/certs/key.pem:ro" in src

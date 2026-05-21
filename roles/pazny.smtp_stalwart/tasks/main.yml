@@ -56,9 +56,13 @@
          2. Wait for cert via pazny.acme (--tags acme)
          3. Open https://{{ stalwart_domain }}/admin — login with the
             STALWART_RECOVERY_ADMIN credentials above. Bootstrap wizard
-            walks through domain + DKIM + TLS cert paths (mounted at
-            /etc/stalwart/certs/ when tenant is public). Wizard generates
-            /etc/stalwart/config.json.
+            walks through domain + DKIM + TLS cert paths. Inside the
+            container the wildcard cert is mounted at:
+              /certs/cert.pem
+              /certs/key.pem
+            (NOT /etc/stalwart/certs/* — Docker Desktop virtiofs on
+            macOS can't handle nested file binds, see compose template
+            comment). Wizard generates /etc/stalwart/config.json.
          4. Paste DKIM key (from wizard) into CF DNS.
          5. Test send:    swaks --to <you>@gmail.com --server {{ stalwart_domain }}
          6. Test receive: swaks --to test@{{ tenant_domain }}
