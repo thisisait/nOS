@@ -56,7 +56,13 @@ stalwart_port_imap:    993    # IMAPS
 # container) serves both /admin UI and the /jmap management endpoint.
 # Published to 127.0.0.1 so Wing (host launchd) can reach JMAP without
 # going through Traefik + public TLS.
-stalwart_port_admin:  8080    # webadmin (HTTP) — Wing reaches /jmap here
+#
+# Host-side default is 8088 (not 8080) because cAdvisor in the
+# observability stack already holds 127.0.0.1:8080 — collision crashed
+# the first blank with "Bind for 127.0.0.1:8080 failed: port is already
+# allocated" on the Restart handler. The container-internal port stays
+# 8080 (fixed by Stalwart); only the host bind changes.
+stalwart_port_admin:  8088    # webadmin (HTTP) — Wing reaches /jmap here
 # Wing's StalwartProvisioner reads STALWART_API_URL = http://127.0.0.1:<port>/jmap.
 
 # Admin user — STALWART_RECOVERY_ADMIN env pre-pins this on first boot

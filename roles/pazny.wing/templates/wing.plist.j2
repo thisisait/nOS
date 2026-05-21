@@ -147,7 +147,7 @@
              to localhost). Empty STALWART_ADMIN_PASSWORD → isConfigured()
              returns false. -->
         <key>STALWART_API_URL</key>
-        <string>{{ stalwart_api_url | default('http://127.0.0.1:' + (stalwart_port_admin | default(8080) | string)) }}</string>
+        <string>{{ stalwart_api_url | default('http://127.0.0.1:' + (stalwart_port_admin | default(8088) | string)) }}</string>
         <key>STALWART_ADMIN_USER</key>
         <string>{{ stalwart_admin_username | default('admin') }}</string>
         <key>STALWART_ADMIN_PASSWORD</key>
