@@ -7,8 +7,11 @@ mirror-sync via API immediately after a successful push. Eliminates the
 the Woodpecker pipeline firing.
 
 Also pins:
-  * Gitea mirror_interval default = 1m (was 10m) as a safety net for raw
-    `git push` (operators who don't yet use the wrapper)
+  * Gitea mirror_interval default = 10m0s — Gitea's server-side
+    [mirror].MIN_INTERVAL floor (configurable in app.ini but defaulting
+    to 10m). The 2026-05-21 attempt to set 1m0s came back HTTP 422 from
+    the PATCH API. The fast path is the wrapper (instant /mirror-sync);
+    the per-repo interval is the safety net for raw-push users.
   * The post-repo task reconverges the per-repo mirror_interval via
     PATCH on every playbook run (so a default-value bump propagates to
     existing installs)
@@ -87,28 +90,24 @@ def test_nos_push_uses_short_timeout():
 # ── Gitea mirror_interval default ────────────────────────────────────────
 
 
-def test_gitea_default_mirror_interval_is_under_two_minutes():
-	"""Default poll interval must be tight enough that raw `git push`
-	(without the wrapper) doesn't sit for 10 minutes. 1m is the chosen
-	sweet spot."""
+def test_gitea_default_mirror_interval_at_server_floor():
+	"""Gitea hard-codes [mirror].MIN_INTERVAL = 10m in app.ini; per-repo
+	overrides below that come back HTTP 422 from the PATCH API (operator
+	blank crash 2026-05-21: 'invalid mirror interval: 1m0s is below
+	minimum interval: 10m0s'). So 10m0s is the floor for the per-repo
+	override. Instant sync is owned by tools/nos-push's /mirror-sync
+	call — the per-repo interval is purely a safety net for raw
+	`git push` users.
+
+	Pin EXACTLY 10m0s (not >10m0s) so operators don't drift to longer
+	fallbacks that defeat the safety net. To lower the floor globally,
+	patch app.ini's [mirror].MIN_INTERVAL — out of scope for this gate."""
 	src = (REPO / "roles/pazny.gitea/defaults/main.yml").read_text()
-	m = re.search(r'gitea_nos_repo_mirror_interval:\s*"([^"]+)"', src)
+	m = re.search(r'^gitea_nos_repo_mirror_interval:\s*"([^"]+)"', src, re.MULTILINE)
 	assert m, "gitea_nos_repo_mirror_interval default not declared"
-	value = m.group(1)
-	# Acceptable: 30s, 1m0s, 60s — anything ≤ 120 seconds.
-	# Sanity-parse: <N>m<N>s OR <N>s
-	mm = re.match(r'^(\d+)m(\d+)s$', value)
-	ss = re.match(r'^(\d+)s$', value)
-	if mm:
-		seconds = int(mm.group(1)) * 60 + int(mm.group(2))
-	elif ss:
-		seconds = int(ss.group(1))
-	else:
-		assert False, f"unrecognized interval format: {value}"
-	assert seconds <= 120, (
-		f"gitea_nos_repo_mirror_interval={value} ({seconds}s) is too long "
-		"— raw `git push` will sit for that long before Woodpecker sees "
-		"the commit. Set to ≤ 1m to keep the fallback poll responsive."
+	assert m.group(1) == "10m0s", (
+		f"gitea_nos_repo_mirror_interval={m.group(1)} — Gitea's MIN_INTERVAL "
+		"floor is 10m0s; anything lower returns HTTP 422 from the PATCH API."
 	)
 
 
