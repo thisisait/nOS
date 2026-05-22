@@ -27,5 +27,18 @@ install_gitea_autowire_nos: false
 gitea_nos_repo_owner: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
 gitea_nos_repo_name: "nOS"
 gitea_nos_repo_clone_url: "https://github.com/thisisait/nOS.git"
-gitea_nos_repo_mirror_interval: "1m0s"  # A17: 1-minute fallback poll; tools/nos-push triggers instant sync via API
+# Mirror interval — fallback poll when tools/nos-push isn't used. Gitea
+# enforces a server-side MIN_INTERVAL of 10 minutes (configurable globally
+# in app.ini under [mirror].MIN_INTERVAL but defaulting to 10m). The
+# PATCH API returns HTTP 422 for any per-repo override below the floor —
+# operator's blank run on 2026-05-21 hit "invalid mirror interval: 1m0s
+# is below minimum interval: 10m0s" with our previous 1m0s default. So
+# 10m0s is the lowest the per-repo override can go.
+#
+# In practice this is a non-issue: `tools/nos-push` calls /mirror-sync
+# via the API for sub-10s end-to-end push → Woodpecker cycle. 10m0s is
+# the safety net for the case where someone runs raw `git push` and
+# forgets the wrapper. Operator can lower app.ini MIN_INTERVAL globally
+# if they need tighter fallback.
+gitea_nos_repo_mirror_interval: "10m0s"
 gitea_nos_repo_private: true
