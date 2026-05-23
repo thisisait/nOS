@@ -271,14 +271,21 @@ final class AuthentikClient
 			return [];
 		}
 		if ($code >= 400) {
+			// SEC-10 (2026-05-23): drop response body — Authentik 4xx
+			// responses echo invitation `fixed_data` fragments + flow
+			// instance metadata that can include peer-tenant slugs,
+			// target_groups, email_hints. These messages flow into
+			// Wing events row → /audit log → launchd.err.log. Mirror
+			// the suppression pattern already in InfisicalClient +
+			// StalwartProvisioner.
 			throw new RuntimeException(
-				"Authentik {$method} {$path}: HTTP {$code}: " . substr((string) $raw, 0, 500),
+				"Authentik {$method} {$path}: HTTP {$code} (body suppressed; check Authentik logs)",
 			);
 		}
 		$decoded = json_decode((string) $raw, true);
 		if (!is_array($decoded)) {
 			throw new RuntimeException(
-				"Authentik {$method} {$path}: non-JSON body: " . substr((string) $raw, 0, 200),
+				"Authentik {$method} {$path}: non-JSON response (body suppressed)",
 			);
 		}
 		return $decoded;
