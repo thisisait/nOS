@@ -128,7 +128,8 @@
     # Bone container bind-mount targets (Track A, 2026-04-26). Pre-creating
     # them here keeps Docker from racing the role tasks and creating empty
     # root-owned dirs.
-    - { path: "{{ ansible_facts['env']['HOME'] }}/.nos", enabled: "{{ install_bone | default(false) | bool }}" }
+    # SEC-4 (2026-05-23): ~/.nos removed from this 0755 loop — created
+    # at 0700 in main.yml::pre_tasks before any other task runs.
     - { path: "{{ ansible_facts['env']['HOME'] }}/agents/log", enabled: true }
   when: item.enabled | bool
   loop_control:

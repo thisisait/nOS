@@ -352,6 +352,22 @@
     # File ~/.nos/secrets.yml is created on the first run (at the end of
     # the generation phase). On subsequent runs we load it BEFORE lazy-regen blocks,
     # so guards see the real value and not a placeholder.
+
+    # SEC-4 (2026-05-23): ensure ~/.nos exists at mode 0700 BEFORE any
+    # other task touches it. Previously the dir was first created by
+    # tasks/stacks/core-up.yml's loop (mode 0755 — shared with the
+    # other data dirs) and only later tightened by state_manager/main.yml
+    # — whichever ran last won. With 0755 in the race window, any local
+    # UID could `ls ~/.nos` + read the names of persisted-secret files
+    # (UID enumeration). Pin 0700 in pre_tasks so this dir's mode is
+    # never wider than absolute necessity.
+    - name: "[Secrets] Ensure ~/.nos directory exists at 0700"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+        state: directory
+        mode: '0700'
+      tags: ['always']
+
     - name: "[Secrets] Check for persisted secrets file"
       ansible.builtin.stat:
         path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
