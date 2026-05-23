@@ -262,6 +262,16 @@
     {{ _docker_compose_pull | default('') }} 2>&1
   loop: "{{ _remaining_stacks }}"
   register: _stack_seq
+  # A19 (2026-05-23): retry transient `up -d` failures (rc != 0) before the
+  # fail-fast assert. Docker Desktop's virtiofs intermittently fails NESTED
+  # single-file bind mounts (e.g. wordpress mounts oidc-bootstrap.php INTO its
+  # SSD-backed /var/www/html → "mountpoint is outside of rootfs", container
+  # stuck "Created", rc=1) — these clear on a second `up -d`. Also covers
+  # transient image-pull blips. NOT tolerance: a persistently-failing stack
+  # still trips the assert below.
+  until: _stack_seq.rc == 0
+  retries: 2
+  delay: 10
   changed_when: false
   failed_when: false
   check_mode: false
