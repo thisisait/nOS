@@ -266,22 +266,21 @@ ui-extension:
 # NOTIFICATIONS — REM-001 surface drift watch + admin reconverge alerts
 # =============================================================================
 
+# Canonical A9 severity routing (consumed by the wing-base aggregator).
+# Failure modes the emitter sends for this plugin:
+#   on_admin_reconverge_failure  → critical
+#   on_socket_proxy_surface_drift → critical (Conductor post-A8 diffs the proxy
+#     env block vs the trimmed REM-001 baseline; alerts on silent re-grant of
+#     NODES/PLUGINS/SECRETS/CONFIGS/SWARM/SYSTEM)
+#   on_oauth2_misconfigured      → high
+# (The old event-key block referenced notifications/*.txt templates that were
+# never committed; routing now keys off severity, which the aggregator reads.)
 notification:
-  on_admin_reconverge_failure:
-    channels: [wing-inbox, ntfy]
-    severity: critical
-    template: notifications/admin-reconverge-failed.txt
-  on_oauth2_misconfigured:
-    channels: [wing-inbox]
-    severity: high
-    template: notifications/oauth2-misconfigured.txt
-  on_socket_proxy_surface_drift:
-    # Conductor (post-A8) periodically diffs the proxy env block against
-    # the trimmed REM-001 baseline; alert on any silent re-grant of
-    # NODES/PLUGINS/SECRETS/CONFIGS/SWARM/SYSTEM.
-    channels: [wing-inbox, ntfy]
-    severity: critical
-    template: notifications/socket-proxy-drift.txt
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
 
 # =============================================================================
 # HARVEST MAP — what already lives where (for the Track Q sweep)

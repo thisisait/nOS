@@ -44,10 +44,16 @@ type:
 # to confirm `qdrant` is enabled before applying side effects.
 
 requires:
-  app: qdrant                           # Tier-2 binding (NEW vs. grafana-base)
-  # No feature_flag for Tier-2 plugins — the presence of apps/qdrant.yml +
-  # successful nos_apps_render IS the toggle. Loader checks the merged apps
-  # catalog at hook time; if `qdrant` is absent, this plugin no-ops.
+  app: qdrant                           # Tier-2 binding (apps/qdrant.yml owns the install)
+  # Gate: install_qdrant is the ENFORCED toggle. The loader's run_hook only
+  # honors `feature_flag` (not `requires.app`), so without this the post_compose
+  # `wait_health` against :6333 ran on EVERY playbook run and timed out 60s →
+  # plugin degraded — even when Qdrant was never deployed. feature_flag makes
+  # the hooks skip cleanly when install_qdrant=false (the default), matching the
+  # uniform gate contract every other service plugin follows. The `app:` binding
+  # above stays as the Tier-2 install pointer; honoring it in run_hook (skip when
+  # the app is absent from the merged catalog) is a future loader enhancement.
+  feature_flag: install_qdrant
   variables:
     - tenant_domain
     - host_alias
@@ -263,15 +269,19 @@ ui-extension:
 # NOTIFICATIONS
 # =============================================================================
 
+# Canonical A9 severity routing (consumed by the wing-base aggregator).
+# Failure modes the emitter sends for this plugin:
+#   on_collection_bootstrap_failure → high
+#   on_health_loss → high (Pulse job post-A7 probes /healthz every 60s; alerts
+#     after 3 consecutive fails)
+# (The old event-key block referenced notifications/*.txt templates that were
+# never committed; routing now keys off severity, which the aggregator reads.)
 notification:
-  on_collection_bootstrap_failure:
-    channels: [wing-inbox, ntfy]
-    template: notifications/bootstrap-failed.txt
-  on_health_loss:
-    # Pulse job (post-A7) probes /healthz every 60s. Alert if 3 consecutive fails.
-    channels: [wing-inbox, ntfy]
-    template: notifications/health-loss.txt
-    severity: high
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
 
 # =============================================================================
 # SCHEMA — wing.db tables this plugin owns (TODO: future loader feature)

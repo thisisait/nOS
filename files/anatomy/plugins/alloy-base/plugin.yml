@@ -168,3 +168,16 @@ gdpr:
 # │   └── install.yml              # brew install + brew services start (Ansible)
 # └── templates/
 #     └── config.alloy.j2          # minimal core River config (no scrapes/tails)
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+# Uniform wiring contract (2026-05-23): harvested by wing-base into
+# notification-routing.json; Bone falls back to this when an emitter POSTs a
+# notification with origin_plugin + severity but no explicit channels. The
+# emitter decides which failure maps to which severity; this block only routes
+# a severity to channels. Channels: wing-inbox | ntfy | mail. Tune per service.
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
