@@ -44,14 +44,14 @@
 			<td style="padding:8px; text-align:right; white-space:nowrap;">
 				{* A13.7 — POST-only forms (were <a href>); closes GET-CSRF + ensures no
 				   browser pre-fetch / link-scanner can rubber-stamp an approval. *}
-				<form method="post" action="{plink Approvals:approve, actionId =>
-					<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *} $req[actor_action_id]}" style="display:inline; margin-right:6px;"
+				<form method="post" action="{plink Approvals:approve, actionId => $req[actor_action_id]}" style="display:inline; margin-right:6px;"
 					onsubmit="return confirm('Approve agent action {$req[actor_action_id]|truncate:24,''}?');">
+					<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 					<button type="submit" class="btn btn-primary" style="border:none; cursor:pointer;">Approve</button>
 				</form>
-				<form method="post" action="{plink Approvals:reject, actionId =>
-					<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *} $req[actor_action_id]}" style="display:inline;"
+				<form method="post" action="{plink Approvals:reject, actionId => $req[actor_action_id]}" style="display:inline;"
 					onsubmit="return confirm('Reject agent action {$req[actor_action_id]|truncate:24,''}?');">
+					<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 					<button type="submit" class="btn" style="border:none; cursor:pointer;">Reject</button>
 				</form>
 			</td>
