@@ -109,11 +109,31 @@ The reset.yml task MUST:
 
 **Shipped:** SEC-5 = `roles/pazny.infisical/tasks/reset-admin.yml`.
 
-**Queued:** equivalent reset.yml for `pazny.authentik`,
-`pazny.gitea`, `pazny.portainer`, `pazny.vaultwarden`, `pazny.erpnext`.
-Each must follow the same shape so an operator who learned the
-Infisical recovery flow can apply it to any service. The template is
-the Infisical file — copy + adapt the service-specific TRUNCATE list.
+### Per-service recovery posture
+
+Not every service needs a `reset.yml` — some have Pattern D built into
+their bootstrap mechanism. Catalog:
+
+| Service | Recovery mechanism | Why explicit reset is / isn't needed |
+|---|---|---|
+| **Infisical** | `--tags infisical-reset-admin` (SEC-5) | One-shot `infisical bootstrap` CLI; no reconverge. Lockout class confirmed live 2026-05-23. |
+| **Authentik** | Blueprint reconverge on every playbook run (`files/anatomy/plugins/authentik-base/blueprints/00-admin-groups.yaml.j2`) re-applies akadmin email + password from current Ansible-derived values | Built-in Pattern D. Operator's `ansible-playbook main.yml --tags authentik` IS the recovery. No separate reset.yml needed. |
+| **Gitea** | `--tags gitea` re-runs `gitea admin user change-password`-style task (see `roles/pazny.gitea/tasks/post.yml`) | Built-in Pattern D-ish via the admin-user reconverge step. |
+| **Portainer** | `roles/pazny.portainer/tasks/post.yml` resets admin via Portainer API on each run | Built-in. |
+| **Vaultwarden** | NO admin reset path today. Operator-tier vault, secrets are user-encrypted. | **Pattern D queued** if operator-lockout class surfaces; for now, blank=true is the only recovery (acceptable since Vaultwarden is per-user, no admin DB content to preserve). |
+| **ERPNext** | `bench set-admin-password` invoked in `roles/pazny.erpnext/tasks/post.yml` | Built-in Pattern D. |
+| **WordPress / BookStack / Outline / FreeScout / Miniflux / HedgeDoc / Firefly** | Each role's `post.yml` re-runs the service's admin-creation step on every playbook run | Built-in Pattern D via reconverge. |
+
+**Operator playbook for any admin lockout:**
+```bash
+# Step 1: try the per-service tag (almost always sufficient)
+ansible-playbook main.yml --tags <service>
+# Step 2 (Infisical only): explicit force-reset with data-wipe gate
+ansible-playbook main.yml --tags infisical-reset-admin
+```
+
+Operators should NEVER need `blank=true` for an admin lockout. If they
+ever do, that's a missing reset path — open a SEC-N ticket.
 
 ## File-mode policy (every secret lives in 0600)
 
