@@ -24,6 +24,7 @@ services:
       QGIS_SERVER_PARALLEL_RENDERING: "true"
     networks:
       - engineering_net
+      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:

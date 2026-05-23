@@ -5,13 +5,14 @@
 http:
   middlewares:
     # ── Authentik forward-auth ────────────────────────────────────────────
-    # The embedded outpost lives on host 127.0.0.1:{{ authentik_port | default(9003) }}
-    # — Traefik reaches it via the nos-host extra_hosts alias. Fail-closed:
-    # if the outpost is unreachable, Traefik returns 502 (no auth bypass —
-    # PENTEST-002 posture preserved).
+    # A19 (2026-05-23): the embedded outpost runs INSIDE the authentik-server
+    # container (internal :9000). Traefik reaches it DIRECTLY on shared_net —
+    # the old `nos-host:9003` host-gateway path 502'd after Docker Desktop made
+    # host-gateway IPv6-only-resolvable, which would have failed forward-auth
+    # for EVERY proxy-gated service. Fail-closed posture (PENTEST-002) preserved.
     authentik:
       forwardAuth:
-        address: "http://nos-host:{{ authentik_port | default(9003) }}/outpost.goauthentik.io/auth/traefik"
+        address: "http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
         trustForwardHeader: true
         authResponseHeaders:
           - X-authentik-username

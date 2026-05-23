@@ -21,6 +21,7 @@ services:
       - {{ uptime_kuma_data_dir }}:/app/data
     networks:
       - iiab_net
+      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:

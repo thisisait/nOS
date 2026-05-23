@@ -21,6 +21,7 @@ services:
       - {{ maps_data_dir }}:/data
     networks:
       - iiab_net
+      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:

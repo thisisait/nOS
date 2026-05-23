@@ -34,6 +34,7 @@ services:
       - 'ZIMS=$$(ls /data/*.zim 2>/dev/null); if [ -n "$$ZIMS" ]; then exec /usr/local/bin/kiwix-serve --port=8080 $$ZIMS; else echo "No ZIM files in /data -- add .zim files and restart"; exec sleep infinity; fi'
     networks:
       - iiab_net
+      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:
