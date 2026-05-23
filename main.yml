@@ -429,6 +429,47 @@
       tags: ['always']
       when: (nos_sudo_password | default('') | length) > 0
 
+    # ── Anatomy daemon liveness sweep (A18 hardening, 2026-05-23) ─────────
+    # Symptom: operator ran `ansible-playbook main.yml --tags gitea` to
+    # apply a hotfix; the wing role tasks were skipped entirely; Wing
+    # daemon (previously knocked out by a macOS reboot / sleep cycle)
+    # stayed down indefinitely. KeepAlive=true in the plist only fires
+    # once launchd KNOWS about the job — a plist sitting on disk without
+    # being bootstrapped is invisible.
+    #
+    # Fix: at every playbook invocation (any tag set, since this task
+    # carries `always`), check launchctl for each anatomy daemon; if not
+    # loaded, bootstrap it. The respective role's own bootstrap task
+    # still runs the full setup when the role IS in scope — this is
+    # purely a recovery net for partial-tag runs.
+    #
+    # No-op on first install: when the plist doesn't exist yet (fresh
+    # blank, role hasn't rendered it), the bootstrap call silently
+    # exits non-zero and we continue (failed_when: false). The role
+    # task that runs later will do the proper rendering + bootstrap.
+    - name: "[Preflight] Ensure anatomy daemons (Wing/Bone/Pulse) loaded in launchd"
+      ansible.builtin.shell: |
+        UID_NUM=$(id -u)
+        PLIST=~/Library/LaunchAgents/{{ item }}.plist
+        if [ ! -f "$PLIST" ]; then
+          echo "skip:no-plist:{{ item }}"
+          exit 0
+        fi
+        if launchctl print "gui/${UID_NUM}/{{ item }}" >/dev/null 2>&1; then
+          echo "ok:already-loaded:{{ item }}"
+        else
+          launchctl bootstrap "gui/${UID_NUM}" "$PLIST" 2>&1 && echo "ok:bootstrapped:{{ item }}"
+        fi
+      loop:
+        - "{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
+        - "{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
+        - "{{ pulse_launchd_label | default('eu.thisisait.nos.pulse') }}"
+      register: _anatomy_daemons_sweep
+      changed_when: "'bootstrapped:' in (_anatomy_daemons_sweep.results | map(attribute='stdout') | join('\n'))"
+      failed_when: false
+      when: ansible_os_family == 'Darwin'
+      tags: ['always']
+
   environment:
     SUDO_ASKPASS: "{{ lookup('env', 'HOME') + '/.ansible_askpass' if ((nos_sudo_password | default('') | length) > 0) else '' }}"
 

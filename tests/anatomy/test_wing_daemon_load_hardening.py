@@ -67,6 +67,44 @@ def test_main_yml_restart_wing_handler_probes_after_bootstrap():
 	assert "launchd.err.log" in handler
 
 
+def test_main_yml_preflight_loads_all_anatomy_daemons():
+	"""A18 hardening (2026-05-23): when the operator runs a partial-tag
+	playbook (e.g. `--tags gitea`), the wing role tasks are skipped
+	entirely → if the Wing launchd job was unloaded between runs (macOS
+	reboot, manual bootout, ThrottleInterval crash loop with eventual
+	bootout), Wing stays down forever. This pre-task is the recovery
+	net: at every play invocation, iterate {wing,bone,pulse}_launchd_label
+	plists and bootstrap any that aren't currently loaded.
+
+	Pinned attributes:
+	  * Task has `tags: ['always']` so partial-tag runs (--tags gitea,
+	    --skip-tags …) still execute it.
+	  * Loops over all three anatomy daemons, not just Wing.
+	  * Gracefully no-ops when the plist file doesn't exist yet (fresh
+	    blank, role hasn't rendered).
+	  * Gated on Darwin (no Linux equivalent yet).
+	"""
+	src = (REPO / "main.yml").read_text()
+	# Find the anatomy-daemons sweep task.
+	start = src.find("Ensure anatomy daemons (Wing/Bone/Pulse) loaded")
+	assert start > 0, "anatomy-daemon sweep pre-task missing from main.yml"
+	# Next bare "- name:" at the same indent terminates this task body.
+	end = src.find("\n  environment:", start + 10)
+	task = src[start:end]
+	# Required hooks (regex-tolerant — multi-line YAML).
+	assert "tags: ['always']" in task, \
+		"anatomy-daemon sweep must carry tags:['always'] so partial-tag runs still execute it"
+	assert "{{ wing_launchd_label" in task and "{{ bone_launchd_label" in task and "{{ pulse_launchd_label" in task, \
+		"sweep must iterate all three anatomy daemons (wing/bone/pulse)"
+	assert "ansible_os_family == 'Darwin'" in task, \
+		"sweep must be gated on Darwin (no Linux launchd)"
+	assert "launchctl print" in task and "launchctl bootstrap" in task, \
+		"sweep must use the check-then-bootstrap pattern"
+	# Must tolerate missing plist (fresh blank).
+	assert "no-plist" in task or "! -f" in task, \
+		"sweep must skip gracefully when plist file doesn't exist yet"
+
+
 def test_main_yml_restart_wing_handler_dropped_silent_failure_flag():
 	"""Pre-A17 the handler had `failed_when: false` which hid every
 	failure mode. The handler MUST NOT carry that anymore — only
