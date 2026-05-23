@@ -1,7 +1,7 @@
 # nOS E2E SSO test suite — Playwright
 
-Browser-based end-to-end tests for all nOS services with Authentik SSO login.
-Covers **17 forward_auth services** (3 Tier-2 apps + 14 Tier-1) + health checks.
+Browser-based end-to-end tests for nOS services with Authentik SSO login.
+Covers **18 forward_auth services** (3 Tier-2 apps + 15 Tier-1/opt-in) + health checks.
 
 ## One-time setup
 
@@ -59,7 +59,7 @@ identities provide. Don't use this in CI.
 1. Navigate to service URL (e.g. `https://grafana.pazny.eu/`)
 2. Traefik forward-auth middleware redirects to Authentik login
 3. Fill ephemeral username → Next → fill random password → Submit
-4. Redirect back to service → verify page renders with content
+4. Redirect back to service → verify the browser left Authentik (and optional title checks)
 
 ## Identity lifecycle
 
@@ -84,7 +84,7 @@ python3 files/anatomy/scripts/sweep-orphan-testers.py
 
 ```
 tests/e2e/
-├── tier2-wet-test.spec.ts   # Tier-2 apps (3) + Tier-1 services (14) + health checks
+├── tier2-wet-test.spec.ts   # Tier-2 apps (3) + Tier-1/opt-in services (15) + health checks
 ├── global-setup.ts          # Provision ephemeral tester before the suite
 ├── global-teardown.ts       # Revoke tester after the suite (pass or fail)
 ├── journeys/                # Pytest-based journey tests (operator_login, rbac_admin, smoke...)

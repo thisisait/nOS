@@ -41,10 +41,10 @@ non-operator-identity end-to-end write to `wing.db` proven.
 Total: 26 new anatomy gates locking the Wing surface (253/253 green).
 
 **Parallel pending work:**
-* **Tier-2 aggregator path** — extend `run_aggregators` with
-  `from: app_manifest` source so Tier-2 apps land in `inputs.clients`
-  alongside Tier-1; retire the `authentik_oidc_apps: []` Tier-2 stub.
 * **Linux port** (`docs/linux-port.md`) — Ubuntu LTS target; deferred.
+* **Post-A17 hardening follow-ups** — keep security fixes small, gated,
+  and tied to anatomy tests; the Tier-2 `from: app_manifest` aggregator path
+  is already live and pinned by `tests/anatomy/test_apps_runner_aggregator_cutover.py`.
 
 ### Last verified state (2026-05-17)
 
