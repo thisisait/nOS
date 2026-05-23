@@ -207,15 +207,18 @@
       ansible.builtin.set_fact:
         _apps_bone_ts_epoch: "{{ (ansible_date_time.epoch | int) | string }}"
 
-    # Bone server-side re-canonicalizes the parsed body before HMAC check
-    # (files/anatomy/bone/main.py: `json.dumps(body, separators=(",", ":"),
-    # sort_keys=True)`). The client's HMAC must match THAT exact canonical
-    # form, not what Ansible's `to_json` filter produces (which keeps insert
-    # order + default `, ` / `: ` separators).
+    # Bone verifies the HMAC over the RAW received body bytes
+    # (files/anatomy/bone/events.py::verify_hmac: message = "{ts}.{raw_body}").
+    # It does NOT re-canonicalize server-side. So the bytes we SEND on the wire
+    # must be byte-identical to the bytes we SIGN. We canonicalize once via
+    # `jq -cS` (compact, sorted keys) and POST THOSE EXACT bytes below with
+    # body_format: raw.
     #
-    # We funnel the body through `jq -cS` (compact, sort keys) to produce
-    # the same canonical bytes Bone signs against. Without this step, every
-    # signed POST returns 401 "invalid signature" — surfaced 2026-05-03.
+    # A19 fix (2026-05-23): the old comment claimed Bone re-canonicalizes the
+    # parsed body — it does NOT. The POST sent `_apps_bone_batch` via
+    # body_format:json, letting Ansible re-serialize the dict with different
+    # separators/key-order than the signed `jq -cS` form → HMAC mismatch → 401
+    # "invalid signature" on every app.deployed event.
     - name: "[Apps Post] Canonicalize Bone body via jq -cS (matches server-side encoding)"
       ansible.builtin.shell:
         cmd: 'set -o pipefail; printf %s "$NOS_BODY" | jq -cS .'
@@ -250,8 +253,10 @@
       ansible.builtin.uri:
         url: "{{ wing_events_url | default('http://127.0.0.1:' ~ (bone_port | default(8099)) ~ '/api/v1/events') }}"
         method: POST
-        body_format: json
-        body: "{{ _apps_bone_batch }}"
+        # Send the EXACT canonical bytes the HMAC was computed over (raw, not
+        # body_format:json — Ansible would re-serialize and break the signature).
+        body_format: raw
+        body: "{{ _apps_bone_canon.stdout }}"
         headers:
           Content-Type: "application/json"
           X-Wing-Signature: "sha256={{ _apps_bone_hmac_calc.stdout | trim }}"
