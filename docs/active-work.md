@@ -5,14 +5,49 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-23 • Post-A17 security hardening + E2E/aggregator
-> closeout. Local `dev` is ahead of `origin/dev`; push before opening the
-> next roadmap lane. Broad local gates: 896 pytest checks green, syntax-check
-> clean, Playwright SSO full suite green (14 passed / 7 skipped).
+> Last updated: 2026-05-23 (evening) • A19 plugin-wiring unification +
+> orchestration health-wait + single-run autowiring → **v0.2-beta**
+> milestone. Local `dev` is ahead of `origin/dev`; push + tag `v0.2-beta`
+> from `master` before opening the next roadmap lane. Broad local gates:
+> pytest green (incl. new `test_plugin_wiring_contract.py`), syntax-check
+> clean, full STRICT all-on blank `ok=1886 failed=0`.
 
 ---
 
-## Current track: **steady-state closeout — A1–A17 + security hardening DONE**
+## Current track: **v0.2-beta cut — A1–A19 + security hardening DONE**
+
+**v0.2-beta milestone (2026-05-23)** — see [`RELEASE.md`](../RELEASE.md).
+Cut as git tag `v0.2-beta` from `master` (prior tag `v0.1-beta`). Validated
+by a full STRICT all-on blank: `ok=1886 failed=0`. A19 bundle:
+
+* **Plugin-wiring unification** — notification routing canonicalized to the
+  A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info`
+  → `wing-inbox`|`ntfy`|`mail`) across **55/55** plugins. New CI gate
+  `tests/anatomy/test_plugin_wiring_contract.py`, report
+  `tools/plugin-wiring-report.py`, doctrine
+  `files/anatomy/docs/plugin-wiring-capabilities.md` (live-consumer vs
+  forward-ready metadata). qdrant-base gained a `feature_flag`; gitleaks
+  gdpr/schema conformed.
+* **Orchestration health-wait** — blocking `docker compose up --wait`
+  replaced by `up -d` + an in-stream health-wait heartbeat
+  (`tasks/stacks/wait-stacks-healthy.yml`, `tasks/stacks/health-tick.yml`,
+  `files/anatomy/scripts/stack-health-probe.py`). ~15s ticks print per-stack
+  readiness lines into `ansible.log`. STRICT — every container must reach
+  healthy. New vars `stack_up_parallel` / `stack_up_wait_timeout` /
+  `stack_wait_tick_interval`; sequential cold-blank avoids Docker-daemon
+  saturation. New `profiles/all-on.yml` (every known-good service, excludes
+  erpnext/freepbx/spacetimedb). Applied to core-up / stack-up / apps-up.
+* **Sudo-free runner** — `tools/nos-stacks.sh [tag]` runs the stack layer
+  without sudo and without the vars_prompt (agent/CI dev).
+* **Single-run autowiring** — `authentik_bootstrap_token` is
+  playbook-generated + pinned as the Authentik blueprint token key (Wing
+  /users + invitations work on ONE blank run, no fetch-tool second pass);
+  Woodpecker↔Gitea OAuth2 client auto-created.
+* **Wing Latte CSRF fix** — CSRF tokens on every browser POST form (SEC-14).
+
+---
+
+## Prior track: **steady-state closeout — A1–A17 + security hardening DONE**
 
 A1–A14 are all **DONE**, including A9 fanout, A9.2 daily-digest mail,
 A9.3 Remediator agent, and the **Phase 5 ceremony milestone — CLOSED
@@ -151,9 +186,11 @@ the previous snapshot all completed — see git log between `7e2026c` and
 
 | Surface | State |
 |---|---|
-| `git status` | clean (one floating `nos_tester_password` template change pending operator decision) |
-| Last verified | 2026-05-16; Playwright + smoke + coexistence + syntax-check all green |
+| `git status` | A19 wiring + orchestration changes uncommitted on `dev` (this session) |
+| Last verified | 2026-05-23; full STRICT all-on blank `ok=1886 failed=0`; pytest + syntax-check green |
+| Release | `v0.2-beta` (cut from `master`; prior `v0.1-beta`) — see `RELEASE.md` |
 | Tier-1 services | smoke probe: 31/32 OK on pazny.eu (Nextcloud 500 separate) |
+| Plugin wiring | 55/55 notification-canonical; `test_plugin_wiring_contract.py` gate |
 | Plugin loader | 63 plugins (Q1–Q7 + D1+D2 complete) |
 | Authentik blueprints | rendered by `authentik-base` plugin aggregator; per-plugin `authentik:` blocks are SoT (post-D1.3) |
 | Pulse | 4 endpoints live; conductor + gitleaks Pulse jobs registered |

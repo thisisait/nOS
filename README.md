@@ -84,17 +84,68 @@ about in `credentials.yml`; the rest are derived. Generator: `openssl rand -hex 
 ### 3. Run
 
 ```bash
-# Full install (prompts for sudo)
-ansible-playbook main.yml -K
+# Full install (sudo prompt via vars_prompt — no -K needed)
+ansible-playbook main.yml
 
 # Clean reinstall — wipes ALL data and secrets, prompts for a new prefix, rebuilds from scratch
-ansible-playbook main.yml -K -e blank=true
+ansible-playbook main.yml -e blank=true
 
 # Run a single stack
-ansible-playbook main.yml -K --tags "stacks,observability"
+ansible-playbook main.yml --tags "stacks,observability"
 ```
 
 A full first run takes **~20 minutes** on an M4 Pro with fast internet.
+
+### Stack bring-up tuning
+
+Stacks come up with `docker compose up -d` (non-blocking), then an **in-stream
+health-wait heartbeat** (`tasks/stacks/wait-stacks-healthy.yml` →
+`files/anatomy/scripts/stack-health-probe.py`) polls every container until it
+reports healthy. Each ~15s tick prints a per-stack readiness line into the main
+`ansible.log` — e.g. `iiab: 17/18 ready (waiting: jellyfin[starting])` — so a
+long bring-up no longer freezes the log. The wait is **STRICT**: every container
+must reach healthy, no tolerance escape hatch. Slow services just need a generous
+timeout.
+
+| Var | Default | What it does |
+|---|---|---|
+| `stack_up_parallel` | `true` | Bring wave-2 stacks up concurrently. Set `false` to bring them up one at a time — required for a cold blank that enables everything (parallel pulls/builds saturate the Docker daemon and blow the per-stack timeout). |
+| `stack_up_wait_timeout` | `540` | Per-stack health budget in seconds. Bump to 900–1200 for cold-blank heavy sets (GitLab/OnlyOffice cold init is slow). |
+| `stack_wait_tick_interval` | `15` | Seconds between health-poll ticks (heartbeat freshness vs task-count noise). |
+
+### Testing the full catalogue
+
+`profiles/all-on.yml` is a committed test profile that enables every known-good
+service (excludes `erpnext` / `freepbx` / `spacetimedb`), forces sequential
+bring-up, and sets a 1200s per-stack timeout:
+
+```bash
+ansible-playbook main.yml -e @profiles/all-on.yml                 # everything on
+ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true   # full wipe + reinstall
+```
+
+`-e @profiles/all-on.yml` layers on top of your gitignored `config.yml` /
+`credentials.yml` without touching secret overrides.
+
+### Autonomous (sudo-free) stack runs
+
+`tools/nos-stacks.sh` brings the Docker stack layer up **without sudo and
+without the interactive prompt** — for agent / CI-driven dev. The compose-up
+flow carries zero `become:` tasks, and `-e nos_sudo_password=''` skips the
+`vars_prompt`:
+
+```bash
+tools/nos-stacks.sh                 # all stacks (core + wave-2)
+tools/nos-stacks.sh woodpecker      # render + recreate one service (A17)
+tools/nos-stacks.sh observability   # one stack
+```
+
+It refuses `blank=true` (that path needs sudo + a human).
+
+### Known first-run notes
+
+- **GitLab cold init is slow** (~12 min to first healthy) but converges under
+  the strict health-wait — give it a generous `stack_up_wait_timeout`.
 
 ---
 
@@ -144,8 +195,11 @@ docker compose \
   -f ~/stacks/iiab/overrides/wordpress.yml \
   -f ~/stacks/iiab/overrides/nextcloud.yml \
   ... \
-  up iiab --wait
+  up iiab -d
 ```
+
+Bring-up is non-blocking (`up -d`); a separate in-stream health-wait heartbeat
+then polls every container to healthy (see *Stack bring-up tuning* below).
 
 **Result:** each service stays in its own role, but the stack sees one merged compose. Add a
 service by creating a role — no hand-edits to the base stack template.
@@ -194,6 +248,16 @@ upgrades. Every action emits structured events to Wing
 
 See [docs/framework-overview.md](docs/framework-overview.md) for the operator tour,
 and [docs/framework-plan.md](docs/framework-plan.md) for the authoritative spec.
+
+### Notifications
+
+Every service plugin carries a canonical A9 notification-routing block
+(`on_critical` / `on_high` / `on_medium` / `on_low` / `on_info` → channels
+`wing-inbox` | `ntfy` | `mail`) — uniform across all 55 plugins. The `wing-base`
+aggregator harvests them into a routing sidecar that Bone reads at insert time,
+fanning events out to the Wing inbox, ntfy push, and SMTP (Stalwart, with a
+daily digest at a configurable severity floor). See
+[files/anatomy/docs/notification-fanout.md](files/anatomy/docs/notification-fanout.md).
 
 ---
 
@@ -268,9 +332,9 @@ install_open_webui: true
 ### Version policy
 
 ```bash
-ansible-playbook main.yml -K                           # stable (default, CVE-patched)
-ansible-playbook main.yml -K -e version_policy=latest  # track upstream latest
-ansible-playbook main.yml -K -e version_policy=lts     # LTS branches where available
+ansible-playbook main.yml                              # stable (default, CVE-patched)
+ansible-playbook main.yml -e version_policy=latest     # track upstream latest
+ansible-playbook main.yml -e version_policy=lts        # LTS branches where available
 ./security-update.sh                                   # security-only pull
 ```
 
@@ -292,7 +356,7 @@ instance_parent: ""                  # slug of parent box for hierarchy
 ## Tags & selective runs
 
 ```bash
-ansible-playbook main.yml -K --tags "TAG[,TAG…]"
+ansible-playbook main.yml --tags "TAG[,TAG…]"
 ```
 
 | Tag | What runs |
