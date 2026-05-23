@@ -91,14 +91,41 @@
     - (_infisical_seed_result.token | default('')) | length > 0
   no_log: true
 
-- name: "[pazny.infisical Seed] Re-persist ~/.nos/secrets.yml with admin token"
+# A18 (2026-05-23): harvest the `nos-users` project UUID from the seeder
+# output and pin it as a fact so Wing's invite-flow Cesta B (this run AND
+# subsequent ones via ~/.nos/secrets.yml) doesn't require manual
+# `infisical projects list` + config edit. The fact is also pushed to the
+# persisted secrets file below so the next run loads it back even when the
+# seed task is skipped (e.g. `--tags wing`).
+#
+# Operator-override-aware: if the operator pinned a value in config.yml
+# (e.g. pointing at a non-default project), respect that — we ONLY auto-pin
+# when the current value is empty. Set-fact's high precedence would
+# otherwise silently shadow the operator's intent.
+- name: "[pazny.infisical Seed] Pin infisical_users_project_id from seeder output"
+  ansible.builtin.set_fact:
+    infisical_users_project_id: "{{ _infisical_seed_result.projects['nos-users'].id }}"
+  when:
+    - (infisical_users_project_id | default('')) | length == 0
+    - _infisical_seed_result is defined
+    - _infisical_seed_result.projects is defined
+    - "'nos-users' in (_infisical_seed_result.projects | default({}))"
+    - (_infisical_seed_result.projects['nos-users'].id | default('')) | length > 0
+  no_log: true
+
+# Re-render ~/.nos/secrets.yml whenever the seeder ran successfully —
+# previously gated only on `bootstrapped: true`, but the projects[].id
+# fields we now capture become available on EVERY successful run, not
+# just first-time bootstrap. With everything in the template carrying
+# default('') fallbacks, a re-render with no changes is a no-op.
+- name: "[pazny.infisical Seed] Re-persist ~/.nos/secrets.yml with admin token + project IDs"
   ansible.builtin.template:
     src: "secrets.yml.j2"
     dest: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
     mode: '0600'
   when:
     - _infisical_seed_result is defined
-    - (_infisical_seed_result.bootstrapped | default(false)) | bool
+    - (_infisical_seed_result.token | default('')) | length > 0
   no_log: true
 
 - name: "[pazny.infisical Seed] Status"

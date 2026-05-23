@@ -387,6 +387,41 @@ def test_default_config_seeds_nos_users_infisical_project():
 	assert "slug: nos-users" in src
 
 
+def test_seed_yml_pins_users_project_id_from_seeder():
+	"""A18 (2026-05-23): the seed task harvests the `nos-users` project
+	UUID from seed.py's JSON output and set_facts it so Wing's plist
+	render picks it up without an operator-side `infisical projects list`
+	+ config edit step.
+
+	Pinned attributes:
+	  * set_fact reads `_infisical_seed_result.projects['nos-users'].id`
+	  * Operator override (config.yml pin) takes precedence — the task is
+	    gated on `infisical_users_project_id` being currently empty
+	  * The persisted-secrets re-render is no longer gated only on
+	    bootstrap, so the project_id flows to ~/.nos/secrets.yml on every
+	    successful seed run (not just first install)"""
+	src = (REPO / "roles/pazny.infisical/tasks/seed.yml").read_text()
+	assert "Pin infisical_users_project_id" in src
+	# Must read from the seeder output JSON path.
+	assert "_infisical_seed_result.projects['nos-users'].id" in src
+	# Must respect operator override (only set when currently empty).
+	assert "(infisical_users_project_id | default('')) | length == 0" in src
+	# Re-render must trigger on token presence, not only on bootstrap.
+	# Old gate was `_infisical_seed_result.bootstrapped`; new gate widens it.
+	assert "_infisical_seed_result.token" in src
+
+
+def test_secrets_template_has_users_project_id():
+	"""~/.nos/secrets.yml.j2 template must include the new field so the
+	NEXT playbook run (any tag set) loads the auto-discovered value back
+	via include_vars on pre-tasks."""
+	src = (REPO / "templates/secrets.yml.j2").read_text()
+	assert "infisical_users_project_id:" in src
+	# Must use default('') so the template doesn't crash when the var
+	# isn't set (fresh blank, seed never ran yet).
+	assert "infisical_users_project_id | default('')" in src
+
+
 # ── DI registration (common.neon) ───────────────────────────────────────
 
 
