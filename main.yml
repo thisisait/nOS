@@ -1032,6 +1032,7 @@
         # derived default; if operator overrode, that wins.
         bone_secret: "{% if '_pw_' in (bone_secret | default('')) or (bone_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bone_secret }}{% endif %}"
         nos_deploy_hmac_secret: "{% if '_pw_' in (nos_deploy_hmac_secret | default('')) or (nos_deploy_hmac_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ nos_deploy_hmac_secret }}{% endif %}"
+        wing_edge_token: "{% if '_pw_' in (wing_edge_token | default('')) or (wing_edge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_edge_token }}{% endif %}"
       tags: ['always']
 
     - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"

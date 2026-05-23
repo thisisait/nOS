@@ -22,6 +22,48 @@ abstract class BasePresenter extends Presenter
 	/** @inject */
 	public EventRepository $eventsForBadge;
 
+	/**
+	 * SEC-6 (2026-05-23): edge-trust validation runs BEFORE any action
+	 * method or beforeRender. If WING_EDGE_TOKEN env is set, every
+	 * request MUST carry a matching X-Wing-Edge-Token header (injected
+	 * by Traefik's wing-edge@file middleware). Direct-loopback requests
+	 * that bypass Traefik (curl from another process on the host)
+	 * arrive without the header and are refused — even if they spoof
+	 * X-Authentik-Username.
+	 *
+	 * Graceful degradation when WING_EDGE_TOKEN env is empty (fresh
+	 * install pre-regen, or operator explicitly disabled): skip the
+	 * check. The 127.0.0.1 bind (Wing Caddyfile, SEC-6) is still the
+	 * first defense; this header is the second.
+	 */
+	public function startup(): void
+	{
+		parent::startup();
+		$this->enforceEdgeTrust();
+	}
+
+	private function enforceEdgeTrust(): void
+	{
+		$expected = (string) (getenv('WING_EDGE_TOKEN') ?: '');
+		if ($expected === '') {
+			// Edge-trust not yet configured — skip (fresh install path).
+			// SEC-3 lazy-regen populates this on first main.yml run; the
+			// next plist render + Restart wing handler will activate it.
+			return;
+		}
+		$got = (string) ($this->getHttpRequest()->getHeader('X-Wing-Edge-Token') ?? '');
+		// Timing-safe compare so a brute-force attempt can't oracle the
+		// match position from response latency.
+		if (!hash_equals($expected, $got)) {
+			$this->error(
+				'Forbidden -- request did not pass through the Traefik edge. '
+				. 'Browser access must come via https://wing.<tld>/, not '
+				. 'direct localhost:9000.',
+				403,
+			);
+		}
+	}
+
 	public function beforeRender(): void
 	{
 		$this->template->activeTab = $this->activeTab;

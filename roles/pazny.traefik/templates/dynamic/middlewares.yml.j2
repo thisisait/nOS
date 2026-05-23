@@ -46,6 +46,24 @@ http:
     compress:
       compress: {}
 
+    # ── SEC-6 (2026-05-23): Wing edge-trust signature ─────────────────────
+    # Wing's BasePresenter::startup() rejects requests that DON'T carry
+    # X-Wing-Edge-Token matching its WING_EDGE_TOKEN env. Without this
+    # middleware on the wing router, every legitimate browser request
+    # would 403 — apply this middleware in services.yml's wing router.
+    #
+    # Defense-in-depth: customRequestHeaders REPLACES any client-sent
+    # header with the same name, so a malicious client can't pre-poison
+    # X-Wing-Edge-Token and hope Traefik forwards it. The 127.0.0.1
+    # Caddyfile bind (Wing.Caddyfile.j2 SEC-6) is the first defense —
+    # only Traefik can reach the listener. This middleware is the
+    # second — direct loopback requests (any process bypassing Traefik)
+    # arrive without the header and are refused at PHP layer.
+    wing-edge:
+      headers:
+        customRequestHeaders:
+          X-Wing-Edge-Token: "{{ wing_edge_token | default('') }}"
+
   # ── Servers transports ────────────────────────────────────────────────
   serversTransports:
     # Skip cert verify for upstream HTTPS — used when reaching Authentik,

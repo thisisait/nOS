@@ -54,10 +54,14 @@ http:
       entryPoints: ["websecure"]
       service: "{{ _router }}"
       tls: {}
+{# SEC-6 (2026-05-23): wing router gets the wing-edge@file middleware
+   that injects X-Wing-Edge-Token. Wing's BasePresenter rejects requests
+   without it (closing the direct-loopback bypass class). #}
+{% set _extra_mw = ['wing-edge@file'] if s.id == 'wing' else [] %}
 {% if _auth == 'proxy' %}
-      middlewares: ["authentik@file", "security-headers@file", "compress@file"]
+      middlewares: {{ (['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% else %}
-      middlewares: ["security-headers@file", "compress@file"]
+      middlewares: {{ (['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% endif %}
 {% endif %}
 {% endif %}
