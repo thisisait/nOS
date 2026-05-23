@@ -1019,6 +1019,31 @@
         bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
         outline_secret_key: "{% if '_pw_' in (outline_secret_key | default('')) or (outline_secret_key | default('') | length) != 64 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_secret_key }}{% endif %}"
         authentik_secret_key: "{% if '_pw_' in (authentik_secret_key | default('')) or (authentik_secret_key | default('') | length) < 50 %}{{ lookup('pipe', 'openssl rand -hex 50') }}{% else %}{{ authentik_secret_key }}{% endif %}"
+        # SEC-3 (2026-05-23): high-entropy HMAC secrets. Pre-this,
+        # bone_secret + wing_events_hmac_secret + nos_deploy_hmac_secret
+        # all defaulted to `{{ global_password_prefix }}_pw_<svc>` (~50
+        # bits real entropy with the default "changeme" prefix). Now:
+        # 256-bit openssl-rand replaces the prefix-derived value on
+        # first run + persists to ~/.nos/secrets.yml so subsequent
+        # runs reuse the same value (avoiding HMAC drift between
+        # Bone/Wing/CI sides). The wing_events_hmac_secret intentionally
+        # MIRRORS bone_secret (both sides of the same channel must
+        # share the key) — but only if bone_secret was the prefix-
+        # derived default; if operator overrode, that wins.
+        bone_secret: "{% if '_pw_' in (bone_secret | default('')) or (bone_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bone_secret }}{% endif %}"
+        nos_deploy_hmac_secret: "{% if '_pw_' in (nos_deploy_hmac_secret | default('')) or (nos_deploy_hmac_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ nos_deploy_hmac_secret }}{% endif %}"
+      tags: ['always']
+
+    - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"
+      # Two-step because the value of bone_secret above has to be
+      # resolved BEFORE this set_fact reads it. wing_events_hmac_secret
+      # was historically `{{ bone_secret }}` in default.config.yml so
+      # the symmetry held without operator setup. Preserve that, but
+      # only when wing_events_hmac_secret looks like the unset/derived
+      # default (so an explicit operator override in credentials.yml
+      # still wins).
+      ansible.builtin.set_fact:
+        wing_events_hmac_secret: "{% if '_pw_' in (wing_events_hmac_secret | default('')) or (wing_events_hmac_secret | default('') | length) < 32 or wing_events_hmac_secret == bone_secret %}{{ bone_secret }}{% else %}{{ wing_events_hmac_secret }}{% endif %}"
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (prefix change, blank, or destroy_state)"
