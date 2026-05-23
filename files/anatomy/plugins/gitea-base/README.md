@@ -1,9 +1,10 @@
 # gitea-base
 
-**Status: SCAFFOLD (U8, 2026-05-04).** Declares the contract for Q2 native-OIDC
-API wiring. The loader does not yet have a `replay_api_calls` runner — full
-execution lands in **Phase 2 C5**. Until then, `roles/pazny.gitea/tasks/post.yml`
-+ `tasks/stacks/authentik_service_post.yml:1-79` remain the live wiring path.
+**Status: LIVE CONTRACT (U8 → C5, 2026-05-23).** Declares the contract for
+Q2 native-OIDC API wiring. The loader now has a `replay_api_calls` runner;
+`roles/pazny.gitea/tasks/post.yml` + `tasks/stacks/authentik_service_post.yml`
+remain as parity fallback until one more idempotent live run proves the
+plugin-only path.
 
 ## What this plugin captures
 
@@ -25,10 +26,10 @@ execution lands in **Phase 2 C5**. Until then, `roles/pazny.gitea/tasks/post.yml
 
 | Phase | What lands |
 |-------|------------|
-| **U8 (now)** | Manifest + hook sequence + GDPR row + `ui-extension.hub_card`. Loader skips unknown lifecycle entries gracefully. |
-| **C1** | Drop the central `authentik_oidc_apps` Gitea entry from `default.config.yml` once authentik-base aggregator picks up this plugin's `authentik:` block. |
+| **U8** | Manifest + hook sequence + GDPR row + `ui-extension.hub_card`. |
+| **C1** | Central `authentik_oidc_apps` entry retired; authentik-base aggregator picks up this plugin's `authentik:` block. |
 | **C2** | Operator merges `manifest.fragment.yml` into `state/manifest.yml`. |
-| **C5** | Plugin-loader gains `replay_api_calls` runner + e2e validation against a live Gitea+Authentik pair. Role-side post.yml + service-post slice retire. |
+| **C5** | Plugin-loader gained `replay_api_calls`; role-side post.yml + service-post slice retire after final live parity gate. |
 
 ## RBAC tier
 

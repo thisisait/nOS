@@ -11,15 +11,14 @@
 #   - Every agent profile under files/anatomy/agents/ with a `pulse:`
 #     block (conductor today, future agents) does the same.
 #   - This plugin's aggregator harvests both sources into inputs.jobs.
-#   - The renderer (wing/post.yml today, plugin loader's
-#     `replay_api_calls` action when it lands in C5) iterates inputs.jobs
-#     and POSTs each to /api/v1/pulse_jobs (idempotent upsert).
+#   - The renderer (wing/post.yml today; future pulse-base post_compose hook)
+#     iterates inputs.jobs and POSTs each to /api/v1/pulse_jobs
+#     (idempotent upsert).
 #
-# Until C5 lands the loader's `replay_api_calls` action, the
-# registration loop lives in roles/pazny.wing/tasks/post.yml — but
-# data-driven from the harvested catalog (no more hardcoded blocks).
-# When C5 lands, the lifecycle.post_compose stub below activates and
-# wing/post.yml's loop retires.
+# The loader has `replay_api_calls`, but this plugin still needs an
+# item-iteration variant for catalog fan-out. Until that lands, the
+# registration loop lives in roles/pazny.wing/tasks/post.yml — data-driven
+# from the harvested catalog, not hardcoded blocks.
 #
 # Doctrine pin: roles register install primitives (DB user, admin
 # password reconverge, container start). Plugins declare the contract
@@ -51,9 +50,8 @@ aggregates:
 # =============================================================================
 # Lifecycle — none today. Pulse job registration runs imperatively from
 # roles/pazny.wing/tasks/post.yml (data-driven iteration over the harvested
-# inputs.jobs). When the loader gains a `replay_api_calls` action (C5
-# phase, forward-spec), the post.yml loop retires and this lifecycle block
-# returns with:
+# inputs.jobs). When replay_api_calls gains an item-iteration variant, the
+# post.yml loop retires and this lifecycle block returns with:
 #
 #   post_compose:
 #     - replay_api_calls:

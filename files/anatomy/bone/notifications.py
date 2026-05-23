@@ -7,8 +7,8 @@ Anatomy A9 (2026-05-16). Mirrors events.py shape:
     transport).
   - Whitelist of valid severities + channels (re-checked client-side too).
   - validate_payload returns None on OK, error string on reject.
-  - insert_notification delegates to clients/wing.py so the single seam
-    rule (no sqlite3.connect against wing.db outside that module) holds.
+  - insert_notification delegates to clients/wing.py so the single DB seam
+    rule holds outside that module.
 
 Bone POST /api/v1/notifications calls verify_hmac + validate_payload, then
 clients.wing.insert_notification. The /inbox presenter reads directly via

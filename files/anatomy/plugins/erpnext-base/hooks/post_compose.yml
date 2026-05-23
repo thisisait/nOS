@@ -3,7 +3,7 @@
 # erpnext-base / hooks/post_compose.yml
 #
 # Declarative post-compose sequence. Loader replays via `replay_api_calls`
-# once Phase 2 C5 lands the runner (bench is `runner: docker_exec`).
+# (bench is `runner: docker_exec`).
 # Mirrors roles/pazny.erpnext/tasks/post.yml byte-for-byte — the largest
 # bench-CLI harvest in the repo.
 # =============================================================================
