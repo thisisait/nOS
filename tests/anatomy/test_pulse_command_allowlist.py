@@ -1,0 +1,141 @@
+"""Anatomy gate — Pulse command + args allowlist (SEC-8, 2026-05-23).
+
+Pre-SEC-8, PulsePresenter::actionJobs accepted any `command` value from
+any token holder. Combined with TokenRepository having no scope/role
+column, every active Wing API token = arbitrary RCE via Pulse on next
+tick (Pulse subprocess.run([command, *args]) on the host with operator
+UID).
+
+Defense layered:
+  1. command MUST be absolute path under an allowed prefix.
+  2. basename MUST NOT be a shell interpreter (sh/bash/etc).
+  3. basename MUST match a strict alnum + dot/underscore/dash regex.
+  4. each arg MUST match a regex banning whitespace + shell metacharacters.
+
+This gate pins all four layers AND verifies that the real plugin
+manifests currently in the tree still parse through the validator
+(otherwise the operator's working installation would break on next
+plugin-loader run).
+"""
+
+from __future__ import annotations
+
+import pathlib
+import re
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/PulsePresenter.php"
+
+
+def test_pulse_presenter_has_validate_command():
+	"""Method must exist + must be called from actionJobs POST path."""
+	src = PRESENTER.read_text()
+	assert "private function validatePulseCommand" in src, \
+		"validatePulseCommand method missing"
+	# Must be called from the POST branch.
+	post_idx = src.find("if ($this->getMethod() === 'POST')")
+	upsert_idx = src.find("$this->pulse->upsertJob(")
+	validate_idx = src.find("$this->validatePulseCommand(")
+	assert post_idx < validate_idx < upsert_idx, \
+		"validatePulseCommand must run AFTER req-field checks and BEFORE upsertJob"
+
+
+def test_pulse_command_requires_absolute_path():
+	src = PRESENTER.read_text()
+	# The string literal of the error message is the canonical anchor.
+	assert "command must be an absolute path" in src
+	# Must also check the prefix allowlist.
+	assert "ALLOWED_COMMAND_PREFIXES" in src
+	# Must contain the canonical safe prefixes.
+	for prefix in ("/opt/homebrew/bin/", "/usr/local/bin/"):
+		assert f"'{prefix}'" in src, f"ALLOWED_COMMAND_PREFIXES must include {prefix}"
+
+
+def test_pulse_basename_banned_for_shell_interpreters():
+	src = PRESENTER.read_text()
+	assert "BANNED_BASENAMES" in src
+	for banned in ("sh", "bash", "zsh", "sudo", "su"):
+		assert f"'{banned}'" in src, f"BANNED_BASENAMES must include '{banned}'"
+
+
+def test_pulse_arg_regex_bans_whitespace_and_shell_meta():
+	"""The arg regex must reject anything that could shell-inject if a
+	future code path drops the argv array form. Whitespace + shell-meta
+	+ quotes specifically banned."""
+	src = PRESENTER.read_text()
+	# Extract ARG_REGEX literal.
+	m = re.search(r"ARG_REGEX\s*=\s*'(/[^']+/)';", src)
+	assert m, "ARG_REGEX constant not found"
+	regex_pattern = m.group(1)
+	# Compile + verify behaviour with sample strings.
+	# Strip leading/trailing `/` and PHP-style modifiers.
+	import re as _re
+	core = regex_pattern.strip('/')
+	pat = _re.compile(core)
+
+	# Should PASS — real-world args.
+	for ok in (
+		"/Users/pazny/wing/app/bin/dispatch-notifications.php",
+		"--key=value",
+		"http://127.0.0.1:9000/api/v1/events",
+		"foo.bar_baz",
+		"",
+	):
+		assert pat.fullmatch(ok), f"arg regex must accept '{ok}'"
+
+	# Should FAIL — injection-shaped.
+	for bad in (
+		"rm -rf /",          # whitespace
+		"`id`",              # backtick
+		"$(whoami)",         # command substitution
+		"foo; bar",          # ;
+		"foo | bar",         # pipe
+		"foo > /tmp/x",      # redirect
+		"foo & echo",        # background + amp
+		"foo\nbar",          # newline
+		"foo'bar",           # quote
+		'foo"bar',           # double quote
+	):
+		assert not pat.fullmatch(bad), f"arg regex must reject '{bad}'"
+
+
+def test_real_plugin_manifests_pass_validator():
+	"""Critical: the validator must accept commands that LIVE plugin
+	manifests already register. Otherwise the next plugin-loader run
+	breaks operator's working install."""
+	plugin_files = list((REPO / "files/anatomy/plugins").rglob("plugin.yml"))
+	# Find every `command:` value under a `jobs:` block.
+	for path in plugin_files:
+		src = path.read_text()
+		# Look for `jobs:` followed by `- name:` and `command:`.
+		if "jobs:" not in src:
+			continue
+		# Iterate over each command line.
+		for m in re.finditer(r"command:\s*[\"']?([^\"'\n]+)[\"']?", src):
+			cmd = m.group(1).strip()
+			# Replace Jinja templates with realistic post-render values
+			# so the validator's prefix check passes.
+			cmd_rendered = (
+				cmd
+				.replace("{{ playbook_dir }}", "/Users/pazny/projects/nOS")
+				.replace("{{ wing_app_dir }}", "/Users/pazny/wing/app")
+			)
+			# Manual prefix check (mirrors PHP).
+			allowed = (
+				cmd_rendered.startswith("/opt/homebrew/bin/")
+				or cmd_rendered.startswith("/usr/local/bin/")
+				or cmd_rendered.startswith("/Users/")
+			)
+			assert allowed, (
+				f"Live plugin manifest {path.relative_to(REPO)} declares "
+				f"command={cmd_rendered!r} which would be REJECTED by "
+				f"PulsePresenter::validatePulseCommand. Either tighten "
+				f"the manifest OR extend ALLOWED_COMMAND_PREFIXES."
+			)
+			basename = cmd_rendered.rsplit("/", 1)[-1]
+			banned = ("sh", "bash", "zsh", "dash", "csh", "ksh",
+			          "fish", "sudo", "su", "env")
+			assert basename not in banned, (
+				f"Live plugin manifest {path.relative_to(REPO)} declares "
+				f"banned basename '{basename}' (shell interpreter)"
+			)

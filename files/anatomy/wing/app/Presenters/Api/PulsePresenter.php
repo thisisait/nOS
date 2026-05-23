@@ -54,6 +54,18 @@ final class PulsePresenter extends BaseApiPresenter
 					$this->sendError("$req is required");
 				}
 			}
+			// SEC-8 (2026-05-23): command + args allowlist. Pre-this,
+			// any holder of any active Wing API token could schedule
+			// `command=/bin/sh, args=["-c","curl … | sh"]` and arbitrary
+			// RCE fired on next Pulse tick. Defense:
+			//   1. command must be an absolute path under a known
+			//      executable prefix (Homebrew, /usr/local, the
+			//      playbook plugin dir).
+			//   2. basename must NOT be a shell interpreter — even when
+			//      the path passes (e.g. /opt/homebrew/bin/bash).
+			//   3. each arg must match a strict regex banning whitespace
+			//      + every shell metacharacter.
+			$this->validatePulseCommand((string) $body['command'], $body['args'] ?? []);
 			$job = $this->pulse->upsertJob($body);
 			$this->sendCreated(['accepted' => true, 'job' => $job]);
 			return;
@@ -147,5 +159,100 @@ final class PulsePresenter extends BaseApiPresenter
 			$this->sendError('insert failed: ' . $e->getMessage(), 500);
 		}
 		$this->sendCreated(['accepted' => true, 'run_id' => $runId]);
+	}
+
+	/**
+	 * Allowed path prefixes for Pulse `command`. The basename after the
+	 * prefix is matched against ALLOWED_BASENAME_PATTERN; combined with
+	 * the BANNED_BASENAMES list this lets `php`/`python3` through (they
+	 * require a script arg the arg-regex itself validates) but rejects
+	 * shell interpreters that take inline scripts via `-c`.
+	 *
+	 * Hardcoded — anatomy gate pins the list. Operators wiring a new
+	 * subprocess runner add a path to the live plugin manifest, which
+	 * lands under one of these prefixes by convention; if not, the
+	 * playbook fails loud here rather than at runtime.
+	 */
+	private const ALLOWED_COMMAND_PREFIXES = [
+		'/opt/homebrew/bin/',     // Homebrew-installed CLIs (gitleaks, trivy, php, …)
+		'/usr/local/bin/',        // legacy/system-managed CLIs
+		'/Users/',                // host-owned scripts (wing/app/bin, files/anatomy/plugins/<x>/skills/)
+	];
+
+	/**
+	 * Shell-interpreter basenames that take inline scripts via -c and
+	 * thus get full RCE even when the path itself is in the allowlist.
+	 * php is NOT here — it can only run a file given as a positional
+	 * arg, and the arg-regex bans the shell-meta needed for `php -r`
+	 * inline-eval (the `-r` flag + space-separated body fails the
+	 * arg-regex).
+	 */
+	private const BANNED_BASENAMES = [
+		'sh', 'bash', 'zsh', 'dash', 'csh', 'ksh', 'fish',
+		'sudo', 'su', 'env',
+	];
+
+	/**
+	 * Per-arg regex. Allows: alnum, dot, underscore, dash, slash, colon,
+	 * equals, comma, plus, tilde, at-sign. Bans: whitespace (any flavor),
+	 * quotes (single, double, backtick), shell-control (& | ; > <),
+	 * parens, brackets, braces, backslash, dollar-sign, newline.
+	 *
+	 * Effectively this lets file paths, simple flags (`--key=value`),
+	 * URLs, env-var literals through. Rejects any payload-as-arg shape
+	 * that needs `-c '...'` semantics.
+	 */
+	private const ARG_REGEX = '/^[a-zA-Z0-9._@\/:=,+~-]{0,512}$/';
+
+	private function validatePulseCommand(string $command, mixed $args): void
+	{
+		if ($command === '') {
+			$this->sendError('command is required');
+		}
+		if ($command[0] !== '/') {
+			$this->sendError('command must be an absolute path', 400);
+		}
+		$inPrefix = false;
+		foreach (self::ALLOWED_COMMAND_PREFIXES as $prefix) {
+			if (str_starts_with($command, $prefix)) {
+				$inPrefix = true;
+				break;
+			}
+		}
+		if (!$inPrefix) {
+			$this->sendError(
+				'command path not in Pulse allowlist (see PulsePresenter::ALLOWED_COMMAND_PREFIXES)',
+				400,
+			);
+		}
+		$basename = basename($command);
+		if (in_array($basename, self::BANNED_BASENAMES, true)) {
+			$this->sendError(
+				"command basename '{$basename}' is banned (shell interpreter — accepts -c inline scripts)",
+				400,
+			);
+		}
+		// Strict shape check on basename — catches null bytes, NUL,
+		// embedded path traversal residue.
+		if (!preg_match('/^[a-z][a-zA-Z0-9._-]{0,63}$/', $basename)) {
+			$this->sendError('command basename malformed', 400);
+		}
+
+		if ($args !== null && $args !== []) {
+			if (!is_array($args)) {
+				$this->sendError('args must be a JSON array', 400);
+			}
+			foreach ($args as $i => $arg) {
+				if (!is_string($arg)) {
+					$this->sendError("args[{$i}] must be a string", 400);
+				}
+				if (!preg_match(self::ARG_REGEX, $arg)) {
+					$this->sendError(
+						"args[{$i}] contains banned characters (whitespace / shell metacharacters)",
+						400,
+					);
+				}
+			}
+		}
 	}
 }
