@@ -141,3 +141,61 @@ traefik_extra_routers: []
 traefik_host_services:
   - openclaw
   - hermes
+
+# ── A19 (2026-05-23): container-name routing (fixes IPv6 host-gateway 502) ───
+# Docker Desktop began resolving the `host-gateway` alias (nos-host) to an
+# IPv6 address that the IPv4-only Traefik container can't route → every
+# `nos-host:<port>` upstream returned 502 "Network unreachable". Worse, the
+# IPv4 host-gateway reaches HOST processes (wing) but NOT Docker-published
+# loopback ports (verified). So:
+#   • containerized services → reach the container DIRECTLY on shared_net via
+#     its compose service name + INTERNAL port (proven: grafana:3000 works).
+#   • host daemons (wing/openclaw/hermes — not in the map) → the explicit IPv4
+#     host-gateway (traefik_host_gateway_ip), which DOES reach host loopback.
+#
+# traefik_container_upstreams: manifest-id → { svc: <shared_net alias =
+# compose service name>, port: <internal/container port> }. Ground-truth from
+# the running containers' published host→private mappings. `svc` defaults to
+# the id with underscores→dashes; only override where the compose service name
+# differs (tileserver/mcpo/authentik-server/woodpecker-server). Services NOT
+# listed fall back to host-gateway routing (host daemons).
+traefik_host_gateway_ip: "192.168.65.254"   # Docker Desktop host gateway (IPv4); override per host
+traefik_container_upstreams:
+  grafana:       { port: 3000 }
+  gitea:         { port: 3000 }
+  gitlab:        { port: 80 }
+  woodpecker:    { svc: woodpecker-server, port: 8000 }
+  authentik:     { svc: authentik-server, port: 9000 }
+  infisical:     { port: 8080 }
+  portainer:     { port: 9000 }
+  vaultwarden:   { port: 80 }
+  nextcloud:     { port: 80 }
+  outline:       { port: 3000 }
+  metabase:      { port: 3000 }
+  superset:      { port: 8088 }
+  open_webui:    { svc: open-webui, port: 8080 }
+  jellyfin:      { port: 8096 }
+  miniflux:      { port: 8080 }
+  hedgedoc:      { port: 3000 }
+  bookstack:     { port: 80 }
+  firefly:       { port: 8080 }
+  onlyoffice:    { port: 80 }
+  ntfy:          { port: 80 }
+  puter:         { port: 4100 }
+  kiwix:         { port: 8080 }
+  nodered:       { port: 1880 }
+  n8n:           { port: 5678 }
+  uptime_kuma:   { svc: uptime-kuma, port: 3001 }
+  calibre_web:   { svc: calibre-web, port: 8083 }
+  homeassistant: { port: 8123 }
+  rustfs:        { port: 9001 }
+  mailpit:       { port: 8025 }
+  qgis_server:   { svc: qgis-server, port: 80 }
+  offline_maps:  { svc: tileserver, port: 8080 }
+  mcp_gateway:   { svc: mcpo, port: 8000 }
+  wordpress:     { port: 80 }
+  code_server:   { svc: code-server, port: 8443 }
+  freescout:     { port: 80 }
+  paperclip:     { port: 3100 }
+  snappymail:    { port: 8888 }
+  influxdb:      { port: 8086 }

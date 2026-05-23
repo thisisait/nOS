@@ -3,10 +3,14 @@
 # Auto-derived from state/manifest.yml: every service entry that has both
 # `domain_var` and `port_var` AND whose `install_flag` is currently true.
 #
-# Upstream is uniformly `http(s)://nos-host:<port>` because every Tier-1
-# Docker service publishes its primary port via host loopback in its
-# compose template. Host-side services (openclaw, hermes) work the
-# same way because nos-host:host-gateway resolves to the Docker host.
+# Upstream routing (A19, 2026-05-23 — was uniformly nos-host):
+#   • containerized services (traefik_container_upstreams) → the container
+#     DIRECTLY on shared_net, `<compose-alias>:<internal-port>`. The old
+#     `nos-host:<host-port>` model broke when Docker Desktop started resolving
+#     host-gateway to an unreachable IPv6 addr, and the IPv4 host-gateway can't
+#     reach Docker-published loopback ports either.
+#   • host daemons (wing/openclaw/hermes) → traefik_host_gateway_ip (IPv4),
+#     which DOES reach host-process loopback ports.
 #
 # Auth middleware comes from traefik_auth_modes in vars/main.yml:
 #   none/oidc → no auth middleware (service handles its own auth)
@@ -105,14 +109,24 @@ http:
 {% set _router = s.id | replace('_', '-') %}
 {% set _is_https = s.id in (traefik_https_upstream_ids | default([])) %}
 {% set _scheme = 'https' if _is_https else 'http' %}
+{% set _cu = (traefik_container_upstreams | default({})).get(s.id) %}
     {{ _router }}:
       loadBalancer:
         servers:
-          # Anatomy A3.5 (2026-05-04): wing is no longer a special case.
-          # FrankenPHP serves plain HTTP on host:9000; Traefik reaches it
-          # via host.docker.internal like every other host-mode service.
-          # Previous nginx-sidecar exception removed.
-          - url: "{{ _scheme }}://nos-host:{{ _port }}"
+{% if _cu %}
+          # A19 (2026-05-23): containerized service — reach the container
+          # DIRECTLY on shared_net (compose alias : internal port). Bypasses
+          # the IPv6 host-gateway that broke `nos-host` routing (502s) and the
+          # fact that the IPv4 host-gateway can't reach Docker-published
+          # loopback ports anyway.
+          - url: "{{ _scheme }}://{{ _cu.svc | default(_router) }}:{{ _cu.port }}"
+{% else %}
+          # Host daemon (wing/openclaw/hermes) — served by a launchd process on
+          # the host's 127.0.0.1; the IPv4 host-gateway DOES reach host-process
+          # loopback (the IPv6 `nos-host` alias does not). Override the IP per
+          # host via traefik_host_gateway_ip.
+          - url: "{{ _scheme }}://{{ traefik_host_gateway_ip | default('192.168.65.254') }}:{{ _port }}"
+{% endif %}
 {% if _is_https %}
         serversTransport: "noverify@file"
 {% endif %}

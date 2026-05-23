@@ -27,6 +27,7 @@ services:
       DOCKER_MODS: linuxserver/mods:universal-calibre
     networks:
       - iiab_net
+      - {{ stacks_shared_network }}
     logging:
       driver: "json-file"
       options:
