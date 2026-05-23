@@ -102,6 +102,32 @@ def test_secret_files_have_0600_mode():
 	)
 
 
+def test_nos_dir_created_at_0700_in_pre_tasks():
+	"""SEC-4 (2026-05-23): ~/.nos contains persisted secrets (admin
+	tokens, KMS encryption keys, APP_KEYs, JWT secrets, Bluesky PDS
+	rotation key). The directory must be 0700 — any wider mode lets a
+	local UID enumerate which secret-files exist via `ls ~/.nos`.
+
+	Pre-SEC-4, tasks/stacks/core-up.yml created it as part of a 0755
+	loop; state_manager later tightened to 0700; whichever ran last
+	won. Now: created in main.yml::pre_tasks at 0700 unconditionally,
+	BEFORE any other task touches it. The 0755 entry in core-up.yml
+	was removed."""
+	src = (REPO / "main.yml").read_text()
+	# Pre-task: 0700 creation must exist BEFORE the persisted-secrets
+	# stat task (or any role).
+	pre_task_idx = src.find('"[Secrets] Ensure ~/.nos directory exists at 0700"')
+	assert pre_task_idx > 0, "Pre-task ensuring ~/.nos at 0700 not present in main.yml"
+	stat_idx = src.find('"[Secrets] Check for persisted secrets file"')
+	assert stat_idx > pre_task_idx, \
+		"~/.nos 0700 task must come BEFORE the secrets-file stat (else stat may run on missing dir)"
+
+	# core-up.yml MUST NOT recreate ~/.nos at 0755.
+	coreup = (REPO / "tasks/stacks/core-up.yml").read_text()
+	assert "/.nos\", enabled:" not in coreup, \
+		"core-up.yml must not recreate ~/.nos — it's owned by main.yml pre_tasks at 0700"
+
+
 def test_acme_key_explicitly_pinned_to_0600():
 	"""Belt-and-suspenders: the ACME wildcard private key task is the
 	highest-impact case (gates every *.tenant_domain route). Pin
