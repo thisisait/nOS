@@ -137,7 +137,36 @@ Prereqs:
 - `install_infisical: true` in your config (already on by default)
 - Wing + Bone + Authentik live (verify: `curl -sf http://127.0.0.1:9000/` returns 200)
 
-Steps:
+### One-time: machine identity for the seeder (only if pre-existing Infisical)
+
+If Infisical is **freshly installed** by this playbook run, `infisical
+bootstrap` runs automatically + captures the admin token. **Skip this
+section.**
+
+If Infisical is **already running** from a prior install (admin user
+exists, no `infisical_admin_token` in `~/.nos/secrets.yml`), the
+bootstrap step returns "already bootstrapped" and the seed chain
+stops. Recover by minting a machine identity ONCE:
+
+1. Open `https://vault.<tld>` and log in:
+   - email: `admin@<tld>`
+   - password: value of `{{ global_password_prefix }}_pw_infisical_admin`
+2. **Org Settings → Access Control → Identities → "Create identity"**
+   - Name: `nos-seeder`
+   - Organization role: `Admin`
+3. Click the new identity → **Authentication → UniversalAuth → "Create Client Secret"**
+4. Copy **Client ID** + **Client Secret** values.
+5. Paste into `credentials.yml` (gitignored, alongside other operator overrides):
+   ```yaml
+   infisical_machine_id_client_id: "<paste>"
+   infisical_machine_id_client_secret: "<paste>"
+   ```
+
+From now on, every playbook run exchanges these for a fresh access
+token via `/api/v1/auth/universal-auth/login`. The JWT never sits on
+disk and never expires from your perspective.
+
+### Steps
 
 1. **In `config.yml`:**
    ```yaml

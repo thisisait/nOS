@@ -411,6 +411,43 @@ def test_seed_yml_pins_users_project_id_from_seeder():
 	assert "_infisical_seed_result.token" in src
 
 
+def test_post_task_exchanges_machine_identity_for_admin_jwt():
+	"""A18 follow-up (2026-05-23): pre-existing Infisical installs (admin
+	user already bootstrapped, no token persisted) leave seed.py in a
+	stuck state — it returns exit 2 with "admin already bootstrapped but
+	no token persisted". Recovery: machine identity (UniversalAuth) via
+	one-time UI step → operator pastes client_id + client_secret into
+	credentials.yml → playbook exchanges them for a fresh admin JWT on
+	every run via /api/v1/auth/universal-auth/login.
+
+	Pinned attributes:
+	  * Task hits the correct UniversalAuth endpoint
+	  * Form-urlencoded body (per Infisical API spec)
+	  * Gated on (a) Infisical healthy, (b) admin_token empty, (c) both
+	    client creds present
+	  * set_fact pulls accessToken from json response
+	  * Operator hint surfaced when machine identity creds aren't set"""
+	src = (REPO / "roles/pazny.infisical/tasks/post.yml").read_text()
+	assert "/api/v1/auth/universal-auth/login" in src
+	assert "body_format: form-urlencoded" in src
+	# Skip when token already populated (legacy path) OR creds missing.
+	assert "(infisical_admin_token | default('')) | length == 0" in src
+	assert "(infisical_machine_id_client_id | default('')) | length > 0" in src
+	# Must read accessToken from .json response.
+	assert "_infisical_machine_auth.json.accessToken" in src
+	# Operator-facing hint when machine identity creds aren't set.
+	assert "Org Settings → Access Control → Identities" in src
+
+
+def test_default_credentials_declares_machine_id_vars():
+	"""Stubs for the UniversalAuth credentials live in default.credentials.yml
+	so operators see them on `--syntax-check` and can override in their
+	gitignored credentials.yml without scaffolding new keys."""
+	src = (REPO / "default.credentials.yml").read_text()
+	assert "infisical_machine_id_client_id:" in src
+	assert "infisical_machine_id_client_secret:" in src
+
+
 def test_secrets_template_has_users_project_id():
 	"""~/.nos/secrets.yml.j2 template must include the new field so the
 	NEXT playbook run (any tag set) loads the auto-discovered value back
