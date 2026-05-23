@@ -465,7 +465,12 @@
         - "{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
         - "{{ pulse_launchd_label | default('eu.thisisait.nos.pulse') }}"
       register: _anatomy_daemons_sweep
-      changed_when: "'bootstrapped:' in (_anatomy_daemons_sweep.results | map(attribute='stdout') | join('\n'))"
+      # changed_when fires per-iteration. The aggregated `.results` only
+      # exists AFTER the loop completes; per-iteration we have the bare
+      # `stdout` of the current iteration. Mark "changed" only when this
+      # iteration ACTUALLY bootstrapped (not when it was already loaded
+      # or had no plist).
+      changed_when: "'ok:bootstrapped:' in (stdout | default(''))"
       failed_when: false
       when: ansible_os_family == 'Darwin'
       tags: ['always']
