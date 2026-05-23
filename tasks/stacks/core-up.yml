@@ -431,16 +431,17 @@
     msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_infra_result is defined and _core_infra_result.rc is defined
 
-- name: "[Core] Wait for INFRA stack healthy (in-stream heartbeat)"
-  tags: ['core', 'always']
-  ansible.builtin.include_tasks: wait-stacks-healthy.yml
-  vars:
-    _wait_stacks: ["infra"]
-  when: _core_infra_enabled | bool
-
-# ── DB post-start setup (MUST run AFTER infra and BEFORE observability) ─────
-# Grafana in the observability stack may use PostgreSQL as its backend -
-# DB user/DB must exist before grafana compose up.
+# ── DB post-start setup — MUST run BEFORE the infra health-wait below ───────
+# A19 fix (2026-05-23): the mariadb/postgresql post tasks each pg_isready /
+# ping-wait for their own engine (retries 18×5s), so they run fine straight
+# after `up -d` without the full infra health-wait completing first. They MUST
+# run before the health-wait: authentik + infisical live in the infra stack and
+# can't reach `healthy` until their Postgres role+db exist (created here) — a
+# STRICT health-wait that ran first would DEADLOCK (it waits for authentik,
+# authentik waits for a DB user that this task creates, this task is gated
+# behind the wait). The old blocking `up --wait` masked it via failed_when:false
+# (it timed out on authentik, then proceeded to create the user anyway).
+# Grafana (observability) also needs its Postgres backend created here first.
 
 - name: "[Core] MariaDB post-start (pazny.mariadb role -> tasks/post.yml)"
   ansible.builtin.include_role:
@@ -459,6 +460,15 @@
     - install_postgresql | default(false)
     - _core_infra_enabled | bool
   tags: ['postgresql', 'database']
+
+# ── DB users/dbs now exist → wait for the FULL infra stack to go healthy ────
+# (authentik/infisical can now authenticate to Postgres). In-stream heartbeat.
+- name: "[Core] Wait for INFRA stack healthy (in-stream heartbeat)"
+  tags: ['core', 'always']
+  ansible.builtin.include_tasks: wait-stacks-healthy.yml
+  vars:
+    _wait_stacks: ["infra"]
+  when: _core_infra_enabled | bool
 
 # ── Start OBSERVABILITY stack (DB and configs ready) ────────────────────────
 
