@@ -1,0 +1,110 @@
+/* hub-map.css — Hub "Service Map" schematic view (A20 scaffold, 2026-05-23).
+   Dark node-graph styling; reuses the design tokens from tokens.css. */
+
+/* ── View toggle (Cards | Map) ─────────────────────────────────────────────*/
+.hub-viewtoggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-left: auto;
+}
+.hub-viewtoggle button {
+  background: transparent;
+  color: var(--text2);
+  border: 0;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hub-viewtoggle button + button { border-left: 1px solid var(--border); }
+.hub-viewtoggle button.active { background: var(--accent); color: #fff; }
+.hub-viewtoggle button:not(.active):hover { background: var(--bg2, rgba(255,255,255,.04)); color: var(--text); }
+
+/* ── Map shell ─────────────────────────────────────────────────────────────*/
+#hub-map-view { position: relative; }
+.hub-map-head {
+  display: flex; align-items: baseline; gap: 12px; margin: 4px 0 10px;
+}
+.hub-map-head h2 { margin: 0; font-size: 20px; }
+.hub-map-head .sub { color: var(--text2); font-size: 13px; }
+
+.hub-map-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 70vh; min-height: 460px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--bg, #0d1117);
+}
+.hub-map-canvas-wrap { position: absolute; inset: 0; }
+.hub-map-svg { width: 100%; height: 100%; cursor: grab; }
+.hub-map-svg.panning { cursor: grabbing; }
+
+/* edges */
+.hub-edge { fill: none; stroke: var(--accent); stroke-opacity: .35; stroke-width: 1.5; }
+.hub-edge.weak { stroke: var(--text2); stroke-opacity: .18; stroke-dasharray: 4 4; }
+
+/* nodes */
+.hub-node { cursor: pointer; }
+.hub-node-box { fill: #161b22; stroke: var(--border); stroke-width: 1; }
+.hub-node:hover .hub-node-box { stroke: var(--accent); }
+.hub-node.selected .hub-node-box { stroke: var(--accent); stroke-width: 2; filter: drop-shadow(0 0 6px rgba(88,166,255,.5)); }
+.hub-node-name { fill: var(--text); font-size: 12px; font-family: var(--mono, monospace); }
+.hub-node-dot { stroke: #0d1117; stroke-width: 1.5; }
+
+.hub-node-stack-c { fill: rgba(88,166,255,.12); stroke: var(--accent); stroke-width: 1.5; }
+.hub-node:hover .hub-node-stack-c { fill: rgba(88,166,255,.22); }
+.hub-node-stack-t { fill: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .5px; }
+
+/* zoom controls */
+.hub-map-zoom {
+  position: absolute; left: 12px; bottom: 12px; z-index: 3;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.hub-map-zoom button {
+  width: 30px; height: 30px; border: 1px solid var(--border);
+  background: #161b22; color: var(--text); border-radius: 7px;
+  font-size: 16px; line-height: 1; cursor: pointer;
+}
+.hub-map-zoom button:hover { border-color: var(--accent); }
+
+/* live pill */
+.hub-map-live {
+  position: absolute; right: 12px; top: 12px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+  background: rgba(13,17,23,.7);
+}
+.hub-map-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── Detail panel ──────────────────────────────────────────────────────────*/
+#hub-map-detail {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 300px; z-index: 4;
+  background: #0d1117; border-left: 1px solid var(--border);
+  padding: 16px; overflow-y: auto;
+  transform: translateX(100%); transition: transform .18s ease;
+  box-shadow: -12px 0 30px rgba(0,0,0,.35);
+}
+#hub-map-detail.open { transform: translateX(0); }
+.hub-d-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.hub-d-title { font-weight: 600; font-size: 15px; font-family: var(--mono, monospace); }
+.hub-d-badge { font-size: 10px; color: var(--text2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; letter-spacing: .5px; }
+.hub-d-close { margin-left: auto; background: transparent; border: 0; color: var(--text2); font-size: 20px; cursor: pointer; line-height: 1; }
+.hub-d-close:hover { color: var(--text); }
+.hub-d-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.hub-d-health { font-size: 12px; color: var(--text2); text-transform: capitalize; }
+.hub-d-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.hub-d-k { color: var(--text2); }
+.hub-d-v { color: var(--text); font-family: var(--mono, monospace); }
+.hub-d-desc { font-size: 12px; color: var(--text2); margin-top: 12px; line-height: 1.5; }
+.hub-d-hint { font-size: 11px; color: var(--text2); margin-top: 16px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 8px; opacity: .8; }

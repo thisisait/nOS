@@ -2,6 +2,8 @@
 
 {block content}
 
+<link rel="stylesheet" href="/assets/hub-map.css">
+
 <div class="stats">
 	<div class="stat" style="border-left:3px solid var(--accent)">
 		<div class="label">Systems</div>
@@ -34,8 +36,13 @@
 	{/foreach}
 	<span class="filter-sep"></span>
 	<button class="filter-btn" id="hub-probe-all" title="Probe all systems">Probe All</button>
+	<span class="hub-viewtoggle" role="group" aria-label="Hub view mode">
+		<button type="button" data-view="cards">▤ Cards</button>
+		<button type="button" data-view="map">◇ Map</button>
+	</span>
 </div>
 
+<div id="hub-cards-view">
 {foreach $byStack as $stackName => $systems}
 	{var $svcCount = 0}
 	{foreach $systems as $_s}{if $_s['category'] !== 'stack'}{var $svcCount = $svcCount + 1}{/if}{/foreach}
@@ -111,7 +118,30 @@
 		<div class="empty-state-hint">Run <code>php bin/ingest-registry.php</code> to import from service-registry.json.</div>
 	</div>
 {/if}
+</div>{* /#hub-cards-view *}
+
+{* ── Service Map — interactive schematic view (A20 scaffold, 2026-05-23). ──
+   Toggled by the Cards|Map control in the filter bar; built client-side from
+   the .sys-card nodes above by /assets/hub-map.js. Future: live Bone-telemetry
+   metrics on each node + Traefik access-graph edges. *}
+<div id="hub-map-view" hidden>
+	<div class="hub-map-head">
+		<h2>Service Map</h2>
+		<span class="sub">Systems, stacks and their dependencies — one interactive schematic.</span>
+	</div>
+	<div class="hub-map-stage">
+		<span class="hub-map-live"><span class="dot"></span> from registry</span>
+		<div class="hub-map-zoom">
+			<button type="button" data-zoom="in" title="Zoom in">+</button>
+			<button type="button" data-zoom="out" title="Zoom out">−</button>
+			<button type="button" data-zoom="fit" title="Fit to view">⤢</button>
+		</div>
+		<div class="hub-map-canvas-wrap"></div>
+		<aside id="hub-map-detail"></aside>
+	</div>
+</div>
 
 <script src="/assets/hub.js"></script>
+<script src="/assets/hub-map.js" defer></script>
 
 {/block}
