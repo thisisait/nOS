@@ -2,10 +2,10 @@
 # =============================================================================
 # gitea-base / hooks/post_compose.yml
 #
-# Declarative API-call sequence the plugin loader will replay once the
-# `replay_api_calls` runner lands (Phase 2 C5). Until then this file is
-# documentation: each entry mirrors a task in roles/pazny.gitea/tasks/post.yml
-# or tasks/stacks/authentik_service_post.yml so the harvest is byte-traceable.
+# Declarative API-call sequence replayed by the plugin loader's
+# `replay_api_calls` runner. Each entry mirrors a task in
+# roles/pazny.gitea/tasks/post.yml or tasks/stacks/authentik_service_post.yml
+# so the harvest is byte-traceable during the final role-thinning pass.
 #
 # SHAPE: same as portainer-base/plugin.yml `api_calls` block — base_url +
 # tls_verify + retries + sequence[].

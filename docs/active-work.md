@@ -5,13 +5,14 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-17 (evening) • Phase 5 ceremony CLOSED + Wing
-> UI revision SHIPPED (W3+W1+W2+W4). 32 commits pushed to origin/master
-> (`826c406..22600df`). 253/253 anatomy gates green.
+> Last updated: 2026-05-23 • Post-A17 security hardening + E2E/aggregator
+> closeout. Local `dev` is ahead of `origin/dev`; push before opening the
+> next roadmap lane. Broad local gates: 896 pytest checks green, syntax-check
+> clean, Playwright SSO full suite green (14 passed / 7 skipped).
 
 ---
 
-## Current track: **steady-state — A1–A14 + Phase 5 + Wing UI revision all DONE**
+## Current track: **steady-state closeout — A1–A17 + security hardening DONE**
 
 A1–A14 are all **DONE**, including A9 fanout, A9.2 daily-digest mail,
 A9.3 Remediator agent, and the **Phase 5 ceremony milestone — CLOSED
@@ -46,24 +47,19 @@ Total: 26 new anatomy gates locking the Wing surface (253/253 green).
   and tied to anatomy tests; the Tier-2 `from: app_manifest` aggregator path
   is already live and pinned by `tests/anatomy/test_apps_runner_aggregator_cutover.py`.
 
-### Last verified state (2026-05-17)
+### Last verified state (2026-05-23)
 
-- **`git status`** clean, 0 commits ahead after the 27-commit batch
-  pushed today (`826c406..3fec16b` on origin/master).
-- **Anatomy gates:** 227/227 green.
-- **ansible-playbook main.yml --syntax-check:** clean.
-- **Smoke probe (post-playbook):** 32/32 OK (Nextcloud 500 was the
-  duplicate-prefix drift class — closed by Nextcloud post.yml
-  pre-bootstrap config.php sed-patch).
-- **wing.db event lineage:** 7 agent-attributed rows from this session
-  — 2× `agent_run_start` + 3× `agent_run_end` + 2× `conductor_report`,
-  spanning the conductor + remediator identities with cryptographic
-  `actor_id` + `actor_action_id` attribution (A10 audit trail proven
-  end-to-end).
-- **Per-minute Pulse jobs:** `wing:dispatch-notifications` exit 0
-  every minute since 13:09 UTC (post args[] fix).
-- **Bone HMAC POSTs:** working end-to-end after the canonical-JSON
-  + openssl-NF + launchd bootout-not-kickstart fix bundle.
+- **`git status`:** clean before the closeout doc/test-fix pass; local
+  `dev` was ahead of `origin/dev` by 20 commits after the E2E hardening
+  commit. Push is the remaining publication step.
+- **Broad pytest gate:** `896 passed, 5 skipped` across anatomy, apps,
+  Authentik, Bone auth, callback, coexistence, migrate, and upgrades.
+- **Ansible syntax:** `ansible-playbook main.yml --syntax-check` clean.
+- **Authentik aggregator parity:** `authentik_oidc_apps` central coverage is
+  0; plugin `inputs.clients` has 38 entries; central-only blockers are 0.
+- **Playwright SSO:** static-identity full suite green — 14 passed,
+  7 deployment-skipped. Helper uses exact `AUTHENTIK_DOMAIN` hostname
+  matching and Playwright request preflight for dev/prod TLS parity.
 
 ### What landed since 2026-05-07
 

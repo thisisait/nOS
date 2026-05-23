@@ -3,7 +3,7 @@
 # nextcloud-base / hooks/post_compose.yml
 #
 # Declarative post-compose sequence. Loader replays via `replay_api_calls`
-# once Phase 2 C5 lands the runner (occ CLI is `runner: docker_exec`).
+# (occ CLI is `runner: docker_exec`).
 # Mirrors tasks/stacks/authentik_service_post.yml:103-184 byte-for-byte.
 # =============================================================================
 
