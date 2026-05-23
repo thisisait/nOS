@@ -1,0 +1,211 @@
+---
+# ==============================================================================
+# pazny.infisical / reset-admin.yml — break-glass admin recovery (SEC-5, 2026-05-23)
+#
+# When to use:
+#   The admin user in Infisical's PG (`users.email`) doesn't match the
+#   value Ansible derives for `infisical_admin_email`, OR the admin's
+#   password (SRP verifier) doesn't match `infisical_admin_password`, OR
+#   no admin token was persisted to `~/.nos/secrets.yml::infisical_admin_token`
+#   and the operator can't log in to mint a machine identity. The
+#   surface symptom is: seed.py returns "admin already bootstrapped but
+#   no token persisted; manually retrieve via UI or wipe with -e blank=true".
+#
+# What this task does:
+#   1. Pre-check: refuse to run if Infisical has non-empty projects OR
+#      secrets (operator's real data we won't wipe blindly). Override
+#      with `-e infisical_reset_force=true` if they accept the loss.
+#   2. Delete the orphan admin user + organization + every dependent row
+#      from Infisical's PG, in FK-safe order.
+#   3. Re-invoke `seed.py` bootstrap path on the fresh-empty DB. The
+#      bootstrap CLI creates the canonical admin (admin@<tenant_domain>)
+#      with the prefix-derived password, and seed.py captures the
+#      resulting token into ~/.nos/secrets.yml.
+#
+# Invocation:
+#   ansible-playbook main.yml --tags infisical-reset-admin
+#   (or, with data-loss confirmation:)
+#   ansible-playbook main.yml --tags infisical-reset-admin -e infisical_reset_force=true
+#
+# Doctrine context:
+#   This is a TEMPLATE for the systemic recovery pattern declared in
+#   docs/secret-lifecycle-doctrine.md (SEC-13). Every admin-bootstrap
+#   role should ship an equivalent reset path so `blank=true` ceases to
+#   be the only recovery option. See also SEC-13 capture-not-derive
+#   pattern that prevents future lockouts.
+# ==============================================================================
+
+- name: "[Reset] Refuse on local TLD (no Infisical to reset)"
+  ansible.builtin.fail:
+    msg: |
+      install_infisical is false / no Infisical container detected.
+      reset-admin.yml only applies when an Infisical instance exists
+      that's in a stuck state.
+  when:
+    - not (install_infisical | default(false) | bool)
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Pre-check: count projects + secrets in PG"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('/usr/local/bin/docker') }}"
+      - exec
+      - "{{ postgresql_container_name | default('infra-postgresql-1') }}"
+      - psql
+      - "-U"
+      - "{{ postgresql_root_user | default('postgres') }}"
+      - "-d"
+      - infisical
+      - "-tAc"
+      - "SELECT COALESCE((SELECT COUNT(*) FROM projects), 0) || ':' || COALESCE((SELECT COUNT(*) FROM secrets_v2), 0)"
+  register: _infisical_reset_precheck
+  changed_when: false
+  failed_when: false
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Parse pre-check counts"
+  ansible.builtin.set_fact:
+    _infisical_projects_count: "{{ (_infisical_reset_precheck.stdout | default('0:0')).split(':')[0] | int }}"
+    _infisical_secrets_count:  "{{ (_infisical_reset_precheck.stdout | default('0:0')).split(':')[1] | int }}"
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Refuse when non-empty data exists (no operator confirmation)"
+  ansible.builtin.fail:
+    msg: |
+      Infisical has {{ _infisical_projects_count }} project(s) and
+      {{ _infisical_secrets_count }} secret(s). reset-admin.yml will
+      DELETE EVERYTHING — including any projects + secrets the operator
+      created via UI or seeder.
+
+      If this is acceptable, re-run with:
+        ansible-playbook main.yml --tags infisical-reset-admin \
+          -e infisical_reset_force=true
+
+      For non-destructive recovery, log in via Infisical UI as
+      {{ _deployed_admin_email | default('the actual deployed admin email') }}
+      and create a UniversalAuth machine identity manually (per
+      docs/invite-provisioning.md). Then paste client_id+secret into
+      credentials.yml.
+  when:
+    - (_infisical_projects_count | int) > 0 or (_infisical_secrets_count | int) > 0
+    - not (infisical_reset_force | default(false) | bool)
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Discover currently-deployed admin email (forensic only)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('/usr/local/bin/docker') }}"
+      - exec
+      - "{{ postgresql_container_name | default('infra-postgresql-1') }}"
+      - psql
+      - "-U"
+      - "{{ postgresql_root_user | default('postgres') }}"
+      - "-d"
+      - infisical
+      - "-tAc"
+      - "SELECT email FROM users WHERE \"superAdmin\" = true ORDER BY \"createdAt\" LIMIT 1"
+  register: _infisical_deployed_email
+  changed_when: false
+  failed_when: false
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Announce: deployed-vs-canonical drift"
+  ansible.builtin.debug:
+    msg: |
+      ════════════════════════════════════════════════════════════════════
+       Infisical admin-state reset (SEC-5)
+      ════════════════════════════════════════════════════════════════════
+       Deployed:      email={{ _infisical_deployed_email.stdout | default('<none>') }}
+       Canonical:     email={{ infisical_admin_email | default('admin@<tenant>') }}
+                      password={{ infisical_admin_password | default('<derived>') }} (prefix-derived)
+       Projects:      {{ _infisical_projects_count }}
+       Secrets:       {{ _infisical_secrets_count }}
+       Action:        TRUNCATE users + organizations cascade, re-bootstrap
+      ════════════════════════════════════════════════════════════════════
+  tags: ['infisical-reset-admin']
+
+# Wipe the admin + org + every dependent row. Order matters for FK
+# constraints — children first. The CASCADE keyword on TRUNCATE
+# handles transitive deps.
+- name: "[Reset] Truncate Infisical PG state (admin + org tree)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('/usr/local/bin/docker') }}"
+      - exec
+      - "{{ postgresql_container_name | default('infra-postgresql-1') }}"
+      - psql
+      - "-U"
+      - "{{ postgresql_root_user | default('postgres') }}"
+      - "-d"
+      - infisical
+      - "-c"
+      - |
+        TRUNCATE
+          users,
+          organizations,
+          "userEncryptionKeys",
+          "userAliases",
+          "userActions",
+          super_admin,
+          "authTokenSessions",
+          "authTokens",
+          identities,
+          identity_universal_auths,
+          identity_ua_client_secrets,
+          identity_access_tokens,
+          "identityOrgMemberships",
+          incidentcontacts,
+          organization_memberships,
+          org_memberships,
+          org_bots,
+          org_roles
+        RESTART IDENTITY CASCADE;
+  register: _infisical_reset_truncate
+  failed_when:
+    - _infisical_reset_truncate.rc != 0
+    - "'does not exist' not in (_infisical_reset_truncate.stderr | default(''))"
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Clear stale admin_token + machine-identity creds in ~/.nos/secrets.yml"
+  ansible.builtin.set_fact:
+    infisical_admin_token: ""
+    infisical_machine_id_client_id: ""
+    infisical_machine_id_client_secret: ""
+    infisical_users_project_id: ""
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Re-render ~/.nos/secrets.yml with cleared values"
+  ansible.builtin.template:
+    src: "secrets.yml.j2"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    mode: '0600'
+  no_log: true
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Bootstrap fresh admin (re-runs seed.yml chain)"
+  ansible.builtin.include_tasks: seed.yml
+  vars:
+    # seed.py will see an empty users table → run `infisical bootstrap`
+    # → create canonical admin@<tenant> with prefix-derived password →
+    # capture the resulting token + project IDs into ~/.nos/secrets.yml.
+    infisical_admin_token: ""
+  tags: ['infisical-reset-admin']
+
+- name: "[Reset] Post-reset summary"
+  ansible.builtin.debug:
+    msg: |
+      ════════════════════════════════════════════════════════════════════
+       Infisical admin-state reset COMPLETE
+      ════════════════════════════════════════════════════════════════════
+       Admin email:   {{ infisical_admin_email }}
+       Admin pass:    {{ infisical_admin_password }} (operator: store securely)
+       Token:         {{ '<populated>' if (infisical_admin_token | default('')) | length > 0 else '<seed-failed-check-logs>' }}
+
+       NEXT (operator):
+         1. Verify login at https://{{ infisical_domain | default('vault.<tld>') }}
+         2. (Optional) Set up UniversalAuth machine identity per
+            docs/invite-provisioning.md to avoid future token expiry.
+         3. Re-run playbook normally — seed.py will re-create nos-users
+            + other projects + capture project_ids automatically.
+      ════════════════════════════════════════════════════════════════════
+  tags: ['infisical-reset-admin']

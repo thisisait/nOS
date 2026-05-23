@@ -513,6 +513,17 @@
     - _core_infra_enabled | bool
   tags: ['infisical', 'iam']
 
+# SEC-5 (2026-05-23): break-glass admin recovery. Tag-gated, never runs
+# unless operator explicitly invokes via `--tags infisical-reset-admin`.
+# Use when seed.py reports "admin already bootstrapped but no token"
+# (lost token + locked out of UI). See roles/pazny.infisical/tasks/reset-admin.yml.
+- name: "[Core] pazny.infisical reset-admin (break-glass; tag-gated)"
+  ansible.builtin.include_role: { name: pazny.infisical, tasks_from: reset-admin.yml, apply: { tags: ['infisical-reset-admin'] } }
+  when:
+    - install_infisical | default(false)
+    - "'infisical-reset-admin' in ansible_run_tags | default([])"
+  tags: ['infisical-reset-admin', 'never']
+
 - name: "[Core] pazny.bluesky_pds post-start (goat CLI admin account)"
   ansible.builtin.include_role: { name: pazny.bluesky_pds, tasks_from: post.yml, apply: { tags: ['bluesky-pds', 'infra'] } }
   when:
