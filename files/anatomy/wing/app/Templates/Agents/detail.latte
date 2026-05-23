@@ -59,8 +59,8 @@
 *}
 <div style="padding:16px; border:1px solid var(--border); border-radius:8px; margin-bottom:24px; background:var(--bg2, transparent);">
 	<h3 style="margin:0 0 12px; font-size:13px; color:var(--text2);">Start new session</h3>
-	<form method="post" action="{plink Agents:start, name =>
-		<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *} $agent->name}" style="display:flex; flex-direction:column; gap:8px; max-width:680px;">
+	<form method="post" action="{plink Agents:start, name => $agent->name}" style="display:flex; flex-direction:column; gap:8px; max-width:680px;">
+		<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 		<label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text2);">
 			Prompt (optional — falls back to agent's built-in default)
 			<textarea name="prompt" rows="2" placeholder="Optional initial user message"

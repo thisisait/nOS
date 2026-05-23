@@ -117,3 +117,34 @@ def test_csrf_input_uses_template_variable_not_hardcoded():
 				f"{path.relative_to(REPO)}: _csrf input must reference "
 				f"{{$csrfToken}} template variable. Found: {tag}"
 			)
+
+
+def test_csrf_input_not_inside_link_macro():
+	"""Regression gate for the 8474f33 (SEC-14) breakage: the `_csrf`
+	hidden input was dropped INSIDE a `{plink ...}` macro's argument list
+	(on forms whose action took a trailing `param => $value`). Latte then
+	tried to parse the raw `<input>` HTML as part of the PHP expression →
+	render error at runtime.
+
+	Correct placement: the `_csrf` input is the FIRST CHILD of the
+	`<form>`, never a token inside `{plink}` / `{link}`. This gate fails
+	if `_csrf` ever appears between an unclosed `{plink`/`{link` and its
+	closing `}` — i.e. the macro-relative position the textual-presence
+	check (test_every_post_form_has_csrf_input) cannot see."""
+	macro_re = re.compile(r"\{p?link[^}]*_csrf[^}]*\}")
+	violations = []
+	for path in TEMPLATES.rglob("*.latte"):
+		src = path.read_text()
+		for m in macro_re.finditer(src):
+			line = src.count("\n", 0, m.start()) + 1
+			rel = path.relative_to(REPO)
+			violations.append(
+				f"{rel}:{line}: `_csrf` found inside a {{plink}}/{{link}} "
+				f"macro — must be the first child of <form>, not a macro "
+				f"argument. Offending macro: {m.group(0)[:120]}"
+			)
+	assert not violations, (
+		"`_csrf` input must NEVER live inside a {plink}/{link} macro "
+		"(breaks Latte parsing — see SEC-14 regression). Found:\n  "
+		+ "\n  ".join(violations)
+	)

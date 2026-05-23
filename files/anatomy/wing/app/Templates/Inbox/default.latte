@@ -64,8 +64,8 @@
 					<td style="font-size:11px; color:var(--text2)">{($n['created_at'] ?? '')|substr:0,19}</td>
 					<td>
 						{if !$n['wing_inbox_read_at']}
-							<form method="post" action="{plink Inbox:markRead, uuid =>
-								<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *} $n['uuid']}" style="display:inline;">
+							<form method="post" action="{plink Inbox:markRead, uuid => $n['uuid']}" style="display:inline;">
+								<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 								<button type="submit" class="btn btn-small">Mark read</button>
 							</form>
 						{else}
