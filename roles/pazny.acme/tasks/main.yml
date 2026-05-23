@@ -167,7 +167,12 @@
     src: "{{ _acme_actual_dir }}/{{ _acme_key_basename }}.key"
     dest: "{{ acme_cert_key }}"
     remote_src: true
-    mode: '0644'
+    # SEC-11 (2026-05-23): 0600 — wildcard LE private key. Previous
+    # 0644 let every local UID read the key that gates EVERY *.{{ tenant_domain }}
+    # route through Traefik. Containers consuming the key (Traefik,
+    # Stalwart) bind-mount it RO so 0600 host-side doesn't break
+    # them — Docker's user namespace gives them their own view.
+    mode: '0600'
     follow: true
   notify:
     - Restart nginx
