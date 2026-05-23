@@ -1,0 +1,101 @@
+---
+# ==============================================================================
+# pazny.woodpecker/tasks/post-oauth.yml — autowire the Woodpecker↔Gitea OAuth2 app
+#
+# A19 (2026-05-23). Replaces the old manual "create the OAuth2 app in Gitea by
+# hand and paste the client/secret into config.yml" step. Idempotent, single-run.
+#
+# Pattern mirrors tasks/stacks/authentik_service_post.yml (Gitea Admin Basic
+# auth over the local port, list-then-create). Gitea admin creds always exist
+# after the gitea role's post-start, so there is no extra prerequisite — we do
+# NOT use gitea_api_token (that's only for the optional repo-autowire feature).
+#
+# Ordering note: the woodpecker compose override was already rendered + the
+# container started by stack-up BEFORE this runs, so on a FIRST run the server
+# came up without OAuth creds. After we capture them we re-render the override
+# and recreate woodpecker-server in-run (the "Restart woodpecker" handler only
+# does `restart`, which does NOT re-read compose env). On reruns the creds are
+# loaded from ~/.nos/secrets.yml at pre_tasks, the render already has them, and
+# the GET below finds the existing app → no create, no recreate.
+# ==============================================================================
+
+- name: "[pazny.woodpecker OAuth] List Gitea OAuth2 applications"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/user/applications/oauth2"
+    method: GET
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [200]
+  register: _wp_oauth_apps
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.woodpecker OAuth] Resolve existing 'Woodpecker CI' app id"
+  ansible.builtin.set_fact:
+    _wp_oauth_app_id: >-
+      {{ (_wp_oauth_apps.json | default([]) | selectattr('name', 'equalto', 'Woodpecker CI')
+          | list | first | default({})).id | default(0) }}
+  when: _wp_oauth_apps.status | default(0) == 200
+
+- name: "[pazny.woodpecker OAuth] Create 'Woodpecker CI' OAuth2 app (first run only)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/user/applications/oauth2"
+    method: POST
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "Woodpecker CI"
+      confidential_client: true
+      redirect_uris:
+        - "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/authorize"
+    status_code: [201]
+  register: _wp_oauth_create
+  when:
+    - _wp_oauth_apps.status | default(0) == 200
+    - _wp_oauth_app_id | int == 0
+
+- name: "[pazny.woodpecker OAuth] Capture client_id + secret from create response"
+  ansible.builtin.set_fact:
+    # Gitea returns the secret ONLY on create — it cannot be re-read later, so
+    # we persist it (secrets.yml.j2) and reuse it on subsequent runs.
+    woodpecker_gitea_client: "{{ _wp_oauth_create.json.client_id }}"
+    woodpecker_gitea_secret: "{{ _wp_oauth_create.json.client_secret }}"
+  when: _wp_oauth_create.changed | default(false)
+
+# ── In-run apply (first create only) ─────────────────────────────────────────
+# The override on disk + the running server still carry empty creds; re-render
+# with the captured values and force-recreate just woodpecker-server.
+- name: "[pazny.woodpecker OAuth] Re-render compose override with captured creds"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/devops/overrides/woodpecker.yml"
+    mode: '0600'
+  when: _wp_oauth_create.changed | default(false)
+
+- name: "[pazny.woodpecker OAuth] Find devops compose overrides (for recreate)"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}/devops/overrides"
+    patterns: "*.yml"
+    file_type: file
+  register: _wp_devops_overrides
+  when: _wp_oauth_create.changed | default(false)
+  changed_when: false
+
+- name: "[pazny.woodpecker OAuth] Recreate woodpecker-server with OAuth creds"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/devops/docker-compose.yml"
+    {% for f in _wp_devops_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+    -p devops
+    up -d --force-recreate --no-deps woodpecker-server
+  when: _wp_oauth_create.changed | default(false)
+  changed_when: true
+
+- name: "[pazny.woodpecker OAuth] Status"
+  ansible.builtin.debug:
+    msg: >-
+      Woodpecker↔Gitea OAuth2:
+      {{ 'CREATED + server recreated (single-run)' if (_wp_oauth_create.changed | default(false))
+         else ('reusing existing app id ' ~ (_wp_oauth_app_id | default('?'))) }}

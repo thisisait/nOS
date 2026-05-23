@@ -98,22 +98,16 @@
       {% endif %}
 
       {# ── A16 (2026-05-17): CI autowire token reminder ────────────────────── #}
+      {# WS2 (2026-05-23): authentik_bootstrap_token is now playbook-generated
+         and pinned as the nos-api blueprint token key, so Wing /users +
+         invitations work on a single blank run — the old "fetch the token, then
+         re-run --tags wing" reminder is retired. The gitea/woodpecker API-token
+         reminders below remain (they gate the optional repo-autowire feature). #}
       {% set _need_gitea_token = (install_gitea_autowire_nos | default(false) | bool) and (gitea_api_token | default('') | length == 0) %}
       {% set _need_wp_token    = (install_woodpecker_autowire_nos | default(false) | bool) and (woodpecker_api_token | default('') | length == 0) %}
-      {% set _have_authentik_bootstrap = (authentik_bootstrap_token | default('') | length > 0) %}
-      {% if _need_gitea_token or _need_wp_token or ((install_wing | default(true) | bool) and (install_authentik | default(false) | bool) and not _have_authentik_bootstrap) %}
+      {% if _need_gitea_token or _need_wp_token %}
       ── OPERATOR ACTION REQUIRED — MISSING TOKENS ─────────────────────────────
 
-      {% if (install_wing | default(true) | bool) and (install_authentik | default(false) | bool) and not _have_authentik_bootstrap %}
-        Authentik bootstrap token   (powers Wing /users + invitation minting)
-
-          1. Open       https://{{ authentik_domain | default('auth.dev.local') }}/if/admin/#/identity/tokens
-          2. Find       nos-api   →   "Copy Key"
-          3. Run        python3 tools/fetch-authentik-bootstrap-token.py
-                        (or paste the value as authentik_bootstrap_token in ~/.nos/secrets.yml)
-          4. Re-run     ansible-playbook main.yml --tags wing
-
-      {% endif %}
       {% if _need_gitea_token %}
         Gitea API token             (powers nOS repo + GitHub pull-mirror autowiring)
 
