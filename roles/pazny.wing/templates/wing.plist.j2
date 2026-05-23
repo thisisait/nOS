@@ -43,6 +43,20 @@
         <key>WING_API_TOKEN</key>
         <string>{{ wing_api_token | default('') }}</string>
 
+        <!-- SEC-6 (2026-05-23): edge-trust signature. Traefik's
+             wing-edge@file middleware injects this header on every
+             request that reaches Wing via the public route. Wing's
+             BasePresenter rejects requests that DON'T carry it (or
+             carry a wrong value) BEFORE trusting forward-auth headers.
+             Pre-SEC-6, any local process or Tier-N container with
+             host-gateway DNS could `curl -H 'X-Authentik-Groups: nos-providers'
+             http://wing:9000/admin/halt` and bypass RBAC. The 127.0.0.1
+             bind (SEC-6 Caddyfile) is the first defense; this header
+             is the second — defense in depth. Empty value disables
+             validation (fresh install pre-regen). -->
+        <key>WING_EDGE_TOKEN</key>
+        <string>{{ wing_edge_token | default('') }}</string>
+
         <!-- Bone (host launchd at 127.0.0.1:{{ bone_port | default(8099) }}) is the
              control-plane API Wing presenters proxy through. BONE_URL is
              read by app/Model/BoneClient.php. -->

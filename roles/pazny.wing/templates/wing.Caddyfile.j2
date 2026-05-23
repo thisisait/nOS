@@ -26,7 +26,21 @@
 }
 
 # Loopback bind — Traefik reaches this via host.docker.internal:9000.
+#
+# SEC-6 (2026-05-23): explicit `bind 127.0.0.1` keeps the listener
+# OFF every non-loopback interface. Pre-SEC-6, `:9000` alone made
+# FrankenPHP bind `*:9000` (IPv6 wildcard) which exposed Wing's full
+# admin API to any LAN-reachable host once `services_lan_access` was
+# on for any other service, AND to any docker container reaching
+# `host.docker.internal:9000`. Combined with the forward-auth header
+# trust model (BasePresenter reads X-Authentik-Username unconditionally),
+# the wildcard bind meant any LAN-side client could `curl -H
+# 'X-Authentik-Groups: nos-providers' http://<host-ip>:9000/admin/halt`
+# and bypass RBAC entirely. host.docker.internal still resolves to the
+# loopback inside Docker Desktop on macOS, so Traefik continues to reach
+# the listener.
 :9000 {
+    bind 127.0.0.1
     root * {{ wing_app_dir }}/www
     encode zstd gzip
 
