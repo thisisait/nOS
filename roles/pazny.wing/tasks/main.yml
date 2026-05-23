@@ -73,11 +73,21 @@
     - "{{ wing_app_dir }}"
     - "{{ wing_data_dir }}"
     - "{{ wing_app_dir }}/temp"
-    - "{{ wing_log_dir }}"
     - "{{ wing_runtime_dir }}/repos"
     - "{{ wing_runtime_dir }}/patches"
     - "{{ wing_runtime_dir }}/caddy-data"
     - "{{ wing_runtime_dir }}/caddy-config"
+
+# SEC-2 (2026-05-23): the log directory holds Tracy's exception-*.html
+# dumps which CAN contain partial env-block fragments even with the
+# $keysToHide filter (Tracy redacts values but key names + structural
+# context might still leak service-graph info). Lock to 0700 so no
+# local UID can list or read.
+- name: "[pazny.wing] Ensure log directory exists at 0700"
+  ansible.builtin.file:
+    path: "{{ wing_log_dir }}"
+    state: directory
+    mode: '0700'
 
 # ── FrankenPHP runtime ───────────────────────────────────────────────────────
 # FrankenPHP lives in the dunglas/frankenphp tap (added globally via
