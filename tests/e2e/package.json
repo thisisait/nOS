@@ -2,7 +2,7 @@
   "name": "nos-e2e",
   "version": "0.1.0",
   "private": true,
-  "description": "nOS Tier-2 wet-test Playwright suite (Track P scaffolding).",
+  "description": "nOS Authentik SSO Playwright suite.",
   "scripts": {
     "test": "playwright test",
     "test:json": "playwright test --reporter=json",

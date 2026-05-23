@@ -2,8 +2,8 @@
  * tests/e2e/playwright.config.ts
  *
  * Playwright configuration for the nOS e2e SSO test suite.
- * Covers Tier-1 services (24) + Tier-2 apps (3) with browser-based
- * Authentik SSO login flow.
+ * Covers forward_auth Tier-1/Tier-2 services with browser-based Authentik
+ * SSO login flow.
  *
  * Env vars:
  *   NOS_HOST                tenant_domain (default: dev.local)

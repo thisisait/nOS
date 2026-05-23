@@ -18,13 +18,35 @@
 
 import { readFileSync } from 'node:fs';
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 
 // ─── Environment ───────────────────────────────────────────────────────────
 
 const NOS_HOST = process.env.NOS_HOST ?? 'dev.local';
 const APPS_SUBDOMAIN = process.env.APPS_SUBDOMAIN ?? 'apps';
 const AUTH_DOMAIN = process.env.AUTHENTIK_DOMAIN ?? `auth.${NOS_HOST}`;
+const AUTH_HOST = hostnameOf(AUTH_DOMAIN);
+
+function hostnameOf(value: string): string {
+  try {
+    return new URL(value).hostname.toLowerCase().replace(/\.$/, '');
+  } catch {
+    return value
+      .replace(/^https?:\/\//, '')
+      .split('/')[0]
+      .split(':')[0]
+      .toLowerCase()
+      .replace(/\.$/, '');
+  }
+}
+
+function pageHostname(page: Page): string {
+  return hostnameOf(page.url());
+}
+
+function isAuthentikHost(hostname: string): boolean {
+  return hostnameOf(hostname) === AUTH_HOST;
+}
 
 interface TesterCreds {
   username: string;
@@ -102,16 +124,15 @@ const FORWARD_AUTH: ServiceEntry[] = [
  * hanging the login form selector for 15s. Returns ``true`` if the
  * service appears live (any router/redirect/SSO response).
  */
-async function probeDeployed(url: string): Promise<boolean> {
+async function probeDeployed(request: APIRequestContext, url: string): Promise<boolean> {
   try {
-    const resp = await fetch(url, {
-      method: 'GET',
-      redirect: 'manual',
-      // mkcert dev + LE prod are both fine without explicit options;
-      // Node 18+ fetch ignores TLS errors only via NODE_TLS_REJECT_UNAUTHORIZED.
+    const resp = await request.get(url, {
+      failOnStatusCode: false,
+      maxRedirects: 0,
+      timeout: 10_000,
     });
     // Traefik's "no router" 404 has body "404 page not found".
-    if (resp.status === 404) {
+    if (resp.status() === 404) {
       const body = await resp.text();
       if (body.includes('404 page not found')) return false;
     }
@@ -125,6 +146,10 @@ async function probeDeployed(url: string): Promise<boolean> {
 // ─── Authentik login helper ────────────────────────────────────────────────
 
 async function fillAuthentikLogin(page: Page): Promise<void> {
+  // Some services may already render (valid session, auth disabled in a local
+  // fixture, or a future native-OIDC path). In that case there is nothing to do.
+  if (!isAuthentikHost(pageHostname(page))) return;
+
   // Stage 1: identification
   await page.waitForSelector('input[name="uidField"]', { timeout: 15000 });
   await page.fill('input[name="uidField"]', TESTER.username);
@@ -141,8 +166,7 @@ async function fillAuthentikLogin(page: Page): Promise<void> {
 
   for (let i = 0; i < 40; i++) {
     await page.waitForTimeout(500);
-    const hostname = new URL(page.url()).hostname;
-    if (!hostname.startsWith('auth.')) return;
+    if (!isAuthentikHost(pageHostname(page))) return;
   }
   throw new Error(`Still on Authentik after 20s: ${page.url()}`);
 }
@@ -155,12 +179,12 @@ test.describe('SSO browser flow — forward_auth services', () => {
   });
 
   for (const svc of FORWARD_AUTH) {
-    test(`${svc.slug} — login via Authentik and verify page renders`, async ({ page }) => {
+    test(`${svc.slug} — login via Authentik and verify page renders`, async ({ page, request }) => {
       test.info().annotations.push({ type: 'url', description: svc.url });
 
       // Service-deployment preflight — skips the test cleanly when Traefik
       // returns its "no router" 404 instead of hanging on the login form.
-      if (!(await probeDeployed(svc.url))) {
+      if (!(await probeDeployed(request, svc.url))) {
         test.skip(true, `${svc.slug} not deployed (Traefik 404 / DNS miss)`);
       }
 
@@ -179,7 +203,7 @@ test.describe('SSO browser flow — forward_auth services', () => {
       //      Puter responds JSON when its own auth has no user row for
       //      the SSO identity, etc.). The redirect-back is the contract.
       const finalHostname = new URL(page.url()).hostname;
-      expect(finalHostname).not.toMatch(/^auth\./);
+      expect(isAuthentikHost(finalHostname)).toBe(false);
 
       if (svc.titleContains) {
         const title = (await page.title()).trim();
