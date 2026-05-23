@@ -126,48 +126,88 @@ STALWART_ADMIN_USER               admin (configurable)
 STALWART_ADMIN_PASSWORD           stalwart_admin_password from credentials
 ```
 
-## Bootstrap
+## Quick test — Infisical-only path (MVP, no Stalwart needed)
 
-First-time setup, after a fresh blank with `install_infisical: true` +
-`install_smtp_stalwart: true`:
+This is the smallest end-to-end loop you can run today to verify the
+A18 wiring. Stalwart provisioning is graceful-degraded, so you can
+test the Authentik invitation + Infisical credential push WITHOUT
+ever touching the Stalwart admin wizard.
 
-1. **Let the playbook seed Infisical.** `roles/pazny.infisical/files/seed.py`
-   creates the `nos-users` project among others. Look for the project ID:
+Prereqs:
+- `install_infisical: true` in your config (already on by default)
+- Wing + Bone + Authentik live (verify: `curl -sf http://127.0.0.1:9000/` returns 200)
 
-   ```bash
-   infisical projects list --plain | grep nos-users
-   ```
+Steps:
 
-   Copy the UUID into `config.yml`:
-
-   ```yaml
-   infisical_users_project_id: "00000000-0000-4000-8000-aaaaaaaaaaaa"
-   ```
-
-2. **Walk the Stalwart wizard once.** Open `https://mail.<tld>/admin`,
-   log in with `admin` + `stalwart_admin_password`. The bootstrap wizard
-   walks through domain + DKIM + TLS cert paths (mounted at
-   `/etc/stalwart/certs/` when the tenant is public). Wizard generates
-   `/etc/stalwart/config.json` — after that, JMAP is live on `/jmap`.
-
-3. **Flip the master toggle:**
-
+1. **In `config.yml`:**
    ```yaml
    nos_invite_provisioning_enabled: true
    ```
+   That's it — no Stalwart toggle, no UUID copy.
 
-4. **Re-run the playbook** so Wing's plist picks up the new env. Bone +
-   Wing both restart via launchd handlers.
-
-5. **Verify:**
-
+2. **Run the playbook:**
    ```bash
-   # Wing /users/invite — operator-facing form. Submit a test invitation
-   # with email_hint="testuser@<tld>" and Tier-2. After the redirect:
-   #   - /users/created shows the provisioning_json snapshot
-   #   - /audit shows the user_invitation_provisioned event
-   #   - infisical secrets list /users/testuser/ — mailbox_password exists
-   #   - swaks --to testuser@<tld> ... — mailbox accepts the test message
+   ansible-playbook main.yml
+   ```
+   The infisical role's seeder creates `nos-users` project and writes its
+   UUID to `~/.nos/secrets.yml::infisical_users_project_id` automatically
+   (A18, 2026-05-23). Wing's plist picks it up on the same run. No manual
+   UUID copy required.
+
+3. **Verify the toggle propagated:**
+   ```bash
+   grep -E "NOS_INVITE_PROVISIONING|INFISICAL_USERS_PROJECT_ID" \
+     ~/Library/LaunchAgents/eu.thisisait.nos.wing.plist
+   ```
+   Both lines should be non-empty.
+
+4. **Submit a test invite** at `https://wing.<tld>/users/invite`:
+   - Email hint: `testuser@<tld>`
+   - Tier: 2 (manager)
+   - Apps: leave empty for now
+
+5. **Verify the result:**
+   - `/users/created` lands with the enrollment URL + provisioning snapshot
+   - `/audit` shows `user_invitation_provisioned` event with
+     `infisical_done=true`, `stalwart_done=false` (skip — toggle off)
+   - In Infisical UI (`https://vault.<tld>`), browse to project
+     `nOS Users` → environment `prod` → path `/users/default/testuser/` →
+     `mailbox_password` secret exists with a 24-char value
+
+That's the Cesta B Infisical path verified. When you're ready to add
+mailbox provisioning, see the next section.
+
+## Full bootstrap (with Stalwart mailbox provisioning)
+
+Once the Infisical path above works, add Stalwart for end-to-end
+mailbox provisioning:
+
+1. **Enable + walk the Stalwart wizard once.**
+   ```yaml
+   install_smtp_stalwart: true
+   ```
+   Re-run the playbook. Open `https://mail.<tld>/admin`, log in with
+   `admin` + `stalwart_admin_password`. The bootstrap wizard walks
+   through domain + DKIM + TLS cert paths. The wildcard cert from
+   `pazny.acme` is mounted inside the container at:
+   ```
+   /certs/cert.pem
+   /certs/key.pem
+   ```
+   (NOT `/etc/stalwart/certs/*` — Docker Desktop virtiofs on macOS
+   can't handle nested file binds; details in
+   `roles/pazny.smtp_stalwart/templates/compose.yml.j2` comment.)
+   Wizard generates `/etc/stalwart/config.json`. After that, JMAP is
+   live on the host at `http://127.0.0.1:8088/jmap`.
+
+2. **Re-run the playbook** so Wing's plist picks up
+   `STALWART_ADMIN_PASSWORD` + `STALWART_API_URL`.
+
+3. **Verify** — same invite as in the MVP section, but now
+   `stalwart_done=true` and the mailbox is reachable via swaks:
+   ```bash
+   swaks --to testuser@<tld> --server mail.<tld>:587 --auth LOGIN \
+     --auth-user testuser --auth-password <pw-from-Infisical>
    ```
 
 ## Failure modes & graceful degradation
