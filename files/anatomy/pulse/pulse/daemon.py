@@ -27,6 +27,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+from . import redact
 from .config import PulseConfig
 from .runners import subprocess as sp_runner
 from .wing_client import WingClient
@@ -158,11 +159,17 @@ class PulseDaemon:
             result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env or {})
             log.info("job %s done rc=%d dur=%.1fs timed_out=%s",
                      job_id, result.exit_code, result.duration_s, result.timed_out)
+            # SEC-9 (2026-05-23): scrub stdout/stderr tails BEFORE
+            # forwarding to Wing. Subprocess output can carry env-var
+            # dumps (WING_API_TOKEN=…), CLI password flags, Bearer
+            # headers from HTTP-client tracebacks, and gitleaks
+            # captured-secret previews. Without this, those values
+            # persist into wing.db.events + /audit + launchd.err.log.
             self.wing.post_run_finish(
                 run_id, finished_at_iso=_now_iso(),
                 exit_code=result.exit_code,
-                stdout_tail=result.stdout_tail,
-                stderr_tail=result.stderr_tail,
+                stdout_tail=redact.scrub_text(result.stdout_tail),
+                stderr_tail=redact.scrub_text(result.stderr_tail),
             )
         except Exception as e:  # noqa: BLE001 — broad catch on purpose; logged
             log.exception("job %s fatal: %s", job_id, e)
@@ -171,7 +178,7 @@ class PulseDaemon:
                     run_id, finished_at_iso=_now_iso(),
                     exit_code=255,
                     stdout_tail="",
-                    stderr_tail=f"daemon exception: {e}",
+                    stderr_tail=redact.scrub_text(f"daemon exception: {e}"),
                 )
             except Exception:  # noqa: BLE001
                 pass
