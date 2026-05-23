@@ -119,6 +119,29 @@ final class SystemRepository
 	}
 
 
+	/**
+	 * Whitelist of columns operator/agent input can write. SEC-7
+	 * (2026-05-23): pre-this, `upsert($body)` passed the entire
+	 * decoded JSON request body to Nette `->insert($data)` — mass
+	 * assignment lets the caller forge health_status, scan_priority,
+	 * created_at, parent_id arbitrarily. Combined with HubPresenter's
+	 * publicActions = ['systems'], any local-reachable client could
+	 * spawn arbitrary registry rows + influence SSRF-guard URL
+	 * lookups (actionHealth's "URL must be in DB" gate).
+	 *
+	 * Allowed: the install-shape columns Ansible's nos_apps_render +
+	 * service_registry post-tasks legitimately write. Health is
+	 * managed by setHealth (probe-driven), audit columns by the DB.
+	 */
+	private const WRITABLE_FIELDS = [
+		'id', 'parent_id', 'name', 'description', 'type', 'category',
+		'stack', 'image', 'version', 'version_var', 'pinned',
+		'domain', 'port', 'url', 'network_exposed', 'has_web_ui',
+		'toggle_var', 'enabled',
+		'priority', 'upstream_repo',
+		'source', 'metadata',
+	];
+
 	public function upsert(array $data): void
 	{
 		$id = $data['id'] ?? null;
@@ -126,13 +149,17 @@ final class SystemRepository
 			throw new \InvalidArgumentException('System id is required');
 		}
 
-		$exists = $this->db->table('systems')->where('id', $id)->count('*') > 0;
-		$data['updated_at'] = (new \DateTimeImmutable)->format('Y-m-d H:i:s');
+		// SEC-7: strip everything not in the whitelist. Mass-assignment
+		// columns (health_status, created_at, scan_*) silently dropped
+		// so caller can't forge audit state or probe consensus.
+		$filtered = array_intersect_key($data, array_flip(self::WRITABLE_FIELDS));
+		$filtered['updated_at'] = (new \DateTimeImmutable)->format('Y-m-d H:i:s');
 
+		$exists = $this->db->table('systems')->where('id', $id)->count('*') > 0;
 		if ($exists) {
-			$this->db->table('systems')->where('id', $id)->update($data);
+			$this->db->table('systems')->where('id', $id)->update($filtered);
 		} else {
-			$this->db->table('systems')->insert($data);
+			$this->db->table('systems')->insert($filtered);
 		}
 	}
 

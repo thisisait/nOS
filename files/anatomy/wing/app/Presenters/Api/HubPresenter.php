@@ -7,21 +7,57 @@ namespace App\Presenters\Api;
 use App\Model\SystemRepository;
 
 /**
- * GET /api/v1/hub/systems         — list all systems (flat, with filters)
- * GET /api/v1/hub/systems?tree=1  — tree (hierarchy with children)
- * GET /api/v1/hub/systems/{id}    — single system detail
- * GET /api/v1/hub/health          — probe all systems with a URL
- * POST /api/v1/hub/systems        — upsert a system
+ * GET /api/v1/hub/systems         — list all systems (flat, with filters) [PUBLIC]
+ * GET /api/v1/hub/systems?tree=1  — tree (hierarchy with children) [PUBLIC]
+ * GET /api/v1/hub/systems/{id}    — single system detail [PUBLIC]
+ * GET /api/v1/hub/health          — probe all systems with a URL [PUBLIC]
+ * POST /api/v1/hub/systems        — upsert a system [BEARER required]
  *
- * Public routes (no Bearer token) — data is non-sensitive service metadata.
- * Nginx gates browser access via Authentik; API access is local-only.
+ * GET routes are public — service metadata is non-sensitive and Nginx
+ * gates browser access via Authentik.
+ *
+ * SEC-7 (2026-05-23): POST was ALSO public pre-this commit — any
+ * client able to reach 127.0.0.1:9000 could forge registry rows
+ * (subverting actionHealth's "URL must be in DB" SSRF guard) and write
+ * any column via mass-assignment. Both holes closed:
+ *   1. `systems` removed from $publicActions — POST now hits
+ *      requireTokenAuth via BaseApiPresenter::startup(). GETs are
+ *      restored to "public" via the runtime branch below.
+ *   2. SystemRepository::upsert whitelists WRITABLE_FIELDS — clients
+ *      can't write health_status, audit columns, or unknown columns.
  */
 final class HubPresenter extends BaseApiPresenter
 {
-	protected array $publicActions = ['systems', 'health'];
+	/**
+	 * `health` stays public (read-only probe surface).
+	 *
+	 * `systems` is intentionally NOT in this list anymore — the action
+	 * itself handles read-vs-write differently. GET paths short-circuit
+	 * to public; POST hits requireTokenAuth via parent startup BEFORE
+	 * the action runs (because we keep `systems` out of $publicActions).
+	 */
+	protected array $publicActions = ['health'];
 
 	/** @inject */
 	public SystemRepository $systems;
+
+	public function startup(): void
+	{
+		// SEC-7: for GET on /systems, bypass requireTokenAuth (read is
+		// public). For POST, fall through to BaseApiPresenter::startup
+		// which runs requireTokenAuth. The action name `systems` is
+		// not in $publicActions; the read-public behavior is recovered
+		// by this method-aware override.
+		$method = $this->getHttpRequest()->getMethod();
+		if ($this->getAction() === 'systems' && $method === 'GET') {
+			// Mirror BaseApiPresenter's content-type setting; skip the
+			// token check entirely (read is public).
+			$this->getHttpResponse()->setContentType('application/json', 'utf-8');
+			\Nette\Application\UI\Presenter::startup();
+			return;
+		}
+		parent::startup();
+	}
 
 	public function actionSystems(?string $id = null): void
 	{
@@ -36,6 +72,8 @@ final class HubPresenter extends BaseApiPresenter
 
 		$method = $this->getMethod();
 		if ($method === 'POST') {
+			// Bearer auth already enforced by startup() (this action
+			// is NOT in $publicActions for non-GET methods).
 			$body = $this->getJsonBody();
 			if (empty($body['id'])) {
 				$this->sendError('id is required');
