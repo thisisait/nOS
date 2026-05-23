@@ -103,6 +103,17 @@ ansible-playbook main.yml --tags "macos-defaults,osx"
 
 Full tag list: see README.md § *Tags & selective runs*.
 
+### Test the whole catalogue / run stacks without sudo
+
+```bash
+ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]   # enable every known-good service (sequential, 1200s timeout)
+tools/nos-stacks.sh [tag]                                           # stack layer only, no sudo, no prompt (agent/CI dev)
+```
+
+Stack bring-up is `up -d` + an in-stream STRICT health-wait heartbeat (per-stack
+readiness ticks in the log). Tune via `stack_up_parallel` / `stack_up_wait_timeout`
+/ `stack_wait_tick_interval` — see README.md § *Stack bring-up tuning*.
+
 ---
 
 ## Expected outcome

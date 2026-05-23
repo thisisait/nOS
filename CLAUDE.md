@@ -46,6 +46,12 @@ ansible-playbook main.yml --tags "ssh,iiab-terminal"
 
 # Syntax validation
 ansible-playbook main.yml --syntax-check
+
+# Enable every known-good service (test profile; excludes erpnext/freepbx/spacetimedb)
+ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]
+
+# Run the Docker stack layer autonomously — no sudo, no vars_prompt (agent/CI dev)
+tools/nos-stacks.sh [tag]        # e.g. tools/nos-stacks.sh woodpecker
 ```
 
 ## Architecture
@@ -106,16 +112,18 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 6. **Host tasks:** macOS system prefs → SSH / IIAB Terminal → language runtimes → Nginx → external storage.
 7. **`tasks/stacks/core-up.yml`** — `infra` + `observability` stacks (always first):
    - Role renders (compose-override templates)
-   - `docker compose up infra --wait` + `docker compose up observability --wait`
+   - `docker compose up infra -d` + `docker compose up observability -d` (non-blocking), then `tasks/stacks/wait-stacks-healthy.yml` polls every container to healthy
    - DB setup (MariaDB databases, PostgreSQL databases + `pgcrypto`)
    - Post-start roles: Authentik blueprints + OIDC, Infisical init, Bluesky PDS, Portainer admin + OAuth.
 8. **Service configs:** Nginx vhosts, data dirs, Alloy scrape targets, observability dashboards.
 9. **`tasks/stacks/stack-up.yml`** — the remaining stacks (`iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`):
    - Role renders
-   - Loop: `docker compose up <stack> --wait` per stack
+   - `docker compose up <stack> -d` per stack (concurrent when `stack_up_parallel: true`, default; one-at-a-time when `false`), then the shared in-stream health-wait
    - Post-start roles: admin init, OIDC configuration, DB migrations, onboarding
    - Authentik service-side OIDC setup, Bluesky PDS bridge.
 10. **Post-provision:** stack-health verification → service registry.
+
+**Stack bring-up (A19, 2026-05-23):** bring-up is non-blocking `docker compose up -d`; `tasks/stacks/wait-stacks-healthy.yml` → `files/anatomy/scripts/stack-health-probe.py` then runs an **in-stream health-wait heartbeat**. Each `stack_wait_tick_interval` (default 15s) tick prints a per-stack readiness line into `ansible.log` (e.g. `iiab: 17/18 ready (waiting: jellyfin[starting])`) so a long bring-up never freezes the log. The wait is **STRICT** — every container must reach healthy, no tolerance escape hatch; slow services (GitLab cold init ~12 min) just need a generous `stack_up_wait_timeout` (default 540s; the all-on profile sets 1200s). `stack_up_parallel: false` brings stacks up one at a time to avoid Docker-daemon saturation on a cold blank. Applies to `core-up.yml`, `stack-up.yml`, and `apps-up.yml`.
 
 **Key invariant:** infra + observability are **always required, always first**. Post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki, and Tempo are online.
 
@@ -133,6 +141,8 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 | **engineering** | QGIS Server |
 | **data** | Metabase, Apache Superset, InfluxDB |
 
+**Bring-up tuning vars** (`default.config.yml`): `stack_up_parallel` (default `true`; `false` = one-at-a-time, contention-free cold blank), `stack_up_wait_timeout` (default 540s; per-stack STRICT health budget), `stack_wait_tick_interval` (default 15s; heartbeat cadence). **`profiles/all-on.yml`** is a committed test profile that enables every known-good service (excludes erpnext/freepbx/spacetimedb), forces sequential bring-up + 1200s timeout — run with `ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]`. **`tools/nos-stacks.sh [tag]`** runs the stack layer with no sudo and no vars_prompt (compose-up tasks carry zero `become:`; `-e nos_sudo_password=''` skips the prompt) — for agent/CI dev; refuses `blank=true`.
+
 ### Non-Docker applications
 
 - **OpenClaw** — AI agent daemon via launchd, Ollama 0.19+ with the MLX backend
@@ -147,6 +157,8 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 ### IAM & SSO (Authentik)
 
 Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC providers + applications are generated from per-plugin `authentik:` blocks in `files/anatomy/plugins/<svc>-base/plugin.yml`, harvested by `authentik-base`'s aggregator into `inputs.clients` and rendered into the live Authentik blueprint by the plugin loader (D1.2/D1.3 cutover, 2026-05-05). The legacy central `authentik_oidc_apps` list in `default.config.yml` was retired in D1.3 — only the empty stub survives as the Tier-2 apps_runner extension channel.
+
+> **Plugin wiring contract (2026-05-23):** every plugin manifest block (`authentik`, `notification`, `pulse`, `compose_extension`, `observability`, `lifecycle`, `requires`) has a documented status — which blocks have a *live consumer* vs *forward-ready metadata* — in `files/anatomy/docs/plugin-wiring-capabilities.md`, pinned by `tests/anatomy/test_plugin_wiring_contract.py` and measured by `tools/plugin-wiring-report.py`. Notification routing is unified at the canonical A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info` → `wing-inbox`|`ntfy`|`mail`) across **55/55** plugins.
 
 **β1.A (2026-05-05) doctrine — three SSO buckets, not two:**
 
@@ -247,7 +259,7 @@ No code changes. The runner takes care of routing, secrets, and observability.
 
 ### Feature-toggle pattern
 
-~78 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering.
+~78 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering. Bring-up tuning vars (`stack_up_parallel`, `stack_up_wait_timeout`, `stack_wait_tick_interval`) live in `default.config.yml`; `profiles/all-on.yml` is the committed "everything-on" override profile.
 
 ## Linting Rules
 
@@ -333,6 +345,8 @@ Closed epics, archived here so future archaeology has a starting point. Authorit
 - **A16 Woodpecker CI autowiring** (2026-05-17) — Gitea repo creation + Woodpecker activation are playbook-managed.
 - **A17 Stack-up tags + nos-push + deploy-trigger + Wing daemon hardening** (2026-05-20) — see commits `5c16a05..d87efef`.
 - **A18 Invite-flow Cesta B (Infisical + Stalwart)** (2026-05-20) — `UsersPresenter::actionInviteCreate` optionally provisions per-user credentials into Infisical (`/users/<name>/`) and a Stalwart mailbox via JMAP after the Authentik invitation lands. Bundles Stalwart v0.11.8 → v0.16.6 upgrade (REST → JMAP API). See `docs/invite-provisioning.md`.
+- **A19 plugin-wiring unification + orchestration health-wait** (2026-05-23) — notification routing canonicalized to 55/55 plugins (gate `test_plugin_wiring_contract.py`, report `tools/plugin-wiring-report.py`, doctrine `files/anatomy/docs/plugin-wiring-capabilities.md`); in-stream health-wait heartbeat replaces blocking `--wait` (`wait-stacks-healthy.yml` + `stack-health-probe.py`); `stack_up_parallel`/sequential cold-blank + `profiles/all-on.yml`; sudo-free `tools/nos-stacks.sh`. See `RELEASE.md` (v0.2-beta).
+- **A19 single-run autowiring** (2026-05-23) — `authentik_bootstrap_token` is playbook-generated and pinned as the Authentik blueprint token key, so Wing /users + invitations work on ONE blank run (no fetch-tool second pass); Woodpecker↔Gitea OAuth2 client is auto-created.
 
 ## AIT — AgentKit runtime (Anatomy A14, 2026-05-07)
 

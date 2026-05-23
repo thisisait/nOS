@@ -5,7 +5,20 @@
 > below are retained for context and may describe pre-2026-05-03 states that
 > have since been superseded.
 >
-> Last updated: 2026-05-20 • commit: post-A17 deploy-trigger + Wing daemon hardening • by: pazny+claude
+> Last updated: 2026-05-23 • milestone: **v0.2-beta** (A19 wiring unification + orchestration health-wait + single-run autowiring) • by: pazny+claude
+
+## v0.2-beta milestone (2026-05-23)
+
+First tagged beta since `v0.1-beta`. Cut as git tag `v0.2-beta` from `master`.
+Authoritative release notes: [`RELEASE.md`](../RELEASE.md). Bundle = **A19**:
+
+| Area | Shipped |
+|---|---|
+| **Plugin wiring** | Notification routing canonicalized to the A9 severity shape across **55/55** plugins; CI gate `tests/anatomy/test_plugin_wiring_contract.py`; report `tools/plugin-wiring-report.py`; doctrine `files/anatomy/docs/plugin-wiring-capabilities.md` (live-consumer vs forward-ready). qdrant-base gained a `feature_flag`; gitleaks gdpr/schema conformed. |
+| **Orchestration** | Blocking `up --wait` → `up -d` + in-stream STRICT health-wait heartbeat (`tasks/stacks/wait-stacks-healthy.yml` / `health-tick.yml` / `files/anatomy/scripts/stack-health-probe.py`); `stack_up_parallel` sequential cold-blank; `profiles/all-on.yml`; sudo-free `tools/nos-stacks.sh`. |
+| **Autowiring** | Single-run `authentik_bootstrap_token` (Wing /users + invitations on ONE blank, no 2nd-pass fetch tool); Woodpecker↔Gitea OAuth2 auto-create. |
+| **Security** | A1–A18 hardening continued; Wing Latte CSRF tokens on every browser POST (SEC-14). |
+| **Validated by** | Full STRICT all-on blank: `ok=1886 failed=0`. |
 
 ## Q2 2026 status — post-A17 retrospective (2026-05-20)
 
@@ -35,6 +48,8 @@ plan; the table below documents what actually landed.
 | A15 Users + Invitations console | 2026-05-15+ | `roles/pazny.wing/templates/wing.plist.j2` |
 | A16 Woodpecker CI autowiring | 2026-05-17 | `roles/pazny.woodpecker/tasks/post-repo.yml` |
 | A17 Stack-up tags + nos-push + deploy-trigger + Wing daemon hardening | 2026-05-20 | commits `5c16a05..d87efef` |
+| A18 Invite-flow Cesta B (Infisical + Stalwart JMAP) | 2026-05-20 | `docs/invite-provisioning.md` |
+| A19 Wiring unification + health-wait + single-run autowiring (**v0.2-beta**) | 2026-05-23 | `RELEASE.md` + `files/anatomy/docs/plugin-wiring-capabilities.md` |
 
 ### Wave 4 (Track Q) retrospective
 
@@ -47,11 +62,11 @@ plan; the table below documents what actually landed.
 the SSO source-of-truth; the central list survives only as an empty Tier-2
 apps_runner stub.
 
-### Open backlog (post-A17 → Q3 candidates)
+### Open backlog (post-v0.2-beta → Q3 candidates)
 
-- Stalwart admin REST API spike → invite flow extension (auto-provision mailbox + push creds to Infisical)
+- ~~Stalwart admin API → invite flow extension (auto-provision mailbox + push creds to Infisical)~~ **SHIPPED A18** (2026-05-20, JMAP path) — see `docs/invite-provisioning.md`.
 - Inspektor + Librarian agent runners (waiting on trivy/grype/nuclei substrate + Qdrant corpus pipeline)
-- A8 conductor scheduled drift scans (closes the security-scan staleness gap)
+- **A8 conductor scheduled drift scans (still OPEN)** — closes the security-scan staleness gap; manual interim via `hooks/playbook-end.d/20-cve-drift-check.sh`.
 - Upstream OIDC PRs queued in `docs/upstream-pr-opportunities.md`
 
 ---
