@@ -2,9 +2,16 @@
 # ==============================================================================
 # pazny.woodpecker/tasks/post.yml — entrypoint for post-start tasks
 #
-# Called from tasks/stacks/stack-up.yml after `docker compose up devops --wait`.
-# Conditionally pulls in post-repo.yml when install_woodpecker_autowire_nos=true.
+# Called from tasks/stacks/stack-up.yml after the devops stack is healthy.
+#  1. post-oauth.yml — autowire the Gitea OAuth2 app (always, when Gitea is on).
+#  2. post-repo.yml  — optional nOS repo mirror + activation (autowire toggle).
 # ==============================================================================
+
+- name: "[pazny.woodpecker Post] Autowire Gitea OAuth2 application"
+  ansible.builtin.include_tasks: post-oauth.yml
+  when:
+    - install_woodpecker | default(false) | bool
+    - install_gitea | default(false) | bool
 
 - name: "[pazny.woodpecker Post] Wire nOS repo into Woodpecker"
   ansible.builtin.include_tasks: post-repo.yml

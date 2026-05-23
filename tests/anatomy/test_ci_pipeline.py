@@ -169,20 +169,21 @@ def test_stack_up_wires_woodpecker_post():
 
 
 def test_final_summary_carries_token_hint_section():
-	"""final-summary.yml MUST surface a calibrated operator hint when any
-	of the three high-impact tokens is missing (authentik_bootstrap_token
-	when wing+authentik installed; gitea_api_token / woodpecker_api_token
-	when the matching autowire toggle is on). Catches a regression where
-	the hint section was accidentally removed."""
+	"""final-summary.yml MUST surface a calibrated operator hint when a
+	manual autowire token is missing (gitea_api_token / woodpecker_api_token
+	when the matching autowire toggle is on). Catches a regression where the
+	hint section was accidentally removed.
+
+	A19 (2026-05-23): authentik_bootstrap_token is now playbook-generated +
+	blueprint-pinned (single-run Wing /users), so it is NO longer a missing
+	token the summary nags about, and the old fetch-tool 2-pass is retired."""
 	src = (REPO / "tasks/final-summary.yml").read_text()
 	assert "OPERATOR ACTION REQUIRED — MISSING TOKENS" in src
-	# All three tokens must be referenced.
-	assert "authentik_bootstrap_token" in src
+	# The two still-manual autowire tokens must be referenced.
 	assert "gitea_api_token" in src
 	assert "woodpecker_api_token" in src
-	# Hint must point to fetch-authentik-bootstrap-token.py — the
-	# canonical operator path documented in tools/.
-	assert "fetch-authentik-bootstrap-token.py" in src
+	# The retired authentik bootstrap fetch-tool 2-pass must NOT reappear.
+	assert "fetch-authentik-bootstrap-token.py" not in src
 
 
 def test_final_summary_hint_is_conditional_not_unconditional():
@@ -192,6 +193,7 @@ def test_final_summary_hint_is_conditional_not_unconditional():
 	src = (REPO / "tasks/final-summary.yml").read_text()
 	assert "_need_gitea_token" in src
 	assert "_need_wp_token" in src
-	# The wrapping `{% if _need_gitea_token or _need_wp_token or ...%}`
-	# must include the authentik bootstrap path too.
-	assert "_have_authentik_bootstrap" in src
+	# A19: the guard fires only when a manual autowire token is missing
+	# (authentik bootstrap is auto-provisioned now, so it's dropped from the
+	# condition). The hint must NOT be unconditional.
+	assert "{% if _need_gitea_token or _need_wp_token %}" in src

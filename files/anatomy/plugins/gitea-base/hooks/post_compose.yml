@@ -97,7 +97,11 @@ sequence:
       and _gitea_oauth_sources.status == 200
       and (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | length) > 0
     method: PATCH
-    path: "/api/v1/admin/identity-providers/{{ _gitea_ak_source_id }}"
+    # Resolve the source id inline from the registered list (the replay runner
+    # renders paths against the registers map). The old `{{ _gitea_ak_source_id }}`
+    # was never registered in this sequence → rendered empty → PATCH to a
+    # path with no id. (A19 latent fix, 2026-05-23.)
+    path: "/api/v1/admin/identity-providers/{{ (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | first | default({})).id | default(0) }}"
     auth:
       type: basic
       username: "{{ gitea_admin_user }}"

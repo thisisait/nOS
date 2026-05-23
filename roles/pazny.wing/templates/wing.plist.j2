@@ -104,10 +104,11 @@
         <string>{{ authentik_domain }}</string>
         <!-- A15 (2026-05-17): admin-API bearer token used by the /users
              presenter (AuthentikClient) to list users / groups / apps and
-             create invitations. Provisioned by tools/fetch-authentik-
-             bootstrap-token.py into ~/.nos/secrets.yml. Optional — when
-             empty the /users page renders a one-line operator hint
-             instead of bleeding raw 401s. -->
+             create invitations. Playbook-generated (main.yml) + pinned as the
+             nos-api token `key:` in the 00-admin-groups Authentik blueprint, so
+             it is known on a single blank run — no fetch-tool 2nd pass. When
+             empty (install_authentik=false) the /users page renders a one-line
+             operator hint instead of bleeding raw 401s. -->
         <key>AUTHENTIK_BOOTSTRAP_TOKEN</key>
         <string>{{ authentik_bootstrap_token | default('') }}</string>
         <!-- A15 (2026-05-17): comma-separated extra tenant slugs surfaced

@@ -41,14 +41,18 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
-  # ── API token pro PDS bridge a dalsi automatizace ──────────────────────────
-  # Bridge script (bluesky_pds_bridge.yml) hleda token s identifier
-  # 'nos-api'. Bez nej PDS bridge preskoci s "token=chybi".
+  # ── API token for the PDS bridge and other automation ──────────────────────
+  # The bridge script (bluesky_pds_bridge.yml) looks up the token by identifier
+  # 'nos-api'; without it the PDS bridge skips with "token=missing".
+  # `key:` is pinned to the playbook-generated authentik_bootstrap_token so the
+  # value is deterministic — Wing reads the SAME var as AUTHENTIK_BOOTSTRAP_TOKEN,
+  # making /users + invitations work on a single blank run (no fetch-tool pass).
   - model: authentik_core.token
     state: present
     identifiers:
       identifier: nos-api
     attrs:
+      key: "{{ authentik_bootstrap_token }}"
       user: !Find [authentik_core.user, [username, akadmin]]
       intent: api
       expiring: false
