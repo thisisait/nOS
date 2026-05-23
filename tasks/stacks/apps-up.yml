@@ -63,30 +63,33 @@
       check_mode: false
 
     # ── Bring the apps stack up ─────────────────────────────────────────────
-    # `--wait` blocks until every container is healthy or 240s elapse. The
-    # 240s budget covers parallel cold-start of N Tier-2 apps:
-    #   start_period (60s) + healthcheck interval × retries (≤150s) ≈ 210s
-    # plus headroom for image pull / volume init. Verified empirically
-    # against twofauth + roundcube + documenso + documenso-db on Apple
-    # Silicon — 120s was tight (compose-up timed out before roundcube +
-    # twofauth flipped to healthy, even though both reached healthy within
-    # ~30s of compose-up's exit).
-    - name: "[Apps] Start APPS stack (docker compose up --wait)"
+    # A19 (2026-05-23): `up -d` (NO --wait) starts containers + does image
+    # pull/build, then the in-stream health-wait below reports readiness
+    # tick-by-tick into the log (vs a silent 240s freeze) and enforces STRICT
+    # health — every Tier-2 app must reach healthy, same contract as the Tier-1
+    # stacks. rc here still catches compose CONFIG/IMAGE errors.
+    - name: "[Apps] Start APPS stack (docker compose up -d)"
       ansible.builtin.shell: >
         {{ docker_bin }} compose
         -f "{{ stacks_dir }}/apps/docker-compose.yml"
         {% for f in _apps_overrides_find.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
         -p apps
-        up -d --build --remove-orphans --wait --wait-timeout 240
+        up -d --build --remove-orphans
         {{ _docker_compose_pull | default('') }} 2>&1
       register: _apps_stack_result
       changed_when: false
       failed_when: false
       check_mode: false
 
-    - name: "[Apps] Apps stack result"
+    - name: "[Apps] Apps stack start result"
       ansible.builtin.debug:
         msg: "apps: rc={{ _apps_stack_result.rc | default('?') }} {{ (_apps_stack_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
+
+    - name: "[Apps] Wait for APPS stack healthy (in-stream heartbeat)"
+      ansible.builtin.include_tasks: wait-stacks-healthy.yml
+      vars:
+        _wait_stacks: ["apps"]
+      when: _apps_stack_result.rc | default(1) == 0
 
     # When compose-up failed (image pull error, healthcheck timeout, etc.)
     # the next task (post-start include) is gated on rc=0 and SKIPS, so

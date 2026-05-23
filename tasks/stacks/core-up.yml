@@ -406,7 +406,11 @@
 
 # ── Start INFRA stack first (DB must be ready before anything else) ─────────
 
-- name: "[Core] Start INFRA stack (docker compose up --wait)"
+# up -d (NO --wait): starts containers + does the image pull/build, returns
+# without blocking on health. The health-wait below then reports readiness
+# tick-by-tick into the log instead of freezing it for ~9 min (A: in-stream
+# heartbeat, 2026-05-23). rc still catches compose CONFIG errors here.
+- name: "[Core] Start INFRA stack (docker compose up -d)"
   tags: ['core', 'always']
   ansible.builtin.shell: >
     {{ docker_bin }} compose
@@ -414,18 +418,25 @@
     {% for f in _infra_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p infra
     --progress plain
-    up -d --build --remove-orphans --wait --wait-timeout 540
+    up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_infra_result
   failed_when: false
   check_mode: false
   when: _core_infra_enabled | bool
 
-- name: "[Core] Infra stack result"
+- name: "[Core] Infra stack start result"
   tags: ['core', 'always']
   ansible.builtin.debug:
     msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_infra_result is defined and _core_infra_result.rc is defined
+
+- name: "[Core] Wait for INFRA stack healthy (in-stream heartbeat)"
+  tags: ['core', 'always']
+  ansible.builtin.include_tasks: wait-stacks-healthy.yml
+  vars:
+    _wait_stacks: ["infra"]
+  when: _core_infra_enabled | bool
 
 # ── DB post-start setup (MUST run AFTER infra and BEFORE observability) ─────
 # Grafana in the observability stack may use PostgreSQL as its backend -
@@ -451,7 +462,7 @@
 
 # ── Start OBSERVABILITY stack (DB and configs ready) ────────────────────────
 
-- name: "[Core] Start OBSERVABILITY stack (docker compose up --wait)"
+- name: "[Core] Start OBSERVABILITY stack (docker compose up -d)"
   tags: ['core', 'always']
   ansible.builtin.shell: >
     {{ docker_bin }} compose
@@ -459,18 +470,25 @@
     {% for f in _observability_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p observability
     --progress plain
-    up -d --build --remove-orphans --wait --wait-timeout 540
+    up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_obs_result
   failed_when: false
   check_mode: false
   when: _core_observability_enabled | bool
 
-- name: "[Core] Observability stack result"
+- name: "[Core] Observability stack start result"
   tags: ['core', 'always']
   ansible.builtin.debug:
     msg: "observability: rc={{ _core_obs_result.rc | default('?') }} {{ (_core_obs_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_obs_result is defined and _core_obs_result.rc is defined
+
+- name: "[Core] Wait for OBSERVABILITY stack healthy (in-stream heartbeat)"
+  tags: ['core', 'always']
+  ansible.builtin.include_tasks: wait-stacks-healthy.yml
+  vars:
+    _wait_stacks: ["observability"]
+  when: _core_observability_enabled | bool
 
 - name: "[Core] Grafana admin password reconverge (pazny.grafana -> post.yml)"
   ansible.builtin.include_role:

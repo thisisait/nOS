@@ -171,23 +171,25 @@
       }}
 
 # ── Start remaining stacks (parallel) ───────────────────────────────────────
-# Wave-2 stacks are independent of each other (only infra+observability are
-# shared). Firing them in parallel via async + poll:0 cuts blank time by
-# ~10 min vs the legacy sequential loop. Hard ceiling 600s per stack;
-# async_status polls every 10s for up to 60 retries (10 min total).
-
-- name: "[Stacks] Fire docker compose up --wait per stack (async, parallel)"
+# START phase only: `up -d` (NO --wait) does the image pull/build + container
+# create/start and returns WITHOUT blocking on health. Firing them async +
+# poll:0 pulls/builds every stack concurrently (fast, but Docker-heavy — that's
+# why the all-on cold blank uses stack_up_parallel=false instead). rc here
+# catches compose CONFIG/IMAGE errors. The consolidated health-wait further
+# down reports readiness tick-by-tick into the log (A: in-stream heartbeat).
+- name: "[Stacks] Fire docker compose up -d per stack (async, parallel start)"
   tags: ['stacks', 'always']
+  when: stack_up_parallel | default(true) | bool
   ansible.builtin.shell: >
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     {% for f in _stack_overrides_map[item] | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p "{{ item }}"
     --progress plain
-    up -d --build --remove-orphans --wait --wait-timeout 540
+    up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
   loop: "{{ _remaining_stacks }}"
-  async: 600
+  async: "{{ (stack_up_wait_timeout | default(540) | int) + 120 }}"
   poll: 0
   register: _stack_jobs
   changed_when: false
@@ -199,6 +201,7 @@
 
 - name: "[Stacks] Wait for parallel stack-up jobs to finish"
   tags: ['stacks', 'always']
+  when: stack_up_parallel | default(true) | bool
   ansible.builtin.async_status:
     jid: "{{ async_job.ansible_job_id }}"
   loop: "{{ _stack_jobs.results }}"
@@ -206,7 +209,7 @@
     loop_var: async_job
     label: "{{ async_job.item }}"
   register: _stack_results_raw
-  retries: 60
+  retries: "{{ ((stack_up_wait_timeout | default(540) | int) + 120) // 10 }}"
   delay: 10
   until: _stack_results_raw.finished | default(false)
   failed_when: false
@@ -217,6 +220,7 @@
 # Downstream tasks expect _stack_results.results[i].item = stack name string.
 - name: "[Stacks] Flatten async_status results (item = stack name)"
   tags: ['stacks', 'always']
+  when: stack_up_parallel | default(true) | bool
   ansible.builtin.set_fact:
     _stack_results:
       results: "{{ _normalised_acc }}"
@@ -231,6 +235,57 @@
           'stdout_lines': r.stdout_lines | default([]),
           'stderr': r.stderr | default(''),
           'finished': r.finished | default(false)
+        }) -%}
+      {%- endfor -%}
+      {{ out }}
+
+# ── Start remaining stacks (sequential — cold-blank / large-set safe) ────────
+# When stack_up_parallel=false, START stacks one at a time. The parallel path
+# above races every stack's image pull/build at once; on a cold blank with the
+# all-on profile (gitlab ~4 GB, onlyoffice) that saturates the Docker daemon.
+# A SYNCHRONOUS `up -d` loop serializes the heavy part (pull/build/create) —
+# stack N+1 doesn't start pulling until stack N's containers are created — so
+# the daemon is never slammed. `up -d` (NO --wait) returns before health, so
+# this stays fast; the consolidated health-wait below then waits on all of them
+# with an in-stream heartbeat. Produces the same _stack_results shape the
+# dump/assert consume (rc = compose CONFIG/IMAGE error, not health).
+- name: "[Stacks] Start stacks sequentially — up -d (cold-blank safe)"
+  tags: ['stacks', 'always']
+  when: not (stack_up_parallel | default(true) | bool)
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose
+    -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
+    {% for f in _stack_overrides_map[item] | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+    -p "{{ item }}"
+    --progress plain
+    up -d --build --remove-orphans
+    {{ _docker_compose_pull | default('') }} 2>&1
+  loop: "{{ _remaining_stacks }}"
+  register: _stack_seq
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  loop_control:
+    loop_var: item
+    label: "{{ item }}"
+
+- name: "[Stacks] Flatten sequential results (item = stack name)"
+  tags: ['stacks', 'always']
+  when: not (stack_up_parallel | default(true) | bool)
+  ansible.builtin.set_fact:
+    _stack_results:
+      results: "{{ _seq_acc }}"
+  vars:
+    _seq_acc: |-
+      {%- set out = [] -%}
+      {%- for r in (_stack_seq.results | default([])) -%}
+        {%- set _ = out.append({
+          'item': r.item,
+          'rc': r.rc | default(124),
+          'stdout': r.stdout | default(''),
+          'stdout_lines': r.stdout_lines | default([]),
+          'stderr': r.stderr | default(''),
+          'finished': true
         }) -%}
       {%- endfor -%}
       {{ out }}
@@ -261,26 +316,38 @@
     label: "{{ r.item }} (rc={{ r.rc }})"
   when: r.rc | int != 0
 
-- name: "[Stacks] Assert all parallel stacks reached up --wait (fail-fast)"
+- name: "[Stacks] Assert all stacks started (up -d rc==0, fail-fast)"
   tags: ['stacks', 'always']
   ansible.builtin.fail:
     msg: |
-      One or more stacks failed `docker compose up --wait` (rc != 0):
+      One or more stacks failed `docker compose up -d` (rc != 0):
         {% for r in _stack_results.results if r.rc | int != 0 %}
         - {{ r.item }} (rc={{ r.rc }})
         {% endfor %}
+      This is a START failure (compose config / image), not a health timeout.
       See the `[Stacks] Dump failed-stack output` task above for full
       stdout/stderr. Common causes:
-        - --wait-timeout exceeded on cold blank (slow image build/pull)
-        - one container's healthcheck never goes Healthy (exec into it,
-          run `docker inspect <c> --format '{{ '{{' }} .State.Health {{ '}}' }}'`)
+        - image pull failed (tag typo / registry down)
         - compose file merge conflict (run `docker compose -p <stack> config`)
+        - a referenced env/secret is undefined
   when: _stack_results.results | selectattr('rc', 'defined') | rejectattr('rc', 'equalto', 0) | list | length > 0
 
+# ── Health-wait — in-stream heartbeat for all wave-2 stacks ─────────────────
+# Containers are STARTED above; now wait for them to go healthy, printing a
+# per-stack readiness summary into the log every stack_wait_tick_interval
+# seconds (vs a silent ~9-15 min `up --wait` freeze). Consolidated over all
+# remaining stacks so the operator sees the whole wave converge at once.
+- name: "[Stacks] Wait for wave-2 stacks healthy (in-stream heartbeat)"
+  tags: ['stacks', 'always']
+  ansible.builtin.include_tasks: wait-stacks-healthy.yml
+  vars:
+    _wait_stacks: "{{ _remaining_stacks }}"
+  when: _remaining_stacks | default([]) | length > 0
+
 # ── Plugin loader — post_compose for all non-core stacks ────────────────────
-# Runs AFTER the parallel async_status join so every stack is confirmed up.
-# Complements the core-up.yml post_compose (infra + observability); handles
-# iiab / devops / b2b / data / voip / engineering / apps / host plugins.
+# Runs AFTER the health-wait so every stack is confirmed HEALTHY (not just
+# started). Complements the core-up.yml post_compose (infra + observability);
+# handles iiab / devops / b2b / data / voip / engineering / apps / host plugins.
 # Plugins without a resolvable stack are also included here (safe default).
 - name: "[Stacks] Plugin loader — post_compose hook (iiab / devops / b2b / data / …)"
   nos_plugin_loader:

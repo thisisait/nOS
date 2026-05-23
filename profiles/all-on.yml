@@ -1,0 +1,117 @@
+# =============================================================================
+# profiles/all-on.yml — "enable every known-good service" test profile
+# =============================================================================
+#
+# Purpose: flip on every wired service so a single blank run exercises the
+# whole plugin-wiring surface (SSO, observability, notification routing,
+# compose extensions) end-to-end. This is a TEST profile, not a production
+# default — it deliberately turns on heavy + rarely-paired services that the
+# committed defaults leave off.
+#
+# Usage:
+#   ansible-playbook main.yml -e @profiles/all-on.yml
+#   ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true   # full wipe + reinstall
+#
+# This file is self-contained: it lists every known-good service toggle as
+# `true` (even ones already on by default) so it stays an unambiguous
+# "everything on" declaration independent of default.config.yml drift. It does
+# NOT touch your gitignored config.yml / credentials.yml — `-e @file` vars
+# outrank vars_files but layer on top, leaving your secret overrides intact.
+#
+# DELIBERATELY EXCLUDED (scope = "all known-good"):
+#   - install_erpnext      — hard-blocked behind erpnext_experimental_override,
+#                            non-working on first blank (see roles/pazny.erpnext)
+#   - install_freepbx      — tiredofit image abandoned 2022; unfixable CRITICAL
+#                            CVEs (REM-014/046); operators accept-risk only
+#   - install_spacetimedb  — BSL 1.1 license (internal-SaaS use only), not FOSS
+# Re-enable any of those manually if you specifically want to test them.
+# =============================================================================
+
+# ── Cold-blank bring-up tuning ────────────────────────────────────────────────
+# Enabling the whole catalogue at once means wave-2 stacks (iiab, devops with
+# gitlab ~4 GB, b2b with onlyoffice, engineering, data) all pull/build + health
+# check simultaneously. Parallel bring-up saturates the Docker daemon on a cold
+# blank and blows the per-stack --wait-timeout (devops/b2b → rc=124 timeout,
+# iiab → a container starved to unhealthy). Sequential + a generous timeout
+# trades wall-time for a deterministic, contention-free bring-up.
+stack_up_parallel: false
+stack_up_wait_timeout: 1200      # 20 min — generous headroom for gitlab's cold
+                                 # init so STRICT health-wait converges (no
+                                 # tolerated-failure escape hatch). The in-stream
+                                 # heartbeat keeps the long wait visible.
+
+# ── Hard dependencies (force-on so dependent services have a backing store) ──
+install_postgresql: true        # Outline, Miniflux, Metabase, Superset, Paperclip, HedgeDoc, GitLab, Authentik, Infisical
+install_mariadb: true            # WordPress, Nextcloud, FreeScout, BookStack, Firefly
+redis_docker: true               # Authentik, Infisical, Outline, Superset, Firefly
+
+# ── infra stack ──────────────────────────────────────────────────────────────
+install_authentik: true
+install_infisical: true
+install_vaultwarden: true
+install_portainer: true
+install_traefik: true
+install_bluesky_pds: true
+
+# ── observability stack ────────────────────────────────────────────────────
+install_observability: true      # Grafana + Prometheus + Loki + Tempo + Alloy
+install_influxdb: true
+
+# ── iiab stack ──────────────────────────────────────────────────────────────
+install_wordpress: true
+install_nextcloud: true
+install_kiwix: true
+install_offline_maps: true
+install_jellyfin: true
+install_openwebui: true
+install_mcp_gateway: true        # requires Open WebUI (on above)
+install_uptime_kuma: true
+install_calibreweb: true
+install_homeassistant: true
+install_rustfs: true
+install_puter: true
+install_ntfy: true
+install_miniflux: true
+install_nodered: true
+install_n8n: true
+install_snappymail: true
+
+# ── devops stack ────────────────────────────────────────────────────────────
+install_gitea: true
+install_gitlab: true             # ⚠️  ~4 GB RAM. Comment out if the host is memory-constrained.
+install_woodpecker: true         # requires Gitea OAuth2 (Gitea on above)
+install_paperclip: true
+install_code_server: true
+
+# ── b2b stack ──────────────────────────────────────────────────────────────
+install_freescout: true
+install_outline: true
+install_hedgedoc: true
+install_bookstack: true
+install_firefly: true
+install_onlyoffice: true
+
+# ── engineering stack ────────────────────────────────────────────────────────
+install_qgis_server: true
+
+# ── data stack ──────────────────────────────────────────────────────────────
+install_metabase: true
+install_superset: true
+
+# ── Tier-2 apps (manifest-driven) ────────────────────────────────────────────
+install_qdrant: true             # now feature_flag-gated (see qdrant-base/plugin.yml)
+
+# ── non-Docker host agents / daemons ──────────────────────────────────────────
+install_bone: true
+install_pulse: true
+install_wing: true
+install_openclaw: true
+install_backup: true
+install_mailpit: true            # dev SMTP sink (notification mail target)
+install_watchtower: true
+
+# ── NOTE on mail backend ──────────────────────────────────────────────────────
+# install_smtp_stalwart is intentionally LEFT AT DEFAULT (false): Stalwart and
+# Mailpit both want the SMTP submission port, so enabling both races. Mailpit
+# (above) is the dev sink the notification fanout dispatches to. Flip to Stalwart
+# only when testing the production mail path, and turn Mailpit off in tandem.
