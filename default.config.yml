@@ -1299,8 +1299,8 @@ woodpecker_grpc_port: 9060       # gRPC for agents (internal)
 woodpecker_version: "v3"                # latest tag removed, must be semver (v3/v3.x/v3.x.y)
 woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
 woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
-woodpecker_gitea_client: ""      # FILL IN after creating OAuth2 app in Gitea
-woodpecker_gitea_secret: ""      # FILL IN after creating OAuth2 app in Gitea
+woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
+woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
 woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
 # REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
@@ -1487,6 +1487,23 @@ post_provision_tasks: []
 # Each stack has its own docker-compose.yml in a subdirectory of stacks_dir.
 stacks_dir: "{{ ansible_facts['env']['HOME'] }}/stacks"
 stacks_shared_network: "shared_net"
+
+# ── Stack-up bring-up tuning (tasks/stacks/stack-up.yml) ─────────────────────
+# stack_up_parallel: true  → fire `docker compose up --wait` for every wave-2
+#   stack at once (async). Fastest for normal installs (few stacks enabled).
+#   false → bring stacks up one at a time. Slower but contention-free; required
+#   when enabling the whole catalogue on a cold blank (the all-on profile),
+#   where parallel pulls/builds saturate the Docker daemon and blow the
+#   per-stack --wait-timeout (gitlab/onlyoffice are the slow ones).
+# stack_up_wait_timeout: per-stack `docker compose up --wait` ceiling (seconds).
+#   540 is fine when images are warm; bump to 900 for cold-blank heavy sets.
+stack_up_parallel: true
+stack_up_wait_timeout: 540
+# stack_wait_tick_interval: seconds between health-poll ticks during bring-up.
+# Each tick prints a per-stack readiness line into the main ansible.log stream
+# (tasks/stacks/wait-stacks-healthy.yml) so a long `up --wait` no longer freezes
+# the log. 15s is a good balance of heartbeat freshness vs task-count noise.
+stack_wait_tick_interval: 15
 
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 iiab_compose_dir: "{{ stacks_dir }}/iiab"

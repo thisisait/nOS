@@ -38,11 +38,16 @@ STACK_UP_REQUIRED_TASKS = (
 	"[Stacks] Build list of remaining (non-core) active stacks",
 	"[Stacks] Enumerate compose overrides per remaining stack",
 	"[Stacks] Build stack name -> overrides list map",
-	"[Stacks] Fire docker compose up --wait per stack (async, parallel)",
+	# A19 (2026-05-23): bring-up split into START (up -d, no --wait) + an
+	# in-stream health-wait heartbeat. Parallel + sequential start paths both
+	# present (gated on stack_up_parallel); the consolidated health-wait follows.
+	"[Stacks] Fire docker compose up -d per stack (async, parallel start)",
 	"[Stacks] Wait for parallel stack-up jobs to finish",
 	"[Stacks] Flatten async_status results (item = stack name)",
+	"[Stacks] Start stacks sequentially — up -d (cold-blank safe)",
 	"[Stacks] Dump failed-stack output (visibility for rc!=0)",
-	"[Stacks] Assert all parallel stacks reached up --wait (fail-fast)",
+	"[Stacks] Assert all stacks started (up -d rc==0, fail-fast)",
+	"[Stacks] Wait for wave-2 stacks healthy (in-stream heartbeat)",
 )
 
 
@@ -70,10 +75,13 @@ CORE_UP_REQUIRED_TASKS = (
 	"[Core] Enumerate observability compose overrides",
 	"[Core] Re-enumerate infra compose overrides (after plugin loader)",
 	"[Core] Re-enumerate observability compose overrides (after plugin loader)",
-	"[Core] Start INFRA stack (docker compose up --wait)",
-	"[Core] Infra stack result",
-	"[Core] Start OBSERVABILITY stack (docker compose up --wait)",
-	"[Core] Observability stack result",
+	# A19 (2026-05-23): up -d (no --wait) + in-stream health-wait heartbeat.
+	"[Core] Start INFRA stack (docker compose up -d)",
+	"[Core] Infra stack start result",
+	"[Core] Wait for INFRA stack healthy (in-stream heartbeat)",
+	"[Core] Start OBSERVABILITY stack (docker compose up -d)",
+	"[Core] Observability stack start result",
+	"[Core] Wait for OBSERVABILITY stack healthy (in-stream heartbeat)",
 )
 
 

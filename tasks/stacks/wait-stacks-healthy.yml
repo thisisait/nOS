@@ -1,0 +1,43 @@
+# =============================================================================
+# wait-stacks-healthy.yml — in-stream health-wait (replaces blocking `--wait`).
+#
+# Why this exists: `docker compose up --wait` blocks for up to 540/900s and
+# Ansible buffers the shell task's stdout until it returns — so the log
+# "freezes" for tens of minutes during bring-up, with no visibility into which
+# container is still starting (gitlab/outline can sit unhealthy for 30+ min).
+# This task file does the health-wait as a poll loop of short Ansible tasks,
+# each printing a per-stack readiness summary into the MAIN ansible.log stream.
+#
+# Caller contract:
+#   - bring the stacks up FIRST with `docker compose up -d` (NO --wait), then
+#     include this file with `_wait_stacks` set to the project name(s) to await.
+#   - vars: _wait_stacks (list, required), stack_up_wait_timeout (budget s),
+#     stack_wait_tick_interval (s between ticks, default 15).
+#
+# Fails (with the last health snapshot) if not all-ready within the budget.
+# =============================================================================
+
+- name: "[Stacks] Health-wait init ({{ _wait_stacks | join(', ') }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.set_fact:
+    _wait_done: false
+    _wait_last: []
+
+- name: "[Stacks] Health-wait poll ({{ _wait_stacks | join(', ') }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.include_tasks: health-tick.yml
+  loop: "{{ range(0, ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) + 1) | list }}"
+  loop_control:
+    loop_var: _tick
+    label: "tick {{ _tick }}/{{ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) }} — {{ _wait_stacks | join(',') }}"
+  when: not (_wait_done | bool)
+
+- name: "[Stacks] Health-wait result ({{ _wait_stacks | join(', ') }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.fail:
+    msg: |
+      Stacks [{{ _wait_stacks | join(', ') }}] did not all reach ready within
+      {{ stack_up_wait_timeout | default(540) }}s. Last health snapshot:
+        {{ _wait_last | reject('equalto', 'PENDING') | reject('equalto', 'FAILED') | reject('equalto', 'ALL_READY') | list | join('\n        ') }}
+      Diagnose: docker compose -p <stack> ps  /  docker compose -p <stack> logs --tail=200
+  when: not (_wait_done | bool)
