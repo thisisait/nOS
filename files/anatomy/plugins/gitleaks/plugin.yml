@@ -75,33 +75,14 @@ pulse:
 # will exist before the first Pulse run regardless of which path fires first.
 # =============================================================================
 
-schema:
-  migrations:
-    - description: "gitleaks_findings table + indexes"
-      sql: |
-        CREATE TABLE IF NOT EXISTS gitleaks_findings (
-            id            TEXT PRIMARY KEY,
-            fingerprint   TEXT NOT NULL,
-            rule_id       TEXT NOT NULL,
-            description   TEXT,
-            secret_masked TEXT,
-            file_path     TEXT NOT NULL,
-            line_start    INTEGER NOT NULL,
-            commit_sha    TEXT,
-            author        TEXT,
-            date          TEXT,
-            severity      TEXT NOT NULL DEFAULT 'high',
-            repo_path     TEXT NOT NULL,
-            scan_id       TEXT,
-            resolved_at   TEXT,
-            resolved_by   TEXT,
-            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-            updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
-        CREATE INDEX IF NOT EXISTS idx_gitleaks_rule_id ON gitleaks_findings(rule_id);
-        CREATE INDEX IF NOT EXISTS idx_gitleaks_severity ON gitleaks_findings(severity, resolved_at);
-        CREATE INDEX IF NOT EXISTS idx_gitleaks_scan_id ON gitleaks_findings(scan_id);
+# schema: the gitleaks_findings table + indexes are the single source of truth
+# in files/anatomy/wing/db/schema-extensions.sql (lines 251-273), applied by
+# Wing's init-db.php. A duplicate inline `schema:` block lived here but nothing
+# consumed it (the loader has no schema-block handler) and it used an
+# {migrations:[{sql}]} shape the plugin schema doesn't permit (schema = array
+# of .sql paths). Removed to keep one DDL source and conform to the manifest
+# schema. Re-add as `schema: [schema/<file>.sql]` if a per-plugin migration
+# ever needs to live outside schema-extensions.sql.
 
 # =============================================================================
 # NOTIFICATIONS — severity → channel routing (Anatomy A9.5, 2026-05-16)
@@ -143,7 +124,7 @@ gdpr:
   data_categories:
     - source_code_metadata    # file paths, git author name, commit SHA
     - partial_credentials     # secret_masked only: first 4 + '...' + last 4
-  data_subjects: operators
+  data_subjects: [operators]
   retention_days: 365
   processors:
     - gitleaks                # local Homebrew binary — no external data transfer

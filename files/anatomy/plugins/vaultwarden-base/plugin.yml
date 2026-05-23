@@ -183,17 +183,20 @@ ui-extension:
 # NOTIFICATIONS
 # =============================================================================
 
+# Canonical A9 severity routing (consumed by the wing-base aggregator).
+# Failure modes the emitter sends for this plugin:
+#   on_admin_token_logged_in_clear → critical (triggered by the
+#     observability.alerts entry above)
+#   on_failed_login_burst → high (Loki query: >10 failed logins from one IP
+#     in 5 minutes)
+# (The old event-key block referenced notifications/*.txt templates that were
+# never committed; routing now keys off severity, which the aggregator reads.)
 notification:
-  on_admin_token_logged_in_clear:
-    # Triggered by the observability.alerts entry above
-    channels: [wing-inbox, ntfy]
-    severity: critical
-    template: notifications/admin-token-leaked.txt
-  on_failed_login_burst:
-    # Loki query: more than 10 failed logins from a single IP in 5 minutes
-    channels: [wing-inbox]
-    severity: high
-    template: notifications/failed-login-burst.txt
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
 
 # =============================================================================
 # HARVEST MAP — what already lives where (for the Track Q sweep)

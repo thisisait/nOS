@@ -97,3 +97,28 @@ gdpr:
   retention_days: 365
   processors: []
   eu_residency: true
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+# Uniform wiring contract (2026-05-23): harvested by wing-base into
+# notification-routing.json; Bone falls back to this when an emitter POSTs a
+# notification with origin_plugin + severity but no explicit channels. The
+# emitter decides which failure maps to which severity; this block only routes
+# a severity to channels. Channels: wing-inbox | ntfy | mail. Tune per service.
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# ── Wing /hub card (ui-extension) ────────────────────────────────────────────
+# Forward-ready deep-link card for the Wing hub (harvest pending). Matches the
+# woodpecker-base/grafana-base shape. domain var is playbook-defined.
+ui-extension:
+  hub_card:
+    title: Nextcloud
+    icon: cloud
+    url: "https://{{ nextcloud_domain }}"
+    tier: 3
+    description: Self-hosted cloud — files, calendar, contacts
+    health_check: "https://{{ nextcloud_domain }}"

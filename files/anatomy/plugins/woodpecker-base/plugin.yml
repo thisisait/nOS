@@ -176,15 +176,16 @@ ui-extension:
 #   - on_oauth_setup_failure (loader-emitted, severity=high)
 #   - on_compose_render_failure (loader-emitted, severity=high)
 
+# Canonical A9 severity routing (consumed by the wing-base aggregator). Both
+# events above are severity=high. (The old event-key block referenced
+# notifications/*.txt templates that were never committed; routing now keys off
+# severity, which the aggregator reads.)
 notification:
-  on_oauth_setup_failure:
-    channels: [wing-inbox, ntfy]
-    template: notifications/oauth-setup-failed.txt
-  on_compose_render_failure:
-    channels: [wing-inbox]
-    template: notifications/compose-render-failed.txt
-  templates:
-    ntfy: notifications/oauth-setup-failed.ntfy
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
 
 # =============================================================================
 # SCHEMA — wing.db tables this plugin owns
