@@ -103,6 +103,15 @@ def test_main_yml_preflight_loads_all_anatomy_daemons():
 	# Must tolerate missing plist (fresh blank).
 	assert "no-plist" in task or "! -f" in task, \
 		"sweep must skip gracefully when plist file doesn't exist yet"
+	# changed_when must evaluate per-iteration (uses bare `stdout`, not
+	# the post-loop aggregate `_anatomy_daemons_sweep.results`). The
+	# aggregate doesn't exist while the loop is in flight — operator's
+	# 2026-05-23 run crashed with "object of type 'dict' has no attribute
+	# 'results'". Catch any future regression to the aggregate form.
+	assert "_anatomy_daemons_sweep.results" not in task, \
+		"changed_when must use per-iteration `stdout`, not the post-loop aggregate"
+	assert "'ok:bootstrapped:' in (stdout" in task, \
+		"changed_when must inspect per-iteration stdout"
 
 
 def test_main_yml_restart_wing_handler_dropped_silent_failure_flag():
