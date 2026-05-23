@@ -698,13 +698,54 @@ def _render_string(s: str, ctx: dict) -> str:
 
 
 def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
-    """Render src (Jinja2 template) → dest. Returns True if dest changed."""
+    """Render src (Jinja2 template) → dest. Returns True if dest changed.
+
+    Security (SEC-1, 2026-05-23): rendered overrides routinely contain
+    plaintext OIDC client_secrets, DB passwords, SMTP creds, mkcert CA
+    paths, JWT secrets — anything a plugin compose-extension projects.
+    The bare write-text method inherits the process umask (typically
+    022 → file mode 0644), which exposed every override under
+    ~/stacks/*/overrides/ to any local UID on the macOS host. Lock
+    writes to 0600 via the open-with-mode pattern (no mode= kwarg on
+    write-text in Py3.9).
+
+    Atomic-ish: write to a temp sibling + os.replace so partial writes
+    don't leave a half-rendered override on disk between this run and
+    the next docker compose up.
+    """
     src_text = src.read_text()
     rendered = _jinja_env().from_string(src_text).render(**ctx)
     dest.parent.mkdir(parents=True, exist_ok=True)
+    # Also lock the parent dir to 0700 — if it already exists with a
+    # looser mode (legacy install pre-SEC-1), this re-tightens it.
+    try:
+        dest.parent.chmod(0o700)
+    except OSError:
+        pass  # best-effort; failing chmod must not block the render
     if dest.is_file() and dest.read_text() == rendered:
+        # Even on no-content-change, re-assert the mode in case a
+        # previous render (pre-SEC-1) left it at 0644.
+        try:
+            dest.chmod(0o600)
+        except OSError:
+            pass
         return False
-    dest.write_text(rendered)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w") as fh:
+            fh.write(rendered)
+        os.replace(str(tmp), str(dest))
+    except Exception:
+        # Clean up the partial temp on any failure; surface the
+        # original exception.
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+    # os.replace preserves the source (tmp) file's mode (0600 from
+    # the os.open above); no second chmod needed.
     return True
 
 
