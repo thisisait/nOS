@@ -71,6 +71,7 @@
 					<td>
 						{if $state === 'pending'}
 							<form method="post" action="{plink Users:revoke}" style="display:inline;">
+								<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 								<input type="hidden" name="invitation_pk" value="{$i['invitation_pk']}">
 								<button type="submit" onclick="return confirm('Revoke this invitation? The shareable URL will stop working immediately.')" style="background:none;border:1px solid var(--border-danger);color:var(--text-danger);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Revoke</button>
 							</form>

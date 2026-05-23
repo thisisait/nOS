@@ -29,6 +29,7 @@
 {else}
 
 <form method="post" action="{plink Users:inviteCreate}" style="max-width:780px;">
+	<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 
 	<fieldset style="border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:16px;">
 		<legend style="font-weight:600;padding:0 6px;">Recipient (optional, display-only)</legend>

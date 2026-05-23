@@ -68,6 +68,12 @@ abstract class BasePresenter extends Presenter
 	{
 		$this->template->activeTab = $this->activeTab;
 
+		// SEC-14 (2026-05-23): expose CSRF token so every Latte form
+		// can emit `<input type="hidden" name="_csrf" value="{$csrfToken}">`.
+		// requirePostMethod() validates the field on every state-changing
+		// action.
+		$this->template->csrfToken = $this->getCsrfToken();
+
 		// Authentik proxy auth headers (populated by Traefik forward-auth /
 		// the legacy nginx setup). Authentik joins groups with whitespace /
 		// pipe / comma depending on the property mapping; tolerate all so
@@ -187,6 +193,22 @@ abstract class BasePresenter extends Presenter
 	 * a top-level navigation from a malicious page while the operator is
 	 * logged in) cannot trigger the mutation. Templates must use
 	 * ``<form method="post" action="...">`` to call these actions.
+	 *
+	 * SEC-14 (2026-05-23) extension: in addition to method enforcement,
+	 * validates a session-bound CSRF token. Without this, a logged-in
+	 * super-admin visiting a malicious page would have their session
+	 * cookie (Authentik's, SameSite=Lax by default) ride along on a
+	 * hidden auto-submitting form to https://wing.<tld>/admin/halt,
+	 * /users/invite-create, /approvals/approve/<id>, etc. — full RBAC
+	 * bypass via the operator's own browser.
+	 *
+	 * Templates emit the token as a hidden input named `_csrf` via the
+	 * `$csrfToken` variable populated by beforeRender(). Use:
+	 *
+	 *   <form method="post" action="{link …}">
+	 *     <input type="hidden" name="_csrf" value="{$csrfToken}">
+	 *     ...
+	 *   </form>
 	 */
 	protected function requirePostMethod(): void
 	{
@@ -197,5 +219,48 @@ abstract class BasePresenter extends Presenter
 				405,
 			);
 		}
+		$this->validateCsrfToken();
+	}
+
+	/**
+	 * Validate the `_csrf` POST field against the session-bound token.
+	 * The token is generated lazily on first use per Nette session and
+	 * reused across all forms within the same session — rotating per-
+	 * form would require server-side state per form and gain nothing
+	 * since the attack window is the same.
+	 *
+	 * Timing-safe compare so a brute-force attempt can't oracle the
+	 * match position from response latency.
+	 */
+	private function validateCsrfToken(): void
+	{
+		$expected = $this->getCsrfToken();
+		$got = (string) ($this->getHttpRequest()->getPost('_csrf') ?? '');
+		if ($got === '' || !hash_equals($expected, $got)) {
+			$this->error(
+				'Forbidden -- CSRF token missing or invalid. Reload the form and try again.',
+				403,
+			);
+		}
+	}
+
+	/**
+	 * Mint or retrieve the session-bound CSRF token. Used by both
+	 * server-side validation (requirePostMethod) and template render
+	 * (beforeRender exposes $csrfToken).
+	 *
+	 * Stored in Nette's session under the 'csrf' section. Persistent
+	 * for the duration of the operator's session; rotated when the
+	 * session expires or is destroyed.
+	 */
+	protected function getCsrfToken(): string
+	{
+		$session = $this->getSession('csrf');
+		// Nette's SessionSection acts like an object — properties are
+		// keys. `token` lives there for the session's lifetime.
+		if (empty($session->token)) {
+			$session->token = bin2hex(random_bytes(32));  // 256-bit hex
+		}
+		return (string) $session->token;
 	}
 }
