@@ -10,9 +10,9 @@
 
 - name: "[pazny.grafana Post] Check if Grafana container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/observability/docker-compose.yml"
-    -p observability ps -q grafana 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=observability"
+    --filter "label=com.docker.compose.service=grafana"
   register: _grafana_container
   changed_when: false
   failed_when: false

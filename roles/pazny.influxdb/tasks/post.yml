@@ -16,9 +16,9 @@
 
 - name: "[pazny.influxdb Post] Check if InfluxDB container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/observability/docker-compose.yml"
-    -p observability ps -q influxdb 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=observability"
+    --filter "label=com.docker.compose.service=influxdb"
   register: _influxdb_container
   changed_when: false
   failed_when: false
