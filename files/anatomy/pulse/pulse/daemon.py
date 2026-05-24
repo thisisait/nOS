@@ -127,7 +127,9 @@ class PulseDaemon:
         if not isinstance(env, dict):
             log.warning("job %s: env must be dict, got %r — ignoring", job_id, type(env))
             env = {}
-        timeout_s = float(job.get("max_runtime_s", 300))
+        # SEC L-PULSE1 (2026-05-24): clamp to a host ceiling so a job can't pin
+        # a run slot (and stall the 30s stop-drain) with an absurd timeout.
+        timeout_s = min(float(job.get("max_runtime_s", 300)), 3600.0)
         run_id = str(uuid.uuid4())
         # Spawn worker thread (subprocess.run blocks; we don't want to
         # block the tick loop while a 5-minute backup runs).
