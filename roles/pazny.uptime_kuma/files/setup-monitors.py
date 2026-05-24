@@ -413,7 +413,7 @@ def _modern_run(args) -> int:
     client = KumaClient(args.url, args.user, args.password, dry_run=args.dry_run,
                         timeout=args.timeout)
     if not client.connect():
-        return 0
+        return 2  # connect/login timed out (likely load) — retryable by the role
 
     try:
         # 1) Monitors (idempotent).
@@ -435,12 +435,13 @@ def _modern_run(args) -> int:
                 consec_err += 1
                 # Fail-fast: a run of consecutive errors means the Kuma API is
                 # unresponsive (event-wait timeouts under load) — abort rather
-                # than grind every monitor (48 × timeout ≈ a 30-min hang). A
-                # later `--tags uptime_kuma` re-run (host idle) succeeds.
-                if consec_err >= 5:
+                # than grind every monitor (48 × timeout ≈ a 30-min hang).
+                # Returns exit 3 → the role retries (until rc==0) so a later
+                # attempt catches the load settling; the host-idle re-run always
+                # works. Threshold 3 keeps each aborted attempt to ~3×timeout.
+                if consec_err >= 3:
                     log(f"[!] Aborting: {consec_err} consecutive errors — Kuma "
-                        f"API unresponsive (event-wait timeout under load). "
-                        f"Re-run `--tags uptime_kuma` when the host is idle.")
+                        f"API unresponsive (event-wait timeout under load).")
                     aborted = True
                     break
             if mid is None and m["name"] in existing:
@@ -452,7 +453,7 @@ def _modern_run(args) -> int:
             log(f"\nDone: {created} created, {updated} updated, {errored} errors "
                 f"(ABORTED — Kuma API unresponsive). Monitors tracked: "
                 f"{len(name_to_id)}.")
-            return 0
+            return 3  # retryable: signals the role to re-attempt (until rc==0)
 
         # 2) Notifications.
         not_existing = client.list_notifications()

@@ -237,6 +237,14 @@
       - "{{ uptime_kuma_api_timeout | default(45) }}"
       - "-v"
   register: _kuma_result
+  # Retry on a non-zero exit (2 = connect/login timed out, 3 = aborted after
+  # consecutive event-wait timeouts). Kuma's Socket.IO API is starved while the
+  # blank's apps phase is at peak load; a later attempt catches the load
+  # settling. failed_when:false keeps it non-fatal once retries are spent — the
+  # host-idle `--tags uptime_kuma` re-run always succeeds.
+  until: (_kuma_result.rc | default(1)) == 0
+  retries: "{{ uptime_kuma_setup_retries | default(2) }}"
+  delay: "{{ uptime_kuma_setup_retry_delay | default(45) }}"
   changed_when: "'[+] Created' in (_kuma_result.stdout | default(''))"
   failed_when: false
   when:
