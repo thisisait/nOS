@@ -696,12 +696,22 @@
 
     - name: Restart bone
       # Anatomy A3a (2026-05-03): Bone reverted from container → host launchd.
-      # Restart via launchctl kickstart -k for graceful drain. The Track A
-      # docker compose restart path is gone — the container is removed by
-      # the role's track-A reversal cleanup.
+      # 2026-05-24: full unload + reload (was: kickstart -k). This PLAY-LEVEL
+      # handler takes priority over pazny.bone/handlers/main.yml, so the
+      # 2026-05-17 bootout+bootstrap fix there never actually ran for main.yml
+      # notifies (the bone-role plist render) — kickstart -k only re-spawns the
+      # process and launchd keeps the STALE EnvironmentVariables block. On a
+      # blank that rotates bone_secret/WING_EVENTS_HMAC_SECRET, Bone then runs
+      # the old secret → every signed POST (apps_runner app.deployed,
+      # notifications) returns 401. bootout+bootstrap forces a fresh env read.
       ansible.builtin.shell: |
-        launchctl kickstart -k "gui/$(id -u)/eu.thisisait.nos.bone" 2>/dev/null || true
-      changed_when: false
+        LABEL="{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
+        PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+        UID_NUM=$(id -u)
+        launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+      changed_when: true
 
     - name: Restart bluesky-pds
       ansible.builtin.shell: >
@@ -1270,6 +1280,16 @@
     # Shared Docker network + directory structure for all stacks
     - import_tasks: tasks/stacks/shared-network.yml
       tags: ['iiab', 'docker', 'stacks']
+
+    # Flush host-phase handlers BEFORE the stacks/apps phase. Critical for the
+    # host launchd organs (Bone, Wing): on a blank that rotates bone_secret /
+    # WING_EVENTS_HMAC_SECRET, the bone-role plist render notifies "Restart bone"
+    # — but handlers normally flush at END of play, AFTER apps_runner signs its
+    # app.deployed events. Bone would run the STALE secret through the whole
+    # stacks phase → 401 on every signed POST. Flushing here reloads Bone (env
+    # block, via bootout+bootstrap) with the current secret first (2026-05-24).
+    - name: "[Host] Flush handlers before stacks (reload Bone/Wing with current secrets)"
+      ansible.builtin.meta: flush_handlers
 
     # ──────────────────────────────────────────────────────────────────────────
     # CORE STACKS - infra (DB/IAM/Vault) + observability ALWAYS FIRST
