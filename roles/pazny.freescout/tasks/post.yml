@@ -57,6 +57,7 @@
   changed_when: true
   failed_when: false
   check_mode: false
+  no_log: true
 
 # ── Reconverge admin password every run (state-declarative UPDATE) ──────
 # FreeScout has no dedicated change-password artisan command, we use tinker
@@ -72,6 +73,7 @@
   changed_when: "'UPDATED' in (_fs_pw_update.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
 
 # ──────────────────────────────────────────────────────────────────────────
 # Native OIDC wiring via the `freescout-oauth` community module
@@ -153,6 +155,7 @@
   changed_when: "'OIDC_PERSISTED' in (_fs_oidc_persist.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
   when:
     - install_authentik | default(false)
     - _fs_ready.status | default(0) in [200, 302, 500]

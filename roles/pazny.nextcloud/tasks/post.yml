@@ -51,6 +51,7 @@
 # config.php from a previous run stored kloFas9_pw_nextcloud).
 - name: "[pazny.nextcloud Post] Pre-bootstrap: sync config.php dbpassword (file edit)"
   ansible.builtin.shell: |
+    set -o pipefail
     PHP_FILE="{{ nextcloud_dir }}/config/config.php"
     if [[ ! -f "$PHP_FILE" ]]; then
       echo "NO_CONFIG"
@@ -78,7 +79,9 @@
   register: _nc_prebootstrap
   changed_when: "'PATCHED:' in (_nc_prebootstrap.stdout | default(''))"
   failed_when: false
-  no_log: false  # mask is in code; safe to surface result
+  no_log: true  # cmd embeds nextcloud_db_password (EXPECTED=...); telemetry
+  # forwards `cmd` raw. The masked-stdout debug below still reads the
+  # registered var, so the diagnostic is preserved without leaking the secret.
 
 - name: "[pazny.nextcloud Post] Pre-bootstrap result"
   ansible.builtin.debug:
@@ -98,6 +101,7 @@
   changed_when: false
   failed_when: false
   check_mode: false
+  no_log: true   # stdout is the live dbpassword
   when: _nc_container.stdout | default('') | length > 0
 
 - name: "[pazny.nextcloud Post] Update DB password in config.php (via occ)"
@@ -113,6 +117,7 @@
   changed_when: true
   failed_when: false
   check_mode: false
+  no_log: true
 
 # ── Admin password reconverge ────────────────────────────────────────────
 # occ user:resetpassword reads OC_PASS from env, runs on every run ⇒ drift
@@ -131,6 +136,7 @@
   changed_when: "'Successfully reset password' in (_nc_pw_reset.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
 
 # ── trusted_domains sync ─────────────────────────────────────────────────
 - name: "[pazny.nextcloud Post] Get current trusted_domains"

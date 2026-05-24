@@ -216,6 +216,7 @@
   register: _kuma_pw_reset
   changed_when: "'UPDATED' in (_kuma_pw_reset.stdout | default(''))"
   failed_when: false
+  no_log: true
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
@@ -247,6 +248,7 @@
   delay: "{{ uptime_kuma_setup_retry_delay | default(45) }}"
   changed_when: "'[+] Created' in (_kuma_result.stdout | default(''))"
   failed_when: false
+  no_log: true
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]

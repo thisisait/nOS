@@ -39,12 +39,14 @@
   register: restic_repo_check
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[Backup] Initialize restic repo"
   ansible.builtin.command: restic init -r {{ restic_repo }}
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
   when: restic_repo_check.rc != 0
+  no_log: true
 
 # ── Pre-backup database dumps ────────────────────────────────────────────────
 
@@ -76,6 +78,7 @@
     RESTIC_PASSWORD: "{{ restic_password }}"
   async: 3600
   poll: 30
+  no_log: true
 
 - name: "[Backup] Prune old snapshots"
   ansible.builtin.command: >
@@ -86,6 +89,7 @@
     --prune
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
+  no_log: true
 
 # ── Scheduled backup via launchd ─────────────────────────────────────────────
 

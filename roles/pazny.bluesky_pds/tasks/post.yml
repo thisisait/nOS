@@ -27,6 +27,7 @@
   register: _pds_accounts
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.bluesky_pds Post] Create admin account"
   ansible.builtin.shell: >
@@ -43,6 +44,7 @@
     - bluesky_pds_admin_handle not in (_pds_accounts.stdout | default(''))
   failed_when: false
   changed_when: "'did:' in (_pds_create.stdout | default(''))"
+  no_log: true
 
 - name: "[pazny.bluesky_pds Post] Account creation result"
   ansible.builtin.debug:
@@ -65,3 +67,4 @@
     - bluesky_pds_admin_handle in (_pds_accounts.stdout | default(''))
   changed_when: _pds_pw_update.rc | default(1) == 0
   failed_when: false
+  no_log: true

@@ -53,6 +53,7 @@
     - _portainer_admin_check.status | default(0) == 404
   changed_when: _portainer_admin_create.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 # ── Password reconverge (state-declarative UPDATE) ────────────────────
 # Portainer PUT /api/users/{id}/passwd requires the OLD password in the body. We alternate:
@@ -75,6 +76,7 @@
     - _portainer_admin_check.status | default(0) == 204  # admin already exists
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] Login attempt with previous password (for reconverge)"
   ansible.builtin.uri:
@@ -93,6 +95,7 @@
     - _portainer_admin_check.status | default(0) == 204
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] PUT /api/users/1/passwd (password reconverge)"
   ansible.builtin.uri:
@@ -111,6 +114,7 @@
     - _portainer_auth_old.status | default(0) == 200
   changed_when: _portainer_pw_reset.status | default(0) in [200, 204]
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] Password reconverge status"
   ansible.builtin.debug:
@@ -136,6 +140,7 @@
     - _portainer_ready.status | default(0) == 200
     - install_authentik | default(false)
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] OAuth2 auth token status"
   ansible.builtin.debug:
@@ -181,6 +186,7 @@
     - _portainer_auth.json.jwt | length > 0
   changed_when: _portainer_oauth_put.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] Verify OAuth2 settings applied"
   ansible.builtin.uri:
@@ -194,6 +200,7 @@
   when:
     - _portainer_oauth_put.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] OAuth2 setup summary"
   ansible.builtin.debug:
@@ -237,6 +244,7 @@
     - _portainer_auth.json.jwt | length > 0
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] Register `apps` endpoint (idempotent)"
   ansible.builtin.uri:
@@ -260,6 +268,7 @@
     - (_portainer_endpoints_list.json | selectattr('Name', 'equalto', 'apps') | list | length) == 0
   changed_when: _portainer_apps_ep.status | default(0) in [200, 201]
   failed_when: false
+  no_log: true
 
 - name: "[pazny.portainer Post] Apps endpoint registration summary"
   ansible.builtin.debug:

@@ -61,6 +61,7 @@
     set -euo pipefail
     curl -fsSL "{{ spacetimedb_cli_install_url }}" | sh -s -- --yes
   args:
+    executable: /bin/bash
     creates: "{{ ansible_facts['env']['HOME'] }}/.local/bin/spacetime"
   register: _spacetimedb_cli_install
   when:
@@ -88,6 +89,8 @@
       exit 0
     fi
     "$SP" server add --no-fingerprint --url "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}" nos
+  args:
+    executable: /bin/bash
   register: _spacetimedb_server_add
   changed_when: _spacetimedb_server_add.rc == 0 and (_spacetimedb_server_add.stdout | length > 0)
   failed_when: false
@@ -101,6 +104,8 @@
     set -uo pipefail
     SP="{{ _spacetimedb_cli_path.stdout | default('spacetime') | trim }}"
     "$SP" server set-default nos
+  args:
+    executable: /bin/bash
   register: _spacetimedb_server_default
   changed_when: false
   failed_when: false

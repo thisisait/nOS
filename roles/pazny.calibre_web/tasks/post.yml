@@ -53,6 +53,7 @@
     timeout: 10
   register: _cw_login_target
   failed_when: false
+  no_log: true
   when:
     - _cw_ready.status | default(0) in [200, 302]
     - _cw_login_default.status | default(0) == 302
@@ -74,6 +75,7 @@
   changed_when: "'UPDATED' in (_cw_pw_update.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.calibre_web Post] Password reset status"
   ansible.builtin.debug:

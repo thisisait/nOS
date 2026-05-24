@@ -271,6 +271,7 @@
 
 - name: "[pazny.wing] Diagnose dead daemon (only if probe never landed)"
   ansible.builtin.shell: |
+    set -o pipefail
     UID_NUM=$(id -u)
     echo "=== launchctl print ==="
     launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" 2>&1 | grep -E "state |last exit code|stdout|stderr|pid" | head -10 || true
@@ -280,6 +281,8 @@
     echo ""
     echo "=== port {{ wing_port }} listener ==="
     lsof -nP -iTCP:{{ wing_port }} -sTCP:LISTEN 2>&1 | head -5 || echo "(port not bound)"
+  args:
+    executable: /bin/bash
   register: _wing_diagnose
   changed_when: false
   when: _wing_post_bootstrap_probe.status | default(0) | int == 0

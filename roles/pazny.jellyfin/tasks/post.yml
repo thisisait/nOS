@@ -62,6 +62,7 @@
     - _jf_startup.status | default(0) == 200
   changed_when: _jf_user.status | default(0) in [200, 204]
   failed_when: false
+  no_log: true
 
 - name: "[pazny.jellyfin Post] Complete startup wizard"
   ansible.builtin.uri:
@@ -102,6 +103,7 @@
     - _jf_startup.status | default(0) == 403  # wizard already complete
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.jellyfin Post] Authenticate with previous password (for reconverge)"
   ansible.builtin.uri:
@@ -122,6 +124,7 @@
     - _jf_startup.status | default(0) == 403
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.jellyfin Post] POST /Users/{id}/Password (reconverge)"
   ansible.builtin.uri:
@@ -141,6 +144,7 @@
     - _jf_auth_old.json.AccessToken is defined
   changed_when: _jf_pw_reset.status | default(0) in [200, 204]
   failed_when: false
+  no_log: true
 
 - name: "[pazny.jellyfin Post] Password reconverge status"
   ansible.builtin.debug:

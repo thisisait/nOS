@@ -159,6 +159,7 @@
     # re-run the cask manually once Homebrew ships a fix.
     - name: Install configured cask applications.
       ansible.builtin.shell: |
+        set -o pipefail
         cask_name="{{ item.name | default(item) }}"
         if [ -d "{{ homebrew_prefix }}/Caskroom/${cask_name}" ]; then
           echo "ALREADY_INSTALLED"

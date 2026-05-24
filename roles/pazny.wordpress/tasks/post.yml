@@ -65,6 +65,7 @@
   register: _wp_install
   changed_when: _wp_install.rc == 0
   failed_when: false
+  no_log: true
 
 # ── Reconverge admin password every run (idempotent UPDATE) ────────────
 # `wp user update` is safe on existing users — always rewrites the password
@@ -82,6 +83,7 @@
   register: _wp_pw_update
   changed_when: "'Success' in (_wp_pw_update.stdout | default(''))"
   failed_when: false
+  no_log: true
 
 # ── Native OIDC — install + activate openid-connect-generic plugin ──────
 # Idempotent: `wp plugin install --activate` is a no-op when already present

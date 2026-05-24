@@ -78,6 +78,26 @@ except ImportError:  # pragma: no cover - allows import under pytest w/o ansible
 
 _SENSITIVE_KEY_RE = re.compile(r"password|token|secret|key|credential",
                                re.IGNORECASE)
+# SEC H-ANS1 defense-in-depth (2026-05-24): `no_log: true` on secret-bearing
+# tasks is the primary control, but key-name redaction misses secrets that live
+# inside a string VALUE (a password on a `cmd` line, in `stdout`, etc.). Redact
+# by value too — conservative, high-confidence patterns only, so non-secret
+# diagnostics survive: the nOS prefix-derived form, password/secret/token CLI
+# flags (keeping the flag, dropping the value), and Authorization headers.
+_SECRET_PW_RE = re.compile(r"\b\w+_pw_\w+\b")
+_SECRET_FLAG_RE = re.compile(
+    r"(--?[\w-]*(?:password|passwd|user[_-]?pass|secret|token|api[_-]?key)[\w-]*[=\s]+)(\S+)",
+    re.IGNORECASE)
+_SECRET_AUTH_RE = re.compile(
+    r"(Authorization:\s*(?:Basic|Bearer|token)\s+)(\S+)", re.IGNORECASE)
+
+
+def _redact_value(s):
+    """Redact secret-looking substrings from a string value (see above)."""
+    s = _SECRET_PW_RE.sub("***", s)
+    s = _SECRET_FLAG_RE.sub(lambda m: m.group(1) + "***", s)
+    s = _SECRET_AUTH_RE.sub(lambda m: m.group(1) + "***", s)
+    return s
 _MIGRATION_TAG_RE = re.compile(r"^\s*\[\s*Migrate\s*\]", re.IGNORECASE)
 _UPGRADE_TAG_RE = re.compile(r"^\s*\[\s*Upgrade\s*\]", re.IGNORECASE)
 _PATCH_TAG_RE = re.compile(r"^\s*\[\s*Patch\s*\]", re.IGNORECASE)
@@ -118,7 +138,9 @@ def scrub(obj, _depth=0):
     if isinstance(obj, tuple):
         return [scrub(i, _depth + 1) for i in obj]
     # Primitives; drop non-JSON-serialisable by coercing to repr.
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
+    if isinstance(obj, str):
+        return _redact_value(obj)
+    if isinstance(obj, (int, float, bool)) or obj is None:
         return obj
     try:
         json.dumps(obj)

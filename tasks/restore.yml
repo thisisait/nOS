@@ -321,6 +321,7 @@
         validate_certs: false
       register: ak_post
       failed_when: false
+      no_log: true
 
     - name: "[Restore][authentik] Append to summary"
       ansible.builtin.set_fact:

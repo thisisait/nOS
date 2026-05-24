@@ -25,6 +25,7 @@
   changed_when: false
   failed_when: false
   check_mode: false
+  no_log: true
 
 # Partial-state detector: role_user exists but migrations table has < 30 rows.
 # This is the classic mid-crash state from the old MariaDB 11.4.10 FK ALTER bug
@@ -41,6 +42,7 @@
   changed_when: false
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Set partial-state flag"
   ansible.builtin.set_fact:
@@ -67,6 +69,7 @@
   when: not (_bookstack_migration_ok | default(false))
   changed_when: true
   failed_when: false
+  no_log: true
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Stop bookstack so it releases connections"
   ansible.builtin.command: "{{ docker_bin }} stop -t 10 b2b-bookstack-1"
@@ -94,6 +97,7 @@
   changed_when: false
   failed_when: false
   check_mode: false
+  no_log: true
   when: not (_bookstack_migration_ok | default(false))
 
 - name: "[pazny.bookstack] (try {{ bookstack_try }}) Update migration_ok flag after restart"

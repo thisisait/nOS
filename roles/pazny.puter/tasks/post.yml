@@ -76,6 +76,7 @@
   changed_when: "'CREATED' in (_puter_admin_create.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.puter Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
@@ -97,6 +98,7 @@
   changed_when: "'RESET' in (_puter_reset.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
 
 # App registry — runs only if the API is up (gated in apps.yml itself, but we
 # also skip the include here to avoid the 150 s wait-loop when Puter is down).

@@ -42,6 +42,7 @@
       until: _mariadb_check.rc == 0
       changed_when: false
       failed_when: false
+      no_log: true
 
     - name: "[pazny.erpnext Post] Remove stale configurator container"
       ansible.builtin.shell: >
@@ -114,6 +115,7 @@
   when: _erpnext_site_config.stat.exists
   changed_when: _erpnext_pw_reset.rc | default(1) == 0
   failed_when: false
+  no_log: true
 
 # ── Health check ──────────────────────────────────────────────────────────────
 # Frappe site routing vyzaduje `Host:` header (nginx frontend vybere site
@@ -199,6 +201,7 @@
       register: _erpnext_slk_create
       changed_when: _erpnext_slk_create.rc | default(1) == 0
       failed_when: false
+      no_log: true
 
     - name: "[pazny.erpnext Post] Authentik Social Login Key result"
       ansible.builtin.debug:
