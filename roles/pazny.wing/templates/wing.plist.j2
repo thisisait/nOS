@@ -80,7 +80,11 @@
              deploy is effectively off until the operator provisions
              the matching secret in Woodpecker. -->
         <key>NOS_DEPLOY_HMAC_SECRET</key>
-        <string>{{ nos_deploy_hmac_secret | default(global_password_prefix + '_pw_deploy_hmac') | default('') }}</string>
+        {# SEC L-DEPLOY1 (2026-05-24): main.yml always regenerates this to a
+           random 32-byte value, so the old `+ '_pw_deploy_hmac'` prefix-derived
+           fallback was a dead path that could only ship a guessable secret if
+           the regen were ever skipped. Drop it — empty = deploy off until set. #}
+        <string>{{ nos_deploy_hmac_secret | default('') }}</string>
         <key>NOS_DEPLOY_LOG_DIR</key>
         <string>{{ ansible_facts['env']['HOME'] }}/.nos/deploys</string>
 

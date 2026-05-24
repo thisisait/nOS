@@ -31,8 +31,9 @@
         <string>{{ bone_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 
         <!-- Bone-specific config (matches container env from Track A) -->
-        <key>BONE_SECRET</key>
-        <string>{{ bone_secret | default('') }}</string>
+        {# SEC L-BONE2 (2026-05-24): BONE_SECRET (legacy API-key channel) is
+           retired (auth.py decision O4) — no live read. Dropped to stop
+           exposing a dead secret in the launchd env. #}
         <key>WING_EVENTS_HMAC_SECRET</key>
         <string>{{ wing_events_hmac_secret | default(bone_secret | default('')) }}</string>
         <key>INSTANCE_NAME</key>

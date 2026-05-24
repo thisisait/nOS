@@ -550,6 +550,7 @@
       # bootstrap failure was hidden by `failed_when: false`; surfaced
       # 2026-05-18 when wing.pazny.eu was 502 despite a green playbook.
       ansible.builtin.shell: |
+        set -o pipefail
         LABEL="{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
         PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
         UID_NUM=$(id -u)
@@ -575,6 +576,8 @@
         echo "=== launchd.err.log tail ==="
         tail -15 "{{ wing_log_dir | default((wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')) + '/log') }}/launchd.err.log" 2>/dev/null || echo "(no err log)"
         exit 1
+      args:
+        executable: /bin/bash    # SEC M-PIPE1: pipefail needs bash, not /bin/sh
       changed_when: true
       # failed_when intentionally NOT set — A17 surfaces dead daemons
       # via non-zero exit; pre-A17 `failed_when: false` was the bug.
@@ -1000,6 +1003,28 @@
     # Destructive group: encrypt user data - regeneration gated via
     # blank=true or destroy_state=true; on non-blank run we show a warning.
     # ──────────────────────────────────────────────────────────────────────────
+    # SEC (2026-05-24, M-SEC1): weak-prefix gate. global_password_prefix
+    # (default "changeme") seeds DB roots, admin passwords, and the
+    # prefix-derived OIDC/agent client secrets. The SEC-3 sweep randomizes the
+    # HMAC/data keys but those classes still ride the prefix — so a weak prefix
+    # on a PUBLIC tenant ships guessable confidential secrets fleet-wide. Fail
+    # closed for public TLDs; lenient for local dev.local; explicit bypass.
+    - name: "[Security] Refuse a weak password prefix on a public tenant"
+      ansible.builtin.assert:
+        that:
+          - global_password_prefix not in ['changeme', '']
+          - (global_password_prefix | length) >= 12
+        fail_msg: >-
+          global_password_prefix is weak. Every prefix-derived secret (DB roots,
+          OIDC + agent client secrets, admin passwords) inherits its entropy. Set
+          a strong prefix (>= 12 chars, not 'changeme') in credentials.yml. For a
+          local dev.local install bypass with -e allow_weak_prefix=true.
+        quiet: true
+      when:
+        - not (allow_weak_prefix | default(false) | bool)
+        - not (tenant_domain_is_local | default(true) | bool)
+      tags: ['always']
+
     - name: "Auto-regenerate stateless secrets (every run — safe group)"
       ansible.builtin.set_fact:
         # authentik_secret_key: moved to persisted secrets - regen on every run
