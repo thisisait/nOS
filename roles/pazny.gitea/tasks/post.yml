@@ -11,10 +11,16 @@
 # ==============================================================================
 
 - name: "[pazny.gitea Post] Check if Gitea container is running"
+  # Label filter, NOT `compose -f <base> ps -q gitea`: the base devops
+  # compose is `services: {}` (real services live in role overrides), so the
+  # old `-f docker-compose.yml ps -q gitea` returned "no such service" → empty
+  # → every admin task below silently skipped → NO admin on a blank → post-repo
+  # 401. The label filter resolves the running container with no compose-file
+  # dependency (A19, 2026-05-24).
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/devops/docker-compose.yml"
-    -p devops ps -q gitea 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=devops"
+    --filter "label=com.docker.compose.service=gitea"
   register: _gitea_container
   changed_when: false
   failed_when: false

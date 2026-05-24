@@ -21,9 +21,9 @@
 
 - name: "[pazny.nextcloud Post] Check if Nextcloud container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/iiab/docker-compose.yml"
-    -p iiab ps -q nextcloud 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=iiab"
+    --filter "label=com.docker.compose.service=nextcloud"
   register: _nc_container
   changed_when: false
   failed_when: false

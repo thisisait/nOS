@@ -9,9 +9,9 @@
 
 - name: "[pazny.gitlab Post] Check if GitLab container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/devops/docker-compose.yml"
-    -p devops ps -q gitlab 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=devops"
+    --filter "label=com.docker.compose.service=gitlab"
   register: _gitlab_container
   changed_when: false
   failed_when: false

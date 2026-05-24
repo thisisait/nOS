@@ -21,9 +21,9 @@
 
 - name: "[pazny.wordpress Post] Check if WordPress container is running"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/iiab/docker-compose.yml"
-    -p iiab ps -q wordpress 2>/dev/null
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=iiab"
+    --filter "label=com.docker.compose.service=wordpress"
   register: _wp_container
   changed_when: false
   failed_when: false
