@@ -872,3 +872,119 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Events Ingest
+  /api/v1/notifications:
+    get:
+      description: 'Paginated notification query — convenience for CLI users + dispatch
+
+        worker scripts that want to check what''s pending without opening
+
+        sqlite3 directly. Wing''s /inbox UI reads via the Wing-side
+
+        NotificationRepository, not this route.'
+      operationId: notifications_list_api_v1_notifications_get
+      parameters:
+      - in: query
+        name: target_actor_id
+        required: false
+        schema:
+          default: operator
+          title: Target Actor Id
+          type: string
+      - in: query
+        name: severity
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+      - in: query
+        name: unread_only
+        required: false
+        schema:
+          default: false
+          title: Unread Only
+          type: boolean
+      - in: query
+        name: since
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Since
+      - in: query
+        name: actor_action_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Actor Action Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Notifications List
+    post:
+      description: "HMAC-authenticated notification ingestion. Writes wing.db.notifications.\n\nBody shape:\n  severity: critical|high|medium|low|info\
+        \   (required)\n  title:    str                              (required, ≤500 chars)\n  body:     str             \
+        \                 (optional, markdown)\n  channels: [wing-inbox|ntfy|mail]           (optional, default [wing-inbox])\n\
+        \  target_actor_id: str                       (optional, default \"operator\")\n  actor_id, actor_action_id:     \
+        \            (optional, A10 audit lineage)\n  origin_plugin, origin_agent:               (optional, attribution hints)\n\
+        \  source_event_id: int                       (optional, soft FK events.id)\n  metadata: object                  \
+        \         (optional, per-channel hints)\n\nBatches accepted as {\"notifications\": [...]}; single-object payloads\n\
+        also accepted for hand-curl tests."
+      operationId: notifications_ingest_api_v1_notifications_post
+      parameters:
+      - in: header
+        name: x-wing-timestamp
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Timestamp
+          type: string
+      - in: header
+        name: x-wing-signature
+        required: false
+        schema:
+          default: ''
+          title: X-Wing-Signature
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Notifications Ingest
