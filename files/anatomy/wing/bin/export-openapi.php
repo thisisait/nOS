@@ -272,7 +272,7 @@ $spec = [
 ];
 
 // -- Step 4: emit YAML. --------------------------------------------------
-function yaml_emit(mixed $v, int $indent = 0): string
+function nos_yaml_emit(mixed $v, int $indent = 0): string
 {
 	$pad = str_repeat('  ', $indent);
 	if (is_array($v)) {
@@ -287,7 +287,7 @@ function yaml_emit(mixed $v, int $indent = 0): string
 				if (is_array($item)) {
 					// Render at indent+1; replace its first-line padding
 					// with "- " marker, leave subsequent lines as-is.
-					$itemStr = yaml_emit($item, $indent + 1);
+					$itemStr = nos_yaml_emit($item, $indent + 1);
 					$lines = explode("\n", rtrim($itemStr, "\n"));
 					$childPad = str_repeat('  ', $indent + 1);
 					$first = $lines[0];
@@ -316,7 +316,7 @@ function yaml_emit(mixed $v, int $indent = 0): string
 					if ($item === []) {
 						$out .= $pad . $key . ": []\n";
 					} else {
-						$out .= $pad . $key . ":\n" . yaml_emit($item, $indent + 1);
+						$out .= $pad . $key . ":\n" . nos_yaml_emit($item, $indent + 1);
 					}
 				} else {
 					$out .= $pad . $key . ': ' . yaml_scalar($item) . "\n";
@@ -361,7 +361,7 @@ $header = "# AUTO-GENERATED — do not edit by hand.\n"
 	. "# Regenerate: php files/anatomy/wing/bin/export-openapi.php\n"
 	. "# CI drift check: .github/workflows/ci.yml — contracts-drift job.\n"
 	. "---\n";
-file_put_contents($outPath, $header . yaml_emit($spec));
+file_put_contents($outPath, $header . nos_yaml_emit($spec));
 
 echo "Wrote $outPath (" . count($paths) . " paths)\n";
 

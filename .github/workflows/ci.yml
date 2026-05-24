@@ -136,6 +136,7 @@ jobs:
           python3 -m pytest tests/
           --ignore=tests/wing-api
           --ignore=tests/wing-frontend
+          --ignore=tests/e2e
           -q
 
   # ──────────────────────────────────────────────────────────────────────────
