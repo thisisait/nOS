@@ -1281,16 +1281,6 @@
     - import_tasks: tasks/stacks/shared-network.yml
       tags: ['iiab', 'docker', 'stacks']
 
-    # Flush host-phase handlers BEFORE the stacks/apps phase. Critical for the
-    # host launchd organs (Bone, Wing): on a blank that rotates bone_secret /
-    # WING_EVENTS_HMAC_SECRET, the bone-role plist render notifies "Restart bone"
-    # — but handlers normally flush at END of play, AFTER apps_runner signs its
-    # app.deployed events. Bone would run the STALE secret through the whole
-    # stacks phase → 401 on every signed POST. Flushing here reloads Bone (env
-    # block, via bootout+bootstrap) with the current secret first (2026-05-24).
-    - name: "[Host] Flush handlers before stacks (reload Bone/Wing with current secrets)"
-      ansible.builtin.meta: flush_handlers
-
     # ──────────────────────────────────────────────────────────────────────────
     # CORE STACKS - infra (DB/IAM/Vault) + observability ALWAYS FIRST
     #
