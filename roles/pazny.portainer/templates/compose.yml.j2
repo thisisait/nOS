@@ -14,7 +14,11 @@ services:
   portainer:
     image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
     restart: unless-stopped
-    command: --host tcp://docker-socket-proxy:2375
+    # --http-enabled: Portainer 2.19+ disables the plain-HTTP listener by
+    # default and 303-redirects :9000 → HTTPS. We publish HTTP on 9000 (TLS is
+    # terminated by Traefik), so without this flag the post-start readiness
+    # probe gets 303 forever → admin-init + OAuth setup silently skip.
+    command: --host tcp://docker-socket-proxy:2375 --http-enabled
     depends_on:
       - docker-socket-proxy
     ports:
