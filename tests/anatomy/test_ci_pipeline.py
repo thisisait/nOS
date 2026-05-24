@@ -77,13 +77,21 @@ def test_gitea_post_repo_task_present():
 	assert "mirror: true" in src
 
 
-def test_gitea_post_repo_requires_token():
-	"""install_gitea_autowire_nos=true MUST fail closed if the operator
-	hasn't provisioned gitea_api_token. Silent skip would leave the
-	mirror unconfigured with no diagnostic."""
+def test_gitea_post_repo_uses_admin_basic_auth():
+	"""A19 (2026-05-24): the nOS repo-autowire MUST use Gitea Admin Basic auth
+	over 127.0.0.1 — NOT a pre-provisioned gitea_api_token (wiped by blank=true
+	→ 401 on the first post-blank run) and NOT the public domain (Cloudflare /
+	Traefik round-trip). Mirrors woodpecker post-oauth.yml. Single-run robust."""
 	src = (REPO / "roles/pazny.gitea/tasks/post-repo.yml").read_text()
-	assert "gitea_api_token" in src
-	assert "ansible.builtin.fail" in src
+	# Admin Basic auth, local port — the robust path.
+	assert "gitea_admin_user" in src and "gitea_admin_password" in src
+	assert "b64encode" in src
+	assert "127.0.0.1" in src
+	# The stale-token + public-domain anti-patterns must be gone (the rationale
+	# comment may still NAME gitea_api_token; what must not exist is its USE as
+	# an auth header or the public-domain URL).
+	assert "token {{ gitea_api_token" not in src
+	assert "{{ gitea_domain }}" not in src
 
 
 def test_gitea_defaults_declare_autowire_vars():
@@ -169,20 +177,23 @@ def test_stack_up_wires_woodpecker_post():
 
 
 def test_final_summary_carries_token_hint_section():
-	"""final-summary.yml MUST surface a calibrated operator hint when a
-	manual autowire token is missing (gitea_api_token / woodpecker_api_token
-	when the matching autowire toggle is on). Catches a regression where the
-	hint section was accidentally removed.
+	"""final-summary.yml MUST surface a calibrated operator hint when the one
+	still-manual autowire token is missing (woodpecker_api_token, when
+	install_woodpecker_autowire_nos is on). Catches a regression where the hint
+	section was accidentally removed.
 
-	A19 (2026-05-23): authentik_bootstrap_token is now playbook-generated +
-	blueprint-pinned (single-run Wing /users), so it is NO longer a missing
-	token the summary nags about, and the old fetch-tool 2-pass is retired."""
+	A19 (2026-05-24): authentik_bootstrap_token is playbook-generated +
+	blueprint-pinned, and the gitea repo-autowire now uses Admin Basic auth —
+	so neither is a missing token the summary nags about. Only the OAuth-derived
+	Woodpecker PAT remains operator-provided."""
 	src = (REPO / "tasks/final-summary.yml").read_text()
-	assert "OPERATOR ACTION REQUIRED — MISSING TOKENS" in src
-	# The two still-manual autowire tokens must be referenced.
-	assert "gitea_api_token" in src
+	assert "OPERATOR ACTION REQUIRED — MISSING TOKEN" in src
+	# The one still-manual autowire token must be referenced.
 	assert "woodpecker_api_token" in src
-	# The retired authentik bootstrap fetch-tool 2-pass must NOT reappear.
+	# Retired prerequisites must NOT reappear as an operator-action block (the
+	# rationale comment may still NAME gitea_api_token — what must be gone is the
+	# "Gitea API token" instruction section and the fetch-tool 2-pass).
+	assert "Gitea API token" not in src
 	assert "fetch-authentik-bootstrap-token.py" not in src
 
 
@@ -191,9 +202,9 @@ def test_final_summary_hint_is_conditional_not_unconditional():
 	noise-pollutes every successful playbook completion. Pinned via
 	the presence of the conditional set blocks."""
 	src = (REPO / "tasks/final-summary.yml").read_text()
-	assert "_need_gitea_token" in src
 	assert "_need_wp_token" in src
-	# A19: the guard fires only when a manual autowire token is missing
-	# (authentik bootstrap is auto-provisioned now, so it's dropped from the
-	# condition). The hint must NOT be unconditional.
-	assert "{% if _need_gitea_token or _need_wp_token %}" in src
+	# A19: gitea now uses admin Basic auth (no token), so _need_gitea_token is
+	# retired — only the Woodpecker PAT can be missing. Hint must NOT be
+	# unconditional, and must not resurrect the gitea-token guard.
+	assert "_need_gitea_token" not in src
+	assert "{% if _need_wp_token %}" in src

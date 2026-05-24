@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.gitea — Gitea in Docker (devops compose stack)
 #
-# Credentials (gitea_admin_password, gitea_secret_key) staysji v top-level
+# Credentials (gitea_admin_password, gitea_secret_key) stay in top-level
 # default.credentials.yml — still centralized, the role only reads them via
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
