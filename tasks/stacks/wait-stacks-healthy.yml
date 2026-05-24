@@ -23,6 +23,11 @@
     _wait_done: false
     _wait_last: []
 
+# NOTE: NO `when:` on this include — a `when` on a *looped* include_tasks does
+# NOT short-circuit the loop (Ansible evaluates it once at loop-expansion, so a
+# set_fact inside health-tick.yml never skips later items). The loop therefore
+# always iterates the full budget; the early-exit lives INSIDE health-tick.yml
+# (each task gated on `not _wait_done`), so post-ready ticks are silent no-ops.
 - name: "[Stacks] Health-wait poll ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.include_tasks: health-tick.yml
@@ -30,7 +35,6 @@
   loop_control:
     loop_var: _tick
     label: "tick {{ _tick }}/{{ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) }} — {{ _wait_stacks | join(',') }}"
-  when: not (_wait_done | bool)
 
 - name: "[Stacks] Health-wait result ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']

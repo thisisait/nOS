@@ -1,14 +1,19 @@
 # =============================================================================
 # health-tick.yml — one poll tick of the in-stream bring-up heartbeat.
 #
-# Included in a loop by wait-stacks-healthy.yml. The include is gated on
-# `not _wait_done`, so this file only runs while at least one container is
-# still pending — once everything is ready the remaining ticks are skipped
-# whole (no per-subtask noise).
+# Included in a loop by wait-stacks-healthy.yml over a fixed range() (the time
+# budget). Every task here is gated on `not _wait_done` — that is the early-exit
+# mechanism. A `when:` on a *looped* `include_tasks` does NOT short-circuit
+# (Ansible evaluates the include's when once at loop-expansion, so a set_fact
+# inside never skips later items — proven empirically). So the loop ALWAYS
+# iterates the full budget; we early-exit from the INSIDE instead: once a tick
+# records ALL_READY, every subsequent tick's probe/debug/set_fact/sleep skip
+# (silent under display_skipped_hosts=false) — no wasted docker probes, no
+# wasted sleeps, and a post-ready container flap can't flip _wait_done back.
 #
-# Each tick prints a per-stack readiness summary into the MAIN ansible.log
-# stream (the whole point — a blocking `docker compose up --wait` emits
-# nothing for up to 540/900s; this turns that silence into a ~15s heartbeat).
+# Each pre-ready tick prints a per-stack readiness summary into the MAIN
+# ansible.log stream (the whole point — a blocking `docker compose up --wait`
+# emits nothing for up to 540/900s; this turns that silence into a heartbeat).
 #
 # Loop var: _tick. Reads fact: _wait_stacks (list of compose project names).
 # =============================================================================
@@ -22,17 +27,20 @@
   register: _tick_probe
   changed_when: false
   check_mode: false
+  when: not (_wait_done | bool)
 
 - name: "[Stacks] {{ _wait_stacks | join(', ') }} — health (tick {{ _tick }})"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.debug:
     msg: "{{ _tick_probe.stdout_lines | reject('equalto', 'PENDING') | reject('equalto', 'ALL_READY') | reject('equalto', 'FAILED') | list }}"
+  when: not (_wait_done | bool)
 
 - name: "[Stacks] Record health-wait state (tick {{ _tick }})"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.set_fact:
     _wait_done: "{{ 'ALL_READY' in (_tick_probe.stdout | default('')) }}"
     _wait_last: "{{ _tick_probe.stdout_lines | default([]) }}"
+  when: not (_wait_done | bool)
 
 - name: "[Stacks] Settle {{ stack_wait_tick_interval | default(15) }}s before next tick"
   tags: ['stacks', 'core', 'always']
