@@ -108,3 +108,40 @@
 .hub-d-v { color: var(--text); font-family: var(--mono, monospace); }
 .hub-d-desc { font-size: 12px; color: var(--text2); margin-top: 12px; line-height: 1.5; }
 .hub-d-hint { font-size: 11px; color: var(--text2); margin-top: 16px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 8px; opacity: .8; }
+
+/* ── Enriched view (review 2026-05-24): data-dense nodes, hover focus, legend ─*/
+
+/* service node second line (version · :port · category) + stack svc-count */
+.hub-node-meta { fill: var(--text2); font-size: 8.5px; font-family: var(--mono, monospace); opacity: .8; }
+.hub-node-stack-n { fill: var(--accent); font-size: 7.5px; opacity: .7; }
+
+/* scan-findings badge (top-right of a service node) */
+.hub-node-find-c { fill: var(--orange, #d29922); stroke: #0d1117; stroke-width: 1; }
+.hub-node-find-t { fill: #0d1117; font-size: 9px; font-weight: 700; }
+
+/* hover focus — dim everything not adjacent to the hovered node */
+.hub-map-svg.focusing .hub-node:not(.faded) .hub-node-box,
+.hub-map-svg.focusing .hub-node:not(.faded) .hub-node-stack-c { stroke: var(--accent); }
+.hub-node.faded { opacity: .22; transition: opacity .12s ease; }
+.hub-edge.faded { stroke-opacity: .05; }
+.hub-edge.lit { stroke-opacity: .85; stroke-width: 2; }
+
+/* detail panel: health status row + outbound link */
+.hub-d-status { display: flex; align-items: center; margin-bottom: 10px; }
+.hub-d-links { margin-top: 12px; }
+.hub-d-link {
+  display: inline-block; font-size: 12px; color: var(--accent);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; text-decoration: none;
+}
+.hub-d-link:hover { border-color: var(--accent); background: rgba(88,166,255,.08); }
+
+/* health legend (bottom-right of the stage) */
+.hub-map-legend {
+  position: absolute; right: 12px; bottom: 12px; z-index: 3;
+  display: flex; gap: 12px; flex-wrap: wrap; max-width: 260px;
+  font-size: 10px; color: var(--text2);
+  background: rgba(13,17,23,.72); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px;
+}
+.hub-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.hub-map-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
