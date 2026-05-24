@@ -7,10 +7,13 @@
 # mirror lands, every push to GitHub auto-syncs into Gitea, which in turn
 # fires the Woodpecker pipeline (post-repo.yml in pazny.woodpecker).
 #
-# Required vars (operator-provisioned in credentials.yml before the first
-# run that toggles install_gitea_autowire_nos=true):
-#   * gitea_api_token       — admin API token (Settings → Applications →
-#                              Generate New Token in Gitea UI)
+# AUTH: Gitea Admin Basic auth over the LOCAL port (127.0.0.1:gitea_port) —
+# NOT gitea_api_token and NOT the public domain. Rationale (A19, 2026-05-24):
+# a pre-provisioned gitea_api_token is wiped by `blank=true` (fresh Gitea DB
+# has no such token) → 401 on the first post-blank run; and the public domain
+# routes through Cloudflare/Traefik (extra failure surface, CF NEL noise). The
+# admin user+password always exist after the gitea role's post-start, so this
+# is single-run robust with no operator prerequisite. Mirrors post-oauth.yml.
 #
 # Optional vars (defaults in pazny.gitea/defaults/main.yml):
 #   * gitea_nos_repo_owner  — default: same as gitea_admin_user
@@ -23,32 +26,22 @@
 # mirror don't get one).
 # ==============================================================================
 
-- name: "[pazny.gitea Post Repo] Ensure gitea_api_token is set"
-  ansible.builtin.fail:
-    msg: |
-      install_gitea_autowire_nos=true requires gitea_api_token in
-      credentials.yml. Provision it via Gitea UI:
-        Profile → Settings → Applications → Generate New Token
-        Scope: write:repository, write:admin
-  when: gitea_api_token | default('') | length == 0
-
 - name: "[pazny.gitea Post Repo] Check if nOS repo already exists"
   ansible.builtin.uri:
-    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
     method: GET
     headers:
-      Authorization: "token {{ gitea_api_token }}"
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
     status_code: [200, 404]
-    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
   register: _gitea_repo_check
   changed_when: false
 
 - name: "[pazny.gitea Post Repo] Create + pull-mirror repo (first run only)"
   ansible.builtin.uri:
-    url: "https://{{ gitea_domain }}/api/v1/repos/migrate"
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/migrate"
     method: POST
     headers:
-      Authorization: "token {{ gitea_api_token }}"
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
       Content-Type: "application/json"
     body_format: json
     body:
@@ -61,18 +54,16 @@
       description: "nOS playbook — auto-mirror from GitHub (A16, 2026-05-17)"
       service: "git"
     status_code: 201
-    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
   when: _gitea_repo_check.status == 404
   register: _gitea_repo_create
 
 - name: "[pazny.gitea Post Repo] Force initial mirror sync (first run only)"
   ansible.builtin.uri:
-    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}/mirror-sync"
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}/mirror-sync"
     method: POST
     headers:
-      Authorization: "token {{ gitea_api_token }}"
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
     status_code: [200, 202]
-    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
   when: _gitea_repo_create.changed | default(false)
   changed_when: true
 
@@ -82,15 +73,14 @@
 # is idempotent — setting the same value twice is a no-op.
 - name: "[pazny.gitea Post Repo] Reconverge mirror_interval (UPDATE leg)"
   ansible.builtin.uri:
-    url: "https://{{ gitea_domain }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
     method: PATCH
     headers:
-      Authorization: "token {{ gitea_api_token }}"
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
       Content-Type: "application/json"
     body_format: json
     body:
       mirror_interval: "{{ gitea_nos_repo_mirror_interval }}"
     status_code: 200
-    validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
   when: _gitea_repo_check.status == 200
   changed_when: false  # idempotent; we can't cheaply detect actual drift

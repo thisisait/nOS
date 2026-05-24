@@ -100,26 +100,15 @@
       {# ── A16 (2026-05-17): CI autowire token reminder ────────────────────── #}
       {# WS2 (2026-05-23): authentik_bootstrap_token is now playbook-generated
          and pinned as the nos-api blueprint token key, so Wing /users +
-         invitations work on a single blank run — the old "fetch the token, then
-         re-run --tags wing" reminder is retired. The gitea/woodpecker API-token
-         reminders below remain (they gate the optional repo-autowire feature). #}
-      {% set _need_gitea_token = (install_gitea_autowire_nos | default(false) | bool) and (gitea_api_token | default('') | length == 0) %}
-      {% set _need_wp_token    = (install_woodpecker_autowire_nos | default(false) | bool) and (woodpecker_api_token | default('') | length == 0) %}
-      {% if _need_gitea_token or _need_wp_token %}
-      ── OPERATOR ACTION REQUIRED — MISSING TOKENS ─────────────────────────────
-
-      {% if _need_gitea_token %}
-        Gitea API token             (powers nOS repo + GitHub pull-mirror autowiring)
-
-          1. Open       https://{{ gitea_domain | default('git.dev.local') }}/-/user/settings/applications
-          2. Click      "Generate New Token"
-                        Name: nos-autowire
-                        Scopes: write:repository, write:admin
-          3. Paste into credentials.yml:
-                        gitea_api_token: "<token>"
-
-      {% endif %}
+         invitations work on a single blank run.
+         A19 (2026-05-24): the gitea repo-autowire now uses Gitea Admin Basic
+         auth over 127.0.0.1 (post-repo.yml), so gitea_api_token is no longer a
+         prerequisite — its reminder is retired too. Only the Woodpecker PAT
+         remains operator-provided (it is OAuth-derived; cannot be autowired). #}
+      {% set _need_wp_token = (install_woodpecker_autowire_nos | default(false) | bool) and (woodpecker_api_token | default('') | length == 0) %}
       {% if _need_wp_token %}
+      ── OPERATOR ACTION REQUIRED — MISSING TOKEN ──────────────────────────────
+
         Woodpecker API token        (powers nOS repo activation in CI)
 
           1. Open       https://{{ woodpecker_domain | default('ci.dev.local') }}/user
@@ -127,9 +116,8 @@
           3. Paste into credentials.yml:
                         woodpecker_api_token: "<token>"
 
-      {% endif %}
         After provisioning, re-run the playbook (only the affected tags is
-        enough): ansible-playbook main.yml --tags wing,gitea,woodpecker
+        enough): ansible-playbook main.yml --tags woodpecker
 
       {% endif %}
       ═══════════════════════════════════════════════════════════════════════════
