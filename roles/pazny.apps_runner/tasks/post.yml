@@ -203,9 +203,15 @@
     #     signed message to bind it against replay)
     # Earlier this task sent ISO-8601 + signed body-only; Bone responded
     # 401 "invalid timestamp" on every run since A3a (Bone host launchd).
-    - name: "[Apps Post] Compute Unix-epoch timestamp for HMAC"
+    # MUST be the CURRENT epoch, computed here — NOT ansible_date_time.epoch,
+    # which is frozen at gather_facts (play start). On a long blank (1h+) that
+    # cached value is way outside Bone's ±300s window → verify_hmac returns
+    # "timestamp out of window" → 401 on every signed POST, even though the
+    # secret matches. `date +%s` runs at task time, seconds before the POST.
+    # (A19 fix 2026-05-24 — the real cause of the recurring app.deployed 401.)
+    - name: "[Apps Post] Compute Unix-epoch timestamp for HMAC (current time)"
       ansible.builtin.set_fact:
-        _apps_bone_ts_epoch: "{{ (ansible_date_time.epoch | int) | string }}"
+        _apps_bone_ts_epoch: "{{ lookup('pipe', 'date +%s') | trim }}"
 
     # Bone verifies the HMAC over the RAW received body bytes
     # (files/anatomy/bone/events.py::verify_hmac: message = "{ts}.{raw_body}").
