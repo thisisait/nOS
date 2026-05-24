@@ -100,11 +100,19 @@ class KumaClient:
       - status-page creation + monitor assignment
     """
 
-    def __init__(self, url: str, user: str, password: str, dry_run: bool = False):
+    def __init__(self, url: str, user: str, password: str, dry_run: bool = False,
+                 timeout: float = 45):
         self.url = url
         self.user = user
         self.password = password
         self.dry_run = dry_run
+        # uptime-kuma-api waits this long for each server-pushed event
+        # (Event.INFO / Event.MONITOR_LIST). The lib default (10s) is too short
+        # when the host is under load during a blank run — Kuma's event delivery
+        # is starved and EVERY op times out (48 monitors × timeout ≈ a 30-min
+        # hang). A larger budget tolerates the load; fail-fast (in _modern_run)
+        # caps the worst case if the API is genuinely unresponsive.
+        self.timeout = timeout
         self._api = None
         self._monitor_types = None
 
@@ -119,7 +127,7 @@ class KumaClient:
 
         self._MonitorType = MonitorType
         self._NotificationType = NotificationType
-        self._api = UptimeKumaApi(self.url)
+        self._api = UptimeKumaApi(self.url, timeout=self.timeout)
         try:
             self._api.setup(self.user, self.password)
             log(f"[+] Initial setup complete (user: {self.user})")
@@ -250,7 +258,8 @@ class KumaClient:
             "applyExisting": True,
             "ntfyserverurl": server_url,
             "ntfytopic": topic,
-            "ntfyPriorityNotification": 4,  # default priority
+            "ntfyPriority": 4,  # Kuma's ntfy priority field (was the bogus
+                                # 'ntfyPriorityNotification' → "unknown argument")
         }
         if self.dry_run:
             log(f"[dry] upsert ntfy notification {name} → {server_url}/{topic}")
@@ -401,7 +410,8 @@ def _modern_run(args) -> int:
         f"{len(notifications)} notification blocks, "
         f"status_page={'yes' if status_page else 'no'}")
 
-    client = KumaClient(args.url, args.user, args.password, dry_run=args.dry_run)
+    client = KumaClient(args.url, args.user, args.password, dry_run=args.dry_run,
+                        timeout=args.timeout)
     if not client.connect():
         return 0
 
@@ -409,19 +419,40 @@ def _modern_run(args) -> int:
         # 1) Monitors (idempotent).
         existing = client.list_monitors()
         created = updated = errored = 0
+        consec_err = 0
+        aborted = False
         name_to_id: Dict[str, int] = {}
         for m in monitors:
             action, mid = client.upsert_monitor(m, existing)
             if action == "created":
                 created += 1
+                consec_err = 0
             elif action == "updated":
                 updated += 1
+                consec_err = 0
             elif action == "error":
                 errored += 1
+                consec_err += 1
+                # Fail-fast: a run of consecutive errors means the Kuma API is
+                # unresponsive (event-wait timeouts under load) — abort rather
+                # than grind every monitor (48 × timeout ≈ a 30-min hang). A
+                # later `--tags uptime_kuma` re-run (host idle) succeeds.
+                if consec_err >= 5:
+                    log(f"[!] Aborting: {consec_err} consecutive errors — Kuma "
+                        f"API unresponsive (event-wait timeout under load). "
+                        f"Re-run `--tags uptime_kuma` when the host is idle.")
+                    aborted = True
+                    break
             if mid is None and m["name"] in existing:
                 mid = existing[m["name"]].get("id")
             if mid:
                 name_to_id[m["name"]] = mid
+
+        if aborted:
+            log(f"\nDone: {created} created, {updated} updated, {errored} errors "
+                f"(ABORTED — Kuma API unresponsive). Monitors tracked: "
+                f"{len(name_to_id)}.")
+            return 0
 
         # 2) Notifications.
         not_existing = client.list_notifications()
@@ -489,6 +520,10 @@ def main() -> int:
     p.add_argument("--password", required=True)
     p.add_argument("--config", required=True,
                    help="Path to a JSON/YAML spec file.")
+    p.add_argument("--timeout", type=float, default=45,
+                   help="Per-event wait budget (s) for the Kuma API. Default 45 "
+                        "tolerates Kuma event-delivery starvation under blank-run "
+                        "load (the lib default of 10s causes a 30-min hang).")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv[1:])

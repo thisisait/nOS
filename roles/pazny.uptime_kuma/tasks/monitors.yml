@@ -233,6 +233,8 @@
       - "{{ uptime_kuma_admin_password }}"
       - "--config"
       - "{{ uptime_kuma_data_dir }}/monitors.spec.json"
+      - "--timeout"
+      - "{{ uptime_kuma_api_timeout | default(45) }}"
       - "-v"
   register: _kuma_result
   changed_when: "'[+] Created' in (_kuma_result.stdout | default(''))"
