@@ -75,6 +75,114 @@ paths:
           required: true
           schema:
             type: string
+  '/api/v1/agent-sessions/{uuid}':
+    get:
+      summary: 'AgentSessions::actiondefault'
+      operationId: AgentSessions_default_get
+      tags:
+        - AgentSessions
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/v1/agents:
+    get:
+      summary: list on-disk agents
+      operationId: Agents_default_get
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/agents/{name}':
+    get:
+      summary: single agent config (parsed YAML view)
+      operationId: Agents_default_get
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/agents/{name}/sessions':
+    get:
+      summary: session list for one agent
+      operationId: Agents_sessions_get
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+    post:
+      summary: 'operator-trigger: spawn a runner'
+      operationId: Agents_sessions_post
+      tags:
+        - Agents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/coexistence:
     get:
       summary: list tracks per service
@@ -276,6 +384,21 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  /api/v1/deploy-trigger:
+    get:
+      summary: 'DeployTrigger::actiondefault'
+      operationId: DeployTrigger_default_get
+      tags:
+        - DeployTrigger
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
   /api/v1/events:
     get:
       summary: 'paginated query (?run_id, ?type, ?since, ?limit).'
@@ -577,7 +700,7 @@ paths:
             type: string
   /api/v1/hub/health:
     get:
-      summary: probe all systems with a URL
+      summary: probe all systems with a URL [PUBLIC]
       operationId: Hub_health_get
       tags:
         - Hub
@@ -592,7 +715,7 @@ paths:
           description: Not found
   /api/v1/hub/systems:
     get:
-      summary: list all systems (flat, with filters)
+      summary: list all systems (flat, with filters) [PUBLIC]
       operationId: Hub_systems_get
       tags:
         - Hub
@@ -605,8 +728,10 @@ paths:
           description: Authentication required
         '404':
           description: Not found
+      security:
+        - BearerAuth: []
     post:
-      summary: upsert a system
+      summary: upsert a system [BEARER required]
       operationId: Hub_systems_post
       tags:
         - Hub
@@ -619,9 +744,11 @@ paths:
           description: Authentication required
         '404':
           description: Not found
+      security:
+        - BearerAuth: []
   '/api/v1/hub/systems/{id}':
     get:
-      summary: single system detail
+      summary: single system detail [PUBLIC]
       operationId: Hub_systems_get
       tags:
         - Hub
@@ -634,12 +761,29 @@ paths:
           description: Authentication required
         '404':
           description: Not found
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+  /api/v1/metrics:
+    get:
+      summary: 'Metrics::actiondefault'
+      operationId: Metrics_default_get
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
   /api/v1/migrations:
     get:
       summary: list { applied, pending } (via BoxAPI)
