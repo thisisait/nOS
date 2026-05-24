@@ -52,6 +52,7 @@
   when: _gitlab_ready.status | default(0) == 200
   changed_when: "'UPDATED' in (_gitlab_pw_reset.stdout | default(''))"
   failed_when: false
+  no_log: true
 
 - name: "[pazny.gitlab Post] Password reconverge status"
   ansible.builtin.debug:

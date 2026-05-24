@@ -70,6 +70,7 @@
   become: true
   when: _iiab_user_check.rc != 0
   register: _iiab_user_create
+  no_log: true
 
 - name: "[IIAB Terminal] Ensure user home + .ssh directory"
   ansible.builtin.file:

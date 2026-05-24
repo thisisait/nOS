@@ -44,6 +44,7 @@
     'changed password' in (_ntfy_user_add.stdout | default(''))
   failed_when: false
   check_mode: false
+  no_log: true
   when:
     - _ntfy_container.stdout | default('') | length > 0
     - _ntfy_health.status | default(0) == 200

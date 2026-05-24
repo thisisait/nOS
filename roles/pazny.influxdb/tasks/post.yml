@@ -50,6 +50,7 @@
     - _influxdb_health.status | default(0) == 200
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.influxdb Post] Reconverge admin password via API"
   ansible.builtin.uri:
@@ -77,6 +78,7 @@
   register: _influx_pw_update
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.influxdb Post] Show access info"
   ansible.builtin.debug:

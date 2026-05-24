@@ -27,6 +27,7 @@
   register: _mcp_pg_user
   changed_when: _mcp_pg_user.rc == 0
   failed_when: false
+  no_log: true
   when: mcp_enable_postgres | default(true)
 
 # ── 2. Grafana service account + token ────────────────────────────────────────
@@ -48,6 +49,7 @@
   register: _grafana_sa
   changed_when: _grafana_sa.status in [200, 201]
   failed_when: false
+  no_log: true
   when: mcp_enable_grafana | default(true)
 
 - name: "[mcp_gateway Post] Get Grafana service account ID (if existed)"
@@ -61,6 +63,7 @@
     timeout: 10
   register: _grafana_sa_search
   failed_when: false
+  no_log: true
   when: mcp_enable_grafana | default(true)
 
 - name: "[mcp_gateway Post] Extract Grafana SA ID"
@@ -86,6 +89,7 @@
   register: _grafana_token
   changed_when: _grafana_token.status in [200, 201]
   failed_when: false
+  no_log: true
   when:
     - mcp_enable_grafana | default(true)
     - (_grafana_sa_id | default(0) | int) > 0
@@ -156,6 +160,7 @@
   delay: 5
   until: _mcpo_health.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 - name: "[mcp_gateway Post] Status"
   ansible.builtin.debug:

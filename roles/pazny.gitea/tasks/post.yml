@@ -69,6 +69,7 @@
   changed_when: true
   failed_when: false
   check_mode: false
+  no_log: true
 
 # ── Reconverge admin password every run (idempotent UPDATE) ─────────────
 # `gitea admin user change-password` is safe to call on an existing user —
@@ -88,6 +89,7 @@
   changed_when: true
   failed_when: false
   check_mode: false
+  no_log: true
   notify: Restart gitea
 
 # ── A16 (2026-05-17): autowire nOS repo + GitHub pull-mirror ──────────────

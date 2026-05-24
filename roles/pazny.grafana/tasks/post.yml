@@ -41,4 +41,5 @@
   changed_when: "'Admin password changed successfully' in (_grafana_pw_reset.stdout | default(''))"
   failed_when: false
   check_mode: false
+  no_log: true
   notify: Restart grafana

@@ -63,6 +63,7 @@
     - _mb_setup_token | default('') | length > 0
   changed_when: _mb_setup.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 # ── Admin password reconverge (state-declarative UPDATE) ──────────────────
 # Metabase /api/user/{id}/password vyzaduje old_password v body. Stridani
@@ -85,6 +86,7 @@
     - _mb_setup_token | default('') | length == 0  # setup already done
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.metabase Post] Login with current password (already converged?)"
   ansible.builtin.uri:
@@ -102,6 +104,7 @@
     - _mb_setup_token | default('') | length == 0
   changed_when: false
   failed_when: false
+  no_log: true
 
 - name: "[pazny.metabase Post] Reconverge admin password via PUT /api/user/1/password"
   ansible.builtin.uri:
@@ -121,6 +124,7 @@
     - _mb_session_new.status | default(0) != 200
   changed_when: _mb_pw_reset.status | default(0) in [200, 204]
   failed_when: false
+  no_log: true
 
 - name: "[pazny.metabase Post] Password reconverge status"
   ansible.builtin.debug:

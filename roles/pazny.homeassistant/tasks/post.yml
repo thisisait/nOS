@@ -51,6 +51,7 @@
     - _ha_onboarding.json | selectattr('step', 'equalto', 'user') | selectattr('done', 'equalto', false) | list | length > 0
   changed_when: _ha_user_create.status | default(0) == 200
   failed_when: false
+  no_log: true
 
 # -- Reconverge admin password every run (state-declarative UPDATE) ------
 # Onboarding API zavrena po prvnim runu -> CLI script `hass --script auth`
@@ -68,6 +69,7 @@
   changed_when: _ha_pw_update.rc | default(1) == 0
   failed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.homeassistant Post] Set core config (timezone, location)"
   ansible.builtin.uri:

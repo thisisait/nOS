@@ -78,6 +78,8 @@
   ansible.builtin.shell: |
     set -euo pipefail
     df -g "{{ playbook_dir }}" | awk 'NR==2 {print $4}'
+  args:
+    executable: /bin/bash
   register: _patch_disk_free
   changed_when: false
   when: (_patch.requires | default({})).min_disk_free_gb is defined

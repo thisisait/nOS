@@ -29,6 +29,7 @@
   register: _pds_bridge_token_raw
   changed_when: false
   failed_when: false
+  no_log: true   # stdout is the Authentik API token
   when: _pds_bridge_health.status | default(0) == 200
 
 - name: "[PDS Bridge] Set bridge variables"
@@ -60,6 +61,7 @@
     - _pds_bridge_health.status | default(0) == 200
     - _pds_bridge_token | default('') | length >= 10
   failed_when: false
+  no_log: true
 
 # ── 3. Fetch existing PDS accounts ──────────────────────────────────────────
 
@@ -72,6 +74,7 @@
   register: _pds_bridge_existing
   changed_when: false
   failed_when: false
+  no_log: true
   when:
     - _pds_bridge_health.status | default(0) == 200
     - _pds_bridge_token | default('') | length >= 10
@@ -175,19 +178,24 @@
 # right thing either way.
 
 - name: "[PDS Bridge] Create PDS account"
+  # SEC: username is regex-hardened in step 4; email is operator/Authentik-
+  # sourced and reaches the shell, so `| quote` it (and the handle/password)
+  # to close the shell-injection hole. no_log keeps the admin password +
+  # per-user password out of the telemetry callback (cmd + stdout).
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p infra exec -T bluesky-pds
     goat pds admin account create
     --pds-host http://localhost:3000
-    --admin-password "{{ bluesky_pds_admin_password }}"
-    --handle "{{ item.username }}.{{ _pds_hostname }}"
-    --email "{{ item.email | default(item.username ~ '@' ~ _pds_hostname) }}"
-    --password "{{ global_password_prefix }}_pw_bsky_{{ item.username }}" 2>&1
+    --admin-password {{ bluesky_pds_admin_password | quote }}
+    --handle {{ (item.username ~ '.' ~ _pds_hostname) | quote }}
+    --email {{ (item.email | default(item.username ~ '@' ~ _pds_hostname)) | quote }}
+    --password {{ (global_password_prefix ~ '_pw_bsky_' ~ item.username) | quote }} 2>&1
   register: _pds_bridge_created
   loop: "{{ _pds_bridge_new_users | default([]) }}"
   loop_control:
     label: "{{ item.username }}.{{ _pds_hostname }}"
   when: _pds_bridge_new_users | default([]) | length > 0
+  no_log: true
   changed_when: "'did:' in (_pds_bridge_created.stdout | default(''))"
   # Real error guard: treat output as failure UNLESS either (a) a DID was
   # returned (success), (b) the handle is already taken (idempotent), or

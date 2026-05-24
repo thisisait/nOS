@@ -226,6 +226,7 @@
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false
+  no_log: true
 
 - name: "[pazny.wing] Parse Pulse job catalog"
   ansible.builtin.set_fact:
