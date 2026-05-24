@@ -24,6 +24,15 @@ skip_list:
   # unwieldy in templates and tasks.
   - var-naming[no-role-prefix]
   - jinja[spacing]
+  # Imperative post-start tasks (compose recreate, API create/activate,
+  # mirror-sync) legitimately set changed_when on a non-handler — they MUST
+  # run inline in the post sequence, not deferred to end-of-play. Same
+  # pragmatic stance as the already-skipped no-changed-when.
+  - no-handler
+  # Task names use the "[pazny.<svc> Phase] ..." prefix convention; the
+  # lowercase role-namespace segment trips name[casing] (wants an uppercase
+  # first letter). The prefix is load-bearing for log grepping.
+  - name[casing]
   - name[template]
 
 # Track H Phase 6 (2026-05-01): ansible-lint 26.x reports load-failure
