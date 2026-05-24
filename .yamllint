@@ -15,9 +15,18 @@ rules:
     min-spaces-inside: 0
     max-spaces-inside-empty: 0
     max-spaces-inside: -1
+  # Plugin manifests (and many role defaults) align values for readability
+  # (`key:        value`). The default colons rule (max-spaces-after: 1) flags
+  # that as an ERROR — 236 of them across files/anatomy/plugins/*/plugin.yml.
+  # The alignment is deliberate, so allow it (mirrors line-length being a
+  # warning, not a hard fail).
+  colons:
+    max-spaces-after: -1
 
 ignore: |
   .github/workflows/stale.yml
+  # Vendored JS deps (Playwright etc.) — not our YAML to lint.
+  tests/e2e/node_modules
   .venv
   roles
   files/observability
