@@ -46,8 +46,18 @@ End-to-end fixes surfaced while validating the STRICT all-on blank — each pins
 - **Uptime Kuma** — monitor setup tolerates Socket.IO event-delivery starvation under peak load: a larger per-event timeout, fail-fast after 3 consecutive timeouts (was a ~30-min hang), and a role-level retry until the load settles. A heavily-loaded blank may still defer monitor creation to a host-idle `--tags uptime_kuma` re-run (non-fatal — monitors/events are never lost).
 - **Traefik** — Tier-1 routing resolves upstreams by container name on the shared network (the IPv6 host-gateway path produced 502s).
 
+### Security review + hardening (2026-05-24)
+
+A 5-agent audit (`docs/llm/security/2026-05-24-multiagent-review.md`) against the SEC-1..15 baseline — solid, no true CRITICALs after reconciliation. New hardening:
+
+- **SEC-16** — weak-prefix gate: refuse `global_password_prefix` in {`changeme`, '', <12 chars} on a public tenant (it seeds DB roots, OIDC/agent secrets, admin pws). Lenient on `dev.local`; `-e allow_weak_prefix=true` bypass. Dead prefix-derived `NOS_DEPLOY_HMAC_SECRET` fallback + retired `BONE_SECRET` dropped from the launchd plists.
+- **SEC-17** — Pulse execution-boundary command allowlist: the SEC-8 allowlist now enforces in the runner that spawns the process (not just the PHP create path), so *any* `pulse_jobs` row is gated. Child env scoped — secrets stripped (`WING_API_TOKEN`, …), job-supplied loader/PATH overrides (`DYLD_*`/`LD_*`) refused; `max_runtime_s` clamped.
+- **SEC-18** — 83 `no_log: true` across 30 task files (admin pws/tokens were persisting in Wing's SQLite via the telemetry callback, which redacted by key-name only); the callback now scrubs by value too; every shell pipe gets `set -o pipefail`; the Bluesky bridge `| quote`s the Authentik-sourced email (injection).
+- **portainer** — `--http-enabled` (2.19+ 303-redirects plain HTTP → HTTPS, which silently skipped admin-init + OAuth setup).
+
+Deferred (tracked in the review): the OIDC/agent-secret compartmentalization refactor (mitigated now by SEC-16), deploy-trigger edge-gating, askpass-on-failure cleanup.
+
 ### Validated by
 
-- STRICT all-on blank runs reaching `failed=0` (`ok ≈ 1300`, zero fatal).
-- Standard gate suite green: `pytest tests/{anatomy,apps,authentik,bone_auth,callback,coexistence,migrate,upgrades}` (1107 passed, 11 skipped), plugin-loader smoke (63 ok / 0 failed / 0 schema errors), wiring contract (DAG / gate-parity / notification shape), `composer validate`, `--syntax-check`. The `tests/e2e` journey suite runs in CI with a live ephemeral tester identity.
-- Bone-ts and Kuma-retry fixes verified out-of-band (fresh-ts POST accepted by Bone; host-idle Kuma setup creates all 48 monitors, 0 errors).
+- STRICT all-on blank (`-e @profiles/all-on.yml -e blank=true`): **`failed=0`, zero fatal**, with the hardening live (M-SEC1 gate passes on a ≥12 prefix; `no_log`/pipefail post-config unaffected), **Kuma creating all 48 monitors in-context**, and **Bone `app.deployed` returning HTTP 200** (the timestamp fix).
+- Gate suite green: `pytest` (1120 passed, 4 skipped — incl. the SEC-17 Pulse-allowlist tests), plugin-loader smoke (63 ok / 0 failed / 0 schema), wiring contract (DAG / gate-parity / notification), ansible-lint (`risky-shell-pipe` fixed, not skipped), `composer validate`, `--syntax-check`. `tests/e2e` runs in CI with a live tester identity.
