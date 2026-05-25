@@ -104,3 +104,21 @@ pulse:
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ conductor_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+
+    # Nervy (2026-05-25): deterministic (no-LLM) scheduled drift watcher.
+    # Runs the drift-check probe daily so the Prometheus drift metric refreshes
+    # between playbook runs, and notifies (HMAC → Bone) when the scan is stale
+    # (>14d) or CRITICALs are pending. Closes the "manual interim refresh path"
+    # debt; the LLM scan-REFRESH (self-test-001 above + scan-runner) stays separate.
+    - name: security-drift-watch
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/drift-watch.sh"
+      schedule: "0 6 * * *"          # 06:00 UTC daily
+      jitter_min: 10
+      max_runtime_s: 120
+      max_concurrent: 1
+      env:
+        NOS_REPO: "{{ playbook_dir }}"
+        BONE_API_URL: "http://127.0.0.1:9000"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        DRIFT_STALE_HOURS: "336"
