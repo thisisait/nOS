@@ -50,6 +50,11 @@
   register: _pulse_pip_install
   changed_when: _pulse_pip_install.stdout | trim != ""
 
+# ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
+# Linux sibling of the launchd path; env mirrors pulse.plist.j2. Gated on
+# nos_service_manager (tasks/_platform.yml) so macOS is unchanged.
+
+# ---- macOS: launchd ----
 - name: "[pazny.pulse] Render launchd plist"
   ansible.builtin.template:
     src: pulse.plist.j2
@@ -58,6 +63,7 @@
     # that hit the local API. Apply the same lock-down as Wing + Bone.
     mode: '0600'
   notify: Reload pulse launchd
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[pazny.pulse] Bootstrap launchd job (idempotent)"
   ansible.builtin.shell: |
@@ -72,6 +78,29 @@
     fi
   register: _pulse_bootstrap
   changed_when: "'bootstrapped' in _pulse_bootstrap.stdout"
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ---- Linux: systemd --user (env mirrors pulse.plist.j2) ----
+- name: "[pazny.pulse] (Linux) Install systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ pulse_launchd_label }}"
+    su_description: "nOS Pulse — scheduled-job daemon"
+    su_exec_start: "{{ pulse_venv }}/bin/python -m pulse"
+    su_working_dir: "{{ playbook_dir }}/files/anatomy/pulse"
+    su_environment:
+      HOME: "{{ ansible_facts['env']['HOME'] }}"
+      PATH: "{{ pulse_venv }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      WING_API_BASE: "{{ pulse_wing_api_base }}"
+      WING_API_TOKEN: "{{ pulse_api_token }}"
+      PULSE_TICK_INTERVAL_S: "{{ pulse_tick_interval_s | string }}"
+      PULSE_MAX_CONCURRENT: "{{ pulse_max_concurrent | string }}"
+      PULSE_STATE_DIR: "{{ pulse_state_dir }}"
+      PULSE_LOG_PATH: "{{ pulse_log_dir }}/pulse.log"
+      PULSE_DRY_RUN: "{{ '1' if (pulse_dry_run | bool) else '0' }}"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 - name: "[pazny.pulse] Setup summary"
   ansible.builtin.debug:

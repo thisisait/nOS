@@ -1,6 +1,11 @@
 ---
 - name: Reload pulse launchd
   ansible.builtin.shell: |
+    {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    systemctl --user restart "{{ pulse_launchd_label }}.service"
+    {% else %}
     launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist 2>/dev/null || true
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist
+    {% endif %}
   changed_when: false
