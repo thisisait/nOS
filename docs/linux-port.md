@@ -76,16 +76,16 @@ plist path untouched, `systemd-user` calls `ensure_unit`.
 
 | Daemon | macOS (launchd) | Linux (systemd --user) |
 |---|---|---|
-| **Bone** | ✅ | ✅ **pilot done (2026-05-25)** |
-| Wing | ✅ | ⏳ TODO — also needs host PHP/FrankenPHP on Linux |
-| Pulse | ✅ | ⏳ TODO (same `ensure_unit` pattern) |
-| OpenClaw | ✅ | ⏳ TODO — + Ollama CUDA/CPU backend (no MLX on Linux) |
-| Hermes | ✅ | ⏳ TODO |
-| acme / backup (timers) | launchd | ⏳ TODO — `su_type: timer` (template ready) |
+| **Bone** | ✅ | ✅ **ported (2026-05-25)** |
+| **Pulse** | ✅ | ✅ **ported (2026-05-25)** |
+| **Wing** | ✅ | ✅ **ported (2026-05-25)** — FrankenPHP static binary + composer via `frankenphp php-cli`; **pending VM validation** (static binary arch, php-cli, Caddyfile) |
+| OpenClaw | ✅ | 🚫 **Darwin-gated** — Ollama MLX is Apple-Silicon only; Linux = separate Ollama-CUDA role (post-v1) |
+| Hermes | ✅ | 🚫 **Darwin-gated** — brew-coupled (uv/python@3.13); apt/uv-installer branch = backlog |
+| acme / backup (timers) | launchd | ⏳ backlog — `su_type: timer` (template ready, not yet wired) |
 
-Also still mac-coded: the **preflight launchctl loop** in `main.yml`
-(`[Preflight] Ensure anatomy daemons (Wing/Bone/Pulse) loaded in launchd`) — it
-must branch on `nos_service_manager` before a Linux blank can complete.
+The **preflight launchctl loop** in `main.yml` (`[Preflight] Ensure anatomy
+daemons loaded`) is already `when: ansible_os_family == 'Darwin'` — Linux-safe
+(each role's systemd-user branch does its own `enable --now`).
 
 ## Linux gotchas
 
