@@ -1383,7 +1383,11 @@
     - name: "OpenClaw (pazny.openclaw role)"
       ansible.builtin.import_role:
         name: pazny.openclaw
-      when: install_openclaw | default(false)
+      # Darwin-only: Ollama MLX backend + launchctl env are Apple-Silicon
+      # specific. Linux equivalent (Ollama CUDA/CPU) is a separate post-v1 role.
+      when:
+        - install_openclaw | default(false)
+        - ansible_os_family == 'Darwin'
       tags: ['openclaw', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1394,7 +1398,11 @@
     - name: "Hermes Agent (pazny.hermes role)"
       ansible.builtin.import_role:
         name: pazny.hermes
-      when: install_hermes | default(false)
+      # Darwin-only for now: brew-coupled (uv + python@3.13). Linux port needs
+      # an apt/uv-installer branch — backlog (docs/linux-port.md).
+      when:
+        - install_hermes | default(false)
+        - ansible_os_family == 'Darwin'
       tags: ['hermes', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
