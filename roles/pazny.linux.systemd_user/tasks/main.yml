@@ -1,17 +1,23 @@
 ---
 # ==============================================================================
-# pazny.linux.systemd_user — STUB tasks for systemd --user.
+# pazny.linux.systemd_user — systemd --user service manager (Linux).
 #
-# Phase 1 of cross-platform port. Real implementation later: a reusable
-# `include_role: name=pazny.linux.systemd_user tasks_from=ensure_unit` that
-# Linux ports of pazny.bone / pazny.acme / pazny.backup invoke instead of
-# the launchctl bootstrap dance.
+# This role has NO default action. It is a library: host-daemon roles
+# (pazny.bone / .wing / .pulse / .openclaw, and the acme/backup timers) call
+# its reusable entry point on Linux instead of the macOS launchctl dance:
+#
+#   - include_role:
+#       name: pazny.linux.systemd_user
+#       tasks_from: ensure_unit
+#     vars: { su_name: ..., su_exec_start: ..., su_environment: {...} }
+#
+# Callers gate the include on `nos_service_manager == 'systemd-user'`
+# (resolved per-platform in tasks/_platform.yml), so macOS never reaches it.
+# See roles/pazny.linux.systemd_user/tasks/ensure_unit.yml for the contract.
+# First consumer: pazny.bone (Linux pilot, 2026-05-25).
 # ==============================================================================
 
-- name: "[pazny.linux.systemd_user] STUB — Linux port not yet wired"
+- name: "[pazny.linux.systemd_user] Library role — call tasks_from=ensure_unit"
   ansible.builtin.debug:
-    msg: |
-      pazny.linux.systemd_user is a Phase-1 scaffolding stub.
-      Real systemd unit rendering lands once pazny.linux.apt + the
-      cross-platform refactor in main.yml are validated on Ubuntu 24.04 LTS.
-  when: ansible_os_family in ['Debian', 'RedHat']
+    msg: "pazny.linux.systemd_user is a library (no default action); see tasks/ensure_unit.yml."
+  when: false

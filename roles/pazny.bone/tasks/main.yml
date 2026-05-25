@@ -108,8 +108,13 @@
       - "--exclude=Dockerfile"        # not needed at runtime in host mode
   notify: Restart bone
 
-# ── launchd plist ────────────────────────────────────────────────────────────
+# ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
+# Anatomy A3a put Bone on host launchd. The Linux sibling (2026-05-25 pilot)
+# renders a systemd --user unit via pazny.linux.systemd_user::ensure_unit. Both
+# branches gate on nos_service_manager (tasks/_platform.yml); the env dict below
+# mirrors bone.plist.j2 — keep the two in sync until they share one source.
 
+# ---- macOS: launchd ----
 - name: "[pazny.bone] Render launchd plist"
   ansible.builtin.template:
     src: bone.plist.j2
@@ -119,6 +124,7 @@
     # processes / backup agents must not be able to read these.
     mode: '0600'
   notify: Restart bone
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[pazny.bone] Bootstrap launchd job (idempotent)"
   ansible.builtin.shell: |
@@ -133,6 +139,47 @@
     fi
   register: _bone_bootstrap
   changed_when: "'bootstrapped' in _bone_bootstrap.stdout"
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ---- Linux: systemd --user (env mirrors bone.plist.j2 EnvironmentVariables) ----
+- name: "[pazny.bone] (Linux) Build systemd --user environment"
+  ansible.builtin.set_fact:
+    _bone_systemd_env: >-
+      {{
+        {
+          'HOME': ansible_facts['env']['HOME'],
+          'PATH': bone_venv ~ '/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+          'WING_EVENTS_HMAC_SECRET': wing_events_hmac_secret | default(bone_secret | default('')),
+          'INSTANCE_NAME': instance_name | default('nos'),
+          'INSTANCE_TLD': tenant_domain | default('dev.local'),
+          'PLAYBOOK_DIR': playbook_dir,
+          'STATE_DIR': bone_state_dir,
+          'SERVICE_REGISTRY_PATH': bone_registry_dir ~ '/service-registry.json',
+          'WING_DB_DIR': bone_wing_db_dir,
+          'WING_DB_PATH': bone_wing_db_dir ~ '/wing.db',
+          'QDRANT_URL': (qdrant_url | default('http://127.0.0.1:' ~ (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else ''),
+          'QDRANT_API_KEY': qdrant_api_key | default(''),
+          'BONE_REQUIRE_JWT_AUTH': (install_authentik | default(false)) | ternary('1', '0'),
+        } | combine(
+          {
+            'AUTHENTIK_OIDC_ISSUER': authentik_oidc_issuer | default('https://' ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) ~ '/'),
+            'AUTHENTIK_JWKS_URL': bone_jwks_url | default('https://' ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) ~ '/application/o/nos-state-manager/jwks/'),
+          } if (install_authentik | default(false)) else {}
+        )
+      }}
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[pazny.bone] (Linux) Install systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ bone_launchd_label }}"
+    su_description: "nOS Bone — local FastAPI bridge (Ansible ↔ Wing)"
+    su_exec_start: "{{ bone_venv }}/bin/uvicorn main:app --host 127.0.0.1 --port {{ bone_port }}"
+    su_working_dir: "{{ bone_runtime_dir }}"
+    su_environment: "{{ _bone_systemd_env }}"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 # ── Setup summary ────────────────────────────────────────────────────────────
 

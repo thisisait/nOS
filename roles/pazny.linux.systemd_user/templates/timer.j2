@@ -1,0 +1,11 @@
+{# pazny.linux.systemd_user :: timer unit (rendered by ensure_unit.yml) #}
+[Unit]
+Description={{ su_description }}
+
+[Timer]
+OnCalendar={{ su_timer_calendar }}
+Persistent=true
+Unit={{ su_timer_unit | default(su_name ~ '.service') }}
+
+[Install]
+WantedBy=timers.target

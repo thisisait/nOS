@@ -23,11 +23,20 @@
   # isn't loaded (e.g. fresh install), so we `|| true` and rely on
   # `bootstrap` to do the right thing in both cases. Surfaced live on
   # pazny.eu 2026-05-17 during the first non-operator remediator run.
+  #
+  # Linux (2026-05-25): systemd --user re-reads the unit's Environment= on
+  # `restart`, so no bootout/bootstrap dance is needed — a plain restart picks
+  # up rotated secrets. Branch on nos_service_manager (tasks/_platform.yml).
   ansible.builtin.shell: |
+    {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    systemctl --user restart "{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}.service"
+    {% else %}
     LABEL="{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
     PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
     UID_NUM=$(id -u)
     launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
     sleep 1
     launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+    {% endif %}
   changed_when: true

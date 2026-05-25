@@ -1,0 +1,83 @@
+---
+# ==============================================================================
+# pazny.linux.systemd_user :: ensure_unit
+# ------------------------------------------------------------------------------
+# Render + enable ONE systemd --user unit. The Linux counterpart of the launchd
+# bootstrap dance that pazny.bone / .wing / .pulse / .openclaw do on macOS.
+#
+# Callers (a daemon role's systemd-user branch) invoke:
+#   - include_role:
+#       name: pazny.linux.systemd_user
+#       tasks_from: ensure_unit
+#     vars:
+#       su_name:        eu.thisisait.nos.bone        # unit base name (req)
+#       su_description: "nOS Bone — local FastAPI bridge"   # (req)
+#       su_type:        service                       # service (default) | timer
+#       su_exec_start:  "{{ bone_venv }}/bin/uvicorn main:app --host 127.0.0.1 --port {{ bone_port }}"
+#       su_working_dir: "{{ bone_runtime_dir }}"      # optional
+#       su_environment: { KEY: value, ... }           # optional dict (Environment=)
+#       su_restart:     always                        # optional (default always)
+#       su_restart_sec: 3                             # optional
+#       # timers only:
+#       su_timer_calendar: "*-*-* 03:00:00"           # OnCalendar= (req for timer)
+#       su_timer_unit:     eu.thisisait.nos.backup.service  # default <su_name>.service
+#
+# Idempotent. macOS never reaches here — callers gate on
+# nos_service_manager == 'systemd-user' (set in tasks/_platform.yml).
+#
+# NOTE: `systemctl --user` needs the user DBus + XDG_RUNTIME_DIR. We pass it
+# explicitly so the tasks work whether the play runs as the login user or via
+# become. enable-linger lets the units run without an active graphical session.
+# Verify on a real Ubuntu 24.04 host — this path is not exercised on macOS CI.
+# ==============================================================================
+
+- name: "[systemd_user] Assert required inputs"
+  ansible.builtin.assert:
+    that:
+      - su_name is defined and (su_name | length) > 0
+      - su_description is defined
+      - (su_type | default('service')) != 'service' or (su_exec_start is defined)
+      - (su_type | default('service')) != 'timer' or (su_timer_calendar is defined)
+    quiet: true
+
+- name: "[systemd_user] Resolve uid + runtime dir"
+  ansible.builtin.set_fact:
+    _su_uid: "{{ ansible_facts['user_uid'] | default(ansible_user_uid) }}"
+    _su_unit_file: "{{ su_name }}.{{ su_type | default('service') }}"
+
+- name: "[systemd_user] Ensure ~/.config/systemd/user exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    state: directory
+    mode: '0755'
+
+- name: "[systemd_user] Enable lingering (units run without an active login session)"
+  ansible.builtin.command: "loginctl enable-linger {{ ansible_facts['user_id'] | default(ansible_user_id) }}"
+  register: _su_linger
+  changed_when: "'already enabled' not in (_su_linger.stderr | default(''))"
+  failed_when: false
+
+- name: "[systemd_user] Render unit {{ _su_unit_file }}"
+  ansible.builtin.template:
+    src: "{{ (su_type | default('service')) }}.j2"
+    # 0600 — a .service Environment= block may embed secrets (HMAC seeds, tokens).
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ _su_unit_file }}"
+    mode: '0600'
+  register: _su_render
+
+- name: "[systemd_user] daemon-reload (user scope)"
+  ansible.builtin.systemd_service:
+    scope: user
+    daemon_reload: true
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"
+  when: _su_render is changed
+
+- name: "[systemd_user] Enable + (re)start {{ _su_unit_file }}"
+  ansible.builtin.systemd_service:
+    scope: user
+    name: "{{ _su_unit_file }}"
+    enabled: true
+    state: "{{ 'restarted' if (_su_render is changed and (su_type | default('service')) == 'service') else 'started' }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"

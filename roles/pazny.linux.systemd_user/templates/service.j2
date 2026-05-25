@@ -1,0 +1,20 @@
+{# pazny.linux.systemd_user :: service unit (rendered by ensure_unit.yml) #}
+[Unit]
+Description={{ su_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type={{ su_service_type | default('simple') }}
+{% if su_working_dir is defined %}
+WorkingDirectory={{ su_working_dir }}
+{% endif %}
+{% for k, v in (su_environment | default({})).items() %}
+Environment="{{ k }}={{ v }}"
+{% endfor %}
+ExecStart={{ su_exec_start }}
+Restart={{ su_restart | default('always') }}
+RestartSec={{ su_restart_sec | default(3) }}
+
+[Install]
+WantedBy=default.target
