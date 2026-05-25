@@ -61,7 +61,11 @@ pulse:
         # /api/v1/notifications endpoint after a scan finds new secrets.
         # When unset the skill ingests findings but skips notification emit
         # (manual runs without plist env still work).
-        WING_EVENTS_HMAC_SECRET: "{{ bone_secret | default('') }}"
+        # NOTE: bare token (no `| default`) — discover-pulse-catalog.py does a
+        # LITERAL string-replace keyed on "{{ bone_secret }}"; the filter form
+        # never matched, so this shipped the unrendered string + nightly scans
+        # failed HMAC verification (caught by the live conductor 2026-05-25).
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         BONE_API_URL: "http://127.0.0.1:9000"
         NOS_SCAN_DIR: "{{ playbook_dir }}"
         # Filter severity: only ingest findings at this level or above.

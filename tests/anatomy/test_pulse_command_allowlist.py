@@ -105,6 +105,49 @@ def test_pulse_arg_regex_bans_whitespace_and_shell_meta():
 		assert not pat.fullmatch(bad), f"arg regex must reject '{bad}'"
 
 
+def test_pulse_tokens_are_bare_not_filtered():
+	"""discover-pulse-catalog.py substitutes pulse command/env tokens by LITERAL
+	string-replace keyed on bare "{{ name }}". A filter form ("{{ name | default(x) }}")
+	never matches → the literal unrendered string ships into pulse_jobs and the job
+	fails at runtime (e.g. an HMAC secret that's the string "{{ bone_secret … }}").
+	Caught live by the conductor 2026-05-25 (gitleaks WING_EVENTS_HMAC_SECRET).
+	Guard: no Jinja token in a pulse job command/env may contain a `|` filter."""
+	import yaml
+
+	# KNOWN pre-existing offenders (tracked bug, NOT a license for new ones):
+	# wing-base's dispatch-notifications{,-digest} env uses conditional Jinja
+	# ({{ x if install_y … }}) that the literal-replace catalog cannot render,
+	# so the mail/ntfy env ships unrendered → A9 external delivery is broken.
+	# Surfaced 2026-05-25 (conductor → gitleaks tip → this iceberg). Real fix:
+	# Ansible must pre-render these (or the catalog gain a Jinja pass). Until
+	# then they're quarantined here so the gate blocks NEW filter-form tokens.
+	KNOWN_UNRENDERED = {("wing-base", "dispatch-notifications"),
+	                    ("wing-base", "dispatch-notifications-digest")}
+
+	filtered = re.compile(r"\{\{[^}]*\|[^}]*\}\}")
+	manifests = list((REPO / "files/anatomy/plugins").rglob("plugin.yml")) \
+		+ list((REPO / "files/anatomy/agents").glob("*.yml"))
+	offenders = []
+	for path in manifests:
+		plugin = path.parent.name if path.parent.name != "agents" else path.stem
+		try:
+			doc = yaml.safe_load(path.read_text()) or {}
+		except yaml.YAMLError:
+			continue
+		for job in ((doc.get("pulse") or {}).get("jobs") or []):
+			if (plugin, job.get("name")) in KNOWN_UNRENDERED:
+				continue
+			vals = [str(job.get("command", ""))] + \
+				[str(v) for v in (job.get("env") or {}).values()]
+			for v in vals:
+				if filtered.search(v):
+					offenders.append(f"{path.relative_to(REPO)} [{job.get('name')}]: {v}")
+	assert not offenders, (
+		"pulse command/env tokens must be bare (catalog does literal replace, "
+		f"no Jinja filters): {offenders}"
+	)
+
+
 def test_real_plugin_manifests_pass_validator():
 	"""Critical: the validator must accept commands that LIVE plugin
 	manifests already register. Otherwise the next plugin-loader run
