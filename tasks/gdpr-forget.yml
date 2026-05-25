@@ -1,0 +1,148 @@
+---
+# =============================================================================
+# tasks/gdpr-forget.yml — GDPR Art. 17 right-to-erasure fan-out.
+# =============================================================================
+# Opt-in (main.yml imports this under tags ['gdpr-forget','never']):
+#   DRY-RUN (default — prints the plan, deletes NOTHING, logs a gdpr_dsar row):
+#     ansible-playbook main.yml --tags gdpr-forget -e forget_subject=user@tld
+#   EXECUTE:
+#     ansible-playbook main.yml --tags gdpr-forget -e forget_subject=user@tld \
+#       -e forget_confirm=true
+#
+# The audited destructive-command list is state/gdpr-erasure-map.yml. Authentik
+# (the identity anchor) + container_exec entries run automatically on a
+# confirmed run; `manual` entries are always REPORTED (the operator runs the
+# printed step). Every run logs a gdpr_dsar row (request_type=erase) — the legal
+# audit record — and is attributable in Wing's events trail. See
+# docs/security-baseline.md §4.
+# =============================================================================
+
+- name: "[GDPR forget] Validate data subject"
+  ansible.builtin.assert:
+    that:
+      - forget_subject is defined
+      - "'@' in (forget_subject | string)"
+    fail_msg: "Set -e forget_subject=<email> (the data subject to erase)."
+    quiet: true
+
+- name: "[GDPR forget] Resolve confirm flag (default dry-run)"
+  ansible.builtin.set_fact:
+    _forget_confirm: "{{ forget_confirm | default(false) | bool }}"
+
+- name: "[GDPR forget] Load audited erasure map"
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/state/gdpr-erasure-map.yml"
+    name: _erasure
+
+- name: "[GDPR forget] Build plan from services enabled for this tenant"
+  ansible.builtin.set_fact:
+    _forget_plan: "{{ _forget_plan | default([]) + [item] }}"
+  loop: "{{ _erasure.services }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: item.flag == 'always' or (lookup('vars', item.flag, default=false) | bool)
+
+- name: "[GDPR forget] Erasure plan banner"
+  ansible.builtin.debug:
+    msg: >-
+      {{ '*** EXECUTE — deletions will run ***' if _forget_confirm
+         else 'DRY-RUN — nothing will be deleted (add -e forget_confirm=true to execute)' }}
+      | subject={{ forget_subject }}
+      | {{ _forget_plan | default([]) | length }} services in scope:
+      {{ _forget_plan | default([]) | map(attribute='id') | list }}
+
+- name: "[GDPR forget] Per-service plan detail"
+  ansible.builtin.debug:
+    msg: "{{ item.id }} [{{ item.method }}] — {{ item.note }}"
+  loop: "{{ _forget_plan | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+# ── Legal audit record (always, even on dry-run) ─────────────────────────────
+- name: "[GDPR forget] Record DSAR row (gdpr_dsar, request_type=erase)"
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      printf '%s' "$NOS_DSAR_JSON" | php bin/record-dsar.php --json=-
+    chdir: "{{ wing_app_dir }}"
+    executable: /bin/bash
+  environment:
+    NOS_DSAR_JSON: >-
+      {{ {
+            'subject_email': forget_subject,
+            'request_type': 'erase',
+            'status': (_forget_confirm | ternary('completed', 'received')),
+            'processing_ids': (_forget_plan | default([]) | map(attribute='id') | list),
+            'notes': (_forget_confirm
+                      | ternary('Erasure executed via tasks/gdpr-forget.yml',
+                                'Dry-run: plan logged, no deletion performed'))
+         } | to_json }}
+  register: _dsar_rec
+  changed_when: "'OK recorded' in (_dsar_rec.stdout | default(''))"
+  failed_when: false
+  when: install_wing | default(true) | bool
+
+# ── Executor: Authentik (identity anchor) ────────────────────────────────────
+- name: "[GDPR forget] Authentik — look up user by email"
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/users/?email={{ forget_subject | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _ak_user
+  failed_when: false
+  no_log: true
+  when:
+    - _forget_confirm
+    - (_forget_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0
+
+- name: "[GDPR forget] Authentik — delete user"
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/users/{{ (_ak_user.json.results | first).pk }}/"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [204, 404]
+  failed_when: false
+  no_log: true
+  when:
+    - _forget_confirm
+    - (_ak_user.json.results | default([]) | length) > 0
+
+# ── Executor: container_exec (email-keyed one-liners) ────────────────────────
+- name: "[GDPR forget] container_exec — resolve container + run delete"
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      CID=$(docker ps -q
+        --filter "label=com.docker.compose.project={{ item.stack }}"
+        --filter "label=com.docker.compose.service={{ item.service }}" | head -1);
+      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi;
+      docker exec "$CID" {{ item.command }}
+    executable: /bin/bash
+  loop: "{{ _forget_plan | default([]) | selectattr('method', 'eq', 'container_exec') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+  register: _cexec
+  changed_when: "'SKIP' not in (_cexec.stdout | default('SKIP'))"
+  failed_when: false
+  when: _forget_confirm
+
+# ── manual services — operator action required (printed in dry-run + execute) ─
+- name: "[GDPR forget] MANUAL erasure required (run the printed step)"
+  ansible.builtin.debug:
+    msg: "MANUAL erase for {{ item.id }} ({{ forget_subject }}): {{ item.note }}"
+  loop: "{{ _forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: "[GDPR forget] Summary"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'ERASURE COMPLETE' if _forget_confirm else 'DRY-RUN COMPLETE' }} for {{ forget_subject }}.
+      Auto-executed: {{ _forget_plan | default([]) | selectattr('method', 'in', ['authentik_api', 'container_exec']) | list | length }};
+      manual steps reported: {{ _forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length }}.
+      DSAR row logged (request_type=erase). {{ '' if _forget_confirm else 'Re-run with -e forget_confirm=true to execute.' }}

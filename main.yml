@@ -828,6 +828,24 @@
       when: patch_id is defined and (patch_id | length) > 0
       tags: ['apply-patches', 'never']
 
+    # ── GDPR Art. 17 right-to-erasure fan-out (explicit opt-in) ─────────────
+    # Dry-run by default; -e forget_confirm=true to execute. Always logs a
+    # gdpr_dsar row. Audited command list: state/gdpr-erasure-map.yml; runbook:
+    # docs/security-baseline.md §4. 'never' keeps it out of normal runs.
+    #   ansible-playbook main.yml --tags gdpr-forget -e forget_subject=user@tld
+    - name: "[GDPR] Right-to-erasure fan-out (opt-in)"
+      ansible.builtin.import_tasks: tasks/gdpr-forget.yml
+      when: forget_subject is defined and (forget_subject | length) > 0
+      tags: ['gdpr-forget', 'never']
+
+    # ── GDPR storage-limitation purge (Art. 5(1)(e)) — explicit opt-in ──────
+    # On-demand audit-log retention enforcement; dry-run unless
+    # -e retention_confirm=true. Not scheduled. See docs/security-baseline.md §4.
+    #   ansible-playbook main.yml --tags audit-retention [-e retention_confirm=true]
+    - name: "[GDPR] Audit-log retention purge (opt-in)"
+      ansible.builtin.import_tasks: tasks/audit-retention.yml
+      tags: ['audit-retention', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.

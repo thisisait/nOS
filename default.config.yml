@@ -659,6 +659,10 @@ wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
 wing_app_dir: "{{ wing_home }}/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
+# Audit-log retention horizon (GDPR Art. 5(1)(e) storage limitation). Enforced
+# on-demand by `--tags audit-retention` (dry-run unless -e retention_confirm=true);
+# see docs/security-baseline.md §4. Not auto-scheduled.
+wing_audit_retention_days: 365
 
 # ==============================================================================
 # NODE.JS

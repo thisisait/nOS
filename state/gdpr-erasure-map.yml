@@ -1,0 +1,149 @@
+# =============================================================================
+# GDPR right-to-erasure map (Art. 17) — consumed by tasks/gdpr-forget.yml
+# =============================================================================
+# ONE audited file for every destructive per-subject deletion. Centralized on
+# purpose: erasure commands are irreversible, so a single reviewable list beats
+# scattering `rm`-equivalents across 20 plugins. Keys (`id`) match the DPA
+# register / gdpr_processing rows (svc_<name>); `flag` is the install toggle the
+# service is gated on (`always` = part of an always-on stack).
+#
+# Coverage = every service that stores PER-USER data (native_oidc + header_oidc
+# + AT-proto identity). forward_auth services are access gates with no per-user
+# state, so they are intentionally absent — there is nothing to erase.
+#
+# method:
+#   authentik_api  — the identity anchor. Deletes the Authentik user, revoking
+#                    SSO everywhere. Executed automatically on a confirmed run.
+#   container_exec — `docker exec` an email-keyed one-liner in the service
+#                    container. Executed on a confirmed run; the container is
+#                    resolved by compose label at runtime.
+#   manual         — no safe email-keyed programmatic delete verified yet; the
+#                    dry-run plan prints `note` (the exact documented step) and
+#                    a confirmed run still only REPORTS it. Promote an entry to
+#                    container_exec/authentik_api once verified on a live host.
+#
+# {{ forget_subject }} (the data subject's email) is substituted at runtime.
+# SAFETY: nothing here runs without `-e forget_confirm=true`; the default
+# dry-run prints the full plan and logs a gdpr_dsar row only.
+# =============================================================================
+
+services:
+  # ── Identity anchor (always first) ──────────────────────────────────────
+  - id: svc_authentik
+    flag: install_authentik
+    method: authentik_api
+    note: "Delete the Authentik user — revokes SSO access to every service."
+
+  # ── Verified email-keyed container deletes ──────────────────────────────
+  - id: svc_gitea
+    flag: install_gitea
+    method: container_exec
+    stack: devops
+    service: gitea
+    command: "gitea admin user delete --email {{ forget_subject }} --purge"
+    note: "gitea admin user delete --email <subject> --purge"
+
+  - id: svc_wordpress
+    flag: install_wordpress
+    method: container_exec
+    stack: iiab
+    service: wordpress
+    command: "wp user delete {{ forget_subject }} --reassign=0 --yes --allow-root"
+    note: "wp user delete <subject> --reassign=0 --yes"
+
+  # ── Manual (documented step printed in the plan; not auto-run) ───────────
+  - id: svc_nextcloud
+    flag: install_nextcloud
+    method: manual
+    note: "Resolve uid from email (occ user:list --output=json), then
+           docker exec <nextcloud> php occ user:delete <uid>."
+
+  - id: svc_grafana
+    flag: always
+    method: manual
+    note: "GET /api/users/lookup?loginOrEmail=<subject> → DELETE /api/admin/users/:id (admin basic auth)."
+
+  - id: svc_gitlab
+    flag: install_gitlab
+    method: manual
+    note: "GET /api/v4/users?search=<subject> → DELETE /api/v4/users/:id?hard_delete=true (admin PAT)."
+
+  - id: svc_outline
+    flag: install_outline
+    method: manual
+    note: "POST /api/users.delete with the user id (admin API token)."
+
+  - id: svc_open-webui
+    flag: install_openwebui
+    method: manual
+    note: "Admin Panel → Users → delete; or DELETE /api/v1/users/{id} (admin JWT)."
+
+  - id: svc_n8n
+    flag: install_n8n
+    method: manual
+    note: "Owner UI → Settings → Users → delete; or DELETE /rest/users/:id (owner auth)."
+
+  - id: svc_vaultwarden
+    flag: install_vaultwarden
+    method: manual
+    note: "Admin panel /admin → Users → delete the account by email."
+
+  - id: svc_freescout
+    flag: install_freescout
+    method: manual
+    note: "Manage → Users → delete; or php artisan freescout:... (no stable email-keyed CLI)."
+
+  - id: svc_infisical
+    flag: install_infisical
+    method: manual
+    note: "Org Settings → Members → remove; org-admin API DELETE /api/v1/organizations/:id/memberships/:mid."
+
+  - id: svc_miniflux
+    flag: install_miniflux
+    method: manual
+    note: "Admin → Users → remove; or DELETE /v1/users/:id (admin token)."
+
+  - id: svc_hedgedoc
+    flag: install_hedgedoc
+    method: manual
+    note: "bin/manage_users --del <email> inside the container (HedgeDoc CLI)."
+
+  - id: svc_bookstack
+    flag: install_bookstack
+    method: manual
+    note: "Settings → Users → delete; or php artisan (no stable email-keyed CLI)."
+
+  - id: svc_portainer
+    flag: install_portainer
+    method: manual
+    note: "GET /api/users (match by Username/email) → DELETE /api/users/:id (admin JWT)."
+
+  - id: svc_erpnext
+    flag: install_erpnext
+    method: manual
+    note: "bench --site <site> remove-user <email>, or set User as Disabled + anonymize per Frappe DPA tooling."
+
+  - id: svc_homeassistant
+    flag: install_homeassistant
+    method: manual
+    note: "Settings → People & Users → delete (no stable API for user deletion)."
+
+  - id: svc_jellyfin
+    flag: install_jellyfin
+    method: manual
+    note: "GET /Users (match by Name/email) → DELETE /Users/{id} (X-Emby-Token admin)."
+
+  - id: svc_superset
+    flag: install_superset
+    method: manual
+    note: "Settings → List Users → delete; or superset fab CLI."
+
+  - id: svc_firefly
+    flag: install_firefly
+    method: manual
+    note: "Admin → Users → delete; or DELETE /api/v1/users/:id (admin PAT)."
+
+  - id: svc_bluesky-pds
+    flag: install_bluesky_pds
+    method: manual
+    note: "pdsadmin account delete <did> (resolve did from @<handle>.bsky.<tld>)."

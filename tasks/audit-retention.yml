@@ -1,0 +1,38 @@
+---
+# =============================================================================
+# tasks/audit-retention.yml — GDPR storage-limitation purge (Art. 5(1)(e)).
+# =============================================================================
+# Opt-in (main.yml imports under tags ['audit-retention','never']); on-demand,
+# NOT scheduled. Dry-run by default — add -e retention_confirm=true to delete.
+#   ansible-playbook main.yml --tags audit-retention                       # dry-run
+#   ansible-playbook main.yml --tags audit-retention -e retention_confirm=true
+#
+# Horizon: wing_audit_retention_days (default 365, default.config.yml). Purges
+# Wing's audit `events` table only. Authentik keeps its OWN event retention —
+# set it in Authentik → System → Settings → "Event retention" (it self-purges).
+# See docs/security-baseline.md §4.
+# =============================================================================
+
+- name: "[Audit retention] Resolve confirm flag (default dry-run)"
+  ansible.builtin.set_fact:
+    _retention_confirm: "{{ retention_confirm | default(false) | bool }}"
+
+- name: "[Audit retention] Purge wing.db events older than {{ wing_audit_retention_days | default(365) }} days"
+  ansible.builtin.command:
+    cmd: >-
+      php bin/purge-events.php
+      --db={{ wing_data_dir }}/wing.db
+      --older-than-days={{ wing_audit_retention_days | default(365) }}
+      {{ '' if _retention_confirm else '--dry-run' }}
+    chdir: "{{ wing_app_dir }}"
+  register: _audit_purge
+  changed_when: >-
+    'Purged' in (_audit_purge.stdout | default(''))
+    and 'Purged 0 ' not in (_audit_purge.stdout | default(''))
+  when: install_wing | default(true) | bool
+
+- name: "[Audit retention] Result"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _audit_purge.stdout | default('(wing not installed — skipped)') | trim }}
+      {{ '' if _retention_confirm else '— dry-run; add -e retention_confirm=true to execute' }}

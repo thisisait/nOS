@@ -79,6 +79,11 @@ final class EventRepository
 		// target_groups, target_apps, expires_at}. Revoke-row carries
 		// {invitation_pk, invitation_uuid}. Both rows source='wing'.
 		'user_invitation_issued', 'user_invitation_revoked',
+		// Right-to-erasure fan-out (C3 — tasks/gdpr-forget.yml, 2026-05-25).
+		//   gdpr_forget_user — one row per Art. 17 erasure run; result_json carries
+		//   {subject, dsar_id, services_planned, services_erased, dry_run}. Paired
+		//   with a gdpr_dsar row (request_type=erase) which is the legal record.
+		'gdpr_forget_user',
 	];
 
 	public function __construct(

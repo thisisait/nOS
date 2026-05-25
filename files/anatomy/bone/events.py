@@ -67,6 +67,10 @@ VALID_TYPES = {
     # whitelists aligned so a future Bone POST proxying the same event
     # type (e.g. webhook-driven redemption notification) doesn't 400.
     "user_invitation_issued", "user_invitation_revoked",
+    # ── C3 right-to-erasure (tasks/gdpr-forget.yml, 2026-05-25) ─────────────
+    # One row per Art. 17 erasure run; Wing-side whitelist must stay aligned.
+    # result_json: {subject, dsar_id, services_planned, services_erased, dry_run}.
+    "gdpr_forget_user",
 }
 
 
