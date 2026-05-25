@@ -7,6 +7,10 @@ exclude_paths:
   # don't install (it's a Molecule-only test dep, not a runtime dep).
   # Excluding the molecule/ subdir keeps lint focused on runtime code.
   - roles/pazny.dotfiles/molecule
+  # Same scaffold in the upstream galaxy role (gitignored local install from
+  # requirements.yml; absent on CI). Excluded so a whole-tree local ansible-lint
+  # isn't red on a vendored Molecule-only dep we never run.
+  - roles/geerlingguy.dotfiles/molecule
 
 skip_list:
   - schema[meta]
