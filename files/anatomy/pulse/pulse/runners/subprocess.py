@@ -21,7 +21,7 @@ import time
 # spawns the process, so the allowlist holds regardless of who wrote the
 # pulse_jobs row (direct SQLite, agents, a future create-path) — not just the
 # one PHP create endpoint. Keep in lockstep with the PHP constants.
-_ALLOWED_PREFIXES = ("/opt/homebrew/bin/", "/usr/local/bin/", "/Users/")
+_ALLOWED_PREFIXES = ("/opt/homebrew/bin/", "/usr/local/bin/", "/Users/", "/home/")
 _BANNED_BASENAMES = frozenset(
     ("sh", "bash", "zsh", "dash", "csh", "ksh", "fish", "sudo", "su", "env"))
 _BASENAME_RE = re.compile(r"^[a-z][a-zA-Z0-9._-]{0,63}$")

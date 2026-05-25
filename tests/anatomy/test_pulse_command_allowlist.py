@@ -46,9 +46,15 @@ def test_pulse_command_requires_absolute_path():
 	assert "command must be an absolute path" in src
 	# Must also check the prefix allowlist.
 	assert "ALLOWED_COMMAND_PREFIXES" in src
-	# Must contain the canonical safe prefixes.
-	for prefix in ("/opt/homebrew/bin/", "/usr/local/bin/"):
+	# Must contain the canonical safe prefixes — incl. host-home on BOTH
+	# platforms (/Users on macOS, /home on Linux; playbook_dir-rooted scripts).
+	for prefix in ("/opt/homebrew/bin/", "/usr/local/bin/", "/Users/", "/home/"):
 		assert f"'{prefix}'" in src, f"ALLOWED_COMMAND_PREFIXES must include {prefix}"
+
+	# Python runner must stay in lockstep with the PHP presenter.
+	runner = (REPO / "files/anatomy/pulse/pulse/runners/subprocess.py").read_text()
+	for prefix in ("/Users/", "/home/"):
+		assert f'"{prefix}"' in runner, f"subprocess._ALLOWED_PREFIXES must include {prefix}"
 
 
 def test_pulse_basename_banned_for_shell_interpreters():

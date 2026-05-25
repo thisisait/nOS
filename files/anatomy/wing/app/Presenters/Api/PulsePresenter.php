@@ -176,7 +176,8 @@ final class PulsePresenter extends BaseApiPresenter
 	private const ALLOWED_COMMAND_PREFIXES = [
 		'/opt/homebrew/bin/',     // Homebrew-installed CLIs (gitleaks, trivy, php, …)
 		'/usr/local/bin/',        // legacy/system-managed CLIs
-		'/Users/',                // host-owned scripts (wing/app/bin, files/anatomy/plugins/<x>/skills/)
+		'/Users/',                // host-owned scripts on macOS (wing/app/bin, plugins/<x>/skills/)
+		'/home/',                 // host-owned scripts on Linux (playbook_dir = /home/<user>/…)
 	];
 
 	/**
