@@ -81,7 +81,8 @@ plist path untouched, `systemd-user` calls `ensure_unit`.
 | **Wing** | ✅ | ✅ **ported (2026-05-25)** — FrankenPHP static binary + composer via `frankenphp php-cli`; **pending VM validation** (static binary arch, php-cli, Caddyfile) |
 | OpenClaw | ✅ | 🚫 **Darwin-gated** — Ollama MLX is Apple-Silicon only; Linux = separate Ollama-CUDA role (post-v1) |
 | Hermes | ✅ | 🚫 **Darwin-gated** — brew-coupled (uv/python@3.13); apt/uv-installer branch = backlog |
-| acme / backup (timers) | launchd | ⏳ backlog — `su_type: timer` (template ready, not yet wired) |
+| **backup** (timer) | launchd | ✅ **ported (2026-05-25)** — oneshot `.service` + `.timer` via `ensure_unit` |
+| acme (renewal) | acme.sh self-cron | ⏳ acme.sh manages its own renewal cron cross-platform; remaining gap is the **Homebrew install** of acme.sh on Linux (apt/curl) |
 
 The **preflight launchctl loop** in `main.yml` (`[Preflight] Ensure anatomy
 daemons loaded`) is already `when: ansible_os_family == 'Darwin'` — Linux-safe

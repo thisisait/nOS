@@ -35,12 +35,19 @@
     mode: '0600'
     force: false
 
+# ── Schedule: launchd (macOS) | systemd --user timer (Linux) ──────────────────
+# macOS uses a launchd StartCalendarInterval plist. Linux uses a systemd --user
+# oneshot .service driven by a .timer (OnCalendar) — rendered via ensure_unit.
+# Both gate on nos_service_manager (tasks/_platform.yml).
+
+# ---- macOS: launchd ----
 - name: "[backup] Deploy launchd plist"
   ansible.builtin.template:
     src: backup-launchd.plist.j2
     dest: "{{ backup_launchd_plist }}"
     mode: '0644'
   notify: Reload backup launchd
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[backup] Load launchd agent (idempotent)"
   ansible.builtin.command: >
@@ -50,6 +57,36 @@
   failed_when: >
     _backup_load.rc != 0 and
     'already loaded' not in (_backup_load.stderr | default(''))
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ---- Linux: systemd --user oneshot service + timer ----
+- name: "[backup] (Linux) Render oneshot backup service (not enabled — timer drives it)"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ backup_launchd_label }}"
+    su_description: "nOS nightly backup to RustFS"
+    su_service_type: oneshot
+    su_exec_start: "/bin/bash {{ backup_script_path }}"
+    su_working_dir: "{{ ansible_facts['env']['HOME'] }}"
+    su_enable: false
+    su_environment:
+      HOME: "{{ ansible_facts['env']['HOME'] }}"
+      PATH: "{{ ansible_facts['env']['HOME'] }}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[backup] (Linux) Render + enable backup timer"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ backup_launchd_label }}"
+    su_type: timer
+    su_description: "nOS nightly backup schedule"
+    su_timer_calendar: "*-*-* {{ '%02d' | format(backup_schedule_hour | int) }}:{{ '%02d' | format(backup_schedule_minute | int) }}:00"
+    su_timer_unit: "{{ backup_launchd_label }}.service"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 - name: "[backup] Optionally run backup.sh immediately (backup_run_now=true)"
   ansible.builtin.command: "{{ backup_script_path }}"

@@ -73,6 +73,9 @@
     XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"
   when: _su_render is changed
 
+# su_enable=false renders the unit but does NOT enable/start it — used for a
+# timer-driven oneshot .service (the .timer enables it; the service itself must
+# not run at boot). daemon-reload above still makes it visible to the timer.
 - name: "[systemd_user] Enable + (re)start {{ _su_unit_file }}"
   ansible.builtin.systemd_service:
     scope: user
@@ -81,3 +84,4 @@
     state: "{{ 'restarted' if (_su_render is changed and (su_type | default('service')) == 'service') else 'started' }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"
+  when: su_enable | default(true) | bool
