@@ -122,3 +122,26 @@ pulse:
         BONE_API_URL: "http://127.0.0.1:9000"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         DRIFT_STALE_HOURS: "336"
+
+    # Nervy (2026-05-25): autonomous vulnerability scan — the LLM scan-REFRESH
+    # half. Migrated from the launchd eu.thisisait.nos.vulnscan job to unified
+    # Pulse scheduling (alongside gitleaks + conductor), per tasks/vulnerability-
+    # scan.yml's own "eventually migrate to Pulse" note. Dispatches `claude`
+    # with scan-prompt.md over the oldest components, refreshes last_full_scan +
+    # remediation-queue, emits scan.batch_* events. No-ops cleanly when `claude`
+    # is absent (scan-runner preflights it). Pause via Wing /pulse to stop the
+    # autonomous LLM scans. REPO_DIR/VULNSCAN_SECURITY_DIR are set explicitly —
+    # scan-runner's $(dirname $0)/../docs default mis-resolves from the repo path.
+    - name: vulnerability-scan
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/vuln-scan/scan-runner.sh"
+      schedule: "0 2 * * *"          # 02:00 UTC daily (was 2×/day launchd)
+      jitter_min: 15
+      max_runtime_s: 1800             # an LLM scan of a batch can run minutes
+      max_concurrent: 1
+      env:
+        REPO_DIR: "{{ playbook_dir }}"
+        VULNSCAN_SECURITY_DIR: "{{ playbook_dir }}/docs/llm/security"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        # `claude` (Claude Code) must be on this PATH; adjust if installed elsewhere.
+        PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
