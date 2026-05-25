@@ -80,6 +80,44 @@
     'Ingested' in (_wing_ingest.stdout | default(''))
     and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
 
+# ── GDPR Article 30 register — Tier-1 core services (C3, 2026-05-25) ──────────
+# Per-plugin gdpr: blocks were loader-validated (Art. 6(1)) but never ingested:
+# the /gdpr UI + DPA story covered only the 4 Tier-2 apps, leaving ~50 core
+# services dark. This closes the gap. The canonical mapper
+# (files/anatomy/module_utils/nos_gdpr.py) turns each plugin gdpr block into a
+# complete Article-30 record; we upsert via the SAME bin/upsert-gdpr.php path
+# the apps_runner uses for Tier-2 (--id=svc_<name> here vs app_<name> there).
+# The static DPA register (state/dpa-register.md) is the offline twin of these
+# same rows — both rendered from the one mapper, so /gdpr and the markdown agree.
+- name: "[pazny.wing] Emit Tier-1 GDPR Article-30 records (canonical mapper)"
+  ansible.builtin.command:
+    cmd: "python3 {{ playbook_dir }}/tools/gdpr-records.py --tier core"
+  register: _gdpr_records_raw
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.wing] Upsert Tier-1 GDPR processing rows (host PHP CLI, one per service)"
+  # Mirrors roles/pazny.apps_runner/tasks/post.yml Hook 7. JSON goes through an
+  # env var (NOS_GDPR_JSON) so the shell never has to quote nested arrays;
+  # `--json=-` reads it from the stdin pipe. Idempotent: re-running rewrites the
+  # row from the latest plugin block. failed_when:false keeps a single malformed
+  # record from aborting the run — the changed/ok tally surfaces any miss.
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      printf '%s' "$NOS_GDPR_JSON"
+      | php bin/upsert-gdpr.php --id={{ item.id }} --json=-
+    chdir: "{{ wing_app_dir }}"
+    executable: /bin/bash
+  environment:
+    NOS_GDPR_JSON: "{{ item | to_json }}"
+  loop: "{{ _gdpr_records_raw.stdout | from_json }}"
+  loop_control:
+    label: "{{ item.id }}"
+  register: _gdpr_tier1_upserts
+  changed_when: "'OK upserted' in (_gdpr_tier1_upserts.stdout | default(''))"
+  failed_when: false
+
 # ── API token reconverge ─────────────────────────────────────────────────────
 # Provisions named tokens for every first-class Wing consumer. Each gets its
 # own row so the audit trail carries a meaningful actor name. Idempotent.

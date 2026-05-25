@@ -126,6 +126,5 @@ gdpr:
     - partial_credentials     # secret_masked only: first 4 + '...' + last 4
   data_subjects: [operators]
   retention_days: 365
-  processors:
-    - gitleaks                # local Homebrew binary — no external data transfer
+  processors: []                  # local Homebrew binary; no external data transfer
   eu_residency: true

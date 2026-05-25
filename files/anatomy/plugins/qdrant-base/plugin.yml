@@ -246,8 +246,7 @@ gdpr:
     - automated_systems               # agent run summaries
   legal_basis: legitimate_interests   # research / agent memory; not contract-bound
   retention_days: 365                 # nightly Pulse rebuild expires older points
-  processors:
-    - qdrant
+  processors: []                  # self-hosted; no third-party (Art. 30) processor
   eu_residency: true
   # Plugin-specific extensions (additionalProperties on gdpr is true).
   bone_redaction_required: true       # Bone MUST strip operator email before upsert

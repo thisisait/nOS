@@ -132,8 +132,7 @@ gdpr:
     - automated_systems               # agent clients (Bone, Pulse, conductor)
   legal_basis: contract               # auth is contractually required for service access
   retention_days: -1                  # active accounts kept indefinitely; deletion via DSAR
-  processors:
-    - authentik
+  processors: []                  # self-hosted; no third-party (Art. 30) processor
   eu_residency: true
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────

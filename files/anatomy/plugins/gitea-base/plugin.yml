@@ -122,8 +122,7 @@ gdpr:
     - end_users                          # tenant developers (Tier 2 RBAC)
   legal_basis: contract
   retention_days: -1                     # active accounts kept; deletion via DSAR
-  processors:
-    - gitea
+  processors: []                  # self-hosted; no third-party (Art. 30) processor
   eu_residency: true
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────

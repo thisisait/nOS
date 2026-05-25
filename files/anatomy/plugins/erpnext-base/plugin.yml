@@ -119,9 +119,7 @@ gdpr:
     - third_parties                      # customer contacts in CRM
   legal_basis: contract
   retention_days: 2555                   # 7y per typical accounting law
-  processors:
-    - erpnext
-    - mariadb
+  processors: []                  # self-hosted (mariadb is internal infra, not a processor)
   eu_residency: true
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────

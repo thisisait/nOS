@@ -64,7 +64,5 @@ gdpr:
     - operators
   legal_basis: legitimate_interests
   retention_days: 14
-  processors:
-    - grafana
-    - tempo
+  processors: []                  # self-hosted (grafana/tempo are internal infra)
   eu_residency: true
