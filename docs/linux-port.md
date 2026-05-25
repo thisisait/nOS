@@ -1,6 +1,15 @@
 # Linux port — operator guide
 
-**Status:** code-complete on master 2026-04-26 (Track C of `docs/roadmap-2026q2.md`). Not yet wet-tested on a clean Ubuntu 24.04 LTS host. This guide is the operator runbook for that test, plus a record of which roles already work cross-platform and which still need Darwin gates.
+**Status:** infra layer (apt / docker / nginx / hardening) code-complete on master 2026-04-26; **host-daemon layer in progress (2026-05-25)**. Not yet wet-tested on a clean Ubuntu 24.04 LTS host. This guide is the operator runbook for that test, plus a record of which roles already work cross-platform and which still need Darwin gates.
+
+> **⚠️ Regression note (2026-05-25):** the original Track C predates the anatomy
+> host-revert. **A3.5 / A3a / A4 moved Bone, Wing, Pulse and OpenClaw from Docker
+> containers back to host `launchd` plists** — re-coupling the core daemons to
+> macOS. The cross-platform fix is a service-manager abstraction
+> (`pazny.linux.systemd_user::ensure_unit`, branched on `nos_service_manager`).
+> **Bone is the first daemon ported (pilot, 2026-05-25);** Wing / Pulse / OpenClaw
+> and the preflight launchctl loop (`main.yml` "[Preflight] Ensure anatomy daemons
+> loaded") still need the same branch. See "Host daemons" below.
 
 ---
 
@@ -36,11 +45,47 @@ Cross-platform variables live in `tasks/_platform.yml` (imported in `pre_tasks`)
 
 | Concern | Status | Workaround |
 |---|---|---|
-| `tasks/php.yml` | macOS-only (Homebrew) | Wing now runs in a container (Track A), so host PHP isn't needed by default. Set `install_php: false`. |
+| `tasks/php.yml` | macOS-only (Homebrew) | **STALE WORKAROUND** — Wing reverted to a HOST FrankenPHP launchd daemon in A3.5, so host PHP *is* needed again when `install_wing: true`. Linux needs an apt `php8.3-*` + FrankenPHP path. Until then, set `install_wing: false` on Linux. |
 | `tasks/node.yml`, `tasks/python.yml`, `tasks/golang.yml`, `tasks/dotnet.yml`, `tasks/bun.yml` | macOS-only | Skip via `install_node: false` etc. on Linux for now. apt + asdf siblings come in Track C+. |
 | `pazny.openclaw` (launchd plist) | macOS-only | Skip with `install_openclaw: false`. systemd-user equivalent is a follow-up. |
 | `pazny.dotfiles` | macOS-only | Skip. Linux dotfile management is operator-side. |
 | MLX backend for Ollama | macOS-only by design | Use Ollama's CUDA / CPU backend on Linux; nOS doesn't enforce MLX. |
+
+## Host daemons (launchd → systemd --user)
+
+The anatomy daemons run as **host services**, not containers (A3.5/A3a/A4).
+On macOS that's a `launchd` plist + `launchctl bootstrap`; on Linux it's a
+systemd `--user` unit. The abstraction lives in **`pazny.linux.systemd_user`**:
+
+```yaml
+- include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: eu.thisisait.nos.bone
+    su_description: "nOS Bone — local FastAPI bridge"
+    su_exec_start: "{{ bone_venv }}/bin/uvicorn main:app --host 127.0.0.1 --port {{ bone_port }}"
+    su_working_dir: "{{ bone_runtime_dir }}"
+    su_environment: { WING_EVENTS_HMAC_SECRET: "...", ... }   # → Environment= lines
+```
+
+It renders `~/.config/systemd/user/<name>.service`, runs `loginctl enable-linger`
+(units survive logout), and `systemctl --user enable --now`. Each daemon role
+branches on `nos_service_manager` (`tasks/_platform.yml`): `launchd` keeps the
+plist path untouched, `systemd-user` calls `ensure_unit`.
+
+| Daemon | macOS (launchd) | Linux (systemd --user) |
+|---|---|---|
+| **Bone** | ✅ | ✅ **pilot done (2026-05-25)** |
+| Wing | ✅ | ⏳ TODO — also needs host PHP/FrankenPHP on Linux |
+| Pulse | ✅ | ⏳ TODO (same `ensure_unit` pattern) |
+| OpenClaw | ✅ | ⏳ TODO — + Ollama CUDA/CPU backend (no MLX on Linux) |
+| Hermes | ✅ | ⏳ TODO |
+| acme / backup (timers) | launchd | ⏳ TODO — `su_type: timer` (template ready) |
+
+Also still mac-coded: the **preflight launchctl loop** in `main.yml`
+(`[Preflight] Ensure anatomy daemons (Wing/Bone/Pulse) loaded in launchd`) — it
+must branch on `nos_service_manager` before a Linux blank can complete.
 
 ## Linux gotchas
 
