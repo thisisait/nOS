@@ -11,7 +11,11 @@
 # be revisited when Uptime Kuma v2.x ships stable OIDC.
 # ==============================================================================
 
-uptime_kuma_version: "1"                            # "1" = latest v1.x; pin e.g. "1.23.13"
+uptime_kuma_version: "1"                            # major-locked v1.x (last stable line).
+# NOTE (C1 2026-05-25): v1.x is EOL upstream; only v2.x gets updates. v2.x is a
+# breaking major (data migration + native OIDC). Staying on "1" (functional,
+# forward_auth-gated) is a deliberate decision — migrating to v2.x is a separate
+# operator call, not a mechanical pin. "1" stays in v1.x; never jumps to v2.x.
 uptime_kuma_port: 3001
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"

@@ -10,7 +10,7 @@
 # blank-reset path resolver, RBAC tier mapping).
 # ==============================================================================
 
-calibreweb_version: "latest"
+calibreweb_version: "0.6.26-ls384"
 calibreweb_port: 8083
 calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"

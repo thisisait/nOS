@@ -8,7 +8,7 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-wordpress_version: "latest"
+wordpress_version: "6.9.4-php8.3-apache"
 wordpress_port: 8084
 wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"

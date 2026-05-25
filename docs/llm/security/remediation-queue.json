@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T00:00:00Z",
+  "generated_at": "2026-05-25T00:00:00Z",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -77,12 +77,14 @@
       "fix_version": "0.6.6",
       "remediation_type": "version_bump",
       "remediation_detail": "Switch Open WebUI from :main (development branch) to latest release tag (0.6.x). The :main tag pulls unreviewed development code.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned openwebui_version=\"0.8.12\" in roles/pazny.open_webui/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 0.6.6)."
     },
     {
       "id": "REM-006",
@@ -177,12 +179,14 @@
       "fix_version": "2.0.0",
       "remediation_type": "version_bump",
       "remediation_detail": "URGENT: n8n has 4 CRITICAL CVEs (CVSS 10.0+9.9). Unauthenticated RCE via webhook. Pin n8n_version to '2.0.0' in default.config.yml. Major version bump \u2014 test workflow compatibility.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.cyera.com/research/ni8mare-unauthenticated-remote-code-execution-in-n8n-cve-2026-21858",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned n8n_version=\"2.14.1\" in roles/pazny.n8n/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 2.0.0)."
     },
     {
       "id": "REM-012",
@@ -193,12 +197,14 @@
       "fix_version": "7.4.6-alpine",
       "remediation_type": "version_bump",
       "remediation_detail": "URGENT: Redis RediShell RCE (CVSS 10.0) + NO authentication. Pin redis_version to '7.4.6-alpine'. Combined with REM-003 (add requirepass).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://redis.io/blog/security-advisory-cve-2025-49844/",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned redis_version=\"7.4.6-alpine\" in roles/pazny.redis/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 7.4.6-alpine)."
     },
     {
       "id": "REM-013",
@@ -279,12 +285,14 @@
       "fix_version": "v15.98.1",
       "remediation_type": "version_bump",
       "remediation_detail": "ERPNext unauth document access (CVSS 9.3) + 3 SQLi CVEs. Pin erpnext_version to 'v15.98.1' (exact, not 'v15').",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://radar.offseq.com/threat/cve-2026-27471-cwe-862-missing-authorization-in-fr-0d95cb60",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned erpnext_version=\"v15.98.1\" in roles/pazny.erpnext/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v15.98.1)."
     },
     {
       "id": "REM-018",
@@ -295,12 +303,14 @@
       "fix_version": "18.8.2-ce.0",
       "remediation_type": "version_bump",
       "remediation_detail": "GitLab 9 HIGH CVEs (SAML bypass, 2FA bypass, XSS, DoS). Pin gitlab_version to '18.8.2-ce.0'.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://about.gitlab.com/releases/2025/03/12/patch-release-gitlab-17-9-2-released/",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned gitlab_version=\"18.10.3-ce.0\" in roles/pazny.gitlab/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 18.8.2-ce.0)."
     },
     {
       "id": "REM-019",
@@ -311,12 +321,14 @@
       "fix_version": "1.35.4",
       "remediation_type": "version_bump",
       "remediation_detail": "Vaultwarden 5 HIGH CVEs (RCE, priv escalation, auth bypass). Pin vaultwarden_version to '1.35.4'.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2025-24364",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned vaultwarden_version=\"1.35.4\" in roles/pazny.vaultwarden/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 1.35.4)."
     },
     {
       "id": "REM-020",
@@ -327,12 +339,14 @@
       "fix_version": "16.10-alpine",
       "remediation_type": "version_bump",
       "remediation_detail": "PostgreSQL 3 HIGH CVEs (SQLi in libpq, pg_dump RCE). Pin postgresql_version to '16.10-alpine'.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.postgresql.org/support/security/CVE-2025-1094/",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned postgresql_version=\"16.13-alpine\" in roles/pazny.postgresql/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 16.10-alpine)."
     },
     {
       "id": "REM-021",
@@ -361,12 +375,14 @@
       "fix_version": "2.5.2",
       "remediation_type": "version_bump",
       "remediation_detail": "CORRECTION: n8n minimum safe version is 2.5.2, not 2.0.0. CVE-2026-25049 (CVSS 9.4) sandbox escape via type confusion allows authenticated RCE. Public exploits available. Update REM-011 fix_version to 2.5.2.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.endorlabs.com/learn/cve-2026-25049-n8n-rce",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 1
+      "scan_cycle": 1,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned n8n_version=\"2.14.1\" in roles/pazny.n8n/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 2.5.2)."
     },
     {
       "id": "REM-023",
@@ -428,12 +444,14 @@
       "fix_version": "latest",
       "remediation_type": "version_bump",
       "remediation_detail": "Metabase notification API credential exfiltration \u2014 authenticated user can extract DB connection credentials via crafted notification template. Ensure Metabase is on latest release.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.metabase.com/blog/security-vulnerability-postmortem",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 1
+      "scan_cycle": 1,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned metabase_version=\"v0.61.2.6\" in roles/pazny.metabase/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes latest)."
     },
     {
       "id": "REM-027",
@@ -444,12 +462,14 @@
       "fix_version": "18.10.1-ce.0",
       "remediation_type": "version_bump",
       "remediation_detail": "CORRECTION: GitLab latest safe version is 18.10.1-ce.0 (March 2026 patch), not 18.8.2. Fixes Jira credential leak, GraphQL DoS, additional auth issues. Update REM-018.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://about.gitlab.com/releases/2026/01/07/patch-release-gitlab-18-7-1-released/",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 1
+      "scan_cycle": 1,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned gitlab_version=\"18.10.3-ce.0\" in roles/pazny.gitlab/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 18.10.1-ce.0)."
     },
     {
       "id": "REM-028",
@@ -460,12 +480,14 @@
       "fix_version": "1.24.7+",
       "remediation_type": "version_bump",
       "remediation_detail": "CRITICAL: Gitea directory traversal in repository-template processing (authenticated RCE). Affected: >= v1.11.0-rc1 && <= v1.24.6. Attacker creates malicious template repo \u2192 symlink to .ssh/authorized_keys \u2192 arbitrary SSH key injection \u2192 RCE. Public exploit available. Pin gitea_version to '1.25.5' (latest stable).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/ClemaX/Gitea-Forgejo-CVE-2026",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned gitea_version=\"1.25.5\" in roles/pazny.gitea/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 1.24.7+)."
     },
     {
       "id": "REM-029",
@@ -508,12 +530,14 @@
       "fix_version": "11.4.10",
       "remediation_type": "version_bump",
       "remediation_detail": "MariaDB heap buffer overflow in JSON_SCHEMA_VALID() (CVE-2026-32710, CVSS 8.6) + mariadb-dump RCE (CVE-2025-13699, CVSS 7.0). Pin mariadb_version to '11.4.10' or verify 'lts' tag resolves to >= 11.4.10.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://securityonline.info/mariadb-json-schema-validation-buffer-overflow-vulnerability-cve-2026-32710/",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mariadb_version=\"11.8.6\" in roles/pazny.mariadb/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 11.4.10)."
     },
     {
       "id": "REM-032",
@@ -524,12 +548,14 @@
       "fix_version": "0.6.35",
       "remediation_type": "version_bump",
       "remediation_detail": "CORRECTION: Open WebUI minimum safe version is 0.6.35, not 0.6.6 (REM-005). CVE-2025-64496 (CVSS 7.3): SSE code injection via Direct Connections \u2192 account takeover + RCE. CVE-2025-64495: Stored DOM XSS in prompt templates. Update REM-005 fix_version to 0.6.35.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.catonetworks.com/blog/cato-ctrl-vulnerability-discovered-open-webui-cve-2025-64496/",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned openwebui_version=\"0.8.12\" in roles/pazny.open_webui/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 0.6.35)."
     },
     {
       "id": "REM-033",
@@ -540,12 +566,14 @@
       "fix_version": "10.10.7+",
       "remediation_type": "version_bump",
       "remediation_detail": "Jellyfin argument injection via FFmpeg codec (CVE-2025-31499). Attacker with valid itemId can execute arbitrary code via /Videos/<itemId>/stream endpoint. Pin jellyfin_version to '10.10.7' or later.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2025-31499",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned jellyfin_version=\"10.11.8\" in roles/pazny.jellyfin/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 10.10.7+)."
     },
     {
       "id": "REM-034",
@@ -556,12 +584,14 @@
       "fix_version": "latest (2.27+)",
       "remediation_type": "version_bump",
       "remediation_detail": "Portainer updated OTel SDK (GO-2026-4394 arbitrary code exec via PATH hijacking), Docker binary (CVE-2025-68121 TLS bypass, CVSS 10.0 in underlying Go crypto/tls), and golang-jwt (CVE-2025-30204). Verify portainer 'latest' resolves to >= 2.27. Pin to specific version for reproducibility.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://docs.portainer.io/release-notes",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned portainer_version=\"2.27.3\" in roles/pazny.portainer/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes latest (2.27+))."
     },
     {
       "id": "REM-035",
@@ -658,12 +688,14 @@
       "fix_version": "2.10.1",
       "remediation_type": "version_bump",
       "remediation_detail": "CORRECTION: n8n minimum safe version is 2.10.1, not 2.5.2. CVE-2026-27493 (CVSS 9.5) form node injection + CVE-2026-27577 (CVSS 9.4) sandbox escape \u2192 full RCE chain. CVE-2025-68613 added to CISA KEV (actively exploited). Update REM-011 and REM-022 fix_version to 2.10.1.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://thehackernews.com/2026/03/critical-n8n-flaws-allow-remote-code.html",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 3
+      "scan_cycle": 3,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned n8n_version=\"2.14.1\" in roles/pazny.n8n/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 2.10.1)."
     },
     {
       "id": "REM-041",
@@ -674,12 +706,14 @@
       "fix_version": "v15.98.1",
       "remediation_type": "version_bump",
       "remediation_detail": "ERPNext 10 Error-Based SQLi vulnerabilities (CVE-2025-52039 through CVE-2025-52050, CVSS 8.2) in Frappe ERPNext 15.57.5. Plus CVE-2025-65267 stored XSS via SVG avatar images. Covered by existing upgrade to v15.98.1 (REM-017).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.ameeba.com/blog/cve-2025-52039-sql-injection-vulnerability-in-frappe-erpnext/",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 3
+      "scan_cycle": 3,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned erpnext_version=\"v15.98.1\" in roles/pazny.erpnext/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v15.98.1)."
     },
     {
       "id": "REM-042",
@@ -813,12 +847,14 @@
       "fix_version": "1.35.0",
       "remediation_type": "version_bump",
       "remediation_detail": "Vaultwarden 2FA bypass when performing protected actions (CVE-2026-27801, CVSS ~7.5). Affects <= 1.34.3, fixed in 1.35.0. ALREADY MITIGATED: our pinned version 1.35.4 includes this fix. No action required.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.cvedetails.com/cve/CVE-2026-27801/",
       "confidence": "high",
       "found_at": "2026-04-10T06:00:00Z",
-      "scan_cycle": 6
+      "scan_cycle": 6,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned vaultwarden_version=\"1.35.4\" in roles/pazny.vaultwarden/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 1.35.0)."
     },
     {
       "id": "REM-050",
@@ -829,12 +865,14 @@
       "fix_version": "1.35.3",
       "remediation_type": "version_bump",
       "remediation_detail": "Vaultwarden broken access control \u2014 organization member can enumerate all ciphers regardless of collection permissions (CVE-2026-26012). Affects < 1.35.3, fixed in 1.35.3. ALREADY MITIGATED: our pinned version 1.35.4 includes this fix. No action required.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2026-26012",
       "confidence": "high",
       "found_at": "2026-04-10T06:00:00Z",
-      "scan_cycle": 6
+      "scan_cycle": 6,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned vaultwarden_version=\"1.35.4\" in roles/pazny.vaultwarden/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 1.35.3)."
     },
     {
       "id": "REM-051",
@@ -909,12 +947,14 @@
       "fix_version": "0.59.1+",
       "remediation_type": "version_bump",
       "remediation_detail": "Metabase unauthenticated dashboard parameter data leak (CVSS 5.3). When 'Enable Public Sharing' is disabled, dashboard parameters can still be queried by unauthenticated users. Fixed in 0.59.1. Ensure 'latest' resolves to >= 0.59.1.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/metabase/metabase/security/advisories/GHSA-j3qp-7mr8-hr55",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned metabase_version=\"v0.61.2.6\" in roles/pazny.metabase/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 0.59.1+)."
     },
     {
       "id": "REM-054",
@@ -957,12 +997,14 @@
       "fix_version": "0.57.1+",
       "remediation_type": "version_bump",
       "remediation_detail": "Metabase SSRF via webhook channel test endpoint (CVE-2026-22805). Admin notification channel webhook test allows requests to internal/local IPs. In nOS Docker environment, Metabase shares network with 40+ services \u2014 authenticated user could probe internal Docker services (Redis, PostgreSQL, etc). Fixed in 0.57.1. Ensure 'latest' >= 0.57.1. Consider network-level isolation for Metabase container.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/metabase/metabase/security/advisories/GHSA-2wgg-7r2p-cmqx",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned metabase_version=\"v0.61.2.6\" in roles/pazny.metabase/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 0.57.1+)."
     },
     {
       "id": "REM-059",
@@ -1069,12 +1111,14 @@
       "fix_version": "0.8.6",
       "remediation_type": "version_bump",
       "remediation_detail": "Open WebUI path traversal info disclosure in POST /api/v1/audio/transcriptions (CVE-2026-28786, CVSS 4.3). Unsanitized filename field allows any authenticated user to trigger FileNotFoundError that leaks server DATA_DIR absolute path in HTTP 400 response. Does NOT permit file read/write/RCE. Fixed in 0.8.6. Our version 0.6.35 is vulnerable. Low risk \u2014 only leaks path info, and service is behind Authentik SSO.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://advisories.gitlab.com/pkg/pypi/open-webui/CVE-2026-28786/",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
-      "scan_cycle": 10
+      "scan_cycle": 10,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned openwebui_version=\"0.8.12\" in roles/pazny.open_webui/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 0.8.6)."
     },
     {
       "id": "REM-066",
@@ -1181,12 +1225,14 @@
       "fix_version": "10.11.8",
       "remediation_type": "version_bump",
       "remediation_detail": "Jellyfin 10.11.7 (Apr 1, 2026) shipped 4 security patches by @Shadowghost, classified as critical security update. CVE/GHSA details under 14-day embargo (disclosure ~Apr 15). Version 10.11.8 followed with additional regressions fix. All versions before 10.11.7 are affected including our 10.10.7. Upgrade to jellyfin_version >= 10.11.8 recommended.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://jellywatch.app/blog/jellyfin-10-11-7-critical-security-update-april-2026",
       "confidence": "high",
       "found_at": "2026-04-10T22:00:00Z",
-      "scan_cycle": 12
+      "scan_cycle": 12,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned jellyfin_version=\"10.11.8\" in roles/pazny.jellyfin/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes 10.11.8)."
     },
     {
       "id": "REM-073",
@@ -1331,12 +1377,14 @@
       "fix_version": "v1.29.7",
       "remediation_type": "version_bump",
       "remediation_detail": "SSRF via Link Check API allows probing internal IPs/hostnames. Affects <=1.29.1. Bump roles/pazny.mailpit/defaults/main.yml: mailpit_version v1.20 -> v1.29.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/axllent/mailpit/security/advisories/GHSA-mpf7-p9x7-96r3",
       "confidence": "high",
       "found_at": "2026-05-07T02:07:40Z",
-      "scan_cycle": 14
+      "scan_cycle": 14,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
     },
     {
       "id": "REM-082",
@@ -1347,12 +1395,14 @@
       "fix_version": "v1.29.7",
       "remediation_type": "version_bump",
       "remediation_detail": "SSRF via HTML Check API allows probing internal IPs. Affects <=1.28.2. Bump mailpit_version to v1.29.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/advisories/GHSA-6jxm-fv7w-rw5j",
       "confidence": "high",
       "found_at": "2026-05-07T02:07:40Z",
-      "scan_cycle": 14
+      "scan_cycle": 14,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
     },
     {
       "id": "REM-083",
@@ -1363,12 +1413,14 @@
       "fix_version": "v1.29.7",
       "remediation_type": "version_bump",
       "remediation_detail": "SMTP Header Injection (CRLF) via insufficient regex on RCPT TO/MAIL FROM. Affects <=1.28.2. Bump mailpit_version to v1.29.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/advisories/GHSA-54wq-72mp-cq7c",
       "confidence": "high",
       "found_at": "2026-05-07T02:07:40Z",
-      "scan_cycle": 14
+      "scan_cycle": 14,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
     },
     {
       "id": "REM-084",
@@ -1379,12 +1431,14 @@
       "fix_version": "v1.29.7",
       "remediation_type": "version_bump",
       "remediation_detail": "Cross-Site WebSocket Hijacking (CSWSH) \u2014 WebSocket server lacks Origin validation; any origin can read all email messages. Affects <=1.28.1. HIGH-IMPACT for nOS since dev mailboxes leak password reset tokens. Bump to v1.29.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/advisories/GHSA-524m-q5m7-79mm",
       "confidence": "high",
       "found_at": "2026-05-07T02:07:40Z",
-      "scan_cycle": 14
+      "scan_cycle": 14,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
     },
     {
       "id": "REM-085",
@@ -1395,12 +1449,14 @@
       "fix_version": "v1.29.7",
       "remediation_type": "version_bump",
       "remediation_detail": "SSRF via /proxy endpoint allows probing internal services. Affects <=1.28.0. Bump mailpit_version to v1.29.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/axllent/mailpit/security/advisories/GHSA-8v65-47jx-7mfr",
       "confidence": "high",
       "found_at": "2026-05-07T02:07:40Z",
-      "scan_cycle": 14
+      "scan_cycle": 14,
+      "resolved_at": "2026-05-25T00:00:00Z",
+      "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
     }
   ],
   "summary": {
@@ -1412,12 +1468,12 @@
       "LOW": 1
     },
     "by_status": {
-      "pending": 53,
-      "resolved": 30,
+      "pending": 25,
+      "resolved": 58,
       "vendor-blocked": 2
     },
     "auto_fixable": 70,
     "manual_review_required": 15,
-    "note": "Cycle 14 \u2014 Inspector Claw added 5 mailpit CVE remediations (v1.20 \u2192 v1.29.7). All 5 affect deployed version: 4\u00d7 SSRF, 1\u00d7 CSWSH (auth bypass \u2014 high practical impact since dev mailboxes leak password reset tokens), 1\u00d7 SMTP CRLF. | 2026-05-16: resolved 4 items (REM-023 HA + REM-038/039/042 RustFS \u2014 already pinned in default.config.yml); reclassified REM-014/046 FreePBX as vendor-blocked (tiredofit image abandoned upstream 2022)."
+    "note": "Cycle 14 \u2014 Inspector Claw added 5 mailpit CVE remediations (v1.20 \u2192 v1.29.7). All 5 affect deployed version: 4\u00d7 SSRF, 1\u00d7 CSWSH (auth bypass \u2014 high practical impact since dev mailboxes leak password reset tokens), 1\u00d7 SMTP CRLF. | 2026-05-16: resolved 4 items (REM-023 HA + REM-038/039/042 RustFS \u2014 already pinned in default.config.yml); reclassified REM-014/046 FreePBX as vendor-blocked (tiredofit image abandoned upstream 2022). | 2026-05-25 C1 sweep: resolved 28 version_bumps now pinned (ZDI/no-fix-target + freescout scheme-mismatch left pending)."
   }
 }

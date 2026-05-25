@@ -6,7 +6,7 @@
 # Rosetta emulaci (`platform: linux/amd64`).
 # ==============================================================================
 
-qgis_version: "latest"
+qgis_version: "LTR"
 qgis_port: 8071
 qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 qgis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"

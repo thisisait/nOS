@@ -7,7 +7,7 @@
 # centralized for prefix rotation.
 # ==============================================================================
 
-infisical_version: "latest"
+infisical_version: "v0.160.4"
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"

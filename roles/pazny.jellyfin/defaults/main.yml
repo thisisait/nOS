@@ -7,7 +7,7 @@
 # blank-reset path resolver). Role defaults poskytuji fallback.
 # ==============================================================================
 
-jellyfin_version: "10.10.7"                         # CVE-2025-31499 pin
+jellyfin_version: "10.11.8"
 jellyfin_port: 8096
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_lan_access: true                           # true = port dostupny z LAN
