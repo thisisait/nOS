@@ -14,7 +14,32 @@
 
 ---
 
-## Current track: **v0.2-beta cut — A1–A19 + security hardening DONE**
+## Current track: **Epic C (Zpevnění) DONE → next: Linux port (Track C)**
+
+Post-v0.2-beta hardening epic, landed 2026-05-25 on `dev` (uncommitted→committed,
+awaiting operator blank before push):
+
+* **C3 — GDPR operator surface** — closed the keystone gap: per-plugin `gdpr:`
+  blocks (loader-validated but never ingested) now flow through one canonical
+  mapper (`files/anatomy/module_utils/nos_gdpr.py`) into TWO synchronized
+  surfaces — the static DPA register (`state/dpa-register.md`, 67 services, for
+  a DPO) and the live `gdpr_processing` table (Wing `/gdpr`). Plus Art.17
+  right-to-erasure fan-out (`tasks/gdpr-forget.yml`, dry-run+confirm, audited
+  `state/gdpr-erasure-map.yml`, DSAR legal record), storage-limitation purge
+  (`tasks/audit-retention.yml`), DPO one-pager (`docs/security-baseline.md`).
+  6 new anatomy gates.
+* **C1 — image-pin sweep** — 16 floating tags pinned to fixed versions;
+  remediation queue 53→25 pending (28 resolved; ZDI-no-fix + freescout
+  scheme-mismatch kept honest); anti-regression gate `test_image_pin_hygiene.py`.
+* **C2 — Nextcloud** — `stable`→`"33"` major-lock (likely live-500 fix: NC
+  refuses major skips/downgrades on existing data).
+
+**Next lane: Track C — Linux infra stack green** (`docs/linux-port.md`,
+`docs/roadmap-2026q2.md` Track C). Ubuntu LTS target so nOS stops being
+macOS-only. Real `pazny.linux.apt` + `pazny.linux.systemd_user`, Darwin-gate the
+mac-only roles, CI `integration-linux` job.
+
+## Prior track: **v0.2-beta cut — A1–A19 + security hardening DONE**
 
 **v0.2-beta milestone (2026-05-23)** — see [`RELEASE.md`](../RELEASE.md).
 Cut as git tag `v0.2-beta` from `master` (prior tag `v0.1-beta`). Validated
