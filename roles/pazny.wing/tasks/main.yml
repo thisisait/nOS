@@ -96,26 +96,52 @@
 # (also tapped). Both taps must exist before this task runs; if they're
 # missing, brew prints a clear error pointing at the tap name.
 
+- name: "[pazny.wing] Resolve FrankenPHP + composer paths per platform"
+  ansible.builtin.set_fact:
+    _wing_frankenphp_bin: "{{ frankenphp_bin if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/frankenphp') }}"
+    # composer.phar location + how to invoke it. macOS runs it against php-zts
+    # on PATH; Linux runs it through FrankenPHP's embedded PHP (no separate php).
+    _wing_composer_phar: "{{ (homebrew_prefix | default('/opt/homebrew') ~ '/bin/composer') if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/composer.phar') }}"
+    _wing_composer_cmd: "{{ 'composer' if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/frankenphp php-cli ' ~ ansible_facts['env']['HOME'] ~ '/.local/bin/composer.phar') }}"
+
+# ---- macOS: Homebrew tap (php-zts dep) ----
 - name: "[pazny.wing] Install frankenphp via Homebrew"
   community.general.homebrew:
     name: dunglas/frankenphp/frankenphp
     state: present
   register: _wing_frankenphp_install
+  when: ansible_os_family == 'Darwin'
+
+# ---- Linux: static binary (self-contained PHP — NEEDS-VM-VALIDATION) ----
+# FrankenPHP ships a static per-arch binary on GitHub releases; its embedded
+# PHP also runs composer via `frankenphp php-cli`, so no separate php package
+# is needed. Validate the asset name/arch + php-cli behaviour on Ubuntu 24.04.
+- name: "[pazny.wing] (Linux) Ensure ~/.local/bin exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+    state: directory
+    mode: '0755'
+  when: ansible_os_family != 'Darwin'
+
+- name: "[pazny.wing] (Linux) Download FrankenPHP static binary"
+  ansible.builtin.get_url:
+    url: "https://github.com/dunglas/frankenphp/releases/latest/download/frankenphp-linux-{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
+    dest: "{{ _wing_frankenphp_bin }}"
+    mode: '0755'
+  when: ansible_os_family != 'Darwin'
 
 - name: "[pazny.wing] Stat frankenphp binary"
   ansible.builtin.stat:
-    path: "{{ frankenphp_bin }}"
+    path: "{{ _wing_frankenphp_bin }}"
   register: _wing_frankenphp_stat
 
 - name: "[pazny.wing] Refuse to continue when frankenphp binary missing"
   ansible.builtin.fail:
     msg: |
-      frankenphp binary not found at {{ frankenphp_bin }} after Homebrew
-      install. Possible causes:
-        - shivammathur/php tap missing (run: brew tap shivammathur/php)
-        - dunglas/frankenphp tap missing (run: brew tap dunglas/frankenphp)
-        - Homebrew Cellar at non-default path (set frankenphp_bin in config.yml)
-      Verify: brew list dunglas/frankenphp/frankenphp
+      frankenphp binary not found at {{ _wing_frankenphp_bin }}.
+        macOS: brew tap shivammathur/php + dunglas/frankenphp, then
+               `brew list dunglas/frankenphp/frankenphp`.
+        Linux: verify the GitHub release asset name/arch in this role.
   when: not _wing_frankenphp_stat.stat.exists
 
 # ── App source sync ──────────────────────────────────────────────────────────
@@ -155,13 +181,13 @@
 # php-zts), so no symlink conflict.
 - name: "[pazny.wing] Stat composer binary"
   ansible.builtin.stat:
-    path: "{{ homebrew_prefix }}/bin/composer"
+    path: "{{ _wing_composer_phar }}"
   register: _composer_stat
 
 - name: "[pazny.wing] Download composer.phar (official installer)"
   ansible.builtin.get_url:
     url: "https://getcomposer.org/composer-stable.phar"
-    dest: "{{ homebrew_prefix }}/bin/composer"
+    dest: "{{ _wing_composer_phar }}"
     mode: '0755'
     force: false
   when: not _composer_stat.stat.exists
@@ -186,7 +212,7 @@
 # operator-side belt to that suspenders.
 - name: "[pazny.wing] Pre-flight — composer validate --strict (lockfile sync gate)"
   ansible.builtin.command:
-    cmd: composer validate --strict --no-check-publish
+    cmd: "{{ _wing_composer_cmd }} validate --strict --no-check-publish"
     chdir: "{{ wing_app_dir }}"
   register: _wing_composer_validate
   changed_when: false
@@ -195,7 +221,7 @@
 
 - name: "[pazny.wing] Run composer install (vendor missing or lock newer)"
   ansible.builtin.command:
-    cmd: composer install --no-dev --optimize-autoloader --no-interaction
+    cmd: "{{ _wing_composer_cmd }} install --no-dev --optimize-autoloader --no-interaction"
     chdir: "{{ wing_app_dir }}"
   register: _wing_composer
   changed_when: "'Nothing to install' not in (_wing_composer.stdout | default('')) or _wing_composer.rc != 0"
@@ -229,6 +255,31 @@
     # bootstrap or with later "Restart wing" handler kicks.
     mode: '0600'
   notify: Restart wing
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ── Linux: systemd --user (env via EnvironmentFile, NEEDS-VM-VALIDATION) ──────
+# Caddyfile (rendered above) is cross-platform; FrankenPHP runs it the same way.
+# wing.env mirrors the plist's EnvironmentVariables; the unit references it via
+# EnvironmentFile=. Validate FrankenPHP run + Caddyfile + php-cli on Ubuntu.
+- name: "[pazny.wing] (Linux) Render systemd EnvironmentFile (0600 — secrets)"
+  ansible.builtin.template:
+    src: wing.env.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/wing.env"
+    mode: '0600'
+  notify: Restart wing
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[pazny.wing] (Linux) Install systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ wing_launchd_label }}"
+    su_description: "nOS Wing — FrankenPHP security-research dashboard"
+    su_exec_start: "{{ _wing_frankenphp_bin }} run --config {{ wing_caddyfile_path }}"
+    su_working_dir: "{{ wing_app_dir }}"
+    su_environment_file: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/wing.env"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 # ── Launchd bootstrap (idempotent) ───────────────────────────────────────────
 # Same pattern as A3a Bone + A4 Pulse. `launchctl print` returns 0 when the
@@ -256,6 +307,7 @@
   register: _wing_launchd_bootstrap
   changed_when: true
   failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[pazny.wing] Wait for daemon to bind {{ wing_port }} (health probe)"
   ansible.builtin.uri:
@@ -270,6 +322,7 @@
   failed_when: false
 
 - name: "[pazny.wing] Diagnose dead daemon (only if probe never landed)"
+  # macOS launchctl/lsof diagnostics; Linux uses `journalctl --user -u wing`.
   ansible.builtin.shell: |
     set -o pipefail
     UID_NUM=$(id -u)

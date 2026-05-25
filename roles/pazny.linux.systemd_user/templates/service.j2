@@ -12,6 +12,9 @@ WorkingDirectory={{ su_working_dir }}
 {% for k, v in (su_environment | default({})).items() %}
 Environment="{{ k }}={{ v }}"
 {% endfor %}
+{% if su_environment_file is defined %}
+EnvironmentFile={{ su_environment_file }}
+{% endif %}
 ExecStart={{ su_exec_start }}
 Restart={{ su_restart | default('always') }}
 RestartSec={{ su_restart_sec | default(3) }}

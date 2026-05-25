@@ -552,12 +552,19 @@
       ansible.builtin.shell: |
         set -o pipefail
         LABEL="{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
-        PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
-        UID_NUM=$(id -u)
         WING_PORT="{{ wing_port | default(9000) }}"
+        UID_NUM=$(id -u)
+        {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
+        # Linux: systemd --user re-reads EnvironmentFile on restart (no
+        # bootout/bootstrap dance needed for rotated secrets).
+        export XDG_RUNTIME_DIR="/run/user/${UID_NUM}"
+        systemctl --user restart "${LABEL}.service"
+        {% else %}
+        PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
         launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
         sleep 1
         launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        {% endif %}
         # Probe for daemon liveness — any HTTP response (incl. 401/403)
         # proves the daemon is bound. Up to 20×0.5s before giving up.
         for i in $(seq 1 20); do
@@ -569,12 +576,16 @@
           fi
           sleep 0.5
         done
-        echo "FAIL: wing daemon did not bind ${WING_PORT} within 10s after bootstrap"
+        echo "FAIL: wing daemon did not bind ${WING_PORT} within 10s after restart"
+        {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
+        journalctl --user -u "${LABEL}.service" -n 20 --no-pager 2>/dev/null || true
+        {% else %}
         echo "=== launchctl print ==="
         launchctl print "gui/${UID_NUM}/${LABEL}" 2>&1 \
           | grep -E "state |last exit code|stderr path|pid" | head -8 || true
         echo "=== launchd.err.log tail ==="
         tail -15 "{{ wing_log_dir | default((wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')) + '/log') }}/launchd.err.log" 2>/dev/null || echo "(no err log)"
+        {% endif %}
         exit 1
       args:
         executable: /bin/bash    # SEC M-PIPE1: pipefail needs bash, not /bin/sh
