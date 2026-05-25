@@ -8,7 +8,14 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-nextcloud_version: "stable"
+# MAJOR-LOCKED on purpose (was floating "stable" — the likely cause of the
+# live 500). Nextcloud hard-refuses BOTH major skips AND downgrades on existing
+# data, so a floating "stable" that crosses a major (e.g. 32→33) 500s on start.
+# A major tag ("33") stays in 33.x: gets security patches, never skips/downgrades.
+# Bumping the major on an EXISTING install: set this to your CURRENT data major
+# first, then step up ONE major per run (there is no upgrades/nextcloud.yml
+# recipe yet). Fresh blanks are unaffected — any value reinitializes cleanly.
+nextcloud_version: "33"
 nextcloud_port: 8085
 nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
