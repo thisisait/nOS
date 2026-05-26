@@ -81,6 +81,12 @@ final class AgentsPresenter extends BasePresenter
 		$this->template->agent = $agent;
 		$this->template->sessions = $this->sessions->listRecent(50, $name);
 		$this->template->vaultsAvailable = $this->vaults->listVaults();
+		// Rubric filename — Latte has no `basename` filter, so derive it here
+		// (the template used `|basename`, which threw a LogicException and
+		// BlueScreened the detail page for every agent with an outcome).
+		$this->template->rubricBasename = $agent->hasOutcome() && $agent->rubric
+			? basename($agent->rubric->sourcePath)
+			: null;
 	}
 
 	public function renderSession(string $name, string $id): void

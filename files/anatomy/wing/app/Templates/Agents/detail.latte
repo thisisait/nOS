@@ -31,7 +31,7 @@
 			{else}—{/if}
 		</div>
 		<div n:if="$agent->hasOutcome()" style="font-size:11px; color:var(--text2); margin-top:6px;">
-			<code>{$agent->rubric->sourcePath|basename}</code>
+			<code>{$rubricBasename}</code>
 		</div>
 	</div>
 </div>
@@ -81,6 +81,12 @@
 				Spawns <code>php bin/run-agent.php</code> as a non-blocking child; you'll be redirected to the live session view.
 			</span>
 		</div>
+		<p style="margin:4px 0 0; font-size:11px; color:var(--text2);">
+			Manual runs go through the AgentKit runner, so the model's provider key must be reachable by the wing daemon
+			(<code>ANTHROPIC_API_KEY</code> in the env, or a vault credential scoped <code>anthropic-api</code>). Scheduled
+			Pulse runs use the local <code>claude</code> CLI instead. A missing key surfaces as a terminated session whose
+			error you can read in the transcript on the session view.
+		</p>
 	</form>
 </div>
 
