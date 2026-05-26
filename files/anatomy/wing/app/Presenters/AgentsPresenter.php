@@ -8,6 +8,7 @@ use App\AgentKit\AgentLoader;
 use App\AgentKit\AgentLoadException;
 use App\Model\AgentSessionRepository;
 use App\Model\AgentVaultRepository;
+use App\Model\EventRepository;
 
 /**
  * Wing /agents — agent catalog + session lineage browser (A14, 2026-05-07).
@@ -40,6 +41,7 @@ final class AgentsPresenter extends BasePresenter
 		private AgentLoader $loader,
 		private AgentSessionRepository $sessions,
 		private AgentVaultRepository $vaults,
+		private EventRepository $events,
 	) {
 	}
 
@@ -99,6 +101,21 @@ final class AgentsPresenter extends BasePresenter
 				'queries' => [['query' => $session['trace_id']]],
 			]) ?: ''),
 		);
+
+		// Raw run transcript — every LLM call, tool use, tool result and
+		// framework event for this session shares actor_action_id == uuid
+		// (A14 audit-lineage contract). query() returns newest-first; the
+		// transcript reads chronologically, so reverse. Each row carries the
+		// decoded `result` plus the raw `result_json` for a verbatim view.
+		$transcript = array_reverse($this->events->query(['actor_action_id' => $id], 500)['items']);
+		foreach ($transcript as &$ev) {
+			// Pretty raw view for the collapsible verbatim panel.
+			$ev['result_pretty'] = $ev['result'] ?? null
+				? (json_encode($ev['result'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: ($ev['result_json'] ?? ''))
+				: ($ev['result_json'] ?? '');
+		}
+		unset($ev);
+		$this->template->transcript = $transcript;
 	}
 
 	/**

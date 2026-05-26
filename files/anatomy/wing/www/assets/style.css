@@ -70,6 +70,17 @@ a { color: var(--accent); text-decoration: none; }
 .badge-warning { background: rgba(210,153,34,0.15); color: var(--orange); }
 .badge-danger { background: rgba(248,81,73,0.15); color: var(--red); }
 
+/* Agent run transcript — verbatim LLM chat history + tool I/O per session. */
+.transcript { display: flex; flex-direction: column; gap: 10px; }
+.transcript-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+.transcript-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.transcript-task { font-family: monospace; font-size: 11px; color: var(--text2); word-break: break-all; }
+.transcript-ts { margin-left: auto; font-size: 11px; color: var(--text2); white-space: nowrap; }
+.transcript-body { margin: 0; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; max-height: 360px; overflow: auto; }
+.transcript-raw { margin-top: 6px; }
+.transcript-raw summary { cursor: pointer; font-size: 11px; color: var(--text2); user-select: none; }
+.transcript-raw pre { margin: 6px 0 0; font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; max-height: 300px; overflow: auto; }
+
 /* Grids */
 .comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .comp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }

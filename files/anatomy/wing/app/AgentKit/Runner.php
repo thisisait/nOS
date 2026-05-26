@@ -347,6 +347,10 @@ final class Runner
 				result: [
 					'stop_reason' => $response->stopReason,
 					'text_preview' => substr($response->textOutput(), 0, 240),
+					// Full assistant text — the operator /agents session view
+					// renders the verbatim LLM chat history from this field;
+					// text_preview is retained for lean digest consumers.
+					'text' => $response->textOutput(),
 				],
 				traceId: $traceId,
 			);
@@ -430,6 +434,9 @@ final class Runner
 						'tool_use_id' => $use['id'],
 						'is_error' => $toolResult->isError,
 						'content_preview' => substr($toolResult->content, 0, 240),
+						// Full tool output — rendered verbatim in the session
+						// transcript; content_preview kept for digest consumers.
+						'content' => $toolResult->content,
 						'metadata' => $toolResult->metadata,
 					],
 					traceId: $traceId,
