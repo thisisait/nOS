@@ -47,6 +47,12 @@ body.nav-open { overflow: hidden; }
 /* Container */
 .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
+/* Flash messages — feedback from redirecting actions (agent trigger, etc.). */
+.flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; border: 1px solid var(--border); }
+.flash-success { background: rgba(63,185,80,0.12); border-color: rgba(63,185,80,0.3); color: var(--green); }
+.flash-error { background: rgba(248,81,73,0.12); border-color: rgba(248,81,73,0.3); color: var(--red); }
+.flash-info { background: rgba(136,198,255,0.12); border-color: rgba(136,198,255,0.3); color: var(--accent); }
+
 /* Stats */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }

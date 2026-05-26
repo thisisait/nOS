@@ -83,6 +83,9 @@
 </nav>
 
 <div class="container">
+	{* Flash messages — operator feedback from redirecting actions (e.g. the
+	   agent operator-trigger). Nette exposes $flashes to every template. *}
+	<div n:foreach="$flashes as $flash" n:class="flash, 'flash-' . $flash->type">{$flash->message}</div>
 	{include content}
 </div>
 
