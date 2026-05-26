@@ -63,6 +63,12 @@ a { color: var(--accent); text-decoration: none; }
 .badge-clean { background: rgba(63,185,80,0.15); color: var(--green); }
 .badge-resolved { background: rgba(63,185,80,0.1); color: var(--green); border: 1px solid rgba(63,185,80,0.2); }
 .badge-pending { background: rgba(210,153,34,0.1); color: var(--orange); border: 1px solid rgba(210,153,34,0.2); }
+/* Semantic status badges — used by Agents / Users / Approvals / Invitations. */
+.badge-success { background: rgba(63,185,80,0.15); color: var(--green); }
+.badge-primary { background: rgba(136,198,255,0.15); color: var(--accent); }
+.badge-info { background: rgba(57,210,192,0.15); color: var(--cyan); }
+.badge-warning { background: rgba(210,153,34,0.15); color: var(--orange); }
+.badge-danger { background: rgba(248,81,73,0.15); color: var(--red); }
 
 /* Grids */
 .comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 24px; }
