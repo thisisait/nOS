@@ -218,3 +218,37 @@ body.nav-open { overflow: hidden; }
 /* Children (sub-services) */
 .sys-children { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--bg); border-radius: 4px; margin-top: 2px; }
 .sys-child { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+
+/* ── Mobile / touch (W5, 2026-05-26) ──────────────────────────────────────
+   The console was desktop-only (viewport meta + 2 media queries). This layer
+   makes every page usable on phones + touch: form controls don't zoom on iOS,
+   tap targets clear 44px, wide tables scroll horizontally instead of breaking
+   the layout, and the header/container reclaim padding on narrow screens. */
+
+/* Form controls: 16px avoids iOS Safari's focus-zoom; full-width on mobile. */
+input, select, textarea { font-size: 16px; max-width: 100%; }
+
+/* Media + preformatted blocks never force horizontal page scroll. */
+img, svg, video, canvas { max-width: 100%; height: auto; }
+pre { max-width: 100%; overflow-x: auto; }
+
+@media (max-width: 768px) {
+	.header { padding: 10px 14px; gap: 10px; flex-wrap: wrap; }
+	.header h1 { font-size: 17px; }
+	.header-tagline, .header .subtitle { display: none; }   /* declutter */
+	.container { padding: 16px 14px; }
+
+	/* Wide tables scroll horizontally within their own box rather than
+	   stretching the page. display:block keeps the inner table layout but
+	   lets the element scroll on touch. */
+	.container table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+	/* Touch tap targets — buttons + interactive controls clear 44px. */
+	button, input[type="submit"], input[type="button"], .btn, .nav-overlay-close {
+		min-height: 44px;
+	}
+
+	/* Stat-card / filter rows that used fixed flex bases wrap cleanly. */
+	.two-col { grid-template-columns: 1fr; }
+	.empty { padding: 40px 16px; }
+}
