@@ -29,6 +29,7 @@
   register: _wp_oauth_apps
   changed_when: false
   failed_when: false
+  no_log: true   # Basic-auth header embeds gitea_admin_password (SEC-18 gap)
 
 - name: "[pazny.woodpecker OAuth] Resolve existing 'Woodpecker CI' app id"
   ansible.builtin.set_fact:
@@ -55,6 +56,7 @@
   when:
     - _wp_oauth_apps.status | default(0) == 200
     - _wp_oauth_app_id | int == 0
+  no_log: true   # Basic-auth header embeds gitea_admin_password; response carries the OAuth client secret
 
 - name: "[pazny.woodpecker OAuth] Capture client_id + secret from create response"
   ansible.builtin.set_fact:
@@ -63,6 +65,7 @@
     woodpecker_gitea_client: "{{ _wp_oauth_create.json.client_id }}"
     woodpecker_gitea_secret: "{{ _wp_oauth_create.json.client_secret }}"
   when: _wp_oauth_create.changed | default(false)
+  no_log: true   # captures the OAuth client secret
 
 # ── In-run apply (first create only) ─────────────────────────────────────────
 # The override on disk + the running server still carry empty creds; re-render

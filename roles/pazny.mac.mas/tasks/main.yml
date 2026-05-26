@@ -16,6 +16,7 @@
 - name: Sign in to MAS when email and password are provided.
   command: '"{{ mas_path }}" signin "{{ mas_email }}" "{{ mas_password }}"'
   register: mas_signin_result
+  no_log: true   # command embeds mas_password
   when:
     - ansible_facts.distribution_version is version('10.13', '<')
     - mas_account_result.rc == 1
@@ -26,6 +27,7 @@
 - name: Sign in to MAS when email is provided, and complete password and 2FA using dialog.
   command: '"{{ mas_path }}" signin "{{ mas_email }}" "{{ mas_password }}" --dialog'
   register: mas_signin_result
+  no_log: true   # command embeds mas_password
   when:
     - ansible_facts.distribution_version is version('10.13', '<')
     - mas_signin_dialog

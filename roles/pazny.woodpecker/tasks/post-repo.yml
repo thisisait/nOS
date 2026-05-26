@@ -38,6 +38,7 @@
   when: woodpecker_api_token | default('') | length > 0
   block:
     - name: "[pazny.woodpecker Post Repo] Discover Gitea forge_remote_id"
+      no_log: true   # Basic-auth embeds gitea_admin_password (SEC-18 gap)
       ansible.builtin.uri:
         url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
         method: GET
@@ -48,6 +49,7 @@
       changed_when: false
 
     - name: "[pazny.woodpecker Post Repo] Refresh forge cache (sync Gitea repo list)"
+      no_log: true   # Bearer header embeds woodpecker_api_token
       # On a fresh install Woodpecker hasn't yet pulled the operator's repo
       # list from Gitea — so a bare /api/repos?forge_remote_id=<id> activate
       # returns "forge repo not found". POST /api/user/repos?flush=true tells
@@ -62,6 +64,7 @@
       changed_when: true
 
     - name: "[pazny.woodpecker Post Repo] Check if repo is already activated"
+      no_log: true   # Bearer header embeds woodpecker_api_token
       ansible.builtin.uri:
         url: "https://{{ woodpecker_domain }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
         method: GET
@@ -73,6 +76,7 @@
       changed_when: false
 
     - name: "[pazny.woodpecker Post Repo] Activate nOS repo (first run only)"
+      no_log: true   # Bearer header embeds woodpecker_api_token
       ansible.builtin.uri:
         url: "https://{{ woodpecker_domain }}/api/repos?forge_remote_id={{ _woodpecker_gitea_repo.json.id }}"
         method: POST
