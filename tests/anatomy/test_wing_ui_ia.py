@@ -1,14 +1,18 @@
-"""Anatomy gates for Wing IA (W1 information architecture, 2026-05-17).
+"""Anatomy gates for Wing IA (W1 information architecture, 2026-05-17;
+W5 burger overlay, 2026-05-26).
 
-W1 reshapes the top-nav from 12 flat tabs (mixing operate / insights /
-security / platform with no visual hierarchy) into 5 visual groups
-separated by CSS `.tab-sep::before` dividers. Pins:
+W1 reshaped the top-nav from 12 flat tabs into 5 visual groups. W5
+(operator request) then moved the nav off the horizontal bar entirely:
+a burger button in the header toggles a fullscreen overlay where the 5
+groups are `.nav-overlay-group` sections with `<h2>` labels. The
+`.tab-sep::before` separators are retired; the links keep `.tab` +
+`.tab-key` so keyboard-nav.js and the unread/pending counts survive.
+Pins:
 
-  * the new tab set (drops fragment-targeted Timeline/Components,
-    adds Migrations/Upgrades/Coexistence/GDPR which had presenters but
-    no nav entry),
-  * the group separator CSS,
-  * the right-aligned Help+Admin section.
+  * the full nav entry set (every group's links present),
+  * the 5 grouped overlay sections,
+  * the burger + overlay CSS,
+  * the Admin entry as a class (not an inline-style hack).
 """
 
 from __future__ import annotations
@@ -61,21 +65,23 @@ def test_fragment_only_tabs_retired():
     assert 'data-tab="components"' not in src
 
 
-def test_top_nav_has_5_group_separators():
-    """W1 visual contract: 5 groups, 4 dividers between them. The
-    `.tab-sep` modifier draws a vertical line via ::before, so we count
-    its occurrences in the layout. (Tabs marked .tab-sep are the FIRST
-    of each non-Operate group.)
+def test_top_nav_has_5_group_sections():
+    """W5 visual contract: 5 grouped sections inside the burger overlay,
+    each introduced by an `<h2>` label (Operate / Insights / Security /
+    Platform / More). Pins the grouping that replaced the W1 `.tab-sep`
+    dividers.
     """
     src = LAYOUT.read_text()
-    # 4 separators between 5 groups: Insights / Security / Platform / Help.
-    # Count usage in class attributes, not in comments — the layout
-    # carries a `.tab-sep` reference in a {* ... *} comment block.
     import re
-    matches = re.findall(r'class="[^"]*\btab-sep\b', src)
-    assert len(matches) == 4, (
-        f"expected 4 .tab-sep class-usages (Insights/Security/Platform/Help "
-        f"group starts), got {len(matches)}: {matches}"
+    groups = re.findall(r'class="nav-overlay-group"', src)
+    assert len(groups) == 5, (
+        f"expected 5 .nav-overlay-group sections, got {len(groups)}"
+    )
+    for label in ("Operate", "Insights", "Security", "Platform", "More"):
+        assert f"<h2>{label}</h2>" in src, f"missing nav group label {label}"
+    # The retired horizontal-separator modifier must be gone.
+    assert not re.findall(r'class="[^"]*\btab-sep\b', src), (
+        ".tab-sep separators are retired in W5 — the overlay uses <h2> group labels"
     )
 
 
@@ -92,13 +98,18 @@ def test_admin_tab_uses_class_not_inline_style():
     assert "margin-left:auto" not in src or "tab-right" in src
 
 
-def test_style_css_carries_separator_rules():
+def test_style_css_carries_nav_overlay_rules():
+    """W5: the burger + fullscreen-overlay CSS must be present, and the
+    unread/pending count + admin-emphasis classes are retained (the
+    overlay links reuse them)."""
     css = STYLE.read_text()
-    assert ".tab-sep::before" in css
-    assert ".tab-right" in css
+    assert ".nav-burger" in css
+    assert ".nav-overlay" in css
+    assert ".nav-overlay-group" in css
     assert ".tab-admin" in css
-    # W4 unread-count slot pre-declared (wiring lands in W4).
     assert ".tab-count" in css
+    # Body-scroll lock while the overlay is open.
+    assert "body.nav-open" in css
 
 
 def test_dashboard_no_dead_in_page_tabs():

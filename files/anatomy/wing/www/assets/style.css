@@ -18,24 +18,31 @@ a { color: var(--accent); text-decoration: none; }
 .status-pill .pulse { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-/* Tabs */
-.tabs { display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; overflow-x: auto; }
-.tab { padding: 10px 16px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; font-size: 14px; white-space: nowrap; transition: all 0.15s; position: relative; }
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--text); border-bottom-color: var(--accent); }
-.tab .tab-key { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 10px; background: var(--surface2); border-radius: 3px; margin-left: 6px; color: var(--text2); }
-.tab-badge { position: absolute; top: 6px; right: 4px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 0 4px; }
-/* W1 — group separators between top-nav sections. `.tab-sep` draws a
-   thin vertical divider via ::before so the DOM stays semantically flat
-   but the eye reads grouped sections (Operate · Insights · Security ·
-   Platform · Help/Admin). */
-.tab-sep::before { content: ""; display: inline-block; width: 1px; height: 18px; background: var(--border); margin-right: 16px; vertical-align: middle; }
-.tab-right { margin-left: auto; }
-.tab-admin { color: var(--red); font-weight: 600; }
-.tab-admin.active { border-bottom-color: var(--red); color: var(--red); }
-/* W4 unread-count slot (wired in W4). Live count of unread inbox /
-   pending approvals rows; hidden when zero. */
-.tab-count { display: inline-block; min-width: 18px; padding: 0 5px; height: 16px; line-height: 16px; text-align: center; font-size: 10px; font-weight: 700; background: var(--red); color: var(--bg); border-radius: 8px; margin-left: 6px; }
+/* Nav — W5 (2026-05-26) burger-toggled fullscreen overlay. The horizontal
+   .tabs bar was replaced; .tab + .tab-key + .tab-count are retained because
+   the overlay links reuse them (and keyboard-nav.js keys off .tab .tab-key). */
+.nav-burger { display: inline-flex; flex-direction: column; justify-content: center; gap: 4px; width: 44px; height: 44px; padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; flex: 0 0 auto; }
+.nav-burger span { display: block; height: 2px; width: 100%; background: var(--text); border-radius: 2px; }
+.nav-burger:hover { background: var(--surface2); }
+
+.nav-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.nav-overlay[hidden] { display: none; }
+.nav-overlay-inner { max-width: 720px; margin: 0 auto; padding: 64px 20px 48px; }
+.nav-overlay-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; font-size: 30px; line-height: 1; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer; }
+.nav-overlay-close:hover { background: var(--surface2); }
+.nav-overlay-group { margin-bottom: 24px; }
+.nav-overlay-group h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+.tab { color: var(--text2); transition: background 0.15s, color 0.15s; }
+.nav-overlay .tab { display: flex; align-items: center; gap: 8px; padding: 14px 12px; font-size: 18px; color: var(--text); border-radius: 8px; white-space: normal; min-height: 44px; }
+.nav-overlay .tab:hover { background: var(--surface2); }
+.nav-overlay .tab.active { color: var(--accent); background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+.nav-overlay .tab-admin { color: var(--red); font-weight: 600; }
+.tab-key { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; text-align: center; font-size: 11px; background: var(--surface2); border-radius: 3px; color: var(--text2); }
+.nav-overlay .tab-key { margin-left: auto; }
+/* Live unread-inbox / pending-approval count; hidden when zero. */
+.tab-count { display: inline-block; min-width: 18px; padding: 0 5px; height: 18px; line-height: 18px; text-align: center; font-size: 10px; font-weight: 700; background: var(--red); color: var(--bg); border-radius: 9px; }
+body.nav-open { overflow: hidden; }
 
 /* Container */
 .container { max-width: 1400px; margin: 0 auto; padding: 24px; }

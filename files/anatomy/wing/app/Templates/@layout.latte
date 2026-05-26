@@ -14,8 +14,11 @@
 
 <div class="header">
 	<div class="header-left">
+		<button type="button" class="nav-burger" id="navBurger" aria-label="Open navigation menu" aria-controls="navOverlay" aria-expanded="false">
+			<span></span><span></span><span></span>
+		</button>
 		<div>
-			<h1><a href="/" style="color:inherit">Wing</a> <span style="color:var(--text2); font-weight:400">nOS operator console</span></h1>
+			<h1><a href="/" style="color:inherit">Wing</a> <span class="header-tagline" style="color:var(--text2); font-weight:400">nOS operator console</span></h1>
 			<div class="subtitle">Inbox · agents · audit · security findings · platform state</div>
 		</div>
 	</div>
@@ -28,43 +31,56 @@
 	</div>
 </div>
 
-<div class="tabs" id="tabs">
-	{* W1 Information Architecture (2026-05-17): 5 visual groups instead of
-	   12-tab flat soup. Group separators are pure CSS (.tab-sep ::before
-	   border-left). Numeric tab-key chips renumbered to reflect new order;
-	   the chip hint will become wired keyboard nav in W4. *}
+{* W5 (2026-05-26): nav moved from a horizontal tab bar to a burger-toggled
+   fullscreen overlay (operator request). Links keep the .tab class + .tab-key
+   chips so keyboard-nav.js (digit → tab) and the unread/pending counts keep
+   working unchanged. Groups become labelled sections; tap targets are large
+   for touch. The overlay is `hidden` by default; nav-overlay.js toggles it. *}
+<nav class="nav-overlay" id="navOverlay" aria-label="Main navigation" hidden>
+	<div class="nav-overlay-inner">
+		<button type="button" class="nav-overlay-close" id="navClose" aria-label="Close navigation menu">&times;</button>
 
-	{* Operate — daily attention surfaces *}
-	<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
-	<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox{if ($unreadInboxCount ?? 0) > 0} <span class="tab-count" aria-label="unread notifications">{$unreadInboxCount}</span>{/if} <span class="tab-key">2</span></a>
-	<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals{if ($pendingApprovalsCount ?? 0) > 0} <span class="tab-count" aria-label="pending approvals">{$pendingApprovalsCount}</span>{/if} <span class="tab-key">3</span></a>
+		<div class="nav-overlay-group">
+			<h2>Operate</h2>
+			<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
+			<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox{if ($unreadInboxCount ?? 0) > 0} <span class="tab-count" aria-label="unread notifications">{$unreadInboxCount}</span>{/if} <span class="tab-key">2</span></a>
+			<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals{if ($pendingApprovalsCount ?? 0) > 0} <span class="tab-count" aria-label="pending approvals">{$pendingApprovalsCount}</span>{/if} <span class="tab-key">3</span></a>
+		</div>
 
-	{* Insights — look-back / audit trail *}
-	<a class="tab tab-sep{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Dashboard <span class="tab-key">4</span></a>
-	<a class="tab{if $activeTab === 'timeline'} active{/if}" href="/timeline" data-tab="timeline">Timeline <span class="tab-key">5</span></a>
-	<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">6</span></a>
-	<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents <span class="tab-key">7</span></a>
+		<div class="nav-overlay-group">
+			<h2>Insights</h2>
+			<a class="tab{if $activeTab === 'overview'} active{/if}" href="/dashboard" data-tab="overview">Dashboard <span class="tab-key">4</span></a>
+			<a class="tab{if $activeTab === 'timeline'} active{/if}" href="/timeline" data-tab="timeline">Timeline <span class="tab-key">5</span></a>
+			<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">6</span></a>
+			<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents <span class="tab-key">7</span></a>
+		</div>
 
-	{* Security — findings + remediation + GDPR register *}
-	<a class="tab tab-sep{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">8</span></a>
-	<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">9</span></a>
-	<a class="tab{if $activeTab === 'gdpr'} active{/if}" href="/gdpr" data-tab="gdpr">GDPR</a>
+		<div class="nav-overlay-group">
+			<h2>Security</h2>
+			<a class="tab{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">8</span></a>
+			<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">9</span></a>
+			<a class="tab{if $activeTab === 'gdpr'} active{/if}" href="/gdpr" data-tab="gdpr">GDPR</a>
+		</div>
 
-	{* Platform — state-change machinery (migrations, upgrades, coexistence) +
-	   identity (users + invitations, Tier-1 only) *}
-	<a class="tab tab-sep{if $activeTab === 'migrations'} active{/if}" href="/migrations" data-tab="migrations">Migrations</a>
-	<a class="tab{if $activeTab === 'upgrades'} active{/if}" href="/upgrades" data-tab="upgrades">Upgrades</a>
-	<a class="tab{if $activeTab === 'coexistence'} active{/if}" href="/coexistence" data-tab="coexistence">Coexistence</a>
-	{if $isSuperAdmin}
-		<a class="tab{if $activeTab === 'users'} active{/if}" href="/users" data-tab="users">Users</a>
-	{/if}
+		<div class="nav-overlay-group">
+			<h2>Platform</h2>
+			<a class="tab{if $activeTab === 'migrations'} active{/if}" href="/migrations" data-tab="migrations">Migrations</a>
+			<a class="tab{if $activeTab === 'upgrades'} active{/if}" href="/upgrades" data-tab="upgrades">Upgrades</a>
+			<a class="tab{if $activeTab === 'coexistence'} active{/if}" href="/coexistence" data-tab="coexistence">Coexistence</a>
+			{if $isSuperAdmin}
+				<a class="tab{if $activeTab === 'users'} active{/if}" href="/users" data-tab="users">Users</a>
+			{/if}
+		</div>
 
-	{* Right-aligned: help (always visible) + admin (Tier-1 super-admin only) *}
-	<a class="tab tab-right tab-sep{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">0</span></a>
-	{if $isSuperAdmin}
-		<a class="tab tab-admin{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin">Admin</a>
-	{/if}
-</div>
+		<div class="nav-overlay-group">
+			<h2>More</h2>
+			<a class="tab{if $activeTab === 'help'} active{/if}" href="/help" data-tab="help">Help <span class="tab-key">0</span></a>
+			{if $isSuperAdmin}
+				<a class="tab tab-admin{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin">Admin</a>
+			{/if}
+		</div>
+	</div>
+</nav>
 
 <div class="container">
 	{include content}
@@ -72,5 +88,6 @@
 
 <script src="/assets/dashboard.js"></script>
 <script src="/assets/keyboard-nav.js?v={$basePath}" defer></script>
+<script src="/assets/nav-overlay.js?v={$basePath}" defer></script>
 </body>
 </html>
