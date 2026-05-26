@@ -204,22 +204,32 @@ def test_dispatch_worker_supports_tls_modes():
 
 
 def test_wing_base_wires_stalwart_when_enabled():
-    """wing-base plugin.yml's two Pulse jobs (per-minute + digest) must
-    flip MAIL_TLS_MODE / MAIL_PORT / MAIL_USERNAME / MAIL_PASSWORD to
-    Stalwart-compatible values when install_smtp_stalwart is true.
-    Pre-this both jobs hardcoded mailpit-style raw SMTP on 1025."""
+    """Mail wiring flips Stalwart-vs-mailpit on install_smtp_stalwart. The
+    conditional MOVED (2026-05-26) out of wing-base/plugin.yml — which the
+    literal-replace pulse catalog can't render, so it shipped UNRENDERED —
+    into wing post.yml, which Ansible-renders into NOS_MAIL_* env. plugin.yml
+    now carries BARE tokens; the Stalwart conditional lives in post.yml."""
     import yaml
     manifest = yaml.safe_load(
         (REPO / "files/anatomy/plugins/wing-base/plugin.yml").read_text()
     )
-    jobs = manifest["pulse"]["jobs"]
-    for job in jobs:
+    for job in manifest["pulse"]["jobs"]:
         env = job.get("env") or {}
-        assert "MAIL_TLS_MODE" in env, f"{job['name']} missing MAIL_TLS_MODE"
-        assert "install_smtp_stalwart" in env["MAIL_TLS_MODE"]
-        assert "stalwart_port_submission" in env.get("MAIL_PORT", "")
-        assert "stalwart_admin_username" in env.get("MAIL_USERNAME", "")
-        assert "stalwart_admin_password" in env.get("MAIL_PASSWORD", "")
+        if "MAIL_TLS_MODE" not in env:
+            continue
+        # Bare tokens only — no in-plugin Jinja conditional (catalog is literal).
+        assert env["MAIL_TLS_MODE"] == "{{ mail_tls_mode }}", \
+            f"{job['name']} MAIL_TLS_MODE must be a bare token"
+        assert "if " not in env.get("MAIL_PORT", ""), \
+            f"{job['name']} MAIL_PORT must be a bare token, not a conditional"
+
+    # The Stalwart conditional now lives in wing post.yml's NOS_MAIL_* env,
+    # where Ansible renders it with full var context.
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    assert "NOS_MAIL_TLS_MODE" in post and "install_smtp_stalwart" in post
+    assert "stalwart_port_submission" in post
+    assert "stalwart_admin_username" in post
+    assert "stalwart_admin_password" in post
 
 
 def test_dispatch_worker_handles_digest_path():

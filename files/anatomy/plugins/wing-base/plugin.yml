@@ -141,27 +141,27 @@ pulse:
       max_concurrent: 1
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
-        NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
+        NTFY_URL: "{{ ntfy_url }}"
         # Mail target — Stalwart (production) when install_smtp_stalwart is on,
         # else mailpit (dev sink). The TLS_MODE + USERNAME + PASSWORD trio
         # tells the dispatch worker which SMTP dance to do; mailpit is raw
         # SMTP, Stalwart requires STARTTLS on submission port 587 + AUTH LOGIN.
         # See files/anatomy/wing/bin/dispatch-notifications.php::_smtp_open_session.
-        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) or install_smtp_stalwart | default(false) else '' }}"
-        MAIL_PORT: "{{ stalwart_port_submission | default(587) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
-        MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
-        MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
-        MAIL_PASSWORD: "{{ stalwart_admin_password if install_smtp_stalwart | default(false) else '' }}"
+        MAIL_HOST: "{{ mail_host }}"
+        MAIL_PORT: "{{ mail_port }}"
+        MAIL_TLS_MODE: "{{ mail_tls_mode }}"
+        MAIL_USERNAME: "{{ mail_username }}"
+        MAIL_PASSWORD: "{{ mail_password }}"
         # Operators with a self-signed dev cert can set mail_tls_verify=false.
-        MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
-        MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
-        MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
+        MAIL_TLS_VERIFY: "{{ mail_tls_verify_flag }}"
+        MAIL_FROM: "{{ mail_from }}"
+        MAIL_RECIPIENT: "{{ mail_recipient }}"
         DISPATCH_BATCH_LIMIT: "50"
         # A9 daily-digest (2026-05-17): severities AT OR BELOW this floor
         # ("medium" → medium+low+info) queue for digest instead of immediate
         # mail. Critical/high stay immediate. Set to "none" to disable
         # digest behavior entirely (every severity fires immediate).
-        DISPATCH_MAIL_DIGEST_FLOOR: "{{ mail_digest_floor | default('medium') }}"
+        DISPATCH_MAIL_DIGEST_FLOOR: "{{ mail_digest_floor_val }}"
     # ── A9 daily-digest flush ─────────────────────────────────────────────
     # Companion to dispatch-notifications. Once a day (09:00 UTC by default)
     # batches every row queued via mail_digest_window into ONE summary email.
@@ -179,14 +179,14 @@ pulse:
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: ""               # digest job is mail-only
-        MAIL_HOST: "{{ '127.0.0.1' if install_mailpit | default(true) or install_smtp_stalwart | default(false) else '' }}"
-        MAIL_PORT: "{{ stalwart_port_submission | default(587) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
-        MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
-        MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
-        MAIL_PASSWORD: "{{ stalwart_admin_password if install_smtp_stalwart | default(false) else '' }}"
-        MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
-        MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
-        MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
+        MAIL_HOST: "{{ mail_host }}"
+        MAIL_PORT: "{{ mail_port }}"
+        MAIL_TLS_MODE: "{{ mail_tls_mode }}"
+        MAIL_USERNAME: "{{ mail_username }}"
+        MAIL_PASSWORD: "{{ mail_password }}"
+        MAIL_TLS_VERIFY: "{{ mail_tls_verify_flag }}"
+        MAIL_FROM: "{{ mail_from }}"
+        MAIL_RECIPIENT: "{{ mail_recipient }}"
         DISPATCH_DIGEST_FLUSH: "1"
 
 # =============================================================================

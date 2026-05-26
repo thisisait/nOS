@@ -114,15 +114,11 @@ def test_pulse_tokens_are_bare_not_filtered():
 	Guard: no Jinja token in a pulse job command/env may contain a `|` filter."""
 	import yaml
 
-	# KNOWN pre-existing offenders (tracked bug, NOT a license for new ones):
-	# wing-base's dispatch-notifications{,-digest} env uses conditional Jinja
-	# ({{ x if install_y … }}) that the literal-replace catalog cannot render,
-	# so the mail/ntfy env ships unrendered → A9 external delivery is broken.
-	# Surfaced 2026-05-25 (conductor → gitleaks tip → this iceberg). Real fix:
-	# Ansible must pre-render these (or the catalog gain a Jinja pass). Until
-	# then they're quarantined here so the gate blocks NEW filter-form tokens.
-	KNOWN_UNRENDERED = {("wing-base", "dispatch-notifications"),
-	                    ("wing-base", "dispatch-notifications-digest")}
+	# The wing-base dispatch iceberg (conditional Jinja → unrendered mail/ntfy
+	# env) was FIXED 2026-05-26: wing post.yml Ansible-renders the values into
+	# NOS_* env, wing-base carries bare tokens, the catalog table maps them.
+	# No quarantine remains — every pulse token must now be bare.
+	KNOWN_UNRENDERED: set = set()
 
 	filtered = re.compile(r"\{\{[^}]*\|[^}]*\}\}")
 	manifests = list((REPO / "files/anatomy/plugins").rglob("plugin.yml")) \

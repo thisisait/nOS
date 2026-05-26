@@ -76,15 +76,34 @@ def _build_substitutions() -> dict[str, str]:
         # at task time.
         "{{ wing_home }}":                _env("NOS_WING_HOME"),
         "{{ wing_app_dir }}":             _env("NOS_WING_APP_DIR"),
+        # A9 mail/ntfy dispatch env (2026-05-26 fix): the catalog can't render
+        # the conditional Jinja these used to carry, so wing post.yml now
+        # Ansible-renders the resolved values (full var context) + passes them
+        # as NOS_* env; wing-base/plugin.yml carries the matching bare tokens.
+        "{{ ntfy_url }}":                 _env("NOS_NTFY_URL"),
+        "{{ mail_host }}":                _env("NOS_MAIL_HOST"),
+        "{{ mail_port }}":                _env("NOS_MAIL_PORT"),
+        "{{ mail_tls_mode }}":            _env("NOS_MAIL_TLS_MODE"),
+        "{{ mail_username }}":            _env("NOS_MAIL_USERNAME"),
+        "{{ mail_password }}":            _env("NOS_MAIL_PASSWORD"),
+        "{{ mail_tls_verify_flag }}":     _env("NOS_MAIL_TLS_VERIFY"),
+        "{{ mail_from }}":                _env("NOS_MAIL_FROM"),
+        "{{ mail_recipient }}":           _env("NOS_MAIL_RECIPIENT"),
+        "{{ mail_digest_floor_val }}":    _env("NOS_MAIL_DIGEST_FLOOR"),
     }
 
 
 def _expand(value, subs: dict[str, str]):
     """Recursively walk dict / list / str and apply substitutions."""
     if isinstance(value, str):
+        # Substitute every KNOWN token unconditionally — even when its value is
+        # empty (e.g. NTFY_URL="" with install_ntfy off). The old `if replacement`
+        # guard left empty-valued known tokens LITERAL, shipping "{{ … }}" into
+        # pulse_jobs (the silent-failure class the conductor caught 2026-05-25).
+        # Tokens not in `subs` are still untouched (stay literal — surfaced by
+        # the bare-token guard test).
         for token, replacement in subs.items():
-            if replacement:
-                value = value.replace(token, replacement)
+            value = value.replace(token, replacement)
         return value
     if isinstance(value, dict):
         return {k: _expand(v, subs) for k, v in value.items()}

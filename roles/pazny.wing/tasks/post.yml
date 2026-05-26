@@ -261,6 +261,21 @@
     # with "Could not open input file" 1× per minute.
     NOS_WING_HOME: "{{ wing_home }}"
     NOS_WING_APP_DIR: "{{ wing_app_dir }}"
+    # A9 mail/ntfy dispatch (2026-05-26 fix): Ansible renders these conditional
+    # values HERE (full var context) — the catalog can't render Jinja, so
+    # wing-base/plugin.yml carries bare tokens that map to these NOS_* vars.
+    # Was: the conditionals lived in plugin.yml + shipped UNRENDERED (A9 mail/
+    # ntfy delivery silently broken; caught by the live conductor 2026-05-25).
+    NOS_NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
+    NOS_MAIL_HOST: "{{ '127.0.0.1' if (install_mailpit | default(true)) or (install_smtp_stalwart | default(false)) else '' }}"
+    NOS_MAIL_PORT: "{{ (stalwart_port_submission | default(587)) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
+    NOS_MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
+    NOS_MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
+    NOS_MAIL_PASSWORD: "{{ (stalwart_admin_password | default('')) if install_smtp_stalwart | default(false) else '' }}"
+    NOS_MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
+    NOS_MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
+    NOS_MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
+    NOS_MAIL_DIGEST_FLOOR: "{{ mail_digest_floor | default('medium') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false
