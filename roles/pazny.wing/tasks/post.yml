@@ -80,6 +80,18 @@
     'Ingested' in (_wing_ingest.stdout | default(''))
     and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
 
+# Surface historical pulse / claude-CLI agent runs in /agents (W5-A1): those
+# runs emit agent_run_* events but never created agent_sessions rows, so they
+# were invisible. Replay the events into sessions (idempotent). New runs are
+# synced live by Api\EventsPresenter on ingest.
+- name: "[pazny.wing] Backfill agent_sessions from historical agent_run events"
+  ansible.builtin.command:
+    cmd: php bin/backfill-agent-sessions.php
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_session_backfill
+  changed_when: "'now holds 0' not in (_wing_session_backfill.stdout | default(''))"
+  failed_when: false
+
 # ── GDPR Article 30 register — Tier-1 core services (C3, 2026-05-25) ──────────
 # Per-plugin gdpr: blocks were loader-validated (Art. 6(1)) but never ingested:
 # the /gdpr UI + DPA story covered only the 4 Tier-2 apps, leaving ~50 core

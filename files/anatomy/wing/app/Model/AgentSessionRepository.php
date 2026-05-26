@@ -65,6 +65,95 @@ final class AgentSessionRepository
 	}
 
 	/**
+	 * Synthesize an agent_sessions row from a pulse / claude-CLI agent event
+	 * (`agent_run_start` / `agent_run_end`). That runtime (pulse-run-agent.sh,
+	 * the no-API-key Claude-Max path) emits events grouped by actor_action_id
+	 * but never created a session row, so its runs were invisible in /agents
+	 * (only /timeline). We upsert the row here keyed on uuid == actor_action_id,
+	 * so the run's existing events (the transcript reads them by
+	 * actor_action_id) attach automatically. Idempotent: a re-ingested start is
+	 * a no-op; the PHP runner's own sessions use agent_session_* event types, so
+	 * they never collide with this agent_run_* path.
+	 *
+	 * @param array<string, mixed> $event
+	 */
+	public function syncFromAgentEvent(array $event): void
+	{
+		$type = (string) ($event['type'] ?? '');
+		if ($type !== 'agent_run_start' && $type !== 'agent_run_end') {
+			return;
+		}
+		$uuid = (string) ($event['actor_action_id'] ?? '');
+		if ($uuid === '') {
+			return;
+		}
+		$actorId = (string) ($event['actor_id'] ?? '');
+		// actor_id 'nos-scout' / 'agent:nos-scout' → agent_name 'scout'.
+		$agentName = preg_replace('/^(agent:)?nos-/', '', $actorId);
+		$agentName = ($agentName !== null && $agentName !== '') ? $agentName : ($actorId ?: 'unknown');
+		$ts = (string) ($event['ts'] ?? gmdate('c'));
+		$runId = (string) ($event['run_id'] ?? '');
+		$existing = $this->findByUuid($uuid);
+
+		// Repair orphaned same-run events: the inner agent writes its own
+		// conductor_report event and may leave actor_action_id null (scout
+		// did; remediator stamped it). All three share the run_id, so stamp
+		// the session uuid onto any null-attribution event of this run — so
+		// the report shows in the session transcript regardless of the
+		// agent's self-attribution. Idempotent (only touches null/empty).
+		if ($runId !== '') {
+			$this->db->query(
+				'UPDATE events SET actor_action_id = ? WHERE run_id = ? AND (actor_action_id IS NULL OR actor_action_id = ?)',
+				$uuid,
+				$runId,
+				'',
+			);
+		}
+
+		if ($type === 'agent_run_start') {
+			if ($existing !== null) {
+				return; // idempotent
+			}
+			$this->db->table('agent_sessions')->insert($this->synthRow($uuid, $agentName, $actorId, $ts, 'running'));
+			return;
+		}
+
+		// agent_run_end
+		if ($existing === null) {
+			$row = $this->synthRow($uuid, $agentName, $actorId, $ts, 'idle');
+			$row['ended_at'] = $ts;
+			$row['stop_reason'] = 'run_end';
+			$this->db->table('agent_sessions')->insert($row);
+			return;
+		}
+		if (($existing['status'] ?? '') !== 'idle') {
+			$this->db->table('agent_sessions')->where('uuid', $uuid)->update([
+				'status'      => 'idle',
+				'ended_at'    => $ts,
+				'stop_reason' => (string) ($event['result']['stop_reason'] ?? 'run_end'),
+			]);
+		}
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function synthRow(string $uuid, string $agentName, string $actorId, string $ts, string $status): array
+	{
+		return [
+			'uuid'          => $uuid,
+			'agent_name'    => $agentName,
+			'agent_version' => 1,
+			'status'        => $status,
+			'trigger'       => 'pulse',
+			'actor_id'      => $actorId,
+			'trace_id'      => '',          // claude-CLI runs carry no OTel trace
+			'model_uri'     => 'claude-cli',
+			'started_at'    => $ts,
+		];
+	}
+
+	/**
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function listRecent(int $limit = 50, ?string $agentName = null): array

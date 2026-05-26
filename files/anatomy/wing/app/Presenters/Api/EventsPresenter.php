@@ -21,6 +21,7 @@ final class EventsPresenter extends BaseApiPresenter
 
 	public function __construct(
 		private EventRepository $events,
+		private \App\Model\AgentSessionRepository $sessions,
 	) {
 	}
 
@@ -53,6 +54,15 @@ final class EventsPresenter extends BaseApiPresenter
 			$id = $this->events->insert($payload);
 		} catch (\Throwable $e) {
 			$this->sendError('insert failed: ' . $e->getMessage(), 500);
+		}
+
+		// Surface pulse / claude-CLI agent runs in /agents: synthesize the
+		// agent_sessions row from agent_run_start/end. Best-effort — a sync
+		// hiccup must not fail the (already-persisted) event ingest.
+		try {
+			$this->sessions->syncFromAgentEvent($payload);
+		} catch (\Throwable $e) {
+			// swallow — event is recorded; session is a derived projection
 		}
 
 		$this->sendCreated(['accepted' => true, 'id' => $id]);
