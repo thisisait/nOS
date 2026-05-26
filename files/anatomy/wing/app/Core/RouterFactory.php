@@ -46,6 +46,10 @@ final class RouterFactory
 		// State & Migration Framework API (agent 7)
 		// Events: POST = ingestion (HMAC), GET = paginated query (bearer).
 		$api->addRoute('api/v1/events', 'Events:default');
+		// Notifications read (W5-A2, 2026-05-26): GET = list (bearer). Creation
+		// stays on the Bone HMAC path; this is the read the scout agent needs
+		// for its severity-spike signal (previously 404 → un-evaluable).
+		$api->addRoute('api/v1/notifications', 'Notifications:default');
 		// A13.2 (2026-05-07): Prometheus metrics surface scraped by Alloy.
 		// Anonymous read; bound to 127.0.0.1:9000 only (Caddyfile).
 		$api->addRoute('api/v1/metrics', 'Metrics:default');
