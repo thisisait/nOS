@@ -95,3 +95,33 @@ def test_reset_clears_persisted_secrets_then_rebootstraps():
 	assert 'src: "secrets.yml.j2"' in src
 	# Must re-include seed.yml to recreate the canonical admin + projects.
 	assert "include_tasks: seed.yml" in src
+
+
+POST = REPO / "roles/pazny.infisical/tasks/post.yml"
+
+
+def test_machine_auth_login_tolerates_stale_creds_after_blank():
+	"""Blank-resilience (2026-05-26): blank=true wipes Infisical's DB, so the
+	stored machine identity is gone and the universal-auth login returns 401.
+	The login task MUST accept 401/403 — `status_code: 200` made one dead
+	credential abort the ENTIRE blank run (it aborted an all-on blank at
+	`Exchange machine identity for fresh admin JWT`)."""
+	src = POST.read_text()
+	assert "universal-auth/login" in src, "machine-auth login task missing"
+	import re
+	# Only the machine-auth login carries a status_code list with 401 — it
+	# must tolerate the post-blank rejection rather than hard-fail on 200-only.
+	assert re.search(r"status_code:\s*\[[^\]]*401[^\]]*\]", src), (
+		"machine-auth login must accept 401/403 (stale machine identity after "
+		"blank) so it degrades gracefully instead of aborting the run"
+	)
+
+
+def test_machine_auth_rejection_warns_operator():
+	"""A present-but-rejected (401/403) machine identity must surface a
+	recovery hint pointing at the break-glass reset. The pre-existing
+	'token missing' hint only fires when creds are EMPTY (length == 0), not
+	when they're stale-after-blank (length > 0 but invalid)."""
+	src = POST.read_text()
+	assert "rejected the stored machine identity" in src, "missing stale-cred warning task"
+	assert "infisical-reset-admin" in src, "recovery hint must point to the break-glass reset"

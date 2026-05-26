@@ -116,7 +116,13 @@
       clientId: "{{ infisical_machine_id_client_id }}"
       clientSecret: "{{ infisical_machine_id_client_secret }}"
     return_content: true
-    status_code: 200
+    # Tolerate 401/403: after `blank=true` wipes Infisical's DB the stored
+    # machine identity no longer exists, so login returns 401. Treating that
+    # as a task FAILURE (status_code: 200) hard-aborted the whole playbook on
+    # every blank with pre-existing creds. Accept the rejection here and let
+    # the warning below route the operator to recovery — Infisical itself is
+    # up and usable; only the admin-token seeding defers.
+    status_code: [200, 401, 403]
   register: _infisical_machine_auth
   when:
     - _infisical_health.status | default(0) == 200
@@ -133,6 +139,21 @@
     - _infisical_machine_auth.json is defined
     - _infisical_machine_auth.json.accessToken | default('') | length > 0
   no_log: true
+
+- name: "[pazny.infisical Post] Warn when stored machine identity is rejected (stale after blank)"
+  ansible.builtin.debug:
+    msg: |
+      ⚠  Infisical rejected the stored machine identity (HTTP {{ _infisical_machine_auth.status | default('?') }} Invalid credentials).
+      The clientId/clientSecret in credentials.yml point to an identity that no longer exists —
+      almost always because `blank=true` wiped Infisical's DB. Admin-token seeding is skipped this run;
+      Infisical is up and usable, but A18 invite-flow Cesta B will skip Infisical writes until recovered.
+
+      Recover with EITHER:
+        • ansible-playbook main.yml --tags infisical-reset-admin   (clears the stale creds, then reseed), OR
+        • re-create the `nos-seeder` identity in Infisical and paste fresh
+          infisical_machine_id_client_id / _client_secret into credentials.yml, then re-run.
+  when:
+    - _infisical_machine_auth.status | default(0) | int in [401, 403]
 
 - name: "[pazny.infisical Post] Operator hint when token still missing"
   ansible.builtin.debug:
