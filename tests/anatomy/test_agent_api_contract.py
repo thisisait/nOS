@@ -54,3 +54,19 @@ def test_upgrades_planned_queue_wired():
     repo = (REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php").read_text()
     for m in ("function planUpgrade", "function listPlanned", "function markPlannedApplied"):
         assert m in repo, f"UpgradeRepository missing {m}"
+
+
+def test_upgrade_engine_consumes_planned_queue():
+    """W5-B3: the upgrade-engine must apply queued upgrades ONLY under --tags
+    upgrade (never on a normal run): read the planned keys, make them eligible
+    (OR with from_regex auto-detect), and mark them applied after a real run."""
+    engine = (REPO / "tasks/upgrade-engine.yml").read_text()
+    assert "planned-upgrades.php --list" in engine, "engine must read the planned queue"
+    assert "_planned_keys" in engine, "engine must use planned keys for eligibility"
+    assert "--mark-applied" in engine, "engine must mark planned upgrades applied"
+    # Mark-applied must be skipped on dry-run.
+    assert "upgrade_dry_run" in engine
+    bin_ = (REPO / "files/anatomy/wing/bin/planned-upgrades.php")
+    assert bin_.is_file(), "planned-upgrades.php bridge missing"
+    src = bin_.read_text()
+    assert "--list" in src and "mark-applied" in src

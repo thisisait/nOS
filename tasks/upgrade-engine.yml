@@ -62,6 +62,27 @@
     label: "{{ item.path | basename }}"
   tags: ['always', 'upgrade']
 
+- name: "[Upgrade] Read planned-upgrade queue from Wing (W5-B3)"
+  ansible.builtin.command:
+    cmd: >-
+      php bin/planned-upgrades.php --list
+      --data-dir={{ wing_data_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app/data') }}
+    chdir: "{{ wing_app_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app') }}"
+  register: _planned_raw
+  changed_when: false
+  failed_when: false
+  tags: ['always', 'upgrade']
+
+- name: "[Upgrade] Parse planned-upgrade keys (service:recipe_id)"
+  ansible.builtin.set_fact:
+    # Operator/agent-queued upgrades. These are eligible under --tags upgrade
+    # regardless of the from_regex auto-detect — the operator explicitly
+    # planned them (the only auto-apply path, per the apply-gate decision).
+    _planned_keys: >-
+      {{ (_planned_raw.stdout | default('[]') | trim | from_json)
+         if (_planned_raw.stdout | default('') | trim | length > 0) else [] }}
+  tags: ['always', 'upgrade']
+
 - name: "[Upgrade] Filter catalog to eligible recipes"
   vars:
     _installed_map: "{{ _upgrade_state.state.services | default({}) }}"
@@ -106,8 +127,15 @@
   when:
     - (_target_service | length == 0) or (item.0.service == _target_service)
     - (_target_recipe_id | length == 0) or (item.1.id == _target_recipe_id)
-    - item.0.service in _installed_map
-    - (_installed_map[item.0.service].installed | default('')) | regex_search(item.1.from_regex) is not none
+    # Eligible if EITHER the installed version matches from_regex (auto-detect)
+    # OR the (service, recipe) is in the planned queue (W5-B3 explicit path).
+    - >-
+      (
+        (item.0.service in _installed_map)
+        and ((_installed_map[item.0.service].installed | default('')) | regex_search(item.1.from_regex) is not none)
+      ) or (
+        (item.0.service ~ ':' ~ item.1.id) in (_planned_keys | default([]))
+      )
   tags: ['always', 'upgrade']
 
 - name: "[Upgrade] Sort eligible jobs by recipe id (stable ordering)"
@@ -178,6 +206,24 @@
     - _upgrade_results is defined
     - _upgrade_results.results is defined
     - _upgrade_results.results | selectattr('failed', 'defined') | selectattr('failed', 'eq', true) | list | length > 0
+  tags: ['upgrade']
+
+- name: "[Upgrade] Mark planned-queue upgrades as applied (W5-B3)"
+  ansible.builtin.command:
+    cmd: >-
+      php bin/planned-upgrades.php --mark-applied
+      --service={{ item.item.service }} --recipe={{ item.item.recipe.id }}
+      --data-dir={{ wing_data_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app/data') }}
+    chdir: "{{ wing_app_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app') }}"
+  loop: "{{ _upgrade_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.service }}:{{ item.item.recipe.id }}"
+  when:
+    - not (upgrade_dry_run | default(false) | bool)
+    - (item.item.service ~ ':' ~ item.item.recipe.id) in (_planned_keys | default([]))
+    - item.success | default(false) | bool
+  changed_when: true
+  failed_when: false
   tags: ['upgrade']
 
 - name: "[Upgrade] Persist updated state"
