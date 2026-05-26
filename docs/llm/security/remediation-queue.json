@@ -514,12 +514,14 @@
       "fix_version": "6.0.0",
       "remediation_type": "version_bump",
       "remediation_detail": "Apache Superset authorization bypass (CVE-2026-23982) + Row Level Security SQLi (CVE-2025-48912). Low-privileged users can access unauthorized data by overwriting dataset SQL queries. Fix requires Superset >= 6.0.0 (major version). Also fixes CVE-2025-27696 (ownership takeover). Pin superset_version to '6.0.0'.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://superset.apache.org/docs/security/cves/",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-26T00:00:00Z",
+      "resolved_by": "superset_version pinned 6.0.0-dev in roles/pazny.superset/defaults/main.yml (contains the 6.0.0 fix; twin REM-068 already resolved). Reconciled in 2026-05-26 review."
     },
     {
       "id": "REM-031",
@@ -1468,8 +1470,8 @@
       "LOW": 1
     },
     "by_status": {
-      "pending": 25,
-      "resolved": 58,
+      "pending": 24,
+      "resolved": 59,
       "vendor-blocked": 2
     },
     "auto_fixable": 70,

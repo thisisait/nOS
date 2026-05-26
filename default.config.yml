@@ -1859,6 +1859,11 @@ authentik_rbac_tiers:
     groups: ["nos-providers", "nos-admins", "nos-managers", "nos-users", "nos-guests"]
 
 # Mapping slug → tier. Services without an entry default to tier 3 (user+).
+# LEGACY FALLBACK ONLY: the RBAC blueprint resolves tier as
+# `c.tier | default(authentik_app_tiers[c.slug])`, so for every plugin-backed
+# service (all carry authentik.tier) these values are DEAD — the per-plugin
+# tier wins. Kept (aligned to the plugin tiers + slug-correct keys, 2026-05-26
+# review) only as the fallback for Tier-2 apps_runner apps that lack a tier.
 authentik_app_tiers:
   portainer: 1
   infisical: 1
@@ -1879,18 +1884,18 @@ authentik_app_tiers:
   vaultwarden: 3
   uptime-kuma: 3
   calibre-web: 3
-  home-assistant: 3
+  homeassistant: 3          # slug-correct key (was 'home-assistant', never matched c.slug)
   kiwix: 4
   jellyfin: 4
   wing: 1
   wordpress: 4
-  code-server: 1
+  code-server: 2          # aligned to plugin authentik.tier (was 1)
   influxdb: 1
-  ntfy: 2
+  ntfy: 3                 # aligned to plugin authentik.tier (was 2)
   nodered: 2
   firefly: 2
   miniflux: 3
-  mailpit: 2
+  mailpit: 1                # aligned to plugin authentik.tier (was 2)
   hedgedoc: 3
   bookstack: 3
   onlyoffice: 3
