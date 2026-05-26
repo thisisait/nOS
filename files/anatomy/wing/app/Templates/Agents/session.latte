@@ -38,10 +38,17 @@
 
 <div style="margin-bottom:16px; padding:12px; border:1px solid var(--border); border-radius:8px;">
 	<div style="font-size:11px; color:var(--text2); text-transform:uppercase;">W3C trace</div>
-	<div style="font-family:monospace; font-size:13px; margin-top:4px;">{$session['trace_id']}</div>
-	<div style="font-size:11px; color:var(--text2); margin-top:6px;">
-		Search this trace_id in Tempo via Grafana Explore (links land when Grafana datasource is provisioned).
-	</div>
+	{if $session['trace_id']}
+		<div style="display:flex; align-items:center; gap:10px; margin-top:4px; flex-wrap:wrap;">
+			<span style="font-family:monospace; font-size:13px;">{$session['trace_id']}</span>
+			<a href="{$tempoUrl}" target="_blank" rel="noopener" class="badge badge-primary" style="text-decoration:none;">Open in Tempo &rarr;</a>
+		</div>
+		<div style="font-size:11px; color:var(--text2); margin-top:6px;">
+			Opens Grafana Explore with this trace pre-queried against the Tempo datasource.
+		</div>
+	{else}
+		<div style="font-family:monospace; font-size:13px; margin-top:4px; color:var(--text2);">&mdash; no trace captured for this session</div>
+	{/if}
 </div>
 
 <h3 style="margin-bottom:8px; font-size:14px; color:var(--text2);">Threads ({count($threads)})</h3>
