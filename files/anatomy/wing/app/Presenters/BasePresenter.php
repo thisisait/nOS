@@ -68,6 +68,13 @@ abstract class BasePresenter extends Presenter
 	{
 		$this->template->activeTab = $this->activeTab;
 
+		// Asset cache-buster (W5 fix): style.css was linked with no version,
+		// so CSS edits stayed invisible behind the browser cache (the burger
+		// overlay shipped unstyled). Key the stylesheet URLs on the on-disk
+		// mtime so every deploy busts the cache automatically.
+		$cssPath = dirname(__DIR__, 2) . '/www/assets/style.css';
+		$this->template->assetVer = @filemtime($cssPath) ?: 1;
+
 		// SEC-14 (2026-05-23): expose CSRF token so every Latte form
 		// can emit `<input type="hidden" name="_csrf" value="{$csrfToken}">`.
 		// requirePostMethod() validates the field on every state-changing

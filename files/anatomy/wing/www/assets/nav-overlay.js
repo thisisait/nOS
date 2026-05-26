@@ -2,7 +2,8 @@
 //
 // The horizontal tab bar was replaced by a fullscreen overlay opened from a
 // burger button in the header (operator request). This wires the toggle:
-//   - burger click            → open
+//   - burger click            → toggle
+//   - "m" key                 → toggle (ignored while typing in a field)
 //   - close button / ESC      → close
 //   - click a nav link        → close (navigation reloads anyway; closing
 //                               first avoids a flash of the overlay on the
@@ -31,7 +32,17 @@
 		burger.focus();
 	}
 
-	burger.addEventListener('click', open);
+	function toggle() {
+		overlay.hidden ? open() : close();
+	}
+
+	function isTyping(t) {
+		if (!t) return false;
+		const tag = (t.tagName || '').toLowerCase();
+		return tag === 'input' || tag === 'textarea' || tag === 'select' || t.isContentEditable;
+	}
+
+	burger.addEventListener('click', toggle);
 	closeBtn.addEventListener('click', close);
 
 	// Close when a navigation link is activated.
@@ -40,11 +51,18 @@
 		if (link) close();
 	});
 
-	// ESC closes while the overlay is open.
 	document.addEventListener('keydown', (e) => {
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
+		// ESC closes while open.
 		if (e.key === 'Escape' && !overlay.hidden) {
 			e.preventDefault();
 			close();
+			return;
+		}
+		// "m" toggles the menu (unless typing in a field).
+		if ((e.key === 'm' || e.key === 'M') && !isTyping(e.target)) {
+			e.preventDefault();
+			toggle();
 		}
 	});
 })();

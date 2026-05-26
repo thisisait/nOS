@@ -7,8 +7,8 @@
 	{* W2 (2026-05-17): tokens.css loaded first — single source of truth
 	   for colors, spacing, radii, fonts, plus utility classes that every
 	   page can rely on. style.css + per-page CSS still load below. *}
-	<link rel="stylesheet" href="/assets/tokens.css?v={$basePath}">
-	<link rel="stylesheet" href="/assets/style.css">
+	<link rel="stylesheet" href="/assets/tokens.css?v={$assetVer}">
+	<link rel="stylesheet" href="/assets/style.css?v={$assetVer}">
 </head>
 <body>
 
@@ -38,8 +38,11 @@
    for touch. The overlay is `hidden` by default; nav-overlay.js toggles it. *}
 <nav class="nav-overlay" id="navOverlay" aria-label="Main navigation" hidden>
 	<div class="nav-overlay-inner">
-		<button type="button" class="nav-overlay-close" id="navClose" aria-label="Close navigation menu">&times;</button>
-
+		<div class="nav-overlay-header">
+			<span class="nav-overlay-title">Navigate <kbd>m</kbd></span>
+			<button type="button" class="nav-overlay-close" id="navClose" aria-label="Close navigation menu">&times;</button>
+		</div>
+		<div class="nav-overlay-groups">
 		<div class="nav-overlay-group">
 			<h2>Operate</h2>
 			<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
@@ -78,6 +81,7 @@
 			{if $isSuperAdmin}
 				<a class="tab tab-admin{if $activeTab === 'admin'} active{/if}" href="/admin" data-tab="admin">Admin</a>
 			{/if}
+		</div>
 		</div>
 	</div>
 </nav>
