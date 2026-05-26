@@ -26,6 +26,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from ..lib.wing_csrf import csrf_post
+
 WING_URL = os.environ.get("WING_API_URL", "http://127.0.0.1:9000").rstrip("/")
 WING_DB = os.environ.get("WING_DB", "/Users/pazny/wing/app/data/wing.db")
 HMAC_SECRET = os.environ.get(
@@ -60,9 +62,20 @@ def _hmac_post(payload: dict) -> int:
         return e.code
 
 
+def _with_edge(headers: dict | None) -> dict:
+    """SEC-6: inject Wing's edge token (Traefik's wing-edge middleware header)
+    so loopback requests pass the edge gate that runs before RBAC. Without it
+    every request 403s regardless of forward-auth groups."""
+    out = dict(headers or {})
+    edge = os.environ.get("WING_EDGE_TOKEN", "")
+    if edge:
+        out.setdefault("X-Wing-Edge-Token", edge)
+    return out
+
+
 def _http_get(path: str, headers: dict | None = None,
               follow: bool = True) -> tuple[int, str, str]:
-    req = urllib.request.Request(WING_URL + path, headers=headers or {})
+    req = urllib.request.Request(WING_URL + path, headers=_with_edge(headers))
     if not follow:
         class _NR(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, *a, **kw): return None
@@ -82,7 +95,7 @@ def _http_post(path: str, headers: dict | None = None,
                follow: bool = False) -> tuple[int, str, str]:
     """POST helper added for A13.7 — state-changing actions are POST-only.
     Empty body is fine (the action data lives in the URL path)."""
-    req = urllib.request.Request(WING_URL + path, headers=headers or {},
+    req = urllib.request.Request(WING_URL + path, headers=_with_edge(headers),
                                  method="POST", data=b"")
     if not follow:
         class _NR(urllib.request.HTTPRedirectHandler):
@@ -140,16 +153,15 @@ def test_approval_flow_request_to_decision(journey):
             s.note = "request landed in events"
 
         with j.step("operator_clicks_approve") as s:
-            # A13.7 (2026-05-07): /approvals/approve/* is now POST-only +
-            # super-admin gated. Send X-Authentik-Groups so the gate accepts
-            # us, and use POST so requirePostMethod() passes.
-            status, _, loc = _http_post(
-                f"/approvals/approve/{action_id}",
+            # A13.7: /approvals/approve/* is POST-only + super-admin gated.
+            # SEC-14: it CSRF-validates → GET /approvals first to mint the
+            # session + token, then POST the approve with _csrf (+ edge token).
+            status, _, loc = csrf_post(
+                WING_URL, "/approvals", f"/approvals/approve/{action_id}",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",
                 },
-                follow=False,
             )
             assert status in (302, 303), (
                 f"approve action expected 302/303, got {status}"

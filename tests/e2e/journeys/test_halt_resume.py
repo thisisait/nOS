@@ -24,6 +24,8 @@ import urllib.request
 
 import pytest
 
+from ..lib.wing_csrf import csrf_post
+
 WING_URL = os.environ.get("WING_API_URL", "http://127.0.0.1:9000").rstrip("/")
 WING_DB = os.environ.get("WING_DB", "/Users/pazny/wing/app/data/wing.db")
 TEST_OPERATOR = "e2e-test-admin"
@@ -36,7 +38,15 @@ def _http(method: str, path: str, *, headers: dict | None = None,
     `allow_redirect=False` (default) catches 302 explicitly so we can
     assert it (admin halt/resume return 302 → /admin).
     """
-    req = urllib.request.Request(WING_URL + path, headers=headers or {}, method=method)
+    # SEC-6: Wing's edge gate 403s any request lacking X-Wing-Edge-Token (the
+    # header Traefik's wing-edge middleware injects). These journeys hit Wing
+    # directly on loopback, so they must simulate that header too — not only
+    # the forward-auth ones — else every request 403s BEFORE RBAC is reached.
+    headers = dict(headers or {})
+    _edge = os.environ.get("WING_EDGE_TOKEN", "")
+    if _edge:
+        headers.setdefault("X-Wing-Edge-Token", _edge)
+    req = urllib.request.Request(WING_URL + path, headers=headers, method=method)
     handler = urllib.request.HTTPRedirectHandler() if allow_redirect else None
     opener = urllib.request.build_opener(handler) if handler else urllib.request.build_opener()
     if not allow_redirect:
@@ -84,9 +94,10 @@ def test_halt_and_resume_audit_chain(journey):
                 pre = conn.execute(
                     "SELECT COUNT(*) FROM pulse_jobs WHERE paused=0 AND removed_at IS NULL"
                 ).fetchone()[0]
-            # A13.7 (2026-05-07): /admin/halt is now POST-only.
-            status, _, loc = _http(
-                "POST", "/admin/halt",
+            # A13.7: /admin/halt is POST-only. SEC-14: it CSRF-validates, so we
+            # GET /admin first (mint session + token) then POST with _csrf.
+            status, _, loc = csrf_post(
+                WING_URL, "/admin", "/admin/halt",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",
@@ -112,9 +123,9 @@ def test_halt_and_resume_audit_chain(journey):
                     "AND paused_reason NOT LIKE 'emergency-halt:%' "
                     "AND paused_reason IS NOT NULL"
                 ).fetchone()[0]
-            # A13.7 — /admin/resume is now POST-only.
-            status, _, _ = _http(
-                "POST", "/admin/resume",
+            # A13.7 — /admin/resume is POST-only + SEC-14 CSRF-validated.
+            status, _, _ = csrf_post(
+                WING_URL, "/admin", "/admin/resume",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",

@@ -70,6 +70,8 @@ def test_admin_rbac(journey, tester_identity, group_name, expected_status):
                 "X-Authentik-Groups": group_name,
                 "X-Authentik-Uid": str(tester_identity.user_pk),
                 "X-Authentik-Name": f"E2E Tester ({tester_identity.tier})",
+                # SEC-6 edge gate — Traefik's wing-edge header (else 403 pre-RBAC).
+                "X-Wing-Edge-Token": os.environ.get("WING_EDGE_TOKEN", ""),
             }
             r = requests.get(
                 f"{WING_URL}/admin",
@@ -101,6 +103,7 @@ def test_admin_rbac(journey, tester_identity, group_name, expected_status):
             headers = {
                 "X-Authentik-Username": tester_identity.username,
                 "X-Authentik-Groups": group_name,
+                "X-Wing-Edge-Token": os.environ.get("WING_EDGE_TOKEN", ""),
             }
             r = requests.get(
                 f"{WING_URL}/admin/halt",
