@@ -61,6 +61,10 @@ final class RouterFactory
 		$api->addRoute('api/v1/migrations/<id>/rollback', 'Migrations:rollback');
 		$api->addRoute('api/v1/migrations[/<id>]', 'Migrations:default');
 		$api->addRoute('api/v1/upgrades/history', 'Upgrades:history');
+		// W5-B2: planned-upgrade queue. /planned before /<service>; /queue
+		// before the general /<service>/<recipe> (Nette is first-match).
+		$api->addRoute('api/v1/upgrades/planned', 'Upgrades:planned');
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/queue', 'Upgrades:queue');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan', 'Upgrades:plan');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply', 'Upgrades:apply');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
@@ -110,6 +114,7 @@ final class RouterFactory
 		// State & Migration Framework browser routes (agent 7)
 		$router->addRoute('migrations/<id>', 'Migrations:detail');
 		$router->addRoute('migrations', 'Migrations:default');
+		$router->addRoute('upgrades/<service>/<recipe>/queue', 'Upgrades:queueUpgrade');
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');

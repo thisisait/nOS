@@ -69,6 +69,15 @@
 					</span>
 				</td>
 				<td class="upg-action-col">
+					{if !empty($row['planned'])}
+						<span class="badge badge-warning" title="Queued by {$row['planned_by']} — applies under --tags upgrade">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</span>
+					{elseif !empty($row['recipe_available']) && !empty($row['recipes'])}
+						<form method="post" action="{plink Upgrades:queueUpgrade, service => $row['service'], recipe => $row['recipes'][0]['recipe_id']}" style="display:inline">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							<input type="hidden" name="target_version" value="{$row['latest'] ?? ''}">
+							<button type="submit" class="mig-btn" title="Queue {$row['recipes'][0]['recipe_id']} → applied under --tags upgrade">Plan</button>
+						</form>
+					{/if}
 					<a class="mig-btn" href="/upgrades/{$row['service']}"
 					   aria-label="Open upgrades for {$row['service']}">Recipes</a>
 				</td>

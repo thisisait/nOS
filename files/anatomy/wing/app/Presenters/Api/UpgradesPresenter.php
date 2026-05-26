@@ -62,6 +62,40 @@ final class UpgradesPresenter extends BaseApiPresenter
 		$this->proxyBoxApi($this->upgrades->apply($service, $recipe));
 	}
 
+	/**
+	 * POST /api/v1/upgrades/{service}/{recipe}/queue — queue an upgrade as
+	 * planned (W5-B2). The upgrade-engine applies the queue under --tags
+	 * upgrade. planned_by is ALWAYS the validated bearer-token identity
+	 * (never body-supplied) to prevent attribution spoofing — same gate
+	 * pattern as Gitleaks:resolve.
+	 */
+	public function actionQueue(string $service, string $recipe): void
+	{
+		$this->requireMethod('POST');
+		$body = $this->getJsonBody();
+		if (isset($body['planned_by'])) {
+			$this->sendError('planned_by is derived from the bearer token identity, not the request body', 400);
+		}
+		$plannedBy = $this->getActorId() ?: 'api';
+		$target = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
+		$notes  = (isset($body['notes']) && is_string($body['notes'])) ? $body['notes'] : null;
+		$queued = $this->upgrades->planUpgrade($service, $recipe, $target, $plannedBy, $notes);
+		$this->sendSuccess([
+			'queued'     => $queued,
+			'service'    => $service,
+			'recipe'     => $recipe,
+			'planned_by' => $plannedBy,
+			'note'       => $queued ? 'queued — applied under: ansible-playbook main.yml --tags upgrade' : 'already queued',
+		]);
+	}
+
+	/** GET /api/v1/upgrades/planned — the planned-upgrade queue. */
+	public function actionPlanned(): void
+	{
+		$this->requireMethod('GET');
+		$this->sendSuccess(['planned' => $this->upgrades->listPlanned()]);
+	}
+
 	public function actionHistory(): void
 	{
 		$this->requireMethod('GET');

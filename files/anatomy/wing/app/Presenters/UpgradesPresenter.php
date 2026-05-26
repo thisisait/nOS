@@ -44,9 +44,40 @@ final class UpgradesPresenter extends BasePresenter
 			}
 		}
 
+		// The template iterates $matrix (was a latent var mismatch: the
+		// presenter only set $services, so /upgrades always showed the
+		// empty-state). Set both; $matrix is the one the template reads.
+		$this->template->matrix = $services;
 		$this->template->services = $services;
 		$this->template->countsBySeverity = $counts;
 		$this->template->upgradeAvailable = $available;
+		$this->template->plannedCount = count($this->upgrades->listPlanned());
+	}
+
+	/**
+	 * POST /upgrades/<service>/<recipe>/queue — operator queues an upgrade
+	 * (W5-B2). Mirrors the bearer API but for the browser: CSRF-gated,
+	 * planned_by is the forward-auth operator identity. The upgrade-engine
+	 * applies the queue under --tags upgrade.
+	 */
+	public function actionQueueUpgrade(string $service, string $recipe): void
+	{
+		$this->requirePostMethod();
+		$target = $this->getHttpRequest()->getPost('target_version');
+		$plannedBy = (string) ($this->template->authUser ?? $this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
+		$queued = $this->upgrades->planUpgrade(
+			$service,
+			$recipe,
+			is_string($target) && $target !== '' ? $target : null,
+			$plannedBy !== '' ? $plannedBy : 'operator',
+		);
+		$this->flashMessage(
+			$queued
+				? "Queued {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade"
+				: "{$service}/{$recipe} is already queued.",
+			$queued ? 'success' : 'info',
+		);
+		$this->redirect('Upgrades:default');
 	}
 
 	/**

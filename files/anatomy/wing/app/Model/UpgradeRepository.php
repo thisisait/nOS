@@ -61,12 +61,27 @@ final class UpgradeRepository
 					break;
 				}
 			}
+			$sev = $latest['severity'] ?? 'minor';
+			$sevClass = match ($sev) {
+				'breaking'             => 'breaking',
+				'security', 'critical' => 'critical',
+				'patch', 'minor'       => 'minor',
+				default                => 'unknown',
+			};
+			$target = $latest['to_version'] ?? null;
 			$out[] = [
 				'id'               => $service,
+				'service'          => $service,
+				'category'         => null,
 				'installed'        => $inst,
-				'stable'           => $latest['to_version'] ?? null,
-				'latest'           => $latest['to_version'] ?? null,
-				'severity'         => $latest['severity'] ?? 'minor',
+				'installed_class'  => $inst !== null ? 'current' : 'unknown',
+				'stable'           => $target,
+				'stable_class'     => $sevClass,
+				'latest'           => $target,
+				'latest_class'     => $sevClass,
+				'upstream'         => null,        // offline matrix — no upstream scanner (B1 decision)
+				'upstream_class'   => 'unknown',
+				'severity'         => $sev,
 				'recipe_available' => true,
 				'recipe_count'     => count($svcRecipes),
 				'recipes'          => $svcRecipes,

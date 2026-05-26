@@ -41,3 +41,16 @@ def test_apps_runner_deploy_events_carry_attribution():
     assert "'actor_id': 'apps_runner'" in post, "app.deployed must carry actor_id"
     assert "'actor_action_id': _apps_action_id" in post, "app.deployed must carry a run-level actor_action_id"
     assert "| to_uuid" in post, "actor_action_id must be a UUID, not a bare timestamp"
+
+
+def test_upgrades_planned_queue_wired():
+    """W5-B2: the planned-upgrade queue must be writable (API + operator) and
+    feed the matrix. Pins the queue endpoint + repo methods + route."""
+    router = (REPO / "files/anatomy/wing/app/Core/RouterFactory.php").read_text()
+    assert "Upgrades:queue" in router, "API queue route missing"
+    assert "Upgrades:queueUpgrade" in router, "operator queue route missing"
+    api = (REPO / "files/anatomy/wing/app/Presenters/Api/UpgradesPresenter.php").read_text()
+    assert "function actionQueue" in api and "getActorId" in api, "queue must derive planned_by from the token"
+    repo = (REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php").read_text()
+    for m in ("function planUpgrade", "function listPlanned", "function markPlannedApplied"):
+        assert m in repo, f"UpgradeRepository missing {m}"
