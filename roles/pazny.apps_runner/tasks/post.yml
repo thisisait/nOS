@@ -158,14 +158,23 @@
         _apps_bone_batch:
           events: "{{ _events_acc }}"
       vars:
+        # A4 (2026-05-26): attribution. Pre-fix these events carried
+        # actor_id=null + actor_action_id=null + run_id=bare-timestamp, so the
+        # scout drift agent flagged them as an attribution gap. Stamp a service
+        # actor_id, a run-level UUID actor_action_id (shared across the batch so
+        # all app.deployed events of one apps-up group together), and a
+        # meaningful run_id.
+        _apps_action_id: "{{ (ansible_date_time.iso8601 ~ '-apps-deploy') | to_uuid }}"
         _events_acc: |-
           {%- set out = [] -%}
           {%- for a in _apps_render.apps -%}
             {%- set _ = out.append({
               'ts': ansible_date_time.iso8601,
-              'run_id': ansible_date_time.iso8601,
+              'run_id': 'apps-deploy-' ~ ansible_date_time.epoch,
               'type': 'app.deployed',
               'source': 'apps_runner',
+              'actor_id': 'apps_runner',
+              'actor_action_id': _apps_action_id,
               'app_id': a.id,
               'fqdn': a.fqdn,
               'category': a.category,
