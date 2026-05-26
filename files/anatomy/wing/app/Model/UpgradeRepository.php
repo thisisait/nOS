@@ -22,17 +22,118 @@ final class UpgradeRepository
 	}
 
 	/**
-	 * Full matrix of services — installed vs stable vs latest vs recipe.
+	 * Full matrix of services — installed vs target vs recipe vs planned.
+	 *
+	 * W5-B1 (2026-05-26): built offline from the local upgrade_recipes catalog
+	 * (ingested from upgrades/*.yml) joined to systems (best-effort installed
+	 * version) and upgrades_planned (queued upgrades). Was a Bone /api/upgrades
+	 * proxy that 401'd (HMAC vs the endpoint's JWT-scope gate) → empty matrix.
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function matrix(): array
 	{
-		$resp = $this->box->get('/api/upgrades');
-		if ($resp['status'] >= 400 || !is_array($resp['body'])) {
-			return [];
+		// Recipe catalog grouped by service (target version DESC → [0] is latest).
+		$recipes = [];
+		foreach ($this->db->table('upgrade_recipes')->order('service ASC, to_version DESC') as $r) {
+			$recipes[$r->service][] = $r->toArray();
 		}
-		return $resp['body']['services'] ?? [];
+		// Queued upgrades, keyed by service.
+		$planned = [];
+		foreach ($this->db->table('upgrades_planned')->where('status', 'planned') as $p) {
+			$planned[$p->service] = $p->toArray();
+		}
+		// Installed versions, best-effort from the systems registry.
+		$installed = [];
+		foreach ($this->db->table('systems') as $s) {
+			$key = strtolower(str_replace([' ', '_', '-'], '', (string) $s->name));
+			$installed[$key] = (string) ($s->version ?? '');
+		}
+
+		$out = [];
+		foreach ($recipes as $service => $svcRecipes) {
+			$latest = $svcRecipes[0];
+			$instKey = strtolower(str_replace([' ', '_', '-'], '', (string) $service));
+			$inst = null;
+			foreach ($installed as $k => $v) {
+				if ($v !== '' && ($k === $instKey || str_contains($k, $instKey) || str_contains($instKey, $k))) {
+					$inst = $v;
+					break;
+				}
+			}
+			$out[] = [
+				'id'               => $service,
+				'installed'        => $inst,
+				'stable'           => $latest['to_version'] ?? null,
+				'latest'           => $latest['to_version'] ?? null,
+				'severity'         => $latest['severity'] ?? 'minor',
+				'recipe_available' => true,
+				'recipe_count'     => count($svcRecipes),
+				'recipes'          => $svcRecipes,
+				'planned'          => isset($planned[$service]),
+				'planned_target'   => $planned[$service]['target_version'] ?? null,
+				'planned_by'       => $planned[$service]['planned_by'] ?? null,
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * Planned (queued) upgrades. status defaults to 'planned'.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function listPlanned(string $status = 'planned'): array
+	{
+		$out = [];
+		foreach ($this->db->table('upgrades_planned')->where('status', $status)->order('planned_at DESC') as $r) {
+			$out[] = $r->toArray();
+		}
+		return $out;
+	}
+
+	/**
+	 * Queue an upgrade as planned (idempotent on service+recipe+status).
+	 * planned_by carries the attribution (operator / agent name).
+	 */
+	public function planUpgrade(string $service, string $recipeId, ?string $targetVersion, string $plannedBy, ?string $notes = null): bool
+	{
+		$exists = $this->db->table('upgrades_planned')
+			->where('service', $service)
+			->where('recipe_id', $recipeId)
+			->where('status', 'planned')
+			->fetch();
+		if ($exists) {
+			return false; // already queued
+		}
+		$this->db->table('upgrades_planned')->insert([
+			'service'        => $service,
+			'recipe_id'      => $recipeId,
+			'target_version' => $targetVersion,
+			'planned_by'     => $plannedBy,
+			'status'         => 'planned',
+			'notes'          => $notes,
+		]);
+		return true;
+	}
+
+	/** Mark a queued upgrade as applied (called by the upgrade-engine). */
+	public function markPlannedApplied(string $service, string $recipeId): void
+	{
+		$this->db->table('upgrades_planned')
+			->where('service', $service)
+			->where('recipe_id', $recipeId)
+			->where('status', 'planned')
+			->update(['status' => 'applied', 'applied_at' => gmdate('c')]);
+	}
+
+	/** Cancel a queued upgrade. */
+	public function cancelPlanned(int $id): void
+	{
+		$this->db->table('upgrades_planned')
+			->where('id', $id)
+			->where('status', 'planned')
+			->update(['status' => 'cancelled']);
 	}
 
 	/**

@@ -92,6 +92,17 @@
   changed_when: "'now holds 0' not in (_wing_session_backfill.stdout | default(''))"
   failed_when: false
 
+# Populate the /upgrades version matrix (W5-B1): ingest the committed upgrade
+# recipes (upgrades/*.yml) into upgrade_recipes. Offline / deterministic — no
+# upstream version calls. Idempotent (truncate + reinsert).
+- name: "[pazny.wing] Ingest upgrade recipes into upgrade_recipes table"
+  ansible.builtin.command:
+    cmd: php bin/ingest-upgrade-recipes.php --recipes-dir={{ playbook_dir }}/upgrades --data-dir={{ wing_data_dir }}
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_recipe_ingest
+  changed_when: "'loaded 0 recipe' not in (_wing_recipe_ingest.stdout | default(''))"
+  failed_when: false
+
 # ── GDPR Article 30 register — Tier-1 core services (C3, 2026-05-25) ──────────
 # Per-plugin gdpr: blocks were loader-validated (Art. 6(1)) but never ingested:
 # the /gdpr UI + DPA story covered only the 4 Tier-2 apps, leaving ~50 core

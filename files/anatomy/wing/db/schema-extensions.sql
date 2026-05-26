@@ -540,3 +540,39 @@ CREATE TABLE IF NOT EXISTS agent_memory_stores (
 );
 CREATE INDEX IF NOT EXISTS idx_memory_agent_name ON agent_memory_stores (agent_name);
 CREATE INDEX IF NOT EXISTS idx_memory_updated    ON agent_memory_stores (updated_at);
+
+-- ── Upgrade pipeline (W5-B, 2026-05-26) ─────────────────────────────────────
+-- upgrade_recipes: the version-transition catalog, ingested from
+-- upgrades/*.yml by bin/ingest-upgrade-recipes.php (offline / deterministic —
+-- no upstream calls). Feeds the /upgrades version matrix.
+CREATE TABLE IF NOT EXISTS upgrade_recipes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    recipe_id     TEXT NOT NULL,
+    from_pattern  TEXT,                     -- from_regex in the recipe
+    to_version    TEXT,                     -- the target version
+    severity      TEXT,                     -- patch | minor | breaking
+    docs_url      TEXT,
+    title         TEXT,
+    ingested_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (service, recipe_id)
+);
+CREATE INDEX IF NOT EXISTS idx_upgrade_recipes_service ON upgrade_recipes (service);
+
+-- upgrades_planned: operator/agent-queued upgrades. The upgrade-engine
+-- (tasks/upgrade-engine.yml) consumes status='planned' rows ONLY under
+-- --tags upgrade (never on a normal run), applies the recipe, then flips the
+-- row to 'applied'. planned_by carries the attribution (operator/agent name).
+CREATE TABLE IF NOT EXISTS upgrades_planned (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    recipe_id     TEXT NOT NULL,
+    target_version TEXT,
+    planned_by    TEXT NOT NULL DEFAULT 'operator',
+    status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
+    notes         TEXT,
+    planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    applied_at    TEXT,
+    UNIQUE (service, recipe_id, status)
+);
+CREATE INDEX IF NOT EXISTS idx_upgrades_planned_status ON upgrades_planned (status);
