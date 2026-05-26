@@ -173,18 +173,17 @@ See [migration-authoring.md §Action types reference](migration-authoring.md#act
 | `backup.restore` | Restore a labeled backup to its original path | `label` |
 | `compose.set_image_tag` | Rewrite the service's image tag in its compose override | `service`, `tag` |
 | `compose.restart_service` | `docker compose restart <svc>` | `service`, `stack` |
-| `compose.up_wait` | `docker compose up <svc> --wait` | `service`, `stack`, `timeout_sec` |
-| `http.get` | HTTP GET, assert status | `url`, `auth`, `expect_status` |
 | `http.get_all` | Paginate an API, save aggregated JSON to file | `url`, `save_to` |
 | `http.wait` | Poll until status matches | `url`, `expect_status`, `timeout_sec` |
-| `http.post` | HTTP POST with body | `url`, `body`, `auth`, `expect_status` |
-| `db.pg_dump` | `pg_dump` of a Postgres database into backup dir | `db`, `label` |
-| `db.pg_restore` | `pg_restore` from a labeled dump | `db`, `label` |
-| `db.pg_upgrade` | Run Postgres major upgrade in a side container | `from_version`, `to_version`, `data_dir` |
-| `db.mariadb_dump` | `mariadb-dump` of a database | `db`, `label` |
-| `db.mariadb_restore` | Restore a dumped database | `db`, `label` |
-| `db.mariadb_upgrade` | Run `mariadb-upgrade` inside the service container | `service` |
-| `cache.purge` | Clear an app's cache directory | `path` |
+| `custom.module` | Invoke a custom Ansible module step | (module-specific) |
+
+> **Real handler set only** (`nos_upgrade_actions/__init__.py` + `upgrade.schema.json`).
+> The rows above + the merged **migration** action set (`fs.*`, `exec.shell`,
+> `docker.*`, `launchd.*`, `state.*`, `authentik.*`, `noop`) are all that exist.
+> There are **no** `db.*`, `http.get`, `http.post`, `compose.up_wait`, or
+> `cache.purge` handlers — the schema enum would reject them. DB upgrades
+> (`pg_upgrade`, `mariadb-upgrade`) + dump/restore + HTTP POSTs are done via
+> `exec.shell` (see the shipped `postgresql.yml` / `mariadb.yml` recipes).
 
 ---
 

@@ -205,7 +205,7 @@ Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisi
 Declarative state and safe transitions for long-lived installs. Four surfaces:
 
 - **State** — `state/manifest.yml` (committed, expected shape) vs. `~/.nos/state.yml` (runtime, generated per run by `pazny.state_manager`). Merged, never overwritten. `~/.nos/` is the runtime side-car — delete it and the next run regenerates.
-- **Migrations** — one-shot global transitions (rename `devboxnos-*` → `nos-*`, move state dirs, rewrite identifiers) in `files/anatomy/migrations/<ISO-date>-<slug>.yml` (moved from `/migrations/` in 2026-05-03 anatomy A1). Ran automatically in `pre_tasks`. Idempotent: each step has `detect` / `action` / `verify` / `rollback`. Breaking migrations prompt for confirmation unless `-e auto_migrate=true`.
+- **Migrations** — one-shot global transitions (rename `devboxnos-*` → `nos-*`, move state dirs, rewrite identifiers) in `files/anatomy/migrations/<ISO-date>-<slug>.yml` (moved from `/migrations/` in 2026-05-03 anatomy A1). Run automatically early in the `tasks:` section (after host roles) — moved out of `pre_tasks` 2026-05-10 because `pre_tasks` runs before Homebrew Python and `nos_state` needs PyYAML. Idempotent: each step has `detect` / `action` / `verify` / `rollback`. Breaking migrations prompt for confirmation unless `-e auto_migrate=true`.
 - **Upgrade recipes** — per-service version transitions in `upgrades/<service>.yml`. `pre` / `apply` / `post` / `rollback` phases. Invoked explicitly (`--tags upgrade -e upgrade_service=<svc>`) or via Wing. Covers breaking patterns like `pg_upgrade`, `mariadb-upgrade`, Grafana dashboard-preserving bumps.
 - **Coexistence** — dual-version operation via `nos_coexistence` module. Provision a second track on a shifted port with cloned data, test, cut over via atomic Nginx reload, clean up after TTL. Supported: Grafana, Postgres, MariaDB, Authentik (special), Gitea, Nextcloud, WordPress.
 
@@ -251,7 +251,7 @@ Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.m
 ```bash
 cp apps/_template.yml apps/myapp.yml
 $EDITOR apps/myapp.yml          # fill meta + gdpr + compose blocks
-python3 -m module_utils.nos_app_parser apps/myapp.yml   # smoke-parse
+PYTHONPATH=files/anatomy python3 -m module_utils.nos_app_parser apps/myapp.yml   # smoke-parse (module_utils lives under files/anatomy/ since A1)
 ansible-playbook main.yml
 ```
 

@@ -23,7 +23,7 @@ cp apps/_template.yml apps/myapp.yml
 $EDITOR apps/myapp.yml
 
 # 2. Smoke-parse (catches schema / GDPR errors before the playbook does)
-python3 -m module_utils.nos_app_parser apps/myapp.yml
+PYTHONPATH=files/anatomy python3 -m module_utils.nos_app_parser apps/myapp.yml
 
 # 3. Run the playbook (apps_runner discovers the new manifest automatically)
 ansible-playbook main.yml -K
@@ -174,7 +174,7 @@ time).
 ```bash
 cp apps/_template.yml apps/myapp.yml
 # Edit meta + gdpr + compose blocks
-python3 -m module_utils.nos_app_parser apps/myapp.yml
+PYTHONPATH=files/anatomy python3 -m module_utils.nos_app_parser apps/myapp.yml
 ansible-playbook main.yml -K
 ```
 

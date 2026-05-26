@@ -59,17 +59,18 @@ FastAPI bridge running on the host. Two responsibilities:
 
 1. **Ingest path for the Ansible callback plugin.** Ansible runs emit
    `playbook_*` / `task_*` / `handler_*` events; the callback plugin POSTs
-   them HMAC-signed to Bone, Bone forwards them HMAC-signed to Wing
-   `/api/v1/events`.
+   them HMAC-signed to Bone, which writes them to wing.db via its single
+   `clients/wing.py` SQLite seam.
 2. **Control-plane proxy.** Wing presenters delegate
    "do something stateful on the host" calls (read mkcert CA, run
    `nos_authentik` blueprint sweep, query Qdrant) to Bone via the
    `BoneClient.php` HTTP layer. Bone is allowed in the host's
    security context; Wing PHP isn't.
 
-Bone never reads or writes wing.db directly anymore (P0.1, 2026-05-05).
-All persistence flows through Wing's HTTP API. The CI lint enforcing this
-is a follow-up TODO.
+Bone writes wing.db **directly** through one seam (`clients/wing.py`, sqlite3).
+The originally-planned Bone→HTTP→Wing `/api/v1/events` forward (so Wing alone
+owns persistence) is a scoped-out follow-up — `clients/wing.py`'s own docstring
+notes this. (Earlier drafts of this doc claimed the forward was live; it isn't.)
 
 ### Wing — `eu.thisisait.nos.wing` launchd, FrankenPHP at port `9000`
 

@@ -95,8 +95,9 @@ One-shot transitions that move the system from version N to version N+1. Example
 - Rename Authentik groups from `devboxnos-admins` to `nos-admins`
 - Bootout `com.devboxnos.openclaw.plist` launchagents
 
-A migration is a YAML file under `migrations/`. The engine runs migrations automatically
-during `pre_tasks`. Idempotent: already-applied migrations are no-ops. See
+A migration is a YAML file under `files/anatomy/migrations/`. The engine runs migrations
+automatically early in the `tasks:` section (moved out of `pre_tasks` 2026-05-10 — it ran
+before Homebrew Python). Idempotent: already-applied migrations are no-ops. See
 [migration-authoring.md](migration-authoring.md).
 
 ### 3. Upgrade recipes
