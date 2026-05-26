@@ -132,14 +132,14 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 | Stack | Services (each owned by a `pazny.*` role) |
 |-------|------|
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
-| **observability** | Grafana, Prometheus, Loki, Tempo |
+| **observability** | Grafana, Prometheus, Loki, Tempo, InfluxDB |
 | **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
 | **apps** | Tier-2 manifest-driven apps (apps_runner — Documenso, 2FAuth, Qdrant, Roundcube) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **voip** | FreePBX (Asterisk) |
 | **engineering** | QGIS Server |
-| **data** | Metabase, Apache Superset, InfluxDB |
+| **data** | Metabase, Apache Superset |
 
 **Bring-up tuning vars** (`default.config.yml`): `stack_up_parallel` (default `true`; `false` = one-at-a-time, contention-free cold blank), `stack_up_wait_timeout` (default 540s; per-stack STRICT health budget), `stack_wait_tick_interval` (default 15s; heartbeat cadence). **`profiles/all-on.yml`** is a committed test profile that enables every known-good service (excludes erpnext/freepbx/spacetimedb), forces sequential bring-up + 1200s timeout — run with `ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]`. **`tools/nos-stacks.sh [tag]`** runs the stack layer with no sudo and no vars_prompt (compose-up tasks carry zero `become:`; `-e nos_sudo_password=''` skips the prompt) — for agent/CI dev; refuses `blank=true`.
 
@@ -158,7 +158,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 
 Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC providers + applications are generated from per-plugin `authentik:` blocks in `files/anatomy/plugins/<svc>-base/plugin.yml`, harvested by `authentik-base`'s aggregator into `inputs.clients` and rendered into the live Authentik blueprint by the plugin loader (D1.2/D1.3 cutover, 2026-05-05). The legacy central `authentik_oidc_apps` list in `default.config.yml` was retired in D1.3 — only the empty stub survives as the Tier-2 apps_runner extension channel.
 
-> **Plugin wiring contract (2026-05-23):** every plugin manifest block (`authentik`, `notification`, `pulse`, `compose_extension`, `observability`, `lifecycle`, `requires`) has a documented status — which blocks have a *live consumer* vs *forward-ready metadata* — in `files/anatomy/docs/plugin-wiring-capabilities.md`, pinned by `tests/anatomy/test_plugin_wiring_contract.py` and measured by `tools/plugin-wiring-report.py`. Notification routing is unified at the canonical A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info` → `wing-inbox`|`ntfy`|`mail`) across **55/55** plugins.
+> **Plugin wiring contract (2026-05-23):** every plugin manifest block (`authentik`, `notification`, `pulse`, `compose_extension`, `observability`, `lifecycle`, `requires`) has a documented status — which blocks have a *live consumer* vs *forward-ready metadata* — in `files/anatomy/docs/plugin-wiring-capabilities.md`, pinned by `tests/anatomy/test_plugin_wiring_contract.py` and measured by `tools/plugin-wiring-report.py`. Notification routing is unified at the canonical A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info` → `wing-inbox`|`ntfy`|`mail`) across **55/55 service** plugins (56 notification blocks total — the 7 composition plugins carry none by design).
 
 **β1.A (2026-05-05) doctrine — three SSO buckets, not two:**
 
@@ -181,7 +181,7 @@ Cookie domain `.<tld>` enables cross-subdomain session sharing. Embedded outpost
 
 ### RBAC (role-based access control)
 
-Four access tiers bound to Authentik groups via expression policies (`authentik_rbac_tiers` + `authentik_app_tiers` in `default.config.yml`):
+Four access tiers bound to Authentik groups via expression policies (`authentik_rbac_tiers` + `authentik_app_tiers` in `default.config.yml`). The per-tier service lists below are **representative, not exhaustive** — the authoritative per-service tier is each plugin's `authentik.tier` (with `authentik_app_tiers` as the legacy Tier-2 fallback):
 - **Tier 1 (admin):** Portainer, Infisical, Grafana — `nos-providers`, `nos-admins`
 - **Tier 2 (manager):** Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout — + `nos-managers`
 - **Tier 3 (user):** Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `nos-users`
@@ -259,7 +259,7 @@ No code changes. The runner takes care of routing, secrets, and observability.
 
 ### Feature-toggle pattern
 
-~78 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering. Bring-up tuning vars (`stack_up_parallel`, `stack_up_wait_timeout`, `stack_wait_tick_interval`) live in `default.config.yml`; `profiles/all-on.yml` is the committed "everything-on" override profile.
+~87 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering. Bring-up tuning vars (`stack_up_parallel`, `stack_up_wait_timeout`, `stack_wait_tick_interval`) live in `default.config.yml`; `profiles/all-on.yml` is the committed "everything-on" override profile.
 
 ## Linting Rules
 
@@ -314,7 +314,7 @@ Live items only. Closed epics live in "Recently shipped doctrine" further below 
 - Bluesky PDS federation not yet functional (the identity bridge creates accounts, but AT Protocol federation requires public DNS).
 - Pre-2026-04-22 installs carry legacy `devboxnos-*` Authentik group names, `com.devboxnos.*` launchd bundle IDs, and the `~/.devboxnos/` state directory. Rebrand complete in-repo; migration on existing hosts needs a blank reset (or manual rename of the Authentik groups + `launchctl bootout` of the old plists).
 - **Drift baseline staleness (security scan):** `docs/llm/security/scan-state.json` `last_full_scan` field can drift (>14 days = drift hook starts complaining). Long-term: A8 conductor agent auto-runs scans on schedule (queued). Manual interim refresh path via `hooks/playbook-end.d/20-cve-drift-check.sh` works today.
-- **Security remediation backlog:** authoritative file `docs/llm/security/remediation-queue.json`. As of 2026-05-16: **53 pending / 30 resolved / 2 vendor-blocked** out of 85 total. Phase A is mechanical CVE pins; Phase B is `mem_limit`/`cpus` sweep; Phase C is hardening; Phase D is architectural. Vendor-blocked: Open WebUI ZDI CVEs (REM-064), RustFS gRPC sigverify (REM-059), **FreePBX REM-014/046** (tiredofit Docker image abandoned upstream 2022-04-30 — CRITICAL CVEs UNFIXABLE in this image, operators accept the risk).
+- **Security remediation backlog:** authoritative file `docs/llm/security/remediation-queue.json`. As of 2026-05-26: **24 pending / 59 resolved / 2 vendor-blocked** out of 85 total (Epic C1 image-pin sweep burned down the version-bump backlog). Phase A is mechanical CVE pins; Phase B is `mem_limit`/`cpus` sweep; Phase C is hardening; Phase D is architectural. Vendor-blocked: Open WebUI ZDI CVEs (REM-064), RustFS gRPC sigverify (REM-059), **FreePBX REM-014/046** (tiredofit Docker image abandoned upstream 2022-04-30 — CRITICAL CVEs UNFIXABLE in this image, operators accept the risk).
 - **Inspektor + Librarian agent runners — deferred (metadata.runner_status):** ship as AgentKit contract-only (no live execution). Inspektor waits on a trivy/grype/nuclei substrate plugin; Librarian waits on a Qdrant corpus pipeline. Scout, Remediator, Conductor are live. See `docs/sso-and-attribution.md` for the agent matrix.
 
 ## Operator gotchas (image / config-specific)
@@ -345,7 +345,7 @@ Closed epics, archived here so future archaeology has a starting point. Authorit
 - **A16 Woodpecker CI autowiring** (2026-05-17) — Gitea repo creation + Woodpecker activation are playbook-managed.
 - **A17 Stack-up tags + nos-push + deploy-trigger + Wing daemon hardening** (2026-05-20) — see commits `5c16a05..d87efef`.
 - **A18 Invite-flow Cesta B (Infisical + Stalwart)** (2026-05-20) — `UsersPresenter::actionInviteCreate` optionally provisions per-user credentials into Infisical (`/users/<name>/`) and a Stalwart mailbox via JMAP after the Authentik invitation lands. Bundles Stalwart v0.11.8 → v0.16.6 upgrade (REST → JMAP API). See `docs/invite-provisioning.md`.
-- **A19 plugin-wiring unification + orchestration health-wait** (2026-05-23) — notification routing canonicalized to 55/55 plugins (gate `test_plugin_wiring_contract.py`, report `tools/plugin-wiring-report.py`, doctrine `files/anatomy/docs/plugin-wiring-capabilities.md`); in-stream health-wait heartbeat replaces blocking `--wait` (`wait-stacks-healthy.yml` + `stack-health-probe.py`); `stack_up_parallel`/sequential cold-blank + `profiles/all-on.yml`; sudo-free `tools/nos-stacks.sh`. See `RELEASE.md` (v0.2-beta).
+- **A19 plugin-wiring unification + orchestration health-wait** (2026-05-23) — notification routing canonicalized to 55/55 service plugins (gate `test_plugin_wiring_contract.py`, report `tools/plugin-wiring-report.py`, doctrine `files/anatomy/docs/plugin-wiring-capabilities.md`); in-stream health-wait heartbeat replaces blocking `--wait` (`wait-stacks-healthy.yml` + `stack-health-probe.py`); `stack_up_parallel`/sequential cold-blank + `profiles/all-on.yml`; sudo-free `tools/nos-stacks.sh`. See `RELEASE.md` (v0.2-beta).
 - **A19 single-run autowiring** (2026-05-23) — `authentik_bootstrap_token` is playbook-generated and pinned as the Authentik blueprint token key, so Wing /users + invitations work on ONE blank run (no fetch-tool second pass); Woodpecker↔Gitea OAuth2 client is auto-created.
 
 ## AIT — AgentKit runtime (Anatomy A14, 2026-05-07)
@@ -357,7 +357,7 @@ Self-hosted, platform-agnostic, audit-first agent runtime. Lives under `files/an
 - **Agent definition** = `files/anatomy/agents/<name>/{agent.yml, system.md, rubric.md}`. `agent.yml` validated against `state/schema/agent.schema.yaml` on every push by `tests/anatomy/test_agent_schema.py`. Name pattern `^[a-z][a-z0-9-]{1,38}[a-z0-9]$`, lower+dashes only.
 - **Model URI scheme** = `<provider>-<model-id>`, dashes throughout (e.g. `anthropic-claude-opus-4-7`, `openclaw-qwen-coder-32b`). Pinned by `App\AgentKit\AgentLoader::isValidModelUri` + the schema regex + `tests/anatomy/test_agentkit_naming.py::test_uri_scheme_uses_dash_separator`.
 - **LLMClient interface** has exactly 2 methods (`identifier()`, `send()`). Surface drift caught by `test_llm_client_protocol_is_minimal`. Both `AnthropicAdapter` (uses `anthropic-ai/sdk` composer dep) and `OpenClawAdapter` (HTTP to `OPENCLAW_BASE_URL`) honor the protocol.
-- **Tables** (in `files/anatomy/wing/db/schema-extensions.sql`): `agent_sessions`, `agent_threads`, `agent_iterations`, `agent_vaults`, `agent_credentials`, `agent_subscriptions`. Verified by `test_all_agentkit_tables_declared`.
+- **Tables** (in `files/anatomy/wing/db/schema-extensions.sql`): `agent_sessions`, `agent_threads`, `agent_iterations`, `agent_vaults`, `agent_credentials`, `agent_subscriptions` (verified by `test_all_agentkit_tables_declared`), plus `agent_memory_stores` (the Dreams table, pinned by `test_agentkit_dreams.py`).
 - **Audit lineage**: every LLM call → `events` row + OTel span + token tally in `agent_sessions`. `actor_action_id == agent_sessions.uuid` so a single `SELECT WHERE actor_action_id=?` reconstructs the entire run. 12 new event types (`agent_session_*`, `agent_thread_*`, `agent_iteration_*`, `agent_tool_use`, `agent_tool_result`, `agent_message`, `agent_grader_decision`, `agent_webhook_dispatch`, `agent_vault_resolved`).
 - **OTel**: `App\AgentKit\Telemetry\OtelExporter` POSTs JSON spans to Alloy on `127.0.0.1:4318` (host config already opens both 4317 gRPC + 4318 HTTP). Service name `nos.agentkit`. Trace_id stored in `agent_sessions.trace_id` for Tempo deep-link from Wing /agents UI.
 - **Vault**: `agent_credentials.secret_ref` is NEVER plaintext — it's a pointer (`env:VAR_NAME` or `infisical:/path`) resolved by `CredentialResolver` at session-open time. Plaintext only lives in function-local memory inside the adapter call.
@@ -373,9 +373,8 @@ Self-hosted, platform-agnostic, audit-first agent runtime. Lives under `files/an
 
 **First agent shipped: `conductor`** (`files/anatomy/agents/conductor/`). System prompt + rubric describe the self-test ceremony — `mcp_wing GET /api/v1/hub/health`, `mcp_wing GET /api/v1/pulse_jobs`, etc. Conductor reports under markdown heading `## Conductor report` with sections `Health`, `Findings`, `Recommendations for operator`. Grader scores against `rubric.md` (evidence-discipline + structural).
 
-**Out-of-scope, deferred (post-A14):**
-- Multi-agent process pool (Coordinator currently runs sub-agents sequentially)
-- Dreams (memory consolidation across past sessions)
-- Operator-trigger UI button (today: CLI only)
-- Vault refresh from Infisical (today: env-var fallback works)
-- Per-agent webhook auto-fan-out for event-driven loops
+**Post-A14 follow-ups — ALL SHIPPED (2026-05-15+; was a "deferred" list):**
+- Multi-agent process pool — `AgentKit/ProcessPool.php`, instantiated in `Coordinator.php`
+- Dreams (cross-session memory consolidation) — `AgentKit/Memory/Dreamer.php` + `MemoryStore.php` + `bin/dream-agent.php` + the `agent_memory_stores` table (pinned by `test_agentkit_dreams.py`)
+- Operator-trigger UI button, per-agent webhook auto-fan-out, Infisical vault refresh
+- Closed per `docs/active-work.md`; left here as a pointer so the changelog doesn't read as still-open.

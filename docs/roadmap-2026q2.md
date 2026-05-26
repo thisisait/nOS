@@ -27,7 +27,7 @@ plan; the table below documents what actually landed.
 
 | Wave | Plan | Outcome |
 |---|---|---|
-| **Wave 1** — Tracks A-D | Containerize Bone+Wing, agent identity, Linux infra, ANSSI hardening | ✅ DONE 2026-04 |
+| **Wave 1** — Tracks A-D | Containerize Bone+Wing, agent identity, Linux infra, ANSSI hardening | ✅ Bone/Wing + agent identity + ANSSI DONE 2026-04. ⚠️ Linux infra: roles scaffolded + Darwin-gated; full port (daemon systemd ports, integration-linux CI, Ubuntu wet-test) is the **ongoing Track C lane** — see active-work.md. |
 | **Wave 2** — Tracks E-J | Tier-2 apps_runner, tech debt cleanup, ansible-core 2.20+, dynamic TLD, Cloudflare LE | ✅ DONE 2026-05-01 → 2026-05-03 |
 | **Wave 3** — Bones & Wings refactor (A0-A17) | Plugin loader, callback plugin, Wing host-revert, role thinning, autowiring | ✅ DONE 2026-05-03 → 2026-05-20 |
 | **Wave 4** — Track Q autowiring | 7-batch consolidation of 71 `pazny.*` roles into per-plugin manifests | ✅ DONE 2026-05-05 → 2026-05-07 (63 plugins live) |

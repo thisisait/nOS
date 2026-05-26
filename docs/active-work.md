@@ -201,8 +201,9 @@ the previous snapshot all completed — see git log between `7e2026c` and
    `aggregator-dry-run.py` is the active CI gate inside
    `tests/e2e/journeys/test_plugin_contract.py`; `d12-annotate-plugins.py`
    is idempotent and harmless — keep as utility.
-8. **Security backlog** — 12 pending `remediation_items` rows; Phase A
-   (CVE pins) → B (mem/cpu limits) → C (hardening) → D (architectural).
+8. **Security backlog** — 24 pending `remediation_items` rows (Epic C1
+   burned down the version-bump backlog 2026-05-25/26); Phase A (CVE pins,
+   largely done) → B (mem/cpu, done) → C (hardening) → D (architectural).
    Vendor-blocked: Open WebUI ZDI CVEs, RustFS gRPC sigverify.
 
 ---

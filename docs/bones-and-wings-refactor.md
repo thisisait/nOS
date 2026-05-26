@@ -1268,7 +1268,7 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 | A6.5 | ✅ DONE 2026-05-04 | Grafana thin-role pilot + real `grafana-base` service plugin. Loader implements `render`, `render_compose_extension`, `copy_dashboards`, `wait_health`, `conditional_remove_dir` actions backed by Jinja2. Manifest dotted-path resolver walks `provisioning.datasources`-style refs. Module wrapper passes `template_vars: "{{ vars }}"` through to action params + plugin templates. Grafana role thinned: provisioning artifacts (datasources/all.yml.j2 + dashboards/all.yml.j2 + 18 dashboard JSONs) moved to `files/anatomy/plugins/grafana-base/provisioning/`. OIDC env block + mkcert CA conditional + `GF_INSTALL_PLUGINS` + extra_hosts authentik moved to `templates/grafana-base.compose.yml.j2`. core-up.yml drops 2 datasource/dashboard-render tasks; observability.yml drops the in-repo dashboard enumerate+copy pair. 7 new tests (render w/ Jinja, render idempotency, render_compose_extension, copy_dashboards, copy_dashboards idempotency, wait_health timeout, dotted-path-missing). | **Track Q UNBLOCKED.** |
 | A7 | ✅ DONE 2026-05-05 | gitleaks PoC plugin — schema + presenter + Pulse job-reg + plugin manifest + skill (`bfe7629..d558e1b`) | — |
 | A8 | ✅ DONE 2026-05-07 | conductor profile + agent runner + Wing /inbox + /approvals (`d1552dc..4974c53`); OpenClaw + nos-conductor Wing tokens, pulse-run-agent.sh | — |
-| A9 | ⏳ NOT STARTED | notification fanout | should follow inbox/approval shape |
+| A9 | ✅ DONE 2026-05-16/17 | notification fanout (A9.1–A9.5: NotificationRepository, Bone /notifications, dispatch worker, daily digest, severity floors) | see `files/anatomy/docs/notification-fanout.md` |
 | A10 | ✅ DONE 2026-05-07 | `actor_id` + `actor_action_id` columns on events + pulse_runs + agent_sessions; auto-attribution callback plugin; `/audit` presenter (X-series commits) | — |
 | A11 | ✅ DONE | `/approvals` approve/reject flow promoted from stub to working presenter with HMAC audit | — |
 | A12 | ✅ DONE | platform-halt big-red-button — operator can halt all agent runs via Wing UI | — |
@@ -1277,4 +1277,4 @@ The roadmap will be updated to point at this document. Original K/L/M phase IDs 
 
 ---
 
-*Last revision: 2026-05-16 — refreshed after A7–A14 + A13.x cascade all shipped. Only A9 (notification fanout) remains pending in this track.*
+*Last revision: 2026-05-26 — A7–A14 + A13.x + A9 notification fanout all shipped; this track is complete. (A9 was stale-marked NOT STARTED until the 2026-05-26 review.)*
