@@ -84,7 +84,14 @@ services:
 	- App\Model\AgentMemoryStoreRepository
 
 	# AgentKit core services
-	- App\AgentKit\AgentLoader(%appDir%/../../agents)
+	# %appDir% is the Bootstrap dir (Nette sets it to the dir of the file that
+	# calls `new Configurator`, i.e. app/Bootstrap). The agent definitions live
+	# in files/anatomy/agents — a sibling of wing/, so from app/Bootstrap that is
+	# ../../../agents (repo). The wing role rsyncs the same tree to ~/wing/agents,
+	# which from the deployed Bootstrap (~/wing/app/app/Bootstrap) is also
+	# ../../../agents. Two dots (the pre-2026-05-26 value) pointed at the
+	# nonexistent wing/agents — the catalog was always empty + /agents/<name> 404.
+	- App\AgentKit\AgentLoader(%appDir%/../../../agents)
 	- App\AgentKit\Vault\CredentialResolver
 	- App\AgentKit\LLMClient\Factory
 	- App\AgentKit\Telemetry\AuditEmitter

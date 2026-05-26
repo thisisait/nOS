@@ -168,6 +168,29 @@
   delegate_to: "{{ inventory_hostname }}"
   notify: Restart wing
 
+# ── AgentKit definitions sync ─────────────────────────────────────────────────
+# The PHP AgentLoader is wired in common.neon as
+# `AgentLoader(%appDir%/../../agents)`. In the repo %appDir% is
+# files/anatomy/wing/app, so the loader root is the sibling
+# files/anatomy/agents (correct for CLI + pytest). Deployed, the app-source
+# rsync nests files/anatomy/wing/ inside {{ wing_app_dir }} (~/wing/app), so
+# %appDir% becomes ~/wing/app/app and `../../agents` resolves to ~/wing/agents.
+# Without this task that path is empty — the Wing /agents catalog renders blank
+# and every /agents/<name> detail/session 404s ("Agent not loadable"). The
+# dir-form <name>/agent.yml definitions (validated by test_agent_schema.py) are
+# the AgentKit source; the flat <name>.yml siblings are Pulse profiles consumed
+# from the repo path and are harmless here (AgentLoader::listAvailable only
+# scans subdirectories with an agent.yml). Distinct from OpenClaw's ~/agents.
+- name: "[pazny.wing] Sync AgentKit definitions to host"
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/files/anatomy/agents/"
+    dest: "{{ wing_home }}/agents/"
+    delete: true
+    rsync_opts:
+      - "--exclude=.git/"
+      - "--exclude=*.bak"
+  delegate_to: "{{ inventory_hostname }}"
+
 # ── Composer install (host-native, no docker run) ────────────────────────────
 # Replaces the Track-A `docker compose run --rm wing-cli composer install`
 # pattern.
