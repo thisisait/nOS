@@ -133,8 +133,12 @@ def test_pulse_tokens_are_bare_not_filtered():
 		for job in ((doc.get("pulse") or {}).get("jobs") or []):
 			if (plugin, job.get("name")) in KNOWN_UNRENDERED:
 				continue
-			vals = [str(job.get("command", ""))] + \
-				[str(v) for v in (job.get("env") or {}).values()]
+			# Check EVERY field the catalog literal-substitutes: command, schedule,
+			# args, env values. (schedule/args were a blind spot — the digest
+			# job's schedule shipped a filter token literal, 2026-05-26.)
+			vals = [str(job.get("command", "")), str(job.get("schedule", ""))] \
+				+ [str(a) for a in (job.get("args") or [])] \
+				+ [str(v) for v in (job.get("env") or {}).values()]
 			for v in vals:
 				if filtered.search(v):
 					offenders.append(f"{path.relative_to(REPO)} [{job.get('name')}]: {v}")

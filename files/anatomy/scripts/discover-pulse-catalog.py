@@ -90,6 +90,7 @@ def _build_substitutions() -> dict[str, str]:
         "{{ mail_from }}":                _env("NOS_MAIL_FROM"),
         "{{ mail_recipient }}":           _env("NOS_MAIL_RECIPIENT"),
         "{{ mail_digest_floor_val }}":    _env("NOS_MAIL_DIGEST_FLOOR"),
+        "{{ mail_digest_cron }}":         _env("NOS_MAIL_DIGEST_CRON"),
     }
 
 

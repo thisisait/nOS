@@ -172,7 +172,7 @@ pulse:
       command: "/opt/homebrew/bin/php"
       args:
         - "{{ wing_app_dir }}/bin/dispatch-notifications.php"
-      schedule: "{{ mail_digest_cron | default('0 9 * * *') }}"
+      schedule: "{{ mail_digest_cron }}"   # bare token (catalog can't render filters); resolved via NOS_MAIL_DIGEST_CRON
       jitter_min: 5
       max_runtime_s: 60
       max_concurrent: 1

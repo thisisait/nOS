@@ -276,6 +276,7 @@
     NOS_MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
     NOS_MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
     NOS_MAIL_DIGEST_FLOOR: "{{ mail_digest_floor | default('medium') }}"
+    NOS_MAIL_DIGEST_CRON: "{{ mail_digest_cron | default('0 9 * * *') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false
