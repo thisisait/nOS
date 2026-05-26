@@ -1511,7 +1511,8 @@
       tags: ['backup']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Vulnerability Scanner – NOS Security Auditor (2x daily scheduled scan)
+    # Vulnerability Scanner – dir/state scaffolding only. Scheduling moved to
+    # the conductor 'vulnerability-scan' Pulse job (daily; see conductor.yml).
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/vulnerability-scan.yml
       when: configure_vulnerability_scan | default(false)
