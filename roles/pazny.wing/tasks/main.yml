@@ -231,6 +231,21 @@
         and _wing_autoload_stat.stat.mtime < _wing_lock_stat.stat.mtime)
   notify: Restart wing
 
+# ── DB schema BEFORE the daemon serves (ordering fix, 2026-05-26) ─────────────
+# Pre-this, init-db ran only in post.yml (stack-up phase, minutes later). But
+# the daemon bootstraps just below and Pulse immediately polls
+# /api/v1/pulse_jobs/due → Nette threw "Table 'api_tokens' does not exist" 500s
+# for the whole window (Tracy-dumped 30× on the 2026-05-25 blank). Creating the
+# schema here (idempotent, standalone CLI) means the daemon serves a ready DB
+# from request #1. post.yml re-runs init-db harmlessly + does the migrate/ingest
+# steps that genuinely need the running daemon.
+- name: "[pazny.wing] Initialize SQLite schema BEFORE daemon start"
+  ansible.builtin.command:
+    cmd: "{{ ('php' if ansible_os_family == 'Darwin' else (_wing_frankenphp_bin ~ ' php-cli')) }} bin/init-db.php --data-dir={{ wing_data_dir }}"
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_initdb_pre
+  changed_when: "'Created' in (_wing_initdb_pre.stdout | default(''))"
+
 # ── Caddyfile + launchd plist ────────────────────────────────────────────────
 
 - name: "[pazny.wing] Render Caddyfile"
