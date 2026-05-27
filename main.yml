@@ -862,6 +862,24 @@
       ansible.builtin.import_tasks: tasks/audit-retention.yml
       tags: ['audit-retention', 'never']
 
+    # ── Upgrade engine (W5: wire the orphaned apply-path) ───────────────────
+    # The engine was a standalone task file never imported into main.yml, so
+    # `--tags upgrade` didn't actually run it. Its tasks are now 'upgrade'-only
+    # (was 'always'), so a normal run skips them entirely; 'never' keeps it off
+    # un-tagged runs. Applies the upgrades_planned queue + auto-detected recipes.
+    #   ansible-playbook main.yml --tags upgrade [-e upgrade_dry_run=true]
+    - name: "[Upgrade] Apply eligible / queued upgrades (opt-in)"
+      ansible.builtin.import_tasks: tasks/upgrade-engine.yml
+      tags: ['upgrade', 'never']
+
+    # ── Coexistence apply (W5-B5c) ──────────────────────────────────────────
+    # Consumes the coexistence_planned queue (upgrade-architect / operator) and
+    # provisions each parallel track. Off normal runs; --tags coexistence only.
+    #   ansible-playbook main.yml --tags coexistence [-e coexist_dry_run=true]
+    - name: "[Coexistence] Apply queued coexistence provisions (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-apply.yml
+      tags: ['coexistence', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.

@@ -27,7 +27,7 @@ files, never run an upgrade, never provision anything.
    and a `coexistence_port_offset`.
 4. For a breaking / whole-new-version upgrade, ALSO queue coexistence:
    `POST /api/v1/coexistence/<service>/queue` (Bearer), body
-   `{"tag":"<short>","port_offset":10,"reason":"<why>"}`. This lets the operator
+   `{"tag":"<short>","target_version":"<new version>","port_offset":10,"reason":"<why>"}`. This lets the operator
    provision a parallel track before cutover. Queue only what you'd draft a
    breaking recipe for; never auto-provision.
 5. Post your report via `POST /api/v1/events` type=conductor_report

@@ -189,3 +189,34 @@ def test_upgrade_architect_agent_wired():
     prof = (base / "upgrade-architect.yml").read_text()
     assert "/coexistence/" in prof and "queue" in prof, "architect must queue coexistence"
     assert "never write" in prof.lower() or "propose-only" in prof.lower() or "never write/commit" in prof.lower()
+
+
+def test_coexistence_queue_consumed_under_tag():
+    """W5-B5c (2026-05-27): the coexistence_planned queue (architect/operator
+    queues a parallel-track provision for a breaking upgrade) must be consumed
+    ONLY under --tags coexistence (never on a normal run), with the new track
+    resolved against the manifest (real stack + base port from port_var) so it
+    clears the live legacy install."""
+    # Queue surface: table column, repo, API, bridge.
+    schema = (REPO / "files/anatomy/wing/db/schema-extensions.sql").read_text()
+    assert "coexistence_planned" in schema and "target_version" in schema
+    repo = (REPO / "files/anatomy/wing/app/Model/CoexistenceRepository.php").read_text()
+    for m in ("function planCoexistence", "function listPlanned", "function markPlannedApplied"):
+        assert m in repo, f"CoexistenceRepository missing {m}"
+    api = (REPO / "files/anatomy/wing/app/Presenters/Api/CoexistencePresenter.php").read_text()
+    assert "function actionQueue" in api and "getActorId" in api, "queue must derive planned_by from the token"
+    bridge = (REPO / "files/anatomy/wing/bin/planned-coexistence.php")
+    assert bridge.is_file(), "planned-coexistence.php bridge missing"
+    assert "--list" in bridge.read_text() and "mark-applied" in bridge.read_text()
+    # init-db must ALTER target_version into existing coexistence_planned tables.
+    initdb = (REPO / "files/anatomy/wing/bin/init-db.php").read_text()
+    assert "'coexistence_planned'" in initdb and "target_version" in initdb, "init-db must add target_version to existing tables"
+    # Consumer: tag-gated, manifest-resolved, dry-run-safe mark.
+    consumer = (REPO / "tasks/coexistence-apply.yml").read_text()
+    assert "planned-coexistence.php --list" in consumer, "consumer must read the queue"
+    assert "_coexist_manifest" in consumer and "manifest.yml" in consumer, "consumer must resolve stack/port from the manifest"
+    assert "coexist_base_port" in consumer and "port_var" in consumer, "base_port must come from the manifest port_var"
+    assert "coexist_dry_run" in consumer and "--mark-applied" in consumer
+    # Wired into main.yml behind 'never' so a normal run never provisions.
+    main = (REPO / "main.yml").read_text()
+    assert "tasks/coexistence-apply.yml" in main, "consumer not imported in main.yml"

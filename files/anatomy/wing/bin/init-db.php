@@ -439,6 +439,13 @@ $addMissingColumns($db, 'user_invitations', [
 	'provisioning_json' => "TEXT NOT NULL DEFAULT '{}'",
 ]);
 
+// W5-B5c (2026-05-27): coexistence_planned gained target_version after the
+// table first shipped (B5a). Existing DBs need the column ALTERed in — the
+// --tags coexistence consumer (planned-coexistence.php) selects it.
+$addMissingColumns($db, 'coexistence_planned', [
+	'target_version' => 'TEXT',
+]);
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

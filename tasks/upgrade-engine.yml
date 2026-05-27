@@ -40,7 +40,7 @@
   nos_state:
     action: read
   register: _upgrade_state
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Locate upgrade recipe files"
   ansible.builtin.find:
@@ -48,7 +48,7 @@
     patterns: "*.yml,*.yaml"
     excludes: "_template.yml"
   register: _upgrade_files
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Load recipe files"
   ansible.builtin.set_fact:
@@ -60,7 +60,7 @@
   loop: "{{ _upgrade_files.files }}"
   loop_control:
     label: "{{ item.path | basename }}"
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Read planned-upgrade queue from Wing (W5-B3)"
   ansible.builtin.command:
@@ -71,7 +71,7 @@
   register: _planned_raw
   changed_when: false
   failed_when: false
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Parse planned-upgrade keys (service:recipe_id)"
   ansible.builtin.set_fact:
@@ -81,7 +81,7 @@
     _planned_keys: >-
       {{ (_planned_raw.stdout | default('[]') | trim | from_json)
          if (_planned_raw.stdout | default('') | trim | length > 0) else [] }}
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Filter catalog to eligible recipes"
   vars:
@@ -96,7 +96,7 @@
         | selectattr('recipes', 'defined')
         | list
       }}
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Expand plan — one entry per matching (service, recipe)"
   vars:
@@ -136,12 +136,12 @@
       ) or (
         (item.0.service ~ ':' ~ item.1.id) in (_planned_keys | default([]))
       )
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Sort eligible jobs by recipe id (stable ordering)"
   ansible.builtin.set_fact:
     _upgrade_jobs: "{{ (_upgrade_jobs | default([])) | sort(attribute='recipe.id') }}"
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Summary"
   ansible.builtin.debug:
@@ -150,7 +150,7 @@
       {% for job in _upgrade_jobs %}
         - [{{ job.recipe.severity }}] {{ job.service }}: {{ job.installed }} -> {{ job.recipe.to }} (recipe {{ job.recipe.id }})
       {% endfor %}
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] No eligible recipes — exit"
   ansible.builtin.meta: end_play
@@ -172,7 +172,7 @@
 - name: "[Upgrade] Compute run timestamp (used for unique backup labels)"
   ansible.builtin.set_fact:
     _upgrade_run_ts: "{{ ansible_date_time.iso8601_basic_short }}"
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 # ------------------------------------------------------------------------------
 # Per-job orchestration
@@ -230,7 +230,7 @@
   nos_state:
     action: write
     merge: true
-  tags: ['always', 'upgrade']
+  tags: ['upgrade']
 
 - name: "[Upgrade] Final summary"
   ansible.builtin.debug:

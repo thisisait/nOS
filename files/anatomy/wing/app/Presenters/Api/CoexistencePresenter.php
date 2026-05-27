@@ -52,8 +52,9 @@ final class CoexistencePresenter extends BaseApiPresenter
 		$plannedBy = $this->getActorId() ?: 'api';
 		$tag = (isset($body['tag']) && is_string($body['tag']) && $body['tag'] !== '') ? $body['tag'] : 'new';
 		$portOffset = (int) ($body['port_offset'] ?? 10);
+		$version = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
 		$reason = (isset($body['reason']) && is_string($body['reason'])) ? $body['reason'] : null;
-		$result = $this->coexistence->planCoexistence($service, $tag, $portOffset, $plannedBy, $reason);
+		$result = $this->coexistence->planCoexistence($service, $tag, $portOffset, $plannedBy, $version, $reason);
 		$this->sendSuccess([
 			'queued'     => $result['ok'],
 			'status'     => $result['status'],

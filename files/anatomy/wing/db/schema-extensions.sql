@@ -585,6 +585,7 @@ CREATE TABLE IF NOT EXISTS coexistence_planned (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     service       TEXT NOT NULL,
     tag           TEXT NOT NULL DEFAULT 'new',
+    target_version TEXT,
     port_offset   INTEGER DEFAULT 10,
     reason        TEXT,
     planned_by    TEXT NOT NULL DEFAULT 'operator',

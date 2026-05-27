@@ -41,7 +41,7 @@ final class CoexistenceRepository
 	 *
 	 * @return array{ok:bool, status:string, detail:string}
 	 */
-	public function planCoexistence(string $service, string $tag, int $portOffset, string $plannedBy, ?string $reason = null): array
+	public function planCoexistence(string $service, string $tag, int $portOffset, string $plannedBy, ?string $targetVersion = null, ?string $reason = null): array
 	{
 		$exists = $this->db->table('coexistence_planned')
 			->where('service', $service)->where('tag', $tag)->where('status', 'planned')->fetch();
@@ -49,12 +49,13 @@ final class CoexistenceRepository
 			return ['ok' => false, 'status' => 'already_queued', 'detail' => 'already queued'];
 		}
 		$this->db->table('coexistence_planned')->insert([
-			'service'     => $service,
-			'tag'         => $tag,
-			'port_offset' => $portOffset,
-			'reason'      => $reason,
-			'planned_by'  => $plannedBy,
-			'status'      => 'planned',
+			'service'        => $service,
+			'tag'            => $tag,
+			'target_version' => $targetVersion,
+			'port_offset'    => $portOffset,
+			'reason'         => $reason,
+			'planned_by'     => $plannedBy,
+			'status'         => 'planned',
 		]);
 		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued'];
 	}

@@ -1,0 +1,110 @@
+---
+# ==============================================================================
+# COEXISTENCE APPLY (W5-B5c, 2026-05-27)
+# ------------------------------------------------------------------------------
+# Consumes the coexistence_planned queue (the upgrade-architect agent or an
+# operator queues a parallel-track provision for a breaking upgrade) and
+# provisions each track via tasks/coexistence-provision.yml. Applies ONLY under
+# --tags coexistence (the import in main.yml carries 'never'); never on a
+# normal run. Dry-run with -e coexist_dry_run=true.
+#
+#     ansible-playbook main.yml --tags coexistence
+#     ansible-playbook main.yml --tags coexistence -e coexist_dry_run=true
+# ==============================================================================
+
+- name: "[Coexistence] Read planned-coexistence queue from Wing"
+  ansible.builtin.command:
+    cmd: >-
+      php bin/planned-coexistence.php --list
+      --data-dir={{ wing_data_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app/data') }}
+    chdir: "{{ wing_app_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app') }}"
+  register: _coexist_raw
+  changed_when: false
+  failed_when: false
+  tags: ['coexistence']
+
+- name: "[Coexistence] Parse planned queue"
+  ansible.builtin.set_fact:
+    _coexist_planned: >-
+      {{ (_coexist_raw.stdout | default('[]') | trim | from_json)
+         if (_coexist_raw.stdout | default('') | trim | length > 0) else [] }}
+  tags: ['coexistence']
+
+# state/manifest.yml is the authoritative service→{stack, port_var} source
+# (same rows Traefik's file provider reads). Index it by id so each queued
+# track lands in its real compose stack and computes off its real base port.
+- name: "[Coexistence] Index manifest rows by service id"
+  ansible.builtin.set_fact:
+    _coexist_manifest: >-
+      {{ dict(_rows | map(attribute='id') | zip(_rows)) }}
+  vars:
+    _rows: "{{ (lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml).services }}"
+  tags: ['coexistence']
+
+- name: "[Coexistence] Summary"
+  ansible.builtin.debug:
+    msg: |-
+      Coexistence apply: {{ _coexist_planned | length }} queued provision(s).
+      {% for c in _coexist_planned %}
+        - {{ c.service }}/{{ c.tag }} → {{ c.target_version | default('(no version!)') }} (port_offset {{ c.port_offset }})
+      {% endfor %}
+      {% if _coexist_planned | selectattr('target_version', 'none') | list | length > 0 %}
+      WARNING: entries without target_version are skipped (provision needs a version).
+      {% endif %}
+  tags: ['coexistence']
+
+# nos_coexistence (via coexistence-provision.yml) requires coexist_version, so
+# skip any queued row without one. apply: tags propagates 'coexistence' onto
+# the included provision tasks (they're tagged coexist-provision otherwise).
+- name: "[Coexistence] Provision each queued track"
+  ansible.builtin.include_tasks:
+    file: tasks/coexistence-provision.yml
+    apply:
+      tags: ['coexistence']
+  vars:
+    coexist_service: "{{ item.service }}"
+    coexist_tag: "{{ item.tag }}"
+    coexist_version: "{{ item.target_version }}"
+    coexist_port_offset: "{{ item.port_offset | default(10) }}"
+    # Land the track in the service's real compose stack (manifest.stack);
+    # fall back to the module default if the service isn't in the manifest.
+    coexist_stack: >-
+      {{ _coexist_manifest[item.service].stack
+         if item.service in _coexist_manifest else omit }}
+    # nos_coexistence's first track owns base_port, so base_port must clear the
+    # live legacy install. The queue's port_offset means "sit `offset` above the
+    # service's normal port" — so base_port = <port_var> + offset (e.g.
+    # postgresql 5432 + 10 → track on 5442). port_var comes from the manifest;
+    # if the service/var is absent we omit and the module errors clearly
+    # (either port or base_port must be provided).
+    coexist_base_port: >-
+      {{ ((vars[_coexist_manifest[item.service].port_var] | int) + (item.port_offset | default(10) | int))
+         if (item.service in _coexist_manifest
+             and vars[_coexist_manifest[item.service].port_var] is defined)
+         else omit }}
+    coexist_dry_run: "{{ coexist_dry_run | default(false) | bool }}"
+  loop: "{{ _coexist_planned }}"
+  loop_control:
+    label: "{{ item.service }}/{{ item.tag }}"
+  when:
+    - item.target_version is not none
+    - (item.target_version | default('')) | length > 0
+  tags: ['coexistence']
+
+- name: "[Coexistence] Mark queued provisions applied"
+  ansible.builtin.command:
+    cmd: >-
+      php bin/planned-coexistence.php --mark-applied
+      --service={{ item.service }} --tag={{ item.tag }}
+      --data-dir={{ wing_data_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app/data') }}
+    chdir: "{{ wing_app_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app') }}"
+  loop: "{{ _coexist_planned }}"
+  loop_control:
+    label: "{{ item.service }}/{{ item.tag }}"
+  when:
+    - not (coexist_dry_run | default(false) | bool)
+    - item.target_version is not none
+    - (item.target_version | default('')) | length > 0
+  changed_when: true
+  failed_when: false
+  tags: ['coexistence']
