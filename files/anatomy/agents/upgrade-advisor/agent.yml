@@ -1,0 +1,51 @@
+name: upgrade-advisor
+version: 1
+description: |
+  nOS upgrade-advisor — reads the /upgrades version matrix and QUEUES the
+  upgrades that apply to the running system, for the operator to apply via
+  `ansible-playbook main.yml --tags upgrade`. Proposes only; never applies.
+
+  For each service it reads installed (from state) vs the recipe targets,
+  and queues a recipe only when its from_pattern matches the installed
+  version (the queue's mismatch guard enforces this too). Distinct from the
+  other agents:
+    - Conductor verifies platform health end-to-end.
+    - Scout reports drift (state vs committed).
+    - Remediator triages security findings (gitleaks).
+    - Upgrade-advisor turns the version matrix into a reviewed upgrade plan.
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - mcp.tool_use
+    - wing.read
+    - wing.write
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+
+metadata:
+  ait_phase: W5-B4
+  ceremony_role: upgrade-planning

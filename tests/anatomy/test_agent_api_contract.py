@@ -113,3 +113,25 @@ def test_agent_token_requests_capability_scopes():
     scout = (REPO / "files/anatomy/agents/scout/system.md").read_text()
     assert "/api/state" in scout and "nos:state:read" in scout, "scout must read Bone /api/state with its scoped JWT"
     assert "Do NOT use Wing" in scout, "scout must be steered off the Wing HMAC proxy for state"
+
+
+def test_upgrade_advisor_agent_wired():
+    """W5-B4: the upgrade-advisor agent (reads /upgrades matrix → queues
+    applicable upgrades) must be fully wired — dir-form contract, flat
+    profile + pulse job, wrapper, Authentik client, and the per-agent Wing
+    token provisioning."""
+    base = REPO / "files/anatomy/agents"
+    for f in ("upgrade-advisor/agent.yml", "upgrade-advisor/system.md", "upgrade-advisor/rubric.md", "upgrade-advisor.yml"):
+        assert (base / f).is_file(), f"missing upgrade-advisor file: {f}"
+    assert (REPO / "tools/run-upgrade-advisor.sh").is_file(), "wrapper missing"
+    cfg = (REPO / "default.config.yml").read_text()
+    assert 'client_id: "nos-upgrade-advisor"' in cfg, "Authentik client not declared"
+    creds = (REPO / "default.credentials.yml").read_text()
+    assert "upgrade_advisor_wing_api_token" in creds, "Wing token credential missing"
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    assert "--name=upgrade-advisor" in post, "Wing token not provisioned by the role"
+    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" in post, "token not in the wing daemon env"
+    # Propose-only: the profile queues upgrades and never applies/forces.
+    prof = (base / "upgrade-advisor.yml").read_text()
+    assert "/queue" in prof, "advisor must queue upgrades"
+    assert "never apply" in prof and "NEVER pass force" in prof, "advisor must be propose-only (no apply, no force)"

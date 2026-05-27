@@ -194,6 +194,24 @@
     or 'Updated' in (_wing_scout_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — upgrade-advisor (W5-B4)"
+  # Reads the /upgrades matrix + queues applicable upgrades. The token name
+  # is the actor_id recorded as planned_by on each queued upgrade. Authentik
+  # client (nos-upgrade-advisor) is pre-provisioned in authentik_agent_clients.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ upgrade_advisor_wing_api_token }}
+      - --name=upgrade-advisor
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_upgrade_advisor_token
+  changed_when: >
+    'Created' in (_wing_upgrade_advisor_token.stdout | default(''))
+    or 'Updated' in (_wing_upgrade_advisor_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — remediator (A9.3 triage agent)"
   # Sister to the conductor token — same pattern, separate identity for
   # actor-attribution. Without this row in api_tokens, the remediator's
@@ -277,6 +295,7 @@
     NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
     NOS_REMEDIATOR_WING_API_TOKEN: "{{ remediator_wing_api_token | default('') }}"
     NOS_SCOUT_WING_API_TOKEN: "{{ scout_wing_api_token | default('') }}"
+    NOS_UPGRADE_ADVISOR_WING_API_TOKEN: "{{ upgrade_advisor_wing_api_token | default('') }}"
     NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
     # A9.4-fixup (2026-05-17): wing-base Pulse jobs reference {{ wing_home }}
     # in args[] and env values. Without the substitution, Pulse would

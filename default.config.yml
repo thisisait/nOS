@@ -2042,6 +2042,17 @@ authentik_agent_clients:
       - "nos:state:read"
       - "nos:security:read"
 
+  - name: "nOS Upgrade Advisor"
+    slug: "nos-upgrade-advisor"
+    client_id: "nos-upgrade-advisor"
+    client_secret: "{{ global_password_prefix }}_pw_agent_upgrade_advisor"
+    # W5-B4 upgrade-planning agent. Reads the /upgrades matrix + queues
+    # applicable upgrades (Wing bearer); the queue's mismatch guard rejects
+    # non-applicable recipes. Read-only on state; never applies upgrades.
+    capabilities:
+      - "nos:upgrades:read"
+      - "nos:state:read"
+
   - name: "nOS Conductor"
     slug: "nos-conductor"
     client_id: "nos-conductor"
