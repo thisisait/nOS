@@ -143,8 +143,15 @@ final class UpgradeRepository
 	/**
 	 * Queue an upgrade as planned (idempotent on service+recipe+status).
 	 * planned_by carries the attribution (operator / agent name).
+	 *
+	 * Mismatch guard (2026-05-27): REFUSES by default when the recipe's
+	 * from_pattern does not match the installed version — that is how a
+	 * downgrade/inapplicable recipe got queued (authentik-2024-to-2025 on a
+	 * 2025.12.4 install). Pass $force=true to override deliberately.
+	 *
+	 * @return array{ok:bool, status:string, detail:string}
 	 */
-	public function planUpgrade(string $service, string $recipeId, ?string $targetVersion, string $plannedBy, ?string $notes = null): bool
+	public function planUpgrade(string $service, string $recipeId, ?string $targetVersion, string $plannedBy, ?string $notes = null, bool $force = false): array
 	{
 		$exists = $this->db->table('upgrades_planned')
 			->where('service', $service)
@@ -152,8 +159,16 @@ final class UpgradeRepository
 			->where('status', 'planned')
 			->fetch();
 		if ($exists) {
-			return false; // already queued
+			return ['ok' => false, 'status' => 'already_queued', 'detail' => 'already queued'];
 		}
+
+		if (!$force) {
+			$mismatch = $this->recipeMismatch($service, $recipeId);
+			if ($mismatch !== null) {
+				return ['ok' => false, 'status' => 'mismatch', 'detail' => $mismatch];
+			}
+		}
+
 		$this->db->table('upgrades_planned')->insert([
 			'service'        => $service,
 			'recipe_id'      => $recipeId,
@@ -162,12 +177,42 @@ final class UpgradeRepository
 			'status'         => 'planned',
 			'notes'          => $notes,
 		]);
-		return true;
+		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued'];
+	}
+
+	/**
+	 * Returns a human-readable reason if the recipe is NOT applicable to the
+	 * installed version (its from_pattern doesn't match), else null. Unknown
+	 * installed version or recipe → no objection (can't prove a mismatch).
+	 */
+	public function recipeMismatch(string $service, string $recipeId): ?string
+	{
+		$recipe = $this->db->table('upgrade_recipes')
+			->where('service', $service)->where('recipe_id', $recipeId)->fetch();
+		if ($recipe === null) {
+			return "recipe '{$recipeId}' not found for service '{$service}'";
+		}
+		$pattern = (string) ($recipe->from_pattern ?? '');
+		$installed = $this->installedVersionsFromState()[$service] ?? null;
+		if ($pattern === '' || $installed === null) {
+			return null; // can't evaluate → allow
+		}
+		if (@preg_match('~' . $pattern . '~', $installed) === 1) {
+			return null; // applicable
+		}
+		return "installed '{$installed}' does not match recipe from-pattern '{$pattern}'"
+			. " (target {$recipe->to_version}) — applying it would downgrade or break;"
+			. ' pass force=true to override.';
 	}
 
 	/** Mark a queued upgrade as applied (called by the upgrade-engine). */
 	public function markPlannedApplied(string $service, string $recipeId): void
 	{
+		// Drop any prior terminal marker first: UNIQUE(service,recipe_id,status)
+		// would otherwise collide on a repeat apply of the same recipe.
+		$this->db->table('upgrades_planned')
+			->where('service', $service)->where('recipe_id', $recipeId)->where('status', 'applied')
+			->delete();
 		$this->db->table('upgrades_planned')
 			->where('service', $service)
 			->where('recipe_id', $recipeId)
@@ -175,13 +220,19 @@ final class UpgradeRepository
 			->update(['status' => 'applied', 'applied_at' => gmdate('c')]);
 	}
 
-	/** Cancel a queued upgrade. */
+	/** Cancel a queued upgrade (by id, or by service+recipe). */
 	public function cancelPlanned(int $id): void
 	{
+		$row = $this->db->table('upgrades_planned')->where('id', $id)->where('status', 'planned')->fetch();
+		if ($row === null) {
+			return;
+		}
+		// Avoid the UNIQUE(service,recipe_id,status) collision when a prior
+		// cancelled marker for the same recipe already exists.
 		$this->db->table('upgrades_planned')
-			->where('id', $id)
-			->where('status', 'planned')
-			->update(['status' => 'cancelled']);
+			->where('service', $row->service)->where('recipe_id', $row->recipe_id)->where('status', 'cancelled')
+			->delete();
+		$this->db->table('upgrades_planned')->where('id', $id)->update(['status' => 'cancelled']);
 	}
 
 	/**

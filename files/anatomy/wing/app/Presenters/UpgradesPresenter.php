@@ -64,19 +64,23 @@ final class UpgradesPresenter extends BasePresenter
 	{
 		$this->requirePostMethod();
 		$target = $this->getHttpRequest()->getPost('target_version');
-		$plannedBy = (string) ($this->template->authUser ?? $this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
-		$queued = $this->upgrades->planUpgrade(
+		$force = (bool) $this->getHttpRequest()->getPost('force');
+		$plannedBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
+		$result = $this->upgrades->planUpgrade(
 			$service,
 			$recipe,
 			is_string($target) && $target !== '' ? $target : null,
 			$plannedBy !== '' ? $plannedBy : 'operator',
+			null,
+			$force,
 		);
-		$this->flashMessage(
-			$queued
-				? "Queued {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade"
-				: "{$service}/{$recipe} is already queued.",
-			$queued ? 'success' : 'info',
-		);
+		[$msg, $type] = match ($result['status']) {
+			'queued'         => ["Queued {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade", 'success'],
+			'already_queued' => ["{$service}/{$recipe} is already queued.", 'info'],
+			'mismatch'       => ["Refused — {$result['detail']}", 'error'],
+			default          => [$result['detail'], 'info'],
+		};
+		$this->flashMessage($msg, $type);
 		$this->redirect('Upgrades:default');
 	}
 

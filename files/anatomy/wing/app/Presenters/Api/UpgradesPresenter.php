@@ -79,13 +79,20 @@ final class UpgradesPresenter extends BaseApiPresenter
 		$plannedBy = $this->getActorId() ?: 'api';
 		$target = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
 		$notes  = (isset($body['notes']) && is_string($body['notes'])) ? $body['notes'] : null;
-		$queued = $this->upgrades->planUpgrade($service, $recipe, $target, $plannedBy, $notes);
+		$force  = !empty($body['force']);
+		$result = $this->upgrades->planUpgrade($service, $recipe, $target, $plannedBy, $notes, $force);
+		// Mismatch guard: a recipe whose from_pattern doesn't match the
+		// installed version is refused (409) unless force=true.
+		if ($result['status'] === 'mismatch') {
+			$this->sendError($result['detail'], 409);
+		}
 		$this->sendSuccess([
-			'queued'     => $queued,
+			'queued'     => $result['ok'],
+			'status'     => $result['status'],
 			'service'    => $service,
 			'recipe'     => $recipe,
 			'planned_by' => $plannedBy,
-			'note'       => $queued ? 'queued — applied under: ansible-playbook main.yml --tags upgrade' : 'already queued',
+			'note'       => $result['ok'] ? 'queued — applied under: ansible-playbook main.yml --tags upgrade' : $result['detail'],
 		]);
 	}
 

@@ -82,3 +82,19 @@ def test_upgrade_matrix_reads_installed_from_state():
     assert "installedVersionsFromState" in repo, "matrix must read installed from state.yml"
     assert ".nos/state.yml" in repo
     assert "from_pattern" in repo, "stable must be the applicable (from_pattern-matched) step"
+
+
+def test_upgrade_queue_mismatch_guard():
+    """2026-05-27: queueing a recipe whose from_pattern doesn't match the
+    installed version is REFUSED (409 / mismatch) unless force=true — that is
+    how a downgrade got queued (authentik-2024-to-2025 on a 2025.12.4 install).
+    Status transitions must also survive the UNIQUE(service,recipe_id,status)
+    constraint on repeat apply/cancel."""
+    repo = (REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php").read_text()
+    assert "function recipeMismatch" in repo, "mismatch guard helper missing"
+    assert "bool $force" in repo, "planUpgrade must accept a force override"
+    assert "from-pattern" in repo, "mismatch detail must explain the from_pattern miss"
+    # repeat-apply / repeat-cancel must not collide on the UNIQUE constraint.
+    assert "->where('status', 'applied')\n\t\t\t->delete()" in repo or "where('status', 'applied')->delete()" in repo
+    api = (REPO / "files/anatomy/wing/app/Presenters/Api/UpgradesPresenter.php").read_text()
+    assert "'mismatch'" in api and "409" in api, "API queue must 409 on mismatch"
