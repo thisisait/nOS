@@ -144,3 +144,14 @@ def test_upgrade_advisor_agent_wired():
     prof = (base / "upgrade-advisor.yml").read_text()
     assert "/queue" in prof, "advisor must queue upgrades"
     assert "never apply" in prof and "NEVER pass force" in prof, "advisor must be propose-only (no apply, no force)"
+
+
+def test_agent_clients_blueprint_is_force_applied():
+    """2026-05-27: the 'Reapply authentik blueprints' handler must apply
+    30-agent-clients. It was rendered but excluded from the apply loop, so a
+    newly-added agent OAuth client (e.g. upgrade-advisor) was never provisioned
+    outside a full blank → client_credentials mint returned invalid_client."""
+    for f in ("main.yml", "roles/pazny.authentik/handlers/main.yml"):
+        src = (REPO / f).read_text()
+        # Find the reapply loop and assert 30-agent-clients is in it.
+        assert "30-agent-clients" in src, f"{f}: reapply handler must apply 30-agent-clients"

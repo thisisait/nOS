@@ -734,8 +734,13 @@
       failed_when: false
 
     - name: Reapply authentik blueprints
+      # 30-agent-clients added 2026-05-27: it was rendered but never
+      # force-applied here, so incrementally-added agent OAuth clients
+      # (e.g. a new upgrade-advisor) only existed if present during a full
+      # blank (Authentik's one-time scan). Apply it like the others so the
+      # "add a new agent" workflow actually provisions the client.
       ansible.builtin.shell: |
-        for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies; do
+        for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies 30-agent-clients; do
           {{ docker_bin }} compose -p infra exec -T authentik-worker \
             ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
         done

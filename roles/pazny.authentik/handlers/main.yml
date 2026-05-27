@@ -11,8 +11,11 @@
   failed_when: false
 
 - name: Reapply authentik blueprints
+  # 30-agent-clients added 2026-05-27 (see main.yml play-level handler):
+  # agent OAuth clients were rendered but never force-applied, so a new agent
+  # never got provisioned outside a full blank.
   ansible.builtin.shell: |
-    for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies; do
+    for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies 30-agent-clients; do
       {{ docker_bin }} compose -p infra exec -T authentik-worker \
         ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
     done
