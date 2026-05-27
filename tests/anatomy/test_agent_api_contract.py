@@ -116,7 +116,7 @@ def test_agent_token_requests_capability_scopes():
     for p in ("scout/system.md", "scout.yml"):
         src = (REPO / "files/anatomy/agents" / p).read_text()
         assert "/api/state" in src, f"{p}: scout must read Bone /api/state"
-        assert "do NOT use Wing" in src.lower(), f"{p}: scout must be steered off Wing's /api/v1/state"
+        assert "do not use wing" in src.lower(), f"{p}: scout must be steered off Wing's /api/v1/state"
     flat = (REPO / "files/anatomy/agents/scout.yml").read_text()
     sysprompt = flat.split("system_prompt:", 1)[-1].split("\ncapabilities:", 1)[0]
     assert "/api/v1/state" not in sysprompt, "flat scout system_prompt must not list Wing /api/v1/state"
