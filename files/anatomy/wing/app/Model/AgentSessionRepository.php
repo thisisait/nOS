@@ -120,17 +120,27 @@ final class AgentSessionRepository
 
 		// agent_run_end
 		$startedAt = (string) ($existing['started_at'] ?? $ts);
+		// Token usage the claude-CLI runtime captured from `claude --output-format
+		// json` (.usage) and carried in result.tokens_*. Without it the session
+		// detail showed 0/0 for every pulse-run agent. Only set columns present.
+		$result = is_array($event['result'] ?? null) ? $event['result'] : [];
+		$tokenCols = [];
+		foreach (['tokens_input', 'tokens_output', 'tokens_cache_read'] as $col) {
+			if (isset($result[$col]) && is_numeric($result[$col])) {
+				$tokenCols[$col] = (int) $result[$col];
+			}
+		}
 		if ($existing === null) {
 			$row = $this->synthRow($uuid, $agentName, $actorId, $ts, 'idle');
 			$row['ended_at'] = $ts;
 			$row['stop_reason'] = 'run_end';
-			$this->db->table('agent_sessions')->insert($row);
+			$this->db->table('agent_sessions')->insert($row + $tokenCols);
 		} elseif (($existing['status'] ?? '') !== 'idle') {
 			$this->db->table('agent_sessions')->where('uuid', $uuid)->update([
 				'status'      => 'idle',
 				'ended_at'    => $ts,
 				'stop_reason' => (string) ($event['result']['stop_reason'] ?? 'run_end'),
-			]);
+			] + $tokenCols);
 		}
 		$this->linkAgentReports($uuid, $agentName, $actorId, $startedAt, $ts);
 	}

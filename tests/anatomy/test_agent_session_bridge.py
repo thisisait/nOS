@@ -1,4 +1,4 @@
-"""Anatomy gate — claude-CLI agent runs surface in /agents sessions (W5-A1, 2026-05-26).
+r"""Anatomy gate — claude-CLI agent runs surface in /agents sessions (W5-A1, 2026-05-26).
 
 The pulse / claude-CLI runtime (pulse-run-agent.sh) emits agent_run_start/end
 events grouped by actor_action_id but never created an agent_sessions row, so
@@ -69,3 +69,16 @@ def test_agent_reports_linked_by_bounded_window():
     assert "ts >= ? AND ts <= ?" in src, "linkage must bound BOTH ends of the run window"
     sess = (WING / "app/Templates/Agents/session.latte").read_text()
     assert "report_markdown" in sess, "session transcript must render the conductor_report body"
+
+
+def test_claude_cli_runtime_captures_tokens():
+    """2026-05-27: claude-CLI sessions showed 0/0 tokens — the runtime ran
+    `claude --print` (no usage) and agent_run_end carried no counts. Fix:
+    `--output-format json` → parse .usage → carry tokens_* in the run_end
+    event, and syncFromAgentEvent writes them onto the session on run-end."""
+    runner = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    assert "--output-format json" in runner, "runner must request the JSON envelope for usage"
+    assert "tokens_input" in runner and "tokens_output" in runner, "agent_run_end must carry token counts"
+    src = REPOSITORY.read_text()
+    # The run-end branch must lift tokens_* out of the event result into the session.
+    assert "tokens_cache_read" in src and "$tokenCols" in src, "syncFromAgentEvent must persist run-end token counts"

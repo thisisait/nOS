@@ -238,7 +238,11 @@ if [[ -n "$AGENT_PROFILE" && -f "$AGENT_PROFILE" ]]; then
         | sed '$d')   # drop the trailing 'next-key:' line that ended the slice
 fi
 
-CLAUDE_ARGS=(--print --permission-mode bypassPermissions)
+# `--output-format json`: yields a single result object with .result (final
+# text) + .usage (token tally) + .total_cost_usd, so the agent_run_end event
+# can carry real token counts (otherwise the /agents session shows 0/0 for
+# every pulse-run agent — the claude-CLI runtime had no usage source).
+CLAUDE_ARGS=(--print --output-format json --permission-mode bypassPermissions)
 # claude CLI 2.x flag is `--system-prompt` (not `--system`).
 # `--permission-mode bypassPermissions`: the runner is a non-interactive
 # subprocess; we cannot answer permission prompts. The conductor is
@@ -247,15 +251,40 @@ CLAUDE_ARGS=(--print --permission-mode bypassPermissions)
 # every Bash/curl call the ceremony needs.
 [[ -n "$SYSTEM_PROMPT" ]] && CLAUDE_ARGS+=(--system-prompt "$SYSTEM_PROMPT")
 
-CLAUDE_OUTPUT=$(
+# Capture the JSON envelope on stdout; keep stderr separate so a warning
+# line can't corrupt the JSON parse.
+CLAUDE_ERR=$(mktemp /tmp/pulse-agent-err-XXXXX)
+CLAUDE_JSON=$(
     WING_API_URL="$WING_API_URL" \
     WING_API_TOKEN="$WING_API_TOKEN" \
     NOS_AUTHENTIK_TOKEN="$AUTHENTIK_TOKEN" \
     NOS_RUN_ID="$RUN_ID" \
-    claude "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>&1
+    claude "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>"$CLAUDE_ERR"
 ) || CLAUDE_EXIT=$?
 
-echo "INFO: claude exited with code $CLAUDE_EXIT"
+# Extract .result (human text) + .usage tokens. On any parse failure (claude
+# died before emitting JSON, or emitted plain text) fall back to the raw
+# stdout and leave token counts empty — the event then carries 0s, not a crash.
+TOK_IN=""; TOK_OUT=""; TOK_CACHE=""; COST=""
+CLAUDE_OUTPUT=$(printf '%s' "$CLAUDE_JSON" | python3 -c '
+import sys, json
+try:
+    print(json.load(sys.stdin).get("result", ""), end="")
+except Exception:
+    sys.exit(3)
+' 2>/dev/null) || CLAUDE_OUTPUT="$CLAUDE_JSON"
+read -r TOK_IN TOK_OUT TOK_CACHE COST < <(printf '%s' "$CLAUDE_JSON" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin); u = d.get("usage") or {}
+except Exception:
+    d, u = {}, {}
+print(u.get("input_tokens", ""), u.get("output_tokens", ""), u.get("cache_read_input_tokens", ""), d.get("total_cost_usd", ""))
+' 2>/dev/null)
+[[ -s "$CLAUDE_ERR" ]] && CLAUDE_OUTPUT+=$'\n'"$(cat "$CLAUDE_ERR")"
+rm -f "$CLAUDE_ERR"
+
+echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=\$$COST)}"
 if [[ -n "$CLAUDE_OUTPUT" ]]; then
     echo "$CLAUDE_OUTPUT" | tail -20
 fi
@@ -275,9 +304,13 @@ _post_wing_event "$(jq --sort-keys -nc \
     --arg action_id "$ACTOR_ACTION_ID" \
     --argjson exit_code "$CLAUDE_EXIT" \
     --arg summary "$RESULT_SUMMARY" \
+    --argjson t_in "${TOK_IN:-0}" \
+    --argjson t_out "${TOK_OUT:-0}" \
+    --argjson t_cache "${TOK_CACHE:-0}" \
     '{ts:$ts, type:"agent_run_end", run_id:$run_id, source:$src,
       actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
-      result:{exit_code:$exit_code, summary:$summary}}')"
+      result:{exit_code:$exit_code, summary:$summary,
+              tokens_input:$t_in, tokens_output:$t_out, tokens_cache_read:$t_cache}}')"
 
 # ── A9 notification on non-zero exit ──────────────────────────────────────────
 # Exit 1 = conductor reported actionable findings (operator review).
