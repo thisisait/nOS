@@ -70,3 +70,15 @@ def test_upgrade_engine_consumes_planned_queue():
     assert bin_.is_file(), "planned-upgrades.php bridge missing"
     src = bin_.read_text()
     assert "--list" in src and "mark-applied" in src
+
+
+def test_upgrade_matrix_reads_installed_from_state():
+    """W5-B1 fix (2026-05-27): the /upgrades 'installed' column was blank
+    because matrix() read systems.version (mostly NULL). It must read the
+    authoritative ~/.nos/state.yml services.<id>.installed (same source the
+    upgrade-engine uses), and differentiate stable (applicable next step via
+    from_pattern) from latest (highest target)."""
+    repo = (REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php").read_text()
+    assert "installedVersionsFromState" in repo, "matrix must read installed from state.yml"
+    assert ".nos/state.yml" in repo
+    assert "from_pattern" in repo, "stable must be the applicable (from_pattern-matched) step"

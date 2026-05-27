@@ -43,42 +43,48 @@ final class UpgradeRepository
 		foreach ($this->db->table('upgrades_planned')->where('status', 'planned') as $p) {
 			$planned[$p->service] = $p->toArray();
 		}
-		// Installed versions, best-effort from the systems registry.
-		$installed = [];
-		foreach ($this->db->table('systems') as $s) {
-			$key = strtolower(str_replace([' ', '_', '-'], '', (string) $s->name));
-			$installed[$key] = (string) ($s->version ?? '');
-		}
+		// Installed versions from ~/.nos/state.yml — the authoritative source the
+		// upgrade-engine itself reads (keyed by the same lowercase service ids as
+		// the recipes). systems.version is unreliable (mostly NULL), which left
+		// the matrix "installed" column blank.
+		$installed = $this->installedVersionsFromState();
 
 		$out = [];
 		foreach ($recipes as $service => $svcRecipes) {
-			$latest = $svcRecipes[0];
-			$instKey = strtolower(str_replace([' ', '_', '-'], '', (string) $service));
-			$inst = null;
-			foreach ($installed as $k => $v) {
-				if ($v !== '' && ($k === $instKey || str_contains($k, $instKey) || str_contains($instKey, $k))) {
-					$inst = $v;
-					break;
+			$inst = $installed[$service] ?? null;
+			$latest = $svcRecipes[0]['to_version'] ?? null;   // highest target (ordered DESC)
+
+			// "stable" = the next applicable step: the recipe whose from_pattern
+			// matches the installed version (lowest such target). Distinct from
+			// "latest" only when there are stepping-stones (e.g. 17→17.11→18).
+			$applicable = [];
+			foreach ($svcRecipes as $r) {
+				$pat = (string) ($r['from_pattern'] ?? '');
+				if ($inst !== null && $pat !== '' && @preg_match('~' . $pat . '~', $inst) === 1) {
+					$applicable[] = $r;
 				}
 			}
-			$sev = $latest['severity'] ?? 'minor';
+			$next = $applicable !== [] ? end($applicable) : $svcRecipes[0];   // lowest applicable, else highest
+			$stable = $next['to_version'] ?? $latest;
+			$sev = $next['severity'] ?? 'minor';
 			$sevClass = match ($sev) {
 				'breaking'             => 'breaking',
 				'security', 'critical' => 'critical',
 				'patch', 'minor'       => 'minor',
 				default                => 'unknown',
 			};
-			$target = $latest['to_version'] ?? null;
+			// At-target = installed already equals the only/next target.
+			$atTarget = $inst !== null && ($inst === $stable);
 			$out[] = [
 				'id'               => $service,
 				'service'          => $service,
 				'category'         => null,
 				'installed'        => $inst,
-				'installed_class'  => $inst !== null ? 'current' : 'unknown',
-				'stable'           => $target,
-				'stable_class'     => $sevClass,
-				'latest'           => $target,
-				'latest_class'     => $sevClass,
+				'installed_class'  => $atTarget ? 'current' : ($inst !== null ? 'minor' : 'unknown'),
+				'stable'           => $stable,
+				'stable_class'     => $atTarget ? 'current' : $sevClass,
+				'latest'           => $latest,
+				'latest_class'     => ($inst !== null && $inst === $latest) ? 'current' : $sevClass,
 				'upstream'         => null,        // offline matrix — no upstream scanner (B1 decision)
 				'upstream_class'   => 'unknown',
 				'severity'         => $sev,
@@ -89,6 +95,33 @@ final class UpgradeRepository
 				'planned_target'   => $planned[$service]['target_version'] ?? null,
 				'planned_by'       => $planned[$service]['planned_by'] ?? null,
 			];
+		}
+		return $out;
+	}
+
+	/**
+	 * Installed versions keyed by service id, read from ~/.nos/state.yml
+	 * (services.<id>.installed) — the same authoritative state the
+	 * upgrade-engine consumes. Empty map if the file is absent/unparseable.
+	 *
+	 * @return array<string,string>
+	 */
+	private function installedVersionsFromState(): array
+	{
+		$path = (getenv('HOME') ?: '') . '/.nos/state.yml';
+		if ($path === '/.nos/state.yml' || !is_file($path)) {
+			return [];
+		}
+		try {
+			$state = \Symfony\Component\Yaml\Yaml::parseFile($path);
+		} catch (\Throwable $e) {
+			return [];
+		}
+		$out = [];
+		foreach (($state['services'] ?? []) as $svc => $info) {
+			if (is_array($info) && !empty($info['installed'])) {
+				$out[(string) $svc] = (string) $info['installed'];
+			}
 		}
 		return $out;
 	}
