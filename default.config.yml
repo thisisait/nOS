@@ -659,6 +659,12 @@ wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
 wing_app_dir: "{{ wing_home }}/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
+# Tracy debug bar gate. Empty (default) = debug NEVER renders — the bar leaks
+# $_COOKIE/config/SQL dumps and must stay off on any reachable install. To
+# debug: set this to a long random value, redeploy, then set a `tracy-debug`
+# browser cookie to the same value (constant-time compared in Booting.php).
+# IP gating can't work behind loopback+Traefik (every request looks local).
+wing_tracy_secret: ""
 # Audit-log retention horizon (GDPR Art. 5(1)(e) storage limitation). Enforced
 # on-demand by `--tags audit-retention` (dry-run unless -e retention_confirm=true);
 # see docs/security-baseline.md §4. Not auto-scheduled.

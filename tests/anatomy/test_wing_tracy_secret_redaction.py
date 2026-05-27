@@ -79,3 +79,35 @@ def test_wing_role_creates_log_dir_at_0700():
 	# wing_log_dir line MUST NOT be inside the 0755 loop block.
 	assert "{{ wing_log_dir }}" not in loop_body, \
 		"wing_log_dir must be removed from the 0755 loop (use the dedicated 0700 task)"
+
+
+def test_tracy_debug_off_by_default_cookie_gated():
+	"""2026-05-27: setDebugMode('127.0.0.1') kept the Tracy bar ON for ALL
+	traffic — Wing binds loopback so Traefik proxies every request from
+	127.0.0.1 (CF-proxied users included), leaking $_COOKIE/config/SQL dumps.
+	Debug must be OFF by default and gated behind a long secret cookie."""
+	src = (REPO / "files/anatomy/wing/app/Bootstrap/Booting.php").read_text()
+	assert "setDebugMode('127.0.0.1')" not in src, "IP gating is a no-op behind the loopback proxy"
+	assert "WING_TRACY_SECRET" in src, "debug must be gated on the WING_TRACY_SECRET env"
+	assert "tracy-debug" in src, "debug must require a matching tracy-debug cookie"
+	assert "hash_equals(" in src, "cookie compare must be constant-time"
+	# The plist must surface the env (empty default = debug never on).
+	plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
+	assert "WING_TRACY_SECRET" in plist and "wing_tracy_secret | default('')" in plist
+
+
+def test_error_presenter_renders_clean_production_page():
+	"""common.neon sets `errorPresenter: Error`; the class was missing (masked
+	by always-on debug), so production errors fell back to Tracy's generic
+	page (leaks <meta generator=Tracy>). A minimal ErrorPresenter must exist,
+	implement IPresenter directly (NOT BasePresenter — else the edge guard
+	re-fires during error handling), and emit no Tracy generator."""
+	ep = REPO / "files/anatomy/wing/app/Presenters/ErrorPresenter.php"
+	assert ep.is_file(), "ErrorPresenter.php missing (errorPresenter: Error in common.neon)"
+	src = ep.read_text()
+	assert "implements Nette\\Application\\IPresenter" in src, "must implement IPresenter directly"
+	assert "extends BasePresenter" not in src, "must NOT extend BasePresenter (edge guard would re-fire)"
+	# The rendered page must not emit a framework generator meta (the Tracy
+	# fallback's leak). Guard the actual HTML markers, not the docstring.
+	assert 'name="generator"' not in src and 'content="Tracy"' not in src, \
+		"clean error page must not emit a generator/Tracy meta"

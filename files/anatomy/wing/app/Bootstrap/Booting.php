@@ -51,7 +51,17 @@ class Booting
 		$configurator = new Configurator;
 		$appDir = dirname(__DIR__);
 
-		$configurator->setDebugMode('127.0.0.1');
+		// Tracy debug mode is OFF by default. IP gating is useless here: Wing
+		// binds loopback and Traefik proxies EVERY request from 127.0.0.1, so
+		// an IP-allowlisted debug mode turned the debug bar (full $_COOKIE /
+		// config / SQL dumps) ON for all traffic, CF-proxied users included.
+		// Gate it on a long secret instead: debug enabled only when
+		// WING_TRACY_SECRET is set AND the request carries a matching
+		// `tracy-debug` cookie (constant-time compare).
+		$tracySecret = (string) (getenv('WING_TRACY_SECRET') ?: '');
+		$configurator->setDebugMode(
+			$tracySecret !== '' && hash_equals($tracySecret, (string) ($_COOKIE['tracy-debug'] ?? '')),
+		);
 		$configurator->enableTracy($appDir . '/../log');
 		$configurator->setTempDirectory($appDir . '/../temp');
 

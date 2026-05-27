@@ -57,6 +57,14 @@
         <key>WING_EDGE_TOKEN</key>
         <string>{{ wing_edge_token | default('') }}</string>
 
+        <!-- Tracy debug bar gate (off by default). Empty = debug NEVER on.
+             Set wing_tracy_secret to a long random value to allow debug, then
+             set a `tracy-debug` cookie to that value in your browser. IP gating
+             can't work behind the loopback+Traefik proxy (all requests look
+             like 127.0.0.1), so the secret cookie is the only safe gate. -->
+        <key>WING_TRACY_SECRET</key>
+        <string>{{ wing_tracy_secret | default('') }}</string>
+
         <!-- Bone (host launchd at 127.0.0.1:{{ bone_port | default(8099) }}) is the
              control-plane API Wing presenters proxy through. BONE_URL is
              read by app/Model/BoneClient.php. -->
