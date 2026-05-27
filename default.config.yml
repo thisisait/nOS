@@ -2053,6 +2053,19 @@ authentik_agent_clients:
       - "nos:upgrades:read"
       - "nos:state:read"
 
+  - name: "nOS Upgrade Architect"
+    slug: "nos-upgrade-architect"
+    client_id: "nos-upgrade-architect"
+    client_secret: "{{ global_password_prefix }}_pw_agent_upgrade_architect"
+    # W5-B5 recipe-authoring agent. Reads the /upgrades matrix, DRAFTS recipes
+    # for coverage gaps (in its report — operator commits), and queues
+    # coexistence for breaking upgrades. Read-only; never writes files or
+    # provisions.
+    capabilities:
+      - "nos:upgrades:read"
+      - "nos:state:read"
+      - "nos:coexistence:read"
+
   - name: "nOS Conductor"
     slug: "nos-conductor"
     client_id: "nos-conductor"

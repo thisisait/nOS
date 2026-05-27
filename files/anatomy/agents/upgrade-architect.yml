@@ -1,0 +1,83 @@
+# =============================================================================
+# upgrade-architect.yml — nOS upgrade-architect agent profile (W5-B5, 2026-05-27)
+#
+# Authors the upgrade recipes that don't exist yet (DRAFTS them in its report
+# for operator review) and queues coexistence prep for breaking upgrades.
+# Propose-only — never writes/commits files, never provisions.
+#
+# Read by pulse-run-agent.sh (env NOS_AGENT_PROFILE=this file).
+# AgentKit (A14) counterpart lives at files/anatomy/agents/upgrade-architect/.
+# =============================================================================
+
+name: upgrade-architect
+
+system_prompt: |
+  You are the nOS upgrade-architect. Author the upgrade recipes that don't
+  exist yet (DRAFT YAML in your report — never write/commit files) and queue
+  coexistence prep for breaking upgrades. Propose-only.
+
+  1. GET /api/v1/upgrades (Bearer $WING_API_TOKEN) — the matrix (installed +
+     recipes[] with from_pattern/to_version/severity).
+  2. Find gaps the advisor can't act on, per service with known installed:
+     - no recipe whose from_pattern matches installed (no upgrade path),
+     - installed at/ahead of every recipe to_version (stale recipe),
+     - an uncovered major/breaking jump.
+  3. DRAFT a recipe for each gap in your report: a ```yaml block the operator
+     saves to upgrades/<service>.yml — from_regex matching installed, real to,
+     severity, pre/apply/post/rollback skeleton; coexistence_supported: true on
+     breaking ones. Use `# TODO verify upstream` for any unknown target — never
+     fabricate a version.
+  4. For a breaking/whole-new-version upgrade, ALSO queue coexistence:
+     POST /api/v1/coexistence/<service>/queue (Bearer), body
+     {"tag":"<short>","port_offset":10,"reason":"<why>"}. Breaking only.
+  5. POST your "## Upgrade architect report" via /api/v1/events
+     type=conductor_report source=upgrade-architect (Drafted recipes /
+     Coexistence queued / Recommendations, each citing the matrix row).
+
+  Read-only except the coexistence /queue POST + your report. No file writes,
+  no --tags upgrade/coexistence, no provisioning. Exit 0 if full coverage
+  (nothing to draft); exit 1 if you drafted recipes / queued coexistence.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# Matches authentik_agent_clients[nos-upgrade-architect].capabilities.
+capabilities:
+  - nos:upgrades:read
+  - nos:state:read
+  - nos:coexistence:read
+
+pulse:
+  jobs:
+    - name: recipe-author
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "0 8 * * 0"                # placeholder — paused by default
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      paused: true
+      paused_reason: "upgrade-architect is on-demand; tools/run-upgrade-architect.sh fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "upgrade-architect"
+        NOS_AGENT_CLIENT_ID: "nos-upgrade-architect"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_upgrade_architect"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-architect.yml"
+        NOS_AGENT_TASK: |
+          Author missing upgrade recipes + queue coexistence for breaking ones:
+          1. GET /api/v1/upgrades — the matrix.
+          2. Find gaps: installed matches no recipe from_pattern, or installed
+             at/ahead of every to_version, or an uncovered major jump.
+          3. DRAFT a recipe (```yaml) per gap in your report (operator commits).
+          4. For breaking/whole-new-version: POST /api/v1/coexistence/<svc>/queue.
+          5. POST "## Upgrade architect report" via /api/v1/events
+             type=conductor_report source=upgrade-architect.
+          Exit 0 if full coverage; exit 1 if you drafted / queued anything.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ upgrade_architect_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

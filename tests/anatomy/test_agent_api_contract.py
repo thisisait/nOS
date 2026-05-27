@@ -168,3 +168,24 @@ def test_pulse_catalog_substitutes_agent_wing_tokens():
     assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" in cat, "catalog must read the token from env"
     post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
     assert post.count("NOS_UPGRADE_ADVISOR_WING_API_TOKEN") >= 1, "wing post must pass the token to the catalog env"
+
+
+def test_upgrade_architect_agent_wired():
+    """W5-B5: the upgrade-architect agent (drafts recipes for coverage gaps in
+    its report + queues coexistence for breaking) must be fully wired with the
+    complete new-agent provisioning checklist (contract, profile, wrapper,
+    Authentik client, wing token: credentials + catalog substitution + post
+    provision + env). Propose-only — never writes files or provisions."""
+    base = REPO / "files/anatomy/agents"
+    for f in ("upgrade-architect/agent.yml", "upgrade-architect/system.md", "upgrade-architect/rubric.md", "upgrade-architect.yml"):
+        assert (base / f).is_file(), f"missing: {f}"
+    assert (REPO / "tools/run-upgrade-architect.sh").is_file()
+    assert 'client_id: "nos-upgrade-architect"' in (REPO / "default.config.yml").read_text()
+    assert "upgrade_architect_wing_api_token" in (REPO / "default.credentials.yml").read_text()
+    cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
+    assert "{{ upgrade_architect_wing_api_token }}" in cat and "NOS_UPGRADE_ARCHITECT_WING_API_TOKEN" in cat
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    assert "--name=upgrade-architect" in post and "NOS_UPGRADE_ARCHITECT_WING_API_TOKEN" in post
+    prof = (base / "upgrade-architect.yml").read_text()
+    assert "/coexistence/" in prof and "queue" in prof, "architect must queue coexistence"
+    assert "never write" in prof.lower() or "propose-only" in prof.lower() or "never write/commit" in prof.lower()
