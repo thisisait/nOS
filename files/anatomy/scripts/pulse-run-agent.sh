@@ -152,9 +152,29 @@ _post_wing_notification() {
 }
 
 # ── Authentik client_credentials ─────────────────────────────────────────────
+#
+# Scope request (2026-05-27): Authentik's client_credentials flow only grants
+# scopes that are EXPLICITLY requested (and have a scopemapping). Without a
+# `scope` param the issued JWT carries an empty scope claim, so EVERY scoped
+# Bone endpoint (/api/state, migrations, upgrades, …) returns 403. Request the
+# agent's capability scopes: NOS_AGENT_SCOPES env, else the `capabilities:`
+# list in the agent profile.
+AGENT_SCOPES="${NOS_AGENT_SCOPES:-}"
+if [[ -z "$AGENT_SCOPES" && -n "$AGENT_PROFILE" && -f "$AGENT_PROFILE" ]]; then
+    # Extract the bare `capabilities:` list (one scope per `  - ` item) until
+    # the next top-level key. Scopes are bare tokens (no quotes), so no gsub.
+    AGENT_SCOPES=$(awk '
+        /^capabilities:/ {grab=1; next}
+        grab && /^[^[:space:]#]/ {exit}
+        grab && /^[[:space:]]+-[[:space:]]/ {sub(/^[[:space:]]*-[[:space:]]*/,""); sub(/[[:space:]]*#.*$/,""); printf "%s ", $0}
+    ' "$AGENT_PROFILE" | sed 's/[[:space:]]*$//')
+fi
 
 TOKEN_URL="${AUTHENTIK_URL%/}/application/o/token/"
-echo "INFO: obtaining Authentik token for $CLIENT_ID"
+echo "INFO: obtaining Authentik token for $CLIENT_ID${AGENT_SCOPES:+ (scopes: $AGENT_SCOPES)}"
+
+_scope_args=()
+[[ -n "$AGENT_SCOPES" ]] && _scope_args=(--data-urlencode "scope=${AGENT_SCOPES}")
 
 TOKEN_RESP=$(curl -sS -w "\n%{http_code}" \
     -X POST \
@@ -162,6 +182,7 @@ TOKEN_RESP=$(curl -sS -w "\n%{http_code}" \
     --data-urlencode "grant_type=client_credentials" \
     --data-urlencode "client_id=${CLIENT_ID}" \
     --data-urlencode "client_secret=${CLIENT_SECRET}" \
+    "${_scope_args[@]}" \
     "${TOKEN_URL}" 2>&1) || _die "curl to Authentik failed"
 
 TOKEN_BODY=$(echo "$TOKEN_RESP" | sed '$d')   # all lines except the last (portable; macOS BSD head lacks `-n -N`)

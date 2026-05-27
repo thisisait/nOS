@@ -45,12 +45,15 @@ remediator run, or accept the drift as intentional.
     - `GET /api/v1/events?since=<ISO>&limit=200` — recent events
     - `GET /api/v1/events?source=<name>&limit=50` — by source
     - `GET /api/v1/notifications?since=<ISO>` — recent notifications
-    - `GET /api/v1/state` — current state snapshot
     - `GET /api/v1/pulse_jobs` — registered jobs (find paused/failing)
     - `POST /api/v1/events` — write your `conductor_report` event
       (re-uses the existing event type; scout-specific source tag)
 - **mcp-bone** — Bone REST API:
     - `GET /api/health` — liveness
+    - `GET /api/state` — current state snapshot (state-mirror signal). Bone's
+      JWT-scoped endpoint: send `Authorization: Bearer $NOS_AUTHENTIK_TOKEN`
+      (your token carries `nos:state:read`). Do NOT use Wing's `/api/v1/state`
+      — it proxies via HMAC and can't satisfy the scope gate (401).
     - `POST /api/v1/notifications` — emit drift alerts
 
 ## Output contract

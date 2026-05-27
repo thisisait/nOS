@@ -98,3 +98,18 @@ def test_upgrade_queue_mismatch_guard():
     assert "->where('status', 'applied')\n\t\t\t->delete()" in repo or "where('status', 'applied')->delete()" in repo
     api = (REPO / "files/anatomy/wing/app/Presenters/Api/UpgradesPresenter.php").read_text()
     assert "'mismatch'" in api and "409" in api, "API queue must 409 on mismatch"
+
+
+def test_agent_token_requests_capability_scopes():
+    """W5-A3 (2026-05-27): Authentik client_credentials grants only REQUESTED
+    scopes, so the runner must request the agent's capabilities in the token
+    mint — otherwise the JWT scope claim is empty and every scoped Bone
+    endpoint (/api/state, migrations, upgrades) 403s. Scout must read state
+    from Bone /api/state (JWT), not Wing's HMAC proxy."""
+    runner = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    assert "AGENT_SCOPES" in runner, "runner must derive the agent scopes"
+    assert "scope=${AGENT_SCOPES}" in runner, "runner must request scopes in the token mint"
+    assert "/^capabilities:/" in runner, "scopes derived from the profile capabilities list"
+    scout = (REPO / "files/anatomy/agents/scout/system.md").read_text()
+    assert "/api/state" in scout and "nos:state:read" in scout, "scout must read Bone /api/state with its scoped JWT"
+    assert "Do NOT use Wing" in scout, "scout must be steered off the Wing HMAC proxy for state"
