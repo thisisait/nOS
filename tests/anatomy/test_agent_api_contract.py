@@ -119,7 +119,9 @@ def test_agent_token_requests_capability_scopes():
         assert "do not use wing" in src.lower(), f"{p}: scout must be steered off Wing's /api/v1/state"
     flat = (REPO / "files/anatomy/agents/scout.yml").read_text()
     sysprompt = flat.split("system_prompt:", 1)[-1].split("\ncapabilities:", 1)[0]
-    assert "/api/v1/state" not in sysprompt, "flat scout system_prompt must not list Wing /api/v1/state"
+    # The Wing path may be NAMED in the "do NOT use" steer, but must not be a
+    # listed `GET` endpoint the agent would call.
+    assert "GET /api/v1/state" not in sysprompt, "flat scout system_prompt must not list Wing GET /api/v1/state as an endpoint"
 
 
 def test_upgrade_advisor_agent_wired():
