@@ -2,26 +2,27 @@
 # =============================================================================
 # run-upgrade-architect.sh — operator-driven recipe authoring (W5-B5, 2026-05-27)
 #
-# Fires the upgrade-advisor agent's `upgrade-advise` Pulse job on demand. The
-# advisor reads the /upgrades version matrix, finds the upgrades that APPLY to
-# the running system (installed matches a recipe from_pattern and is behind the
-# target), and QUEUES them via POST /api/v1/upgrades/<svc>/<recipe>/queue. It
-# proposes only — the operator applies the queue with
-# `ansible-playbook main.yml --tags upgrade`.
+# Fires the upgrade-architect agent's `recipe-author` Pulse job on demand. The
+# architect reads the /upgrades version matrix, finds coverage gaps the advisor
+# can't act on (no matching recipe / stale recipe / uncovered major), DRAFTS a
+# recipe for each in its report, and for breaking gaps QUEUES coexistence prep
+# via POST /api/v1/coexistence/<svc>/queue. It proposes only — the operator
+# commits each drafted YAML and applies coexistence with
+# `ansible-playbook main.yml --tags coexistence`.
 #
 # Same shape as tools/run-scout.sh / run-remediator.sh: pre-flight (Bone health
 # + pulse_jobs row + Authentik liveness), env from pulse_jobs.env_json,
 # post-flight verifier, markdown report to ~/.nos/upgrade-architect-report-<ts>.md.
 #
-# The advisor's Pulse row is paused=1 by default; this runs it off-schedule.
+# The architect's Pulse row is paused=1 by default; this runs it off-schedule.
 #
 # Usage:
 #   bash tools/run-upgrade-architect.sh           # run the architect
 #   bash tools/run-upgrade-architect.sh --dry-run # pre-flight only
 #
 # Exit codes:
-#   0 — advisor exit 0 (nothing to queue, or all queues succeeded)
-#   1 — advisor exit 1 (queued upgrades need operator review before --tags upgrade)
+#   0 — architect exit 0 (full coverage, nothing drafted or queued)
+#   1 — architect exit 1 (drafted recipes / queued coexistence need review)
 #   2 — pre-flight failed
 # =============================================================================
 
@@ -60,7 +61,7 @@ echo "✓ Bone $BONE_URL/api/health → 200"
 PULSE_JOB_ROW=$(sqlite3 -json "$WING_DB" \
     "SELECT id, command, args_json, env_json, paused FROM pulse_jobs WHERE id LIKE '$JOB_ID_PATTERN' LIMIT 1;" 2>/dev/null || true)
 if [[ -z "$PULSE_JOB_ROW" || "$PULSE_JOB_ROW" == "[]" ]]; then
-    _die "no pulse_jobs row matches '$JOB_ID_PATTERN' — has the upgrade-advisor agent registration run? Re-run the playbook after the profile lands in Wing."
+    _die "no pulse_jobs row matches '$JOB_ID_PATTERN' — has the upgrade-architect agent registration run? Re-run the playbook after the profile lands in Wing."
 fi
 JOB_ID=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].id')
 JOB_CMD=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].command')
@@ -90,9 +91,12 @@ if [[ "$DRY_RUN" == "1" ]]; then
     exit 0
 fi
 
+# SQLite stores planned_at as 'YYYY-MM-DD HH:MM:SS' (UTC, no T/Z); compare in
+# that exact shape or the >= window silently matches nothing (space < 'T').
 RUN_START_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+RUN_START_SQLITE=$(date -u +"%Y-%m-%d %H:%M:%S")
 echo
-echo "── Firing upgrade-advisor (queued before: $QUEUED_BEFORE) ──"
+echo "── Firing upgrade-architect (coexistence queued before: $QUEUED_BEFORE) ──"
 echo
 
 ENV_FILE=$(mktemp /tmp/upgrade-architect-env-XXXXX)
@@ -115,29 +119,29 @@ RUN_EXIT=0
 ) > "$OUTPUT_FILE" 2>&1 || RUN_EXIT=$?
 
 echo
-echo "── Advisor exit: $RUN_EXIT ──"
+echo "── Architect exit: $RUN_EXIT ──"
 echo
 
 QUEUED_AFTER=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM coexistence_planned WHERE status='planned';" 2>/dev/null || echo "?")
 NEWLY_QUEUED=$(sqlite3 -json "$WING_DB" \
-    "SELECT service, recipe_id, target_version FROM upgrades_planned WHERE status='planned' AND planned_at >= '$RUN_START_ISO';" 2>/dev/null || echo "[]")
+    "SELECT service, tag, target_version FROM coexistence_planned WHERE status='planned' AND planned_at >= '$RUN_START_SQLITE';" 2>/dev/null || echo "[]")
 
 {
-    echo "# nOS upgrade-advisor report — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo "# nOS upgrade-architect report — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     echo
     echo "**run_id:** \`$PULSE_RUN_ID\`"
-    echo "**advisor exit:** \`$RUN_EXIT\`"
-    echo "**queued:** $QUEUED_BEFORE → $QUEUED_AFTER"
+    echo "**architect exit:** \`$RUN_EXIT\`"
+    echo "**coexistence queued:** $QUEUED_BEFORE → $QUEUED_AFTER"
     echo
-    echo "## Newly queued this run"
+    echo "## Coexistence queued this run"
     echo
     if [[ -n "$NEWLY_QUEUED" && "$NEWLY_QUEUED" != "[]" ]]; then
-        echo "$NEWLY_QUEUED" | jq -r '.[] | "- **\(.service)** \(.recipe_id) → \(.target_version // "?")"'
+        echo "$NEWLY_QUEUED" | jq -r '.[] | "- **\(.service)** /\(.tag) → \(.target_version // "?")"'
     else
-        echo "_None — nothing applicable to queue (all services at target, or no matching recipe)._"
+        echo "_None — no breaking coverage gap needed a coexistence track. Drafted recipes (if any) are in the architect report below._"
     fi
     echo
-    echo "## Advisor stdout/stderr"
+    echo "## Architect stdout/stderr"
     echo
     echo '```'
     tail -60 "$OUTPUT_FILE"
@@ -146,11 +150,11 @@ NEWLY_QUEUED=$(sqlite3 -json "$WING_DB" \
     echo "## Verdict"
     echo
     if [[ "$RUN_EXIT" -eq 0 ]]; then
-        echo "**GREEN** — advisor exit 0. Review the queue on /upgrades, then apply with \`ansible-playbook main.yml --tags upgrade\` (dry-run first with \`-e upgrade_dry_run=true\`)."
+        echo "**GREEN** — architect exit 0. Full recipe coverage; nothing drafted or queued."
     elif [[ "$RUN_EXIT" -eq 1 ]]; then
-        echo "**REVIEW** — advisor queued upgrades that need your review (breaking/security). Inspect /upgrades before applying."
+        echo "**REVIEW** — architect drafted recipes and/or queued coexistence. Review the drafted YAML in the report, commit each to \`upgrades/<service>.yml\`, then apply any coexistence with \`ansible-playbook main.yml --tags coexistence\` (dry-run first with \`-e coexist_dry_run=true\`)."
     else
-        echo "**RED** — advisor failed at exit \`$RUN_EXIT\` (env/auth/Wing error). Read the stdout/stderr above."
+        echo "**RED** — architect failed at exit \`$RUN_EXIT\` (env/auth/Wing error). Read the stdout/stderr above."
     fi
 } | tee "$REPORT_FILE"
 

@@ -90,7 +90,10 @@ if [[ "$DRY_RUN" == "1" ]]; then
     exit 0
 fi
 
+# SQLite stores planned_at as 'YYYY-MM-DD HH:MM:SS' (UTC, no T/Z); compare in
+# that exact shape or the >= window silently matches nothing (space < 'T').
 RUN_START_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+RUN_START_SQLITE=$(date -u +"%Y-%m-%d %H:%M:%S")
 echo
 echo "── Firing upgrade-advisor (queued before: $QUEUED_BEFORE) ──"
 echo
@@ -120,7 +123,7 @@ echo
 
 QUEUED_AFTER=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM upgrades_planned WHERE status='planned';" 2>/dev/null || echo "?")
 NEWLY_QUEUED=$(sqlite3 -json "$WING_DB" \
-    "SELECT service, recipe_id, target_version FROM upgrades_planned WHERE status='planned' AND planned_at >= '$RUN_START_ISO';" 2>/dev/null || echo "[]")
+    "SELECT service, recipe_id, target_version FROM upgrades_planned WHERE status='planned' AND planned_at >= '$RUN_START_SQLITE';" 2>/dev/null || echo "[]")
 
 {
     echo "# nOS upgrade-advisor report — $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
