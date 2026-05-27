@@ -68,6 +68,7 @@ def _build_substitutions() -> dict[str, str]:
         "{{ conductor_wing_api_token }}": _env("NOS_CONDUCTOR_WING_API_TOKEN"),
         "{{ remediator_wing_api_token }}": _env("NOS_REMEDIATOR_WING_API_TOKEN"),
         "{{ scout_wing_api_token }}":      _env("NOS_SCOUT_WING_API_TOKEN"),
+        "{{ upgrade_advisor_wing_api_token }}": _env("NOS_UPGRADE_ADVISOR_WING_API_TOKEN"),
         "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
         # A9.4-fixup (2026-05-17): wing-base dispatch jobs reference
         # {{ wing_home }} in env (WING_DB_PATH) and {{ wing_app_dir }}

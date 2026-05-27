@@ -155,3 +155,16 @@ def test_agent_clients_blueprint_is_force_applied():
         src = (REPO / f).read_text()
         # Find the reapply loop and assert 30-agent-clients is in it.
         assert "30-agent-clients" in src, f"{f}: reapply handler must apply 30-agent-clients"
+
+
+def test_pulse_catalog_substitutes_agent_wing_tokens():
+    """2026-05-27: discover-pulse-catalog.py does LITERAL substring substitution
+    on a FIXED token map (no Jinja). A new agent's {{ <agent>_wing_api_token }}
+    must be added to that map AND passed as NOS_*_WING_API_TOKEN in the wing
+    post env, or the agent's WING_API_TOKEN stays the literal placeholder and
+    its API calls 401 (hit with upgrade-advisor)."""
+    cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
+    assert "{{ upgrade_advisor_wing_api_token }}" in cat, "catalog substitution map missing upgrade_advisor token"
+    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" in cat, "catalog must read the token from env"
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    assert post.count("NOS_UPGRADE_ADVISOR_WING_API_TOKEN") >= 1, "wing post must pass the token to the catalog env"
