@@ -227,9 +227,17 @@
   tags: ['upgrade']
 
 - name: "[Upgrade] Persist updated state"
+  # nos_migrate apply_upgrade already writes upgrades_applied[] to state.yml
+  # (it owns state_path). This is a final consistency merge-touch — action=write
+  # requires state + state_path (bare write errored, never caught because the
+  # engine was orphaned until wired under --tags upgrade). Skip on dry-run so a
+  # preview leaves the state file untouched.
   nos_state:
     action: write
+    state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     merge: true
+    state: {}
+  when: not (upgrade_dry_run | default(false) | bool)
   tags: ['upgrade']
 
 - name: "[Upgrade] Final summary"
