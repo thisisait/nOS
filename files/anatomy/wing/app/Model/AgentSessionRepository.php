@@ -119,20 +119,46 @@ final class AgentSessionRepository
 		}
 
 		// agent_run_end
+		$startedAt = (string) ($existing['started_at'] ?? $ts);
 		if ($existing === null) {
 			$row = $this->synthRow($uuid, $agentName, $actorId, $ts, 'idle');
 			$row['ended_at'] = $ts;
 			$row['stop_reason'] = 'run_end';
 			$this->db->table('agent_sessions')->insert($row);
-			return;
-		}
-		if (($existing['status'] ?? '') !== 'idle') {
+		} elseif (($existing['status'] ?? '') !== 'idle') {
 			$this->db->table('agent_sessions')->where('uuid', $uuid)->update([
 				'status'      => 'idle',
 				'ended_at'    => $ts,
 				'stop_reason' => (string) ($event['result']['stop_reason'] ?? 'run_end'),
 			]);
 		}
+		$this->linkAgentReports($uuid, $agentName, $actorId, $startedAt, $ts);
+	}
+
+	/**
+	 * Link the agent's own report events to this session. The inner agent
+	 * posts conductor_report with its OWN run_id/actor_action_id (sometimes
+	 * NOS_RUN_ID, sometimes self-generated), so neither the run_id repair nor
+	 * a lower-bound-only window reliably attaches it. Bind to the run's FULL
+	 * window [started_at, ended_at]: agents run one-at-a-time on-demand, so a
+	 * report posted in that window belongs to this run — authoritative, so we
+	 * override any prior (mis)link. The session's own agent_run_* events are
+	 * already this uuid, so `actor_action_id <> uuid` leaves them alone.
+	 */
+	private function linkAgentReports(string $uuid, string $agentName, string $actorId, string $startedAt, string $endedAt): void
+	{
+		$this->db->query(
+			'UPDATE events SET actor_action_id = ?
+			 WHERE (source = ? OR actor_id = ?)
+			   AND ts >= ? AND ts <= ?
+			   AND (actor_action_id IS NULL OR actor_action_id <> ?)',
+			$uuid,
+			$agentName,
+			$actorId,
+			$startedAt,
+			$endedAt,
+			$uuid,
+		);
 	}
 
 	/**

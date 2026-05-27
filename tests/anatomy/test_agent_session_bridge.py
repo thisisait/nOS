@@ -55,3 +55,17 @@ def test_backfill_script_present_and_wired():
     assert BACKFILL.is_file(), "backfill-agent-sessions.php missing"
     post = WING_POST.read_text()
     assert "backfill-agent-sessions.php" in post, "wing role must run the backfill on deploy"
+
+
+def test_agent_reports_linked_by_bounded_window():
+    """2026-05-27: the inner agent posts its conductor_report with its own
+    run_id/actor_action_id, so it didn't attach to the session transcript. On
+    run-end, link reports from this agent within the run's FULL window
+    [started_at, ended_at] (both bounds — a lower-bound-only window let the
+    first run greedily grab every later run's report). Renders the full report
+    in the session deep-dive."""
+    src = REPOSITORY.read_text()
+    assert "function linkAgentReports" in src, "report-linkage helper missing"
+    assert "ts >= ? AND ts <= ?" in src, "linkage must bound BOTH ends of the run window"
+    sess = (WING / "app/Templates/Agents/session.latte").read_text()
+    assert "report_markdown" in sess, "session transcript must render the conductor_report body"

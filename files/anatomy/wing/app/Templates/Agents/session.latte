@@ -129,16 +129,25 @@
 			<span n:class="
 				'badge',
 				$ev['type'] === 'agent_message' ? 'badge-primary',
+				$ev['type'] === 'conductor_report' ? 'badge-primary',
 				$ev['type'] === 'agent_tool_use' ? 'badge-info',
 				$ev['type'] === 'agent_tool_result' ? ($ev['result']['is_error'] ?? false ? 'badge-danger' : 'badge-success'),
-				str_contains($ev['type'], 'session') ? 'badge-warning',
+				str_contains($ev['type'], 'run') || str_contains($ev['type'], 'session') ? 'badge-warning',
 			">{$ev['type']}</span>
 			<span class="transcript-task">{$ev['task'] ?? ''}</span>
 			<span class="transcript-ts">{$ev['ts']|truncate:19,''}</span>
 		</div>
 
 		{* Human-readable body per event type *}
-		{if $ev['type'] === 'agent_message'}
+		{if $ev['type'] === 'conductor_report'}
+			{* The agent's full report markdown — the meat of the run. *}
+			<pre class="transcript-body">{$ev['result']['report_markdown'] ?? $ev['result']['summary'] ?? '(no report body)'}</pre>
+		{elseif $ev['type'] === 'agent_run_start'}
+			<pre class="transcript-body">{$ev['task'] ?? '(run started)'}</pre>
+		{elseif $ev['type'] === 'agent_run_end'}
+			<div style="font-size:11px; color:var(--text2); margin-bottom:4px;">exit_code: <code>{$ev['result']['exit_code'] ?? '?'}</code></div>
+			<pre class="transcript-body">{$ev['result']['summary'] ?? '(no summary)'}</pre>
+		{elseif $ev['type'] === 'agent_message'}
 			<div n:if="isset($ev['result']['stop_reason'])" style="font-size:11px; color:var(--text2); margin-bottom:4px;">stop_reason: <code>{$ev['result']['stop_reason']}</code></div>
 			<pre class="transcript-body">{$ev['result']['text'] ?? $ev['result']['text_preview'] ?? '(no text)'}</pre>
 		{elseif $ev['type'] === 'agent_tool_use'}
