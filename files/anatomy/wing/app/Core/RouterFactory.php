@@ -77,6 +77,10 @@ final class RouterFactory
 		$api->addRoute('api/v1/patches/<id>/apply', 'Patches:apply');
 		$api->addRoute('api/v1/patches/<id>/events', 'Patches:events');
 		$api->addRoute('api/v1/patches[/<id>]', 'Patches:default');
+		// W5-B5 planned-coexistence queue. /planned before /<service>; /queue
+		// before /<service>/provision (Nette is first-match).
+		$api->addRoute('api/v1/coexistence/planned', 'Coexistence:planned');
+		$api->addRoute('api/v1/coexistence/<service>/queue', 'Coexistence:queue');
 		$api->addRoute('api/v1/coexistence/<service>/provision', 'Coexistence:provision');
 		$api->addRoute('api/v1/coexistence/<service>/cutover', 'Coexistence:cutover');
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');

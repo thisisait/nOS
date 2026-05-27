@@ -576,3 +576,21 @@ CREATE TABLE IF NOT EXISTS upgrades_planned (
     UNIQUE (service, recipe_id, status)
 );
 CREATE INDEX IF NOT EXISTS idx_upgrades_planned_status ON upgrades_planned (status);
+
+-- coexistence_planned: operator/agent-queued coexistence provisions (W5-B5).
+-- The upgrade-architect agent queues a parallel-track provision for a
+-- breaking / whole-new-version upgrade; the consumer applies it ONLY under
+-- --tags coexistence (never on a normal run), then flips to 'applied'.
+CREATE TABLE IF NOT EXISTS coexistence_planned (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    tag           TEXT NOT NULL DEFAULT 'new',
+    port_offset   INTEGER DEFAULT 10,
+    reason        TEXT,
+    planned_by    TEXT NOT NULL DEFAULT 'operator',
+    status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
+    planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    applied_at    TEXT,
+    UNIQUE (service, tag, status)
+);
+CREATE INDEX IF NOT EXISTS idx_coexistence_planned_status ON coexistence_planned (status);

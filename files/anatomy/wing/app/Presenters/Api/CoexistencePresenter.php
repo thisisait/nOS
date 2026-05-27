@@ -37,6 +37,40 @@ final class CoexistencePresenter extends BaseApiPresenter
 		$this->proxyBoxApi($this->coexistence->provision($service, $body));
 	}
 
+	/**
+	 * POST /api/v1/coexistence/<service>/queue — queue a coexistence provision
+	 * (W5-B5). The --tags coexistence consumer applies it. planned_by is the
+	 * validated bearer identity (never body-supplied) to prevent spoofing.
+	 */
+	public function actionQueue(string $service): void
+	{
+		$this->requireMethod('POST');
+		$body = $this->getJsonBody();
+		if (isset($body['planned_by'])) {
+			$this->sendError('planned_by is derived from the bearer token identity, not the body', 400);
+		}
+		$plannedBy = $this->getActorId() ?: 'api';
+		$tag = (isset($body['tag']) && is_string($body['tag']) && $body['tag'] !== '') ? $body['tag'] : 'new';
+		$portOffset = (int) ($body['port_offset'] ?? 10);
+		$reason = (isset($body['reason']) && is_string($body['reason'])) ? $body['reason'] : null;
+		$result = $this->coexistence->planCoexistence($service, $tag, $portOffset, $plannedBy, $reason);
+		$this->sendSuccess([
+			'queued'     => $result['ok'],
+			'status'     => $result['status'],
+			'service'    => $service,
+			'tag'        => $tag,
+			'planned_by' => $plannedBy,
+			'note'       => $result['ok'] ? 'queued — applied under: ansible-playbook main.yml --tags coexistence' : $result['detail'],
+		]);
+	}
+
+	/** GET /api/v1/coexistence/planned — the planned-coexistence queue. */
+	public function actionPlanned(): void
+	{
+		$this->requireMethod('GET');
+		$this->sendSuccess(['planned' => $this->coexistence->listPlanned()]);
+	}
+
 	public function actionCutover(string $service): void
 	{
 		$this->requireMethod('POST');

@@ -21,6 +21,54 @@ final class CoexistenceRepository
 	) {
 	}
 
+	// ── Planned-coexistence queue (W5-B5) ────────────────────────────────────
+	// The upgrade-architect agent queues a parallel-track provision for a
+	// breaking upgrade; the --tags coexistence consumer applies it.
+
+	/** @return array<int,array<string,mixed>> */
+	public function listPlanned(string $status = 'planned'): array
+	{
+		$out = [];
+		foreach ($this->db->table('coexistence_planned')->where('status', $status)->order('planned_at DESC') as $r) {
+			$out[] = $r->toArray();
+		}
+		return $out;
+	}
+
+	/**
+	 * Queue a coexistence provision (idempotent on service+tag+status).
+	 * planned_by is the validated caller identity (attribution).
+	 *
+	 * @return array{ok:bool, status:string, detail:string}
+	 */
+	public function planCoexistence(string $service, string $tag, int $portOffset, string $plannedBy, ?string $reason = null): array
+	{
+		$exists = $this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'planned')->fetch();
+		if ($exists) {
+			return ['ok' => false, 'status' => 'already_queued', 'detail' => 'already queued'];
+		}
+		$this->db->table('coexistence_planned')->insert([
+			'service'     => $service,
+			'tag'         => $tag,
+			'port_offset' => $portOffset,
+			'reason'      => $reason,
+			'planned_by'  => $plannedBy,
+			'status'      => 'planned',
+		]);
+		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued'];
+	}
+
+	/** Mark a queued coexistence provision applied (delete-prior avoids the UNIQUE collision). */
+	public function markPlannedApplied(string $service, string $tag): void
+	{
+		$this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'applied')->delete();
+		$this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'planned')
+			->update(['status' => 'applied', 'applied_at' => gmdate('c')]);
+	}
+
 	/**
 	 * Tracks grouped by service.
 	 *
