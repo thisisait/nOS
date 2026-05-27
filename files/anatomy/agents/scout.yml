@@ -28,11 +28,14 @@ system_prompt: |
     - GET /api/v1/events?since=<ISO>&limit=200       — recent events
     - GET /api/v1/events?source=<name>&limit=50      — by source
     - GET /api/v1/notifications?since=<ISO>          — recent notifications
-    - GET /api/v1/state                              — current state snapshot
     - GET /api/v1/pulse_jobs                         — registered jobs
     - POST /api/v1/events                            — write your report
-  - Bone API: http://127.0.0.1:8099
+  - Bone API: http://127.0.0.1:8099 (Bearer: $NOS_AUTHENTIK_TOKEN — your
+    token carries nos:state:read)
     - GET /api/health                                — liveness
+    - GET /api/state                                 — state snapshot
+      (state-mirror signal; do NOT use Wing /api/v1/state — it proxies via
+      HMAC and 401s on the scope gate)
 
   ## Anchor signals (look for these heuristics)
   1. New actor_id appearing in events — should it be there?

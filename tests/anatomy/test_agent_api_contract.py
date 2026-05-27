@@ -110,9 +110,16 @@ def test_agent_token_requests_capability_scopes():
     assert "AGENT_SCOPES" in runner, "runner must derive the agent scopes"
     assert "scope=${AGENT_SCOPES}" in runner, "runner must request scopes in the token mint"
     assert "/^capabilities:/" in runner, "scopes derived from the profile capabilities list"
-    scout = (REPO / "files/anatomy/agents/scout/system.md").read_text()
-    assert "/api/state" in scout and "nos:state:read" in scout, "scout must read Bone /api/state with its scoped JWT"
-    assert "Do NOT use Wing" in scout, "scout must be steered off the Wing HMAC proxy for state"
+    # Both the dir-form system.md (AgentKit runner) AND the flat profile
+    # system_prompt (the claude-CLI runner extracts THIS) must point at Bone
+    # /api/state, not Wing's /api/v1/state.
+    for p in ("scout/system.md", "scout.yml"):
+        src = (REPO / "files/anatomy/agents" / p).read_text()
+        assert "/api/state" in src, f"{p}: scout must read Bone /api/state"
+        assert "do NOT use Wing" in src.lower(), f"{p}: scout must be steered off Wing's /api/v1/state"
+    flat = (REPO / "files/anatomy/agents/scout.yml").read_text()
+    sysprompt = flat.split("system_prompt:", 1)[-1].split("\ncapabilities:", 1)[0]
+    assert "/api/v1/state" not in sysprompt, "flat scout system_prompt must not list Wing /api/v1/state"
 
 
 def test_upgrade_advisor_agent_wired():
