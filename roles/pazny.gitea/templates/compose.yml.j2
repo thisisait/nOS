@@ -31,6 +31,13 @@ services:
       GITEA__security__INSTALL_LOCK: "true"
       GITEA__security__SECRET_KEY: "{{ gitea_secret_key | default(global_password_prefix + '_pw_gitea_secret') }}"
       GITEA__service__DISABLE_REGISTRATION: "{{ gitea_disable_registration | default(false) | string | lower }}"
+      # Pure-SSO onboarding: hide the local self-registration form (it was
+      # publicly reachable — anyone could create a Gitea account) but STILL
+      # allow OAuth2/OIDC first-login auto-create, so Authentik users onboard
+      # automatically. DISABLE_REGISTRATION=true would block OIDC auto-create
+      # too (admin-only), breaking the blank's zero-manual-signup goal; this
+      # flag is the "external registration only" gate. Admin is API-provisioned.
+      GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "{{ gitea_allow_only_external_registration | default(true) | string | lower }}"
       GITEA__log__LEVEL: "Warn"
       TZ: "Europe/Prague"
 {% if install_mailpit | default(false) %}
