@@ -85,8 +85,17 @@
       {% endif %}
   tags: ['coexist-provision']
 
+# Only reload nginx when it's the active edge (install_nginx). On a Traefik-
+# primary install (the default) nginx isn't installed, so `brew services reload
+# nginx` exits non-zero and fails the whole provision — the track is already
+# rendered + recorded by then. The module still writes a vhost file, but it's
+# inert without a running nginx (and a DB track has no HTTP route anyway).
+# TODO: register coexistence tracks with the Traefik file provider on
+# install_nginx=false so HTTP-facing tracks are actually routable.
 - name: "[coexistence_provision] Reload nginx"
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
   changed_when: true
-  when: not (coexist_dry_run | default(false) | bool)
+  when:
+    - not (coexist_dry_run | default(false) | bool)
+    - install_nginx | default(false) | bool
   tags: ['coexist-provision']

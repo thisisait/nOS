@@ -82,7 +82,10 @@
          if (item.service in _coexist_manifest
              and vars[_coexist_manifest[item.service].port_var] is defined)
          else omit }}
-    coexist_dry_run: "{{ coexist_dry_run | default(false) | bool }}"
+    # coexist_dry_run is NOT forwarded here: re-declaring it as an include var
+    # that reads its own name is self-referential and recurses when no -e
+    # override breaks the loop (masked while every test passed -e
+    # coexist_dry_run=true). The included tasks inherit it from play scope.
   loop: "{{ _coexist_planned }}"
   loop_control:
     label: "{{ item.service }}/{{ item.tag }}"

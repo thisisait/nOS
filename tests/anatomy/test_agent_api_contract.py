@@ -220,3 +220,10 @@ def test_coexistence_queue_consumed_under_tag():
     # Wired into main.yml behind 'never' so a normal run never provisions.
     main = (REPO / "main.yml").read_text()
     assert "tasks/coexistence-apply.yml" in main, "consumer not imported in main.yml"
+    # Real-apply (no -e) regressions found 2026-05-28, masked by dry-run -e:
+    # (1) coexist_dry_run must NOT be a self-referential include var (recursed
+    #     when no -e broke the loop); (2) the nginx reload must be gated on
+    #     install_nginx (brew reload nginx fails on a Traefik-primary install).
+    assert "NOT forwarded here" in consumer, "coexist_dry_run self-reference (recursion) must stay removed"
+    prov = (REPO / "tasks/coexistence-provision.yml").read_text()
+    assert "install_nginx" in prov, "nginx reload must be gated on install_nginx (Traefik-primary has no nginx)"
