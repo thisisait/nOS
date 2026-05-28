@@ -20,7 +20,12 @@ services:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
       WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default(global_password_prefix + '_pw_openwebui') }}"
-      ENABLE_SIGNUP: "{{ openwebui_enable_signup | default(true) | string | lower }}"
+      # Pure-SSO: local signup OFF by default. It was true → the public
+      # /auth/signup page let anyone self-register, and the FIRST registrant
+      # becomes admin (a public first-admin race during a blank). Users onboard
+      # via Authentik (ENABLE_OAUTH_SIGNUP in the plugin overlay); the admin is
+      # DB-seeded by post.yml and merged on first OIDC login (merge-by-email).
+      ENABLE_SIGNUP: "{{ openwebui_enable_signup | default(false) | string | lower }}"
       DEFAULT_USER_ROLE: "user"
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"

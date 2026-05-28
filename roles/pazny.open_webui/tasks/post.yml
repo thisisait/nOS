@@ -23,62 +23,42 @@
   # fail-fast); if we still can't reach the port from the host, that's a
   # genuine split-brain to surface, not paper over.
 
-- name: "[pazny.open_webui Post] Check if any user exists"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signin"
-    method: POST
-    body_format: json
-    body:
-      email: "{{ openwebui_admin_email | default(default_admin_email) }}"
-      password: "{{ openwebui_admin_password | default(global_password_prefix + '_pw_openwebui_admin') }}"
-    status_code: [200, 400, 401, 403]
-    timeout: 10
-  register: _owui_login
-  failed_when: false
-  no_log: true
-  when: _owui_ready.status | default(0) == 200
-
-- name: "[pazny.open_webui Post] Register first admin user (first-run only)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signup"
-    method: POST
-    body_format: json
-    body:
-      name: "{{ openwebui_admin_name | default('Admin') }}"
-      email: "{{ openwebui_admin_email | default(default_admin_email) }}"
-      password: "{{ openwebui_admin_password }}"
-    status_code: [200, 201]
-    timeout: 10
-  register: _owui_signup
-  when:
-    - _owui_ready.status | default(0) == 200
-    - _owui_login.status | default(0) != 200
-  changed_when: _owui_signup.status | default(0) in [200, 201]
-  failed_when: false
-  no_log: true
-
-# ── Reconverge admin password every run (state-declarative UPDATE) ──────
-# Open WebUI uses SQLite + bcrypt (passlib). A direct UPDATE via
-# in-container python beha idempotentne.
-- name: "[pazny.open_webui Post] Reconverge admin password (SQLite + bcrypt)"
+# ── Ensure admin (DB-seed first-run, reconverge otherwise) ─────────────────
+# Pure-SSO + signup-off safe: we no longer hit the public /auth/signup endpoint
+# (ENABLE_SIGNUP=false closes the public first-admin race). Instead seed the
+# admin DIRECTLY into webui.db on first run (empty DB), and reconverge the
+# password on later runs. The admin email == the Authentik admin's, so
+# OAUTH_MERGE_ACCOUNTS_BY_EMAIL merges the first OIDC login into this admin →
+# SSO-primary, with the seeded password as a break-glass fallback. Idempotent;
+# the in-container python uses the same sqlite3 + passlib path as before.
+- name: "[pazny.open_webui Post] Ensure admin user (seed first-run / reconverge)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p iiab exec -T open-webui python3 -c "
-    import sqlite3
+    import sqlite3, uuid, time
     from passlib.context import CryptContext
     pwd_ctx = CryptContext(schemes=['bcrypt'], deprecated='auto')
     hashed = pwd_ctx.hash('{{ openwebui_admin_password }}')
+    email = '{{ openwebui_admin_email | default(default_admin_email) }}'
     db = sqlite3.connect('/app/backend/data/webui.db')
     cur = db.cursor()
-    cur.execute('UPDATE auth SET password=? WHERE email=?', (hashed, '{{ openwebui_admin_email | default(default_admin_email) }}'))
+    total = cur.execute('SELECT count(*) FROM user').fetchone()[0]
+    mine = cur.execute('SELECT id FROM user WHERE email=?', (email,)).fetchone()
+    if total == 0:
+        uid = str(uuid.uuid4()); now = int(time.time())
+        cur.execute('INSERT INTO user (id,name,email,role,profile_image_url,created_at,updated_at,last_active_at) VALUES (?,?,?,?,?,?,?,?)', (uid, 'Admin', email, 'admin', '/user.png', now, now, now))
+        cur.execute('INSERT INTO auth (id,email,password,active) VALUES (?,?,?,1)', (uid, email, hashed))
+        print('SEEDED')
+    elif mine:
+        cur.execute('UPDATE auth SET password=? WHERE email=?', (hashed, email))
+        print('RECONVERGED')
+    else:
+        print('SKIP')
     db.commit()
-    print('UPDATED' if cur.rowcount > 0 else 'NOTFOUND')
     db.close()
     "
-  register: _owui_pw_update
-  when:
-    - _owui_ready.status | default(0) == 200
-    - _owui_login.status | default(0) == 200
-  changed_when: "'UPDATED' in (_owui_pw_update.stdout | default(''))"
+  register: _owui_admin
+  when: _owui_ready.status | default(0) == 200
+  changed_when: "('SEEDED' in (_owui_admin.stdout | default('')) ) or ('RECONVERGED' in (_owui_admin.stdout | default('')))"
   failed_when: false
   check_mode: false
   no_log: true
