@@ -24,7 +24,7 @@
   # genuine split-brain to surface, not paper over.
 
 # ── Ensure admin (DB-seed first-run, reconverge otherwise) ─────────────────
-# Pure-SSO + signup-off safe: we no longer hit the public /auth/signup endpoint
+# Pure-SSO + signup-off safe: we no longer POST the public signup endpoint
 # (ENABLE_SIGNUP=false closes the public first-admin race). Instead seed the
 # admin DIRECTLY into webui.db on first run (empty DB), and reconverge the
 # password on later runs. The admin email == the Authentik admin's, so
