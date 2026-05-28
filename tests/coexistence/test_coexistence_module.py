@@ -436,3 +436,56 @@ def test_provision_clone_from_invokes_strategy(tmp_env, monkeypatch):
     assert called["method"] == "cp_recursive"
     assert called["spec"]["src_path"].endswith("grafana-legacy")
     assert called["spec"]["dst_path"].endswith("grafana-new")
+
+
+# ---------------------------------------------------------------------------
+# render: derive the track from the legacy override (2026-05-28)
+
+def test_render_derives_env_and_networks_from_legacy(tmp_env):
+    """Stateful tracks couldn't boot: the minimal template omitted env +
+    networks, so a postgres track restart-looped ('POSTGRES_PASSWORD not
+    specified'). render_compose_override must DERIVE from the legacy
+    {service}.yml override — inherit environment / networks / healthcheck and
+    swap image tag + container_name + port + the data volume."""
+    import yaml as _yaml
+    legacy = {"services": {"grafana": {
+        "image": "grafana/grafana:11.5.0",
+        "ports": ["127.0.0.1:3000:3000"],
+        "volumes": ["/srv/grafana-legacy:/var/lib/grafana", "/ca:/ca:ro"],
+        "environment": {"GF_SECURITY_ADMIN_PASSWORD": "s3cret"},
+        "networks": ["observability_net"],
+        "healthcheck": {"test": ["CMD", "wget", "-q", "localhost:3000"]},
+    }}}
+    ovr = pathlib.Path(tmp_env["stacks_dir"]) / "observability" / "overrides" / "grafana.yml"
+    ovr.write_text(_yaml.safe_dump(legacy))
+
+    body = lib.render_compose_override({
+        "service": "grafana", "tag": "new", "version": "12.0.0",
+        "port": 3010, "data_path": "/srv/grafana-new",
+        "stacks_dir": tmp_env["stacks_dir"], "stack": "observability",
+    })
+    svc = _yaml.safe_load(body)["services"]["grafana-new"]
+    # Inherited:
+    assert svc["environment"]["GF_SECURITY_ADMIN_PASSWORD"] == "s3cret"
+    assert svc["networks"] == ["observability_net"]
+    assert "healthcheck" in svc
+    # Swapped:
+    assert svc["image"] == "grafana/grafana:12.0.0"
+    assert svc["container_name"] == "nos-grafana-new"
+    assert svc["ports"] == ["127.0.0.1:3010:3000"]
+    # Data volume replaced; other (CA) volume kept.
+    assert "/srv/grafana-new:/var/lib/grafana" in svc["volumes"]
+    assert "/ca:/ca:ro" in svc["volumes"]
+    assert not any(str(v).startswith("/srv/grafana-legacy") for v in svc["volumes"])
+
+
+def test_render_falls_back_to_minimal_template_without_legacy(tmp_env):
+    """No legacy override on disk → self-contained minimal template (so the
+    derive path can't regress services that have no discoverable override)."""
+    body = lib.render_compose_override({
+        "service": "grafana", "tag": "new", "version": "12.0.0",
+        "port": 3010, "data_path": "/srv/grafana-new",
+        "stacks_dir": tmp_env["stacks_dir"], "stack": "observability",
+    })
+    assert "grafana-new" in body
+    assert "127.0.0.1:3010:3000" in body
