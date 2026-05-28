@@ -227,3 +227,19 @@ def test_coexistence_queue_consumed_under_tag():
     assert "NOT forwarded here" in consumer, "coexist_dry_run self-reference (recursion) must stay removed"
     prov = (REPO / "tasks/coexistence-provision.yml").read_text()
     assert "install_nginx" in prov, "nginx reload must be gated on install_nginx (Traefik-primary has no nginx)"
+
+
+def test_agent_exit_verdict_sentinel_propagated():
+    """2026-05-28: claude --print exits 0 on success regardless of the agent's
+    conclusion, so the run-tools showed GREEN even when a breaking upgrade was
+    queued. Agents end their report with a `NOS_AGENT_EXIT: N` sentinel; the
+    runner lifts it into the process exit (escalate-only, never masking a real
+    claude failure). Verified live: advisor → exit 1 → wrapper REVIEW."""
+    runner = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
+    assert "NOS_AGENT_EXIT" in runner, "runner must parse the verdict sentinel"
+    assert "AGENT_VERDICT" in runner and "-gt 0" in runner, "escalate-only (don't mask a real failure)"
+    # Both review-capable agents, both runtime forms, must instruct the sentinel.
+    for p in ("upgrade-advisor.yml", "upgrade-advisor/system.md",
+              "upgrade-architect.yml", "upgrade-architect/system.md"):
+        assert "NOS_AGENT_EXIT" in (REPO / "files/anatomy/agents" / p).read_text(), \
+            f"{p}: must instruct the exit-verdict sentinel"

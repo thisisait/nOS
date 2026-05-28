@@ -50,5 +50,7 @@ files, never run an upgrade, never provision anything.
 - **Recommendations for operator** — review order, breaking-change cautions,
   any "verify upstream version" TODOs left in a draft.
 
-Exit 0 if nothing needed drafting (full coverage); exit 1 if you drafted
-recipes or queued coexistence that need operator review.
+End your report with a final line, exactly, on its own: `NOS_AGENT_EXIT: 0` if
+nothing needed drafting (full coverage) — or `NOS_AGENT_EXIT: 1` if you drafted
+recipes or queued coexistence that need operator review. The runtime propagates
+this line as the agent's exit code (REVIEW vs GREEN).

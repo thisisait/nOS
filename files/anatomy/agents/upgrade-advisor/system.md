@@ -43,5 +43,7 @@ Report under the markdown heading `## Upgrade advisor report` with sections:
 - **Recommendations for operator** — e.g. "review breaking upgrades before
   running `--tags upgrade`", or scan-freshness caveats.
 
-Exit 0 if nothing needed queueing or all queues succeeded; exit 1 if you queued
-upgrades that need operator review before applying.
+End your report with a final line, exactly, on its own: `NOS_AGENT_EXIT: 0` if
+nothing needed queueing (or only routine upgrades) — or `NOS_AGENT_EXIT: 1` if
+you queued upgrades that need operator review before applying. The runtime
+propagates this line as the agent's exit code (REVIEW vs GREEN).

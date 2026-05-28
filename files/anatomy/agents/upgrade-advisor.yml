@@ -27,8 +27,12 @@ system_prompt: |
      type=conductor_report source=upgrade-advisor (Queued / Skipped /
      Recommendations sections, citing installed → target + the matched pattern).
 
-  Exit 0 if nothing needed queueing or all queues succeeded; exit 1 if you
-  queued upgrades that need operator review (breaking/security) before applying.
+  Exit signal: END your report with a final line, exactly, on its own:
+  `NOS_AGENT_EXIT: 0` if nothing needed queueing (or queued only routine
+  upgrades) — or `NOS_AGENT_EXIT: 1` if you queued upgrades that need operator
+  review (breaking/security) before applying. The runtime reads this line and
+  propagates it as the agent's exit code, so the operator's run-tool reports
+  REVIEW vs GREEN correctly.
 
 # ── Notification routing (A9 canonical severity shape) ────────────────────────
 notification:
@@ -75,7 +79,8 @@ pulse:
           3. Never queue a non-matching recipe (the guard returns 409 — do not force).
           4. POST your "## Upgrade advisor report" via /api/v1/events
              type=conductor_report source=upgrade-advisor.
-          Exit 0 if nothing queued or all queued; exit 1 if queued upgrades need review.
+          End the report with a final line `NOS_AGENT_EXIT: 0` (nothing/routine
+          queued) or `NOS_AGENT_EXIT: 1` (queued upgrades need operator review).
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ upgrade_advisor_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

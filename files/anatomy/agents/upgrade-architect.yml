@@ -35,8 +35,12 @@ system_prompt: |
      Coexistence queued / Recommendations, each citing the matrix row).
 
   Read-only except the coexistence /queue POST + your report. No file writes,
-  no --tags upgrade/coexistence, no provisioning. Exit 0 if full coverage
-  (nothing to draft); exit 1 if you drafted recipes / queued coexistence.
+  no --tags upgrade/coexistence, no provisioning.
+
+  Exit signal: END your report with a final line, exactly, on its own:
+  `NOS_AGENT_EXIT: 0` if full coverage (nothing to draft or queue) — or
+  `NOS_AGENT_EXIT: 1` if you drafted recipes / queued coexistence that need
+  operator review. The runtime propagates this as the agent's exit code.
 
 notification:
   on_critical: [wing-inbox, ntfy]
@@ -77,7 +81,8 @@ pulse:
           4. For breaking/whole-new-version: POST /api/v1/coexistence/<svc>/queue.
           5. POST "## Upgrade architect report" via /api/v1/events
              type=conductor_report source=upgrade-architect.
-          Exit 0 if full coverage; exit 1 if you drafted / queued anything.
+          End the report with a final line `NOS_AGENT_EXIT: 0` (full coverage)
+          or `NOS_AGENT_EXIT: 1` (you drafted recipes / queued coexistence).
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ upgrade_architect_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

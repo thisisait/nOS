@@ -284,6 +284,22 @@ print(u.get("input_tokens", ""), u.get("output_tokens", ""), u.get("cache_read_i
 [[ -s "$CLAUDE_ERR" ]] && CLAUDE_OUTPUT+=$'\n'"$(cat "$CLAUDE_ERR")"
 rm -f "$CLAUDE_ERR"
 
+# Propagate the agent's self-declared verdict. `claude --print` exits 0 on any
+# successful run regardless of what the agent concluded, so the operator run-
+# tools (run-upgrade-advisor.sh etc.) couldn't tell REVIEW (queued/drafted)
+# from GREEN. Agents end their report with a `NOS_AGENT_EXIT: N` sentinel; lift
+# it into the process exit. Only ESCALATE a clean run — never mask a real
+# claude failure (CLAUDE_EXIT already non-zero stays).
+if [[ "$CLAUDE_EXIT" -eq 0 ]]; then
+    AGENT_VERDICT=$(printf '%s' "$CLAUDE_OUTPUT" \
+        | grep -oE 'NOS_AGENT_EXIT:[[:space:]]*[0-9]+' | tail -1 \
+        | grep -oE '[0-9]+$')
+    if [[ -n "$AGENT_VERDICT" && "$AGENT_VERDICT" -gt 0 ]]; then
+        CLAUDE_EXIT="$AGENT_VERDICT"
+        echo "INFO: agent self-declared review verdict (NOS_AGENT_EXIT=$AGENT_VERDICT)"
+    fi
+fi
+
 echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=\$$COST)}"
 if [[ -n "$CLAUDE_OUTPUT" ]]; then
     echo "$CLAUDE_OUTPUT" | tail -20
