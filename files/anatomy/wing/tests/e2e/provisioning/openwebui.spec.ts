@@ -1,35 +1,48 @@
 import { test, expect } from '@playwright/test';
 import { loadCreds } from '../fixtures/credentials';
+import { loginAuthentik } from '../fixtures/authentik';
 
 /**
- * Open WebUI first-signup (becomes the admin). No API for this flow —
- * the first person to sign up is promoted to admin automatically.
+ * Open WebUI onboarding — pure-SSO (2026-05-29).
  *
- * Idempotent: if signup is disabled (admin already exists), we skip.
+ * Public local signup is CLOSED (ENABLE_SIGNUP=false): the old "first visitor
+ * to sign up becomes admin" race is gone. Access is via Authentik OIDC, and a
+ * tier-1 (nos-admins / nos-providers) Authentik user auto-becomes a WebUI admin
+ * via OAUTH role management (OAUTH_ADMIN_ROLES). The admin is also DB-seeded by
+ * the playbook (break-glass), so the instance is fully provisioned on a blank.
  */
-test('Open WebUI — first admin signup', async ({ page }) => {
+
+test('Open WebUI — public local signup is closed', async ({ page }) => {
   const creds = loadCreds('openwebui');
   test.skip(!creds, 'Open WebUI credentials not set — skipping');
 
   await page.goto(creds!.url + '/auth', { waitUntil: 'domcontentloaded' });
 
-  // The signup form shows a "Sign up" toggle when no admin exists yet.
-  // After the admin is created, only the login form is visible.
-  const signupToggle = page.getByRole('button', { name: /sign up/i });
-  const hasSignup = await signupToggle.count();
-  if (hasSignup === 0) {
-    test.info().annotations.push({ type: 'note', description: 'Open WebUI already has admin' });
-    return;
-  }
-  await signupToggle.first().click().catch(() => {});
+  // The public "Sign up" toggle must be GONE — that was the first-admin race.
+  await expect(page.getByRole('button', { name: /sign up/i })).toHaveCount(0);
 
-  // Fill the form
-  await page.getByPlaceholder(/name/i).first().fill('Admin');
-  await page.getByPlaceholder(/email/i).first().fill(creds!.email || creds!.username);
-  await page.getByPlaceholder(/password/i).first().fill(creds!.password);
+  // Authentik SSO must be the access path (pure-SSO onboarding).
+  const sso = page.getByRole('button', { name: /authentik|continue with|sign in with/i });
+  await expect(sso.first()).toBeVisible({ timeout: 10_000 });
+});
 
-  await page.getByRole('button', { name: /create account|sign up/i }).first().click();
+test('Open WebUI — Authentik admin gets admin role via OIDC groups', async ({ page }) => {
+  const creds = loadCreds('openwebui');
+  test.skip(!creds, 'Open WebUI credentials not set — skipping');
+  test.skip(
+    !process.env.AUTHENTIK_PASSWORD,
+    'AUTHENTIK_PASSWORD not set — skipping SSO admin-grant check (set AUTHENTIK_USER to a nos-admins member)',
+  );
 
-  // Successful signup redirects to / (chat UI)
-  await expect(page).toHaveURL(/\/(c|$)/i, { timeout: 15_000 });
+  await page.goto(creds!.url + '/auth', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: /authentik|continue with|sign in with/i }).first().click();
+  await loginAuthentik(page);
+
+  // Back in Open WebUI (chat UI), not bounced to a "pending approval" screen.
+  await expect(page).not.toHaveURL(/\/auth/i, { timeout: 20_000 });
+
+  // Admin grant: the admin-only users surface must be reachable. A non-admin
+  // OIDC user (allowed but not in OAUTH_ADMIN_ROLES) is bounced off /admin.
+  await page.goto(creds!.url + '/admin/users', { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveURL(/\/admin/i, { timeout: 15_000 });
 });

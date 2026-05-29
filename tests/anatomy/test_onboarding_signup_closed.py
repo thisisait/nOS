@@ -64,6 +64,27 @@ def test_gitea_external_only_registration():
         "admin_group must derive from the tier-1 group set"
 
 
+def test_group_to_admin_mapping_coverage():
+    """The Authentik admin auto-becomes the service admin via the groups claim
+    across the native-OIDC admin surface. Grafana / Superset / Jellyfin shipped
+    this earlier; Open-WebUI + Gitea + GitLab were added 2026-05-29."""
+    grafana = (REPO / "files/anatomy/plugins/grafana-base/templates/grafana-base.compose.yml.j2").read_text()
+    assert "GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH" in grafana and "groups[*]" in grafana
+    gitlab = (REPO / "roles/pazny.gitlab/templates/compose.yml.j2").read_text()
+    assert "admin_groups:" in gitlab and "groups_attribute: 'groups'" in gitlab, \
+        "GitLab omniauth must sync the groups claim → admin"
+
+
+def test_open_webui_e2e_verifies_pure_sso():
+    """The Playwright provisioning spec must verify the NEW pure-SSO behavior
+    (public signup closed + OIDC admin grant) — not the retired race where the
+    first public signup became admin."""
+    spec = (REPO / "files/anatomy/wing/tests/e2e/provisioning/openwebui.spec.ts").read_text()
+    assert "public local signup is closed" in spec
+    assert "loginAuthentik" in spec, "must exercise the Authentik OIDC login path"
+    assert "first admin signup" not in spec, "the retired public-signup test must be gone"
+
+
 def test_already_safe_services_stay_closed():
     """Regression guard for services the audit confirmed already-safe — keep
     public signup closed so a future edit can't silently reopen it."""
