@@ -56,6 +56,12 @@ def test_gitea_external_only_registration():
     compose = (REPO / "roles/pazny.gitea/templates/compose.yml.j2").read_text()
     assert "ALLOW_ONLY_EXTERNAL_REGISTRATION" in compose
     assert "gitea_allow_only_external_registration: true" in (REPO / "default.config.yml").read_text()
+    # Group → admin sync: the Authentik OIDC source maps the groups claim, and a
+    # tier-1 Authentik user becomes a Gitea admin (no manual promotion).
+    hook = (REPO / "files/anatomy/plugins/gitea-base/hooks/post_compose.yml").read_text()
+    assert 'group_claim_name: "groups"' in hook, "Gitea OIDC source must read the groups claim"
+    assert "admin_group:" in hook and "selectattr('tier', 'equalto', 1)" in hook, \
+        "admin_group must derive from the tier-1 group set"
 
 
 def test_already_safe_services_stay_closed():
