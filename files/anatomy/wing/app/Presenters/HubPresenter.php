@@ -34,6 +34,9 @@ final class HubPresenter extends BasePresenter
 	 */
 	private const BACKEND_ONLY_SLUGS = [
 		'bluesky_pds', 'loki', 'tempo', 'prometheus', 'alloy', 'nginx',
+		// QGIS Server serves WMS/WFS /ows endpoints — no browser root UI;
+		// surfaced by the all-on URL audit gate 2026-05-29.
+		'qgis_server',
 	];
 
 	public function renderDefault(): void

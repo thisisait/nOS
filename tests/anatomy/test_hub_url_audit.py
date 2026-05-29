@@ -37,7 +37,7 @@ OK_STATUSES = {"200", "301", "302", "307", "401", "403"}
 # actually renders (otherwise it false-positives on systems the operator never
 # sees in the UI). When a slug is promoted to a manifest `kind: backend` flag,
 # both lists collapse to the manifest read.
-_BACKEND_ONLY = {"bluesky_pds", "loki", "tempo", "prometheus", "alloy", "nginx"}
+_BACKEND_ONLY = {"bluesky_pds", "loki", "tempo", "prometheus", "alloy", "nginx", "qgis_server"}
 
 
 def _wing_token() -> str | None:
