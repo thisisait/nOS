@@ -52,3 +52,12 @@ def test_harvest_collects_cards_and_renders_valid_json():
     assert len(doc["cards"]) >= 30
     c0 = doc["cards"][0]
     assert {"slug", "title", "icon", "url", "tier", "description", "health_check"} <= set(c0)
+
+
+def test_uptime_kuma_consumes_hub_card_health_check():
+    """P1b: Uptime Kuma probes the service's declared health endpoint (from the
+    harvested hub_card.health_check) instead of the bare root. Path-style
+    health_checks are appended to the monitor URL; full-URL/absent keep root."""
+    mon = (REPO / "roles/pazny.uptime_kuma/tasks/monitors.yml").read_text()
+    assert "hub-cards.json" in mon, "monitors must read the plugin-harvested cards"
+    assert "_kuma_health_paths" in mon and "startswith('/')" in mon, "path-style health_check appended to URL"

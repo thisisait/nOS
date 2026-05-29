@@ -57,6 +57,26 @@
   ansible.builtin.set_fact:
     _kuma_spec_monitors: []
 
+# P1b (2026-05-29): probe the service's declared health endpoint instead of the
+# bare root. The plugin-harvested hub-cards.json (wing-base) carries each
+# service's ui-extension.hub_card.health_check; build a slug→path map so the
+# monitor URL can target it. Slugs are hyphenated (open-webui); manifest ids
+# are underscored (open_webui) — normalise on lookup.
+- name: "[pazny.uptime_kuma] Read plugin hub-cards (health_check paths)"
+  ansible.builtin.slurp:
+    src: "{{ wing_home | default(ansible_facts['env']['HOME'] ~ '/wing') }}/app/data/hub-cards.json"
+  register: _kuma_hubcards_raw
+  failed_when: false
+
+- name: "[pazny.uptime_kuma] Build slug → health_check map"
+  ansible.builtin.set_fact:
+    _kuma_health_paths: >-
+      {{ dict(_cards | map(attribute='slug') | zip(_cards | map(attribute='health_check'))) }}
+  vars:
+    _cards: >-
+      {{ ((_kuma_hubcards_raw.content | default('') | b64decode | from_json).cards | default([]))
+         if (_kuma_hubcards_raw.content is defined) else [] }}
+
 - name: "[pazny.uptime_kuma] Append one HTTP monitor per enabled domain-backed service"
   ansible.builtin.set_fact:
     _kuma_spec_monitors: "{{ _kuma_spec_monitors + [_m] }}"
@@ -66,10 +86,14 @@
     label: "{{ svc.id }}"
   vars:
     _domain: "{{ vars[svc.domain_var] | default('') }}"
+    # Health-endpoint path from the plugin hub_card (path-style only — full-URL
+    # or absent health_checks keep the bare-root probe). Join by hyphenated slug.
+    _hc: "{{ _kuma_health_paths[svc.id | replace('_', '-')] | default('') }}"
+    _hc_path: "{{ _hc if _hc.startswith('/') else '' }}"
     _m:
       name: "{{ svc.id | replace('_', ' ') | title }}"
       type: "http"
-      url: "https://{{ _domain }}"
+      url: "https://{{ _domain }}{{ _hc_path }}"
       interval: 60
       maxretries: 2
       ignore_tls: true
