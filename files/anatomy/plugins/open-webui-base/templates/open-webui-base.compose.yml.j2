@@ -24,6 +24,18 @@ services:
       OPENID_PROVIDER_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/open-webui/.well-known/openid-configuration"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
       OAUTH_SCOPES: "openid profile email"
+      # ── OIDC group → role mapping (the Authentik admin IS the WebUI admin) ──
+      # Authentik's profile scope emits the user's group names in the `groups`
+      # claim (verified live), so role management lets a tier-1 (nos-admins /
+      # nos-providers) Authentik user auto-become a WebUI admin on first OIDC
+      # login — zero manual promotion, fully provisioned. Allowed = the tier-3
+      # group set (Open WebUI is a tier-3 service); admin = the tier-1 set.
+      # Derived from authentik_rbac_tiers so renamed groups stay in sync. The
+      # DB-seeded admin (post.yml) remains a local break-glass if OIDC is down.
+      ENABLE_OAUTH_ROLE_MANAGEMENT: "true"
+      OAUTH_ROLES_CLAIM: "groups"
+      OAUTH_ADMIN_ROLES: "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-providers', 'nos-admins'])) | join(',') }}"
+      OAUTH_ALLOWED_ROLES: "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 3) | map(attribute='groups') | first | default(['nos-providers', 'nos-admins', 'nos-managers', 'nos-users'])) | join(',') }}"
 {% if tenant_domain_is_local | default(true) | bool %}
       # mkcert CA conditional — Python httpx + SSL bundle. On a public TLD
       # we MUST NOT set these (system Mozilla list validates LE cleanly).

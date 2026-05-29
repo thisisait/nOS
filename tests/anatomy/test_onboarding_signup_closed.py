@@ -34,6 +34,21 @@ def test_open_webui_local_signup_off_and_admin_db_seeded():
     ).read_text(), "OIDC merge-by-email links the seeded admin to the Authentik login"
 
 
+def test_open_webui_oidc_group_to_admin_mapping():
+    """Deeper pure-SSO: the Authentik admin must auto-BECOME the Open-WebUI
+    admin on OIDC login (no manual promotion). Authentik's profile scope emits
+    the `groups` claim, so role management maps tier-1 groups → admin, tier-3 →
+    allowed. Groups derive from authentik_rbac_tiers (rename-safe)."""
+    overlay = (
+        REPO / "files/anatomy/plugins/open-webui-base/templates/open-webui-base.compose.yml.j2"
+    ).read_text()
+    assert 'ENABLE_OAUTH_ROLE_MANAGEMENT: "true"' in overlay
+    assert 'OAUTH_ROLES_CLAIM: "groups"' in overlay, "Authentik emits group names in the groups claim"
+    assert "OAUTH_ADMIN_ROLES" in overlay and "selectattr('tier', 'equalto', 1)" in overlay, \
+        "admin roles must derive from the tier-1 group set"
+    assert "OAUTH_ALLOWED_ROLES" in overlay
+
+
 def test_gitea_external_only_registration():
     """Gitea: the local self-registration form must be off, but OIDC first-login
     auto-create must stay on (DISABLE_REGISTRATION=true would block OIDC too).
