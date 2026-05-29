@@ -27,6 +27,8 @@ services:
 
 	# Hub — unified system entity (DB-backed, replaces ServiceRegistry)
 	- App\Model\SystemRepository
+	# P1a: plugin-harvested hub cards (icon/tier overlay onto /hub systems)
+	- App\Model\HubCardRepository
 
 	# State & Migration Framework
 	- App\Model\BoneClient

@@ -61,3 +61,18 @@ def test_uptime_kuma_consumes_hub_card_health_check():
     mon = (REPO / "roles/pazny.uptime_kuma/tasks/monitors.yml").read_text()
     assert "hub-cards.json" in mon, "monitors must read the plugin-harvested cards"
     assert "_kuma_health_paths" in mon and "startswith('/')" in mon, "path-style health_check appended to URL"
+
+
+def test_wing_overlays_hub_card_icon_on_systems():
+    """P1a render side: HubCardRepository reads hub-cards.json; HubPresenter
+    overlays the card icon/tier onto the /hub systems by slug (render-time, no
+    DB change), and exposes the viewer's RBAC tier. The icon glyph needs an
+    icon system — data-icon is wired through to the DOM for it."""
+    assert (REPO / "files/anatomy/wing/app/Model/HubCardRepository.php").is_file()
+    pres = (REPO / "files/anatomy/wing/app/Presenters/HubPresenter.php").read_text()
+    assert "HubCardRepository" in pres and "bySlug()" in pres
+    assert "viewerTier" in pres, "viewer RBAC tier must be exposed for tier-aware presentation"
+    neon = (REPO / "files/anatomy/wing/app/config/common.neon").read_text()
+    assert "HubCardRepository" in neon, "repository must be DI-registered"
+    latte = (REPO / "files/anatomy/wing/app/Templates/Hub/default.latte").read_text()
+    assert "data-icon=" in latte, "card icon must reach the DOM"

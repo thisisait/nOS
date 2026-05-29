@@ -52,10 +52,11 @@
 		<div class="hub-grid">
 			{foreach $systems as $sys}
 				{continueIf $sys['category'] === 'stack'}
-				<article class="sys-card" data-id="{$sys['id']}" data-stack="{$sys['stack'] ?? ''}" data-category="{$sys['category'] ?? ''}" data-name="{$sys['name']|lower}" data-health="{$sys['health_status']}">
+				<article class="sys-card" data-id="{$sys['id']}" data-stack="{$sys['stack'] ?? ''}" data-category="{$sys['category'] ?? ''}" data-name="{$sys['name']|lower}" data-health="{$sys['health_status']}" data-icon="{$sys['icon'] ?? ''}" data-tier="{$sys['card_tier'] ?? ''}">
 					<div class="sys-header">
 						<div class="sys-title">
 							<span class="sys-health-dot sys-health-{$sys['health_status']}" title="{$sys['health_status']}{if $sys['health_ms']} ({$sys['health_ms']}ms){/if}"></span>
+							{if $sys['icon'] ?? null}<span class="sys-icon" data-icon="{$sys['icon']}" aria-hidden="true"></span>{/if}
 							<strong class="sys-name">{$sys['name']}</strong>
 							{if $sys['version']}<span class="version">{$sys['version']}</span>{/if}
 						</div>
