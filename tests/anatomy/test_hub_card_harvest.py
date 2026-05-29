@@ -87,3 +87,17 @@ def test_wing_deploy_clears_compiled_cache():
     main = (REPO / "roles/pazny.wing/tasks/main.yml").read_text()
     assert "temp/cache" in main and "state: absent" in main, "wing deploy must clear the compiled cache"
     assert "_wing_app_sync is changed" in main, "clear only when app source changed"
+
+
+def test_systems_registry_orphan_sweep():
+    """2026-05-29: /hub showed 18 hard 404s; 14 of them (hedgedoc, jellyfin,
+    wordpress, miniflux, …) had install_*=false → the rendered registry no
+    longer listed them, yet stale `source=registry` rows remained in the
+    systems table from a prior run when they were on. Ingest must sweep rows
+    whose id dropped out of the registry (stack-* and install_* exempt).
+    Live: systems 66 → 51."""
+    src = (REPO / "files/anatomy/wing/app/Model/SystemRepository.php").read_text()
+    assert "registry_dropouts_swept" in src and "$importedIds" in src, \
+        "registry-orphan sweep + tracked imported ids must be in ingestRegistry"
+    cli = (REPO / "files/anatomy/wing/bin/ingest-registry.php").read_text()
+    assert "registry dropouts" in cli, "CLI must report the new sweep count"

@@ -44,5 +44,6 @@ $result = $repo->ingestRegistry($registryPath);
 $merged = $result['merged'] ?? 0;
 $orphans = $result['orphans_swept'] ?? 0;
 $staleDom = $result['stale_domains_swept'] ?? 0;
-echo "Ingested {$result['imported']} systems, created {$result['stacks_created']} stack parents, merged $merged duplicates, swept $orphans install_* orphans + $staleDom stale-domain rows\n";
+$dropouts = $result['registry_dropouts_swept'] ?? 0;
+echo "Ingested {$result['imported']} systems, created {$result['stacks_created']} stack parents, merged $merged duplicates, swept $orphans install_* orphans + $staleDom stale-domain rows + $dropouts registry dropouts\n";
 echo "Registry: $registryPath\n";

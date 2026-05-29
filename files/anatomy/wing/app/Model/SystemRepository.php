@@ -261,6 +261,7 @@ final class SystemRepository
 
 		$stacksCreated = 0;
 		$imported = 0;
+		$importedIds = [];   // tracked for the registry-orphan sweep below
 
 		foreach ($data['services'] as $svc) {
 			$stack = $svc['stack'] ?? null;
@@ -327,6 +328,7 @@ final class SystemRepository
 				'source' => 'registry',
 			]);
 			$imported++;
+			$importedIds[$id] = true;
 		}
 
 		// Sweep: rows from prior runs that used the old `install_*` toggle_var
@@ -358,6 +360,28 @@ final class SystemRepository
 				->delete();
 		}
 
+		// Sweep: registry-source rows whose id is no longer in the current
+		// registry. This happens when install_X flips true → false: the
+		// rendered service-registry.json drops the service, but the systems
+		// table kept the prior row → /hub showed it → clicking 404'd (Traefik
+		// no longer routes it either). Source-gated to registry (we never
+		// nuke scanner-curated rows); stack-parents are exempt (created
+		// independently); install_*-prefixed ids were already swept above.
+		// Verified 2026-05-29: 14 services (hedgedoc/jellyfin/wordpress/…)
+		// had install=false + a stale registry row + 404 in /hub.
+		$gone = 0;
+		foreach ($this->db->table('systems')
+			->where('source', 'registry')
+			->where('id NOT LIKE ?', 'stack-%')
+			->where('id NOT LIKE ?', 'install_%')
+			->fetchAll() as $row) {
+			$rowId = (string) $row['id'];
+			if (!isset($importedIds[$rowId])) {
+				$this->db->table('systems')->where('id', $rowId)->delete();
+				$gone++;
+			}
+		}
+
 		// After ingest + sweep: merge orphan components_db entries into their
 		// registry counterparts by name, then delete the orphans.
 		$merged = $this->dedup();
@@ -368,6 +392,7 @@ final class SystemRepository
 			'merged' => $merged,
 			'orphans_swept' => $swept,
 			'stale_domains_swept' => $staleSwept,
+			'registry_dropouts_swept' => $gone,
 		];
 	}
 
