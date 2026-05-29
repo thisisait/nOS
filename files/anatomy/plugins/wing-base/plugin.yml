@@ -108,6 +108,14 @@ aggregates:
   - from: agent_profile
     block_path: notification
     output_var: notification_routing
+  # P1a (2026-05-29): harvest every peer plugin's ui-extension block (the
+  # hub_card metadata, authored on 49 plugins) so the /hub renders them
+  # plugin-driven + RBAC-aware. The loader's feature-flag gate means only
+  # INSTALLED services are harvested; _deep_render resolves the card url
+  # against the live domain vars.
+  - from: consumer_block
+    block_path: ui-extension
+    output_var: hub_cards
 
 # Render target for the routing sidecar (read by Bone's clients/wing.py at
 # notification-insert time when the emitter omits explicit channels).
@@ -115,10 +123,16 @@ provisioning:
   notification_routing:
     template: templates/notification-routing.json.j2
     target: "{{ wing_home }}/app/data/notification-routing.json"
+  # P1a: plugin-harvested hub cards (the /hub renders these, RBAC-filtered by
+  # the viewer's tier). Read by App\Model\HubCardRepository.
+  hub_cards:
+    template: templates/hub-cards.json.j2
+    target: "{{ wing_home }}/app/data/hub-cards.json"
 
 lifecycle:
   post_compose:
     - render: provisioning.notification_routing
+    - render: provisioning.hub_cards
 
 # =============================================================================
 # PULSE JOB — notification dispatch worker (Anatomy A9, 2026-05-16)
