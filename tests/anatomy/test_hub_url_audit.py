@@ -33,6 +33,12 @@ import pytest
 HARD_FAIL = {"404", "500", "502", "503", "ERR", "000"}
 OK_STATUSES = {"200", "301", "302", "307", "401", "403"}
 
+# Mirror HubPresenter::BACKEND_ONLY_SLUGS so the gate audits exactly what /hub
+# actually renders (otherwise it false-positives on systems the operator never
+# sees in the UI). When a slug is promoted to a manifest `kind: backend` flag,
+# both lists collapse to the manifest read.
+_BACKEND_ONLY = {"bluesky_pds", "loki", "tempo", "prometheus", "alloy", "nginx"}
+
 
 def _wing_token() -> str | None:
     """The live daemon's bearer; checks env first, then the operator's plist."""
@@ -85,13 +91,16 @@ def test_no_hard_404_in_hub_systems():
     bad: list[tuple[str, str, str]] = []
     counter: Counter[str] = Counter()
     for s in systems:
-        url = s.get("domain_url") or s.get("url") or ""
-        if not url.startswith("http"):
-            continue
+        sid = str(s.get("id", "?"))
+        if sid in _BACKEND_ONLY:
+            continue   # surfaces via Grafana / clients, not /hub
+        url = s.get("domain_url")
+        if not url or not url.startswith("http"):
+            continue   # TCP-only daemon or no public domain → not a /hub card
         code = _curl_status(url)
         counter[code] += 1
         if code in HARD_FAIL:
-            bad.append((str(s.get("id", "?")), code, url))
+            bad.append((sid, code, url))
 
     print(f"\n  status distribution: {dict(counter)}")
     if bad:
