@@ -210,3 +210,41 @@
   changed_when: false
   failed_when: false
   check_mode: false
+
+# ── OnlyOffice document-editing wiring (P2a, 2026-05-29) ───────────────────
+# Declarative Nextcloud↔OnlyOffice: enable the `onlyoffice` connector app and
+# point it at the document server with the SHARED JWT secret
+# (onlyoffice_jwt_secret == OnlyOffice's JWT_SECRET env, so the two trust each
+# other). Browser-facing DocumentServerUrl rides Traefik; JWT secures the
+# server↔server calls. Fully provisioned on a blank — no manual "connect to
+# document server" step. Gated on both services being installed.
+- name: "[pazny.nextcloud Post] Install + enable the OnlyOffice connector app"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    sh -c 'php occ app:install onlyoffice || php occ app:enable onlyoffice'
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - install_onlyoffice | default(false)
+  register: _nc_oo_app
+  changed_when: "'enabled' in (_nc_oo_app.stdout | default('') | lower)"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.nextcloud Post] Point OnlyOffice connector at the document server (+ shared JWT)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    sh -c '{{ item }}'
+  loop:
+    - "php occ config:app:set onlyoffice DocumentServerUrl --value=https://{{ onlyoffice_domain }}/"
+    - "php occ config:app:set onlyoffice jwt_secret --value={{ onlyoffice_jwt_secret | quote }}"
+  loop_control:
+    label: "set onlyoffice {{ item.split(' ')[4] }}"
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - install_onlyoffice | default(false)
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true   # jwt_secret in the second item
