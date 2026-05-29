@@ -1,0 +1,17 @@
+/* hub-icons.css — sizing for the plugin-driven .sys-icon glyph (P1a, 2026-05-29). */
+.sys-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+  color: var(--accent-purple, #b079d6);
+  flex-shrink: 0;
+}
+.sys-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2;
+}

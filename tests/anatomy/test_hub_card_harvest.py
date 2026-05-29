@@ -101,3 +101,19 @@ def test_systems_registry_orphan_sweep():
         "registry-orphan sweep + tracked imported ids must be in ingestRegistry"
     cli = (REPO / "files/anatomy/wing/bin/ingest-registry.php").read_text()
     assert "registry dropouts" in cli, "CLI must report the new sweep count"
+
+
+def test_hub_icon_glyph_assets_wired():
+    """P1a icon glyph (2026-05-29): the .sys-icon span needs lucide to render
+    a visible SVG. lucide is self-hosted (data sovereignty — no CDN), wired in
+    Hub/default.latte alongside a tiny init JS that maps non-standard names
+    (ai-chat → message-square-text, etc.) to lucide standard."""
+    assert (REPO / "files/anatomy/wing/www/assets/lucide.min.js").is_file(), \
+        "self-hosted lucide must be committed (no CDN dep on first load)"
+    init = (REPO / "files/anatomy/wing/www/assets/hub-icons.js").read_text()
+    assert "lucide.createIcons" in init and "ALIAS" in init
+    css = (REPO / "files/anatomy/wing/www/assets/hub-icons.css").read_text()
+    assert ".sys-icon" in css
+    latte = (REPO / "files/anatomy/wing/app/Templates/Hub/default.latte").read_text()
+    for tag in ("hub-icons.css", "lucide.min.js", "hub-icons.js"):
+        assert tag in latte, f"Hub template must reference {tag}"
