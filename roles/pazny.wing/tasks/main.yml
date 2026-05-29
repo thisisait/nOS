@@ -166,6 +166,21 @@
       - "--exclude=tests/test-results/"
       - "--exclude=tests/.env"
   delegate_to: "{{ inventory_hostname }}"
+  register: _wing_app_sync
+  notify: Restart wing
+
+# The rsync excludes temp/ (preserving runtime cache), but Nette compiles the
+# DI container + Latte templates into temp/cache. When app source changes
+# (e.g. a presenter gains a constructor arg), the STALE compiled container
+# calls the new class with the old signature → ArgumentCountError → 500 on the
+# affected page. Clear the compiled cache whenever the source changed so Nette
+# recompiles on the next request. (A live /hub 500 — HubPresenter +1 arg — hit
+# exactly this; the Restart-wing handler alone doesn't recompile the container.)
+- name: "[pazny.wing] Clear compiled cache (DI container + Latte) on source change"
+  ansible.builtin.file:
+    path: "{{ wing_app_dir }}/temp/cache"
+    state: absent
+  when: _wing_app_sync is changed
   notify: Restart wing
 
 # ── AgentKit definitions sync ─────────────────────────────────────────────────

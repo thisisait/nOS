@@ -76,3 +76,14 @@ def test_wing_overlays_hub_card_icon_on_systems():
     assert "HubCardRepository" in neon, "repository must be DI-registered"
     latte = (REPO / "files/anatomy/wing/app/Templates/Hub/default.latte").read_text()
     assert "data-icon=" in latte, "card icon must reach the DOM"
+
+
+def test_wing_deploy_clears_compiled_cache():
+    """2026-05-29: /hub 500'd (ArgumentCountError) after HubPresenter gained a
+    constructor arg — the rsync excludes temp/, so the STALE compiled Nette DI
+    container called the new class with the old signature. The Restart-wing
+    handler doesn't recompile. The deploy must clear temp/cache on source change
+    so the container + Latte recompile."""
+    main = (REPO / "roles/pazny.wing/tasks/main.yml").read_text()
+    assert "temp/cache" in main and "state: absent" in main, "wing deploy must clear the compiled cache"
+    assert "_wing_app_sync is changed" in main, "clear only when app source changed"
