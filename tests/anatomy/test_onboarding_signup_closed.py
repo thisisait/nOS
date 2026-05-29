@@ -26,6 +26,11 @@ def test_open_webui_local_signup_off_and_admin_db_seeded():
     compose = (REPO / "roles/pazny.open_webui/templates/compose.yml.j2").read_text()
     assert "openwebui_enable_signup | default(false)" in compose, "local signup must default OFF"
     assert "openwebui_enable_signup | default(true)" not in compose, "ENABLE_SIGNUP must not default true"
+    # The explicit config var is the live source of truth — the template
+    # default is moot if this is set true (the gap the first run exposed).
+    cfg = (REPO / "default.config.yml").read_text()
+    assert "openwebui_enable_signup: false" in cfg, "default.config.yml must set signup false (overrides the template default)"
+    assert "openwebui_enable_signup: true" not in cfg, "no explicit true override may reopen public signup"
     post = (REPO / "roles/pazny.open_webui/tasks/post.yml").read_text()
     assert "auth/signup" not in post, "must not bootstrap via the public signup endpoint"
     assert "INSERT INTO user" in post and "INSERT INTO auth" in post, "admin must be DB-seeded"

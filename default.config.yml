@@ -1296,7 +1296,12 @@ openwebui_port: 3004             # Internal container port 8080 → host 3004
 openwebui_version: "0.8.12"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
 openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
-openwebui_enable_signup: true    # false = admin must add users manually
+openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
+                                 # public /auth/signup first-admin race). Users
+                                 # onboard via Authentik OIDC; admin is DB-seeded
+                                 # + group-mapped (OAUTH_ADMIN_ROLES). The compose
+                                 # template default is false too, but this
+                                 # explicit value was the live source of truth.
 openwebui_admin_name: "Admin"
 openwebui_admin_email: "{{ default_admin_email }}"
 openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
