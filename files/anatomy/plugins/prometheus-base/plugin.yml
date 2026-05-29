@@ -86,14 +86,9 @@ gdpr:
   processors: []
   eu_residency: true
 
-ui-extension:
-  hub_card:
-    title: "Prometheus"
-    icon: chart-line
-    url: "https://prometheus.{{ tenant_domain | default('dev.local') }}"
-    tier: 1
-    description: "Metrics + alerting"
-    health_check: "/-/ready"
+# Prometheus is a metrics backend; on nOS it has no public Traefik route (the
+# /graph UI lives only on the cluster network — operators query it via Grafana
+# → Explore → Prometheus). No hub_card; the card URL 404'd. (2026-05-29 audit.)
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into

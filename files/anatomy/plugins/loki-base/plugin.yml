@@ -70,14 +70,8 @@ gdpr:
   processors: []
   eu_residency: true
 
-ui-extension:
-  hub_card:
-    title: "Loki"
-    icon: file-text
-    url: "https://loki.{{ tenant_domain | default('dev.local') }}"
-    tier: 1
-    description: "Log aggregation"
-    health_check: "/ready"
+# Loki is a log-aggregation backend (no browser UI — operators query it via
+# Grafana → Explore → Loki). No hub_card; the card URL 404'd. (2026-05-29 audit.)
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into

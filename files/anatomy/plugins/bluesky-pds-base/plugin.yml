@@ -71,14 +71,9 @@ gdpr:
   processors: []
   eu_residency: true
 
-ui-extension:
-  hub_card:
-    title: "Bluesky PDS"
-    icon: at-sign
-    url: "https://{{ bluesky_pds_hostname }}"
-    tier: 3
-    description: "AT Protocol identity + posts"
-    health_check: "/xrpc/_health"
+# PDS is an AT Protocol API server (no browser UI at /, just /xrpc/* endpoints),
+# so no hub_card — clicking it 404s. Operators interact via AT clients; health
+# probes happen out-of-band. (2026-05-29 audit removed the misleading card.)
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into

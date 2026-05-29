@@ -70,16 +70,10 @@ gdpr:
   processors: []
   eu_residency: true
 
-ui-extension:
-  hub_card:
-    title: "Tempo"
-    icon: activity
-    url: "https://tempo.{{ tenant_domain | default('dev.local') }}"
-    tier: 1
-    description: "Distributed tracing"
-    health_check: "/ready"
-  # REM-036 (Tempo /status/config exposure) — vendor-blocked / accepted
-  # under "local storage, low blast radius" per Group V in active-work.
+# Tempo is a tracing backend (no browser UI — operators query it via Grafana
+# → Explore → Tempo). No hub_card; the card URL 404'd. (2026-05-29 audit.)
+# REM-036 (Tempo /status/config exposure) — vendor-blocked / accepted
+# under "local storage, low blast radius" per Group V in active-work.
   # Wing /hub card omits the Tempo dashboard URL fragment that points
   # at /status/config to avoid embedded-link discovery.
 
