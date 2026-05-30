@@ -84,4 +84,14 @@
     state: "{{ 'restarted' if (_su_render is changed and (su_type | default('service')) == 'service') else 'started' }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"
+  register: _su_enable_start
+  # A Persistent= timer fires its bound oneshot synchronously on first start; if
+  # that oneshot exits non-zero at provisioning time (e.g. the backup target is
+  # not up yet) systemctl reports the timer's start job as failed. Arming the
+  # timer IS the provisioning goal — the oneshot's runtime result surfaces
+  # separately (systemctl --user --failed / the role's status file), so a timer
+  # start must not abort the run. A .service that won't come up is still fatal.
+  failed_when:
+    - (su_type | default('service')) != 'timer'
+    - _su_enable_start is failed
   when: su_enable | default(true) | bool
