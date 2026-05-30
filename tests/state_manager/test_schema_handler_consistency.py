@@ -100,9 +100,17 @@ def test_no_handler_name_collisions():
     from module_utils.nos_migrate_actions import ACTION_HANDLERS as MIG
     from module_utils.nos_upgrade_actions import UPGRADE_ACTION_HANDLERS as UPG
 
-    overlap = set(MIG.keys()) & set(UPG.keys())
+    # Deliberate overrides: the upgrade table intentionally shadows a migration
+    # handler and merged_handlers() prefers the upgrade one BY DESIGN.
+    #   exec.shell — the upgrade wrapper normalises recipe `command:` /
+    #     auto-`shell` ergonomics, then delegates to the strict migrate handler
+    #     (defense-in-depth allow_shell gate unchanged). Added 2026-05-30.
+    INTENTIONAL_OVERRIDES = {"exec.shell"}
+
+    overlap = (set(MIG.keys()) & set(UPG.keys())) - INTENTIONAL_OVERRIDES
     assert not overlap, (
         "action type(s) registered in both migration and upgrade handler "
-        "tables — merged_handlers() would silently prefer the upgrade one: %r"
+        "tables without being a documented intentional override — "
+        "merged_handlers() would silently prefer the upgrade one: %r"
         % sorted(overlap)
     )
