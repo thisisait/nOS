@@ -45,6 +45,9 @@
     - "{{ nginx_etc_dir }}/sites-enabled"
     - "{{ nginx_etc_dir }}/conf.d"
     - "{{ nginx_log_dir }}"
+  # On Linux nginx_etc_dir is /etc/nginx (root-owned); macOS uses the
+  # operator-writable homebrew prefix, so become only on non-Darwin.
+  become: "{{ ansible_os_family != 'Darwin' }}"
 
 - name: Deploy main nginx.conf
   ansible.builtin.template:
@@ -52,6 +55,7 @@
     dest: "{{ nginx_etc_dir }}/nginx.conf"
     backup: true
     mode: '0644'
+  become: "{{ ansible_os_family != 'Darwin' }}"
   notify: Restart nginx
 
 - name: Deploy Authentik proxy auth snippets
@@ -64,6 +68,7 @@
   loop:
     - authentik-proxy-auth.conf
     - authentik-proxy-locations.conf
+  become: "{{ ansible_os_family != 'Darwin' }}"
   when:
     - install_authentik | default(false)
     - nginx_enabled | length > 0
@@ -75,6 +80,7 @@
     dest: "{{ nginx_etc_dir }}/sites-available/{{ item }}"
     mode: '0644'
   loop: "{{ nginx_enabled }}"
+  become: "{{ ansible_os_family != 'Darwin' }}"
   notify: Restart nginx
 
 - name: Enable nginx sites (symlink)
@@ -84,6 +90,7 @@
     state: link
     force: true
   loop: "{{ nginx_enabled }}"
+  become: "{{ ansible_os_family != 'Darwin' }}"
   notify: Reload nginx
 
 - name: Remove disabled nginx sites
@@ -96,6 +103,7 @@
       done
       $found || rm -f "$f"
     done
+  become: "{{ ansible_os_family != 'Darwin' }}"
   changed_when: false
 
 # Cert files live under {{ tls_cert_dir }} (written by tasks/tls-certs.yml).
