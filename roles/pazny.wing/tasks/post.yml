@@ -80,6 +80,52 @@
     'Ingested' in (_wing_ingest.stdout | default(''))
     and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
 
+# ── Security-research re-sync (idempotent) ───────────────────────────────────
+# bin/migrate.php is a ONE-SHOT bootstrap: once systems.source='components_db'
+# exists it short-circuits forever, so /remediation + /pentest stop tracking
+# the authoritative JSON (remediation-queue.json had 85 items, the table held
+# 83 — the 2 vendor-blocked FreePBX rows were dropped because migrate.php's
+# INSERT OR IGNORE swallowed the status CHECK rejection). These two scripts are
+# the ONGOING re-sync — they UPSERT on every run keyed on the stable id, so the
+# pages always match the committed JSON. Gated ONLY on the JSON input existing
+# (NOT the components_db one-shot gate, NOT the *.md-presence heuristic that
+# gates migrate.php). The DB path is taken from WING_DB_PATH (unset here → the
+# script's ~/wing/app/data/wing.db default, same dir as wing_data_dir), and the
+# JSON is passed explicitly so the chdir into wing_app_dir doesn't break the
+# script's repo-relative default.
+
+- name: "[pazny.wing] Stat remediation-queue.json (re-sync source)"
+  ansible.builtin.stat:
+    path: "{{ wing_json_source }}/remediation-queue.json"
+  register: _wing_rem_json
+  changed_when: false
+
+- name: "[pazny.wing] Re-sync remediation-queue.json → remediation_items (idempotent upsert)"
+  ansible.builtin.command:
+    cmd: php bin/ingest-remediation.php --json={{ wing_json_source }}/remediation-queue.json
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_rem_ingest
+  # Idempotent: the script prints "changed=N" (real inserts/updates via the
+  # UPSERT WHERE-guard). A steady-state re-sync is changed=0 → reported ok.
+  changed_when: "'changed=0' not in (_wing_rem_ingest.stdout | default('changed=0'))"
+  when: _wing_rem_json.stat.exists | default(false)
+
+- name: "[pazny.wing] Stat pentest-journal.json (re-sync source)"
+  ansible.builtin.stat:
+    path: "{{ wing_json_source }}/pentest-journal.json"
+  register: _wing_pentest_json
+  changed_when: false
+
+- name: "[pazny.wing] Re-sync pentest-journal.json → pentest_* tables (idempotent upsert)"
+  ansible.builtin.command:
+    cmd: php bin/ingest-pentest.php --json={{ wing_json_source }}/pentest-journal.json
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_pentest_ingest
+  # Idempotent: keyed on the script's "changed=N" (targets+findings real diffs;
+  # the keyless area rows are rebuilt content-stable and excluded from the count).
+  changed_when: "'changed=0' not in (_wing_pentest_ingest.stdout | default('changed=0'))"
+  when: _wing_pentest_json.stat.exists | default(false)
+
 # Surface historical pulse / claude-CLI agent runs in /agents (W5-A1): those
 # runs emit agent_run_* events but never created agent_sessions rows, so they
 # were invisible. Replay the events into sessions (idempotent). New runs are
