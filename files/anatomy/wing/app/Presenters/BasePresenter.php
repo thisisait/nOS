@@ -23,6 +23,30 @@ abstract class BasePresenter extends Presenter
 	public EventRepository $eventsForBadge;
 
 	/**
+	 * RBAC tier → Authentik group(s). Tier 1 is the most privileged; access is
+	 * cumulative (a tier-1 admin satisfies any higher-numbered tier gate). The
+	 * group names are the canonical nOS RBAC groups (CLAUDE.md "RBAC" +
+	 * authentik_rbac_tiers defaults) and are pinned here as a hard security
+	 * contract — a rename in default.config.yml must be matched in code.
+	 */
+	private const TIER_GROUPS = [
+		1 => ['nos-providers', 'nos-admins'],
+		2 => ['nos-managers'],
+		3 => ['nos-users'],
+		4 => ['nos-guests'],
+	];
+
+	/**
+	 * Minimum RBAC tier required to reach ANY action of this presenter.
+	 * null = no tier gate (public / any forward-authed identity). A subclass
+	 * sets e.g. `protected ?int $minAccessTier = 1;` to require Tier-1, and
+	 * BasePresenter::startup() enforces it BY DEFAULT — so a new privileged
+	 * presenter is gated by a single declarative property instead of an
+	 * easy-to-forget startup() override (the A13.7 regression class).
+	 */
+	protected ?int $minAccessTier = null;
+
+	/**
 	 * SEC-6 (2026-05-23): edge-trust validation runs BEFORE any action
 	 * method or beforeRender. If WING_EDGE_TOKEN env is set, every
 	 * request MUST carry a matching X-Wing-Edge-Token header (injected
@@ -40,6 +64,12 @@ abstract class BasePresenter extends Presenter
 	{
 		parent::startup();
 		$this->enforceEdgeTrust();
+		// Standard RBAC gate — enforced for EVERY presenter that declares a
+		// minimum tier. Privileged subclasses opt in with one property
+		// ($minAccessTier) instead of an easy-to-forget startup() override.
+		if ($this->minAccessTier !== null) {
+			$this->requireTier($this->minAccessTier);
+		}
 	}
 
 	private function enforceEdgeTrust(): void
@@ -147,9 +177,45 @@ abstract class BasePresenter extends Presenter
 	 */
 	protected function callerHasGroup(string $group): bool
 	{
-		$raw = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Groups') ?? '');
-		$tokens = preg_split('/[\\s,|]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-		return in_array($group, $tokens, true);
+		// The Nette identity's roles ARE the caller's Authentik groups —
+		// ForwardAuthUserStorage rebuilds them from the forward-auth headers on
+		// every request, so this is the standard Nette authorization API rather
+		// than ad-hoc header parsing. Returns false when no identity (logged out).
+		return $this->getUser()->isInRole($group);
+	}
+
+	/**
+	 * The caller's most-privileged (lowest-numbered) RBAC tier, derived from
+	 * their Authentik group roles, or PHP_INT_MAX when they hold no recognised
+	 * tier group (incl. logged-out). Cumulative: a tier-1 admin returns 1 and
+	 * thus satisfies any requireTier(>=1).
+	 */
+	protected function callerTier(): int
+	{
+		foreach (self::TIER_GROUPS as $tier => $groups) {
+			foreach ($groups as $group) {
+				if ($this->getUser()->isInRole($group)) {
+					return $tier;
+				}
+			}
+		}
+		return PHP_INT_MAX;
+	}
+
+	/**
+	 * Reject with 403 unless the caller's tier is at least as privileged as
+	 * $minTier (lower number = more privileged). The declarative
+	 * $minAccessTier property routes through here from startup().
+	 */
+	protected function requireTier(int $minTier): void
+	{
+		if ($this->callerTier() > $minTier) {
+			$this->error(
+				'Forbidden -- this resource requires RBAC tier ' . $minTier
+				. ' or higher; your Authentik groups do not grant it.',
+				403,
+			);
+		}
 	}
 
 	/**

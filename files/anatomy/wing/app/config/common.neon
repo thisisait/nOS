@@ -16,6 +16,14 @@ database:
 services:
 	router: App\Core\RouterFactory::createRouter()
 
+	# RBAC: replace the framework default (session-backed) user storage with a
+	# stateless one that derives the Nette identity — and its ROLES — from the
+	# Authentik forward-auth headers on every request. This is what makes
+	# `$user->isInRole('nos-admins')` work in BasePresenter without touching the
+	# CSRF session. nette/security's SecurityExtension registers the
+	# `security.userStorage` name; we override it here.
+	security.userStorage: App\Security\ForwardAuthUserStorage
+
 	# Repositories
 	- App\Model\ComponentRepository
 	- App\Model\ScanStateRepository

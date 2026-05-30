@@ -14,6 +14,13 @@ final class UpgradesPresenter extends BasePresenter
 {
 	protected string $activeTab = 'upgrades';
 
+	// RBAC: queuing an upgrade (actionQueueUpgrade) mutates upgrades_planned,
+	// which the engine auto-applies under `--tags upgrade`. Tier-1 only — gated
+	// by default in BasePresenter::startup() via this one property (matches the
+	// forward-auth tier-1 boundary on wing.<tld>; defense-in-depth so a future
+	// edge-config slip can't expose the queue to a lower tier).
+	protected ?int $minAccessTier = 1;
+
 	public function __construct(
 		private UpgradeRepository $upgrades,
 	) {

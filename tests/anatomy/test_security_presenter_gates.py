@@ -66,7 +66,40 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         PRESENTERS / "AgentsPresenter.php",
         ["actionStart"],
     ),
+    (
+        # UpgradesPresenter::actionQueueUpgrade (W5-B2) inserts into
+        # upgrades_planned, which the engine auto-applies under `--tags
+        # upgrade`. Gated Tier-1 via the declarative `$minAccessTier = 1`
+        # (enforced by BasePresenter::startup()) rather than a startup()
+        # override. Added 2026-05-30 after security-review flagged the missing
+        # gate (same A13.7 class as ApprovalsPresenter).
+        "UpgradesPresenter",
+        PRESENTERS / "UpgradesPresenter.php",
+        ["actionQueueUpgrade"],
+    ),
 ]
+
+
+def _startup_body(src: str) -> str | None:
+    m = re.search(
+        r"public function startup\(\)\s*:\s*void\s*\{(.+?)\n\t\}",
+        src, re.DOTALL,
+    )
+    return m.group(1) if m else None
+
+
+def _is_tier_gated(src: str) -> bool:
+    """A presenter is privilege-gated if EITHER it overrides startup() and
+    calls a tier helper there, OR it declares `$minAccessTier = <1..3>`
+    (enforced centrally by BasePresenter::startup())."""
+    body = _startup_body(src)
+    if body is not None and (
+        "requireSuperAdmin()" in body
+        or "requireGroup(" in body
+        or "requireTier(" in body
+    ):
+        return True
+    return bool(re.search(r"\$minAccessTier\s*=\s*[123]\s*;", src))
 
 
 # ── Base-class contract ─────────────────────────────────────────────
@@ -81,8 +114,31 @@ def test_base_presenter_exposes_required_helpers():
         "protected function requireGroup",
         "protected function requirePostMethod",
         "protected function callerHasGroup",
+        "protected function requireTier",
     ):
         assert helper in src, f"BasePresenter missing helper: {helper}"
+
+
+def test_min_access_tier_enforced_by_default_in_base_startup():
+    """The declarative gate must actually be wired: BasePresenter::startup()
+    has to enforce ``$minAccessTier`` via ``requireTier()`` for EVERY presenter,
+    and ``requireTier`` must abort with 403. Otherwise a subclass could set the
+    property believing it's gated while the action runs wide open."""
+    src = BASE_PRESENTER.read_text()
+    body = _startup_body(src)
+    assert body is not None, "BasePresenter has no startup() body"
+    assert "minAccessTier" in body and "requireTier(" in body, (
+        "BasePresenter::startup() no longer enforces $minAccessTier via "
+        "requireTier — the declarative RBAC gate is dead code"
+    )
+    m = re.search(
+        r"protected function requireTier\([^)]*\)\s*:\s*void\s*\{(.+?)\n\t\}",
+        src, re.DOTALL,
+    )
+    assert m, "requireTier body not parseable"
+    assert "403" in m.group(1) and "$this->error" in m.group(1), (
+        "requireTier must abort with $this->error(..., 403)"
+    )
 
 
 def test_super_admin_gate_pins_correct_groups():
@@ -140,35 +196,30 @@ def test_post_only_gate_returns_405():
     ids=[p[0] for p in _PRIVILEGED_PRESENTERS],
 )
 def test_privileged_presenter_calls_super_admin_gate(name, path, actions):
-    """Privileged presenters MUST override ``startup()`` and call the
-    ``requireSuperAdmin()`` (or ``requireGroup(...)``) helper. The
-    A13.7 incident was a presenter that simply forgot to override
-    startup() at all — this test makes that an immediate red CI run.
+    """Privileged presenters MUST be tier-gated — EITHER an explicit
+    ``startup()`` calling ``requireSuperAdmin()`` / ``requireGroup()`` /
+    ``requireTier()``, OR the declarative ``$minAccessTier = <1..3>`` that
+    BasePresenter::startup() enforces by default. The A13.7 incident was a
+    presenter that forgot the gate entirely — this test makes that red, while
+    allowing both the legacy override and the one-line declarative form.
     """
     src = path.read_text()
 
-    # Must override startup
-    assert re.search(r"public function startup\(\)\s*:\s*void", src), (
-        f"{name} does not override startup() — privileged presenter must"
+    assert _is_tier_gated(src), (
+        f"{name} has no RBAC gate — neither a startup() calling "
+        f"requireSuperAdmin()/requireGroup()/requireTier() nor a declarative "
+        f"$minAccessTier = 1..3. This is the A13.7 regression class: without a "
+        f"gate any forward-authed user can call privileged actions."
     )
 
-    # Locate startup body
-    m = re.search(
-        r"public function startup\(\)\s*:\s*void\s*\{(.+?)\n\t\}",
-        src, re.DOTALL,
-    )
-    assert m, f"{name} startup() body not parseable"
-    body = m.group(1)
-    assert "parent::startup()" in body, (
-        f"{name} startup() does not call parent::startup() — header parsing breaks"
-    )
-    assert (
-        "requireSuperAdmin()" in body or "requireGroup(" in body
-    ), (
-        f"{name} startup() does not call requireSuperAdmin() / requireGroup() — "
-        f"this is the A13.7 regression class. Without this gate any authenticated "
-        f"Authentik user can call privileged actions on this presenter."
-    )
+    # If it DOES override startup(), it must chain parent::startup() (else the
+    # base-class edge-trust + tier enforcement never runs).
+    body = _startup_body(src)
+    if body is not None:
+        assert "parent::startup()" in body, (
+            f"{name} overrides startup() without parent::startup() — base-class "
+            f"edge-trust + minAccessTier enforcement is skipped"
+        )
 
 
 @pytest.mark.parametrize(
