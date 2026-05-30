@@ -146,13 +146,24 @@ def handle_set_image_tag(action, ctx):
             _rewrite_image_tag(path, tag)
             changed_files.append(path)
 
-    if not changed_files:
+    wait = bool(action.get("wait", True))
+    project = action.get("compose_project") or stack
+    stack_dir = os.path.join(_stacks_dir(ctx), stack)
+
+    # Converge-on-drift: even when the override tag already matched (no
+    # rewrite this run), the running container may be stale — e.g. a prior run
+    # bumped the override but a bare `up -d` never recreated it. Real runs
+    # re-check the live tag and recreate if it drifted; tests (run_cmd
+    # injected) keep the rewrite-driven path so the contract is unchanged.
+    needs_up = bool(changed_files)
+    if wait and not needs_up and not ctx.get("dry_run") and ctx.get("run_cmd") is None:
+        if _verify_running_tags(project, stack_dir, services, tag, ctx):
+            needs_up = True
+
+    if not needs_up:
         return _ok(False, reason="tags_already_set", tag=tag, services=services)
 
-    wait = bool(action.get("wait", True))
     if wait and not ctx.get("dry_run"):
-        project = action.get("compose_project") or stack
-        stack_dir = os.path.join(_stacks_dir(ctx), stack)
         # Invoke docker compose via the project's base file(s); the engine
         # is expected to have the overrides glob discovered elsewhere, but
         # for a standalone upgrade we rely on `-p <project>` resolution.
