@@ -18,6 +18,16 @@
       Protocol 2
   notify: "Reload sshd"
 
+# `sshd -t` aborts with "Missing privilege separation directory: /run/sshd" on
+# a fresh host where the ssh unit hasn't created it yet (/run is tmpfs). Ensure
+# it before validating. (The ssh package's tmpfiles.d recreates it on boot.)
+- name: "[hardening.ssh] Ensure sshd privilege-separation dir (/run/sshd) exists"
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    mode: '0755'
+  become: true
+
 - name: "[hardening.ssh] Validate sshd config"
   ansible.builtin.command:
     cmd: sshd -t
