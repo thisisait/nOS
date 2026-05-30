@@ -18,6 +18,11 @@
       "items": { "type": "string" }
     },
     "notes": { "type": "string" },
+    "allow_shell": {
+      "type": "boolean",
+      "default": false,
+      "description": "File-level gate: when true, exec.shell steps in this file's recipes are permitted (the engine inherits it into each recipe). Still requires per-step allow_shell as defense in depth."
+    },
 
     "recipes": {
       "type": "array",
@@ -53,6 +58,11 @@
         "release_date":   { "type": "string", "format": "date" },
         "notes":          { "type": "string" },
 
+        "allow_shell": {
+          "type": "boolean",
+          "default": false,
+          "description": "Recipe-level exec.shell gate. Normally inherited from the file-level allow_shell by the engine; may be set explicitly per recipe."
+        },
         "coexistence_supported": {
           "type": "boolean",
           "default": false,
