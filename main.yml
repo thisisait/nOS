@@ -1387,6 +1387,7 @@
 
     # Shared Docker network + directory structure for all stacks
     - import_tasks: tasks/stacks/shared-network.yml
+      when: nos_docker_ready | default(true)
       tags: ['iiab', 'docker', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1398,6 +1399,7 @@
     # their configs + notify handlers to restart containers.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/core-up.yml
+      when: nos_docker_ready | default(true)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1524,6 +1526,7 @@
     # Docker stacks - deploy compose files and start all stacks
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/stack-up.yml
+      when: nos_docker_ready | default(true)
       tags: ['iiab', 'stack', 'docker', 'stacks']
 
     # DB setup now runs INSIDE stack-up.yml (infra → DB setup → remaining stacks)
@@ -1538,10 +1541,12 @@
     # Traefik / Bone / Wing being online. Empty apps/ is a clean no-op.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/apps-up.yml
+      when: nos_docker_ready | default(true)
       tags: ['apps', 'tier2', 'stack', 'stacks', 'apps-runner']
 
     # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml
+      when: nos_docker_ready | default(true)
       tags: ['iiab', 'stack', 'verify', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
