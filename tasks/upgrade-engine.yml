@@ -200,9 +200,15 @@
 
 - name: "[Upgrade] Resolve referenced play-vars (undefined-safe sentinel)"
   ansible.builtin.set_fact:
+    # wantlist=true is LOAD-BEARING: without it lookup('vars', *names) returns a
+    # comma-joined STRING, so `names | zip(string)` zips against the string's
+    # CHARACTERS and every var collapses to its first char ('/Users/...' -> '/').
+    # That rendered `rm -rf {{ postgresql_data_dir }}/*` as `rm -rf //*`. With
+    # wantlist=true the lookup returns a per-name list aligned to names.
     _upgrade_render_vars: >-
       {{ dict(_upgrade_render_var_names | zip(
-              lookup('vars', *_upgrade_render_var_names, default='__NOS_UNDEF__'))) }}
+              lookup('vars', *_upgrade_render_var_names,
+                     default='__NOS_UNDEF__', wantlist=true))) }}
   when: _upgrade_render_var_names | length > 0
   tags: ['upgrade']
 
