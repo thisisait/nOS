@@ -508,15 +508,37 @@
         [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
       args:
         executable: /bin/bash
+      when: ansible_os_family == 'Darwin'
+      failed_when: false
+
+    # Linux sibling: nginx is systemd-managed (pazny.linux.nginx). listen on the
+    # same topic so notify: "Restart nginx" reaches whichever branch matches.
+    - name: Restart nginx (Linux systemd)
+      listen: Restart nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+      become: true
+      when: ansible_os_family != 'Darwin'
       failed_when: false
 
     - name: Reload nginx
       ansible.builtin.command: >
         {{ homebrew_prefix }}/bin/nginx -s reload
       register: nginx_reload
+      when: ansible_os_family == 'Darwin'
       failed_when: false
       changed_when: nginx_reload.rc != 0
       notify: Restart nginx
+
+    - name: Reload nginx (Linux systemd)
+      listen: Reload nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded
+      become: true
+      when: ansible_os_family != 'Darwin'
+      failed_when: false
 
     - name: Restart php-fpm
       # Legacy handler — kept for backwards compatibility with any role still
