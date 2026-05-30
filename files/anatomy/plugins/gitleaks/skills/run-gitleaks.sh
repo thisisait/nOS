@@ -80,8 +80,12 @@ echo "INFO: scanning $SCAN_DIR (min_severity=$MIN_SEVERITY, scan_id=$SCAN_ID)"
 # --no-banner: keep stdout clean for structured output.
 # --report-path: write JSON to temp file.
 # Scan the git history (not just working tree) for maximum coverage.
-if ! gitleaks git \
-        --source="$SCAN_DIR" \
+#
+# gitleaks 8.x: the repo/source is a POSITIONAL arg (`gitleaks git [flags]
+# [repo]`); the old `--source=` flag was removed in the 8.18 CLI redesign and
+# returns "unknown flag", which made every scan exit 2 → no findings ever
+# ingested, no notification ever emitted (Wing Inbox stayed empty).
+if ! gitleaks git "$SCAN_DIR" \
         --report-format=json \
         --report-path="$TMPFILE" \
         --exit-code=0 \
