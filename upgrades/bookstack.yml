@@ -17,7 +17,7 @@ notes: |
 recipes:
   - id: "bookstack-minor-or-patch"
     from_regex: "^v(2[6-9]|3[0-9])\\."
-    to: "v26.04.0-ls260"
+    to: "v26.05-ls264"
     severity: patch
     release_date: "2026-04-01"
     notes: |

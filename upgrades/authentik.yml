@@ -110,7 +110,7 @@ recipes:
 
   - id: "authentik-2025-to-2026"
     from_regex: "^2025\\."
-    to: "2026.1.0"
+    to: "2026.5.2"
     severity: minor
     changelog_url: "https://docs.goauthentik.io/docs/releases/2026.1"
     notes: |

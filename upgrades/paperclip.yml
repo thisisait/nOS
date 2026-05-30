@@ -52,11 +52,12 @@ recipes:
         wait: true
 
     post:
-      - id: wait_http
+      # TCP liveness — paperclip on :3006 closes plain HTTP requests without a
+      # response ("Empty reply from server"), so an HTTP status probe never
+      # passes. A TCP connect confirms the recreated container is listening.
+      - id: wait_tcp
         type: http.wait
-        url: "http://127.0.0.1:{{ paperclip_port | default(3006) }}/"
-        host_header: "{{ paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-        expect_status: [200, 302, 401, 403]
+        url: "tcp://127.0.0.1:{{ paperclip_port | default(3006) }}"
         timeout_sec: 120
         interval_sec: 3
       - id: verify_schema

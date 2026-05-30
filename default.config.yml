@@ -964,7 +964,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "7.4.6-alpine"           # CVE-2025-49844 (CVSS 10.0 RediShell RCE)
+redis_version: "8.0"                    # supersedes 7.4.6-alpine CVE-2025-49844 pin (RediShell RCE)
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
@@ -1829,7 +1829,7 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # Central login for all services. PostgreSQL + Redis from the infra stack.
 # ==============================================================================
 
-authentik_version: "2025.12.4"                     # CVE-2026-25227 (CVSS 9.1 code injection). 2025.2 is EOL!
+authentik_version: "2026.5.2"                      # supersedes 2025.12.4 CVE-2026-25227 pin; current latest (2026-05)
 authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
 authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
