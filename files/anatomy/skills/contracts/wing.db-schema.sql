@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (35)
+-- TABLES (38)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -147,6 +147,20 @@ CREATE TABLE attack_probes (
 		findings    INTEGER NOT NULL DEFAULT 0,
 		completed   INTEGER NOT NULL DEFAULT 0
 	);
+
+CREATE TABLE coexistence_planned (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    tag           TEXT NOT NULL DEFAULT 'new',
+    target_version TEXT,
+    port_offset   INTEGER DEFAULT 10,
+    reason        TEXT,
+    planned_by    TEXT NOT NULL DEFAULT 'operator',
+    status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
+    planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    applied_at    TEXT,
+    UNIQUE (service, tag, status)
+);
 
 CREATE TABLE coexistence_tracks (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -557,6 +571,19 @@ CREATE TABLE systems (
 		updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 	);
 
+CREATE TABLE upgrade_recipes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    recipe_id     TEXT NOT NULL,
+    from_pattern  TEXT,                     -- from_regex in the recipe
+    to_version    TEXT,                     -- the target version
+    severity      TEXT,                     -- patch | minor | breaking
+    docs_url      TEXT,
+    title         TEXT,
+    ingested_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (service, recipe_id)
+);
+
 CREATE TABLE upgrades_applied (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     service           TEXT NOT NULL,
@@ -570,6 +597,19 @@ CREATE TABLE upgrades_applied (
     rolled_back       INTEGER NOT NULL DEFAULT 0,
     event_run_id      TEXT,
     raw_record_json   TEXT
+);
+
+CREATE TABLE upgrades_planned (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    service       TEXT NOT NULL,
+    recipe_id     TEXT NOT NULL,
+    target_version TEXT,
+    planned_by    TEXT NOT NULL DEFAULT 'operator',
+    status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
+    notes         TEXT,
+    planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    applied_at    TEXT,
+    UNIQUE (service, recipe_id, status)
 );
 
 CREATE TABLE user_invitations (
@@ -615,7 +655,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (70)
+-- INDEXS (73)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -645,6 +685,8 @@ CREATE INDEX idx_agent_threads_status  ON agent_threads(status);
 CREATE INDEX idx_coexist_active  ON coexistence_tracks(active);
 
 CREATE INDEX idx_coexist_service ON coexistence_tracks(service);
+
+CREATE INDEX idx_coexistence_planned_status ON coexistence_planned (status);
 
 CREATE INDEX idx_events_actor_action_id ON events(actor_action_id);
 
@@ -736,7 +778,11 @@ CREATE INDEX idx_sys_parent ON systems(parent_id);
 
 CREATE INDEX idx_sys_stack ON systems(stack);
 
+CREATE INDEX idx_upgrade_recipes_service ON upgrade_recipes (service);
+
 CREATE INDEX idx_upgrades_applied_at ON upgrades_applied(applied_at);
+
+CREATE INDEX idx_upgrades_planned_status ON upgrades_planned (status);
 
 CREATE INDEX idx_upgrades_service ON upgrades_applied(service);
 

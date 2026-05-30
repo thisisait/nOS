@@ -200,6 +200,23 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  /api/v1/coexistence/planned:
+    get:
+      summary: 'Coexistence::actionplanned'
+      operationId: Coexistence_planned_get
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   '/api/v1/coexistence/{service}/cleanup/{tag}':
     post:
       summary: tear down stale track (force flag)
@@ -255,6 +272,29 @@ paths:
     post:
       summary: spin up a second track on shifted port
       operationId: Coexistence_provision_post
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/coexistence/{service}/queue':
+    get:
+      summary: 'Coexistence::actionqueue'
+      operationId: Coexistence_queue_get
       tags:
         - Coexistence
       responses:
@@ -893,6 +933,23 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/notifications:
+    get:
+      summary: list operator notifications (Bearer auth).
+      operationId: Notifications_default_get
+      tags:
+        - Notifications
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   /api/v1/patches:
     get:
       summary: 'list patches (filter: status, component_id, limit)'
@@ -1770,6 +1827,23 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  /api/v1/upgrades/planned:
+    get:
+      summary: 'Upgrades::actionplanned'
+      operationId: Upgrades_planned_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   '/api/v1/upgrades/{service}':
     get:
       summary: list recipes for a single service
@@ -1853,6 +1927,34 @@ paths:
     post:
       summary: dry-run a recipe; returns the plan + diff
       operationId: Upgrades_plan_post
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/queue':
+    get:
+      summary: 'Upgrades::actionqueue'
+      operationId: Upgrades_queue_get
       tags:
         - Upgrades
       responses:
