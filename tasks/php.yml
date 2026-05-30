@@ -27,9 +27,7 @@
         pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
       fi
     executable: /bin/bash
-  loop:
-    - redis
-    - imagick
+  loop: "{{ php_common_extensions | default(['redis', 'imagick']) }}"
   register: pecl_common
   failed_when: false   # extension availability varies by PHP version
   # Already-installed extensions short-circuit (their .so is in extension_dir) →

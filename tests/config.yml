@@ -14,6 +14,10 @@ homebrew_upgrade_all_packages: false
 
 install_nginx: true
 install_php: true
+# No PHP apps run in CI (WordPress/Nextcloud are install:false), so skip the
+# PECL extension build — it isn't exercised and pecl's installed-state is
+# undetectable on the GitHub macOS runner (re-installs, breaking idempotence).
+php_common_extensions: []
 install_node: true
 install_bun: true
 install_python: true
