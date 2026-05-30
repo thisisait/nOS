@@ -81,10 +81,26 @@
   failed_when: false
   check_mode: false
 
+# Docker Desktop's GUI app is only present on a macOS host that installed it.
+# GitHub macOS CI runners (Docker Desktop removed for licensing, 2024) and Linux
+# hosts have no /Applications/Docker.app, so `open -a Docker` hard-fails there
+# ("Unable to find application named 'Docker'"). Gate the daemon-start sequence
+# (open/wait/pause) on the app existing: where it's absent, Docker is provided
+# another way (colima / systemd) or simply not needed (CI runs with every Docker
+# stack disabled), and these tasks skip gracefully instead of aborting the run.
+- name: "[Docker] Check whether Docker Desktop.app is installed"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app
+  register: _docker_desktop_app
+  check_mode: false
+
 - name: "[Docker] Start Docker Desktop if not running"
   ansible.builtin.command: open -a Docker
-  when: docker_info.rc != 0
+  when:
+    - docker_info.rc != 0
+    - _docker_desktop_app.stat.exists | default(false)
   changed_when: true
+  failed_when: false
   check_mode: false
 
 - name: "[Docker] Wait for Docker daemon to be ready (up to 90 s)"
@@ -95,7 +111,9 @@
     done
     exit 1
   register: docker_wait
-  when: docker_info.rc != 0
+  when:
+    - docker_info.rc != 0
+    - _docker_desktop_app.stat.exists | default(false)
   changed_when: false
   failed_when: false
   check_mode: false
@@ -114,6 +132,7 @@
       ══════════════════════════════════════════════════════════════════════
   when:
     - docker_info.rc != 0
+    - _docker_desktop_app.stat.exists | default(false)
     - docker_wait is not skipped
     - docker_wait.rc != 0
     - not ansible_check_mode
