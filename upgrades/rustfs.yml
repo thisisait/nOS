@@ -46,10 +46,9 @@ recipes:
         allow_shell: true
 
     apply:
-      - id: pull_image
-        type: exec.shell
-        command: "docker compose -p iiab pull rustfs"
-        allow_shell: true
+      # No explicit pull — compose.set_image_tag runs `up -d --wait`, which
+      # pulls the new tag if absent. A bare `docker compose pull` has no -f
+      # context in the engine's exec.shell cwd and fails "no config file".
       - id: bump_image_tag
         type: compose.set_image_tag
         stack: iiab

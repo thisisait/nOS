@@ -42,10 +42,8 @@ recipes:
         label: "pre-{{ upgrade_id }}"
 
     apply:
-      - id: pull_image
-        type: exec.shell
-        command: "docker compose -p devops pull paperclip"
-        allow_shell: true
+      # No explicit pull — compose.set_image_tag's `up -d --wait` pulls the
+      # new tag; a bare `docker compose pull` has no -f context here.
       - id: bump_image_tag
         type: compose.set_image_tag
         stack: devops

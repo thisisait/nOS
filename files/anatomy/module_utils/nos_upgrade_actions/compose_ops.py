@@ -136,7 +136,7 @@ def handle_set_image_tag(action, ctx):
         # is expected to have the overrides glob discovered elsewhere, but
         # for a standalone upgrade we rely on `-p <project>` resolution.
         cmd = ["docker", "compose", "-p", project, "-f",
-               os.path.join(stack_dir, "compose.yml")]
+               os.path.join(stack_dir, "docker-compose.yml")]
         # Include every override under the stack's overrides dir.
         ov_dir = os.path.join(stack_dir, "overrides")
         if os.path.isdir(ov_dir):

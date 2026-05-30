@@ -953,6 +953,10 @@ postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
 postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
+# Live container name (compose project = stack, so <stack>-<service>-1). Used by
+# upgrade recipes' docker-exec dump/restore steps; default 'nos-postgresql' was wrong.
+postgresql_container_name: "infra-postgresql-1"
+mariadb_container_name: "infra-mariadb-1"
 
 # ==============================================================================
 # INFRA – REDIS (Docker, alternative to Homebrew Redis)
@@ -962,6 +966,7 @@ postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
 redis_version: "7.4.6-alpine"           # CVE-2025-49844 (CVSS 10.0 RediShell RCE)
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
+redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
 # IIAB – MARIADB (continued)
