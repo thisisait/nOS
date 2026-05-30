@@ -5,7 +5,22 @@
 > below are retained for context and may describe pre-2026-05-03 states that
 > have since been superseded.
 >
-> Last updated: 2026-05-23 • milestone: **v0.2-beta** (A19 wiring unification + orchestration health-wait + single-run autowiring) • by: pazny+claude
+> Last updated: 2026-05-30 • milestone: **v0.3-beta** (DRAFT — upgrade-engine real-apply + RBAC + observability veins + hub autowiring) • by: pazny+claude
+
+## v0.3-beta milestone (2026-05-30) — DRAFT, pending operator tag
+
+112 commits since `v0.2-beta`. The macOS release; cross-platform is the v0.4
+milestone. Authoritative notes: [`RELEASE.md`](../RELEASE.md).
+
+| Area | Shipped |
+|---|---|
+| **Upgrade/coexistence engine** | First REAL `--tags upgrade` apply (dry-run had masked a broken path); coexistence track derived from the legacy override (pg17 verified beside pg16); `upgrade_exclude` carve-out; advisor stale-recipe gaps closed (gitlab `from_regex` 18.10+ + 5 forward-coverage tracks). |
+| **RBAC & SSO** | Wing tiered RBAC via stateless `Nette\Security` identity from forward-auth headers (`$minAccessTier`); Authentik group → service admin (GitLab/Gitea/Open-WebUI); pure-SSO onboarding. |
+| **Observability veins** | `grafana-wing` provisions the orphaned `wing_sqlite` datasource → SQLite dashboards populate; stub panels → real `agent_sessions`/`remediation_items` queries; idempotent `bin/ingest-{remediation,pentest}.php`; gitleaks 8.x scan fix. Gate `test_grafana_datasource_provisioned.py`. |
+| **Hub autowiring (P1/P2)** | `hub_card` harvest → `/hub` (lucide icons, tier, RBAC); Uptime-Kuma health_check probe; Nextcloud↔OnlyOffice. |
+| **Agent runtime** | `pulse-run-agent.sh` mkdir mutex serializes claude-CLI agents; session tokens + exit-verdict propagation. |
+| **Fleet (review)** | `docs/fleet-review-2026q2.md` — fleet mode / Track F reality vs aspiration; push-vs-pull decision teed up. |
+| **Validated by** | Full all-on run `ok=1201 failed=0`, 33/33 smoke; `tests/upgrades` 165 + anatomy green; ansible-lint 0. |
 
 ## v0.2-beta milestone (2026-05-23)
 

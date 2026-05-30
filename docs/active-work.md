@@ -5,16 +5,28 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-30 • Upgrade-engine first-real-apply (6/7 services
-> upgraded + role-default persistence) + Wing tiered RBAC via Nette identity,
-> both live-verified on the operator's host. Local `dev` is well ahead of
-> `origin/dev` (push + tag `v0.2-beta` from `master` still pending). Broad
-> local gates: pytest green (1058 anatomy + 211 upgrade/migrate), php -l clean,
-> composer lockfile in sync, syntax-check clean.
+> Last updated: 2026-05-30 (evening) • **v0.3-beta release prep**. On top of the
+> upgrade-engine + RBAC lanes (below), this session wired the observability
+> **veins** end-to-end (Grafana SQLite dashboards now populate — `grafana-wing`
+> datasource), serialized claude-CLI agents (`pulse-run-agent.sh` mutex), closed
+> the upgrade-advisor stale-recipe gaps (gitlab regex + 5 forward tracks), wrote
+> the fleet review (`docs/fleet-review-2026q2.md`), and verified a full all-on
+> run (`ok=1201 failed=0`, 33/33 smoke; CF502 resolved operator-side). Gates:
+> pytest green (anatomy + `tests/upgrades` 165), ansible-lint 0, lockfile in
+> sync, syntax-check clean. **NEXT: cut `v0.3-beta`** (`dev → master` PR + tag,
+> operator-gated) + the cross-platform/Linux v0.4 milestone (see
+> [`docs/linux-port.md`](linux-port.md): gate homebrew, port heartbeat, Ubuntu
+> wet-test).
 
 ---
 
-## Current track: **Upgrade-engine first-real-apply + Wing tiered RBAC (2026-05-30)**
+## Current track: **v0.3-beta release prep (2026-05-30 evening)**
+
+The macOS release. Cross-platform = v0.4 (operator decision). Remaining to tag:
+finalize `RELEASE.md` (drafted), run the operator's `dev → master` PR + `v0.3-beta`
+tag (admin bypass — see memory `nos-release-flow`). The lanes that built up to it:
+
+## Prior track: **Upgrade-engine first-real-apply + Wing tiered RBAC (2026-05-30)**
 
 Operator-driven "bring nOS up to date" session. Two lanes landed on `dev`
 (11 commits `daf6a2b..981f68c`), live-verified on the operator's host:
