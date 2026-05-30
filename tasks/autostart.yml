@@ -23,11 +23,14 @@
   changed_when: false
   failed_when: false
   check_mode: false
+  when: ansible_os_family == 'Darwin'
 
 - name: "[Auto-start] Add Docker Desktop to login items"
   ansible.builtin.shell: |
     osascript -e 'tell application "System Events" to make new login item at end with properties {path:"/Applications/Docker.app", hidden:true}'
-  when: _docker_login_check.rc != 0
+  when:
+    - ansible_os_family == 'Darwin'
+    - _docker_login_check.rc | default(1) != 0
   register: _docker_login_add
   changed_when: _docker_login_add.rc == 0
   failed_when: false
@@ -66,7 +69,9 @@
   ansible.builtin.stat:
     path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
   register: _ollama_plist_check
-  when: install_openclaw | default(false) | bool
+  when:
+    - ansible_os_family == 'Darwin'
+    - install_openclaw | default(false) | bool
 
 - name: "[Auto-start] WARN if Ollama persistent plist missing"
   ansible.builtin.debug:
@@ -74,6 +79,7 @@
       WARN: Ollama persistent LaunchAgent missing - after reboot Ollama won't see SSD models.
       Fix: ansible-playbook main.yml -K --tags openclaw
   when:
+    - ansible_os_family == 'Darwin'
     - install_openclaw | default(false) | bool
     - not (_ollama_plist_check.stat.exists | default(false))
 
@@ -85,10 +91,12 @@
       ═══════════════════════════════════════════════════════════════════
        AUTO-START STATUS (after PC restart)
       ═══════════════════════════════════════════════════════════════════
-       Docker Desktop:     {{ 'login item OK' if _docker_login_check.rc == 0 else 'added to login items' }}
+      {% if ansible_os_family == 'Darwin' %}
+       Docker Desktop:     {{ 'login item OK' if (_docker_login_check.rc | default(1)) == 0 else 'added to login items' }}
+      {% endif %}
        Docker containers:  {{ 'all restart=unless-stopped' if 'ALL_OK' in (_container_restart_check.stdout | default('')) else 'see warning above' }}
        Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy)
-      {% if install_openclaw | default(false) | bool %}
+      {% if ansible_os_family == 'Darwin' and install_openclaw | default(false) | bool %}
        Ollama:             {{ 'custom LaunchAgent (env vars for SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else 'WARN brew plist (env vars lost after reboot)' }}
       {% endif %}
       ═══════════════════════════════════════════════════════════════════

@@ -16,6 +16,7 @@
   community.general.homebrew:
     name: dnsmasq
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: "[dnsmasq] Detect LAN IP for DNS responses"
   ansible.builtin.shell: ipconfig getifaddr en0 2>/dev/null || echo "127.0.0.1"
@@ -63,6 +64,8 @@
       cache-size=1000
     create: true
     mode: '0644'
+  # dnsmasq.conf has no _platform var; the Homebrew path is macOS-only.
+  when: ansible_os_family == 'Darwin'
   notify: Restart dnsmasq
 
 - name: Ensure /etc/resolver directory exists
@@ -71,7 +74,10 @@
     state: directory
     mode: '0755'
   become: true
-  when: not ansible_check_mode
+  # /etc/resolver is a macOS-only DNS resolver mechanism.
+  when:
+    - ansible_os_family == 'Darwin'
+    - not ansible_check_mode
 
 - name: Create macOS resolver for dev.local domain
   ansible.builtin.copy:
@@ -82,7 +88,10 @@
       port {{ dnsmasq_port | default(53) }}
     mode: '0644'
   become: true
-  when: not ansible_check_mode
+  # /etc/resolver is a macOS-only DNS resolver mechanism.
+  when:
+    - ansible_os_family == 'Darwin'
+    - not ansible_check_mode
 
 - name: Create macOS resolver for dev.lan domain (Bluesky PDS)
   ansible.builtin.copy:
@@ -93,7 +102,9 @@
       port {{ dnsmasq_port | default(53) }}
     mode: '0644'
   become: true
+  # /etc/resolver is a macOS-only DNS resolver mechanism.
   when:
+    - ansible_os_family == 'Darwin'
     - install_bluesky_pds | default(false)
     - not ansible_check_mode
 
@@ -110,6 +121,8 @@
   failed_when:
     - dnsmasq_svc.rc != 0
     - "'already started' not in (dnsmasq_svc.stdout | default(''))"
+  # brew-svc.sh is a launchctl wrapper — macOS/launchd-only.
+  when: nos_service_manager == 'launchd'
 
 - name: "Verify dnsmasq resolves {{ dnsmasq_dev_domain | default('dev.local') }} correctly"
   ansible.builtin.command: "dig +short grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain | default('dev.local') }} @127.0.0.1"

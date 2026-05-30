@@ -13,6 +13,7 @@
       - bzip2
       - libffi
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Add pyenv to shell profile (.zshrc)
   ansible.builtin.blockinfile:
@@ -25,6 +26,7 @@
       eval "$(pyenv virtualenv-init -)"
     create: true
     mode: '0644'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install Python via pyenv
   ansible.builtin.shell: |
@@ -36,6 +38,7 @@
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set Python global version via pyenv
   ansible.builtin.shell: |
@@ -47,6 +50,7 @@
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Upgrade pip
   ansible.builtin.shell: |
@@ -58,6 +62,7 @@
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install pip packages
   ansible.builtin.shell: |
@@ -70,3 +75,4 @@
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
+  when: nos_pkg_manager == 'homebrew'
