@@ -8,11 +8,14 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.2-
 
 ## v0.3-beta (2026-05-30) — DRAFT, pending operator tag
 
-> 112 commits since `v0.2-beta`. Headline: the **upgrade/coexistence engine now
+> 116 commits since `v0.2-beta`. Headline: the **upgrade/coexistence engine now
 > applies for real**, **tiered RBAC** reaches Wing, the **observability veins**
 > are wired end-to-end (Grafana SQLite dashboards finally populate), and the
-> **hub autowiring** epic (P1/P2) lands. Draft notes — the `dev → master` PR +
-> `v0.3-beta` tag are the operator's to cut (admin bypass; outward-facing).
+> **hub autowiring** epic (P1/P2) lands. Validated on the operator's host: a full
+> all-on run (`ok=1201 failed=0`, 33/33 smoke), e2e 3 core journeys green, and
+> CI-equivalent `pytest` 1398 passed / ansible-lint 0 / lockfile in sync. Draft
+> notes — the `dev → master` PR + `v0.3-beta` tag are the operator's to cut
+> (admin bypass; outward-facing).
 
 ### Upgrade & coexistence engine — first real apply
 
@@ -30,6 +33,11 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.2-
 - **Coexistence apply** — track now derived from the legacy `{service}.yml`
   override (inherits env/networks/healthcheck) so stateful tracks boot (pg17
   verified beside pg16); major-version data via logical dump/restore at cutover.
+- **Advisor stale-recipe gaps closed** — gitlab `from_regex` fixed to match
+  18.10+ (was `^18\.(0|[1-9])\.`, blind to two-digit minors); 5 at-target
+  forward-coverage tracks (grafana/mariadb/infisical/authentik/redis) so the
+  advisor matches the installed line instead of reporting stale. Re-validated:
+  architect GREEN, all 12 services with a known version match a recipe.
 
 ### RBAC & SSO
 
