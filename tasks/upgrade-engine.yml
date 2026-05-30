@@ -189,11 +189,19 @@
 # event.schema.json) for the callback plugin.
 
 - name: "[Upgrade] Apply each eligible recipe"
+  # 2026-05-30: do NOT pass `recipe` through here — recipe YAML carries
+  # {{ var }} tokens (e.g. {{ rustfs_data_dir }}) intended for the engine's
+  # OWN minimal substitution layer (defined in nos_migrate.py _apply_upgrade).
+  # Ansible templates module args at finalization → boom on undefined role
+  # defaults. nos_migrate now loads the recipe from recipe_path itself as raw
+  # YAML, so tokens reach the engine verbatim. recipe.id is still passed via
+  # the upgrade.recipe stub so the module can identify the single recipe to
+  # apply inside a multi-recipe file.
   nos_migrate:
     action: apply_upgrade
     upgrade:
       service: "{{ item.service }}"
-      recipe: "{{ item.recipe }}"
+      recipe: { id: "{{ item.recipe.id }}" }
       installed: "{{ item.installed }}"
       recipe_path: "{{ item.recipe_path }}"
       run_ts: "{{ _upgrade_run_ts }}"

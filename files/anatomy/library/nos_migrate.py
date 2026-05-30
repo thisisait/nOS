@@ -261,6 +261,45 @@ def _apply_upgrade(upgrade, ctx, dry_run):
     handlers = merged_handlers()
     service = upgrade.get("service", "")
     recipe = upgrade.get("recipe") or {}
+    recipe_path = upgrade.get("recipe_path") or ""
+    # 2026-05-30: prefer raw-YAML load from recipe_path to bypass Ansible's
+    # Jinja-template resolution of the recipe dict at task-arg finalization.
+    # Recipes carry {{ var }} tokens (e.g. {{ rustfs_data_dir }}) intended for
+    # the engine's own minimal substitution layer (_tokens below + handlers).
+    # Resolving them through Ansible's templater requires those vars to be in
+    # play scope — and role defaults aren't. Live --tags upgrade was failing
+    # 8/8 recipes at the Apply task arg with `'rustfs_data_dir' is undefined`
+    # the moment the dict was templated. Loading raw YAML from disk inside
+    # the module keeps the tokens as plain strings so the engine sees them
+    # verbatim and the substitution layer does its job.
+    if recipe_path:
+        try:
+            import yaml as _yaml  # PyYAML is already a hard dep of nos_migrate.
+            with open(recipe_path, "r") as _rf:
+                _raw = _yaml.safe_load(_rf) or {}
+            # Some recipes are top-level (service+recipes[]). For upgrade
+            # apply we want the single recipe matching upgrade.recipe.id when
+            # given; otherwise the first one. We also accept a flat recipe.
+            if isinstance(_raw, dict) and _raw.get("recipes"):
+                _wanted_id = (recipe or {}).get("id")
+                _picked = None
+                for _r in _raw.get("recipes", []) or []:
+                    if isinstance(_r, dict) and (_wanted_id is None or _r.get("id") == _wanted_id):
+                        _picked = _r
+                        break
+                if _picked is not None:
+                    # Inherit top-level allow_shell gate (recipes inside the
+                    # service file don't repeat the flag).
+                    if _raw.get("allow_shell") and "allow_shell" not in _picked:
+                        _picked = dict(_picked)
+                        _picked["allow_shell"] = True
+                    recipe = _picked
+            elif isinstance(_raw, dict):
+                recipe = _raw
+        except Exception:
+            # Fall through to whatever the controller passed; engine will
+            # surface a clear error if the recipe is empty.
+            pass
     run_ts = upgrade.get("run_ts", "")
     installed = upgrade.get("installed", "")
     recipe_id = recipe.get("id", "unknown")
