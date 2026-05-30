@@ -20,7 +20,8 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      if pecl list 2>/dev/null | grep -qiE "^{{ item }}[[:space:]]"; then
+      ext_dir="$(php -i 2>/dev/null | awk -F' => ' '/^extension_dir/{print $2; exit}')"
+      if [ -n "$ext_dir" ] && [ -f "$ext_dir/{{ item }}.so" ]; then
         echo "NOS_PECL_PRESENT"
       else
         pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
@@ -31,8 +32,9 @@
     - imagick
   register: pecl_common
   failed_when: false   # extension availability varies by PHP version
-  # Already-present extensions short-circuit (grep -q hit) → no install runs,
-  # so a steady-state re-run is changed=0; only an actual install marks changed.
+  # Already-installed extensions short-circuit (their .so is in extension_dir) →
+  # no install; only an actual install marks changed. pecl list/info proved
+  # unreliable on the macOS runner (empty registry even when the .so exists).
   changed_when: "'NOS_PECL_INSTALLED' in (pecl_common.stdout | default(''))"
   when: nos_pkg_manager == 'homebrew'
 
@@ -41,7 +43,8 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      if pecl list 2>/dev/null | grep -qiE "^{{ item }}[[:space:]]"; then
+      ext_dir="$(php -i 2>/dev/null | awk -F' => ' '/^extension_dir/{print $2; exit}')"
+      if [ -n "$ext_dir" ] && [ -f "$ext_dir/{{ item }}.so" ]; then
         echo "NOS_PECL_PRESENT"
       else
         pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
