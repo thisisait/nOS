@@ -116,11 +116,19 @@
 # FrankenPHP ships a static per-arch binary on GitHub releases; its embedded
 # PHP also runs composer via `frankenphp php-cli`, so no separate php package
 # is needed. Validate the asset name/arch + php-cli behaviour on Ubuntu 24.04.
-- name: "[pazny.wing] (Linux) Ensure ~/.local/bin exists"
+- name: "[pazny.wing] (Linux) Ensure ~/.local + bin exist (operator-owned)"
   ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+    path: "{{ item }}"
     state: directory
+    owner: "{{ ansible_facts['user_id'] }}"
     mode: '0755'
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/.local"
+    - "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+  # ~/.local can be left root-owned by an earlier become/pip step (or the CI
+  # runner image); chown it back so the operator-context frankenphp + composer
+  # downloads below can write here without become.
+  become: true
   when: ansible_os_family != 'Darwin'
 
 - name: "[pazny.wing] (Linux) Download FrankenPHP static binary"
