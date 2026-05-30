@@ -14,14 +14,43 @@
     dest: "{{ ansible_facts['env']['HOME'] }}/agents/heartbeat.py"
     mode: '0755'
 
+# ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
+# Linux sibling of the launchd path; env mirrors the plist. Gated on
+# nos_service_manager (tasks/_platform.yml) so macOS is unchanged.
+
+# ---- macOS: launchd ----
 - name: "[Heartbeat] Deploy launchd plist"
   ansible.builtin.template:
     src: eu.thisisait.nos.heartbeat.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.heartbeat.plist"
     mode: '0644'
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[Heartbeat] Load heartbeat daemon"
   ansible.builtin.command: >
     launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.heartbeat.plist
   changed_when: true
   failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ---- Linux: systemd --user (env mirrors eu.thisisait.nos.heartbeat.plist.j2) ----
+- name: "[Heartbeat] (Linux) Install systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "eu.thisisait.nos.heartbeat"
+    su_description: "nOS Heartbeat — phone-home daemon"
+    # heartbeat.py is pure stdlib (urllib/json/platform); systemd needs an
+    # ABSOLUTE ExecStart. pyenv is macOS-only (gated in python.yml), so on Linux
+    # use the system python3 rather than ~/.pyenv/shims.
+    su_exec_start: "/usr/bin/python3 {{ ansible_facts['env']['HOME'] }}/agents/heartbeat.py"
+    su_environment:
+      HOME: "{{ ansible_facts['env']['HOME'] }}"
+      HEARTBEAT_ENDPOINT: "{{ heartbeat_endpoint | default('') }}"
+      HEARTBEAT_API_KEY: "{{ heartbeat_api_key | default('') }}"
+      HEARTBEAT_INTERVAL: "{{ heartbeat_interval | default(300) | string }}"
+      INSTANCE_NAME: "{{ instance_name | default('nos') }}"
+      SERVICE_REGISTRY: "{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
+      VERSION_FILE: "{{ playbook_dir }}/VERSION"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'

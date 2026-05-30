@@ -24,14 +24,16 @@
 # ── Render target ────────────────────────────────────────────────────────────
 - name: "[nginx] Resolve render target"
   ansible.builtin.set_fact:
-    nginx_etc_dir: "{{ homebrew_prefix }}/etc/nginx"
-    nginx_log_dir: "{{ homebrew_prefix }}/var/log/nginx"
+    nginx_etc_dir: "{{ nos_nginx_etc_dir }}"
+    nginx_log_dir: "{{ nos_nginx_log_dir }}"
     nginx_enabled: "{{ nginx_sites_enabled | default([]) }}"
 
 - name: Install nginx via Homebrew
   community.general.homebrew:
     name: nginx
     state: present
+  # On Linux nginx is installed by the pazny.linux.nginx role (apt).
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Ensure nginx sites directories exist
   ansible.builtin.file:
@@ -109,7 +111,11 @@
     nginx_svc.rc != 0 and
     'already started' not in (nginx_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
+  # brew-svc.sh is a launchctl wrapper — macOS/launchd-only.
+  when: nos_service_manager == 'launchd'
 
 - name: Test nginx configuration
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/nginx -t"
   changed_when: false
+  # {{ homebrew_prefix }}/bin/nginx is the brew binary — macOS-only.
+  when: ansible_os_family == 'Darwin'

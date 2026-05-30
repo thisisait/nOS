@@ -10,6 +10,7 @@
   community.general.homebrew:
     name: ollama
     state: latest
+  when: nos_pkg_manager == 'homebrew'
 
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
   ansible.builtin.file:
@@ -33,6 +34,7 @@
     label: "{{ item.key }}={{ item.value }}"
   changed_when: false
   no_log: "{{ item.key == 'WING_API_TOKEN' }}"
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Stop OpenClaw gateway (holds persistent Ollama connection)"
   ansible.builtin.command: pkill -f 'openclaw-gateway'
@@ -62,6 +64,7 @@
     executable: /bin/bash
   changed_when: false
   failed_when: false
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Wait for port 11434 to be free"
   ansible.builtin.wait_for:
@@ -75,6 +78,7 @@
     src: com.ollama.agent.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
     mode: '0644'
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Load user LaunchAgent (com.ollama.agent)"
   ansible.builtin.command: >
@@ -84,6 +88,7 @@
   failed_when: >
     ollama_svc.rc != 0 and
     'already loaded' not in (ollama_svc.stderr | default(''))
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Wait for Ollama process to start"
   ansible.builtin.shell: |

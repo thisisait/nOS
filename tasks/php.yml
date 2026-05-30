@@ -7,11 +7,13 @@
   community.general.homebrew:
     name: "php@{{ php_version }}"
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install imagemagick (required for imagick PECL extension)
   community.general.homebrew:
     name: imagemagick
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install common PHP extensions via PECL
   ansible.builtin.shell:
@@ -25,6 +27,7 @@
     - imagick
   failed_when: false   # extension availability varies by PHP version
   changed_when: true
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install additional PHP extensions from config via PECL
   ansible.builtin.shell:
@@ -36,6 +39,7 @@
   loop: "{{ php_extensions | default([]) }}"
   failed_when: false
   changed_when: true
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install Composer
   ansible.builtin.shell: |
@@ -52,6 +56,7 @@
   args:
     creates: "{{ homebrew_prefix }}/bin/composer"
     executable: /bin/zsh
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install global Composer packages
   community.general.composer:
@@ -62,6 +67,7 @@
   environment:
     COMPOSER_HOME: "{{ ansible_facts['env']['HOME'] }}/.composer"
     PATH: "{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set PHP memory_limit
   community.general.ini_file:
@@ -71,6 +77,7 @@
     value: "{{ php_memory_limit }}"
     mode: '0644'
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set PHP upload_max_filesize
   community.general.ini_file:
@@ -80,6 +87,7 @@
     value: "{{ php_upload_max_filesize }}"
     mode: '0644'
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set PHP post_max_size
   community.general.ini_file:
@@ -89,6 +97,7 @@
     value: "{{ php_post_max_size }}"
     mode: '0644'
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set PHP max_execution_time
   community.general.ini_file:
@@ -98,6 +107,7 @@
     value: "{{ php_max_execution_time }}"
     mode: '0644'
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Set PHP date.timezone
   community.general.ini_file:
@@ -107,12 +117,14 @@
     value: "{{ php_date_timezone }}"
     mode: '0644'
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Ensure php-fpm.d directory exists
   ansible.builtin.file:
     path: "{{ homebrew_prefix }}/etc/php/{{ php_version }}/php-fpm.d"
     state: directory
     mode: '0755'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Configure PHP-FPM pool (www.conf)
   ansible.builtin.blockinfile:
@@ -132,6 +144,7 @@
     insertafter: "^\\[www\\]"
     backup: true
   notify: Restart php-fpm
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Start PHP-FPM service
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start php@{{ php_version }}"
@@ -143,3 +156,4 @@
     phpfpm_svc.rc != 0 and
     'already started' not in (phpfpm_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (phpfpm_svc.stderr | default(''))
+  when: nos_pkg_manager == 'homebrew'

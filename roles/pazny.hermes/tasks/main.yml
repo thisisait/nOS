@@ -30,12 +30,14 @@
     name: uv
     state: present
   failed_when: false
+  when: nos_pkg_manager == 'homebrew'
 
 - name: "[Hermes] Ensure Python 3.11+ via Homebrew"
   community.general.homebrew:
     name: "python@3.13"
     state: present
   failed_when: false
+  when: nos_pkg_manager == 'homebrew'
 
 # ── 3. Git clone hermes-agent ─────────────────────────────────────────────────
 

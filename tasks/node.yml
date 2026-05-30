@@ -7,12 +7,14 @@
   community.general.homebrew:
     name: nvm
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Ensure NVM directory exists
   ansible.builtin.file:
     path: "{{ ansible_facts['env']['HOME'] }}/.nvm"
     state: directory
     mode: '0755'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Add NVM to shell profile (.zshrc)
   ansible.builtin.blockinfile:
@@ -24,6 +26,7 @@
       [ -s "{{ homebrew_prefix }}/opt/nvm/etc/bash_completion.d/nvm" ] && source "{{ homebrew_prefix }}/opt/nvm/etc/bash_completion.d/nvm"
     create: true
     mode: '0644'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install Node.js LTS via NVM
   ansible.builtin.shell: |
@@ -37,6 +40,7 @@
   changed_when: false
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install global npm packages
   ansible.builtin.shell: |
@@ -50,6 +54,7 @@
   changed_when: false
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install extra npm packages from config
   ansible.builtin.shell: |
@@ -63,6 +68,7 @@
   changed_when: false
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: nos_pkg_manager == 'homebrew'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Bridge NVM-installed CLIs into the homebrew-prefix PATH so launchd daemons
@@ -88,6 +94,7 @@
   register: _claude_path
   changed_when: false
   check_mode: false
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Symlink claude into homebrew_prefix/bin (PATH-bridge for launchd)
   ansible.builtin.file:
@@ -95,4 +102,6 @@
     dest: "{{ homebrew_prefix }}/bin/claude"
     state: link
     force: true
-  when: _claude_path.stdout | trim | length > 0
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - _claude_path.stdout | default('') | trim | length > 0
