@@ -1223,22 +1223,30 @@
       tags: ['sudoers']
 
     - import_tasks: tasks/terminal.yml
-      when: configure_terminal | default(true)
+      when:
+        - configure_terminal | default(true)
+        - ansible_os_family == 'Darwin'   # Terminal.app profile (open .terminal) — macOS-only
       tags: ['terminal']
 
     - import_tasks: tasks/osx.yml
-      when: configure_osx | default(true)
+      when:
+        - configure_osx | default(true)
+        - ansible_os_family == 'Darwin'   # macOS system prefs — macOS-only
       tags: ['osx']
 
     - import_tasks: tasks/macos-defaults.yml
-      when: configure_macos_defaults | default(true)
+      when:
+        - configure_macos_defaults | default(true)
+        - ansible_os_family == 'Darwin'   # `defaults` command — macOS-only
       tags: ['macos-defaults', 'osx']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Power management - pmset (server-like operation: display sleeps, network stays on)
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/power-management.yml
-      when: configure_power_management | default(true)
+      when:
+        - configure_power_management | default(true)
+        - ansible_os_family == 'Darwin'   # pmset — macOS-only
       tags: ['power', 'pmset', 'power-management']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1247,6 +1255,7 @@
     - import_tasks: tasks/system-services.yml
       when: >
         not ansible_check_mode and
+        ansible_os_family == 'Darwin' and
         ((enable_ssh | default(false)) or
         (enable_samba | default(false)) or
         (enable_vnc | default(false)) or
