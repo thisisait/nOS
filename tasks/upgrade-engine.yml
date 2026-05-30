@@ -127,6 +127,10 @@
   when:
     - (_target_service | length == 0) or (item.0.service == _target_service)
     - (_target_recipe_id | length == 0) or (item.1.id == _target_recipe_id)
+    # Safety carve-out: operator excludes risky/destructive recipes from a bulk
+    # run, e.g. -e '{"upgrade_exclude":["postgresql"]}' to route PG's in-place
+    # dump/wipe/restore through the coexistence track instead.
+    - item.0.service not in (upgrade_exclude | default([]))
     # Eligible if EITHER the installed version matches from_regex (auto-detect)
     # OR the (service, recipe) is in the planned queue (W5-B3 explicit path).
     - >-
