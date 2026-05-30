@@ -70,6 +70,36 @@ epic** (memory `auto-wiring-epic-state` — P1a icon glyph, P2b/P4). Roadmap lan
 after that: **Linux port (Track C)** or **A8 conductor scheduled drift-scans**
 (open backlog — would automate this very "update everything" cadence).
 
+### Parked backlog — observability + Wing-data flow (diagnosed 2026-05-30)
+
+Operator flagged empty Grafana/Wing surfaces; root-caused, not yet fixed:
+
+* **Agent run-lifecycle (feature + bug)** — failed/incomplete agent runs
+  (concurrency crash, timeout-kill, LLM API socket error) never emit
+  `agent_run_end`, so their `agent_sessions` row hangs `running` forever (5
+  orphans cleaned by hand this session). Build the operator-requested
+  `/agents` UI: token-consumption progress bar (`tokens_input/output/cache_read`
+  already on the row), elapsed + countdown to a ~30-min cap, and an admin-only
+  manual-kill (set `status=interrupted`) — plus a server-side auto-terminate of
+  runs past the cap so dead runs self-clean. **Run claude-CLI agents
+  sequentially** (concurrent = all crash — see [[agent-two-runtime-session-gap]]).
+* **Grafana nOS dashboards empty** (22-ai-agents, 90-security, 99-playbook) —
+  NOT missing data: `frser-sqlite-datasource@4.0.6` is installed + Prometheus
+  has 6/7 targets up. The dashboards carry **stub panels** (`vector(0)`) + query
+  Loki/Prom series that don't flow (openclaw off, app metrics unexported) + the
+  SQLite datasource likely isn't mounted onto `wing.db` (Grafana is containerised,
+  wing.db is host-side). Wire the SQLite DS to wing.db + replace stubs with real
+  SQL over `events`/`agent_sessions`/`remediation_items`.
+* **Wing /remediation empty despite data** — 24 pending / 59 resolved rows
+  exist; `RemediationPresenter::renderDefault` calls `repo->list(['limit'=>200])`
+  (no status filter) so the data IS queried → template render issue, needs a
+  live `/remediation` check.
+* **Wing inbox empty** — `notifications` table = 0; nothing posts notifications
+  (agents write events, not notifications). Wire agent verdicts / A9 severities
+  → notifications.
+* **pentest stale / gitleaks 0** — no recent pentest scan; gitleaks can't ingest
+  (unrendered HMAC pulse env, see [[pulse-catalog-literal-substitution]]).
+
 ---
 
 ## Prior track: **Epic C (Zpevnění) DONE (2026-05-25)**
