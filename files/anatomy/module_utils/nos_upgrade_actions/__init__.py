@@ -33,6 +33,7 @@ UPGRADE_ACTION_HANDLERS = {
     "http.get_all":    _http_ops.handle_http_get_all,
     "compose.set_image_tag":    _compose_ops.handle_set_image_tag,
     "compose.restart_service":  _compose_ops.handle_restart_service,
+    "compose.recreate":         _compose_ops.handle_recreate,
     "custom.module":   _custom_module.handle_custom_module,
     # Upgrade-flavoured exec.shell — normalises `command:`/`shell:` ergonomics
     # then delegates to the strict migrate handler. merged_handlers() applies

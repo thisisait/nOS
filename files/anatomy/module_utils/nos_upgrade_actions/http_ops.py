@@ -132,10 +132,18 @@ def handle_http_wait(action, ctx):
     url = action.get("url")
     if not url:
         return _fail("http.wait requires 'url'")
-    expect_status = int(action.get("expect_status", 200))
+    # expect_status may be a single int or a list of acceptable codes
+    # (recipes use e.g. [200, 302, 401, 403] for auth-gated endpoints).
+    _expect = action.get("expect_status", 200)
+    expect_statuses = _expect if isinstance(_expect, (list, tuple)) else [_expect]
+    expect_statuses = [int(s) for s in expect_statuses]
     timeout_sec = int(action.get("timeout_sec", 60))
     interval_sec = max(1, int(action.get("interval_sec", 3)))
     verify = bool(action.get("verify", False))
+    # Optional Host header — recipes probing a service through Traefik pass
+    # the vhost so routing picks the right router.
+    host_header = action.get("host_header")
+    req_headers = {"Host": host_header} if host_header else None
 
     if ctx.get("dry_run"):
         return _ok(False, dry_run=True, url=url)
@@ -159,9 +167,10 @@ def handle_http_wait(action, ctx):
                     return _ok(False, url=url, attempts=attempts, mode="tcp")
                 last_err = "tcp_connect_failed"
             else:
-                status, _body = _do_http(ctx, url, timeout=min(10, interval_sec * 2),
+                status, _body = _do_http(ctx, url, headers=req_headers,
+                                         timeout=min(10, interval_sec * 2),
                                          verify=verify)
-                if status == expect_status:
+                if status in expect_statuses:
                     return _ok(False, url=url, attempts=attempts, status=status)
                 last_err = "status=%d" % status
         except (URLError, socket.timeout, OSError) as exc:

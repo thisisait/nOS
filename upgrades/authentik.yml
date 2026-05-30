@@ -57,6 +57,7 @@ recipes:
       - id: bump_image_tags
         type: compose.set_image_tag
         stack: infra
+        override: authentik
         services: [authentik-server, authentik-worker]
         tag: "{{ recipe.to }}"
         wait: true
@@ -85,6 +86,7 @@ recipes:
       - id: revert_image_tags
         type: compose.set_image_tag
         stack: infra
+        override: authentik
         services: [authentik-server, authentik-worker]
         tag: "{{ recipe.from_version_resolved }}"
         wait: false
@@ -139,6 +141,7 @@ recipes:
       - id: bump_image_tags
         type: compose.set_image_tag
         stack: infra
+        override: authentik
         services: [authentik-server, authentik-worker]
         tag: "{{ recipe.to }}"
         wait: true
@@ -161,6 +164,7 @@ recipes:
       - id: revert_image_tags
         type: compose.set_image_tag
         stack: infra
+        override: authentik
         services: [authentik-server, authentik-worker]
         tag: "{{ recipe.from_version_resolved }}"
         wait: false

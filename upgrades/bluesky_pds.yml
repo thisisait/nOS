@@ -40,7 +40,7 @@ recipes:
       - id: list_dids_before
         type: exec.shell
         command: >-
-          docker compose -p infra exec -T bluesky-pds
+          docker exec infra-bluesky-pds-1
           goat pds admin account list
           --pds-host http://localhost:3000
           --admin-password "{{ bluesky_pds_admin_password }}"
@@ -48,15 +48,14 @@ recipes:
         allow_shell: true
 
     apply:
-      - id: pull_image
-        type: exec.shell
-        command: "docker compose -p infra pull bluesky-pds"
-        allow_shell: true
-      - id: recreate_container
-        type: exec.shell
-        command: >-
-          docker compose -p infra up -d --force-recreate --no-deps bluesky-pds
-        allow_shell: true
+      # Rolling same-tag (0.4) bump: pull latest digest + force-recreate via
+      # the full -f override chain (a bare `docker compose -p infra ...` has no
+      # compose file in the engine's exec cwd).
+      - id: recreate_pds
+        type: compose.recreate
+        stack: infra
+        service: bluesky-pds
+        wait: true
 
     post:
       - id: wait_healthy
@@ -68,7 +67,7 @@ recipes:
       - id: verify_dids_intact
         type: exec.shell
         command: >-
-          docker compose -p infra exec -T bluesky-pds
+          docker exec infra-bluesky-pds-1
           goat pds admin account list
           --pds-host http://localhost:3000
           --admin-password "{{ bluesky_pds_admin_password }}"
@@ -83,8 +82,8 @@ recipes:
         type: backup.restore
         dst: "{{ bluesky_pds_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-      - id: recreate_container
-        type: exec.shell
-        command: >-
-          docker compose -p infra up -d --force-recreate --no-deps bluesky-pds
-        allow_shell: true
+      - id: recreate_pds
+        type: compose.recreate
+        stack: infra
+        service: bluesky-pds
+        wait: true

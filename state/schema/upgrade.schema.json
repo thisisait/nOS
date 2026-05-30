@@ -112,6 +112,7 @@
             "http.get_all",
             "compose.set_image_tag",
             "compose.restart_service",
+            "compose.recreate",
             "custom.module",
             "fs.mv",
             "fs.cp",
