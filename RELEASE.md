@@ -2,7 +2,86 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.1-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.2-beta`.
+
+---
+
+## v0.3-beta (2026-05-30) — DRAFT, pending operator tag
+
+> 112 commits since `v0.2-beta`. Headline: the **upgrade/coexistence engine now
+> applies for real**, **tiered RBAC** reaches Wing, the **observability veins**
+> are wired end-to-end (Grafana SQLite dashboards finally populate), and the
+> **hub autowiring** epic (P1/P2) lands. Draft notes — the `dev → master` PR +
+> `v0.3-beta` tag are the operator's to cut (admin bypass; outward-facing).
+
+### Upgrade & coexistence engine — first real apply
+
+- **Apply path exercised end-to-end** (`daf6a2b..23609c8`). The `--tags upgrade`
+  flow had never run for real — dry-run short-circuited before handlers, masking
+  a multi-defect apply path. Now: `nos_migrate.py` renders recipe step strings via
+  Jinja2 against play-vars + engine tokens; the upgrade-table `exec.shell` wrapper
+  aliases recipe `command:`→`cmd`; `compose.set_image_tag` gained `override` +
+  `--force-recreate` + converge-on-drift; recipes aligned to live container names
+  (`<stack>-<service>-1`, base `docker-compose.yml`); `upgrade_exclude` carve-out.
+- **CRITICAL fix** — `lookup('vars', …)` needs `wantlist=true`; without it the
+  play-var list collapsed to first characters (a big-review catch before a real
+  PG run; no live damage). authentik major upgrades are forward-only (rollback
+  `noop`; restoring a dump under new code half-migrates the schema).
+- **Coexistence apply** — track now derived from the legacy `{service}.yml`
+  override (inherits env/networks/healthcheck) so stateful tracks boot (pg17
+  verified beside pg16); major-version data via logical dump/restore at cutover.
+
+### RBAC & SSO
+
+- **Wing tiered RBAC via Nette identity** — `ForwardAuthUserStorage` builds a
+  stateless `Nette\Security` identity from the `X-Authentik-*` forward-auth
+  headers each request (roles = Authentik groups). `BasePresenter` gained a
+  declarative `$minAccessTier` enforced by default in `startup()`.
+- **SSO admin propagation** — Authentik group → service admin for GitLab,
+  Gitea (OIDC groups), Open-WebUI; **pure-SSO onboarding** (public signup closed,
+  external-only registration) so a blank run needs zero manual registration.
+
+### Observability veins (data → Grafana / Wing)
+
+- **Grafana SQLite dashboards finally populate** — the `wing_sqlite` datasource
+  was orphaned by the P1 datasource split (declared only in an unrendered
+  `all.yml.j2`), so every playbook-timeline / AI-agent SQLite panel was dark
+  against a full `wing.db`. New **`grafana-wing` composition plugin** renders it
+  (gated on `install_observability` + `wing-base`); plugin pinned `4.0.6`. New CI
+  gate pins the dashboard→datasource→provisioning chain. *Verified live: the
+  datasource registers, health OK, panels query `wing.db`.*
+- **Stub panels → real queries** — `22-ai-agents` (token / success-rate / latency /
+  model-distribution from `agent_sessions`) and `90-security` (CVE bargauge
+  repointed off a non-existent table to `remediation_items`); every SQL
+  live-verified.
+- **Idempotent re-sync** — `bin/ingest-remediation.php` + `bin/ingest-pentest.php`
+  UPSERT `/remediation` + `/pentest` from the authoritative JSON every run
+  (migrate.php was one-shot and drifted); WHERE-guarded so a steady-state run is
+  `changed=0`.
+- **gitleaks scan fixed** — 8.x dropped `--source` (positional repo now); every
+  nightly scan had been exiting 2, leaving the Wing Inbox + Secret Findings empty.
+
+### Hub autowiring (P1/P2)
+
+- `ui-extension.hub_card` harvested into `/hub` (icons via self-hosted lucide,
+  tier overlay, RBAC `viewerTier`); Uptime-Kuma probes `hub_card.health_check`;
+  Nextcloud↔OnlyOffice auto-wired; non-clickable backends filtered + a post-run
+  URL-audit gate.
+
+### Agent runtime
+
+- **Sequential run lock** — `pulse-run-agent.sh` (the single chokepoint) now takes
+  an atomic `mkdir` mutex; concurrent claude-CLI agents had crashed all
+  participants. Stale lock reclaimed by PID liveness; released on any exit.
+- claude-CLI session tokens captured; agent exit verdict (REVIEW vs GREEN)
+  propagated; agent reports shown in the session transcript.
+
+### Fleet (review only)
+
+- `docs/fleet-review-2026q2.md` reconciles the aspirational fleet design with
+  reality (built vs greenfield), confirms the naming (fleet mode / Track F), maps
+  the p2p / server-client / mesh topologies, and tees up the push-vs-pull
+  control-plane decision. No live config changed.
 
 ---
 
