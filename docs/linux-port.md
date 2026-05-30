@@ -145,22 +145,27 @@ this is the v0.4 lane). The codebase is ~65% Linux-ready: the **infra layer**
 abstraction** are done, and **Bone / Pulse / Wing / backup** already branch on
 `nos_service_manager`. What's left for a clean Ubuntu 24.04 aarch64 run:
 
-**Minimal (blocks a Linux run) — mostly mechanical, reuse the proven pattern:**
-1. **Gate every `homebrew:` call** with `when: nos_pkg_manager == 'homebrew'`
-   (or rely on the `install_*: false` defaults): `tasks/php.yml`, `tasks/node.yml`,
-   `tasks/python.yml`, `tasks/dnsmasq.yml`, `tasks/nginx.yml`,
-   `roles/pazny.hermes`, `roles/pazny.openclaw`. On a default all-on run the first
-   ungated `homebrew:` module errors on Linux.
-2. **Port `tasks/heartbeat.yml`** — launchd-only today; add the systemd-user
-   branch (copy `roles/pazny.pulse/tasks/main.yml:58-100`).
-3. **Gate `tasks/autostart.yml`** osascript Docker-login-items + the
-   `~/Library/LaunchAgents/com.ollama.agent.plist` check `when: ansible_os_family == 'Darwin'`.
-4. **Gate the OpenClaw LaunchAgent rendering** `when: nos_service_manager == 'launchd'`.
-5. **Replace hardcoded `homebrew_prefix` paths** with `_platform.yml` vars
-   (`nos_nginx_etc_dir`, etc.) in `tasks/nginx.yml`, `tasks/dnsmasq.yml`.
-6. **Ubuntu 24.04 aarch64 wet-test** (Lima / Multipass / Graviton) — the gating
-   above + `install_{openclaw,hermes,php,node,...}: false`; Bone/Pulse/Wing/backup
-   + the full Docker stack should come up. This is the real acceptance gate.
+**Minimal (blocks a Linux run) — ✅ IMPLEMENTED on `feat/linux-port`** (commit
+`f91aac7` + the `docker-prereqs` Darwin gate landed earlier on `dev`/`939610e`):
+1. ✅ **Homebrew calls gated** `when: nos_pkg_manager == 'homebrew'` across
+   `tasks/{php,node,python,dnsmasq,nginx}.yml` + `roles/pazny.{hermes,openclaw}`.
+2. ✅ **`tasks/heartbeat.yml` ported** — systemd-user branch
+   (`pazny.linux.systemd_user::ensure_unit`, mirrors pulse); launchd path gated to
+   macOS; `ExecStart=/usr/bin/python3` (pyenv is mac-only).
+3. ✅ **`tasks/autostart.yml` gated** — osascript Docker-login-items + the
+   Ollama-plist check `when: ansible_os_family == 'Darwin'` (+ register defaults).
+4. ✅ **OpenClaw/Hermes launchd + homebrew gated** (`nos_service_manager` /
+   `nos_pkg_manager`); their full Linux RUNTIME is deferred (see below).
+5. ✅ **nginx/dnsmasq paths** → `nos_nginx_etc_dir` / `nos_nginx_log_dir`
+   (macOS value identical); macOS-only `/etc/resolver` + `open -a Docker`
+   (`tasks/iiab/docker-prereqs.yml`) gated on `ansible_os_family == 'Darwin'` /
+   Docker.app presence.
+   *Every gate is true-on-macOS → zero macOS behavior change. ansible-lint
+   production 0 failures, `--syntax-check` clean.*
+6. ⏳ **Ubuntu 24.04 aarch64 wet-test** (Lima / Multipass / Graviton) — the one
+   REMAINING acceptance gate. Run with `install_{openclaw,hermes}: false`;
+   Bone / Pulse / Wing / backup + the Docker stack (via the `pazny.linux.docker`
+   apt path) should come up. **Not yet run** — needs a Linux host.
 
 **Defer (post-v0.4, keep `install_*: false` on Linux):** OpenClaw (Ollama MLX is
 Apple-only → needs a CUDA/CPU backend), Hermes (Homebrew `uv`/`python@3.13` →
