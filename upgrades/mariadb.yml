@@ -1,5 +1,6 @@
 ---
 service: mariadb
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://mariadb.com/kb/en/upgrading/"
 maintainers: ["pazny"]
 notes: |

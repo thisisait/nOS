@@ -1,5 +1,6 @@
 ---
 service: erpnext
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://frappeframework.com/docs/user/en/bench/resources/bench-commands-cheatsheet"
 maintainers: ["pazny"]
 notes: |

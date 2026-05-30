@@ -1,5 +1,6 @@
 ---
 service: authentik
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://docs.goauthentik.io/docs/install-config/upgrade"
 maintainers: ["pazny"]
 notes: |

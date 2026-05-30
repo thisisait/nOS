@@ -1,5 +1,6 @@
 ---
 service: postgresql
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://www.postgresql.org/docs/current/upgrading.html"
 maintainers: ["pazny"]
 notes: |

@@ -1,5 +1,6 @@
 ---
 service: grafana
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://grafana.com/docs/grafana/latest/upgrade-guide/"
 maintainers: ["pazny"]
 notes: |

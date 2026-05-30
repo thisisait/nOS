@@ -1,5 +1,6 @@
 ---
 service: bluesky_pds
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://github.com/bluesky-social/pds/blob/main/README.md"
 maintainers: ["pazny"]
 notes: |

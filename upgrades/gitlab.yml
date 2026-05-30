@@ -1,5 +1,6 @@
 ---
 service: gitlab
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://docs.gitlab.com/ee/update/"
 maintainers: ["pazny"]
 notes: |

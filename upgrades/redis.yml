@@ -1,5 +1,6 @@
 ---
 service: redis
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://redis.io/docs/latest/operate/oss_and_stack/management/"
 maintainers: ["pazny"]
 notes: |

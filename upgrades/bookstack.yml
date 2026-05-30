@@ -1,5 +1,6 @@
 ---
 service: bookstack
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://www.bookstackapp.com/docs/admin/updates/"
 maintainers: ["pazny"]
 notes: |

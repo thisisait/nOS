@@ -387,6 +387,15 @@ def apply(record, ctx=None, dry_run=False):
         # 4b. dispatch action
         action = step.get("action") or {}
         action_type = action.get("type")
+        # When the recipe/migration top-level opts into shell, treat that as
+        # opt-in for ALL exec.shell steps within (vs requiring every step to
+        # also carry allow_shell:true — 40+ duplicate flags across the
+        # upgrade-recipe catalogue would be a maintenance landmine, and the
+        # top-level opt-in is the reviewable signal that the recipe is
+        # trusted). The step-level handler still re-checks ctx for the
+        # migration flag (defense in depth on the negative path).
+        if action_type == "exec.shell" and ctx.get("migration_allows_shell"):
+            action.setdefault("allow_shell", True)
         try:
             handler = get_handler(action_type)
         except KeyError as exc:

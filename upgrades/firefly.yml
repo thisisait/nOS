@@ -1,5 +1,6 @@
 ---
 service: firefly
+allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image bump steps
 docs_url: "https://docs.firefly-iii.org/how-to/firefly-iii/upgrade/upgrade/"
 maintainers: ["pazny"]
 notes: |
