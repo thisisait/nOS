@@ -74,6 +74,35 @@ CASES = [
     # Infisical 0.70 -> 0.80
     ("infisical", "infisical-0.70-to-0.80", True,  "0.70.5"),
     ("infisical", "infisical-0.70-to-0.80", False, "0.80.0"),
+    # ── Forward-coverage tracks (2026-05-30): each pins the advisor to the
+    #    verified-installed major so the recipe stops reporting as "stale". ──
+    ("grafana",   "grafana-12-current",     True,  "12.4.2"),
+    ("grafana",   "grafana-12-current",     True,  "12.0.0"),
+    ("grafana",   "grafana-12-current",     False, "11.5.0"),
+    ("grafana",   "grafana-12-current",     False, "13.0.0"),
+    ("mariadb",   "mariadb-11-current",     True,  "11.8.6"),
+    ("mariadb",   "mariadb-11-current",     True,  "11.0.0"),
+    ("mariadb",   "mariadb-11-current",     False, "10.11.0"),
+    ("mariadb",   "mariadb-11-current",     False, "12.0.0"),
+    ("infisical", "infisical-current",      True,  "0.159.16"),
+    ("infisical", "infisical-current",      True,  "0.159.0"),
+    ("infisical", "infisical-current",      False, "0.158.0"),
+    ("infisical", "infisical-current",      False, "0.160.0"),
+    ("authentik", "authentik-2026-current", True,  "2026.5.2"),
+    ("authentik", "authentik-2026-current", True,  "2026.1.0"),
+    ("authentik", "authentik-2026-current", False, "2025.10.0"),
+    ("authentik", "authentik-2026-current", False, "2027.1.0"),
+    ("redis",     "redis-8-current",        True,  "8.0"),
+    ("redis",     "redis-8-current",        True,  "8.0.0"),
+    ("redis",     "redis-8-current",        False, "7.4.0"),
+    ("redis",     "redis-8-current",        False, "9.0.0"),
+    # gitlab 18-to-current regex FIX: ^18\.([0-9]|[1-9][0-9])\. now matches
+    # two-digit minors (18.10+), which the old ^18\.(0|[1-9])\. could not.
+    ("gitlab",    "gitlab-18-to-current",   True,  "18.10.3-ce.0"),
+    ("gitlab",    "gitlab-18-to-current",   True,  "18.0.5-ce.0"),
+    ("gitlab",    "gitlab-18-to-current",   True,  "18.99.9-ce.0"),
+    ("gitlab",    "gitlab-18-to-current",   False, "17.11.7-ce.0"),
+    ("gitlab",    "gitlab-18-to-current",   False, "19.0.0-ce.0"),
 ]
 
 
@@ -100,4 +129,6 @@ def test_alphabetic_ordering_yields_progressive_upgrades():
     import yaml  # noqa: local import to allow skip-on-missing elsewhere
     doc = yaml.safe_load(open(os.path.join(UPGRADES_DIR, "grafana.yml")))
     ids = sorted([r["id"] for r in doc["recipes"]])
-    assert ids == ["grafana-10-to-11", "grafana-11-to-12"]
+    # grafana-12-current (the at-target forward-coverage track) sorts AFTER
+    # both transition tracks, so a 10.x system still gets 10->11 first.
+    assert ids == ["grafana-10-to-11", "grafana-11-to-12", "grafana-12-current"]

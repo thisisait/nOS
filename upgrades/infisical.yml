@@ -155,3 +155,74 @@ recipes:
         type: backup.restore
         dst: "{{ infisical_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+
+  - id: "infisical-current"
+    from_regex: "^0\\.159\\."
+    to: "0.159.16"   # bare (no 'v') — siblings + advisor compare bare versions
+    severity: minor
+    changelog_url: "https://github.com/Infisical/infisical/releases"
+    notes: |
+      Forward-coverage track pinned to the verified-installed version
+      (running container = v0.159.16). Its job is to give the upgrade-advisor
+      a matching from_regex for the 0.159.x line so it stops reporting a
+      stale recipe; because to == installed it is an at-target track and
+      queues nothing today. When upstream ships a newer release, the operator
+      bumps `to:` (and `infisical_version` in default.config.yml) and the same
+      mirrored apply/rollback shape carries the upgrade through.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 1
+      service_healthy: true
+      other_services_healthy: ["postgresql"]
+
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
+          pg_dump -U postgres -d infisical --clean --if-exists
+          > {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        # infisical image tags ARE v-prefixed (infisical/infisical:v0.x) while
+        # `to:` is the bare version the advisor compares — so prepend the v here.
+        tag: "v{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/status"
+        expect_status: 200
+        timeout_sec: 120
+        interval_sec: 3
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_db
+        type: exec.shell
+        allow_shell: true
+        command: >-
+          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
+          psql -U postgres -d infisical
+          < {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
