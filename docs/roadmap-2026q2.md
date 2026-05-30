@@ -5,9 +5,25 @@
 > below are retained for context and may describe pre-2026-05-03 states that
 > have since been superseded.
 >
-> Last updated: 2026-05-30 • milestone: **v0.3-beta** (DRAFT — upgrade-engine real-apply + RBAC + observability veins + hub autowiring) • by: pazny+claude
+> Last updated: 2026-05-31 • milestone: **v0.4-beta** (DRAFT — cross-platform: Ubuntu 24.04 wet-test green + macOS idempotence) • by: pazny+claude
 
-## v0.3-beta milestone (2026-05-30) — DRAFT, pending operator tag
+## v0.4-beta milestone (2026-05-31) — DRAFT, pending operator tag
+
+~19 gap fixes on `feat/linux-port`. The cross-platform release: the full playbook
+provisions Ubuntu 24.04 LTS end-to-end. Authoritative notes:
+[`RELEASE.md`](../RELEASE.md) + [`docs/linux-port.md`](linux-port.md).
+
+| Area | Shipped |
+|---|---|
+| **Platform seam** | `tasks/_platform.yml` resolves pkg/service-manager + nginx paths + `docker_bin` per OS; brew/launchctl/osascript/macOS-settings tasks gated `nos_pkg_manager=='homebrew'` / `ansible_os_family=='Darwin'` — macOS-byte-identical. |
+| **Linux daemons** | Bone/Pulse/backup/heartbeat → `systemd --user` (`pazny.linux.systemd_user::ensure_unit`, linger, Persistent-timer tolerance); Wing → FrankenPHP single binary; venvs from system `python3` (apt `python3-venv`). |
+| **TLS + proxy** | mkcert apt (platform CAROOT); portable `nginx.conf` (epoll/`user www-data`/`/var`,`/run`); host-nginx per-service vhosts macOS-only — **Traefik is the Linux edge**. |
+| **Docker** | `docker_bin` → `/usr/bin/docker`; `nos_docker_ready` probe gates the compose layer (Docker-less host skips gracefully); ubuntu brings up mailpit + watchtower through the health-wait. |
+| **macOS idempotence** | re-run `changed=0`: `wing_api_token` persisted (was regen-every-run → churned Pulse plist), install/PECL/dotnet/service-start `changed_when` state-based, dnsmasq notify-driven, `~/.zshrc` no touch-bump, service-registry timestamp dropped. |
+| **CI** | new `Integration (ubuntu-24.04)` job runs `ansible-playbook main.yml` on a Linux runner (standing acceptance gate); both ubuntu + macOS Integration green. |
+| **Deferred** | OpenClaw (Ollama/CUDA), Hermes, host-nginx vhost templates on Linux, fleet provisioning. |
+
+## v0.3-beta milestone (2026-05-30) — released
 
 112 commits since `v0.2-beta`. The macOS release; cross-platform is the v0.4
 milestone. Authoritative notes: [`RELEASE.md`](../RELEASE.md).

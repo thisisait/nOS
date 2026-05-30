@@ -2,11 +2,65 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.2-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.3-beta`.
 
 ---
 
-## v0.3-beta (2026-05-30) — DRAFT, pending operator tag
+## v0.4-beta (2026-05-31) — DRAFT, pending operator tag
+
+> **nOS goes cross-platform.** The playbook now provisions **Ubuntu 24.04 LTS**
+> end-to-end, validated by a standing `Integration (ubuntu-24.04)` CI wet-test
+> that runs the *full* playbook on a GitHub Linux runner and is **green**. macOS
+> (Apple Silicon) remains the reference platform — every gate added here is
+> macOS-byte-identical (it resolves true on a Mac), so macOS behaviour is
+> unchanged. 18 commits on `feat/linux-port`. Draft notes — the `dev → master`
+> PR + `v0.4-beta` tag are the operator's to cut (admin bypass; outward-facing).
+
+### Cross-platform (Linux) — the headline
+
+- **Platform seam.** `tasks/_platform.yml` resolves `nos_pkg_manager`
+  (homebrew|apt|dnf), `nos_service_manager` (launchd|systemd-user),
+  `nos_nginx_*` paths and `nos_docker_bin` per OS; every Homebrew install, brew
+  shell-out, `launchctl`/`osascript`/`defaults`/`pmset` call and macOS
+  system-settings task is now gated on `nos_pkg_manager == 'homebrew'` /
+  `ansible_os_family == 'Darwin'`. The Linux equivalents are the `pazny.linux.*`
+  roles (apt / docker / nginx / hardening) + `pazny.linux.systemd_user`.
+- **Host daemons on Linux.** Bone, Pulse, the backup orchestrator and the
+  heartbeat render `systemd --user` units (`ensure_unit`, `loginctl
+  enable-linger`) instead of launchd; Wing runs the FrankenPHP single binary
+  from `~/.local/bin` (downloaded on Linux, brew on macOS) with composer driven
+  via `frankenphp php-cli`. Bone/Pulse venvs build from the system `python3`
+  (`tasks/python.yml` apt-installs `python3-venv`).
+- **TLS + proxy.** mkcert installs via apt on Linux (CAROOT is platform-aware);
+  `templates/nginx/nginx.conf` is portable (epoll/`user www-data`/`/var`+`/run`
+  paths on Linux, kqueue/homebrew paths on macOS); host-nginx config-deploy +
+  reload/restart handlers gained a systemd path. Per-service host-nginx vhosts
+  stay macOS-only — **Traefik is the edge proxy on Linux**.
+- **Docker.** `docker_bin` rebinds to `/usr/bin/docker`; a final readiness probe
+  (`nos_docker_ready`) gates the whole compose layer, so a Docker-less host (e.g.
+  a GitHub macOS runner) skips the stacks gracefully instead of erroring. The
+  ubuntu wet-test brings up real containers (mailpit + watchtower) through the
+  shared health-wait.
+
+### macOS — idempotence
+
+- The macOS `Integration` job runs the playbook twice and asserts `changed=0`.
+  Long-standing non-idempotent tasks are fixed: install/PECL/dotnet/service-start
+  `changed_when` now key off real state, dnsmasq restart is notify-driven,
+  `~/.zshrc` no longer `touch`-bumps, `service-registry.json` dropped its volatile
+  timestamp, and **`wing_api_token` is now a persisted secret** (it regenerated
+  every run, churning the agents' bearer + the Pulse launchd plist). nos_state
+  runtime-refresh tasks are marked non-idempotency-relevant.
+
+### Deferred (post-v0.4)
+
+- OpenClaw (Ollama/CUDA on Linux), Hermes, the host-nginx per-service vhost
+  templates on Linux (Traefik covers routing), and fleet provisioning
+  (p2p/server-client/mesh) remain macOS-only / greenfield.
+
+---
+
+## v0.3-beta (2026-05-30)
 
 > 116 commits since `v0.2-beta`. Headline: the **upgrade/coexistence engine now
 > applies for real**, **tiered RBAC** reaches Wing, the **observability veins**
