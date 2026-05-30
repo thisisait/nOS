@@ -140,8 +140,13 @@
 # ── 3. Python dependencies ──────────────────────────────────────────────────
 
 - name: "[Docker] Install Python docker SDK + dependencies"
+  # Install into the interpreter Ansible actually uses for localhost tasks
+  # (so community.mysql can import PyMySQL at runtime). On the operator's Mac
+  # the ansible.cfg interpreter pin resolves this to homebrew's python3 (same
+  # as before); on CI / Linux it resolves to the setup/system python — the
+  # hardcoded {{ homebrew_prefix }}/bin/python3 doesn't exist there.
   ansible.builtin.command: >-
-    {{ homebrew_prefix }}/bin/python3 -m pip install
+    {{ ansible_facts['python']['executable'] | default(homebrew_prefix + '/bin/python3') }} -m pip install
     --break-system-packages
     PyMySQL
   register: docker_sdk_result
