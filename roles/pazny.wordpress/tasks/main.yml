@@ -41,13 +41,16 @@
     mode: '0600'
   notify: Restart wordpress
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.wordpress] Deploy nginx vhost"
   ansible.builtin.template:
     src: "{{ playbook_dir }}/templates/nginx/sites-available/wordpress.conf"
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/wordpress.conf"
     mode: '0644'
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.wordpress] Enable nginx vhost (symlink)"
   ansible.builtin.file:
@@ -56,7 +59,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.wordpress] Print installation info"
   ansible.builtin.debug:

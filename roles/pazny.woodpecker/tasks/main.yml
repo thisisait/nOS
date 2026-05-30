@@ -21,6 +21,7 @@
     - "{{ woodpecker_data_dir }}"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.woodpecker] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/woodpecker.conf"
@@ -28,7 +29,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.woodpecker] Render compose override fragment (server + agent)"
   ansible.builtin.template:

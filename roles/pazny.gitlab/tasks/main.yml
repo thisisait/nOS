@@ -79,6 +79,7 @@
       # ── Registrace ────────────────────────────────────────────────────────────
       gitlab_rails['gitlab_signup_enabled'] = {{ gitlab_signup_enabled | default(false) | string | lower }}
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.gitlab] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/gitlab.conf"
@@ -86,7 +87,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.gitlab] Render compose override fragment"
   ansible.builtin.template:

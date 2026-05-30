@@ -24,6 +24,7 @@
   changed_when: "'Stopping' in (_gitea_brew_stop.stdout | default(''))"
   failed_when: false
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.gitea] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/gitea.conf"
@@ -31,7 +32,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.gitea] Render compose override fragment"
   ansible.builtin.template:

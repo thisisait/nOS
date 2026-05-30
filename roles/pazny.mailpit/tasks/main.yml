@@ -22,11 +22,14 @@
     mode: '0600'
   notify: Restart mailpit
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.mailpit] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/mailpit.conf"
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-enabled/mailpit.conf"
     state: link
     force: true
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
   notify: Restart nginx

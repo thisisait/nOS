@@ -49,13 +49,16 @@
     mode: '0600'
   notify: Restart bookstack
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.bookstack] Deploy nginx vhost"
   ansible.builtin.template:
     src: "{{ playbook_dir }}/templates/nginx/sites-available/bookstack.conf"
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/bookstack.conf"
     mode: '0644'
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.bookstack] Enable nginx vhost (symlink)"
   ansible.builtin.file:
@@ -64,7 +67,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.bookstack] Print installation info"
   ansible.builtin.debug:
