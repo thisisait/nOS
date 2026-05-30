@@ -1,0 +1,21 @@
+---
+# ==============================================================================
+# grafana-wing — state/manifest.yml fragment
+#
+# Composition plugins do not run their own container or bind a port, so they
+# do NOT contribute a `services:` row. They are listed under the sibling
+# `compositions:` key (mirrors grafana-loki / grafana-prometheus /
+# grafana-tempo). For now this fragment is informational —
+# `pazny.state_manager` ignores it; when the manifest schema is extended it
+# merges in verbatim.
+# ==============================================================================
+
+compositions:
+  - id: grafana-wing
+    type: composition
+    requires:
+      plugins: [grafana-base, wing-base]
+      feature_flag: install_observability
+    provides:
+      - grafana_datasource: wing_sqlite
+    plugin_path: files/anatomy/plugins/grafana-wing

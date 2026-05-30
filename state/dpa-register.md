@@ -12,11 +12,11 @@
 
 ## Summary
 
-- **Processing activities:** 67 (63 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legitimate_interests (62)
+- **Processing activities:** 68 (64 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legitimate_interests (63)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
-- ⚠️ **30 activities** carry an auto-generated purpose (plugin `gdpr.purpose` not yet authored) — flagged with † below.
+- ⚠️ **31 activities** carry an auto-generated purpose (plugin `gdpr.purpose` not yet authored) — flagged with † below.
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -792,6 +792,17 @@ Authentik-authenticated principals reach the service.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Grafana Wing — `svc_grafana-wing` †
+- **Purpose:** Operation of the Grafana Wing service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `playbook_event_metadata`, `agent_session_telemetry`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

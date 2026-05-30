@@ -31,12 +31,18 @@ services:
       # role's compose template; this placeholder env var is harmless +
       # surfaces the plugin's identity in `docker inspect grafana`.
       _NOS_PLUGIN: "grafana-base"
-{% if grafana_dashboards | default([]) | length > 0 %}
-      # frser-sqlite-datasource is unsigned but operator opts in via the
-      # grafana_dashboards list (lookup of community dashboards). Without
-      # a non-empty list, leaving GF_INSTALL_PLUGINS unset keeps Grafana's
-      # default plugin allowlist tight.
-      GF_INSTALL_PLUGINS: "frser-sqlite-datasource"
+{% if install_wing | default(install_php | default(true)) %}
+      # frser-sqlite-datasource backs the Wing SQLite datasource (uid
+      # wing_sqlite) provisioned by the grafana-wing composition plugin.
+      # Gated on the SAME install_wing condition as the datasource + the
+      # wing.db bind-mount (roles/pazny.grafana) so plugin + datasource +
+      # dashboards always provision together. The prior grafana_dashboards-
+      # length gate was wrong: it conflated "operator wants community
+      # dashboards" with "install the sqlite plugin", so an empty list left
+      # the wing_sqlite panels dark. Pinned to 4.0.6 for deterministic
+      # installs; the plugin is Grafana-signed (ships MANIFEST.txt), so no
+      # GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS is needed.
+      GF_INSTALL_PLUGINS: "frser-sqlite-datasource 4.0.6"
 {% endif %}
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────

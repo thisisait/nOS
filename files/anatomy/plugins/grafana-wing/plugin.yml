@@ -1,0 +1,90 @@
+# =============================================================================
+# grafana-wing — composition plugin (veins wiring, 2026-05-30)
+#
+# Wires wing-base (Wing's SQLite event/agent/migration store) into grafana-base
+# (visualization) via a Grafana datasource provisioning fragment. Pure tendon:
+# no service of its own, no compose extension, no Authentik client. Activates
+# only when both sibling plugins are loaded (install_observability AND
+# install_wing → wing-base present).
+#
+# Why this plugin exists:
+#   The P1 (2026-05-05) refactor split the Prometheus/Loki/Tempo datasources
+#   out of grafana-base/provisioning/datasources/all.yml.j2 into sibling
+#   composition plugins (grafana-prometheus / grafana-loki / grafana-tempo) to
+#   fix a duplicate-uid / duplicate-default crash. The Wing SQLite datasource
+#   was left behind in the now-orphaned all.yml.j2 with NO render action, so
+#   `uid: wing_sqlite` was never provisioned — every 99-playbook / 22-ai-agents
+#   panel keyed to it rendered empty against a fully-populated wing.db. This
+#   plugin is the missing sibling that closes that gap.
+# =============================================================================
+
+name: grafana-wing
+version: 0.1.0
+description: |
+  Composition plugin: registers Wing's SQLite store as a Grafana datasource
+  (uid=wing_sqlite, type frser-sqlite-datasource) so the 99-playbook and
+  22-ai-agents dashboards can read playbook events, migration / upgrade /
+  coexistence history, and agent-session telemetry directly from wing.db
+  (bind-mounted read-only into the Grafana container at
+  /var/lib/grafana/wing/wing.db by roles/pazny.grafana).
+upstream: https://github.com/fr-ser/grafana-sqlite-datasource
+license: AGPL-3.0  # follows the Grafana licensing of the consuming service
+
+type:
+  - composition
+
+# =============================================================================
+# REQUIRES — both peer plugins must load before this one
+# =============================================================================
+# requires.plugin is an ACTIVATION gate (not just DAG ordering): grafana-wing
+# does NOT render unless BOTH grafana-base (install_observability) and wing-base
+# (install_wing) are loaded. That naturally suppresses the datasource on a host
+# without Wing — no broken "missing wing.db" datasource is ever written.
+
+requires:
+  plugin:
+    - grafana-base
+    - wing-base
+  feature_flag: install_observability
+
+# =============================================================================
+# PROVISIONING — datasource fragment dropped into Grafana's provisioning dir
+# =============================================================================
+# Grafana 9+ concatenates every `datasources:` list under
+# provisioning/datasources/. Rendering this fragment as a sibling of the
+# grafana-prometheus/loki/tempo fragments adds the Wing SQLite datasource
+# without editing any base file. Filename uses the plugin slug so
+# `ls ~/stacks/observability/grafana/provisioning/datasources/` shows which
+# plugin contributed which datasource.
+
+provisioning:
+  datasource:
+    template: provisioning/datasources/wing.yml.j2
+    target: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/wing.yml"
+
+# =============================================================================
+# LIFECYCLE HOOKS — render the fragment before grafana boots
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - ensure_dir: "{{ stacks_dir }}/observability/grafana/provisioning/datasources"
+    - render: provisioning.datasource
+  post_blank:
+    - remove_file: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/wing.yml"
+
+# =============================================================================
+# GDPR — Article 30 row (compositions process no new data, but the schema
+# requires a complete block; the retention horizon is owned by wing-base)
+# =============================================================================
+
+gdpr:
+  data_categories:
+    - playbook_event_metadata    # task/play/handler lifecycle rows queried via Grafana
+    - agent_session_telemetry    # agent run outcomes + token tallies (operator-only)
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: 0              # stores nothing itself; horizon owned by wing-base
+  processors: []
+  eu_residency: true
