@@ -34,6 +34,13 @@ services:
         gitlab_exporter['enable'] = false
         gitlab_rails['gitlab_signup_enabled'] = false
         gitlab_rails['time_zone'] = 'Europe/Prague'
+        # Whitelist the Docker bridge so the host-side readiness probe (NAT'd
+        # to the bridge gateway, e.g. 172.21.0.1) reaches /-/readiness instead
+        # of GitLab 404'ing it. Without this the pazny.gitlab post-check 404s
+        # for the full 60x10s retry budget (~10 min stall) before its
+        # failed_when:false lets the play continue. Localhost stays for the
+        # in-container healthcheck.
+        gitlab_rails['monitoring_whitelist'] = ['127.0.0.0/8', '::1/128', '172.16.0.0/12']
 {% if install_authentik | default(false) %}
         gitlab_rails['omniauth_enabled'] = true
         gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
