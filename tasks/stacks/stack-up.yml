@@ -510,6 +510,10 @@
   loop: "{{ _all_deployed_stacks }}"
   register: _stacks_ps
   changed_when: false
+  # Display-only: a stack with no enabled services never gets a docker-compose.yml
+  # rendered (e.g. infra when every infra service is disabled), so `ps` returns
+  # "no such file". That is not a run failure — nothing to show for that stack.
+  failed_when: false
   check_mode: false
   loop_control:
     label: "{{ item }}"
