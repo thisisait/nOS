@@ -65,16 +65,20 @@ recipes:
     post:
       - id: wait_server_healthy
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/live/"
-        expect_status: 204
-        timeout_sec: 180
-        interval_sec: 4
+        # Probe authentik LOCALLY on its host port — NOT the public domain.
+        # The public edge (Cloudflare / Traefik forward-auth) returns 403, and
+        # authentik's /-/health/live/ returns 200 (not 204). A false-negative
+        # here used to fire the destructive rollback below.
+        url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/-/health/live/"
+        expect_status: [200, 204]
+        timeout_sec: 300
+        interval_sec: 5
       - id: wait_ready
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/ready/"
-        expect_status: 204
-        timeout_sec: 120
-        interval_sec: 3
+        url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/-/health/ready/"
+        expect_status: [200, 204]
+        timeout_sec: 180
+        interval_sec: 4
       - id: reapply_blueprints
         type: custom.module
         module: ansible.builtin.include_tasks
@@ -83,30 +87,17 @@ recipes:
         ignore_errors: true
 
     rollback:
-      - id: revert_image_tags
-        type: compose.set_image_tag
-        stack: infra
-        override: authentik
-        services: [authentik-server, authentik-worker]
-        tag: "{{ recipe.from_version_resolved }}"
-        wait: false
-      - id: restore_db
-        type: exec.shell
-        allow_shell: true
-        command: >-
-          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
-          psql -U postgres -d authentik
-          < {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ authentik_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
-      - id: restart_service
-        type: compose.restart_service
-        stack: infra
-        service: authentik-server
-        action: up
-        wait: true
+      # NO automatic rollback. authentik major upgrades run forward-only DB
+      # migrations that cannot be cleanly reversed: restoring the pre-upgrade
+      # dump under the new code (or reverting the image over a migrated DB)
+      # leaves a half-migrated schema — observed 2026-05-30 as a
+      # `column cert_expiry already exists` gunicorn boot loop that took SSO
+      # down. On post-phase failure authentik is left on the NEW version.
+      # Manual recovery: stop authentik, drop+recreate the authentik DB, restore
+      # ~/.nos/backups/<upgrade_id>/authentik-db.sql, then start the image whose
+      # schema matches the dump (old) — or re-run forward on the clean DB.
+      - id: no_auto_rollback
+        type: noop
 
   - id: "authentik-2025-to-2026"
     from_regex: "^2025\\."
@@ -149,10 +140,14 @@ recipes:
     post:
       - id: wait_server_healthy
         type: http.wait
-        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/-/health/live/"
-        expect_status: 204
-        timeout_sec: 180
-        interval_sec: 4
+        # Probe authentik LOCALLY on its host port — NOT the public domain.
+        # The public edge (Cloudflare / Traefik forward-auth) returns 403, and
+        # authentik's /-/health/live/ returns 200 (not 204). A false-negative
+        # here used to fire the destructive rollback below.
+        url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/-/health/live/"
+        expect_status: [200, 204]
+        timeout_sec: 300
+        interval_sec: 5
       - id: reapply_blueprints
         type: custom.module
         module: ansible.builtin.include_tasks
@@ -161,21 +156,10 @@ recipes:
         ignore_errors: true
 
     rollback:
-      - id: revert_image_tags
-        type: compose.set_image_tag
-        stack: infra
-        override: authentik
-        services: [authentik-server, authentik-worker]
-        tag: "{{ recipe.from_version_resolved }}"
-        wait: false
-      - id: restore_db
-        type: exec.shell
-        allow_shell: true
-        command: >-
-          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
-          psql -U postgres -d authentik
-          < {{ '~/.nos/backups/' + upgrade_id + '/authentik-db.sql' | expanduser }}
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ authentik_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
+      # NO automatic rollback — authentik major upgrades are forward-only (see
+      # the 2024-to-2025 rollback note). Restoring the pre-upgrade DB dump under
+      # the new code half-migrates the schema and boot-loops the server, which
+      # took SSO down on 2026-05-30. On failure authentik stays on the NEW
+      # version; recover manually from ~/.nos/backups/<upgrade_id>/authentik-db.sql.
+      - id: no_auto_rollback
+        type: noop
