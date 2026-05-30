@@ -80,10 +80,15 @@
     nos_docker_bin: "/usr/bin/docker"
   when: nos_platform == 'redhat'
 
-- name: "[platform] Compute derived nginx vhost paths"
+- name: "[platform] Compute derived nginx vhost paths + point docker_bin at the platform binary"
   ansible.builtin.set_fact:
     nos_nginx_sites_available: "{{ nos_nginx_etc_dir }}/sites-available"
     nos_nginx_sites_enabled: "{{ nos_nginx_etc_dir }}/sites-enabled"
+    # docker_bin defaults to the macOS path (/usr/local/bin/docker). On Linux
+    # Docker CE (apt) lands at /usr/bin/docker; without this remap docker-prereqs
+    # can't find the binary and blocks on the "waiting for manual fix" pause.
+    # On macOS nos_docker_bin == the original docker_bin, so this is a no-op.
+    docker_bin: "{{ nos_docker_bin }}"
 
 - name: "[platform] Print platform summary"
   ansible.builtin.debug:
