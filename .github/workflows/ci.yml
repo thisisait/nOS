@@ -310,3 +310,60 @@ jobs:
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+
+  # v0.4 cross-platform wet-test. GitHub ubuntu runners ship Docker + passwordless
+  # sudo, so this ACTUALLY exercises the Linux path: the pazny.linux.* roles
+  # (apt / docker / nginx / hardening), systemd --user daemons, and the
+  # homebrew/launchd/osascript Darwin-gates added on feat/linux-port. Expected to
+  # surface the remaining Linux gaps as it is iterated toward green; once green it
+  # is the standing Linux acceptance gate (the macOS Integration matrix above
+  # cannot test Linux, and GitHub macOS runners no longer ship Docker Desktop).
+  integration-linux:
+    name: Integration (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.
+        id: python-setup
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install test dependencies.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
+
+      - name: Set up the test environment.
+        run: |
+          cp tests/ansible.cfg ./ansible.cfg
+          cp tests/inventory ./inventory
+          cp tests/config.yml ./config.yml
+          # Retry Galaxy install — see Syntax Check job comment.
+          for attempt in 1 2 3; do
+            ansible-galaxy install -r requirements.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
+
+      - name: Test the playbook's syntax.
+        run: ansible-playbook main.yml --syntax-check
+        env:
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+
+      - name: Test the playbook (Linux).
+        run: ansible-playbook main.yml
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
