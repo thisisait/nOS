@@ -20,7 +20,7 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      if pecl list | grep -q "^{{ item }}\b"; then
+      if pecl info {{ item }} >/dev/null 2>&1; then
         echo "NOS_PECL_PRESENT"
       else
         pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
@@ -41,7 +41,7 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      if pecl list | grep -q "^{{ item }}\b"; then
+      if pecl info {{ item }} >/dev/null 2>&1; then
         echo "NOS_PECL_PRESENT"
       else
         pecl install {{ item }} && echo "NOS_PECL_INSTALLED"

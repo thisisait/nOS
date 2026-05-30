@@ -1105,7 +1105,6 @@
         # invalidated all SSO sessions (Django SECRET_KEY = CSRF + session signing)
         vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
         paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        wing_api_token: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
         hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
       tags: ['always']
@@ -1128,6 +1127,11 @@
         bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
         outline_secret_key: "{% if '_pw_' in (outline_secret_key | default('')) or (outline_secret_key | default('') | length) != 64 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_secret_key }}{% endif %}"
         authentik_secret_key: "{% if '_pw_' in (authentik_secret_key | default('')) or (authentik_secret_key | default('') | length) < 50 %}{{ lookup('pipe', 'openssl rand -hex 50') }}{% else %}{{ authentik_secret_key }}{% endif %}"
+        # wing_api_token: persisted (was regen-every-run above). The agents' Wing
+        # bearer + Pulse's launchd plist embed it; regenerating every run churned
+        # the token and made the Pulse plist render non-idempotent. Generate once
+        # (prefix-default -> random), persist, reuse — like authentik_secret_key.
+        wing_api_token: "{% if '_pw_' in (wing_api_token | default('')) or (wing_api_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_api_token }}{% endif %}"
         # SEC-3 (2026-05-23): high-entropy HMAC secrets. Pre-this,
         # bone_secret + wing_events_hmac_secret + nos_deploy_hmac_secret
         # all defaulted to `{{ global_password_prefix }}_pw_<svc>` (~50
