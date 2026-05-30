@@ -339,7 +339,11 @@ if [[ "$CLAUDE_EXIT" -ne 0 ]]; then
     else
         NOTIF_SEV="high"
     fi
-    NOTIF_TITLE="${AGENT_NAME^} exit=$CLAUDE_EXIT (run=$RUN_ID)"
+    # Capitalise first char portably — macOS ships bash 3.2, which lacks the
+    # ${VAR^} (bash 4+) operator and errors "bad substitution" on every
+    # non-zero-exit agent run (review verdicts fire this path).
+    _agent_title="$(printf '%s' "${AGENT_NAME:0:1}" | tr '[:lower:]' '[:upper:]')${AGENT_NAME:1}"
+    NOTIF_TITLE="$_agent_title exit=$CLAUDE_EXIT (run=$RUN_ID)"
     NOTIF_BODY=$(printf '**run_id:** %s\n**task:** %s\n**exit:** %d\n\n```\n%s\n```' \
         "$RUN_ID" "${TASK_PROMPT:0:120}" "$CLAUDE_EXIT" "$(echo "${CLAUDE_OUTPUT:-}" | tail -10)")
     _post_wing_notification "$NOTIF_SEV" "$NOTIF_TITLE" "$NOTIF_BODY"
