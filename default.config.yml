@@ -1590,6 +1590,11 @@ code_server_port: 3009                  # container 8443 (HTTPS) — Traefik ups
 hedgedoc_port: 3012
 bookstack_port: 3013
 firefly_port: 3014
+# Data dirs promoted from role defaults so the upgrade engine can resolve them
+# in play scope (recipes reference these for backup/restore steps).
+bookstack_data_dir: "{{ ansible_facts['env']['HOME'] }}/bookstack/config"
+firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"
+firefly_export_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/export"
 onlyoffice_port: 3015
 influxdb_port: 8086
 mcpo_port: 8765

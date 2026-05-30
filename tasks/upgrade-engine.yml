@@ -175,6 +175,34 @@
   tags: ['upgrade']
 
 # ------------------------------------------------------------------------------
+# Render-var context (2026-05-30)
+# ------------------------------------------------------------------------------
+# Recipe steps reference play-vars ({{ rustfs_data_dir }}, {{ postgresql_port
+# | default(5432) }}, ...) the module's pure-Python render layer can't see.
+# We harvest every {{ identifier }} the eligible recipes mention, strip the
+# engine's own runtime tokens, resolve the rest against play scope, and pass
+# the values to nos_migrate as upgrade.tmpl_vars. Genuinely-undefined names
+# resolve to a sentinel so the module keeps them undefined (recipe-side
+# `| default(...)` then works) rather than collapsing to ''.
+- name: "[Upgrade] Collect play-var names referenced by recipes"
+  ansible.builtin.set_fact:
+    _upgrade_render_var_names: >-
+      {{ _upgrade_jobs | map(attribute='recipe') | map('to_json') | join(' ')
+         | regex_findall('{{\s*([a-zA-Z_][a-zA-Z0-9_]*)')
+         | difference(['recipe', 'upgrade_id', 'installed', 'run_ts', 'service',
+                       'from_version_resolved'])
+         | unique }}
+  tags: ['upgrade']
+
+- name: "[Upgrade] Resolve referenced play-vars (undefined-safe sentinel)"
+  ansible.builtin.set_fact:
+    _upgrade_render_vars: >-
+      {{ dict(_upgrade_render_var_names | zip(
+              lookup('vars', *_upgrade_render_var_names, default='__NOS_UNDEF__'))) }}
+  when: _upgrade_render_var_names | length > 0
+  tags: ['upgrade']
+
+# ------------------------------------------------------------------------------
 # Per-job orchestration
 # ------------------------------------------------------------------------------
 #
@@ -205,15 +233,18 @@
       installed: "{{ item.installed }}"
       recipe_path: "{{ item.recipe_path }}"
       run_ts: "{{ _upgrade_run_ts }}"
+      tmpl_vars: "{{ _upgrade_render_vars | default({}) }}"
     dry_run: "{{ upgrade_dry_run | default(false) | bool }}"
   loop: "{{ _upgrade_jobs }}"
   loop_control:
     label: "{{ item.service }}:{{ item.recipe.id }}"
   register: _upgrade_results
-  failed_when:
-    - _upgrade_results is defined
-    - _upgrade_results.results is defined
-    - _upgrade_results.results | selectattr('failed', 'defined') | selectattr('failed', 'eq', true) | list | length > 0
+  # Per-recipe failures are NOT fatal mid-loop — every eligible recipe is
+  # attempted and reported. The "Result gate" task below fails the play if any
+  # recipe failed, so the exit code still reflects reality. (The prior
+  # self-referential failed_when silently evaluated False during its own loop,
+  # masking real failures — the "failed=0 lies" footgun.)
+  failed_when: false
   tags: ['upgrade']
 
 - name: "[Upgrade] Mark planned-queue upgrades as applied (W5-B3)"
@@ -255,6 +286,22 @@
       {% for r in (_upgrade_results.results | default([])) %}
       {% set job = r.item %}
         - {{ job.service }}:{{ job.recipe.id }} -> {{ 'ok' if r.success | default(false) else 'FAILED' }}
+        {% if not r.success | default(false) %}    error: {{ r.error | default(r.msg) | default('unknown') }} (phase {{ r.failed_phase | default('?') }}, step {{ r.failed_step | default('?') }}){% endif %}
         {% if r.rolled_back | default(false) %}(rolled back){% endif %}
       {% endfor %}
+  tags: ['upgrade']
+
+- name: "[Upgrade] Result gate — non-zero exit if any recipe failed"
+  vars:
+    _upgrade_failed: >-
+      {{ (_upgrade_results.results | default([]))
+         | rejectattr('success', 'eq', true)
+         | map(attribute='item') | map(attribute='service') | list }}
+  ansible.builtin.fail:
+    msg: >-
+      Upgrade engine: {{ _upgrade_failed | length }} recipe(s) FAILED
+      ({{ _upgrade_failed | join(', ') }}) — see '[Upgrade] Final summary' above.
+  when:
+    - not (upgrade_dry_run | default(false) | bool)
+    - _upgrade_failed | length > 0
   tags: ['upgrade']

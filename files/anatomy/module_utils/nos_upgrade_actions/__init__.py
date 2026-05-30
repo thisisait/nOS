@@ -23,6 +23,7 @@ from . import backup as _backup
 from . import http_ops as _http_ops
 from . import compose_ops as _compose_ops
 from . import custom_module as _custom_module
+from . import exec_shell as _exec_shell
 
 
 UPGRADE_ACTION_HANDLERS = {
@@ -33,6 +34,11 @@ UPGRADE_ACTION_HANDLERS = {
     "compose.set_image_tag":    _compose_ops.handle_set_image_tag,
     "compose.restart_service":  _compose_ops.handle_restart_service,
     "custom.module":   _custom_module.handle_custom_module,
+    # Upgrade-flavoured exec.shell — normalises `command:`/`shell:` ergonomics
+    # then delegates to the strict migrate handler. merged_handlers() applies
+    # UPGRADE_ACTION_HANDLERS last, so this wins over the strict mapping for
+    # the upgrade engine while migrations keep the strict contract.
+    "exec.shell":      _exec_shell.handle_exec_shell,
 }
 
 

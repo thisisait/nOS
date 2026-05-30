@@ -306,6 +306,24 @@ def _apply_upgrade(upgrade, ctx, dry_run):
     upgrade_id = "%s-%s-%s" % (service, recipe_id, run_ts) if run_ts else \
                  "%s-%s" % (service, recipe_id)
 
+    # 2026-05-30: recipe steps reference role/config play-vars
+    # ({{ rustfs_data_dir }}, {{ postgresql_port | default(5432) }}, ...).
+    # The controller resolves those in play scope and hands us the values in
+    # upgrade.tmpl_vars. Undefined vars arrive as a sentinel so we can drop
+    # them here — keeping them genuinely undefined in the render context lets
+    # a recipe `{{ foo | default(...) }}` fall through to its default instead
+    # of rendering an empty string from a defined-but-empty value.
+    _UNDEF = "__NOS_UNDEF__"
+    tmpl_vars = {k: v for k, v in (upgrade.get("tmpl_vars") or {}).items()
+                 if v != _UNDEF}
+
+    # Recipes reference {{ recipe.from_version_resolved }} (the installed
+    # version) but the recipe dict on disk has no such key — inject it so the
+    # render below resolves it without a StrictUndefined error.
+    if "from_version_resolved" not in recipe:
+        recipe = dict(recipe)
+        recipe["from_version_resolved"] = installed
+
     step_ctx = dict(ctx) if ctx else {}
     step_ctx.update({
         "upgrade_id": upgrade_id,
@@ -322,17 +340,40 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         "migration_allows_shell": bool(recipe.get("allow_shell")),
     })
 
-    # Minimal Jinja-like token substitution on step values. Engine is pure
-    # Python — we don't have Ansible's full template engine here. Handlers
-    # that need rich templating can read step_ctx directly.
-    _tokens = {
-        "{{ upgrade_id }}":               upgrade_id,
-        "{{ recipe.to }}":                str(recipe.get("to", "")),
-        "{{ recipe.from_version_resolved }}": installed,
-        "{{ installed }}":                installed,
-        "{{ run_ts }}":                   run_ts,
-        "{{ service }}":                  service,
-    }
+    # Recipes mix two token namespaces in one string: play-vars
+    # ({{ rustfs_data_dir }}, resolved via tmpl_vars) and engine runtime
+    # tokens ({{ upgrade_id }}, {{ recipe.to }}, {{ recipe.from_version_resolved }}).
+    # We render both in a single Jinja2 pass against a merged context. The
+    # recipe is loaded raw (tokens left literal) precisely so this layer —
+    # not Ansible's play-scope templater, which can't see engine tokens —
+    # owns resolution. StrictUndefined surfaces a genuinely-missing var as a
+    # step failure instead of silently emitting ''.
+    import os as _os
+    try:
+        import jinja2 as _jinja2
+    except ImportError:
+        _jinja2 = None
+
+    _render_ctx = dict(tmpl_vars)
+    _render_ctx.update({
+        "upgrade_id":            upgrade_id,
+        "recipe":                recipe,
+        "installed":             installed,
+        "run_ts":                run_ts,
+        "service":               service,
+        "from_version_resolved": installed,
+    })
+    if _jinja2 is not None:
+        _env = _jinja2.Environment(undefined=_jinja2.StrictUndefined,
+                                   keep_trailing_newline=True)
+        # `expanduser` is an Ansible filter, not a vanilla Jinja2 one; recipes
+        # use it on backup paths ({{ '~/.nos/backups/' + upgrade_id | expanduser }}).
+        _env.filters.setdefault("expanduser", _os.path.expanduser)
+
+    def _render_str(s):
+        if _jinja2 is None or "{{" not in s:
+            return s
+        return _env.from_string(s).render(_render_ctx)
 
     def _resolve(step):
         if not isinstance(step, dict):
@@ -340,15 +381,13 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         out = {}
         for k, v in step.items():
             if isinstance(v, str):
-                rv = v
-                for tok, val in _tokens.items():
-                    if tok in rv:
-                        rv = rv.replace(tok, val)
-                out[k] = rv
+                out[k] = _render_str(v)
             elif isinstance(v, dict):
                 out[k] = _resolve(v)
             elif isinstance(v, list):
-                out[k] = [_resolve(x) if isinstance(x, dict) else x for x in v]
+                out[k] = [_resolve(x) if isinstance(x, dict)
+                          else (_render_str(x) if isinstance(x, str) else x)
+                          for x in v]
             else:
                 out[k] = v
         return out
@@ -357,7 +396,10 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         applied = []
         for raw_step in steps or []:
             sid = raw_step.get("id", "%s-unknown" % phase_name)
-            step = _resolve(raw_step)
+            try:
+                step = _resolve(raw_step)
+            except Exception as exc:
+                return False, sid, "token render failed: %s" % exc, applied
             action_type = step.get("type")
             if not action_type:
                 return False, sid, "step missing 'type'", applied
@@ -380,6 +422,24 @@ def _apply_upgrade(upgrade, ctx, dry_run):
 
     started = _time.monotonic()
     all_applied = []
+
+    # Engine guarantee: provision the run's backup directory before any phase.
+    # Recipes write artefacts into ~/.nos/backups/<upgrade_id>/ (bucket lists,
+    # SQL dumps, diff baselines) via shell redirects, which fail if the dir
+    # doesn't exist. backup.volume only creates <label>.tar.gz files, not the
+    # per-run subdir — so the engine owns it. Skipped on dry-run.
+    if not dry_run:
+        try:
+            _backup_dir = _os.path.join(
+                _os.path.expanduser("~/.nos/backups"), upgrade_id)
+            _os.makedirs(_backup_dir, exist_ok=True)
+        except Exception as exc:
+            return {
+                "success": False, "failed_phase": "pre", "failed_step": "_provision_backup_dir",
+                "error": "could not create backup dir for %s: %s" % (upgrade_id, exc),
+                "upgrade_id": upgrade_id, "service": service,
+                "steps_applied": 0, "duration_sec": 0,
+            }
 
     if dry_run:
         return {
