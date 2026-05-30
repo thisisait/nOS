@@ -137,6 +137,38 @@ curl -fsS http://localhost:8099/api/health
 curl -fkSI https://auth.dev.local/ | head -1   # expect HTTP/2 302
 ```
 
+## v0.4 milestone — minimal cross-platform-ready scope
+
+Captured from the 2026-05-30 readiness audit (decision: v0.3-beta ships macOS;
+this is the v0.4 lane). The codebase is ~65% Linux-ready: the **infra layer**
+(apt / docker / nginx / hardening) and the **`pazny.linux.systemd_user`
+abstraction** are done, and **Bone / Pulse / Wing / backup** already branch on
+`nos_service_manager`. What's left for a clean Ubuntu 24.04 aarch64 run:
+
+**Minimal (blocks a Linux run) — mostly mechanical, reuse the proven pattern:**
+1. **Gate every `homebrew:` call** with `when: nos_pkg_manager == 'homebrew'`
+   (or rely on the `install_*: false` defaults): `tasks/php.yml`, `tasks/node.yml`,
+   `tasks/python.yml`, `tasks/dnsmasq.yml`, `tasks/nginx.yml`,
+   `roles/pazny.hermes`, `roles/pazny.openclaw`. On a default all-on run the first
+   ungated `homebrew:` module errors on Linux.
+2. **Port `tasks/heartbeat.yml`** — launchd-only today; add the systemd-user
+   branch (copy `roles/pazny.pulse/tasks/main.yml:58-100`).
+3. **Gate `tasks/autostart.yml`** osascript Docker-login-items + the
+   `~/Library/LaunchAgents/com.ollama.agent.plist` check `when: ansible_os_family == 'Darwin'`.
+4. **Gate the OpenClaw LaunchAgent rendering** `when: nos_service_manager == 'launchd'`.
+5. **Replace hardcoded `homebrew_prefix` paths** with `_platform.yml` vars
+   (`nos_nginx_etc_dir`, etc.) in `tasks/nginx.yml`, `tasks/dnsmasq.yml`.
+6. **Ubuntu 24.04 aarch64 wet-test** (Lima / Multipass / Graviton) — the gating
+   above + `install_{openclaw,hermes,php,node,...}: false`; Bone/Pulse/Wing/backup
+   + the full Docker stack should come up. This is the real acceptance gate.
+
+**Defer (post-v0.4, keep `install_*: false` on Linux):** OpenClaw (Ollama MLX is
+Apple-only → needs a CUDA/CPU backend), Hermes (Homebrew `uv`/`python@3.13` →
+apt + uv-installer), the dev tool-chains (node/python/php via apt+asdf).
+
+**Reuse, don't re-detect:** `tasks/_platform.yml` (`nos_service_manager`,
+`nos_pkg_manager`, `nos_nginx_*`), `roles/pazny.linux.{apt,docker,nginx,hardening,systemd_user}`.
+
 ## Tracking
 
 This guide will be expanded as additional roles get Linux siblings. Failing tests / missing functionality should be reported as issues with `[linux]` prefix. The matching cross-platform plumbing lives in `tasks/_platform.yml`; new platform-conditional logic should consult that file's variables rather than re-detecting `ansible_os_family` inline.
