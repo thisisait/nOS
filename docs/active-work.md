@@ -65,10 +65,22 @@ Operator-driven "bring nOS up to date" session. Two lanes landed on `dev`
 **Next (this session): finish A** — playbook completes → verify version
 persistence + PLAY RECAP → re-run `tools/run-upgrade-advisor.sh` (queue should be
 near-empty) → PG 16→17 via `--tags coexistence` → re-run the Wing agents.
-**Then before the planned roadmap lane: a big review + finish the autowiring
-epic** (memory `auto-wiring-epic-state` — P1a icon glyph, P2b/P4). Roadmap lane
-after that: **Linux port (Track C)** or **A8 conductor scheduled drift-scans**
-(open backlog — would automate this very "update everything" cadence).
+**Pre-C gate — DONE (2026-05-30):**
+* **Big review** of the session's 16 commits → caught a **CRITICAL** bug:
+  `lookup('vars', *names)` lacked `wantlist=true`, so every recipe play-var
+  collapsed to its first char and `rm -rf {{ postgresql_data_dir }}/*` rendered
+  as `rm -rf //*` (would have fired on the PG coexistence run — PG was
+  `upgrade_exclude`'d so no live damage). Fixed + verified. Plus result-gate
+  hardening, stale-test fixes. Masked/latent follow-ups noted (expanduser filter
+  precedence; `_rewrite_all_image_tags` first-image assumption).
+* **Autowiring epic** — already complete: P1a hub_card harvest + icon-glyph
+  render (lucide self-hosted, `0177022`, live-verified) is closed; P2b/P4
+  deferred-with-reasons; only #61 (tree-shake the 392KB lucide → ~5KB) is an
+  optional perf nicety. See [[auto-wiring-epic-state]].
+
+Roadmap lane now unblocked: **Linux port (Track C)** or **A8 conductor scheduled
+drift-scans** (open backlog — would automate this "update everything" cadence).
+Parked this-session backlog (observability/Wing-data) above also awaits.
 
 ### Parked backlog — observability + Wing-data flow (diagnosed 2026-05-30)
 
