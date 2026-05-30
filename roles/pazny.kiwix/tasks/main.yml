@@ -49,13 +49,16 @@
 # Nginx vhost templates staysji v playbook-level templates/nginx/
 # sites-available/ because of the auto-enable pattern — hence the absolute path via
 # {{ playbook_dir }}, not role-local templates/.
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.kiwix] Deploy nginx reverse proxy vhost"
   ansible.builtin.template:
     src: "{{ playbook_dir }}/templates/nginx/sites-available/kiwix.conf"
     dest: "{{ homebrew_prefix }}/etc/nginx/sites-available/kiwix.conf"
     mode: '0644'
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.kiwix] Enable nginx vhost (symlink)"
   ansible.builtin.file:
@@ -64,7 +67,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.kiwix] Create ZIM file download helper script"
   ansible.builtin.copy:

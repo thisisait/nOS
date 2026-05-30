@@ -60,6 +60,7 @@
   when: install_authentik | default(false)
   notify: Restart jellyfin
 
+# Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.jellyfin] Enable nginx vhost"
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/etc/nginx/sites-available/jellyfin.conf"
@@ -67,7 +68,9 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when:
+    - install_nginx | default(true)
+    - ansible_os_family == 'Darwin'
 
 - name: "[pazny.jellyfin] Display post-install note"
   ansible.builtin.debug:
