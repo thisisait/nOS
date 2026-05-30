@@ -276,6 +276,11 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         "run_ts": run_ts,
         "from_version_resolved": installed,
         "dry_run": dry_run,
+        # 2026-05-30: _apply_upgrade runs its own phase loop (not run_engine),
+        # so it must thread the recipe top-level allow_shell flag into ctx
+        # itself — otherwise exec.shell refuses every backup/dump/image-bump
+        # step (live --tags upgrade had 8/8 recipes rolling back at the gate).
+        "migration_allows_shell": bool(recipe.get("allow_shell")),
     })
 
     # Minimal Jinja-like token substitution on step values. Engine is pure
