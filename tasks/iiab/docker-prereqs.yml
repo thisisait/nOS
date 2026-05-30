@@ -154,4 +154,22 @@
   failed_when:
     - docker_sdk_result.rc != 0
     - "'already satisfied' not in docker_sdk_result.stdout"
+  when: docker_info.rc | default(1) == 0
   check_mode: false
+
+# ── 4. Definitive readiness gate for the stack layer ──────────────────────────
+# A fresh probe (post start / wait / manual-fix recovery) is the single source
+# of truth for whether the compose layer can run. GitHub macOS runners dropped
+# Docker Desktop in 2024, so docker is simply absent there; this records false
+# and shared-network + core/stack/apps-up skip gracefully instead of erroring on
+# a missing binary. On a real host with Docker up it records true → no change.
+- name: "[Docker] Final daemon readiness probe"
+  ansible.builtin.command: "{{ docker_bin }} info"
+  register: _docker_final
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Docker] Record stack-layer docker readiness"
+  ansible.builtin.set_fact:
+    nos_docker_ready: "{{ _docker_final.rc | default(1) == 0 }}"
