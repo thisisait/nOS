@@ -29,10 +29,16 @@
     PATH: "{{ homebrew_prefix }}/share/dotnet:{{ ansible_facts['env']['HOME'] }}/.dotnet/tools:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     DOTNET_ROOT: "{{ homebrew_prefix }}/share/dotnet"
   register: dotnet_tool_result
-  changed_when: "'already installed' not in dotnet_tool_result.stderr"
+  # `dotnet tool install -g` prints "is already installed." to stdout (rc 0 on
+  # recent SDKs, non-zero on older ones) when the tool is present — so a
+  # steady-state re-run is changed=0. Check both streams to stay version-safe.
+  changed_when: >
+    'already installed' not in (dotnet_tool_result.stdout | default('')) and
+    'already installed' not in (dotnet_tool_result.stderr | default(''))
   failed_when:
     - dotnet_tool_result.rc != 0
-    - "'already installed' not in dotnet_tool_result.stderr"
+    - "'already installed' not in (dotnet_tool_result.stdout | default(''))"
+    - "'already installed' not in (dotnet_tool_result.stderr | default(''))"
   when: nos_pkg_manager == 'homebrew'
 
 - name: Show installed .NET version

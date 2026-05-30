@@ -53,7 +53,13 @@
   ansible.builtin.command: >
     launchctl load -w "{{ backup_launchd_plist }}"
   register: _backup_load
-  changed_when: _backup_load.rc == 0
+  # legacy `launchctl load -w` exits 0 even when the agent is already loaded
+  # (it prints "<plist>: service already loaded" to stderr). Only treat a run
+  # that ACTUALLY loaded the agent — no "already loaded" notice — as changed,
+  # so a steady-state re-run is ok, not changed.
+  changed_when: >
+    _backup_load.rc == 0 and
+    'already loaded' not in (_backup_load.stderr | default(''))
   failed_when: >
     _backup_load.rc != 0 and
     'already loaded' not in (_backup_load.stderr | default(''))

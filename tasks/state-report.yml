@@ -35,4 +35,8 @@
         run_id: "{{ nos_run_id }}"
         at: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
         tag: "{{ ansible_run_tags | default(['all']) | join(',') }}"
+  # runtime-state refresh; not idempotency-relevant — this is a per-run recap
+  # whose run_id + timestamp are volatile by definition, so it legitimately
+  # writes new content every invocation rather than a config change.
+  changed_when: false
   tags: ['always', 'state']

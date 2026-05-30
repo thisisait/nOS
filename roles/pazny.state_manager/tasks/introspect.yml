@@ -18,6 +18,8 @@
     manifest_path: "{{ nos_state_manifest }}"
     role_vars: "{{ vars }}"
   register: _nos_introspect
+  # Read/introspection (the module stamps generated_at); not a config write.
+  changed_when: false
   tags: ['always', 'state']
 
 - name: "[state] Stash observed service state as a fact"
