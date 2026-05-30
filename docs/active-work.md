@@ -5,19 +5,76 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-23 (evening) • A19 plugin-wiring unification +
-> orchestration health-wait + single-run autowiring → **v0.2-beta**
-> milestone. Local `dev` is ahead of `origin/dev`; push + tag `v0.2-beta`
-> from `master` before opening the next roadmap lane. Broad local gates:
-> pytest green (incl. new `test_plugin_wiring_contract.py`), syntax-check
-> clean, full STRICT all-on blank `ok=1886 failed=0`.
+> Last updated: 2026-05-30 • Upgrade-engine first-real-apply (6/7 services
+> upgraded + role-default persistence) + Wing tiered RBAC via Nette identity,
+> both live-verified on the operator's host. Local `dev` is well ahead of
+> `origin/dev` (push + tag `v0.2-beta` from `master` still pending). Broad
+> local gates: pytest green (1058 anatomy + 211 upgrade/migrate), php -l clean,
+> composer lockfile in sync, syntax-check clean.
 
 ---
 
-## Current track: **Epic C (Zpevnění) DONE → next: Linux port (Track C)**
+## Current track: **Upgrade-engine first-real-apply + Wing tiered RBAC (2026-05-30)**
 
-Post-v0.2-beta hardening epic, landed 2026-05-25 on `dev` (uncommitted→committed,
-awaiting operator blank before push):
+Operator-driven "bring nOS up to date" session. Two lanes landed on `dev`
+(11 commits `daf6a2b..981f68c`), live-verified on the operator's host:
+
+* **Upgrade engine apply-path made real** — the `--tags upgrade` engine had
+  NEVER run for real (dry-run short-circuits before handlers, so the "success"
+  was a false positive). First real run exposed a fully-broken contract; now
+  fixed and exercised end-to-end:
+  - **Render layer** — recipe step strings mix play-vars (`{{ rustfs_data_dir }}`,
+    filters) and engine tokens (`{{ upgrade_id }}`); `nos_migrate.py` now renders
+    BOTH via Jinja2 against controller-passed `tmpl_vars` (undefined-safe
+    `lookup('vars')`) + engine tokens. The recipe is raw-loaded so tokens stay
+    literal for this layer to own.
+  - **exec.shell bridge** — recipes author `command:` shell-strings; the
+    upgrade action table wraps the strict handler to alias `command→cmd` +
+    auto-`shell` (gate unchanged). `compose.recreate` added for rolling
+    same-tag bumps; `set_image_tag` gained `override` (shared file), `--force-recreate
+    --pull always`, post-up image verify + converge-on-drift.
+  - **Live container names** are `<stack>-<service>-1`, base file is
+    `docker-compose.yml`; recipe target tags were corrected to real registry
+    tags; `upgrade_exclude` carve-out keeps PG out of bulk.
+  - **Persistence** — applied upgrades bump the role-default version var
+    (otherwise a plain `main.yml` re-render reverts them). **6/7 done + verified:**
+    redis 8.0, firefly 6.2.21, bluesky 0.4, bookstack v26.05-ls264, authentik
+    2026.5.2, rustfs at-target. **PG 16→17 deferred to the coexistence track**
+    (sole `rm -rf data` recipe; pin #3).
+  - **authentik recovery** — the 2026.5.2 jump + a buggy recipe rollback
+    (restore_db under new code) half-migrated the auth DB → `cert_expiry already
+    exists` boot loop, SSO down. Recovered out-of-band: clean pre-upgrade dump
+    restore into a dropped+recreated DB → forward-migrate (10 users / 49 providers
+    intact). authentik recipe hardened: local-port health probe (was the public
+    domain → Cloudflare 403), rollback → `noop` (major upgrades are forward-only).
+  - See memory `upgrade-engine-apply-path`. Engine internals spec:
+    `files/anatomy/docs/upgrade-recipes.md`.
+* **Wing tiered RBAC via Nette identity** — Wing read forward-auth groups
+  ad-hoc and a new state-mutating presenter could forget the gate. Added
+  `nette/security`; `ForwardAuthUserStorage` builds a stateless Nette identity
+  from the `X-Authentik-*` headers each request (roles = groups → `$user->isInRole()`
+  without session churn). `callerHasGroup`/`requireSuperAdmin` route through it;
+  new `TIER_GROUPS` + `callerTier` + `requireTier` + declarative `$minAccessTier`
+  enforced by default in `BasePresenter::startup()` (privileged presenters gate
+  with one property). UpgradesPresenter → tier-1. Live-verified: tier-1 → 200,
+  tier-2/3/4 → 403; render/CSRF intact.
+* **GitLab readiness** — `/-/readiness` is monitoring-whitelist-gated; the
+  host-side probe (NAT'd to the bridge gateway) 404'd for the full ~10 min
+  retry budget. Added `172.16.0.0/12` to `monitoring_whitelist`.
+
+**Next (this session): finish A** — playbook completes → verify version
+persistence + PLAY RECAP → re-run `tools/run-upgrade-advisor.sh` (queue should be
+near-empty) → PG 16→17 via `--tags coexistence` → re-run the Wing agents.
+**Then before the planned roadmap lane: a big review + finish the autowiring
+epic** (memory `auto-wiring-epic-state` — P1a icon glyph, P2b/P4). Roadmap lane
+after that: **Linux port (Track C)** or **A8 conductor scheduled drift-scans**
+(open backlog — would automate this very "update everything" cadence).
+
+---
+
+## Prior track: **Epic C (Zpevnění) DONE (2026-05-25)**
+
+Post-v0.2-beta hardening epic, landed 2026-05-25 on `dev`:
 
 * **C3 — GDPR operator surface** — closed the keystone gap: per-plugin `gdpr:`
   blocks (loader-validated but never ingested) now flow through one canonical
