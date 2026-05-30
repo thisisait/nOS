@@ -1,4 +1,22 @@
 ---
+# The net.bridge.bridge-nf-call-* sysctls (Docker/bridge iptables) require the
+# br_netfilter kernel module. On a fresh host it isn't auto-loaded, so
+# /proc/sys/net/bridge/* doesn't exist and ansible.posix.sysctl's reload (which
+# re-applies the whole hardening file) aborts with "cannot stat" — failing every
+# item in the loop. Load + persist the module first so the bridge keys resolve.
+- name: "[hardening.sysctl] Load br_netfilter (bridge-nf sysctls / Docker bridge)"
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+  become: true
+
+- name: "[hardening.sysctl] Persist br_netfilter across reboots"
+  ansible.builtin.copy:
+    content: "br_netfilter\n"
+    dest: /etc/modules-load.d/nos-br_netfilter.conf
+    mode: '0644'
+  become: true
+
 - name: "[hardening.sysctl] Apply kernel runtime parameters"
   ansible.posix.sysctl:
     name: "{{ item.key }}"
