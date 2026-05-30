@@ -109,15 +109,23 @@
 # Cert files live under {{ tls_cert_dir }} (written by tasks/tls-certs.yml).
 # Host nginx vhosts read them via ssl_certificate {{ ssl_cert_path }};
 
+# brew-svc.sh wraps `launchctl load`, swallowing stderr → it emits no
+# "already started" signal. Probe launchd state first so the start only
+# reports changed when nginx was not already loaded (re-run = changed=0).
+- name: Check whether nginx is already loaded in launchd
+  ansible.builtin.command: "launchctl list homebrew.mxcl.nginx"
+  register: nginx_loaded
+  changed_when: false
+  failed_when: false
+  # brew-svc.sh is a launchctl wrapper — macOS/launchd-only.
+  when: nos_service_manager == 'launchd'
+
 - name: Start and enable nginx via brew services
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start nginx"
   register: nginx_svc
-  changed_when: >
-    'already started' not in (nginx_svc.stdout | default('')) and
-    'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
+  changed_when: nginx_loaded.rc | default(1) != 0
   failed_when: >
     nginx_svc.rc != 0 and
-    'already started' not in (nginx_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (nginx_svc.stderr | default(''))
   # brew-svc.sh is a launchctl wrapper — macOS/launchd-only.
   when: nos_service_manager == 'launchd'

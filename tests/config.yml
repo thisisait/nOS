@@ -8,6 +8,9 @@
 install_homebrew_packages: true
 install_cask_apps: true
 install_mas_apps: false
+# Pinned-package install only; never pull arbitrary upstream upgrades in CI
+# (non-deterministic `brew upgrade` breaks the idempotence re-run check).
+homebrew_upgrade_all_packages: false
 
 install_nginx: true
 install_php: true

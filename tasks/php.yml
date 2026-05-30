@@ -20,13 +20,20 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      pecl list | grep -q "^{{ item }}\b" || pecl install {{ item }}
+      if pecl list | grep -q "^{{ item }}\b"; then
+        echo "NOS_PECL_PRESENT"
+      else
+        pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
+      fi
     executable: /bin/bash
   loop:
     - redis
     - imagick
+  register: pecl_common
   failed_when: false   # extension availability varies by PHP version
-  changed_when: true
+  # Already-present extensions short-circuit (grep -q hit) → no install runs,
+  # so a steady-state re-run is changed=0; only an actual install marks changed.
+  changed_when: "'NOS_PECL_INSTALLED' in (pecl_common.stdout | default(''))"
   when: nos_pkg_manager == 'homebrew'
 
 - name: Install additional PHP extensions from config via PECL
@@ -34,11 +41,17 @@
     cmd: |
       set -o pipefail
       export PATH="{{ homebrew_prefix }}/opt/php@{{ php_version }}/bin:$PATH"
-      pecl list | grep -q "^{{ item }}\b" || pecl install {{ item }}
+      if pecl list | grep -q "^{{ item }}\b"; then
+        echo "NOS_PECL_PRESENT"
+      else
+        pecl install {{ item }} && echo "NOS_PECL_INSTALLED"
+      fi
     executable: /bin/bash
   loop: "{{ php_extensions | default([]) }}"
+  register: pecl_extra
   failed_when: false
-  changed_when: true
+  # Same already-present short-circuit as above — re-run is changed=0.
+  changed_when: "'NOS_PECL_INSTALLED' in (pecl_extra.stdout | default(''))"
   when: nos_pkg_manager == 'homebrew'
 
 - name: Install Composer
@@ -146,14 +159,21 @@
   notify: Restart php-fpm
   when: nos_pkg_manager == 'homebrew'
 
+# brew-svc.sh wraps `launchctl load`, swallowing stderr → it emits no
+# "already started" signal. Probe launchd state first so the start only
+# reports changed when the service was not already loaded (re-run = changed=0).
+- name: Check whether PHP-FPM is already loaded in launchd
+  ansible.builtin.command: "launchctl list homebrew.mxcl.php@{{ php_version }}"
+  register: phpfpm_loaded
+  changed_when: false
+  failed_when: false
+  when: nos_pkg_manager == 'homebrew'
+
 - name: Start PHP-FPM service
   ansible.builtin.command: "{{ playbook_dir }}/files/brew-svc.sh start php@{{ php_version }}"
   register: phpfpm_svc
-  changed_when: >
-    'already started' not in (phpfpm_svc.stdout | default('')) and
-    'Bootstrap failed: 5' not in (phpfpm_svc.stderr | default(''))
+  changed_when: phpfpm_loaded.rc | default(1) != 0
   failed_when: >
     phpfpm_svc.rc != 0 and
-    'already started' not in (phpfpm_svc.stdout | default('')) and
     'Bootstrap failed: 5' not in (phpfpm_svc.stderr | default(''))
   when: nos_pkg_manager == 'homebrew'

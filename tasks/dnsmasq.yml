@@ -108,21 +108,11 @@
     - install_bluesky_pds | default(false)
     - not ansible_check_mode
 
-# Force restart (not just start) — config blockinfile notifies handler but
-# handler runs at end of playbook. If playbook is interrupted, running
-# dnsmasq keeps stale config. Forcing restart here is idempotent and cheap.
-- name: Restart dnsmasq to apply config (requires root for port 53)  # noqa: command-instead-of-shell
-  ansible.builtin.shell: >-
-    {{ playbook_dir }}/files/brew-svc.sh restart dnsmasq
-  environment:
-    SUDO_ASKPASS: "{{ lookup('env', 'HOME') }}/.ansible_askpass"
-  register: dnsmasq_svc
-  changed_when: true
-  failed_when:
-    - dnsmasq_svc.rc != 0
-    - "'already started' not in (dnsmasq_svc.stdout | default(''))"
-  # brew-svc.sh is a launchctl wrapper — macOS/launchd-only.
-  when: nos_service_manager == 'launchd'
+# dnsmasq restart is now notify-driven: the "Deploy dnsmasq configuration"
+# task above carries `notify: Restart dnsmasq`, so the play-level handler
+# only fires when the config block actually changed. A steady-state re-run
+# leaves the config untouched → no restart → changed=0. (The old unconditional
+# `restart dnsmasq` task here forced changed=true every run.)
 
 - name: "Verify dnsmasq resolves {{ dnsmasq_dev_domain | default('dev.local') }} correctly"
   ansible.builtin.command: "dig +short grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain | default('dev.local') }} @127.0.0.1"

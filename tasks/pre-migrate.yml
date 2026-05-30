@@ -28,6 +28,10 @@
     manifest_path: "{{ playbook_dir }}/state/manifest.yml"
     role_vars: "{{ vars }}"
   register: _nos_introspect
+  # runtime-state refresh; not idempotency-relevant — introspection is a read
+  # that records the observed service versions + a fresh generated_at every run
+  # (the module hardcodes changed=True for the stamp), not a config write.
+  changed_when: false
   tags: ['migrate']
 
 - name: "[pre-migrate] List pending migrations"
@@ -100,4 +104,6 @@
     state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     merge: true
     state: {}
+  # Consistency merge-touch; the only delta is the module's generated_at stamp.
+  changed_when: false
   tags: ['migrate']

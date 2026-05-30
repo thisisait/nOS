@@ -26,4 +26,8 @@
     merge: true
     state: "{{ _nos_identity_payload }}"
   register: _nos_write
+  # runtime-state refresh; not idempotency-relevant — every write stamps a
+  # fresh generated_at into ~/.nos/state.yml, so the module always reports
+  # changed even when the identity payload is byte-identical.
+  changed_when: false
   tags: ['always', 'state']

@@ -287,6 +287,10 @@
     merge: true
     state: {}
   when: not (upgrade_dry_run | default(false) | bool)
+  # runtime-state refresh; not idempotency-relevant — a merge-touch consistency
+  # write whose only delta is the freshly stamped generated_at (the actual
+  # upgrades_applied[] rows are written by nos_migrate apply_upgrade above).
+  changed_when: false
   tags: ['upgrade']
 
 - name: "[Upgrade] Final summary"

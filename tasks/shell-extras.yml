@@ -27,10 +27,15 @@
 # ── Zsh configuration - starship init + aliases ──────────────────────────────
 
 - name: Ensure ~/.zshrc exists
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
-    state: touch
+  # `state: touch` bumps mtime on every run (never idempotent). Use copy with
+  # force:false so an existing ~/.zshrc is left byte-for-byte untouched (ok),
+  # and a fresh run still creates an empty 0644 file before the blockinfile
+  # tasks append to it.
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    content: ""
     mode: '0644'
+    force: false
 
 - name: Add starship init to ~/.zshrc
   ansible.builtin.blockinfile:
