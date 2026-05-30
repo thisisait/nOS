@@ -25,11 +25,21 @@
   check_mode: false
   when: ansible_os_family == 'Darwin'
 
+- name: "[Auto-start] Check Docker Desktop.app is installed"
+  ansible.builtin.stat:
+    path: /Applications/Docker.app
+  register: _docker_app_stat
+  when: ansible_os_family == 'Darwin'
+
 - name: "[Auto-start] Add Docker Desktop to login items"
   ansible.builtin.shell: |
     osascript -e 'tell application "System Events" to make new login item at end with properties {path:"/Applications/Docker.app", hidden:true}'
+  # Skip where Docker.app isn't installed (CI runners / Docker-less Macs): the
+  # osascript would add a login item the check never finds, so the task re-ran
+  # (changed) every pass.
   when:
     - ansible_os_family == 'Darwin'
+    - _docker_app_stat.stat.exists | default(false)
     - _docker_login_check.rc | default(1) != 0
   register: _docker_login_add
   changed_when: _docker_login_add.rc == 0

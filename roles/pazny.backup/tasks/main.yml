@@ -49,17 +49,24 @@
   notify: Reload backup launchd
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
+# Probe launchd state first: `launchctl load -w` prints "already loaded" to
+# stderr with version-dependent wording, so a stderr-substring changed_when was
+# unreliable (re-run still reported changed). rc of `launchctl list <label>` is
+# the robust signal (0 = already loaded).
+- name: "[backup] Check whether backup agent is already loaded"
+  ansible.builtin.command: "launchctl list {{ backup_launchd_label }}"
+  register: _backup_loaded
+  changed_when: false
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
 - name: "[backup] Load launchd agent (idempotent)"
   ansible.builtin.command: >
     launchctl load -w "{{ backup_launchd_plist }}"
   register: _backup_load
-  # legacy `launchctl load -w` exits 0 even when the agent is already loaded
-  # (it prints "<plist>: service already loaded" to stderr). Only treat a run
-  # that ACTUALLY loaded the agent — no "already loaded" notice — as changed,
-  # so a steady-state re-run is ok, not changed.
-  changed_when: >
-    _backup_load.rc == 0 and
-    'already loaded' not in (_backup_load.stderr | default(''))
+  # Changed only when the agent was NOT already loaded (probe rc != 0), so a
+  # steady-state re-run is ok.
+  changed_when: _backup_loaded.rc | default(1) != 0
   failed_when: >
     _backup_load.rc != 0 and
     'already loaded' not in (_backup_load.stderr | default(''))
