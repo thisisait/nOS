@@ -33,18 +33,45 @@
 - name: "[mkcert] Install dev CA + generate local-dev wildcard cert"
   when: tenant_domain_is_local | default(true) | bool
   block:
-    - name: "[mkcert] Install mkcert via Homebrew"
+    # mkcert's per-OS default CAROOT differs:
+    #   macOS → ~/Library/Application Support/mkcert
+    #   Linux → ~/.local/share/mkcert
+    # We pin CAROOT explicitly to the *operator's* HOME default rather than
+    # dropping the override, because `mkcert -install` below runs under
+    # `become: true` (sudo) — without an explicit CAROOT it would write to
+    # root's HOME, but tasks/stacks/core-up.yml later runs `mkcert -CAROOT`
+    # *as the operator* (no become) to find rootCA.pem for the shared-certs
+    # copy. Both contexts must agree on one directory, so we keep it explicit
+    # and equal to the operator's per-OS default.
+    - name: "[mkcert] Resolve platform-aware CAROOT (operator HOME default)"
+      ansible.builtin.set_fact:
+        _mkcert_caroot_dir: >-
+          {{ ansible_facts['env']['HOME'] ~ '/Library/Application Support/mkcert'
+             if ansible_os_family == 'Darwin'
+             else ansible_facts['env']['HOME'] ~ '/.local/share/mkcert' }}
+
+    - name: "[mkcert] Install mkcert via Homebrew (macOS)"
       community.general.homebrew:
         name:
           - mkcert
           - nss
         state: present
+      when: nos_pkg_manager == 'homebrew'
+
+    - name: "[mkcert] Install mkcert + NSS tools via apt (Linux)"
+      ansible.builtin.apt:
+        name:
+          - mkcert
+          - libnss3-tools
+        state: present
+      become: true
+      when: nos_pkg_manager == 'apt'
 
     - name: "[mkcert] Install CA into system trust store"
       ansible.builtin.command: mkcert -install
       become: true
       environment:
-        CAROOT: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+        CAROOT: "{{ _mkcert_caroot_dir }}"
       changed_when: false
 
     # `mkcert -install` ran under sudo against a CAROOT inside the operator's
@@ -55,10 +82,12 @@
     # the user can read the key for cert signing.
     - name: "[mkcert] Reclaim CAROOT ownership for the operator"
       ansible.builtin.file:
-        path: "{{ ansible_facts['env']['HOME'] }}/Library/Application Support/mkcert"
+        path: "{{ _mkcert_caroot_dir }}"
         state: directory
         owner: "{{ ansible_facts['env']['USER'] }}"
-        group: staff
+        # macOS users belong to the `staff` group; on Linux the operator's
+        # primary group conventionally matches the username (Ubuntu/Debian).
+        group: "{{ 'staff' if ansible_os_family == 'Darwin' else ansible_facts['env']['USER'] }}"
         recurse: true
       become: true
 

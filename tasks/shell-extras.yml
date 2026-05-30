@@ -7,6 +7,7 @@
   community.general.homebrew:
     name: starship
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 # ── Starship configuration ────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@
       [ -f {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/completion.zsh
       [ -f {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh ] && source {{ homebrew_prefix }}/opt/fzf/shell/key-bindings.zsh
     create: true
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Add modern CLI aliases to ~/.zshrc
   ansible.builtin.blockinfile:

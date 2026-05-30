@@ -7,6 +7,7 @@
   community.general.homebrew:
     name: go
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Ensure Go workspace directories exist
   ansible.builtin.file:
@@ -28,6 +29,7 @@
       export PATH="$GOPATH/bin:$GOROOT/bin:$PATH"
     create: true
     mode: '0644'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install Go development tools
   ansible.builtin.command: >
@@ -39,3 +41,4 @@
     PATH: "{{ ansible_facts['env']['HOME'] }}/go/bin:{{ homebrew_prefix }}/opt/go/libexec/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     HOME: "{{ ansible_facts['env']['HOME'] }}"
   changed_when: false
+  when: nos_pkg_manager == 'homebrew'

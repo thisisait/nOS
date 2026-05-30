@@ -7,6 +7,7 @@
   community.general.homebrew_cask:
     name: "{{ dotnet_sdk_cask | default('dotnet-sdk') }}"
     state: present
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Add .NET to shell profile (.zshrc)
   ansible.builtin.blockinfile:
@@ -19,6 +20,7 @@
       export DOTNET_CLI_TELEMETRY_OPTOUT=1
     create: true
     mode: '0644'
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Install global .NET tools
   ansible.builtin.command: dotnet tool install -g {{ item.name }}
@@ -31,6 +33,7 @@
   failed_when:
     - dotnet_tool_result.rc != 0
     - "'already installed' not in dotnet_tool_result.stderr"
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Show installed .NET version
   ansible.builtin.command: dotnet --version
@@ -39,7 +42,9 @@
   environment:
     PATH: "{{ homebrew_prefix }}/share/dotnet:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     DOTNET_ROOT: "{{ homebrew_prefix }}/share/dotnet"
+  when: nos_pkg_manager == 'homebrew'
 
 - name: Print .NET version
   ansible.builtin.debug:
     msg: ".NET SDK installed: {{ dotnet_version.stdout }}"
+  when: nos_pkg_manager == 'homebrew'
