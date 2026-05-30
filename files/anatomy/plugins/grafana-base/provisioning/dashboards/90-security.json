@@ -140,17 +140,20 @@
     {
       "type": "bargauge",
       "id": 9,
-      "title": "Open findings by severity — placeholder (Wave 1+)",
-      "description": "SELECT severity, count(*) FROM security_findings WHERE status='open' GROUP BY severity — via Wing SQLite exporter.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Open remediation items by severity",
+      "description": "Pending CVE / remediation backlog bucketed by severity from Wing's remediation_items table (status='pending').",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36},
       "targets": [
-        {"refId": "A", "expr": "wing_findings_open{severity=\"critical\"}", "legendFormat": "critical"},
-        {"refId": "B", "expr": "wing_findings_open{severity=\"high\"}", "legendFormat": "high"},
-        {"refId": "C", "expr": "wing_findings_open{severity=\"medium\"}", "legendFormat": "medium"},
-        {"refId": "D", "expr": "wing_findings_open{severity=\"low\"}", "legendFormat": "low"}
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT severity, COUNT(*) AS count FROM remediation_items WHERE status = 'pending' GROUP BY severity ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 ELSE 5 END",
+          "queryText": "SELECT severity, COUNT(*) AS count FROM remediation_items WHERE status = 'pending' GROUP BY severity ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 ELSE 5 END",
+          "timeColumns": []
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}, "noValue": "Wave 1+"}, "overrides": []},
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}}, "overrides": []},
       "options": {"orientation": "horizontal", "displayMode": "gradient", "reduceOptions": {"calcs": ["lastNotNull"]}, "showUnfilled": true}
     },
     {

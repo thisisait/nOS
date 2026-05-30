@@ -33,41 +33,77 @@
     {
       "type": "stat",
       "id": 2,
-      "title": "Actions last 1h (placeholder — Wave 2)",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Agent sessions last 1h",
+      "description": "Count of AgentKit sessions started in the last hour (agent_sessions table, Wing SQLite).",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 4, "w": 6, "x": 0, "y": 3},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS actions FROM agent_sessions WHERE started_at >= datetime('now', '-1 hour')",
+          "queryText": "SELECT COUNT(*) AS actions FROM agent_sessions WHERE started_at >= datetime('now', '-1 hour')",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
     },
     {
       "type": "stat",
       "id": 3,
-      "title": "Success rate (placeholder — Wave 2)",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Success rate",
+      "description": "Percentage of agent_sessions that completed idle (vs terminated). All-time.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 4, "w": 6, "x": 6, "y": 3},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT ROUND(100.0 * SUM(CASE WHEN status = 'idle' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate FROM agent_sessions",
+          "queryText": "SELECT ROUND(100.0 * SUM(CASE WHEN status = 'idle' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate FROM agent_sessions",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 50}, {"color": "green", "value": 80}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
     },
     {
       "type": "stat",
       "id": 4,
-      "title": "Avg latency (placeholder — Wave 2)",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Avg session duration",
+      "description": "Average agent session wallclock (ended_at - started_at) in milliseconds, across completed sessions.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 4, "w": 6, "x": 12, "y": 3},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "ms", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT ROUND(AVG((julianday(ended_at) - julianday(started_at)) * 86400000.0), 0) AS avg_ms FROM agent_sessions WHERE ended_at IS NOT NULL",
+          "queryText": "SELECT ROUND(AVG((julianday(ended_at) - julianday(started_at)) * 86400000.0), 0) AS avg_ms FROM agent_sessions WHERE ended_at IS NOT NULL",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "ms", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
     },
     {
       "type": "stat",
       "id": 5,
-      "title": "Tokens used today (placeholder — Wave 2)",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Tokens used (24h)",
+      "description": "Sum of tokens_input + tokens_output across agent_sessions started in the last 24h.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 4, "w": 6, "x": 18, "y": 3},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COALESCE(SUM(COALESCE(tokens_input, 0) + COALESCE(tokens_output, 0)), 0) AS tokens FROM agent_sessions WHERE started_at >= datetime('now', '-1 day')",
+          "queryText": "SELECT COALESCE(SUM(COALESCE(tokens_input, 0) + COALESCE(tokens_output, 0)), 0) AS tokens FROM agent_sessions WHERE started_at >= datetime('now', '-1 day')",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}}, "overrides": []},
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
     },
     {
@@ -165,12 +201,20 @@
     {
       "type": "bargauge",
       "id": 13,
-      "title": "LLM model distribution — placeholder (Wave 2)",
-      "description": "Wave 2 InfluxDB poller will bucket usage by model (MLX vs Ollama GGUF).",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Agent sessions by model URI",
+      "description": "Session count bucketed by model_uri (e.g. claude-cli, anthropic-*, openclaw-*) from agent_sessions.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
       "gridPos": {"h": 6, "w": 24, "x": 0, "y": 27},
-      "targets": [{"refId": "A", "expr": "vector(0)", "legendFormat": "placeholder"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "noValue": "Wave 2"}, "overrides": []},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT model_uri AS model, COUNT(*) AS sessions FROM agent_sessions GROUP BY model_uri ORDER BY sessions DESC",
+          "queryText": "SELECT model_uri AS model, COUNT(*) AS sessions FROM agent_sessions GROUP BY model_uri ORDER BY sessions DESC",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
       "options": {"orientation": "horizontal", "displayMode": "gradient", "reduceOptions": {"calcs": ["lastNotNull"]}, "showUnfilled": true}
     },
     {
