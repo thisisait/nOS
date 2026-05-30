@@ -14,10 +14,10 @@
 name: redis-base
 version: 0.1.0
 description: |
-  Wiring layer for Redis 7.4 in the infra compose stack: shared in-memory
+  Wiring layer for Redis in the infra compose stack: shared in-memory
   cache + pubsub substrate for Authentik (server + worker), n8n, and any
-  other Redis-backed consumer. Pinned to 7.4.6-alpine for CVE-2025-49844
-  (RediShell RCE).
+  other Redis-backed consumer. On 8.0 since 2026-05-30 (redis-7-to-8 upgrade;
+  supersedes the 7.4.6-alpine CVE-2025-49844 / RediShell RCE pin).
 upstream: https://redis.io/
 license: BSD-3-Clause
 

@@ -221,7 +221,8 @@ def main():
         if action == "apply_upgrade":
             upgrade = module.params.get("upgrade")
             if not upgrade:
-                module.fail_json(msg="apply_upgrade requires 'upgrade' dict "
+                module.fail_json(success=False,
+                                 msg="apply_upgrade requires 'upgrade' dict "
                                      "(keys: service, recipe, installed, run_ts)")
             result = _apply_upgrade(upgrade, ctx=ctx, dry_run=ctx["dry_run"])
             if not result.get("success"):
@@ -232,7 +233,10 @@ def main():
         module.fail_json(msg="unknown action %r" % action)
 
     except Exception as exc:
-        module.fail_json(msg="nos_migrate: %s" % exc)
+        # Always carry success=False so the upgrade-engine Result gate's
+        # rejectattr('success', ...) never trips on a missing key when a
+        # module-level crash (vs a recipe-step failure) produces the item.
+        module.fail_json(success=False, msg="nos_migrate: %s" % exc)
 
 
 def _apply_upgrade(upgrade, ctx, dry_run):

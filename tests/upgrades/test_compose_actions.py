@@ -24,7 +24,7 @@ def _write_override(base_ctx, stack, svc, image, tag):
         fh.write(OVERRIDE_TEMPLATE.format(svc=svc, image=image, tag=tag))
     # Base compose must exist for the up --wait command path, but tests
     # don't actually invoke docker because wait=False.
-    base = os.path.join(base_ctx["stacks_dir"], stack, "compose.yml")
+    base = os.path.join(base_ctx["stacks_dir"], stack, "docker-compose.yml")
     if not os.path.exists(base):
         with open(base, "w") as fh:
             fh.write("services: {}\n")
@@ -90,7 +90,7 @@ def test_restart_service_invokes_docker_compose(base_ctx, cmd_recorder):
     # Ensure compose.yml exists so the command list includes -f for it.
     stack_dir = os.path.join(base_ctx["stacks_dir"], "infra")
     os.makedirs(stack_dir, exist_ok=True)
-    with open(os.path.join(stack_dir, "compose.yml"), "w") as fh:
+    with open(os.path.join(stack_dir, "docker-compose.yml"), "w") as fh:
         fh.write("services: {}\n")
     res = co.handle_restart_service({
         "stack": "infra", "service": "mariadb", "action": "restart",
@@ -100,12 +100,16 @@ def test_restart_service_invokes_docker_compose(base_ctx, cmd_recorder):
     called = cmd_recorder.calls[0]["cmd"]
     assert called[0] == "docker"
     assert "restart" in called and "mariadb" in called
+    # Base file is now docker-compose.yml (was compose.yml) — assert its -f is
+    # actually included so the base-file resolution path stays covered.
+    assert any("docker-compose.yml" in str(c) for c in called), \
+        "base -f docker-compose.yml missing from command"
 
 
 def test_restart_service_up_wait(base_ctx, cmd_recorder):
     stack_dir = os.path.join(base_ctx["stacks_dir"], "infra")
     os.makedirs(stack_dir, exist_ok=True)
-    with open(os.path.join(stack_dir, "compose.yml"), "w") as fh:
+    with open(os.path.join(stack_dir, "docker-compose.yml"), "w") as fh:
         fh.write("services: {}\n")
     co.handle_restart_service({
         "stack": "infra", "service": "postgresql", "action": "up", "wait": True,

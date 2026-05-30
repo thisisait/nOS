@@ -99,7 +99,7 @@ def _is_tier_gated(src: str) -> bool:
         or "requireTier(" in body
     ):
         return True
-    return bool(re.search(r"\$minAccessTier\s*=\s*[123]\s*;", src))
+    return bool(re.search(r"\$minAccessTier\s*=\s*[1-4]\s*;", src))
 
 
 # ── Base-class contract ─────────────────────────────────────────────
