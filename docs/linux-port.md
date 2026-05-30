@@ -1,15 +1,14 @@
 # Linux port — operator guide
 
-**Status:** infra layer (apt / docker / nginx / hardening) code-complete on master 2026-04-26; **host-daemon layer in progress (2026-05-25)**. Not yet wet-tested on a clean Ubuntu 24.04 LTS host. This guide is the operator runbook for that test, plus a record of which roles already work cross-platform and which still need Darwin gates.
+**Status:** **GREEN (v0.4-beta, 2026-05-31).** The full playbook provisions a clean Ubuntu 24.04 LTS host end-to-end; the standing acceptance gate is the `Integration (ubuntu-24.04)` CI job (`.github/workflows/ci.yml`, runs the full `ansible-playbook main.yml` on a GitHub Linux runner). This guide is the operator runbook plus a record of which roles work cross-platform. **Deferred to post-v0.4:** OpenClaw (Ollama/CUDA), Hermes, host-nginx per-service vhost templates (Traefik covers Linux routing), fleet provisioning.
 
-> **⚠️ Regression note (2026-05-25):** the original Track C predates the anatomy
-> host-revert. **A3.5 / A3a / A4 moved Bone, Wing, Pulse and OpenClaw from Docker
-> containers back to host `launchd` plists** — re-coupling the core daemons to
-> macOS. The cross-platform fix is a service-manager abstraction
-> (`pazny.linux.systemd_user::ensure_unit`, branched on `nos_service_manager`).
-> **Bone is the first daemon ported (pilot, 2026-05-25);** Wing / Pulse / OpenClaw
-> and the preflight launchctl loop (`main.yml` "[Preflight] Ensure anatomy daemons
-> loaded") still need the same branch. See "Host daemons" below.
+> **Daemon layer ported (2026-05-31):** Bone, Pulse, the backup orchestrator and
+> the heartbeat render `systemd --user` units via
+> `pazny.linux.systemd_user::ensure_unit` (branched on `nos_service_manager`);
+> Wing runs the FrankenPHP single binary from `~/.local/bin`. A Persistent= timer
+> start is tolerated (its bound oneshot may fail at provisioning time with no
+> backup target). OpenClaw + Hermes stay Darwin-gated (`ansible_os_family ==
+> 'Darwin'`) until their Linux runtimes land.
 
 ---
 

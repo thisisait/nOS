@@ -5,18 +5,22 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-30 (evening) • **v0.3-beta release prep**. On top of the
-> upgrade-engine + RBAC lanes (below), this session wired the observability
-> **veins** end-to-end (Grafana SQLite dashboards now populate — `grafana-wing`
-> datasource), serialized claude-CLI agents (`pulse-run-agent.sh` mutex), closed
-> the upgrade-advisor stale-recipe gaps (gitlab regex + 5 forward tracks), wrote
-> the fleet review (`docs/fleet-review-2026q2.md`), and verified a full all-on
-> run (`ok=1201 failed=0`, 33/33 smoke; CF502 resolved operator-side). Gates:
-> pytest green (anatomy + `tests/upgrades` 165), ansible-lint 0, lockfile in
-> sync, syntax-check clean. **NEXT: cut `v0.3-beta`** (`dev → master` PR + tag,
-> operator-gated) + the cross-platform/Linux v0.4 milestone (see
-> [`docs/linux-port.md`](linux-port.md): gate homebrew, port heartbeat, Ubuntu
-> wet-test).
+> Last updated: 2026-05-31 • **v0.4-beta cross-platform (Linux) — release prep**.
+> v0.3-beta is tagged. This session took the playbook cross-platform: the full
+> `ansible-playbook main.yml` now provisions Ubuntu 24.04 LTS end-to-end, pinned
+> by a standing `Integration (ubuntu-24.04)` CI wet-test (**green**). ~19 gap
+> fixes on `feat/linux-port`, all macOS-byte-identical (Darwin / pkg-manager /
+> service-manager gates): platform seam, systemd --user daemons (Bone/Pulse/
+> backup/heartbeat), FrankenPHP Wing on Linux, mkcert apt, portable nginx.conf,
+> `docker_bin` remap + `nos_docker_ready` compose-layer gate, host-nginx vhosts
+> Darwin-gated (Traefik routes Linux). Also closed the long-standing macOS
+> `integration` **idempotence** red (re-run `changed=0`): `wing_api_token`
+> persisted, install/PECL/service-start `changed_when` fixed, dnsmasq notify-
+> driven. Gates: ubuntu Integration green, macOS Integration green, syntax-check
+> clean. **NEXT: cut `v0.4-beta`** (`feat/linux-port → dev → master` PR + tag,
+> operator-gated, admin bypass) — clears the 3 dependabot symfony alerts too.
+> **Deferred post-v0.4:** OpenClaw (Ollama/CUDA) + Hermes Linux runtimes, host-
+> nginx vhost templates on Linux, fleet provisioning (p2p/server-client/mesh).
 
 ---
 
