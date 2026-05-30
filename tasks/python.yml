@@ -76,3 +76,27 @@
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
   changed_when: false
   when: nos_pkg_manager == 'homebrew'
+
+# ── Linux: system python3 + venv + pip (apt/dnf) ─────────────────────────────
+# macOS uses pyenv (above). On Linux the host Python daemons (Bone, Pulse) build
+# their venv from the system interpreter (/usr/bin/python3) — Debian splits the
+# venv + pip modules into separate packages, so ensure them before the daemons
+# render their venvs.
+- name: "[python] Ensure python3 + venv + pip (Linux apt)"
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-venv
+      - python3-pip
+    state: present
+  become: true
+  when: nos_pkg_manager == 'apt'
+
+- name: "[python] Ensure python3 + pip (Linux dnf)"
+  ansible.builtin.dnf:
+    name:
+      - python3
+      - python3-pip
+    state: present
+  become: true
+  when: nos_pkg_manager == 'dnf'

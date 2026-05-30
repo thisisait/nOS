@@ -42,6 +42,6 @@ pulse_wing_api_base: "http://127.0.0.1:{{ wing_port | default(9000) }}"
 # OIDC client) lands in A10 (audit-trail phase).
 pulse_api_token: "{{ wing_api_token }}"
 
-# Python version. Reuses the playbook's pyenv-managed Python (ansible_facts
-# resolves to its real path on the host).
-pulse_python: "{{ ansible_facts['env']['HOME'] }}/.pyenv/shims/python3"
+# Python interpreter. macOS: the operator's pyenv shim. Linux: the system
+# interpreter (tasks/python.yml apt-installs python3-venv for it).
+pulse_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else '/usr/bin/python3' }}"
