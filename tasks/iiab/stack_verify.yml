@@ -47,6 +47,12 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ _port }}{{ item.path | default('/') }}"
     method: GET
+    # none = a liveness probe must NOT crawl the redirect chain: GitLab Omnibus
+    # 302-redirects http->https on the SAME port, so following lands on TLS-over-
+    # HTTP -> SSL_WRONG_VERSION_NUMBER -> 36-retry burn. The 3xx itself proves the
+    # service answers; every redirecting probe already accepts 3xx (_default_status
+    # or explicit), and [200]-only entries are health endpoints that never redirect.
+    follow_redirects: none
     timeout: 5
     status_code: "{{ item.status | default(_probe_catalog._default_status) }}"
     validate_certs: false
