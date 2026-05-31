@@ -31,11 +31,39 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/admin/check"
     method: GET
-    status_code: [204, 404]
+    status_code: [204, 404, 303]   # 303 = AdminInitTimeout (no admin + window closed)
     timeout: 5
   register: _portainer_admin_check
   failed_when: false
   when: _portainer_ready.status | default(0) == 200
+
+# ── Admin-init window guard (cold-blank gotcha) ─────────────────────────────
+# Portainer's admin-init API window is ~5 min from CONTAINER START. On a cold
+# blank the run can reach this task long after that (blank-confirm pause + slow
+# sequential infra health-wait) -> /api/users/admin/init returns 303
+# `AdminInitTimeout`, the admin is never created, and failed_when:false hides it
+# (failed=0 but no admin). A container restart resets the window. Do it ONLY
+# when no admin exists yet (check != 204), so re-runs (admin present -> 204) skip.
+- name: "[pazny.portainer Post] Restart to reset admin-init window (no admin yet)"
+  ansible.builtin.command: "{{ docker_bin | default('docker') }} restart infra-portainer-1"
+  register: _portainer_restart
+  when:
+    - _portainer_ready.status | default(0) == 200
+    - _portainer_admin_check.status | default(0) != 204
+  changed_when: true
+
+- name: "[pazny.portainer Post] Re-wait for API after window-reset restart"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
+    method: GET
+    timeout: 5
+    status_code: [200]
+  register: _portainer_ready2
+  until: _portainer_ready2.status | default(0) == 200
+  retries: 12
+  delay: 5
+  failed_when: false
+  when: _portainer_restart is changed
 
 - name: "[pazny.portainer Post] Create admin user via API"
   ansible.builtin.uri:
@@ -50,7 +78,7 @@
   register: _portainer_admin_create
   when:
     - _portainer_ready.status | default(0) == 200
-    - _portainer_admin_check.status | default(0) == 404
+    - _portainer_admin_check.status | default(0) != 204   # no admin (404, or 303 pre-restart -> window reset above)
   changed_when: _portainer_admin_create.status | default(0) == 200
   failed_when: false
   no_log: true
