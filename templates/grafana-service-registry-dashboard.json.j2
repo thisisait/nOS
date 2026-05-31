@@ -275,17 +275,6 @@
         "mode": "html",
         "content": {{ ("<div style='" ~ S_section ~ "'>CLI packages (" ~ (homebrew_installed_packages | default([]) | length) ~ ")</div><div style='padding:4px'>" ~ _brew_cli | join('') ~ "</div><div style='" ~ S_section ~ "'>Applications (" ~ (homebrew_cask_apps | default([]) | length) ~ ")</div><div style='padding:4px'>" ~ _brew_cask | join('') ~ "</div>") | to_json }}
       }
-    },
-    {
-      "id": 5,
-      "type": "text",
-      "title": "",
-      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 42 },
-      "transparent": true,
-      "options": {
-        "mode": "html",
-        "content": {{ ("<div style='text-align:center;font-size:11px;color:rgba(230,237,243,0.3)'>Generated " ~ ansible_date_time.iso8601 ~ " | ansible-playbook main.yml --tags service-registry</div>") | to_json }}
-      }
     }
   ]
 }

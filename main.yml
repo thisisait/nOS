@@ -1099,15 +1099,14 @@
         - not (tenant_domain_is_local | default(true) | bool)
       tags: ['always']
 
-    - name: "Auto-regenerate stateless secrets (every run — safe group)"
-      ansible.builtin.set_fact:
-        # authentik_secret_key: moved to persisted secrets - regen on every run
-        # invalidated all SSO sessions (Django SECRET_KEY = CSRF + session signing)
-        vaultwarden_admin_token: "{{ lookup('pipe', 'openssl rand -base64 48') }}"
-        paperclip_auth_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        outline_utils_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-        hedgedoc_session_secret: "{{ lookup('pipe', 'openssl rand -hex 32') }}"
-      tags: ['always']
+    # NOTE: the former "Auto-regenerate stateless secrets (every run — safe
+    # group)" set_fact was removed. Its only members
+    # (vaultwarden_admin_token / paperclip_auth_secret / outline_utils_secret /
+    # hedgedoc_session_secret) regenerated on every run, which churned each
+    # service's env/config render on every steady-state run (non-idempotent).
+    # They moved to the persisted lazy-regenerate group below — generate once,
+    # persist to ~/.nos/secrets.yml, reuse (mirrors the wing_api_token move).
+    # authentik_secret_key was already relocated to the persisted group too.
 
     - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
       # UX: user can flip install_firefly: true (or bookstack / onlyoffice /
@@ -1132,6 +1131,15 @@
         # the token and made the Pulse plist render non-idempotent. Generate once
         # (prefix-default -> random), persist, reuse — like authentik_secret_key.
         wing_api_token: "{% if '_pw_' in (wing_api_token | default('')) or (wing_api_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_api_token }}{% endif %}"
+        # Idempotence (2026-05-31): these four were regen-every-run in the
+        # removed "safe group" set_fact above. Each rendered into a service
+        # env/config every run, so a steady-state full-playbook re-run reported
+        # changed>0. Now persisted + lazy: generate once (placeholder/short ->
+        # random), persist to ~/.nos/secrets.yml, reuse. Entropy forms unchanged.
+        vaultwarden_admin_token: "{% if '_pw_' in (vaultwarden_admin_token | default('')) or (vaultwarden_admin_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -base64 48') }}{% else %}{{ vaultwarden_admin_token }}{% endif %}"
+        paperclip_auth_secret: "{% if '_pw_' in (paperclip_auth_secret | default('')) or (paperclip_auth_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ paperclip_auth_secret }}{% endif %}"
+        outline_utils_secret: "{% if '_pw_' in (outline_utils_secret | default('')) or (outline_utils_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_utils_secret }}{% endif %}"
+        hedgedoc_session_secret: "{% if '_pw_' in (hedgedoc_session_secret | default('')) or (hedgedoc_session_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ hedgedoc_session_secret }}{% endif %}"
         # SEC-3 (2026-05-23): high-entropy HMAC secrets. Pre-this,
         # bone_secret + wing_events_hmac_secret + nos_deploy_hmac_secret
         # all defaulted to `{{ global_password_prefix }}_pw_<svc>` (~50
