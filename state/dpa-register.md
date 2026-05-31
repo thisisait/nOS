@@ -10,10 +10,18 @@
 > operator's own host; absent a declared processor (see below), there
 > is no third-party data processor and no transfer outside the EU.
 
+## Controller & DPO (Art. 30(1)(a))
+
+- **Controller:** _(unset — export GDPR_CONTROLLER_NAME)_
+- **DPO / contact point:** _(unset — export GDPR_DPO_NAME)_
+- **DPO contact:** _(unset — export GDPR_DPO_CONTACT)_
+
+_Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-register.py` to populate (not set by any playbook profile yet)._
+
 ## Summary
 
-- **Processing activities:** 68 (64 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legitimate_interests (63)
+- **Processing activities:** 69 (65 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (63)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 - ⚠️ **31 activities** carry an auto-generated purpose (plugin `gdpr.purpose` not yet authored) — flagged with † below.
@@ -748,6 +756,17 @@ Authentik-authenticated principals reach the service.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Gdpr Breach — `svc_gdpr-breach`
+- **Purpose:** Track GDPR Art-33/34 + NIS2/ZKB breach-notification deadlines and escalate overdue regulator notifications
+- **Legal basis (Art. 6):** `legal_obligation`
+- **Data subjects:** `operators`
+- **Data categories:** `breach_incident_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

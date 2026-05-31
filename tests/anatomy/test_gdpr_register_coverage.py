@@ -95,15 +95,27 @@ def test_record_carries_all_upsert_columns(rec):
         f"{rec['id']} missing upsert columns: {sorted(UPSERT_COLUMNS - rec.keys())}"
 
 
-def test_committed_dpa_register_is_current():
-    """The DPO-facing markdown must match a fresh render of the source blocks."""
+_GDPR_ENV = ("GDPR_CONTROLLER_NAME", "GDPR_DPO_NAME", "GDPR_DPO_CONTACT")
+
+
+def _load_tool():
     import importlib.util
 
     tool_path = REPO / "tools" / "gdpr-dpa-register.py"
     spec = importlib.util.spec_from_file_location("gdpr_dpa_register", tool_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    return mod
 
+
+def test_committed_dpa_register_is_current(monkeypatch):
+    """The DPO-facing markdown must match a fresh render of the source blocks.
+    Clear the GDPR_* controller vars first — the committed register is the
+    inert/placeholder form, so a gov operator who exported them must NOT hit a
+    spurious 'stale' red (the byte-identity gate assumes GDPR_* unset)."""
+    for v in _GDPR_ENV:
+        monkeypatch.delenv(v, raising=False)
+    mod = _load_tool()
     out = REPO / "state" / "dpa-register.md"
     assert out.exists(), "state/dpa-register.md missing — run tools/gdpr-dpa-register.py"
     fresh = mod.render(nos_gdpr.all_records(REPO))
@@ -111,3 +123,24 @@ def test_committed_dpa_register_is_current():
         "state/dpa-register.md is stale — run "
         "`python3 tools/gdpr-dpa-register.py` and commit."
     )
+
+
+def test_controller_block_inert_without_env(monkeypatch):
+    """Art-30(1)(a) block renders deterministic placeholders when GDPR_* unset."""
+    for v in _GDPR_ENV:
+        monkeypatch.delenv(v, raising=False)
+    blob = "\n".join(_load_tool()._controller_lines())
+    assert "## Controller & DPO (Art. 30(1)(a))" in blob
+    assert "_(unset — export GDPR_CONTROLLER_NAME)_" in blob
+    assert "_(unset — export GDPR_DPO_NAME)_" in blob
+    assert "_(unset — export GDPR_DPO_CONTACT)_" in blob
+
+
+def test_controller_block_populates_from_env(monkeypatch):
+    """Exported GDPR_* values flow into the Art-30(1)(a) block."""
+    monkeypatch.setenv("GDPR_CONTROLLER_NAME", "Acme Úřad")
+    monkeypatch.setenv("GDPR_DPO_NAME", "Jan Novák")
+    monkeypatch.setenv("GDPR_DPO_CONTACT", "dpo@acme.gov.cz")
+    blob = "\n".join(_load_tool()._controller_lines())
+    assert "Acme Úřad" in blob and "Jan Novák" in blob and "dpo@acme.gov.cz" in blob
+    assert "unset —" not in blob
