@@ -25,6 +25,19 @@ export default defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
+    // SEC-6 edge-trust gate: browser requests to BasePresenter pages
+    // (Homepage, /hub) are refused with 403 unless they carry the
+    // X-Wing-Edge-Token header that Traefik's wing-edge@file middleware
+    // injects. Mirror it here so browser-context navigations pass the
+    // gate when hitting Wing directly (e.g. WING_URL=https://127.0.0.1:9000).
+    // No-ops gracefully when WING_EDGE_TOKEN is unset — matching both the
+    // suite's skip-when-unconfigured convention and the presenter's own
+    // empty-token degradation path. API tests use request.newContext (a
+    // fresh context that does not inherit this) and hit BaseApiPresenter,
+    // which is exempt from the edge gate — so they are unaffected.
+    extraHTTPHeaders: {
+      'X-Wing-Edge-Token': process.env.WING_EDGE_TOKEN || '',
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
