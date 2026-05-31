@@ -20,6 +20,8 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ freescout_port }}/"
     method: GET
+    headers:
+      Host: "{{ freescout_domain }}"   # FreeScout enforces trusted-host -> bare 127.0.0.1 returns 403
     timeout: 5
     status_code: [200, 302, 500]
   register: _fs_ready
