@@ -26,10 +26,23 @@
     mode: '0644'
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
+# Probe launchd state first (same as roles/pazny.backup): `launchctl load -w`
+# prints version-dependent "already loaded" wording, so the rc of
+# `launchctl list <label>` is the robust idempotence signal (0 = already loaded).
+- name: "[Heartbeat] Check whether heartbeat agent is already loaded"
+  ansible.builtin.command: "launchctl list eu.thisisait.nos.heartbeat"
+  register: _heartbeat_loaded
+  changed_when: false
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
 - name: "[Heartbeat] Load heartbeat daemon"
   ansible.builtin.command: >
     launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.heartbeat.plist
-  changed_when: true
+  register: _heartbeat_load
+  # Changed only when the agent was NOT already loaded (probe rc != 0), so a
+  # steady-state re-run is changed=0.
+  changed_when: _heartbeat_loaded.rc | default(1) != 0
   failed_when: false
   when: (nos_service_manager | default('launchd')) == 'launchd'
 

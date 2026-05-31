@@ -54,6 +54,11 @@
 
 - name: "[coexistence_cleanup] Reload nginx"
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
-  changed_when: true
-  when: not (coexist_dry_run | default(false) | bool)
+  register: _coexist_cleanup_reload
+  # Reload only when the module actually removed a track; on a steady-state
+  # re-run cleanup is a no-op so the reload is skipped (changed=0).
+  changed_when: _coexist_cleanup_reload.rc | default(1) == 0
+  when:
+    - not (coexist_dry_run | default(false) | bool)
+    - _coexist_cleanup_result.changed | default(false) | bool
   tags: ['coexist-cleanup']
