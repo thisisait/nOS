@@ -1162,7 +1162,7 @@ shell_aliases:
 grafana_port: 3000
 prometheus_port: 9090
 loki_port: 3100
-tempo_version: "2.10.0"           # github.com/grafana/tempo/releases – no Homebrew formula
+tempo_version: "2.10.3"           # >=2.10.3 fixes CVE-2026-28377 / REM-036 (was 2.10.0); github.com/grafana/tempo/releases
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
 phpfpm_exporter_version: "2.2.0"         # github.com/hipages/php-fpm_exporter/releases – no Homebrew formula
 tempo_http_port: 3200
@@ -1273,7 +1273,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_port: 5678
-n8n_version: "2.14.1"      # CVE-2026-33660+33696+33663+33713 (Merge RCE, GSuiteAdmin proto pollution). Was 2.10.1
+n8n_version: "2.20.7"      # CVE-2026-44789/44790/44791 RCE fix (was 2.14.1); minimal fixed 2.x, same-major migrate-on-start
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -1693,7 +1693,7 @@ authentik_oidc_erpnext_client_secret: "{{ global_password_prefix }}_pw_oidc_erpn
 
 freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 freescout_port: 8090
-freescout_version: "php8.3-1.17.152"     # tiredofit image tag = PHP+upstream ver; past CVE-2026-28289 (fixed before 1.17.152)
+freescout_version: "php8.3-1.17.159"     # bundles FreeScout 1.8.219; fixes REM-069/070/071 (CVE-2026-32752/35584/39384), was 1.17.152
 freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
