@@ -29,6 +29,12 @@ and replays it into the running infra stack.
 - `aws` CLI installed (it's part of the base `brew` bundle).
 - RustFS reachable at `http://127.0.0.1:9010` and the `backups` bucket exists.
 - `rustfs_access_key` / `rustfs_secret_key` in your `credentials.yml`.
+- `backup_encryption_passphrase` in your `credentials.yml`. Nightly dumps are
+  AES-256 client-side encrypted (objects carry a `.enc` suffix); the restore
+  step auto-detects and decrypts them with this value. It **must** match the
+  passphrase the backup ran with — a wrong/missing value fails the restore loud
+  (no silent fallback). Legacy plaintext (`.sql.gz` without `.enc`) restores
+  unchanged. `openssl` with `enc -pbkdf2` support must be on `PATH`.
 
 ---
 
