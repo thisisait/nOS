@@ -7,7 +7,7 @@
 # fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================
 
-tempo_version: "2.10.0"   # github.com/grafana/tempo/releases — no Homebrew formula
+tempo_version: "2.10.3"   # github.com/grafana/tempo/releases — no Homebrew formula; >=2.10.3 fixes CVE-2026-28377 (REM-036)
 tempo_http_port: 3200
 tempo_otlp_grpc_port: 4327   # Tempo internal OTLP gRPC (Alloy -> Tempo)
 tempo_otlp_http_port: 4328   # Tempo internal OTLP HTTP (Alloy -> Tempo)
