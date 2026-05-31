@@ -417,7 +417,9 @@
       "source": "https://www.tenable.com/cve/CVE-2026-34940",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 1
+      "scan_cycle": 1,
+      "decision_at": "2026-05-31T00:00:00Z",
+      "decision": "NOT a mechanical image-pin / no in-repo change applied. Ollama is the host Homebrew install (roles/pazny.openclaw/tasks/main.yml installs via community.general.homebrew with state: latest), not a Docker image — there is no ollama_version var anywhere in the repo to pin. Every playbook run already does state: latest (brew upgrade ollama), so the host floats to the current formula which is past the CVE-2026-34940 / CVE-2026-5530 fixes. Hardening the OLLAMA_HOST bind to 127.0.0.1 is a separate config_change, not an image-pin. Left pending: operator-side brew upgrade verification; no version-var bump possible."
     },
     {
       "id": "REM-025",
@@ -498,12 +500,14 @@
       "fix_version": "1.8.207+",
       "remediation_type": "version_bump",
       "remediation_detail": "CRITICAL: FreeScout zero-click RCE via email (CVSS 10/10). Unauthenticated attacker sends crafted email \u2192 .htaccess bypass via zero-width space \u2192 arbitrary PHP execution. Actively exploited across public health, financial, tech sectors. CVE-2026-28289 bypasses patch for CVE-2026-27636. Verify freescout Docker image >= 1.8.207. Also disable AllowOverrideAll in Apache config.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://www.helpnetsecurity.com/2026/03/05/freescout-vulnerability-cve-2026-28289/",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "resolved_by": "Already mitigated \u2014 no code change. roles/pazny.freescout/defaults/main.yml pins freescout_version=\"php8.3-1.17.159\", which bundles FreeScout app 1.8.219 (confirmed via nfrastack/container-freescout CHANGELOG.md build->app mapping). Fix for CVE-2026-28289 is FreeScout >=1.8.207 (first bundled in tiredofit build 1.17.147); 1.8.219 is well past it."
     },
     {
       "id": "REM-030",
@@ -609,7 +613,9 @@
       "source": "https://nginx.org/en/security_advisories.html",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "decision_at": "2026-05-31T00:00:00Z",
+      "decision": "NOT a mechanical image-pin / no in-repo change applied. nginx in nOS is the HOST package (Homebrew 'nginx' on macOS via tasks/nginx.yml; apt 'nginx' on Linux via roles/pazny.linux.nginx, var linux_nginx_package='nginx'). There is NO Docker nginx image and NO pinnable version tag anywhere in the repo (Traefik is the primary edge proxy; install_nginx defaults to false). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.5, which cannot be expressed as a repo image-pin. Left pending: operator host-package upgrade; no version-var bump possible without changing the install model."
     },
     {
       "id": "REM-036",
@@ -617,15 +623,17 @@
       "component": "tempo",
       "severity": "MEDIUM",
       "current_version": "2.10.0",
-      "fix_version": "latest",
+      "fix_version": "2.10.3",
       "remediation_type": "version_bump",
       "remediation_detail": "Grafana Tempo S3 SSE-C encryption key exposed in plaintext via /status/config endpoint (CVE-2026-28377). Low risk for nOS (local storage, not S3) but update for completeness.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://cve.threatint.eu/CVE/CVE-2026-28377",
       "confidence": "medium",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "resolved_by": "Pinned tempo_version=\"2.10.3\" in roles/pazny.tempo/defaults/main.yml. CVE-2026-28377 fixed in Tempo >=2.10.3 per the Grafana advisory (grafana.com/security/security-advisories/cve-2026-28377/) + the v2.10.3 release notes ('S3 SSE-C encryption_key is now treated as a secret'); 2.10.2 does NOT contain the fix. Tag grafana/tempo:2.10.3 verified via docker manifest inspect. Same 2.10.x minor (no major/minor bump)."
     },
     {
       "id": "REM-037",
@@ -1086,7 +1094,9 @@
       "source": "https://nginx.org/en/security_advisories.html",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
-      "scan_cycle": 10
+      "scan_cycle": 10,
+      "decision_at": "2026-05-31T00:00:00Z",
+      "decision": "NOT a mechanical image-pin / no in-repo change applied (same as REM-035). nginx is the HOST package (Homebrew 'nginx' / apt 'nginx'), no Docker image and no pinnable version tag in the repo; install_nginx defaults to false (Traefik is primary proxy). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.7. Note: the affected ngx_http_dav_module and ngx_http_mp4_module are not enabled in nOS vhost templates (templates/nginx/sites-available/), so the DAV/MP4 vectors are not active even on hosts that opt in; ngx_mail (CVE-2026-27651) is also unused. Left pending: operator host-package upgrade; cannot be expressed as a repo image-pin."
     },
     {
       "id": "REM-064",
