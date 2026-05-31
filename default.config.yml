@@ -677,6 +677,17 @@ wing_tracy_secret: ""
 # see docs/security-baseline.md §4. Not auto-scheduled.
 wing_audit_retention_days: 365
 
+# Tamper-evident audit hash-chain (gov-readiness P1). When true, every events
+# row is HMAC-chained at INSERT (Bone Python + Wing PHP seams), WORM triggers
+# block content UPDATE / unguarded DELETE on chained rows, the retention purge
+# re-anchors, and bin/verify-audit-chain.php confirms integrity. Pre-enable rows
+# stay unsigned (accepted baseline). DETECT-not-prevent vs a DB-only attacker;
+# the chain key is on-box (derived from wing_events_hmac_secret). Default OFF
+# (behavior-changing-control doctrine). Toggling OFF->ON re-runs
+# backfill-event-chain.php (post.yml does this when on) to record the segment
+# anchor. Verify: php files/anatomy/wing/bin/verify-audit-chain.php --db=<wing.db>
+wing_audit_chain_enabled: false
+
 # ==============================================================================
 # NODE.JS
 # ==============================================================================

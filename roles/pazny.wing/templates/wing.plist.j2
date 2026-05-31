@@ -79,6 +79,8 @@
              reads this via getenv(). Without it, every /events POST → 500. -->
         <key>WING_EVENTS_HMAC_SECRET</key>
         <string>{{ wing_events_hmac_secret | default(bone_secret) | default('') }}</string>
+        <key>WING_AUDIT_CHAIN_ENABLED</key>
+        <string>{{ '1' if (wing_audit_chain_enabled | default(false) | bool) else '' }}</string>
 
         <!-- A17 (2026-05-20): CI deploy-trigger HMAC secret. Used by
              /api/v1/deploy-trigger to verify POSTs from Woodpecker

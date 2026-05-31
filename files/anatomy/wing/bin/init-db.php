@@ -357,6 +357,23 @@ $addMissingColumns($db, 'events', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_patch ON events(patch_id)');
 
+// events.{prev_hash,row_hash} — tamper-evident audit hash-chain (gov P1).
+// Existing DBs pick these up here (schema-extensions.sql CREATE TABLE is a
+// no-op on an existing table). NULL on every legacy / chain-off row, so the
+// WORM triggers (WHEN OLD.row_hash IS NOT NULL) stay dormant. The triggers
+// themselves are installed UNCONDITIONALLY by schema-extensions.sql above;
+// init-db NEVER drops them (flag-independent contracts artifact).
+$addMissingColumns($db, 'events', [
+	'prev_hash' => 'TEXT',
+	'row_hash'  => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_events_row_hash ON events(row_hash)');
+
+// Reset the WORM DELETE guard on every boot (cheap, idempotent). Closes the
+// "purge crashed mid-transaction left purge_unlocked='1'" leak.
+$db->exec("INSERT INTO audit_chain_meta (k,v) VALUES ('purge_unlocked','0') "
+	. "ON CONFLICT(k) DO UPDATE SET v='0'");
+
 // events.source — Anatomy P1 (2026-05-05). Closes attribution gap in
 // CLAUDE.md "Wing /events table schema mismatch" tech-debt entry —
 // Bone's POST handler accepted `source` in JSON but silently dropped

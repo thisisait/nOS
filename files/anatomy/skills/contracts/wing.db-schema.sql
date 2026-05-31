@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (38)
+-- TABLES (39)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -148,6 +148,11 @@ CREATE TABLE attack_probes (
 		completed   INTEGER NOT NULL DEFAULT 0
 	);
 
+CREATE TABLE audit_chain_meta (
+    k  TEXT PRIMARY KEY,
+    v  TEXT
+);
+
 CREATE TABLE coexistence_planned (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     service       TEXT NOT NULL,
@@ -224,6 +229,8 @@ CREATE TABLE events (
     actor_id          TEXT,                  -- Authentik client_id (operator/agent/plugin)
     actor_action_id   TEXT,                  -- UUID grouping events of one logical action
     acted_at          TEXT,                  -- ISO-8601; usually = ts, kept separate for backfilled rows
+    prev_hash     TEXT,                    -- HMAC chain: previous chained row's row_hash (NULL = unsigned legacy/chain-off row)
+    row_hash      TEXT,                    -- HMAC chain: HMAC(chainKey, prev_hash || canonical(immutable fields)); see app/Model/AuditChain.php
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -655,7 +662,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (73)
+-- INDEXS (74)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -695,6 +702,8 @@ CREATE INDEX idx_events_actor_id        ON events(actor_id);
 CREATE INDEX idx_events_migration ON events(migration_id);
 
 CREATE INDEX idx_events_patch     ON events(patch_id);
+
+CREATE INDEX idx_events_row_hash        ON events(row_hash);
 
 CREATE INDEX idx_events_run_id    ON events(run_id);
 
@@ -803,4 +812,25 @@ CREATE UNIQUE INDEX uq_agent_iterations    ON agent_iterations(session_uuid, ite
 CREATE UNIQUE INDEX uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
 
 CREATE UNIQUE INDEX uq_pulse_jobs_name ON pulse_jobs(plugin_name, job_name);
+
+-- ============================================================
+-- TRIGGERS (2)
+-- ============================================================
+
+CREATE TRIGGER events_worm_delete BEFORE DELETE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL
+   AND COALESCE((SELECT v FROM audit_chain_meta WHERE k='purge_unlocked'), '0') <> '1'
+  BEGIN SELECT RAISE(ABORT, 'events WORM: DELETE only via the retention re-anchor path'); END;
+
+CREATE TRIGGER events_worm_update BEFORE UPDATE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL AND (
+       NEW.ts IS NOT OLD.ts OR NEW.run_id IS NOT OLD.run_id OR NEW.type IS NOT OLD.type
+    OR NEW.playbook IS NOT OLD.playbook OR NEW.play IS NOT OLD.play OR NEW.task IS NOT OLD.task
+    OR NEW.role IS NOT OLD.role OR NEW.host IS NOT OLD.host OR NEW.duration_ms IS NOT OLD.duration_ms
+    OR NEW.changed IS NOT OLD.changed OR NEW.result_json IS NOT OLD.result_json
+    OR NEW.migration_id IS NOT OLD.migration_id OR NEW.upgrade_id IS NOT OLD.upgrade_id
+    OR NEW.patch_id IS NOT OLD.patch_id OR NEW.coexist_svc IS NOT OLD.coexist_svc
+    OR NEW.source IS NOT OLD.source OR NEW.actor_id IS NOT OLD.actor_id OR NEW.acted_at IS NOT OLD.acted_at
+    OR NEW.row_hash IS NOT OLD.row_hash OR NEW.prev_hash IS NOT OLD.prev_hash)
+  BEGIN SELECT RAISE(ABORT, 'events WORM: only actor_action_id may change on a chained row'); END;
 

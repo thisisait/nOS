@@ -134,7 +134,43 @@ final class EventRepository
 			'actor_id'         => $payload['actor_id']         ?? null,
 			'actor_action_id'  => $payload['actor_action_id']  ?? null,
 			'acted_at'         => $payload['acted_at']         ?? null,
+			// Tamper-evident hash-chain (gov P1). NULL on the default
+			// chain-off path -> WORM triggers stay dormant. Set below when on.
+			'prev_hash'        => null,
+			'row_hash'         => null,
 		];
+
+		// Default-OFF: when WING_AUDIT_CHAIN_ENABLED!='1' or no secret, take the
+		// byte-identical legacy insert (prev_hash/row_hash NULL). Chain ON:
+		// serialize the tail read + sign inside one write txn so prev_hash can't
+		// race. Algorithm is shared with bin/verify-audit-chain.php via
+		// AuditChain; the Python writer (Bone) mirrors it in clients/wing.py.
+		if (getenv('WING_AUDIT_CHAIN_ENABLED') === '1' && ($key = AuditChain::chainKey()) !== null) {
+			$pdo = $this->db->getConnection()->getPdo();
+			$ownTxn = !$pdo->inTransaction();
+			if ($ownTxn) {
+				$pdo->exec('BEGIN IMMEDIATE');
+			}
+			try {
+				$prev = $this->db->getConnection()
+					->query('SELECT row_hash FROM events WHERE row_hash IS NOT NULL ORDER BY id DESC LIMIT 1')
+					->fetchField();
+				$prev = ($prev === false || $prev === null) ? AuditChain::GENESIS : (string) $prev;
+				$row['prev_hash'] = $prev;
+				$row['row_hash'] = AuditChain::rowHash($prev, $row, $key);
+				$this->db->table('events')->insert($row);
+				$id = (int) $pdo->lastInsertId();
+				if ($ownTxn) {
+					$pdo->exec('COMMIT');
+				}
+				return $id;
+			} catch (\Throwable $e) {
+				if ($ownTxn && $pdo->inTransaction()) {
+					$pdo->exec('ROLLBACK');
+				}
+				throw $e;
+			}
+		}
 
 		$this->db->table('events')->insert($row);
 		return (int) $this->db->getConnection()->getPdo()->lastInsertId();

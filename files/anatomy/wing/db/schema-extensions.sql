@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS events (
     actor_id          TEXT,                  -- Authentik client_id (operator/agent/plugin)
     actor_action_id   TEXT,                  -- UUID grouping events of one logical action
     acted_at          TEXT,                  -- ISO-8601; usually = ts, kept separate for backfilled rows
+    prev_hash     TEXT,                    -- HMAC chain: previous chained row's row_hash (NULL = unsigned legacy/chain-off row)
+    row_hash      TEXT,                    -- HMAC chain: HMAC(chainKey, prev_hash || canonical(immutable fields)); see app/Model/AuditChain.php
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_run_id    ON events(run_id);
@@ -52,6 +54,48 @@ CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
 CREATE INDEX IF NOT EXISTS idx_events_source    ON events(source);
 CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id);
 CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id);
+CREATE INDEX IF NOT EXISTS idx_events_row_hash        ON events(row_hash);
+
+-- Audit-chain metadata singleton (k/v). Keys:
+--   purge_unlocked              '0'/'1' guard the WORM DELETE trigger checks
+--   last_purged_hash / _cutoff  retention boundary (survivor's prev_hash anchor)
+--   chain_last_anchor           current tail recorded by backfill-event-chain.php
+--   chain_segment_anchor_<hash> a re-enable boundary the verifier accepts
+--   last_verify_ok / _at        cached /audit badge verdict (future Pulse job)
+CREATE TABLE IF NOT EXISTS audit_chain_meta (
+    k  TEXT PRIMARY KEY,
+    v  TEXT
+);
+INSERT OR IGNORE INTO audit_chain_meta (k, v) VALUES ('purge_unlocked', '0');
+
+-- Column-scoped WORM triggers. UNCONDITIONAL (installed always) but fire ONLY
+-- on already-CHAINED rows (OLD.row_hash NOT NULL). On a chain-off install every
+-- row has NULL row_hash, so these never fire -> byte-identical write semantics,
+-- and the CI-rebuilt contracts artifact is flag-independent.
+--
+-- UPDATE: allow ONLY actor_action_id to change (the two AgentSessionRepository
+-- back-stamps touch only that column); abort if any HASHED column changes.
+DROP TRIGGER IF EXISTS events_worm_update;
+CREATE TRIGGER events_worm_update BEFORE UPDATE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL AND (
+       NEW.ts IS NOT OLD.ts OR NEW.run_id IS NOT OLD.run_id OR NEW.type IS NOT OLD.type
+    OR NEW.playbook IS NOT OLD.playbook OR NEW.play IS NOT OLD.play OR NEW.task IS NOT OLD.task
+    OR NEW.role IS NOT OLD.role OR NEW.host IS NOT OLD.host OR NEW.duration_ms IS NOT OLD.duration_ms
+    OR NEW.changed IS NOT OLD.changed OR NEW.result_json IS NOT OLD.result_json
+    OR NEW.migration_id IS NOT OLD.migration_id OR NEW.upgrade_id IS NOT OLD.upgrade_id
+    OR NEW.patch_id IS NOT OLD.patch_id OR NEW.coexist_svc IS NOT OLD.coexist_svc
+    OR NEW.source IS NOT OLD.source OR NEW.actor_id IS NOT OLD.actor_id OR NEW.acted_at IS NOT OLD.acted_at
+    OR NEW.row_hash IS NOT OLD.row_hash OR NEW.prev_hash IS NOT OLD.prev_hash)
+  BEGIN SELECT RAISE(ABORT, 'events WORM: only actor_action_id may change on a chained row'); END;
+
+-- DELETE: blocked on chained rows unless purge_unlocked='1' (set only inside
+-- purge-events.php's re-anchor transaction; reset immediately after + on every
+-- init-db boot).
+DROP TRIGGER IF EXISTS events_worm_delete;
+CREATE TRIGGER events_worm_delete BEFORE DELETE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL
+   AND COALESCE((SELECT v FROM audit_chain_meta WHERE k='purge_unlocked'), '0') <> '1'
+  BEGIN SELECT RAISE(ABORT, 'events WORM: DELETE only via the retention re-anchor path'); END;
 
 -- Migration history mirror. Source of truth lives in ~/.nos/state.yml; this
 -- table is a read cache populated via BoxAPI /api/state pushes.

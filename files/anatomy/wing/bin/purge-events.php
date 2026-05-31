@@ -63,12 +63,69 @@ if ($dryRun) {
     exit(0);
 }
 
-$ok = $sqlite->exec("DELETE FROM events WHERE {$predicate}");
-$sqlite->close();
-if ($ok === false) {
-    fwrite(STDERR, "DELETE failed\n");
-    exit(3);
+// Detect whether THIS db has the audit-chain surface. Absent (chain-off
+// install, pre-feature DB, or a legacy test seed) -> the original byte-identical
+// DELETE so we never crash on a DB lacking audit_chain_meta / row_hash.
+$hasMeta = (int) $sqlite->querySingle(
+    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='audit_chain_meta'"
+) > 0;
+$hasRowHash = false;
+$ti = $sqlite->query('PRAGMA table_info(events)');
+while ($c = $ti->fetchArray(SQLITE3_ASSOC)) {
+    if ($c['name'] === 'row_hash') {
+        $hasRowHash = true;
+        break;
+    }
 }
 
+$chainInWindow = 0;
+if ($hasMeta && $hasRowHash) {
+    $chainInWindow = (int) $sqlite->querySingle(
+        "SELECT COUNT(*) FROM events WHERE {$predicate} AND row_hash IS NOT NULL"
+    );
+}
+
+if (!$hasMeta || !$hasRowHash || $chainInWindow === 0) {
+    // Legacy / chain-off / no-chained-rows-in-window: original path, unchanged.
+    $ok = $sqlite->exec("DELETE FROM events WHERE {$predicate}");
+    $sqlite->close();
+    if ($ok === false) {
+        fwrite(STDERR, "DELETE failed\n");
+        exit(3);
+    }
+    echo "Purged {$count} events older than {$days} days\n";
+    exit(0);
+}
+
+// Chain-aware re-anchor path: capture the survivor boundary (newest purged
+// row's hash), unlock the WORM DELETE guard, delete, record last_purged_hash so
+// the verifier accepts the survivor's prev_hash, reset the guard — one txn.
+$boundaryHash = $sqlite->querySingle(
+    "SELECT row_hash FROM events WHERE {$predicate} AND row_hash IS NOT NULL ORDER BY id DESC LIMIT 1"
+);
+$cutoff = $sqlite->querySingle("SELECT MAX(ts) FROM events WHERE {$predicate}");
+$sqlite->exec('BEGIN IMMEDIATE');
+try {
+    $sqlite->exec("INSERT INTO audit_chain_meta (k,v) VALUES ('purge_unlocked','1') ON CONFLICT(k) DO UPDATE SET v='1'");
+    $ok = $sqlite->exec("DELETE FROM events WHERE {$predicate}");
+    if ($ok === false) {
+        throw new \RuntimeException('DELETE failed');
+    }
+    if ($boundaryHash) {
+        $bh = SQLite3::escapeString((string) $boundaryHash);
+        $ct = SQLite3::escapeString((string) $cutoff);
+        $sqlite->exec("INSERT INTO audit_chain_meta (k,v) VALUES ('last_purged_hash','{$bh}') ON CONFLICT(k) DO UPDATE SET v='{$bh}'");
+        $sqlite->exec("INSERT INTO audit_chain_meta (k,v) VALUES ('last_purged_cutoff','{$ct}') ON CONFLICT(k) DO UPDATE SET v='{$ct}'");
+    }
+    $sqlite->exec("UPDATE audit_chain_meta SET v='0' WHERE k='purge_unlocked'");
+    $sqlite->exec('COMMIT');
+} catch (\Throwable $e) {
+    $sqlite->exec("UPDATE audit_chain_meta SET v='0' WHERE k='purge_unlocked'");
+    @$sqlite->exec('ROLLBACK');
+    $sqlite->close();
+    fwrite(STDERR, 'DELETE failed: ' . $e->getMessage() . "\n");
+    exit(3);
+}
+$sqlite->close();
 echo "Purged {$count} events older than {$days} days\n";
 exit(0);
