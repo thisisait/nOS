@@ -96,6 +96,19 @@ def test_every_per_user_pii_service_has_erasure_entry():
     )
 
 
+def test_backend_store_residual_reach_documented():
+    """Art-17 reach (Batch-3): the backend/residual stores that retain DERIVED
+    subject data beyond per-service deletes each carry a manual entry, so the
+    dry-run plan surfaces the full reach. Regression guard against the
+    'Redis/Qdrant/RustFS/wing.db/Loki entirely uncovered' gap the gov-readiness
+    audit flagged."""
+    entries = {e["id"]: e for e in _entries()}
+    for sid in ("svc_redis", "svc_qdrant", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo"):
+        assert sid in entries, f"backend-store reach entry missing: {sid}"
+        assert entries[sid]["method"] == "manual", \
+            f"{sid} must stay manual — its delete is broad/ambiguous, never auto-run per-subject"
+
+
 def test_forget_event_whitelisted_both_sides():
     """gdpr_forget_user must be in BOTH the Bone and Wing event whitelists."""
     bone = (REPO / "files/anatomy/bone/events.py").read_text()
