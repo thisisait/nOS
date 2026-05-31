@@ -11,12 +11,14 @@
 #     (later -e file wins, so gov-local's hardening overrides all-on's defaults)
 #
 # This is a SOVEREIGNTY profile, not a full government-compliance profile.
-# At-rest disk crypto (P0-ATREST, require_disk_encryption) and enforced MFA
-# (P0-MFA, enforce_mfa) are now TOGGLABLE here (set below). The remaining
-# blocking gov controls (breach-notification, tamper-evident audit log, ISDS +
-# NIA/eIDAS federation) are NOT yet togglable — see docs/compliance/
-# gov-readiness-audit-2026q2.md for that roadmap. What this profile ALSO closes
-# is every off-host data path that is a single variable.
+# At-rest disk crypto (P0-ATREST, require_disk_encryption), enforced MFA
+# (P0-MFA, enforce_mfa) and the tamper-evident audit hash-chain (P1,
+# wing_audit_chain_enabled) are all TOGGLABLE here (set below). The breach-
+# notification Pulse scan registers when the gdpr-breach-base plugin is enabled
+# (sibling control — inert until a breach is filed). The remaining blocking gov
+# controls (ISDS + NIA/eIDAS federation) are NOT yet togglable — see
+# docs/compliance/gov-readiness-audit-2026q2.md for that roadmap. What this
+# profile ALSO closes is every off-host data path that is a single variable.
 # =============================================================================
 
 # ── No third-party control-plane egress ──────────────────────────────────────
@@ -62,6 +64,16 @@ require_disk_encryption: true
 # the 50-mfa-policy.yaml.j2 header ready. mfa_password_hibp stays FALSE on an
 # air-gapped tenant (HIBP needs egress); flip it true only if egress is allowed.
 enforce_mfa: true
+
+# ── Tamper-evident audit hash-chain (P1) ───────────────────────────────────
+# HMAC-chain every wing.db events row at INSERT; WORM triggers block content
+# edits / unguarded deletes on chained rows; bin/verify-audit-chain.php (+ the
+# hourly verify Pulse job) confirms integrity. On a chain OFF->ON toggle the
+# post.yml anchor task (backfill-event-chain.php) is best-effort
+# (failed_when: false) and always reports ok — the segment anchor is recorded
+# idempotently inside the script; verify with `php bin/verify-audit-chain.php`,
+# NOT the Ansible changed flag. Pre-enable rows stay unsigned (accepted baseline).
+wing_audit_chain_enabled: true
 
 # =============================================================================
 # MANUAL STEPS this profile cannot express as a single variable (do these too):
