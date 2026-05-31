@@ -715,6 +715,14 @@ try:
 except ImportError:  # pragma: no cover — only triggers in degraded env
     _qdrant = None
 
+# Honors qdrant-base/plugin.yml `bone_redaction_required: true` — strip emails
+# from payloads before they reach Qdrant (no per-point erasure path exists).
+try:
+    from redaction import redact_payload as _redact_payload
+except Exception:  # noqa: BLE001 — degraded env: fail open to identity
+    def _redact_payload(payload):  # type: ignore[no-redef]
+        return payload
+
 
 def _qdrant_or_503():
     if _qdrant is None:
@@ -760,7 +768,7 @@ async def embeddings_upsert(
             _qdrant.Point(
                 id=p["id"],
                 vector=p["vector"],
-                payload=p.get("payload"),
+                payload=_redact_payload(p.get("payload")),
             )
             for p in raw_points
         ]
