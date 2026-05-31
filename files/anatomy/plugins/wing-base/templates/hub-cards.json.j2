@@ -11,9 +11,13 @@
 
   Card shape: { slug, title, icon, url, tier, description, health_check }.
 -#}
+{#- `generated_at` intentionally omitted: a volatile per-run timestamp made the
+    rendered file differ every run, so post_compose reported `changed` even when
+    the harvested cards were identical. Dropping it makes a steady-state re-render
+    changed=0 (same fix as templates/service-registry.json.j2). Consumers read the
+    field defensively (HubCardRepository: `?? null`). -#}
 {%- set cards = inputs.hub_cards | default([]) -%}
 {
-  "generated_at": "{{ ansible_date_time.iso8601 | default('') }}",
   "cards": [
 {%- set ns = namespace(first=true) %}
 {%- for e in cards %}

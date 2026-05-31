@@ -362,11 +362,15 @@
     UID_NUM=$(id -u)
     if launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" >/dev/null 2>&1; then
       launchctl kickstart -k "gui/${UID_NUM}/{{ wing_launchd_label }}"
+      echo "already-loaded"
     else
       launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+      echo "bootstrapped"
     fi
   register: _wing_launchd_bootstrap
-  changed_when: true
+  # Same idempotence signal as pazny.bone: changed only on a real bootstrap.
+  # A steady-state re-run kickstarts (graceful restart) but is changed=0.
+  changed_when: "'bootstrapped' in _wing_launchd_bootstrap.stdout"
   failed_when: false
   when: (nos_service_manager | default('launchd')) == 'launchd'
 

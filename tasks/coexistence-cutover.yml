@@ -53,6 +53,11 @@
 
 - name: "[coexistence_cutover] Reload nginx (zero-downtime)"
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
-  changed_when: true
-  when: not (coexist_dry_run | default(false) | bool)
+  register: _coexist_cutover_reload
+  # Reload only when the module actually flipped the track; on a steady-state
+  # re-run the cutover is a no-op so we skip the reload entirely (changed=0).
+  changed_when: _coexist_cutover_reload.rc | default(1) == 0
+  when:
+    - not (coexist_dry_run | default(false) | bool)
+    - _coexist_cutover_result.changed | default(false) | bool
   tags: ['coexist-cutover']

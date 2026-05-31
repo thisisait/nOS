@@ -14,9 +14,12 @@
   Format: object keyed by plugin/agent slug; each value carries the
   per-severity channel arrays declared in the manifest.
 -#}
+{#- `generated_at` intentionally omitted: a volatile per-run timestamp made the
+    rendered file differ every run, so post_compose reported `changed` even when
+    the routing was identical. Dropping it makes a steady-state re-render
+    changed=0 (same fix as templates/service-registry.json.j2). -#}
 {%- set entries = inputs.notification_routing | default([]) -%}
 {
-  "generated_at": "{{ ansible_date_time.iso8601 | default('') }}",
   "entries": {
 {%- set ns = namespace(first=true) %}
 {%- for e in entries %}
