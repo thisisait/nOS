@@ -886,6 +886,18 @@
       when: forget_subject is defined and (forget_subject | length) > 0
       tags: ['gdpr-forget', 'never']
 
+    # ── GDPR Art. 15 right-of-access EXPORT fan-out (explicit opt-in) ───────
+    # Read-only: dry-run by default; -e export_confirm=true assembles the
+    # bundle. Records request_type='access' (the universally-valid right; Art-20
+    # portability applies only to the consent/contract subset, see the map's
+    # portability_eligible flag). Audited command list: state/gdpr-export-map.yml;
+    # runbook: docs/security-baseline.md §4. 'never' keeps it out of normal runs.
+    #   ansible-playbook main.yml --tags gdpr-export -e export_subject=user@tld
+    - name: "[GDPR] Right-of-access export fan-out (opt-in)"
+      ansible.builtin.import_tasks: tasks/gdpr-export.yml
+      when: export_subject is defined and (export_subject | length) > 0
+      tags: ['gdpr-export', 'never']
+
     # ── GDPR storage-limitation purge (Art. 5(1)(e)) — explicit opt-in ──────
     # On-demand audit-log retention enforcement; dry-run unless
     # -e retention_confirm=true. Not scheduled. See docs/security-baseline.md §4.

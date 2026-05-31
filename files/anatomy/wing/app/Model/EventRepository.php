@@ -84,6 +84,12 @@ final class EventRepository
 		//   {subject, dsar_id, services_planned, services_erased, dry_run}. Paired
 		//   with a gdpr_dsar row (request_type=erase) which is the legal record.
 		'gdpr_forget_user',
+		// Right-of-access export (Art-15 — tasks/gdpr-export.yml). Forward-ready
+		// (no task emits it yet; the paired gdpr_dsar row, request_type='access',
+		// is the legal record). result_json would carry {subject, dsar_id,
+		// request_type:'access', services_planned, services_captured,
+		// manual_pending, portability_eligible, dry_run, bundle_dir}.
+		'gdpr_export_user',
 	];
 
 	public function __construct(

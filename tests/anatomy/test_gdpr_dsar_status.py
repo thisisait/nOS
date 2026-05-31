@@ -80,3 +80,15 @@ def test_vaultwarden_dsar_endpoint_is_honest():
             break
     else:
         raise AssertionError("no dsar_endpoint: line found in vaultwarden plugin")
+
+
+def test_dsar_id_capture_is_scalar_not_backref_list():
+    """regex_search with a backref arg ('\\1') returns a LIST (['42']); rendered
+    into --update=['42'] it casts to 0 -> the terminal-status update silently
+    no-ops and the gdpr_dsar row stays 'received' (the whole honest-status point
+    is lost). Both DSAR tasks must capture the id as a SCALAR via the lookbehind
+    form. Functional-bug regression guard (the static wiring tests missed it)."""
+    for rel in ("tasks/gdpr-forget.yml", "tasks/gdpr-export.yml"):
+        src = (REPO / rel).read_text()
+        assert "regex_search('(?<=#)[0-9]+')" in src, \
+            f"{rel}: capture the DSAR id as a scalar (lookbehind), not a backref list"
