@@ -7,13 +7,16 @@ declare(strict_types=1);
  *
  * Usage:
  *   php bin/record-dsar.php --json=<path-to-record.json>
- *   php bin/record-dsar.php --json=-                       # stdin
+ *   php bin/record-dsar.php --json=-                       # stdin (intake)
+ *   php bin/record-dsar.php --update=<id> --status=<s> [--notes=...]  # transition
  *
- * Called by tasks/gdpr-forget.yml — one invocation per right-to-erasure run.
- * A dry-run logs status="received" (the request is real even if no deletion
- * happens yet); a confirmed run logs status="completed" with the
- * gdpr_processing ids touched. This row is the legal audit record a CNIL-style
- * inspection traces; it is intentionally append-only (one row per run).
+ * Called by tasks/gdpr-forget.yml. Intake INSERTs a status="received" row (the
+ * request is real even before any deletion). A confirmed run then --update=s the
+ * SAME row to its real terminal status once executors finish: "completed" only
+ * when every in-scope store was actually erased, else "in-progress" (manual /
+ * failed steps pending) — never the optimistic "completed regardless" that
+ * Art. 12(3) forbids. This row is the legal audit record a CNIL-style inspection
+ * traces; received_at/created_at history is preserved across the transition.
  *
  * JSON shape (→ gdpr_dsar columns; recordDsar() JSON-encodes processing_ids):
  *   subject_email   (required)   the data subject
@@ -29,13 +32,46 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 $jsonArg = null;
+$updateId = null;
+$updateStatus = null;
+$updateNotes = null;
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--json=')) {
         $jsonArg = substr($arg, 7);
+    } elseif (str_starts_with($arg, '--update=')) {
+        $updateId = (int) substr($arg, 9);
+    } elseif (str_starts_with($arg, '--status=')) {
+        $updateStatus = substr($arg, 9);
+    } elseif (str_starts_with($arg, '--notes=')) {
+        $updateNotes = substr($arg, 8);
     }
 }
+
+// ── Update mode: transition an existing row's status (Art. 12(3)) ───────────
+if ($updateId !== null && $updateId > 0) {
+    if ($updateStatus === null || $updateStatus === '') {
+        fwrite(STDERR, "Usage: php bin/record-dsar.php --update=<id> --status=<received|in-progress|completed|rejected> [--notes=...]\n");
+        exit(1);
+    }
+    try {
+        $container = App\Bootstrap\Booting::boot()->createContainer();
+        /** @var App\Model\GdprRepository $repo */
+        $repo = $container->getByType(App\Model\GdprRepository::class);
+        $ok = $repo->updateDsarStatus($updateId, $updateStatus, $updateNotes);
+    } catch (\Throwable $e) {
+        fwrite(STDERR, "DB updateDsarStatus failed: " . $e->getMessage() . "\n");
+        exit(3);
+    }
+    if (!$ok) {
+        fwrite(STDERR, "No gdpr_dsar row #{$updateId} to update\n");
+        exit(3);
+    }
+    echo "OK updated gdpr_dsar #{$updateId} (status={$updateStatus})\n";
+    exit(0);
+}
+
 if ($jsonArg === null || $jsonArg === '') {
-    fwrite(STDERR, "Usage: php bin/record-dsar.php --json=<path|->\n");
+    fwrite(STDERR, "Usage: php bin/record-dsar.php --json=<path|-> | --update=<id> --status=<s>\n");
     exit(1);
 }
 

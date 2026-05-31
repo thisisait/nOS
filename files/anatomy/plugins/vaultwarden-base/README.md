@@ -40,7 +40,7 @@ the operator-only services (Portainer, Grafana, Qdrant, Woodpecker):
 | `retention_days` | `-1` (forever) | Vault IS permanent storage; -1 is the documented sentinel |
 | `transfers_outside_eu` | `false` | All-local Vaultwarden, no Bitwarden cloud sync |
 | `breach_severity_default` | `critical` | Vault breach = worst case; auto-tag any incident at max severity |
-| `dsar_endpoint` | `wing-cli vault-erase --user $DSAR_USER_EMAIL` | First plugin with a real DSAR endpoint (post-A8 conductor wires this; today it's a manual curl) |
+| `dsar_endpoint` | `manual: /admin -> Users -> delete by email` | Honest current mechanism — there is NO `wing-cli vault-erase` command yet (the D8 DSAR worker that would automate it is unbuilt); erasure step is authoritative in `state/gdpr-erasure-map.yml` |
 
 The `apps_runner` parser already enforces TLS-from-data gates when
 `data_subjects` includes `end_users`, so a misconfigured Vaultwarden

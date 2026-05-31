@@ -58,8 +58,12 @@
   loop_control:
     label: "{{ item.id }}"
 
-# ── Legal audit record (always, even on dry-run) ─────────────────────────────
-- name: "[GDPR forget] Record DSAR row (gdpr_dsar, request_type=erase)"
+# ── Legal audit record — INTAKE (always, even on dry-run) ────────────────────
+# Art. 12(3): record that the request landed BEFORE touching anything. A
+# confirmed run transitions this same row to its real terminal status after the
+# executors finish (see "terminal status" below) — we never pre-stamp
+# 'completed' while 19/22 services are still only reported.
+- name: "[GDPR forget] Record DSAR intake row (status=received)"
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail;
@@ -71,15 +75,20 @@
       {{ {
             'subject_email': forget_subject,
             'request_type': 'erase',
-            'status': (_forget_confirm | ternary('completed', 'received')),
+            'status': 'received',
             'processing_ids': (_forget_plan | default([]) | map(attribute='id') | list),
             'notes': (_forget_confirm
-                      | ternary('Erasure executed via tasks/gdpr-forget.yml',
-                                'Dry-run: plan logged, no deletion performed'))
+                      | ternary('Erasure run started — terminal status set after executors.',
+                                'Dry-run: plan logged, no deletion performed.'))
          } | to_json }}
   register: _dsar_rec
   changed_when: "'OK recorded' in (_dsar_rec.stdout | default(''))"
   failed_when: false
+  when: install_wing | default(true) | bool
+
+- name: "[GDPR forget] Capture DSAR row id (for terminal-status update)"
+  ansible.builtin.set_fact:
+    _dsar_id: "{{ (_dsar_rec.stdout | default('') | regex_search('#(\\d+)', '\\1')) | default('', true) }}"
   when: install_wing | default(true) | bool
 
 # ── Executor: Authentik (identity anchor) ────────────────────────────────────
@@ -106,6 +115,7 @@
       Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
     validate_certs: false
     status_code: [204, 404]
+  register: _ak_delete
   failed_when: false
   no_log: true
   when:
@@ -139,10 +149,56 @@
   loop_control:
     label: "{{ item.id }}"
 
+# ── Terminal status — record what ACTUALLY happened (Art. 12(3)) ─────────────
+# 'completed' ONLY when every in-scope store was truly erased: zero manual steps
+# pending, zero container_exec SKIP/failure, and (if Authentik was in scope) the
+# user delete returned 204/404. Otherwise 'in-progress' — manual / failed steps
+# remain, so the legal record must NOT claim completion.
+- name: "[GDPR forget] Compute terminal DSAR status"
+  ansible.builtin.set_fact:
+    _forget_terminal: >-
+      {{ 'completed'
+         if (
+              (_forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length) == 0
+              and (_cexec.results | default([]) | selectattr('stdout', 'defined')
+                   | selectattr('stdout', 'search', 'SKIP') | list | length) == 0
+              and (_cexec.results | default([]) | rejectattr('rc', 'eq', 0) | list | length) == 0
+              and not (
+                   ((_forget_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0)
+                   and ((_ak_user.json.results | default([]) | length) > 0)
+                   and (_ak_delete.status | default(0) not in [204, 404])
+              )
+            )
+         else 'in-progress' }}
+  when: _forget_confirm
+
+- name: "[GDPR forget] Update DSAR row to terminal status"
+  ansible.builtin.command:
+    argv:
+      - php
+      - bin/record-dsar.php
+      - "--update={{ _dsar_id }}"
+      - "--status={{ _forget_terminal }}"
+      - "--notes={{ 'Erasure run: auto-executed='
+          ~ (_forget_plan | default([]) | selectattr('method', 'in', ['authentik_api', 'container_exec']) | list | length)
+          ~ ', manual-pending=' ~ (_forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length)
+          ~ '. Terminal=' ~ _forget_terminal ~ '.' }}"
+    chdir: "{{ wing_app_dir }}"
+  register: _dsar_upd
+  changed_when: "'OK updated' in (_dsar_upd.stdout | default(''))"
+  failed_when: false
+  when:
+    - _forget_confirm
+    - install_wing | default(true) | bool
+    - (_dsar_id | default('') | length) > 0
+
 - name: "[GDPR forget] Summary"
   ansible.builtin.debug:
     msg: >-
-      {{ 'ERASURE COMPLETE' if _forget_confirm else 'DRY-RUN COMPLETE' }} for {{ forget_subject }}.
+      {{ ('ERASURE ' ~ (_forget_terminal | default('in-progress') | upper)) if _forget_confirm else 'DRY-RUN COMPLETE' }}
+      for {{ forget_subject }}.
       Auto-executed: {{ _forget_plan | default([]) | selectattr('method', 'in', ['authentik_api', 'container_exec']) | list | length }};
-      manual steps reported: {{ _forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length }}.
-      DSAR row logged (request_type=erase). {{ '' if _forget_confirm else 'Re-run with -e forget_confirm=true to execute.' }}
+      manual steps {{ 'pending (run the printed steps, then the DSAR closes)' if _forget_confirm else 'reported' }}:
+      {{ _forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length }}.
+      DSAR row {{ 'updated to ' ~ (_forget_terminal | default('in-progress')) if _forget_confirm else 'logged (received)' }}.
+      {{ '' if _forget_confirm else 'Re-run with -e forget_confirm=true to execute.' }}
