@@ -54,6 +54,14 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    PostgreSQL is the shared relational datastore for Postgres-family services
+    (including Authentik's identity tables). It persists whatever the consuming
+    services write — application user/content rows, audit logs, and OAuth
+    session data — so those services can function (legitimate interest in
+    operating the persistence layer, Art. 6(1)(f)). End-user PII present here
+    is owned by the consuming service; data lifetime and the precise processing
+    purpose are determined by that service, not by PostgreSQL itself.
   data_categories:
     - application_user_data         # whatever each consumer service stores
     - audit_logs

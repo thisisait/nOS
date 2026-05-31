@@ -58,6 +58,13 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Tempo is the platform distributed-tracing backend. It stores trace spans
+    and their request metadata (which may include user-agent strings and
+    request paths) so the operator can debug latency and reconstruct request
+    flows across services (legitimate interest in service operation,
+    Art. 6(1)(f)). End-user data appears incidentally inside span attributes;
+    retention is ~14 days.
   data_categories:
     - trace_spans
     - request_metadata     # spans may include user-agent, request paths

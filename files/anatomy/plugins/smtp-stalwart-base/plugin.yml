@@ -106,6 +106,16 @@ observability:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    Stalwart is the self-hosted mail server (SMTP/IMAP/JMAP). It processes
+    mailbox contents (message bodies and attachments at rest), SMTP envelope
+    and header metadata, mailbox credentials (password hashes), and delivery
+    logs (queue, bounce, DKIM/SPF/DMARC results), in order to send, receive and
+    store email for tenant mailbox owners (legitimate interest in operating the
+    mail service, Art. 6(1)(f)). Data subjects include operators, tenant
+    mailbox owners, and external correspondents whose addresses and message
+    content appear in inbound/outbound flows. Mailbox retention is ~365 days;
+    queue/bounce logs are shorter.
   data_categories:
     - mailbox_contents            # message bodies + attachments at rest
     - smtp_envelope_metadata      # MAIL FROM / RCPT TO / Received headers

@@ -76,6 +76,13 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Prometheus is the platform metrics time-series backend. It stores
+    infrastructure metrics and their hostname labels scraped from exporters so
+    the operator can monitor capacity, health and alerting (legitimate
+    interest in service operation, Art. 6(1)(f)). Metrics are machine-level;
+    no end-user identifiers are stored. Retention follows prometheus_retention
+    (~30 days).
   data_categories:
     - infrastructure_metrics
     - hostname_labels

@@ -72,6 +72,14 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Traefik is the platform edge reverse proxy. Its access and error logs
+    record request metadata (method, path, status, latency), client source IP
+    addresses, and User-Agent strings for every HTTP client reaching the edge,
+    in order to operate, secure and troubleshoot the ingress layer (legitimate
+    interest in service operation and security, Art. 6(1)(f)). The IP and
+    User-Agent fields are attributable to end-users; access logs rotate on a
+    ~30-day horizon aligned with Loki retention.
   data_categories:
     - request_metadata          # access logs: method, path, status, latency
     - client_ip_addresses       # source IPs in access + error logs

@@ -58,6 +58,15 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    The Bluesky Personal Data Server hosts AT Protocol identities (DID +
+    handle records), each user's social repository (posts, likes, follows and
+    other records), uploaded media blobs, and PDS-local account credentials
+    (password hashes for the admin and bridged tenant accounts). It processes
+    this to provide a self-hosted decentralised-social-identity service to
+    tenants who are bridged an @user.bsky.<tld> account (legitimate interest
+    in operating the social service, Art. 6(1)(f)). The repository lifecycle
+    is operator-managed; deletion is handled via the Art-17 erasure path.
   data_categories:
     - at_protocol_identities        # DID + handle records
     - social_repository_content     # posts, likes, follows, etc.

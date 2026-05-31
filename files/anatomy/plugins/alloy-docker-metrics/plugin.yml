@@ -68,6 +68,13 @@ lifecycle:
 # nginx anonymize_ip).
 
 gdpr:
+  purpose: |
+    Scrapes per-container Docker infrastructure metrics (CPU, memory,
+    network, restart counts) and tails container stdout/stderr logs so the
+    operator can monitor and troubleshoot the Docker workload (legitimate
+    interest in service operation, Art. 6(1)(f)). End-user data only appears
+    incidentally inside container access logs; high log volume means a short
+    retention horizon.
   data_categories:
     - infrastructure_metrics       # docker_container_* prom metrics
     - container_logs               # incidental — see redaction note above

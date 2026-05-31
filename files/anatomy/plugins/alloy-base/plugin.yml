@@ -144,6 +144,14 @@ observability:
 # tailed services, alloy is a transit-only processor).
 
 gdpr:
+  purpose: |
+    Alloy is the platform telemetry collection agent: it scrapes host and
+    container infrastructure metrics and forwards log lines and trace spans
+    in transit to Prometheus, Loki and Tempo. Processing is necessary to
+    operate, monitor and troubleshoot the self-hosted platform (legitimate
+    interest in service operation, Art. 6(1)(f)). End-user data appears only
+    transiently in transit inside forwarded log/trace payloads; durable
+    storage and retention are owned by the Loki/Tempo backends, not Alloy.
   data_categories:
     - infrastructure_metrics
     - log_lines_in_transit

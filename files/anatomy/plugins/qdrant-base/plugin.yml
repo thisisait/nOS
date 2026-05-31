@@ -233,6 +233,15 @@ lifecycle:
 # Loader merges this into the canonical row at apply time.
 
 gdpr:
+  purpose: |
+    Qdrant is the vector database backing agent memory and advisory retrieval.
+    It stores agent prompt-context embeddings (which may include operator data),
+    advisory text (CVE summaries, vendor advisories), and vector metadata
+    (collection names, point ids, payload schemas), in order to provide
+    semantic memory and retrieval for the platform's AI agents (legitimate
+    interest in research / agent operation, not contract-bound, Art. 6(1)(f)).
+    Subjects are operators and automated agent systems; Bone redacts operator
+    email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
   # Plugin GDPR row tracks what the WIRING adds on top of apps/qdrant.yml's
   # operational row. Loader treats plugin gdpr blocks as first-class (Q2
   # migration deletes the central authentik_oidc_apps + dedupes; the same

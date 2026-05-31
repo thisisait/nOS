@@ -65,6 +65,13 @@ lifecycle:
 # must enable redaction at each source — alloy doesn't redact in transit.
 
 gdpr:
+  purpose: |
+    Tails host operational logs (nginx and php-fpm access/error) and the
+    platform audit trail (Bone, Wing, Pulse and agent runs) and ships them to
+    Loki so the operator can debug failures and reconstruct an audit lineage
+    (legitimate interest in service operation and security, Art. 6(1)(f)).
+    End-user data appears incidentally inside host nginx access lines (request
+    paths, source IPs); durable retention is owned by Loki, not this agent.
   data_categories:
     - operational_logs             # nginx, php-fpm access + error
     - audit_trail_logs             # Bone, Wing, Pulse, agent runs

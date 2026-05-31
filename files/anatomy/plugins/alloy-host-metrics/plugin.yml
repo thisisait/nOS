@@ -83,6 +83,12 @@ lifecycle:
 # through prometheus-base's existing retention horizon.
 
 gdpr:
+  purpose: |
+    Scrapes host-level infrastructure metrics (CPU, memory, disk and network
+    utilisation) from the node exporter so the operator can monitor capacity
+    and health of the host (legitimate interest in service operation,
+    Art. 6(1)(f)). No end-user identifiers are collected — host metrics are
+    machine-level, not subject-level.
   data_categories:
     - infrastructure_metrics       # host-level — CPU, memory, disk, network
   data_subjects:

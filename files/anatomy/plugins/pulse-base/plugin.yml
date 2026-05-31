@@ -80,6 +80,12 @@ aggregates:
 # row for that storage contract. This block satisfies the loader's
 # required-fields contract for aggregator plugins.
 gdpr:
+  purpose: |
+    Pulse is the host-side scheduled-job runner. It processes aggregated job
+    catalog metadata (plugin name, job name, schedule, command) authored or
+    triggered by the operator, in order to schedule and run maintenance jobs
+    (legitimate interest in service operation, Art. 6(1)(f)). Only the
+    operator authors or triggers jobs; no tenant end-user data is processed.
   data_categories:
     - aggregated_job_metadata     # plugin_name, job_name, schedule, command
   data_subjects:
