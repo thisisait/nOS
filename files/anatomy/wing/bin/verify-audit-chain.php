@@ -22,11 +22,14 @@ require __DIR__ . '/../app/Model/AuditChain.php';
 
 $db = null;
 $json = false;
+$writeVerdict = false;
 foreach ($argv as $a) {
     if (str_starts_with($a, '--db=')) {
         $db = substr($a, 5);
     } elseif ($a === '--json') {
         $json = true;
+    } elseif ($a === '--write-verdict') {
+        $writeVerdict = true;
     }
 }
 if ($db === null || $db === '') {
@@ -95,6 +98,34 @@ while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
     $checked++;
 }
 $s->close();
+
+// --write-verdict: cache the integrity verdict into audit_chain_meta so the
+// Wing header badge reads it cheaply (no per-render chain walk). Opt-in — the
+// Pulse verify job is the only caller; fires regardless of --json. WAL-safe
+// (busyTimeout) + best-effort: a write failure is SWALLOWED so the exit code
+// stays driven SOLELY by the verdict (0 intact / 2 broken / 3 secret-or-db).
+if ($writeVerdict) {
+    $verdictOk = $break === null ? '1' : '0';
+    try {
+        $w = new SQLite3($db, SQLITE3_OPEN_READWRITE);
+        $w->busyTimeout(5000);
+        $hasMeta = (int) $w->querySingle(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='audit_chain_meta'"
+        );
+        if ($hasMeta > 0) {
+            $now = gmdate('c');
+            $u = $w->prepare("INSERT INTO audit_chain_meta (k,v) VALUES ('last_verify_ok', :v) ON CONFLICT(k) DO UPDATE SET v = :v");
+            $u->bindValue(':v', $verdictOk);
+            $u->execute();
+            $u2 = $w->prepare("INSERT INTO audit_chain_meta (k,v) VALUES ('last_verify_at', :v) ON CONFLICT(k) DO UPDATE SET v = :v");
+            $u2->bindValue(':v', $now);
+            $u2->execute();
+        }
+        $w->close();
+    } catch (\Throwable $e) {
+        fwrite(STDERR, "verdict-write skipped: " . $e->getMessage() . "\n");
+    }
+}
 
 if ($break !== null) {
     if ($json) {

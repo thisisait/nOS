@@ -41,6 +41,7 @@ services:
 	# State & Migration Framework
 	- App\Model\BoneClient
 	- App\Model\EventRepository
+	- App\Model\AuditChainRepository
 	- App\Model\MigrationRepository
 	- App\Model\UpgradeRepository
 	- App\Model\CoexistenceRepository

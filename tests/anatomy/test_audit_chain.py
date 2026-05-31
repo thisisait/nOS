@@ -278,6 +278,48 @@ def test_existing_db_migration_via_real_init_db(tmp_path):
     con.close()
 
 
+def test_verify_writes_verdict_when_flag_set(tmp_path):
+    """--write-verdict caches the verdict in audit_chain_meta (header badge)."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    v = _php([str(VERIFY), f"--db={db}", "--write-verdict"])
+    assert v.returncode == 0, v.stderr
+    con = sqlite3.connect(db)
+    ok = con.execute("SELECT v FROM audit_chain_meta WHERE k='last_verify_ok'").fetchone()
+    at = con.execute("SELECT v FROM audit_chain_meta WHERE k='last_verify_at'").fetchone()
+    con.close()
+    assert ok and ok[0] == "1", "intact chain must cache ok='1'"
+    assert at and at[0], "last_verify_at must be set"
+    # tamper -> exit 2, verdict flips to '0'
+    con = sqlite3.connect(db)
+    con.execute("DROP TRIGGER events_worm_update")
+    con.execute("UPDATE events SET task='X' WHERE id=1")
+    con.commit()
+    con.close()
+    v2 = _php([str(VERIFY), f"--db={db}", "--write-verdict"])
+    assert v2.returncode == 2
+    con = sqlite3.connect(db)
+    ok2 = con.execute("SELECT v FROM audit_chain_meta WHERE k='last_verify_ok'").fetchone()
+    con.close()
+    assert ok2 and ok2[0] == "0", "tampered chain must cache ok='0'"
+
+
+def test_verify_without_flag_leaves_verdict_untouched(tmp_path):
+    """Backward-compat: plain --db= (no --write-verdict) writes no verdict."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    v = _php([str(VERIFY), f"--db={db}"])
+    assert v.returncode == 0
+    con = sqlite3.connect(db)
+    ok = con.execute("SELECT v FROM audit_chain_meta WHERE k='last_verify_ok'").fetchone()
+    con.close()
+    assert ok is None, "plain verify must not touch the verdict keys"
+
+
 def test_flag_off_is_noop(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=False)

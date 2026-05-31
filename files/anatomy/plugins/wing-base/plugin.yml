@@ -202,6 +202,25 @@ pulse:
         MAIL_FROM: "{{ mail_from }}"
         MAIL_RECIPIENT: "{{ mail_recipient }}"
         DISPATCH_DIGEST_FLUSH: "1"
+    # ── Audit-chain integrity verify (gov P1) ─────────────────────────────
+    # Daily walk of the wing.db hash-chain; caches the verdict into
+    # audit_chain_meta (--write-verdict) for the Wing header badge. Harmless
+    # when the chain is off (all-unsigned -> ok, badge hidden by its env gate).
+    # Needs WING_EVENTS_HMAC_SECRET to compute the key (else exits 3, no write).
+    - name: audit-chain-verify
+      runner: subprocess
+      command: "/opt/homebrew/bin/php"
+      args:
+        - "{{ wing_app_dir }}/bin/verify-audit-chain.php"
+        - "--db={{ wing_home }}/app/data/wing.db"
+        - "--json"
+        - "--write-verdict"
+      schedule: "17 4 * * *"        # daily 04:17 UTC; off-peak
+      jitter_min: 10
+      max_runtime_s: 120
+      max_concurrent: 1
+      env:
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"   # bare token (catalog literal-replace)
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)

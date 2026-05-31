@@ -28,6 +28,16 @@
 			<span style="color:var(--text2);font-size:12px">{$authName ?? $authUser}</span>
 			<a href="https://{$authentikDomain}/application/o/wing/end-session/" style="font-size:12px;color:var(--text2);margin-left:4px">Logout</a>
 		{/if}
+		{* Audit-chain integrity badge — set only when WING_AUDIT_CHAIN_ENABLED=1 (gov). *}
+		{if isset($auditChainVerdict)}
+			{if !($auditChainVerdict['known'] ?? false)}
+				<span style="background:var(--text2);color:#fff;font-size:11px;padding:1px 6px;border-radius:3px;margin-left:6px" title="audit chain not yet verified by the Pulse job">Audit chain unverified</span>
+			{elseif ($auditChainVerdict['ok'] ?? false)}
+				<span style="background:#0a7d33;color:#fff;font-size:11px;padding:1px 6px;border-radius:3px;margin-left:6px" title="verified {$auditChainVerdict['at'] ?? ''}">&#10003; Audit chain OK</span>
+			{else}
+				<span style="background:#a00;color:#fff;font-size:11px;padding:1px 6px;border-radius:3px;margin-left:6px" title="tamper detected — see verify-audit-chain.php">&#10007; Audit chain BROKEN</span>
+			{/if}
+		{/if}
 	</div>
 </div>
 
