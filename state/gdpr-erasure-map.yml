@@ -83,6 +83,11 @@ services:
     method: manual
     note: "Owner UI → Settings → Users → delete; or DELETE /rest/users/:id (owner auth)."
 
+  - id: svc_nodered
+    flag: install_nodered
+    method: manual
+    note: "Node-RED users are name-keyed in settings.js adminAuth (not email-keyed) — no programmatic per-subject delete; remove the user block + redeploy. No per-user flow data unless the operator stored PII in flows."
+
   - id: svc_vaultwarden
     flag: install_vaultwarden
     method: manual

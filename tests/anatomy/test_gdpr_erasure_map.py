@@ -68,6 +68,34 @@ def test_entry_is_well_formed(entry):
             "container_exec command must be keyed on the subject email"
 
 
+def _inscope_expected() -> set[str]:
+    """Every per-user-PII service that MUST carry an Art-17 erasure entry: gdpr
+    plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
+    (svc_bluesky-pds) + authentik anchors. forward_auth services are access
+    gates with no per-user state, so they are intentionally out of scope."""
+    ids = {"svc_authentik", "svc_bluesky-pds"}
+    for f in PLUGINS_ROOT.glob("*/plugin.yml"):
+        d = yaml.safe_load(f.read_text()) or {}
+        a = d.get("authentik") or {}
+        if a.get("mode") in ("native_oidc", "header_oidc") and d.get("gdpr"):
+            ids.add("svc_" + f.parent.name.removesuffix("-base"))
+    return ids
+
+
+def test_every_per_user_pii_service_has_erasure_entry():
+    """Coverage-completeness: close the silent-green loophole where a new
+    native/header_oidc service could ship with NO erasure path and the gate
+    stay green. A service with no programmatic delete still needs an entry
+    (method:manual + note) — that is the documented-deferral mechanism."""
+    mapped = {e["id"] for e in _entries()}
+    missing = sorted(_inscope_expected() - mapped)
+    assert not missing, (
+        "per-user-PII services with NO Art-17 erasure entry — add each to "
+        "state/gdpr-erasure-map.yml (method:manual + note if no email-keyed "
+        f"programmatic delete is verified yet): {missing}"
+    )
+
+
 def test_forget_event_whitelisted_both_sides():
     """gdpr_forget_user must be in BOTH the Bone and Wing event whitelists."""
     bone = (REPO / "files/anatomy/bone/events.py").read_text()
