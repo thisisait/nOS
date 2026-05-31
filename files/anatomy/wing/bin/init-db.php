@@ -369,6 +369,33 @@ $addMissingColumns($db, 'events', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_row_hash ON events(row_hash)');
 
+// WORM triggers — created HERE (not in schema-extensions.sql) so row_hash is
+// guaranteed present on BOTH fresh and pre-existing DBs: the ALTER sweep above
+// adds it on existing installs where `CREATE TABLE IF NOT EXISTS events` was a
+// no-op. Creating them in schema-extensions.sql failed ("no such column:
+// row_hash") on every existing wing.db. Fire ONLY on already-chained rows
+// (OLD.row_hash NOT NULL) -> dormant when the chain is off; UPDATE allows only
+// actor_action_id to change; DELETE blocked unless purge_unlocked='1'.
+$db->exec(<<<'SQL'
+DROP TRIGGER IF EXISTS events_worm_update;
+CREATE TRIGGER events_worm_update BEFORE UPDATE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL AND (
+       NEW.ts IS NOT OLD.ts OR NEW.run_id IS NOT OLD.run_id OR NEW.type IS NOT OLD.type
+    OR NEW.playbook IS NOT OLD.playbook OR NEW.play IS NOT OLD.play OR NEW.task IS NOT OLD.task
+    OR NEW.role IS NOT OLD.role OR NEW.host IS NOT OLD.host OR NEW.duration_ms IS NOT OLD.duration_ms
+    OR NEW.changed IS NOT OLD.changed OR NEW.result_json IS NOT OLD.result_json
+    OR NEW.migration_id IS NOT OLD.migration_id OR NEW.upgrade_id IS NOT OLD.upgrade_id
+    OR NEW.patch_id IS NOT OLD.patch_id OR NEW.coexist_svc IS NOT OLD.coexist_svc
+    OR NEW.source IS NOT OLD.source OR NEW.actor_id IS NOT OLD.actor_id OR NEW.acted_at IS NOT OLD.acted_at
+    OR NEW.row_hash IS NOT OLD.row_hash OR NEW.prev_hash IS NOT OLD.prev_hash)
+  BEGIN SELECT RAISE(ABORT, 'events WORM: only actor_action_id may change on a chained row'); END;
+DROP TRIGGER IF EXISTS events_worm_delete;
+CREATE TRIGGER events_worm_delete BEFORE DELETE ON events FOR EACH ROW
+  WHEN OLD.row_hash IS NOT NULL
+   AND COALESCE((SELECT v FROM audit_chain_meta WHERE k='purge_unlocked'), '0') <> '1'
+  BEGIN SELECT RAISE(ABORT, 'events WORM: DELETE only via the retention re-anchor path'); END;
+SQL);
+
 // Reset the WORM DELETE guard on every boot (cheap, idempotent). Closes the
 // "purge crashed mid-transaction left purge_unlocked='1'" leak.
 $db->exec("INSERT INTO audit_chain_meta (k,v) VALUES ('purge_unlocked','0') "

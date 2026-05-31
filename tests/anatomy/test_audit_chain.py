@@ -68,12 +68,16 @@ def _wing():
 
 
 def _fresh_db(tmp_path) -> pathlib.Path:
-    db = tmp_path / "wing.db"
-    con = sqlite3.connect(db)
-    con.executescript(SCHEMA.read_text())
-    con.commit()
-    con.close()
-    return db
+    # Build via the REAL init-db.php (not raw schema-extensions.sql) so the test
+    # schema matches production EXACTLY — including the WORM triggers + chain
+    # index that init-db creates AFTER its ALTER sweep. Applying schema-extensions
+    # alone used to hide the existing-DB migration bug (no triggers => no WORM).
+    r = subprocess.run(
+        ["php", str(WING / "bin" / "init-db.php"), f"--data-dir={tmp_path}"],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 0, f"init-db failed building test DB: {r.stderr}"
+    return tmp_path / "wing.db"
 
 
 def _php(args, secret=SECRET):
@@ -236,6 +240,42 @@ def test_toggle_off_then_on_verifies(tmp_path):
     W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "chained2"})
     v = _php([str(VERIFY), f"--db={db}"])
     assert v.returncode == 0, v.stderr
+
+
+def test_existing_db_migration_via_real_init_db(tmp_path):
+    """Regression: run the REAL init-db.php against a PRE-EXISTING wing.db whose
+    events table predates the chain columns (no row_hash). The WORM triggers +
+    idx_events_row_hash must be created AFTER the ALTER sweep adds row_hash, not
+    inside schema-extensions.sql (which would fail 'no such column: row_hash' on
+    every existing install — the bug that broke a live playbook run)."""
+    initdb = WING / "bin" / "init-db.php"
+    db = tmp_path / "wing.db"
+    con = sqlite3.connect(db)
+    # OLD events schema — exactly the pre-chain column set, no row_hash/prev_hash.
+    con.execute(
+        "CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, "
+        "run_id TEXT NOT NULL, type TEXT NOT NULL, playbook TEXT, play TEXT, task TEXT, "
+        "role TEXT, host TEXT, duration_ms INTEGER, changed INTEGER, result_json TEXT, "
+        "migration_id TEXT, upgrade_id TEXT, patch_id TEXT, coexist_svc TEXT, source TEXT, "
+        "actor_id TEXT, actor_action_id TEXT, acted_at TEXT, "
+        "created_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    )
+    con.execute("INSERT INTO events (ts,run_id,type,task) VALUES ('2026-01-01T00:00:00Z','r','task_ok','legacy')")
+    con.commit()
+    con.close()
+
+    r = subprocess.run(["php", str(initdb), f"--data-dir={tmp_path}"], capture_output=True, text=True)
+    assert r.returncode == 0, f"init-db must migrate an existing DB cleanly: {r.stderr}"
+
+    con = sqlite3.connect(db)
+    cols = [c[1] for c in con.execute("PRAGMA table_info(events)")]
+    trg = [t[0] for t in con.execute("SELECT name FROM sqlite_master WHERE type='trigger'")]
+    assert "row_hash" in cols and "prev_hash" in cols, "ALTER sweep must add chain columns"
+    assert "events_worm_update" in trg and "events_worm_delete" in trg, "WORM triggers must be created post-sweep"
+    # the pre-existing legacy row has NULL row_hash -> triggers dormant -> still mutable
+    con.execute("UPDATE events SET task='edited' WHERE id=1")
+    con.commit()
+    con.close()
 
 
 def test_flag_off_is_noop(tmp_path):

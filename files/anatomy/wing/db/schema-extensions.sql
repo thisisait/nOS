@@ -54,7 +54,6 @@ CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
 CREATE INDEX IF NOT EXISTS idx_events_source    ON events(source);
 CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id);
 CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id);
-CREATE INDEX IF NOT EXISTS idx_events_row_hash        ON events(row_hash);
 
 -- Audit-chain metadata singleton (k/v). Keys:
 --   purge_unlocked              '0'/'1' guard the WORM DELETE trigger checks
@@ -68,34 +67,15 @@ CREATE TABLE IF NOT EXISTS audit_chain_meta (
 );
 INSERT OR IGNORE INTO audit_chain_meta (k, v) VALUES ('purge_unlocked', '0');
 
--- Column-scoped WORM triggers. UNCONDITIONAL (installed always) but fire ONLY
--- on already-CHAINED rows (OLD.row_hash NOT NULL). On a chain-off install every
--- row has NULL row_hash, so these never fire -> byte-identical write semantics,
--- and the CI-rebuilt contracts artifact is flag-independent.
---
--- UPDATE: allow ONLY actor_action_id to change (the two AgentSessionRepository
--- back-stamps touch only that column); abort if any HASHED column changes.
-DROP TRIGGER IF EXISTS events_worm_update;
-CREATE TRIGGER events_worm_update BEFORE UPDATE ON events FOR EACH ROW
-  WHEN OLD.row_hash IS NOT NULL AND (
-       NEW.ts IS NOT OLD.ts OR NEW.run_id IS NOT OLD.run_id OR NEW.type IS NOT OLD.type
-    OR NEW.playbook IS NOT OLD.playbook OR NEW.play IS NOT OLD.play OR NEW.task IS NOT OLD.task
-    OR NEW.role IS NOT OLD.role OR NEW.host IS NOT OLD.host OR NEW.duration_ms IS NOT OLD.duration_ms
-    OR NEW.changed IS NOT OLD.changed OR NEW.result_json IS NOT OLD.result_json
-    OR NEW.migration_id IS NOT OLD.migration_id OR NEW.upgrade_id IS NOT OLD.upgrade_id
-    OR NEW.patch_id IS NOT OLD.patch_id OR NEW.coexist_svc IS NOT OLD.coexist_svc
-    OR NEW.source IS NOT OLD.source OR NEW.actor_id IS NOT OLD.actor_id OR NEW.acted_at IS NOT OLD.acted_at
-    OR NEW.row_hash IS NOT OLD.row_hash OR NEW.prev_hash IS NOT OLD.prev_hash)
-  BEGIN SELECT RAISE(ABORT, 'events WORM: only actor_action_id may change on a chained row'); END;
-
--- DELETE: blocked on chained rows unless purge_unlocked='1' (set only inside
--- purge-events.php's re-anchor transaction; reset immediately after + on every
--- init-db boot).
-DROP TRIGGER IF EXISTS events_worm_delete;
-CREATE TRIGGER events_worm_delete BEFORE DELETE ON events FOR EACH ROW
-  WHEN OLD.row_hash IS NOT NULL
-   AND COALESCE((SELECT v FROM audit_chain_meta WHERE k='purge_unlocked'), '0') <> '1'
-  BEGIN SELECT RAISE(ABORT, 'events WORM: DELETE only via the retention re-anchor path'); END;
+-- NOTE: idx_events_row_hash + the events WORM triggers (events_worm_update /
+-- events_worm_delete) are NOT created here. They reference events.row_hash,
+-- but on a PRE-EXISTING wing.db `CREATE TABLE IF NOT EXISTS events` above is a
+-- no-op, so row_hash does not exist until bin/init-db.php's ALTER-column sweep
+-- adds it. Creating them in this file would therefore fail ("no such column:
+-- row_hash") on every existing install. init-db.php creates both the index and
+-- the triggers immediately AFTER that sweep, so row_hash is guaranteed present
+-- on fresh AND existing DBs. (The contracts artifact still captures them — it
+-- is dumped from a fully init-db'd schema.)
 
 -- Migration history mirror. Source of truth lives in ~/.nos/state.yml; this
 -- table is a read cache populated via BoxAPI /api/state pushes.
