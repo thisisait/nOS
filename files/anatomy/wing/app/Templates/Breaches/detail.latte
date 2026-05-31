@@ -1,0 +1,24 @@
+{block title}Breach #{$breach['id']}{/block}
+
+{block content}
+<h2>Breach #{$breach['id']} — {$breach['nature']}</h2>
+<div class="sub">Risk: {$breach['risk_level']} · Status: {$breach['status']} · Detected: {$breach['detected_at']} · Aware: {$breach['aware_at'] ?? $breach['detected_at']}</div>
+
+<h3 style="margin-top:16px">Notification deadlines</h3>
+<ul>
+	{foreach $deadlines as $stage => $d}
+		{if $d['applicable']}
+			<li>
+				<strong>{$stage}</strong>: due {$d['due_at'] ?? '—'}
+				{if $d['done_at']} · <span style="color:#0a7d33">done {$d['done_at']}</span>{else} · <span style="color:#a00">open</span>{/if}
+			</li>
+		{/if}
+	{/foreach}
+</ul>
+
+<div class="sub" style="margin-top:16px">
+	Regulator report: <code>php bin/breach-report.php --id={$breach['id']} --format=md</code>
+	&nbsp;·&nbsp; <code>GET /api/v1/gdpr/breaches/{$breach['id']}/report</code>
+</div>
+<p><a href="/breaches">&larr; all breaches</a></p>
+{/block}

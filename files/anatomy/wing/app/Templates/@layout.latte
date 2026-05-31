@@ -73,6 +73,7 @@
 			<a class="tab{if $activeTab === 'pentest'} active{/if}" href="/pentest" data-tab="pentest">Pentest <span class="tab-key">8</span></a>
 			<a class="tab{if $activeTab === 'remediation'} active{/if}" href="/remediation" data-tab="remediation">Remediation <span class="tab-key">9</span></a>
 			<a class="tab{if $activeTab === 'gdpr'} active{/if}" href="/gdpr" data-tab="gdpr">GDPR</a>
+			{if $isSuperAdmin}<a class="tab{if $activeTab === 'breaches'} active{/if}" href="/breaches" data-tab="breaches">Breaches</a>{/if}
 		</div>
 
 		<div class="nav-overlay-group">

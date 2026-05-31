@@ -1,0 +1,30 @@
+{block title}Breaches{/block}
+
+{block content}
+<h2>GDPR breach register</h2>
+<div class="sub">Art-33 (ÚOOÚ 72h) + NÚKIB 24h/72h/30d deadline tracking. File a breach via <code>bin/breach-file.php --json=-</code>; this is the read-only deadline view (overdue stages escalate as critical notifications via the hourly Pulse scan).</div>
+
+{if !$breaches}
+<p style="margin-top:16px;color:var(--text2)">No breaches filed. (That is the good state.)</p>
+{else}
+<table style="margin-top:16px;width:100%;border-collapse:collapse">
+	<thead>
+		<tr style="text-align:left;border-bottom:1px solid var(--border)">
+			<th>#</th><th>Nature</th><th>Risk</th><th>Status</th><th>Art-33 due (72h)</th><th>NÚKIB 72h due</th>
+		</tr>
+	</thead>
+	<tbody>
+	{foreach $breaches as $row}
+		<tr style="border-bottom:1px solid var(--border)">
+			<td><a href="/breaches/{$row['b']['id']}">{$row['b']['id']}</a></td>
+			<td>{$row['b']['nature']}</td>
+			<td>{$row['b']['risk_level']}</td>
+			<td>{$row['b']['status']}</td>
+			<td>{$row['deadlines']['art33']['due_at'] ?? '—'}</td>
+			<td>{$row['deadlines']['nis2_72h']['due_at'] ?? '—'}</td>
+		</tr>
+	{/foreach}
+	</tbody>
+</table>
+{/if}
+{/block}

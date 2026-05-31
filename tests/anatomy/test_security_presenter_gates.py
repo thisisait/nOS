@@ -77,6 +77,15 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         PRESENTERS / "UpgradesPresenter.php",
         ["actionQueueUpgrade"],
     ),
+    (
+        # BreachesPresenter (gov P1) — Tier-1 READ-ONLY GDPR breach register +
+        # deadline countdowns. No state-changing browser actions (filing runs
+        # through bin/breach-file.php), so the mutator list is empty; the gate
+        # is the declarative `$minAccessTier = 1` enforced by BasePresenter.
+        "BreachesPresenter",
+        PRESENTERS / "BreachesPresenter.php",
+        [],
+    ),
 ]
 
 
