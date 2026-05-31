@@ -2,11 +2,14 @@
 
 The qdrant-base plugin manifest declares ``bone_redaction_required: true``
 ("Bone MUST strip operator email before upsert"). Embeddings and their payloads
-land in Qdrant, which has no per-subject erasure path (a known GDPR Art. 17
-gap — the Bone Qdrant client exposes no points/delete), so the defensible
-control is to keep direct identifiers OUT of the vector store in the first
-place. This module strips email addresses from an upsert payload before it
-leaves the host.
+land in Qdrant, covered by two complementary GDPR controls:
+  1. PREVENTION (this module) — strip direct identifiers (email) from an upsert
+     payload BEFORE it leaves the host, so they never enter the vector store.
+  2. REACH (Art. 17) — ``QdrantClient.delete_points(ids=|filter=)`` removes
+     whatever vectors do land, on a per-subject erasure run.
+Keeping identifiers out is the first line of defence; delete_points is the
+remedy when something must be removed after the fact. (Earlier revisions of this
+header claimed no points/delete existed — it does now; do not re-add that note.)
 
 Default-on; set ``BONE_EMBED_REDACT=false`` to disable (debugging only).
 """

@@ -8,8 +8,11 @@
 # service is gated on (`always` = part of an always-on stack).
 #
 # Coverage = every service that stores PER-USER data (native_oidc + header_oidc
-# + AT-proto identity). forward_auth services are access gates with no per-user
-# state, so they are intentionally absent — there is nothing to erase.
+# + AT-proto identity), PLUS the backend/residual stores that retain DERIVED
+# subject data beyond those per-service deletes (Redis sessions, Qdrant
+# embeddings, RustFS backups, wing.db agent tables, Loki/Tempo) — see the
+# "Backend stores & residual reach" section. forward_auth services are access
+# gates with no per-user state, so they are intentionally absent.
 #
 # method:
 #   authentik_api  — the identity anchor. Deletes the Authentik user, revoking
@@ -152,3 +155,57 @@ services:
     flag: install_bluesky_pds
     method: manual
     note: "pdsadmin account delete <did> (resolve did from @<handle>.bsky.<tld>)."
+
+  # ── Backend stores & residual reach (Art. 17 — beyond per-service deletes) ─
+  # These hold DERIVED / RESIDUAL subject data the per-service deletes above do
+  # not reach. All `manual`: the deletions are broad (FLUSHDB drops every
+  # session, not one subject's) or need operator-supplied keys (post-redaction
+  # Qdrant has no email to filter on), so auto-running them on a per-subject run
+  # would over-delete. The dry-run plan prints these so the reach is auditable.
+  - id: svc_redis
+    flag: install_redis
+    method: manual
+    note: "Sessions/cache only, opaque-keyed (session ids, not email). The
+           svc_authentik delete revokes SSO; residual sessions TTL-expire. To
+           force-clear: docker exec <redis> redis-cli FLUSHDB (drops ALL
+           sessions for that logical DB — every user re-logs in)."
+
+  - id: svc_qdrant
+    flag: install_qdrant
+    method: manual
+    note: "Embeddings carry NO direct identifier — redaction.py strips email
+           before upsert (Art. 25). Remove derived vectors via the Bone
+           QdrantClient.delete_points(collection, ids=|filter=) seam, keyed on
+           the subject's source-document / agent-session id (no email filter
+           survives redaction)."
+
+  - id: svc_rustfs
+    flag: install_rustfs
+    method: manual
+    note: "BACKUP CARVE-OUT (Art. 17(3) / recital 65): an erased subject's
+           encrypted dumps age out per backup retention (7 daily + 4 weekly +
+           12 monthly) — do NOT surgically edit encrypted archives. Re-run this
+           erasure for the subject after ANY restore. Object-store buckets of
+           user uploads follow the owning service's delete."
+
+  - id: svc_wing
+    flag: install_wing
+    method: manual
+    note: "agent_sessions/threads/iterations/memory_stores may reference the
+           subject in prompts/outputs. events are WORM-chained (integrity);
+           subject content in agent tables is purged via tasks/audit-retention.yml.
+           Manual review for free-text PII in agent memory."
+
+  - id: svc_loki
+    flag: always
+    method: manual
+    note: "Logs may contain IP/email in request lines. No per-subject log
+           deletion — minimise PII at the source and rely on the Loki retention
+           horizon (logs age out). Tighten loki retention for gov deployments."
+
+  - id: svc_tempo
+    flag: always
+    method: manual
+    note: "Traces may carry IP / user span attributes. No per-subject trace
+           deletion; rely on the Tempo retention horizon (traces age out).
+           Minimise PII in span attributes."
