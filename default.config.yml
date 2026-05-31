@@ -1268,6 +1268,7 @@ gitea_admin_user: "{{ ansible_facts['user_id'] }}"
 gitea_admin_password: "{{ global_password_prefix }}_pw_gitea"
 gitea_admin_email: ""                          # FILL IN!
 gitea_secret_key: "{{ global_password_prefix }}_pw_gitea_secret"
+gitea_metrics_token: "{{ global_password_prefix }}_pw_gitea_metrics"   # bearer token guarding /metrics (Alloy scrape sends it)
 gitea_disable_registration: false              # true = only admin can add users (also blocks OIDC auto-create)
 # Pure-SSO: hide the local self-registration form but still let OAuth2/OIDC
 # first-login auto-create users (Authentik onboarding). true = external-only.

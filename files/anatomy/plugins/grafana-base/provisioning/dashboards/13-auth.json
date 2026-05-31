@@ -295,7 +295,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "sum by (tier) (authentik_rbac_users_by_tier)",
+          "expr": "sum by (tier) (pg_authentik_rbac_tier_users)",
           "legendFormat": "{{tier}}",
           "range": false,
           "refId": "A"
@@ -397,7 +397,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"authentik-(server|worker)-1\"}[5m]))",
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"authentik.*\"}[5m]))",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"

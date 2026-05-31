@@ -55,7 +55,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "gitea_repos",
+          "expr": "gitea_repositories",
           "legendFormat": "repos",
           "refId": "A"
         }
@@ -325,7 +325,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "avg_over_time(woodpecker_pipeline_mttr_seconds[24h])",
+          "expr": "woodpecker_pipeline_mttr_seconds",
           "legendFormat": "mttr",
           "refId": "A"
         }
@@ -512,7 +512,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"(gitea|woodpecker-server|woodpecker-agent|gitlab|paperclip|code-server)-1\"}[5m]))",
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\"(gitea|woodpecker|gitlab|paperclip|code-server).*\"}[5m]))",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"

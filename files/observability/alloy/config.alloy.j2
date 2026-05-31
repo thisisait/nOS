@@ -132,6 +132,39 @@ prometheus.scrape "qdrant" {
 }
 {% endif %}
 
+{% if install_gitea | default(false) %}
+// Gitea — repo / user / org gauges + Go process metrics.
+// Requires GITEA__metrics__ENABLED=true in the gitea compose env. /metrics is
+// unauthenticated unless GITEA__metrics__TOKEN is set (it isn't), so no bearer
+// header. Hits the host-published port (gitea_port → container :3000).
+prometheus.scrape "gitea" {
+  targets = [{
+    __address__ = "localhost:{{ gitea_port | default(3003) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "gitea"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+}
+{% endif %}
+
+{% if install_woodpecker | default(false) %}
+// Woodpecker CI — pipeline / build / agent metrics (woodpecker_pipeline_*).
+// /metrics is Bearer-protected by WOODPECKER_PROMETHEUS_AUTH_TOKEN
+// (woodpecker_prom_token), so pass the same token via bearer_token. Hits the
+// host-published web UI port (woodpecker_port → container :8000).
+prometheus.scrape "woodpecker" {
+  targets = [{
+    __address__ = "localhost:{{ woodpecker_port | default(8060) }}",
+  }]
+  forward_to  = [prometheus.remote_write.default.receiver]
+  job_name    = "woodpecker"
+  metrics_path = "/metrics"
+  bearer_token = "{{ woodpecker_prom_token | default(global_password_prefix + '_pw_wp_prom') }}"
+  scrape_interval = "30s"
+}
+{% endif %}
+
 {% if install_spacetimedb | default(false) %}
 // SpacetimeDB — native Rust process metrics (worker pool, db ops, energy, WS conns).
 // Path is /v1/prometheus (the /metrics router under /v1 returns the same blob;
