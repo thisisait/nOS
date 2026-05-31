@@ -102,7 +102,13 @@ final class RouterFactory
 		// GDPR Article 30 register (Track D, 2026-04-26).
 		$api->addRoute('api/v1/gdpr/processing[/<id>]', 'Gdpr:processing');
 		$api->addRoute('api/v1/gdpr/dsar[/<id>]', 'Gdpr:dsar');
+		// Specific breach-report route BEFORE the generic breaches route
+		// (Nette first-match-wins) so /breaches/<id>/report isn't swallowed.
+		$api->addRoute('api/v1/gdpr/breaches/<id>/report', 'Gdpr:breachReport');
 		$api->addRoute('api/v1/gdpr/breaches[/<id>]', 'Gdpr:breaches');
+		// Audit hash-chain integrity (gov P1) — Api\AuditPresenter (distinct
+		// from the browser Audit:default).
+		$api->addRoute('api/v1/audit/verify', 'Audit:verify');
 		$api->addRoute('api/v1/gdpr/export.csv', 'Gdpr:exportCsv');
 
 		// Public homepage (no auth — nginx exempts exact /)
@@ -142,6 +148,11 @@ final class RouterFactory
 		// Phase 5 ceremony pass criterion uses this view to verify the
 		// conductor self-test produced rows with actor_id=conductor.
 		$router->addRoute('audit', 'Audit:default');
+
+		// GDPR breach register (gov P1) — Tier-1 read-only deadline view.
+		// Specific /<id> detail BEFORE the list (first-match-wins).
+		$router->addRoute('breaches/<id>', 'Breaches:detail');
+		$router->addRoute('breaches', 'Breaches:default');
 
 		// A12 (2026-05-07): Tier-1 platform control panel (big-red-button
 		// emergency halt of all Pulse cron firing). Specific routes BEFORE

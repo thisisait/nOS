@@ -47,6 +47,25 @@ final class GdprPresenter extends BaseApiPresenter
 {
     public function __construct(private GdprRepository $repo) {}
 
+    // ── /api/v1/gdpr/breaches/<id>/report ────────────────────────────────
+    // Regulator-report export (Art-33/34 + NÚKIB). GET-only. Shares the
+    // assembly with bin/breach-report.php via App\Model\BreachReport so the
+    // CLI export and the API never drift. Returns the structured report + a
+    // paste-ready markdown rendering in one envelope.
+    public function actionBreachReport(string $id): void
+    {
+        $this->requireMethod('GET');
+        $b = $this->repo->getBreach((int) $id);
+        if ($b === null) {
+            $this->sendError('breach not found', 404);
+        }
+        $report = \App\Model\BreachReport::build($b);
+        $this->sendSuccess([
+            'report' => $report,
+            'markdown' => \App\Model\BreachReport::renderMarkdown($report),
+        ]);
+    }
+
     // ── /api/v1/gdpr/processing ──────────────────────────────────────────
 
     public function actionProcessing(?string $id = null): void
