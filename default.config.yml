@@ -109,6 +109,13 @@ instance_parent: ""                       # Slug of parent box (for hierarchy)
 # partial stack failures (e.g., `-e fail_on_stack_errors=false` during debug).
 fail_on_stack_errors: true
 
+# Gov-readiness: require host full-disk encryption (P0-ATREST). When true, a
+# pre_tasks gate hard-fails the run unless macOS FileVault is On / a Linux LUKS
+# (dm-crypt) backing device is present, BEFORE any personal-data service starts.
+# Default OFF — a host disk property, independent of Docker. profiles/gov-local.yml
+# flips it true. Bypass a false-negative detection with -e nos_skip_at_rest_check=true.
+require_disk_encryption: false
+
 # ── Fleet / Heartbeat ────────────────────────────────────────────────────────
 configure_heartbeat: false                # Heartbeat daemon for fleet reporting
 heartbeat_endpoint: ""                    # URL of the fleet management server
@@ -1882,6 +1889,19 @@ authentik_rbac_tiers:
     name: "tier-guest"
     description: "Guest/public access (content, media)"
     groups: ["nos-providers", "nos-admins", "nos-managers", "nos-users", "nos-guests"]
+
+# ── P0-MFA — enforced MFA + password policy (gov gate, default OFF) ───────────
+# enforce_mfa OFF = files/anatomy/plugins/authentik-base/blueprints/
+# 50-mfa-policy.yaml.j2 renders to a no-op (entries: with no list); Authentik's
+# stock default-authentication-flow is untouched → login byte-identical to today.
+# ON (profiles/gov-local.yml) = render a DEDICATED Tier-1 authentication flow
+# (nos-tier1-mfa-flow) with not_configured_action='configure' (force inline
+# TOTP/WebAuthn self-enrol — never a hard deny) and route only Tier-1 OIDC/proxy
+# providers to it; non-Tier-1 providers keep the stock flow. Plus a password
+# policy bound to the prompt stages that actually collect a new password.
+enforce_mfa: false
+mfa_password_min_length: 15            # NIST SP 800-63 floor for the password policy
+mfa_password_hibp: false               # OFF: HIBP needs egress (not air-gap-safe); zxcvbn is the local check
 
 # Mapping slug → tier. Services without an entry default to tier 3 (user+).
 # LEGACY FALLBACK ONLY: the RBAC blueprint resolves tier as

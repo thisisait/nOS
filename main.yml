@@ -333,6 +333,16 @@
         - install_traefik | default(true) | bool
       tags: ['always', 'preflight']
 
+    # ── Preflight: at-rest disk encryption (P0-ATREST, gov-readiness) ────────
+    # Default-OFF host FDE gate. Inert unless require_disk_encryption is true
+    # (profiles/gov-local.yml). Runs here — after _platform.yml, before any
+    # data dir / stack bring-up — so a gov run on an unencrypted disk fails
+    # before any personal-data service can start. Independent of Docker, so it
+    # does NOT gate on nos_docker_ready. See docs/compliance/
+    # gov-readiness-audit-2026q2.md P0 item 2.
+    - import_tasks: tasks/preflight-at-rest.yml
+      tags: ['always', 'preflight', 'security']
+
     # NOTE: State & Migration Framework orchestrator (pre-migrate.yml) runs
     # at the very top of `tasks:` (after roles installed Homebrew). On a fresh
     # machine, pre_tasks runs before pazny.mac.homebrew has guaranteed
@@ -762,7 +772,7 @@
       # blank (Authentik's one-time scan). Apply it like the others so the
       # "add a new agent" workflow actually provisions the client.
       ansible.builtin.shell: |
-        for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies 30-agent-clients; do
+        for bp in 00-admin-groups 10-oidc-apps 20-rbac-policies 30-agent-clients{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}; do
           {{ docker_bin }} compose -p infra exec -T authentik-worker \
             ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
         done
