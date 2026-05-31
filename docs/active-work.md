@@ -24,11 +24,11 @@
 
 ---
 
-## Current track: **v0.3-beta release prep (2026-05-30 evening)**
+## Prior track: **v0.3-beta release prep (2026-05-30 evening) — shipped**
 
-The macOS release. Cross-platform = v0.4 (operator decision). Remaining to tag:
-finalize `RELEASE.md` (drafted), run the operator's `dev → master` PR + `v0.3-beta`
-tag (admin bypass — see memory `nos-release-flow`). The lanes that built up to it:
+The macOS release. Cross-platform = v0.4 (operator decision). Tagged: finalized
+`RELEASE.md`, ran the operator's `dev → master` PR + `v0.3-beta` tag (admin
+bypass — see memory `nos-release-flow`). The lanes that built up to it:
 
 ## Prior track: **Upgrade-engine first-real-apply + Wing tiered RBAC (2026-05-30)**
 

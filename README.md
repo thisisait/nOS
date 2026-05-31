@@ -4,7 +4,7 @@
 >
 > `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
 > An Ansible playbook that orchestrates 45+ roles, wires 40+ FOSS services together through one SSO,
-> and turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud.
+> and turns an Apple Silicon Mac — or an Ubuntu 24.04 LTS host — into a reproducible, self-hosted, self-managing cloud.
 
 <p align="center">
   <a href="https://thisisait.eu">thisisait.eu</a> ·
@@ -58,7 +58,10 @@ Hardware and electricity not included. A Mac Mini M4 pays for itself in under a 
 
 ## Quick start
 
-> **Target:** macOS on Apple Silicon (M1+). Intel Macs are not supported.
+> **Reference platform:** macOS on Apple Silicon (M1+). Intel Macs are not supported.
+> **Also supported:** Ubuntu 24.04 LTS — the full playbook is wet-tested end-to-end by a
+> standing `Integration (ubuntu-24.04)` CI job (run with `install_openclaw: false` /
+> `install_hermes: false`; those agents stay macOS-only for now — see [docs/linux-port.md](docs/linux-port.md)).
 > **Recommended:** 36 GB RAM, 1 TB external SSD (nOS tiers heavy data onto it automatically).
 
 ### 1. Bootstrap
