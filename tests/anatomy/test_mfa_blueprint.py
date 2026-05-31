@@ -86,13 +86,15 @@ def test_flag_on_shape():
     assert pol[0]["attrs"]["check_zxcvbn"] is True
     assert pol[0]["attrs"]["check_have_i_been_pwned"] is False
 
-    # password policy bound to the enrollment PROMPT stage (not login pw stage)
+    # Password policy is created but NOT blueprint-bound to a prompt stage:
+    # Authentik's policybinding.target for a prompt stage atomically failed the
+    # WHOLE blueprint on the live 2026-05-31 blank+gov run (null / does-not-exist
+    # pk), so the brittle bindings were dropped (the core MFA flow doesn't need
+    # them). Pin that NO policybinding ships (regression guard against re-adding
+    # the blueprint-killing entry).
     pol_binds = [e for e in entries if e["model"] == "authentik_policies.policybinding"]
-    targets = [str(b["identifiers"].get("target")) for b in pol_binds]
-    assert any("nos-enrollment-prompts" in t for t in targets), \
-        "password policy must bind the enrollment prompt stage"
-    assert not any("default-authentication-password" in t for t in targets), \
-        "password policy must NOT bind the login password stage (would be inert)"
+    assert pol_binds == [], \
+        "no policybinding may ship — a null/invalid prompt-stage target atomically rejects the whole blueprint"
 
 
 def test_source_negative_asserts():

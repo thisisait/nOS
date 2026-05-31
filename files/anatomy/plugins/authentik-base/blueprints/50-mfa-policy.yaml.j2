@@ -167,30 +167,15 @@ entries:
       hibp_allowed_count: 0
       error_message: "Password must be at least {{ mfa_password_min_length | default(15) }} chars with mixed case, a digit and a symbol (nOS gov policy)."
 
-  # ── 7. Bind the password policy to PROMPT stages that COLLECT a new password ─
-  # NOT the login password stage (it authenticates, never puts the password into
-  # PROMPT context → policy would be inert). The enrollment prompt stage
-  # nos-enrollment-prompts (40-enrollment-flow.yaml.j2) carries field_key=password.
-  - model: authentik_policies.policybinding
-    state: present
-    identifiers:
-      target: !Find [authentik_stages_prompt.promptstage, [name, nos-enrollment-prompts]]
-      order: 0
-    attrs:
-      policy: !Find [authentik_policies_password.passwordpolicy, [name, nos-password-policy]]
-      enabled: true
-      negate: false
-      timeout: 30
-  # The stock password-change flow's prompt stage (so an in-app password change
-  # is also policed). default-password-change-prompt is the upstream prompt stage.
-  - model: authentik_policies.policybinding
-    state: present
-    identifiers:
-      target: !Find [authentik_stages_prompt.promptstage, [name, default-password-change-prompt]]
-      order: 0
-    attrs:
-      policy: !Find [authentik_policies_password.passwordpolicy, [name, nos-password-policy]]
-      enabled: true
-      negate: false
-      timeout: 30
+  # ── 7. NOTE — password policy is created (above) but NOT blueprint-bound ──
+  # Authentik's blueprint `policybinding.target` for a PROMPT stage proved
+  # fragile on the live 2026-05-31 blank+gov run (atomic-fail of the WHOLE
+  # blueprint): binding the non-existent `nos-enrollment-prompts` null-targeted
+  # ("field may not be null"), and binding the stock `default-password-change-
+  # prompt` resolved to a raw stage pk that policybinding.target (a
+  # PolicyBindingModel pbm_uuid) rejects ("does not exist"). The core gov MFA
+  # control — the `nos-mfa-validate` stage + the dedicated `nos-tier1-mfa-flow`
+  # — does NOT depend on the policy binding, so we keep the policy OBJECT (for a
+  # manual/UI bind or a future validation_policies M2M wire) and drop the brittle
+  # blueprint bindings rather than let one bad target tank all 9 entries.
 {% endif %}
