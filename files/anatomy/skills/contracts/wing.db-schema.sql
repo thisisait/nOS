@@ -725,7 +725,7 @@ CREATE INDEX idx_events_migration ON events(migration_id);
 
 CREATE INDEX idx_events_patch     ON events(patch_id);
 
-CREATE INDEX idx_events_row_hash        ON events(row_hash);
+CREATE INDEX idx_events_row_hash ON events(row_hash);
 
 CREATE INDEX idx_events_run_id    ON events(run_id);
 
