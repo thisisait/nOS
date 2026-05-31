@@ -14,9 +14,11 @@ runner must consult before `docker compose up`:
 
 - ``gate_tls_required``  — if the app processes ``end_users`` data, the
   vhost must terminate TLS. Reject deploy without ssl_cert_path.
-- ``gate_sso_required``  — if ``legal_basis == "consent"``, Authentik
-  SSO must be wired (proxy auth at minimum) so consent collection is
-  auditable.
+- ``gate_sso_required``  — if ``legal_basis == "consent"``, an authenticated
+  Authentik identity channel is required so any consent later captured can be
+  ATTRIBUTED to a real subject. SSO is NOT consent collection — see
+  ``consent_capture_satisfied`` (pure additive, never called) + Wing's
+  gdpr_consent registry.
 - ``gate_eu_residency``  — if ``transfers_outside_eu == false``, every
   compose service image must come from an EU-or-neutral registry
   (docker.io, ghcr.io, registry.gitlab.com, lscr.io, quay.io). Reject
@@ -265,13 +267,95 @@ def gate_tls_required(record: Dict[str, Any]) -> bool:
 
 
 def gate_sso_required(record: Dict[str, Any]) -> bool:
-    """True if the app needs Authentik wiring (consent legal basis).
+    """True if the app needs an authenticated identity channel (Authentik).
 
-    Without auditable consent collection there's no Art 6(1)(a) basis
-    to invoke. Authentik proxy auth at minimum; native OIDC if the app
-    supports it.
+    DOES NOT mean "SSO == consent". SSO is AUTHENTICATION; consent is a
+    separate, explicit, recorded act (see ``consent_capture_satisfied`` and
+    Wing's gdpr_consent registry). When ``legal_basis == "consent"`` we still
+    require Authentik wiring, but only so that any consent later captured can
+    be ATTRIBUTED to a real, authenticated subject — NOT because logging in is
+    itself consent. Authentik proxy auth at minimum; native OIDC if the app
+    supports it. Behaviour is byte-identical to the pre-decoupling gate; the
+    change is in what the gate MEANS, plus the new ``consent_capture_satisfied``
+    predicate below.
     """
     return (record.get("gdpr") or {}).get("legal_basis") == "consent"
+
+
+# Consent-capture mechanisms the parser recognises in gdpr.consent_capture.
+# Exported for tests + future consumers even though NOTHING in the runner reads
+# it today (see consent_capture_satisfied — pure additive, never called).
+CONSENT_CAPTURE_MECHANISMS = ("record-consent", "external", "none")
+
+
+def consent_capture_satisfied(record: Dict[str, Any]) -> Tuple[bool, str]:
+    """Honest check that consent is actually COLLECTED, not just SSO-gated.
+
+    NOT CALLED ANYWHERE in the runner. This is a pure additive predicate —
+    forward-ready metadata only, exactly like the consent_granted/
+    consent_withdrawn event-whitelist entries. The runner
+    (files/anatomy/library/nos_apps_render.py) does NOT consult it and there is
+    NO opt-in enforcement var. So adding this function changes ZERO deploy
+    outcomes; it exists to (a) make the "SSO == consent" falsehood nameable in
+    code, and (b) give a future enforcement edit (or a Wing/CI audit) a single
+    correct predicate to call instead of re-deriving the rule.
+
+    The old gate conflated SSO enrollment with consent collection: an app
+    declaring ``legal_basis: consent`` was deemed fine the moment Authentik was
+    wired, even though NO consent record was ever written. That is the
+    "consent == collected" falsehood this decoupling names.
+
+    Returns ``(ok, reason)``:
+      * ``(True, "")``                 — not a consent app (N/A), OR a declared
+                                         writing mechanism is present & complete.
+      * ``(False, "<advisory text>")`` — consent app with no/insufficient
+                                         consent-capture declaration.
+
+    The accepted declaration is an OPTIONAL ``gdpr.consent_capture`` sub-block:
+        consent_capture:
+          mechanism: record-consent   # record-consent | external | none
+          activity: <gdpr_consent.activity slug>   # required for 'record-consent'
+          attestation: <text/url>                  # required for 'external'
+          tos_version_hash: <hash>                 # optional; pins terms shown
+    """
+    gdpr = record.get("gdpr") or {}
+    if gdpr.get("legal_basis") != "consent":
+        return True, ""  # gate not applicable to non-consent bases
+
+    cc = gdpr.get("consent_capture")
+    if not isinstance(cc, dict) or not cc:
+        return False, (
+            "legal_basis is 'consent' but no gdpr.consent_capture mechanism is "
+            "declared. Authentik SSO is AUTHENTICATION, not consent — a real "
+            "consent record must be written (e.g. via record-consent.php into "
+            "the gdpr_consent registry). Add a gdpr.consent_capture block."
+        )
+
+    mech = cc.get("mechanism")
+    if mech not in CONSENT_CAPTURE_MECHANISMS:
+        return False, (
+            "gdpr.consent_capture.mechanism %r not in %s"
+            % (mech, list(CONSENT_CAPTURE_MECHANISMS))
+        )
+    if mech == "none":
+        return False, (
+            "gdpr.consent_capture.mechanism is 'none' — an explicit declaration "
+            "that consent is NOT collected. Incompatible with legal_basis: "
+            "consent. Use a different legal_basis or declare a real mechanism."
+        )
+    if mech == "record-consent" and not cc.get("activity"):
+        return False, (
+            "gdpr.consent_capture.mechanism 'record-consent' requires an "
+            "'activity' slug (the gdpr_consent.activity the consent covers)."
+        )
+    if mech == "external" and not cc.get("attestation"):
+        return False, (
+            "gdpr.consent_capture.mechanism 'external' requires an 'attestation' "
+            "field (text or URL pointing to where/how the external consent is "
+            "collected + recorded) — bare 'external' would reintroduce the "
+            "'consent == collected' false-positive this predicate exists to catch."
+        )
+    return True, ""
 
 
 def gate_eu_residency(

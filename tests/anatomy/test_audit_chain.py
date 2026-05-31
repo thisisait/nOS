@@ -331,3 +331,52 @@ def test_flag_off_is_noop(tmp_path):
     assert rh is None, "chain-off insert must leave row_hash NULL"
     v = _php([str(VERIFY), f"--db={db}"])
     assert v.returncode == 0
+
+
+def test_consent_table_migration_via_real_init_db(tmp_path):
+    """Regression mirror of test_existing_db_migration_via_real_init_db, for the
+    consent registry: run the REAL init-db.php against a PRE-EXISTING wing.db
+    whose gdpr_consent table predates the active-consent partial index (and is
+    missing withdrawn_at). idx_gdpr_consent_active references withdrawn_at, so it
+    MUST be created in init-db.php AFTER the ALTER sweep adds the column — NOT in
+    schema-extensions.sql (which would fail 'no such column: withdrawn_at' on
+    every existing install, the exact class of bug the row_hash ordering taught)."""
+    initdb = WING / "bin" / "init-db.php"
+    db = tmp_path / "wing.db"
+    con = sqlite3.connect(db)
+    # OLD gdpr_consent schema — a plausible earlier shape WITHOUT withdrawn_at,
+    # updated_at, and the active-consent partial index.
+    con.execute(
+        "CREATE TABLE gdpr_consent (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "subject_email TEXT NOT NULL, processing_id TEXT, activity TEXT NOT NULL, "
+        "lawful_basis TEXT NOT NULL DEFAULT 'consent', tos_version_hash TEXT, "
+        "source TEXT NOT NULL DEFAULT 'operator', granted_at TEXT NOT NULL, "
+        "notes TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    )
+    con.execute(
+        "INSERT INTO gdpr_consent (subject_email,activity,granted_at) "
+        "VALUES ('a@b.test','legacy-activity','2026-01-01T00:00:00Z')"
+    )
+    con.commit()
+    con.close()
+
+    r = subprocess.run(["php", str(initdb), f"--data-dir={tmp_path}"], capture_output=True, text=True)
+    assert r.returncode == 0, f"init-db must migrate an existing consent table cleanly: {r.stderr}"
+
+    con = sqlite3.connect(db)
+    cols = [c[1] for c in con.execute("PRAGMA table_info(gdpr_consent)")]
+    idx = [i[1] for i in con.execute("PRAGMA index_list(gdpr_consent)")]
+    assert "withdrawn_at" in cols, "ALTER sweep must add gdpr_consent.withdrawn_at"
+    assert "updated_at" in cols, "ALTER sweep must add gdpr_consent.updated_at"
+    assert "idx_gdpr_consent_active" in idx, (
+        "active-consent partial index must be created post-sweep (it references "
+        "the ALTER-added withdrawn_at)"
+    )
+    # the legacy row survives, still active (withdrawn_at NULL) and addressable
+    n = con.execute(
+        "UPDATE gdpr_consent SET withdrawn_at='2026-02-01T00:00:00Z' "
+        "WHERE subject_email='a@b.test' AND activity='legacy-activity' AND withdrawn_at IS NULL"
+    ).rowcount
+    con.commit()
+    con.close()
+    assert n == 1, "the migrated legacy row must be withdrawable via the active path"

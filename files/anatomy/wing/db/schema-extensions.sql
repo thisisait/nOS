@@ -232,6 +232,62 @@ CREATE TABLE IF NOT EXISTS gdpr_breaches (
 );
 CREATE INDEX IF NOT EXISTS idx_gdpr_breaches_status ON gdpr_breaches(status, detected_at);
 
+-- ── GDPR consent registry (Art. 6(1)(a) + Art. 7) ──────────────────────
+-- Each row is ONE consent lifecycle for one (subject, activity): a grant
+-- (granted_at set) that may later be withdrawn (withdrawn_at set). Art. 7(1)
+-- requires the controller to DEMONSTRATE consent was given; Art. 7(3)
+-- requires withdrawal to be as easy as granting and to be recorded. This
+-- table is that demonstrable ledger. SCOPE IS Art-6(1)(a)+Art-7 ONLY — this
+-- is NOT a data-portability surface (Art-20 lives in a separate backlog,
+-- tasks/gdpr-export.yml; do not read portability into this table).
+--
+-- DECOUPLED from SSO: a row here means "this subject actively consented to
+-- this activity" — NOT "this subject logged in via Authentik". SSO
+-- enrollment is authentication; consent is a separate, explicit act recorded
+-- by record-consent.php (operator/UI/API), never inferred from a login. See
+-- nos_app_parser.gate_sso_required (no longer a consent proxy) +
+-- nos_app_parser.consent_capture_satisfied.
+--
+-- processing_id soft-FKs the Art-30 register's id (gdpr_processing.id) so a
+-- withdrawal/erasure can be correlated to the activity it covers. NOTE the id
+-- shapes that processing_id may hold: the seeded register (db/gdpr-seed.sql)
+-- uses bare slugs ('tenant-vault','collab-docs','project-knowledge'); the
+-- plugin-derived register (nos_gdpr.records_from_plugins) uses 'svc_<slug>';
+-- Tier-2 manifests use 'app_<name>'. processing_id is a free TEXT soft-FK, so
+-- any of these is valid; NULL = a cross-cutting consent not tied to one row.
+-- lawful_basis is recorded per-row (almost always 'consent' here, but kept
+-- explicit so a mis-filed non-consent row is visible, not silent).
+--
+-- tos_version_hash records WHICH terms text was presented to the subject (a
+-- hash, never a secret). It is EVIDENCE OF THE TERMS SHOWN, not proof that the
+-- consent act was freely-given / specific / informed / unambiguous
+-- (Art-4(11)/Art-7(2)) — those qualities depend on HOW consent was solicited,
+-- which this ledger does not itself attest. source records HOW consent arrived
+-- (operator | ui | api | import) for the audit trail.
+--
+-- NO active-consent partial index here: it would reference withdrawn_at, which
+-- on a PRE-EXISTING DB does not exist until init-db.php's ALTER sweep adds it
+-- (CREATE TABLE IF NOT EXISTS is a no-op on an existing table). init-db.php
+-- creates the active-consent partial index immediately AFTER that sweep — same
+-- discipline as idx_events_row_hash + the WORM triggers.
+CREATE TABLE IF NOT EXISTS gdpr_consent (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_email       TEXT NOT NULL,                    -- the data subject
+    processing_id       TEXT,                             -- soft FK gdpr_processing.id; NULL = cross-cutting
+    activity            TEXT NOT NULL,                    -- consented-to activity slug (e.g. "marketing-email")
+    lawful_basis        TEXT NOT NULL DEFAULT 'consent',  -- Art. 6(1) basis; normally 'consent'
+    tos_version_hash    TEXT,                             -- hash of the terms presented (NOT a secret, NOT proof of valid consent)
+    source              TEXT NOT NULL DEFAULT 'operator', -- operator | ui | api | import — how consent arrived
+    granted_at          TEXT NOT NULL,                    -- ISO-8601; when consent was given
+    withdrawn_at        TEXT,                             -- ISO-8601; NULL = still active (Art. 7(3))
+    notes               TEXT,                             -- free-form (e.g. UI request id, operator note)
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_gdpr_consent_subject    ON gdpr_consent(subject_email);
+CREATE INDEX IF NOT EXISTS idx_gdpr_consent_activity   ON gdpr_consent(activity);
+CREATE INDEX IF NOT EXISTS idx_gdpr_consent_processing ON gdpr_consent(processing_id);
+
 -- ============================================================================
 -- Pulse — scheduled-job catalog + run history (Anatomy A4, 2026-05-03)
 -- ============================================================================

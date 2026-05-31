@@ -14,9 +14,11 @@ import pytest
 
 from module_utils.nos_app_parser import (
     AppParseError,
+    CONSENT_CAPTURE_MECHANISMS,
     DEFAULT_EU_REGISTRIES,
     GDPR_LEGAL_BASES,
     SENSITIVE_DATA_SUBJECTS,
+    consent_capture_satisfied,
     gate_eu_residency,
     gate_sso_required,
     gate_tls_required,
@@ -186,6 +188,74 @@ class TestGates(object):
         }})
         ok, off = gate_eu_residency(rec)
         assert ok is True and off == []
+
+
+    # ── Consent decoupling: SSO != consent (gate stays, semantics split) ──────
+
+    def test_sso_gate_unchanged_is_not_consent_collection(self):
+        """The SSO gate still fires for consent (an authenticated identity is
+        needed to ATTRIBUTE consent) — but that is NOT consent collection."""
+        rec = _valid_record(gdpr={"legal_basis": "consent"})
+        assert gate_sso_required(rec) is True
+        ok, reason = consent_capture_satisfied(rec)
+        assert ok is False
+        assert "not consent" in reason.lower() or "consent record" in reason.lower()
+
+    def test_consent_capture_na_for_non_consent_bases(self):
+        rec = _valid_record(gdpr={"legal_basis": "contract"})
+        ok, reason = consent_capture_satisfied(rec)
+        assert ok is True and reason == ""
+
+    def test_consent_capture_satisfied_with_record_consent_mechanism(self):
+        rec = _valid_record(gdpr={
+            "legal_basis": "consent",
+            "consent_capture": {"mechanism": "record-consent", "activity": "marketing-email"},
+        })
+        ok, _ = consent_capture_satisfied(rec)
+        assert ok is True
+
+    def test_consent_capture_record_consent_needs_activity(self):
+        rec = _valid_record(gdpr={
+            "legal_basis": "consent",
+            "consent_capture": {"mechanism": "record-consent"},
+        })
+        ok, reason = consent_capture_satisfied(rec)
+        assert ok is False and "activity" in reason
+
+    def test_consent_capture_external_needs_attestation(self):
+        """Bare 'external' must NOT satisfy — it would reintroduce the
+        'consent == collected' false-positive the predicate exists to catch."""
+        rec = _valid_record(gdpr={
+            "legal_basis": "consent",
+            "consent_capture": {"mechanism": "external"},
+        })
+        ok, reason = consent_capture_satisfied(rec)
+        assert ok is False and "attestation" in reason
+        # ...and WITH an attestation it passes:
+        rec2 = _valid_record(gdpr={
+            "legal_basis": "consent",
+            "consent_capture": {"mechanism": "external", "attestation": "https://forms.example/consent"},
+        })
+        ok2, _ = consent_capture_satisfied(rec2)
+        assert ok2 is True
+
+    def test_consent_capture_mechanism_none_rejected(self):
+        rec = _valid_record(gdpr={
+            "legal_basis": "consent",
+            "consent_capture": {"mechanism": "none"},
+        })
+        ok, reason = consent_capture_satisfied(rec)
+        assert ok is False and "none" in reason.lower()
+
+    def test_consent_capture_mechanisms_tuple_exported(self):
+        assert CONSENT_CAPTURE_MECHANISMS == ("record-consent", "external", "none")
+
+    def test_consent_capture_is_optional_no_manifest_break(self):
+        """A consent manifest with NO consent_capture block still VALIDATES
+        (validate() unchanged) — the predicate is never called by the runner.
+        Proves existing Tier-2 manifests don't break."""
+        rec = _valid_record(gdpr={"legal_basis": "consent"})
+        validate(rec)  # no raise — consent_capture is optional
 
 
 # ---------------------------------------------------------------------------

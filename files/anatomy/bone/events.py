@@ -78,6 +78,19 @@ VALID_TYPES = {
     # dsar_id, request_type:'access', services_planned, services_captured,
     # manual_pending, portability_eligible, dry_run, bundle_dir}.
     "gdpr_export_user",
+    # ── Consent registry (Art. 6(1)(a) + Art. 7) ──────────────────────────
+    # Permit-only, forward-ready (NO live producer yet — record-consent.php
+    # writes the gdpr_consent row directly and does NOT emit these; matches the
+    # user_invitation_* precedent above, which was whitelisted before a
+    # producer existed). Kept aligned with Wing's EventRepository VALID_TYPES so
+    # a FUTURE Bone POST proxying a consent event (e.g. a webhook-driven consent
+    # capture from an external form) doesn't 400.
+    #   consent_granted   — a subject granted consent; result_json would carry
+    #                        {consent_id, subject, activity, processing_id,
+    #                         tos_version_hash, source}.
+    #   consent_withdrawn — a subject withdrew (Art. 7(3)); result_json would
+    #                        carry {consent_id?, subject, activity, rows}.
+    "consent_granted", "consent_withdrawn",
 }
 
 

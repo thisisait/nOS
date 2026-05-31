@@ -194,7 +194,13 @@ services:
     note: "agent_sessions/threads/iterations/memory_stores may reference the
            subject in prompts/outputs. events are WORM-chained (integrity);
            subject content in agent tables is purged via tasks/audit-retention.yml.
-           Manual review for free-text PII in agent memory."
+           gdpr_consent rows store the subject's plaintext email (Art-7(1)
+           demonstrability) — on erasure, do NOT delete the consent proof;
+           pseudonymise it via GdprRepository::pseudonymiseSubject (keeps the
+           grant/withdraw record, removes the plaintext email — reconciles
+           Art-7(1) vs Art-17). record-consent.php has no pseudonymise flag yet,
+           so this is an operator-run SQL/CLI step (method:manual).
+           Manual review for free-text PII in agent memory + consent notes."
 
   - id: svc_loki
     flag: always
