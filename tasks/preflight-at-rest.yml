@@ -1,0 +1,84 @@
+---
+# ==============================================================================
+# P0-ATREST — at-rest disk-encryption pre-flight gate (gov-readiness, 2026-05).
+#
+# Doctrine: docs/compliance/gov-readiness-audit-2026q2.md P0 item 2.
+#
+# HARD-FAILS the run on a gov tenant when host full-disk encryption is not
+# active, BEFORE any personal-data service starts. Default-OFF — every task
+# here is gated on `require_disk_encryption` (false in default.config.yml;
+# profiles/gov-local.yml sets it true). On a normal / CI run the flag is off
+# so this file is completely inert (no shell probe runs, nothing fails).
+#
+# Why pre_tasks (not tasks:): this is a HOST disk property (fdesetup / lsblk),
+# independent of Docker, so it must fail before data dirs + stacks. It does
+# NOT depend on nos_docker_ready (which isn't set until the compose layer in
+# tasks:) — gating on that fact this early would error or always-skip. The
+# default-OFF flag is the CI guard: the integration wet-test never passes
+# -e @profiles/gov-local.yml, so the gate self-skips on CI.
+#
+# Detection (mirrors tasks/_platform.yml's os-family idiom):
+#   macOS  : `fdesetup status` -> 'FileVault is On.' (no sudo for status).
+#   Linux  : unprivileged `lsblk` -> a crypto_LUKS FSTYPE or a dm-crypt TYPE
+#            on a backing device. Heuristic — catches the common LUKS / LVM-on-
+#            LUKS root case; stacked layouts (ZFS-native crypto, eCryptfs) may
+#            need the -e nos_skip_at_rest_check=true escape hatch after the
+#            operator verifies encryption out-of-band.
+# ==============================================================================
+
+- name: "[Preflight at-rest] Probe macOS FileVault status"
+  ansible.builtin.command: fdesetup status
+  register: _at_rest_fde
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - require_disk_encryption | default(false) | bool
+    - ansible_os_family == 'Darwin'
+  tags: ['always', 'preflight', 'security']
+
+- name: "[Preflight at-rest] Probe Linux LUKS / dm-crypt status"
+  ansible.builtin.command: lsblk -rno FSTYPE,TYPE
+  register: _at_rest_luks
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - require_disk_encryption | default(false) | bool
+    - ansible_os_family != 'Darwin'
+  tags: ['always', 'preflight', 'security']
+
+- name: "[Preflight at-rest] Resolve whether at-rest encryption is active"
+  ansible.builtin.set_fact:
+    at_rest_encryption_active: >-
+      {{ ('FileVault is On.' in (_at_rest_fde.stdout | default('')))
+         if ansible_os_family == 'Darwin'
+         else (('crypto_LUKS' in (_at_rest_luks.stdout | default('')))
+               or ('crypt' in (_at_rest_luks.stdout | default('')).split())) }}
+  when:
+    - require_disk_encryption | default(false) | bool
+  tags: ['always', 'preflight', 'security']
+
+- name: "[Preflight at-rest] Refuse a gov run on an unencrypted host"
+  ansible.builtin.fail:
+    msg: |
+      require_disk_encryption is true (gov tenant) but host full-disk
+      encryption is NOT active.
+        Platform : {{ nos_platform | default(ansible_os_family) }}
+        Probe    : {{ (_at_rest_fde.stdout | default('')) if ansible_os_family == 'Darwin'
+                       else (_at_rest_luks.stdout | default('') | trim) }}
+
+      A government deployment MUST store personal data on an encrypted volume.
+        macOS : System Settings -> Privacy & Security -> FileVault -> Turn On.
+                Verify:  fdesetup status   (must print 'FileVault is On.')
+        Linux : provision the data/root volume on LUKS (cryptsetup luksFormat).
+                Verify:  lsblk -o NAME,TYPE,FSTYPE   (crypto_LUKS / crypt present)
+
+      If your host IS encrypted via a layout this heuristic can't see (ZFS-native
+      crypto, stacked LVM-on-LUKS, eCryptfs), verify it out-of-band and bypass:
+        -e nos_skip_at_rest_check=true
+  when:
+    - require_disk_encryption | default(false) | bool
+    - not (at_rest_encryption_active | default(false) | bool)
+    - not (nos_skip_at_rest_check | default(false) | bool)
+  tags: ['always', 'preflight', 'security']

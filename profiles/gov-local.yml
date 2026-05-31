@@ -10,11 +10,13 @@
 #   ansible-playbook main.yml -e @profiles/all-on.yml -e @profiles/gov-local.yml
 #     (later -e file wins, so gov-local's hardening overrides all-on's defaults)
 #
-# This is a SOVEREIGNTY profile, not a full government-compliance profile. The
-# blocking gov controls (at-rest disk crypto, enforced MFA, breach-notification,
-# tamper-evident audit log, ISDS + NIA/eIDAS federation) are NOT togglable here
-# — see docs/compliance/gov-readiness-audit-2026q2.md for that roadmap. What
-# this profile DOES close is every off-host data path that is a single variable.
+# This is a SOVEREIGNTY profile, not a full government-compliance profile.
+# At-rest disk crypto (P0-ATREST, require_disk_encryption) and enforced MFA
+# (P0-MFA, enforce_mfa) are now TOGGLABLE here (set below). The remaining
+# blocking gov controls (breach-notification, tamper-evident audit log, ISDS +
+# NIA/eIDAS federation) are NOT yet togglable — see docs/compliance/
+# gov-readiness-audit-2026q2.md for that roadmap. What this profile ALSO closes
+# is every off-host data path that is a single variable.
 # =============================================================================
 
 # ── No third-party control-plane egress ──────────────────────────────────────
@@ -36,6 +38,30 @@ install_freepbx: false
 # object storage as cleartext. Keep backup_encryption_passphrase under the same
 # custody as global_password_prefix (lose it → backups unrecoverable).
 backup_encryption_enabled: true
+
+# ── Enforce at-rest disk encryption (P0-ATREST) ────────────────────────────
+# A gov tenant MUST store personal data on an encrypted volume. This makes the
+# pre_tasks at-rest gate hard-fail the run unless macOS FileVault is On / a Linux
+# LUKS backing device is present, BEFORE any personal-data service starts. If
+# your host uses an encryption layout the heuristic misses (ZFS-native crypto,
+# stacked LVM-on-LUKS, eCryptfs), verify it out-of-band and pass
+# -e nos_skip_at_rest_check=true on the run.
+require_disk_encryption: true
+
+# ── Enforce MFA on Tier-1 privileged sign-in (P0-MFA) ──────────────────────
+# Routes ONLY Tier-1 (nos-providers/nos-admins) OIDC/proxy providers through a
+# dedicated authentication flow (nos-tier1-mfa-flow) whose validate stage is
+# not_configured_action='configure' — a brand-new / un-enrolled Tier-1 user is
+# prompted to set up TOTP or a WebAuthn passkey INLINE and continues. NEVER a
+# hard deny, so nobody is locked out. Non-Tier-1 providers keep the stock flow,
+# byte-unchanged. Also installs a length-15 + zxcvbn password policy on the
+# enrollment / password-change prompts.
+#
+# BEFORE flipping this on a live install: enrol a TOTP/WebAuthn device for at
+# least one nos-admins identity, AND keep the un-wedge `ak shell` command from
+# the 50-mfa-policy.yaml.j2 header ready. mfa_password_hibp stays FALSE on an
+# air-gapped tenant (HIBP needs egress); flip it true only if egress is allowed.
+enforce_mfa: true
 
 # =============================================================================
 # MANUAL STEPS this profile cannot express as a single variable (do these too):

@@ -1,0 +1,196 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS P0-MFA — enforced MFA (TOTP + WebAuthn/passkey) on Tier-1 ──────────────
+#
+# Gated behind `enforce_mfa` (default FALSE in default.config.yml; gov-local.yml
+# opts in). DEFAULT-OFF SAFETY rests SOLELY on the enforce_mfa Jinja body-wrap
+# below (the `if enforce_mfa ... endif` around `entries:`): the authentik-base
+# plugin lifecycle render_dir (provisioning.blueprints) renders EVERY .j2 in this
+# dir UNCONDITIONALLY, so this file always lands at
+# <stacks_dir>/infra/authentik/blueprints/50-mfa-policy.yaml and is auto-discovered
+# by Authentik's blueprint engine. With the flag off it renders to `entries:` with
+# NO list -> the blueprint applies zero objects (harmless no-op). DO NOT remove the
+# Jinja if/endif wrap believing the render is gated elsewhere — it is NOT. Removing
+# it would enforce MFA on every non-gov install.
+# (NB: this header avoids literal Jinja brace-tags — Jinja parses them even inside
+# YAML # comments, so a stray tag here would break the render.)
+#
+# WHY A DEDICATED FLOW, NOT AN OVERRIDE OF THE SHARED VALIDATE STAGE:
+# default-authentication-flow's order-30 mfa-validation binding already carries
+# the upstream `default-authentication-flow-authenticator-validate-optional`
+# policy (failure_result:true). Stacking a Tier-1 gate onto that shared binding
+# is BROKEN under any policy_engine_mode (any -> MFA runs for everyone; all ->
+# Tier-1 passwordless skips MFA). So we DO NOT touch default-authentication-flow.
+# Instead we build a self-contained flow `nos-tier1-mfa-flow` (ident -> password ->
+# our own MFA validate stage) and route ONLY Tier-1 providers' authentication_flow
+# at it (see 10-oidc-apps.yaml.j2). Non-Tier-1 providers keep the stock flow,
+# byte-unchanged. Tier-1 scoping is therefore STRUCTURAL, not policy-mode-dependent.
+#
+# LOCKOUT AVOIDANCE: not_configured_action='configure' (NOT 'deny') + a populated
+# configuration_stages -> a brand-new / un-enrolled Tier-1 user (incl. a fresh
+# akadmin) is prompted to enrol a device INLINE on first login, then continues.
+# Never a hard deny, never a dead end.
+#
+# UN-WEDGE (if a future edit ever regresses to 'deny' or you must roll back):
+#   1. set enforce_mfa: false and re-run `ansible-playbook main.yml --tags authentik`
+#      (file renders empty + drops out of the reapply loop; 10-oidc re-routes Tier-1
+#      providers back to the stock flow). state:present does NOT delete the orphaned
+#      flow object, but it sits unused once providers no longer reference it.
+#   2. or reset the validate stage directly:
+#      docker compose -p infra exec -T authentik-worker ak shell -c \
+#        "from authentik.stages.authenticator_validate.models import AuthenticatorValidateStage as S; \
+#         s=S.objects.filter(name='nos-mfa-validate').first(); \
+#         (s and (setattr(s,'not_configured_action','skip'), s.save()))"
+#   3. or use Authentik's built-in recovery flow / a static-token device.
+#
+# UPSTREAM IDENTIFIERS (stock authentik 2026.5): flow slugs
+# default-authentication-identification, default-authentication-password,
+# default-password-change; stage default-authentication-password
+# (authentik_stages_password.passwordstage); prompt stage
+# default-password-change-prompt. Re-verify on any Authentik MAJOR upgrade — a
+# rename makes !Find return null and MFA silently won't enforce (worker logs it).
+version: 1
+metadata:
+  name: nos-mfa-policy
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+{% if enforce_mfa | default(false) | bool %}
+  # ── 1. TOTP setup stage (inline-configure target + self-enrol path) ───────
+  - model: authentik_stages_authenticator_totp.authenticatortotpstage
+    state: present
+    identifiers:
+      name: nos-mfa-totp-setup
+    attrs:
+      digits: "6"                       # Google-Authenticator compatible
+      friendly_name: "TOTP authenticator"
+      configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+
+  # ── 2. WebAuthn / passkey setup stage ─────────────────────────────────────
+  - model: authentik_stages_authenticator_webauthn.authenticatorwebauthnstage
+    state: present
+    identifiers:
+      name: nos-mfa-webauthn-setup
+    attrs:
+      user_verification: required             # true gov passkey: discoverable +
+      resident_key_requirement: required      # user-verification, not 'preferred'
+      configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+
+  # ── 3. Our OWN MFA validate stage (NOT the upstream shared one) ───────────
+  - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+    state: present
+    identifiers:
+      name: nos-mfa-validate
+    attrs:
+      not_configured_action: configure        # inline self-enrol — NEVER deny
+      device_classes:
+        - totp
+        - webauthn
+      configuration_stages:
+        - !Find [authentik_stages_authenticator_totp.authenticatortotpstage, [name, nos-mfa-totp-setup]]
+        - !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, nos-mfa-webauthn-setup]]
+      webauthn_user_verification: required
+      last_auth_threshold: "seconds=0"         # challenge every login (gov step-up)
+
+  # ── 4. Dedicated Tier-1 authentication flow ───────────────────────────────
+  # Self-contained: identification → password → MFA validate. Tier-1 providers
+  # route their authentication_flow here (10-oidc-apps.yaml.j2). Non-Tier-1
+  # providers keep the stock default-authentication-flow, byte-unchanged.
+  - model: authentik_flows.flow
+    state: present
+    identifiers:
+      slug: nos-tier1-mfa-flow
+    attrs:
+      name: "nOS — Tier-1 privileged sign-in (MFA enforced)"
+      title: "Sign in (MFA required)"
+      designation: authentication
+      authentication: require_unauthenticated
+      compatibility_mode: false
+      denied_action: message_continue
+      layout: stacked
+      policy_engine_mode: any
+
+  # ── 5. Stage bindings on the dedicated flow (10/20/30) ─────────────────────
+  # !Find each binding by BOTH target AND order (multi-condition Find ANDs the
+  # Q objects) so it can never resolve to another flow's same-order binding.
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-tier1-mfa-flow]]
+      order: 10
+    attrs:
+      stage: !Find [authentik_stages_identification.identificationstage, [name, default-authentication-identification]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-tier1-mfa-flow]]
+      order: 20
+    attrs:
+      stage: !Find [authentik_stages_password.passwordstage, [name, default-authentication-password]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-tier1-mfa-flow]]
+      order: 30
+    attrs:
+      stage: !Find [authentik_stages_authenticator_validate.authenticatorvalidatestage, [name, nos-mfa-validate]]
+      evaluate_on_plan: true
+      re_evaluate_policies: true
+      invalid_response_action: retry
+      policy_engine_mode: any
+
+  # ── 6. Password policy (zxcvbn local always-on; HIBP opt-in egress) ───────
+  - model: authentik_policies_password.passwordpolicy
+    state: present
+    identifiers:
+      name: nos-password-policy
+    attrs:
+      password_field: password         # MUST match the prompt-stage field_key
+      length_min: {{ mfa_password_min_length | default(15) }}
+      amount_uppercase: 1
+      amount_lowercase: 1
+      amount_digits: 1
+      amount_symbols: 1
+      check_static_rules: true
+      check_zxcvbn: true               # local, air-gap-safe
+      zxcvbn_score_threshold: 3
+      check_have_i_been_pwned: {{ (mfa_password_hibp | default(false) | bool) | to_json }}
+      hibp_allowed_count: 0
+      error_message: "Password must be at least {{ mfa_password_min_length | default(15) }} chars with mixed case, a digit and a symbol (nOS gov policy)."
+
+  # ── 7. Bind the password policy to PROMPT stages that COLLECT a new password ─
+  # NOT the login password stage (it authenticates, never puts the password into
+  # PROMPT context → policy would be inert). The enrollment prompt stage
+  # nos-enrollment-prompts (40-enrollment-flow.yaml.j2) carries field_key=password.
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_stages_prompt.promptstage, [name, nos-enrollment-prompts]]
+      order: 0
+    attrs:
+      policy: !Find [authentik_policies_password.passwordpolicy, [name, nos-password-policy]]
+      enabled: true
+      negate: false
+      timeout: 30
+  # The stock password-change flow's prompt stage (so an in-app password change
+  # is also policed). default-password-change-prompt is the upstream prompt stage.
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_stages_prompt.promptstage, [name, default-password-change-prompt]]
+      order: 0
+    attrs:
+      policy: !Find [authentik_policies_password.passwordpolicy, [name, nos-password-policy]]
+      enabled: true
+      negate: false
+      timeout: 30
+{% endif %}

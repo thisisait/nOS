@@ -42,6 +42,11 @@ entries:
 {%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
 {%- set _redirects = c.redirect_uris if (c.redirect_uris is iterable and c.redirect_uris is not string) else ([c.redirect_uris] if c.redirect_uris else []) -%}
 {%- set _launch = c.launch_url | default(c.external_host) | default('') -%}
+{# P0-MFA: route ONLY Tier-1 providers through the dedicated MFA flow when
+   enforce_mfa is on. Flag-off / non-Tier-1 -> _auth_flow is none -> no
+   authentication_flow key emitted -> byte-identical to today's render. #}
+{%- set _tier = c.tier | default(authentik_app_tiers[c.slug] | default(3)) -%}
+{%- set _auth_flow = 'nos-tier1-mfa-flow' if ((enforce_mfa | default(false) | bool) and (_tier | int == 1)) else none -%}
 {% if not _is_proxy %}
   # ── {{ _name }} (OAuth2 / OIDC) ──
   - model: authentik_providers_oauth2.oauth2provider
@@ -53,7 +58,8 @@ entries:
       client_id: "{{ c.client_id }}"
       client_secret: "{{ c.client_secret }}"
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+{% if _auth_flow %}      authentication_flow: !Find [authentik_flows.flow, [slug, {{ _auth_flow }}]]
+{% endif %}      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       access_code_validity: "minutes=10"
       access_token_validity: "minutes=10"
       refresh_token_validity: "days=30"
@@ -94,7 +100,8 @@ entries:
       mode: "forward_single"
       internal_host_ssl_validation: false
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+{% if _auth_flow %}      authentication_flow: !Find [authentik_flows.flow, [slug, {{ _auth_flow }}]]
+{% endif %}      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
 
   - model: authentik_core.application
     state: present
