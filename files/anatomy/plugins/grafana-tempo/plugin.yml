@@ -57,6 +57,12 @@ lifecycle:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    Composition wiring that provisions the Tempo datasource into Grafana so
+    operators can inspect distributed traces. It surfaces trace spans and
+    their request metadata for debugging and performance analysis (legitimate
+    interest in service operation, Art. 6(1)(f)). It stores nothing itself;
+    the trace-retention horizon is owned by tempo-base.
   data_categories:
     - trace_spans
     - request_metadata

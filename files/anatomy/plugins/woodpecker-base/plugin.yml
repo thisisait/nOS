@@ -143,6 +143,14 @@ observability:
 # author email + repo URL — pipeline owners' personal data. Closes the gap.
 
 gdpr:
+  purpose: |
+    Woodpecker is the self-hosted CI engine wired to Gitea. It processes CI
+    pipeline logs (build output, which may embed commit metadata), Gitea OAuth2
+    session data, and commit-author metadata (author name + email per pipeline
+    trigger), in order to run continuous-integration pipelines for repository
+    contributors (legitimate interest in operating CI, Art. 6(1)(f)). Subjects
+    are the operator and repo developers triggering pipelines; all execution is
+    local with no external runners. CI logs auto-prune (~90 days).
   data_categories:
     - ci_pipeline_logs            # build output, may include commit metadata
     - oauth_session_data          # Gitea OAuth2 session cookies

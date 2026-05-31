@@ -79,6 +79,13 @@ lifecycle:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    Composition wiring that provisions the wing.db SQLite datasource into
+    Grafana for the playbook-run and AI-agent dashboards. It surfaces
+    playbook event metadata (task/play/handler lifecycle) and agent-session
+    telemetry (run outcomes, token tallies) to operators (legitimate interest
+    in service operation, Art. 6(1)(f)). It stores nothing itself; the
+    retention horizon is owned by wing-base. Operator-only data subjects.
   data_categories:
     - playbook_event_metadata    # task/play/handler lifecycle rows queried via Grafana
     - agent_session_telemetry    # agent run outcomes + token tallies (operator-only)

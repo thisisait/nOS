@@ -48,6 +48,13 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Redis is the platform in-memory cache and session store. It holds
+    transient cache data and OAuth/Authentik session blobs on behalf of the
+    consuming services so they perform efficiently (legitimate interest in
+    operating the cache layer, Art. 6(1)(f)). Session keys can be linked to
+    downstream end-users, but nothing is durable — the AOF rotates within a
+    day. Data ownership and purpose remain with the consuming service.
   data_categories:
     - cache_data                    # transient session blobs, ephemeral
     - oauth_session_data            # Authentik session cache lives here

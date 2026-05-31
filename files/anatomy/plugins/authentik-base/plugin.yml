@@ -121,6 +121,15 @@ ui-extension:
     health_check: "/-/health/ready/"
 
 gdpr:
+  purpose: |
+    Authentik is the platform identity provider and SSO authority. It
+    processes user identity metadata (username, display name, email),
+    authentication credentials (password hashes), session and API tokens, and
+    auth audit events (sign-in, group/RBAC changes) in order to authenticate
+    users and authorise their access to every nOS service. Authentication is
+    a precondition of providing the service to the user, so the legal basis is
+    contract (Art. 6(1)(b)). Subjects include human operators and tenant
+    end-users as well as automated agent clients (Bone, Pulse, conductor).
   data_categories:
     - authentication_credentials      # password hashes (akadmin, nos-tester)
     - identity_metadata               # username, display name, email

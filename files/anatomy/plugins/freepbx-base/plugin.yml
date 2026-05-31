@@ -92,6 +92,15 @@ observability:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    FreePBX/Asterisk is the self-hosted telephony PBX. It processes call
+    detail records (caller/callee numbers, duration, codec), voicemail
+    recordings, SIP/IAX extension credentials (hashed), and operator-authored
+    dialplan routing rules, in order to provide and operate telephony for the
+    organisation (legitimate interest in running the phone system,
+    Art. 6(1)(f)). Subjects include PBX admins, extension owners, and external
+    callers whose numbers appear in CDRs. CDRs rotate on a ~90-day horizon;
+    voicemail retention follows operator policy.
   data_categories:
     - call_metadata               # CDRs: caller/callee numbers, duration, codec
     - voicemail_recordings        # WAV/sln files in /var/spool/asterisk/voicemail

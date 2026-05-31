@@ -107,6 +107,15 @@ ui-extension:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    ERPNext is the business ERP/CRM platform. It processes employee and
+    customer identity metadata, financial records (invoices, expenses, GL
+    entries), HR and payroll data, CRM customer/order data, and an audit log,
+    in order to run the operator's accounting, HR and customer-relationship
+    operations. Most of this is necessary to perform contracts with employees
+    and customers (Art. 6(1)(b)), with statutory accounting-retention
+    obligations driving the ~7-year horizon. Subjects include operators,
+    tenant employees/customers (end-users), and third-party CRM contacts.
   data_categories:
     - identity_metadata                  # employee names, emails
     - financial_records                  # invoices, expenses, GL entries

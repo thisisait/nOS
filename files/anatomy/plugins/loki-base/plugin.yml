@@ -58,6 +58,14 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Loki is the platform log-aggregation backend. It stores log lines,
+    hostname labels and request metadata (which may include user agents and
+    source IPs harvested from nginx/Wing access logs) so the operator can
+    search, correlate and debug across services (legitimate interest in
+    service operation and security, Art. 6(1)(f)). End-user data appears
+    incidentally inside ingested access-log lines; retention follows the Loki
+    schema_config horizon (~30 days).
   data_categories:
     - log_lines
     - hostname_labels

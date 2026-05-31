@@ -57,6 +57,14 @@ observability:
       tier: "3"
 
 gdpr:
+  purpose: |
+    The MCP Gateway (mcpo) proxies Model Context Protocol tool calls for local
+    agents. It processes MCP request metadata (tool invocations and their
+    parameters) and access logs for the read-only filesystem and local git
+    repositories it exposes, in order to mediate and audit agent tool access
+    (legitimate interest in service operation, Art. 6(1)(f)). Subjects are the
+    operator and automated agent systems (e.g. Open WebUI agents); no tenant
+    end-user identities are processed.
   data_categories:
     - mcp_request_metadata           # tool invocations + parameters
     - filesystem_access_logs         # read-only paths exposed by filesystem MCP

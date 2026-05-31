@@ -112,6 +112,14 @@ ui-extension:
 # =============================================================================
 
 gdpr:
+  purpose: |
+    Gitea is the self-hosted Git forge. It processes developer identity
+    metadata (username, email, full name), authentication credentials
+    (password hash, OAuth tokens), user-authored source code repositories, and
+    an activity audit log (push events, login history), in order to provide
+    source-code hosting and collaboration to tenant developers. Providing the
+    forge to a registered developer is contractual (Art. 6(1)(b)). Accounts
+    persist while active; deletion is handled via the Art-17 erasure path.
   data_categories:
     - identity_metadata                  # username, email, full name
     - authentication_credentials         # password hash, OAuth tokens

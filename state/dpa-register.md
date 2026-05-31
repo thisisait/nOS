@@ -24,7 +24,6 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 - **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (63)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
-- ⚠️ **31 activities** carry an auto-generated purpose (plugin `gdpr.purpose` not yet authored) — flagged with † below.
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -45,8 +44,15 @@ overrides them. Authoritative prose: `docs/security-baseline.md`.
 
 ### infra stack
 
-#### Authentik — `svc_authentik` †
-- **Purpose:** Operation of the Authentik service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Authentik — `svc_authentik`
+- **Purpose:** Authentik is the platform identity provider and SSO authority. It
+processes user identity metadata (username, display name, email),
+authentication credentials (password hashes), session and API tokens, and
+auth audit events (sign-in, group/RBAC changes) in order to authenticate
+users and authorise their access to every nOS service. Authentication is
+a precondition of providing the service to the user, so the legal basis is
+contract (Art. 6(1)(b)). Subjects include human operators and tenant
+end-users as well as automated agent clients (Bone, Pulse, conductor).
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `operators`, `end_users`, `automated_systems`
 - **Data categories:** `authentication_credentials`, `identity_metadata`, `session_tokens`, `audit_log_entries`
@@ -56,8 +62,15 @@ overrides them. Authoritative prose: `docs/security-baseline.md`.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Bluesky Pds — `svc_bluesky-pds` †
-- **Purpose:** Operation of the Bluesky Pds service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Bluesky Pds — `svc_bluesky-pds`
+- **Purpose:** The Bluesky Personal Data Server hosts AT Protocol identities (DID +
+handle records), each user's social repository (posts, likes, follows and
+other records), uploaded media blobs, and PDS-local account credentials
+(password hashes for the admin and bridged tenant accounts). It processes
+this to provide a self-hosted decentralised-social-identity service to
+tenants who are bridged an @user.bsky.<tld> account (legitimate interest
+in operating the social service, Art. 6(1)(f)). The repository lifecycle
+is operator-managed; deletion is handled via the Art-17 erasure path.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `at_protocol_identities`, `social_repository_content`, `object_storage_blobs`, `account_credentials`
@@ -80,8 +93,14 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Mariadb — `svc_mariadb` †
-- **Purpose:** Operation of the Mariadb service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Mariadb — `svc_mariadb`
+- **Purpose:** MariaDB is the shared relational datastore for MySQL-family services. It
+persists whatever the consuming services write — application user and
+content rows plus their audit logs (e.g. WordPress, Nextcloud, FreeScout)
+— so those services can function (legitimate interest in operating the
+persistence layer, Art. 6(1)(f)). End-user PII present here is owned by the
+consuming service; data lifetime and the precise processing purpose are
+determined by that service, not by MariaDB itself.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `application_user_data`, `audit_logs`
@@ -91,8 +110,12 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Portainer — `svc_portainer` †
-- **Purpose:** Operation of the Portainer service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Portainer — `svc_portainer`
+- **Purpose:** Portainer is the operator-facing Docker management console. It processes
+the admin password hash, Authentik OIDC session data, and its own limited
+activity audit log, in order to let operators administer the container
+estate (legitimate interest in service operation, Art. 6(1)(f)). The only
+data subjects are operators; no tenant end-user data is processed.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `admin_credentials`, `oauth_session_data`, `audit_logs`
@@ -102,8 +125,14 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Postgresql — `svc_postgresql` †
-- **Purpose:** Operation of the Postgresql service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Postgresql — `svc_postgresql`
+- **Purpose:** PostgreSQL is the shared relational datastore for Postgres-family services
+(including Authentik's identity tables). It persists whatever the consuming
+services write — application user/content rows, audit logs, and OAuth
+session data — so those services can function (legitimate interest in
+operating the persistence layer, Art. 6(1)(f)). End-user PII present here
+is owned by the consuming service; data lifetime and the precise processing
+purpose are determined by that service, not by PostgreSQL itself.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `application_user_data`, `audit_logs`, `oauth_session_data`
@@ -113,8 +142,13 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Redis — `svc_redis` †
-- **Purpose:** Operation of the Redis service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Redis — `svc_redis`
+- **Purpose:** Redis is the platform in-memory cache and session store. It holds
+transient cache data and OAuth/Authentik session blobs on behalf of the
+consuming services so they perform efficiently (legitimate interest in
+operating the cache layer, Art. 6(1)(f)). Session keys can be linked to
+downstream end-users, but nothing is durable — the AOF rotates within a
+day. Data ownership and purpose remain with the consuming service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `cache_data`, `oauth_session_data`
@@ -124,8 +158,16 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Smtp Stalwart — `svc_smtp-stalwart` †
-- **Purpose:** Operation of the Smtp Stalwart service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Smtp Stalwart — `svc_smtp-stalwart`
+- **Purpose:** Stalwart is the self-hosted mail server (SMTP/IMAP/JMAP). It processes
+mailbox contents (message bodies and attachments at rest), SMTP envelope
+and header metadata, mailbox credentials (password hashes), and delivery
+logs (queue, bounce, DKIM/SPF/DMARC results), in order to send, receive and
+store email for tenant mailbox owners (legitimate interest in operating the
+mail service, Art. 6(1)(f)). Data subjects include operators, tenant
+mailbox owners, and external correspondents whose addresses and message
+content appear in inbound/outbound flows. Mailbox retention is ~365 days;
+queue/bounce logs are shorter.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `mailbox_owners`, `external_correspondents`
 - **Data categories:** `mailbox_contents`, `smtp_envelope_metadata`, `mailbox_credentials`, `delivery_logs`
@@ -135,8 +177,14 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Traefik — `svc_traefik` †
-- **Purpose:** Operation of the Traefik service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Traefik — `svc_traefik`
+- **Purpose:** Traefik is the platform edge reverse proxy. Its access and error logs
+record request metadata (method, path, status, latency), client source IP
+addresses, and User-Agent strings for every HTTP client reaching the edge,
+in order to operate, secure and troubleshoot the ingress layer (legitimate
+interest in service operation and security, Art. 6(1)(f)). The IP and
+User-Agent fields are attributable to end-users; access logs rotate on a
+~30-day horizon aligned with Loki retention.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `request_metadata`, `client_ip_addresses`, `user_agent_strings`
@@ -148,8 +196,14 @@ Vault values are envelope-encrypted at rest.
 
 ### observability stack
 
-#### Alloy — `svc_alloy` †
-- **Purpose:** Operation of the Alloy service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Alloy — `svc_alloy`
+- **Purpose:** Alloy is the platform telemetry collection agent: it scrapes host and
+container infrastructure metrics and forwards log lines and trace spans
+in transit to Prometheus, Loki and Tempo. Processing is necessary to
+operate, monitor and troubleshoot the self-hosted platform (legitimate
+interest in service operation, Art. 6(1)(f)). End-user data appears only
+transiently in transit inside forwarded log/trace payloads; durable
+storage and retention are owned by the Loki/Tempo backends, not Alloy.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `infrastructure_metrics`, `log_lines_in_transit`, `trace_spans_in_transit`
@@ -159,8 +213,14 @@ Vault values are envelope-encrypted at rest.
 - **Storage:** 'observability' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Grafana — `svc_grafana` †
-- **Purpose:** Operation of the Grafana service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Grafana — `svc_grafana`
+- **Purpose:** Grafana is the operator-facing observability console. It processes its own
+usage metrics, dashboard view logs, and OAuth session data for the
+operators and admins who sign in to view metrics, logs and traces. This is
+necessary to operate and monitor the platform for self-observability
+(legitimate interest in service operation, Art. 6(1)(f)). No tenant
+end-users are data subjects here — only the operator/admin staff who use
+the console.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operator`, `admins`
 - **Data categories:** `usage_metrics`, `dashboard_view_logs`, `oauth_session_data`
@@ -182,8 +242,14 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'observability' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Loki — `svc_loki` †
-- **Purpose:** Operation of the Loki service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Loki — `svc_loki`
+- **Purpose:** Loki is the platform log-aggregation backend. It stores log lines,
+hostname labels and request metadata (which may include user agents and
+source IPs harvested from nginx/Wing access logs) so the operator can
+search, correlate and debug across services (legitimate interest in
+service operation and security, Art. 6(1)(f)). End-user data appears
+incidentally inside ingested access-log lines; retention follows the Loki
+schema_config horizon (~30 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `log_lines`, `hostname_labels`, `request_metadata`
@@ -193,8 +259,13 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'observability' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Prometheus — `svc_prometheus` †
-- **Purpose:** Operation of the Prometheus service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Prometheus — `svc_prometheus`
+- **Purpose:** Prometheus is the platform metrics time-series backend. It stores
+infrastructure metrics and their hostname labels scraped from exporters so
+the operator can monitor capacity, health and alerting (legitimate
+interest in service operation, Art. 6(1)(f)). Metrics are machine-level;
+no end-user identifiers are stored. Retention follows prometheus_retention
+(~30 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `infrastructure_metrics`, `hostname_labels`
@@ -204,8 +275,13 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'observability' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Tempo — `svc_tempo` †
-- **Purpose:** Operation of the Tempo service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Tempo — `svc_tempo`
+- **Purpose:** Tempo is the platform distributed-tracing backend. It stores trace spans
+and their request metadata (which may include user-agent strings and
+request paths) so the operator can debug latency and reconstruct request
+flows across services (legitimate interest in service operation,
+Art. 6(1)(f)). End-user data appears incidentally inside span attributes;
+retention is ~14 days.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `trace_spans`, `request_metadata`
@@ -266,8 +342,14 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Mcp Gateway — `svc_mcp-gateway` †
-- **Purpose:** Operation of the Mcp Gateway service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Mcp Gateway — `svc_mcp-gateway`
+- **Purpose:** The MCP Gateway (mcpo) proxies Model Context Protocol tool calls for local
+agents. It processes MCP request metadata (tool invocations and their
+parameters) and access logs for the read-only filesystem and local git
+repositories it exposes, in order to mediate and audit agent tool access
+(legitimate interest in service operation, Art. 6(1)(f)). Subjects are the
+operator and automated agent systems (e.g. Open WebUI agents); no tenant
+end-user identities are processed.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `automated_systems`
 - **Data categories:** `mcp_request_metadata`, `filesystem_access_logs`, `git_repo_access_logs`
@@ -340,8 +422,13 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Offline Maps — `svc_offline-maps` †
-- **Purpose:** Operation of the Offline Maps service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Offline Maps — `svc_offline-maps`
+- **Purpose:** The offline-maps tile server serves pre-rendered map tiles to browser
+clients. It processes tile request logs (bounding box, zoom level, tile
+coordinates) and hostname labels for operational monitoring of the map
+service (legitimate interest in service operation, Art. 6(1)(f)). The
+request logs can be attributed to browsing end-users; no account or
+identity data is collected.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `tile_request_logs`, `hostname_labels`
@@ -376,8 +463,15 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Rustfs — `svc_rustfs` †
-- **Purpose:** Operation of the Rustfs service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Rustfs — `svc_rustfs`
+- **Purpose:** RustFS is the S3-compatible object store used as the nightly backup target
+and general blob store. It holds object-storage blobs (backup tarballs and
+bucket contents) and S3 GET/PUT access logs, in order to provide durable
+backup and object storage for the platform (legitimate interest in service
+operation and resilience, Art. 6(1)(f)). Operators administer it; any
+end-user PII inside backup tarballs is derived from the originating service
+and governed by that service's record. Retention is the backup horizon
+(~90 days), tightened by per-bucket lifecycle policies.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `object_storage_blobs`, `access_logs`
@@ -428,8 +522,14 @@ blob plus the OIDC link (when Authentik SSO is enabled).
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Watchtower — `svc_watchtower` †
-- **Purpose:** Operation of the Watchtower service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Watchtower — `svc_watchtower`
+- **Purpose:** Watchtower automates container image updates. It processes container
+metadata (image names, tags, IDs, restart counts) and update event logs
+(what was pulled, when, success/failure), in order to keep the container
+estate patched and report on update activity (legitimate interest in
+service operation and security, Art. 6(1)(f)). Only operators are data
+subjects; no end-user data is processed. Logs rotate (max-size 10m,
+max-file 3).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `container_metadata`, `update_event_logs`
@@ -510,8 +610,15 @@ third-party user data — the operator is the only data subject.
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Qdrant — `svc_qdrant` †
-- **Purpose:** Operation of the Qdrant service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Qdrant — `svc_qdrant`
+- **Purpose:** Qdrant is the vector database backing agent memory and advisory retrieval.
+It stores agent prompt-context embeddings (which may include operator data),
+advisory text (CVE summaries, vendor advisories), and vector metadata
+(collection names, point ids, payload schemas), in order to provide
+semantic memory and retrieval for the platform's AI agents (legitimate
+interest in research / agent operation, not contract-bound, Art. 6(1)(f)).
+Subjects are operators and automated agent systems; Bone redacts operator
+email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `automated_systems`
 - **Data categories:** `agent_prompt_context`, `advisory_text`, `vector_metadata`
@@ -535,8 +642,14 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'devops' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Gitea — `svc_gitea` †
-- **Purpose:** Operation of the Gitea service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Gitea — `svc_gitea`
+- **Purpose:** Gitea is the self-hosted Git forge. It processes developer identity
+metadata (username, email, full name), authentication credentials
+(password hash, OAuth tokens), user-authored source code repositories, and
+an activity audit log (push events, login history), in order to provide
+source-code hosting and collaboration to tenant developers. Providing the
+forge to a registered developer is contractual (Art. 6(1)(b)). Accounts
+persist while active; deletion is handled via the Art-17 erasure path.
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `identity_metadata`, `authentication_credentials`, `source_code`, `audit_log_entries`
@@ -571,8 +684,14 @@ Authentik-authenticated principals reach the service.
 - **Storage:** 'devops' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Woodpecker — `svc_woodpecker` †
-- **Purpose:** Operation of the Woodpecker service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Woodpecker — `svc_woodpecker`
+- **Purpose:** Woodpecker is the self-hosted CI engine wired to Gitea. It processes CI
+pipeline logs (build output, which may embed commit metadata), Gitea OAuth2
+session data, and commit-author metadata (author name + email per pipeline
+trigger), in order to run continuous-integration pipelines for repository
+contributors (legitimate interest in operating CI, Art. 6(1)(f)). Subjects
+are the operator and repo developers triggering pipelines; all execution is
+local with no external runners. CI logs auto-prune (~90 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operator`, `developers`
 - **Data categories:** `ci_pipeline_logs`, `oauth_session_data`, `commit_author_metadata`
@@ -596,8 +715,15 @@ user accounts, and the OIDC session link.
 - **Storage:** 'b2b' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Erpnext — `svc_erpnext` †
-- **Purpose:** Operation of the Erpnext service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Erpnext — `svc_erpnext`
+- **Purpose:** ERPNext is the business ERP/CRM platform. It processes employee and
+customer identity metadata, financial records (invoices, expenses, GL
+entries), HR and payroll data, CRM customer/order data, and an audit log,
+in order to run the operator's accounting, HR and customer-relationship
+operations. Most of this is necessary to perform contracts with employees
+and customers (Art. 6(1)(b)), with statutory accounting-retention
+obligations driving the ~7-year horizon. Subjects include operators,
+tenant employees/customers (end-users), and third-party CRM contacts.
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `operators`, `end_users`, `third_parties`
 - **Data categories:** `identity_metadata`, `financial_records`, `hr_data`, `customer_data`, `audit_log_entries`
@@ -672,8 +798,15 @@ document revisions, comments, user accounts, and OIDC session data.
 
 ### voip stack
 
-#### Freepbx — `svc_freepbx` †
-- **Purpose:** Operation of the Freepbx service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Freepbx — `svc_freepbx`
+- **Purpose:** FreePBX/Asterisk is the self-hosted telephony PBX. It processes call
+detail records (caller/callee numbers, duration, codec), voicemail
+recordings, SIP/IAX extension credentials (hashed), and operator-authored
+dialplan routing rules, in order to provide and operate telephony for the
+organisation (legitimate interest in running the phone system,
+Art. 6(1)(f)). Subjects include PBX admins, extension owners, and external
+callers whose numbers appear in CDRs. CDRs rotate on a ~90-day horizon;
+voicemail retention follows operator policy.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `extension_users`, `external_callers`
 - **Data categories:** `call_metadata`, `voicemail_recordings`, `extension_credentials`, `dialplan_state`
@@ -685,8 +818,13 @@ document revisions, comments, user accounts, and OIDC session data.
 
 ### engineering stack
 
-#### Qgis Server — `svc_qgis-server` †
-- **Purpose:** Operation of the Qgis Server service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Qgis Server — `svc_qgis-server`
+- **Purpose:** QGIS Server is the backend-only OGC geospatial service (WMS/WFS). It
+processes OGC request logs (GetMap / GetFeature parameters) and hostname
+labels for operational monitoring of the map/feature endpoints (legitimate
+interest in service operation, Art. 6(1)(f)). Subjects are the operator and
+automated GIS clients consuming the endpoints; no account or end-user
+identity data is collected.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `automated_systems`
 - **Data categories:** `ogc_request_logs`, `hostname_labels`
@@ -726,8 +864,13 @@ Authentik-authenticated principals reach the service.
 
 ### host / non-stack
 
-#### Alloy Docker Metrics — `svc_alloy-docker-metrics` †
-- **Purpose:** Operation of the Alloy Docker Metrics service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Alloy Docker Metrics — `svc_alloy-docker-metrics`
+- **Purpose:** Scrapes per-container Docker infrastructure metrics (CPU, memory,
+network, restart counts) and tails container stdout/stderr logs so the
+operator can monitor and troubleshoot the Docker workload (legitimate
+interest in service operation, Art. 6(1)(f)). End-user data only appears
+incidentally inside container access logs; high log volume means a short
+retention horizon.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `infrastructure_metrics`, `container_logs`
@@ -737,8 +880,12 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Alloy Host Metrics — `svc_alloy-host-metrics` †
-- **Purpose:** Operation of the Alloy Host Metrics service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Alloy Host Metrics — `svc_alloy-host-metrics`
+- **Purpose:** Scrapes host-level infrastructure metrics (CPU, memory, disk and network
+utilisation) from the node exporter so the operator can monitor capacity
+and health of the host (legitimate interest in service operation,
+Art. 6(1)(f)). No end-user identifiers are collected — host metrics are
+machine-level, not subject-level.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `infrastructure_metrics`
@@ -748,8 +895,13 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Alloy Syslog — `svc_alloy-syslog` †
-- **Purpose:** Operation of the Alloy Syslog service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Alloy Syslog — `svc_alloy-syslog`
+- **Purpose:** Tails host operational logs (nginx and php-fpm access/error) and the
+platform audit trail (Bone, Wing, Pulse and agent runs) and ships them to
+Loki so the operator can debug failures and reconstruct an audit lineage
+(legitimate interest in service operation and security, Art. 6(1)(f)).
+End-user data appears incidentally inside host nginx access lines (request
+paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `end_users`
 - **Data categories:** `operational_logs`, `audit_trail_logs`
@@ -781,8 +933,12 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Grafana Loki — `svc_grafana-loki` †
-- **Purpose:** Operation of the Grafana Loki service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Grafana Loki — `svc_grafana-loki`
+- **Purpose:** Composition wiring that provisions the Loki datasource into Grafana. It
+processes only the log-query metadata of the operators who run Explore
+queries against Loki (legitimate interest in service operation,
+Art. 6(1)(f)); it stores nothing itself — the log-retention horizon is
+owned by loki-base.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `log_query_metadata`
@@ -792,8 +948,12 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Grafana Prometheus — `svc_grafana-prometheus` †
-- **Purpose:** Operation of the Grafana Prometheus service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Grafana Prometheus — `svc_grafana-prometheus`
+- **Purpose:** Composition wiring that provisions the Prometheus datasource into Grafana.
+It surfaces infrastructure metrics piped through from prometheus-base to
+operators viewing dashboards (legitimate interest in service operation,
+Art. 6(1)(f)). It persists nothing itself; the metric-retention horizon is
+owned by prometheus-base. No end-user identifiers are involved.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `infrastructure_metrics`
@@ -803,8 +963,12 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Grafana Tempo — `svc_grafana-tempo` †
-- **Purpose:** Operation of the Grafana Tempo service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Grafana Tempo — `svc_grafana-tempo`
+- **Purpose:** Composition wiring that provisions the Tempo datasource into Grafana so
+operators can inspect distributed traces. It surfaces trace spans and
+their request metadata for debugging and performance analysis (legitimate
+interest in service operation, Art. 6(1)(f)). It stores nothing itself;
+the trace-retention horizon is owned by tempo-base.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `trace_spans`, `request_metadata`
@@ -814,8 +978,13 @@ Authentik-authenticated principals reach the service.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Grafana Wing — `svc_grafana-wing` †
-- **Purpose:** Operation of the Grafana Wing service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Grafana Wing — `svc_grafana-wing`
+- **Purpose:** Composition wiring that provisions the wing.db SQLite datasource into
+Grafana for the playbook-run and AI-agent dashboards. It surfaces
+playbook event metadata (task/play/handler lifecycle) and agent-session
+telemetry (run outcomes, token tallies) to operators (legitimate interest
+in service operation, Art. 6(1)(f)). It stores nothing itself; the
+retention horizon is owned by wing-base. Operator-only data subjects.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `playbook_event_metadata`, `agent_session_telemetry`
@@ -866,8 +1035,12 @@ unless the caller explicitly POSTs to Wing /events with source=agent:*
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Pulse — `svc_pulse` †
-- **Purpose:** Operation of the Pulse service within the nOS self-hosted platform; processing limited to what the service requires to function for authenticated users.
+#### Pulse — `svc_pulse`
+- **Purpose:** Pulse is the host-side scheduled-job runner. It processes aggregated job
+catalog metadata (plugin name, job name, schedule, command) authored or
+triggered by the operator, in order to schedule and run maintenance jobs
+(legitimate interest in service operation, Art. 6(1)(f)). Only the
+operator authors or triggers jobs; no tenant end-user data is processed.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `aggregated_job_metadata`

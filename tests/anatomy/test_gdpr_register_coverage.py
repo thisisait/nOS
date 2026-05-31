@@ -95,6 +95,43 @@ def test_record_carries_all_upsert_columns(rec):
         f"{rec['id']} missing upsert columns: {sorted(UPSERT_COLUMNS - rec.keys())}"
 
 
+# ── Authored-purpose gate for real-subject-PII services ──────────────────────
+# nos_gdpr default-fills a generic purpose for any plugin whose `gdpr.purpose`
+# is absent, flagging it `purpose_generated=True`. Generic boilerplate is
+# acceptable for operator-only / infra activities, but NOT for an activity that
+# processes real data-subject PII: Art-30(1)(b) requires a *specific* purpose,
+# and a DPO can't assess proportionality against a placeholder. So any plugin
+# whose `data_subjects` name end_users (the canonical real-subject token) MUST
+# carry an author-provided purpose. The set of end_users-bearing records is
+# discovered dynamically, so a new such service can't silently ship with
+# boilerplate and keep the gate green.
+_REAL_SUBJECT_TOKEN = "end_users"
+
+
+def _end_user_records() -> list[dict]:
+    return [r for r in _core_records() if _REAL_SUBJECT_TOKEN in r["data_subjects"]]
+
+
+def test_end_user_services_exist():
+    """Sanity: the dynamic discovery actually finds the real-subject cohort
+    (guards against a token rename silently emptying the parametrization and
+    turning the authored-purpose gate into a vacuous pass)."""
+    assert _end_user_records(), \
+        f"no records carry data_subjects[{_REAL_SUBJECT_TOKEN!r}] — token renamed?"
+
+
+@pytest.mark.parametrize("rec", _end_user_records(), ids=lambda r: r["id"])
+def test_end_user_service_has_authored_purpose(rec):
+    """Art-30(1)(b): a service processing end_user PII needs a specific,
+    author-provided purpose — not the nos_gdpr generic boilerplate."""
+    assert rec.get("purpose_generated") is False, (
+        f"{rec['id']} processes end_users ({rec['data_subjects']}) but ships NO "
+        f"explicit gdpr.purpose — nos_gdpr auto-filled generic boilerplate. "
+        f"Author a specific purpose in the plugin's gdpr block "
+        f"(operators-only / infra services may keep the generated default)."
+    )
+
+
 _GDPR_ENV = ("GDPR_CONTROLLER_NAME", "GDPR_DPO_NAME", "GDPR_DPO_CONTACT")
 
 

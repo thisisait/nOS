@@ -238,6 +238,12 @@ lifecycle:
 # gap (no portainer row in Wing /gdpr).
 
 gdpr:
+  purpose: |
+    Portainer is the operator-facing Docker management console. It processes
+    the admin password hash, Authentik OIDC session data, and its own limited
+    activity audit log, in order to let operators administer the container
+    estate (legitimate interest in service operation, Art. 6(1)(f)). The only
+    data subjects are operators; no tenant end-user data is processed.
   data_categories:
     - admin_credentials                  # admin password hash (Portainer DB)
     - oauth_session_data                 # Authentik OIDC sessions

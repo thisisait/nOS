@@ -99,6 +99,12 @@ lifecycle:
 # (the source of the metrics being queried).
 
 gdpr:
+  purpose: |
+    Composition wiring that provisions the Prometheus datasource into Grafana.
+    It surfaces infrastructure metrics piped through from prometheus-base to
+    operators viewing dashboards (legitimate interest in service operation,
+    Art. 6(1)(f)). It persists nothing itself; the metric-retention horizon is
+    owned by prometheus-base. No end-user identifiers are involved.
   data_categories:
     - infrastructure_metrics       # piped through from prometheus-base
   data_subjects:

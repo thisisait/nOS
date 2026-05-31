@@ -54,6 +54,13 @@ observability:
       tier: "3"
 
 gdpr:
+  purpose: |
+    The offline-maps tile server serves pre-rendered map tiles to browser
+    clients. It processes tile request logs (bounding box, zoom level, tile
+    coordinates) and hostname labels for operational monitoring of the map
+    service (legitimate interest in service operation, Art. 6(1)(f)). The
+    request logs can be attributed to browsing end-users; no account or
+    identity data is collected.
   data_categories:
     - tile_request_logs              # bbox / zoom / tile coords requested
     - hostname_labels

@@ -68,6 +68,14 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    Watchtower automates container image updates. It processes container
+    metadata (image names, tags, IDs, restart counts) and update event logs
+    (what was pulled, when, success/failure), in order to keep the container
+    estate patched and report on update activity (legitimate interest in
+    service operation and security, Art. 6(1)(f)). Only operators are data
+    subjects; no end-user data is processed. Logs rotate (max-size 10m,
+    max-file 3).
   data_categories:
     - container_metadata        # image names, tags, IDs, restart counts
     - update_event_logs         # what got pulled, when, success/failure

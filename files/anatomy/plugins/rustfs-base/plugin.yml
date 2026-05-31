@@ -59,6 +59,15 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    RustFS is the S3-compatible object store used as the nightly backup target
+    and general blob store. It holds object-storage blobs (backup tarballs and
+    bucket contents) and S3 GET/PUT access logs, in order to provide durable
+    backup and object storage for the platform (legitimate interest in service
+    operation and resilience, Art. 6(1)(f)). Operators administer it; any
+    end-user PII inside backup tarballs is derived from the originating service
+    and governed by that service's record. Retention is the backup horizon
+    (~90 days), tightened by per-bucket lifecycle policies.
   data_categories:
     - object_storage_blobs          # backup tarballs, blob-store contents
     - access_logs                   # S3 GET/PUT request log

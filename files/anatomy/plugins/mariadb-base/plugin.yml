@@ -47,6 +47,14 @@ observability:
       tier: "1"
 
 gdpr:
+  purpose: |
+    MariaDB is the shared relational datastore for MySQL-family services. It
+    persists whatever the consuming services write — application user and
+    content rows plus their audit logs (e.g. WordPress, Nextcloud, FreeScout)
+    — so those services can function (legitimate interest in operating the
+    persistence layer, Art. 6(1)(f)). End-user PII present here is owned by the
+    consuming service; data lifetime and the precise processing purpose are
+    determined by that service, not by MariaDB itself.
   data_categories:
     - application_user_data         # each consumer service's user/content rows
     - audit_logs

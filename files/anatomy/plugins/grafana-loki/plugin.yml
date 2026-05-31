@@ -50,6 +50,12 @@ lifecycle:
     - remove_file: "{{ stacks_dir }}/observability/grafana/provisioning/datasources/loki.yml"
 
 gdpr:
+  purpose: |
+    Composition wiring that provisions the Loki datasource into Grafana. It
+    processes only the log-query metadata of the operators who run Explore
+    queries against Loki (legitimate interest in service operation,
+    Art. 6(1)(f)); it stores nothing itself — the log-retention horizon is
+    owned by loki-base.
   data_categories:
     - log_query_metadata    # Grafana Explore queries against Loki
   data_subjects:

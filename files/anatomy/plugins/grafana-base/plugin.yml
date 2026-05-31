@@ -195,6 +195,14 @@ observability:
 # This plugin closes that gap.
 
 gdpr:
+  purpose: |
+    Grafana is the operator-facing observability console. It processes its own
+    usage metrics, dashboard view logs, and OAuth session data for the
+    operators and admins who sign in to view metrics, logs and traces. This is
+    necessary to operate and monitor the platform for self-observability
+    (legitimate interest in service operation, Art. 6(1)(f)). No tenant
+    end-users are data subjects here — only the operator/admin staff who use
+    the console.
   data_categories:
     - usage_metrics
     - dashboard_view_logs
