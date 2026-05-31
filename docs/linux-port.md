@@ -161,10 +161,11 @@ abstraction** are done, and **Bone / Pulse / Wing / backup** already branch on
    Docker.app presence.
    *Every gate is true-on-macOS → zero macOS behavior change. ansible-lint
    production 0 failures, `--syntax-check` clean.*
-6. ⏳ **Ubuntu 24.04 aarch64 wet-test** (Lima / Multipass / Graviton) — the one
-   REMAINING acceptance gate. Run with `install_{openclaw,hermes}: false`;
-   Bone / Pulse / Wing / backup + the Docker stack (via the `pazny.linux.docker`
-   apt path) should come up. **Not yet run** — needs a Linux host.
+6. ✅ **Ubuntu 24.04 wet-test** — now a standing acceptance gate. The
+   `Integration (ubuntu-24.04)` CI job runs the full `ansible-playbook main.yml`
+   on a GitHub Linux runner (with `install_{openclaw,hermes}: false`) and is
+   **green** as of v0.4-beta: Bone / Pulse / Wing / backup + the Docker stack
+   (via the `pazny.linux.docker` apt path) come up end-to-end.
 
 **Defer (post-v0.4, keep `install_*: false` on Linux):** OpenClaw (Ollama MLX is
 Apple-only → needs a CUDA/CPU backend), Hermes (Homebrew `uv`/`python@3.13` →

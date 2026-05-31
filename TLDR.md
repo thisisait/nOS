@@ -3,7 +3,7 @@
 > One-page cheatsheet for `nOS`, the self-hosted AIT engine.
 > For the full story: [README.md](README.md).
 
-Target: macOS on Apple Silicon (M1+). Recommended: 36 GB RAM + 1 TB external SSD.
+Reference platform: macOS on Apple Silicon (M1+). Also supported: Ubuntu 24.04 LTS (full playbook CI-wet-tested; run with `install_openclaw: false` / `install_hermes: false` — see [docs/linux-port.md](docs/linux-port.md)). Recommended: 36 GB RAM + 1 TB external SSD.
 
 ---
 
