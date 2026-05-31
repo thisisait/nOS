@@ -88,7 +88,10 @@
 
 - name: "[GDPR forget] Capture DSAR row id (for terminal-status update)"
   ansible.builtin.set_fact:
-    _dsar_id: "{{ (_dsar_rec.stdout | default('') | regex_search('#(\\d+)', '\\1')) | default('', true) }}"
+    # regex_search WITHOUT a backref arg returns the SCALAR match, not a list:
+    # the '\\1'-backref form returns ['42'] -> "--update=['42']" -> record-dsar
+    # casts to 0 -> the terminal update silently no-ops (row stuck at 'received').
+    _dsar_id: "{{ (_dsar_rec.stdout | default('') | regex_search('(?<=#)[0-9]+')) | default('', true) }}"
   when: install_wing | default(true) | bool
 
 # ── Executor: Authentik (identity anchor) ────────────────────────────────────
