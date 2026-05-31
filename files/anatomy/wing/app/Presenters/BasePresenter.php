@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\Model\AuditChainRepository;
 use App\Model\EventRepository;
 use App\Model\NotificationRepository;
 use Nette\Application\UI\Presenter;
@@ -21,6 +22,9 @@ abstract class BasePresenter extends Presenter
 
 	/** @inject */
 	public EventRepository $eventsForBadge;
+
+	/** @inject */
+	public AuditChainRepository $auditChainForBadge;
 
 	/**
 	 * RBAC tier → Authentik group(s). Tier 1 is the most privileged; access is
@@ -154,6 +158,17 @@ abstract class BasePresenter extends Presenter
 			$this->template->pendingApprovalsCount = $this->eventsForBadge->countPendingApprovals();
 		} catch (\Throwable) {
 			$this->template->pendingApprovalsCount = 0;
+		}
+		// Audit-chain integrity badge — ONLY when the chain is enabled (strict
+		// '1' gate, matching EventRepository + bone/clients/wing.py). Reads the
+		// cached verdict (Pulse-refreshed); never walks the chain per render.
+		// On a chain-off install the variable stays unset -> badge hides.
+		if (getenv('WING_AUDIT_CHAIN_ENABLED') === '1') {
+			try {
+				$this->template->auditChainVerdict = $this->auditChainForBadge->verdict();
+			} catch (\Throwable) {
+				// swallow — a missing audit_chain_meta just hides the badge
+			}
 		}
 	}
 
