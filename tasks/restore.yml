@@ -99,15 +99,21 @@
          | list }}
 
 - name: "[Restore] Build list of sources to restore"
+  # `s3file` is the object key (may carry a `.enc` suffix from client-side
+  # encryption); `file` is the local PLAINTEXT name decryption produces, which
+  # every downstream replay step operates on. `.enc` is transparent to the
+  # operator's restore_sources filter (matched against the plaintext name).
   ansible.builtin.set_fact:
     restore_plan: >-
       {%- set plan = [] -%}
       {%- for f in restore_available_files -%}
-        {%- set stem = f | regex_replace('\\.sql\\.gz$|\\.tar\\.gz$|\\.json$', '') -%}
+        {%- set plain = f | regex_replace('\\.enc$', '') -%}
+        {%- set stem = plain | regex_replace('\\.sql\\.gz$|\\.tar\\.gz$|\\.json$', '') -%}
         {%- if (restore_requested_sources | length) == 0
                or stem in restore_requested_sources
-               or f in restore_requested_sources -%}
-          {%- set _ = plan.append({'file': f, 'source': stem}) -%}
+               or plain in restore_requested_sources -%}
+          {%- set _ = plan.append({'s3file': f, 'file': plain, 'source': stem,
+                                    'encrypted': f.endswith('.enc')}) -%}
         {%- endif -%}
       {%- endfor -%}
       {{ plan }}
@@ -163,15 +169,38 @@
 - name: "[Restore] Download backups to {{ restore_workdir }}"
   ansible.builtin.command: >
     aws --endpoint-url {{ restore_s3_endpoint }}
-    s3 cp s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}{{ item.file }}
-    {{ restore_workdir }}/{{ item.file }}
+    s3 cp s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}{{ item.s3file }}
+    {{ restore_workdir }}/{{ item.s3file }}
   environment: "{{ restore_aws_env }}"
   loop: "{{ restore_plan }}"
   loop_control:
-    label: "{{ item.file }}"
+    label: "{{ item.s3file }}"
   register: restore_downloads
   changed_when: true
   no_log: true
+
+# Decrypt client-side-encrypted objects in place (.enc → plaintext name).
+# Mirror of encrypt_stream() in roles/pazny.backup/files/backup.sh — cipher
+# params MUST match. Plaintext objects skip this; downstream steps then operate
+# uniformly on `item.file`. Fails loud (no fallback) on a wrong/missing passphrase.
+- name: "[Restore] Decrypt encrypted objects (.enc → plaintext)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 -salt \
+      -pass env:NOS_BACKUP_PASS \
+      -in "{{ restore_workdir }}/{{ item.s3file }}" \
+      -out "{{ restore_workdir }}/{{ item.file }}"
+  args:
+    executable: /bin/bash
+  environment:
+    NOS_BACKUP_PASS: "{{ backup_encryption_passphrase }}"
+  loop: "{{ restore_plan | selectattr('encrypted') | list }}"
+  loop_control:
+    label: "{{ item.s3file }}"
+  register: restore_decrypt
+  changed_when: restore_decrypt.rc == 0
+  no_log: true
+  when: not ansible_check_mode
 
 - name: "[Restore] Stat downloaded files (for summary)"
   ansible.builtin.stat:

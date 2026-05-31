@@ -35,6 +35,12 @@ RETAIN_DAILY={{ backup_retention_daily }}
 RETAIN_WEEKLY={{ backup_retention_weekly }}
 RETAIN_MONTHLY={{ backup_retention_monthly }}
 
+# Client-side encryption: AES-256-CBC/pbkdf2 over every dump before upload.
+ENCRYPT="{{ 'true' if backup_encryption_enabled | default(true) else 'false' }}"
+ENC_PASSPHRASE="{{ backup_encryption_passphrase }}"
+OPENSSL_BIN=""
+ENC_SUFFIX=""
+
 STATUS_FILE="{{ backup_status_file }}"
 LOG_FILE="{{ backup_log_file }}"
 OVERWRITE_SAME_DAY="{{ 'true' if backup_overwrite_same_day else 'false' }}"
@@ -56,6 +62,48 @@ die() {
 now_ms() {
     # GNU-date-free millisecond clock (macOS)
     python3 -c 'import time; print(int(time.time() * 1000))'
+}
+
+# Resolve an openssl that supports `enc -pbkdf2`. launchd runs with a
+# restricted PATH (no Homebrew); older macOS system LibreSSL lacks -pbkdf2.
+# Probe each candidate so the cipher matches tasks/restore.yml exactly.
+resolve_openssl() {
+    local cand
+    for cand in openssl /opt/homebrew/opt/openssl@3/bin/openssl \
+                /usr/local/opt/openssl@3/bin/openssl /usr/bin/openssl; do
+        command -v "${cand}" >/dev/null 2>&1 || continue
+        if printf 'x' | "${cand}" enc -aes-256-cbc -pbkdf2 -iter 1 -salt \
+               -pass pass:probe >/dev/null 2>&1; then
+            OPENSSL_BIN="${cand}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Fail closed if encryption is requested but unusable — never silently ship
+# cleartext PII to object storage. Sets ENC_SUFFIX + exports NOS_BACKUP_PASS.
+setup_encryption() {
+    if [[ "${ENCRYPT}" != "true" ]]; then
+        log "encryption: OFF (backup_encryption_enabled=false) — dumps stored as plaintext"
+        return 0
+    fi
+    [[ -n "${ENC_PASSPHRASE}" ]] || die "encryption enabled but backup_encryption_passphrase is empty"
+    resolve_openssl || die "encryption enabled but no -pbkdf2-capable openssl found on PATH"
+    export NOS_BACKUP_PASS="${ENC_PASSPHRASE}"
+    ENC_SUFFIX=".enc"
+    log "encryption: ON (AES-256-CBC/pbkdf2 via ${OPENSSL_BIN})"
+}
+
+# Stream filter: AES-256 when enabled, passthrough otherwise. Used as the last
+# pipe stage before `aws s3 cp -`. Decryption mirror lives in tasks/restore.yml.
+encrypt_stream() {
+    if [[ "${ENCRYPT}" == "true" ]]; then
+        "${OPENSSL_BIN}" enc -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 \
+            -salt -pass env:NOS_BACKUP_PASS
+    else
+        cat
+    fi
 }
 
 # Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1)
@@ -140,7 +188,7 @@ run_mariadb() {
     local date_str ts key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
     ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/mariadb-all.${ts}.sql.gz"
+    key="${date_str}/mariadb-all.${ts}.sql.gz${ENC_SUFFIX}"
 
     if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/mariadb-all."; then
         log "mariadb: today's dump already exists, skipping"
@@ -160,6 +208,7 @@ run_mariadb() {
           "-u${MARIADB_USER}" \
           "-p${MARIADB_PASSWORD}" \
       | gzip -c \
+      | encrypt_stream \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -179,7 +228,7 @@ run_postgres() {
     local date_str ts key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
     ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/postgresql-all.${ts}.sql.gz"
+    key="${date_str}/postgresql-all.${ts}.sql.gz${ENC_SUFFIX}"
 
     if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/postgresql-all."; then
         log "postgresql: today's dump already exists, skipping"
@@ -192,6 +241,7 @@ run_postgres() {
     docker exec -i -e "PGPASSWORD=${PG_PASSWORD}" "${PG_CONTAINER}" \
         pg_dumpall -U "${PG_USER}" \
       | gzip -c \
+      | encrypt_stream \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -212,7 +262,7 @@ run_volumes() {
     for vol in "${VOLUMES[@]}"; do
         [[ -z "${vol}" ]] && continue
         ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-        key="${date_str}/volume-${vol}.${ts}.tar.gz"
+        key="${date_str}/volume-${vol}.${ts}.tar.gz${ENC_SUFFIX}"
 
         if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/volume-${vol}."; then
             log "volume/${vol}: today's dump already exists, skipping"
@@ -224,6 +274,7 @@ run_volumes() {
         start=$(now_ms)
         docker run --rm -v "${vol}:/data:ro" alpine:3 \
             sh -c 'cd /data && tar -czf - .' \
+          | encrypt_stream \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
         dur=$(( $(now_ms) - start ))
@@ -246,7 +297,7 @@ run_authentik() {
     local date_str ts key start dur rc size tmp
     date_str="$(date -u +%Y-%m-%d)"
     ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/authentik-blueprints.${ts}.json.gz"
+    key="${date_str}/authentik-blueprints.${ts}.json.gz${ENC_SUFFIX}"
     tmp="$(mktemp -t nos-authentik.XXXXXX.json)"
 
     if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/authentik-blueprints."; then
@@ -262,6 +313,7 @@ run_authentik() {
             -H "Accept: application/json" \
             "${AUTHENTIK_URL}/api/v3/managed/blueprints/" > "${tmp}"; then
         gzip -c "${tmp}" \
+          | encrypt_stream \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
     else
@@ -362,6 +414,7 @@ main() {
 
     log "==== nOS backup start ===="
     status_reset
+    setup_encryption
     ensure_bucket
 
     run_mariadb

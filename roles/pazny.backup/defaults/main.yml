@@ -18,6 +18,15 @@ backup_retention_daily: 7
 backup_retention_weekly: 4
 backup_retention_monthly: 12
 
+# -- Client-side encryption (GDPR Art. 32 / NIS2 at-rest) ----------------------
+# Every dump is AES-256-CBC/pbkdf2 encrypted BEFORE upload, so personal data
+# never lands in object storage as cleartext-after-gzip. Restore decrypts with
+# the SAME passphrase (tasks/restore.yml). Encrypted objects carry a `.enc`
+# suffix; legacy plaintext objects restore unchanged (per-file auto-detect).
+# Turn OFF only for a throw-away dev target where the bucket holds no PII.
+backup_encryption_enabled: true
+backup_encryption_passphrase: "{{ global_password_prefix | default('nos') }}_pw_backup_encryption"
+
 # -- Sources -------------------------------------------------------------------
 backup_databases_mariadb: true
 backup_databases_postgresql: true
