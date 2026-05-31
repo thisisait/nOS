@@ -1,0 +1,76 @@
+# =============================================================================
+# gdpr-breach-base — breach-notification deadline scan (gov-readiness P0 #4)
+#
+# Registers the hourly Pulse scan that escalates overdue GDPR Art-33 (ÚOOÚ 72h)
+# and NÚKIB 24h/72h/30d notification deadlines as CRITICAL notifications into
+# wing.db.notifications (the A9 fanout drains them). The deadline engine + the
+# bin/breach-{file,scan,report}.php CLIs shipped earlier; this manifest is the
+# missing auto-scheduling seam (was deferred to keep the first playbook run
+# safe; now wired).
+#
+# type: scheduled-job (composition) — NOT a Docker service, no compose extension.
+#
+# PROVABLY INERT on a normal run: registration only POSTs a Pulse-job row at
+# render time (identical cost to wing-base dispatch-notifications). Execution is
+# self-no-op — breach-scan.php's WHERE clause requires an overdue, non-resolved,
+# not-yet-escalated gdpr_breaches row; on any install with an empty register the
+# hourly tick prints "0 overdue breach stage(s) escalated" and exits 0. The
+# escalated_stages_json stamp makes re-runs idempotent (no alert-spam).
+# =============================================================================
+
+name: gdpr-breach-base
+version: "0.1.0"
+description: >
+  Hourly scan of the gdpr_breaches register for overdue GDPR Art-33 (ÚOOÚ 72h)
+  and NÚKIB 24h/72h/30d notification deadlines; emits ONE CRITICAL escalation
+  per overdue stage into wing.db.notifications. Inert until a breach is filed.
+
+type:
+  - composition
+  - scheduled-job
+
+requires:
+  role: pazny.wing
+
+pulse:
+  jobs:
+    - name: breach-deadline-scan
+      runner: subprocess
+      command: "/opt/homebrew/bin/php"   # allowlisted prefix (SEC-8); wing-base dispatch precedent
+      args:
+        - "{{ wing_app_dir }}/bin/breach-scan.php"
+      schedule: "0 * * * *"              # hourly, UTC — timely for the 24h/72h clocks
+      jitter_min: 5
+      max_runtime_s: 60
+      max_concurrent: 1
+      env:
+        # BARE tokens (no `| default`) — discover-pulse-catalog.py does a LITERAL
+        # string replace keyed on "{{ wing_home }}"; the filter form never matches.
+        WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
+
+# Canonical A9 5-key severity routing — contract completeness (the scan passes
+# EXPLICIT channels on its direct insert, so this block is forward-ready
+# metadata, not a live consumer; the PHP/SQLite path never reads the routing
+# sidecar). Matches the gitleaks scheduled-job precedent.
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# =============================================================================
+# GDPR — Article 30 register row (REQUIRED by plugin.schema.json + the loader).
+# This plugin processes only operator-authored breach-incident metadata.
+# retention_days: -1 (permanent) — a breach register is a legal record; 0 is
+# rejected by the parser as a 5(1)(e) red flag.
+# =============================================================================
+gdpr:
+  purpose: "Track GDPR Art-33/34 + NIS2/ZKB breach-notification deadlines and escalate overdue regulator notifications"
+  legal_basis: legal_obligation     # GDPR Art-33/34 + Czech ZKB statutory duty
+  data_categories:
+    - breach_incident_metadata      # nature, risk_level, affected counts, regulator refs
+  data_subjects: [operators]        # only the operator files / triggers breaches
+  retention_days: -1                # permanent legal record
+  processors: []
+  eu_residency: true
