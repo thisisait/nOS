@@ -247,8 +247,8 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "sum by (budget) (firefly_budget_spend_current)",
-          "legendFormat": "{{budget}}",
+          "expr": "sum by (budget_id) (pg_firefly_budget_spend)",
+          "legendFormat": "{{budget_id}}",
           "range": true,
           "refId": "A"
         }
@@ -336,7 +336,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "erpnext_sales_orders_total",
+          "expr": "mysql_erpnext_sales_orders_total",
           "legendFormat": "sales orders",
           "refId": "A"
         }

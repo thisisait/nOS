@@ -248,7 +248,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "bookstack_books_total",
+          "expr": "mysql_bookstack_books_total",
           "legendFormat": "books",
           "refId": "A"
         }
@@ -283,7 +283,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
           "editorMode": "code",
-          "expr": "bookstack_pages_total",
+          "expr": "mysql_bookstack_pages_total",
           "legendFormat": "pages",
           "refId": "A"
         }

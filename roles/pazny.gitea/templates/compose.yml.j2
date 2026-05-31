@@ -39,6 +39,15 @@ services:
       # flag is the "external registration only" gate. Admin is API-provisioned.
       GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "{{ gitea_allow_only_external_registration | default(true) | string | lower }}"
       GITEA__log__LEVEL: "Warn"
+      # ── Prometheus metrics (Grafana observability epic) ────────────────────
+      # Exposes /metrics with gitea_repositories / gitea_users /
+      # gitea_organizations (+ more). The endpoint is token-gated: with a TOKEN
+      # set, scrapers MUST send `Authorization: Bearer <token>` — the Alloy
+      # scrape block carries the matching gitea_metrics_token. Endpoint binds on
+      # the internal :3000, reachable from Alloy via the published 127.0.0.1
+      # gitea_port mapping above.
+      GITEA__metrics__ENABLED: "true"
+      GITEA__metrics__TOKEN: "{{ gitea_metrics_token | default(global_password_prefix + '_pw_gitea_metrics') }}"
       TZ: "Europe/Prague"
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────

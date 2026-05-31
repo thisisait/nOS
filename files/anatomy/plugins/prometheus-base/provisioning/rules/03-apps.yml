@@ -183,3 +183,29 @@ groups:
             Run `ansible-playbook main.yml -K` (migrations run automatically in
             pre_tasks) or set `-e auto_migrate=true` for breaking migrations.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosInfoMigrationPending.md"
+
+  - name: nos_apps_woodpecker
+    interval: 1m
+    rules:
+      # Woodpecker CI "mean time to recovery" — derived from the native
+      # woodpecker_pipeline_* family (scraped via alloy job_name "woodpecker").
+      #
+      # True MTTR (wall-clock between a failure and the NEXT success on the same
+      # branch) is not cleanly expressible in stateless PromQL — it needs a
+      # join across the failure timestamp and the recovery timestamp. As a
+      # best-effort proxy we surface the average duration of FAILED pipeline
+      # runs: how long a broken build churns before it gives up, in seconds.
+      # That is the recover-from-failure cost a dashboard panel cares about.
+      #
+      # Source metric: woodpecker_pipeline_time is a per-pipeline gauge of the
+      # last run's duration carrying a `status` label (success/failure/error).
+      # avg over the failing statuses = mean failed-run seconds. If your
+      # Woodpecker version exposes a histogram instead (woodpecker_pipeline_
+      # time_seconds_*), swap to histogram_quantile(0.5, ...) on the _bucket.
+      # The recorded metric name is fixed by the shared metric contract so the
+      # Grafana panel and this producer agree.
+      - record: woodpecker_pipeline_mttr_seconds
+        expr: |
+          avg(woodpecker_pipeline_time{status=~"failure|error|killed"})
+        labels:
+          nos_domain: apps
