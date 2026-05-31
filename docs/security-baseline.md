@@ -59,6 +59,18 @@ Article-30 block.
   services holding that subject's data, emits a Bone `gdpr_forget_user` audit
   event, and logs the request in Wing's `gdpr_dsar` table (`request_type=erase`)
   for inspection evidence.
+- **Right of access (Art. 15)** — `ansible-playbook main.yml --tags gdpr-export
+  -e export_subject=<email>` assembles a per-subject access bundle. **Read-only
+  and dry-run by default** (prints the plan, writes nothing); add `-e
+  export_confirm=true` to write the bundle to `~/.nos/dsar-exports/<subject>-<date>/`
+  (dir `0700`, files `0600`). Authentik auto-captures the single exact-email-match
+  user object; every other in-scope store is `method:manual` (the run prints +
+  stubs the exact export step). Logs a `gdpr_dsar` row with **`request_type=access`**
+  — the universally-valid right. **Art. 20 portability** is recorded only for the
+  consent/contract subset (`portability_eligible` in `state/gdpr-export-map.yml`:
+  erpnext, gitea, vaultwarden); the other in-scope services run on legitimate
+  interests, for which portability does not apply. Audited map:
+  `state/gdpr-export-map.yml`.
 - **DSAR tracking** — the `gdpr_dsar` table records every access / rectify /
   erase / portability / object request and its disposition, with the
   `gdpr_processing.id`s touched, so a CNIL-style inspection can trace each one.
@@ -74,6 +86,14 @@ the same custody as `global_password_prefix` — without it, encrypted backups a
 unrecoverable.** Restore via the `restore` playbook tag; see
 [`restore-runbook.md`](restore-runbook.md). Host-disk at-rest FDE
 (FileVault / LUKS) remains operator-provisioned (see §1).
+
+- **DSAR access bundles are a NEW unencrypted personal-data store outside the
+  backup-encryption guarantee.** `~/.nos/dsar-exports/<subject>-<date>/` holds a
+  data subject's personal data in cleartext (`0700`/`0600`, no auto-encrypt, no
+  auto-expiry). **Operator action:** deliver the bundle over a secure channel,
+  then delete the directory; and confirm `~/.nos/` is not in the nightly RustFS
+  backup scope, or these bundles will land in object storage as a fresh
+  personal-data copy. Tracked as an operator decision, not an automated control.
 
 ## 6. Hardening
 

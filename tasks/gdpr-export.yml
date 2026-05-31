@@ -1,0 +1,315 @@
+---
+# =============================================================================
+# tasks/gdpr-export.yml — GDPR Art. 15 (right of access) EXPORT fan-out.
+# Read-only sibling of tasks/gdpr-forget.yml.
+# =============================================================================
+# Records request_type='access' — the universally-valid right (Art-20
+# portability is recorded ONLY where a service's lawful basis is consent/
+# contract; see state/gdpr-export-map.yml `portability_eligible`, and the
+# residual-risks note). Opt-in (main.yml imports under tags ['gdpr-export',
+# 'never']):
+#   DRY-RUN (default — prints the plan, writes NOTHING to disk, logs a
+#            gdpr_dsar row at status=received):
+#     ansible-playbook main.yml --tags gdpr-export -e export_subject=user@tld
+#   ASSEMBLE the bundle:
+#     ansible-playbook main.yml --tags gdpr-export -e export_subject=user@tld \
+#       -e export_confirm=true
+#
+# Audited export-command list: state/gdpr-export-map.yml. Authentik (the
+# identity anchor) auto-captures READ-ONLY on a confirmed run (single exact-
+# email match — never the raw multi-user envelope); every other in-scope store
+# is method:manual and is REPORTED (the operator runs the printed step and drops
+# the result into the bundle dir). Every run logs a gdpr_dsar row — the legal
+# audit record — reusing the Art-17 honest-status lifecycle. See
+# docs/security-baseline.md §4.
+# =============================================================================
+
+- name: "[GDPR export] Validate data subject"
+  ansible.builtin.assert:
+    that:
+      - export_subject is defined
+      - "'@' in (export_subject | string)"
+    fail_msg: "Set -e export_subject=<email> (the data subject to export)."
+    quiet: true
+
+- name: "[GDPR export] Resolve confirm flag (default dry-run)"
+  ansible.builtin.set_fact:
+    _export_confirm: "{{ export_confirm | default(false) | bool }}"
+
+- name: "[GDPR export] Resolve bundle dir for this subject"
+  ansible.builtin.set_fact:
+    _export_dir: >-
+      {{ export_bundle_dir
+         | default(ansible_facts['env']['HOME'] ~ '/.nos/dsar-exports/'
+                   ~ (export_subject | regex_replace('[^A-Za-z0-9._-]', '_'))
+                   ~ '-' ~ ('%Y%m%d' | strftime(ansible_date_time.epoch | int))) }}
+
+- name: "[GDPR export] Load audited export map"
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/state/gdpr-export-map.yml"
+    name: _exportmap
+
+- name: "[GDPR export] Build plan from services enabled for this tenant"
+  ansible.builtin.set_fact:
+    _export_plan: "{{ _export_plan | default([]) + [item] }}"
+  loop: "{{ _exportmap.services }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: item.flag == 'always' or (lookup('vars', item.flag, default=false) | bool)
+
+- name: "[GDPR export] Export plan banner"
+  ansible.builtin.debug:
+    msg: >-
+      {{ ('*** ASSEMBLE — bundle written to ' ~ _export_dir ~ ' ***') if _export_confirm
+         else 'DRY-RUN — nothing written (add -e export_confirm=true to assemble)' }}
+      | subject={{ export_subject }} | request_type=access
+      | {{ _export_plan | default([]) | length }} services in scope:
+      {{ _export_plan | default([]) | map(attribute='id') | list }}
+      | portability-eligible (consent/contract):
+      {{ _export_plan | default([]) | selectattr('portability_eligible', 'defined')
+         | selectattr('portability_eligible', 'eq', true) | map(attribute='id') | list }}
+
+- name: "[GDPR export] Per-service plan detail"
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.id }} [{{ item.method }}{{ ' | portability-eligible' if (item.portability_eligible | default(false)) else '' }}]
+      — {{ item.note }}
+  loop: "{{ _export_plan | default([]) }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+# ── Legal audit record — INTAKE (always, even on dry-run) ────────────────────
+# Art. 12(3): record that the access request landed BEFORE assembling anything.
+# request_type='access' is the universally-valid right (NOT 'portability', which
+# 18/21 in-scope legitimate-interests services do not grant). A confirmed run
+# transitions this SAME row to its real terminal status after extraction — we
+# never pre-stamp 'completed' while N services are still only REPORTED (manual).
+- name: "[GDPR export] Record DSAR intake row (status=received)"
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      printf '%s' "$NOS_DSAR_JSON" | php bin/record-dsar.php --json=-
+    chdir: "{{ wing_app_dir }}"
+    executable: /bin/bash
+  environment:
+    NOS_DSAR_JSON: >-
+      {{ {
+            'subject_email': export_subject,
+            'request_type': 'access',
+            'status': 'received',
+            'processing_ids': (_export_plan | default([]) | map(attribute='id') | list),
+            'notes': (_export_confirm
+                      | ternary('Access export run started — terminal status set after extraction. Bundle: ' ~ _export_dir,
+                                'Dry-run: plan logged, no bundle written.'))
+         } | to_json }}
+  register: _dsar_rec
+  changed_when: "'OK recorded' in (_dsar_rec.stdout | default(''))"
+  failed_when: false
+  when: install_wing | default(true) | bool
+
+- name: "[GDPR export] Capture DSAR row id (for terminal-status update)"
+  ansible.builtin.set_fact:
+    # regex_search WITHOUT a backref arg returns the SCALAR match, not a list:
+    # the '\\1'-backref form returns ['42'] -> "--update=['42']" -> record-dsar
+    # casts to 0 -> the terminal update silently no-ops (row stuck at 'received').
+    _dsar_id: "{{ (_dsar_rec.stdout | default('') | regex_search('(?<=#)[0-9]+')) | default('', true) }}"
+  when: install_wing | default(true) | bool
+
+# ── Bundle dir — only on a confirmed run (it will hold personal data) ────────
+# Per-subject dir is epoch-stamped/unique per run -> no collision. mode 0700
+# on the leaf is independent of the parent ~/.nos perms (created at main.yml).
+- name: "[GDPR export] Create per-subject bundle dir (0700)"
+  ansible.builtin.file:
+    path: "{{ _export_dir }}"
+    state: directory
+    mode: "0700"
+  when: _export_confirm
+
+# ── Executor: Authentik (identity anchor) — READ-ONLY, SINGLE exact match ────
+- name: "[GDPR export] Authentik — fetch user object by email"
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/users/?email={{ export_subject | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    return_content: true
+    status_code: [200]
+  register: _ak_user
+  failed_when: false
+  no_log: true
+  when:
+    - _export_confirm
+    - (_export_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0
+
+# Authentik's ?email= filter is contains/iexact and CAN return MULTIPLE users.
+# Select ONLY the single exact-email-match user object — writing the raw
+# envelope would leak OTHER subjects' identities into this subject's bundle
+# (a fresh Art-5/Art-32 breach inside a DSAR response).
+- name: "[GDPR export] Authentik — select single exact-match user"
+  ansible.builtin.set_fact:
+    _ak_match: >-
+      {{ (_ak_user.json.results | default([])
+          | selectattr('email', 'equalto', export_subject) | list | first) | default({}, true) }}
+  no_log: true
+  when:
+    - _export_confirm
+    - _ak_user.json is defined
+
+- name: "[GDPR export] Authentik — write single user object to bundle"
+  ansible.builtin.copy:
+    dest: "{{ _export_dir }}/svc_authentik.json"
+    content: "{{ _ak_match | to_nice_json }}"
+    mode: "0600"
+  register: _ak_write
+  failed_when: false
+  no_log: true
+  when:
+    - _export_confirm
+    - (_ak_match | default({})) != {}
+
+# (No container_exec entries today — WordPress is method:manual because
+# wp user get is user-object-only. The executor below stays so a future
+# verified read-only email-keyed export drops in with zero task changes.)
+- name: "[GDPR export] container_exec — resolve container + capture export"
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      CID=$(docker ps -q
+        --filter "label=com.docker.compose.project={{ item.stack }}"
+        --filter "label=com.docker.compose.service={{ item.service }}" | head -1);
+      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi;
+      T="{{ _export_dir }}/.{{ item.id }}.tmp";
+      if docker exec "$CID" {{ item.command }} > "$T"; then
+        mv "$T" "{{ _export_dir }}/{{ item.id }}.json";
+      else
+        echo "FAIL {{ item.id }}: export command exited non-zero"; rm -f "$T"; exit 1;
+      fi
+    executable: /bin/bash
+  loop: "{{ _export_plan | default([]) | selectattr('method', 'eq', 'container_exec') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+  register: _cexec
+  changed_when: "'SKIP' not in (_cexec.stdout | default('SKIP')) and 'FAIL' not in (_cexec.stdout | default(''))"
+  failed_when: false
+  when: _export_confirm
+
+# ── manual services — operator action required (printed dry-run + assemble) ──
+- name: "[GDPR export] MANUAL export required (run the printed step, append to bundle)"
+  ansible.builtin.debug:
+    msg: "MANUAL export for {{ item.id }} ({{ export_subject }}): {{ item.note }}"
+  loop: "{{ _export_plan | default([]) | selectattr('method', 'eq', 'manual') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: "[GDPR export] Write manual-step stub into bundle"
+  ansible.builtin.copy:
+    dest: "{{ _export_dir }}/{{ item.id }}.MANUAL.txt"
+    content: >-
+      MANUAL export PENDING for {{ item.id }} — subject {{ export_subject }}.
+      This service has no verified read-only email-keyed export CLI; run the step
+      below and append its result to this directory before the DSAR can close:
+      {{ item.note }}
+    mode: "0600"
+  loop: "{{ _export_plan | default([]) | selectattr('method', 'eq', 'manual') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: _export_confirm
+
+# ── Manifest — index the bundle (subject, plan, per-service capture state) ───
+# auto_captured = stores whose data is in the bundle. manual_pending = stores
+# the operator must still export. authentik_no_record distinguishes
+# "checked, subject not present" from "uncaptured" (Art-15 must evidence the
+# difference — e.g. grafana data_subjects=operator/admins may hold no external
+# subject). request_type='access'; portability_eligible names the consent/
+# contract subset for which Art-20 is additionally a valid framing.
+- name: "[GDPR export] Write bundle manifest"
+  ansible.builtin.copy:
+    dest: "{{ _export_dir }}/MANIFEST.json"
+    content: >-
+      {{ {
+            'subject': export_subject,
+            'generated_at': ansible_date_time.iso8601,
+            'request_type': 'access',
+            'dsar_id': (_dsar_id | default('')),
+            'auto_captured': ([] if ((_ak_match | default({})) == {})
+                              else ['svc_authentik'])
+                             + (_cexec.results | default([])
+                                | selectattr('rc', 'eq', 0)
+                                | selectattr('stdout', 'defined')
+                                | rejectattr('stdout', 'search', 'SKIP')
+                                | rejectattr('stdout', 'search', 'FAIL')
+                                | map(attribute='item') | map(attribute='id') | list),
+            'authentik_no_record': (
+                 ((_export_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0)
+                 and ((_ak_match | default({})) == {})),
+            'manual_pending': (_export_plan | default([]) | selectattr('method', 'eq', 'manual')
+                               | map(attribute='id') | list),
+            'portability_eligible': (_export_plan | default([])
+                               | selectattr('portability_eligible', 'defined')
+                               | selectattr('portability_eligible', 'eq', true)
+                               | map(attribute='id') | list)
+         } | to_nice_json }}
+    mode: "0600"
+  when: _export_confirm
+
+# ── Terminal status — record what was ACTUALLY assembled (Art. 12(3)) ────────
+# 'completed' ONLY when every in-scope store's data is in the bundle: zero
+# manual steps pending, zero container_exec SKIP/FAIL/non-zero, and (if
+# Authentik was in scope AND the subject exists there) its fetch+write
+# succeeded. With the honest map (WordPress=manual, only Authentik auto-
+# captures) a real multi-service tenant ALWAYS lands 'in-progress' until the
+# operator appends the manual exports — the legal record never claims a complete
+# access response while content/other-store exports are pending.
+- name: "[GDPR export] Compute terminal DSAR status"
+  ansible.builtin.set_fact:
+    _export_terminal: >-
+      {{ 'completed'
+         if (
+              (_export_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length) == 0
+              and (_cexec.results | default([]) | selectattr('stdout', 'defined')
+                   | selectattr('stdout', 'search', 'SKIP') | list | length) == 0
+              and (_cexec.results | default([]) | selectattr('stdout', 'defined')
+                   | selectattr('stdout', 'search', 'FAIL') | list | length) == 0
+              and (_cexec.results | default([]) | rejectattr('rc', 'eq', 0) | list | length) == 0
+              and not (
+                   ((_export_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0)
+                   and ((_ak_match | default({})) != {})
+                   and (_ak_write.failed | default(true))
+              )
+            )
+         else 'in-progress' }}
+  when: _export_confirm
+
+- name: "[GDPR export] Update DSAR row to terminal status"
+  ansible.builtin.command:
+    argv:
+      - php
+      - bin/record-dsar.php
+      - "--update={{ _dsar_id }}"
+      - "--status={{ _export_terminal }}"
+      - "--notes={{ 'Access export run: auto-captured='
+          ~ (([] if ((_ak_match | default({})) == {}) else ['svc_authentik'])
+             | length)
+          ~ ', manual-pending=' ~ (_export_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length)
+          ~ '. Bundle=' ~ _export_dir ~ '. Terminal=' ~ _export_terminal ~ '.' }}"
+    chdir: "{{ wing_app_dir }}"
+  register: _dsar_upd
+  changed_when: "'OK updated' in (_dsar_upd.stdout | default(''))"
+  failed_when: false
+  when:
+    - _export_confirm
+    - install_wing | default(true) | bool
+    - (_dsar_id | default('') | length) > 0
+
+- name: "[GDPR export] Summary"
+  ansible.builtin.debug:
+    msg: >-
+      {{ ('ACCESS EXPORT ' ~ (_export_terminal | default('in-progress') | upper)) if _export_confirm else 'DRY-RUN COMPLETE' }}
+      for {{ export_subject }} (request_type=access).
+      Auto-captured: {{ ([] if ((_ak_match | default({})) == {}) else ['svc_authentik']) | length }};
+      manual steps {{ 'pending (run the printed steps, append to the bundle, then the DSAR closes)' if _export_confirm else 'reported' }}:
+      {{ _export_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length }}.
+      {{ ('Bundle: ' ~ _export_dir ~ '.') if _export_confirm else '' }}
+      DSAR row {{ 'updated to ' ~ (_export_terminal | default('in-progress')) if _export_confirm else 'logged (received)' }}.
+      {{ '' if _export_confirm else 'Re-run with -e export_confirm=true to assemble.' }}

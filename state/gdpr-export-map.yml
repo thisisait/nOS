@@ -1,0 +1,223 @@
+# =============================================================================
+# GDPR right-of-access EXPORT map (Art. 15) — consumed by tasks/gdpr-export.yml
+# =============================================================================
+# Read-only sibling of gdpr-erasure-map.yml. ONE audited file for every
+# per-subject EXPORT. Centralized on purpose: an export reaches into the same
+# per-user stores an erasure does, so a single reviewable list beats scattering
+# ad-hoc dumps across 20 plugins. Keys (`id`) match the DPA register /
+# gdpr_processing rows (svc_<name>); `flag` is the install toggle the service is
+# gated on (`always` = part of an always-on stack).
+#
+# COVERAGE = 21 per-user-PII service plugins (native_oidc + header_oidc carrying
+# a gdpr: block) + 2 anchors (svc_authentik identity + svc_bluesky-pds AT-proto)
+# = 23 entries. This is byte-for-byte the per-user-PII set the erasure map
+# covers (erasure-minus-the-6-residual-stores) — Art-15 access mirrors Art-17
+# erasure. forward_auth services are access gates with no per-user state, so
+# they are intentionally out of scope; the backend/residual stores (Redis
+# sessions, Qdrant embeddings, RustFS backups, wing.db, Loki/Tempo) that the
+# erasure map additionally reaches are NOT extracted by a single-subject access
+# export, so they are intentionally absent here (including them would imply
+# coverage we cannot evidence).
+#
+# ── LEGAL BASIS / request_type (Art-15 vs Art-20) ───────────────────────────
+# Art-15 (right of ACCESS) applies to ALL personal data under ANY lawful basis
+# → this feature records request_type='access' for the run (universally valid).
+# Art-20 (data PORTABILITY) applies ONLY to subject-PROVIDED data processed
+# under consent 6(1)(a) or contract 6(1)(b). Per this repo's plugin manifests
+# the ONLY contract-basis services are erpnext, gitea, vaultwarden (none are
+# consent; the other 18 are legitimate_interests). `portability_eligible: true`
+# tags those three so the operator and the CI gate know portability is a valid
+# additional framing for them — but the DSAR row stays request_type='access'
+# (the always-true right), never the false 'portability' on a legitimate-
+# interests store. NOTE: even for the 3 contract services Art-20 covers only
+# subject-PROVIDED data, not platform-derived/observed data (e.g. gitea commit
+# metadata) — that subset is an operator judgement, documented per entry.
+#
+# method:
+#   authentik_api  — the identity anchor. READ-ONLY: GETs the single
+#                    exact-email-match Authentik user object as JSON. Runs
+#                    automatically on a confirmed run.
+#   manual         — no safe email-keyed programmatic per-subject export
+#                    verified yet; the plan prints `note` (the exact documented
+#                    step) and a confirmed run writes a self-describing stub file
+#                    naming that step. Promote to authentik_api/container_exec
+#                    once a read-only email-keyed export is verified live.
+#   container_exec — (reserved; NO entry uses it today) `docker exec` a
+#                    READ-ONLY email-keyed export one-liner whose stdout is
+#                    captured into the bundle. The CI gate enforces such a
+#                    command is keyed on {{ export_subject }} AND carries no
+#                    mutating verb — see test_gdpr_export_map.py. WordPress is
+#                    deliberately NOT here: `wp user get` returns only the user
+#                    object, not authored content (posts/comments), so auto-
+#                    capturing it would let the DSAR claim a complete access
+#                    response it did not deliver — it is method:manual instead.
+#
+# {{ export_subject }} (the data subject's email) is substituted at runtime.
+# SAFETY: every method here is READ-ONLY by construction — an export never
+# mutates a store. The confirm gate exists only to gate WRITING the bundle to
+# disk (which contains personal data), not because anything is destructive.
+# Runbook: docs/security-baseline.md §4.
+# =============================================================================
+
+services:
+  # ── Identity anchor (always first) — READ-ONLY single-user fetch ─────────
+  - id: svc_authentik
+    flag: install_authentik
+    method: authentik_api
+    portability_eligible: true   # lawful basis = contract (Art. 6(1)(b))
+    note: "Export the single exact-email-match Authentik user object (canonical
+           SSO identity, groups, attributes) as JSON. Read-only GET.
+           Art-20 NOTE: only subject-PROVIDED identity (email, name) is portable;
+           platform-assigned groups/RBAC + auth audit are access-only."
+
+  # ── Per-user-PII services — manual (documented step printed + stubbed) ───
+  # No verified safe email-keyed READ-ONLY per-subject export CLI inside the
+  # container. The operator runs the printed step and drops the result into the
+  # bundle dir. WordPress is manual on purpose (see header: wp user get is
+  # user-object-only; full Art-15 needs authored content too).
+  - id: svc_wordpress
+    flag: install_wordpress
+    method: manual
+    note: "User object: wp user get <subject> --format=json --allow-root.
+           AUTHORED CONTENT (required for a complete Art-15 response):
+           wp post list --author=<id> --format=json + comments. Both inside the
+           wordpress container."
+
+  - id: svc_gitea
+    flag: install_gitea
+    method: manual
+    portability_eligible: true   # lawful basis = contract (Art. 6(1)(b))
+    note: "GET /api/v1/users/search?q=<subject> (admin token) -> GET
+           /api/v1/users/{username}; repos via /api/v1/users/{username}/repos.
+           Art-20 NOTE: only subject-PROVIDED data is portable; platform-derived
+           commit metadata is access-only. `gitea dump` is full-instance, not
+           per-subject."
+
+  - id: svc_nextcloud
+    flag: install_nextcloud
+    method: manual
+    note: "Resolve uid from email (occ user:list --output=json), then occ
+           user:info <uid> --output=json; file data via the user_migration app
+           (occ user:export <uid>)."
+
+  - id: svc_grafana
+    flag: always
+    method: manual
+    note: "GET /api/users/lookup?loginOrEmail=<subject> -> GET /api/users/:id and
+           /api/users/:id/orgs (admin basic auth). data_subjects=operator/admins
+           — an external subject may legitimately have NO record here."
+
+  - id: svc_gitlab
+    flag: install_gitlab
+    method: manual
+    note: "GET /api/v4/users?search=<subject> -> GET /api/v4/users/:id (admin
+           PAT); no built-in single-subject portability export."
+
+  - id: svc_outline
+    flag: install_outline
+    method: manual
+    note: "POST /api/users.info with the user id; document export via POST
+           /api/documents.list?userId= (admin API token)."
+
+  - id: svc_open-webui
+    flag: install_openwebui
+    method: manual
+    note: "GET /api/v1/users/ (match by email) -> GET /api/v1/users/{id}; chats
+           via /api/v1/chats (admin JWT)."
+
+  - id: svc_n8n
+    flag: install_n8n
+    method: manual
+    note: "Owner UI -> Settings -> Users (no per-subject export CLI); or GET
+           /rest/users/:id (owner auth)."
+
+  - id: svc_nodered
+    flag: install_nodered
+    method: manual
+    note: "Node-RED users are name-keyed in settings.js adminAuth (not
+           email-keyed); no per-user data to export unless the operator stored
+           PII in flows."
+
+  - id: svc_vaultwarden
+    flag: install_vaultwarden
+    method: manual
+    portability_eligible: true   # lawful basis = contract (Art. 6(1)(b))
+    note: "The subject exports their own vault (Bitwarden client -> Export
+           Vault). Admin cannot decrypt; no server-side per-subject plaintext
+           export by design — this is the privacy-correct behaviour."
+
+  - id: svc_freescout
+    flag: install_freescout
+    method: manual
+    note: "Manage -> Users -> view; conversations via GET
+           /api/conversations?email=<subject> (FreeScout API module). No stable
+           export CLI."
+
+  - id: svc_infisical
+    flag: install_infisical
+    method: manual
+    note: "Org Settings -> Members -> view; org-admin API GET
+           /api/v1/organizations/:id/memberships (match by email)."
+
+  - id: svc_miniflux
+    flag: install_miniflux
+    method: manual
+    note: "GET /v1/users/:username (admin token); subscriptions/feeds via the
+           export OPML endpoint on the subject's own session."
+
+  - id: svc_hedgedoc
+    flag: install_hedgedoc
+    method: manual
+    note: "No per-subject export CLI (bin/manage_users only deletes). Subject
+           exports own notes via the UI; admin reads the user row in the DB."
+
+  - id: svc_bookstack
+    flag: install_bookstack
+    method: manual
+    note: "Settings -> Users -> view; or GET /api/users (match by email) -> GET
+           /api/users/:id (API token). No stable export CLI."
+
+  - id: svc_portainer
+    flag: install_portainer
+    method: manual
+    note: "GET /api/users (match by Username/email) -> GET /api/users/:id (admin
+           JWT)."
+
+  - id: svc_erpnext
+    flag: install_erpnext
+    method: manual
+    portability_eligible: true   # lawful basis = contract (Art. 6(1)(b))
+    note: "bench --site <site> export-doc User <email>, or Frappe DPA export
+           tooling (Personal Data Download request). Art-20 NOTE: portable =
+           subject-provided fields only."
+
+  - id: svc_homeassistant
+    flag: install_homeassistant
+    method: manual
+    note: "Settings -> People & Users -> view (no stable API for per-user data
+           export)."
+
+  - id: svc_jellyfin
+    flag: install_jellyfin
+    method: manual
+    note: "GET /Users (match by Name/email) -> GET /Users/{id} and
+           /Users/{id}/Items (X-Emby-Token admin)."
+
+  - id: svc_superset
+    flag: install_superset
+    method: manual
+    note: "GET /api/v1/security/users/?q=(filters:...) (match by email) -> GET
+           /api/v1/security/users/:id (admin token)."
+
+  - id: svc_firefly
+    flag: install_firefly
+    method: manual
+    note: "GET /api/v1/users (match by email) -> GET /api/v1/users/:id (admin
+           PAT); financial data export via the subject's own data-export
+           endpoint."
+
+  - id: svc_bluesky-pds
+    flag: install_bluesky_pds
+    method: manual
+    note: "Resolve did from @<handle>.bsky.<tld>, then com.atproto.sync.getRepo
+           (CAR export of the subject's repo) via the PDS admin/auth token."

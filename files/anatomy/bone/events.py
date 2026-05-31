@@ -71,6 +71,13 @@ VALID_TYPES = {
     # One row per Art. 17 erasure run; Wing-side whitelist must stay aligned.
     # result_json: {subject, dsar_id, services_planned, services_erased, dry_run}.
     "gdpr_forget_user",
+    # ── Art-15 right-of-access export (tasks/gdpr-export.yml) ───────────────
+    # Forward-ready (no task emits it yet — the gdpr_dsar row is the legal
+    # record; mirrors how gdpr_forget_user is whitelist-only). If a future Bone
+    # POST proxies a per-run export event, result_json carries: {subject,
+    # dsar_id, request_type:'access', services_planned, services_captured,
+    # manual_pending, portability_eligible, dry_run, bundle_dir}.
+    "gdpr_export_user",
 }
 
 
