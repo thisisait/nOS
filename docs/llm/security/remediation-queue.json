@@ -1179,12 +1179,14 @@
       "fix_version": "1.8.209",
       "remediation_type": "version_bump",
       "remediation_detail": "CRITICAL: FreeScout broken access control in ThreadPolicy::edit() (CVE-2026-32752, CWE-863). Any authenticated user can read and modify ALL customer-created thread messages across ALL mailboxes, regardless of role or mailbox permissions. Enables silent evidence tampering, bypasses mailbox permission model, GDPR/compliance violation. Fixed in 1.8.209. Our version 1.8.207 is VULNERABLE. Bump freescout_version to >= 1.8.212 (covers all recent CVEs).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://dailycve.com/freescout-broken-access-control-cve-2026-32752-critical/",
       "confidence": "high",
       "found_at": "2026-04-10T18:00:00Z",
-      "scan_cycle": 11
+      "scan_cycle": 11,
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "resolved_by": "Bumped freescout_version php8.3-1.17.152 -> php8.3-1.17.159 in roles/pazny.freescout/defaults/main.yml; tiredofit build 1.17.159 bundles FreeScout 1.8.219 (>=1.8.212). Tag arm64 verified via docker manifest inspect."
     },
     {
       "id": "REM-070",
@@ -1195,12 +1197,14 @@
       "fix_version": "1.8.212",
       "remediation_type": "version_bump",
       "remediation_detail": "FreeScout missing authentication on GET /thread/read/{conversation_id}/{thread_id} (CVE-2026-35584, CWE-306). Unauthenticated attacker can mark any thread as read, enumerate valid thread IDs via HTTP response codes, and manipulate opened_at timestamps (IDOR). Fixed in 1.8.212. Our version 1.8.207 is VULNERABLE.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://radar.offseq.com/threat/cve-2026-35584-cwe-306-missing-authentication-for--587bb12d",
       "confidence": "high",
       "found_at": "2026-04-10T18:00:00Z",
-      "scan_cycle": 11
+      "scan_cycle": 11,
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "resolved_by": "Bumped freescout_version php8.3-1.17.152 -> php8.3-1.17.159 in roles/pazny.freescout/defaults/main.yml; tiredofit build 1.17.159 bundles FreeScout 1.8.219 (>=1.8.212). Tag arm64 verified via docker manifest inspect."
     },
     {
       "id": "REM-071",
@@ -1211,12 +1215,14 @@
       "fix_version": "1.8.212",
       "remediation_type": "version_bump",
       "remediation_detail": "FreeScout authorization bypass in customer merge (CVE-2026-39384). The limit_user_customer_visibility parameter is not enforced when merging customers, allowing unauthorized access to restricted customer data. Fixed in 1.8.212. Our version 1.8.207 is VULNERABLE. Bump freescout_version to >= 1.8.212.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://cve.threatint.eu/CVE/CVE-2026-39384",
       "confidence": "high",
       "found_at": "2026-04-10T18:00:00Z",
-      "scan_cycle": 11
+      "scan_cycle": 11,
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "resolved_by": "Bumped freescout_version php8.3-1.17.152 -> php8.3-1.17.159 in roles/pazny.freescout/defaults/main.yml; tiredofit build 1.17.159 bundles FreeScout 1.8.219 (>=1.8.212). Tag arm64 verified via docker manifest inspect."
     },
     {
       "id": "REM-072",
@@ -1470,12 +1476,12 @@
       "LOW": 1
     },
     "by_status": {
-      "pending": 24,
-      "resolved": 59,
+      "pending": 21,
+      "resolved": 62,
       "vendor-blocked": 2
     },
     "auto_fixable": 70,
     "manual_review_required": 15,
-    "note": "Cycle 14 \u2014 Inspector Claw added 5 mailpit CVE remediations (v1.20 \u2192 v1.29.7). All 5 affect deployed version: 4\u00d7 SSRF, 1\u00d7 CSWSH (auth bypass \u2014 high practical impact since dev mailboxes leak password reset tokens), 1\u00d7 SMTP CRLF. | 2026-05-16: resolved 4 items (REM-023 HA + REM-038/039/042 RustFS \u2014 already pinned in default.config.yml); reclassified REM-014/046 FreePBX as vendor-blocked (tiredofit image abandoned upstream 2022). | 2026-05-25 C1 sweep: resolved 28 version_bumps now pinned (ZDI/no-fix-target + freescout scheme-mismatch left pending)."
+    "note": "Cycle 14 \u2014 Inspector Claw added 5 mailpit CVE remediations (v1.20 \u2192 v1.29.7). All 5 affect deployed version: 4\u00d7 SSRF, 1\u00d7 CSWSH (auth bypass \u2014 high practical impact since dev mailboxes leak password reset tokens), 1\u00d7 SMTP CRLF. | 2026-05-16: resolved 4 items (REM-023 HA + REM-038/039/042 RustFS \u2014 already pinned in default.config.yml); reclassified REM-014/046 FreePBX as vendor-blocked (tiredofit image abandoned upstream 2022). | 2026-05-25 C1 sweep: resolved 28 version_bumps now pinned (ZDI/no-fix-target + freescout scheme-mismatch left pending). | 2026-05-31 conservative pin batch: resolved freescout trio REM-069/070/071 — reconciled the scheme mismatch by mapping tiredofit image build php8.3-1.17.159 (verified arm64) to bundled FreeScout 1.8.219 (>=1.8.212 fix); bumped from php8.3-1.17.152."
   }
 }
