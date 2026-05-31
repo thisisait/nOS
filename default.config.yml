@@ -97,6 +97,13 @@ acme_staging: false                       # true → use LE staging endpoint (te
 # Default false (clean separation: local TLD → dnsmasq, public TLD → real DNS).
 dnsmasq_force_local_domains: false
 instance_org: ""                          # Client organization name
+
+# Breach-notification controller identity (gov P1). Feeds the GDPR Art-33(3)(b)
+# header of bin/breach-report.php via GDPR_CONTROLLER_NAME/_DPO_NAME/_DPO_CONTACT
+# env. Empty-default = inert (the report renders blank header fields).
+gdpr_controller_name: "{{ instance_org | default('') }}"   # Art-30(1)(a)/Art-33(3) controller identity
+gdpr_dpo_name: ""                                          # Art-33(3)(b) DPO / contact-point name
+gdpr_dpo_contact: "{{ default_admin_email }}"              # Art-33(3)(b) DPO contact (defaults to admin email)
 instance_location: ""                     # Location (e.g. "Prague, CZ")
 instance_role: "standalone"               # standalone | headquarters | factory | office | division
 instance_parent: ""                       # Slug of parent box (for hierarchy)
