@@ -20,6 +20,7 @@ by tests/anatomy/test_gdpr_register_coverage.py.
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import sys
 
@@ -48,6 +49,32 @@ def _join(items: list[str]) -> str:
     return ", ".join(f"`{i}`" for i in items) if items else "—"
 
 
+def _controller_lines() -> list[str]:
+    """Art-30(1)(a) controller + DPO identity block. Reads GDPR_CONTROLLER_NAME
+    / GDPR_DPO_NAME / GDPR_DPO_CONTACT from the environment; unset → deterministic
+    placeholder lines so the committed register's byte-identity gate holds with
+    no env set. Populate via a STANDALONE step: export the three vars + re-run
+    this tool (not wired into a playbook profile yet)."""
+    name = os.environ.get("GDPR_CONTROLLER_NAME") or ""
+    dpo = os.environ.get("GDPR_DPO_NAME") or ""
+    contact = os.environ.get("GDPR_DPO_CONTACT") or ""
+
+    def _v(v: str, var: str) -> str:
+        return v if v else f"_(unset — export {var})_"
+
+    return [
+        "## Controller & DPO (Art. 30(1)(a))",
+        "",
+        f"- **Controller:** {_v(name, 'GDPR_CONTROLLER_NAME')}",
+        f"- **DPO / contact point:** {_v(dpo, 'GDPR_DPO_NAME')}",
+        f"- **DPO contact:** {_v(contact, 'GDPR_DPO_CONTACT')}",
+        "",
+        "_Standalone step: export the three `GDPR_*` env vars and re-run "
+        "`tools/gdpr-dpa-register.py` to populate (not set by any playbook profile yet)._",
+        "",
+    ]
+
+
 def render(records: list[dict]) -> str:
     records = sorted(records, key=_stack_key)
     n = len(records)
@@ -71,6 +98,7 @@ def render(records: list[dict]) -> str:
     L.append("> operator's own host; absent a declared processor (see below), there")
     L.append("> is no third-party data processor and no transfer outside the EU.")
     L.append("")
+    L.extend(_controller_lines())
     L.append("## Summary")
     L.append("")
     L.append(f"- **Processing activities:** {n} "
