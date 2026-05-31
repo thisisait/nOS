@@ -7,7 +7,7 @@
 # the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-n8n_version: "2.14.1"  # CVE-2026-33660/33696/33663/33713 pin
+n8n_version: "2.20.7"  # CVE-2026-44789/44790/44791 RCE fix (was 2.14.1); minimal fixed 2.x — same-major migrate-on-start, validate on next run
 n8n_port: 5678
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"

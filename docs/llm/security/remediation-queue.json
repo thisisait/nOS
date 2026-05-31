@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-25T00:00:00Z",
+  "generated_at": "2026-05-31T08:13:57Z",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -60,7 +60,7 @@
       "current_version": "latest",
       "fix_version": "see version-pins-proposal.json",
       "remediation_type": "version_bump",
-      "remediation_detail": "Pin 23 Docker images to specific semver tags. Priority: vaultwarden, openwebui (currently :main!), portainer, traefik, grafana, gitlab, gitea, n8n. Apply version-pins-proposal.json recommendations to default.config.yml.",
+      "remediation_detail": "Pin 23 Docker images to specific semver tags. Priority: vaultwarden, openwebui (currently :main!), portainer, traefik, grafana, gitlab, gitea, n8n. Apply version-pins-proposal.json recommendations to default.config.yml. | 2026-05-31 trivy rescan confirms scale: 585 CRITICAL / 5002 HIGH fixable across 61 images, overwhelmingly stale-base-image OS packages \u2014 image-tag freshness + watchtower is the lever.",
       "status": "pending",
       "auto_fixable": true,
       "source": "static_analysis",
@@ -419,7 +419,7 @@
       "found_at": "2026-04-08T18:00:00Z",
       "scan_cycle": 1,
       "decision_at": "2026-05-31T00:00:00Z",
-      "decision": "NOT a mechanical image-pin / no in-repo change applied. Ollama is the host Homebrew install (roles/pazny.openclaw/tasks/main.yml installs via community.general.homebrew with state: latest), not a Docker image — there is no ollama_version var anywhere in the repo to pin. Every playbook run already does state: latest (brew upgrade ollama), so the host floats to the current formula which is past the CVE-2026-34940 / CVE-2026-5530 fixes. Hardening the OLLAMA_HOST bind to 127.0.0.1 is a separate config_change, not an image-pin. Left pending: operator-side brew upgrade verification; no version-var bump possible."
+      "decision": "NOT a mechanical image-pin / no in-repo change applied. Ollama is the host Homebrew install (roles/pazny.openclaw/tasks/main.yml installs via community.general.homebrew with state: latest), not a Docker image \u2014 there is no ollama_version var anywhere in the repo to pin. Every playbook run already does state: latest (brew upgrade ollama), so the host floats to the current formula which is past the CVE-2026-34940 / CVE-2026-5530 fixes. Hardening the OLLAMA_HOST bind to 127.0.0.1 is a separate config_change, not an image-pin. Left pending: operator-side brew upgrade verification; no version-var bump possible."
     },
     {
       "id": "REM-025",
@@ -1475,6 +1475,40 @@
       "scan_cycle": 14,
       "resolved_at": "2026-05-25T00:00:00Z",
       "resolved_by": "Pinned mailpit_version=\"v1.30.0\" in roles/pazny.mailpit/defaults/main.yml (C1 sweep 2026-05-25; current-stable supersedes v1.29.7)."
+    },
+    {
+      "id": "REM-086",
+      "finding_ref": "CVE-2026-44789,CVE-2026-44790,CVE-2026-44791",
+      "component": "n8n",
+      "severity": "CRITICAL",
+      "current_version": "2.14.1",
+      "fix_version": "2.20.7",
+      "remediation_type": "version_bump",
+      "remediation_detail": "n8n RCE trio + bundled vm2/convict/handlebars CVEs; pinned n8n_version 2.14.1->2.20.7 (minimal fixed 2.x; same-major migrate-on-start, validate next run)",
+      "status": "resolved",
+      "auto_fixable": true,
+      "source": "trivy-rescan-2026-05-31",
+      "confidence": "high",
+      "found_at": "2026-05-31T08:13:57Z",
+      "resolved_at": "2026-05-31T08:13:57Z",
+      "scan_cycle": 16
+    },
+    {
+      "id": "REM-087",
+      "finding_ref": "CVE-2026-39087",
+      "component": "ntfy",
+      "severity": "HIGH",
+      "current_version": "v2.21.0",
+      "fix_version": "v2.22.0",
+      "remediation_type": "version_bump",
+      "remediation_detail": "ntfy app CVE; pinned ntfy_version v2.21.0->v2.22.0",
+      "status": "resolved",
+      "auto_fixable": true,
+      "source": "trivy-rescan-2026-05-31",
+      "confidence": "high",
+      "found_at": "2026-05-31T08:13:57Z",
+      "resolved_at": "2026-05-31T08:13:57Z",
+      "scan_cycle": 16
     }
   ],
   "summary": {
@@ -1492,6 +1526,7 @@
     },
     "auto_fixable": 70,
     "manual_review_required": 15,
-    "note": "Cycle 14 \u2014 Inspector Claw added 5 mailpit CVE remediations (v1.20 \u2192 v1.29.7). All 5 affect deployed version: 4\u00d7 SSRF, 1\u00d7 CSWSH (auth bypass \u2014 high practical impact since dev mailboxes leak password reset tokens), 1\u00d7 SMTP CRLF. | 2026-05-16: resolved 4 items (REM-023 HA + REM-038/039/042 RustFS \u2014 already pinned in default.config.yml); reclassified REM-014/046 FreePBX as vendor-blocked (tiredofit image abandoned upstream 2022). | 2026-05-25 C1 sweep: resolved 28 version_bumps now pinned (ZDI/no-fix-target + freescout scheme-mismatch left pending). | 2026-05-31 conservative pin batch: resolved freescout trio REM-069/070/071 — reconciled the scheme mismatch by mapping tiredofit image build php8.3-1.17.159 (verified arm64) to bundled FreeScout 1.8.219 (>=1.8.212 fix); bumped from php8.3-1.17.152."
+    "note": "REM-078 (n8n RCE) + REM-079 (ntfy) added+resolved this cycle",
+    "last_rescan": "2026-05-31T08:13:57Z"
   }
 }
