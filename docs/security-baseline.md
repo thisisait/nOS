@@ -19,6 +19,7 @@ controller-side evidence.
 | **In transit** | TLS terminated at the Traefik edge (wildcard cert: mkcert on `*.local`, Let's Encrypt DNS-01 on a public TLD). No plaintext on the wire between client and edge. | Playbook-managed (`roles/pazny.traefik`, `roles/pazny.acme`). |
 | **In transit (internal)** | Service-to-service traffic stays on private Docker networks on a single host; not exposed off-box. | Playbook-managed. |
 | **At rest (disk)** | Full-disk encryption — **FileVault** (macOS) / **LUKS** (Linux). | **Operator-provisioned** — nOS does not enable it for you; verify before processing personal data. |
+| **At rest (backups)** | Every nightly dump is **AES-256-CBC / pbkdf2 client-side encrypted before upload** to RustFS (`backup_encryption_enabled`, default on); object storage never holds cleartext personal data. | Playbook-managed; `backup_encryption_passphrase` custody is the operator's (lose it → backups unrecoverable). |
 | **At rest (secrets)** | Secrets held in **Infisical** (central vault) or launchd/systemd environment, never written to disk in plaintext by the playbook. See [`secret-lifecycle-doctrine.md`](secret-lifecycle-doctrine.md). | Playbook-managed; root key custody is the operator's. |
 
 ## 2. Access control & identity
@@ -47,8 +48,12 @@ Article-30 block.
 - **Retention horizon** is declared per service (`gdpr.retention_days` in each
   plugin) and rendered into the DPA register. `-1` = lifecycle-managed (deletion
   via DSAR); `0` = transient/not persisted.
-- **Enforcement** — `roles/pazny.audit_retention` purges Wing `events` and
-  Authentik events past their horizon on a Pulse schedule.
+- **Enforcement** — retention purge is **operator-initiated, not yet
+  scheduled**: `ansible-playbook main.yml --tags audit-retention -e
+  retention_confirm=true` runs `bin/purge-events.php` to delete Wing `events`
+  older than `wing_audit_retention_days`. It is dry-run by default and today
+  covers the Wing `events` store only; automated, application-store-wide
+  retention enforcement is tracked in [`roadmap-2026q2.md`](roadmap-2026q2.md).
 - **Right to erasure (Art. 17)** — `ansible-playbook main.yml --tags gdpr-forget
   -e forget_subject=<email>` fans the deletion out across Authentik + the
   services holding that subject's data, emits a Bone `gdpr_forget_user` audit
@@ -60,9 +65,15 @@ Article-30 block.
 
 ## 5. Backup & recovery
 
-Nightly encrypted backup to RustFS; restore via the `restore` playbook tag. See
-[`restore-runbook.md`](restore-runbook.md). Backups inherit the at-rest disk
-encryption of their target volume.
+Nightly backup to RustFS, **AES-256-CBC / pbkdf2 client-side encrypted before
+upload** (`backup_encryption_enabled`, default on) so personal data never lands
+in object storage as cleartext. Restore decrypts transparently with the same
+`backup_encryption_passphrase` (`tasks/restore.yml` auto-detects the `.enc`
+suffix; legacy plaintext objects still restore). **Keep that passphrase under
+the same custody as `global_password_prefix` — without it, encrypted backups are
+unrecoverable.** Restore via the `restore` playbook tag; see
+[`restore-runbook.md`](restore-runbook.md). Host-disk at-rest FDE
+(FileVault / LUKS) remains operator-provisioned (see §1).
 
 ## 6. Hardening
 
