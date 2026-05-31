@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-05-07T02:16:12Z",
-  "last_advisory_check": "2026-05-07T02:16:12Z",
+  "last_full_scan": "2026-05-31T08:13:57Z",
+  "last_advisory_check": "2026-05-31T08:13:57Z",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 15,
+  "scan_cycle": 16,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -90,10 +90,10 @@
     },
     "n8n": {
       "last_checked": "2026-04-11T18:00:00Z",
-      "last_cve_scan": "2026-04-11T18:00:00Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": "pentest:expression_language_injection",
-      "findings_count": 10,
+      "findings_count": 26,
       "status": "scanned"
     },
     "openwebui": {
@@ -335,7 +335,7 @@
       "last_attack_probe": null,
       "findings_count": 0,
       "status": "scanned",
-      "notes": "nOS anatomy FastAPI bridge — localhost:8099"
+      "notes": "nOS anatomy FastAPI bridge \u2014 localhost:8099"
     },
     "wing": {
       "last_checked": null,
@@ -344,7 +344,7 @@
       "last_attack_probe": null,
       "findings_count": 0,
       "status": "scanned",
-      "notes": "nOS anatomy FrankenPHP dashboard — localhost:9000"
+      "notes": "nOS anatomy FrankenPHP dashboard \u2014 localhost:9000"
     },
     "pulse": {
       "last_checked": null,
@@ -356,60 +356,60 @@
       "notes": "nOS anatomy launchd job scheduler"
     },
     "miniflux": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "nodered": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "hedgedoc": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "bookstack": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "firefly": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "onlyoffice": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
       "findings_count": 0,
-      "status": "pending"
+      "status": "scanned"
     },
     "ntfy": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-05-31T08:13:57Z",
+      "last_cve_scan": "2026-05-31T08:13:57Z",
       "last_misconfig_scan": null,
       "last_attack_probe": null,
-      "findings_count": 0,
-      "status": "pending"
+      "findings_count": 3,
+      "status": "scanned"
     },
     "mailpit": {
       "last_checked": null,
@@ -482,7 +482,7 @@
       "description": "Identify services without resource limits vulnerable to DoS",
       "last_run": "2026-05-07T02:15:18Z",
       "findings": 0,
-      "note": "All 62 nOS-managed (compose) containers have both mem_limit + cpu limits set — REM-004 sweep effective. 3 ad-hoc hashicorp/terraform-mcp-server:0.4.0 containers running unlimited (Claude Code MCP runtime, out of nOS scope; oldest 2026-05-03)"
+      "note": "All 62 nOS-managed (compose) containers have both mem_limit + cpu limits set \u2014 REM-004 sweep effective. 3 ad-hoc hashicorp/terraform-mcp-server:0.4.0 containers running unlimited (Claude Code MCP runtime, out of nOS scope; oldest 2026-05-03)"
     },
     {
       "cycle_mod": 7,
@@ -492,5 +492,13 @@
   ],
   "attack_probes_completed": [
     "ssrf_vector_analysis"
-  ]
+  ],
+  "last_full_scan_summary": {
+    "scanner": "trivy 0.70.0 (manual Inspektor-substrate rescan)",
+    "at": "2026-05-31T08:13:57Z",
+    "images_scanned": 61,
+    "critical_fixable": 585,
+    "high_fixable": 5002,
+    "note": "Dominated by base-image OS package CVEs (openssl/php/Go-stdlib/kernel-headers/imagemagick) = image-freshness, tracked by REM-004. App-level critical fixes pinned this cycle: n8n 2.14.1->2.20.7 (REM-078), ntfy v2.21.0->v2.22.0 (REM-079); tempo->2.10.3 (REM-036) + freescout->php8.3-1.17.159 (REM-069/070/071) already pinned."
+  }
 }
