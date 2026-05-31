@@ -160,10 +160,11 @@ gdpr:
   retention_days: -1                         # forever — vault IS the audit trail
   processors: []                             # all-local; no cloud Bitwarden Premium
   transfers_outside_eu: false
-  # DSAR endpoint: vaultwarden's /admin/users/<email>/delete API. Operator
-  # invokes via `wing-cli vault-erase --user <email>` (post-A8 conductor wires
-  # this; today it's a manual curl with admin token).
-  dsar_endpoint: "wing-cli vault-erase --user $DSAR_USER_EMAIL"
+  # DSAR endpoint (Art. 17): TODAY this is a MANUAL admin step — there is NO
+  # `wing-cli vault-erase` command (the D8 conductor DSAR worker that would wire
+  # an automated endpoint is not built yet). Kept honest until then; the
+  # authoritative erasure step lives in state/gdpr-erasure-map.yml (svc_vaultwarden).
+  dsar_endpoint: "manual: /admin -> Users -> delete by email (admin-panel; no programmatic email-keyed CLI yet)"
   breach_severity_default: critical          # vault breach = max severity
 
 # =============================================================================

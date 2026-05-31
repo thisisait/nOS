@@ -89,6 +89,29 @@ final class GdprRepository
         return (int) $row['id'];
     }
 
+    /**
+     * Transition an existing DSAR row to its real terminal/interim status.
+     *
+     * Art. 12(3) — the legal record must reflect what ACTUALLY happened, not
+     * the optimistic intent stamped at intake. A right-to-erasure run inserts a
+     * 'received' row first (proof the request landed), then calls this once the
+     * executors finish: 'completed' only when every in-scope store was actually
+     * erased, else 'in-progress' (manual / failed steps still pending). The
+     * received_at + created_at history is preserved; only status / notes /
+     * completed_at transition (the columns exist for exactly this lifecycle).
+     */
+    public function updateDsarStatus(int $id, string $status, ?string $notes = null): bool
+    {
+        $data = ['status' => $status, 'updated_at' => date('Y-m-d H:i:s')];
+        if ($notes !== null) {
+            $data['notes'] = $notes;
+        }
+        if ($status === 'completed') {
+            $data['completed_at'] = date('Y-m-d H:i:s');
+        }
+        return $this->db->table('gdpr_dsar')->where('id', $id)->update($data) > 0;
+    }
+
     // ── Breach register (Art. 33-34) ─────────────────────────────────────
 
     /** @return list<array<string, mixed>> */
