@@ -90,6 +90,15 @@ final class EventRepository
 		// request_type:'access', services_planned, services_captured,
 		// manual_pending, portability_eligible, dry_run, bundle_dir}.
 		'gdpr_export_user',
+		// Consent registry (Art. 6(1)(a) + Art. 7). Permit-only / forward-ready
+		// — NO live producer yet (record-consent.php writes gdpr_consent
+		// directly, does not emit). Matches the user_invitation_* precedent.
+		//   consent_granted   — result_json: {consent_id, subject, activity,
+		//                        processing_id, tos_version_hash, source}.
+		//   consent_withdrawn — result_json: {consent_id?, subject, activity, rows}.
+		// MUST stay aligned with Bone's events.py VALID_TYPES (drift silently
+		// 400s a future consent audit event) — pinned by test_consent_registry.py.
+		'consent_granted', 'consent_withdrawn',
 	];
 
 	public function __construct(

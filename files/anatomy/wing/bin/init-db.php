@@ -471,6 +471,44 @@ $addMissingColumns($db, 'gdpr_breaches', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_gdpr_breaches_status ON gdpr_breaches(status, detected_at)');
 
+// gdpr_consent — GDPR consent registry (Art. 6(1)(a) + Art. 7). The
+// schema-extensions.sql CREATE TABLE IF NOT EXISTS is a no-op on a pre-existing
+// wing.db, so ALTER the columns in for DBs that predate this table OR predate a
+// future column add. Types MUST match schema-extensions.sql so the contract
+// artifact stays aligned — EXCEPT the two timestamp columns: the fresh CREATE
+// TABLE gives them DEFAULT (datetime('now')), but the ALTER fallback uses plain
+// 'TEXT' (the repository stamps created_at/updated_at on every write, so a NULL
+// default on a migrated row is harmless, and plain TEXT is portable across all
+// SQLite ADD COLUMN builds — same constant-default discipline as the
+// gdpr_breaches sweep above). The active-consent partial index references
+// withdrawn_at and is therefore created HERE, AFTER the sweep guarantees the
+// column exists on both fresh AND pre-existing DBs — same ordering rule that
+// keeps idx_events_row_hash + the WORM triggers from failing on existing
+// installs.
+$addMissingColumns($db, 'gdpr_consent', [
+	'subject_email'    => 'TEXT NOT NULL DEFAULT \'\'',
+	'processing_id'    => 'TEXT',
+	'activity'         => 'TEXT NOT NULL DEFAULT \'\'',
+	'lawful_basis'     => "TEXT NOT NULL DEFAULT 'consent'",
+	'tos_version_hash' => 'TEXT',
+	'source'           => "TEXT NOT NULL DEFAULT 'operator'",
+	'granted_at'       => 'TEXT NOT NULL DEFAULT \'\'',
+	'withdrawn_at'     => 'TEXT',
+	'notes'            => 'TEXT',
+	'created_at'       => 'TEXT',
+	'updated_at'       => 'TEXT',
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_gdpr_consent_subject    ON gdpr_consent(subject_email)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_gdpr_consent_activity   ON gdpr_consent(activity)');
+$db->exec('CREATE INDEX IF NOT EXISTS idx_gdpr_consent_processing ON gdpr_consent(processing_id)');
+// Active-consent partial index — references withdrawn_at (ALTER-added above).
+// MUST stay here, not in schema-extensions.sql, for the ordering reason above.
+$db->exec(
+	'CREATE INDEX IF NOT EXISTS idx_gdpr_consent_active '
+	. 'ON gdpr_consent(subject_email, activity) '
+	. 'WHERE withdrawn_at IS NULL'
+);
+
 // pulse_runs.{actor_action_id,acted_at} — pulse_runs already carries
 // actor_id (from schema-extensions.sql:234), but lacks the action
 // grouping + wall-clock fields. Adding them here aligns pulse_runs

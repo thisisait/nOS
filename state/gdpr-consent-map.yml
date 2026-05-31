@@ -1,0 +1,58 @@
+# =============================================================================
+# GDPR consent-activity map — companion to the Wing gdpr_consent registry
+# =============================================================================
+# Declares, per Art-30 processing activity, which consent ACTIVITY slug the
+# platform records for a subject (Art. 6(1)(a)). `id` matches the gdpr_processing
+# register id. NOTE: ids here are the SEEDED register's BARE SLUGS
+# (db/gdpr-seed.sql: tenant-vault / collab-docs / project-knowledge), NOT the
+# plugin-derived 'svc_<slug>' convention of nos_gdpr.records_from_plugins — the
+# consent activities that exist today are register/seed-level rows, not Tier-2
+# plugin manifests. The map test therefore does NOT assert a svc_ prefix.
+#
+# HONESTY NOTE — "consent declared, NOT yet collected": every row below is
+# `capture_wired: false`. The seeded Art-30 register asserts legal_basis=consent
+# for these activities, but nOS does NOT yet write a per-subject gdpr_consent
+# row when the subject uses them (Vaultwarden vault create, doc edit, PDS bridge
+# enrollment). Until capture is wired, these are the EXACT activities the
+# "SSO == consent" decoupling exists to surface — the operator has an Art-7(1)
+# demonstrability gap for them. Flip capture_wired: true + set method when a
+# real write path (record-consent.php call / Wing UI / external form) is added.
+#
+# method (how a consent record is/would be written):
+#   record-consent — Wing UI / record-consent.php writes a gdpr_consent row.
+#   external       — an external form posts consent in via the consent API.
+#   manual         — operator records consent out-of-band (no automated write).
+# =============================================================================
+
+activities:
+  - id: tenant-vault
+    flag: install_vaultwarden
+    activity: tenant-vault-storage
+    capture_wired: false
+    method: manual
+    note: >-
+      Vaultwarden personal vault (Art-30 legal_basis=consent). No per-subject
+      gdpr_consent row is written on vault creation today — Art-7(1)
+      demonstrability gap. Wire record-consent on the Authentik->Vaultwarden
+      onboarding to close it, then set capture_wired: true / method: record-consent.
+
+  - id: collab-docs
+    flag: always
+    activity: collab-docs-authoring
+    capture_wired: false
+    method: manual
+    note: >-
+      Collaborative docs (Outline/HedgeDoc/BookStack/Nextcloud), Art-30
+      legal_basis=consent. No gdpr_consent row written on first authoring today.
+      Demonstrability gap until a capture mechanism is wired.
+
+  - id: project-knowledge
+    flag: install_bluesky
+    activity: atproto-identity-bridge
+    capture_wired: false
+    method: manual
+    note: >-
+      AT Protocol identity bridge (Bluesky PDS), Art-30 legal_basis=consent. The
+      seed note claims "explicit consent at first login" but no gdpr_consent row
+      is written — the bridge enrollment is the natural record-consent hook.
+      Demonstrability gap until wired.

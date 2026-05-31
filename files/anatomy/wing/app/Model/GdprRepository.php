@@ -112,6 +112,136 @@ final class GdprRepository
         return $this->db->table('gdpr_dsar')->where('id', $id)->update($data) > 0;
     }
 
+    // ── Consent registry (Art. 6(1)(a) + Art. 7) ─────────────────────────
+
+    /**
+     * Record a consent GRANT. Inserts one active row (withdrawn_at NULL).
+     *
+     * Art. 7(1) demonstrability: this row IS the proof consent was given. It
+     * is an explicit act — never inferred from an Authentik login (SSO is
+     * authentication, not consent). The caller (record-consent.php / a UI / an
+     * API) supplies the subject, activity, and the tos_version_hash that pins
+     * WHICH terms text was presented (evidence of the terms shown, not proof
+     * the act was freely-given/specific/informed — Art-4(11)/Art-7(2)).
+     *
+     * Re-granting after a withdrawal is allowed (Art. 7(3)): it inserts a NEW
+     * row rather than resurrecting the withdrawn one, so the ledger keeps the
+     * full grant/withdraw history.
+     *
+     * @param array<string, mixed> $data
+     * @return int new gdpr_consent.id
+     */
+    public function recordConsent(array $data): int
+    {
+        $now = date('Y-m-d H:i:s');
+        $payload = [
+            'subject_email'    => $data['subject_email'],
+            'processing_id'    => $data['processing_id'] ?? null,
+            'activity'         => $data['activity'],
+            'lawful_basis'     => $data['lawful_basis'] ?? 'consent',
+            'tos_version_hash' => $data['tos_version_hash'] ?? null,
+            'source'           => $data['source'] ?? 'operator',
+            'granted_at'       => $data['granted_at'] ?? $now,
+            'withdrawn_at'     => null,
+            'notes'            => $data['notes'] ?? null,
+            'created_at'       => $now,
+            'updated_at'       => $now,
+        ];
+        $row = $this->db->table('gdpr_consent')->insert($payload);
+        return (int) $row['id'];
+    }
+
+    /**
+     * Withdraw consent (Art. 7(3)). Stamps withdrawn_at on the matching ACTIVE
+     * row(s). Two addressing modes:
+     *
+     *   - by id     — withdraw exactly that row (idempotent: a row already
+     *                 withdrawn keeps its original withdrawn_at);
+     *   - by subject+activity — withdraw EVERY currently-active row for that
+     *                 (subject, activity) pair (normally one; covers a double-
+     *                 grant).
+     *
+     * Withdrawal must be as easy as granting (Art. 7(3)) — the symmetric
+     * counterpart to recordConsent. It NEVER deletes: the grant + the
+     * withdrawal both stay in the ledger as the audit record.
+     *
+     * @return int number of rows transitioned to withdrawn
+     */
+    public function withdrawConsent(
+        ?int $id = null,
+        ?string $subjectEmail = null,
+        ?string $activity = null,
+        ?string $notes = null
+    ): int {
+        $now = date('Y-m-d H:i:s');
+        $data = ['withdrawn_at' => $now, 'updated_at' => $now];
+        if ($notes !== null) {
+            $data['notes'] = $notes;
+        }
+
+        if ($id !== null) {
+            // Only flip if still active — keep the original withdrawn_at on a
+            // re-withdraw (idempotent).
+            return $this->db->table('gdpr_consent')
+                ->where('id', $id)
+                ->where('withdrawn_at', null)
+                ->update($data);
+        }
+
+        if ($subjectEmail !== null && $activity !== null) {
+            return $this->db->table('gdpr_consent')
+                ->where('subject_email', $subjectEmail)
+                ->where('activity', $activity)
+                ->where('withdrawn_at', null)
+                ->update($data);
+        }
+
+        // Neither addressing mode supplied — refuse to mass-withdraw.
+        return 0;
+    }
+
+    /**
+     * List consent rows, newest grant first. Optional subject filter.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listConsent(?string $subjectEmail = null): array
+    {
+        $sel = $this->db->table('gdpr_consent')->order('granted_at DESC');
+        if ($subjectEmail !== null) {
+            $sel->where('subject_email', $subjectEmail);
+        }
+        return array_map(
+            fn(ActiveRow $r) => $r->toArray(),
+            iterator_to_array($sel)
+        );
+    }
+
+    /**
+     * Art-17 reconciliation: pseudonymise a subject's consent rows in place
+     * (keep the grant/withdraw PROOF — Art. 7(1) — but remove the plaintext
+     * email — Art. 17). Overwrites subject_email with an opaque token and
+     * stamps updated_at. Returns the number of rows pseudonymised.
+     *
+     * This is the documented manual reconciliation step referenced by
+     * state/gdpr-erasure-map.yml's svc_wing entry: it is NOT auto-wired into
+     * tasks/gdpr-forget.yml (consent demonstrability vs erasure is an operator
+     * decision — see Residual Risks). Offered as a method so a future
+     * confirmed-run path can call it deterministically instead of hand-rolling
+     * an UPDATE.
+     */
+    public function pseudonymiseSubject(string $subjectEmail, string $token = 'erased-subject'): int
+    {
+        $now = date('Y-m-d H:i:s');
+        return $this->db->table('gdpr_consent')
+            ->where('subject_email', $subjectEmail)
+            ->update([
+                'subject_email' => $token,
+                'notes'         => $token . ' (Art-17 pseudonymised ' . $now . ')',
+                'updated_at'    => $now,
+            ]);
+    }
+
     // ── Breach register (Art. 33-34) ─────────────────────────────────────
 
     /** @return list<array<string, mixed>> */
