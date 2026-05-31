@@ -36,6 +36,8 @@
            exposing a dead secret in the launchd env. #}
         <key>WING_EVENTS_HMAC_SECRET</key>
         <string>{{ wing_events_hmac_secret | default(bone_secret | default('')) }}</string>
+        <key>WING_AUDIT_CHAIN_ENABLED</key>
+        <string>{{ '1' if (wing_audit_chain_enabled | default(false) | bool) else '' }}</string>
         <key>INSTANCE_NAME</key>
         <string>{{ instance_name | default('nos') }}</string>
         <!-- Track F: Bone reads INSTANCE_TLD; resolved from tenant_domain -->

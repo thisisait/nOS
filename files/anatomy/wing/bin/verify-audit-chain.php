@@ -1,0 +1,112 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Wing — verify the tamper-evident audit hash-chain over wing.db `events`.
+ *
+ * Usage:
+ *   php bin/verify-audit-chain.php --db=<path> [--json]
+ *
+ * Exit codes: 0 chain intact · 1 bad args · 2 chain BROKEN · 3 DB/secret error.
+ *
+ * Reuses App\Model\AuditChain verbatim (same canonicalization the writer signs
+ * with) so writer + verifier can never drift. Segment-aware: tolerates an
+ * unsigned (NULL row_hash) run — legacy prefix or a chain-off maintenance
+ * window — and resumes at a row whose prev_hash is GENESIS, a recorded
+ * re-enable anchor, or the retention-purge survivor boundary.
+ */
+
+require __DIR__ . '/../app/Model/AuditChain.php';
+
+$db = null;
+$json = false;
+foreach ($argv as $a) {
+    if (str_starts_with($a, '--db=')) {
+        $db = substr($a, 5);
+    } elseif ($a === '--json') {
+        $json = true;
+    }
+}
+if ($db === null || $db === '') {
+    fwrite(STDERR, "Usage: php bin/verify-audit-chain.php --db=<path> [--json]\n");
+    exit(1);
+}
+if (!is_file($db)) {
+    fwrite(STDERR, "DB not found: {$db}\n");
+    exit(3);
+}
+$key = \App\Model\AuditChain::chainKey();
+if ($key === null) {
+    fwrite(STDERR, "WING_EVENTS_HMAC_SECRET not set\n");
+    exit(3);
+}
+
+$s = new SQLite3($db, SQLITE3_OPEN_READONLY);
+$s->enableExceptions(true);
+
+// Authorized segment-start hashes: GENESIS, every recorded re-enable anchor,
+// and the retention purge survivor boundary.
+$anchors = [\App\Model\AuditChain::GENESIS => true];
+$lastPurged = $s->querySingle("SELECT v FROM audit_chain_meta WHERE k='last_purged_hash'");
+if ($lastPurged) {
+    $anchors[(string) $lastPurged] = true;
+}
+$ar = $s->query("SELECT v FROM audit_chain_meta WHERE k LIKE 'chain_segment_anchor_%'");
+while ($a = $ar->fetchArray(SQLITE3_ASSOC)) {
+    if (!empty($a['v'])) {
+        $anchors[(string) $a['v']] = true;
+    }
+}
+
+$res = $s->query('SELECT * FROM events ORDER BY id ASC');
+$prev = null;
+$segmentOpen = false;
+$checked = 0;
+$skipped = 0;
+$break = null;
+while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+    if ($row['row_hash'] === null) {     // unsigned: legacy prefix or chain-off window
+        $segmentOpen = false;
+        $prev = null;
+        $skipped++;
+        continue;
+    }
+    if (!$segmentOpen) {                  // first chained row of a (possibly new) segment
+        $p = (string) $row['prev_hash'];
+        if (!isset($anchors[$p])) {
+            $break = ['id' => $row['id'], 'why' => 'segment start prev_hash neither genesis nor recorded anchor'];
+            break;
+        }
+        $prev = $p;
+        $segmentOpen = true;
+    }
+    if (!hash_equals((string) $prev, (string) $row['prev_hash'])) {
+        $break = ['id' => $row['id'], 'why' => 'prev_hash break'];
+        break;
+    }
+    $expect = \App\Model\AuditChain::rowHash((string) $prev, $row, $key);
+    if (!hash_equals($expect, (string) $row['row_hash'])) {
+        $break = ['id' => $row['id'], 'why' => 'row_hash mismatch (content tampered)'];
+        break;
+    }
+    $prev = (string) $row['row_hash'];
+    $checked++;
+}
+$s->close();
+
+if ($break !== null) {
+    if ($json) {
+        echo json_encode(['ok' => false, 'checked' => $checked, 'unsigned' => $skipped, 'first_break' => $break]) . "\n";
+    } else {
+        fwrite(STDERR, "CHAIN-BROKEN at id={$break['id']}: {$break['why']}\n");
+    }
+    exit(2);
+}
+if ($json) {
+    echo json_encode(['ok' => true, 'checked' => $checked, 'unsigned' => $skipped]) . "\n";
+} else {
+    echo "CHAIN-OK: {$checked} chained rows verified, {$skipped} unsigned rows skipped\n";
+}
+exit(0);

@@ -20,11 +20,38 @@ P0.1b to keep the change reviewable.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import sqlite3
 from pathlib import Path
 from typing import Any
+
+# ── Tamper-evident audit hash-chain (gov P1) ──────────────────────────────
+# Python mirror of app/Model/AuditChain.php (Wing is the other writer into the
+# same events table; the PHP verifier must recompute Bone-written rows). Byte
+# parity of _canonical() vs PHP AuditChain::canonical() is the load-bearing
+# invariant, pinned by tests/anatomy/test_audit_chain.py.
+_CHAIN_LABEL = b"wing-events-chain-v1"
+_GENESIS = "nos-audit-chain-genesis-v1"
+_CANON_FIELDS = [
+    "ts", "run_id", "type", "playbook", "play", "task", "role", "host",
+    "duration_ms", "changed", "result_json", "migration_id", "upgrade_id",
+    "patch_id", "coexist_svc", "source", "actor_id", "acted_at",
+]
+
+
+def _chain_key() -> str | None:
+    s = os.getenv("WING_EVENTS_HMAC_SECRET", "")
+    if not s:
+        return None
+    return hmac.new(s.encode(), _CHAIN_LABEL, hashlib.sha256).hexdigest()
+
+
+def _canonical(values: dict[str, Any]) -> str:
+    ordered = {f: values.get(f) for f in _CANON_FIELDS}
+    return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False)
 
 
 # Default fallback path mirrors files/anatomy/bone/events.py's default
@@ -87,7 +114,69 @@ def insert_event(payload: dict[str, Any]) -> int:
       wall-clock time of the action (usually = ts). Pre-A10 callbacks
       leave these NULL — backwards compatible.
     """
+    # Materialize the STORED values once (int-cast duration_ms to match PHP's
+    # (int) so the verifier recomputes byte-identically — a stored float would
+    # diverge). The hash, when chained, is computed over exactly these.
+    values = {
+        "ts": payload["ts"],
+        "run_id": payload["run_id"],
+        "type": payload["type"],
+        "playbook": payload.get("playbook"),
+        "play": payload.get("play"),
+        "task": payload.get("task"),
+        "role": payload.get("role"),
+        "host": payload.get("host"),
+        "duration_ms": int(payload["duration_ms"]) if payload.get("duration_ms") is not None else None,
+        "changed": 1 if payload.get("changed") else (0 if "changed" in payload else None),
+        "result_json": json.dumps(payload["result"]) if isinstance(payload.get("result"), dict) else None,
+        "migration_id": payload.get("migration_id"),
+        "upgrade_id": payload.get("upgrade_id"),
+        "patch_id": payload.get("patch_id"),
+        "coexist_svc": payload.get("coexistence_service"),
+        "source": payload.get("source"),
+        "actor_id": payload.get("actor_id"),
+        "acted_at": payload.get("acted_at"),
+    }
+    key = _chain_key()
+    chain_on = os.getenv("WING_AUDIT_CHAIN_ENABLED") == "1" and key is not None
+
     with _open() as conn:
+        if chain_on:
+            # Serialize the tail read + sign + insert in one write txn so the
+            # prev_hash can't race against the PHP writer. BEGIN IMMEDIATE takes
+            # the write lock before the tail SELECT.
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                r = conn.execute(
+                    "SELECT row_hash FROM events WHERE row_hash IS NOT NULL ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+                prev = r[0] if (r and r[0]) else _GENESIS
+                row_hash = hmac.new(
+                    key.encode(), (prev + _canonical(values)).encode(), hashlib.sha256
+                ).hexdigest()
+                cur = conn.execute(
+                    "INSERT INTO events "
+                    "(ts, run_id, type, playbook, play, task, role, host, duration_ms, changed, "
+                    "result_json, migration_id, upgrade_id, patch_id, coexist_svc, source, "
+                    "actor_id, actor_action_id, acted_at, prev_hash, row_hash) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        values["ts"], values["run_id"], values["type"], values["playbook"],
+                        values["play"], values["task"], values["role"], values["host"],
+                        values["duration_ms"], values["changed"], values["result_json"],
+                        values["migration_id"], values["upgrade_id"], values["patch_id"],
+                        values["coexist_svc"], values["source"], values["actor_id"],
+                        payload.get("actor_action_id"), values["acted_at"], prev, row_hash,
+                    ),
+                )
+                conn.commit()
+                return int(cur.lastrowid or 0)
+            except Exception:
+                conn.rollback()
+                raise
+
+        # Default chain-off path — byte-identical to the pre-feature INSERT
+        # (prev_hash/row_hash left NULL by column default).
         cur = conn.execute(
             """
             INSERT INTO events
@@ -98,25 +187,12 @@ def insert_event(payload: dict[str, Any]) -> int:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                payload["ts"],
-                payload["run_id"],
-                payload["type"],
-                payload.get("playbook"),
-                payload.get("play"),
-                payload.get("task"),
-                payload.get("role"),
-                payload.get("host"),
-                payload.get("duration_ms"),
-                1 if payload.get("changed") else (0 if "changed" in payload else None),
-                json.dumps(payload["result"]) if isinstance(payload.get("result"), dict) else None,
-                payload.get("migration_id"),
-                payload.get("upgrade_id"),
-                payload.get("patch_id"),
-                payload.get("coexistence_service"),
-                payload.get("source"),
-                payload.get("actor_id"),
-                payload.get("actor_action_id"),
-                payload.get("acted_at"),
+                values["ts"], values["run_id"], values["type"], values["playbook"],
+                values["play"], values["task"], values["role"], values["host"],
+                values["duration_ms"], values["changed"], values["result_json"],
+                values["migration_id"], values["upgrade_id"], values["patch_id"],
+                values["coexist_svc"], values["source"], values["actor_id"],
+                payload.get("actor_action_id"), values["acted_at"],
             ),
         )
         conn.commit()

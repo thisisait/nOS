@@ -138,6 +138,18 @@
   changed_when: "'now holds 0' not in (_wing_session_backfill.stdout | default(''))"
   failed_when: false
 
+# Record the audit hash-chain segment anchor (gov P1). Idempotent: prints
+# 'now holds 0' once the recorded anchor matches the current tail. Only runs
+# when the chain is enabled; lets the verifier accept a chain OFF->ON boundary.
+- name: "[pazny.wing] Record audit-chain enable anchor (idempotent)"
+  ansible.builtin.command:
+    cmd: php bin/backfill-event-chain.php --data-dir={{ wing_data_dir }}
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_chain_anchor
+  changed_when: "'now holds 0' not in (_wing_chain_anchor.stdout | default(''))"
+  failed_when: false
+  when: wing_audit_chain_enabled | default(false) | bool
+
 # Populate the /upgrades version matrix (W5-B1): ingest the committed upgrade
 # recipes (upgrades/*.yml) into upgrade_recipes. Offline / deterministic — no
 # upstream version calls. Idempotent (truncate + reinsert).
