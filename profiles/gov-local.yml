@@ -1,0 +1,57 @@
+# =============================================================================
+# profiles/gov-local.yml — sovereignty-hardened "local-only" overlay
+# =============================================================================
+#
+# Purpose: collapse the residual external-egress + accept-risk surface so the
+# platform's "all data stays local" claim holds BY DEFAULT, not only in a
+# hand-tuned offline setup. Layer it on top of your normal config:
+#
+#   ansible-playbook main.yml -e @profiles/gov-local.yml
+#   ansible-playbook main.yml -e @profiles/all-on.yml -e @profiles/gov-local.yml
+#     (later -e file wins, so gov-local's hardening overrides all-on's defaults)
+#
+# This is a SOVEREIGNTY profile, not a full government-compliance profile. The
+# blocking gov controls (at-rest disk crypto, enforced MFA, breach-notification,
+# tamper-evident audit log, ISDS + NIA/eIDAS federation) are NOT togglable here
+# — see docs/compliance/gov-readiness-audit-2026q2.md for that roadmap. What
+# this profile DOES close is every off-host data path that is a single variable.
+# =============================================================================
+
+# ── No third-party control-plane egress ──────────────────────────────────────
+# Tailscale routes through login.tailscale.com + DERP relays — a real external
+# dependency and the single material sovereignty default. Off here. For remote
+# access without a third party, self-host Headscale (the FOSS control server)
+# and point tailscaled at it; that is a separate manual wiring step.
+install_tailscale: false
+
+# ── Drop the unfixable accept-risk service ────────────────────────────────────
+# FreePBX's tiredofit image was abandoned upstream in 2022 and carries CRITICAL
+# RCEs that are UNFIXABLE in-image (REM-014 CVSS 10.0, REM-046). A government
+# tenant must not run it. (Already false in default.config.yml — pinned here so
+# an all-on overlay can't turn it back on.)
+install_freepbx: false
+
+# ── Backups stay encrypted (already the default; pinned for demonstrability) ──
+# AES-256 client-side before upload to RustFS — personal data never lands in
+# object storage as cleartext. Keep backup_encryption_passphrase under the same
+# custody as global_password_prefix (lose it → backups unrecoverable).
+backup_encryption_enabled: true
+
+# =============================================================================
+# MANUAL STEPS this profile cannot express as a single variable (do these too):
+#
+# 1. LOCAL TLD ONLY. Keep tenant_domain on a *.local mkcert wildcard (the
+#    default). A public TLD pulls in ACME/Let's Encrypt (DNS-01 egress) — fine
+#    for a public service, but for an air-gapped/sovereign deployment stay local.
+#
+# 2. LOCAL-ONLY AI. Leave openai_api_key / anthropic_api_key EMPTY (the shipped
+#    default) and re-point each AgentKit agent's model.primary from
+#    `anthropic-claude-opus-4-7` to a local `openclaw-*` / `ollama-*` URI in
+#    files/anatomy/agents/<name>/agent.yml. There is no global override var —
+#    the pins are per-agent. Without this, agent runs call the Anthropic API.
+#
+# 3. EGRESS ALLOWLIST. Constrain host outbound to the registries/mirrors you
+#    actually need (image pulls, brew/apt) via a host firewall + an internal
+#    registry mirror; everything else denied. Captures the pull-only metadata
+#    paths this profile can't gate from Ansible vars.
+# =============================================================================
