@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-31T08:13:57Z",
+  "generated_at": "2026-05-31T08:39:14Z",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -10,13 +10,14 @@
       "current_version": "latest",
       "fix_version": null,
       "remediation_type": "architecture",
-      "remediation_detail": "Deploy docker-socket-proxy (tecnativa/docker-socket-proxy) between Portainer and Docker socket. Limit API surface to GET /containers, GET /images, GET /networks. Remove direct docker.sock mount from Portainer.",
-      "status": "pending",
+      "remediation_detail": "Deploy docker-socket-proxy (tecnativa/docker-socket-proxy) between Portainer and Docker socket. Limit API surface to GET /containers, GET /images, GET /networks. Remove direct docker.sock mount from Portainer. | RESOLVED 2026-05-31: Portainer connects via docker-socket-proxy (--host tcp://docker-socket-proxy:2375, depends_on docker-socket-proxy) \u2014 no raw /var/run/docker.sock mount on Portainer. Architecture mitigation in place.",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-05-31T08:39:14Z"
     },
     {
       "id": "REM-002",
@@ -752,7 +753,7 @@
       "current_version": "latest",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "n8n unauthenticated SSRF via HTTP Request node + webhooks. Can scan entire internal Docker network (Redis without auth, PostgreSQL, MariaDB, Prometheus, Portainer). Enable N8N_WEBHOOK_AUTH=true; restrict HTTP node to deny private IP ranges (10.0.0.0/8, 172.16.0.0/12, 127.0.0.0/8).",
+      "remediation_detail": "n8n unauthenticated SSRF via HTTP Request node + webhooks. Can scan entire internal Docker network (Redis without auth, PostgreSQL, MariaDB, Prometheus, Portainer). Enable N8N_WEBHOOK_AUTH=true; restrict HTTP node to deny private IP ranges (10.0.0.0/8, 172.16.0.0/12, 127.0.0.0/8). | 2026-05-31 review: n8n SSRF: no in-app egress control. Real mitigations need a decision: (a) egress-restricted network for n8n (risk: breaks legit HTTP-Request workflows), or (b) ensure internal targets are authenticated (Redis password etc.). Deferred to operator decision.",
       "status": "pending",
       "auto_fixable": false,
       "source": "attack_probe:ssrf_vector_analysis",
@@ -768,7 +769,7 @@
       "current_version": "1",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "Uptime Kuma SSRF via monitor URL creation. Admin can create monitors targeting internal Docker services (Redis, PostgreSQL, etc) for network reconnaissance. Add URL validation to deny private IPs and Docker DNS names.",
+      "remediation_detail": "Uptime Kuma SSRF via monitor URL creation. Admin can create monitors targeting internal Docker services (Redis, PostgreSQL, etc) for network reconnaissance. Add URL validation to deny private IPs and Docker DNS names. | 2026-05-31 review: uptime-kuma SSRF is admin-only and probing internal URLs is the tool\u2019s core function; low real risk (attacker already needs admin). Accept-with-doc or network-isolate; operator decision.",
       "status": "pending",
       "auto_fixable": false,
       "source": "attack_probe:ssrf_vector_analysis",
@@ -974,13 +975,14 @@
       "current_version": "0.6.35",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "PENTEST FINDING: Open WebUI code interpreter module blocking mechanism is trivially bypassable. _real_import reference leaked into execution scope allows LLM-generated code to undo import restrictions. Default BLOCKED_MODULES is empty. When CODE_INTERPRETER_ENGINE=jupyter, prompt injection can achieve server-side RCE. Mitigation: (1) Do NOT use jupyter engine \u2014 keep default pyodide (client-side). (2) If jupyter required, set CODE_INTERPRETER_BLOCKED_MODULES with comprehensive module list AND patch the blocking code to not leak _real_import reference.",
-      "status": "pending",
+      "remediation_detail": "PENTEST FINDING: Open WebUI code interpreter module blocking mechanism is trivially bypassable. _real_import reference leaked into execution scope allows LLM-generated code to undo import restrictions. Default BLOCKED_MODULES is empty. When CODE_INTERPRETER_ENGINE=jupyter, prompt injection can achieve server-side RCE. Mitigation: (1) Do NOT use jupyter engine \u2014 keep default pyodide (client-side). (2) If jupyter required, set CODE_INTERPRETER_BLOCKED_MODULES with comprehensive module list AND patch the blocking code to not leak _real_import reference. | RESOLVED 2026-05-31: Open WebUI CODE_INTERPRETER_ENGINE pinned to \"pyodide\" (browser-sandboxed); not the server-side jupyter path the _real_import bypass targets. Pin is explicit to survive config merges.",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "pentest:code_review:openwebui-code-interpreter-blocking-bypass",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_at": "2026-05-31T08:39:14Z"
     },
     {
       "id": "REM-055",
