@@ -244,6 +244,28 @@ CREATE TABLE gdpr_breaches (
     likely_consequences TEXT,
     measures_taken      TEXT,
     status              TEXT NOT NULL,              -- detected | notified | resolved | non-reportable
+    -- Breach-notification engine (gov P1, 2026-05-31): GDPR Art-33/34 + NIS2/ZKB
+    -- (NÚKIB) deadline columns. *_due_at are stamped once at file-time by
+    -- App\Model\BreachDeadlines; NULL = stage not applicable (risk/scope gate).
+    aware_at                   TEXT,                -- ISO-8601 UTC; Art-33 72h anchor ('became aware'); defaults to detected_at
+    risk_level                 TEXT NOT NULL DEFAULT 'none',  -- none|low|medium|high (Art-33 gate: !=none; Art-34 gate: ==high)
+    data_categories            TEXT,                -- Art-33(3)(a)
+    affected_records           INTEGER,             -- Art-33(3)(a) approx record count
+    art33_due_at               TEXT,                -- aware_at + 72h (NULL when not reportable)
+    art34_due_at               TEXT,                -- report-only marker; never escalated by the scan
+    art34_exception            TEXT,                -- NULL | encryption | risk_mitigated | disproportionate_effort (Art-34(3))
+    nis2_in_scope              INTEGER NOT NULL DEFAULT 0,    -- 0/1; cyber-incident owes NÚKIB notifications
+    nis2_regime                TEXT,                -- higher | lower | critical_infra
+    nis2_cross_border          INTEGER NOT NULL DEFAULT 0,
+    nis2_intentional_suspected INTEGER NOT NULL DEFAULT 0,
+    nis2_early_warning_due_at  TEXT,                -- detected_at + 24h
+    nis2_early_warning_done_at TEXT,
+    nis2_notification_due_at   TEXT,                -- detected_at + 72h (NÚKIB, distinct from GDPR 72h)
+    nis2_notification_done_at  TEXT,
+    nis2_final_report_due_at   TEXT,                -- detected_at + 1 month (end-of-month clamped)
+    nis2_final_report_done_at  TEXT,
+    regulator_ref              TEXT,                -- UOOU/NÚKIB case id returned after filing
+    escalated_stages_json      TEXT NOT NULL DEFAULT '[]',  -- de-dup stamp of stages already alerted
     notes               TEXT,
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
@@ -662,7 +684,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (74)
+-- INDEXS (75)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -714,6 +736,8 @@ CREATE INDEX idx_events_ts        ON events(ts);
 CREATE INDEX idx_events_type      ON events(type);
 
 CREATE INDEX idx_events_upgrade   ON events(upgrade_id);
+
+CREATE INDEX idx_gdpr_breaches_status ON gdpr_breaches(status, detected_at);
 
 CREATE INDEX idx_gdpr_dsar_email  ON gdpr_dsar(subject_email);
 

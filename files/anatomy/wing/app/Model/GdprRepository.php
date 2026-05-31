@@ -103,9 +103,47 @@ final class GdprRepository
     /** @param array<string, mixed> $data */
     public function recordBreach(array $data): int
     {
-        $data['updated_at'] = date('Y-m-d H:i:s');
+        // Stamp computed absolute-UTC due dates ONCE at file-time (the scan then
+        // reads them cheaply). Non-applicable stages get NULL due_at, so the scan
+        // iterates them to zero overdue — the inert leg. Math: BreachDeadlines.
+        $d = BreachDeadlines::compute($data);
+        $data['art33_due_at']              = $d['art33']['due_at'];
+        $data['art34_due_at']              = $d['art34']['due_at'];
+        $data['nis2_early_warning_due_at'] = $d['nis2_24h']['due_at'];
+        $data['nis2_notification_due_at']  = $d['nis2_72h']['due_at'];
+        $data['nis2_final_report_due_at']  = $d['nis2_final']['due_at'];
+        $data['updated_at'] = gmdate('c'); // UTC (deadline math is UTC-anchored)
         $row = $this->db->table('gdpr_breaches')->insert($data);
         return (int) $row['id'];
+    }
+
+    public function getBreach(int $id): ?array
+    {
+        $row = $this->db->table('gdpr_breaches')->get($id);
+        return $row === null ? null : $row->toArray();
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateBreach(int $id, array $data): bool
+    {
+        $data['updated_at'] = gmdate('c');
+        return $this->db->table('gdpr_breaches')->where('id', $id)->update($data) > 0;
+    }
+
+    /** Discharge a notification stage by stamping its done-marker (UTC). */
+    public function markStage(int $id, string $stage, ?string $ts = null): bool
+    {
+        $col = [
+            'art33'      => 'notified_supervisor_at',
+            'art34'      => 'notified_subjects_at',
+            'nis2_24h'   => 'nis2_early_warning_done_at',
+            'nis2_72h'   => 'nis2_notification_done_at',
+            'nis2_final' => 'nis2_final_report_done_at',
+        ][$stage] ?? null;
+        if ($col === null) {
+            return false;
+        }
+        return $this->updateBreach($id, [$col => $ts ?? gmdate('c')]);
     }
 
     // ── CSV export ────────────────────────────────────────────────────────

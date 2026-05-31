@@ -416,6 +416,34 @@ $db->exec(
     . 'WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL'
 );
 
+// gdpr_breaches — GDPR Art-33/34 + NIS2/ZKB deadline engine columns
+// (breach-notification engine, 2026-05-31). schema-extensions.sql CREATE TABLE
+// IF NOT EXISTS is a no-op on existing tables, so this sweep ALTERs the new
+// columns into pre-existing wing.db files. Types MUST match schema-extensions.sql
+// (esp. the NOT NULL DEFAULT clauses) so the contract artifact stays aligned.
+$addMissingColumns($db, 'gdpr_breaches', [
+    'aware_at'                   => 'TEXT',
+    'risk_level'                 => "TEXT NOT NULL DEFAULT 'none'",
+    'data_categories'            => 'TEXT',
+    'affected_records'           => 'INTEGER',
+    'art33_due_at'               => 'TEXT',
+    'art34_due_at'               => 'TEXT',
+    'art34_exception'            => 'TEXT',
+    'nis2_in_scope'              => 'INTEGER NOT NULL DEFAULT 0',
+    'nis2_regime'                => 'TEXT',
+    'nis2_cross_border'          => 'INTEGER NOT NULL DEFAULT 0',
+    'nis2_intentional_suspected' => 'INTEGER NOT NULL DEFAULT 0',
+    'nis2_early_warning_due_at'  => 'TEXT',
+    'nis2_early_warning_done_at' => 'TEXT',
+    'nis2_notification_due_at'   => 'TEXT',
+    'nis2_notification_done_at'  => 'TEXT',
+    'nis2_final_report_due_at'   => 'TEXT',
+    'nis2_final_report_done_at'  => 'TEXT',
+    'regulator_ref'              => 'TEXT',
+    'escalated_stages_json'      => "TEXT NOT NULL DEFAULT '[]'",
+]);
+$db->exec('CREATE INDEX IF NOT EXISTS idx_gdpr_breaches_status ON gdpr_breaches(status, detected_at)');
+
 // pulse_runs.{actor_action_id,acted_at} — pulse_runs already carries
 // actor_id (from schema-extensions.sql:234), but lacks the action
 // grouping + wall-clock fields. Adding them here aligns pulse_runs
