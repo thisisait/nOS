@@ -18,6 +18,7 @@ Public surface:
   QdrantClient.list_collections() -> list[str]
   QdrantClient.upsert(collection, points: list[Point]) -> dict
   QdrantClient.search(collection, vector, limit=10, filter=None) -> list[dict]
+  QdrantClient.delete_points(collection, *, ids=None, filter=None) -> dict
 """
 
 from __future__ import annotations
@@ -123,6 +124,36 @@ class QdrantClient:
             r = c.post(f"{self.url}/collections/{collection}/points/search", json=body)
             r.raise_for_status()
             return r.json().get("result", [])
+
+    def delete_points(
+        self,
+        collection: str,
+        *,
+        ids: list[str | int] | None = None,
+        filter: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Delete points from a collection by id list OR by filter.
+
+        Qdrant's POST /collections/<c>/points/delete accepts exactly one of two
+        selector shapes: ``{"points": [id, ...]}`` (delete-by-id) or
+        ``{"filter": {...}}`` (delete-by-filter, e.g. a `must` match on a
+        payload field like the subject email). This is the per-subject erasure
+        seam Art. 17 needs — embeddings are the one store with no other reach
+        (see redaction.py header). Exactly one selector must be supplied; both
+        or neither raises ValueError so a caller can't accidentally issue a
+        no-op delete or an ambiguous request.
+
+        ``?wait=true`` makes the delete synchronous so a DSAR run can treat a
+        2xx as "the points are gone", not merely "the op was enqueued".
+        """
+        self._require()
+        if (ids is None) == (filter is None):
+            raise ValueError("delete_points needs exactly one of ids= or filter=")
+        body: dict[str, Any] = {"points": list(ids)} if ids is not None else {"filter": filter}
+        with httpx.Client(timeout=self.timeout, headers=self._headers()) as c:
+            r = c.post(f"{self.url}/collections/{collection}/points/delete?wait=true", json=body)
+            r.raise_for_status()
+            return r.json().get("result", {})
 
 
 _singleton: QdrantClient | None = None
