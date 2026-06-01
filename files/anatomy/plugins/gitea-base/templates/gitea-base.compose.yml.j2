@@ -39,6 +39,14 @@ services:
       # re-converging (`ansible-playbook main.yml --tags gitea` recreates the
       # container). Documented in docs/break-glass-runbook.md as env-unset +
       # recreate (NOT a ?param escape).
+      #
+      # SCOPE: only ENABLE_PASSWORD_SIGNIN_FORM (the WEB form). We deliberately
+      # do NOT set ENABLE_BASIC_AUTHENTICATION=false — Gitea HTTP Basic Auth is
+      # the auth method the playbook's own Admin API automation uses
+      # (roles/pazny.gitea/tasks/post.yml + post-repo.yml send
+      # `Authorization: Basic <admin:pass>`). Disabling it 401s the autowire
+      # (repo mirror create) and aborts the run. Basic auth on loopback :3003 is
+      # the API/git path, not the browser SSO path — hiding the web form alone
+      # achieves force-OIDC for users.
       GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "false"
-      GITEA__service__ENABLE_BASIC_AUTHENTICATION: "false"
 {% endif %}
