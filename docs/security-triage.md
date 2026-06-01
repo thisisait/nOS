@@ -43,7 +43,7 @@ All four call sites construct paths like `{DIR} / f"{user_id}.yml"`
 can never escape the parent directory. CodeQL cannot reason about
 `re.match(...) is None → return None` as a sufficient sanitizer.
 
-### `js/unvalidated-dynamic-method-call` #19 — `files/project-wing/index.html:306`
+### `js/unvalidated-dynamic-method-call` #19 — `files/anatomy/wing/index.html:306`
 **Status:** **dismiss as false positive.**
 ```js
 const renderers = { overview: ..., timeline: ..., components: ..., ... };

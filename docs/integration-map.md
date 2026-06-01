@@ -38,7 +38,7 @@ docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`)
                │   POST /api/state  (full snapshot, X-API-Key)
                ▼
  ┌──────────────────────────────────┐
- │  Bone  (files/bone/main.py)      │
+ │  Bone  (files/anatomy/bone/main.py)      │
  │  :8069   FastAPI + X-API-Key     │
  │  Label: eu.thisisait.nos.bone    │
  │                                   │
@@ -106,7 +106,7 @@ it only reads from SQLite (fast) or proxies to Bone (slow-but-authoritative).
 
 1. **Browser** → `POST /api/v1/patches/PATCH-001/apply` with `Authorization: Bearer <token>`.
 2. **Wing** `PatchesPresenter::actionApply` → `PatchRepository::apply('PATCH-001')` → `BoneClient::post('/api/patches/PATCH-001/apply')`.
-3. **Bone** `patches_apply` FastAPI route → `files/bone/patches.py::apply()` → `migrations.invoke_playbook('apply-patches', {'patch_id': 'PATCH-001'})`.
+3. **Bone** `patches_apply` FastAPI route → `files/anatomy/bone/patches.py::apply()` → `migrations.invoke_playbook('apply-patches', {'patch_id': 'PATCH-001'})`.
 4. **Subprocess**: `ansible-playbook main.yml --tags apply-patches -e patch_id=PATCH-001`.
 5. **`tasks/apply-patches.yml`** runs on `127.0.0.1`:
    - loads `patches/PATCH-001.yml`
@@ -143,7 +143,7 @@ Regexes live in `callback_plugins/wing_telemetry.py`: `_MIGRATION_TAG_RE`,
 Adding a new suite follows the same six-step recipe:
 
 1. **DB schema**: add `<suite>_applied` table + an `events.<suite>_id` column
-   and index to `files/project-wing/db/schema-extensions.sql`.
+   and index to `files/anatomy/wing/db/schema-extensions.sql`.
    Add a sweep for the new column in `bin/init-db.php` (the helper in there
    is reusable).
 2. **Wing model**: a `<Suite>Repository` with
@@ -153,9 +153,9 @@ Adding a new suite follows the same six-step recipe:
    block in `app/Core/RouterFactory.php`. Put specific routes
    (`/history`, `/<id>/plan`, `/<id>/apply`, `/<id>/events`) **before**
    the catch-all `[/<id>]` route.
-4. **Bone**: a `files/bone/<suite>.py` sibling module with
+4. **Bone**: a `files/anatomy/bone/<suite>.py` sibling module with
    `list_all / get_by_id / plan / apply` and 3–4 FastAPI routes in
-   `files/bone/main.py`.
+   `files/anatomy/bone/main.py`.
 5. **Ansible engine**: one task file under `tasks/<suite>-engine.yml` (or
    `tasks/apply-<suite>.yml`) gated by `tags: ['<suite>', 'never']` in
    `main.yml` plus a `when: <id-var> is defined` guard.

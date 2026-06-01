@@ -20,7 +20,7 @@ app = FastAPI(title="nOS Bone API", version="0.2.0")
 # JWTs with capability scopes. The legacy BONE_SECRET / X-API-Key channel is
 # retired (decision O4); the only places that read it from env are Bone's
 # own boot-time guard (auth.py:assert_configured) and the events.py HMAC
-# fallback secret. See files/bone/auth.py for the verifier.
+# fallback secret. See files/anatomy/bone/auth.py for the verifier.
 SERVICE_REGISTRY_PATH = os.getenv(
     "SERVICE_REGISTRY_PATH",
     os.path.expanduser("~/projects/default/service-registry.json"),

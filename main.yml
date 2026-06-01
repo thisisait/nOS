@@ -1024,7 +1024,7 @@
           Auto-promoted destroy_state=true so DESTRUCTIVE secrets (APP_KEYs,
           encryption keys, JWT secrets) regenerate alongside the prefix-derived
           passwords. The Bluesky PDS rotation key remains preserved regardless
-          (rotating it would orphan every DID — see main.yml line ~506).
+          (rotating it would orphan every DID — see main.yml lines 1205-1210).
       when: _prefix_changed | bool
       tags: ['always']
 
