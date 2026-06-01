@@ -65,6 +65,16 @@ services:
       # mkcert CA conditional — see volume mount above.
       GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: "/etc/grafana/mkcert-ca.crt"
 {% endif %}
+{% if (sso_autologin_grafana | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 1 ──────────
+      # Dormant behind sso_autologin=false (default). When on, Grafana auto-
+      # redirects to Authentik and hides the local login form. These are the
+      # [auth]-section keys GF_AUTH_OAUTH_AUTO_LOGIN / GF_AUTH_DISABLE_LOGIN_FORM
+      # — NOT GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN / _ENABLE_LOGIN_FORM, which do
+      # not exist in Grafana. Break-glass: ?disableAutoLogin=true → /login.
+      GF_AUTH_OAUTH_AUTO_LOGIN: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+{% endif %}
       GF_AUTH_SIGNOUT_REDIRECT_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/grafana/end-session/"
     extra_hosts:
       # Authentik OIDC endpoint resolves via host-gateway to the host's

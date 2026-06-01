@@ -74,6 +74,17 @@ authentik:
     - profile
   # Tier binding (RBAC) — replaces today's `authentik_app_tiers` mapping
   tier: 1   # admin
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 1 pilot ─────
+  # Grafana is the highest-confidence (0.95) clean win: env-only force-OIDC
+  # via [auth] GF_AUTH_OAUTH_AUTO_LOGIN + GF_AUTH_DISABLE_LOGIN_FORM (NOT the
+  # non-existent GF_AUTH_GENERIC_OAUTH_* equivalents). Stays dormant behind
+  # sso_autologin=false default; the compose-extension {% if %} gates on the
+  # SAME enable expression below.
+  autologin:
+    supports: "yes"          # upstream truth — Grafana hides the form + auto-redirects
+    enabled: "{{ (sso_autologin_grafana | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # enabling DISABLE_LOGIN_FORM removes the local form
+    break_glass: "?disableAutoLogin=true"   # → /login (form returns if DISABLE_LOGIN_FORM=false)
 
 # =============================================================================
 # COMPOSE-EXTENSION — secondary docker-compose override
