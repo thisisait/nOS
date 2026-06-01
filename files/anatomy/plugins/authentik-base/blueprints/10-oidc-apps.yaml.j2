@@ -47,6 +47,18 @@ entries:
    authentication_flow key emitted -> byte-identical to today's render. #}
 {%- set _tier = c.tier | default(authentik_app_tiers[c.slug] | default(3)) -%}
 {%- set _auth_flow = 'nos-tier1-mfa-flow' if ((enforce_mfa | default(false) | bool) and (_tier | int == 1)) else none -%}
+{# Batch 5 (sso-autologin-plan.md): route ONLY clients whose autologin gate
+   resolves true through the branded nos-autologin-flow. The aggregator
+   pre-renders authentik.autologin.enabled to a bool-ish string (the manifest
+   expression ends in `| bool`), so the `| bool` re-coercion here is mandatory
+   — without it the literal string "False" would be truthy. Gate-locked:
+   supports:no plugins never resolve enabled true (test_autologin_no_means_no),
+   and proxy (forward_auth/header_oidc) plugins carry no autologin block at all
+   (test_no_autologin_for_pure_proxy_services), so this is byte-identical to
+   the implicit-consent default for every client that isn't an opted-in
+   native_oidc service. See blueprint 60-autologin-flow.yaml.j2 for the flow +
+   the implicit-consent silent-skip caveat (GH #15814/#13068/#8660). #}
+{%- set _authz_flow = 'nos-autologin-flow' if (c.autologin.enabled | default(false) | bool) else 'default-provider-authorization-implicit-consent' -%}
 {% if not _is_proxy %}
   # ── {{ _name }} (OAuth2 / OIDC) ──
   - model: authentik_providers_oauth2.oauth2provider
@@ -57,7 +69,7 @@ entries:
       client_type: "confidential"
       client_id: "{{ c.client_id }}"
       client_secret: "{{ c.client_secret }}"
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      authorization_flow: !Find [authentik_flows.flow, [slug, {{ _authz_flow }}]]
 {% if _auth_flow %}      authentication_flow: !Find [authentik_flows.flow, [slug, {{ _auth_flow }}]]
 {% endif %}      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       access_code_validity: "minutes=10"
@@ -99,7 +111,7 @@ entries:
       external_host: "{{ _launch }}"
       mode: "forward_single"
       internal_host_ssl_validation: false
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      authorization_flow: !Find [authentik_flows.flow, [slug, {{ _authz_flow }}]]
 {% if _auth_flow %}      authentication_flow: !Find [authentik_flows.flow, [slug, {{ _auth_flow }}]]
 {% endif %}      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
 

@@ -143,6 +143,15 @@
         <key>INSTANCE_NAME</key>
         <string>{{ instance_name | default('nos') }}</string>
 
+        <!-- SSO autologin custom preloader (Batch 5). HubPresenter reads these
+             via getenv(): the splash route is dormant unless the flag is "1",
+             and the warmer/redirect fallback honours the timeout (clamped to
+             the plan's 10s ceiling presenter-side). Off by default. -->
+        <key>SSO_ENABLE_CUSTOM_PRELOADER</key>
+        <string>{{ '1' if (sso_enable_custom_preloader | default(false) | bool) else '' }}</string>
+        <key>SSO_AUTOLOGIN_TIMEOUT_MS</key>
+        <string>{{ sso_autologin_timeout_ms | default(5000) | string }}</string>
+
         <!-- A18 (2026-05-20): Cesta B Hybrid invite-flow extension.
              Master toggle — set "1" to have UsersPresenter::actionInviteCreate
              also push per-user credentials to Infisical + provision the
