@@ -17,12 +17,15 @@
 # docs/security-baseline.md §4.
 # =============================================================================
 
-- name: "[GDPR forget] Validate data subject"
+- name: "[GDPR forget] Validate data subject (strict email — no shell metacharacters)"
   ansible.builtin.assert:
     that:
       - forget_subject is defined
-      - "'@' in (forget_subject | string)"
-    fail_msg: "Set -e forget_subject=<email> (the data subject to erase)."
+      # Strict RFC-ish email; rejects spaces/;/`/$/&/| etc. forget_subject is
+      # interpolated into a container_exec one-liner, so 'a@b; rm -rf / #' must
+      # NEVER pass this gate (host-RCE guard on the confirmed-erasure path).
+      - forget_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none
+    fail_msg: "Set -e forget_subject=<plain email> (no shell metacharacters)."
     quiet: true
 
 - name: "[GDPR forget] Resolve confirm flag (default dry-run)"
@@ -110,9 +113,24 @@
     - _forget_confirm
     - (_forget_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0
 
-- name: "[GDPR forget] Authentik — delete user"
+# Authentik's ?email= filter is contains/iexact and CAN return MULTIPLE users —
+# select ONLY the single EXACT-email match before an IRREVERSIBLE delete. The
+# read-only export sibling already does this; deleting `results | first` could
+# erase a DIFFERENT data subject's identity anchor (a fresh Art-5/Art-32 breach)
+# and then stamp the DSAR 'completed'.
+- name: "[GDPR forget] Authentik — select single exact-match user"
+  ansible.builtin.set_fact:
+    _ak_match: >-
+      {{ (_ak_user.json.results | default([])
+          | selectattr('email', 'equalto', forget_subject) | list | first) | default({}, true) }}
+  no_log: true
+  when:
+    - _forget_confirm
+    - _ak_user.json is defined
+
+- name: "[GDPR forget] Authentik — delete the exact-match user"
   ansible.builtin.uri:
-    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/users/{{ (_ak_user.json.results | first).pk }}/"
+    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/users/{{ _ak_match.pk }}/"
     method: DELETE
     headers:
       Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
@@ -123,7 +141,7 @@
   no_log: true
   when:
     - _forget_confirm
-    - (_ak_user.json.results | default([]) | length) > 0
+    - (_ak_match | default({})) != {}
 
 # ── Executor: container_exec (email-keyed one-liners) ────────────────────────
 - name: "[GDPR forget] container_exec — resolve container + run delete"
@@ -154,9 +172,12 @@
 
 # ── Terminal status — record what ACTUALLY happened (Art. 12(3)) ─────────────
 # 'completed' ONLY when every in-scope store was truly erased: zero manual steps
-# pending, zero container_exec SKIP/failure, and (if Authentik was in scope) the
-# user delete returned 204/404. Otherwise 'in-progress' — manual / failed steps
-# remain, so the legal record must NOT claim completion.
+# pending, zero container_exec SKIP/failure, AND the Authentik leg is genuinely
+# ok. The Authentik leg is ok iff: not in scope, OR the lookup was REACHABLE
+# (status==200 — an unreachable/5xx lookup must NOT vacuously pass, else a run
+# that never reached Authentik would claim completion) AND either there was no
+# exact-email match (subject legitimately absent) or the exact-match delete
+# returned 204/404. Otherwise 'in-progress'.
 - name: "[GDPR forget] Compute terminal DSAR status"
   ansible.builtin.set_fact:
     _forget_terminal: >-
@@ -166,10 +187,15 @@
               and (_cexec.results | default([]) | selectattr('stdout', 'defined')
                    | selectattr('stdout', 'search', 'SKIP') | list | length) == 0
               and (_cexec.results | default([]) | rejectattr('rc', 'eq', 0) | list | length) == 0
-              and not (
-                   ((_forget_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0)
-                   and ((_ak_user.json.results | default([]) | length) > 0)
-                   and (_ak_delete.status | default(0) not in [204, 404])
+              and (
+                   ((_forget_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) == 0)
+                   or (
+                        (_ak_user.status | default(0) == 200)
+                        and (
+                             ((_ak_match | default({})) == {})
+                             or (_ak_delete.status | default(0) in [204, 404])
+                        )
+                   )
               )
             )
          else 'in-progress' }}
