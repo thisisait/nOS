@@ -131,7 +131,10 @@ def provision_tester(tier: str,
     # Step 2: create user
     username = _random_username()
     password = _random_password()
-    tenant = os.environ.get("NOS_HOST") or os.environ.get("TENANT_DOMAIN") or "dev.local"
+    # The email domain must be a DOMAIN, not a host/IP: NOS_HOST is often
+    # 127.0.0.1 (the loopback the API is reached on), and Authentik's email
+    # validator 400-rejects user@127.0.0.1. The tenant TLD is TENANT_DOMAIN.
+    tenant = os.environ.get("TENANT_DOMAIN") or "dev.local"
     email = f"{username}@{tenant}"
     logger.info("provisioning ephemeral tester user=%s tier=%s group=%s",
                 username, tier, group_name)
