@@ -14,17 +14,13 @@ use Tracy\Debugger;
 use Tracy\ILogger;
 
 /**
- * Minimal error presenter. common.neon sets `errorPresenter: Error`, but the
- * class was missing — masked while debug mode was always-on (the
- * setDebugMode('127.0.0.1') bug: Wing binds loopback so Traefik proxied every
- * request from 127.0.0.1, keeping Tracy on for all traffic). Once debug was
- * gated behind WING_TRACY_SECRET, the absence surfaced: any production error
- * threw InvalidLinkException and fell back to Tracy's generic "Server Error"
- * page, which leaks `<meta generator=Tracy>` + the framework.
+ * Minimal error presenter (common.neon `errorPresenter: Error`). Renders a
+ * clean, generator-free 4xx/5xx page and logs non-4xx — Tracy's fallback
+ * "Server Error" page leaks `<meta generator=Tracy>` + the framework, which a
+ * production error must never expose.
  *
- * This renders a clean, generator-free 4xx/5xx page and logs non-4xx. It
- * implements IPresenter directly (NOT BasePresenter) so the edge-trust guard
- * does not re-fire during error handling, and takes no DI deps so it can never
+ * Implements IPresenter DIRECTLY (NOT BasePresenter) so the edge-trust guard
+ * does not re-fire during error handling, and takes NO DI deps so it can never
  * fail to construct while handling another failure.
  */
 final class ErrorPresenter implements Nette\Application\IPresenter
