@@ -88,7 +88,17 @@ def test_dsar_id_capture_is_scalar_not_backref_list():
     no-ops and the gdpr_dsar row stays 'received' (the whole honest-status point
     is lost). Both DSAR tasks must capture the id as a SCALAR via the lookbehind
     form. Functional-bug regression guard (the static wiring tests missed it)."""
+    import re
     for rel in ("tasks/gdpr-forget.yml", "tasks/gdpr-export.yml"):
         src = (REPO / rel).read_text()
         assert "regex_search('(?<=#)[0-9]+')" in src, \
             f"{rel}: capture the DSAR id as a scalar (lookbehind), not a backref list"
+        # C5: negative guard — the capture-group + backref form is what returned
+        # the ['42'] LIST. Re-adding it must fail this gate, not just go unpinned.
+        assert "regex_search('#(" not in src, \
+            f"{rel}: regex_search('#(\\\\d+)', '\\\\1') returns a LIST -> --update no-op (banned)"
+    # C5: behavioral — the SHIPPED lookbehind pattern extracts the SCALAR id from
+    # the record-dsar CLI echo (not a ['42'] list). Pins the fix, not just its text.
+    m = re.search(r'(?<=#)[0-9]+', "OK recorded gdpr_dsar #42 (erase/received)")
+    assert m is not None and m.group(0) == "42", \
+        "lookbehind must extract scalar id '42' from the CLI echo"

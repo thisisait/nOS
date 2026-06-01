@@ -93,3 +93,17 @@ def test_consent_events_whitelisted_both_sides():
     for ev in ("consent_granted", "consent_withdrawn"):
         assert f'"{ev}"' in bone, f"{ev} missing from Bone VALID_TYPES"
         assert f"'{ev}'" in wing, f"{ev} missing from Wing EventRepository::VALID_TYPES"
+
+
+def test_capture_wired_implies_automated_write_method():
+    """C7: capture_wired honesty. Today every row is capture_wired:false (the
+    demonstrability gap is declared, not hidden). If a row ever flips to true it
+    MUST name an automated write path (record-consent | external) — `manual`
+    with capture_wired:true would re-assert the 'consent collected' claim while
+    nothing writes a gdpr_consent row (the Art-7(1) falsehood this map surfaces)."""
+    for e in _entries():
+        if e.get("capture_wired") is True:
+            assert e["method"] in {"record-consent", "external"}, (
+                f"{e['id']}: capture_wired:true requires an automated write method "
+                f"(record-consent|external), not {e['method']!r}"
+            )
