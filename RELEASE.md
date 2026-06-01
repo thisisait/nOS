@@ -6,6 +6,56 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.3-
 
 ---
 
+## Gov / GDPR compliance (2026-06-01) — DRAFT, pending operator tag
+
+> **nOS reaches gov-readiness grade.** A Czech public-administration compliance
+> audit drove a remediation batch closing the structural GDPR / NIS2 P0 controls,
+> all **default-OFF + `profiles/gov-local.yml` opt-in** (a non-gov run is
+> byte-unchanged on macOS + Linux). LIVE-validated on a `+all +gov` reconverge
+> (`failed=0`): `gdpr_consent` migrated on the real `wing.db`, 31 authored
+> purposes ingested, MFA flow live (8 Tier-1 providers), Infisical KMS self-healed.
+> Built + reviewed via multi-agent workflows; the post-batch adversarial review
+> (35 agents → 22 findings) is folded in. Draft — part of the next tag alongside v0.4-beta.
+
+### Structural P0 controls (gov-local opt-in)
+- **Enforced MFA** — `50-mfa-policy.yaml.j2` builds a dedicated `nos-tier1-mfa-flow`
+  (TOTP + WebAuthn, `not_configured_action=configure` so nobody is locked out),
+  routed to Tier-1 providers only; passkey resident-key `preferred` for first-try
+  enrollment (`enforce_mfa`).
+- **At-rest gate** — `tasks/preflight-at-rest.yml` hard-fails a gov run on
+  FileVault-off / no-LUKS before any personal-data service starts (`require_disk_encryption`).
+- **Backup encryption** — `backup.sh` AES-256-CBC/pbkdf2 client-side before upload to RustFS; `tasks/restore.yml` auto-decrypts.
+- **Tamper-evident audit log** — `App\Model\AuditChain` HMAC hash-chains every
+  `events` row at INSERT; WORM triggers block edits/unguarded deletes;
+  `verify-audit-chain.php` + a daily Pulse verify + the Wing header badge (`wing_audit_chain_enabled`).
+- **Breach-notification engine** — `BreachDeadlines` (Art-33/34 + NIS2/NÚKIB
+  countdowns), `bin/breach-{file,scan,report}.php`, hourly Pulse scan, Tier-1 `/breaches` view, `docs/incident-response-plan.md`.
+
+### GDPR data-subject rights
+- **Art-30 records** — all 31 boilerplate plugin purposes authored (CI gate now
+  requires an author-provided purpose for `end_users`-PII services); Controller/DPO block in the DPA register.
+- **Art-17 erasure** — honest DSAR terminal status (`record-dsar.php --update`:
+  `received` → `completed` only when zero manual/failed steps remain); erasure-map
+  reach for backend stores (Redis/Qdrant/RustFS/wing.db/Loki/Tempo); **exact-email
+  match** before the Authentik delete (no cross-subject erasure).
+- **Art-15 right-of-access export** — `tasks/gdpr-export.yml` (opt-in
+  `[gdpr-export,never]`, dry-run-first, `-e export_confirm=true`), audited
+  `state/gdpr-export-map.yml`, single-exact-email Authentik auto-capture, `0700/0600` bundle.
+- **Art-7 consent registry** — `gdpr_consent` ledger (grant→withdraw) +
+  `bin/record-consent.php`; decoupled from SSO (the `gate_sso_required==consent`
+  proxy is named via a never-called `consent_capture_satisfied` predicate).
+
+### Baseline-claim corrections
+- The audit's three doc-vs-code falsehoods are resolved in code: encrypted-backup
+  claim now true, Bone embeddings redaction implemented, the non-existent
+  `audit_retention` role claim corrected. `docs/compliance/gov-readiness-audit-2026q2.md` carries a reconciled 2026-06-01 scorecard.
+
+### Still open (next gov milestone)
+- ISDS (datové schránky) + NIA/eIDAS federation — greenfield, need external
+  endpoints. Retention enforcement is declared metadata, not yet enforced across application stores.
+
+---
+
 ## v0.4-beta (2026-05-31) — DRAFT, pending operator tag
 
 > **nOS goes cross-platform.** The playbook now provisions **Ubuntu 24.04 LTS**
