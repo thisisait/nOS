@@ -34,6 +34,12 @@
     status_code: [204, 404, 303]   # 303 = AdminInitTimeout (no admin + window closed)
     timeout: 5
   register: _portainer_admin_check
+  # Retry a transient localhost flake rather than letting one bad GET decide the
+  # restart/init branch: without this, a flaked status (-1) is != 204 and used to
+  # trip a needless restart on a healthy re-run (fail-OPEN). 6×5s settles it.
+  until: _portainer_admin_check.status | default(0) in [204, 404, 303]
+  retries: 6
+  delay: 5
   failed_when: false
   when: _portainer_ready.status | default(0) == 200
 
@@ -42,14 +48,16 @@
 # blank the run can reach this task long after that (blank-confirm pause + slow
 # sequential infra health-wait) -> /api/users/admin/init returns 303
 # `AdminInitTimeout`, the admin is never created, and failed_when:false hides it
-# (failed=0 but no admin). A container restart resets the window. Do it ONLY
-# when no admin exists yet (check != 204), so re-runs (admin present -> 204) skip.
+# (failed=0 but no admin). A container restart resets the window. Restart ONLY on
+# a KNOWN no-admin signal (404 = no admin, 303 = window closed) — fail-CLOSED, so
+# an error/unknown status (-1 from a flake, 5xx) SKIPS rather than needlessly
+# restarting a healthy, already-provisioned Portainer on a re-run.
 - name: "[pazny.portainer Post] Restart to reset admin-init window (no admin yet)"
   ansible.builtin.command: "{{ docker_bin | default('docker') }} restart infra-portainer-1"
   register: _portainer_restart
   when:
     - _portainer_ready.status | default(0) == 200
-    - _portainer_admin_check.status | default(0) != 204
+    - _portainer_admin_check.status | default(0) in [404, 303]
   changed_when: true
 
 - name: "[pazny.portainer Post] Re-wait for API after window-reset restart"
@@ -78,7 +86,7 @@
   register: _portainer_admin_create
   when:
     - _portainer_ready.status | default(0) == 200
-    - _portainer_admin_check.status | default(0) != 204   # no admin (404, or 303 pre-restart -> window reset above)
+    - _portainer_admin_check.status | default(0) in [404, 303]   # no admin (404) or window-closed (303); fail-closed
   changed_when: _portainer_admin_create.status | default(0) == 200
   failed_when: false
   no_log: true
