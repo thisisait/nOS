@@ -73,7 +73,14 @@ def list_all() -> dict[str, Any]:
 def get_by_id(patch_id: str) -> dict[str, Any] | None:
     if not _ID_RE.match(patch_id):
         return None
-    path = PATCHES_DIR / f"{patch_id}.yml"
+    # Defense-in-depth base-dir containment: _ID_RE already forbids '/' and '..',
+    # but resolve() + is_relative_to keeps the file sink provably confined to
+    # PATCHES_DIR even if the id regex is ever loosened (and models a CodeQL
+    # path-injection sanitizer, clearing the is_file/open alerts on this path).
+    base = PATCHES_DIR.resolve()
+    path = (base / f"{patch_id}.yml").resolve()
+    if not path.is_relative_to(base):
+        return None
     if not path.is_file():
         return None
     return _load_patch_file(path)
