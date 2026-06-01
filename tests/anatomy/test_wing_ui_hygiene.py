@@ -27,10 +27,15 @@ def test_no_inline_script_blocks_in_templates():
     tags (those have a `src=` attribute on the same line as the `<script` token).
     """
     offenders: list[tuple[str, int]] = []
-    pattern = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>")
+    # Two simple patterns instead of one negative-lookahead-over-[^>]* (which
+    # py/bad-tag-filter flags as a bypassable HTML-tag filter + can't match
+    # upper-case <SCRIPT>): flag a <script> opener that has NO src= attribute.
+    # IGNORECASE closes the upper-case bypass the scanner warned about.
+    open_tag = re.compile(r"<script[\s>]", re.IGNORECASE)
+    has_src = re.compile(r"<script[^>]*\bsrc=", re.IGNORECASE)
     for path in _all_latte_files():
         for idx, line in enumerate(path.read_text().splitlines(), 1):
-            if pattern.search(line):
+            if open_tag.search(line) and not has_src.search(line):
                 offenders.append((str(path.relative_to(REPO)), idx))
     assert not offenders, (
         "inline <script> blocks remain in templates — extract them to "

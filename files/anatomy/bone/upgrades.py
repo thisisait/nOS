@@ -28,7 +28,13 @@ _RECIPE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 def _load_service_file(service: str) -> dict[str, Any] | None:
     if not _SERVICE_RE.match(service):
         return None
-    path = UPGRADES_DIR / f"{service}.yml"
+    # Defense-in-depth base-dir containment (see patches.get_by_id): _SERVICE_RE
+    # already forbids '/' and '.', but resolve() + is_relative_to confines the
+    # is_file/open sink to UPGRADES_DIR + models a CodeQL path-injection sanitizer.
+    base = UPGRADES_DIR.resolve()
+    path = (base / f"{service}.yml").resolve()
+    if not path.is_relative_to(base):
+        return None
     if not path.is_file():
         return None
     try:

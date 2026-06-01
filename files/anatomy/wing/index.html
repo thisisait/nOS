@@ -199,8 +199,10 @@ async function handleFiles(fileList) {
 }
 
 // ── Tabs + keyboard nav ──────────────────────────────────────────────────
-let activeTab = location.hash.slice(1) || 'overview';
 const tabNames = ['overview','timeline','components','pentest','remediation','help'];
+// Clamp the location.hash source to the allowlist so activeTab can never be an
+// off-list value flowing into renderers[activeTab] (CodeQL js/unvalidated-dynamic-method-call).
+let activeTab = tabNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
 
 function setTab(name) {
   if (!tabNames.includes(name)) return;
