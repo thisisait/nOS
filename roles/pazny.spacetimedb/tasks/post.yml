@@ -1,8 +1,9 @@
 ---
-# DISSOLUTION PLAN (Phase 2 C5): This file dissolves into
-# files/anatomy/plugins/spacetimedb-base/ lifecycl.post_compose once the plugin
-# loader gains a `replay_api_calls` runner with docker_exec + http support.
-# Until C5 lands, this file remains the authoritative wiring path.
+# TRANSITIONAL (Phase 2 C5 shipped 2026-05-12): the plugin loader post_compose
+# runner is LIVE, so files/anatomy/plugins/spacetimedb-base authoritatively replays the
+# post-start wiring. This role file is NOT retired — still invoked every run, and
+# runs idempotently ALONGSIDE the hook during the dual-safe transition.
+# (Host-side CLI install + server alias genuinely remain role-side.)
 #
 # ==============================================================================
 # pazny.spacetimedb/tasks/post.yml
