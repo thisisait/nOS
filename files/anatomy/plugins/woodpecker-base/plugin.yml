@@ -219,6 +219,6 @@ notification:
 #   image, ports, volumes, mem_limit, cpus     | stay in role compose (install)
 # `default.config.yml` authentik_oidc_apps     |
 #   slug: woodpecker (proxy entry)             | authentik (tendon)
-# (gap today): GDPR Article 30 row             | gdpr (tendon)
-# (gap today): Wing /hub card                  | ui-extension (tendon)
-# (gap today): REM-002 hardening               | compose_extension env (NEW)
+# GDPR Article 30 row (SHIPPED)                | gdpr (tendon)
+# Wing /hub card (SHIPPED)                      | ui-extension (tendon)
+# REM-002 hardening (SHIPPED)                   | compose_extension env

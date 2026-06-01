@@ -2,9 +2,10 @@
 # =============================================================================
 # erpnext-base — service plugin (Q2 OIDC API scaffold, U8, 2026-05-04)
 #
-# Status: SCAFFOLD. Loader has no `bench`/`docker_exec` runner yet; full
-# execution is Phase 2 C5. Until then, `roles/pazny.erpnext/tasks/post.yml`
-# (205 LOC) is the live wiring path.
+# Status: LIVE (Phase 2 C5 shipped 2026-05-12). The plugin loader post_compose
+# runner executes this manifest's wiring. `roles/pazny.erpnext/tasks/post.yml`
+# (~213 LOC) is NOT retired — still invoked at stack-up and runs idempotently
+# ALONGSIDE the hook during the dual-safe transition.
 #
 # NOTE on SSO mode (D1.0 corrected 2026-05-05): pre-D1.0 the U8 worker
 # followed CLAUDE.md "Proxy auth" list, but reality is native OIDC —
