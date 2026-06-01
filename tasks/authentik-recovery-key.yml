@@ -1,0 +1,75 @@
+---
+# tasks/authentik-recovery-key.yml
+# ----------------------------------------------------------------------------
+# Batch 4 break-glass INFRA (docs/sso-autologin-plan.md §"Bezpečnost:
+# break-glass + lockout", layer 3 "Authentik recovery key").
+#
+# WHAT THIS DOES
+#   Generates a high-entropy `authentik_recovery_break_glass_secret`, persists
+#   it idempotently to ~/.nos/secrets.yml, and reuses it across re-runs. The
+#   secret is the documented OFFLINE break-glass INPUT the operator hands to
+#   the CLI recovery-key command when Authentik is unreachable, e.g.
+#
+#       docker compose run --rm server create_recovery_key <username>
+#       # (a.k.a. the `ak create_recovery_key` management command)
+#
+# WHAT THIS DELIBERATELY DOES NOT DO
+#   It does NOT blueprint-seed an `authentik_core.recoverytoken`. That model
+#   does NOT exist in the Authentik blueprint schema (verified against
+#   goauthentik.io/blueprints/schema.json — the blueprint exposes
+#   `authentik_core.token`, NOT `recoverytoken`). A blueprint-provision attempt
+#   would either silently no-op or fail, creating a CRITICAL lockout risk.
+#   Recovery keys are CLI-only; this secret is plain config persistence, not a
+#   blueprint seed. See the plan §205-209 and docs/break-glass-runbook.md
+#   (authored by the runbook agent).
+#
+# DORMANCY / IDEMPOTENCE
+#   - Gated behind `install_authentik` — no Authentik, no secret.
+#   - Pure secret persistence: generates once, reuses forever. Nothing is
+#     deployed, nothing is restarted, no container is touched.
+#   - Independent of `sso_autologin` / `sso_enable_custom_preloader`: a
+#     break-glass escape must exist BEFORE autologin is ever switched on, so
+#     this lands whenever Authentik is installed (the secret is inert until
+#     an operator uses it). The whole autologin MECHANISM stays off by default.
+#
+# ORDERING CONTRACT (why this is imported AFTER the main secrets.yml.j2 render)
+#   main.yml renders templates/secrets.yml.j2 over ~/.nos/secrets.yml. That
+#   template does not (and must not) carry this key, so this task appends the
+#   key with `lineinfile` AFTER that render — otherwise the template re-render
+#   would clobber it. On the next run, main.yml's early
+#   "[Secrets] Load persisted secrets" include_vars reads the whole file
+#   (including the appended line) BEFORE this task runs, so the guard below
+#   short-circuits and `lineinfile` is a no-op. Gate:
+#   tests/anatomy/test_recovery_key_persists_across_reruns.py.
+# ----------------------------------------------------------------------------
+
+- name: "[Recovery] Generate-if-absent offline break-glass secret"
+  # Lazy-regen pattern (mirrors authentik_secret_key / wing_api_token in
+  # main.yml): regenerate ONLY when the value is unset, a prefix-derived
+  # placeholder, or too short. A value loaded from ~/.nos/secrets.yml on a
+  # re-run passes the guard untouched → stable across re-runs.
+  ansible.builtin.set_fact:
+    authentik_recovery_break_glass_secret: >-
+      {% if '_pw_' in (authentik_recovery_break_glass_secret | default('')) or (authentik_recovery_break_glass_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ authentik_recovery_break_glass_secret }}{% endif %}
+  tags: ['always', 'authentik', 'secrets', 'break-glass']
+
+- name: "[Recovery] Ensure ~/.nos directory exists at 0700"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+    state: directory
+    mode: '0700'
+  tags: ['always', 'authentik', 'secrets', 'break-glass']
+
+- name: "[Recovery] Persist offline break-glass secret to ~/.nos/secrets.yml"
+  # Idempotent append/maintain. The regexp keys off the var NAME so a value
+  # rotation rewrites the same line in place (no duplicate keys). Runs AFTER
+  # the main secrets.yml.j2 render (which does not carry this key), so the
+  # template can never clobber it. mode 0600 — owner-only, matching the main
+  # persist step.
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: '^authentik_recovery_break_glass_secret:'
+    line: 'authentik_recovery_break_glass_secret: "{{ authentik_recovery_break_glass_secret }}"'
+    create: true
+    mode: '0600'
+  tags: ['always', 'authentik', 'secrets', 'break-glass']

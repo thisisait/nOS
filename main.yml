@@ -1259,6 +1259,15 @@
         mode: '0600'
       tags: ['always']
 
+    # Batch 4 break-glass: generate + persist the offline recovery-key INPUT
+    # (NOT a blueprint seed — recovery keys are CLI-only). Imported AFTER the
+    # secrets.yml.j2 render above so the template can't clobber the appended
+    # key; loaded by the early include_vars next run. See the task header +
+    # docs/sso-autologin-plan.md §"Bezpečnost: break-glass + lockout".
+    - import_tasks: tasks/authentik-recovery-key.yml
+      when: install_authentik | default(false) | bool
+      tags: ['always', 'authentik', 'secrets', 'break-glass']
+
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
       ansible.builtin.shell: |
         {{ playbook_dir }}/files/brew-svc.sh stop redis 2>/dev/null || true
