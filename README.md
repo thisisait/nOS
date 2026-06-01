@@ -459,7 +459,7 @@ nOS/
 ├── inventory                        # Ansible inventory (localhost)
 ├── security-update.sh               # security-only image pull
 │
-├── roles/pazny.<service>/           # 57 roles, one per service
+├── roles/pazny.<service>/           # 71 roles, one per service
 │   ├── defaults/  tasks/  handlers/  templates/  meta/
 │   └── templates/compose.yml.j2     # compose-override fragment
 │
@@ -483,7 +483,7 @@ nOS/
 ├── templates/
 │   ├── stacks/{infra,observability,iiab,devops,b2b,voip,engineering,data}/
 │   │   └── docker-compose.yml.j2    # base stack (services: {} + networks)
-│   └── nginx/sites-available/       # 50 vhosts
+│   └── nginx/sites-available/       # 53 vhosts
 │
 ├── files/                           # static assets (configs, dashboards, icons)
 ├── docs/                            # architecture notes, fleet-architecture.md
