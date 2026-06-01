@@ -384,6 +384,27 @@ install_vaultwarden: true        # Vaultwarden – Bitwarden-compatible personal
 # ── Identity / federation ─────────────────────────────────────────────────────
 install_bluesky_pds: true        # Bluesky PDS – AT Protocol identity server (SSO @user.dev.local)
 
+# ── SSO Autologin (β) ─────────────────────────────────────────────────────────
+# Global flag: auto-redirect/force-OIDC for native_oidc services that SUPPORT
+# it (per-plugin authentik.autologin.supports: yes). supports:no services stay
+# button-only and CANNOT be flipped (gate tests/anatomy/test_autologin_no_means_no.py).
+# Precedence: per-service > per-min-tier > global > false.
+# RISK: misconfig + no local fallback = lockout if Authentik is down. This is a
+# pre-existing risk of any pure-SSO native_oidc service, not new to autologin —
+# but enabling autologin makes it easy to lock yourself out of many services at
+# once. Opt-in only, AFTER manually testing each login flow.
+# READ docs/break-glass-runbook.md before enabling.
+sso_autologin: false                       # SAFE DEFAULT (opt-in; the whole mechanism stays dormant)
+sso_enable_custom_preloader: false         # Wing /hub branded splash + session pre-warmer (optional)
+sso_autologin_local_fallback_enabled: false  # render ALLOW_LOCAL_LOGIN-style break-glass env when on
+sso_autologin_timeout_ms: 5000             # preloader / redirect fallback timeout (ms)
+# Per-tier / per-service overrides (precedence: svc > min_tier > global > false).
+# NOTE: the tier var is named sso_autologin_min_tier_<N> to avoid collision/
+# confusion with the unrelated authentik_app_tiers / authentik_rbac_tiers maps.
+# sso_autologin_min_tier_1: true           # enable for all Tier-1 (admin) native_oidc services that support it
+# sso_autologin_gitea: "{{ sso_autologin | default(false) }}"
+# sso_autologin_n8n: false                 # upstream CANNOT force-OIDC (supports:no, gate-locked anyway)
+
 # ── Network / access ──────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (remote access to all services)
 install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (no /etc/hosts edits)
