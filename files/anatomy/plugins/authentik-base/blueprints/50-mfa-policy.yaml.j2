@@ -73,8 +73,11 @@ entries:
     identifiers:
       name: nos-mfa-webauthn-setup
     attrs:
-      user_verification: required             # true gov passkey: discoverable +
-      resident_key_requirement: required      # user-verification, not 'preferred'
+      user_verification: required             # gov-grade user verification — KEPT strict
+      resident_key_requirement: preferred     # was 'required' (discoverable-only): too strict
+                                              # in practice — passkey enrollment took ~3 tries
+                                              # on common authenticators. 'preferred' keeps UV
+                                              # but accepts non-discoverable creds -> first-try.
       configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
 
   # ── 3. Our OWN MFA validate stage (NOT the upstream shared one) ───────────
