@@ -183,6 +183,23 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/audit/verify:
+    get:
+      summary: 'Audit::actionverify'
+      operationId: Audit_verify_get
+      tags:
+        - Audit
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   /api/v1/coexistence:
     get:
       summary: list tracks per service
@@ -505,6 +522,29 @@ paths:
     get:
       summary: single breach incident detail
       operationId: Gdpr_breaches_get
+      tags:
+        - Gdpr
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/gdpr/breaches/{id}/report':
+    get:
+      summary: 'Gdpr::actionbreachReport'
+      operationId: Gdpr_breachReport_get
       tags:
         - Gdpr
       responses:

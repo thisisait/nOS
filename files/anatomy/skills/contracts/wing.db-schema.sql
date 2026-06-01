@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (39)
+-- TABLES (40)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -267,6 +267,21 @@ CREATE TABLE gdpr_breaches (
     regulator_ref              TEXT,                -- UOOU/NÚKIB case id returned after filing
     escalated_stages_json      TEXT NOT NULL DEFAULT '[]',  -- de-dup stamp of stages already alerted
     notes               TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE gdpr_consent (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_email       TEXT NOT NULL,                    -- the data subject
+    processing_id       TEXT,                             -- soft FK gdpr_processing.id; NULL = cross-cutting
+    activity            TEXT NOT NULL,                    -- consented-to activity slug (e.g. "marketing-email")
+    lawful_basis        TEXT NOT NULL DEFAULT 'consent',  -- Art. 6(1) basis; normally 'consent'
+    tos_version_hash    TEXT,                             -- hash of the terms presented (NOT a secret, NOT proof of valid consent)
+    source              TEXT NOT NULL DEFAULT 'operator', -- operator | ui | api | import — how consent arrived
+    granted_at          TEXT NOT NULL,                    -- ISO-8601; when consent was given
+    withdrawn_at        TEXT,                             -- ISO-8601; NULL = still active (Art. 7(3))
+    notes               TEXT,                             -- free-form (e.g. UI request id, operator note)
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -684,7 +699,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (75)
+-- INDEXS (79)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -738,6 +753,14 @@ CREATE INDEX idx_events_type      ON events(type);
 CREATE INDEX idx_events_upgrade   ON events(upgrade_id);
 
 CREATE INDEX idx_gdpr_breaches_status ON gdpr_breaches(status, detected_at);
+
+CREATE INDEX idx_gdpr_consent_active ON gdpr_consent(subject_email, activity) WHERE withdrawn_at IS NULL;
+
+CREATE INDEX idx_gdpr_consent_activity   ON gdpr_consent(activity);
+
+CREATE INDEX idx_gdpr_consent_processing ON gdpr_consent(processing_id);
+
+CREATE INDEX idx_gdpr_consent_subject    ON gdpr_consent(subject_email);
 
 CREATE INDEX idx_gdpr_dsar_email  ON gdpr_dsar(subject_email);
 
