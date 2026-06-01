@@ -109,4 +109,65 @@ final class HubPresenter extends BasePresenter
 		$this->template->stacks = $stacks;
 		$this->template->categories = $categories;
 	}
+
+	/**
+	 * BATCH 5 — Custom preloader (sso-autologin-plan.md §"Custom preloader").
+	 *
+	 * Branded interstitial + silent session pre-warmer. On load,
+	 * hub-session-warmer.js fires a `prompt=none` OIDC authorize against
+	 * Authentik: if a session exists the 302 returns instantly (~100-200ms)
+	 * and we bounce on to /hub (or ?service=); if NOT (first login) the
+	 * prompt=none flow FAILS — the warmer must NOT loop, it falls back to the
+	 * normal flow. A 10s timeout also drops to a Retry fallback.
+	 *
+	 * DORMANT by default: the whole mechanism is gated on
+	 * `sso_enable_custom_preloader` (default false in default.config.yml,
+	 * surfaced into the Wing runtime as the SSO_ENABLE_CUSTOM_PRELOADER env
+	 * var). When the flag is off, the splash is bypassed entirely and the
+	 * caller lands straight on the normal /hub dashboard — wiring the
+	 * mechanism without turning it on.
+	 *
+	 * `?skip_splash=1` is an unconditional bypass (break-glass / direct link):
+	 * it redirects to the dashboard regardless of the flag so a user can never
+	 * be trapped on the splash. The same `?service=` passthrough is preserved
+	 * so a deep-link target survives the bypass.
+	 */
+	public function renderSplash(): void
+	{
+		$req = $this->getHttpRequest();
+
+		// Hard bypass — `?skip_splash=1` always lands on the dashboard, and the
+		// preloader OFF (default) also bypasses so the splash stays dormant.
+		$skip = (string) ($req->getQuery('skip_splash') ?? '') === '1';
+		$enabled = getenv('SSO_ENABLE_CUSTOM_PRELOADER') === '1';
+		if ($skip || !$enabled) {
+			// Preserve a deep-link target across the bypass: ?service= names the
+			// service the launcher tile pointed at. Forward it to /hub so the
+			// dashboard (or a future per-service redirect) still has it.
+			$service = (string) ($req->getQuery('service') ?? '');
+			$this->redirect('Hub:default', $service !== '' ? ['service' => $service] : []);
+			return;
+		}
+
+		// Build the OIDC `prompt=none` authorize target + the per-service
+		// redirect-host whitelist the warmer JS enforces. The whitelist is
+		// ONLY `<svc>.<tld>` + `auth.<tld>` — open-redirect defence
+		// (sso-autologin-plan.md §"Open-redirect / CSRF").
+		$authentikDomain = getenv('AUTHENTIK_DOMAIN') ?: 'auth.dev.local';
+		$tld = getenv('TENANT_DOMAIN') ?: 'dev.local';
+		$service = (string) ($req->getQuery('service') ?? '');
+
+		$this->template->authentikDomain = $authentikDomain;
+		$this->template->tenantDomain = $tld;
+		// `service` is echoed into a data-attribute and consumed by the warmer
+		// to compute its post-success destination; the JS re-validates it
+		// against the host whitelist, never trusting it raw.
+		$this->template->splashService = $service;
+		// Surface the configured fallback timeout (ms) so the JS and the
+		// presenter stay in lock-step. Defaults match default.config.yml
+		// (sso_autologin_timeout_ms: 5000) but the plan's preloader spec pins a
+		// 10s ceiling, so clamp to at least 10000 for the splash hard-timeout.
+		$cfgTimeout = (int) (getenv('SSO_AUTOLOGIN_TIMEOUT_MS') ?: 5000);
+		$this->template->splashTimeoutMs = max($cfgTimeout, 10000);
+	}
 }

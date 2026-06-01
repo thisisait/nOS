@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS SSO autologin flow — sso-autologin-plan.md Batch 5 (Authentik branding) ──
+#
+# The "Authentik branded flow" FALLBACK half of the custom-preloader work
+# (the Wing /hub splash is the PRIMARY; this is the first-login polish lever
+# the plan calls Option A). It converges a dedicated authorization flow
+# `nos-autologin-flow` that `autologin: true` clients route their
+# `authorization_flow` at — INSTEAD of the stock
+# `default-provider-authorization-implicit-consent` — see 10-oidc-apps.yaml.j2.
+#
+# DESIGN — Dummy stage + per-flow background + Custom CSS (per plan §"Vazba na
+# Authentik branding"):
+#   - NO custom stage class. A custom stage would require a Python plugin
+#     shipped INTO the Authentik server image — we keep this pure-YAML so a
+#     stock authentik image converges cleanly (same doctrine as the enrollment
+#     flow's "why a policy, not a custom stage" note).
+#   - NO image bloat. The brandable splash is the FLOW BACKGROUND + Custom CSS
+#     on the flow itself (Authentik renders `flow.background` + `flow.layout`
+#     and Brand-level Custom CSS ≥2025.4.0 over the consent/auth screen). We do
+#     NOT embed a base64 image; the background path points at a brand asset the
+#     operator drops in (default: the stock authentik background, so the flow is
+#     visually a no-op until branded).
+#   - A single Dummy stage (`authentik_stages_dummy.dummystage`) is the
+#     no-op carrier the flow needs to be a valid, bindable flow object without
+#     collecting any input. It throw-shows the branded background for the
+#     ~100–200 ms repeat-login redirect (the only latency the preloader can
+#     actually mask — first-login still runs the full upstream flow).
+#
+# ── HONESTY CAVEAT — implicit-consent silent-skip is NOT guaranteed ──────────
+# The plan (and the research it folds in) WARNS that Authentik's
+# implicit-consent silent-skip has documented regressions where the consent
+# prompt STILL shows despite implicit consent — GH goauthentik/authentik
+# #15814 (open/reviewing), #13068, #8660 — especially with the `offline_access`
+# scope or on first login.
+#
+#   >>> OPERATOR STEP (load-bearing): before relying on a seamless one-click
+#   >>> redirect, VERIFY end-to-end on YOUR installed Authentik version that
+#   >>> this flow silently skips the consent screen for an already-authenticated
+#   >>> session. If it does NOT, add an explicit `authentik_stages_consent.
+#   >>> consentstage` (mode: permanent / expiring) bound into this flow AND an
+#   >>> expression policy that skips the UI only when a session already exists,
+#   >>> then reset the preloader messaging to set correct expectations.
+#
+# Implicit consent here = the flow carries NO consent stage (just the no-op
+# Dummy stage), the plan's recommended-IF-VERIFIED variant. The flow is
+# DORMANT: nothing routes `authorization_flow` here unless a
+# client's `authentik.autologin.enabled` resolves true (gate-locked so
+# `supports: no` services can never flip on), and the whole autologin mechanism
+# is off behind `sso_autologin: false`. The flow object simply sits unused
+# until a verified operator opts in.
+#
+# (NB: this header avoids literal Jinja brace-tags — Jinja parses them even
+# inside YAML # comments, so a stray tag here would break the render.)
+version: 1
+metadata:
+  name: nos-autologin-flow
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  # ── 1. Dummy stage — pure no-op carrier (NO custom stage class) ───────────
+  # The flow needs at least one bindable stage to be a valid flow object. A
+  # dummy stage collects nothing and immediately continues; its sole job here
+  # is to give the branded background + Custom CSS a surface to paint during
+  # the brief repeat-login redirect. It never blocks and never prompts.
+  - model: authentik_stages_dummy.dummystage
+    state: present
+    identifiers:
+      name: nos-autologin-dummy
+    attrs:
+      throw_error: false
+
+  # ── 2. The autologin authorization flow ───────────────────────────────────
+  # designation: authorization  → eligible as a provider `authorization_flow`.
+  # authentication: require_authenticated → an UNauthenticated hit bounces to
+  #   the stock authentication flow first (so first-login still works); only an
+  #   already-authenticated session reaches this flow and gets the silent skip.
+  # layout/background → the brandable splash surface (per-flow background, the
+  #   plan's "per-flow background" lever; operator overrides the asset).
+  - model: authentik_flows.flow
+    state: present
+    identifiers:
+      slug: nos-autologin-flow
+    attrs:
+      name: "nOS — SSO autologin (branded)"
+      title: "Signing you in…"
+      designation: authorization
+      authentication: require_authenticated
+      compatibility_mode: false
+      denied_action: message_continue
+      layout: stacked
+      policy_engine_mode: any
+      # Per-flow branded background. Default = stock authentik asset, so the
+      # flow is a visual no-op until the operator drops a brand image here.
+      # CAUTION (plan): keep this a PATH/asset reference — do NOT inline a
+      # base64 image (image bloat). Operator brands via System > Brands
+      # (flow background + Custom CSS, Authentik ≥2025.4.0).
+      background: "{{ sso_autologin_flow_background | default('/static/dist/assets/images/flow_background.jpg') }}"
+
+  # ── 3. Stage binding — the single Dummy stage at order 10 ─────────────────
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, nos-autologin-flow]]
+      order: 10
+    attrs:
+      stage: !Find [authentik_stages_dummy.dummystage, [name, nos-autologin-dummy]]
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+      invalid_response_action: retry
+      policy_engine_mode: any

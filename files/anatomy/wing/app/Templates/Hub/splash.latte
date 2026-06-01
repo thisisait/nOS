@@ -1,0 +1,66 @@
+{*
+  BATCH 5 — Custom preloader splash (sso-autologin-plan.md §"Custom preloader").
+
+  Branded interstitial shown while hub-session-warmer.js silently pre-warms
+  the Authentik session (`prompt=none` OIDC dance). Reuses the dark theme
+  (tokens.css + style.css load via @layout) and the .hub-splash classes added
+  to www/assets/style.css.
+
+  HONEST UX (plan §"Čestně k latenci"): this masks the ~100-200ms cookie
+  exchange for REPEAT logins (existing Authentik session). For FIRST login the
+  prompt=none flow fails and the warmer falls back to the normal flow WITHOUT
+  looping — the splash never traps the user.
+
+  The warmer reads its config from the data-attributes below. The presenter
+  (HubPresenter::renderSplash) only reaches this template when the preloader
+  flag is ON and `?skip_splash=1` is absent — otherwise it redirects to
+  Hub:default before render, so the splash stays dormant by default.
+*}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Warming session… | Wing — nOS</title>
+	<link rel="stylesheet" href="/assets/tokens.css?v={$assetVer}">
+	<link rel="stylesheet" href="/assets/style.css?v={$assetVer}">
+</head>
+<body class="hub-splash-body">
+
+	<main class="hub-splash"
+		id="hub-splash"
+		data-authentik-domain="{$authentikDomain}"
+		data-tenant-domain="{$tenantDomain}"
+		data-service="{$splashService}"
+		data-timeout-ms="{$splashTimeoutMs}"
+		data-fallback-url="/hub?skip_splash=1{if $splashService !== ''}&service={$splashService|urlencode}{/if}">
+
+		<div class="hub-splash-card">
+			{* nOS logomark — inline SVG, no external image (no bloat, on-brand). *}
+			<div class="hub-splash-logo" aria-hidden="true">
+				<svg viewBox="0 0 64 64" width="56" height="56" role="img" aria-label="nOS">
+					<circle cx="32" cy="32" r="28" fill="none" stroke="var(--accent)" stroke-width="3" opacity="0.35"></circle>
+					<circle class="hub-splash-arc" cx="32" cy="32" r="28" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="44 132"></circle>
+					<text x="32" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="var(--text)">nOS</text>
+				</svg>
+			</div>
+
+			<h1 class="hub-splash-title">Warming session…</h1>
+			<p class="hub-splash-sub" id="hub-splash-status">Signing you in via Authentik. This should take a moment.</p>
+
+			{* Fallback panel — revealed by the warmer on prompt=none failure or
+			   the hard timeout. Plain links (no auto-JS) so a stuck user always
+			   has a manual escape to the normal flow / dashboard. *}
+			<div class="hub-splash-fallback" id="hub-splash-fallback" hidden>
+				<p class="hub-splash-sub">Couldn't pre-warm the session. You can continue manually.</p>
+				<div class="hub-splash-actions">
+					<button type="button" class="filter-btn active" id="hub-splash-retry">Retry</button>
+					<a class="filter-btn" href="/hub?skip_splash=1{if $splashService !== ''}&service={$splashService|urlencode}{/if}">Skip to dashboard</a>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<script src="/assets/hub-session-warmer.js" defer></script>
+</body>
+</html>

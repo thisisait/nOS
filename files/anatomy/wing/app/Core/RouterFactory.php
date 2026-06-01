@@ -115,6 +115,11 @@ final class RouterFactory
 		$router->addRoute('', 'Homepage:default');
 
 		// Dashboard routes (browser, behind Authentik proxy auth)
+		// BATCH 5 — custom preloader splash. /hub/splash BEFORE the catch-all
+		// 'hub' so the first-match-wins router hits the interstitial route. The
+		// presenter bounces straight to Hub:default when the preloader flag is
+		// off (dormant default) or `?skip_splash=1` is set.
+		$router->addRoute('hub/splash', 'Hub:splash');
 		$router->addRoute('hub', 'Hub:default');
 		$router->addRoute('dashboard', 'Dashboard:default');
 		$router->addRoute('pentest', 'Pentest:default');
