@@ -809,10 +809,11 @@
         - configure_dock | default(false)
       tags: ['dock']
 
-    # ── Linux-only host roles (Phase 1: stubs only) ─────────────────────────
-    # Activate on Debian/RedHat families. Currently empty — real
-    # implementation lands after the cross-platform refactor is validated
-    # end-to-end on Ubuntu 24.04 LTS.
+    # ── Linux-only host roles ───────────────────────────────────────────────
+    # Activate on Debian/RedHat families. v0.4-beta cross-platform shipped
+    # 2026-05-31 with a standing Ubuntu-24.04 CI wet-test (the full playbook is
+    # green on Linux). pazny.linux.apt is still a thin stub; pazny.linux.systemd_user
+    # is LIVE (consumed by pazny.bone/pulse/backup for systemd --user units).
     - role: pazny.linux.apt
       when:
         - ansible_os_family in ['Debian', 'RedHat']
