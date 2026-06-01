@@ -51,9 +51,7 @@ final class UpgradesPresenter extends BasePresenter
 			}
 		}
 
-		// The template iterates $matrix (was a latent var mismatch: the
-		// presenter only set $services, so /upgrades always showed the
-		// empty-state). Set both; $matrix is the one the template reads.
+		// $matrix is the variable the /upgrades template reads (both are set).
 		$this->template->matrix = $services;
 		$this->template->services = $services;
 		$this->template->countsBySeverity = $counts;
