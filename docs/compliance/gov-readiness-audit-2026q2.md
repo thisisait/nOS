@@ -5,6 +5,70 @@
 > source file; every positive verdict was challenged by an independent skeptic.
 > Scores are post-adversarial-review, not first-impression.
 
+> ⚠️ **RECONCILED 2026-06-01 — read this first.** The snapshot below was
+> correct at its `2a3f02f` baseline, but the gov/GDPR remediation batch (Art-7/15/17/30,
+> MFA, at-rest gate, tamper-evident audit log, backup-crypto, breach engine) has since
+> landed + been LIVE-validated (`+all +gov` reconverge, failed=0). The current state is
+> the reconciliation below; the original snapshot follows it unchanged as a pinned artifact.
+
+---
+
+# nOS — Gov-Readiness Scorecard, Reconciled (2026-06-01)
+
+> Supersedes the 2026-05-31 audit (`docs/compliance/gov-readiness-audit-2026q2.md`, written at `dev @ 2a3f02f`). This reconciliation measures the gov/GDPR remediation that landed and was LIVE-validated across `9cc67c02..HEAD` (the original audit commit through the consent-registry + MFA-passkey fix). Scores are post-adversarial, not first-impression; every uplift is gated to *what code actually shipped*, not what a doc claims.
+
+## (a) Before → after per-dimension score table
+
+| Dimension | Before | After | One-line justification |
+|---|---|---|---|
+| **GDPR Art. 5** — principles | 40 | **52** | Integrity/confidentiality [5(1)(f)] materially repaired — backups now AES-256-CBC client-side before upload (`backup.sh`), audit log is HMAC-hash-chained + WORM-triggered when enabled. Storage limitation [5(1)(e)] still **fails**: retention purge reaches only `wing.db` events; application stores / Qdrant / Redis / RustFS still accumulate indefinitely. |
+| **GDPR Art. 17** — erasure | 26 | **40** | Coverage loophole closed (CI gate now fails if any native/header_oidc PII plugin lacks an erasure entry; caught the live `svc_nodered` gap). Backend stores (redis/qdrant/rustfs/wing/loki/tempo) now mapped + Bone `QdrantClient.delete_points` seam exists. DSAR now records **honest** terminal status (`received`→`completed` only if 0 manual/failed, else `in-progress`) and the `--update` actually fires (regex backref→lookbehind scalar fix). But automation depth is unchanged: still **3 automated** (1 authentik_api + 2 container_exec) of 29; 26 remain `method:manual`. |
+| **GDPR Art. 20** — portability | 12 | **22** | Art-15 **right-of-access** export shipped (`tasks/gdpr-export.yml`, dry-run-first, `-e export_confirm`, audited map, single-exact-email Authentik auto-capture, no cross-subject leak). But scoped honestly to **access** (18/21 services run on legitimate_interests); true Art-20 portability tagged only for the contract subset, most stores manual, and the bundle is **machine-readable but not a one-shot structured export**. |
+| **GDPR Art. 25** — by design | 42 | **58** | The three doc-vs-code falsehoods are fixed: "encrypted backup" now true, Bone embeddings redaction implemented (email strip-before-upsert), false `audit_retention` role claim corrected. `gov-local.yml` sovereignty profile ships (Tailscale off, FreePBX pinned off, backup-crypto/MFA/at-rest/audit-chain opt-in). Still **no DPIA / Art-35 artifact**; AI-agent cloud-primary default unchanged (per-agent manual repoint only). |
+| **GDPR Art. 30** — records | 58 | **74** | The two structural deficiencies are closed: all **31 boilerplate purposes authored** (daggers 31→0, CI gate now requires author-provided purpose for end_users-PII services + cohort-stability pin), and an **Art-30(1)(a) Controller/DPO block** added to the register. Residual: DPO block ships placeholder-unset (activation = export 3 env vars + re-render), and the 5 dark host services (Hermes/OpenCode/IIAB-Terminal/backup-job/Bone) still carry no record. |
+| **GDPR Art. 32** — security | 38 | **62** | Three of four absent controls now present + LIVE-validated: **MFA** wired (dedicated `nos-tier1-mfa-flow`, TOTP+WebAuthn, 8 Tier-1 providers routed this run; passkey resident-key required→preferred for first-try success); **backup-crypto** AES-256; **tamper-evident audit log** (HMAC chain + WORM triggers + `verify-audit-chain.php`, migrated on real `wing.db` this run). At-rest is a **host-volume gate** (FileVault/LUKS pre-flight hard-fail), **not** application TDE/SSE — internal `sslmode=disable` legs and the CVE backlog still stand. |
+| **NIS2 / ZKB** — regulated-service provider | 33 | **52** | Operational **breach-notification engine** shipped (Art-33/34 + NIS2/NÚKIB deadline columns, pure `BreachDeadlines`, 24h/72h/1-month countdowns, hourly breach-scan Pulse job now wired + inert-until-filed, regulator-report export, `/breaches` read-only UI), plus IR/BC playbook in `docs/`. MFA + at-rest gate + tamper-evident log close three §21 blockers. Residual: no SBOM/sigstore, CVE backlog, internal in-transit plaintext. |
+| **eGovernment** — Czech public admin | 22 | **22** | **Unchanged.** No ISDS/datové schránky, no ISVS alignment, no WCAG 2.1 AA / *prohlášení o přístupnosti*, no NKOD path. None of this session's work touched the Czech eGovernment integration surface. |
+| **Czech eIdentita / eIDAS** — NIA federation | 12 | **14** | **Effectively unchanged.** Still zero `authentik_sources_saml`/OIDC source, no NIA/eIDAS/BankID/MojeID, no LoA handling. The +2 reflects only that the **MFA prerequisite** (an eIDAS LoA-substantial precondition) is now buildable/wired — federation itself remains greenfield. |
+
+## (b) P0 deployment blockers — CLOSED vs OPEN
+
+**CLOSED (gated by shipped + this-run-validated code):**
+1. **P0-1 Encrypt backups + fix false claim** — ✅ CLOSED. `backup.sh` AES-256-CBC/pbkdf2 stream filter before `aws s3 cp`, `.enc` suffix, restore auto-detects; `security-baseline.md` corrected.
+2. **P0-2 At-rest encryption gate** — ✅ CLOSED *as a host-volume gate*. `tasks/preflight-at-rest.yml` hard-fails a gov run on FileVault-off / no-LUKS before any personal-data service starts (`require_disk_encryption`, default-off, gov-local opt-in). Caveat: this is a host-disk **gate**, not per-service TDE/SSE/KMS.
+3. **P0-3 Wire mandatory MFA** — ✅ CLOSED. `nos-tier1-mfa-flow` (TOTP+WebAuthn, configure-not-deny), password policy, 8 Tier-1 providers routed LIVE this run; passkey UX fix (preferred).
+4. **P0-4 Operational breach-notification + IR plan** — ✅ CLOSED. `BreachDeadlines` + `breach-{file,scan,report}.php` + hourly Pulse scan + `/breaches` UI + `docs/incident-response-plan.md`.
+6. **P0-6 Honest DSAR completion status** — ✅ CLOSED (the "stop overstating completion" half). DSAR no longer blanket-`completed`; the `--update` no-op bug is fixed. *(The "reach every PII store" half is only **partially** closed — see OPEN below.)*
+7. **P0-7 Consent registry decoupled from SSO** — ✅ CLOSED *as a registry + decouple*. `gdpr_consent` ledger (grant→withdraw, Art 6(1)(a)+7), `GdprRepository` record/withdraw/list/pseudonymise, `bin/record-consent.php`; the `gate_sso_required` proxy is named as a falsehood via a never-called `consent_capture_satisfied` predicate. Migrated on the real `wing.db` this run.
+
+**STILL OPEN:**
+5. **P0-5 Enforced storage limitation [5(1)(e)]** — ❌ OPEN. Retention purge still reaches **only `wing.db` events**; no scheduled per-`retention_days` purge for application DBs, Qdrant, Redis, `agent_*`, or RustFS. `audit-retention.yml` + the GDPR tasks remain `never`-tagged (manual-only).
+6. **P0-6 Erasure reaches every PII store** — ⚠️ PARTIALLY OPEN. Backend stores are now *mapped* and the coverage gate prevents silent gaps, but 26/29 entries are `method:manual` and **backups are not subject-purged/re-dumped** — an erased subject's PII survives in RustFS dump history. The Qdrant delete is a *seam* (capability exists; map entry still manual).
+8. **P0-8 Datové schránky (ISDS)** — ❌ OPEN, greenfield. No code.
+9. **P0-9 Federate Authentik UP to NIA / eIDAS** — ❌ OPEN, greenfield. No identity source; MFA prerequisite now met but federation unbuilt.
+10. **P0-10 Disable FreePBX for gov** — ✅ CLOSED. `gov-local.yml` pins `install_freepbx=false`.
+
+**Doc-vs-code falsehoods (original list of 3): ALL CLOSED** — encrypted-backup claim, Bone redaction, and the non-existent `audit_retention` role were each corrected/implemented.
+
+**Verdict change:** still **CANNOT be deployed to Czech public administration as-is** — but the blocker set shrank from *five structural absences + a greenfield integration surface* to **two greenfield Czech-specific integrations (ISDS, NIA/eIDAS) + retention enforcement + erasure-automation depth**. The platform moved from "structurally missing four §32/§21 controls" to "those four controls present + opt-in, Czech-government integration layer still absent."
+
+## (c) Honest residual gaps (do not let the uplift mask these)
+
+- **Retention enforcement is metadata, not action.** `retention_days` in every Art-30 record is descriptive; only `wing.db` events are actually purged, and even that is `never`-tagged manual-only. Application stores, Qdrant, Redis, `agent_*`, RustFS accumulate indefinitely. This is the single largest *enforced*-control gap and keeps Art-5 below passing.
+- **Consent capture is `wired:false` for all 3 seeded activities** (tenant-vault-storage, collab-docs-authoring, atproto-identity-bridge). The ledger + CLI + withdrawal endpoint exist, but no *capture mechanism* is wired into onboarding — the seeded register asserts `legal_basis=consent` with a documented demonstrability gap. The decouple predicate (`consent_capture_satisfied`) is intentionally **never called by the runner**.
+- **DSAR / access-export bundles are unencrypted on disk.** Bundles are `0700/0600` permission-scoped but written as plaintext (no age/gpg/tar-encrypt). A bundle holding assembled subject PII at rest contradicts the at-rest posture the same session just established for backups.
+- **Erasure automation depth unchanged: 3 of 29 automated.** Coverage and honesty improved; the 26 `method:manual` stores still require an operator to run printed CLI steps, and **backups are never subject-purged** (Art-17 vs backup-retention tension unresolved).
+- **At-rest is a host-disk gate, not application encryption.** FileVault/LUKS presence is checked; there is no per-service TDE, no RustFS SSE/KMS, and internal service-to-service legs still ship `sslmode=disable` (REM-009 open).
+- **Controller/DPO Art-30(1)(a) block ships placeholder-unset.** Demonstrability requires the operator to export `GDPR_CONTROLLER_NAME/_DPO_NAME/_DPO_CONTACT` and re-render; by default the register reads "_(unset)_". 5 dark host services still carry no Art-30 record.
+- **eGovernment + eIDAS are wholly greenfield.** ISDS statutory delivery, ISVS registration, WCAG/accessibility statement, NKOD, and NIA/eIDAS/BankID/MojeID federation received **zero** code this session — scores held flat (22 / 14). MFA now satisfies the eIDAS LoA *prerequisite* but federation is unbuilt.
+- **Supply chain unchanged** — the CVE remediation backlog, SBOM/sigstore provenance, and vendor-blocked CRITICALs (FreePBX, now profile-disabled for gov) are untouched by this session.
+- **Audit chain protects only post-enablement rows.** Pre-`wing_audit_chain_enabled` events stay unsigned (accepted baseline), and the toggle is default-off (gov-local opt-in) — a non-gov install has a mutable log.
+
+**Net:** the four structural §32/§21 absences the original audit gated on are now present and LIVE-validated (failed=0 on the +all +gov reconverge), but every uplift is correctly default-OFF/inert (opt-in `never` tags, manual CLIs, never-called predicates, permit-only event whitelists). The honest delta is **enforcement and Czech-integration**, not capability — retention isn't enforced, consent isn't captured, erasure isn't automated, DSAR bundles aren't encrypted, and ISDS + NIA remain greenfield.
+
+---
+
+
 **Subject:** nOS (This is AIT — Agentic Home Lab), `dev` @ `2a3f02f`
 **Scope:** Deployment readiness for a Czech public-administration body (*orgán veřejné moci*) acting as GDPR controller and a NIS2/ZKB *poskytovatel regulované služby*
 **Frameworks assessed:** GDPR Art. 5, 17, 20, 25, 30, 32 · NIS2 / zákon o kybernetické bezpečnosti (ZKB) · eGovernment (ISDS, ISVS, WCAG) · Czech eIdentita / eIDAS (NIA, BankID, MojeID)
