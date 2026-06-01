@@ -44,6 +44,21 @@ authentik:
     - email
     - profile
   tier: 1
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matice b/d) ─
+  # Infisical CE: the OIDC_* env (already seeded below in the compose-ext when
+  # install_authentik=true) gives a "Sign in with Authentik" button. "Enforce
+  # OIDC" (force-only / pre-login auto-redirect) is ENTERPRISE-gated — there is
+  # NO user-facing enforce nor auto-redirect in OSS. So `enabled` behaves as
+  # SEED-ONLY here: turning autologin on must NOT render an enterprise-only
+  # enforce API/env call (pinned by tests/anatomy/test_infisical_no_enforce_in_oss.py).
+  # PARTIAL + enforce deferred. Stays dormant behind sso_autologin=false; the
+  # compose-extension {% if %} gates on the SAME enable expression below and only
+  # emits a benign OSS seed marker (no enforce).
+  autologin:
+    supports: "partial"      # upstream truth — button seed only; enforce is enterprise-gated
+    enabled: "{{ (sso_autologin_infisical | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # OSS cannot enforce/hide the form (enterprise-only); button only
+    break_glass: "/login/admin"   # org-admin login bypass (always reachable in OSS)
 
 compose_extension:
   template: templates/infisical-base.compose.yml.j2

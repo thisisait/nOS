@@ -31,6 +31,18 @@ services:
       SSO_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_vaultwarden"
       SSO_AUTHORITY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/vaultwarden/"
       SSO_PKCE: "true"
+{#  ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 ───────────
+    Vaultwarden hides the master-password form with SSO_ONLY=true (SSO button
+    only), but reliable SSO_ONLY behaviour ships ONLY on the OIDCWarden fork
+    (SSO_FRONTEND=override). This role runs the OFFICIAL vaultwarden/server
+    image (see roles/pazny.vaultwarden), whose OIDC support is
+    limited/experimental — so per the plan the autologin block is supports:no
+    and SSO_ONLY is hard-pinned false here: force-OIDC is NOT wired on the
+    official image (would gate a hidden form behind an unreliable OIDC flow).
+    The plugin's authentik.autologin.enabled is HARD-LOCKED false
+    (test_autologin_no_means_no); break-glass is /admin. A future operator on
+    the OIDCWarden fork (verified SSO_ONLY) would flip supports:partial and wire
+    SSO_ONLY against the canonical sso_autologin_vaultwarden expression. #}
       SSO_ONLY: "false"
 {% endif %}
 {% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}

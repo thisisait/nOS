@@ -24,6 +24,17 @@ services:
       OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
       OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
       OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
+{% if (sso_autologin_infisical | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 ──────────
+      # Dormant behind sso_autologin=false (default). PARTIAL + enforce DEFERRED:
+      # Infisical CE only seeds the OIDC button (the OIDC_* env above). "Enforce
+      # OIDC" / pre-login auto-redirect is ENTERPRISE-gated — there is NO OSS env
+      # or API that forces OIDC-only login. So this gate deliberately renders only
+      # a benign seed marker, NOT an enterprise enforce call. Honest: enabling
+      # autologin on OSS does NOT hide the local form (org-admin still lands on
+      # /login/admin — the break-glass). Pinned by test_infisical_no_enforce_in_oss.py.
+      _NOS_OIDC_AUTOLOGIN_SEED: "seed-only"
+{% endif %}
     extra_hosts:
       - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}

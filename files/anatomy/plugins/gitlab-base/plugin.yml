@@ -57,6 +57,26 @@ authentik:
     - profile
     - email
   tier: 2   # manager — repo + CI admin
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 ───────────
+  # GitLab is supports: PARTIAL (plan matrix (b), conf 0.78). The reliable
+  # lever is gitlab_rails['disable_password_authentication_for_web'] = true,
+  # which HIDES the username/password form (only the OIDC button remains).
+  # The auto-redirect key gitlab_rails['omniauth_auto_sign_in_with_provider']
+  # is NOT unambiguously confirmed in official GitLab OIDC Omnibus docs — it
+  # may or may not fire depending on version — so this is downgraded from a
+  # "clean win" to PARTIAL: the form is hidden, true zero-click auto-redirect
+  # is not guaranteed. The force-OIDC Omnibus fragment lives ROLE-SIDE (the
+  # role owns the monolithic GITLAB_OMNIBUS_CONFIG string per the D2 decision
+  # in gitlab-base.compose.yml.j2 — splitting it across files is unsafe), and
+  # is gated on the SAME enable expression below. Dormant behind
+  # sso_autologin=false (default). Break-glass: ?auto_sign_in=false → the
+  # /users/sign_in form; reachable only while disable_password_authentication
+  # _for_web is NOT true, otherwise use recovery (see break-glass runbook).
+  autologin:
+    supports: partial        # upstream truth — form hides via disable_pw; auto-redirect key unconfirmed
+    enabled: "{{ (sso_autologin_gitlab | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # disable_password_authentication_for_web=true hides the password form
+    break_glass: "?auto_sign_in=false"   # → /users/sign_in (only if disable_pw ≠ true)
 
 # =============================================================================
 # COMPOSE-EXTENSION

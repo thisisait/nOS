@@ -72,6 +72,21 @@ authentik:
     - profile
     - email
   tier: 2
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (b) ───────────
+  # Node-RED's adminAuth.strategy supports `autoLogin: true`, which makes
+  # Node-RED initiate the passport-openidconnect flow on editor load instead
+  # of showing the "Sign in with Authentik" button. This is a REDIRECT, not a
+  # form-hide: the local login form is NOT hard-hidden (supports: partial,
+  # conf 0.70). The break-glass is a local admin fallback user kept in
+  # adminAuth.users (settings.js) — Authentik-down still admits an operator.
+  # The role's settings.js.j2 gates `autoLogin: true` on the SAME enable
+  # expression below; stays dormant behind sso_autologin=false default.
+  # Tier 2 (manager) per the authentik.tier above → sso_autologin_min_tier_2.
+  autologin:
+    supports: "partial"      # auto-redirect via strategy.autoLogin; form NOT hard-hidden
+    enabled: "{{ (sso_autologin_nodered | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # autoLogin redirects but the local form/users path stays reachable
+    break_glass: "local admin fallback user in adminAuth.users (Authentik-down escape)"
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)

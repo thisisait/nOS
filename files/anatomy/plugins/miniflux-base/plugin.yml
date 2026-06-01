@@ -45,6 +45,31 @@ authentik:
     - email
     - profile
   tier: 3
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (partial) ─────
+  # Miniflux is `partial` (conf 0.80): DISABLE_LOCAL_AUTH=1 hides the
+  # username/password form AND blocks POST /login (upstream issue #2220), but
+  # there is NO built-in auto-redirect — the login page then renders ONLY the
+  # "Sign in with OpenID Connect" link, so a bare DISABLE_LOCAL_AUTH leaves the
+  # operator one manual click away (or, if they hit a deep link, a near-blank
+  # page). The missing auto-redirect is supplied OUT-OF-BAND by a Traefik
+  # redirect middleware (roles/pazny.traefik dynamic config) that 302s
+  # GET /login → /oauth2/oidc/redirect (the canonical Miniflux OAuth2-start
+  # path: `GET /oauth2/{provider}/redirect`, provider=oidc). Both the env and
+  # the middleware gate on the SAME enable expression below and stay dormant
+  # behind sso_autologin=false by default.
+  #
+  # hides_local_form: true — DISABLE_LOCAL_AUTH removes the form entirely.
+  # break_glass is NOT a runtime UI param: with the form gone there is no
+  # reachable local login. The escape is to UNSET DISABLE_LOCAL_AUTH and
+  # recreate the container (env-unset + recreate, not a query string) — see the
+  # break-glass truth-table in sso-autologin-plan.md §"Bezpečnost". When this
+  # gate is OFF the route is NOT touched (no middleware attached) — the service
+  # behaves exactly as before.
+  autologin:
+    supports: "partial"      # form hides via env, but auto-redirect needs the Traefik middleware (no upstream auto-redirect)
+    enabled: "{{ (sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # DISABLE_LOCAL_AUTH removes the local login form (POST /login also blocked)
+    break_glass: "unset DISABLE_LOCAL_AUTH + recreate (no runtime UI escape — form is env-hidden)"
 
 compose_extension:
   template: templates/miniflux-base.compose.yml.j2

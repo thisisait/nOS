@@ -13,6 +13,16 @@
  */
 {% set _oidc_on = (install_authentik | default(false)) and (nodered_native_oidc_enabled | default(false)) %}
 {% set _authentik_domain = authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) %}
+{# ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (b) ──────────
+   When autologin resolves true (gated on the SAME expression as the plugin's
+   authentik.autologin.enabled), the passport-openidconnect strategy gets
+   `autoLogin: true` so Node-RED initiates the OIDC flow on editor load instead
+   of showing the "Sign in with Authentik" button. supports: partial — this is
+   a REDIRECT, NOT a form-hide. A LOCAL ADMIN fallback user is kept in
+   adminAuth.users (break-glass) so an Authentik-down event never locks the
+   operator out. The trailing `| bool` coerces the loader/play-var string to a
+   real bool; default false keeps everything dormant. #}
+{% set _autologin_on = _oidc_on and (nodered_autologin_enabled | default(false) | bool) %}
 
 module.exports = {
     uiPort: process.env.PORT || 1880,
@@ -37,6 +47,16 @@ module.exports = {
             name: "openidconnect",
             label: "Sign in with Authentik",
             icon: "fa-cloud",
+{% if _autologin_on %}
+            // ── SSO autologin (force-OIDC) — Batch 3 (b), gated on
+            //    nodered_autologin_enabled (sso_autologin_nodered >
+            //    sso_autologin_min_tier_2 > sso_autologin). autoLogin makes
+            //    Node-RED start the OIDC flow on load instead of showing the
+            //    button. This is a REDIRECT — the local form is NOT hard-hidden
+            //    (supports: partial). Break-glass: the local admin fallback user
+            //    below stays in adminAuth.users so SSO-down never locks you out.
+            autoLogin: true,
+{% endif %}
             strategy: require("passport-openidconnect").Strategy,
             options: {
                 issuer: "https://{{ _authentik_domain }}/application/o/nodered/",
@@ -56,6 +76,15 @@ module.exports = {
                 }
             }
         },
+        // ── Local admin fallback (break-glass) ──────────────────────────────
+        // Kept regardless of autoLogin so an operator can still be admitted if
+        // Authentik is down. With the `strategy` adminAuth type Node-RED admits
+        // the OIDC identity via the verify() callback above; this `users`
+        // function maps any authenticated username — including the documented
+        // local admin `{{ nodered_local_admin_username | default('admin') }}` —
+        // to full admin permissions. The local-admin credential lives in role
+        // defaults (nodered_local_admin_password) for the documented offline
+        // recovery path (re-render without autoLogin → button returns).
         users: function(username) {
             return Promise.resolve({ username: username, permissions: "*" });
         }

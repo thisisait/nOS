@@ -67,6 +67,25 @@ authentik:
     - email
     - profile
   tier: 3                                    # user — vault is end-user UI
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matice b) ─
+  # Vaultwarden's SSO_ONLY=true hides the master-password form (SSO button
+  # only), BUT reliable SSO_ONLY behaviour ships only on the OIDCWarden
+  # community fork (SSO_FRONTEND=override). The OFFICIAL build this role runs
+  # (vaultwarden/server, see roles/pazny.vaultwarden) has OIDC support that is
+  # LIMITED/EXPERIMENTAL — most deployments rely on the fork or an external
+  # proxy. Per plan: supports:no on the official image (do NOT wire SSO_ONLY).
+  # The HONESTY GATE (test_autologin_no_means_no) demands `enabled` resolve to
+  # false under EVERY operator override, so it is hard-false here — NOT the
+  # canonical precedence chain. If an operator runs the OIDCWarden fork and has
+  # verified SSO_ONLY, this would become supports:partial with the canonical
+  # expr `{{ (sso_autologin_vaultwarden | default(sso_autologin_min_tier_3 |
+  # default(sso_autologin | default(false)))) | bool }}` (tier 3). Dormant
+  # behind sso_autologin=false regardless; gate-locked off on the official image.
+  autologin:
+    supports: "no"           # official image: OIDC limited/experimental, no reliable SSO_ONLY
+    enabled: "{{ false | bool }}"   # HARD-LOCKED false (supports:no) — never flippable
+    hides_local_form: false  # SSO_ONLY would hide it, but it is not wired on the official image
+    break_glass: "/admin"    # admin panel (SSO_ONLY not wired → master-password form stays live)
 
 # =============================================================================
 # COMPOSE-EXTENSION — SSO env block + mkcert CA conditional

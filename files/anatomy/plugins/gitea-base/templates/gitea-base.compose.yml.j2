@@ -1,0 +1,44 @@
+# =============================================================================
+# gitea-base — compose-extension fragment (SSO autologin, sso-autologin-plan.md
+# Batch 3 / matrix (b)).
+#
+# Rendered into {{ stacks_dir }}/devops/overrides/gitea-base.yml at pre_compose.
+# Compose merges this additively with the role's own override fragment
+# (roles/pazny.gitea/templates/compose.yml.j2 → .../overrides/gitea.yml). The
+# override files load alphabetically — `gitea-base.yml` < `gitea.yml` — and the
+# env keys set here (GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM /
+# ENABLE_BASIC_AUTHENTICATION) are NOT set by the role file, so the merge is
+# purely additive (no last-writer conflict).
+#
+# The OIDC client itself is registered via the Gitea Admin API
+# (authentik.post_setup: gitea_admin_api), NOT compose env — so this fragment
+# carries ONLY the force-OIDC form-hide toggle, behind the autologin gate.
+# =============================================================================
+
+services:
+  gitea:
+    environment:
+      _NOS_PLUGIN: "gitea-base"
+{% if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matrix b) ─
+      # Dormant behind sso_autologin=false (default). When on, Gitea HIDES the
+      # local username/password sign-in form, leaving only the "Sign in with
+      # Authentik" OAuth2 button. NOTE: Gitea has NO auto-redirect — the user
+      # still clicks the button (supports: yes for form-hide, no for redirect).
+      #
+      # CRITICAL (plan caveat): the Authentik-backed admin MUST already exist
+      # before the form is locked. The admin is API-provisioned by the
+      # gitea_admin_api post_setup hook (lifecycle.post_compose →
+      # hooks/post_compose.yml) which runs AFTER this render but the local admin
+      # bootstrap (gitea admin user create) runs on the same converge — operators
+      # MUST confirm the admin exists before flipping sso_autologin on, else the
+      # only login path is OIDC and a broken Authentik = lockout.
+      #
+      # BREAK-GLASS (no live UI param — form is env-hidden): re-enable the form
+      # by setting sso_autologin_gitea=false (or sso_autologin=false) and
+      # re-converging (`ansible-playbook main.yml --tags gitea` recreates the
+      # container). Documented in docs/break-glass-runbook.md as env-unset +
+      # recreate (NOT a ?param escape).
+      GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "false"
+      GITEA__service__ENABLE_BASIC_AUTHENTICATION: "false"
+{% endif %}

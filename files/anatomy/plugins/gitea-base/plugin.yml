@@ -71,12 +71,49 @@ authentik:
     - profile
   tier: 2                                # manager — per CLAUDE.md RBAC
   post_setup: gitea_admin_api            # see hooks/post_compose.yml
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matrix b) ───
+  # Gitea hides the local username/password form via the SERVICE env toggles
+  # (ENABLE_PASSWORD_SIGNIN_FORM=false + ENABLE_BASIC_AUTHENTICATION=false),
+  # leaving only the "Sign in with Authentik" OAuth2 button. supports: yes is
+  # honest for the FORM-HIDE capability — but there is NO auto-redirect upstream
+  # (the user still clicks the button). Stays dormant behind sso_autologin=false
+  # default; the compose-extension {% if %} gates on the SAME enable expression.
+  #
+  # CRITICAL caveat: the OIDC-backed admin MUST exist before the form is locked
+  # (the gitea_admin_api post_setup hook provisions it) — flipping autologin on
+  # before an admin exists + a healthy Authentik = lockout (no local login path).
+  #
+  # hides_local_form: true. break_glass is NOT a live UI param (the form is
+  # env-hidden) — it is re-enable env + recreate: set sso_autologin_gitea=false
+  # (or sso_autologin=false) and re-converge. Documented as env-unset+recreate
+  # in docs/break-glass-runbook.md (NOT a ?query escape).
+  autologin:
+    supports: "yes"          # upstream truth — form-hide works cleanly; no auto-redirect
+    enabled: "{{ (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # ENABLE_PASSWORD_SIGNIN_FORM=false removes the local form
+    break_glass: "re-enable ENABLE_PASSWORD_SIGNIN_FORM env + recreate (no live UI param)"
+
+# =============================================================================
+# COMPOSE-EXTENSION — secondary docker-compose override (SSO autologin gate)
+# =============================================================================
+# Loader renders templates/gitea-base.compose.yml.j2 into
+#   {{ stacks_dir }}/devops/overrides/gitea-base.yml
+# which the existing override-discovery loop in stack-up.yml picks up. This
+# fragment carries ONLY the force-OIDC form-hide env (behind the autologin
+# gate) — the OIDC client is registered via the Gitea Admin API, not env.
+
+compose_extension:
+  template: templates/gitea-base.compose.yml.j2
+  target_stack: devops
+  target_service: gitea
 
 # =============================================================================
 # LIFECYCLE — declares the contract; loader runner lands in Phase 2 C5
 # =============================================================================
 
 lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
   post_compose:
     - wait_health: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/version"
     - replay_api_calls: hooks/post_compose.yml
