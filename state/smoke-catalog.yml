@@ -125,7 +125,11 @@ smoke_endpoints:
   # 302 in <100ms moments later. 30s matches the documented worst-case
   # Omnibus internal-proxy latency.
   - id: gitlab
-    url: "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
+    # NB: resolve_jinja_lite handles ONLY simple {{ name }} — a filter/`~`
+    # default() expression stays literal and the probe hits an invalid URL
+    # (DEAD). gitlab_domain is always set in default.config.yml, so the bare
+    # name suffices (matches the manifest auto-derive, which won this anyway).
+    url: "https://{{ gitlab_domain }}/"
     expect: [200, 301, 302, 308]
     when: "install_gitlab | default(false)"
     timeout: 30

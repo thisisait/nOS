@@ -324,6 +324,23 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     # to HTTPS, CF re-serves that 308, browser loops). Catch it explicitly so
     # the smoke output points the operator at the actual root cause instead
     # of a generic timeout. See docs/operator-domain-switch.md "Troubleshooting".
+    # An autologin / forward_auth service bounces the anon probe to the
+    # Authentik IdP (/ -> /login -> auth.<tld>/application/o/authorize -> the
+    # MFA flow). That chain legitimately exceeds the hop cap, so once
+    # sso_autologin is on every SSO-redirecting service smokes DEAD. Treat
+    # "redirected to Authentik" as ALIVE — the service is up and correctly
+    # delegating to SSO. Detect via the auth domain (when known) or the
+    # unmistakable Authentik path markers.
+    _auth_markers = ("/application/o/authorize", "/outpost.goauthentik.io", "/if/flow/")
+
+    def _is_auth_redirect(loc: str) -> bool:
+        if authentik_domain and authentik_domain in loc:
+            return True
+        return any(m in loc for m in _auth_markers)
+
+    class _RedirectedToAuth(Exception):
+        """Sentinel: the probe was bounced to the SSO IdP (service is alive)."""
+
     def _do_simple(method: str) -> tuple[int | None, str | None]:
         # Build a custom redirect handler that records every Location header
         # seen and bails when we hit the same URL twice in a row (loop) or
@@ -335,6 +352,8 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
             def http_error_302(self, req, fp, code, msg, headers):
                 loc = headers.get("location") or headers.get("Location") or ""
                 if loc:
+                    if _is_auth_redirect(loc):
+                        raise _RedirectedToAuth(loc)
                     if seen_locations and seen_locations[-1] == loc:
                         raise urllib.error.URLError(
                             "redirect loop detected: %d hops to %s "
@@ -363,6 +382,10 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
         try:
             with opener.open(req, timeout=timeout) as resp:
                 return resp.status, None
+        except _RedirectedToAuth:
+            # Alive: bounced to the SSO IdP. 302 is in the non-strict expect
+            # set; strict mode still wants `auth: tester` to follow to 200.
+            return 302, None
         except urllib.error.HTTPError as exc:
             return exc.code, None
         except urllib.error.URLError as exc:
