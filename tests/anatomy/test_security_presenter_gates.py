@@ -86,6 +86,17 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         PRESENTERS / "BreachesPresenter.php",
         [],
     ),
+    (
+        # GdprPresenter (S4) — the /gdpr browser view lists the Art-30 register,
+        # the DSAR log, and the breach register: EVERY data subject's email +
+        # request history. Same sensitivity as BreachesPresenter (which gates the
+        # same breach data) -> Tier-1 via the declarative `$minAccessTier = 1`.
+        # Read-only view (mutations run through bin/record-dsar.php etc.), so the
+        # mutator list is empty.
+        "GdprPresenter",
+        PRESENTERS / "GdprPresenter.php",
+        [],
+    ),
 ]
 
 

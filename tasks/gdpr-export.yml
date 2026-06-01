@@ -24,12 +24,16 @@
 # docs/security-baseline.md §4.
 # =============================================================================
 
-- name: "[GDPR export] Validate data subject"
+- name: "[GDPR export] Validate data subject (strict email — no shell metacharacters)"
   ansible.builtin.assert:
     that:
       - export_subject is defined
-      - "'@' in (export_subject | string)"
-    fail_msg: "Set -e export_subject=<email> (the data subject to export)."
+      # Strict RFC-ish email; rejects shell metacharacters. export_subject may be
+      # interpolated into a container_exec one-liner (none today, but the gate
+      # mandates the bare token), so harden the input here — the same host-RCE
+      # guard the erasure sibling carries.
+      - export_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none
+    fail_msg: "Set -e export_subject=<plain email> (no shell metacharacters)."
     quiet: true
 
 - name: "[GDPR export] Resolve confirm flag (default dry-run)"
@@ -272,10 +276,15 @@
               and (_cexec.results | default([]) | selectattr('stdout', 'defined')
                    | selectattr('stdout', 'search', 'FAIL') | list | length) == 0
               and (_cexec.results | default([]) | rejectattr('rc', 'eq', 0) | list | length) == 0
-              and not (
-                   ((_export_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) > 0)
-                   and ((_ak_match | default({})) != {})
-                   and (_ak_write.failed | default(true))
+              and (
+                   ((_export_plan | default([]) | selectattr('method', 'eq', 'authentik_api') | list | length) == 0)
+                   or (
+                        (_ak_user.status | default(0) == 200)
+                        and (
+                             ((_ak_match | default({})) == {})
+                             or (not (_ak_write.failed | default(true)))
+                        )
+                   )
               )
             )
          else 'in-progress' }}

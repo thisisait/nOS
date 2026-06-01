@@ -193,3 +193,13 @@ def test_export_event_whitelisted_both_sides():
     wing = (REPO / "files/anatomy/wing/app/Model/EventRepository.php").read_text()
     assert '"gdpr_export_user"' in bone, "missing from Bone VALID_TYPES"
     assert "'gdpr_export_user'" in wing, "missing from Wing EventRepository::VALID_TYPES"
+
+
+def test_export_subject_strict_email_blocks_shell_metacharacters():
+    """S3 guard: the gate mandates the bare {{ export_subject }} token in any
+    container_exec command, so export_subject MUST be hardened at the assert
+    with a strict-email regex (no shell metacharacters) — the same host-RCE
+    guard the erasure sibling carries."""
+    src = EXPORT_TASK.read_text()
+    assert "regex_search('^[A-Za-z0-9._%+-]+@" in src, \
+        "export_subject must be validated against a strict-email regex (host-RCE guard)"

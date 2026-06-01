@@ -17,6 +17,13 @@ use App\Model\GdprRepository;
 
 final class GdprPresenter extends BasePresenter
 {
+    // The Art-30 register + DSAR log + breach register expose EVERY data
+    // subject's email and request history. Gate at Tier-1 (nos-providers/
+    // nos-admins) — the sibling BreachesPresenter gates the same breach data at
+    // tier 1, and DSAR-intake rows land straight into this view. Without this,
+    // $minAccessTier defaults null -> no RBAC gate -> tier-4 guests could read it.
+    protected ?int $minAccessTier = 1;
+
     protected string $activeTab = 'gdpr';
 
     public function __construct(

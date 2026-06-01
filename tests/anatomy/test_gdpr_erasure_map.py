@@ -115,3 +115,25 @@ def test_forget_event_whitelisted_both_sides():
     wing = (REPO / "files/anatomy/wing/app/Model/EventRepository.php").read_text()
     assert '"gdpr_forget_user"' in bone, "missing from Bone VALID_TYPES"
     assert "'gdpr_forget_user'" in wing, "missing from Wing EventRepository::VALID_TYPES"
+
+
+def test_forget_deletes_exact_email_match_not_first():
+    """S1 regression guard: the Authentik erasure must DELETE the exact-email
+    match, never `results | first`. The ?email= filter is contains/iexact, so
+    `first` could irreversibly delete the WRONG subject's identity anchor (a
+    fresh Art-5/Art-32 breach) then stamp the DSAR 'completed'. The read-only
+    export sibling already guards this; this pins the erasure (destructive) side."""
+    src = (REPO / "tasks" / "gdpr-forget.yml").read_text()
+    assert "selectattr('email', 'equalto', forget_subject)" in src, \
+        "erasure must select the single exact-email match (_ak_match) before delete"
+    assert "(_ak_user.json.results | first).pk" not in src, \
+        "must NOT delete `results | first` — cross-subject deletion hazard (S1)"
+
+
+def test_forget_subject_strict_email_blocks_shell_metacharacters():
+    """S2 guard: forget_subject is interpolated into a container_exec one-liner,
+    so it MUST pass a strict-email regex (no shell metacharacters) — 'a@b; rm
+    -rf / #' has to be rejected at the assert (host-RCE guard on EXECUTE)."""
+    src = (REPO / "tasks" / "gdpr-forget.yml").read_text()
+    assert "regex_search('^[A-Za-z0-9._%+-]+@" in src, \
+        "forget_subject must be validated against a strict-email regex"
