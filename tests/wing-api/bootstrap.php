@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-define('GW_ROOT', dirname(__DIR__, 2) . '/files/project-wing');
+define('GW_ROOT', dirname(__DIR__, 2) . '/files/anatomy/wing');
 
 require GW_ROOT . '/vendor/autoload.php';
 
@@ -92,11 +92,16 @@ function gw_make_temp_db(): string
 	// of our extension statements). Trim, skip empty.
 	$lines = [];
 	foreach (explode("\n", $extensions) as $line) {
-		$trim = ltrim($line);
-		if ($trim === '' || str_starts_with($trim, '--')) {
+		// Strip `-- ...` comments to EOL (inline AND full-line) BEFORE the
+		// naive `;`-split below — an inline column comment can legitimately
+		// contain a `;` (e.g. "-- soft FK gdpr_processing.id; NULL = ...") and
+		// would otherwise truncate the CREATE TABLE into "incomplete input".
+		// (No `--` appears inside a string literal in schema-extensions.sql.)
+		$code = preg_replace('/--.*$/', '', $line);
+		if (trim($code) === '') {
 			continue;
 		}
-		$lines[] = $line;
+		$lines[] = $code;
 	}
 	$cleaned = implode("\n", $lines);
 	foreach (explode(';', $cleaned) as $stmt) {

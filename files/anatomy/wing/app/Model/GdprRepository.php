@@ -211,10 +211,15 @@ final class GdprRepository
         if ($subjectEmail !== null) {
             $sel->where('subject_email', $subjectEmail);
         }
-        return array_map(
+        // array_values: iterator_to_array on a Nette Selection keeps the
+        // PRIMARY KEY as the array key (e.g. [3 => row]); array_values restores a
+        // true 0-indexed list so the @return list<...> contract holds and a JSON
+        // encode yields an array, not a pk-keyed object. (Caught by the C4
+        // behavioral test: listConsent()[0] was undefined under pk-keying.)
+        return array_values(array_map(
             fn(ActiveRow $r) => $r->toArray(),
             iterator_to_array($sel)
-        );
+        ));
     }
 
     /**
