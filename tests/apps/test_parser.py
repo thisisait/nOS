@@ -154,8 +154,11 @@ class TestGates(object):
         # sanitization (a test-code FP); exact membership of the parsed registry
         # is identical semantics and the scanner does not flag it.
         registries = [o.rsplit("(registry ", 1)[-1].rstrip(")") for o in off if "(registry " in o]
-        assert "gcr.io" in registries, "gcr.io must be flagged as a US-only registry"
-        assert "ghcr.io" not in registries, "ghcr.io is EU-neutral, never offending"
+        # EXACT equality (==), not `in`/substring — CodeQL py/incomplete-url-
+        # substring-sanitization only flags substring/startswith/endswith URL
+        # checks, so equality on the parsed registry is identical semantics + quiet.
+        assert any(r == "gcr.io" for r in registries), "gcr.io must be flagged as a US-only registry"
+        assert not any(r == "ghcr.io" for r in registries), "ghcr.io is EU-neutral, never offending"
 
     def test_eu_residency_bypassed_when_acknowledged(self):
         rec = _valid_record(
