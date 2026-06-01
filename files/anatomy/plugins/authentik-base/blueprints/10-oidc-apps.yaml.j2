@@ -47,18 +47,18 @@ entries:
    authentication_flow key emitted -> byte-identical to today's render. #}
 {%- set _tier = c.tier | default(authentik_app_tiers[c.slug] | default(3)) -%}
 {%- set _auth_flow = 'nos-tier1-mfa-flow' if ((enforce_mfa | default(false) | bool) and (_tier | int == 1)) else none -%}
-{# Batch 5 (sso-autologin-plan.md): route ONLY clients whose autologin gate
-   resolves true through the branded nos-autologin-flow. The aggregator
-   pre-renders authentik.autologin.enabled to a bool-ish string (the manifest
-   expression ends in `| bool`), so the `| bool` re-coercion here is mandatory
-   — without it the literal string "False" would be truthy. Gate-locked:
-   supports:no plugins never resolve enabled true (test_autologin_no_means_no),
-   and proxy (forward_auth/header_oidc) plugins carry no autologin block at all
-   (test_no_autologin_for_pure_proxy_services), so this is byte-identical to
-   the implicit-consent default for every client that isn't an opted-in
-   native_oidc service. See blueprint 60-autologin-flow.yaml.j2 for the flow +
-   the implicit-consent silent-skip caveat (GH #15814/#13068/#8660). #}
-{%- set _authz_flow = 'nos-autologin-flow' if (c.autologin.enabled | default(false) | bool) else 'default-provider-authorization-implicit-consent' -%}
+{# Batch 5 REVERTED (2026-06-01, live-validated failure): the custom
+   nos-autologin-flow was a broken authorization flow (built without a
+   provider-authorization stage) → Authentik rejected every bound client with
+   "Invalid grant_type for provider" / "The request is otherwise malformed",
+   breaking OIDC login for ALL autologin native_oidc services (grafana, gitlab,
+   gitea, nextcloud, HA…). Confirmed in a browser test: Jellyfin (supports:no →
+   default flow) worked, every nos-autologin-flow-bound client failed. The plan
+   flagged this exact risk (GH #15814 implicit-consent silent-skip). So we bind
+   EVERY client to the stock implicit-consent flow — service-side force-OIDC
+   (Batch 1-3 env/config) still delivers autologin; we only drop the
+   consent-screen-skip polish that was breaking authorization. #}
+{%- set _authz_flow = 'default-provider-authorization-implicit-consent' -%}
 {% if not _is_proxy %}
   # ── {{ _name }} (OAuth2 / OIDC) ──
   - model: authentik_providers_oauth2.oauth2provider
@@ -69,6 +69,15 @@ entries:
       client_type: "confidential"
       client_id: "{{ c.client_id }}"
       client_secret: "{{ c.client_secret }}"
+      # Authentik 2026.5.x made OAuth2Provider.grant_types an explicit ArrayField
+      # that defaults to EMPTY — an unset list rejects every authorize with
+      # "Invalid grant_type for provider" → "The request is otherwise malformed",
+      # breaking ALL OIDC login. (Surfaced by a fresh blank under 2026.5.2;
+      # older Authentik implied the grant.) Standard OIDC authorization-code +
+      # refresh. See live root-cause 2026-06-01.
+      grant_types:
+        - "authorization_code"
+        - "refresh_token"
       authorization_flow: !Find [authentik_flows.flow, [slug, {{ _authz_flow }}]]
 {% if _auth_flow %}      authentication_flow: !Find [authentik_flows.flow, [slug, {{ _auth_flow }}]]
 {% endif %}      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
