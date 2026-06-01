@@ -69,3 +69,23 @@ OAUTH_PROVIDERS = [
         },
     },
 ]
+
+# -----------------------------------------------------------------------------
+# SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2
+# -----------------------------------------------------------------------------
+# When sso_autologin is enabled for Superset (tier-2 chain below), skip the
+# OAuth provider-selection page and auto-redirect to the single Authentik
+# provider. Stays dormant behind sso_autologin=false default.
+#
+# VERSION-DEPENDENT (supports=partial): OAUTH_SKIP_PROVIDER_SELECTION landed
+# AFTER 6.0.0 and the exact min-version is unconfirmed. The pinned image is
+# apache/superset:6.0.0-dev — verify the running version honors this flag
+# before enabling. On an unsupporting build the flag is simply ignored (the
+# provider-selection page renders as before), so it is safe to set.
+# Break-glass: set the enable chain back to false → flag becomes False and the
+# provider-selection page returns (the local /login form is never hidden).
+{% if (sso_autologin_superset | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool %}
+OAUTH_SKIP_PROVIDER_SELECTION = True
+{% else %}
+OAUTH_SKIP_PROVIDER_SELECTION = False
+{% endif %}

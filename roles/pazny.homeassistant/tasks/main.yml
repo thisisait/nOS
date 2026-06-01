@@ -119,6 +119,14 @@
   when: install_authentik
   notify: Restart homeassistant
 
+# ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ──────────────
+# HA force-OIDC is a CONFIG HOOK (NOT env): the auth_oidc HACS plugin honours
+# `features.default_redirect: true`, which makes HA auto-redirect to Authentik
+# instead of showing the local login picker. Gated on the canonical autologin
+# enable chain (sso_autologin_homeassistant > sso_autologin_min_tier_3 >
+# sso_autologin > false), mirroring homeassistant-base/plugin.yml's
+# authentik.autologin.enabled. Stays dormant behind sso_autologin=false default;
+# break-glass escape is `?skip_oidc_redirect=true` on the HA login URL.
 - name: "[pazny.homeassistant] Inject auth_oidc block into configuration.yaml"
   ansible.builtin.blockinfile:
     path: "{{ homeassistant_config_dir }}/configuration.yaml"
@@ -132,6 +140,7 @@
         features:
           automatic_user_linking: true
           automatic_person_creation: true
+          default_redirect: {{ (sso_autologin_homeassistant | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool | string | lower }}
     create: true
   when: install_authentik
   notify: Restart homeassistant

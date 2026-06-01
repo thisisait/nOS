@@ -23,6 +23,14 @@ services:
       OIDC_ISSUER_DISCOVER: "true"
       OIDC_USER_TO_GROUPS: "true"
       OIDC_ADDITIONAL_SCOPES: "groups"
+{% if (sso_autologin_bookstack | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ──────────
+      # Dormant behind sso_autologin=false (default). When on, BookStack auto-
+      # redirects to Authentik on hitting /login and hides the local form.
+      # AUTH_METHOD=oidc is already set above. Break-glass: ?prevent_auto_init=true
+      # on the login URL returns the local form.
+      AUTH_AUTO_INITIATE: "true"
+{% endif %}
     extra_hosts:
       - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}

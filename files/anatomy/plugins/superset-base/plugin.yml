@@ -47,6 +47,25 @@ authentik:
     - email
   tier: 2
 
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ───────────
+  # Superset is a CONFIG-HOOK service: the force-OIDC flag is
+  # OAUTH_SKIP_PROVIDER_SELECTION=True, rendered into superset_config.py
+  # (roles/pazny.superset/templates/superset_config.py.j2), NOT a compose env.
+  # The role template gates the flag on the SAME enable expression below.
+  #
+  # supports=partial (VERSION-DEPENDENT): the flag landed AFTER 6.0.0 and the
+  # exact min-version is unconfirmed (research could not pin 6.0.1/6.1.0). The
+  # pinned image is apache/superset:6.0.0-dev, so support is not guaranteed —
+  # verify against the running version before enabling (see break_glass).
+  # hides_local_form=false: SKIP_PROVIDER_SELECTION only auto-picks the single
+  # OAuth provider; the local username/password form at /login still exists.
+  # Stays dormant behind sso_autologin=false default.
+  autologin:
+    supports: "partial"      # VERSION-DEPENDENT — flag landed after 6.0.0; pin is 6.0.0-dev
+    enabled: "{{ (sso_autologin_superset | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # only skips provider selection; local /login form remains
+    break_glass: "flag=False"   # set OAUTH_SKIP_PROVIDER_SELECTION back to False (or unset) → provider-selection page returns
+
 compose_extension:
   template: templates/superset-base.compose.yml.j2
   target_stack: data

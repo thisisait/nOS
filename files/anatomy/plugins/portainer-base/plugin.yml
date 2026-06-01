@@ -68,6 +68,19 @@ authentik:
     - email
     - profile
   tier: 1                                # admin only — Portainer is infra mgmt
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ───────────
+  # Portainer is HYBRID (env + API): the OIDC env wires via the live path
+  # roles/pazny.portainer/tasks/post.yml `PUT /api/settings`. Force-OIDC is the
+  # stateful API toggle `OAuthSettings.HideInternalAuth=true` folded into that
+  # SAME PUT body, conditionally, on the canonical enable chain below — NOT the
+  # draft plugin-loader post_compose runner. Stays dormant behind
+  # sso_autologin=false default; supports:yes carries the upstream truth that
+  # HideInternalAuth removes the internal username/password form.
+  autologin:
+    supports: "yes"          # upstream truth — HideInternalAuth hides the internal form
+    enabled: "{{ (sso_autologin_portainer | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # HideInternalAuth=true removes the internal-auth form
+    break_glass: "/#!/internal-auth"   # re-exposes the internal-auth view (API revert if HideInternalAuth set)
 
 # =============================================================================
 # API CALLS — sequenced harvest of roles/pazny.portainer/tasks/post.yml (272 LOC)

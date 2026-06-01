@@ -47,6 +47,18 @@ authentik:
     - email
     - profile
   tier: 4
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 (matice b) ─
+  # WordPress via openid-connect-generic: WP_OIDC_LOGIN_TYPE=auto-sso (from
+  # the default 'button') makes /wp-login.php auto-redirect to Authentik.
+  # PARTIAL: the form is NOT hidden — wp-login.php stays reachable directly
+  # (and IS the documented break-glass). Stays dormant behind
+  # sso_autologin=false default; the compose-extension gates WP_OIDC_LOGIN_TYPE
+  # on the SAME enable expression below.
+  autologin:
+    supports: "partial"      # upstream truth — auto-redirects but does NOT hide the form
+    enabled: "{{ (sso_autologin_wordpress | default(sso_autologin_min_tier_4 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # auto-sso redirects but wp-login.php remains directly reachable
+    break_glass: "/wp-login.php"   # the local form stays live; hit it directly to bypass auto-SSO
 
 compose_extension:
   template: templates/wordpress-base.compose.yml.j2

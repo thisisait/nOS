@@ -186,7 +186,19 @@
   failed_when: false
   check_mode: false
 
-# -- OIDC: set user_oidc as the default login method -------------------
+# -- SSO autologin: force user_oidc as the default login method ----------
+# sso-autologin-plan.md Batch 2 — Nextcloud auto-redirect is NOT settable via
+# a compose env var; it requires the `user_oidc` app configured as the single
+# default provider via occ (allow_multiple_user_backends=0 + login_redirect).
+# This is the live render of the plugin's authentik.autologin block; gated on
+# the SAME enable expression (precedence: svc > min_tier_3 > global > false).
+# Stays dormant behind sso_autologin=false default. The trailing `| bool` is
+# mandatory — the loose-string "false" is otherwise truthy. Break-glass to the
+# native login form: append `?direct=1` to the Nextcloud URL.
+- name: "[pazny.nextcloud Post] Resolve SSO autologin flag"
+  ansible.builtin.set_fact:
+    _nc_autologin: "{{ (sso_autologin_nextcloud | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+
 - name: "[pazny.nextcloud Post] Enable OIDC as direct login (skip Nextcloud login page)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
@@ -195,6 +207,7 @@
   when:
     - _nc_container.stdout | default('') | length > 0
     - install_authentik | default(false)
+    - _nc_autologin | bool
   changed_when: false
   failed_when: false
   check_mode: false
@@ -207,6 +220,7 @@
   when:
     - _nc_container.stdout | default('') | length > 0
     - install_authentik | default(false)
+    - _nc_autologin | bool
   changed_when: false
   failed_when: false
   check_mode: false
