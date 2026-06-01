@@ -6,107 +6,271 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.3-
 
 ---
 
-## Gov / GDPR compliance (2026-06-01) — DRAFT, pending operator tag
+## v0.4-beta (2026-06-01)
 
-> **nOS reaches gov-readiness grade.** A Czech public-administration compliance
-> audit drove a remediation batch closing the structural GDPR / NIS2 P0 controls,
-> all **default-OFF + `profiles/gov-local.yml` opt-in** (a non-gov run is
-> byte-unchanged on macOS + Linux). LIVE-validated on a `+all +gov` reconverge
-> (`failed=0`): `gdpr_consent` migrated on the real `wing.db`, 31 authored
-> purposes ingested, MFA flow live (8 Tier-1 providers), Infisical KMS self-healed.
-> Built + reviewed via multi-agent workflows; the post-batch adversarial review
-> (35 agents → 22 findings) is folded in. Draft — part of the next tag alongside v0.4-beta.
+> **Cross-platform + gov-readiness in one tag.** The playbook now provisions
+> **Ubuntu 24.04 LTS** end-to-end (macOS Apple Silicon remains the reference
+> platform; every Linux gate is macOS-byte-identical, so macOS behaviour is
+> unchanged), and a Czech public-administration audit drove a remediation batch
+> closing the structural GDPR / NIS2 P0 controls — all **default-OFF +
+> `profiles/gov-local.yml` opt-in** (a non-gov run is byte-unchanged on both OSes).
+> Plus a CVE remediation batch, observability metrics wiring, macOS idempotence,
+> and a pre-release CodeQL/security hardening pass. Built + reviewed via
+> multi-agent workflows; the post-batch adversarial review (35 agents → 22
+> findings) is folded in.
 
-### Structural P0 controls (gov-local opt-in)
-- **Enforced MFA** — `50-mfa-policy.yaml.j2` builds a dedicated `nos-tier1-mfa-flow`
-  (TOTP + WebAuthn, `not_configured_action=configure` so nobody is locked out),
-  routed to Tier-1 providers only; passkey resident-key `preferred` for first-try
-  enrollment (`enforce_mfa`).
-- **At-rest gate** — `tasks/preflight-at-rest.yml` hard-fails a gov run on
-  FileVault-off / no-LUKS before any personal-data service starts (`require_disk_encryption`).
-- **Backup encryption** — `backup.sh` AES-256-CBC/pbkdf2 client-side before upload to RustFS; `tasks/restore.yml` auto-decrypts.
-- **Tamper-evident audit log** — `App\Model\AuditChain` HMAC hash-chains every
-  `events` row at INSERT; WORM triggers block edits/unguarded deletes;
-  `verify-audit-chain.php` + a daily Pulse verify + the Wing header badge (`wing_audit_chain_enabled`).
-- **Breach-notification engine** — `BreachDeadlines` (Art-33/34 + NIS2/NÚKIB
-  countdowns), `bin/breach-{file,scan,report}.php`, hourly Pulse scan, Tier-1 `/breaches` view, `docs/incident-response-plan.md`.
-
-### GDPR data-subject rights
-- **Art-30 records** — all 31 boilerplate plugin purposes authored (CI gate now
-  requires an author-provided purpose for `end_users`-PII services); Controller/DPO block in the DPA register.
-- **Art-17 erasure** — honest DSAR terminal status (`record-dsar.php --update`:
-  `received` → `completed` only when zero manual/failed steps remain); erasure-map
-  reach for backend stores (Redis/Qdrant/RustFS/wing.db/Loki/Tempo); **exact-email
-  match** before the Authentik delete (no cross-subject erasure).
-- **Art-15 right-of-access export** — `tasks/gdpr-export.yml` (opt-in
-  `[gdpr-export,never]`, dry-run-first, `-e export_confirm=true`), audited
-  `state/gdpr-export-map.yml`, single-exact-email Authentik auto-capture, `0700/0600` bundle.
-- **Art-7 consent registry** — `gdpr_consent` ledger (grant→withdraw) +
-  `bin/record-consent.php`; decoupled from SSO (the `gate_sso_required==consent`
-  proxy is named via a never-called `consent_capture_satisfied` predicate).
-
-### Baseline-claim corrections
-- The audit's three doc-vs-code falsehoods are resolved in code: encrypted-backup
-  claim now true, Bone embeddings redaction implemented, the non-existent
-  `audit_retention` role claim corrected. `docs/compliance/gov-readiness-audit-2026q2.md` carries a reconciled 2026-06-01 scorecard.
-
-### Still open (next gov milestone)
-- ISDS (datové schránky) + NIA/eIDAS federation — greenfield, need external
-  endpoints. Retention enforcement is declared metadata, not yet enforced across application stores.
-
----
-
-## v0.4-beta (2026-05-31) — DRAFT, pending operator tag
-
-> **nOS goes cross-platform.** The playbook now provisions **Ubuntu 24.04 LTS**
-> end-to-end, validated by a standing `Integration (ubuntu-24.04)` CI wet-test
-> that runs the *full* playbook on a GitHub Linux runner and is **green**. macOS
-> (Apple Silicon) remains the reference platform — every gate added here is
-> macOS-byte-identical (it resolves true on a Mac), so macOS behaviour is
-> unchanged. 18 commits on `feat/linux-port`. Draft notes — the `dev → master`
-> PR + `v0.4-beta` tag are the operator's to cut (admin bypass; outward-facing).
-
-### Cross-platform (Linux) — the headline
+### Cross-platform (Linux)
 
 - **Platform seam.** `tasks/_platform.yml` resolves `nos_pkg_manager`
-  (homebrew|apt|dnf), `nos_service_manager` (launchd|systemd-user),
-  `nos_nginx_*` paths and `nos_docker_bin` per OS; every Homebrew install, brew
-  shell-out, `launchctl`/`osascript`/`defaults`/`pmset` call and macOS
-  system-settings task is now gated on `nos_pkg_manager == 'homebrew'` /
-  `ansible_os_family == 'Darwin'`. The Linux equivalents are the `pazny.linux.*`
-  roles (apt / docker / nginx / hardening) + `pazny.linux.systemd_user`.
+  (homebrew|apt|dnf), `nos_service_manager` (launchd|systemd-user), `nos_nginx_*`
+  paths and `nos_docker_bin` per OS; every Homebrew install, brew shell-out,
+  `launchctl`/`osascript`/`defaults`/`pmset` call and macOS system-settings task
+  is gated on `nos_pkg_manager == 'homebrew'` / `ansible_os_family == 'Darwin'`.
+  Gates resolve true on a Mac — macOS behaviour is byte-identical.
 - **Host daemons on Linux.** Bone, Pulse, the backup orchestrator and the
-  heartbeat render `systemd --user` units (`ensure_unit`, `loginctl
-  enable-linger`) instead of launchd; Wing runs the FrankenPHP single binary
-  from `~/.local/bin` (downloaded on Linux, brew on macOS) with composer driven
-  via `frankenphp php-cli`. Bone/Pulse venvs build from the system `python3`
-  (`tasks/python.yml` apt-installs `python3-venv`).
+  heartbeat render `systemd --user` units (`pazny.linux.systemd_user::ensure_unit`,
+  `loginctl enable-linger`) instead of launchd; a Persistent= timer's
+  bound-oneshot failure during provisioning is tolerated (the timer's service
+  may not be ready when the timer starts). Bone/Pulse venvs build from the system
+  `python3` (`tasks/python.yml` apt-installs `python3-venv`).
+- **Wing on Linux.** Wing runs the FrankenPHP single binary downloaded to
+  `~/.local/bin` (brew on macOS), composer driven via `frankenphp php-cli`;
+  `~/.local` is forced operator-owned before the download so prior become/pip
+  steps can't leave it root-owned and break the unprivileged fetch. The
+  FrankenPHP static-binary download + systemd-user wiring still carry
+  `NEEDS-VM-VALIDATION` markers (`roles/pazny.wing/tasks/main.yml`) — exercised in
+  CI's minimal config but not yet full-runtime-validated on a real Ubuntu 24.04 VM.
 - **TLS + proxy.** mkcert installs via apt on Linux (CAROOT is platform-aware);
   `templates/nginx/nginx.conf` is portable (epoll/`user www-data`/`/var`+`/run`
-  paths on Linux, kqueue/homebrew paths on macOS); host-nginx config-deploy +
-  reload/restart handlers gained a systemd path. Per-service host-nginx vhosts
+  on Linux, kqueue/homebrew/`user _www` on macOS). Per-service host-nginx vhosts
   stay macOS-only — **Traefik is the edge proxy on Linux**.
-- **Docker.** `docker_bin` rebinds to `/usr/bin/docker`; a final readiness probe
-  (`nos_docker_ready`) gates the whole compose layer, so a Docker-less host (e.g.
-  a GitHub macOS runner) skips the stacks gracefully instead of erroring. The
-  ubuntu wet-test brings up real containers (mailpit + watchtower) through the
-  shared health-wait.
+- **Docker.** `docker_bin` rebinds to `/usr/bin/docker`; a final `docker info`
+  readiness probe (`nos_docker_ready`) gates the whole compose layer so a
+  Docker-less host (e.g. a GitHub macOS runner that dropped Docker Desktop) skips
+  the stacks gracefully instead of erroring; the compose-`ps` display tolerates a
+  missing compose file on runners that never brought stacks up.
+- **CI wet-test.** A standing `Integration (ubuntu-24.04)` job runs
+  `ansible-playbook main.yml` once on a GitHub Linux runner against the minimal
+  `tests/config.yml` (`install_traefik: false`, most services off — it exercises
+  the base playbook, not the Docker stacks). The job has **no idempotence
+  second-run** (unlike the macOS `Integration` matrix); it was iterated toward
+  green when first added, with a chain of `fix(linux)` / `fix(ci)` commits closing
+  the initial gaps (systemd timer-start tolerance, missing-compose-file `ps`,
+  `~/.local` ownership, docker-readiness gating, macOS `python3` + ubuntu
+  `/run/sshd` env gaps). Windows/WSL deferred.
+
+### Gov / GDPR compliance
+
+Four structural P0 controls + the data-subject-rights surface, all **default-OFF**,
+opt-in via `profiles/gov-local.yml` (Tailscale off, FreePBX pinned off,
+`enforce_mfa` / `require_disk_encryption` / `wing_audit_chain_enabled`). Flag-off
+renders byte-identical. LIVE-validated on a `+all +gov` reconverge (`failed=0`):
+`gdpr_consent` migrated on the real `wing.db` (ledger + CLI only — capture is
+unwired, see Residual gaps) and the 31 previously auto-generated boilerplate
+purposes ingested as authored purposes.
+
+**Structural P0 controls:**
+
+- **Enforced MFA + at-rest gate.** Dedicated `nos-tier1-mfa-flow` (TOTP +
+  WebAuthn, `not_configured_action=configure` for inline self-enrol, passkey
+  resident-key `preferred` — relaxed from `required` to cut enrollment friction
+  from ~3 tries to first-try). The blueprint routes **every** Tier-1 provider
+  (`authentik.tier == 1`) through this flow when `enforce_mfa=true` — currently
+  the **9** Tier-1 OIDC/proxy providers (`portainer`, `infisical`, `grafana`,
+  `spacetimedb`, `wing`, `influxdb`, `mailpit`, `openclaw`, `qdrant`). At-rest:
+  `tasks/preflight-at-rest.yml` hard-fails on FileVault-off (macOS) / no-LUKS
+  (Linux) before any personal-data service starts (`require_disk_encryption`). A
+  post-validation fix (commit 76906f13) drops a brittle bootstrap trap — the
+  original `50-mfa-policy` blueprint was atomically rejected over a
+  `policybinding.target` referencing a non-existent `nos-enrollment-prompts` stage
+  + an invalid `default-password-change-prompt`; the policy bindings are dropped
+  (policy object retained for future manual/UI binding) and blueprint apply
+  reordered so `50-mfa-policy` lands **before** `10-oidc-apps`, so Tier-1 provider
+  `authentication_flow` resolves `nos-tier1-mfa-flow` on first apply. The
+  `nos-password-policy` object (length-15 + zxcvbn) is created but **not**
+  blueprint-bound to enrollment/password-change prompts for the same brittleness
+  reason.
+- **Backup encryption.** `backup.sh` AES-256-CBC/pbkdf2 stream filter client-side
+  before `aws s3 cp` to RustFS (`resolve_openssl` locates the binary to survive
+  the launchd PATH constraint + macOS LibreSSL compat gaps); `.enc` objects
+  auto-decrypt on restore via matching passphrase in `tasks/restore.yml` (legacy
+  plaintext restores unchanged; fails loud on passphrase mismatch).
+- **Tamper-evident audit chain.** HMAC-SHA256 per-event hash-chain (Bone Python +
+  Wing PHP writers, byte-parity proven by CI); WORM triggers block edits on signed
+  rows; daily Pulse verify with cached verdict in the Wing header badge
+  (off-by-default, `wing_audit_chain_enabled`). An `audit_chain_meta` singleton
+  (k/v) anchors the cached verdict + purge boundary; `AuditChainRepository` caches
+  so each render is one SELECT, not a full chain walk; `backfill-event-chain.php`
+  (anchored in `wing post.yml`) records the OFF→ON toggle boundary. Verifier
+  detects offline tampering segment-aware (legacy-compatible).
+- **Breach-notification engine.** `BreachDeadlines` pure-math (Art-33 72h, NIS2
+  24h/72h/1-month clamp, timezone-normalized); hourly Pulse scan (registered by
+  the new `gdpr-breach-base` plugin, owner of the scheduled job) escalates overdue
+  stages as CRITICAL notifications (dedup'd via deterministic UUID);
+  `bin/breach-{file,scan,report}.php` CLIs + read-only Tier-1 `/breaches` view;
+  operator runbook in `docs/incident-response-plan.md`; provably inert (empty
+  register → no-op).
+
+**GDPR data-subject rights:**
+
+- **Art-7 consent registry.** `gdpr_consent` ledger (grant→withdraw) +
+  `bin/record-consent.php`, decoupled from SSO naming (the `gate_sso_required`
+  proxy is named via a never-called `consent_capture_satisfied` predicate). The
+  ledger and CLI exist and were migrated; **consent capture is not wired into any
+  onboarding flow** — all 3 seeded activities ship `capture_wired:false`. Ledger ≠
+  operational consent enforcement (documented gap).
+- **Art-15 right-of-access export.** `tasks/gdpr-export.yml` (opt-in
+  `[gdpr-export,never]`, dry-run-first, `-e export_confirm=true`), audited
+  `state/gdpr-export-map.yml`, single-exact-email Authentik auto-capture,
+  `0700/0600` bundle. Strict RFC-5322 email-regex validation blocks
+  shell-metacharacters in the one-liner (host-RCE guard).
+- **Art-17 erasure.** Honest DSAR terminal status — `record-dsar.php --update`
+  records `completed` only when zero manual/failed steps remain (the `--update`
+  path was a no-op bug, now fixed: commits 3b9504b7, 39c74180). Erasure-map reach
+  documented for backend stores (Redis/Qdrant/RustFS/wing.db/Loki/Tempo) + 22
+  per-service deletes; a new Qdrant delete seam (commits ff032d53, 9f3716bd);
+  **exact-email** Authentik match guards against cross-subject erasure; strict
+  email-regex validation on the erasure one-liner (host-RCE guard); status-enum
+  validation prevents invalid transitions being written. A CI erasure-coverage
+  gate (commit 8d214817) requires every gdpr plugin to carry an Art-17 entry,
+  closing the silent-green new-service loophole.
+- **Art-30 records.** The 31 plugin `gdpr` blocks that previously shipped
+  auto-generated boilerplate purposes now carry author-provided purposes
+  (`purpose_generated` 31→0); the CI gate `test_gdpr_register_coverage.py`
+  requires an author-provided purpose for every `end_users`-PII service (33 such
+  services across the 65 plugin records, each with an authored purpose).
+  Controller/DPO block (Art-30(1)(a)) added to the DPA register (commit 35119192)
+  but **ships placeholder-unset** (operator must fill it).
+- **Access control.** `GdprPresenter` is gated `minAccessTier=1` — tier-4 guests
+  can no longer view all subjects' PII in `/gdpr`.
+
+**Baseline-claim corrections.** Three doc-vs-code falsehoods resolved in code:
+encrypted-backup claim now true (commit 877da0e7), Bone embeddings redaction
+implemented, the non-existent `audit_retention` role claim corrected to describe
+the real manual-only `tasks/audit-retention.yml`. `docs/compliance/gov-readiness-audit-2026q2.md`
+carries a reconciled 2026-06-01 scorecard that supersedes the original audit
+snapshot.
+
+**Residual gaps (honest).** The code is present but key controls remain
+inert/manual in the deployed config: retention enforcement is metadata-only (no
+scheduled per-`retention_days` purge beyond `wing.db` events); consent capture is
+unwired (never-called predicate); erasure automation depth is 3/29 (26 remain
+manual); DSAR bundles are unencrypted on disk; at-rest is a host-disk gate, not
+per-service TDE/KMS; Czech ISDS (datové schránky) + NIA/eIDAS federation is
+greenfield (needs external endpoints). Per the reconciliation, the platform moved
+from "four structural §32/§21 absences" to "those present + opt-in; enforcement +
+Czech-integration still absent."
+
+### Security & CVE remediation
+
+- **Bone embeddings email redaction.** `redaction.py` strips RFC-5322 email
+  addresses from upsert payloads before Qdrant (recursive dict/list walk; scope is
+  addresses only — non-email PII passes through); default-on,
+  `BONE_EMBED_REDACT=false` disables; 5 unit tests pin behaviour.
+- **CVE batch (7 commits, `origin/master..HEAD`).** n8n 2.14.1→2.20.7 (RCE trio
+  CVE-2026-44789/90/91 + vm2/convict/handlebars, REM-086); Tempo 2.10.0→2.10.3
+  (S3 `encryption_key` exposure via `/status/config`, CVE-2026-28377, REM-036);
+  ntfy v2.21.0→v2.22.0 (CVE-2026-39087, REM-087); FreeScout pinned
+  `php8.3-1.17.159` (bundles 1.8.219; CVE-2026-32752/35584/39384 — CRITICAL
+  broken-access-control / missing auth / authorization bypass, REM-069/070/071);
+  `symfony/yaml` 7.4.10→7.4.13 (3 low alerts — Billion Laughs ReDoS,
+  untrusted-input; composer.lock only).
+- **Version-pin unshadow (commit cdfe43e4).** n8n / Tempo / FreeScout pins synced
+  from role defaults to `default.config.yml` (vars_file outranks role defaults —
+  the pins were dead on render).
+- **REM verifications.** socket-proxy (REM-001) resolved by architecture —
+  Portainer already routes through `docker-socket-proxy` (verified, commit
+  2b8fb950); pyodide (REM-054) pinned in Open WebUI, marked resolved (it's
+  browser-sandboxed, not server-side jupyter).
+- **dnsmasq token leak (commit 935b1eb4).** Jinja template fix (string literal vs
+  concatenation) stops the `dnsmasq_dev_domain` token leaking into the
+  `systems.description` API + a Grafana table.
+- **Trivy rescan** of 61 images conducted (585 CRITICAL / 5002 HIGH fixable,
+  overwhelmingly stale base-image OS packages).
+
+### Observability
+
+- **cAdvisor + Gitea + Woodpecker metrics.** cAdvisor now stores per-container
+  labels (`--store_container_labels=true`) for per-container CPU/memory metrics;
+  Gitea (`GITEA__metrics__ENABLED` + bearer `GITEA__metrics__TOKEN`) and Woodpecker
+  (`woodpecker_prom_token`) metrics endpoints enabled and scraped by Alloy with
+  bearer-token auth (new scrape jobs).
+- **MTTR recording rule.** `woodpecker_pipeline_mttr_seconds` derives mean time to
+  recovery from failed pipeline-run durations (`03-apps.yml`).
+- **Dashboard PromQL fixes** across 4 dashboards: `gitea_repos` →
+  `gitea_repositories`, corrected Woodpecker MTTR query, broadened
+  `container_cpu` regex patterns, BookStack/Firefly/ERPNext metric-name prefixes.
+- **No new Loki panels** — the gitea-push / outline-edit / hedgedoc-ops log panels
+  reuse the **existing** `loki.source.docker` logs. Business-metrics exporters
+  (sql_exporter for Outline/BookStack/Firefly/ERPNext/RBAC, nextcloud_exporter,
+  per-user login label) deferred pending new observability infrastructure.
 
 ### macOS — idempotence
 
-- The macOS `Integration` job runs the playbook twice and asserts `changed=0`.
-  Long-standing non-idempotent tasks are fixed: install/PECL/dotnet/service-start
-  `changed_when` now key off real state, dnsmasq restart is notify-driven,
-  `~/.zshrc` no longer `touch`-bumps, `service-registry.json` dropped its volatile
-  timestamp, and **`wing_api_token` is now a persisted secret** (it regenerated
-  every run, churning the agents' bearer + the Pulse launchd plist). nos_state
-  runtime-refresh tasks are marked non-idempotency-relevant.
+- **Idempotence fixes across macOS tasks.** PECL extensions detect by `.so` file
+  existence (immune to registry emptiness on the macOS runner — iterated `pecl
+  info` → `pecl list | grep` → `.so` check); `dotnet tool install` checks
+  stdout+stderr for "already installed"; nginx/PHP-FPM/backup probe `launchctl`
+  state first so service-start reports changed only on a real load; dnsmasq
+  restart is notify-driven. `~/.zshrc` uses `copy force:false` instead of `touch`.
+  Docker login-item addition now gates on `/Applications/Docker.app` existing (no
+  phantom re-add on Docker-less Macs).
+- **Stateless secrets persisted for idempotence.** `wing_api_token` regenerated
+  every run, re-rendering Pulse's launchd plist → churning agents' bearer; now
+  persisted in `~/.nos/secrets.yml` alongside `authentik_secret_key`. Four more
+  service tokens (`vaultwarden_admin_token`, `paperclip_auth_secret`,
+  `outline_utils_secret`, `hedgedoc_session_secret`) moved from regen-every-run to
+  persisted. Stateless (rotatable session/auth tokens, not data-encrypting); one
+  one-time churn on first run after upgrade, `changed=0` thereafter.
+- **Volatile timestamps eliminated.** `service-registry.json`, the Grafana
+  dashboard, `hub-cards.json`, and `notification-routing.json` dropped per-run
+  `generated_at` / `ansible_date_time.iso8601` footers (no consumer reads them;
+  dropping them makes renders idempotent). Wing launchd bootstrap (`changed_when`
+  now keys on `bootstrapped` in stdout, not unconditional true), heartbeat, and
+  coexistence cutover/cleanup/provision nginx-reload handlers corrected to gate
+  `changed_when` on actual module changes.
+- **nos_state refresh tasks** (introspect/persist/state-report/upgrade-engine)
+  marked `changed_when: false` — they stamp a fresh `generated_at` but represent
+  runtime housekeeping, not config drift.
 
-### Deferred (post-v0.4)
+### Pre-release hardening
 
-- OpenClaw (Ollama/CUDA on Linux), Hermes, the host-nginx per-service vhost
+- **CodeQL alert clears.** ReDoS guards on the email regex (`_EMAIL_RE` bounded to
+  RFC limits — dot-free labels + explicit separators; `py/redos` cleared, commits
+  1059a079 / 19192c39); url-substring assertion converted to exact list membership
+  in `test_parser`; path-containment hardening (realpath + is_relative_to) on
+  patches/upgrades; `index.html` tab allowlist clamped (commit 317ae077).
+- **Portainer fail-closed.** admin-init gate reverted from fail-open (`!=204`) to a
+  fail-closed allowlist `[404, 303]` (commit 530d8b3a); retry loop (6×5s) on
+  health-check flakes; container restart on cold-blank window timeout (commit
+  bec68f3b).
+- **Probe fixes.** FreeScout verify adds the trusted-host `Host` header (commit
+  b980014b); all service HTTP probes stop following redirects
+  (`follow_redirects: none` — 3xx/SSL mismatches no longer burn retries, commit
+  e3f928bf, fixes GitLab and others).
+- **E2E tester identity.** Tester email domain now derived from `TENANT_DOMAIN`,
+  not `NOS_HOST` (fixes Authentik 400 on IP domains, commit f4fd5573); SEC-6 edge
+  token added to the playwright browser context (commit 6d462f85).
+- **Contracts regenerated.** `wing.db-schema.sql` + `wing.openapi.yml` synced for
+  drift (`gdpr_consent` table/indexes + `/api/v1/audit/verify` route, commit
+  b8ee023a).
+- **Doc hygiene.** Closed-bug docblocks trimmed (genealogy dropped, present-tense
+  invariants kept); "until C5 lands" headers retired (C5 shipped 2026-05-12);
+  CLAUDE.md / TLDR / main.yml / framework-docs freshness pass.
+
+### Deferred / still-open
+
+- **Gov:** Czech ISDS (datové schránky) + NIA/eIDAS federation greenfield;
+  retention enforcement metadata-only; consent capture unwired; erasure automation
+  3/29; DSAR bundles unencrypted on disk; at-rest is host-disk gate not
+  per-service TDE/KMS.
+- **Linux:** ubuntu CI Integration runs once (no idempotence second-run); Wing
+  FrankenPHP path carries `NEEDS-VM-VALIDATION` markers (CI-exercised, not
+  full-VM-validated); OpenClaw (Ollama/CUDA), Hermes, host-nginx per-service vhost
   templates on Linux (Traefik covers routing), and fleet provisioning
-  (p2p/server-client/mesh) remain macOS-only / greenfield.
+  (p2p/server-client/mesh) remain macOS-only / greenfield. Windows/WSL deferred.
+- **Observability:** business-metrics exporters (sql_exporter, nextcloud_exporter,
+  per-user login label) pending new observability infrastructure.
 
 ---
 
