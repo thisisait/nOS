@@ -71,6 +71,19 @@ authentik:
     - profile
     - email
   tier: 3   # user — household-facing UI
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ───────────
+  # HA force-OIDC is a CONFIG HOOK, not env: the auth_oidc HACS plugin
+  # (christiaangoossens/hass-oidc-auth) honours `features.default_redirect:
+  # true` in configuration.yaml → HA auto-redirects to Authentik instead of
+  # showing the local login picker. Rendered by roles/pazny.homeassistant
+  # tasks/main.yml (configuration.yaml blockinfile), gated on the SAME enable
+  # expression below. Stays dormant behind sso_autologin=false default.
+  # Caveat: depends on the auth_oidc HACS plugin being present (install_authentik).
+  autologin:
+    supports: "yes"          # upstream truth — default_redirect skips the local picker
+    enabled: "{{ (sso_autologin_homeassistant | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # default_redirect bypasses the local login picker
+    break_glass: "?skip_oidc_redirect=true"   # documented escape → local login picker
 
 # =============================================================================
 # COMPOSE-EXTENSION

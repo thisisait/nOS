@@ -35,7 +35,17 @@ services:
       WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
       WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/end-session/"
       WP_OIDC_SCOPE: "openid profile email"
+{% if (sso_autologin_wordpress | default(sso_autologin_min_tier_4 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ──────────
+      # Dormant behind sso_autologin=false (default). When on, login_type
+      # 'auto-sso' makes openid-connect-generic auto-redirect /wp-login.php to
+      # Authentik. PARTIAL: the form is NOT hidden — /wp-login.php stays
+      # directly reachable and IS the break-glass. Overrides the 'button'
+      # default below (single WP_OIDC_LOGIN_TYPE key — no duplicate mapping).
+      WP_OIDC_LOGIN_TYPE: "auto-sso"
+{% else %}
       WP_OIDC_LOGIN_TYPE: "{{ wordpress_oidc_login_type | default('button') }}"
+{% endif %}
       WP_OIDC_IDENTITY_KEY: "preferred_username"
     extra_hosts:
       # Authentik OIDC endpoint resolves via host-gateway to the host's

@@ -214,6 +214,14 @@
         OAuthAutoCreateUsers: true
         DefaultTeamID: 0
         SSO: true
+        # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ─────────
+        # Portainer is HYBRID: the OIDC env wires via this same PUT, and
+        # HideInternalAuth=true is the stateful API toggle that hides the
+        # internal username/password form so the OAuth button is the only path.
+        # Dormant behind sso_autologin=false default; resolves via the canonical
+        # enable chain (svc > min_tier_1 > global > false), | bool coerced.
+        # Break-glass: /#!/internal-auth re-exposes the internal-auth view.
+        HideInternalAuth: "{{ (sso_autologin_portainer | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool }}"
     status_code: [200]
     timeout: 10
   register: _portainer_oauth_put

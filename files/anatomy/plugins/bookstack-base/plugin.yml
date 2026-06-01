@@ -42,6 +42,17 @@ authentik:
     - profile
     - groups
   tier: 3
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 (clean win) ──
+  # BookStack clean win (conf 0.92): env-only force-OIDC. AUTH_METHOD=oidc is
+  # already set above; AUTH_AUTO_INITIATE=true makes BookStack auto-redirect to
+  # Authentik and hide the local login form. Stays dormant behind
+  # sso_autologin=false default; the compose-extension {% if %} gates on the
+  # SAME enable expression below. Break-glass: ?prevent_auto_init=true → form.
+  autologin:
+    supports: "yes"          # upstream truth — AUTH_AUTO_INITIATE hides form + auto-redirects
+    enabled: "{{ (sso_autologin_bookstack | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: true   # AUTH_AUTO_INITIATE removes the local form
+    break_glass: "?prevent_auto_init=true"   # → login form (skips the auto-initiate)
 
 compose_extension:
   template: templates/bookstack-base.compose.yml.j2

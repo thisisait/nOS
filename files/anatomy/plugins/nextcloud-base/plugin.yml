@@ -56,6 +56,20 @@ authentik:
     - profile
     - email
   tier: 3   # user — files, contacts, calendar for end users
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ───────────
+  # Nextcloud supports auto-redirect, but NOT via a compose env var — it needs
+  # the `user_oidc` app configured as the single default provider via `occ`
+  # (allow_multiple_user_backends=0 + login_redirect=<provider>). The occ hook
+  # in roles/pazny.nextcloud/tasks/post.yml carries the render; it gates on the
+  # SAME enable expression below (config-hook service, NOT compose env). Stays
+  # dormant behind sso_autologin=false default.
+  autologin:
+    supports: "yes"          # upstream truth — occ makes OIDC the default login (302)
+    enabled: "{{ (sso_autologin_nextcloud | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # local form stays reachable via ?direct=1
+    break_glass: "?direct=1" # → Nextcloud's own login form (always reachable)
+    # CAVEAT: occ hook REQUIRED — a compose env var alone is insufficient for
+    # Nextcloud auto-redirect; user_oidc default-provider config lives in the DB.
 
 # =============================================================================
 # COMPOSE-EXTENSION
