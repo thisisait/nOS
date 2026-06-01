@@ -21,11 +21,13 @@ import re
 from typing import Any
 
 # RFC-5322-lite — good enough to catch operator/user emails in free text such
-# as agent prompt context or advisory summaries.
-# Domain labels are dot-FREE char classes joined by explicit `\.` separators
-# (not one `[...\.]+` class containing a dot) so there is no quantifier overlap
-# to backtrack on — linear-time, no ReDoS (py/redos) on adversarial free text.
-_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}")
+# as agent prompt context or advisory summaries. Every quantifier is BOUNDED to
+# its RFC limit (local <=64, label <=63, <=10 sub-labels, TLD <=24) and domain
+# labels are dot-free classes joined by explicit `\.` — bounded repetition has
+# no unbounded backtracking, so there is no ReDoS (py/redos) on adversarial input.
+_EMAIL_RE = re.compile(
+    r"[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9\-]{1,63}(?:\.[A-Za-z0-9\-]{1,63}){0,10}\.[A-Za-z]{2,24}"
+)
 _PLACEHOLDER = "[redacted-email]"
 
 
