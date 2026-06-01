@@ -60,6 +60,22 @@ authentik:
   enabled: "{{ install_paperclip | default(false) }}"
   launch_url: "https://{{ paperclip_domain }}"
   tier: 2
+  # ── Autologin verdict (forward_auth) — sso-autologin-plan.md §forward_auth ──
+  # NOT an `autologin` block: forward_auth gates the route, not identity, and an
+  # autologin field would trip test_no_autologin_for_pure_proxy_services.
+  _nos_autologin_verdict:
+    supports: "no"                # forward_auth never carries autologin (gate-locked)
+    second_login: "session (better-auth account in Paperclip's own user store)"
+    elimination: header-provision-patch  # needs upstream/fork app code (honest)
+    detail: |
+      Paperclip authenticates with better-auth against its own user records.
+      The Traefik authentik@file gate fronts the route, but better-auth has no
+      trusted-header adapter wired to map the forwarded X-Authentik-Username
+      onto a Paperclip user. Clean elimination = a better-auth genericOAuth /
+      trusted-header adapter in Paperclip's app code (the manifest already
+      states "no native OIDC support"). That is upstream/fork work, not a
+      config toggle (see docs/upstream-pr-opportunities.md). Left honestly as a
+      header-provision patch; no fake adapter is shipped.
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)

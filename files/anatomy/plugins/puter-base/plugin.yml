@@ -60,6 +60,23 @@ authentik:
   enabled: "{{ install_puter | default(false) }}"
   launch_url: "https://{{ puter_domain }}"
   tier: 3
+  # ── Autologin verdict (forward_auth) — sso-autologin-plan.md §forward_auth ──
+  # NOT an `autologin` block: forward_auth gates the route, not identity, and an
+  # autologin field would trip test_no_autologin_for_pure_proxy_services.
+  _nos_autologin_verdict:
+    supports: "no"                # forward_auth never carries autologin (gate-locked)
+    second_login: "Puter user directory (own signup/login + per-user home dir)"
+    elimination: needs-upstream # NOT cleanly config-doable today (honest)
+    detail: |
+      Puter is a multi-user cloud-OS with its own account store and per-user
+      home directories — Authentik's forward-auth gate lets the operator reach
+      puter.<tld>, but Puter still renders its own login and has no
+      trusted-proxy / REMOTE_USER mode to auto-provision from the X-Authentik-*
+      headers Traefik forwards. Clean elimination needs an Authentik OIDC plugin
+      written against Puter's TS plugin architecture (or extending its OAuth
+      plugin to read an OIDC discovery URL) — upstream app code, not a config
+      toggle (see docs/upstream-pr-opportunities.md). Left honestly as
+      needs-upstream; no fake header-provision shim is shipped.
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)

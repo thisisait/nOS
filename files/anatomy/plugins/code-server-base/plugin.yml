@@ -60,6 +60,27 @@ authentik:
   enabled: "{{ install_code_server | default(false) }}"
   launch_url: "https://{{ code_server_domain }}"
   tier: 2
+  # ── Autologin verdict (forward_auth) — sso-autologin-plan.md §forward_auth ──
+  # NOT an `autologin` block by design: forward_auth services gate the ROUTE
+  # (WHO), not service identity (WHAT). An `autologin` field here would trip
+  # test_no_autologin_for_pure_proxy_services (anti-pattern double-protection).
+  # This sentinel records the honest second-login elimination verdict instead.
+  _nos_autologin_verdict:
+    supports: "no"                # forward_auth never carries autologin (gate-locked)
+    second_login: "password (HASHED_PASSWORD prompt rendered by the LSIO image)"
+    elimination: needs-sidecar  # NOT cleanly config-doable today (honest)
+    detail: |
+      code-server.<tld> sits behind the Traefik authentik@file middleware, so
+      Authentik already gates the route — but the LinuxServer.io image then
+      renders its OWN password login (PASSWORD/HASHED_PASSWORD). Coder OSS
+      upstream can run `--auth none` (relying purely on the proxy gate) or an
+      external `--auth oauth-proxy` mode, but the LSIO image strips both: it
+      hard-wires the password gate and exposes no REMOTE_USER / trusted-proxy
+      env to consume the X-Authentik-* headers Traefik already forwards.
+      Clean elimination needs EITHER an oauth2-proxy sidecar in front of the
+      container OR an upstream LSIO build-arg PR forwarding Coder's --auth
+      flags (see docs/upstream-pr-opportunities.md). No fake config toggle
+      exists — left honestly as needs-sidecar.
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)

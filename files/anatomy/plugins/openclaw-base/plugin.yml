@@ -64,6 +64,24 @@ authentik:
   enabled: "{{ install_openclaw | default(false) }}"
   launch_url: "https://{{ openclaw_domain }}"
   tier: 1   # admin tier — operator's personal AI infra
+  # ── Autologin verdict (forward_auth) — sso-autologin-plan.md §forward_auth ──
+  # NOT an `autologin` block: forward_auth gates the route, not identity, and an
+  # autologin field would trip test_no_autologin_for_pure_proxy_services.
+  _nos_autologin_verdict:
+    supports: "no"                # forward_auth never carries autologin (gate-locked)
+    second_login: "gateway token (launchd-managed OpenClaw Node.js gateway)"
+    elimination: header-provision-patch  # needs own-code patch (honest)
+    detail: |
+      OpenClaw is the operator's host-side LLM gateway (launchd daemon). The
+      Traefik authentik@file gate fronts claw.<tld>, but the gateway itself
+      authenticates callers with a static gateway token and has no path to
+      consume the X-Authentik-* headers Traefik forwards. Since OpenClaw is
+      nOS's own code (roles/pazny.openclaw + upstream github.com/pazny-develop),
+      the clean fix is a header-provision patch: teach the gateway to trust the
+      forward-auth headers and auto-provision the session (or inject the token
+      from the authenticated header). Tier-1 admin-only surface, so it is low
+      urgency; not shipped here to avoid a half-baked auth change to the
+      gateway — left honestly as a header-provision patch for OpenClaw.
 
 # =============================================================================
 # GDPR — Article 30 register row

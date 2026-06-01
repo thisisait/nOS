@@ -70,6 +70,29 @@ authentik:
   internal_host: "http://woodpecker-server:8000"
   cookie_domain: ".{{ tenant_domain }}"
   tier: 2                         # manager — `nos-managers` group + above
+  # ── Autologin verdict (forward_auth) — sso-autologin-plan.md §forward_auth ──
+  # NOT an `autologin` block: forward_auth gates the route, not identity, and
+  # an autologin field would trip test_no_autologin_for_pure_proxy_services.
+  # The login chain already terminates at Authentik TRANSITIVELY (Woodpecker
+  # logs in via Gitea OAuth2; Gitea is native_oidc with "Sign in with
+  # Authentik"), so there is no PASSWORD second-login — but the user still
+  # clicks through the intermediate Gitea OAuth consent page.
+  _nos_autologin_verdict:
+    supports: "no"                  # forward_auth never carries autologin (gate-locked)
+    second_login: "Gitea OAuth2 consent (transitively Authentik via Gitea native-OIDC)"
+    elimination: needs-upstream   # NOT cleanly config-doable today (honest)
+    detail: |
+      Woodpecker server has NO generic-OIDC and NO trusted-proxy / REMOTE_USER
+      mode — its only auth backends are forge OAuth (Gitea/GitHub/GitLab/
+      Bitbucket/Forgejo). There is no WOODPECKER_OIDC_* env to point straight
+      at Authentik, and no header-auth env to consume the X-Authentik-* headers
+      Traefik forwards. So the documented "WOODPECKER_OIDC_* as primary"
+      elimination path does NOT exist in upstream today (verified against the
+      Woodpecker v3 env reference). Eliminating the intermediate Gitea consent
+      click requires EITHER upstream adding a generic-OIDC backend OR a
+      header-auth/trusted-proxy mode (see docs/upstream-pr-opportunities.md).
+      The current chain is correct-by-design and already Authentik-rooted; the
+      residual friction is one Gitea OAuth consent, not a separate password.
 
 # =============================================================================
 # VESSEL — Gitea OAuth2 client (today set up by hand via debug message)
