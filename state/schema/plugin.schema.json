@@ -93,7 +93,36 @@
         "provider_type": {"type": "string", "enum": ["native_oidc", "header_oidc", "oauth2", "proxy", "forward_auth"], "description": "Schema-canonical alias of mode. `oauth2` ≡ `native_oidc`, `proxy` ≡ `forward_auth` for back-compat with central authentik_oidc_apps shape."},
         "scopes":        {"type": "array", "items": {"type": "string"}},
         "redirect_uris": {"type": "array", "items": {"type": "string"}},
-        "launch_url":    {"type": "string"}
+        "launch_url":    {"type": "string"},
+        "autologin": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "SSO autologin (force-OIDC / auto-redirect) contract — sso-autologin-plan.md Batch 0. LEGAL ONLY for mode: native_oidc (pinned by tests/anatomy/test_autologin_only_for_native_oidc_services.py). `supports` carries the upstream truth (yes|partial|no) from research; a `supports: no` service must NEVER resolve `enabled` to true (hard gate test_autologin_no_means_no.py).",
+          "required": ["supports"],
+          "properties": {
+            "supports": {
+              "type": "string",
+              "enum": ["yes", "partial", "no"],
+              "description": "Upstream force-OIDC capability (research truth, not aspiration). yes: form can be hidden / auto-redirect available. partial: form-hide or redirect needs care / proxy layer. no: upstream cannot force/auto — button stays, enabled gate-locked to false."
+            },
+            "enabled": {
+              "type": "string",
+              "description": "Jinja bool expression with precedence sso_autologin_<svc> > sso_autologin_min_tier_<N> > sso_autologin > false, terminated by `| bool`. The `| bool` is MANDATORY: the loader's _deep_render returns strings and \"false\" is truthy without it."
+            },
+            "hides_local_form": {
+              "type": "boolean",
+              "description": "Informational: does enabling autologin remove the service's local login form?"
+            },
+            "break_glass": {
+              "type": "string",
+              "description": "Documented per-service escape (query param, e.g. ?disableAutoLogin=true, or env-unset+recreate note). See docs/break-glass-runbook.md."
+            },
+            "local_login_fallback": {
+              "type": "string",
+              "description": "Jinja bool expression gating the local-login fallback env (break-glass), rendered into compose env when on."
+            }
+          }
+        }
       },
       "anyOf": [
         {"required": ["client_id", "client_secret", "tier"]}
