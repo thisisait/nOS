@@ -53,6 +53,13 @@ if ($updateId !== null && $updateId > 0) {
         fwrite(STDERR, "Usage: php bin/record-dsar.php --update=<id> --status=<received|in-progress|completed|rejected> [--notes=...]\n");
         exit(1);
     }
+    // S7: enum-validate the transition status (intake already validates request_type) —
+    // 'completed' auto-stamps completed_at, so a typo'd status must not write verbatim.
+    $validStatuses = ['received', 'in-progress', 'completed', 'rejected'];
+    if (!in_array($updateStatus, $validStatuses, true)) {
+        fwrite(STDERR, "status must be one of: " . implode(', ', $validStatuses) . "\n");
+        exit(2);
+    }
     try {
         $container = App\Bootstrap\Booting::boot()->createContainer();
         /** @var App\Model\GdprRepository $repo */
