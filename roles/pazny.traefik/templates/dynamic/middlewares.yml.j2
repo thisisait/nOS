@@ -65,6 +65,24 @@ http:
         customRequestHeaders:
           X-Wing-Edge-Token: "{{ wing_edge_token | default('') }}"
 
+{% if (sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
+    # ── SSO autologin force-OIDC: Miniflux /login → OIDC ──────────────────
+    # sso-autologin-plan.md Batch 3 (partial). DISABLE_LOCAL_AUTH=1 (set in
+    # miniflux-base.compose.yml.j2 on the SAME gate) hides the form but does
+    # NOT auto-redirect — Miniflux renders only the "Sign in with OIDC" link.
+    # This middleware supplies the missing auto-redirect: GET /login (the
+    # form page) → /oauth2/oidc/redirect (Miniflux's canonical OAuth2-start
+    # path `GET /oauth2/{provider}/redirect`, provider=oidc), which 302s on
+    # to Authentik. Applied to the miniflux router in services.yml.j2 — ONLY
+    # when this same gate is on; when OFF the middleware is absent and the
+    # route is untouched. Break-glass: unset DISABLE_LOCAL_AUTH + recreate.
+    miniflux-autologin:
+      redirectRegex:
+        regex: "^https?://([^/]+)/login/?(\\?.*)?$"
+        replacement: "https://${1}/oauth2/oidc/redirect"
+        permanent: false
+{% endif %}
+
   # ── Servers transports ────────────────────────────────────────────────
   serversTransports:
     # Skip cert verify for upstream HTTPS — used when reaching Authentik,

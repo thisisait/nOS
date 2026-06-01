@@ -23,6 +23,16 @@ services:
       OAUTH2_OIDC_DISCOVERY_ENDPOINT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/miniflux/"
       OAUTH2_OIDC_PROVIDER_NAME: "Authentik"
       OAUTH2_USER_CREATION: "1"
+{% if (sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC), sso-autologin-plan.md Batch 3 ──────────
+      # DISABLE_LOCAL_AUTH=1 hides the username/password form and blocks
+      # POST /login (upstream #2220). It does NOT auto-redirect on its own —
+      # the Traefik redirect middleware (roles/pazny.traefik) sends
+      # GET /login → /oauth2/oidc/redirect. Both gate on the SAME expression,
+      # dormant behind sso_autologin=false. Break-glass: unset this var +
+      # recreate (the form is env-hidden, no runtime UI escape).
+      DISABLE_LOCAL_AUTH: "1"
+{% endif %}
     extra_hosts:
       - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
 {% endif %}

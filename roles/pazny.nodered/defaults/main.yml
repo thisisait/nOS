@@ -33,3 +33,21 @@ nodered_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 nodered_native_oidc_enabled: "{{ install_authentik | default(false) }}"
 nodered_passport_openidconnect_version: "0.1.2"   # latest stable (npm 2024-11)
 nodered_oidc_username_claim: "preferred_username" # Authentik default sub mode
+
+# ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (b) ────────────
+# When autologin resolves true, settings.js sets `autoLogin: true` on the
+# passport-openidconnect strategy → Node-RED initiates the OIDC flow on load
+# instead of showing the button. supports: partial — this is a redirect, the
+# local form is NOT hard-hidden. Break-glass: a LOCAL ADMIN fallback user kept
+# in adminAuth.users so an operator can still sign in if Authentik is down.
+# Default expression mirrors the plugin's authentik.autologin.enabled (tier 2).
+# Dormant behind sso_autologin=false (global default). Trailing `| bool` is
+# mandatory — these vars arrive as strings via the loader/play-var chain.
+nodered_autologin_enabled: "{{ (sso_autologin_nodered | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
+# Local admin fallback (break-glass). Username + bcrypt-hashed password live
+# in adminAuth.users so SSO-down never locks the operator out. Password is
+# derived from the global prefix; override per-host in credentials.yml if
+# desired. Only consulted when OIDC autoLogin is on (otherwise the editor's
+# normal adminAuth path applies).
+nodered_local_admin_username: "admin"
+nodered_local_admin_password: "{{ global_password_prefix | default('changeme') }}_nodered_admin"

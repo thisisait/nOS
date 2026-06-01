@@ -55,6 +55,23 @@ authentik:
     - profile
     - email
   tier: 3   # user — collaborative wiki for end users
+  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matice b) ─
+  # Outline auto-redirects to OIDC by the ABSENCE of OIDC_DISABLE_REDIRECT —
+  # there is no positive "force" env. So the mechanism is inverted vs the
+  # Batch-1/2 services: autologin ON → DO NOT emit OIDC_DISABLE_REDIRECT
+  # (upstream default = redirect straight to Authentik); autologin OFF → the
+  # compose-extension emits OIDC_DISABLE_REDIRECT=true so the local login page
+  # (with the "Continue with Authentik" button) stays the entry point.
+  # PARTIAL: absence-of-env gives auto-redirect, but Outline cannot suppress
+  # the post-logout return to its own login screen without a proxy/source mod —
+  # a true forced-only redirect (no path back to a form) is not env-reachable.
+  # Stays dormant behind sso_autologin=false; the compose-extension gates the
+  # OIDC_DISABLE_REDIRECT emission on the SAME enable expression below.
+  autologin:
+    supports: "partial"      # upstream truth — absence-of-env auto-redirects; no env-only forced-only mode
+    enabled: "{{ (sso_autologin_outline | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+    hides_local_form: false  # auto-redirect only; Outline's login screen remains reachable (no env to hide it)
+    break_glass: "set OIDC_DISABLE_REDIRECT=true + recreate"  # re-add the env (no live UI param) → login page returns
 
 # =============================================================================
 # COMPOSE-EXTENSION — secondary docker-compose override (OIDC env + mkcert CA)

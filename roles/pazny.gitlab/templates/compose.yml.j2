@@ -46,6 +46,19 @@ services:
         gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
         gitlab_rails['omniauth_block_auto_created_users'] = false
         gitlab_rails['omniauth_providers'] = [{ name: 'openid_connect', label: 'Authentik', args: { name: 'openid_connect', scope: ['openid', 'profile', 'email'], response_type: 'code', issuer: 'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitlab/', client_auth_method: 'query', discovery: true, uid_field: 'preferred_username', gitlab: { groups_attribute: 'groups', admin_groups: ['{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}'] }, client_options: { identifier: 'nos-gitlab', secret: '{{ global_password_prefix }}_pw_oidc_gitlab', redirect_uri: 'https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback' } } }]
+{% if (sso_autologin_gitlab | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool %}
+        # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 ──────
+        # supports: partial. disable_password_authentication_for_web RELIABLY
+        # hides the username/password form (OIDC button only). The auto-sign-in
+        # key is best-effort: NOT unambiguously confirmed in official GitLab
+        # OIDC Omnibus docs — it may or may not auto-redirect depending on
+        # version, hence PARTIAL. Both gate on the autologin enable expression
+        # (mirrors plugin.yml authentik.autologin.enabled). Dormant behind
+        # sso_autologin=false (default). Break-glass: ?auto_sign_in=false
+        # reaches /users/sign_in ONLY while disable_pw below is not in effect.
+        gitlab_rails['omniauth_auto_sign_in_with_provider'] = 'openid_connect'
+        gitlab_rails['disable_password_authentication_for_web'] = true
+{% endif %}
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:80/-/readiness || exit 1"]

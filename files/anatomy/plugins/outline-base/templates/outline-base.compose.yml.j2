@@ -35,6 +35,19 @@ services:
       OIDC_USERNAME_CLAIM: "preferred_username"
       OIDC_DISPLAY_NAME: "Authentik"
       OIDC_SCOPES: "openid profile email"
+{% if not (sso_autologin_outline | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
+      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matice b) ─
+      # INVERTED mechanism: Outline auto-redirects to OIDC by the ABSENCE of
+      # OIDC_DISABLE_REDIRECT — there is no positive force env. Autologin is
+      # therefore wired as the absence of this key. When autologin is OFF
+      # (default, sso_autologin=false), we EMIT OIDC_DISABLE_REDIRECT=true so the
+      # local login screen (with the "Continue with Authentik" button) stays the
+      # entry point. When autologin is ON, this whole block is skipped → no env →
+      # Outline redirects straight to Authentik. PARTIAL: auto-redirect only; the
+      # login screen is not hidden and a true forced-only mode needs a proxy mod.
+      # Break-glass = set OIDC_DISABLE_REDIRECT=true + recreate (no live UI param).
+      OIDC_DISABLE_REDIRECT: "true"
+{% endif %}
 {% if tenant_domain_is_local | default(true) | bool %}
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
