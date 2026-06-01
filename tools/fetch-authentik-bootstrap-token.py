@@ -274,11 +274,8 @@ def main() -> int:
         return 0
 
     status = _write_secret(args.output, token)
-    # Log status + length only — never the value, and NOT in a `<name>=...`
-    # shape (the redacted `***` was already safe, but the token=*** name pattern
-    # tripped CodeQL's clear-text-logging name heuristic; this phrasing avoids it).
     print(f"[fetch-bootstrap-token] {args.output}: {status} "
-          f"(token redacted, {len(token)} chars written)", file=sys.stderr)
+          f"({TOKEN_KEY_NAME}=*** (len={len(token)}))", file=sys.stderr)
     return 0
 
 
