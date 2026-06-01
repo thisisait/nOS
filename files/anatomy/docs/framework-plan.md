@@ -29,10 +29,10 @@ nOS/
 │   │   └── event.schema.json                   [agent 3]
 │   └── README.md
 │
-├── migrations/                                 [agent 1]
+├── migrations/                                 [agent 1]   # relocated to files/anatomy/migrations/ in anatomy A1 (2026-05-03)
 │   ├── README.md
 │   ├── _template.yml
-│   └── 2026-04-22-devboxnos-to-nos.yml         # retroactive, idempotent
+│   └── <ISO-date>-<slug>.yml                    # (none committed today; _template.yml + README.md only — the rebrand one-shot was applied + deleted)
 │
 ├── upgrades/                                   [agent 6]
 │   ├── README.md

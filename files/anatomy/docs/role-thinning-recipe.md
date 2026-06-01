@@ -1,7 +1,8 @@
 # Role-thinning recipe — deterministic 6-step process
 
-> **Status:** v0.1, derived from Grafana A6.5 PoC inventory 2026-05-03.
-> Subject to revision after the first 2-3 Q-batches reveal real patterns.
+> **Status:** v0.2 (2026-05-04) — derived from the Grafana A6.5 PoC inventory
+> (2026-05-03); the Pitfalls catalog (P1-P5) below captures the patterns the
+> first Q-batches revealed. See the versioning table at the foot of this doc.
 >
 > **Audience:** any agent (human or claude) running a Track Q batch.
 > Doctrine source: `docs/bones-and-wings-refactor.md` §1.1.

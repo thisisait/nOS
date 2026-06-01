@@ -67,7 +67,7 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 - **Pulse** (`files/anatomy/pulse/`) — Pulse daemon, the host-side scheduled-job runner.
 - **Veins** (carriers) — Bone↔Wing HTTP, callback telemetry, plugin-loader hook channels.
 - **Tendons** (cross-service wiring) — what each plugin's `lifecycle:` block declares (renders, dashboard provisioning, post-API setup).
-- **Nerves** *(TBD)* — agentic feedback loops: A8 conductor → Pulse jobs → A10 audit trail.
+- **Nerves** — agentic feedback loops: A8 conductor → Pulse jobs → audit lineage. Components are live (A8 conductor agent, A14 AgentKit runtime, `actor_action_id` audit lineage); the scheduled *closed-loop* conductor (auto-run on a cadence) is still queued.
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
