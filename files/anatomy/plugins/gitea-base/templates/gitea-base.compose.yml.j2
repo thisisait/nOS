@@ -19,34 +19,29 @@ services:
   gitea:
     environment:
       _NOS_PLUGIN: "gitea-base"
+      # Force basic auth ON (UNCONDITIONAL, independent of autologin): the
+      # playbook's Gitea Admin API autowire (post.yml + post-repo.yml) sends
+      # `Authorization: Basic <admin:pass>`. Gitea PERSISTS env-set keys into
+      # app.ini and does NOT reset a key when its env var is later removed — so a
+      # stale ENABLE_BASIC_AUTHENTICATION=false (from a pre-fix render) survives
+      # every recreate and 401s the autowire. Setting it true EXPLICITLY forces
+      # gitea to rewrite that app.ini line. Web password form is hidden
+      # separately by the autologin block below; the API/git Basic path is
+      # loopback :3003 and unaffected.
+      GITEA__service__ENABLE_BASIC_AUTHENTICATION: "true"
 {% if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool %}
       # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matrix b) ─
-      # Dormant behind sso_autologin=false (default). When on, Gitea HIDES the
-      # local username/password sign-in form, leaving only the "Sign in with
-      # Authentik" OAuth2 button. NOTE: Gitea has NO auto-redirect — the user
-      # still clicks the button (supports: yes for form-hide, no for redirect).
+      # When on, Gitea HIDES the local username/password sign-in form, leaving
+      # only the "Sign in with Authentik" OAuth2 button (no auto-redirect —
+      # supports: yes for form-hide, no for redirect). Basic auth for the API
+      # stays ON (above), so the autowire is unaffected.
       #
-      # CRITICAL (plan caveat): the Authentik-backed admin MUST already exist
-      # before the form is locked. The admin is API-provisioned by the
-      # gitea_admin_api post_setup hook (lifecycle.post_compose →
-      # hooks/post_compose.yml) which runs AFTER this render but the local admin
-      # bootstrap (gitea admin user create) runs on the same converge — operators
-      # MUST confirm the admin exists before flipping sso_autologin on, else the
-      # only login path is OIDC and a broken Authentik = lockout.
+      # CRITICAL (plan caveat): the OIDC-backed admin MUST exist before the form
+      # is locked (the gitea_admin_api post_setup provisions it on converge) —
+      # else the only login path is OIDC and a broken Authentik = lockout.
       #
-      # BREAK-GLASS (no live UI param — form is env-hidden): re-enable the form
-      # by setting sso_autologin_gitea=false (or sso_autologin=false) and
-      # re-converging (`ansible-playbook main.yml --tags gitea` recreates the
-      # container). Documented in docs/break-glass-runbook.md as env-unset +
-      # recreate (NOT a ?param escape).
-      #
-      # SCOPE: only ENABLE_PASSWORD_SIGNIN_FORM (the WEB form). We deliberately
-      # do NOT set ENABLE_BASIC_AUTHENTICATION=false — Gitea HTTP Basic Auth is
-      # the auth method the playbook's own Admin API automation uses
-      # (roles/pazny.gitea/tasks/post.yml + post-repo.yml send
-      # `Authorization: Basic <admin:pass>`). Disabling it 401s the autowire
-      # (repo mirror create) and aborts the run. Basic auth on loopback :3003 is
-      # the API/git path, not the browser SSO path — hiding the web form alone
-      # achieves force-OIDC for users.
+      # BREAK-GLASS (no live UI param — form is env-hidden): set
+      # sso_autologin_gitea=false (or sso_autologin=false) + re-converge
+      # (`--tags gitea` recreates). See docs/break-glass-runbook.md.
       GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "false"
 {% endif %}
