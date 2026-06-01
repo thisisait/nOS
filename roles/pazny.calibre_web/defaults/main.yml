@@ -22,3 +22,25 @@ calibreweb_timezone: "Europe/Prague"
 
 calibreweb_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 calibreweb_cpus: "{{ docker_cpus_light | default('0.5') }}"
+
+# ── SSO forward_auth header-provision (Batch 6, sso-autologin-plan.md §forward_auth) ──
+# Calibre-Web has NO native OIDC (upstream req #2965 rejected) but DOES have a
+# real "Allow Reverse Proxy Authentication" feature: it trusts a configured
+# header carrying the username and logs that user in without its own form.
+# Traefik's authentik@file middleware (the forward-auth gate already on the
+# calibre-web router) forwards `X-authentik-username` to the backend — so once
+# the Authentik gate has authenticated the user, Calibre-Web can use the same
+# header to skip its second login.
+#
+# Stored in app.db `settings` (single row): config_allow_reverse_proxy_header_login
+# (Boolean) + config_reverse_proxy_login_header_name (String). No env var exists
+# in the linuxserver image — provisioned by tasks/post.yml via the same in-container
+# SQLite path the admin-password reset uses.
+#
+# DORMANT by default: resolves to the global sso_autologin (false). NOT an
+# authentik.autologin block (forward_auth services are forbidden one by the
+# test_no_autologin_for_pure_proxy_services gate) — a plain service-side toggle.
+# Reversible: a re-run with the gate OFF flips config_allow_reverse_proxy_header_login
+# back to 0.
+calibreweb_proxy_auth_enabled: "{{ (sso_autologin_calibreweb | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
+calibreweb_proxy_auth_header: X-authentik-username

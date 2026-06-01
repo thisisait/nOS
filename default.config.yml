@@ -404,6 +404,29 @@ sso_autologin_timeout_ms: 5000             # preloader / redirect fallback timeo
 # sso_autologin_min_tier_1: true           # enable for all Tier-1 (admin) native_oidc services that support it
 # sso_autologin_gitea: "{{ sso_autologin | default(false) }}"
 # sso_autologin_n8n: false                 # upstream CANNOT force-OIDC (supports:no, gate-locked anyway)
+#
+# ── forward_auth header-provision (Batch 6) ───────────────────────────────────
+# A handful of forward_auth services have a REAL "trust a proxy header" login
+# mode (NOT native OIDC) — the Authentik gate alone can log the user in,
+# eliminating the service's own second login. These are NOT autologin-block
+# services (gate test_no_autologin_for_pure_proxy_services forbids that); they
+# are wired by a service-side config toggle, gated on this same precedence chain.
+#
+# calibre-web: upstream "Allow Reverse Proxy Authentication" (config DB columns
+# config_allow_reverse_proxy_header_login + config_reverse_proxy_login_header_name).
+# When on, Calibre-Web trusts X-authentik-username (forwarded by Traefik's
+# authentik@file middleware) and logs the user straight in — no username/password
+# form. DORMANT by default (resolves false). Reversible: a re-run with the gate
+# OFF flips the DB column back to 0.
+#   CAVEAT (honest, documented): Calibre-Web's reverse-proxy login matches the
+#   forwarded username against an EXISTING Calibre-Web user. The provisioned
+#   admin user is `admin`; if the Authentik principal's username differs and has
+#   no Calibre-Web account, header login silently no-ops and the user still sees
+#   the login form. Auto-provisioning new users from the header is NOT supported
+#   upstream (req #2965 was rejected) — so this cleanly eliminates the second
+#   login only for users whose Authentik username matches a Calibre-Web account.
+# sso_autologin_calibreweb: "{{ sso_autologin | default(false) }}"
+# calibreweb_proxy_auth_header: X-authentik-username   # trusted header (Traefik authentik@file forwards this)
 
 # ── Network / access ──────────────────────────────────────────────────────────
 install_tailscale: true           # Tailscale – WireGuard mesh VPN (remote access to all services)

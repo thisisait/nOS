@@ -20,6 +20,7 @@ gaps and the high-signal metadata, and deliberately left the rest.
 | `lifecycle.{pre_render,pre_compose,post_compose,post_blank}` | loader hook runner | Renders, dir setup, health waits, API replays, blank cleanup. |
 | `compose_extension` | loader `render_compose_extension` | OIDC env / mkcert CA / extra_hosts injected into the stack override. Only services that *need* injection declare it — **not universal**. |
 | `authentik` | `authentik-base` aggregator → blueprint | Registers an OIDC client / proxy provider. Only services with a login surface (native_oidc / forward_auth / header_oidc). |
+| `authentik.autologin` | aggregator → `10-oidc-apps.yaml.j2` flow switch + compose-extension force-OIDC env | Force-OIDC / auto-redirect for **native_oidc only** (gate `test_autologin_only_for_native_oidc_services`). Dormant behind `sso_autologin: false`. `supports: no` can never resolve `enabled: true` (gate `test_autologin_no_means_no`). |
 | `notification` | `wing-base` aggregator → routing sidecar → Bone fallback | Severity→channel routing. **Canonical shape only** (see below). |
 | `pulse` | `pulse-base` aggregator | Registers scheduled jobs. |
 | `observability` | `_plugin_stack` reads `loki.labels.stack`; DAG edge on `scrape` | `metrics`/`dashboard` are **metadata** today (no aggregator). Stack label is optional — unresolved stack just means "never stack-filtered out". |
@@ -75,5 +76,43 @@ normalized to the canonical shape on 2026-05-23.
 - **observability → unchanged (38/55).** `metrics`/`dashboard` have no aggregator
   today; backfill is pure metadata. Deferred until the prometheus-base scrape
   harvest ships (post-Q1), at which point it becomes a real wiring backfill.
+
+## Autologin coverage (SSO autologin, β — `sso-autologin-plan.md`)
+
+The `authentik.autologin` block is a **native_oidc-only** contract. It is the
+single global mechanism (one `sso_autologin` var + per-plugin `{% if %}` blocks)
+that flips a `native_oidc` service to force-OIDC / auto-redirect so a user with a
+live Authentik session lands inside the service without seeing a login form.
+Everything stays dormant behind `sso_autologin: false` (safe default).
+
+**forward_auth / header_oidc services carry NO autologin block — by design.**
+They gate the **route** (WHO), not the service **identity** (WHAT); stacking a
+force-OIDC block would be double-protection (double-login UX, zero security
+gain). The gate `test_no_autologin_for_pure_proxy_services` enforces this. The
+honest per-service second-login elimination verdict for the forward_auth set is
+recorded in a `_nos_autologin_verdict` sentinel inside each plugin's `authentik`
+block (a documentation key, NOT an `autologin` block — distinct from the
+gate-watched `autologin` key):
+
+| forward_auth service | second login | elimination | status |
+|----------------------|--------------|-------------|--------|
+| **wing** | — (reads X-Authentik-* in `BasePresenter::startup()`) | done | ✅ passthrough_clean in practice |
+| kiwix, ntfy, onlyoffice, qdrant, spacetimedb, mailpit | — (stateless) | done | ✅ passthrough_clean |
+| **code-server** | password (LSIO `HASHED_PASSWORD`) | needs-sidecar | oauth2-proxy sidecar OR upstream LSIO build-arg PR (Coder `--auth` flags stripped by the image) |
+| **woodpecker** | Gitea OAuth2 consent (transitively Authentik) | needs-upstream | already Authentik-rooted via Gitea native-OIDC; no `WOODPECKER_OIDC_*` / trusted-proxy env exists upstream to drop the intermediate consent click |
+| **paperclip** | better-auth session | header-provision-patch | better-auth trusted-header / genericOAuth adapter (fork/upstream app code) |
+| **openclaw** | gateway token | header-provision-patch | teach the nOS-owned gateway to trust forward-auth headers (own code) |
+| **puter** | Puter user dir | needs-upstream | Authentik OIDC plugin against Puter's TS plugin architecture |
+| **calibre-web** | username/password | header-provision-patch | (owned by separate work) |
+| **influxdb (OSS)** | local user DB | needs-upstream | OIDC is Enterprise-gated |
+| **metabase (OSS)** | Metabase user dir | needs-upstream | OIDC is Pro/Enterprise-gated |
+| **uptime-kuma** | local Kuma account | needs-upstream | await v2 stable OIDC |
+| **snappymail** | IMAP/SMTP (Stalwart) | no (by-design) | webmail identity is IMAP-determined; SSO for IMAP does not exist |
+
+None of the five quick-win candidates (code-server, woodpecker, paperclip,
+openclaw, puter) turned out to be cleanly config-doable today without faking — so
+none ship a config change; each is documented honestly via its sentinel +
+`docs/upstream-pr-opportunities.md`. The upstream-blocked trio (influxdb,
+metabase, uptime-kuma) and the by-design snappymail are tracked the same way.
 
 Re-measure anytime: `python3 tools/plugin-wiring-report.py [--gaps] [--strict]`.

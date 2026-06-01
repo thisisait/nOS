@@ -81,3 +81,61 @@
   ansible.builtin.debug:
     msg: >-
       Calibre-Web admin pw: {{ 'updated' if ('UPDATED' in (_cw_pw_update.stdout | default(''))) else 'skipped (best-effort)' }}
+
+# ── SSO forward_auth header-provision (Batch 6, sso-autologin-plan.md §forward_auth) ──
+# Calibre-Web has a real upstream "Allow Reverse Proxy Authentication" feature.
+# It is NOT native OIDC and carries NO authentik.autologin block (forward_auth
+# services are forbidden one by the test_no_autologin_for_pure_proxy_services
+# gate). Instead it trusts a configured header carrying the username and logs
+# that user in without rendering its own login form. The calibre-web router
+# already sits behind Traefik's authentik@file forward-auth middleware, which
+# forwards `X-authentik-username` (roles/pazny.traefik dynamic middlewares) —
+# so once Authentik has authenticated the user the SAME header skips the second
+# login.
+#
+# Stored in app.db `settings` (single row) — no env var exists in the linuxserver
+# image, so we set the two columns via the same in-container SQLite path the
+# admin-password reset uses above:
+#   config_allow_reverse_proxy_header_login  (Boolean)  → 1 when on, 0 when off
+#   config_reverse_proxy_login_header_name   (String)   → the trusted header name
+#
+# DORMANT by default: calibreweb_proxy_auth_enabled resolves to the global
+# sso_autologin (false on a blank run). Fully reversible — the OFF branch flips
+# the boolean back to 0, so a re-run with sso_autologin=false (or
+# sso_autologin_calibreweb=false) restores the username/password form. The
+# setting is cached in Calibre-Web's memory at load; a re-render with --tags
+# calibreweb recreates the container so the new DB value takes effect (same
+# recreate semantics the plan documents for env-driven autologin).
+#
+# HONEST CAVEAT (documented in default.config.yml + role defaults): Calibre-Web
+# matches the forwarded username against an EXISTING Calibre-Web user. The
+# provisioned admin user is `admin`; an Authentik principal whose username has
+# no Calibre-Web account is silently NOT logged in (no auto-provision — upstream
+# req #2965 rejected) and still sees the form. This cleanly eliminates the
+# second login only for users whose Authentik username matches a Calibre-Web
+# account.
+- name: "[pazny.calibre_web Post] Reverse-proxy header auth (forward_auth header-provision)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T calibre-web python3 -c "
+    import sqlite3
+    db = sqlite3.connect('/config/app.db')
+    enabled = {{ 1 if (calibreweb_proxy_auth_enabled | default(false) | bool) else 0 }}
+    header = '{{ calibreweb_proxy_auth_header | default('X-authentik-username') }}'
+    db.execute('UPDATE settings SET config_allow_reverse_proxy_header_login=?, config_reverse_proxy_login_header_name=?', (enabled, header))
+    db.commit()
+    db.close()
+    print('PROXYAUTH=' + ('on' if enabled else 'off'))
+    "
+  register: _cw_proxyauth
+  when: _cw_ready.status | default(0) in [200, 302]
+  changed_when: "'PROXYAUTH=' in (_cw_proxyauth.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Reverse-proxy header auth status"
+  ansible.builtin.debug:
+    msg: >-
+      Calibre-Web reverse-proxy header auth:
+      {{ 'ENABLED (trusts ' + (calibreweb_proxy_auth_header | default('X-authentik-username')) + ')'
+         if (calibreweb_proxy_auth_enabled | default(false) | bool)
+         else 'disabled (username/password form; SSO autologin dormant)' }}

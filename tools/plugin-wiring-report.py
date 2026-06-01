@@ -54,6 +54,7 @@ def known_toggles() -> set[str]:
 
 
 def capabilities(m: dict) -> dict[str, bool]:
+    auth = m.get("authentik") or {}
     return {
         "O": bool(m.get("observability")),
         "U": bool(m.get("ui-extension")),
@@ -61,6 +62,11 @@ def capabilities(m: dict) -> dict[str, bool]:
         "C": bool(m.get("compose_extension")),
         "A": bool(m.get("authentik")),
         "B": "post_blank" in (m.get("lifecycle") or {}),
+        # L = autologin block present (native_oidc force-OIDC contract). Pure
+        # proxy (forward_auth/header_oidc) services carry NO autologin block by
+        # design — their second-login elimination verdict lives in the
+        # `_nos_autologin_verdict` documentation sentinel instead.
+        "L": bool(auth.get("autologin")),
     }
 
 
@@ -119,13 +125,14 @@ def main(argv: list[str]) -> int:
     n = len(rows)
     labels = [("O", "observability"), ("U", "ui-extension"),
               ("N", "notification"), ("C", "compose_ext"),
-              ("A", "authentik"), ("B", "post_blank")]
+              ("A", "authentik"), ("B", "post_blank"),
+              ("L", "autologin")]
 
     if not args.gaps:
         print(f"=== Plugin wiring report — {len(plugins)} plugins "
               f"({n} service) ===\n")
-        print(f"{'plugin':26s} O U N C A B   gate")
-        print("-" * 56)
+        print(f"{'plugin':26s} O U N C A B L   gate")
+        print("-" * 58)
         for name, caps in rows:
             req = next(p.manifest.get("requires") or {}
                        for p in services if p.name == name)
@@ -133,7 +140,7 @@ def main(argv: list[str]) -> int:
                                                if req.get("app") else "—")
             mark = " ".join(("X" if caps[k] else ".") for k, _ in labels)
             print(f"{name:26s} {mark}   {gate}")
-        print("-" * 56)
+        print("-" * 58)
 
     print("\n=== Capability coverage ===")
     for k, lbl in labels:
