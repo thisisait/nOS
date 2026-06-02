@@ -51,13 +51,25 @@ services:
       REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
       REDIS_PORT: "6379"
 {% if install_authentik | default(false) %}
-      # ── Authentik SSO (remote_user_guard via nginx auth_request) ─────────
-      # Firefly reads REMOTE_USER and REMOTE_EMAIL headers set by nginx after a
-      # successful Authentik proxy-outpost authentication. Auto-creates user
-      # on first login.
+      # ── Authentik SSO (remote_user_guard via forward-auth) ───────────────
+      # Firefly auto-creates the user on first login from the forwarded identity
+      # header. The header NAME depends on the edge proxy:
+      #   - Traefik (DEFAULT, install_nginx:false): the authentik@file forward-auth
+      #     middleware passes the outpost's X-authentik-username / X-authentik-email
+      #     THROUGH AS-IS → PHP sees $_SERVER['HTTP_X_AUTHENTIK_USERNAME' / ...EMAIL].
+      #   - host nginx (install_nginx:true): the authentik-proxy-auth snippet RENAMES
+      #     them to REMOTE_USER / REMOTE_EMAIL.
+      # The pre-Traefik default (REMOTE_USER) 500'd under Traefik — "guard header
+      # unexpectedly empty" (RemoteUserGuard.php:77) — because nothing renamed the
+      # header on the Traefik path (live-surfaced by the browser sweep 2026-06-02).
       AUTHENTICATION_GUARD: "remote_user_guard"
+{% if install_nginx | default(false) %}
       AUTHENTICATION_GUARD_HEADER: "REMOTE_USER"
       AUTHENTICATION_GUARD_EMAIL: "REMOTE_EMAIL"
+{% else %}
+      AUTHENTICATION_GUARD_HEADER: "HTTP_X_AUTHENTIK_USERNAME"
+      AUTHENTICATION_GUARD_EMAIL: "HTTP_X_AUTHENTIK_EMAIL"
+{% endif %}
 {% endif %}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────
