@@ -250,22 +250,21 @@ entries:
       invalid_response_action: retry
       policy_engine_mode: any
 
-  # ── 8. Policy binding — assign-target-groups on the user_write STAGE BINDING ──
-  # A raw stage (authentik_stages_user_write.userwritestage) is NOT a
-  # PolicyBindingModel, so a policybinding whose target was the stage itself
-  # atomically rejected the whole blueprint ("does not exist" pk) — the second
-  # half of the live status='error'. The order-30 FlowStageBinding (which wires
-  # user_write into nos-enrollment) IS a PolicyBindingModel, so bind there: the
-  # expression policy evaluates around that binding and side-effects the group
-  # assignment (the policy body is idempotent and returns True regardless, so it
-  # never gates the stage). re_evaluate so a flow retry doesn't skip the bind.
-  - model: authentik_policies.policybinding
-    state: present
-    identifiers:
-      target: !Find [authentik_flows.flowstagebinding, [target, !Find [authentik_flows.flow, [slug, nos-enrollment]]], [order, 30]]
-      order: 10
-    attrs:
-      policy: !Find [authentik_policies_expression.expressionpolicy, [name, nos-assign-target-groups]]
-      enabled: true
-      negate: false
-      timeout: 30
+  # ── 8. Policy binding — DROPPED (Authentik FlowStageBinding MTI pk↔pbm quirk) ──
+  # We want the nos-assign-target-groups expression policy bound to the order-30
+  # user_write FlowStageBinding (assigns invitation target_groups at user mint).
+  # But this binding is NOT blueprint-idempotent: PolicyBinding.target FKs to a
+  # PolicyBindingModel (pbm_uuid), while a FlowStageBinding's own pk differs from
+  # its pbm_uuid. The importer resolves !Find/!KeyOf to the FlowStageBinding *pk*
+  # for the find-lookup (no match), then serializes to the *pbm_uuid* on create →
+  # every re-apply re-creates → "policy, target, order must make a unique set" →
+  # the WHOLE blueprint stays status='error' (live 2026-06-02). There is no
+  # blueprint-level way to supply the pbm_uuid, so — exactly as 50-mfa dropped its
+  # brittle prompt-stage policybinding — we DROP this entry to let the flow
+  # converge. The expression policy object (entry 5) is kept for a manual UI bind.
+  #
+  # CONSEQUENCE: a FRESH blank does not auto-assign invitation target_groups —
+  # invited users land in create_users_group (nos-users) only; the operator
+  # adjusts groups in Authentik. Tracked follow-up: a UI-bound or custom-stage
+  # group-assignment path that survives the importer. (On hosts where the binding
+  # was already created live, it persists — state:present never deletes it.)
