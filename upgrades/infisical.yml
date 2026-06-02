@@ -13,7 +13,7 @@ notes: |
 
 recipes:
   - id: "infisical-0.60-to-0.70"
-    from_regex: "^0\\.60\\."
+    from_regex: "^v?0\\.60\\."   # ^v? — infisical image tags are v-prefixed; tolerate both
     to: "0.70.0"
     severity: minor
     changelog_url: "https://github.com/Infisical/infisical/releases"
@@ -93,7 +93,7 @@ recipes:
         wait: true
 
   - id: "infisical-0.70-to-0.80"
-    from_regex: "^0\\.70\\."
+    from_regex: "^v?0\\.70\\."   # ^v? — tolerate v-prefixed image tag
     to: "0.80.0"
     severity: minor
     changelog_url: "https://github.com/Infisical/infisical/releases"
@@ -157,7 +157,7 @@ recipes:
         label: "pre-{{ upgrade_id }}"
 
   - id: "infisical-current"
-    from_regex: "^0\\.159\\."
+    from_regex: "^v?0\\.159\\."   # ^v? — installed tag is v0.159.16; anchored-at-digit missed it
     to: "0.159.16"   # bare (no 'v') — siblings + advisor compare bare versions
     severity: minor
     changelog_url: "https://github.com/Infisical/infisical/releases"
