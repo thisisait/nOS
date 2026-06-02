@@ -146,3 +146,63 @@
       {{ 'ENABLED (trusts ' + (calibreweb_proxy_auth_header | default('X-authentik-username')) + ')'
          if (calibreweb_proxy_auth_enabled | default(false) | bool)
          else 'disabled (username/password form; SSO autologin dormant)' }}
+
+# ── Library autowiring — create metadata.db + point Calibre-Web at it ─────────
+# Without a Calibre library (metadata.db) AND config_calibre_dir set, Calibre-Web
+# dead-ends on /admin/dbconfig. Autowire both. calibredb (shipped by the
+# universal-calibre DOCKER_MOD) creates an empty library at the container's /books,
+# which is calibreweb_books_dir on the host — LOCAL (~/calibre) or the external SSD
+# when configure_external_storage flips calibreweb_books_dir to
+# {{ external_storage_root }}/calibre (tasks/stacks/external-paths.yml). Idempotent:
+# library creation is guarded on metadata.db absence; config_calibre_dir is only
+# written when it differs; the restart fires only when one of them actually changed.
+- name: "[pazny.calibre_web Post] Ensure the library dir is PUID-owned (abc)"
+  # The bind-mounted /books can land root-owned (esp. on Linux, where mount perms
+  # are real — on macOS Docker Desktop host access masks it). Calibre-Web + calibredb
+  # run as abc (PUID); without this they can't create the library or book subdirs.
+  # Idempotent + defensive; run as root (default exec user).
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T calibre-web chown -R abc:abc /books
+  when: _cw_ready.status | default(0) in [200, 302]
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.calibre_web Post] Create empty Calibre library if metadata.db absent"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T -u abc calibre-web sh -c '
+      if [ -f /books/metadata.db ]; then echo EXISTS; exit 0; fi
+      calibredb list --library-path /books >/dev/null 2>&1 || true
+      [ -f /books/metadata.db ] && echo CREATED || echo FAILED'
+  register: _cw_lib
+  when: _cw_ready.status | default(0) in [200, 302]
+  changed_when: "'CREATED' in (_cw_lib.stdout | default(''))"
+  failed_when: "'FAILED' in (_cw_lib.stdout | default(''))"
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Point Calibre-Web at the library (/books)"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T calibre-web python3 -c "
+    import sqlite3
+    db = sqlite3.connect('/config/app.db')
+    row = db.execute('SELECT config_calibre_dir FROM settings').fetchone()
+    if (row[0] if row else None) != '/books':
+        db.execute(\"UPDATE settings SET config_calibre_dir='/books'\")
+        db.commit(); print('LIBDIR_SET')
+    else:
+        print('LIBDIR_OK')
+    db.close()
+    "
+  register: _cw_libdir
+  when: _cw_ready.status | default(0) in [200, 302]
+  changed_when: "'LIBDIR_SET' in (_cw_libdir.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Restart Calibre-Web to load the library"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab restart calibre-web
+  when:
+    - _cw_ready.status | default(0) in [200, 302]
+    - (_cw_lib.changed | default(false)) or (_cw_libdir.changed | default(false))
+  changed_when: true
+  failed_when: false
