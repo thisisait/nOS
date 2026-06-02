@@ -122,9 +122,16 @@
     enabled = {{ 1 if (calibreweb_proxy_auth_enabled | default(false) | bool) else 0 }}
     header = '{{ calibreweb_proxy_auth_header | default('X-authentik-username') }}'
     db.execute('UPDATE settings SET config_allow_reverse_proxy_header_login=?, config_reverse_proxy_login_header_name=?', (enabled, header))
+    # Calibre-Web matches the forwarded username against an EXISTING user (no
+    # auto-create — upstream req #2965 rejected). Rename the seeded admin row to
+    # the operator's Authentik username so their header-login matches → true
+    # autologin for that principal. Only renames the still-default 'admin' row.
+    op = '{{ calibreweb_proxy_auth_username | default('') }}'
+    if enabled and op and op.lower() != 'admin':
+        db.execute('UPDATE user SET name=? WHERE id=1 AND lower(name)=\"admin\"', (op,))
     db.commit()
     db.close()
-    print('PROXYAUTH=' + ('on' if enabled else 'off'))
+    print('PROXYAUTH=' + ('on' if enabled else 'off') + ' user=' + (op or 'admin'))
     "
   register: _cw_proxyauth
   when: _cw_ready.status | default(0) in [200, 302]

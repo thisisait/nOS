@@ -29,36 +29,26 @@ requires:
     - global_password_prefix
 
 authentik:
-  mode: native_oidc
-  provider_type: oauth2
+  # forward_auth (NOT native_oidc): Infisical org-OIDC is enterprise-licensed; on
+  # CE the OIDC_* env is inert (live-verified v0.159.16: oidc_configs=0, sso
+  # endpoint 404, unauth GET=200=no gate), so the old native_oidc claim left this
+  # Tier-1 vault UNGATED. Gate it at the edge via authentik@file forward-auth
+  # (traefik_auth_modes: infisical=proxy). CE ceiling = gate-only (Authentik gates
+  # access, then Infisical's own email/password form). 2026-06-02.
+  mode: forward_auth                          # nOS doctrine label
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-infisical
   client_secret: "{{ global_password_prefix }}_pw_oidc_infisical"
   slug: infisical
   name: 'Infisical'
   enabled: "{{ install_infisical | default(false) }}"
-  redirect_uris:
-    - "https://{{ infisical_domain }}/api/v1/sso/oidc/callback"
   launch_url: "https://{{ infisical_domain }}"
-  scopes:
-    - openid
-    - email
-    - profile
   tier: 1
-  # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matice b/d) ─
-  # Infisical CE: the OIDC_* env (already seeded below in the compose-ext when
-  # install_authentik=true) gives a "Sign in with Authentik" button. "Enforce
-  # OIDC" (force-only / pre-login auto-redirect) is ENTERPRISE-gated — there is
-  # NO user-facing enforce nor auto-redirect in OSS. So `enabled` behaves as
-  # SEED-ONLY here: turning autologin on must NOT render an enterprise-only
-  # enforce API/env call (pinned by tests/anatomy/test_infisical_no_enforce_in_oss.py).
-  # PARTIAL + enforce deferred. Stays dormant behind sso_autologin=false; the
-  # compose-extension {% if %} gates on the SAME enable expression below and only
-  # emits a benign OSS seed marker (no enforce).
-  autologin:
-    supports: "partial"      # upstream truth — button seed only; enforce is enterprise-gated
-    enabled: "{{ (sso_autologin_infisical | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool }}"
-    hides_local_form: false  # OSS cannot enforce/hide the form (enterprise-only); button only
-    break_glass: "/login/admin"   # org-admin login bypass (always reachable in OSS)
+  # NO autologin block: forward_auth services are pure access gates (pinned by
+  # test_no_autologin_for_pure_proxy_services). Infisical CE cannot force/seed
+  # OIDC at all (enterprise-licensed), so there is nothing to auto-redirect —
+  # the honest ceiling is gate-only. break-glass when Authentik is down:
+  # /login/admin (org-admin email+password, reachable past the gate).
 
 compose_extension:
   template: templates/infisical-base.compose.yml.j2

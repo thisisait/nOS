@@ -1451,6 +1451,12 @@ uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
+# NOTE (autologin ceiling): Kuma v1.x has NO OIDC and NO proxy-header login, so it
+# always shows its own login after the Authentik forward-auth gate. The only lever
+# is Kuma "Disable Auth" (gate-only) — a SECURITY DOWNGRADE (anyone past the gate
+# becomes shared Kuma admin). Deliberately NOT wired (deferred): it needs careful
+# set_settings/connect() idempotency in setup-monitors.py. Real per-user SSO waits
+# on the Kuma v2.x migration (sqlite→mariadb, breaking).
 uptime_kuma_status_page_slug: "nos"               # Slug for public status page (status.dev.local → /status/<slug>)
 uptime_kuma_status_page_title: "nOS Service Status"
 uptime_kuma_status_page_domain: "status{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
@@ -2348,6 +2354,13 @@ vaultwarden_port: 8062
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
 vaultwarden_signups_allowed: false                 # Admin creates accounts
 vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
+# SSO_ONLY hides the email+master-password login form → only "Continue with SSO"
+# (Authentik). Native SSO is official since 1.35.0. NOTE: the master password is
+# STILL required to UNLOCK the vault afterwards (it derives the E2E decryption key
+# — SSO can't supply it); this is click-button, not passwordless. Default OFF.
+# DEPLOY-ORDER: your account must pre-exist before enabling (upstream #6316);
+# break-glass if Authentik is down = /admin or re-render with this false.
+vaultwarden_sso_only: false
 
 # ==============================================================================
 # BACKUP — pazny.backup role (nightly DBs + volumes + Authentik blueprints)

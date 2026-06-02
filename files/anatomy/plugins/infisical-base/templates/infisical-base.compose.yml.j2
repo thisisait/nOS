@@ -1,12 +1,19 @@
 # =============================================================================
-# infisical-base — compose-extension fragment (Q2 native_oidc_env batch B).
+# infisical-base — compose-extension fragment.
 # Rendered into {{ stacks_dir }}/infra/overrides/infisical-base.yml.
 #
-# Infisical CE listens on TLS upstream on a public TLD; on a local TLD the
-# Authentik discovery doc resolves via mkcert. The role currently does not
-# mount mkcert CA into the Infisical container (Node-based runtime, see
-# wiring inventory) — keep parity here. Add NODE_EXTRA_CA_CERTS only if a
-# future regression in OIDC discovery on local TLDs surfaces.
+# SSO MODE = forward_auth (Authentik access gate), NOT native OIDC.
+# CORRECTED 2026-06-02 (live-verified on v0.159.16): Infisical's org-level OIDC
+# SSO is an ENTERPRISE-licensed feature — `oidc-config-service` throws "due to
+# plan restriction" on a CE plan, so the OIDC_* env that used to live here was
+# INERT (verified: oidc_configs table = 0 rows, /api/v1/sso/redirect/oidc = 404,
+# unauthenticated GET vault.<tld> = 200 = NO gate). That left a Tier-1 vault with
+# NO Authentik gate AND a false native_oidc promise. We removed the dead OIDC env
+# and gate Infisical at the edge via the Traefik authentik@file forward-auth
+# middleware (plugin.yml mode: forward_auth + traefik_auth_modes: infisical=proxy).
+# Honest CE ceiling: Authentik gates ACCESS, then Infisical shows its OWN email +
+# password form (gate-only). A working SSO button needs an Infisical Enterprise
+# license; do NOT re-add OIDC_* env on CE (it does nothing and re-opens the lie).
 # =============================================================================
 
 services:
@@ -14,27 +21,3 @@ services:
     environment:
       # Defensive placeholder (anatomy P0.12).
       _NOS_PLUGIN: "infisical-base"
-{% if install_authentik | default(false) %}
-      # ── Native OIDC (Authentik) ─────────────────────────────────────────────
-      # Infisical CE 0.60+: env vars seed the default OIDC config. The
-      # organization-level OIDC attach still needs a post-API call — handled
-      # by U8's native_oidc_api batch (post_compose lifecycle hook).
-      OIDC_CLIENT_ID: "nos-infisical"
-      OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_infisical"
-      OIDC_DISCOVERY_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/.well-known/openid-configuration"
-      OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/infisical/"
-      OIDC_REDIRECT_URI: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v1/sso/oidc/callback"
-{% if (sso_autologin_infisical | default(sso_autologin_min_tier_1 | default(sso_autologin | default(false)))) | bool %}
-      # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 ──────────
-      # Dormant behind sso_autologin=false (default). PARTIAL + enforce DEFERRED:
-      # Infisical CE only seeds the OIDC button (the OIDC_* env above). "Enforce
-      # OIDC" / pre-login auto-redirect is ENTERPRISE-gated — there is NO OSS env
-      # or API that forces OIDC-only login. So this gate deliberately renders only
-      # a benign seed marker, NOT an enterprise enforce call. Honest: enabling
-      # autologin on OSS does NOT hide the local form (org-admin still lands on
-      # /login/admin — the break-glass). Pinned by test_infisical_no_enforce_in_oss.py.
-      _NOS_OIDC_AUTOLOGIN_SEED: "seed-only"
-{% endif %}
-    extra_hosts:
-      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
-{% endif %}

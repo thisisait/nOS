@@ -58,6 +58,11 @@
           </OidScopes>
           <DefaultProvider></DefaultProvider>
           <SchemeOverride>https</SchemeOverride>
+          {# v4.0.0.4 OidConfig declaration order inserts PortOverride between
+             SchemeOverride and NewPath; a schema-order drift makes v4's
+             deserializer silently wipe OidConfigs → every login 400s
+             "provider does not exist" (verified vs PluginConfiguration.cs@v4.0.0.4). #}
+          <PortOverride />
           <NewPath>true</NewPath>
           <CanonicalLinks />
           <DefaultUsernameClaim>preferred_username</DefaultUsernameClaim>
