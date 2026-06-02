@@ -11,9 +11,10 @@ plugin only wires services INTO that middleware.
 services:
   mailpit:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mailpit.rule=Host(`{{ mailpit_domain }}`)"
-      - "traefik.http.routers.mailpit.entrypoints=websecure"
-      - "traefik.http.routers.mailpit.tls=true"
-      - "traefik.http.routers.mailpit.middlewares=authentik@file,security-headers@file,compress@file"
-      - "traefik.http.services.mailpit.loadbalancer.server.port={{ mailpit_ui_port }}"
+      # Tier-1 service — routed by the Traefik FILE provider (state/manifest.yml →
+      # services.yml: correct INTERNAL port + per-mode forward-auth middleware). The
+      # removed docker-provider router labels DUPLICATED that with a host-published
+      # port var → a same-priority @docker/@file collision that 502'd on coin-flip
+      # (kiwix 8888≠8080, ntfy 2586≠80, puter 5050≠4100, …). enable=false → the
+      # docker provider skips this container; the @file router is authoritative.
+      - "traefik.enable=false"
