@@ -2,6 +2,27 @@ import { test, expect } from '@playwright/test';
 import { loginAuthentik } from '../fixtures/authentik';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
+
+/**
+ * Origin cross-check: a browser 5xx may come from the public EDGE (CDN / reverse
+ * proxy in front of nOS) rather than the nOS ORIGIN (Traefik). The playbook only
+ * owns the origin, so on a gateway 5xx we re-probe the host pinned to 127.0.0.1
+ * (the local Traefik). origin <500 ⇒ EDGE (operator-scope, non-fatal); origin 5xx
+ * ⇒ a real FAIL. Returns the origin HTTP status (0 on probe error).
+ */
+function originStatus(url: string): number {
+  try {
+    const host = new URL(url).host;
+    const out = execSync(
+      `curl -sk --resolve ${host}:443:127.0.0.1 -o /dev/null -w "%{http_code}" --max-time 8 ${url}`,
+      { encoding: 'utf-8', timeout: 12_000 },
+    );
+    return parseInt(out.trim(), 10) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * Per-service browser sweep (single SSO session).
@@ -21,6 +42,10 @@ const services: { name: string; url: string }[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', '.services.json'), 'utf-8'),
 );
 
+// SWEEP_PIN_ORIGIN=1 pins *.<DEV_DOMAIN> → 127.0.0.1 so the sweep tests the nOS
+// ORIGIN (Traefik) — what the PLAYBOOK controls — instead of the public edge.
+// Without it, a public tenant (e.g. behind Cloudflare) conflates a playbook bug
+// with an operator-scope edge/CDN 502 (origin verified healthy 4 ways, 2026-06-02).
 // raw SMTP host (no web UI) — would just time out
 const SKIP = new Set(['smtp-stalwart']);
 const AUTH_HOST = /\/\/auth\.pazny\.eu/;
@@ -37,7 +62,23 @@ test('per-service browser sweep (single SSO session)', async ({ page }) => {
     }
     let verdict = 'OK', detail = '', status = 0, finalUrl = '';
     try {
-      const resp = await page.goto(svc.url, { waitUntil: 'domcontentloaded', timeout: 25_000 });
+      // ERR_ABORTED is a known Playwright quirk on forward-auth → outpost-callback
+      // redirect chains when a session already exists (the redirect replaces the
+      // in-flight navigation). It is NOT a service failure — retry once before
+      // treating an abort as real.
+      let resp = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          resp = await page.goto(svc.url, { waitUntil: 'domcontentloaded', timeout: 25_000 });
+          break;
+        } catch (navErr: any) {
+          if (attempt === 0 && /ERR_ABORTED|NS_BINDING_ABORTED|frame was detached/i.test(String(navErr?.message))) {
+            await page.waitForTimeout(1500);
+            continue;
+          }
+          throw navErr;
+        }
+      }
       status = resp ? resp.status() : 0;
 
       if (/\/\/auth\.|\/flows\//.test(page.url())) {
@@ -53,7 +94,12 @@ test('per-service browser sweep (single SSO session)', async ({ page }) => {
         || [502, 503, 504].includes(status);
 
       if (gateway) {
-        verdict = 'FAIL'; detail = `gateway ${status || ''} ${title}`.trim();
+        const orig = originStatus(svc.url);
+        if (orig && orig < 500) {
+          verdict = 'EDGE'; detail = `edge ${status || ''} but origin ${orig} healthy (operator CDN/ingress)`;
+        } else {
+          verdict = 'FAIL'; detail = `gateway ${status || ''} (origin ${orig || '?'}) ${title}`.trim();
+        }
       } else if (svc.name === 'authentik') {
         verdict = 'OK'; detail = `IdP ${title}`;
       } else if (AUTH_HOST.test(finalUrl)) {
@@ -72,7 +118,7 @@ test('per-service browser sweep (single SSO session)', async ({ page }) => {
   }
 
   console.log('\n==== SWEEP SUMMARY ====');
-  for (const v of ['OK', 'AUTH', 'SKIP', 'FAIL', 'ERR']) {
+  for (const v of ['OK', 'AUTH', 'EDGE', 'SKIP', 'FAIL', 'ERR']) {
     const ns = results.filter((r) => r.verdict === v).map((r) => r.name);
     if (ns.length) console.log(`  ${v} (${ns.length}): ${ns.join(', ')}`);
   }
