@@ -1,0 +1,79 @@
+---
+# ── nOS P0-1 — admin MFA break-glass fallback (enforce_mfa-gated) ─────────────
+#
+# WHY: under enforce_mfa, nos-tier1-mfa-flow force-enrols a device on first Tier-1
+# login (not_configured_action='configure'). If the only device an admin enrols is
+# a WebAuthn passkey (the inline default on Apple/Safari), that admin is one
+# lost/unsynced authenticator away from a hard lockout — there is no second factor
+# to fall back to, and the stock + Tier-1 flows both demand the passkey.
+#
+# This seeds a StaticDevice (TOTP-class static recovery codes) for ONE nos-admins
+# identity ONLY when it has NO non-passkey fallback yet (totp==0 AND static==0),
+# and persists the codes no_log to ~/.nos/secrets.yml (0600). Idempotent: re-runs
+# find the existing static device and skip. NEVER deletes/rotates an existing one.
+#
+# This is the IN-BAND fallback (a second factor the admin can type at the MFA
+# prompt). The OUT-OF-BAND escape remains `ak create_recovery_key <admin>`
+# (docs/break-glass-runbook.md) — that mints a login URL with no second factor and
+# is the canonical recovery for an ALREADY-locked-out admin (this task can't help
+# someone who can't reach the configure path).
+#
+# Gated on (install_authentik AND enforce_mfa): with MFA off there is no forced
+# enrolment, so no passkey-only lockout to guard against — the task is a no-op.
+# Pinned by tests/anatomy/test_mfa_fallback_enrolled.py.
+
+- name: "[mfa-bootstrap] Seed an admin static break-glass device when no fallback exists"
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p infra exec -T authentik-worker ak shell <<'PYEOF'
+    import secrets
+    from authentik.core.models import User
+    from authentik.stages.authenticator_static.models import StaticDevice, StaticToken
+    from authentik.stages.authenticator_totp.models import TOTPDevice
+
+    # Prefer akadmin; else the lowest-username nos-admins member.
+    admin = (User.objects.filter(username="akadmin", ak_groups__name="nos-admins").first()
+             or User.objects.filter(ak_groups__name="nos-admins").order_by("username").first())
+    if admin is None:
+        print("NOADMIN")
+    else:
+        totp = TOTPDevice.objects.filter(user=admin).count()
+        static = StaticDevice.objects.filter(user=admin).count()
+        if static > 0 or totp > 0:
+            print("SKIP %s totp=%d static=%d" % (admin.username, totp, static))
+        else:
+            dev = StaticDevice.objects.create(user=admin, name="nos-break-glass", confirmed=True)
+            codes = [secrets.token_hex(5) for _ in range(10)]
+            for c in codes:
+                StaticToken.objects.create(device=dev, token=c)
+            print("SEEDED %s %s" % (admin.username, " ".join(codes)))
+    PYEOF
+  args:
+    executable: /bin/bash
+  register: _mfa_bootstrap
+  changed_when: "'SEEDED' in _mfa_bootstrap.stdout"
+  failed_when: false
+  no_log: true
+
+- name: "[mfa-bootstrap] Parse the seeded admin + codes (no_log)"
+  ansible.builtin.set_fact:
+    _mfa_bg_line: >-
+      {{ (_mfa_bootstrap.stdout_lines | default([]) | select('match', '^SEEDED ') | list | first | default('')) }}
+  no_log: true
+
+- name: "[mfa-bootstrap] Persist break-glass codes to ~/.nos/secrets.yml (0600)"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.nos/secrets.yml"
+    create: true
+    mode: "0600"
+    regexp: '^authentik_break_glass_codes:'
+    line: >-
+      authentik_break_glass_codes: "{{ _mfa_bg_line | regex_replace('^SEEDED \S+ ', '') }}"
+  when: _mfa_bg_line | length > 0
+  no_log: true
+
+- name: "[mfa-bootstrap] Report (no codes — see ~/.nos/secrets.yml)"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Seeded admin static break-glass codes (10) → ~/.nos/secrets.yml:authentik_break_glass_codes'
+         if (_mfa_bg_line | length > 0)
+         else 'Admin already has a non-passkey MFA fallback (or no admin yet) — no break-glass codes seeded.' }}
