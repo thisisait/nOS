@@ -326,9 +326,15 @@ rm -f "$CLAUDE_ERR"
 # it into the process exit. Only ESCALATE a clean run — never mask a real
 # claude failure (CLAUDE_EXIT already non-zero stays).
 if [[ "$CLAUDE_EXIT" -eq 0 ]]; then
+    # `|| true` is load-bearing: under `set -euo pipefail` a no-match grep makes
+    # the whole $(...) pipeline exit non-zero, which aborts the script via the
+    # _release_agent_lock EXIT trap BEFORE agent_run_end posts — orphaning the
+    # session as status=running. Agents that emit no NOS_AGENT_EXIT sentinel
+    # (conductor's prose report) hit this every run. Missing sentinel = treat as
+    # exit 0 (empty AGENT_VERDICT), not a fatal pipefail.
     AGENT_VERDICT=$(printf '%s' "$CLAUDE_OUTPUT" \
         | grep -oE 'NOS_AGENT_EXIT:[[:space:]]*[0-9]+' | tail -1 \
-        | grep -oE '[0-9]+$')
+        | grep -oE '[0-9]+$' || true)
     if [[ -n "$AGENT_VERDICT" && "$AGENT_VERDICT" -gt 0 ]]; then
         CLAUDE_EXIT="$AGENT_VERDICT"
         echo "INFO: agent self-declared review verdict (NOS_AGENT_EXIT=$AGENT_VERDICT)"
