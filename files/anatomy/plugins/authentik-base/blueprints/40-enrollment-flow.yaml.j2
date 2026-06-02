@@ -130,7 +130,11 @@ entries:
     attrs:
       create_users_as_inactive: false
       create_users_group: !Find [authentik_core.group, [name, "nos-users"]]
-      user_creation_mode: create
+      # Authentik 2026.5.2 dropped the legacy `create` value — valid choices are
+      # never_create / create_when_required / always_create. `create` atomically
+      # rejected the WHOLE nos-enrollment blueprint (live status='error' 2026-06-02),
+      # so the enrollment flow never converged and invitations dead-ended.
+      user_creation_mode: always_create
       user_type: internal
 
   # ── 4. User-login stage — sign the user in after enrollment ─────────────
@@ -246,13 +250,19 @@ entries:
       invalid_response_action: retry
       policy_engine_mode: any
 
-  # ── 8. Policy binding — assign-target-groups on user_write stage ────────
-  # Order 10 so it fires after user_write's built-in writes. Re-evaluates
-  # policies on each pass so a flow retry doesn't skip the bind.
+  # ── 8. Policy binding — assign-target-groups on the user_write STAGE BINDING ──
+  # A raw stage (authentik_stages_user_write.userwritestage) is NOT a
+  # PolicyBindingModel, so a policybinding whose target was the stage itself
+  # atomically rejected the whole blueprint ("does not exist" pk) — the second
+  # half of the live status='error'. The order-30 FlowStageBinding (which wires
+  # user_write into nos-enrollment) IS a PolicyBindingModel, so bind there: the
+  # expression policy evaluates around that binding and side-effects the group
+  # assignment (the policy body is idempotent and returns True regardless, so it
+  # never gates the stage). re_evaluate so a flow retry doesn't skip the bind.
   - model: authentik_policies.policybinding
     state: present
     identifiers:
-      target: !Find [authentik_stages_user_write.userwritestage, [name, nos-enrollment-user-write]]
+      target: !Find [authentik_flows.flowstagebinding, [target, !Find [authentik_flows.flow, [slug, nos-enrollment]]], [order, 30]]
       order: 10
     attrs:
       policy: !Find [authentik_policies_expression.expressionpolicy, [name, nos-assign-target-groups]]
