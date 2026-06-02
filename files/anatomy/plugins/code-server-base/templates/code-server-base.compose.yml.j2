@@ -16,12 +16,13 @@ services:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/ssl/certs/mkcert-rootCA.pem:ro
 {% endif %}
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.code-server.rule=Host(`{{ code_server_domain }}`)"
-      - "traefik.http.routers.code-server.entrypoints=websecure"
-      - "traefik.http.routers.code-server.tls=true"
-      - "traefik.http.routers.code-server.middlewares=authentik@file,security-headers@file,compress@file"
-      - "traefik.http.services.code-server.loadbalancer.server.port={{ code_server_port }}"
+      # Tier-1 service — routed by the Traefik FILE provider (state/manifest.yml →
+      # services.yml: correct INTERNAL port + per-mode forward-auth middleware). The
+      # removed docker-provider router labels DUPLICATED that with a host-published
+      # port var → a same-priority @docker/@file collision that 502'd on coin-flip
+      # (kiwix 8888≠8080, ntfy 2586≠80, puter 5050≠4100, …). enable=false → the
+      # docker provider skips this container; the @file router is authoritative.
+      - "traefik.enable=false"
 {% if install_authentik | default(false) %}
     extra_hosts:
       - "{{ authentik_domain }}:host-gateway"

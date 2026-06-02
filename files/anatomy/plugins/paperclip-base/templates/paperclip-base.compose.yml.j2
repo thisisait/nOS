@@ -11,12 +11,13 @@ plugin only wires services INTO that middleware.
 services:
   paperclip:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.paperclip.rule=Host(`{{ paperclip_domain }}`)"
-      - "traefik.http.routers.paperclip.entrypoints=websecure"
-      - "traefik.http.routers.paperclip.tls=true"
-      - "traefik.http.routers.paperclip.middlewares=authentik@file,security-headers@file,compress@file"
-      - "traefik.http.services.paperclip.loadbalancer.server.port={{ paperclip_port }}"
+      # Tier-1 service — routed by the Traefik FILE provider (state/manifest.yml →
+      # services.yml: correct INTERNAL port + per-mode forward-auth middleware). The
+      # removed docker-provider router labels DUPLICATED that with a host-published
+      # port var → a same-priority @docker/@file collision that 502'd on coin-flip
+      # (kiwix 8888≠8080, ntfy 2586≠80, puter 5050≠4100, …). enable=false → the
+      # docker provider skips this container; the @file router is authoritative.
+      - "traefik.enable=false"
 {% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) and (tenant_domain_is_local | default(true) | bool) %}
     volumes:
       # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
