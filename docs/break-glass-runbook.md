@@ -112,8 +112,10 @@ one-time recovery URL for an existing admin user:
 # A19 live container name. Use `ak create_recovery_key` inside the server.
 docker exec infra-authentik-server-1 ak create_recovery_key <admin>
 
-# Time-boxed validity (optional first arg = days the link stays valid):
-docker exec infra-authentik-server-1 ak create_recovery_key 1 <admin>
+# Time-boxed validity (optional first arg = MINUTES the link stays valid; default 60):
+# NB: it is MINUTES, not days — `ak create_recovery_key 1 <admin>` is a 1-MINUTE
+# token (verified against the management command, Authentik 2026.5.2).
+docker exec infra-authentik-server-1 ak create_recovery_key 30 <admin>   # valid 30 minutes
 ```
 
 The command prints a single-use recovery URL of the form
@@ -136,7 +138,7 @@ docker exec -it infra-authentik-server-1 ak shell                            # t
 
 ### The nOS-side recovery key (input to the CLI, not a seed)
 
-Per the plan, nOS generates an `authentik_recovery_key` (random bytes) on the
+Per the plan, nOS generates an `authentik_recovery_break_glass_secret` (random bytes) on the
 first blank run and stores it in `~/.nos/secrets.yml` (the real persistent
 secrets store, read idempotently across re-runs). This key is the **offline
 input** you feed to the CLI recovery procedure when the Authentik UI/admin is
@@ -144,7 +146,7 @@ unreachable — it is **not** a blueprint seed and not provisioned into the
 Authentik DB. Its stability across re-runs is pinned by
 `tests/anatomy/test_recovery_key_persists_across_reruns.py`.
 
-> **Note:** the secrets-generation task that writes `authentik_recovery_key`
+> **Note:** the secrets-generation task that writes `authentik_recovery_break_glass_secret`
 > is provisioned by the Batch-4 secrets layer (outside this runbook's scope).
 > If `~/.nos/secrets.yml` does not yet carry the key, the CLI procedure above
 > still works against any existing admin username.
@@ -262,7 +264,7 @@ the "fallback" is the env-unset + recreate above, not a live `ALLOW_LOCAL_LOGIN`
 ## `~/.nos/secrets.yml` backup
 
 `~/.nos/secrets.yml` is the persistent secrets store. It holds
-`authentik_recovery_key` (the offline input for CLI recovery) and other
+`authentik_recovery_break_glass_secret` (the offline input for CLI recovery) and other
 generated secrets, read idempotently across playbook re-runs.
 
 **Back it up off-box.** If Authentik is unreachable AND you have no local copy
