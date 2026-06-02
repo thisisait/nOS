@@ -43,10 +43,19 @@ entries:
 {%- set _redirects = c.redirect_uris if (c.redirect_uris is iterable and c.redirect_uris is not string) else ([c.redirect_uris] if c.redirect_uris else []) -%}
 {%- set _launch = c.launch_url | default(c.external_host) | default('') -%}
 {# P0-MFA: route ONLY Tier-1 providers through the dedicated MFA flow when
-   enforce_mfa is on. Flag-off / non-Tier-1 -> _auth_flow is none -> no
-   authentication_flow key emitted -> byte-identical to today's render. #}
+   enforce_mfa is on. A Tier-1 provider ALWAYS carries an explicit
+   authentication_flow so flipping enforce_mfa OFF RESETS it off nos-tier1-mfa-flow
+   back to the stock flow (Authentik state:present is a partial update — an OMITTED
+   authentication_flow would strand the provider on the MFA flow). Non-Tier-1
+   providers omit the key (null = brand default), byte-identical to today's render. #}
 {%- set _tier = c.tier | default(authentik_app_tiers[c.slug] | default(3)) -%}
-{%- set _auth_flow = 'nos-tier1-mfa-flow' if ((enforce_mfa | default(false) | bool) and (_tier | int == 1)) else none -%}
+{%- if (enforce_mfa | default(false) | bool) and (_tier | int == 1) -%}
+{%-   set _auth_flow = 'nos-tier1-mfa-flow' -%}
+{%- elif (_tier | int == 1) -%}
+{%-   set _auth_flow = 'default-authentication-flow' -%}
+{%- else -%}
+{%-   set _auth_flow = none -%}
+{%- endif -%}
 {# Batch 5 REVERTED (2026-06-01, live-validated failure): the custom
    nos-autologin-flow was a broken authorization flow (built without a
    provider-authorization stage) → Authentik rejected every bound client with

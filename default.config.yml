@@ -1964,6 +1964,13 @@ authentik_rbac_tiers:
 enforce_mfa: false
 mfa_password_min_length: 15            # NIST SP 800-63 floor for the password policy
 mfa_password_hibp: false               # OFF: HIBP needs egress (not air-gap-safe); zxcvbn is the local check
+# Remember-device window (Authentik last_auth_threshold syntax). Once a user
+# satisfies MFA, re-challenge only after this idle window — applied to BOTH the
+# dedicated nos-mfa-validate stage AND the managed stock default-authentication-
+# mfa-validation stage, so the posture is "global MFA, remembered" (one 2FA per
+# working session) rather than a per-login step-up (was seconds=0, brutal daily).
+# profiles/gov-local.yml may pin a stricter value for a step-up posture.
+mfa_remember_window: "hours=8"
 
 # Mapping slug → tier. Services without an entry default to tier 3 (user+).
 # LEGACY FALLBACK ONLY: the RBAC blueprint resolves tier as

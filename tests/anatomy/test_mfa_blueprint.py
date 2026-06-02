@@ -64,15 +64,31 @@ def test_flag_on_shape():
     doc = yaml.load(_render(True), Loader=_OpaqueLoader)
     entries = doc["entries"]
 
-    # dedicated validate stage named nos-mfa-validate (NOT an override of the
-    # shared upstream default-authentication-mfa-validation)
+    # Two validate stages now (posture B, 2026-06-02):
+    #   1. nos-mfa-validate — the dedicated Tier-1 stage (force-enrol, totp+webauthn)
+    #   2. default-authentication-mfa-validation — the STOCK shared stage, managed
+    #      THRESHOLD-ONLY (widen last_auth_threshold to the remember-window so an
+    #      enrolled user re-challenges once per window, not every login). We must
+    #      NEVER re-arm not_configured_action / device_classes on the stock stage
+    #      (that is the over-scope / lockout footgun).
     validate = [e for e in entries
                 if e["model"] == "authentik_stages_authenticator_validate.authenticatorvalidatestage"]
-    assert len(validate) == 1
-    assert validate[0]["identifiers"]["name"] == "nos-mfa-validate"
-    assert validate[0]["attrs"]["not_configured_action"] == "configure"
-    assert validate[0]["attrs"]["device_classes"] == ["totp", "webauthn"]
-    assert validate[0]["attrs"]["configuration_stages"]  # non-empty
+    names = {v["identifiers"]["name"] for v in validate}
+    assert names == {"nos-mfa-validate", "default-authentication-mfa-validation"}, \
+        f"expected exactly the dedicated + tamed-stock validate stages, got {names}"
+
+    nmv = next(v for v in validate if v["identifiers"]["name"] == "nos-mfa-validate")
+    assert nmv["attrs"]["not_configured_action"] == "configure"
+    assert nmv["attrs"]["device_classes"] == ["totp", "webauthn"]
+    assert nmv["attrs"]["configuration_stages"]  # non-empty
+    assert nmv["attrs"]["last_auth_threshold"] == "hours=8"  # mfa_remember_window default
+
+    stock = next(v for v in validate if v["identifiers"]["name"] == "default-authentication-mfa-validation")
+    assert set(stock["attrs"].keys()) == {"last_auth_threshold"}, (
+        "the stock default-authentication-mfa-validation override must be THRESHOLD-ONLY "
+        f"(never re-arm not_configured_action / device_classes), got {set(stock['attrs'].keys())}"
+    )
+    assert stock["attrs"]["last_auth_threshold"] == "hours=8"
 
     # dedicated authentication flow
     flows = [e for e in entries if e["model"] == "authentik_flows.flow"]
@@ -101,6 +117,9 @@ def test_source_negative_asserts():
     src = BP.read_text()
     assert "not_configured_action: configure" in src
     assert "not_configured_action: deny" not in src, "lockout footgun must be absent"
-    assert "default-authentication-mfa-validation" not in src, \
-        "must not override the shared upstream validate stage (broken scoping)"
     assert "!Find" in src
+    # 2026-06-02: the stock default-authentication-mfa-validation IS now managed
+    # (posture B remember-window) — but THRESHOLD-ONLY. The structural guarantee
+    # (attrs == {last_auth_threshold}) is pinned in test_flag_on_shape. The old
+    # "must not mention the stock stage" assertion is intentionally dropped: we
+    # widen its threshold on purpose; we must only never re-arm its scoping fields.

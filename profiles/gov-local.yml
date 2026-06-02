@@ -64,6 +64,11 @@ require_disk_encryption: true
 # the 50-mfa-policy.yaml.j2 header ready. mfa_password_hibp stays FALSE on an
 # air-gapped tenant (HIBP needs egress); flip it true only if egress is allowed.
 enforce_mfa: true
+# Remember-device window (posture B "global MFA, remembered"): an enrolled user
+# re-challenges once per window rather than every login. Pinned here so a +gov
+# reconverge re-asserts it over a relaxed config.yml. For a STRICT gov step-up
+# (2FA on every authentication-flow run), set "seconds=0".
+mfa_remember_window: "hours=8"
 
 # ── Tamper-evident audit hash-chain (P1) ───────────────────────────────────
 # HMAC-chain every wing.db events row at INSERT; WORM triggers block content
