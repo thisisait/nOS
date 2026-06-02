@@ -89,7 +89,15 @@ compose:
         - "CACHE_DRIVER=file"
         - "SESSION_DRIVER=file"
         - "MAIL_MAILER=log"   # Pilot: log-only mail. Wire SMTP in Phase-2.
-        - "AUTHENTICATION_GUARD=web-guard"
+        # ── Autologin via Authentik forward-auth header (header_oidc) ──────────
+        # The `auth: "proxy"` gate below forwards the outpost's X-authentik-*
+        # headers; reverse-proxy-guard reads HTTP_X_AUTHENTIK_USERNAME and
+        # RemoteUserProvider auto-provisions the user (first one → admin). No
+        # 2FAuth /login screen. The authResponseHeaders allow-list (Traefik
+        # middleware) overwrites any client-forged header, so this is safe.
+        - "AUTHENTICATION_GUARD=reverse-proxy-guard"
+        - "AUTH_PROXY_HEADER_FOR_USER=HTTP_X_AUTHENTIK_USERNAME"
+        - "AUTH_PROXY_HEADER_FOR_EMAIL=HTTP_X_AUTHENTIK_EMAIL"
       volumes:
         - tfa_data:/srv/database
         - tfa_storage:/var/www/html/storage

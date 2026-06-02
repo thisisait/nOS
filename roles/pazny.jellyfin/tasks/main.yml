@@ -28,6 +28,28 @@
 # ─── Native OIDC via jellyfin-plugin-sso ─────────────────────────────────────
 # Plugin download is host-side (before first container start) so Jellyfin picks
 # it up on boot. Install skipped when install_authentik is disabled.
+- name: "[pazny.jellyfin] Find stale SSO plugin versions (!= pinned)"
+  ansible.builtin.find:
+    paths: "{{ jellyfin_config_dir }}/plugins"
+    patterns: "SSO-Auth_*"
+    file_type: directory
+    excludes: "SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
+  register: _jf_sso_stale
+  when: install_authentik | default(false)
+
+- name: "[pazny.jellyfin] Remove stale SSO plugin versions (a bump must not leave the old dir)"
+  # Jellyfin registers NEITHER when two versions of the same plugin GUID are
+  # present (the older NotSupported one conflicts) → /sso/OID/* 404s. Remove any
+  # non-pinned SSO-Auth_* so only the pinned version loads. (live 2026-06-02)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _jf_sso_stale.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: install_authentik | default(false)
+  notify: Restart jellyfin
+
 - name: "[pazny.jellyfin] Ensure SSO plugin target directory exists"
   ansible.builtin.file:
     path: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"

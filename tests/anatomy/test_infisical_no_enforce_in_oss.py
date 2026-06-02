@@ -1,28 +1,22 @@
-"""Anatomy gate — infisical autologin is SEED-ONLY in OSS (no enforce).
+"""Anatomy gate — Infisical CE is a gate-only forward_auth service (no OIDC).
 
-sso-autologin-plan.md §"Per-service matice (d)" + §"Testy / gates":
+CORRECTED 2026-06-02 (live-verified on the running v0.159.16): Infisical's
+org-level OIDC SSO is an ENTERPRISE-licensed feature. On a CE plan the OIDC_*
+env that the plugin used to seed is INERT — verified live: `oidc_configs` table
+= 0 rows, `/api/v1/sso/redirect/oidc` = 404, and an unauthenticated GET of the
+vault host returned 200 (NO Authentik gate). That left a Tier-1 vault ungated
+behind a false `native_oidc` promise.
 
-  > infisical: OIDC enforce je enterprise-gated; OSS bez auto-redirectu.
-  > partial seed; enforce deferován. Gate `test_infisical_no_enforce_in_oss`
-  > ověří, že plugin nerenderuje enterprise-only enforce volání v OSS módu.
-
-Honesty contract for Infisical CE (OSS):
-  - The OIDC_* env seeds a "Sign in with Authentik" BUTTON. That is the whole
-    OSS capability.
-  - "Enforce OIDC" / pre-login auto-redirect / forced OIDC-only login is an
-    ENTERPRISE feature — there is NO OSS env var or API that forces it.
-  - `authentik.autologin.supports` is therefore "partial", and turning
-    autologin on (sso_autologin=true) must STILL only seed the button: the
-    compose-extension may render a benign marker, but it must NEVER render an
-    enterprise enforce env/API call that would silently no-op (or, worse,
-    half-configure) on an OSS build.
-
-This gate renders the infisical compose-extension with autologin forced ON
-(every override truthy) through the SAME path the loader uses, and asserts no
-enterprise enforce token reaches the rendered (non-comment) compose env. It
-also asserts the plugin declares no post-API enforce hook. Comment lines (which
-legitimately explain WHY enforce is deferred) are stripped before the scan, so
-the honest documentation can keep the word "enforce" without tripping the gate.
+New contract (gate-only — Authentik gates ACCESS via authentik@file, then
+Infisical shows its own email/password form):
+  1. plugin authentik.mode == forward_auth (NOT native_oidc).
+  2. NO authentik.autologin block (forward_auth = pure access gate; also pinned
+     by test_no_autologin_for_pure_proxy_services).
+  3. the compose-extension renders NO dead OIDC_* org-SSO env (and never an
+     enterprise enforce token) — re-adding it does nothing on CE and re-opens
+     the ungated-vault hole.
+  4. infisical is in the `proxy` Traefik auth bucket (so the authentik@file
+     middleware actually gates it), NOT `oidc`.
 """
 
 from __future__ import annotations
@@ -39,23 +33,20 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PLUGIN_DIR = REPO / "files" / "anatomy" / "plugins" / "infisical-base"
 PLUGIN_YML = PLUGIN_DIR / "plugin.yml"
 COMPOSE_EXT = PLUGIN_DIR / "templates" / "infisical-base.compose.yml.j2"
+TRAEFIK_VARS = REPO / "roles" / "pazny.traefik" / "vars" / "main.yml"
 
-# Enterprise-only "enforce OIDC" tokens that must NEVER reach an OSS render.
-# Infisical's enterprise enforce surface is the org-setting `authEnforced`
-# (PATCH /api/v1/organizations/<id>) plus any *_ENFORCE / ENFORCE_* /
-# *_OIDC_ENFORCE / *_FORCE_SSO style env. Match case-insensitively on the
-# rendered env keys / API field names — NOT on prose.
-_ENFORCE_TOKENS = (
+# Any OIDC org-SSO / enterprise-enforce token that must NOT reach a CE render.
+_FORBIDDEN_ENV_TOKENS = (
+    "oidc_client_id",
+    "oidc_client_secret",
+    "oidc_discovery_url",
+    "oidc_issuer",
+    "oidc_redirect_uri",
     "authenforced",
-    "oidc_enforce",
     "enforce_oidc",
-    "enforce_sso",
-    "sso_enforced",
-    "force_sso",
-    "saml_enforced",
+    "oidc_enforce",
 )
 
-# Minimal var scope that forces the autologin gate ON (worst case for OSS).
 _FORCE_ON_CTX = {
     "install_authentik": True,
     "sso_autologin": True,
@@ -68,60 +59,48 @@ _FORCE_ON_CTX = {
 }
 
 
-def _strip_jinja_and_yaml_comments(line: str) -> str:
-    """Drop `# ...` comments (both YAML and the rendered prose) and `{# #}`."""
+def _strip_comments(line: str) -> str:
     line = re.sub(r"\{#.*?#\}", "", line)
-    hash_idx = line.find("#")
-    if hash_idx != -1:
-        line = line[:hash_idx]
-    return line
+    idx = line.find("#")
+    return line[:idx] if idx != -1 else line
 
 
-def _render_compose_ext_force_on() -> str:
-    """Render the infisical compose-extension with autologin forced ON,
-    then strip comments so the scan only sees real compose env/keys."""
-    src = COMPOSE_EXT.read_text()
-    rendered = load_plugins._render_string(src, dict(_FORCE_ON_CTX))
-    kept = [_strip_jinja_and_yaml_comments(ln) for ln in rendered.splitlines()]
-    return "\n".join(kept)
+def _render_compose_ext() -> str:
+    rendered = load_plugins._render_string(COMPOSE_EXT.read_text(), dict(_FORCE_ON_CTX))
+    return "\n".join(_strip_comments(ln) for ln in rendered.splitlines())
 
 
-def test_infisical_autologin_is_partial_seed_only():
-    """The honesty verdict itself: supports must be 'partial', never 'yes'
-    (claiming 'yes' would promise an OSS enforce that does not exist)."""
-    data = yaml.safe_load(PLUGIN_YML.read_text())
-    al = ((data or {}).get("authentik") or {}).get("autologin") or {}
-    assert al, "infisical plugin lost its authentik.autologin block"
-    assert al.get("supports") == "partial", (
-        "infisical autologin.supports must be 'partial' (OSS = button seed "
-        f"only, enforce enterprise-gated); got {al.get('supports')!r}")
-    # OSS cannot hide the form — claiming hides_local_form:true would be a lie.
-    assert al.get("hides_local_form") in (False, None), (
-        "infisical OSS cannot hide/enforce the local form; hides_local_form "
-        f"must be false, got {al.get('hides_local_form')!r}")
+def test_infisical_is_forward_auth_not_native_oidc():
+    data = yaml.safe_load(PLUGIN_YML.read_text()) or {}
+    a = data.get("authentik") or {}
+    assert a.get("mode") == "forward_auth", (
+        "Infisical CE cannot do org-OIDC (enterprise-licensed) → must be forward_auth "
+        f"(gate-only), not {a.get('mode')!r} — else the Tier-1 vault is ungated."
+    )
 
 
-def test_infisical_no_enforce_in_oss():
-    """With autologin forced ON, the rendered OSS compose-extension must carry
-    NO enterprise enforce env/API token — only the benign button seed."""
-    rendered = _render_compose_ext_force_on().lower()
-    hits = [tok for tok in _ENFORCE_TOKENS if tok in rendered]
+def test_infisical_has_no_autologin_block():
+    data = yaml.safe_load(PLUGIN_YML.read_text()) or {}
+    a = data.get("authentik") or {}
+    assert "autologin" not in a, (
+        "forward_auth Infisical must carry NO autologin block (pure access gate; "
+        "CE has no OIDC to force/seed)."
+    )
+
+
+def test_infisical_compose_ext_renders_no_dead_oidc_env():
+    rendered = _render_compose_ext().lower()
+    hits = [tok for tok in _FORBIDDEN_ENV_TOKENS if tok in rendered]
     assert not hits, (
-        "infisical compose-extension rendered an ENTERPRISE-only enforce token "
-        f"in OSS mode (autologin forced on): {hits}. Enforce OIDC is "
-        "enterprise-gated — OSS must seed the button only, never an enforce "
-        "env/API call.")
+        "infisical compose-extension rendered OIDC/enforce env that is INERT on CE "
+        f"and re-opens the ungated-vault lie: {hits}. Gate at the edge instead."
+    )
 
 
-def test_infisical_no_post_api_enforce_hook():
-    """The plugin must not wire a post-compose API call that enforces OIDC —
-    that would attempt the enterprise org-setting (authEnforced) on OSS."""
-    data = yaml.safe_load(PLUGIN_YML.read_text())
-    lifecycle = (data or {}).get("lifecycle") or {}
-    # Flatten every lifecycle step token to plain text for the scan.
-    text = yaml.safe_dump(lifecycle).lower()
-    hits = [tok for tok in _ENFORCE_TOKENS if tok in text]
-    assert not hits, (
-        "infisical lifecycle declares an enforce-OIDC hook "
-        f"({hits}); enforce is enterprise-gated and must be deferred, not "
-        "wired into a post-compose API call.")
+def test_infisical_is_in_proxy_auth_bucket():
+    vars_doc = yaml.safe_load(TRAEFIK_VARS.read_text()) or {}
+    modes = vars_doc.get("traefik_auth_modes") or {}
+    assert modes.get("infisical") == "proxy", (
+        "infisical must be in the 'proxy' Traefik auth bucket so authentik@file "
+        f"forward-auth actually gates the vault; got {modes.get('infisical')!r}."
+    )

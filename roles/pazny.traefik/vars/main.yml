@@ -64,7 +64,10 @@ traefik_auth_modes:
   wordpress: oidc           # OpenID Connect Generic plugin
   erpnext: oidc             # Frappe OAuth2 social_login_keys
   freescout: oidc           # OAuth Module
-  infisical: oidc           # /api/v1/sso/oidc/callback
+  infisical: proxy          # CE org-OIDC is enterprise-licensed (inert on CE) → gate at the
+                            # edge with authentik@file forward-auth, else this Tier-1 vault is
+                            # UNGATED (live-verified 2026-06-02). Flip back to oidc only with an
+                            # Infisical Enterprise license + a working oidc_configs row.
   miniflux: oidc            # OAUTH2_PROVIDER=oidc
   nodered: oidc             # β1.B 2026-05-05 — passport-openidconnect adminAuth
                             # in /data/settings.js; service handles its own

@@ -44,3 +44,9 @@ calibreweb_cpus: "{{ docker_cpus_light | default('0.5') }}"
 # back to 0.
 calibreweb_proxy_auth_enabled: "{{ (sso_autologin_calibreweb | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool }}"
 calibreweb_proxy_auth_header: X-authentik-username
+# Calibre-Web header-login matches the forwarded username against an EXISTING
+# Calibre-Web account (no auto-create). post.yml renames the seeded `admin` row
+# to this username so that principal gets true autologin. Default = the Authentik
+# bootstrap superuser (akadmin = the operator on a single-admin tenant). Set to
+# your own Authentik username for a personal account; empty keeps `admin`.
+calibreweb_proxy_auth_username: "akadmin"
