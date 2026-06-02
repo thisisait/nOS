@@ -36,3 +36,4 @@ state/smoke-catalog.runtime.yml
 # (pazny.pulse role) — regenerated on every install, not committed.
 files/anatomy/pulse/build/
 files/anatomy/pulse/*.egg-info/
+.debug-report-*.md
