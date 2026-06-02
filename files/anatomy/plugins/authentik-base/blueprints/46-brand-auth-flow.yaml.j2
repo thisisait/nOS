@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS — default-brand authentication-flow routing (P0-3) ────────────────────
+#
+# ALWAYS emits (NOT gated behind enforce_mfa) so the default brand's
+# flow_authentication is explicitly (re)set in BOTH flag states. Authentik
+# blueprint `state: present` is a PARTIAL update with no cascade-delete: an
+# omitted entry would STRAND the brand on whatever a prior run set it to. So:
+#   enforce_mfa ON  → route DIRECT logins (https://auth.<tld>/) through the
+#                     Tier-1 MFA flow (nos-tier1-mfa-flow) — otherwise the brand
+#                     keeps the stock flow and an admin's direct login skips MFA.
+#   enforce_mfa OFF → reset to the stock default-authentication-flow (byte-
+#                     identical to a non-gov install).
+#
+# Identifier `domain: authentik-default` is the live default brand (verified
+# 2026-06-02: Brand.objects.get(default=True).domain == 'authentik-default').
+# Re-verify on any Authentik MAJOR upgrade — a renamed slug makes !Find no-op
+# and the brand silently keeps its prior flow.
+#
+# Only flow_authentication is set — every other brand field (branding_title,
+# default_application, …) is left to its own managed blueprint / the UI, since
+# this is a partial update. flow_recovery is intentionally NOT set here yet (the
+# in-browser static-code recovery flow is a follow-up; CLI `ak create_recovery_key`
+# is the live escape — see docs/break-glass-runbook.md).
+version: 1
+metadata:
+  name: nos-brand-auth-flow
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  - model: authentik_brands.brand
+    state: present
+    identifiers:
+      domain: authentik-default
+    attrs:
+{% if enforce_mfa | default(false) | bool %}
+      flow_authentication: !Find [authentik_flows.flow, [slug, nos-tier1-mfa-flow]]
+{% else %}
+      flow_authentication: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+{% endif %}
