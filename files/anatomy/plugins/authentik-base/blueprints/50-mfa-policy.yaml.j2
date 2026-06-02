@@ -94,7 +94,33 @@ entries:
         - !Find [authentik_stages_authenticator_totp.authenticatortotpstage, [name, nos-mfa-totp-setup]]
         - !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, nos-mfa-webauthn-setup]]
       webauthn_user_verification: required
-      last_auth_threshold: "seconds=0"         # challenge every login (gov step-up)
+      # Posture B (global MFA, remembered): re-challenge once per mfa_remember_window
+      # instead of every login (was seconds=0 every-login step-up). For a strict
+      # gov step-up posture, pin mfa_remember_window: "seconds=0" in gov-local.yml.
+      last_auth_threshold: "{{ mfa_remember_window | default('hours=8') }}"
+
+  # ── 3b. Tame the STOCK shared MFA-validate stage (posture B: global-but-remembered) ──
+  # The stock default-authentication-flow keeps an order-30 'default-authentication-
+  # mfa-validation' (not_configured_action='skip') that challenges ANY enrolled user
+  # on EVERY tier — which defeats the Tier-1 scoping the instant nos-mfa-validate
+  # force-enrols a device (symptom: 2FA prompt on Tier-2 twofauth / Tier-4 jellyfin).
+  # We DELIBERATELY do NOT re-arm it (leave not_configured_action / device_classes to
+  # upstream — that is the lockout/over-scope footgun); we ONLY widen its remember
+  # window so an enrolled user re-challenges once per mfa_remember_window instead of
+  # every login. THRESHOLD-ONLY by design — pinned by tests/anatomy/test_mfa_blueprint.py.
+  # ROLLBACK GAP: state:present never restores the upstream seconds=0 — disabling
+  # enforce_mfa later leaves this stage at the wide window. Un-wedge (reset to the
+  # upstream per-login step-up):
+  #   docker compose -p infra exec -T authentik-worker ak shell -c \
+  #     "from authentik.stages.authenticator_validate.models import AuthenticatorValidateStage as S; \
+  #      s=S.objects.filter(name='default-authentication-mfa-validation').first(); \
+  #      (s and (setattr(s,'last_auth_threshold','seconds=0'), s.save()))"
+  - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+    state: present
+    identifiers:
+      name: default-authentication-mfa-validation
+    attrs:
+      last_auth_threshold: "{{ mfa_remember_window | default('hours=8') }}"
 
   # ── 4. Dedicated Tier-1 authentication flow ───────────────────────────────
   # Self-contained: identification → password → MFA validate. Tier-1 providers
