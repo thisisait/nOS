@@ -16,6 +16,25 @@
     - "'already exists' not in (_shared_net.stderr | default(''))"
   check_mode: false
 
+# SEC-02: Traefik-only "gated" networks for header-trust backends (calibre-web,
+# 2FAuth on gated_net; firefly + its mariadb/redis on gated_b2b_net). Keeping
+# these services OFF the flat shared_net stops a peer container from reaching them
+# directly to forge the X-authentik-* identity header. Created here (external,
+# pre-compose) so every stack that declares them can reference them. NO --subnet
+# pin (Docker auto-assigns; avoids the "Pool overlaps" class that bit a pinned net).
+- name: "[Stacks] Ensure SEC-02 gated Docker networks exist"
+  ansible.builtin.command: >
+    {{ docker_bin }} network create {{ item }} --driver bridge
+  loop:
+    - gated_net
+    - gated_b2b_net
+  register: _gated_nets
+  changed_when: _gated_nets.rc == 0
+  failed_when:
+    - _gated_nets.rc != 0
+    - "'already exists' not in (_gated_nets.stderr | default(''))"
+  check_mode: false
+
 - name: "[Stacks] Ensure stack directories exist"
   ansible.builtin.file:
     path: "{{ item }}"

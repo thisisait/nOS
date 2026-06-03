@@ -23,3 +23,8 @@ networks:
     driver: bridge
   {{ stacks_shared_network }}:
     external: true
+  # SEC-02 gated net (external, pre-created) — firefly lives on b2b_net +
+  # gated_b2b_net (off shared_net); its MariaDB/Redis also join gated_b2b_net so
+  # firefly reaches them without the flat shared bus a peer could forge across.
+  gated_b2b_net:
+    external: true

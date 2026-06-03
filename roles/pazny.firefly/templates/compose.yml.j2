@@ -30,7 +30,10 @@ services:
       APP_KEY: "{{ firefly_app_key }}"
       SITE_OWNER: "{{ firefly_site_owner | default(default_admin_email) }}"
       APP_URL: "https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-      TRUSTED_PROXIES: "**"
+      # Docker bridge range (covers gated_b2b_net's auto-assigned subnet + Traefik)
+      # instead of "**" (trust-all). NB this governs X-Forwarded-* only; the real
+      # SEC-02 close is the network isolation above (RemoteUserGuard ignores it).
+      TRUSTED_PROXIES: "172.16.0.0/12"
       TZ: "{{ firefly_tz | default('Europe/Prague') }}"
       DEFAULT_LANGUAGE: "{{ firefly_default_language | default('en_US') }}"
       LOG_CHANNEL: "stack"
@@ -98,8 +101,11 @@ services:
       - "host.docker.internal:host-gateway"
 {% endif %}
     networks:
+      # SEC-02: b2b_net (siblings) + gated_b2b_net (Traefik + MariaDB/Redis) — OFF
+      # shared_net, so a peer on the flat bus can't reach :8080 to forge the
+      # REMOTE_USER header (RemoteUserGuard does ZERO header validation upstream).
       - b2b_net
-      - {{ stacks_shared_network }}
+      - gated_b2b_net
     logging:
       driver: "json-file"
       options:

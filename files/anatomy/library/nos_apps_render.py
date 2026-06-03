@@ -398,6 +398,20 @@ def _resolve_compose_block(app_name, record, tenant_domain, secret_seed,
 # ---------------------------------------------------------------------------
 # Main per-app processor
 
+def _app_traefik_network(record, default_net, app_name):
+    """SEC-02: if the primary service declares exactly ONE custom network (e.g.
+    `networks: [gated_net]`), Traefik's docker-provider must route the app over
+    THAT network, not the global shared bus — else Traefik (not on the gated net
+    for label routing) can't reach the isolated backend. Falls back to the global
+    apps_traefik_network for the normal (apps_net + shared_net) apps."""
+    svcs = ((record.get("compose") or {}).get("services") or {})
+    svc = svcs.get(app_name) or svcs.get(app_name.replace("_", "-")) or {}
+    nets = svc.get("networks")
+    if isinstance(nets, list) and len(nets) == 1 and nets[0] not in ("apps_net", default_net):
+        return nets[0]
+    return default_net
+
+
 def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
                  extra_eu_registries, strict, traefik_network,
                  host_alias=""):
@@ -475,7 +489,9 @@ def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
         "auth_mode": auth_mode,
         "rbac_tier": rbac_tier,
         "compose": compose_resolved,
-        "traefik_labels": _traefik_labels(name, fqdn, port, auth_mode, traefik_network),
+        "traefik_labels": _traefik_labels(
+            name, fqdn, port, auth_mode,
+            _app_traefik_network(record, traefik_network, name)),
         "registry_entry": _registry_entry(name, record, fqdn),
         "wing_system": _wing_system(name, record, fqdn, auth_mode, rbac_tier),
         "authentik_entry": authentik,

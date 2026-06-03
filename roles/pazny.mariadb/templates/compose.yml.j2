@@ -49,6 +49,7 @@ services:
     networks:
       - infra_net
       - {{ stacks_shared_network }}
+      - gated_b2b_net   # SEC-02: reachable by firefly after firefly left shared_net
     logging:
       driver: "json-file"
       options:
