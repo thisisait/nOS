@@ -9,6 +9,15 @@
 
 n8n_version: "2.20.7"  # CVE-2026-44789/44790/44791 RCE fix (was 2.14.1); minimal fixed 2.x — same-major migrate-on-start, validate on next run
 n8n_port: 5678
+# SSRF protection (REM-043): block the HTTP Request node + webhooks from reaching
+# internal/private IPs (n8n built-in since 2.12; default-OFF upstream → default-ON
+# here). "default" uses n8n's built-in RFC-1918+loopback block set (covers every nOS
+# peer). To RE-OPEN specific legitimate internal fetches, set the allowlist vars
+# (e.g. n8n_ssrf_allowed_hostnames: "*.{{ tenant_domain }}"). Disable: n8n_ssrf_protection: false.
+n8n_ssrf_protection: true
+n8n_ssrf_blocked_ip_ranges: "default"   # "default" = n8n built-in set; else a custom CSV CIDR list
+n8n_ssrf_allowed_hostnames: ""          # CSV allowlist of internal hosts to re-open
+n8n_ssrf_allowed_ip_ranges: ""          # CSV allowlist of internal CIDRs to re-open
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
