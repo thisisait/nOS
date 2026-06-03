@@ -50,3 +50,10 @@ calibreweb_proxy_auth_header: X-authentik-username
 # bootstrap superuser (akadmin = the operator on a single-admin tenant). Set to
 # your own Authentik username for a personal account; empty keeps `admin`.
 calibreweb_proxy_auth_username: "akadmin"
+
+# Seed one bundled public-domain sample book into a FRESH (empty) library so it
+# isn't blank on first open: Alice's Adventures in Wonderland (Project Gutenberg
+# #11, public domain; the PG License permits redistribution). Bundled in
+# files/ → NO provision-time network (air-gap-safe). Added only when the library
+# is empty (never clobbers the operator's books / never re-adds a deleted sample).
+calibreweb_seed_sample_book: true
