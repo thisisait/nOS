@@ -14,6 +14,25 @@ services:
 {% endif %}
     environment:
       _NOS_PLUGIN: "n8n-base"
+{% if n8n_ssrf_protection | default(true) | bool %}
+      # ── SSRF protection (REM-043) ──────────────────────────────────────────
+      # Block the HTTP Request node + webhooks from reaching internal/private IPs
+      # (n8n built-in since 2.12; default-OFF upstream). n8n's default blocked set
+      # covers all RFC-1918 + loopback → every nOS peer (shared_net 172.30/16,
+      # iiab_net 172.20/16 ⊂ 172.16/12, infra postgres/redis/portainer/prometheus).
+      # Closes the unauth SSRF internal-net scan (REM-043), the SEC-02 amplifier.
+      # Re-open specific internal targets via n8n_ssrf_allowed_hostnames.
+      N8N_SSRF_PROTECTION_ENABLED: "true"
+{% if (n8n_ssrf_blocked_ip_ranges | default('default')) != 'default' %}
+      N8N_SSRF_BLOCKED_IP_RANGES: "{{ n8n_ssrf_blocked_ip_ranges }}"
+{% endif %}
+{% if (n8n_ssrf_allowed_hostnames | default('')) | length > 0 %}
+      N8N_SSRF_ALLOWED_HOSTNAMES: "{{ n8n_ssrf_allowed_hostnames }}"
+{% endif %}
+{% if (n8n_ssrf_allowed_ip_ranges | default('')) | length > 0 %}
+      N8N_SSRF_ALLOWED_IP_RANGES: "{{ n8n_ssrf_allowed_ip_ranges }}"
+{% endif %}
+{% endif %}
 {% if tenant_domain_is_local | default(true) | bool %}
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}

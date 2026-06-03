@@ -765,6 +765,34 @@
         restart bluesky-pds
       failed_when: false
 
+    - name: Reconcile providers for services flipped native_oidc → forward_auth
+      # MTI provider-name collision (2026-06-03): a service flipped from native_oidc
+      # to forward_auth (infisical) renders a PROXY provider with the SAME name as
+      # its stale OAuth2 provider. Authentik's Provider base table has a globally
+      # UNIQUE name, so on an EXISTING install reconverging the proxy can't be
+      # created (name taken) → the app stays bound to the dead oauth2 → the outpost
+      # 404s the host. Delete the stale oauth2 provider FIRST so the reapply below
+      # creates the proxy cleanly. Idempotent (no-op once flipped); no-op on a fresh
+      # blank (authentik down in pre_tasks → exec fails → failed_when:false). Extend
+      # _FLIPPED when another service flips. Pinned by test_infisical_no_enforce_in_oss.
+      ansible.builtin.shell: |
+        {{ docker_bin }} compose -p infra exec -T authentik-worker ak shell <<'PYEOF'
+        from authentik.providers.oauth2.models import OAuth2Provider
+        from authentik.core.models import Application
+        _FLIPPED = {"infisical": "Infisical"}   # app-slug -> stale OAuth2Provider name
+        for slug, name in _FLIPPED.items():
+            o = OAuth2Provider.objects.filter(name=name).first()
+            if not o:
+                continue
+            app = Application.objects.filter(slug=slug).first()
+            if app and app.provider_id == o.pk:
+                app.provider = None; app.save()
+            o.delete()
+            print("DELETED stale oauth2 provider:", name)
+        PYEOF
+      changed_when: false
+      failed_when: false
+
     - name: Reapply authentik blueprints
       # 30-agent-clients added 2026-05-27: it was rendered but never
       # force-applied here, so incrementally-added agent OAuth clients
