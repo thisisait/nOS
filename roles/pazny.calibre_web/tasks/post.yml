@@ -198,11 +198,60 @@
   failed_when: false
   check_mode: false
 
+# ── Seed one bundled public-domain sample book into an EMPTY library ─────────
+# Air-gap-safe (bundled in files/, no provision-time download). Gated on the
+# library being empty so it never clobbers the operator's books or re-adds a
+# deleted sample. calibredb add (as abc) imports the EPUB's own title/author.
+- name: "[pazny.calibre_web Post] Count books (sample-seed gate)"
+  # Query metadata.db's books table directly via python3 (in-container) — no shell
+  # pipe (busybox sh can't pipefail). Missing/empty DB → stdout '' → gate treats as
+  # non-empty (default '1') → seed safely skipped.
+  ansible.builtin.shell: |
+    {{ docker_bin }} compose -p iiab exec -T -u abc calibre-web python3 -c "import sqlite3; print(sqlite3.connect('/books/metadata.db').execute('SELECT count(*) FROM books').fetchone()[0])"
+  register: _cw_bookcount
+  when:
+    - _cw_ready.status | default(0) in [200, 302]
+    - calibreweb_seed_sample_book | default(true) | bool
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Stage sample book into /config (mounted)"
+  ansible.builtin.copy:
+    src: sample-alice-in-wonderland.epub
+    dest: "{{ calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config') }}/sample-alice-in-wonderland.epub"
+    mode: '0644'
+  when:
+    - _cw_ready.status | default(0) in [200, 302]
+    - calibreweb_seed_sample_book | default(true) | bool
+    - (_cw_bookcount.stdout | default('1') | trim | int) == 0
+
+- name: "[pazny.calibre_web Post] Add sample book to the empty library"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab exec -T -u abc calibre-web
+    calibredb add /config/sample-alice-in-wonderland.epub --library-path /books
+  register: _cw_seed
+  when:
+    - _cw_ready.status | default(0) in [200, 302]
+    - calibreweb_seed_sample_book | default(true) | bool
+    - (_cw_bookcount.stdout | default('1') | trim | int) == 0
+  changed_when: "'Added book ids' in (_cw_seed.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.calibre_web Post] Remove the staged sample EPUB (calibre copied it into /books)"
+  ansible.builtin.file:
+    path: "{{ calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config') }}/sample-alice-in-wonderland.epub"
+    state: absent
+  when:
+    - calibreweb_seed_sample_book | default(true) | bool
+    - (_cw_bookcount.stdout | default('1') | trim | int) == 0
+
 - name: "[pazny.calibre_web Post] Restart Calibre-Web to load the library"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab restart calibre-web
   when:
     - _cw_ready.status | default(0) in [200, 302]
-    - (_cw_lib.changed | default(false)) or (_cw_libdir.changed | default(false))
+    - (_cw_lib.changed | default(false)) or (_cw_libdir.changed | default(false)) or (_cw_seed.changed | default(false))
   changed_when: true
   failed_when: false
