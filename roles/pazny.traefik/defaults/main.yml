@@ -37,3 +37,8 @@ traefik_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 traefik_networks:
   - infra_net
   - "{{ stacks_shared_network | default('shared_net') }}"
+  # SEC-02 gated nets — Traefik must share a network with the header-trust
+  # backends it routes (calibre-web/2FAuth on gated_net; firefly on gated_b2b_net)
+  # so Docker DNS + file-provider routing resolve them once they leave shared_net.
+  - gated_net
+  - gated_b2b_net

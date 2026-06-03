@@ -62,3 +62,21 @@ networks:
     driver: bridge
   {{ apps_traefik_network }}:
     external: true
+{# SEC-02: any extra network a manifest's service declares (e.g. gated_net for an
+   isolated header-trust app like 2FAuth) MUST be declared here (external,
+   pre-created in shared-network.yml) or `docker compose -p apps up` fails with
+   "network <x> declared as used but not defined". #}
+{% set _extra_nets = [] %}
+{% for app in (_apps_render.apps | default([])) %}
+{% for sname, sdef in (app.compose.services | default({})).items() %}
+{% for net in (sdef.networks | default([])) %}
+{% if net not in ['apps_net', apps_traefik_network] and net not in _extra_nets %}
+{% set _ = _extra_nets.append(net) %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% for net in _extra_nets %}
+  {{ net }}:
+    external: true
+{% endfor %}

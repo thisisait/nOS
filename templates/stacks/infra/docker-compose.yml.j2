@@ -96,3 +96,10 @@ networks:
     driver: bridge
   {{ stacks_shared_network }}:
     external: true
+  # SEC-02 gated nets (external, pre-created in shared-network.yml). Traefik joins
+  # both (route calibre/2FAuth/firefly off shared_net); mariadb + redis join
+  # gated_b2b_net so firefly reaches its DB without shared_net.
+  gated_net:
+    external: true
+  gated_b2b_net:
+    external: true

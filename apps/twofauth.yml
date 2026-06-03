@@ -118,6 +118,12 @@ compose:
         start_period: 60s
       mem_limit: 256m
       cpus: 0.5
+      # SEC-02: Traefik-only gated_net (NOT apps_net/shared_net). 2FAuth has no DB
+      # deps (local sqlite) + reverse-proxy-guard blindly trusts the forwarded
+      # header, so keeping peers off :8000 is the only mitigation. The apps_runner
+      # derives the Traefik docker-provider network from this single declared net.
+      networks:
+        - gated_net
 
   # Volumes namespace: tfa_*. Unique across all Tier-2 pilots
   # (rcube_* for roundcube, documenso_* for documenso). New pilots SHOULD

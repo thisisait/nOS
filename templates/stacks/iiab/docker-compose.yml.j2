@@ -37,3 +37,7 @@ networks:
     driver: bridge
   {{ stacks_shared_network }}:
     external: true
+  # SEC-02 gated net (external, pre-created) — calibre-web lives here only (off
+  # iiab_net/shared_net) so peers can't reach :8083 to forge the proxy-auth header.
+  gated_net:
+    external: true

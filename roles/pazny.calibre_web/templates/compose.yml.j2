@@ -3,9 +3,12 @@
 # Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
 # ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Nedeklaruje top-level networks: — iiab_net je definovana v base
-# templates/stacks/iiab/docker-compose.yml.j2. Calibre-Web je lokalni,
-# nepripojuje se na {{ stacks_shared_network }}.
+# Does not declare top-level networks: — gated_net is defined (external) in the
+# base templates/stacks/iiab/docker-compose.yml.j2. SEC-02: Calibre-Web joins ONLY
+# the Traefik-only gated_net (NOT iiab_net / shared_net) — it has no DB deps (local
+# library), and its reverse-proxy header-login blindly trusts X-authentik-username,
+# so keeping peers off :8083 is the only mitigation. Traefik (on gated_net) still
+# routes it; the @file router's authentik@file middleware still gates the edge.
 #
 # Service name pouziva pomlcku (`calibre-web`), zatimco role name pouziva
 # podtrzitko (`calibre_web`) kvuli Ansible Galaxy naming rules.
@@ -26,8 +29,9 @@ services:
       TZ: "{{ calibreweb_timezone | default('Europe/Prague') }}"
       DOCKER_MODS: linuxserver/mods:universal-calibre
     networks:
-      - iiab_net
-      - {{ stacks_shared_network }}
+      # SEC-02: Traefik-only gated_net (was iiab_net + shared_net). No DB deps, so
+      # nothing else needs to reach calibre-web — only Traefik (also on gated_net).
+      - gated_net
     logging:
       driver: "json-file"
       options:
