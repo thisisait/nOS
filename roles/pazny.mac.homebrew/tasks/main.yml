@@ -444,17 +444,33 @@
     # path above (also shell-based) and removes the deserialization surface.
     - name: Upgrade all homebrew packages (if configured).
       ansible.builtin.shell: |
-        set -e
-        brew update
+        brew update || true
         brew upgrade
       environment:
         HOMEBREW_NO_AUTO_UPDATE: "1"
         HOMEBREW_NO_INSTALL_CLEANUP: "1"
       register: _brew_upgrade_all
       changed_when: "'already up-to-date' not in (_brew_upgrade_all.stdout | default('')).lower()"
+      # NON-FATAL (2026-06-04): `brew upgrade` upgrades EVERY outdated formula, and a
+      # single one glitching (e.g. a third-party tap bottle "Cellar/<f> is not a
+      # directory", or HOMEBREW_REQUIRE_TAP_TRUST) used to abort the ENTIRE nOS
+      # provision before the stacks ever ran. This is a best-effort host-maintenance
+      # convenience — nOS's load-bearing tools are installed/pinned separately — so a
+      # brew-upgrade hiccup must NOT block provisioning. The report below surfaces it.
+      failed_when: false
       when: homebrew_upgrade_all_packages | default(false) | bool
       notify:
         - Clear homebrew cache
+
+    - name: "WARN — brew upgrade hit a snag (non-fatal; provisioning continues)"
+      ansible.builtin.debug:
+        msg: >-
+          `brew upgrade` returned rc={{ _brew_upgrade_all.rc }} — one or more formulae
+          did not upgrade (see: {{ (_brew_upgrade_all.stderr_lines | default([]))[-3:] | default([]) }}).
+          Non-fatal; fix on the host with `brew upgrade <formula>` or `brew untap`/`brew trust`.
+      when:
+        - homebrew_upgrade_all_packages | default(false) | bool
+        - (_brew_upgrade_all.rc | default(0)) != 0
 
     - name: "Formulae upgrade report"
       ansible.builtin.debug:
