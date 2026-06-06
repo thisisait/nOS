@@ -753,13 +753,14 @@
       "current_version": "latest",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "n8n unauthenticated SSRF via HTTP Request node + webhooks. Can scan entire internal Docker network (Redis without auth, PostgreSQL, MariaDB, Prometheus, Portainer). Enable N8N_WEBHOOK_AUTH=true; restrict HTTP node to deny private IP ranges (10.0.0.0/8, 172.16.0.0/12, 127.0.0.0/8). | 2026-05-31 review: n8n SSRF: no in-app egress control. Real mitigations need a decision: (a) egress-restricted network for n8n (risk: breaks legit HTTP-Request workflows), or (b) ensure internal targets are authenticated (Redis password etc.). Deferred to operator decision.",
-      "status": "pending",
-      "auto_fixable": false,
+      "remediation_detail": "n8n unauthenticated SSRF via HTTP Request node + webhooks (could scan the internal Docker network: Redis, PostgreSQL, MariaDB, Prometheus, Portainer). RESOLVED 2026-06-06: enabled n8n's BUILT-IN SSRF guard N8N_SSRF_PROTECTION_ENABLED=\"true\" (n8n core since 2.12, ships default-OFF) via the n8n-base plugin compose-extension, gated by the n8n_ssrf_protection default (true); optional N8N_SSRF_BLOCKED_IP_RANGES / allow-list overrides exposed as role defaults. NOTE: the original advice ('N8N_WEBHOOK_AUTH=true') was incorrect \u2014 no such env var exists in n8n; the real control is N8N_SSRF_PROTECTION_ENABLED, which denies private/link-local egress from the HTTP Request node. Defence-in-depth: SEC-02 moved the header-trust backends off the flat shared_net onto Traefik-only gated nets.",
+      "status": "resolved",
+      "auto_fixable": true,
       "source": "attack_probe:ssrf_vector_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 3
+      "scan_cycle": 3,
+      "resolved_at": "2026-06-06T00:00:00Z"
     },
     {
       "id": "REM-044",
@@ -1514,21 +1515,21 @@
     }
   ],
   "summary": {
-    "total_items": 85,
+    "total_items": 87,
     "by_severity": {
-      "CRITICAL": 27,
-      "HIGH": 34,
+      "CRITICAL": 28,
+      "HIGH": 35,
       "MEDIUM": 23,
       "LOW": 1
     },
     "by_status": {
-      "pending": 21,
-      "resolved": 62,
+      "pending": 16,
+      "resolved": 69,
       "vendor-blocked": 2
     },
-    "auto_fixable": 70,
-    "manual_review_required": 15,
-    "note": "REM-078 (n8n RCE) + REM-079 (ntfy) added+resolved this cycle",
+    "auto_fixable": 73,
+    "manual_review_required": 14,
+    "note": "REM-043 (n8n SSRF) closed 2026-06-06 via N8N_SSRF_PROTECTION_ENABLED + SEC-02 network isolation; summary recomputed from items.",
     "last_rescan": "2026-05-31T08:13:57Z"
   }
 }
