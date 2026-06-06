@@ -37,7 +37,16 @@ apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (C
 # Normalize host_alias by stripping leading/trailing dots. Operators may
 # accidentally type '.lab' or 'lab.' — both should produce a clean '.lab'
 # segment without double-dot artefacts in the rendered FQDN.
-_host_alias_normalized: "{{ host_alias | default('') | regex_replace('^\\.+|\\.+$', '') }}"
+#
+# STOCK-JINJA ONLY in this file's var values: the plugin loader is invoked with
+# `template_vars: "{{ vars }}"`, which makes ansible-core (2.20.6+ new engine)
+# eagerly resolve every play var during module-arg finalization — in a context
+# where ANSIBLE filter plugins (regex_replace, regex_search, bool, b64encode…)
+# are NOT loaded, so any of them throws "No filter named '<x>'" and aborts the
+# whole run on ubuntu CI. Keep these expressions to Jinja2 core builtins
+# (default, trim, length, .endswith(), operators). Do NOT reintroduce
+# regex_replace / | bool here. (hotfix 2026-06-06)
+_host_alias_normalized: "{{ host_alias | default('') | trim('.') }}"
 
 # Helper: ".<host_alias>" when host_alias is set, "" otherwise. Consumer
 # templates compose hostnames as: "<svc>{{ _host_alias_seg }}.{{ tenant_domain }}".
@@ -45,7 +54,7 @@ _host_alias_seg: "{{ ('.' + _host_alias_normalized) if (_host_alias_normalized |
 
 # Same normalization for apps_subdomain — operators may type 'apps.' or '.apps';
 # Tier-2 Jinja consumers (mkcert SANs, ACME domains list) should both render cleanly.
-_apps_subdomain_normalized: "{{ apps_subdomain | default('apps') | regex_replace('^\\.+|\\.+$', '') }}"
+_apps_subdomain_normalized: "{{ apps_subdomain | default('apps') | trim('.') }}"
 
 # Backwards-compat shim — Phase 3 will migrate consumers to tenant_domain
 # directly, then this can be removed in a follow-up cleanup commit.
@@ -60,7 +69,7 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # 'localhost' is treated as local. Everything else is assumed public.
 # Override with `-e tenant_domain_is_local=false` if you want to force ACME on
 # a custom local TLD (e.g. if you have your own internal CA).
-tenant_domain_is_local: "{{ (tenant_domain | regex_search('\\.(local|lan|test|localhost)$|^localhost$')) is not none }}"
+tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost')) or (tenant_domain | default('')) == 'localhost' }}"
 instance_tld_is_local: "{{ tenant_domain_is_local }}"  # Backwards-compat shim
 
 # ── TLS cert paths ───────────────────────────────────────────────────────────
@@ -79,7 +88,7 @@ ssl_cert_key: "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local e
 # Wildcard cert *{host_alias_seg}.{tenant_domain} (+ Tier-2 wildcard) via
 # DNS-01 challenge to Cloudflare. Keys & state stored at ~/.acme.sh/, certs
 # symlinked into nginx/ssl/acme/.
-install_acme: "{{ not (tenant_domain_is_local | bool) }}"
+install_acme: "{{ not tenant_domain_is_local }}"
 acme_provider: "cloudflare"               # cloudflare | manual | http
 acme_email: "{{ default_admin_email }}"
 acme_renewal_days: 60                     # Re-issue when cert expires within N days
@@ -1844,7 +1853,8 @@ authentik_oidc_superset_client_secret: "{{ global_password_prefix }}_pw_oidc_sup
 # fallback for AT Protocol (.local is spec-forbidden); public TLDs get
 # bsky.<tenant_domain> so federation handles match the actual zone.
 # Override either side via config.yml if needed.
-bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true) | bool) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
+# stock-Jinja only (no `| bool`) — see _host_alias_normalized note (L40).
+bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true)) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
 bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
@@ -2250,7 +2260,8 @@ infisical_disable_signup: true                     # Admin creates all users
 # playbook run, so Infisical mirrors the canonical Ansible state. PATCH first,
 # POST on 404. Override `nos_infisical_projects` in config.yml to extend.
 infisical_org_name: "nOS"
-infisical_seed_enabled: "{{ install_infisical | default(false) | bool }}"
+# stock-Jinja only (no `| bool`) — see _host_alias_normalized note (L40).
+infisical_seed_enabled: "{{ install_infisical | default(false) }}"
 
 # ── Invite-flow Cesta B Hybrid (A18, 2026-05-20) ──────────────────────────
 # Wing's UsersPresenter::actionInviteCreate optionally pushes per-user
