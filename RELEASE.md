@@ -2,7 +2,92 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.3-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.4-beta`.
+
+---
+
+## v0.5-beta (2026-06-06)
+
+> **SSO/MFA coherence + a pre-release security cluster.** This tag makes the
+> single-sign-on story *honest and load-bearing*: MFA posture is explicit
+> (remembered by default, strict for gov), autologin is documented exactly where
+> upstream allows it (and where it can't), and three security findings that the
+> SSO work surfaced — a forgeable identity-header trust boundary, an n8n SSRF, and
+> an Authentik provider-flip collision — are closed and live-verified. No new
+> services; the change is in how the existing fleet authenticates. A non-gov,
+> non-`+all` run is behaviourally unchanged except for the network-isolation move.
+
+### SSO autologin — honest coverage
+
+The goal is "it feels like one app": sign in to Authentik once, then every
+`*.<tld>` service is zero-to-one click. What that actually delivers per service
+is bounded by what each upstream supports — stated here rather than over-promised:
+
+| Login UX | Services (representative) | Why |
+|---|---|---|
+| **0-click** (forward_auth passthrough) | Kiwix, Uptime Kuma, Paperclip, Puter, Wing, Mailpit, BI | Authentik session **is** the auth; service has no own login |
+| **0-click** (native_oidc auto-redirect) | Grafana | Upstream supports forced OIDC redirect — no login form shown |
+| **1-click** ("Sign in with Authentik") | Gitea, Nextcloud, Outline, BookStack, 2FAuth, Superset, Vaultwarden | Upstream OIDC, but no auto-redirect — one button on the service's own page |
+| **gate + own login** (documented ceiling) | **portainer** (OIDC button, no auto-redirect), **infisical** (CE org-OIDC is enterprise-licensed → forward_auth gate + own form), **metabase** (OSS has no OIDC → gate + shared operator account) | Upstream limitation, not a bug — gate-enforced `supports:` so it can't be falsely promised |
+
+The global force-OIDC mechanism (`sso_autologin`, single config var → plugin
+loader) ships **dormant (default `false`)**; the per-service upstream-support
+truth lives in `docs/sso-autologin-plan.md` and `docs/sso-and-attribution.md`.
+
+### MFA posture — explicit, per-tenant
+
+- **Default (non-gov):** posture B — global MFA, *remembered*. An enrolled user
+  re-challenges once per `mfa_remember_window` (default `hours=8`), not every login.
+- **Gov (`profiles/gov-local.yml`):** **strict step-up** — `mfa_remember_window:
+  "seconds=0"`, 2FA on every authentication-flow run, no remember-device.
+- MFA is **configure-not-deny** (`nos-tier1-mfa-flow`, TOTP + WebAuthn passkey):
+  an un-enrolled Tier-1 user is prompted to set up a device inline and continues —
+  never a hard lockout. Non-Tier-1 providers keep the stock flow byte-unchanged.
+
+### Security cluster (SEC-02 + REM-043 + MTI)
+
+- **SEC-02 — header-trust isolation.** calibre-web, 2FAuth and Firefly trust the
+  forwarded `X-authentik-*` / `REMOTE_USER` identity header with **zero upstream
+  validation**, so on the flat `shared_net` any peer container could forge it
+  straight to the backend, off-Traefik. Fix: a Traefik-only `gated_net`
+  (calibre + 2FAuth) and `gated_b2b_net` (Firefly, with MariaDB + Redis joined for
+  DB reach) — the backends leave `shared_net`; only Traefik routes them. Firefly's
+  `TRUSTED_PROXIES` narrowed from `**` to `172.16.0.0/12`. **Live-verified:** an
+  n8n→backend forge is unreachable (rc=1) while the edge still serves 302→auth and
+  Firefly stays healthy. Pinned by `tests/anatomy/test_sec02_*`.
+- **REM-043 — n8n SSRF closed.** Enabled n8n's built-in
+  `N8N_SSRF_PROTECTION_ENABLED` guard (n8n core since 2.12, ships default-OFF) via
+  the n8n-base plugin compose-extension, gated by `n8n_ssrf_protection` (default
+  true), with optional blocked/allowed-range overrides. The previously-queued
+  remediation (`N8N_WEBHOOK_AUTH=true`) was a **non-existent env var** — corrected
+  in the remediation queue. Pinned by `tests/anatomy/test_n8n_ssrf_protection.py`.
+- **MTI provider-flip reconcile.** Authentik's `ProxyProvider` is a Django
+  multi-table-inheritance subclass of `OAuth2Provider` sharing the base PK and the
+  globally-unique Provider `name`; flipping a service native_oidc→forward_auth
+  (e.g. infisical) left a stale `OAuth2Provider` row that collided with the new
+  proxy provider (the live symptom was infisical 404). `main.yml` now deletes the
+  stale row idempotently before re-applying blueprints (no-op on a blank run).
+
+### Other
+
+- **Calibre library autowiring** — empty-DB bootstrap (`calibredb` create on an
+  unseeded library, config dir + ownership) plus a seeded Project Gutenberg sample
+  book, so a fresh Calibre-Web has a working library on the first run.
+- **Remediation queue reconciled** — 16 pending / 69 resolved / 2 vendor-blocked of
+  87 (CLAUDE.md + the queue's own summary block were stale; recomputed from items).
+- **Housekeeping** — gov MFA strict pinned, `.gitignore` covers the operator's
+  local Calibre-sync helper.
+
+### Known / residual
+
+- **SSO ceilings are upstream, not bugs** — portainer/infisical/metabase keep an
+  own-login step (see the coverage table). `sso_autologin` global force-OIDC is
+  dormant pending the per-service rollout.
+- **Gov is scaffolding, not deployable** — ISDS (datové schránky) + NIA/eIDAS
+  federation are greenfield; retention is metadata, not enforced. See
+  `docs/compliance/gov-readiness-audit-2026q2.md`.
+- **MTI reconcile is hard-coded to the known flip set** (`infisical`); a future
+  native_oidc→forward_auth flip must add its slug to the `_FLIPPED` map in `main.yml`.
 
 ---
 
