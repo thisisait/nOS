@@ -146,3 +146,34 @@ def test_varsfile_refs_resolve_before_core_up():
         "default.config.yml / default.credentials.yml. Offenders:\n  "
         + "\n  ".join(offenders)
     )
+
+
+# ── Third {{ vars }}-safety gate: no ansible filter inside an inline loop dict ─
+# A non-stock filter inside an inline `loop:` item (`- { k: "{{ x | bool }}" }`)
+# is compiled in a filter-less context on a full ansible-core 2.20.6 run and
+# throws "No filter named '<x>'" — exactly the vars-file trap, in a task body
+# (it bit tasks/stacks/core-up.yml's data-dir loop, 2026-06-06). It does NOT
+# reproduce in isolation, only the live run. Keep inline loop-item fields on
+# stock Jinja (default/trim/replace/operators); a real boolean needs no `| bool`.
+_NONSTOCK_IN_LOOP_ITEM = re.compile(
+    r"^\s*-\s*\{.*\|\s*(bool|regex_replace|regex_search|regex_findall|b64encode|"
+    r"b64decode|hash|password_hash|to_uuid|combine|json_query|ipaddr|to_json|"
+    r"from_json|to_nice_yaml|from_yaml|to_datetime|strftime|map|zip)\b"
+)
+
+
+def test_no_nonstock_filter_in_inline_loop_items():
+    offenders: list[str] = []
+    roots = list((REPO / "tasks").rglob("*.yml"))
+    roots += [p for d in (REPO / "roles").glob("*/tasks") for p in d.rglob("*.yml")]
+    roots.append(REPO / "main.yml")
+    for p in roots:
+        for ln, line in enumerate(p.read_text().splitlines(), 1):
+            if _NONSTOCK_IN_LOOP_ITEM.match(line):
+                offenders.append(f"{p.relative_to(REPO)}:{ln}")
+    assert not offenders, (
+        "A non-stock (ansible) filter sits inside an inline `loop:` dict item. On a "
+        "full ansible-core 2.20.6 run that template is compiled in a filter-less "
+        "context and throws 'No filter named'. Use stock Jinja in loop-item fields "
+        "(a real boolean needs no `| bool`). Offenders:\n  " + "\n  ".join(sorted(offenders))
+    )

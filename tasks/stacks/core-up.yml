@@ -115,23 +115,28 @@
     state: directory
     mode: '0755'
   loop:
-    - { path: "{{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}", enabled: "{{ install_mariadb | default(false) | bool }}" }
-    - { path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}", enabled: "{{ install_postgresql | default(false) | bool }}" }
-    - { path: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}", enabled: "{{ redis_docker | default(false) | bool }}" }
-    - { path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}", enabled: "{{ install_authentik | default(false) | bool }}" }
-    - { path: "{{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}", enabled: "{{ install_infisical | default(false) | bool }}" }
-    - { path: "{{ portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer') }}", enabled: "{{ install_portainer | default(false) | bool }}" }
-    - { path: "{{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}", enabled: "{{ install_traefik | default(false) | bool }}" }
-    - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) | bool }}" }
-    - { path: "{{ spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
-    - { path: "{{ spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys') }}", enabled: "{{ install_spacetimedb | default(false) | bool }}" }
+    - { path: "{{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}", enabled: "{{ install_mariadb | default(false) }}" }
+    - { path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}", enabled: "{{ install_postgresql | default(false) }}" }
+    - { path: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}", enabled: "{{ redis_docker | default(false) }}" }
+    - { path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}", enabled: "{{ install_authentik | default(false) }}" }
+    - { path: "{{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}", enabled: "{{ install_infisical | default(false) }}" }
+    - { path: "{{ portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer') }}", enabled: "{{ install_portainer | default(false) }}" }
+    - { path: "{{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}", enabled: "{{ install_traefik | default(false) }}" }
+    - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) }}" }
+    - { path: "{{ spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data') }}", enabled: "{{ install_spacetimedb | default(false) }}" }
+    - { path: "{{ spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys') }}", enabled: "{{ install_spacetimedb | default(false) }}" }
     # Bone container bind-mount targets (Track A, 2026-04-26). Pre-creating
     # them here keeps Docker from racing the role tasks and creating empty
     # root-owned dirs.
     # SEC-4 (2026-05-23): ~/.nos removed from this 0755 loop — created
     # at 0700 in main.yml::pre_tasks before any other task runs.
     - { path: "{{ ansible_facts['env']['HOME'] }}/agents/log", enabled: true }
-  when: item.enabled | bool
+  # `enabled` carries a real boolean (install_* flags / literal true) — NO `| bool`.
+  # Under ansible-core 2.20.6 this loop-item field is compiled in a filter-less
+  # context on a full run, so `| bool` throws "No filter named 'bool'" (the stock
+  # `default` survives; `| bool` does not). `item.enabled` is already boolean, so
+  # native truthiness is correct + filter-free. See CLAUDE.md `{{ vars }}` gotcha.
+  when: item.enabled
   loop_control:
     label: "{{ item.path }}"
 
