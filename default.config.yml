@@ -1306,6 +1306,13 @@ install_qdrant: false
 # can override `qdrant_api_key` / `qdrant_api_key_ro` directly in
 # credentials.yml — these wrappers fall back to the auto-generated
 # values when no override is set.
+# app_secrets is the apps_runner secret-store (its own default is `{}` in
+# roles/pazny.apps_runner/defaults). That role default only materialises during
+# stack-up — AFTER the core-up `template_vars: "{{ vars }}"` loader resolves the
+# whole namespace — so it MUST also default here, or the eager resolution aborts
+# on an undefined var (the `| default({})` below does not save it). See CLAUDE.md
+# `{{ vars }}` gotcha + test_config_stock_jinja_only.py.
+app_secrets: {}
 qdrant_api_key: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_API', '') }}"
 qdrant_api_key_ro: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_RO_API', '') }}"
 qdrant_url: "http://127.0.0.1:{{ qdrant_port | default(6333) }}"

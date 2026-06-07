@@ -70,61 +70,79 @@ def test_vars_files_use_stock_jinja_filters_only():
     )
 
 
-# ── Second {{ vars }}-safety gate: secret refs must have real definitions ─────
-# A secret referenced ONLY through `{{ foo_password | default(global_password_prefix
-# + '_pw_foo') }}` looks safe, but under the eager `template_vars: "{{ vars }}"`
-# resolution a genuinely-undefined var can abort the whole run *despite* the
-# default() guard (it bit mysqld_exporter_password + the akadmin/oidc seed twins on
-# the 2026-06-06 hotfix — none reproduced in isolation; only the full-namespace
-# core-up run did). The robust convention: every secret-bearing var the committed
-# vars-files reference must ALSO have a real top-level definition (or be a runtime
-# set_fact in main.yml), so resolution never depends on default() trapping undefined.
-SECRET_SUFFIXES = ("_password", "_secret", "_key", "_token")
+# ── Second {{ vars }}-safety gate: every ref must be defined before core-up ───
+# A var referenced ONLY through `{{ foo | default(<x>) }}` looks safe, but under
+# the eager `template_vars: "{{ vars }}"` resolution a genuinely-undefined var
+# aborts the whole run *despite* the default() guard — it does NOT reproduce in an
+# isolated `{{ vars }}` finalize, only the full-namespace core-up run does. It bit
+# mysqld_exporter_password + the akadmin/oidc seed twins, then app_secrets (whose
+# only definition is the apps_runner role default — which loads AFTER core-up) and
+# tester_password_prefix (defined nowhere). The robust convention: EVERY identifier
+# a committed vars-file references in a value must resolve from something loaded
+# BEFORE the core-up loader — a key in default.config.yml / default.credentials.yml
+# / tests/config.yml, a main.yml var/set_fact, an ansible fact, or a stock builtin.
+# A role default does NOT count (its role is invoked during stack-up, after core-up).
+_RUNTIME = {
+    "item", "global_password_prefix", "playbook_dir", "inventory_hostname",
+    "hostvars", "vars", "ansible_facts", "lookup", "now", "range", "namespace",
+    "tenant_domain", "previous_password_prefix", "ansible_become_password",
+    "nos_sudo_password", "omit", "undef",
+}
+_BUILTINS = {
+    "default", "trim", "length", "replace", "lower", "upper", "int", "float",
+    "join", "list", "map", "select", "selectattr", "reject", "rejectattr",
+    "first", "last", "sort", "unique", "min", "max", "sum", "string", "bool",
+    "items", "dictsort", "d", "abs", "round", "title", "capitalize", "ternary",
+    "equalto", "not", "is", "in", "and", "or", "if", "else", "elif", "for",
+    "endif", "endfor", "true", "false", "none", "True", "False", "None",
+}
 
 
-def _defined_names() -> set[str]:
+def _defined_before_core_up() -> set[str]:
     names: set[str] = set()
-    for path in VARS_FILES:
+    for path in VARS_FILES + [REPO / "tests" / "config.yml"]:
         for line in path.read_text().splitlines():
             m = re.match(r"^([a-zA-Z_]\w*):", line)
             if m:
                 names.add(m.group(1))
-    # vars set_fact'd in main.yml before the core-up plugin loader are also defined
-    main = REPO / "main.yml"
-    for line in main.read_text().splitlines():
-        m = re.match(r"^\s{6,}([a-z_]\w*):\s", line)
+    # any key (play var or set_fact, at any indent) defined in main.yml
+    for line in (REPO / "main.yml").read_text().splitlines():
+        m = re.match(r"^\s*([a-z_]\w*):\s", line)
         if m:
             names.add(m.group(1))
     return names
 
 
-def _secret_refs(path: pathlib.Path) -> dict[str, int]:
-    txt = path.read_text()
-    exprs = re.findall(r"\{\{(.*?)\}\}", txt, re.S) + re.findall(r"\{%(.*?)%\}", txt, re.S)
-    refs: dict[str, int] = {}
-    for e in exprs:
-        # blank quoted string literals so '_pw_foo'-style args aren't parsed
-        s = re.sub(r"'(?:[^'\\]|\\.)*'", "''", e)
-        s = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
-        # head identifiers only (not attribute access `.x` / mid-word)
-        for m in re.finditer(r"(?<![\.\w])([a-z_][a-z0-9_]*)", s):
-            ident = m.group(1)
-            if ident.endswith(SECRET_SUFFIXES):
-                refs[ident] = refs.get(ident, 0) + 1
+def _head_refs(path: pathlib.Path) -> dict[str, tuple[int, int]]:
+    refs: dict[str, tuple[int, int]] = {}
+    for ln, line in enumerate(path.read_text().splitlines(), 1):
+        for expr in re.findall(r"\{\{(.*?)\}\}", line) + re.findall(r"\{%(.*?)%\}", line):
+            s = re.sub(r"'(?:[^'\\]|\\.)*'", "''", expr)
+            s = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
+            for m in re.finditer(r"(?<![\.\w])([a-z_][a-z0-9_]*)\b", s):
+                ident = m.group(1)
+                rest = s[m.end():].lstrip()
+                # skip filter/function/method names and kwargs (`foo(` / `foo=`)
+                if rest.startswith("(") or rest.startswith("="):
+                    continue
+                cnt, _ = refs.get(ident, (0, ln))
+                refs[ident] = (cnt + 1, refs.get(ident, (0, ln))[1])
     return refs
 
 
-def test_secret_vars_referenced_have_backing_definition():
-    defined = _defined_names()
+def test_varsfile_refs_resolve_before_core_up():
+    known = _defined_before_core_up() | _RUNTIME | _BUILTINS
     offenders: list[str] = []
     for path in VARS_FILES:
-        for ident, n in sorted(_secret_refs(path).items()):
-            if ident not in defined:
-                offenders.append(f"{path.name}: `{ident}` referenced {n}x, never defined")
+        for ident, (n, ln) in sorted(_head_refs(path).items()):
+            if ident in known or ident.startswith("ansible_"):
+                continue
+            offenders.append(f"{path.name}:{ln} `{ident}` referenced {n}x, undefined at core-up")
     assert not offenders, (
-        "A secret-bearing var is referenced in a committed vars-file but has no real "
-        "definition — only a `| default(...)` fallback. Under `template_vars: "
-        "\"{{ vars }}\"` eager resolution this can abort the run even with default(). "
-        "Add a top-level `<name>: \"{{ global_password_prefix }}_pw_<suffix>\"` "
-        "definition (default.credentials.yml). Offenders:\n  " + "\n  ".join(offenders)
+        "A var referenced in a committed vars-file value is not defined by anything "
+        "that loads BEFORE the core-up `template_vars: \"{{ vars }}\"` loader (role "
+        "defaults don't count — they load during stack-up). The eager resolution "
+        "aborts on it even behind `| default()`. Add a real default in "
+        "default.config.yml / default.credentials.yml. Offenders:\n  "
+        + "\n  ".join(offenders)
     )
