@@ -68,3 +68,63 @@ def test_vars_files_use_stock_jinja_filters_only():
         "`template_vars: \"{{ vars }}\"` eager resolution on ubuntu CI. "
         "Rewrite with Jinja2 core builtins. Offenders:\n  " + "\n  ".join(offenders)
     )
+
+
+# ── Second {{ vars }}-safety gate: secret refs must have real definitions ─────
+# A secret referenced ONLY through `{{ foo_password | default(global_password_prefix
+# + '_pw_foo') }}` looks safe, but under the eager `template_vars: "{{ vars }}"`
+# resolution a genuinely-undefined var can abort the whole run *despite* the
+# default() guard (it bit mysqld_exporter_password + the akadmin/oidc seed twins on
+# the 2026-06-06 hotfix — none reproduced in isolation; only the full-namespace
+# core-up run did). The robust convention: every secret-bearing var the committed
+# vars-files reference must ALSO have a real top-level definition (or be a runtime
+# set_fact in main.yml), so resolution never depends on default() trapping undefined.
+SECRET_SUFFIXES = ("_password", "_secret", "_key", "_token")
+
+
+def _defined_names() -> set[str]:
+    names: set[str] = set()
+    for path in VARS_FILES:
+        for line in path.read_text().splitlines():
+            m = re.match(r"^([a-zA-Z_]\w*):", line)
+            if m:
+                names.add(m.group(1))
+    # vars set_fact'd in main.yml before the core-up plugin loader are also defined
+    main = REPO / "main.yml"
+    for line in main.read_text().splitlines():
+        m = re.match(r"^\s{6,}([a-z_]\w*):\s", line)
+        if m:
+            names.add(m.group(1))
+    return names
+
+
+def _secret_refs(path: pathlib.Path) -> dict[str, int]:
+    txt = path.read_text()
+    exprs = re.findall(r"\{\{(.*?)\}\}", txt, re.S) + re.findall(r"\{%(.*?)%\}", txt, re.S)
+    refs: dict[str, int] = {}
+    for e in exprs:
+        # blank quoted string literals so '_pw_foo'-style args aren't parsed
+        s = re.sub(r"'(?:[^'\\]|\\.)*'", "''", e)
+        s = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
+        # head identifiers only (not attribute access `.x` / mid-word)
+        for m in re.finditer(r"(?<![\.\w])([a-z_][a-z0-9_]*)", s):
+            ident = m.group(1)
+            if ident.endswith(SECRET_SUFFIXES):
+                refs[ident] = refs.get(ident, 0) + 1
+    return refs
+
+
+def test_secret_vars_referenced_have_backing_definition():
+    defined = _defined_names()
+    offenders: list[str] = []
+    for path in VARS_FILES:
+        for ident, n in sorted(_secret_refs(path).items()):
+            if ident not in defined:
+                offenders.append(f"{path.name}: `{ident}` referenced {n}x, never defined")
+    assert not offenders, (
+        "A secret-bearing var is referenced in a committed vars-file but has no real "
+        "definition — only a `| default(...)` fallback. Under `template_vars: "
+        "\"{{ vars }}\"` eager resolution this can abort the run even with default(). "
+        "Add a top-level `<name>: \"{{ global_password_prefix }}_pw_<suffix>\"` "
+        "definition (default.credentials.yml). Offenders:\n  " + "\n  ".join(offenders)
+    )
