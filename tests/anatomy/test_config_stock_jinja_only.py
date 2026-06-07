@@ -177,3 +177,46 @@ def test_no_nonstock_filter_in_inline_loop_items():
         "context and throws 'No filter named'. Use stock Jinja in loop-item fields "
         "(a real boolean needs no `| bool`). Offenders:\n  " + "\n  ".join(sorted(offenders))
     )
+
+
+# ── Fourth gate: inline loop-item dicts must not ref a role-default-ONLY var ───
+# An orchestration loop-item (`- { path: "{{ traefik_config_dir | default(...) }}" }`)
+# runs OUTSIDE any role's var scope. If the var lives only in a role default, that
+# role hasn't loaded yet at core-up, so it is undefined — and under ansible-core
+# 2.20.6 the loop-item `| default()` does not save it (it bit traefik_config_dir
+# 2026-06-06). Hoist such a var into default.config.yml (value matching the role
+# default) so it resolves before core-up. Reuses _defined_before_core_up().
+_INLINE_LOOP_DICT = re.compile(r"^\s*-\s*\{")
+
+
+def _role_default_keys() -> set[str]:
+    keys: set[str] = set()
+    for d in (REPO / "roles").glob("*/defaults/main.yml"):
+        for line in d.read_text().splitlines():
+            m = re.match(r"^([a-z_]\w*):", line)
+            if m:
+                keys.add(m.group(1))
+    return keys
+
+
+def test_inline_loop_item_refs_not_role_default_only():
+    before = _defined_before_core_up()
+    role_only = _role_default_keys() - before
+    offenders: list[str] = []
+    for p in (REPO / "tasks").rglob("*.yml"):
+        for ln, line in enumerate(p.read_text().splitlines(), 1):
+            if not _INLINE_LOOP_DICT.match(line):
+                continue
+            for expr in re.findall(r"\{\{(.*?)\}\}", line) + re.findall(r"\{%(.*?)%\}", line):
+                s = re.sub(r"'(?:[^'\\]|\\.)*'", "''", expr)
+                s = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
+                for m in re.finditer(r"(?<![\.\w])([a-z_][a-z0-9_]*)\b", s):
+                    ident = m.group(1)
+                    if ident in role_only:
+                        offenders.append(f"{p.relative_to(REPO)}:{ln} `{ident}` (role-default-only)")
+    assert not offenders, (
+        "An inline `loop:` dict in an orchestration task references a var defined "
+        "ONLY in a role default — undefined at that point, and `| default()` won't "
+        "save it under ansible-core 2.20.6. Hoist it into default.config.yml (value "
+        "matching the role default). Offenders:\n  " + "\n  ".join(sorted(set(offenders)))
+    )

@@ -121,7 +121,7 @@
     - { path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}", enabled: "{{ install_authentik | default(false) }}" }
     - { path: "{{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}", enabled: "{{ install_infisical | default(false) }}" }
     - { path: "{{ portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer') }}", enabled: "{{ install_portainer | default(false) }}" }
-    - { path: "{{ traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik') }}", enabled: "{{ install_traefik | default(false) }}" }
+    - { path: "{{ traefik_config_dir | default(stacks_dir + '/infra/traefik') }}", enabled: "{{ install_traefik | default(false) }}" }
     - { path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}", enabled: "{{ install_bluesky_pds | default(false) }}" }
     - { path: "{{ spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data') }}", enabled: "{{ install_spacetimedb | default(false) }}" }
     - { path: "{{ spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys') }}", enabled: "{{ install_spacetimedb | default(false) }}" }

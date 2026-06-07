@@ -1630,8 +1630,13 @@ traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
 traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
-# traefik_config_dir / traefik_dynamic_dir / traefik_certs_dir live in
-# roles/pazny.traefik/defaults/main.yml — they reference {{ stacks_dir }}.
+# traefik_dynamic_dir / traefik_certs_dir live in roles/pazny.traefik/defaults
+# (referenced only once the role loads). traefik_config_dir is HOISTED here —
+# tasks/stacks/core-up.yml's data-dir loop pre-creates it BEFORE the traefik role
+# loads, so the role default is too late: under ansible-core 2.20.6 the loop-item
+# `| default()` does not save the undefined var. Value matches the role default
+# ({{ stacks_dir }}/infra/traefik) byte-for-byte. See CLAUDE.md `{{ vars }}` gotcha.
+traefik_config_dir: "{{ stacks_dir }}/infra/traefik"
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
 # These are referenced via lookup('vars', '<svc>_port') in the Traefik file
