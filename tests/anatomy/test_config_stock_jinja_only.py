@@ -220,3 +220,42 @@ def test_inline_loop_item_refs_not_role_default_only():
         "save it under ansible-core 2.20.6. Hoist it into default.config.yml (value "
         "matching the role default). Offenders:\n  " + "\n  ".join(sorted(set(offenders)))
     )
+
+
+# ── Fifth gate: no non-stock filter in a `meta:` task's when: ──────────────────
+# `meta:` tasks (end_play/end_host/clear_facts/…) are processed by the strategy
+# plugin, and on ansible-core 2.20.6 their `when:` is compiled in a filter-less
+# context — `| bool` throws "No filter named 'bool'" (it bit the bone/acme/pulse/
+# wing `meta: end_play` skip-guards, 2026-06-06). NORMAL task / block / include /
+# import `when:` clauses are fine (verified: those ran green before the meta one).
+# A real boolean needs no `| bool` — drop it. Local 2.20.6 does NOT reproduce.
+_META_TASK = re.compile(r"\bmeta:\s*\w")
+_NONSTOCK_FILTER = re.compile(
+    r"\|\s*(bool|regex_replace|regex_search|regex_findall|b64encode|b64decode|"
+    r"hash|password_hash|to_uuid|combine|json_query|ipaddr|to_json|from_json|"
+    r"to_nice_yaml|from_yaml|map|select|reject|difference|union|intersect)\b"
+)
+
+
+def test_no_nonstock_filter_in_meta_task_when():
+    offenders: list[str] = []
+    roots = [p for d in (REPO / "roles").glob("*/tasks") for p in d.rglob("*.yml")]
+    roots += list((REPO / "tasks").rglob("*.yml"))
+    roots.append(REPO / "main.yml")
+    for p in roots:
+        lines = p.read_text().splitlines()
+        for i, line in enumerate(lines):
+            if not _META_TASK.search(line):
+                continue
+            # a meta task's when: sits within a couple of lines of the directive
+            for j in range(max(0, i - 3), min(i + 5, len(lines))):
+                wl = lines[j]
+                if re.match(r"\s*when:", wl) and _NONSTOCK_FILTER.search(wl):
+                    offenders.append(f"{p.relative_to(REPO)}:{j + 1}: {wl.strip()[:70]}")
+                    break
+    assert not offenders, (
+        "A `meta:` task's `when:` uses a non-stock (ansible) filter. On ansible-core "
+        "2.20.6 that condition is compiled in a filter-less context and throws 'No "
+        "filter named'. Drop `| bool` (a real boolean is already truthy) / use stock "
+        "Jinja. Offenders:\n  " + "\n  ".join(sorted(set(offenders)))
+    )

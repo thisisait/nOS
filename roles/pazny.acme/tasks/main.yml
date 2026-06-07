@@ -14,7 +14,7 @@
 
 - name: "[ACME] Skip when running on local TLD"
   ansible.builtin.meta: end_play
-  when: tenant_domain_is_local | default(false) | bool
+  when: tenant_domain_is_local | default(false)   # stock-Jinja: meta: when: is filter-less on 2.20.6
 
 - name: "[ACME] Refuse to run without a Cloudflare API token"
   ansible.builtin.fail:
