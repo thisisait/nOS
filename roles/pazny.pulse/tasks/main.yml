@@ -17,7 +17,7 @@
 
 - name: "[pazny.pulse] Skip when install_pulse: false"
   ansible.builtin.meta: end_play
-  when: not (install_pulse | default(false) | bool)
+  when: not (install_pulse | default(false))   # stock-Jinja: meta: when: is filter-less on 2.20.6
 
 - name: "[pazny.pulse] Ensure runtime directories exist"
   ansible.builtin.file:

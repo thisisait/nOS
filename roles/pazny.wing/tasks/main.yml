@@ -25,7 +25,7 @@
 
 - name: "[pazny.wing] Skip when install_wing: false"
   ansible.builtin.meta: end_play
-  when: not (install_wing | default(true) | bool)
+  when: not (install_wing | default(true))   # stock-Jinja: meta: when: is filter-less on 2.20.6
 
 # ── Track-A reversal cleanup ─────────────────────────────────────────────────
 # Stop + remove the wing + wing-nginx containers if they exist from a prior

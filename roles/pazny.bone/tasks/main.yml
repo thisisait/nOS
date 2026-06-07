@@ -19,7 +19,7 @@
 
 - name: "[pazny.bone] Skip when install_bone: false"
   ansible.builtin.meta: end_play
-  when: not (install_bone | default(true) | bool)
+  when: not (install_bone | default(true))   # stock-Jinja: meta: when: is filter-less on 2.20.6
 
 # ── Track-A reversal cleanup ─────────────────────────────────────────────────
 # Stop + remove the bone container if it exists from a prior (Track A) run.
