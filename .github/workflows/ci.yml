@@ -353,7 +353,10 @@ jobs:
           PY
 
       - name: Test the playbook.
-        run: ansible-playbook main.yml
+        # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
+        # module interpreter past macOS's custom-module discovery cache, which
+        # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
+        run: ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
@@ -361,7 +364,7 @@ jobs:
       - name: Idempotence check.
         run: |
           idempotence=$(mktemp)
-          ansible-playbook main.yml | tee -a "${idempotence}"
+          ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
           tail "${idempotence}" | grep -q 'changed=0.*failed=0' \
             && (echo 'Idempotence test: pass' && exit 0) \
             || (echo 'Idempotence test: fail' && exit 1)
@@ -465,7 +468,10 @@ jobs:
           PY
 
       - name: Test the playbook (Linux).
-        run: ansible-playbook main.yml
+        # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
+        # module interpreter past macOS's custom-module discovery cache, which
+        # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
+        run: ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
