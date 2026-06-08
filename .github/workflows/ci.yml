@@ -37,11 +37,17 @@ jobs:
         with:
           python-version: '3.x'
 
-      # Pin ansible-core to operator's installed baseline (2.20.x). Avoids
-      # CI drift when upstream cuts 2.21+ stable. Bump in a coordinated
-      # commit when ansible-core 2.21/2.22/2.24 is intentionally adopted.
+      # Pin ansible-core to the operator's installed baseline 2.20.5. Upper
+      # bound is <2.20.6 (NOT <2.21): 2.20.6 regressed the deprecated `{{ vars }}`
+      # path — after the first `template_vars: "{{ vars }}"` (core-up plugin
+      # loader) the Jinja env goes filter-less for the rest of the run, so every
+      # non-stock filter (`bool`, `to_nice_json`, `regex_replace`, …) throws
+      # "No filter named". It is NOT reproducible locally (only a full run on a
+      # CI runner triggers it) and the surface is global. The real fix is the
+      # `{{ vars }}` refactor tied to the 2.24 jump (see CLAUDE.md tech-debt).
+      # Bump in a coordinated commit when that lands or upstream fixes 2.20.6+.
       - name: Install lint dependencies.
-        run: pip3 install yamllint 'ansible-core>=2.20,<2.21' ansible-lint
+        run: pip3 install yamllint 'ansible-core>=2.20,<2.20.6' ansible-lint
 
       - name: yamllint – YAML syntax check.
         run: yamllint .
@@ -75,7 +81,7 @@ jobs:
 
       # Pin to current operator baseline (2.20.x). See Lint job comment.
       - name: Install Ansible.
-        run: pip3 install 'ansible-core>=2.20,<2.21'
+        run: pip3 install 'ansible-core>=2.20,<2.20.6'
 
       - name: Install Ansible Galaxy requirements.
         # Retry: Galaxy occasionally returns transient 502/Bad Gateway from
@@ -269,7 +275,7 @@ jobs:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           "$PY" -m pip install --upgrade pip
-          "$PY" -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          "$PY" -m pip install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
           # Sanity probe — fail fast if pyyaml/jsonschema aren't reachable
           # from the SAME interpreter Ansible will use at runtime.
           "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
@@ -341,7 +347,7 @@ jobs:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           "$PY" -m pip install --upgrade pip
-          "$PY" -m pip install 'ansible-core>=2.20,<2.21' pyyaml jsonschema
+          "$PY" -m pip install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
           "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
 
       - name: Set up the test environment.
