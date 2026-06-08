@@ -167,12 +167,11 @@
   timeout: 1800
 
 # ── 6. Doctor check (verify install) ─────────────────────────────────────────
-# Hermes has no persistent daemon mode (just `gateway install` for messaging +
-# `mcp serve` for MCP expose). We leave the daemon to the user — the playbook
-# installs + configures it; the user starts it on demand:
+# The web-UI daemon is opt-in (hermes_daemon_mode, section 7 below). These
+# manual modes are always available regardless:
 #   hermes chat                  — interactive mode
-#   hermes gateway install       — launchd plist for Telegram/Discord
-#   hermes mcp serve             — expose Hermes conversations jako MCP server
+#   hermes gateway install       — launchd plist for Telegram/Discord messaging
+#   hermes mcp serve             — expose Hermes conversations as an MCP server
 
 - name: "[Hermes] Run hermes doctor to verify install"
   ansible.builtin.command: "{{ hermes_venv }}/bin/hermes doctor"
@@ -186,6 +185,67 @@
   ansible.builtin.debug:
     msg: "{{ _hermes_doctor.stdout_lines | default([]) | select('match', '.*(Python|Required|Configuration|Auth).*') | list }}"
   when: _hermes_doctor.stdout is defined
+
+# ── 7. Optional launchd web-UI daemon (OPT-IN: hermes_daemon_mode) ────────────
+# Default OFF. When enabled on a launchd host, render + bootstrap a launchd unit
+# that self-starts the FastAPI web UI and respawns it (mirrors Bone/Pulse/Wing).
+# Loopback-only; Authentik forward-auth fronts hermes.<tld> via hermes-base.
+
+- name: "[Hermes] Render launchd plist (web-UI daemon)"
+  ansible.builtin.template:
+    src: hermes.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ hermes_launchd_label }}.plist"
+    mode: '0644'
+  notify: Restart hermes
+  when:
+    - hermes_daemon_mode | default(false)
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[Hermes] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ hermes_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ hermes_launchd_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _hermes_bootstrap
+  changed_when: "'bootstrapped' in _hermes_bootstrap.stdout"
+  when:
+    - hermes_daemon_mode | default(false)
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+# Best-effort readiness — NEVER fails the run. The web verb (hermes_web_command)
+# is version-dependent + the first run may still be pulling the model, so a
+# non-answer is reported loudly but doesn't break the playbook.
+- name: "[Hermes] Probe web UI readiness (best-effort)"
+  ansible.builtin.uri:
+    url: "http://{{ hermes_web_host | default('127.0.0.1') }}:{{ hermes_web_port | default(18790) }}/"
+    method: GET
+    status_code: [200, 301, 302, 401, 403, 404]
+    timeout: 5
+  register: _hermes_web_probe
+  retries: 6
+  delay: 5
+  until: _hermes_web_probe is succeeded
+  failed_when: false
+  changed_when: false
+  when:
+    - hermes_daemon_mode | default(false)
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[Hermes] Web UI daemon status"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Hermes web UI is UP at http://' + (hermes_web_host | default('127.0.0.1')) + ':' + (hermes_web_port | default(18790) | string)
+         if (_hermes_web_probe.status | default(0)) in [200, 301, 302, 401, 403, 404]
+         else 'Hermes web UI did NOT answer — check `launchctl print gui/$(id -u)/' + hermes_launchd_label + '`, the hermes_web_command verb (upstream CLI differs by version), and ' + hermes_log_dir + '/launchd.{out,err}.log' }}
+  when:
+    - hermes_daemon_mode | default(false)
+    - (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[Hermes] Print installation info"
   ansible.builtin.debug:

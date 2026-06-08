@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ hermes_launchd_label }}</string>
+
+    <!--
+        Self-start the Hermes FastAPI web UI (opt-in: hermes_daemon_mode). The
+        verb is parametric (hermes_web_command) because the upstream CLI differs
+        by version. host/port come from ~/.hermes/.env (HERMES_WEB_HOST/PORT),
+        which the hermes CLI loads itself; Traefik reaches the loopback port via
+        the file-provider route (hermes.<tld>), gated by Authentik forward-auth
+        once files/anatomy/plugins/hermes-base/plugin.yml lands (Phase 2).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+{% for arg in hermes_web_command %}
+        <string>{{ arg }}</string>
+{% endfor %}
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ hermes_home }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ hermes_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <!-- belt-and-suspenders: hermes also reads these from ~/.hermes/.env -->
+        <key>HERMES_WEB_HOST</key>
+        <string>{{ hermes_web_host | default('127.0.0.1') }}</string>
+        <key>HERMES_WEB_PORT</key>
+        <string>{{ hermes_web_port | default(18790) }}</string>
+    </dict>
+
+    <!-- launchd respawns on crash; ThrottleInterval prevents a tight loop if
+         the web verb is wrong (the daemon is opt-in, so a wrong verb just
+         throttle-loops harmlessly until hermes_web_command is corrected). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ hermes_log_dir }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ hermes_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

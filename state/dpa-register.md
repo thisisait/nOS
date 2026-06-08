@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 69 (65 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (63)
+- **Processing activities:** 70 (66 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (64)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -988,6 +988,28 @@ retention horizon is owned by wing-base. Operator-only data subjects.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `playbook_event_metadata`, `agent_session_telemetry`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Hermes — `svc_hermes`
+- **Purpose:** Hermes is the operator's local cross-channel agent gateway. It receives
+prompts from the operator (web UI / CLI / — when explicitly enabled —
+messaging channels), forwards them to Ollama (running on the same host with
+the MLX backend), and returns generated text. No prompts or completions
+persist beyond the active request except Hermes's local FTS5 memory under
+~/.hermes/ (operator-local, never leaves the host).
+
+EU-RESIDENCY CAVEAT: Hermes can OPTIONALLY delegate to the Anthropic API
+(US) or the Claude Code CLI when the operator sets hermes_anthropic_api_key
+/ hermes_claude_code_enabled. Both are OFF by default (all-local Ollama). If
+the operator enables Anthropic delegation, prompts may be transferred to
+Anthropic (US) — update transfers_outside_eu + processors accordingly.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `operator_prompts`, `agent_run_metadata`, `agent_memory`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
