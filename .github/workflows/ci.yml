@@ -35,17 +35,18 @@ jobs:
       - name: Set up Python 3.
         uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.13'
 
-      # Pin ansible-core to the operator's installed baseline 2.20.5. Upper
-      # bound is <2.20.6 (NOT <2.21): 2.20.6 regressed the deprecated `{{ vars }}`
-      # path — after the first `template_vars: "{{ vars }}"` (core-up plugin
-      # loader) the Jinja env goes filter-less for the rest of the run, so every
-      # non-stock filter (`bool`, `to_nice_json`, `regex_replace`, …) throws
-      # "No filter named". It is NOT reproducible locally (only a full run on a
-      # CI runner triggers it) and the surface is global. The real fix is the
-      # `{{ vars }}` refactor tied to the 2.24 jump (see CLAUDE.md tech-debt).
-      # Bump in a coordinated commit when that lands or upstream fixes 2.20.6+.
+      # Pin ansible-core to the operator's installed baseline 2.20.5.
+      # NOTE: the Integration-job red (2026-06-08) was NOT an ansible-core issue
+      # — it was Python 3.14. `setup-python` `'3.x'` floated to 3.14, where
+      # ansible-core 2.20.x's filter plugins fail to import
+      # (`cannot import name 'VaultDecryptionContext'`), so `ansible.builtin.core`
+      # filters get SKIPPED and every filter (`bool`/`default`/`to_nice_json`/…)
+      # throws "No filter named" at runtime (integration only — syntax/lint don't
+      # resolve templates). Fixed by pinning `python-version: '3.13'` everywhere
+      # below. This `<2.20.6` upper bound just matches the operator baseline; it
+      # is not load-bearing for the Python 3.14 fix.
       - name: Install lint dependencies.
         run: pip3 install yamllint 'ansible-core>=2.20,<2.20.6' ansible-lint
 
@@ -77,7 +78,7 @@ jobs:
       - name: Set up Python 3.
         uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.13'
 
       # Pin to current operator baseline (2.20.x). See Lint job comment.
       - name: Install Ansible.
@@ -251,7 +252,7 @@ jobs:
         id: python-setup
         uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.13'
 
       - name: Uninstall GitHub Actions' built-in Homebrew.
         run: tests/uninstall-homebrew.sh
@@ -340,7 +341,7 @@ jobs:
         id: python-setup
         uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.13'
 
       - name: Install test dependencies.
         env:
