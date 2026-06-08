@@ -289,6 +289,12 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
           "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          # nos_state runs target-side on $PY (the module interpreter set via
+          # ANSIBLE_PYTHON_INTERPRETER below) — it needs pyyaml THERE, not in the
+          # venv (the venv is only the CONTROLLER, for filter loading). A venv path
+          # as the module interpreter triggers ansible's venv-resolution to the base
+          # python on macOS → "PyYAML is required"; $PY (non-venv) is macOS-proven.
+          "$PY" -m pip install pyyaml jsonschema
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
@@ -296,10 +302,6 @@ jobs:
       - name: Set up the test environment.
         run: |
           cp tests/ansible.cfg ./ansible.cfg
-          # Pin the module interpreter to the venv python (it has pyyaml/jsonschema).
-          # Otherwise macOS interpreter auto-discovery overrides the env pin for
-          # custom modules (nos_state) → "PyYAML is required". See memory + 2026-05-04.
-          echo "interpreter_python = $RUNNER_TEMP/nosvenv/bin/python" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
@@ -315,7 +317,7 @@ jobs:
         env:
           # Pin Ansible's localhost Python to the same one we installed
           # pyyaml/jsonschema into (see Install test dependencies step).
-          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
       # Diagnostic: prove the controller `ansible-playbook` and its filter core
       # come from the clean venv (not a shadowing user/system ansible).
@@ -339,7 +341,7 @@ jobs:
         run: ansible-playbook main.yml
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
       - name: Idempotence check.
         run: |
@@ -350,7 +352,7 @@ jobs:
             || (echo 'Idempotence test: fail' && exit 1)
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
   # v0.4 cross-platform wet-test. GitHub ubuntu runners ship Docker + passwordless
   # sudo, so this ACTUALLY exercises the Linux path: the pazny.linux.* roles
@@ -389,16 +391,18 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
           "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          # nos_state runs target-side on $PY (the module interpreter set via
+          # ANSIBLE_PYTHON_INTERPRETER below) — it needs pyyaml THERE, not in the
+          # venv (the venv is only the CONTROLLER, for filter loading). A venv path
+          # as the module interpreter triggers ansible's venv-resolution to the base
+          # python on macOS → "PyYAML is required"; $PY (non-venv) is macOS-proven.
+          "$PY" -m pip install pyyaml jsonschema
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
       - name: Set up the test environment.
         run: |
           cp tests/ansible.cfg ./ansible.cfg
-          # Pin the module interpreter to the venv python (it has pyyaml/jsonschema).
-          # Otherwise macOS interpreter auto-discovery overrides the env pin for
-          # custom modules (nos_state) → "PyYAML is required". See memory + 2026-05-04.
-          echo "interpreter_python = $RUNNER_TEMP/nosvenv/bin/python" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
@@ -412,7 +416,7 @@ jobs:
       - name: Test the playbook's syntax.
         run: ansible-playbook main.yml --syntax-check
         env:
-          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
       - name: Diagnose ansible filter loading.
         run: |
@@ -434,4 +438,4 @@ jobs:
         run: ansible-playbook main.yml
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
