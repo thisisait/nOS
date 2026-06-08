@@ -285,7 +285,7 @@ jobs:
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
-          "$RUNNER_TEMP/nosvenv/bin/ansible" -m ansible.builtin.debug -a "msg={{ {'x': []} | to_nice_json }} {{ true | bool }}" localhost
+          "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
       - name: Set up the test environment.
         run: |
@@ -360,7 +360,7 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
-          "$RUNNER_TEMP/nosvenv/bin/ansible" -m ansible.builtin.debug -a "msg={{ {'x': []} | to_nice_json }} {{ true | bool }}" localhost
+          "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
       - name: Set up the test environment.
         run: |
