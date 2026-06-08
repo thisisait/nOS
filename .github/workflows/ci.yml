@@ -263,23 +263,29 @@ jobs:
           sudo rm -rf /Applications/Google\ Chrome.app
           sudo rm -rf /usr/local/bin/firefox
 
-      # Install via the EXPLICIT setup-python python — `python3` in PATH
-      # resolves to /Library/Frameworks/Python.framework/.../bin/python3 on
-      # GitHub's macos-14/15 runners (the system framework install), NOT the
-      # hostedtoolcache python that ANSIBLE_PYTHON_INTERPRETER points at.
-      # Without this explicit path, pip lands packages in the wrong Python's
-      # site-packages and `nos_state` fails with `PyYAML required` despite
-      # the install step reporting success. Surfaced 2026-05-04 in CI run
-      # 25303198873.
+      # Install Ansible into an ISOLATED venv, NOT the toolcache Python.
+      # GitHub's macos/ubuntu runners ship a system ansible-core baked into a
+      # different Python than the one we pin; bare `ansible-playbook` resolves to
+      # THAT (newer) install while our pinned deps land in the toolcache — a
+      # split-brain whose symptom is `ansible.builtin.core` filter plugins
+      # getting skipped ("cannot import name 'VaultDecryptionContext'" — a newer
+      # `core.py` over an older `_dumper.py`), so every filter (`default`/`bool`/
+      # `to_nice_json`/…) throws "No filter named" mid-run. A fresh venv has a
+      # clean, single-version site-packages; prepending its bin to PATH makes
+      # `ansible-playbook`/`ansible-galaxy` and ANSIBLE_PYTHON_INTERPRETER all
+      # point at the SAME clean install. (Supersedes the 2026-05-04 explicit-$PY
+      # fix — the venv subsumes it.)
       - name: Install test dependencies.
         env:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
-          "$PY" -m pip install --upgrade pip
-          "$PY" -m pip install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
-          # Sanity probe — fail fast if pyyaml/jsonschema aren't reachable
-          # from the SAME interpreter Ansible will use at runtime.
-          "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
+          "$PY" -m venv "$RUNNER_TEMP/nosvenv"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
+          echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          # Sanity probe — confirm the venv ansible loads core filters cleanly.
+          "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
+          "$RUNNER_TEMP/nosvenv/bin/ansible" -m ansible.builtin.debug -a "msg={{ {'x': []} | to_nice_json }} {{ true | bool }}" localhost
 
       - name: Set up the test environment.
         run: |
@@ -299,13 +305,13 @@ jobs:
         env:
           # Pin Ansible's localhost Python to the same one we installed
           # pyyaml/jsonschema into (see Install test dependencies step).
-          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
 
       - name: Test the playbook.
         run: ansible-playbook main.yml
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
 
       - name: Idempotence check.
         run: |
@@ -316,7 +322,7 @@ jobs:
             || (echo 'Idempotence test: fail' && exit 1)
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
 
   # v0.4 cross-platform wet-test. GitHub ubuntu runners ship Docker + passwordless
   # sudo, so this ACTUALLY exercises the Linux path: the pazny.linux.* roles
@@ -343,13 +349,18 @@ jobs:
         with:
           python-version: '3.13'
 
+      # Isolated venv — see the macOS Integration job's Install step for why
+      # (runner's baked ansible-core vs our pin → filter-plugin split-brain).
       - name: Install test dependencies.
         env:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
-          "$PY" -m pip install --upgrade pip
-          "$PY" -m pip install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
-          "$PY" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
+          "$PY" -m venv "$RUNNER_TEMP/nosvenv"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
+          echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
+          "$RUNNER_TEMP/nosvenv/bin/ansible" -m ansible.builtin.debug -a "msg={{ {'x': []} | to_nice_json }} {{ true | bool }}" localhost
 
       - name: Set up the test environment.
         run: |
@@ -367,10 +378,10 @@ jobs:
       - name: Test the playbook's syntax.
         run: ansible-playbook main.yml --syntax-check
         env:
-          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
 
       - name: Test the playbook (Linux).
         run: ansible-playbook main.yml
         env:
           ANSIBLE_FORCE_COLOR: '1'
-          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path || 'python3' }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
