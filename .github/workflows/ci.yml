@@ -297,7 +297,12 @@ jobs:
           # import cleanly. Installing ansible-core here pulls them all in; the
           # module payload is bundled by the controller, so $PY's own ansible-core
           # version is irrelevant. (2026-05-04 macOS-proven shape.)
-          "$PY" -m pip install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          # --break-system-packages: the macOS runner's framework $PY is PEP-668
+          # externally-managed, so a plain install silently lands in user-site,
+          # which PYTHONNOUSERSITE=1 (job env) then hides from the module → nos_state
+          # "PyYAML is required". Force the main site-packages.
+          "$PY" -m pip install --break-system-packages 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$PY" -c 'import yaml, jsonschema; print("PY-DEPS-OK @", yaml.__file__)' || echo "PY-DEPS-MISSING"
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
@@ -409,7 +414,12 @@ jobs:
           # import cleanly. Installing ansible-core here pulls them all in; the
           # module payload is bundled by the controller, so $PY's own ansible-core
           # version is irrelevant. (2026-05-04 macOS-proven shape.)
-          "$PY" -m pip install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          # --break-system-packages: the macOS runner's framework $PY is PEP-668
+          # externally-managed, so a plain install silently lands in user-site,
+          # which PYTHONNOUSERSITE=1 (job env) then hides from the module → nos_state
+          # "PyYAML is required". Force the main site-packages.
+          "$PY" -m pip install --break-system-packages 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$PY" -c 'import yaml, jsonschema; print("PY-DEPS-OK @", yaml.__file__)' || echo "PY-DEPS-MISSING"
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
