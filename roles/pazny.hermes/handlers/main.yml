@@ -1,8 +1,20 @@
 ---
-# Hermes has no generic daemon mode. Restart is handled per-use-case:
-#   - hermes gateway restart  (messaging)
-#   - launchctl kickstart com.hermes.gateway  (po `gateway install`)
-# This handler is a stub — config re-renders propagate on the next CLI invocation.
+# Restart hermes — only meaningful when the opt-in launchd web-UI daemon is
+# running (hermes_daemon_mode). A config re-render (.env / config.yaml / SOUL)
+# then kickstarts the launchd unit so the change takes effect. In manual modes
+# (hermes chat / gateway / mcp serve) there is no persistent process to bounce —
+# the change propagates on the next CLI invocation, so the handler is a no-op.
 - name: Restart hermes
-  ansible.builtin.debug:
-    msg: "Hermes config updated. Restart relevant mode manually: `hermes gateway restart` or `hermes mcp serve` etc."
+  ansible.builtin.shell: |
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ hermes_launchd_label }}" >/dev/null 2>&1; then
+      launchctl kickstart -k "gui/${UID_NUM}/{{ hermes_launchd_label }}"
+      echo "kickstarted"
+    else
+      echo "not-loaded"
+    fi
+  register: _hermes_restart
+  changed_when: "'kickstarted' in _hermes_restart.stdout"
+  when:
+    - hermes_daemon_mode | default(false)
+    - (nos_service_manager | default('launchd')) == 'launchd'

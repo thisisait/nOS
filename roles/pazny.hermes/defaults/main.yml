@@ -94,10 +94,29 @@ hermes_web_host: "127.0.0.1"
 hermes_web_port: 18790                              # vedle openclaw 18789
 hermes_domain: "hermes{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
-# -- Daemon mode (optional, manual after deploy) ──────────────────────────────
-# Hermes has no generic daemon mode. If you want persistent:
-#   hermes gateway install   # launchd plist pro Telegram/Discord messaging
-#   hermes mcp serve &       # standalone MCP server background
+# -- Daemon mode (optional, OPT-IN; default OFF) ──────────────────────────────
+# Phase-1 autowiring (2026-06-08): when hermes_daemon_mode=true AND the host uses
+# launchd, the role renders + bootstraps a launchd unit that self-starts the
+# FastAPI web UI on hermes_web_host:hermes_web_port and respawns it (KeepAlive),
+# matching the Bone/Pulse/Wing host-daemon pattern. Default OFF so a blank run
+# never silently starts a daemon or exposes a no-native-auth web UI —
+# manual-over-auto. Cross-channel messaging (Telegram/Discord/Signal) stays a
+# deliberate manual step (`hermes gateway install`), never auto-fired.
+hermes_daemon_mode: false
+hermes_launchd_label: "eu.thisisait.nos.hermes"   # matches state/manifest.yml
+# ProgramArguments for the web-UI daemon. Parametric on purpose: the upstream
+# Hermes CLI verb that starts the FastAPI server is version-dependent, and the
+# source is git-cloned (not vendored), so it can't be pinned from the repo.
+# hermes loads host/port from ~/.hermes/.env (HERMES_WEB_HOST/PORT). Override
+# this list if your hermes build uses a different verb than `web`.
+hermes_web_command:
+  - "{{ hermes_venv }}/bin/hermes"
+  - "web"
+
+# Manual modes (no launchd needed) — still available regardless of daemon_mode:
+#   hermes chat                # interactive TUI
+#   hermes gateway install     # launchd plist for Telegram/Discord messaging
+#   hermes mcp serve &         # standalone MCP server in the background
 
 # ── Concurrent agents ─────────────────────────────────────────────────────────
 
