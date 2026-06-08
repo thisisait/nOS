@@ -11,6 +11,9 @@ roles/*
 /credentials.yml
 /.credentials.yml
 .venv
+# Frozen pre-release-gate venv built by tools/ci-local.sh (ansible-core 2.21
+# mirror of the CI integration job). Regenerated on demand; never committed.
+.ci-venv/
 .remember/*
 vision.md
 _credentials.yml

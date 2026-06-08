@@ -1,0 +1,32 @@
+---
+# requirements.lock.yml — FROZEN exact pins for the 1:1 local+CI integration toolchain.
+#
+# (Named .lock.yml, not .lock: `ansible-galaxy install -r` rejects any file that
+#  doesn't end in .yml/.yaml.)
+#
+# Generated from the operator's verified-working set (ansible-galaxy collection
+# list + role list). requirements.yml keeps the human-facing floor+ceiling ranges
+# for development; this lock freezes the EXACT versions so the local pre-release
+# gate (tools/ci-local.sh) and the CI integration jobs install bit-identical
+# collections. The v0.5-beta saga (21 CI cycles) is the cost of NOT having this.
+#
+# Refresh after an intentional bump:  tools/ci-local.sh --refresh-lock
+# Toolchain (Python + ansible-core) pins live in tools/ci-freeze.env.
+
+roles:
+  - name: elliotweiser.osx-command-line-tools
+    version: "2.3.0"
+  - name: geerlingguy.dotfiles
+    version: "1.3.2"
+
+collections:
+  - name: geerlingguy.mac
+    version: "5.0.0"
+  - name: community.general
+    version: "12.6.1"
+  - name: community.docker
+    version: "5.2.1"
+  - name: community.mysql
+    version: "4.3.0"
+  - name: ansible.posix
+    version: "2.2.0"
