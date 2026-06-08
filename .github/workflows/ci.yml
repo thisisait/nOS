@@ -289,12 +289,15 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
           "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
-          # nos_state runs target-side on $PY (the module interpreter set via
-          # ANSIBLE_PYTHON_INTERPRETER below) — it needs pyyaml THERE, not in the
-          # venv (the venv is only the CONTROLLER, for filter loading). A venv path
-          # as the module interpreter triggers ansible's venv-resolution to the base
-          # python on macOS → "PyYAML is required"; $PY (non-venv) is macOS-proven.
-          "$PY" -m pip install pyyaml jsonschema
+          # Modules run target-side on $PY (the module interpreter, set via
+          # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
+          # CONTROLLER, for filter loading; a venv path as the module interpreter
+          # trips macOS's venv-resolution). $PY needs the full ansible-core dep set
+          # (packaging/jinja2/pyyaml/…) so nos_state + the pip-ish preflight tasks
+          # import cleanly. Installing ansible-core here pulls them all in; the
+          # module payload is bundled by the controller, so $PY's own ansible-core
+          # version is irrelevant. (2026-05-04 macOS-proven shape.)
+          "$PY" -m pip install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
@@ -391,12 +394,15 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
           "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
-          # nos_state runs target-side on $PY (the module interpreter set via
-          # ANSIBLE_PYTHON_INTERPRETER below) — it needs pyyaml THERE, not in the
-          # venv (the venv is only the CONTROLLER, for filter loading). A venv path
-          # as the module interpreter triggers ansible's venv-resolution to the base
-          # python on macOS → "PyYAML is required"; $PY (non-venv) is macOS-proven.
-          "$PY" -m pip install pyyaml jsonschema
+          # Modules run target-side on $PY (the module interpreter, set via
+          # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
+          # CONTROLLER, for filter loading; a venv path as the module interpreter
+          # trips macOS's venv-resolution). $PY needs the full ansible-core dep set
+          # (packaging/jinja2/pyyaml/…) so nos_state + the pip-ish preflight tasks
+          # import cleanly. Installing ansible-core here pulls them all in; the
+          # module payload is bundled by the controller, so $PY's own ansible-core
+          # version is irrelevant. (2026-05-04 macOS-proven shape.)
+          "$PY" -m pip install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
