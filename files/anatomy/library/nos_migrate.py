@@ -410,9 +410,11 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             handler = handlers.get(action_type)
             if handler is None:
                 return False, sid, "no handler for action type %r" % action_type, applied
-            if dry_run:
-                applied.append((phase_name, sid, {"success": True, "dry_run": True}))
-                continue
+            # dry_run is threaded into step_ctx — every handler validates its
+            # inputs (override file exists, tokens render, container resolves,
+            # cmd shape, allow_shell gates) and THEN skips the mutation. So a
+            # dry-run now genuinely validates the recipe end-to-end instead of
+            # the old blanket "return success" that masked broken recipes.
             try:
                 res = handler(step, step_ctx)
             except Exception as exc:
@@ -445,21 +447,14 @@ def _apply_upgrade(upgrade, ctx, dry_run):
                 "steps_applied": 0, "duration_sec": 0,
             }
 
-    if dry_run:
-        return {
-            "success": True,
-            "dry_run": True,
-            "upgrade_id": upgrade_id,
-            "service": service,
-            "recipe_id": recipe_id,
-            "from_version": installed,
-            "to_version": recipe.get("to"),
-            "phases": {
-                "pre":   [s.get("id") for s in recipe.get("pre", [])],
-                "apply": [s.get("id") for s in recipe.get("apply", [])],
-                "post":  [s.get("id") for s in recipe.get("post", [])],
-            },
-        }
+    # NOTE: dry-run is NOT short-circuited here anymore. The phases below run
+    # with dry_run threaded into step_ctx; each handler validates its inputs and
+    # skips side effects (verified dry-run-safe across the whole action set,
+    # incl. exec.shell which gates+validates before the would_exec return). A
+    # broken recipe (unrenderable token, missing override, bad container) now
+    # FAILS the dry-run with the same {failed_phase, failed_step, error} shape a
+    # real apply would — that's the whole point. State persistence + the backup
+    # dir above stay gated on `not dry_run`, so a dry-run mutates nothing.
 
     # Pre phase
     ok, failed_id, err, pre_applied = _run_phase("pre", recipe.get("pre", []))
@@ -498,8 +493,9 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             "duration_sec": int(_time.monotonic() - started),
         }
 
-    return {
+    result = {
         "success": True,
+        "dry_run": dry_run,
         "upgrade_id": upgrade_id,
         "service": service,
         "recipe_id": recipe_id,
@@ -508,6 +504,13 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         "steps_applied": len(all_applied),
         "duration_sec": int(_time.monotonic() - started),
     }
+    if dry_run:
+        # Nothing mutated — surface the per-step validation preview (action type
+        # + would_* hints) so Wing / the operator sees exactly what an apply
+        # WOULD do before confirming.
+        result["steps"] = [{"phase": p, "id": s, "result": r}
+                           for (p, s, r) in all_applied]
+    return result
 
 
 def _resolve_record(module, migrations_dir):
