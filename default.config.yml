@@ -1232,8 +1232,8 @@ observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana
 
 # ── Docker image versions (observability + devops) ───────────────────────────
 grafana_version: "12.4.2"               # CVE-2026-27876 (CVSS 9.1 file write → RCE)
-prometheus_version: "v3.11.2"
-loki_version: "3.7.1"
+prometheus_version: "v3.11.3"   # synced to role default (cleared version-pin shadow)
+loki_version: "3.7.2"           # synced to role default (cleared version-pin shadow)
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
@@ -1784,7 +1784,7 @@ authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_fr
 
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
-outline_version: "1.6.1"
+outline_version: "1.8.0-1"      # synced to role default; boots + runs DB migrations (1.6->1.8)
 outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"
 outline_db_user: "outline"
@@ -1826,7 +1826,7 @@ qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 
 metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 metabase_port: 3002
-metabase_version: "v0.60.1.4"
+metabase_version: "v0.61.2.6"   # synced to role default (cleared version-pin shadow)
 metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
@@ -2252,7 +2252,7 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 # Central vault for DB passwords, API keys, certificates. E2EE.
 # ==============================================================================
 
-infisical_version: "v0.159.16"
+infisical_version: "v0.160.4"   # synced to role default (cleared version-pin shadow)
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
