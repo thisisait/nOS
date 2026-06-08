@@ -294,9 +294,15 @@ jobs:
         env:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
+          # Frozen toolchain pins — single source of truth shared 1:1 with the
+          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE today is
+          # ansible-core==2.21.0, the only 2.21 release — exactly what the old
+          # >=2.21,<2.24 range resolved to, so behaviour is unchanged; the freeze
+          # just stops a future 2.21.x/2.22 float from landing mid-gating.
+          . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Modules run target-side on $PY (the module interpreter, set via
           # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
@@ -310,7 +316,7 @@ jobs:
           # externally-managed, so a plain install silently lands in user-site,
           # which PYTHONNOUSERSITE=1 (job env) then hides from the module → nos_state
           # "PyYAML is required". Force the main site-packages.
-          "$PY" -m pip install --break-system-packages 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
           "$PY" -c 'import yaml, jsonschema; print("PY-DEPS-OK @", yaml.__file__)' || echo "PY-DEPS-MISSING"
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
@@ -328,9 +334,12 @@ jobs:
           echo "interpreter_python = $PY" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
-          # Retry Galaxy install — see Syntax Check job comment.
+          # Retry Galaxy install — see Syntax Check job comment. Install from the
+          # FROZEN lock (exact pins, 1:1 with tools/ci-local.sh), not the
+          # floor+ceiling requirements.yml. The lock holds what the ranges resolve
+          # to today, so this is behaviour-identical now and frozen going forward.
           for attempt in 1 2 3 4 5 6; do
-            ansible-galaxy install -r requirements.yml && exit 0
+            ansible-galaxy install -r requirements.lock.yml && exit 0
             echo "ansible-galaxy attempt ${attempt} failed (galaxy 504s are common); sleeping ${attempt}0s"
             sleep "${attempt}0"
           done
@@ -414,9 +423,15 @@ jobs:
         env:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
+          # Frozen toolchain pins — single source of truth shared 1:1 with the
+          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE today is
+          # ansible-core==2.21.0, the only 2.21 release — exactly what the old
+          # >=2.21,<2.24 range resolved to, so behaviour is unchanged; the freeze
+          # just stops a future 2.21.x/2.22 float from landing mid-gating.
+          . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Modules run target-side on $PY (the module interpreter, set via
           # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
@@ -430,7 +445,7 @@ jobs:
           # externally-managed, so a plain install silently lands in user-site,
           # which PYTHONNOUSERSITE=1 (job env) then hides from the module → nos_state
           # "PyYAML is required". Force the main site-packages.
-          "$PY" -m pip install --break-system-packages 'ansible-core>=2.21,<2.24' pyyaml jsonschema
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
           "$PY" -c 'import yaml, jsonschema; print("PY-DEPS-OK @", yaml.__file__)' || echo "PY-DEPS-MISSING"
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
@@ -447,9 +462,12 @@ jobs:
           echo "interpreter_python = $PY" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
-          # Retry Galaxy install — see Syntax Check job comment.
+          # Retry Galaxy install — see Syntax Check job comment. Install from the
+          # FROZEN lock (exact pins, 1:1 with tools/ci-local.sh), not the
+          # floor+ceiling requirements.yml. The lock holds what the ranges resolve
+          # to today, so this is behaviour-identical now and frozen going forward.
           for attempt in 1 2 3 4 5 6; do
-            ansible-galaxy install -r requirements.yml && exit 0
+            ansible-galaxy install -r requirements.lock.yml && exit 0
             echo "ansible-galaxy attempt ${attempt} failed (galaxy 504s are common); sleeping ${attempt}0s"
             sleep "${attempt}0"
           done
