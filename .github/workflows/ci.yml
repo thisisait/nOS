@@ -232,6 +232,11 @@ jobs:
   integration:
     name: Integration (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Keep the venv ansible's sys.path clean — the runner ships ansible in the
+    # user/system site which can namespace-shadow the venv's `ansible.plugins`
+    # (newer core.py over the venv's older _dumper.py → filter plugins skipped).
+    env:
+      PYTHONNOUSERSITE: '1'
     # On feature branches run integration only on push, not on draft PRs
     if: |
       github.event_name == 'schedule' ||
@@ -307,6 +312,24 @@ jobs:
           # pyyaml/jsonschema into (see Install test dependencies step).
           ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
 
+      # Diagnostic: prove the controller `ansible-playbook` and its filter core
+      # come from the clean venv (not a shadowing user/system ansible).
+      - name: Diagnose ansible filter loading.
+        run: |
+          echo "which ansible-playbook: $(command -v ansible-playbook)"
+          ansible-playbook --version 2>&1 | head -3
+          "$RUNNER_TEMP/nosvenv/bin/python" - <<'PY' || true
+          import os, sys, ansible
+          print("ansible.__path__:", list(getattr(ansible, "__path__", [])))
+          print("PYTHONPATH:", os.environ.get("PYTHONPATH", "<unset>"))
+          try:
+              import ansible.plugins.filter.core as c
+              print("core.py:", c.__file__)
+          except Exception as e:
+              print("core.py IMPORT FAILED:", type(e).__name__, e)
+          print("sys.path:", [p for p in sys.path if p][:8])
+          PY
+
       - name: Test the playbook.
         run: ansible-playbook main.yml
         env:
@@ -334,6 +357,8 @@ jobs:
   integration-linux:
     name: Integration (ubuntu-24.04)
     runs-on: ubuntu-24.04
+    env:
+      PYTHONNOUSERSITE: '1'   # keep the venv ansible's sys.path clean (see macOS job)
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'push' ||
@@ -379,6 +404,22 @@ jobs:
         run: ansible-playbook main.yml --syntax-check
         env:
           ANSIBLE_PYTHON_INTERPRETER: ${{ runner.temp }}/nosvenv/bin/python
+
+      - name: Diagnose ansible filter loading.
+        run: |
+          echo "which ansible-playbook: $(command -v ansible-playbook)"
+          ansible-playbook --version 2>&1 | head -3
+          "$RUNNER_TEMP/nosvenv/bin/python" - <<'PY' || true
+          import os, sys, ansible
+          print("ansible.__path__:", list(getattr(ansible, "__path__", [])))
+          print("PYTHONPATH:", os.environ.get("PYTHONPATH", "<unset>"))
+          try:
+              import ansible.plugins.filter.core as c
+              print("core.py:", c.__file__)
+          except Exception as e:
+              print("core.py IMPORT FAILED:", type(e).__name__, e)
+          print("sys.path:", [p for p in sys.path if p][:8])
+          PY
 
       - name: Test the playbook (Linux).
         run: ansible-playbook main.yml
