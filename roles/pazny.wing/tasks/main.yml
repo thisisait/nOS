@@ -136,6 +136,11 @@
     url: "https://github.com/dunglas/frankenphp/releases/latest/download/frankenphp-linux-{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
     dest: "{{ _wing_frankenphp_bin }}"
     mode: '0755'
+    timeout: 60   # default 10s times out on a slow github.com release CDN
+  register: _wing_frankenphp_dl
+  until: _wing_frankenphp_dl is succeeded
+  retries: 5
+  delay: 10
   when: ansible_os_family != 'Darwin'
 
 - name: "[pazny.wing] Stat frankenphp binary"
