@@ -303,8 +303,15 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
       - name: Set up the test environment.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           cp tests/ansible.cfg ./ansible.cfg
+          # Pin the module interpreter to $PY (it has ansible-core + pyyaml).
+          # macOS interpreter auto-discovery overrides the env pin for CUSTOM
+          # modules (nos_state) → "PyYAML is required"; a cfg pin to the non-venv
+          # $PY (no venv-resolution) fixes it on macOS and is a no-op on ubuntu.
+          echo "interpreter_python = $PY" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
@@ -407,8 +414,15 @@ jobs:
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
 
       - name: Set up the test environment.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           cp tests/ansible.cfg ./ansible.cfg
+          # Pin the module interpreter to $PY (it has ansible-core + pyyaml).
+          # macOS interpreter auto-discovery overrides the env pin for CUSTOM
+          # modules (nos_state) → "PyYAML is required"; a cfg pin to the non-venv
+          # $PY (no venv-resolution) fixes it on macOS and is a no-op on ubuntu.
+          echo "interpreter_python = $PY" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
