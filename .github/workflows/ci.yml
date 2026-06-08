@@ -296,6 +296,10 @@ jobs:
       - name: Set up the test environment.
         run: |
           cp tests/ansible.cfg ./ansible.cfg
+          # Pin the module interpreter to the venv python (it has pyyaml/jsonschema).
+          # Otherwise macOS interpreter auto-discovery overrides the env pin for
+          # custom modules (nos_state) → "PyYAML is required". See memory + 2026-05-04.
+          echo "interpreter_python = $RUNNER_TEMP/nosvenv/bin/python" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
@@ -391,6 +395,10 @@ jobs:
       - name: Set up the test environment.
         run: |
           cp tests/ansible.cfg ./ansible.cfg
+          # Pin the module interpreter to the venv python (it has pyyaml/jsonschema).
+          # Otherwise macOS interpreter auto-discovery overrides the env pin for
+          # custom modules (nos_state) → "PyYAML is required". See memory + 2026-05-04.
+          echo "interpreter_python = $RUNNER_TEMP/nosvenv/bin/python" >> ./ansible.cfg
           cp tests/inventory ./inventory
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment.
