@@ -268,17 +268,18 @@ jobs:
           sudo rm -rf /Applications/Google\ Chrome.app
           sudo rm -rf /usr/local/bin/firefox
 
-      # Install Ansible into an ISOLATED venv, NOT the toolcache Python.
-      # GitHub's macos/ubuntu runners ship a system ansible-core baked into a
-      # different Python than the one we pin; bare `ansible-playbook` resolves to
-      # THAT (newer) install while our pinned deps land in the toolcache — a
-      # split-brain whose symptom is `ansible.builtin.core` filter plugins
-      # getting skipped ("cannot import name 'VaultDecryptionContext'" — a newer
-      # `core.py` over an older `_dumper.py`), so every filter (`default`/`bool`/
-      # `to_nice_json`/…) throws "No filter named" mid-run. A fresh venv has a
-      # clean, single-version site-packages; prepending its bin to PATH makes
-      # `ansible-playbook`/`ansible-galaxy` and ANSIBLE_PYTHON_INTERPRETER all
-      # point at the SAME clean install. (Supersedes the 2026-05-04 explicit-$PY
+      # Install Ansible into an ISOLATED venv, NOT the toolcache Python — and at
+      # ansible-core 2.21+ (NOT the operator's 2.20.x). On these runners the full
+      # playbook trips `ansible.builtin.core` filter loading with "cannot import
+      # name 'VaultDecryptionContext' from ansible._internal._yaml._dumper" →
+      # filters skipped → every filter (`default`/`bool`/`to_nice_json`/…) throws
+      # "No filter named" mid-run. `VaultDecryptionContext` is a symbol ADDED in
+      # ansible-core 2.21 — something in the runner's filter-load path imports it,
+      # so the venv's `_dumper.py` must HAVE it (2.21+), or the load fails. 2.21 is
+      # forward-compat-verified (see CLAUDE.md) and still ships the deprecated
+      # `{{ vars }}` (only removed in 2.24), so it runs the playbook unchanged. The
+      # venv + bin-on-PATH keeps `ansible-playbook`/`ansible-galaxy`/the interpreter
+      # on one clean install. (Supersedes the 2026-05-04 explicit-$PY
       # fix — the venv subsumes it.)
       - name: Install test dependencies.
         env:
@@ -286,7 +287,7 @@ jobs:
         run: |
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
+          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
@@ -382,7 +383,7 @@ jobs:
         run: |
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.20,<2.20.6' pyyaml jsonschema
+          "$RUNNER_TEMP/nosvenv/bin/pip" install 'ansible-core>=2.21,<2.24' pyyaml jsonschema
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, "@", __import__("sys").executable)'
           "$RUNNER_TEMP/nosvenv/bin/ansible" localhost -m ansible.builtin.debug -a '{"msg": "{{ [] | to_nice_json }} {{ true | bool }}"}'
