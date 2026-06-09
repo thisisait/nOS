@@ -96,7 +96,14 @@
   # rest. (Caught on the all-on blank: restic_backup_paths defaults to the whole
   # $HOME, which always has a few unreadable files → rc=3 aborted the run.)
   failed_when: _restic_backup.rc is defined and _restic_backup.rc not in [0, 3]
-  no_log: true
+  # no_log dropped (password is in environment, not the command) so a non-0/3
+  # rc shows the real restic error. KNOWN GAP: restic_backup_paths defaults to
+  # the whole $HOME, which on macOS contains TCC-protected ~/Library subdirs
+  # (Mail, Safari, TCC.db) → restic hits dir-level EPERM → FATAL rc=1 (not the
+  # tolerated rc=3). Proper fix is to NARROW restic_backup_paths to the nOS data
+  # (e.g. ~/backups DB dumps + service data dirs), not the whole home. Until
+  # then, set configure_backup:false to skip the off-site Restic path (the
+  # RustFS nightly via install_backup is separate).
 
 - name: "[Backup] Prune old snapshots"
   ansible.builtin.command: >
