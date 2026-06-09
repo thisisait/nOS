@@ -106,8 +106,13 @@
     status_code: [200]
     timeout: 5
   register: _ollama_api
-  retries: 10
-  delay: 2
+  # Cold blank=true freshly restarts Ollama, which can take well over 20s to
+  # bind on macOS — the old 10x2s gave up and the subsequent `ollama pull` could
+  # race a not-yet-ready Ollama (failed_when:false → silent missing model).
+  # 30x5s (~2.5min) blocks until it actually serves. Stays failed_when:false so
+  # a genuinely-down Ollama doesn't abort the (Ollama-independent) core platform.
+  retries: 30
+  delay: 5
   until: _ollama_api.status | default(0) == 200
   failed_when: false
 
