@@ -29,19 +29,23 @@ services:
       # separately by the autologin block below; the API/git Basic path is
       # loopback :3003 and unaffected.
       GITEA__service__ENABLE_BASIC_AUTHENTICATION: "true"
-{% if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool %}
       # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 3 (matrix b) ─
-      # When on, Gitea HIDES the local username/password sign-in form, leaving
-      # only the "Sign in with Authentik" OAuth2 button (no auto-redirect —
-      # supports: yes for form-hide, no for redirect). Basic auth for the API
-      # stays ON (above), so the autowire is unaffected.
+      # When autologin is ON, Gitea HIDES the local username/password sign-in
+      # form, leaving only the "Sign in with Authentik" OAuth2 button (no
+      # auto-redirect). Basic auth for the API stays ON (above), so the autowire
+      # is unaffected.
       #
-      # CRITICAL (plan caveat): the OIDC-backed admin MUST exist before the form
-      # is locked (the gitea_admin_api post_setup provisions it on converge) —
-      # else the only login path is OIDC and a broken Authentik = lockout.
+      # SET UNCONDITIONALLY (true/false), for the SAME reason as
+      # ENABLE_BASIC_AUTHENTICATION above: Gitea persists env-set keys into
+      # app.ini and NEVER resets a key when its env var is later removed. The old
+      # `{% if autologin %}` render left a stale `false` in app.ini after
+      # autologin was turned back off → passkey-only lockout that no re-converge
+      # could clear. Emitting an explicit value every render makes a recreate
+      # rewrite the app.ini line to match the current autologin state, so
+      # `--tags gitea` is a reliable break-glass.
       #
-      # BREAK-GLASS (no live UI param — form is env-hidden): set
-      # sso_autologin_gitea=false (or sso_autologin=false) + re-converge
-      # (`--tags gitea` recreates). See docs/break-glass-runbook.md.
-      GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "false"
-{% endif %}
+      # CRITICAL (plan caveat): when this is false, the OIDC-backed admin MUST
+      # exist before the form is locked (the gitea_admin_api post_setup
+      # provisions it on converge) — else the only login path is OIDC and a
+      # broken Authentik = lockout. See docs/break-glass-runbook.md.
+      GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "{{ 'false' if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool else 'true' }}"

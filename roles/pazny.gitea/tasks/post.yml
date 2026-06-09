@@ -92,7 +92,57 @@
   no_log: true
   notify: Restart gitea
 
+# ── SSO-mandatory guard (2026-06-09) ──────────────────────────────────────
+# SSO is mandatory: when the local sign-in form is HIDDEN (sso_autologin), the
+# "Sign in with Authentik" OAuth source MUST be registered — else login is
+# SSO-only with no working button = LOCKOUT. The source is registered by the
+# plugin-loader post_compose hook (tagged 'anatomy'), which a service-only
+# `--tags gitea` run SKIPS while still rendering the form-hide (tagged 'gitea').
+# This guard fails LOUD on that desync instead of silently locking the operator
+# out. It passes on a full / `--tags authentik,anatomy,gitea` run (post_compose
+# registers the source before this runs) and on `--tags gitea` when the source
+# already exists from a prior converge.
+- name: "[pazny.gitea Post] SSO guard — list identity providers"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
+    method: GET
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [200]
+  register: _gitea_idp_guard
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - install_authentik | default(false) | bool
+    - (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool
+
+- name: "[pazny.gitea Post] SSO guard — refuse a hidden form with no Authentik source"
+  ansible.builtin.fail:
+    msg: |
+      Gitea's local sign-in form is HIDDEN (sso_autologin) but no 'authentik'
+      OAuth source is registered → SSO-only login with no working button =
+      LOCKOUT. The source is registered by the plugin-loader post_compose
+      (tagged 'anatomy'); a service-only `--tags gitea` run SKIPS it. Run the
+      full SSO wiring:
+          ansible-playbook main.yml --tags authentik,anatomy,gitea
+      (or a full run), then the 'Sign in with Authentik' button appears.
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - install_authentik | default(false) | bool
+    - (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool
+    - _gitea_idp_guard.status | default(0) == 200
+    - (_gitea_idp_guard.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | length) == 0
+
 # ── A16 (2026-05-17): autowire nOS repo + GitHub pull-mirror ──────────────
 - name: "[pazny.gitea Post] Wire nOS repo + GitHub pull-mirror"
   ansible.builtin.include_tasks: post-repo.yml
   when: install_gitea_autowire_nos | default(false) | bool
+
+# ── T32 (2026-06-08): local-first agent forge (writable repo + repo-scoped token).
+# Mutually exclusive with the A16 pull-mirror above (post-forge.yml fails loud if
+# both are on). Opt-in; default OFF.
+- name: "[pazny.gitea Post] Wire local-first agent forge"
+  ansible.builtin.include_tasks: post-forge.yml
+  when: gitea_agent_forge | default(false) | bool

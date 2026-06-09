@@ -42,3 +42,23 @@ gitea_nos_repo_clone_url: "https://github.com/thisisait/nOS.git"
 # if they need tighter fallback.
 gitea_nos_repo_mirror_interval: "10m0s"
 gitea_nos_repo_private: true
+
+# ── T32 local-first AGENT FORGE (2026-06-08; OPT-IN, default OFF) ──────────────
+# When gitea_agent_forge=true, the nOS repo in Gitea is a WRITABLE working repo
+# (NOT the A16 pull-mirror) that agents push branches + open PRs against, and the
+# role provisions a repo-scoped Gitea token (gitea_api_token) for
+# tools/recipe-pr.sh. MUTUALLY EXCLUSIVE with install_gitea_autowire_nos (the
+# read-only pull-mirror): the forge REPLACES the mirror, and GitHub→Gitea trunk
+# sync moves to the operator host (tools/sync-trunk-to-gitea.sh). The agent loop
+# stays self-hosted; promotion to public GitHub is the separate operator-run
+# tools/promote-public.sh. See memory `local-first-git-topology`.
+gitea_agent_forge: false
+# Convert an EXISTING repo (e.g. the A16 pull-mirror) to the writable forge by
+# deleting + recreating it via the admin API over localhost — NO Gitea UI, NO
+# blank. Explicit opt-in (deletes the repo, so it's gated, not default): set true
+# for ONE run to convert, then it's a no-op (the writable repo already exists).
+gitea_forge_recreate: false
+gitea_agent_forge_token_name: "nos-agent-forge"
+# Gitea 1.25 scoped-token scopes (list) — write to repos covers branch + PR.
+gitea_agent_forge_token_scopes:
+  - "write:repository"
