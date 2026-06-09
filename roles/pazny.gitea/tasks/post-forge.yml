@@ -1,0 +1,157 @@
+---
+# ==============================================================================
+# pazny.gitea/tasks/post-forge.yml — T32 local-first AGENT FORGE (2026-06-08)
+#
+# When gitea_agent_forge=true, make the nOS repo in Gitea a WRITABLE working repo
+# (agents push branches + open PRs against it via tools/recipe-pr.sh) and
+# provision a repo-scoped Gitea token for that tool. This REPLACES the A16
+# read-only pull-mirror — the two are mutually exclusive (Gitea rejects pushes to
+# a mirror). GitHub→Gitea trunk sync moves to the operator host
+# (tools/sync-trunk-to-gitea.sh). See memory `local-first-git-topology`.
+#
+# AUTH: Gitea Admin Basic over the LOCAL port (mirrors post-repo.yml /
+# post-oauth.yml) — single-run robust, blank-safe (admin always exists
+# post-start; a fresh Gitea DB has no token, so we regenerate). The token value
+# is shown ONLY on create, so it is captured via set_fact and persisted by the
+# late "[Secrets] Persist runtime secrets" task (secrets.yml.j2 carries
+# gitea_api_token).
+#
+# Called from post.yml only when gitea_agent_forge=true.
+# ==============================================================================
+
+- name: "[pazny.gitea Forge] Refuse forge + pull-mirror together"
+  ansible.builtin.fail:
+    msg: |
+      gitea_agent_forge and install_gitea_autowire_nos are mutually exclusive.
+      The agent forge needs a WRITABLE repo; the A16 autowire creates a read-only
+      pull-mirror (Gitea rejects pushes to it). Disable install_gitea_autowire_nos
+      to use the forge — the operator-host sync (tools/sync-trunk-to-gitea.sh)
+      replaces the pull-mirror's GitHub→Gitea sync.
+  when: install_gitea_autowire_nos | default(false) | bool
+
+- name: "[pazny.gitea Forge] Check if nOS repo exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    method: GET
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [200, 404]
+  register: _forge_repo
+  changed_when: false
+  no_log: true
+
+# Existing repo is a read-only pull-mirror and recreate is OFF → fail loud with
+# the surgical option (no Gitea UI needed, since the form login is broken):
+# re-run with -e gitea_forge_recreate=true to delete + recreate via the API.
+- name: "[pazny.gitea Forge] Refuse to clobber a pull-mirror (recreate OFF)"
+  ansible.builtin.fail:
+    msg: |
+      The Gitea repo {{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }} exists as
+      a pull-MIRROR (read-only). The forge needs it WRITABLE. Convert it WITHOUT
+      the Gitea UI or a blank by re-running with:
+          -e gitea_forge_recreate=true
+      (deletes + recreates the repo via the admin API over localhost). Or keep the
+      mirror and leave gitea_agent_forge=false.
+  when:
+    - _forge_repo.status == 200
+    - _forge_repo.json.mirror | default(false) | bool
+    - not (gitea_forge_recreate | default(false) | bool)
+
+# Surgical convert: delete the existing repo over the LOCAL admin API (no UI),
+# then the create below recreates it writable. Gated on the explicit opt-in.
+- name: "[pazny.gitea Forge] Delete existing repo for writable recreate"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    method: DELETE
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [204, 404]
+  register: _forge_repo_deleted
+  when:
+    - _forge_repo.status == 200
+    - gitea_forge_recreate | default(false) | bool
+  changed_when: true
+  no_log: true
+
+- name: "[pazny.gitea Forge] Create WRITABLE nOS repo (one-time clone, mirror:false)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/migrate"
+    method: POST
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      clone_addr: "{{ gitea_nos_repo_clone_url }}"
+      repo_name: "{{ gitea_nos_repo_name }}"
+      repo_owner: "{{ gitea_nos_repo_owner }}"
+      mirror: false
+      private: "{{ gitea_nos_repo_private | default(true) | bool }}"
+      description: "nOS agent forge — writable working repo (T32, 2026-06-08)"
+      service: "git"
+    status_code: 201
+  when: _forge_repo.status == 404 or (_forge_repo_deleted.changed | default(false))
+  changed_when: true
+  no_log: true
+
+# ── Repo-scoped token for tools/recipe-pr.sh ─────────────────────────────────
+- name: "[pazny.gitea Forge] List existing access tokens"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/users/{{ gitea_admin_user }}/tokens"
+    method: GET
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [200]
+  register: _forge_tokens
+  changed_when: false
+  no_log: true
+
+- name: "[pazny.gitea Forge] Resolve whether the forge token already exists"
+  ansible.builtin.set_fact:
+    _forge_token_exists: "{{ (_forge_tokens.json | default([]) | selectattr('name', 'equalto', gitea_agent_forge_token_name) | list | length) > 0 }}"
+
+# Reuse the persisted token when it BOTH exists in Gitea AND we still hold its
+# value (loaded from ~/.nos/secrets.yml). Otherwise (fresh Gitea after blank, or
+# the value was lost) regenerate: delete the stale same-name token, then create.
+- name: "[pazny.gitea Forge] Delete stale same-name token (regenerate path)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/users/{{ gitea_admin_user }}/tokens/{{ gitea_agent_forge_token_name }}"
+    method: DELETE
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [204, 404]
+  when:
+    - _forge_token_exists | bool
+    - (gitea_api_token | default('') | length) == 0
+  changed_when: true
+  no_log: true
+
+- name: "[pazny.gitea Forge] Create repo-scoped token (value shown once)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/users/{{ gitea_admin_user }}/tokens"
+    method: POST
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ gitea_agent_forge_token_name }}"
+      scopes: "{{ gitea_agent_forge_token_scopes | default(['write:repository']) }}"
+    status_code: [201]
+  register: _forge_token_create
+  when: (not (_forge_token_exists | bool)) or ((gitea_api_token | default('') | length) == 0)
+  no_log: true
+
+- name: "[pazny.gitea Forge] Persist the new token (set_fact → secrets.yml)"
+  ansible.builtin.set_fact:
+    gitea_api_token: "{{ _forge_token_create.json.sha1 }}"
+  when: _forge_token_create.changed | default(false)
+  no_log: true
+
+- name: "[pazny.gitea Forge] Status"
+  ansible.builtin.debug:
+    msg: >-
+      Gitea agent forge: repo {{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}
+      {{ 'CREATED writable' if (_forge_repo.status == 404 or (_forge_repo_deleted.changed | default(false))) else 'present (writable)' }};
+      token {{ 'GENERATED + persisted to ~/.nos/secrets.yml' if (_forge_token_create.changed | default(false)) else 'reused' }}.
+      Keep dev/master fresh from GitHub with tools/sync-trunk-to-gitea.sh.
