@@ -78,6 +78,14 @@
     RESTIC_PASSWORD: "{{ restic_password }}"
   async: 3600
   poll: 30
+  register: _restic_backup
+  # restic rc=3 = "backup completed, but SOME source files could not be read"
+  # — normal for a HOT backup of a live home/data tree (sockets, locked
+  # ~/Library files, files changing under running services). It is a WARNING,
+  # not a failure. rc=0 = clean; rc=1/2 = real error. Tolerate 3, surface the
+  # rest. (Caught on the all-on blank: restic_backup_paths defaults to the whole
+  # $HOME, which always has a few unreadable files → rc=3 aborted the run.)
+  failed_when: _restic_backup.rc is defined and _restic_backup.rc not in [0, 3]
   no_log: true
 
 - name: "[Backup] Prune old snapshots"
