@@ -38,7 +38,9 @@
 
     <!-- launchd respawns on crash; ThrottleInterval prevents a tight loop if
          the web verb is wrong (the daemon is opt-in, so a wrong verb just
-         throttle-loops harmlessly until hermes_web_command is corrected). -->
+         throttle-loops until hermes_web_command is corrected). 300s (5min)
+         matches OpenClaw's launchd unit: a 36GB Mac Studio with a 14B model
+         loaded must not page-fault every 30s on a bad verb. -->
     <key>RunAtLoad</key>
     <true/>
 
@@ -46,7 +48,7 @@
     <true/>
 
     <key>ThrottleInterval</key>
-    <integer>30</integer>
+    <integer>300</integer>
 
     <key>StandardOutPath</key>
     <string>{{ hermes_log_dir }}/launchd.out.log</string>
