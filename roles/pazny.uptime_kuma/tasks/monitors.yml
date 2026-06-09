@@ -247,8 +247,13 @@
 
 - name: "[pazny.uptime_kuma] Auto-create monitors / notifications / status page"
   ansible.builtin.command:
+    # MUST be the SAME interpreter the install task used (l.24), else
+    # uptime-kuma-api (installed --user into that interpreter's site) is not
+    # importable here → setup-monitors.py prints "SKIP: uptime-kuma-api not
+    # installed" and creates ZERO monitors. Bare `python3` (PATH) diverged from
+    # ansible_python_interpreter on macOS → the all-on blank made 0/48 monitors.
     argv:
-      - python3
+      - "{{ ansible_python_interpreter | default('python3') }}"
       - "{{ uptime_kuma_data_dir }}/setup-monitors.py"
       - "--url"
       - "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}"
