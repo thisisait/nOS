@@ -8,7 +8,9 @@ roles/*
 # this from swallowing committed files like files/observability/blackbox/config.yml
 # (2026-05-11: ate the blackbox baseline config until anchored).
 /config.yml
+/config.*.yml
 /credentials.yml
+/credentials.*.yml
 /.credentials.yml
 .venv
 # Frozen pre-release-gate venv built by tools/ci-local.sh (ansible-core 2.21
