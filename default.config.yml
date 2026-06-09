@@ -223,6 +223,10 @@ provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag for the provider
 configure_backup: false
 restic_repo: ""                           # "/Volumes/Backup/restic" | "s3:endpoint/bucket" | "sftp:user@host:/path"
 restic_password: "{{ global_password_prefix }}_pw_restic"
+# Path the restic --exclude-file is deployed to (from files/backup/resticignore).
+# Was referenced in tasks/backup.yml (l.32/74/120) with NO default → a run with
+# configure_backup:true aborted on "restic_excludefile is undefined" (2026-06-09).
+restic_excludefile: "{{ ansible_facts['env']['HOME'] }}/backups/.resticignore"
 restic_keep_daily: 7
 restic_keep_weekly: 4
 restic_keep_monthly: 6
