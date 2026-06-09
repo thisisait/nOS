@@ -39,14 +39,24 @@
   register: restic_repo_check
   changed_when: false
   failed_when: false
-  no_log: true
 
 - name: "[Backup] Initialize restic repo"
   ansible.builtin.command: restic init -r {{ restic_repo }}
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
   when: restic_repo_check.rc != 0
-  no_log: true
+  register: _restic_init
+  # Idempotent: the check (restic snapshots) can return non-zero on a transient
+  # / lock / external-volume hiccup even when the repo IS initialized; restic
+  # init then errors "config file already exists" — benign. Tolerate that;
+  # surface anything else (TCC 'operation not permitted' on an external volume,
+  # wrong password). no_log dropped: RESTIC_PASSWORD is in `environment` (not
+  # logged at default verbosity) so the real error is visible for diagnosis.
+  failed_when:
+    - _restic_init.rc | default(0) != 0
+    - "'already' not in (_restic_init.stderr | default('') | lower)"
+    - "'exists' not in (_restic_init.stderr | default('') | lower)"
+  changed_when: _restic_init.rc | default(1) == 0
 
 # ── Pre-backup database dumps ────────────────────────────────────────────────
 
