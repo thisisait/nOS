@@ -12,6 +12,19 @@ postgresql_version: "16.13-alpine"                      # CVE-2026-2005/2006/200
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
+
+# ── In-transit encryption (REM-009, S3 2026-06-10) ───────────────────────────
+# Server-side ssl=on with a role-generated self-signed cert (10y, CN +
+# SAN postgresql/127.0.0.1). libpq clients default to sslmode=prefer, so
+# every psycopg/libpq consumer upgrades to TLS automatically — no client
+# changes needed; `require` pinning per-client is a follow-up. Self-signed
+# is deliberate: sslmode=require does NOT verify the CA, and it keeps the
+# cert independent of mkcert/LE (works on both local and public TLDs).
+# Live-verified on Docker Desktop (TLSv1.3, key bind-mounted 0600).
+# Linux note: PG requires the key owned by postgres-uid or root — the
+# host-user-owned bind mount fails there; needs the root-chown leg first.
+postgresql_ssl_enabled: "{{ ansible_os_family == 'Darwin' }}"
+postgresql_certs_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/certs"
 postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
