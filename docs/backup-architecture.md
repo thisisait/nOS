@@ -147,28 +147,33 @@ needs `sqlite3` on the host (macOS ships it; Linux needs the `sqlite3` package).
 extend `backup_volumes_to_dump` (#5). Copy #1 (`install_backup: true`) runs
 regardless and restore is now functional end-to-end.
 
-## Known gaps / follow-ups (surfaced by the 2026-06-09 adversarial review)
+## Known gaps / follow-ups (2026-06-09 adversarial review; S4 update 2026-06-10)
 
 Honest scope boundaries — none re-break the backup→restore contract, but they
-bound what a DR currently covers. Tracked for a follow-up pass:
+bound what a DR currently covers:
 
-- **KNOWN-UNBACKED host-bind state beyond gitea/gitlab.** `backup_dirs_to_dump`
-  ships gitea/gitlab/gitlab-config. Other services keep PRIMARY state on host
-  binds that NO DB dump covers and would be lost on DR: **Vaultwarden**
-  (`db.sqlite3` — when not on a shared DB), **n8n** (`database.sqlite`),
-  **Node-RED** (`flows_cred.json`), **Nextcloud** user files, **Authentik**
-  media/certs. Extend `backup_dirs_to_dump` (gated by `install_*`) for these —
-  ideally with a quiesce for the SQLite ones (a live-file tar can be torn).
-- **Backup observability is NOT wired.** `files/observability/scripts/backup_status_exporter.py`
-  is referenced by the `91-backups` Grafana dashboard + `05-backup.yml` alerts
-  but is **never deployed/scheduled**, so those metrics/alerts are dead. A
-  totally-failed backup is still caught by the manifest 36h health check
-  (`state/manifest.yml` backup entry), but the granular per-source dashboard is
-  blind until the exporter is deployed + Alloy's textfile collector scrapes it.
-- **Restic→RustFS DR round-trip unverified.** The doc claims `restic restore`
-  into `rustfs_data_dir` then `--tags restore`. Whether RustFS rebuilds its
-  bucket index from objects dropped raw onto disk (vs needing a re-import) is
-  **not yet wet-tested**. Verify before treating copy #2 as fully DR-ready.
+- ~~**KNOWN-UNBACKED host-bind state beyond gitea/gitlab.**~~ **CLOSED (S4
+  2026-06-10):** `backup_dirs_to_dump` + `restore_dir_targets` now carry
+  **vaultwarden / n8n / nodered / authentik** (media+certs); parity pinned by
+  `test_backup_dirs_have_restore_targets`. **Honest residue:** the two SQLite
+  files (vaultwarden `db.sqlite3`, n8n `database.sqlite`) are tar'd LIVE at
+  03:00 (low-write window; restic keeps 7 dailies, one torn copy isn't fatal)
+  — a proper `sqlite3 .backup` quiesce stays queued. **Nextcloud user files**
+  remain unbacked (size; operator decision — add the data dir to the list to
+  opt in).
+- ~~**Backup observability is NOT wired.**~~ **CLOSED (S4 2026-06-10):**
+  `backup_status_exporter.py` deploys via the backup role with a 60-second
+  launchd agent (`eu.thisisait.nos.backup.exporter`) / systemd-user timer;
+  `node_exporter_textfile_dir` moved to `~/.nos/metrics/textfile` (the old
+  `/var/lib/...` default does not exist on macOS and needs root on Linux —
+  the collector read nothing, dashboard was blind). Live-verified: heartbeat
+  + per-source metrics in `backup.prom`; Alloy textfile collector scrapes it.
+  A failed backup also lands a HIGH inbox notification (W6.1 `notify_result`).
+- **Restic→RustFS DR round-trip unverified.** STILL OPEN — and currently
+  blocked ahead of the verify: the off-site leg itself fails with macOS TCC
+  `operation not permitted` on `/Volumes/SSD1TB/nos-restic` (operator: grant
+  Full Disk Access to the runner, or re-point `restic_repo`; to-do #6).
+  Verify the bucket-index rebuild before treating copy #2 as DR-ready.
 - **`restore-verify` floors cover the core sources** (MariaDB/PG/Authentik hard
   floors; Wing/dirs informational). A full wet DR-in-CI leg (blank → backup →
   restore → verify, both OSes) is the remaining #8 follow-up.
