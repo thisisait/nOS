@@ -169,7 +169,9 @@ HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" \
     -d "$INGEST_PAYLOAD" \
     "$WING_API_URL/api/v1/gitleaks_findings" 2>&1)
 
-HTTP_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+# sed '$d' (drop last line) — NOT `head -n -1`: negative counts are GNU-only,
+# BSD/macOS head dies with "illegal line count" (live pulse failure 2026-06-10).
+HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
 HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
 
 if [[ "$HTTP_CODE" != "201" ]]; then
