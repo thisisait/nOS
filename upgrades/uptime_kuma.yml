@@ -1,0 +1,96 @@
+---
+service: uptime_kuma
+allow_shell: true   # upgrade recipes need exec.shell for backup/verify steps
+docs_url: "https://github.com/louislam/uptime-kuma/wiki/%F0%9F%86%99-How-to-Update"
+maintainers: ["pazny"]
+notes: |
+  Uptime Kuma stores everything (monitors, notification channels, history)
+  in an embedded SQLite db under /app/data — the role bind-mounts
+  {{ uptime_kuma_data_dir }}. The 1.x line is pinned at 1.23.13 in
+  default.config.yml (REM-037/067: notification-template SSTI only
+  partially mitigated on 1.x; 2.2.1 carries the complete fix for
+  CVE-2026-33130 / GHSA-v832-4r73-wx5j — REM-073).
+
+  Breaking boundary 1.x -> 2.x (D3 recipe below):
+  - one-way SQLite schema migration runs automatically on first 2.x boot;
+    there is NO downgrade path on a migrated db — rollback works ONLY by
+    restoring the pre-upgrade data-dir backup (the recipe takes one).
+  - upgrade path requirement: must be on 1.23.x first (we pin 1.23.13).
+  - some notification-provider configs changed shape in 2.x; the playbook's
+    auto-created monitors (roles/pazny.uptime_kuma/tasks/monitors.yml) use
+    the socket API which is compatible, but operator-added exotic
+    notification channels should be eyeballed after the bump.
+
+  PERSISTENCE (upgrade-engine doctrine, 2026-05-30): after a verified apply,
+  bump `uptime_kuma_version` in default.config.yml to "2.2.1" — it currently
+  pins "1.23.13" and config WINS over the engine's compose override on the
+  next plain re-render. (The role default stays the "1"-style major track on
+  the intentional-shadow allowlist; flip both when the line moves.)
+
+recipes:
+  - id: "uptime-kuma-1-to-2"
+    from_regex: "^1\\."
+    to: "2.2.1"
+    severity: breaking
+    release_date: "2026-04-20"
+    notes: |
+      The REM-073 closer: full SSTI fix (unquoted-absolute-path bypass of the
+      GHSA-vffh-c9pq-4crh mitigation). One-way db migration on first boot —
+      budget a few minutes of monitor downtime; history is preserved.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 1
+      service_healthy: true
+
+    pre:
+      # The data dir IS the database — this backup is the only rollback path
+      # once 2.x migrates the schema.
+      - id: backup_data_dir
+        type: backup.volume
+        src: "{{ uptime_kuma_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: note_current_version
+        type: exec.shell
+        command: >-
+          docker inspect iiab-uptime-kuma-1 --format '{{ '{{' }}.Config.Image{{ '}}' }}'
+        allow_shell: true
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: uptime-kuma
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      # First 2.x boot runs the schema migration before the listener opens —
+      # generous budget, same class as the GitLab cold-init wait.
+      - id: wait_http
+        type: http.wait
+        url: "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}"
+        timeout_sec: 600
+        interval_sec: 10
+      - id: verify_2x_running
+        type: exec.shell
+        command: >-
+          docker inspect iiab-uptime-kuma-1 --format '{{ '{{' }}.Config.Image{{ '}}' }}'
+        allow_shell: true
+        expect_stdout_contains: "2.2.1"
+
+    rollback:
+      # Forward-only schema: restoring the PRE-upgrade data dir is the only
+      # valid rollback; reverting just the tag against a migrated db boots
+      # 1.x into a schema it cannot read.
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: uptime-kuma
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: false
+      - id: restore_data_dir
+        type: backup.restore
+        dst: "{{ uptime_kuma_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
