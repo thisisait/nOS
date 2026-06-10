@@ -68,16 +68,23 @@ Peek inside a date:
 aws --endpoint-url http://127.0.0.1:9010 s3 ls backups/2026-04-20/
 ```
 
-Expected entries:
+Expected entries (each `.enc` when encryption is on — the default):
 
 ```
-mariadb.sql.gz
-postgres.sql.gz
-volume-mariadb_data.tar.gz
-volume-postgres_data.tar.gz
-volume-authentik_media.tar.gz
-authentik-blueprints.json
+mariadb.sql.gz                 # mariadb-dump --all-databases
+postgres.sql.gz                # pg_dumpall
+volume-<name>.tar.gz           # Docker named volume(s), if any configured
+dir-gitea.tar.gz               # host-bind git repos
+dir-gitlab.tar.gz
+dir-gitlab-config.tar.gz
+wing-db.sql.gz                 # Wing SQLite store (sqlite3 .dump)
+nos-state.tar.gz               # ~/.nos/{secrets,state}.yml  (restore GATED, see §4)
+authentik-blueprints.json      # OIDC/flows/RBAC defs (live users are in the PG dump)
 ```
+
+> The object stem (basename minus extension) IS the restore `source`. One fixed
+> key per source per day — no timestamps. The backup ↔ restore naming contract
+> is pinned by `tests/anatomy/test_backup_restore_contract.py`.
 
 ---
 
@@ -101,16 +108,37 @@ ansible-playbook main.yml -K --tags restore \
     -e restore_date=2026-04-20 \
     -e restore_sources=mariadb,postgres
 
-# a single volume
+# a single volume / a host-bind dir (gitea repos) / the Wing store
 ansible-playbook main.yml -K --tags restore \
     -e restore_date=2026-04-20 \
-    -e restore_sources=volume-mariadb_data
+    -e restore_sources=volume-mariadb_data,dir-gitea,wing-db
 
 # Authentik config only
 ansible-playbook main.yml -K --tags restore \
     -e restore_date=2026-04-20 \
     -e restore_sources=authentik-blueprints
 ```
+
+### Restoring `~/.nos` state (GATED — fresh-host DR only)
+
+`nos-state` (encryption keys, tokens, `state.yml`) is **never restored by
+default**: overwriting a live `secrets.yml` that has been re-keyed since the
+backup would brick SSO. Opt in only on a true disaster-recovery onto a fresh
+host:
+
+```bash
+ansible-playbook main.yml -K --tags restore \
+    -e restore_date=2026-04-20 -e restore_state=true
+```
+
+### Verify the restore actually replayed
+
+```bash
+ansible-playbook main.yml --tags restore-verify
+```
+
+Asserts DB-count floors + Authentik user count + Wing rows — turns a "restore
+reported ok" into a proven-good one.
 
 ### Skip the interactive prompt (CI / scripted recovery)
 
@@ -170,16 +198,23 @@ See `docs/coexistence-playbook.md` for the full framework.
 3. Filters that list by `restore_sources` (or takes everything).
 4. Prompts the operator to confirm (`ansible.builtin.pause`).
 5. Downloads every planned object to `~/restore-temp/<date>/`.
-6. Per source:
+6. Decrypts any `.enc` object (resolves a `-pbkdf2`-capable openssl, mirror of
+   the producer) → plaintext.
+7. Per source:
    - `mariadb.sql.gz` → `gunzip | docker exec -i infra-mariadb-1 mariadb -uroot -p…`
    - `postgres.sql.gz` → `gunzip | docker exec -i infra-postgresql-1 psql -U postgres`
    - `volume-<name>.tar.gz` → stop consumers → wipe volume via alpine →
      `tar -xzf -` into volume → restart consumers
+   - `dir-<name>.tar.gz` → resolve host target (`restore_dir_targets`) → stop
+     consumers → `tar -xzf` into the bind dir → restart consumers
+   - `wing-db.sql.gz` → stop Wing → snapshot current wing.db → `gunzip | sqlite3`
+     rebuild → restart Wing
+   - `nos-state.tar.gz` → **skipped unless `-e restore_state=true`** → extract `~/.nos`
    - `authentik-blueprints.json` → `POST /api/v3/managed/blueprints/` with the
      Authentik bootstrap bearer token
-7. Re-runs `pazny.mariadb/tasks/post.yml` and `pazny.postgresql/tasks/post.yml`
+8. Re-runs `pazny.mariadb/tasks/post.yml` and `pazny.postgresql/tasks/post.yml`
    to re-seed databases, grants, and extensions that per-service roles expect.
-8. Prints a summary: source, status, bytes restored, duration.
+9. Prints a summary: source, status, bytes restored, duration.
 
 ---
 

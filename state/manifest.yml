@@ -832,7 +832,7 @@ services:
     stack: null
     install_flag: install_backup
     version_source: launchd
-    launchd_label: "eu.thisisait.nos.backup"
+    launchd_label: "eu.thisisait.nos.backup.rustfs"   # copy #1 (RustFS); was .backup — de-collided 2026-06-09
     health_check:
       type: exec
       # Fail if status file is missing or last_run is older than 36h.

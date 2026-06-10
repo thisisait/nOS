@@ -1081,6 +1081,11 @@
       when: restore_date is defined
       tags: ['restore', 'never']
 
+    # Post-restore proof — DB list + row-count floors + Authentik/Wing presence.
+    # Usage:  ansible-playbook main.yml --tags restore-verify
+    - import_tasks: tasks/restore-verify.yml
+      tags: ['restore-verify', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Auto-enable dependencies (ERPNext → MariaDB+Redis, Outline → PostgreSQL, atd.)
     # ──────────────────────────────────────────────────────────────────────────

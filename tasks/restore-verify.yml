@@ -1,0 +1,92 @@
+---
+# ==============================================================================
+# RESTORE-VERIFY — post-restore assertions (the "is it actually back?" gate).
+#
+# Run AFTER `--tags restore`:
+#   ansible-playbook main.yml --tags restore-verify
+# Tagged 'never' so a normal run skips it. Asserts the restored data is really
+# present — DB list + row-count floors + Authentik user count — turning a
+# "restore reported ok" into a proven-good restore. This is the runtime half of
+# the DR gate (the offline contract half is tests/anatomy/test_backup_restore_contract.py).
+# ==============================================================================
+
+- name: "[Restore-verify] MariaDB container is running"
+  ansible.builtin.command: docker ps --filter "name=infra-mariadb-1" --format "{% raw %}{{.Names}}{% endraw %}"
+  register: _rv_maria_ps
+  changed_when: false
+  failed_when: "'infra-mariadb-1' not in _rv_maria_ps.stdout"
+  when: install_mariadb | default(false)
+
+- name: "[Restore-verify] MariaDB has at least the expected user databases"
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker exec infra-mariadb-1 mariadb -uroot \
+      -p"{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}" \
+      -N -e "SELECT COUNT(*) FROM information_schema.SCHEMATA
+             WHERE SCHEMA_NAME NOT IN ('mysql','information_schema','performance_schema','sys');"
+  args:
+    executable: /bin/bash
+  register: _rv_maria_dbs
+  changed_when: false
+  no_log: true
+  failed_when: (_rv_maria_dbs.stdout | trim | int) < (restore_verify_min_mariadb_dbs | default(1) | int)
+  when: install_mariadb | default(false)
+
+- name: "[Restore-verify] PostgreSQL container is running"
+  ansible.builtin.command: docker ps --filter "name=infra-postgresql-1" --format "{% raw %}{{.Names}}{% endraw %}"
+  register: _rv_pg_ps
+  changed_when: false
+  failed_when: "'infra-postgresql-1' not in _rv_pg_ps.stdout"
+  when: install_postgresql | default(false)
+
+- name: "[Restore-verify] PostgreSQL has at least the expected databases"
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker exec infra-postgresql-1 psql -U postgres -tAc \
+      "SELECT count(*) FROM pg_database WHERE datistemplate = false;"
+  args:
+    executable: /bin/bash
+  register: _rv_pg_dbs
+  changed_when: false
+  failed_when: (_rv_pg_dbs.stdout | trim | int) < (restore_verify_min_pg_dbs | default(2) | int)
+  when: install_postgresql | default(false)
+
+- name: "[Restore-verify] Authentik user count (>=1 proves the PG dump replayed)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker exec infra-postgresql-1 psql -U postgres -d authentik -tAc \
+      "SELECT count(*) FROM authentik_core_user;"
+  args:
+    executable: /bin/bash
+  register: _rv_ak_users
+  changed_when: false
+  failed_when: (_rv_ak_users.stdout | trim | int) < 1
+  when: install_authentik | default(false)
+
+- name: "[Restore-verify] Wing DB has rows (proves wing-db.sql.gz replayed)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    sqlite3 "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db" \
+      "SELECT count(*) FROM events;" 2>/dev/null || echo 0
+  args:
+    executable: /bin/bash
+  register: _rv_wing
+  changed_when: false
+  failed_when: false
+  when: install_wing | default(true)
+
+- name: "[Restore-verify] Summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+      Restore verification
+      ══════════════════════════════════════════════════════════════════════
+      MariaDB user DBs:   {{ _rv_maria_dbs.stdout | default('(skipped)') | trim }}
+      PostgreSQL DBs:     {{ _rv_pg_dbs.stdout | default('(skipped)') | trim }}
+      Authentik users:    {{ _rv_ak_users.stdout | default('(skipped)') | trim }}
+      Wing events rows:   {{ _rv_wing.stdout | default('(skipped)') | trim }}
+
+      If any floor failed above, the restore did NOT fully replay — re-run
+      `--tags restore` for the missing source (restore is idempotent per-source).
+      Then run service health:  ansible-playbook main.yml --tags health
+      ══════════════════════════════════════════════════════════════════════

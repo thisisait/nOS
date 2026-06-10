@@ -230,7 +230,11 @@ restic_excludefile: "{{ ansible_facts['env']['HOME'] }}/backups/.resticignore"
 restic_keep_daily: 7
 restic_keep_weekly: 4
 restic_keep_monthly: 6
-restic_backup_schedule_hour: 3            # Hour of daily backup (0-23)
+restic_backup_schedule_hour: 4            # Hour of off-site mirror (staggered after RustFS copy #1 at 03:00)
+# Off-site agent label — de-collided from the RustFS copy-#1 agent
+# (eu.thisisait.nos.backup.rustfs). Both shared eu.thisisait.nos.backup before,
+# writing the SAME plist path → enabling both silently disabled one.
+restic_launchd_label: "eu.thisisait.nos.backup.offsite"
 
 # ── Vulnerability Scanner (NOS Security Auditor) ─────────────────────────────
 configure_vulnerability_scan: false
@@ -1559,13 +1563,21 @@ dnsmasq_additional_addresses: []          # Additional custom DNS records
 # Documentation: https://restic.readthedocs.io/
 # ==============================================================================
 
+# Off-site copy #2 mirrors the RustFS bucket dir (copy #1's encrypted objects) —
+# NOT the whole $HOME. The old "{{ HOME }}" default dragged in TCC-protected
+# ~/Library subdirs on macOS → restic dir-level EPERM → fatal rc=1 (it aborted
+# the all-on blank, 2026-06-09). The bucket dir is user-owned + self-contained:
+# DB dumps, volume/dir tars, wing.db, nos-state, blueprints (all encrypted).
+# DR: `restic restore latest --target <rustfs parent>` repopulates it, then
+# `--tags restore`. See docs/backup-architecture.md.
 restic_backup_paths:
-  - "{{ ansible_facts['env']['HOME'] }}"     # User home directory
+  - "{{ rustfs_data_dir }}"     # RustFS bucket dir = canonical copy #1 object store
 
-# Restic repository – configure depending on target:
+# Restic repository – an off-site, operator-rotated external medium:
+# restic_repo: "/Volumes/Backup/restic"          # external USB/SSD (recommended)
 # restic_repo: "s3:s3.us-east-005.backblazeb2.com/bucket-name"
 # restic_repo: "sftp:user@nas:/backup/mac-studio"
-# restic_repo: "/Volumes/Backup/restic"
+# Leave configure_backup:false until restic_repo points at a MOUNTED disk.
 
 # ==============================================================================
 # EXTERNAL STORAGE – move data directories to a secondary SSD
@@ -2390,12 +2402,14 @@ vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
 vaultwarden_sso_only: false
 
 # ==============================================================================
-# BACKUP — pazny.backup role (nightly DBs + volumes + Authentik blueprints)
-# Runs as a launchd agent on the host; writes to the RustFS S3 bucket.
-# See roles/pazny.backup/README.md + docs/restore-runbook.md.
+# BACKUP — copy #1 (pazny.backup role): nightly DB dumps + named volumes +
+# host-bind dirs (git repos) + wing.db + ~/.nos state + Authentik blueprints,
+# AES-256 encrypted → RustFS S3 bucket via the launchd/systemd agent
+# eu.thisisait.nos.backup.rustfs. Copy #2 (off-site) = the Restic block above.
+# See docs/backup-architecture.md + roles/pazny.backup/README.md + docs/restore-runbook.md.
 # ==============================================================================
 
-backup_schedule_hour: 3                          # local-time 03:00
+backup_schedule_hour: 3                          # local-time 03:00 (off-site Restic staggered to 04:00)
 backup_schedule_minute: 0
 backup_target_bucket: "backups"
 backup_target_endpoint: "http://127.0.0.1:9010"  # RustFS S3 API
@@ -2404,11 +2418,29 @@ backup_target_secret_key: "{{ rustfs_secret_key }}"
 backup_retention_daily: 7                        # last-N dailies
 backup_retention_weekly: 4                       # last-N Sundays
 backup_retention_monthly: 12                     # last-N month-firsts
-backup_volumes_to_dump:
-  - mariadb_data                                 # extend as more services migrate to named volumes
+# Docker NAMED volumes to tar. Empty by default: DB *_data volumes are redundant
+# (the logical dumps below cover them) and a hot-volume tar is an inconsistent
+# datadir. Add only genuinely-stateful NON-DB volumes you confirm via
+# `docker volume ls` (e.g. authentik_media). Was [mariadb_data] — dropped.
+backup_volumes_to_dump: []
+# Host-bind service data dirs (filesystem state NO DB dump can rebuild — git
+# repos). name → target path; restore maps it back via restore_dir_targets.
+# Extend (gated by dir-existence; backup.sh skips a missing path) for other
+# host-bind SQLite services — see "KNOWN-UNBACKED" in docs/backup-architecture.md.
+backup_dirs_to_dump:
+  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
+  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
+  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
 backup_databases_mariadb: true
 backup_databases_postgresql: true
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
+backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wing store
+backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)
+# Client-side encryption (GDPR Art.32 / NIS2 at-rest). OFF only for a throw-away
+# dev target with no PII. The passphrase is the ONLY key to every object —
+# credentials.yml MUST survive off-box (see docs/backup-architecture.md custody).
+backup_encryption_enabled: true
+backup_alpine_image: "alpine:3.20"               # tar/extract image; MUST match restore_alpine_image
 backup_overwrite_same_day: true
 backup_run_now: false
 backup_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json"
