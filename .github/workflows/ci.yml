@@ -9,6 +9,12 @@ name: CI
       - '*.md'
     branches:
       - master
+      # D2 (2026-06-11): dev pushes get the LIGHT lane only (lint + syntax +
+      # pytest + contracts). The two Integration wet-tests stay PR/cron/master
+      # — 22 commits landed on dev after v0.5-beta with zero CI coverage; this
+      # closes that gap without a 25-min wet-test on every dev push (that
+      # remains `tools/ci-local.sh` discipline + the release PR gate).
+      - dev
       - 'claude/**'
   schedule:
     - cron: "0 5 * * 4"
@@ -249,7 +255,7 @@ jobs:
     # On feature branches run integration only on push, not on draft PRs
     if: |
       github.event_name == 'schedule' ||
-      github.event_name == 'push' ||
+      (github.event_name == 'push' && github.ref != 'refs/heads/dev') ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     strategy:
       fail-fast: false
@@ -404,7 +410,7 @@ jobs:
       PYTHONNOUSERSITE: '1'   # keep the venv ansible's sys.path clean (see macOS job)
     if: |
       github.event_name == 'schedule' ||
-      github.event_name == 'push' ||
+      (github.event_name == 'push' && github.ref != 'refs/heads/dev') ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
 
     steps:
