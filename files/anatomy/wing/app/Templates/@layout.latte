@@ -104,8 +104,12 @@
 	{include content}
 </div>
 
-<script src="/assets/dashboard.js"></script>
-<script src="/assets/keyboard-nav.js?v={$basePath}" defer></script>
-<script src="/assets/nav-overlay.js?v={$basePath}" defer></script>
+{* W5-fix (2026-06-10 review): cache-buster was ?v={$basePath} — basePath is
+   the URL path ('' at root), so these two scripts shipped with ?v= and were
+   never cache-busted (the same stale-asset class the $assetVer mechanism was
+   built to prevent). Key all three on $assetVer like the stylesheets. *}
+<script src="/assets/dashboard.js?v={$assetVer}"></script>
+<script src="/assets/keyboard-nav.js?v={$assetVer}" defer></script>
+<script src="/assets/nav-overlay.js?v={$assetVer}" defer></script>
 </body>
 </html>
