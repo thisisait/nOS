@@ -5,7 +5,7 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-06-10 • **post-v0.5-beta serial review → v0.6 prep.**
+> Last updated: 2026-06-11 • **v0.6 W/S/D batch EXECUTED** (see punch-list status table below).
 > v0.5-beta tagged 2026-06-06 (SSO/MFA coherence + SEC-02/REM-043/MTI security
 > cluster). Since the tag, 22 commits landed on `dev` in 5 clusters: **backup/
 > restore overhaul** (3-2-1 split, restore contract repaired + gated; operator
@@ -35,7 +35,37 @@
 
 ---
 
-## v0.6 punch list (drafted by the 2026-06-10 review; operator to re-prioritize)
+## v0.6 punch list — EXECUTED 2026-06-10/11 (12/12 done or honestly scoped)
+
+> Status sweep 2026-06-11, after the operator's "go on all W/S/D" session.
+> Every item below was implemented + live-verified, or explicitly re-scoped
+> with the reason inline. Commits `73deed4e..c6d9d6f0` on `dev`.
+>
+> | Item | Status |
+> |---|---|
+> | W6.1 inbox emitters | ✅ DONE+live (pulse state-change choke point, playbook-fail, backup result; breach pre-existed; first 2 notifications ever in the table, all 4 transitions live-proven) |
+> | W6.2 dashboard honesty | ✅ DONE+live ("last scan 1d ago (on-demand)", computed advisory recency, queue re-ingested 14/71/2) |
+> | W6.3 /agents lifecycle | ✅ DONE+live (45-min lazy reaper, POST+CSRF kill — by:pazny verified, no-CSRF→403, elapsed/cap countdown, token mini-bar) |
+> | W6.4 hub health | ✅ DONE+live (health_url + tcp:// probe + stack aggregation + id-collapse fix → healthy 36→46, unchecked 21→6; the 2 "down" are REAL dead exporters) |
+> | W6.5 lucide slim | ✅ DONE+live (402KB→8.3KB, drift gate: every manifest icon must resolve) |
+> | S1 scan refresh | ✅ scout fired (GREEN, 0 drift); the SCHEDULED vuln-scan was broken by the 644 exec bit for weeks — fixed, fires nightly again |
+> | S2 image freshness | ✅ patch-line bumps synced config+role (vaultwarden/grafana/traefik/gitlab/n8n); gitea/portainer/openwebui → recipe lane |
+> | S3 PG SSL + ERPNext | ✅ REM-009 closed (TLSv1.3 live; Darwin-gated, Linux root-key leg queued); REM-008 deferred-to-rework (role parked+hard-blocked) |
+> | S4 backup gaps | ✅ dirs+restore parity (vaultwarden/n8n/nodered/authentik) + exporter FINALLY deployed (textfile dir was /var/lib = absent on macOS); SQLite quiesce + restic DR round-trip queued (TCC #6 blocks) |
+> | D1 vars retirement | 🔶 DESIGN LOCKED (O25): hostvars disproven live (126 vs 891 keys); generated-namespace plan + tools/loader-vars-report.py; flip = dedicated pre-2.24 wet-test lane |
+> | D2 CI dev lane | ✅ dev pushes run lint+syntax+pytest+contracts; Integration stays PR/master/cron |
+> | D3 kuma 2.2.1 recipe | ✅ recipe shipped (breaking, one-way schema → data-dir-backup rollback); apply stays operator-gated |
+>
+> **Operator to-dos surfaced:** (a) TCC grant for /Volumes/SSD1TB (restic off-site
+> leg fails `operation not permitted`; blocks the DR round-trip verify), (b) live
+> apply of S2 bumps (`--tags vaultwarden,grafana,traefik,gitlab,n8n` or deploy
+> pipeline), (c) optional: fire the kuma recipe, (d) push `dev` (12 commits) —
+> first push exercises the new light CI lane, (e) scout side-finds: state mirror
+> reports openclaw/hermes/tailscale unhealthy; advisor/architect actor-id naming
+> inconsistency. Natural overnight verifications: 02:01 vuln-scan (fixed exec
+> bit) + 03:00 backup (new dirs + first backup notification + recovery emits).
+
+### Original punch list (as drafted 2026-06-10, kept for archaeology)
 
 **Headline: Track W6 — Wing UI rapid improvement.** Foundation is healthy
 (tokens.css, burger nav, RBAC tiers, SEC-6 edge trust; all 20 presenters render
