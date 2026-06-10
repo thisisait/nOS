@@ -22,7 +22,11 @@ services:
   # ── Docker Socket Proxy – security layer between containers and the Docker API ──
   # Eliminates direct access to docker.sock (container escape vector)
   docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy:latest
+    # PINNED (2026-06-10 review): the socket proxy guards the Docker API
+    # (= root on host) — the one container that must never float. Was :latest;
+    # the C1 image-pin gate only scans roles/pazny.*/defaults, so this base-
+    # stack image slipped through. v0.4.2 = the live-verified running image.
+    image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version | default('0.4.2') }}
     restart: unless-stopped
     privileged: true
     volumes:

@@ -63,3 +63,22 @@ def test_exceptions_still_apply():
     floating = {(r, k) for (r, k, _) in _floating_tags()}
     stale = [e for e in EXCEPTIONS if e not in floating]
     assert not stale, f"EXCEPTIONS entries no longer floating (remove them): {stale}"
+
+
+def test_no_floating_tags_in_base_stack_templates():
+    """Base stack templates (templates/stacks/*/docker-compose.yml.j2) carry the
+    shared-infra service definitions that the role-defaults scan above never
+    sees. The 2026-06-10 review found tecnativa/docker-socket-proxy:latest there
+    — the one container guarding docker.sock (= root on host) was the one image
+    still floating. Literal `image: ...:<floating>` lines are banned; a Jinja
+    `{{ var | default('x.y.z') }}` tag is fine (the default is checked too)."""
+    bad = []
+    for f in sorted((REPO / "templates" / "stacks").glob("*/docker-compose.yml.j2")):
+        for n, line in enumerate(f.read_text().splitlines(), 1):
+            s = line.strip()
+            if not s.startswith("image:"):
+                continue
+            tag = s.split(":")[-1].strip().strip("\"'").lower()
+            if tag in FLOATING:
+                bad.append((str(f.relative_to(REPO)), n, s))
+    assert not bad, f"Floating image tags in base stack templates: {bad}"
