@@ -1295,6 +1295,9 @@
         src: "secrets.yml.j2"
         dest: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
         mode: '0600'
+      # diff:false — a --diff run printed the FULL secrets content to stdout AND
+      # ~/.nos/ansible.log (0644). Keeps changed/ok reporting (review 2026-06-10).
+      diff: false
       tags: ['always']
 
     # Batch 4 break-glass: generate + persist the offline recovery-key INPUT

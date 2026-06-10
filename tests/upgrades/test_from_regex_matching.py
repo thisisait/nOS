@@ -84,10 +84,12 @@ CASES = [
     ("mariadb",   "mariadb-11-current",     True,  "11.0.0"),
     ("mariadb",   "mariadb-11-current",     False, "10.11.0"),
     ("mariadb",   "mariadb-11-current",     False, "12.0.0"),
-    ("infisical", "infisical-current",      True,  "0.159.16"),
-    ("infisical", "infisical-current",      True,  "0.159.0"),
-    ("infisical", "infisical-current",      False, "0.158.0"),
-    ("infisical", "infisical-current",      False, "0.160.0"),
+    # re-pinned to the 0.160.x line 2026-06-10 (installed v0.160.4 had NO
+    # matching recipe — upgrade-architect gap; the 0.159 pin went stale)
+    ("infisical", "infisical-current",      True,  "0.160.4"),
+    ("infisical", "infisical-current",      True,  "0.160.0"),
+    ("infisical", "infisical-current",      False, "0.159.16"),
+    ("infisical", "infisical-current",      False, "0.161.0"),
     ("authentik", "authentik-2026-current", True,  "2026.5.2"),
     ("authentik", "authentik-2026-current", True,  "2026.1.0"),
     ("authentik", "authentik-2026-current", False, "2025.10.0"),

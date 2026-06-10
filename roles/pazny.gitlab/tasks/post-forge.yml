@@ -1,0 +1,136 @@
+---
+# ==============================================================================
+# pazny.gitlab/tasks/post-forge.yml — T32.2 GitLab agent forge (2026-06-10)
+#
+# Makes GitLab the operator-facing LOCAL review surface: agents push branches +
+# open MERGE REQUESTS against the nOS project via tools/recipe-pr.sh (forge
+# target "gitlab"). Replaces Gitea as the review surface (its oauth2 source row
+# kept vanishing → /user/oauth2/authentik 500 → operator locked out of the UI;
+# Gitea keeps serving Woodpecker CI). GitHub stays the public trunk;
+# tools/promote-public.sh stays the only GitHub-facing step.
+#
+# AUTH: a PAT created via `gitlab-rails runner` with a value GENERATED HERE and
+# pinned via token.set_token() — the only headless way to mint a GitLab PAT with
+# a KNOWN value (no API exists to create a PAT with Basic auth). The value is
+# persisted IN-ROLE via lineinfile into ~/.nos/secrets.yml immediately after the
+# mint (mirroring tasks/authentik-recovery-key.yml) — the central secrets.yml.j2
+# render (main.yml "[Secrets] Persist runtime secrets") runs BEFORE stack-up
+# reaches this task, so relying on it silently dropped the value every run
+# (adversarial-review CRIT, 2026-06-10). Validated against /api/v4/user on
+# re-runs — invalid or missing → revoke same-name + recreate (blank-safe).
+#
+# The nOS PROJECT is created EMPTY (no GitHub import — the loop stays local);
+# trunk (dev/master) is pushed from the operator host by
+# tools/sync-trunk-to-gitlab.sh, mirroring the Gitea forge sync.
+#
+# Called from post.yml only when gitlab_agent_forge=true AND GitLab is ready.
+# ==============================================================================
+
+# ── 1. Validate the persisted PAT (reuse when it still works) ─────────────────
+- name: "[pazny.gitlab Forge] Validate persisted PAT against /api/v4/user"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/api/v4/user"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_api_token }}"
+    status_code: [200, 401, 403]
+  register: _forge_pat_check
+  when: (gitlab_api_token | default('') | length) > 0
+  changed_when: false
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Decide whether a new PAT is needed"
+  ansible.builtin.set_fact:
+    _forge_pat_needed: >-
+      {{ (gitlab_api_token | default('') | length) == 0
+         or (_forge_pat_check.status | default(401)) != 200 }}
+
+# ── 2. Mint a new PAT via rails runner (revoke stale same-name first) ─────────
+- name: "[pazny.gitlab Forge] Generate new PAT value"
+  ansible.builtin.set_fact:
+    _forge_pat_value: "{{ lookup('password', '/dev/null length=40 chars=ascii_letters,digits') }}"
+  when: _forge_pat_needed | bool
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Create PAT via gitlab-rails runner (set_token)"
+  # Standalone Ruby (files/anatomy/scripts/gitlab-forge-pat.rb) piped via stdin
+  # (`runner -`), values via `compose exec -e VAR` PASS-THROUGH from the task's
+  # environment: — (a) no Jinja inside a shell heredoc (the argument-splitter
+  # gate, test_jinja_heredoc_antipattern), (b) no shell-quoting fragility for
+  # operator-overridden owner/name, (c) the fresh PAT never appears in argv/ps
+  # during the ~30-60s Rails boot.
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec
+    -e NOS_FORGE_OWNER -e NOS_FORGE_TOKEN_NAME -e NOS_FORGE_SCOPES -e NOS_FORGE_PAT
+    -T gitlab gitlab-rails runner -
+    < "{{ playbook_dir }}/files/anatomy/scripts/gitlab-forge-pat.rb"
+  environment:
+    NOS_FORGE_OWNER: "{{ gitlab_nos_repo_owner }}"
+    NOS_FORGE_TOKEN_NAME: "{{ gitlab_forge_token_name }}"
+    NOS_FORGE_SCOPES: "{{ gitlab_forge_token_scopes | join(',') }}"
+    NOS_FORGE_PAT: "{{ _forge_pat_value }}"
+  register: _forge_pat_create
+  when: _forge_pat_needed | bool
+  changed_when: "'CREATED' in (_forge_pat_create.stdout | default(''))"
+  failed_when: "'ERROR' in (_forge_pat_create.stdout | default('')) or (_forge_pat_create.rc | default(0)) != 0"
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Load the new PAT into the run (set_fact)"
+  ansible.builtin.set_fact:
+    gitlab_api_token: "{{ _forge_pat_value }}"
+  when: _forge_pat_create.changed | default(false)
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Persist the new PAT into ~/.nos/secrets.yml (in-role)"
+  # lineinfile, NOT a secrets.yml.j2 re-render: the central render already ran
+  # (before stack-up) AND a re-render here would clobber the appended
+  # break-glass line the template deliberately omits.
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: '^gitlab_api_token:'
+    line: 'gitlab_api_token: "{{ gitlab_api_token }}"'
+    create: true
+    mode: '0600'
+  when: _forge_pat_create.changed | default(false)
+  no_log: true
+
+# ── 3. Ensure the nOS project exists (writable; created EMPTY) ────────────────
+- name: "[pazny.gitlab Forge] Check if nOS project exists"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/api/v4/projects/{{ gitlab_nos_repo_owner }}%2F{{ gitlab_nos_repo_name }}"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_api_token }}"
+    status_code: [200, 404]
+  register: _forge_project
+  changed_when: false
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Create EMPTY nOS project (trunk pushed from host)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/api/v4/projects"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ gitlab_nos_repo_name }}"
+      path: "{{ gitlab_nos_repo_name }}"
+      visibility: "{{ gitlab_nos_repo_visibility | default('private') }}"
+      initialize_with_readme: false
+      description: "nOS agent forge — local MR review surface (T32.2, 2026-06-10)"
+    status_code: [201]
+  when: _forge_project.status == 404
+  register: _forge_project_create
+  changed_when: true
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Status"
+  ansible.builtin.debug:
+    msg: >-
+      GitLab agent forge: project {{ gitlab_nos_repo_owner }}/{{ gitlab_nos_repo_name }}
+      {{ 'CREATED empty — push trunk with tools/sync-trunk-to-gitlab.sh'
+         if (_forge_project_create.changed | default(false)) else 'present' }};
+      PAT {{ 'GENERATED + persisted to ~/.nos/secrets.yml' if (_forge_pat_create.changed | default(false)) else 'reused' }}.
+      Agents open MRs via tools/recipe-pr.sh (forge target: gitlab).
