@@ -1144,6 +1144,17 @@ A10 must land before Phase 5 — `actor_id` column is required for cryptographic
 attribution of conductor writes. Phase 5 pass = first non-operator end-to-end
 write to wing.db.
 
+**O25 — `{{ vars }}` retirement design (D1, 2026-06-11):**
+The 6 wholesale `{{ vars }}` loader sites hard-break on ansible-core 2.24.
+Empirically disproven shortcut: `hostvars[inventory_hostname]` carries only
+126 keys vs `vars`' 891 — play vars_files (ALL of default.config.yml) are
+absent from it. The committed design: a GENERATED explicit namespace — a
+set_fact map covering exactly the ~190 vars plugins reference
+(`tools/loader-vars-report.py` prints the contract), drift-gated so a new
+plugin var ref fails CI until the map regenerates. The flip itself needs a
+full blank wet-test (it touches the render path of all 66 plugins) — a
+dedicated pre-2.24 lane, deliberately NOT bundled into the v0.6 batch.
+
 **O24 — serial-review cadence + pin-gate scope doctrine (2026-06-10):**
 A full *serial* review (one context, playbook → security → anatomy → Wing →
 CI/docs, fixing in-line) after each release catches the class of bug that
