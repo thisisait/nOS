@@ -99,8 +99,12 @@ compose:
       image: "ghcr.io/example/example:1.0.0"
       container_name: example
       restart: unless-stopped
+      # Bind loopback — Traefik (docker provider) is the only edge. A bare
+      # "8080:8080" publishes on 0.0.0.0 = reachable from the LAN, bypassing
+      # the Authentik forward-auth gate. Omit ports: entirely if the app is
+      # only reached via Traefik labels (most Tier-2 apps need no host port).
       ports:
-        - "8080:8080"
+        - "127.0.0.1:8080:8080"
       environment:
         - "EXAMPLE_DB_USER=$SERVICE_USER_DB"
         - "EXAMPLE_DB_PASSWORD=$SERVICE_PASSWORD_DB"
