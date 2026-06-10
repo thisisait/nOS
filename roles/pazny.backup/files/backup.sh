@@ -65,6 +65,13 @@ STATUS_FILE="{{ backup_status_file }}"
 LOG_FILE="{{ backup_log_file }}"
 OVERWRITE_SAME_DAY="{{ 'true' if backup_overwrite_same_day else 'false' }}"
 
+# A9 notification (W6.1, 2026-06-10): backup result lands in the Wing inbox —
+# failures as HIGH, success as a daily INFO heartbeat. Same HMAC scheme as the
+# events pipeline; empty secret (fresh install pre-regen) disables silently.
+BONE_NOTIFY_URL="{{ backup_notify_url | default('http://127.0.0.1:8099/api/v1/notifications') }}"
+NOTIFY_HMAC_SECRET="{{ wing_events_hmac_secret | default('') }}"
+DO_NOTIFY="{{ 'true' if (backup_notify_enabled | default(true)) else 'false' }}"
+
 AWS_OPTS=(--endpoint-url "${S3_ENDPOINT}" --region "${AWS_DEFAULT_REGION}")
 
 # ---- Helpers ---------------------------------------------------------------
@@ -157,6 +164,60 @@ import json, os
 path = os.path.expanduser("${STATUS_FILE}")
 with open(path, "w") as f:
     json.dump({"last_run": 0, "sources": [], "in_progress": True}, f)
+PY
+}
+
+# POST the run result to Bone /api/v1/notifications (A9, W6.1 2026-06-10).
+# Reads the per-source success flags status_append accumulated. Best-effort:
+# a Bone outage must never fail the backup itself. Python (stdlib-only) does
+# JSON + HMAC + HTTP — no jq/curl deps, and no bash array-length syntax that
+# would trip the Jinja brace-hash trap in this template-rendered file.
+notify_result() {
+    [[ "${DO_NOTIFY}" != "true" ]] && return 0
+    [[ -z "${NOTIFY_HMAC_SECRET}" ]] && { log "notify: HMAC secret empty — skipping"; return 0; }
+    python3 - <<PY >> "${LOG_FILE}" 2>&1 || log "notify: POST failed (non-fatal)"
+import hashlib, hmac, json, os, time, urllib.request
+path = os.path.expanduser("${STATUS_FILE}")
+try:
+    with open(path) as f:
+        s = json.load(f)
+except Exception:
+    s = {"sources": []}
+sources = s.get("sources") or []
+failed = [x.get("name", "?") for x in sources if not x.get("success")]
+total_mb = sum(int(x.get("size_bytes") or 0) for x in sources) / 1048576.0
+if failed:
+    sev = "high"
+    title = "Backup FAILED for %d source(s): %s" % (len(failed), ", ".join(failed[:10]))
+elif not sources:
+    sev = "high"
+    title = "Backup ran but recorded ZERO sources (check gates/log)"
+else:
+    sev = "info"
+    title = "Backup OK - %d sources, %.1f MB" % (len(sources), total_mb)
+lines = ["%s: %s (%.1f MB)" % (x.get("name", "?"),
+                               "ok" if x.get("success") else "FAIL",
+                               int(x.get("size_bytes") or 0) / 1048576.0)
+         for x in sources]
+payload = {
+    "severity": sev,
+    "title": title,
+    "body": "\n".join(lines) or "(no sources ran)",
+    "actor_id": "backup",
+    "origin_plugin": "backup",
+    "metadata": {"failed": failed, "source_count": len(sources)},
+}
+raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+ts = str(int(time.time()))
+sig = hmac.new("${NOTIFY_HMAC_SECRET}".encode("utf-8"),
+               ts.encode("utf-8") + b"." + raw, hashlib.sha256).hexdigest()
+req = urllib.request.Request(
+    "${BONE_NOTIFY_URL}", data=raw, method="POST",
+    headers={"Content-Type": "application/json",
+             "X-Wing-Timestamp": ts,
+             "X-Wing-Signature": sig})
+with urllib.request.urlopen(req, timeout=10) as resp:
+    print("notify: HTTP %s" % resp.status)
 PY
 }
 
@@ -582,6 +643,7 @@ main() {
     rotate
 
     status_finalize
+    notify_result
     log "==== nOS backup done ===="
 }
 

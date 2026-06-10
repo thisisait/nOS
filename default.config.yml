@@ -2450,6 +2450,11 @@ backup_dirs_to_dump:
   - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
 backup_databases_mariadb: true
 backup_databases_postgresql: true
+# A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,
+# success=info heartbeat) via Bone HMAC. Empty wing_events_hmac_secret
+# (fresh install pre-regen) silently disables.
+backup_notify_enabled: true
+backup_notify_url: "http://127.0.0.1:8099/api/v1/notifications"
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wing store
 backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)

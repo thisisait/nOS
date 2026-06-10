@@ -155,6 +155,28 @@ final class PulseRepository
 	}
 
 	/**
+	 * Exit code of the most recent FINISHED run of $jobId other than
+	 * $excludeRunId, or null when this is the job's first finished run.
+	 *
+	 * W6.1 (2026-06-10): feeds the state-change notification in
+	 * Api\PulsePresenter::actionRunFinish — notify on success→failure
+	 * and failure→success transitions only, so a job failing every
+	 * fire doesn't flood the inbox (dispatch-notifications fires
+	 * per-minute; a repeat-failure emit would mean 1440 rows/day).
+	 */
+	public function previousExitCode(string $jobId, string $excludeRunId): ?int
+	{
+		$row = $this->db->table('pulse_runs')
+			->where('job_id', $jobId)
+			->where('run_id != ?', $excludeRunId)
+			->where('finished_at IS NOT NULL')
+			->order('finished_at DESC')
+			->limit(1)
+			->fetch();
+		return $row !== null ? (int) $row->exit_code : null;
+	}
+
+	/**
 	 * Compute next_fire_at from a 5-field crontab string (minute hour
 	 * day-of-month month day-of-week). Falls back to FALLBACK_ADVANCE_SECONDS
 	 * when the schedule string can't be parsed (so the job doesn't get

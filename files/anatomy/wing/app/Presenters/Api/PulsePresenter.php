@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
+use App\Model\NotificationRepository;
 use App\Model\PulseRepository;
 
 /**
@@ -25,6 +26,7 @@ final class PulsePresenter extends BaseApiPresenter
 {
 	public function __construct(
 		private PulseRepository $pulse,
+		private NotificationRepository $notifications,
 	) {
 	}
 
@@ -130,7 +132,64 @@ final class PulsePresenter extends BaseApiPresenter
 		if (!$updated) {
 			$this->sendError('Run not found', 404);
 		}
+		$this->emitRunStateChangeNotification($id, $updated);
 		$this->sendSuccess($updated);
+	}
+
+	/**
+	 * W6.1 (2026-06-10): state-change inbox notification for pulse runs.
+	 *
+	 * This is THE single choke point that sees EVERY run result — including
+	 * the daemon-exception synthetic rc=255 (a job whose script never even
+	 * exec'd, e.g. the 2026-06-10 EACCES on scan-runner.sh, emits here too;
+	 * a per-script emitter can be skipped by exactly the failures that
+	 * matter most). Semantics:
+	 *   success→failure  → HIGH  "job failing"   (first failure only)
+	 *   failure→success  → INFO  "job recovered"
+	 *   repeat failure   → silent (no inbox flood from per-minute jobs)
+	 * Channels default to wing-inbox via NotificationRepository::insert —
+	 * the PHP insert path does not read notification-routing.json (same
+	 * contract as breach-scan.php). Failures here are swallowed: a broken
+	 * notifications table must never 500 the run-recording API.
+	 */
+	private function emitRunStateChangeNotification(string $runId, array $run): void
+	{
+		try {
+			$exit = (int) ($run['exit_code'] ?? 0);
+			$jobId = (string) ($run['job_id'] ?? '');
+			if ($jobId === '') {
+				return;
+			}
+			$prev = $this->pulse->previousExitCode($jobId, $runId);
+			$failedNow = $exit !== 0;
+			$failedBefore = $prev !== null && $prev !== 0;
+			if ($failedNow === $failedBefore) {
+				return; // steady state (incl. first-ever success) — no emit
+			}
+			$originPlugin = explode(':', $jobId, 2)[0] ?: null;
+			if ($failedNow) {
+				$stderr = trim((string) ($run['stderr_tail'] ?? ''));
+				$payload = [
+					'severity' => 'high',
+					'title'    => "Pulse job {$jobId} failing (rc={$exit})",
+					'body'     => ($stderr !== '' ? "```\n" . mb_substr($stderr, 0, 1500) . "\n```\n" : '')
+						. "run_id: {$runId}",
+				];
+			} else {
+				$payload = [
+					'severity' => 'info',
+					'title'    => "Pulse job {$jobId} recovered (rc=0)",
+					'body'     => "run_id: {$runId}",
+				];
+			}
+			$payload['actor_id'] = $run['actor_id'] ?? 'pulse';
+			$payload['actor_action_id'] = $run['actor_action_id'] ?? null;
+			$payload['origin_plugin'] = $originPlugin;
+			$this->notifications->insert($payload);
+		} catch (\Throwable $e) {
+			// Best-effort only — log via error_log, never break the API.
+			error_log('pulse run-finish notification emit failed: ' . $e->getMessage());
+		}
 	}
 
 	private function createRun(): void
