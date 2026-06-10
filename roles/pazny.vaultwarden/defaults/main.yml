@@ -6,7 +6,7 @@
 # and are prefix-rotated. OIDC/SSO integration is optional (install_authentik).
 # ==============================================================================
 
-vaultwarden_version: "1.35.4"                       # CVE-2026-27802/27803 + CVE-2025-24364
+vaultwarden_version: "1.35.8"                       # CVE pins + S2 freshness 2026-06-10
 vaultwarden_port: 8062
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"

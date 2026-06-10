@@ -115,5 +115,5 @@ def test_hub_icon_glyph_assets_wired():
     css = (REPO / "files/anatomy/wing/www/assets/hub-icons.css").read_text()
     assert ".sys-icon" in css
     latte = (REPO / "files/anatomy/wing/app/Templates/Hub/default.latte").read_text()
-    for tag in ("hub-icons.css", "lucide.min.js", "hub-icons.js"):
+    for tag in ("hub-icons.css", "lucide-slim.js", "hub-icons.js"):
         assert tag in latte, f"Hub template must reference {tag}"
