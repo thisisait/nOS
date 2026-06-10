@@ -148,10 +148,13 @@
 	</div>
 </div>
 
-<link rel="stylesheet" href="/assets/hub-icons.css">
-<script src="/assets/lucide.min.js"></script>
-<script src="/assets/hub.js"></script>
-<script src="/assets/hub-icons.js"></script>
-<script src="/assets/hub-map.js" defer></script>
+<link rel="stylesheet" href="/assets/hub-icons.css?v={$assetVer}">
+{* W6.5 (2026-06-10): lucide-slim carries ONLY the ~36 glyphs the hub
+   renders (8 KB vs the 402 KB full bundle) with an API-compatible
+   createIcons — hub-icons.js is unchanged. Regen notes in the file header. *}
+<script src="/assets/lucide-slim.js?v={$assetVer}"></script>
+<script src="/assets/hub.js?v={$assetVer}"></script>
+<script src="/assets/hub-icons.js?v={$assetVer}"></script>
+<script src="/assets/hub-map.js?v={$assetVer}" defer></script>
 
 {/block}
