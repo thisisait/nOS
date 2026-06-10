@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# _restore_dir.yml — included per-item from tasks/restore.yml
+# Restores a host-bind service data dir (gitea/gitlab repos, etc.) from
+# dir-<name>.tar.gz. Mirrors _restore_volume.yml but for host paths:
+#   1. Resolve the target host path from restore_dir_targets[name]
+#   2. Stop containers bind-mounting that path (avoid extracting under a live FS)
+#   3. Extract the tarball into the path (contents-level, tar -C)
+#   4. Restart the stopped containers
+# item = { file: 'dir-<name>.tar.gz', source: 'dir-<name>', ... }
+#
+# NOTE — OVERLAY semantics (NOT point-in-time): unlike _restore_volume.yml (which
+# WIPES the volume before extracting), this extracts ONTO the existing dir. The
+# result is the UNION of (current disk state) ∪ (backup), so a deleted/gc'd file
+# can reappear and a restore cannot SHRINK a repo to its backed-up shape. This is
+# the safer default for a DR onto an empty/fresh dir; for a true point-in-time
+# replace of a corrupted repo, the operator should clear the target dir first.
+# ==============================================================================
+
+- name: "[Restore][dir] Resolve key + start time ({{ item.source }})"
+  ansible.builtin.set_fact:
+    dir_key: "{{ item.source | regex_replace('^dir-', '') }}"
+    dir_t0: "{{ lookup('pipe', 'date +%s') }}"
+
+- name: "[Restore][dir] Fail if no target path known for '{{ dir_key }}'"
+  ansible.builtin.fail:
+    msg: >-
+      No restore target for dir '{{ dir_key }}'. Add it to restore_dir_targets
+      in tasks/restore.yml (mirror of backup_dirs_to_dump).
+  when: restore_dir_targets[dir_key] is not defined
+
+- name: "[Restore][dir] Set target path"
+  ansible.builtin.set_fact:
+    dir_target: "{{ restore_dir_targets[dir_key] }}"
+
+- name: "[Restore][dir] Find containers bind-mounting {{ dir_target }}"
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker ps -a --format '{% raw %}{{.Names}}{% endraw %}' \
+      | while read c; do
+          if docker inspect -f '{% raw %}{{range .Mounts}}{{printf "%s\n" .Source}}{{end}}{% endraw %}' "$c" 2>/dev/null \
+             | grep -Fxq "{{ dir_target }}"; then
+            echo "$c"
+          fi
+        done
+  args:
+    executable: /bin/bash
+  register: dir_consumers
+  changed_when: false
+
+- name: "[Restore][dir] Record consumer list"
+  ansible.builtin.set_fact:
+    dir_consumer_names: "{{ dir_consumers.stdout_lines | select | list }}"
+
+- name: "[Restore][dir] Stop consumer containers"
+  ansible.builtin.command: docker stop {{ item2 }}
+  loop: "{{ dir_consumer_names }}"
+  loop_control:
+    loop_var: item2
+  when: dir_consumer_names | length > 0
+  changed_when: true
+
+- name: "[Restore][dir] Ensure target dir exists"
+  ansible.builtin.file:
+    path: "{{ dir_target }}"
+    state: directory
+    mode: '0750'
+
+- name: "[Restore][dir] Extract tarball into {{ dir_target }}"
+  # Host-side extract (these are bind dirs, not Docker volumes). --same-owner
+  # preserves stored UIDs when run privileged (Linux container-owned files);
+  # on macOS Docker Desktop the host user owns the bind path, so it is a no-op.
+  ansible.builtin.shell: |
+    set -o pipefail
+    tar -xzf "{{ restore_workdir }}/{{ item.file }}" -C "{{ dir_target }}" --same-owner 2>/dev/null \
+      || tar -xzf "{{ restore_workdir }}/{{ item.file }}" -C "{{ dir_target }}"
+  args:
+    executable: /bin/bash
+  register: dir_extract
+  changed_when: dir_extract.rc == 0
+
+- name: "[Restore][dir] Restart consumer containers"
+  ansible.builtin.command: docker start {{ item2 }}
+  loop: "{{ dir_consumer_names }}"
+  loop_control:
+    loop_var: item2
+  when: dir_consumer_names | length > 0
+  changed_when: true
+  failed_when: false
+
+- name: "[Restore][dir] Append '{{ dir_key }}' to summary"
+  ansible.builtin.set_fact:
+    restore_summary: "{{ restore_summary + [{
+      'source': item.source,
+      'status': 'ok',
+      'duration_s': ((lookup('pipe', 'date +%s') | int) - (dir_t0 | int)),
+      'size_bytes': (restore_stats.results
+                      | selectattr('item.source','equalto', item.source)
+                      | map(attribute='stat.size') | list | first | default(0)),
+      'target': dir_target,
+      'consumers_restarted': dir_consumer_names
+    }] }}"

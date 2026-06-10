@@ -5,11 +5,14 @@
 # Contract with pazny.backup (Agent C1):
 #   Backups live at  s3://backups/<YYYY-MM-DD>/<source>.<ext>   via RustFS
 #   Endpoint:        http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
-#   Sources:
+#   Sources (object stem = restore source; one fixed key per source per day):
 #     mariadb.sql.gz             mariadb-dump --all-databases
 #     postgres.sql.gz            pg_dumpall
 #     volume-<name>.tar.gz       Docker named volume tarball
-#     authentik-blueprints.json  Authentik export
+#     dir-<name>.tar.gz          host-bind dir (gitea/gitlab repos)
+#     wing-db.sql.gz             Wing SQLite store (sqlite3 .dump)
+#     nos-state.tar.gz           ~/.nos/{secrets,state}.yml (GATED: -e restore_state=true)
+#     authentik-blueprints.json  Authentik export (durable state restores via the postgres dump)
 #
 # Invocation:
 #   ansible-playbook main.yml -K --tags restore \
@@ -59,6 +62,16 @@
     restore_requested_sources: >-
       {{ (restore_sources | default('') | string).split(',')
          | map('trim') | reject('equalto', '') | list }}
+    # MUST equal roles/pazny.backup defaults backup_alpine_image (pinned by
+    # tests/anatomy/test_backup_restore_contract.py).
+    restore_alpine_image: "alpine:3.20"
+    # name → host target path for `dir-<name>` sources (mirrors
+    # backup_dirs_to_dump). Derived from the *_data_dir config vars so an
+    # external-storage redirect lands the restore on the same disk.
+    restore_dir_targets:
+      gitea: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}"
+      gitlab: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}"
+      gitlab-config: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}"
 
 - name: "[Restore] Prepare AWS environment block"
   ansible.builtin.set_fact:
@@ -103,12 +116,21 @@
   # encryption); `file` is the local PLAINTEXT name decryption produces, which
   # every downstream replay step operates on. `.enc` is transparent to the
   # operator's restore_sources filter (matched against the plaintext name).
+  # Stem normalization yields the canonical `source` that the per-type blocks
+  # switch on. Strips: .enc → compression/format ext → a trailing ISO timestamp
+  # (legacy drifted keys) → alias-maps the legacy `-all`/`postgresql` stems. So
+  # BOTH the current contract (mariadb.sql.gz) and any legacy object
+  # (mariadb-all.<ts>.sql.gz) resolve to the same source. Pinned by
+  # tests/anatomy/test_backup_restore_contract.py.
   ansible.builtin.set_fact:
     restore_plan: >-
       {%- set plan = [] -%}
+      {%- set aliases = {'mariadb-all': 'mariadb', 'postgresql-all': 'postgres', 'postgresql': 'postgres'} -%}
       {%- for f in restore_available_files -%}
         {%- set plain = f | regex_replace('\\.enc$', '') -%}
-        {%- set stem = plain | regex_replace('\\.sql\\.gz$|\\.tar\\.gz$|\\.json$', '') -%}
+        {%- set noext = plain | regex_replace('\\.sql\\.gz$|\\.tar\\.gz$|\\.json\\.gz$|\\.json$|\\.gz$', '') -%}
+        {%- set nots = noext | regex_replace('\\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:-]+Z?$', '') -%}
+        {%- set stem = aliases.get(nots, nots) -%}
         {%- if (restore_requested_sources | length) == 0
                or stem in restore_requested_sources
                or plain in restore_requested_sources -%}
@@ -148,10 +170,12 @@
       ║ Sources:    {{ restore_plan | map(attribute='source') | list | join(', ') }}
       ║ Mode:       {{ 'CHECK (dry-run, no writes)' if ansible_check_mode else 'LIVE (will overwrite data)' }}
       ║
-      ║ This will:
+      ║ This will (only for the sources present above):
       ║   * Drop-and-replace MariaDB / PostgreSQL databases from dumps
-      ║   * Stop containers using targeted Docker volumes and rewrite them
-      ║   * Re-apply Authentik blueprints via the API
+      ║   * Stop containers using targeted Docker volumes / host-bind dirs and rewrite them
+      ║   * Rebuild wing.db (stops Wing; live db snapshotted to .pre-restore-<date>)
+      ║   * ~/.nos state: ONLY if -e restore_state=true (else skipped)
+      ║   * Authentik: restored via the postgres dump (blueprint JSON staged, not re-POSTed)
       ║
       ║ There is NO undo. Take a fresh backup first if unsure.
       ║ Press ENTER to continue, Ctrl-C to abort.
@@ -186,7 +210,23 @@
 - name: "[Restore] Decrypt encrypted objects (.enc → plaintext)"
   ansible.builtin.shell: |
     set -o pipefail
-    openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 -salt \
+    # Mirror resolve_openssl() in roles/pazny.backup/files/backup.sh — the system
+    # `openssl` (old macOS LibreSSL) may lack `enc -pbkdf2`; probe candidates so
+    # the cipher matches the producer exactly. Fail closed if none qualify.
+    resolve_openssl() {
+      local cand
+      for cand in openssl /opt/homebrew/opt/openssl@3/bin/openssl \
+                  /usr/local/opt/openssl@3/bin/openssl /usr/bin/openssl; do
+        command -v "$cand" >/dev/null 2>&1 || continue
+        if printf 'x' | "$cand" enc -aes-256-cbc -pbkdf2 -iter 1 -salt \
+               -pass pass:probe >/dev/null 2>&1; then
+          echo "$cand"; return 0
+        fi
+      done
+      return 1
+    }
+    OSSL="$(resolve_openssl)" || { echo "FATAL: no -pbkdf2-capable openssl on PATH" >&2; exit 1; }
+    "$OSSL" enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 -salt \
       -pass env:NOS_BACKUP_PASS \
       -in "{{ restore_workdir }}/{{ item.s3file }}" \
       -out "{{ restore_workdir }}/{{ item.file }}"
@@ -233,14 +273,17 @@
         msg: "infra-mariadb-1 is not running. Bring up the infra stack before restoring."
       when: "'infra-mariadb-1' not in maria_ps.stdout"
 
-    - name: "[Restore][mariadb] Record start time"
+    - name: "[Restore][mariadb] Resolve dump file + start time"
       ansible.builtin.set_fact:
         maria_t0: "{{ lookup('pipe', 'date +%s') }}"
+        maria_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'mariadb')
+             | map(attribute='file') | list | last }}
 
     - name: "[Restore][mariadb] Pipe gunzip'd dump into mariadb client"
       ansible.builtin.shell: |
         set -o pipefail
-        gunzip -c {{ restore_workdir }}/mariadb.sql.gz \
+        gunzip -c {{ restore_workdir }}/{{ maria_file }} \
           | docker exec -i infra-mariadb-1 \
               mariadb -uroot -p"{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}"
       args:
@@ -277,14 +320,17 @@
         msg: "infra-postgresql-1 is not running. Bring up the infra stack before restoring."
       when: "'infra-postgresql-1' not in pg_ps.stdout"
 
-    - name: "[Restore][postgres] Record start time"
+    - name: "[Restore][postgres] Resolve dump file + start time"
       ansible.builtin.set_fact:
         pg_t0: "{{ lookup('pipe', 'date +%s') }}"
+        pg_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'postgres')
+             | map(attribute='file') | list | last }}
 
     - name: "[Restore][postgres] Pipe gunzip'd pg_dumpall into psql"
       ansible.builtin.shell: |
         set -o pipefail
-        gunzip -c {{ restore_workdir }}/postgres.sql.gz \
+        gunzip -c {{ restore_workdir }}/{{ pg_file }} \
           | docker exec -i infra-postgresql-1 psql -U postgres -v ON_ERROR_STOP=0
       args:
         executable: /bin/bash
@@ -328,40 +374,216 @@
     - restore_plan | selectattr('source', 'equalto', 'authentik-blueprints') | list | length > 0
     - not ansible_check_mode
   block:
-    - name: "[Restore][authentik] Record start time"
+    - name: "[Restore][authentik] Resolve blueprints file + start time"
       ansible.builtin.set_fact:
         ak_t0: "{{ lookup('pipe', 'date +%s') }}"
+        ak_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'authentik-blueprints')
+             | map(attribute='file') | list | last }}
 
-    - name: "[Restore][authentik] Read blueprints file"
-      ansible.builtin.slurp:
-        src: "{{ restore_workdir }}/authentik-blueprints.json"
-      register: ak_slurp
+    - name: "[Restore][authentik] Gunzip legacy .json.gz blueprint (defensive)"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c "{{ restore_workdir }}/{{ ak_file }}" > "{{ restore_workdir }}/authentik-blueprints.json"
+      args:
+        executable: /bin/bash
+      when: ak_file is search('\.gz$')
+      changed_when: true
 
-    - name: "[Restore][authentik] POST blueprints to Authentik API"
-      ansible.builtin.uri:
-        url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/managed/blueprints/"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ authentik_bootstrap_token | default(authentik_api_token | default('')) }}"
-          Content-Type: "application/json"
-        body: "{{ ak_slurp.content | b64decode }}"
-        body_format: json
-        status_code: [200, 201, 202, 204]
-        validate_certs: false
-      register: ak_post
-      failed_when: false
-      no_log: true
+    # NO direct re-POST: the GET export is a PAGINATED LIST and
+    # POST /api/v3/managed/blueprints/ expects a SINGLE {name,path} object →
+    # the old call always 400'd (masked by failed_when:false → silent 'warn').
+    # Authentik's durable state — users, groups, flows, OIDC providers AND the
+    # BlueprintInstance rows — is restored by the PostgreSQL dump (authentik DB);
+    # file-based blueprints are re-applied by the worker on container start. The
+    # JSON export is staged on disk for inspection / manual re-apply only.
+    - name: "[Restore][authentik] Note how Authentik state is restored"
+      ansible.builtin.debug:
+        msg: >-
+          Authentik restores via the PostgreSQL 'postgres' source (the authentik DB
+          holds users/flows/providers/blueprint instances). The blueprint JSON export
+          is staged at {{ restore_workdir }}/{{ 'authentik-blueprints.json' if ak_file is search('\.gz$') else ak_file }}
+          for inspection. To fully restore Authentik, ensure the 'postgres' source is
+          in this restore (it is, in a full restore).
 
     - name: "[Restore][authentik] Append to summary"
       ansible.builtin.set_fact:
         restore_summary: "{{ restore_summary + [{
           'source': 'authentik-blueprints',
-          'status': ('ok' if ak_post.status in [200,201,202,204] else 'warn'),
+          'status': 'staged (restores via postgres dump)',
           'duration_s': ((lookup('pipe', 'date +%s') | int) - (ak_t0 | int)),
           'size_bytes': (restore_stats.results
                           | selectattr('item.source','equalto','authentik-blueprints')
                           | map(attribute='stat.size') | list | first | default(0))
         }] }}"
+
+# 5e. Wing SQLite store (wing-db.sql.gz) ---------------------------------------
+
+- name: "[Restore][wing-db] Replay sqlite3 .dump into wing.db"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'wing-db') | list | length > 0
+    - not ansible_check_mode
+  vars:
+    wing_db_target: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
+    wing_label: "{{ wing_launchd_label | default('eu.thisisait.nos.wing') }}"
+    wing_uid: "{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}"
+  # block/rescue/always so a failed rebuild (sqlite3 absent on a Linux DR / a
+  # corrupt .gz) can NEVER leave Wing booted-out with its DB renamed away:
+  #   block  — preflight (FAIL before touching the live db) → stop → snapshot → rebuild → summary
+  #   rescue — roll the snapshot back, then re-raise loud
+  #   always — restart Wing no matter what
+  block:
+    - name: "[Restore][wing-db] Pre-flight: require sqlite3 (BEFORE mutating wing.db)"  # noqa: command-instead-of-shell
+      # `command -v` is a shell builtin (needs shell, not command). Fails the block
+      # here, while wing.db is still in place and Wing still up.
+      ansible.builtin.shell: command -v sqlite3
+      changed_when: false
+
+    - name: "[Restore][wing-db] Resolve dump file + start time"
+      ansible.builtin.set_fact:
+        wing_t0: "{{ lookup('pipe', 'date +%s') }}"
+        wing_db_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'wing-db')
+             | map(attribute='file') | list | last }}
+
+    - name: "[Restore][wing-db] Stop Wing (best-effort — frees the sqlite lock)"
+      ansible.builtin.command: >-
+        {{ ('launchctl bootout gui/' ~ wing_uid ~ '/' ~ wing_label)
+           if (nos_service_manager | default('launchd')) == 'launchd'
+           else ('systemctl --user stop ' ~ wing_label) }}
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][wing-db] Snapshot current wing.db (non-clobbering)"
+      # `mv -n` so a RE-RUN (where wing.db is now the already-restored copy)
+      # cannot overwrite the genuine first-run pre-restore snapshot.
+      ansible.builtin.command: >-
+        mv -n "{{ wing_db_target }}" "{{ wing_db_target }}.pre-restore-{{ restore_date }}"
+      args:
+        removes: "{{ wing_db_target }}"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][wing-db] Rebuild wing.db from the dump"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c "{{ restore_workdir }}/{{ wing_db_file }}" | sqlite3 "{{ wing_db_target }}"
+      args:
+        executable: /bin/bash
+      register: wing_db_replay
+      changed_when: wing_db_replay.rc == 0
+
+    - name: "[Restore][wing-db] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'wing-db', 'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (wing_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','wing-db')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+  rescue:
+    - name: "[Restore][wing-db] FAILED — roll the pre-restore snapshot back"
+      ansible.builtin.command: >-
+        mv -f "{{ wing_db_target }}.pre-restore-{{ restore_date }}" "{{ wing_db_target }}"
+      args:
+        removes: "{{ wing_db_target }}.pre-restore-{{ restore_date }}"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][wing-db] Re-raise the failure"
+      ansible.builtin.fail:
+        msg: >-
+          wing-db restore failed (sqlite3 missing, or a corrupt/partial dump).
+          The live wing.db was rolled back from the .pre-restore snapshot and Wing
+          is being restarted. Install sqlite3 / pick a different restore_date, then retry.
+  always:
+    - name: "[Restore][wing-db] Ensure Wing is restarted"
+      ansible.builtin.command: >-
+        {{ ('launchctl bootstrap gui/' ~ wing_uid ~ ' ' ~ ansible_facts['env']['HOME'] ~ '/Library/LaunchAgents/' ~ wing_label ~ '.plist')
+           if (nos_service_manager | default('launchd')) == 'launchd'
+           else ('systemctl --user start ' ~ wing_label) }}
+      changed_when: true
+      failed_when: false
+
+# 5f. Runtime state side-car (nos-state.tar.gz) — GATED behind restore_state ----
+# Restoring ~/.nos overwrites secrets.yml/state.yml. A NEWER live secrets.yml
+# (post-rekey, fresh tokens) would be clobbered → SSO brick. Default SKIP; opt
+# in only on a true DR onto a fresh host: -e restore_state=true.
+
+- name: "[Restore][nos-state] Present in backup but NOT restored (default)"
+  ansible.builtin.debug:
+    msg: >-
+      nos-state is in this backup but was NOT restored. Pass -e restore_state=true
+      to restore ~/.nos (overwrites live secrets.yml/state.yml — only on fresh-host DR).
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'nos-state') | list | length > 0
+    - not (restore_state | default(false) | bool)
+
+- name: "[Restore][nos-state] Extract ~/.nos side-car (restore_state=true)"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'nos-state') | list | length > 0
+    - restore_state | default(false) | bool
+    - not ansible_check_mode
+  block:
+    - name: "[Restore][nos-state] Resolve file"
+      ansible.builtin.set_fact:
+        state_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'nos-state')
+             | map(attribute='file') | list | last }}
+
+    - name: "[Restore][nos-state] Ensure ~/.nos exists"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+        state: directory
+        mode: '0700'
+
+    - name: "[Restore][nos-state] Snapshot live secrets.yml/state.yml before overwrite"
+      # Non-clobbering rollback copy — an accidental restore_state=true on a
+      # populated host (the SSO-brick scenario) is then recoverable.
+      ansible.builtin.shell: |
+        set -o pipefail
+        d="{{ ansible_facts['env']['HOME'] }}/.nos"
+        for f in secrets.yml state.yml; do
+          if [[ -f "$d/$f" && ! -f "$d/$f.pre-restore-{{ restore_date }}" ]]; then
+            cp -p "$d/$f" "$d/$f.pre-restore-{{ restore_date }}"
+          fi
+        done
+      args:
+        executable: /bin/bash
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][nos-state] Extract tarball into ~/.nos"
+      ansible.builtin.shell: |
+        set -o pipefail
+        tar -xzf "{{ restore_workdir }}/{{ state_file }}" -C "{{ ansible_facts['env']['HOME'] }}/.nos"
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "[Restore][nos-state] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'nos-state', 'status': 'ok', 'duration_s': 0,
+          'size_bytes': (restore_stats.results | selectattr('item.source','equalto','nos-state')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+
+# 5g. Host-bind service dirs (dir-<name>.tar.gz) -------------------------------
+
+- name: "[Restore][dirs] Enumerate dir-* sources"
+  ansible.builtin.set_fact:
+    restore_dir_plan: "{{ restore_plan | selectattr('source', 'match', '^dir-') | list }}"
+
+- name: "[Restore][dirs] Restore each host-bind dir from tarball"
+  when:
+    - restore_dir_plan | length > 0
+    - not ansible_check_mode
+  loop: "{{ restore_dir_plan }}"
+  loop_control:
+    label: "{{ item.source }}"
+  ansible.builtin.include_tasks: _restore_dir.yml
 
 # ── 6. Replay post.yml hooks for restored services ────────────────────────────
 # Best-effort: each role's post.yml is idempotent; re-running re-verifies

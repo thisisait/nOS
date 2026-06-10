@@ -41,6 +41,23 @@
 # Both gate on nos_service_manager (tasks/_platform.yml).
 
 # ---- macOS: launchd ----
+# De-collision (2026-06-09): the legacy label `eu.thisisait.nos.backup` was
+# shared by BOTH this role and the Restic off-site path → same plist path,
+# whoever loaded last won. Boot out + remove the orphan so the renamed
+# .rustfs / .offsite agents are the only ones left.
+- name: "[backup] Boot out legacy colliding backup agent (if present)"
+  ansible.builtin.command: "launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/{{ backup_legacy_launchd_label }}"
+  register: _backup_legacy_bootout
+  changed_when: _backup_legacy_bootout.rc == 0
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[backup] Remove legacy colliding plist (if present)"
+  ansible.builtin.file:
+    path: "{{ backup_legacy_launchd_plist }}"
+    state: absent
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
 - name: "[backup] Deploy launchd plist"
   ansible.builtin.template:
     src: backup-launchd.plist.j2
@@ -73,6 +90,33 @@
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
 # ---- Linux: systemd --user oneshot service + timer ----
+# De-collision (Linux): the same label rename (.backup → .backup.rustfs) orphans
+# any pre-rename systemd --user units. Disable + remove them so the old timer
+# doesn't keep firing the old backup.sh in parallel forever.
+- name: "[backup] (Linux) Disable + remove legacy colliding systemd units (post-rename)"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+  block:
+    - name: "[backup] (Linux) Stop + disable legacy backup timer/service"  # noqa: command-instead-of-module
+      # command (not the systemd module): the legacy units usually no longer
+      # exist; the module errors hard on a missing unit, command + failed_when:false
+      # is the right "disable-if-present" idiom.
+      ansible.builtin.command: "systemctl --user disable --now {{ backup_legacy_launchd_label }}.{{ item }}"
+      loop: ['timer', 'service']
+      changed_when: true
+      failed_when: false
+
+    - name: "[backup] (Linux) Remove legacy unit files"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ backup_legacy_launchd_label }}.{{ item }}"
+        state: absent
+      loop: ['timer', 'service']
+
+    - name: "[backup] (Linux) daemon-reload after legacy removal"
+      ansible.builtin.systemd_service:
+        scope: user
+        daemon_reload: true
+      failed_when: false
+
 - name: "[backup] (Linux) Render oneshot backup service (not enabled — timer drives it)"
   ansible.builtin.include_role:
     name: pazny.linux.systemd_user

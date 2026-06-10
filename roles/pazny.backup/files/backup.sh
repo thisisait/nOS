@@ -31,6 +31,26 @@ DO_AUTHENTIK="{{ 'true' if backup_authentik_blueprints else 'false' }}"
 
 VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 
+# Host-bind service data dirs (gitea/gitlab repos, etc.) — name|path pairs.
+# These hold filesystem state that NO logical DB dump can reconstruct (git
+# repos, uploads). Tarred whole and restored back to the same host path.
+DIR_NAMES=({% for d in backup_dirs_to_dump %}"{{ d.name }}" {% endfor %})
+DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
+
+# Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
+# host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
+WING_DB_PATH="{{ backup_wing_db_path }}"
+DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
+
+# Runtime state side-car: ~/.nos/{secrets,state}.yml (encryption keys, tokens,
+# upgrades_applied history). Tarred; status/log artifacts excluded.
+NOS_STATE_DIR="{{ backup_home_dir }}"
+DO_STATE="{{ 'true' if backup_nos_state else 'false' }}"
+
+# Alpine image for volume/dir tar streaming — MUST match tasks/_restore_volume.yml
+# (a tag mismatch is a latent restore-extract drift). Single source: backup_alpine_image.
+ALPINE_IMAGE="{{ backup_alpine_image }}"
+
 RETAIN_DAILY={{ backup_retention_daily }}
 RETAIN_WEEKLY={{ backup_retention_weekly }}
 RETAIN_MONTHLY={{ backup_retention_monthly }}
@@ -185,12 +205,15 @@ already_exists_today() {
 # ---- Source steps ----------------------------------------------------------
 run_mariadb() {
     [[ "${DO_MARIADB}" != "true" ]] && return 0
-    local date_str ts key start dur rc size
+    local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
-    ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/mariadb-all.${ts}.sql.gz${ENC_SUFFIX}"
+    # Canonical contract (docs/restore-runbook.md §3 + tasks/restore.yml):
+    # ONE fixed object per source per day — NO timestamp. backup_overwrite_same_day
+    # then genuinely overwrites (a timestamp made "overwrite" silently "add another"
+    # AND broke restore, whose source selector can't match a timestamped stem).
+    key="${date_str}/mariadb.sql.gz${ENC_SUFFIX}"
 
-    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/mariadb-all."; then
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/mariadb.sql.gz"; then
         log "mariadb: today's dump already exists, skipping"
         status_append "mariadb" 0 0 1
         return 0
@@ -225,14 +248,14 @@ run_mariadb() {
 
 run_postgres() {
     [[ "${DO_POSTGRES}" != "true" ]] && return 0
-    local date_str ts key start dur rc size
+    local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
-    ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/postgresql-all.${ts}.sql.gz${ENC_SUFFIX}"
+    # Canonical stem is `postgres` (NOT postgresql) — restore.yml selects on it.
+    key="${date_str}/postgres.sql.gz${ENC_SUFFIX}"
 
-    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/postgresql-all."; then
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/postgres.sql.gz"; then
         log "postgresql: today's dump already exists, skipping"
-        status_append "postgresql" 0 0 1
+        status_append "postgres" 0 0 1
         return 0
     fi
 
@@ -249,30 +272,34 @@ run_postgres() {
     if [[ "${rc}" -eq 0 ]]; then
         size=$(s3_size "${key}")
         log "postgresql: OK (${size} bytes in ${dur}ms) → s3://${S3_BUCKET}/${key}"
-        status_append "postgresql" "${size}" "${dur}" 1
+        status_append "postgres" "${size}" "${dur}" 1
     else
         log "postgresql: FAILED (rc=${rc})"
-        status_append "postgresql" 0 "${dur}" 0
+        status_append "postgres" 0 "${dur}" 0
     fi
 }
 
 run_volumes() {
-    local date_str ts key start dur rc size vol
+    local date_str key start dur rc size vol
     date_str="$(date -u +%Y-%m-%d)"
-    for vol in "${VOLUMES[@]}"; do
+    # Empty-safe expansion: bash 3.2 (the launchd /bin/bash) raises "unbound
+    # variable" on the bare "${arr[@]}" of an EMPTY array under set -u. The
+    # ${arr[@]+...} alternation is empty-safe AND avoids the array-length form
+    # (its leading brace-hash is a Jinja comment-open, which would stop backup.sh
+    # from rendering — the whole script is a Jinja template). Fixed CRIT 2026-06-09.
+    for vol in "${VOLUMES[@]+"${VOLUMES[@]}"}"; do
         [[ -z "${vol}" ]] && continue
-        ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-        key="${date_str}/volume-${vol}.${ts}.tar.gz${ENC_SUFFIX}"
+        key="${date_str}/volume-${vol}.tar.gz${ENC_SUFFIX}"
 
-        if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/volume-${vol}."; then
+        if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/volume-${vol}.tar.gz"; then
             log "volume/${vol}: today's dump already exists, skipping"
-            status_append "volume:${vol}" 0 0 1
+            status_append "volume-${vol}" 0 0 1
             continue
         fi
 
-        log "volume/${vol}: tar-gz via alpine"
+        log "volume/${vol}: tar-gz via ${ALPINE_IMAGE}"
         start=$(now_ms)
-        docker run --rm -v "${vol}:/data:ro" alpine:3 \
+        docker run --rm -v "${vol}:/data:ro" "${ALPINE_IMAGE}" \
             sh -c 'cd /data && tar -czf - .' \
           | encrypt_stream \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
@@ -282,10 +309,10 @@ run_volumes() {
         if [[ "${rc}" -eq 0 ]]; then
             size=$(s3_size "${key}")
             log "volume/${vol}: OK (${size} bytes in ${dur}ms)"
-            status_append "volume:${vol}" "${size}" "${dur}" 1
+            status_append "volume-${vol}" "${size}" "${dur}" 1
         else
             log "volume/${vol}: FAILED (rc=${rc})"
-            status_append "volume:${vol}" 0 "${dur}" 0
+            status_append "volume-${vol}" 0 "${dur}" 0
         fi
     done
 }
@@ -294,15 +321,17 @@ run_authentik() {
     [[ "${DO_AUTHENTIK}" != "true" ]] && return 0
     [[ -z "${AUTHENTIK_TOKEN}" ]] && { log "authentik: no token — skipping"; return 0; }
 
-    local date_str ts key start dur rc size tmp
+    local date_str key start dur rc size tmp
     date_str="$(date -u +%Y-%m-%d)"
-    ts="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-    key="${date_str}/authentik-blueprints.${ts}.json.gz${ENC_SUFFIX}"
+    # RAW .json (NOT .json.gz) — tasks/restore.yml slurps the decrypted file as
+    # JSON and POSTs it verbatim; gzipping it broke that path. Encryption still
+    # applies (object becomes authentik-blueprints.json.enc).
+    key="${date_str}/authentik-blueprints.json${ENC_SUFFIX}"
     tmp="$(mktemp -t nos-authentik.XXXXXX.json)"
 
-    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/authentik-blueprints."; then
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/authentik-blueprints.json"; then
         log "authentik: today's dump already exists, skipping"
-        status_append "authentik" 0 0 1
+        status_append "authentik-blueprints" 0 0 1
         rm -f "${tmp}"
         return 0
     fi
@@ -312,8 +341,7 @@ run_authentik() {
     if curl -fsS -H "Authorization: Bearer ${AUTHENTIK_TOKEN}" \
             -H "Accept: application/json" \
             "${AUTHENTIK_URL}/api/v3/managed/blueprints/" > "${tmp}"; then
-        gzip -c "${tmp}" \
-          | encrypt_stream \
+        encrypt_stream < "${tmp}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
     else
@@ -325,11 +353,138 @@ run_authentik() {
     if [[ "${rc}" -eq 0 ]]; then
         size=$(s3_size "${key}")
         log "authentik: OK (${size} bytes in ${dur}ms)"
-        status_append "authentik" "${size}" "${dur}" 1
+        status_append "authentik-blueprints" "${size}" "${dur}" 1
     else
         log "authentik: FAILED (rc=${rc})"
-        status_append "authentik" 0 "${dur}" 0
+        status_append "authentik-blueprints" 0 "${dur}" 0
     fi
+}
+
+run_wing_db() {
+    [[ "${DO_WING}" != "true" ]] && return 0
+    if ! command -v sqlite3 >/dev/null 2>&1; then
+        log "wing-db: sqlite3 not on PATH — skipping (install sqlite3 to back up wing.db)"
+        status_append "wing-db" 0 0 0
+        return 0
+    fi
+    if [[ ! -f "${WING_DB_PATH}" ]]; then
+        log "wing-db: ${WING_DB_PATH} not found — skipping"
+        return 0
+    fi
+
+    local date_str key start dur rc size
+    date_str="$(date -u +%Y-%m-%d)"
+    key="${date_str}/wing-db.sql.gz${ENC_SUFFIX}"
+
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/wing-db.sql.gz"; then
+        log "wing-db: today's dump already exists, skipping"
+        status_append "wing-db" 0 0 1
+        return 0
+    fi
+
+    log "wing-db: sqlite3 .dump of ${WING_DB_PATH}"
+    start=$(now_ms)
+    sqlite3 "${WING_DB_PATH}" .dump \
+      | gzip -c \
+      | encrypt_stream \
+      | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+    rc=$?
+    dur=$(( $(now_ms) - start ))
+
+    if [[ "${rc}" -eq 0 ]]; then
+        size=$(s3_size "${key}")
+        log "wing-db: OK (${size} bytes in ${dur}ms)"
+        status_append "wing-db" "${size}" "${dur}" 1
+    else
+        log "wing-db: FAILED (rc=${rc})"
+        status_append "wing-db" 0 "${dur}" 0
+    fi
+}
+
+run_nos_state() {
+    [[ "${DO_STATE}" != "true" ]] && return 0
+    [[ -d "${NOS_STATE_DIR}" ]] || { log "nos-state: ${NOS_STATE_DIR} missing — skipping"; return 0; }
+
+    local date_str key start dur rc size
+    date_str="$(date -u +%Y-%m-%d)"
+    key="${date_str}/nos-state.tar.gz${ENC_SUFFIX}"
+
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/nos-state.tar.gz"; then
+        log "nos-state: today's dump already exists, skipping"
+        status_append "nos-state" 0 0 1
+        return 0
+    fi
+
+    # ONLY the durable side-car (secrets.yml + state.yml). NOT the whole ~/.nos:
+    # it also holds backup.sh, logs, events.jsonl, and the upgrade-engine
+    # ~/.nos/backups/ dumps — tarring "." bloated the mirror to ~116 MB (live, 2026-06-09).
+    local present=""
+    [[ -f "${NOS_STATE_DIR}/secrets.yml" ]] && present="${present} secrets.yml"
+    [[ -f "${NOS_STATE_DIR}/state.yml" ]] && present="${present} state.yml"
+    if [[ -z "${present}" ]]; then
+        log "nos-state: no secrets.yml/state.yml under ${NOS_STATE_DIR} — skipping"
+        return 0
+    fi
+
+    log "nos-state: tar-gz of ${NOS_STATE_DIR} (${present# })"
+    start=$(now_ms)
+    # shellcheck disable=SC2086  # intentional word-split of the file list
+    tar -czf - -C "${NOS_STATE_DIR}" ${present} \
+      | encrypt_stream \
+      | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+    rc=$?
+    dur=$(( $(now_ms) - start ))
+
+    if [[ "${rc}" -eq 0 ]]; then
+        size=$(s3_size "${key}")
+        log "nos-state: OK (${size} bytes in ${dur}ms)"
+        status_append "nos-state" "${size}" "${dur}" 1
+    else
+        log "nos-state: FAILED (rc=${rc})"
+        status_append "nos-state" 0 "${dur}" 0
+    fi
+}
+
+run_dirs() {
+    # ${!arr[@]} index form is empty-safe under set -u in bash 3.2 (verified) —
+    # no array-length form here (its brace-hash would break the Jinja render).
+    local date_str key start dur rc size i name path
+    date_str="$(date -u +%Y-%m-%d)"
+    for i in "${!DIR_NAMES[@]}"; do
+        name="${DIR_NAMES[$i]}"
+        path="${DIR_PATHS[$i]}"
+        [[ -z "${name}" || -z "${path}" ]] && continue
+        if [[ ! -d "${path}" ]]; then
+            log "dir/${name}: ${path} not found — skipping"
+            continue
+        fi
+        key="${date_str}/dir-${name}.tar.gz${ENC_SUFFIX}"
+
+        if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/dir-${name}.tar.gz"; then
+            log "dir/${name}: today's dump already exists, skipping"
+            status_append "dir-${name}" 0 0 1
+            continue
+        fi
+
+        # tar the dir CONTENTS (-C path .) so restore extracts straight back
+        # into the target path without a doubled component.
+        log "dir/${name}: tar-gz of ${path}"
+        start=$(now_ms)
+        tar -czf - -C "${path}" . \
+          | encrypt_stream \
+          | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+        rc=$?
+        dur=$(( $(now_ms) - start ))
+
+        if [[ "${rc}" -eq 0 ]]; then
+            size=$(s3_size "${key}")
+            log "dir/${name}: OK (${size} bytes in ${dur}ms)"
+            status_append "dir-${name}" "${size}" "${dur}" 1
+        else
+            log "dir/${name}: FAILED (rc=${rc})"
+            status_append "dir-${name}" 0 "${dur}" 0
+        fi
+    done
 }
 
 # ---- Retention / rotation --------------------------------------------------
@@ -420,6 +575,9 @@ main() {
     run_mariadb
     run_postgres
     run_volumes
+    run_dirs
+    run_wing_db
+    run_nos_state
     run_authentik
     rotate
 

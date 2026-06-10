@@ -1,12 +1,17 @@
 ---
 # ==============================================================================
-# BACKUP — legacy Restic-based encrypted backups (host-level).
+# BACKUP — off-site copy #2 (Restic). Mirrors the RustFS bucket dir to an
+# operator-rotated external repo (USB/SSD, S3, SFTP).
 #
-# NOTE: This is the OLD backup path using `configure_backup` + `restic_*` vars.
-# The CURRENT primary backup is `pazny.backup` role (install_backup flag) which
-# dumps DBs + volumes + Authentik blueprints to RustFS via launchd.
-# Keep both paths available — Restic supports off-site repos (S3, SFTP) that
-# RustFS does not. Operators choose one or both.
+# 3-2-1 split (docs/backup-architecture.md): the pazny.backup role
+# (install_backup) is copy #1 — it produces the canonical encrypted
+# dumps/tars/blueprints INTO the RustFS bucket (rustfs_data_dir). THIS path
+# (configure_backup) is copy #2 — it restic-backs-up that SAME bucket dir to an
+# INDEPENDENT, off-site medium so a whole-disk loss is survivable. It no longer
+# re-dumps DBs: that was duplicate work AND the whole-$HOME default that aborted
+# on macOS TCC (rc=1). DR: `restic restore` the repo back into rustfs_data_dir,
+# then `--tags restore`. Scheduled AFTER the RustFS run so it mirrors a COMPLETE
+# copy #1. Label is `.offsite` (de-collided from the RustFS `.rustfs` agent).
 # ==============================================================================
 
 - name: "[Backup] Verify restic is installed"
@@ -19,6 +24,26 @@
   ansible.builtin.fail:
     msg: "restic_repo is empty — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"
   when: restic_repo | default('') | length == 0
+
+# Fail fast if a mirror source is missing: `restic backup <missing-path>` exits
+# rc=1 (FATAL, outside the tolerated [0,3]) and aborts the play with an opaque
+# error. Copy #2 mirrors the RustFS bucket dir, so it needs copy #1 present.
+- name: "[Backup] Stat each restic source path"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ restic_backup_paths }}"
+  register: _restic_src_stats
+
+- name: "[Backup] Fail fast if any restic source path is absent"
+  ansible.builtin.fail:
+    msg: >-
+      restic source path '{{ item.item }}' does not exist. Copy #2 mirrors the RustFS
+      bucket dir (rustfs_data_dir) — enable install_backup + install_rustfs (copy #1)
+      first, or fix restic_backup_paths in config.yml.
+  loop: "{{ _restic_src_stats.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not item.stat.exists
 
 - name: "[Backup] Ensure backups directory exists"
   ansible.builtin.file:
@@ -58,52 +83,39 @@
     - "'exists' not in (_restic_init.stderr | default('') | lower)"
   changed_when: _restic_init.rc | default(1) == 0
 
-# ── Pre-backup database dumps ────────────────────────────────────────────────
-
-- name: "[Backup] Dump PostgreSQL databases"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p infra exec -T postgresql
-    pg_dumpall -U postgres > {{ ansible_facts['env']['HOME'] }}/backups/pg_dump.sql
-  when: install_postgresql | default(false)
-  failed_when: false
-
-- name: "[Backup] Dump MariaDB databases"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p infra exec -T mariadb
-    mysqldump --all-databases -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}
-    > {{ ansible_facts['env']['HOME'] }}/backups/maria_dump.sql
-  when: install_mariadb | default(false)
-  failed_when: false
-  no_log: true
-
-# ── Restic backup ────────────────────────────────────────────────────────────
+# ── Restic backup (mirror of the RustFS bucket dir) ──────────────────────────
+# No DB dumps here — copy #1 (pazny.backup) already wrote the canonical encrypted
+# dumps into rustfs_data_dir. We just replicate that dir off-site.
 
 - name: "[Backup] Run restic backup"
   ansible.builtin.command: >
     restic -r {{ restic_repo }} backup
     --exclude-file={{ restic_excludefile }}
     {{ restic_backup_paths | join(' ') }}
-    {{ ansible_facts['env']['HOME'] }}/backups
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
   async: 3600
   poll: 30
   register: _restic_backup
-  # restic rc=3 = "backup completed, but SOME source files could not be read"
-  # — normal for a HOT backup of a live home/data tree (sockets, locked
-  # ~/Library files, files changing under running services). It is a WARNING,
-  # not a failure. rc=0 = clean; rc=1/2 = real error. Tolerate 3, surface the
-  # rest. (Caught on the all-on blank: restic_backup_paths defaults to the whole
-  # $HOME, which always has a few unreadable files → rc=3 aborted the run.)
+  # rc=0 = clean; rc=3 = "completed, but some source files could not be read"
+  # (e.g. a RustFS object rotated/written mid-scan) — a WARNING, tolerated;
+  # rc=1/2 = real error, surfaced. restic_backup_paths now points at the RustFS
+  # bucket dir (rustfs_data_dir) — user-owned, NOT the whole $HOME, so the macOS
+  # ~/Library TCC EPERM that previously forced a fatal rc=1 no longer applies.
   failed_when: _restic_backup.rc is defined and _restic_backup.rc not in [0, 3]
   # no_log dropped (password is in environment, not the command) so a non-0/3
-  # rc shows the real restic error. KNOWN GAP: restic_backup_paths defaults to
-  # the whole $HOME, which on macOS contains TCC-protected ~/Library subdirs
-  # (Mail, Safari, TCC.db) → restic hits dir-level EPERM → FATAL rc=1 (not the
-  # tolerated rc=3). Proper fix is to NARROW restic_backup_paths to the nOS data
-  # (e.g. ~/backups DB dumps + service data dirs), not the whole home. Until
-  # then, set configure_backup:false to skip the off-site Restic path (the
-  # RustFS nightly via install_backup is separate).
+  # rc shows the real restic error.
+
+- name: "[Backup] Clear stale restic locks before prune"
+  # An interrupted earlier run (e.g. the pre-fix whole-$HOME restic that aborted
+  # on macOS TCC) can leave a stale lock → `forget --prune` then fails with
+  # "repository is already locked". `unlock` removes locks whose process is gone
+  # (safe; there is no concurrent restic on a single-host nightly).
+  ansible.builtin.command: "restic -r {{ restic_repo }} unlock"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  changed_when: false
+  failed_when: false
 
 - name: "[Backup] Prune old snapshots"
   ansible.builtin.command: >
@@ -114,60 +126,117 @@
     --prune
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
-  no_log: true
+  register: _restic_prune
+  # Prune is retention HOUSEKEEPING — the backup snapshot (copy #2) already
+  # succeeded above. A prune hiccup must NOT abort the play and discard a good
+  # backup; surface it as a warning. no_log dropped (password is in environment,
+  # not the command) so the real restic error is finally visible.
+  changed_when: _restic_prune.rc == 0
+  failed_when: false
+
+- name: "[Backup] Warn if prune failed (the backup snapshot is still intact)"
+  ansible.builtin.debug:
+    msg: >-
+      restic forget/prune returned rc={{ _restic_prune.rc }} — retention cleanup
+      did not complete, but copy #2 is safe. Investigate:
+      {{ (_restic_prune.stderr | default('')) | truncate(400) }}
+  when: _restic_prune.rc | default(0) != 0
 
 # ── Scheduled backup via launchd ─────────────────────────────────────────────
 
-- name: "[Backup] Deploy backup-run.sh wrapper script"
+- name: "[Backup] Deploy backup-run.sh wrapper script (off-site mirror)"
   ansible.builtin.copy:
     content: |
       #!/bin/bash
-      # Automated Restic backup — managed by Ansible, do not edit
+      # Automated Restic off-site mirror — managed by Ansible, do not edit.
+      # Mirrors the RustFS bucket dir (copy #1) to the off-site repo (copy #2).
       set -euo pipefail
       export PATH="{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
       export RESTIC_PASSWORD="{{ restic_password }}"
       export RESTIC_REPOSITORY="{{ restic_repo }}"
-      BACKUP_DIR="{{ ansible_facts['env']['HOME'] }}/backups"
-      LOG_FILE="${BACKUP_DIR}/backup.log"
-      mkdir -p "$BACKUP_DIR"
+      LOG_DIR="{{ ansible_facts['env']['HOME'] }}/backups"
+      LOG_FILE="${LOG_DIR}/backup.log"
+      mkdir -p "$LOG_DIR"
       exec >> "$LOG_FILE" 2>&1
-      echo "=== Backup started: $(date -Iseconds) ==="
-      {% if install_postgresql | default(false) %}
-      {{ docker_bin }} compose -p infra exec -T postgresql pg_dumpall -U postgres > "${BACKUP_DIR}/pg_dump.sql" || true
-      {% endif %}
-      {% if install_mariadb | default(false) %}
-      {{ docker_bin }} compose -p infra exec -T mariadb \
-        mysqldump --all-databases \
-        -uroot -p{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }} \
-        > "${BACKUP_DIR}/maria_dump.sql" 2>/dev/null || true
-      {% endif %}
+      echo "=== Off-site mirror started: $(date -Iseconds) ==="
       restic backup \
         --exclude-file="{{ restic_excludefile }}" \
-        {{ restic_backup_paths | join(' ') }} \
-        "${BACKUP_DIR}"
+        {{ restic_backup_paths | join(' ') }}
+      restic unlock || true
       restic forget \
         --keep-daily {{ restic_keep_daily }} \
         --keep-weekly {{ restic_keep_weekly }} \
         --keep-monthly {{ restic_keep_monthly }} \
-        --prune
-      echo "=== Backup finished: $(date -Iseconds) ==="
+        --prune || echo "WARN: restic prune failed — backup snapshot is safe, retention skipped"
+      echo "=== Off-site mirror finished: $(date -Iseconds) ==="
     dest: "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
     mode: '0755'
   no_log: true
 
-- name: "[Backup] Deploy launchd plist for daily backup"
+# De-collision: the legacy Restic plist shared the label/path
+# eu.thisisait.nos.backup with the RustFS role. Boot out + remove it so the
+# renamed .offsite agent is the only Restic one.
+- name: "[Backup] Boot out legacy colliding backup agent (if present)"
+  ansible.builtin.command: >
+    launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/eu.thisisait.nos.backup
+  register: _offsite_legacy_bootout
+  changed_when: _offsite_legacy_bootout.rc == 0
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[Backup] Remove legacy colliding plist (if present)"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist"
+    state: absent
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[Backup] Deploy launchd plist for daily off-site mirror"
   ansible.builtin.template:
-    src: eu.thisisait.nos.backup.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist"
+    src: eu.thisisait.nos.backup.offsite.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ restic_launchd_label }}.plist"
     mode: '0644'
   register: backup_plist
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[Backup] Load launchd backup schedule"  # noqa: no-handler
-  # Inline (not a handler) — same launchctl unload→load ordering rationale
-  # as the vulnerability-scan plist tasks: must run mid-play, not at
-  # end-of-play handler dispatch, so the scheduler is consistent for any
-  # later tasks that check `launchctl list`.
+  # Inline (not a handler) — same launchctl ordering rationale as the
+  # vulnerability-scan plist tasks: must run mid-play so the scheduler is
+  # consistent for any later tasks that check `launchctl list`.
   ansible.builtin.command: >
-    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.backup.plist
-  when: backup_plist is changed
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ restic_launchd_label }}.plist
+  when:
+    - backup_plist is changed
+    - (nos_service_manager | default('launchd')) == 'launchd'
   failed_when: false
+
+# ── Scheduled mirror via systemd --user (Linux) ──────────────────────────────
+# Without this the off-site mirror runs ONCE at provisioning and is never re-armed
+# on Linux (the launchd tasks above are macOS-only). backup-run.sh is deployed
+# unconditionally above; here we add the recurring timer.
+- name: "[Backup] (Linux) Render off-site oneshot service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ restic_launchd_label }}"
+    su_description: "nOS off-site Restic mirror (copy #2)"
+    su_service_type: oneshot
+    su_exec_start: "/bin/bash {{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
+    su_working_dir: "{{ ansible_facts['env']['HOME'] }}"
+    su_enable: false
+    su_environment:
+      HOME: "{{ ansible_facts['env']['HOME'] }}"
+      PATH: "{{ ansible_facts['env']['HOME'] }}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[Backup] (Linux) Render + enable off-site timer"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ restic_launchd_label }}"
+    su_type: timer
+    su_description: "nOS off-site Restic mirror schedule"
+    su_timer_calendar: "*-*-* {{ '%02d' | format(restic_backup_schedule_hour | int) }}:00:00"
+    su_timer_unit: "{{ restic_launchd_label }}.service"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'

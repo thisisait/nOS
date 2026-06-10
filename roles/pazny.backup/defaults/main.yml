@@ -32,10 +32,35 @@ backup_databases_mariadb: true
 backup_databases_postgresql: true
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 
-# Docker named volumes to tar+upload. Only mariadb_data is migrated today;
-# extend this list as services adopt the named-volume pattern.
-backup_volumes_to_dump:
-  - mariadb_data
+# Wing SQLite store (security findings, audit hash-chain, agent sessions, GDPR
+# lineage) — a host file, not a container. sqlite3 .dump → wing-db.sql.gz.
+backup_wing_db: "{{ install_wing | default(true) }}"
+backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
+
+# Runtime state side-car: ~/.nos/{secrets,state}.yml → nos-state.tar.gz.
+# Restore of this is GATED behind restore_state=true (it can clobber a NEWER
+# live secrets.yml and brick SSO) — see tasks/restore.yml.
+backup_nos_state: true
+
+# Docker NAMED volumes to tar+upload. mariadb_data was dropped — it is the raw
+# DB datadir, fully covered by the logical mariadb-dump (redundant). Add only
+# genuinely-stateful non-DB named volumes (operator: cross-check `docker volume
+# ls`; e.g. authentik_media if present). DB *_data volumes are NOT needed.
+backup_volumes_to_dump: []
+
+# Host-bind service data dirs (filesystem state NO DB dump can reconstruct).
+# gitea/gitlab hold git REPOS on disk — covered by NEITHER the DB dumps nor the
+# named-volume list before this. name → restore target path (derived from the
+# role's *_data_dir var so external-storage redirects are honoured).
+backup_dirs_to_dump:
+  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
+  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
+  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
+
+# Alpine image for volume/dir tar streaming. MUST equal the restore extractor's
+# image (tasks/_restore_volume.yml + restore.yml restore_alpine_image) — a tag
+# skew is a silent restore drift. Single source of truth.
+backup_alpine_image: "alpine:3.20"
 
 # -- Container names (match the project-wide convention) -----------------------
 backup_mariadb_container: "{{ mariadb_container_name | default('nos-mariadb') }}"
@@ -48,7 +73,10 @@ backup_postgresql_user: "{{ postgresql_root_user | default('postgres') }}"
 backup_postgresql_password: "{{ postgresql_root_password }}"
 
 # -- Authentik API -------------------------------------------------------------
-backup_authentik_url: "http://127.0.0.1:9000"
+# Authentik server publishes its :9000 on host port authentik_port (default 9003;
+# host :9000 is PHP-FPM). A hardcoded :9000 hit PHP-FPM → 404 → blueprint backup
+# failed (live, 2026-06-09). Track the real published port.
+backup_authentik_url: "http://127.0.0.1:{{ authentik_port | default(9003) }}"
 backup_authentik_token: "{{ authentik_bootstrap_token | default('') }}"
 
 # -- Runtime paths -------------------------------------------------------------
@@ -56,8 +84,14 @@ backup_home_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
 backup_status_file: "{{ backup_home_dir }}/backup-status.json"
 backup_log_file: "{{ backup_home_dir }}/backup.log"
 backup_script_path: "{{ backup_home_dir }}/backup.sh"
-backup_launchd_label: "eu.thisisait.nos.backup"
+# RustFS (on-host copy #1) agent label. Was "eu.thisisait.nos.backup" — COLLIDED
+# with the Restic off-site path (tasks/backup.yml), which wrote the SAME plist
+# path/Label, so enabling both silently clobbered one. Now ".rustfs" vs the
+# Restic ".offsite"; the legacy label is booted-out + removed by tasks/main.yml.
+backup_launchd_label: "eu.thisisait.nos.backup.rustfs"
+backup_legacy_launchd_label: "eu.thisisait.nos.backup"
 backup_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_launchd_label }}.plist"
+backup_legacy_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_legacy_launchd_label }}.plist"
 
 # -- Behavior toggles ----------------------------------------------------------
 # If today's prefix already exists in the bucket, overwrite (true) or skip (false).
