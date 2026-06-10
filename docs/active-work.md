@@ -5,7 +5,104 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-05-31 • **v0.4-beta cross-platform (Linux) — release prep**.
+> Last updated: 2026-06-10 • **post-v0.5-beta serial review → v0.6 prep.**
+> v0.5-beta tagged 2026-06-06 (SSO/MFA coherence + SEC-02/REM-043/MTI security
+> cluster). Since the tag, 22 commits landed on `dev` in 5 clusters: **backup/
+> restore overhaul** (3-2-1 split, restore contract repaired + gated; operator
+> to-dos #5/#6 + 4 known gaps in `docs/backup-architecture.md`), **GitLab/Gitea
+> agent forge T32.2** (GitLab = MR review surface, recipe-PR + trunk-sync tools),
+> **Hermes opt-in launchd daemon** (forward-auth gated route), **frozen 1:1
+> local+CI toolchain** (`tools/ci-local.sh` + `ci-freeze.env` +
+> `requirements.lock.yml` — run BEFORE any release push), **upgrade-engine
+> hardening** (dry-run validation, version-pin shadow gate).
+>
+> **2026-06-10 full serial review** (playbook + security + anatomy + Wing +
+> CI/docs) found & fixed: Nextcloud version-pin shadow (config `"stable"` was
+> shadowing the C2 `"33"` major-lock → live container floated; pinned + allowlist
+> entry removed), `docker-socket-proxy:latest` pinned to 0.4.2 + new base-stack
+> pin gate, `scan-runner.sh` non-executable in git (pulse vulnerability-scan
+> exit 255), `run-gitleaks.sh` GNU `head -n -1` (BSD head dies; → `sed '$d'`),
+> Wing layout cache-buster `?v={$basePath}` → `$assetVer`, `.gitleaks.toml`
+> allowlist (4 verified FPs; scan now clean), `apps/_template.yml` loopback port
+> example, remediation queue reconciled **14 pending / 71 resolved / 2
+> vendor-blocked** (REM-077 + REM-006 verified-done). All suites green after:
+> 1674 passed / 5 skipped, ansible-lint production clean, syntax-check clean.
+> **NEXT: v0.6 plan — see "v0.6 punch list" below.** Wing UI rapid-improvement
+> track is the headline; CI gap: pushes to `dev` don't trigger Integration
+> (covered only by `tools/ci-local.sh` discipline).
+> **Still deferred:** OpenClaw (Ollama/CUDA) + Hermes Linux runtimes, host-nginx
+> vhost templates on Linux, fleet provisioning (p2p/server-client/mesh).
+
+---
+
+## v0.6 punch list (drafted by the 2026-06-10 review; operator to re-prioritize)
+
+**Headline: Track W6 — Wing UI rapid improvement.** Foundation is healthy
+(tokens.css, burger nav, RBAC tiers, SEC-6 edge trust; all 20 presenters render
+200 live). The gap is **dead/stale data surfaces**, not chrome:
+
+1. **W6.1 — Inbox comes alive (A9 emitters).** `notifications` has 0 rows ever;
+   the per-minute dispatch worker runs on empty. Wire the missing *emitters* —
+   agent run verdicts (conductor/remediator reports), playbook-run failure
+   summary (callback plugin → Bone), backup success/failure (backup.sh already
+   has the A9 hook point), breach-deadline warnings — through the existing
+   Bone `POST /api/v1/notifications` HMAC path. Severity floors per A9.
+2. **W6.2 — Dashboard data honesty.** It claims "Scan cycle 16 hourly" while
+   scans are on-demand (4 agent pulse jobs paused by doctrine) and advisories
+   shown are from April. Add stale-data recency badges ("last scan N days ago",
+   warn > 14d), drop the false "hourly", re-ingest the reconciled remediation
+   queue (`bin/ingest-remediation.php`).
+3. **W6.3 — /agents run-lifecycle UI** (operator-requested, parked 2026-05-30):
+   token-consumption progress bar (`tokens_*` columns already on
+   `agent_sessions`), elapsed + countdown vs the ~30-min cap, admin-only
+   manual-kill (status=interrupted), server-side auto-terminate past-cap runs.
+4. **W6.4 — Hub health coverage:** 21/57 systems "unchecked" — extend
+   `health_check` plugin blocks to the remaining services.
+5. **W6.5 (nicety) — lucide tree-shake:** 402 KB → ~5 KB for the ~15 used glyphs
+   (#61).
+
+**Track S — security follow-through:**
+
+6. **S1 — refresh the full security scan** (last 2026-05-31; drift hook warns at
+   14d). On-demand: `tools/run-scout.sh`. Proposal: auto-schedule **scout only**
+   (read-only — doesn't violate the manual-over-auto doctrine); destructive
+   remediation stays operator-fired.
+7. **S2 — REM-004 image-freshness sweep** (trivy says the lever is stale base
+   images): bump the ~10 priority images to current patch tags, verify running
+   tags post-run (version-pin shadow gate now guards the config side).
+8. **S3 — REM-009 PostgreSQL SSL** (mkcert CA mount + PGSSLMODE=require on the
+   6 PG clients) and **REM-008 ERPNext dedicated DB user** — the two remaining
+   config-change items that close Phase C.
+9. **S4 — backup known-gaps:** extend `backup_dirs_to_dump` for Vaultwarden /
+   n8n / Node-RED / Authentik-media host-bind state (with SQLite quiesce);
+   deploy `backup_status_exporter.py` (91-backups dashboard is blind);
+   wet-test the restic→RustFS DR round-trip. Operator: #5 volumes + #6
+   external disk (see `docs/backup-architecture.md`).
+
+**Track D — debt:**
+
+10. **D1 — `{{ vars }}` wholesale retirement** (6 sites: core-up ×3, stack-up,
+    blank-reset, pre-migrate) — hard-breaks on ansible-core 2.24; design the
+    explicit loader-var namespace now, ship before the 2.24 floor bump.
+11. **D2 — CI dev-push gap:** decide — (a) enable Integration on `dev` pushes
+    (25-min cost per push), (b) a light `dev` job (lint+pytest+syntax only),
+    or (c) keep `ci-local.sh` discipline documented as the gate. Review
+    recommends (b).
+12. **D3 — uptime-kuma 1.23.13 → 2.2.1** (full SSTI fix REM-037/073; breaking
+    config-schema migration — needs an upgrade recipe + wet test).
+
+### Release shape proposal (v0.6-beta)
+
+Theme: **"The console you can trust" — Wing UI truthfulness + security
+follow-through.** W6.1–W6.4 + S1–S3 + D2; S4/D1 stretch. Gate: full all-on
+blank + `tools/ci-local.sh` + green release PR (the v0.5 PR went red on the
+filter saga — fixed since, but the next PR must prove it).
+
+---
+
+## Prior track: **v0.4-beta cross-platform (Linux) — shipped 2026-06-01**
+
+> Snapshot of the 2026-05-31 state (header preserved for archaeology):
 > v0.3-beta is tagged. This session took the playbook cross-platform: the full
 > `ansible-playbook main.yml` now provisions Ubuntu 24.04 LTS end-to-end, pinned
 > by a standing `Integration (ubuntu-24.04)` CI wet-test (**green**). ~19 gap

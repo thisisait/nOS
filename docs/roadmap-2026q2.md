@@ -5,9 +5,45 @@
 > below are retained for context and may describe pre-2026-05-03 states that
 > have since been superseded.
 >
-> Last updated: 2026-05-31 • milestone: **v0.4-beta** (DRAFT — cross-platform: Ubuntu 24.04 wet-test green + macOS idempotence) • by: pazny+claude
+> Last updated: 2026-06-10 • milestone: **v0.5-beta released 2026-06-06**; post-tag serial review done, v0.6 punch list drafted in `active-work.md` • by: pazny+claude
 
-## v0.4-beta milestone (2026-05-31) — DRAFT, pending operator tag
+## v0.5-beta milestone (2026-06-06) — released
+
+SSO/MFA coherence + pre-release security cluster. Authoritative notes:
+[`RELEASE.md`](../RELEASE.md).
+
+| Area | Shipped |
+|---|---|
+| **MFA posture** | Non-gov default = posture B (global MFA remembered ~8h via `mfa_remember_window`); gov profile pins strict step-up (`seconds=0`). Configure-not-deny enrollment. |
+| **SSO autologin honesty** | Per-service ceilings documented + gate-enforced (`supports:`): 0-click forward_auth passthrough; Grafana auto-redirect; 1-click OIDC button; portainer/infisical/metabase own-login ceilings. Global `sso_autologin` ships dormant. |
+| **Security cluster** | SEC-02 header-trust isolation (`gated_net`/`gated_b2b_net`, live-verified forge block); REM-043 n8n SSRF closed (`N8N_SSRF_PROTECTION_ENABLED`); MTI provider-flip reconcile in `main.yml`. |
+| **Other** | Calibre library autowiring + Gutenberg seed; remediation queue reconciled. |
+
+### Post-v0.5 work on `dev` (22 commits, 2026-06-06 → 06-10)
+
+| Cluster | Shipped |
+|---|---|
+| **Backup/restore overhaul** | 3-2-1 split (copy #1 RustFS encrypted objects, copy #2 restic off-site mirror of the bucket dir); restore contract repaired end-to-end + `--tags restore-verify`; gates `test_backup_restore_contract.py`. Known gaps tracked in `docs/backup-architecture.md`. |
+| **Agent forge T32.2** | GitLab = agent MR-review surface (`nos_agent_forge`), Gitea keeps Woodpecker; `tools/recipe-pr.sh` + trunk-sync scripts; forge PAT provisioning in-role. |
+| **Frozen CI toolchain** | `tools/ci-local.sh` + `ci-freeze.env` + `requirements.lock.yml` = 1:1 local↔CI integration env (ansible-core 2.21.0); the local pre-release gate that would have collapsed the 21-cycle filter saga. |
+| **Hermes daemon** | Opt-in launchd web-UI (`hermes_daemon_mode`, loopback-only) + hermes-base plugin (forward-auth + GDPR + A9). |
+| **Upgrade-engine hardening** | Dry-run now validates recipes; template-var resolvability + version-pin-shadow gates. |
+
+### 2026-06-10 serial review (decision O24)
+
+Full serial review (playbook core → security → anatomy → Wing UI → CI/docs).
+Fixed in-line: Nextcloud pin shadow (config `stable` killed the C2 `"33"`
+major-lock), `docker-socket-proxy` pinned 0.4.2 + base-stack pin gate,
+`scan-runner.sh` exec bit (pulse exit 255), `run-gitleaks.sh` BSD-`head` fix,
+Wing cache-buster fix, `.gitleaks.toml` FP allowlist, Tier-2 template loopback
+example. Queue reconciled 14/71/2. **v0.6 punch list lives in
+`active-work.md`** — headline Track W6 (Wing UI truthfulness: A9 emitters →
+live Inbox, dashboard recency honesty, /agents run-lifecycle UI, hub health
+coverage), Track S (scan refresh, REM-004 freshness sweep, PG SSL, ERPNext DB
+user, backup gaps), Track D (`{{ vars }}` retirement pre-2.24, CI dev-push
+decision, kuma v2 recipe).
+
+## v0.4-beta milestone (2026-06-01) — released
 
 ~19 gap fixes on `feat/linux-port`. The cross-platform release: the full playbook
 provisions Ubuntu 24.04 LTS end-to-end. Authoritative notes:
@@ -1107,6 +1143,19 @@ add to `VALID_TYPES` in EventRepository.php AND to `event.schema.json` enum.
 A10 must land before Phase 5 — `actor_id` column is required for cryptographic
 attribution of conductor writes. Phase 5 pass = first non-operator end-to-end
 write to wing.db.
+
+**O24 — serial-review cadence + pin-gate scope doctrine (2026-06-10):**
+A full *serial* review (one context, playbook → security → anatomy → Wing →
+CI/docs, fixing in-line) after each release catches the class of bug that
+gates rationalize instead of reject: the Nextcloud `stable` config pin had been
+allowlisted as "intentional shadow" when it was actually the C2 major-lock
+regressing. Doctrine: (a) allowlist entries in anti-drift gates must cite the
+COMMIT that made the divergence intentional, else they're presumed bugs;
+(b) image-pin gates must scan EVERY compose source (role defaults AND base
+stack templates AND Tier-2 manifests) — the docker-socket-proxy `:latest`
+hid in the one file class the C1 gate didn't read; (c) host-side scripts that
+Pulse invokes in-place from the repo checkout must be `100755` in git (the
+644 `scan-runner.sh` was a silent exit-255 since its pulse job registration).
 
 ---
 
