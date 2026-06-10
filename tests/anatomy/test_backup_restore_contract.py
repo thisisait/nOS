@@ -202,3 +202,27 @@ def test_status_names_match_canonical_stems():
     text = BACKUP_SH.read_text()
     bad = re.findall(r'status_append "(postgresql|volume:[^"]*|dir:[^"]*|authentik)"', text)
     assert not bad, f"status_append uses non-canonical (drifted) source names: {bad}"
+
+
+def test_backup_dirs_have_restore_targets():
+    """S4 (2026-06-10): every backup_dirs_to_dump name must have a matching
+    restore_dir_targets entry — a dir that backs up but can't restore is the
+    silent half-contract the 2026-06-09 overhaul was built to kill."""
+    import re
+
+    cfg = (REPO / "default.config.yml").read_text()
+    block = cfg[cfg.index("backup_dirs_to_dump:"):]
+    block = block[: re.search(r"\nbackup_databases_mariadb", block).start()]
+    backup_names = set(re.findall(r'\{ name: "([a-z0-9-]+)"', block))
+    assert backup_names, "backup_dirs_to_dump parse came up empty"
+
+    restore = (REPO / "tasks/restore.yml").read_text()
+    tgt = restore[restore.index("restore_dir_targets:"):]
+    tgt = tgt[: tgt.index("- name:")]
+    restore_names = set(re.findall(r"^\s{6}([a-z0-9-]+):", tgt, re.M))
+
+    missing = sorted(backup_names - restore_names)
+    assert not missing, (
+        f"backup_dirs_to_dump entries with NO restore_dir_targets mapping: "
+        f"{missing} — extend tasks/restore.yml"
+    )

@@ -91,6 +91,15 @@ backup_script_path: "{{ backup_home_dir }}/backup.sh"
 backup_launchd_label: "eu.thisisait.nos.backup.rustfs"
 backup_legacy_launchd_label: "eu.thisisait.nos.backup"
 backup_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_launchd_label }}.plist"
+
+# ── Backup-status exporter (S4 2026-06-10) ───────────────────────────────────
+# backup_status_exporter.py was referenced by the 91-backups dashboard +
+# 05-backup.yml alerts but never deployed/scheduled — dead metrics since C3.
+# Runs every 60s: backup-status.json -> textfile .prom for Alloy's collector.
+backup_exporter_enabled: true
+backup_exporter_script_path: "{{ backup_home_dir }}/backup_status_exporter.py"
+backup_exporter_launchd_label: "eu.thisisait.nos.backup.exporter"
+backup_exporter_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_exporter_launchd_label }}.plist"
 backup_legacy_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_legacy_launchd_label }}.plist"
 
 # -- Behavior toggles ----------------------------------------------------------

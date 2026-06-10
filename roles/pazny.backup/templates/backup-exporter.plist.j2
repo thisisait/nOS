@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- S4 (2026-06-10): backup_status_exporter was referenced by the 91-backups
+     Grafana dashboard + 05-backup.yml alert rules but NEVER deployed or
+     scheduled — the metrics/alerts were dead since C3. This agent runs it
+     every 60s: reads ~/.nos/backup-status.json (written by backup.sh) and
+     emits Prometheus textfile metrics that Alloy's textfile collector
+     scrapes from {{ node_exporter_textfile_dir }}. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ backup_exporter_launchd_label | default('eu.thisisait.nos.backup.exporter') }}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ nos_python | default('/usr/bin/python3') }}</string>
+        <string>{{ backup_exporter_script_path }}</string>
+        <string>--status</string>
+        <string>{{ backup_status_file }}</string>
+        <string>--output</string>
+        <string>{{ node_exporter_textfile_dir }}/backup.prom</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/.nos/backup-exporter.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ ansible_facts['env']['HOME'] }}/.nos/backup-exporter.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

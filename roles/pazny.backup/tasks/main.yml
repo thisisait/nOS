@@ -89,6 +89,74 @@
     'already loaded' not in (_backup_load.stderr | default(''))
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
+# ---- Backup-status exporter (S4 2026-06-10) ----
+# Dashboard 91-backups + 05-backup.yml alerts read nos_backup_* metrics that
+# nothing produced. Deploy the exporter + a 60s agent; Alloy's textfile
+# collector picks up {{ node_exporter_textfile_dir }}/backup.prom.
+- name: "[backup] Ensure textfile metrics dir exists"
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_dir }}"
+    state: directory
+    mode: '0755'
+  when: backup_exporter_enabled | default(true) | bool
+
+- name: "[backup] Deploy backup_status_exporter.py"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/observability/scripts/backup_status_exporter.py"
+    dest: "{{ backup_exporter_script_path }}"
+    mode: '0755'
+  when: backup_exporter_enabled | default(true) | bool
+
+- name: "[backup] Deploy exporter launchd plist"
+  ansible.builtin.template:
+    src: backup-exporter.plist.j2
+    dest: "{{ backup_exporter_launchd_plist }}"
+    mode: '0644'
+  register: _exporter_plist
+  when:
+    - backup_exporter_enabled | default(true) | bool
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+# launchd caches EnvironmentVariables/args — bootout + bootstrap on change
+# (the launchctl kickstart trap, see 2026-05-17 incident notes).
+- name: "[backup] (Re)load exporter agent"
+  ansible.builtin.shell: |
+    launchctl bootout gui/$(id -u)/{{ backup_exporter_launchd_label }} 2>/dev/null || true
+    launchctl bootstrap gui/$(id -u) "{{ backup_exporter_launchd_plist }}"
+  when:
+    - backup_exporter_enabled | default(true) | bool
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - _exporter_plist is changed
+  changed_when: true
+
+- name: "[backup] (Linux) Exporter service + 60s timer"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ backup_exporter_launchd_label }}"
+    su_description: "nOS backup-status textfile exporter"
+    su_service_type: oneshot
+    su_exec_start: "/usr/bin/python3 {{ backup_exporter_script_path }} --status {{ backup_status_file }} --output {{ node_exporter_textfile_dir }}/backup.prom"
+    su_enable: false
+  when:
+    - backup_exporter_enabled | default(true) | bool
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[backup] (Linux) Exporter timer (every minute)"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ backup_exporter_launchd_label }}"
+    su_type: timer
+    su_description: "nOS backup exporter schedule"
+    su_timer_calendar: "*-*-* *:*:00"
+    su_timer_unit: "{{ backup_exporter_launchd_label }}.service"
+  when:
+    - backup_exporter_enabled | default(true) | bool
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+
 # ---- Linux: systemd --user oneshot service + timer ----
 # De-collision (Linux): the same label rename (.backup → .backup.rustfs) orphans
 # any pre-rename systemd --user units. Disable + remove them so the old timer

@@ -72,6 +72,11 @@
       gitea: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}"
       gitlab: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}"
       gitlab-config: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}"
+      # S4 (2026-06-10) — mirrors the backup_dirs_to_dump extension:
+      vaultwarden: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}"
+      n8n: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}"
+      nodered: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}"
+      authentik: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}"
 
 - name: "[Restore] Prepare AWS environment block"
   ansible.builtin.set_fact:

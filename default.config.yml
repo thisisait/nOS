@@ -1704,6 +1704,10 @@ onlyoffice_domain: "onlyoffice{{ _host_alias_seg }}.{{ tenant_domain | default('
 influxdb_domain: "influxdb{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 nodered_port: 1880
+# Real default here (not only in role defaults) — referenced by
+# backup_dirs_to_dump above, which the core-up eager `{{ vars }}` resolve
+# walks BEFORE the nodered role loads (test_config_stock_jinja_only gate).
+nodered_data_dir: "{{ ansible_facts['env']['HOME'] }}/nodered/data"
 # Node-RED runtime defaults (D2 promotion, 2026-05-17): previously these
 # lived only as `| default(...)` chains inside the compose template, which
 # made operator overrides invisible to nos-smoke + config introspection.
@@ -2448,6 +2452,17 @@ backup_dirs_to_dump:
   - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
   - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
   - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
+  # S4 (2026-06-10) — the KNOWN-UNBACKED host-bind set from
+  # docs/backup-architecture.md: PRIMARY state no DB dump covers; before this,
+  # a DR lost every Vaultwarden password. backup.sh skips absent paths, so
+  # disabled services cost nothing. SQLite torn-window honesty: vaultwarden
+  # db.sqlite3 + n8n database.sqlite are tar'd LIVE at 03:00 (low-write
+  # window); restic keeps 7 dailies so one torn copy isn't fatal. A proper
+  # sqlite3 .backup quiesce is the queued follow-up.
+  - { name: "vaultwarden", path: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}" }
+  - { name: "n8n", path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
+  - { name: "nodered", path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
+  - { name: "authentik", path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
 backup_databases_mariadb: true
 backup_databases_postgresql: true
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,
@@ -2469,4 +2484,7 @@ backup_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json"
 backup_log_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup.log"
 
 # Consumed by Alloy's textfile collector (Agent A1 + C3).
-node_exporter_textfile_dir: "/var/lib/node_exporter/textfile"
+# S4 (2026-06-10): was /var/lib/node_exporter/textfile — that path does not
+# exist on macOS (and needs root on Linux), so the collector read nothing and
+# the 91-backups dashboard stayed blind. HOME keeps it sudo-free both OSes.
+node_exporter_textfile_dir: "{{ ansible_facts['env']['HOME'] }}/.nos/metrics/textfile"
