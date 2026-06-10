@@ -206,6 +206,50 @@ final class AgentSessionRepository
 	}
 
 	/**
+	 * W6.3 (2026-06-10): auto-terminate `running` sessions older than the
+	 * cap. Failed/killed agent runs (concurrency crash, timeout SIGKILL,
+	 * LLM socket error) never emit agent_run_end, so their row hung
+	 * `running` forever — 5 orphans were hand-cleaned on 2026-05-30 alone.
+	 * Returns the number of rows reaped.
+	 */
+	public function terminateStale(int $capMinutes): int
+	{
+		$cutoff = gmdate('c', time() - $capMinutes * 60);
+		return $this->db->table('agent_sessions')
+			->where('status', 'running')
+			->where('started_at < ?', $cutoff)
+			->update([
+				'status'      => 'terminated',
+				'stop_reason' => 'interrupted',
+				'ended_at'    => gmdate('c'),
+				'error_json'  => json_encode([
+					'reason' => "auto-terminated: exceeded {$capMinutes}-minute session cap",
+					'by'     => 'wing-stale-reaper',
+				]),
+			]);
+	}
+
+	/**
+	 * W6.3: operator manual kill. Marks the SESSION ROW dead so surfaces
+	 * self-clean — the OS process (claude CLI) is governed separately by
+	 * the Pulse max_runtime kill; this does not signal it. Only a
+	 * `running` row can be interrupted (idempotent on repeat clicks).
+	 */
+	public function markInterrupted(string $uuid, string $by): bool
+	{
+		$n = $this->db->table('agent_sessions')
+			->where('uuid', $uuid)
+			->where('status', 'running')
+			->update([
+				'status'      => 'terminated',
+				'stop_reason' => 'interrupted',
+				'ended_at'    => gmdate('c'),
+				'error_json'  => json_encode(['reason' => 'operator kill', 'by' => $by]),
+			]);
+		return $n > 0;
+	}
+
+	/**
 	 * @param array<string, mixed> $row
 	 */
 	public function startThread(array $row): int
