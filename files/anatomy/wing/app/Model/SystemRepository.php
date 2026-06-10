@@ -136,7 +136,7 @@ final class SystemRepository
 	private const WRITABLE_FIELDS = [
 		'id', 'parent_id', 'name', 'description', 'type', 'category',
 		'stack', 'image', 'version', 'version_var', 'pinned',
-		'domain', 'port', 'url', 'network_exposed', 'has_web_ui',
+		'domain', 'port', 'url', 'health_url', 'network_exposed', 'has_web_ui',
 		'toggle_var', 'enabled',
 		'priority', 'upstream_repo',
 		'source', 'metadata',
@@ -193,6 +193,12 @@ final class SystemRepository
 	 */
 	public function probe(string $url, float $timeout = 2.0): array
 	{
+		// W6.4 (2026-06-10): tcp://host:port — bare TCP liveness for
+		// DB-class services (MariaDB, PostgreSQL, Redis) the HTTP probe
+		// could never reach; they sat "unchecked" on the Hub forever.
+		if (str_starts_with($url, 'tcp://')) {
+			return $this->probeTcp($url, $timeout);
+		}
 		$start = microtime(true);
 		$handle = curl_init($url);
 		if ($handle === false) {
@@ -220,20 +226,89 @@ final class SystemRepository
 
 
 	/**
-	 * Probe all systems with a URL and persist results.
+	 * TCP connect liveness (W6.4). http_code 0 by design — there is no HTTP
+	 * layer; status alone carries the verdict.
+	 *
+	 * @return array{status:string,http_code:int,ms:int}
+	 */
+	private function probeTcp(string $url, float $timeout): array
+	{
+		$parts = parse_url($url);
+		$host = (string) ($parts['host'] ?? '');
+		$port = (int) ($parts['port'] ?? 0);
+		if ($host === '' || $port <= 0) {
+			return ['status' => 'unknown', 'http_code' => 0, 'ms' => 0];
+		}
+		$start = microtime(true);
+		$errno = 0;
+		$errstr = '';
+		$sock = @fsockopen($host, $port, $errno, $errstr, $timeout);
+		$ms = (int) round((microtime(true) - $start) * 1000);
+		if ($sock === false) {
+			return ['status' => 'down', 'http_code' => 0, 'ms' => $ms];
+		}
+		fclose($sock);
+		return ['status' => 'up', 'http_code' => 0, 'ms' => $ms];
+	}
+
+
+	/**
+	 * Probe all systems with a probe-able target and persist results.
+	 * W6.4: health_url (loopback endpoint / tcp://) wins over the
+	 * user-facing url — backends without a public route get probed too.
+	 * After the leaf sweep, stack-parent rows aggregate from children.
 	 *
 	 * @return array<string,array{status:string,http_code:int,ms:int}>
 	 */
 	public function probeAll(float $timeout = 2.0): array
 	{
 		$results = [];
-		foreach ($this->db->table('systems')->where('url IS NOT NULL AND url != ?', '')->fetchAll() as $row) {
+		foreach ($this->db->table('systems')
+			->where("(health_url IS NOT NULL AND health_url != '') OR (url IS NOT NULL AND url != '')")
+			->fetchAll() as $row) {
 			$sys = $row->toArray();
-			$result = $this->probe($sys['url'], $timeout);
+			$target = (string) ($sys['health_url'] ?? '') !== ''
+				? (string) $sys['health_url']
+				: (string) $sys['url'];
+			$result = $this->probe($target, $timeout);
 			$this->setHealth($sys['id'], $result['status'], $result['http_code'], $result['ms']);
 			$results[$sys['id']] = $result;
 		}
+		// Stale-verdict reset (W6.4): a system whose probe target was REMOVED
+		// (e.g. dnsmasq's tcp:// dropped as a false-down) would keep its last
+		// up/down verdict forever — no probe ever refreshes it. Honest state
+		// for an unprobeable leaf is 'unknown'.
+		$this->db->table('systems')
+			->where("(health_url IS NULL OR health_url = '') AND (url IS NULL OR url = '')")
+			->where('type != ?', 'stack')
+			->where('health_status != ?', 'unknown')
+			->update(['health_status' => 'unknown', 'health_http_code' => null, 'health_ms' => null]);
+		$this->aggregateStackHealth();
 		return $results;
+	}
+
+
+	/**
+	 * Stack-parent health = derived from children (W6.4): down if ANY
+	 * checked child is down, up if ALL checked children are up, unknown
+	 * when no child has been probed. Parents themselves have no URL, so
+	 * they showed as eternal "unchecked" noise in the Hub KPI.
+	 */
+	private function aggregateStackHealth(): void
+	{
+		foreach ($this->db->table('systems')->where('type', 'stack')->fetchAll() as $parent) {
+			$up = 0;
+			$down = 0;
+			foreach ($this->db->table('systems')->where('parent_id', $parent->id)->fetchAll() as $child) {
+				if ($child->health_status === 'up') {
+					$up++;
+				} elseif ($child->health_status === 'down') {
+					$down++;
+				}
+			}
+			$status = $down > 0 ? 'down' : ($up > 0 ? 'up' : 'unknown');
+			$this->setHealth((string) $parent->id, $status, 0, 0);
+		}
 	}
 
 
@@ -321,6 +396,9 @@ final class SystemRepository
 				'domain' => $svc['domain'] ?? null,
 				'port' => isset($svc['port']) ? (int) $svc['port'] : null,
 				'url' => $svc['url'] ?? null,
+				// W6.4: backend services carry a loopback / tcp:// probe
+				// target distinct from the (absent) public card link.
+				'health_url' => $svc['health_url'] ?? null,
 				'network_exposed' => !empty($svc['domain']) ? 1 : 0,
 				'has_web_ui' => !empty($svc['domain']) ? 1 : 0,
 				'toggle_var' => $svc['toggle_var'] ?? null,

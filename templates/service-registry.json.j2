@@ -16,6 +16,7 @@
 {% if install_observability | default(true) %}
 {% set _ = _services.append({
   "name": "Grafana",
+  "id": "grafana",
   "category": "observability",
   "tier": 1,
   "enabled": true,
@@ -97,6 +98,7 @@
   "toggle_var": "install_jellyfin",
   "domain": jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": jellyfin_port | default(8096),
+  "health_url": "http://127.0.0.1:" ~ (jellyfin_port | default(8096)) ~ "/health",
   "url": "https://" ~ (jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
@@ -552,16 +554,19 @@
 {% if install_nginx | default(true) %}
 {% set _ = _services.append({
   "name": "Nginx",
+  "id": "nginx",
   "category": "web",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_nginx",
   "port": 443,
+  "health_url": "https://127.0.0.1:443",
   "type": "homebrew",
   "description": "Reverse proxy + SSL"
 }) %}
 {% set _ = _services.append({
   "name": "PHP-FPM",
+  "id": "phpfpm",
   "category": "web",
   "tier": 2,
   "enabled": true,
@@ -574,6 +579,7 @@
 {% if install_dnsmasq | default(true) %}
 {% set _ = _services.append({
   "name": "dnsmasq",
+  "id": "dnsmasq",
   "category": "network",
   "tier": 2,
   "enabled": true,
@@ -586,11 +592,13 @@
 {% if install_mariadb | default(false) %}
 {% set _ = _services.append({
   "name": "MariaDB",
+  "id": "mariadb",
   "category": "database",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_mariadb",
   "port": mariadb_port | default(3306),
+  "health_url": "tcp://127.0.0.1:" ~ (mariadb_port | default(3306)),
   "type": "docker",
   "stack": "infra",
   "description": "Relational database"
@@ -599,11 +607,13 @@
 {% if install_postgresql | default(false) %}
 {% set _ = _services.append({
   "name": "PostgreSQL",
+  "id": "postgresql",
   "category": "database",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_postgresql",
   "port": postgresql_port | default(5432),
+  "health_url": "tcp://127.0.0.1:" ~ (postgresql_port | default(5432)),
   "type": "docker",
   "stack": "infra",
   "description": "Relational database (Outline, Metabase, Superset)"
@@ -612,11 +622,13 @@
 {% if redis_docker | default(false) %}
 {% set _ = _services.append({
   "name": "Redis (Docker)",
+  "id": "redis_docker",
   "category": "cache",
   "tier": 2,
   "enabled": true,
   "toggle_var": "redis_docker",
   "port": redis_port | default(6379),
+  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
   "type": "docker",
   "stack": "infra",
   "description": "In-memory cache (shared across stacks)"
@@ -625,74 +637,88 @@
 {% if install_observability | default(true) %}
 {% set _ = _services.append({
   "name": "Prometheus",
+  "id": "prometheus",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": prometheus_port | default(9090),
+  "health_url": "http://127.0.0.1:" ~ (prometheus_port | default(9090)) ~ "/-/healthy",
   "type": "docker",
   "stack": "observability",
   "description": "Metrics and alerting"
 }) %}
 {% set _ = _services.append({
   "name": "Loki",
+  "id": "loki",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": loki_port | default(3100),
+  "health_url": "http://127.0.0.1:" ~ (loki_port | default(3100)) ~ "/ready",
   "type": "docker",
   "stack": "observability",
   "description": "Log aggregation"
 }) %}
 {% set _ = _services.append({
   "name": "Tempo",
+  "id": "tempo",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": tempo_http_port | default(3200),
+  "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready",
   "type": "docker",
   "stack": "observability",
   "description": "Distributed tracing"
 }) %}
 {% set _ = _services.append({
   "name": "Alloy",
+  "id": "alloy",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": alloy_ui_port | default(12345),
+  "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready",
   "type": "homebrew",
   "description": "Metrics and logs collector"
 }) %}
 {% set _ = _services.append({
   "name": "node_exporter",
+  "id": "node_exporter",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": 9100,
+  "health_url": "http://127.0.0.1:9100/metrics",
   "type": "homebrew",
   "description": "macOS system metrics"
 }) %}
 {% set _ = _services.append({
   "name": "nginx-exporter",
+  "id": "nginx_exporter",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": 9113,
+  "health_url": "http://127.0.0.1:9113/metrics",
   "type": "binary",
   "description": "Nginx metrics"
 }) %}
 {% set _ = _services.append({
   "name": "php-fpm_exporter",
+  "id": "phpfpm_exporter",
   "category": "observability",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_observability",
   "port": phpfpm_exporter_port | default(9253),
+  "health_url": "http://127.0.0.1:" ~ (phpfpm_exporter_port | default(9253)) ~ "/metrics",
   "type": "binary",
   "description": "PHP-FPM metrics"
 }) %}
@@ -700,11 +726,13 @@
 {% if install_php | default(true) %}
 {% set _ = _services.append({
   "name": "Redis",
+  "id": "redis",
   "category": "cache",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_php",
   "port": redis_port | default(6379),
+  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
   "type": "homebrew",
   "description": "In-memory cache"
 }) %}
@@ -712,11 +740,13 @@
 {% if install_openclaw | default(true) %}
 {% set _ = _services.append({
   "name": "Ollama",
+  "id": "openclaw",
   "category": "ai",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_openclaw",
   "port": 11434,
+  "health_url": "http://127.0.0.1:11434/api/version",
   "type": "homebrew",
   "description": "LLM inference engine"
 }) %}
@@ -724,11 +754,13 @@
 {% if install_uptime_kuma | default(false) %}
 {% set _ = _services.append({
   "name": "Uptime Kuma",
+  "id": "uptime_kuma",
   "category": "monitoring",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_uptime_kuma",
   "port": uptime_kuma_port | default(3001),
+  "health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001)),
   "type": "docker",
   "stack": "iiab",
   "description": "Availability monitoring"
@@ -737,11 +769,13 @@
 {% if install_calibreweb | default(false) %}
 {% set _ = _services.append({
   "name": "Calibre-Web",
+  "id": "calibreweb",
   "category": "knowledge",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_calibreweb",
   "port": calibreweb_port | default(8083),
+  "health_url": "http://127.0.0.1:" ~ (calibreweb_port | default(8083)),
   "type": "docker",
   "stack": "iiab",
   "description": "eBook server"
@@ -750,11 +784,13 @@
 {% if install_homeassistant | default(false) %}
 {% set _ = _services.append({
   "name": "Home Assistant",
+  "id": "homeassistant",
   "category": "iot",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_homeassistant",
   "port": homeassistant_port | default(8123),
+  "health_url": "http://127.0.0.1:" ~ (homeassistant_port | default(8123)),
   "type": "docker",
   "stack": "iiab",
   "description": "Home automation"
@@ -763,11 +799,13 @@
 {% if install_rustfs | default(false) %}
 {% set _ = _services.append({
   "name": "RustFS",
+  "id": "rustfs",
   "category": "storage",
   "tier": 2,
   "enabled": true,
   "toggle_var": "install_rustfs",
   "port": rustfs_api_port | default(9010),
+  "health_url": "http://127.0.0.1:" ~ (rustfs_api_port | default(9010)) ~ "/health",
   "type": "docker",
   "stack": "iiab",
   "description": "S3-compatible object storage"
