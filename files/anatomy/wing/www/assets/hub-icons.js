@@ -13,6 +13,9 @@
     'ci-pipeline': 'git-branch',
     'docker':      'container',
     'git':         'git-branch',
+    // W6.5: was a silent miss — homeassistant-base declares it, no lucide
+    // icon of that name exists, the span rendered empty.
+    'home-automation': 'home',
     'vault':       'lock-keyhole',
     'wiki':        'book-open',
   };
