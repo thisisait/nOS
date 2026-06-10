@@ -64,10 +64,77 @@ final class AgentsPresenter extends BasePresenter
 		$this->requireSuperAdmin();
 	}
 
+	/**
+	 * W6.3 (2026-06-10): session-cap minutes for the stale reaper + the
+	 * list-page countdown. Overridable via AGENT_SESSION_CAP_MINUTES env
+	 * (wing.plist). 45 = the ~30-min agent budget + grace; a session
+	 * legitimately running longer than this has lost its runner anyway
+	 * (Pulse max_runtime_s kills the process far earlier).
+	 */
+	private const SESSION_CAP_MINUTES_DEFAULT = 45;
+
+	private function sessionCapMinutes(): int
+	{
+		$env = (int) (getenv('AGENT_SESSION_CAP_MINUTES') ?: 0);
+		return $env > 0 ? $env : self::SESSION_CAP_MINUTES_DEFAULT;
+	}
+
 	public function renderDefault(): void
 	{
+		// Lazy stale-session reaper — every catalog view sweeps orphaned
+		// `running` rows past the cap, so dead runs self-clean without a
+		// dedicated cron (the page where orphans annoy is the page that
+		// clears them).
+		$cap = $this->sessionCapMinutes();
+		$reaped = $this->sessions->terminateStale($cap);
+		if ($reaped > 0) {
+			$this->flashMessage(
+				"{$reaped} stale running session(s) auto-terminated (past the {$cap}-minute cap).",
+				'info',
+			);
+		}
+
+		$recent = $this->sessions->listRecent(20);
+		// Enrich running rows with elapsed/remaining minutes + give the
+		// token mini-bar a relative denominator (largest output in view —
+		// honest relative scale; sessions carry no absolute token budget).
+		$maxOut = 1;
+		foreach ($recent as $s) {
+			$maxOut = max($maxOut, (int) ($s['tokens_output'] ?? 0));
+		}
+		foreach ($recent as &$s) {
+			$s['tokens_pct'] = (int) round(((int) ($s['tokens_output'] ?? 0)) / $maxOut * 100);
+			if (($s['status'] ?? '') === 'running') {
+				$ts = strtotime((string) $s['started_at']);
+				$elapsed = $ts !== false ? (int) floor((time() - $ts) / 60) : 0;
+				$s['elapsed_min'] = $elapsed;
+				$s['remaining_min'] = max(0, $cap - $elapsed);
+			}
+		}
+		unset($s);
+
 		$this->template->agents = $this->buildCatalog();
-		$this->template->recent = $this->sessions->listRecent(20);
+		$this->template->recent = $recent;
+		$this->template->sessionCapMinutes = $cap;
+	}
+
+	/**
+	 * POST /agents/kill?uuid=… — operator manual kill (W6.3). Marks the
+	 * session row terminated/interrupted; the OS process is governed by
+	 * Pulse max_runtime separately (stated in the UI confirm). CSRF +
+	 * POST-only via requirePostMethod; presenter-wide super-admin gate
+	 * applies (startup above).
+	 */
+	public function actionKill(string $uuid): void
+	{
+		$this->requirePostMethod();
+		$by = (string) ($this->getUser()->getId() ?: 'operator');
+		if ($this->sessions->markInterrupted($uuid, $by)) {
+			$this->flashMessage("Session {$uuid} marked interrupted.", 'success');
+		} else {
+			$this->flashMessage("Session {$uuid} is not running — nothing to kill.", 'error');
+		}
+		$this->redirect('Agents:default');
 	}
 
 	public function renderDetail(string $name): void

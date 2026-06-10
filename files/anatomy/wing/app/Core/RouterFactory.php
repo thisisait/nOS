@@ -174,6 +174,9 @@ final class RouterFactory
 		// hits the verb form first (Nette is first-match-wins).
 		$router->addRoute('agents/<name>/sessions/<id>', 'Agents:session');
 		$router->addRoute('agents/<name>/start', 'Agents:start');
+		// W6.3 kill verb BEFORE the catch-all <name> (first-match-wins);
+		// uuid travels as a query param: POST /agents/kill?uuid=…
+		$router->addRoute('agents/kill', 'Agents:kill');
 		$router->addRoute('agents/<name>', 'Agents:detail');
 		$router->addRoute('agents', 'Agents:default');
 		$api->addRoute('api/v1/agents[/<name>]', 'Agents:default');
