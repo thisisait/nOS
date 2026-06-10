@@ -38,17 +38,24 @@ final class ScanStateRepository
 			$probes[] = $row->toArray();
 		}
 
-		// Latest cycle number from scan_cycles table
+		// Latest cycle number + timestamp from scan_cycles table. The
+		// timestamp feeds the dashboard's recency truth (W6.2, 2026-06-10):
+		// scan_config.schedule says "hourly" but scans are operator-fired
+		// on-demand — showing the WHEN beats repeating the false cadence.
 		$latestCycle = $this->db->table('scan_cycles')
-			->select('MAX(cycle_number) AS max_cycle')
+			->order('cycle_number DESC')
+			->limit(1)
 			->fetch();
-		$latestCycleNum = ($latestCycle && $latestCycle['max_cycle'] !== null)
-			? (int) $latestCycle['max_cycle'] : 0;
+		$latestCycleNum = $latestCycle ? (int) $latestCycle->cycle_number : 0;
+		$latestCycleAt = $latestCycle
+			? (string) ($latestCycle->completed_at ?? $latestCycle->started_at)
+			: null;
 
 		return [
 			'config' => $configArr,
 			'next_batch' => $nextBatch,
 			'latest_cycle' => $latestCycleNum,
+			'latest_cycle_at' => $latestCycleAt,
 			'attack_probes' => $probes,
 		];
 	}

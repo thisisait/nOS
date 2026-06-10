@@ -12,10 +12,20 @@
 
 {* ── Stat row (4 KPI cards) ────────────────────────────────────────── *}
 <div class="stats">
+	{* W6.2 (2026-06-10): the sub used to echo scan_config.schedule
+	   ("hourly") — a false cadence; scans are operator-fired on-demand
+	   (tools/run-scout.sh). Show WHEN the last cycle actually ran and
+	   go warning-red past the 14-day drift threshold instead. *}
 	<div class="stat">
 		<div class="label">Scan cycle</div>
 		<div class="value">{$state['latest_cycle'] ?? 0}</div>
-		<div class="sub">{$state['config']['schedule'] ?? '2× daily'}</div>
+		{if $scanAgeDays === null}
+			<div class="sub" style="color: var(--color-danger)">never ran — fire tools/run-scout.sh</div>
+		{elseif $scanStale}
+			<div class="sub" style="color: var(--color-danger)">last scan {$scanAgeDays}d ago — STALE (&gt;14d)</div>
+		{else}
+			<div class="sub">last scan {$scanAgeDays}d ago (on-demand)</div>
+		{/if}
 	</div>
 	<div class="stat">
 		<div class="label">Components</div>
@@ -63,7 +73,7 @@
 {* ── Operational two-column: next-batch + pentest targets ──────────── *}
 <div class="two-col mt-md">
 	<div class="chart-container">
-		<h3>Next scan batch</h3>
+		<h3>Next scan batch <span class="text-muted text-small">(queued for the next operator-fired scan)</span></h3>
 		<div class="next-batch">
 			{if isset($state['next_batch']) && $state['next_batch']}
 				{foreach $state['next_batch'] as $comp}
@@ -105,7 +115,9 @@
 	{foreach $advisories as $adv}
 		<div class="card">
 			<div class="card-header" onclick="this.nextElementSibling.classList.toggle('open')">
-				<span class="recency recency-fresh"></span>
+				{* recency computed per-advisory from its date (W6.2) — was a
+				   hardcoded recency-fresh, so April advisories glowed green. *}
+				<span class="recency {$adv['recency'] ?? 'recency-old'}"></span>
 				<strong>{$adv['filename']}</strong>
 				{if $adv['has_critical']}<span class="badge badge-critical">CRITICAL</span>{/if}
 				{if $adv['has_pentest']}<span class="badge badge-pentest">PENTEST</span>{/if}
