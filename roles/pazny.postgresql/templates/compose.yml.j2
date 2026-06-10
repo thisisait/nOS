@@ -18,6 +18,12 @@ services:
       - "127.0.0.1:{{ postgresql_port | default(5432) }}:5432"
     volumes:
       - {{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}:/var/lib/postgresql/data
+{% if postgresql_ssl_enabled | default(false) %}
+      # REM-009: self-signed server cert (role-generated). 0600 key works on
+      # Docker Desktop's FUSE ownership; see role defaults for the Linux note.
+      - {{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}/server.crt:/certs/server.crt:ro
+      - {{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}/server.key:/certs/server.key:ro
+{% endif %}
     command:
       - "-c"
       - "max_connections={{ postgresql_max_connections | default(600) }}"
@@ -29,6 +35,16 @@ services:
       - "-c"
       # Safety net for rogue clients that open a transaction and wander off.
       - "idle_in_transaction_session_timeout={{ postgresql_idle_in_transaction_timeout_ms | default(60000) }}"
+{% if postgresql_ssl_enabled | default(false) %}
+      # REM-009 in-transit TLS — libpq clients (sslmode=prefer default)
+      # upgrade automatically once the server offers SSL.
+      - "-c"
+      - "ssl=on"
+      - "-c"
+      - "ssl_cert_file=/certs/server.crt"
+      - "-c"
+      - "ssl_key_file=/certs/server.key"
+{% endif %}
     environment:
       POSTGRES_PASSWORD: "{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}"
       POSTGRES_USER: "{{ postgresql_root_user | default('postgres') }}"

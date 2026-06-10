@@ -18,6 +18,30 @@
     state: directory
     mode: '0755'
 
+- name: "[pazny.postgresql] Ensure certs directory exists (REM-009 SSL)"
+  ansible.builtin.file:
+    path: "{{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}"
+    state: directory
+    mode: '0700'
+  when: postgresql_ssl_enabled | default(false) | bool
+
+# Self-signed, 10y, SAN postgresql + loopback. Idempotent: only generated
+# when the key is absent — rotation = delete the pair + re-run. sslmode=
+# require does not verify the CA, so self-signed serves the in-transit
+# goal without entangling mkcert/LE (REM-009; live-verified TLSv1.3).
+- name: "[pazny.postgresql] Generate self-signed server cert (REM-009 SSL)"
+  ansible.builtin.shell: >
+    openssl req -new -x509 -days 3650 -nodes
+    -out server.crt -keyout server.key
+    -subj "/CN=postgresql"
+    -addext "subjectAltName=DNS:postgresql,IP:127.0.0.1"
+    && chmod 600 server.key && chmod 644 server.crt
+  args:
+    chdir: "{{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}"
+    creates: "{{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}/server.key"
+  when: postgresql_ssl_enabled | default(false) | bool
+  notify: Restart postgresql
+
 - name: "[pazny.postgresql] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

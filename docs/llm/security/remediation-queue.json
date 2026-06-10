@@ -129,7 +129,7 @@
       "current_version": "v15",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "Create dedicated MariaDB user for ERPNext runtime containers with limited privileges (SELECT, INSERT, UPDATE, DELETE on erpnext DB only). Keep root access only in configurator init container.",
+      "remediation_detail": "Create dedicated MariaDB user for ERPNext runtime containers with limited privileges (SELECT, INSERT, UPDATE, DELETE on erpnext DB only). Keep root access only in configurator init container. | DEFERRED (S3 2026-06-10): install_erpnext=false, role marked EXPERIMENTAL/NON-WORKING + hard-blocked at role-load — zero live exposure. Dedicated-DB-user lands as an acceptance criterion of the ERPNext rework.",
       "status": "pending",
       "auto_fixable": true,
       "source": "static_analysis",
@@ -145,8 +145,8 @@
       "current_version": "16-alpine",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "Enable SSL on PostgreSQL. Mount mkcert CA cert. Set PGSSLMODE=require on all PostgreSQL clients (Authentik, Outline, Metabase, Superset, Infisical, Paperclip).",
-      "status": "pending",
+      "remediation_detail": "Enable SSL on PostgreSQL. Mount mkcert CA cert. Set PGSSLMODE=require on all PostgreSQL clients (Authentik, Outline, Metabase, Superset, Infisical, Paperclip). | RESOLVED (S3 2026-06-10): server-side ssl=on with role-generated self-signed cert (postgresql_ssl_enabled, Darwin default-on; Linux needs the root-chown key leg). Live-verified TLSv1.3: miniflux/metabase/superset/authentik(partial pool) encrypted; sslmode=prefer set for authentik + miniflux + postgres_exporter. Follow-ups: hedgedoc/paperclip client-specific SSL, per-client require pinning.",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "static_analysis",
       "confidence": "high",
@@ -1523,13 +1523,13 @@
       "LOW": 1
     },
     "by_status": {
-      "resolved": 71,
-      "pending": 14,
+      "resolved": 72,
+      "pending": 13,
       "vendor-blocked": 2
     },
     "auto_fixable": 73,
     "manual_review_required": 14,
-    "note": "REM-077 (traefik encodedCharacters) + REM-006 (mem/cpu sweep) verified-implemented and closed by the 2026-06-10 serial review; REM-002 annotated partial. Summary recomputed from items.",
+    "note": "REM-009 PG SSL closed by the S3 leg (2026-06-10); REM-008 deferred to the ERPNext rework (service disabled). Summary recomputed from items.",
     "last_rescan": "2026-05-31T08:13:57Z"
   }
 }
