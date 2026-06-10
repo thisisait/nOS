@@ -1,0 +1,31 @@
+# Gitleaks allowlist — verified FALSE POSITIVES only (2026-06-10 security review).
+# Each entry was manually inspected; none is a real credential. Real findings
+# must NEVER be allowlisted — rotate + purge instead (docs/secret-lifecycle-doctrine.md).
+#
+# Run:  gitleaks detect --source . --no-banner
+# The pulse gitleaks job picks this file up automatically (repo-root config).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified false positives — docblocks, test fixtures, docs placeholders"
+
+# 1) ForwardAuthUserStorage.php — PHP docblock prose ("the CSRF token
+#    BasePresenter stores...") trips the generic-api-key entropy heuristic.
+# 2) test_pulse_redact.py — deliberate FAKE token exercising the redactor
+#    (asserts the value gets <REDACTED>); a real secret never appears.
+# 3) grafana-tempo README — `curl -u admin:$(rg ...)` shell substitution,
+#    no literal credential on the line.
+# 4) README.md (historical) — Czech docs placeholder "silne-heslo" /
+#    "nahodny-64-char-hex" example values.
+paths = [
+    '''files/anatomy/wing/app/Security/ForwardAuthUserStorage\.php''',
+    '''tests/anatomy/test_pulse_redact\.py''',
+    '''files/anatomy/plugins/grafana-tempo/README\.md''',
+]
+
+regexes = [
+    '''silne-heslo''',
+    '''nahodny-64-char-hex''',
+]
