@@ -36,7 +36,7 @@ yaml_lookup() {
   for f in "$@"; do
     [ -f "$f" ] || continue
     v=$(grep -h -E "^${key}:" "$f" 2>/dev/null \
-        | sed -E 's/^[^:]+:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
+        | sed -n -E 's/^[^:]+:[[:space:]]*"?([^"#]*[^"#[:space:]])"?[[:space:]]*(#.*)?$/\1/p' \
         | grep -vE '\{\{' | head -1 || true)
     [ -n "${v:-}" ] && { printf '%s' "$v"; return 0; }
   done

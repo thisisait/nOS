@@ -157,18 +157,22 @@ recipes:
         label: "pre-{{ upgrade_id }}"
 
   - id: "infisical-current"
-    from_regex: "^v?0\\.159\\."   # ^v? — installed tag is v0.159.16; anchored-at-digit missed it
-    to: "0.159.16"   # bare (no 'v') — siblings + advisor compare bare versions
+    from_regex: "^v?0\\.160\\."   # ^v? — installed tag is v0.160.4; re-pinned from 0.159 (agent-drafted 2026-06-10)
+    to: "0.160.4"   # bare (no 'v') — siblings + advisor compare bare versions
     severity: minor
     changelog_url: "https://github.com/Infisical/infisical/releases"
     notes: |
-      Forward-coverage track pinned to the verified-installed version
-      (running container = v0.159.16). Its job is to give the upgrade-advisor
-      a matching from_regex for the 0.159.x line so it stops reporting a
-      stale recipe; because to == installed it is an at-target track and
+      Forward-coverage track re-pinned to the verified-installed version
+      (running container = v0.160.4; was pinned to the 0.159.x line, so the
+      advisor saw "no matching recipe" — upgrade-architect gap, 2026-06-10).
+      Its job is to give the upgrade-advisor a matching from_regex for the
+      0.160.x line; because to == installed it is an at-target track and
       queues nothing today. When upstream ships a newer release, the operator
       bumps `to:` (and `infisical_version` in default.config.yml) and the same
       mirrored apply/rollback shape carries the upgrade through.
+      # TODO verify upstream: the matrix's stable/latest metadata (0.80.0) is a
+      # stale naive-compare — installed already leads it; re-check the real
+      # upstream latest before bumping past 0.160.4.
 
     coexistence_supported: false
 

@@ -84,8 +84,10 @@ backup or blank baseline first.
   `curl http://127.0.0.1:18789/status` (OpenClaw). Full agent runs need
   `anthropic_api_key` (or a per-agent ollama override) in credentials.yml.
 - **Git forge** (local-first) — validate-only `bash tools/recipe-pr.sh grafana`;
-  open a local Gitea PR `bash tools/recipe-pr.sh grafana --open-pr`; verify
-  Woodpecker CI fires; promote `bash tools/promote-public.sh <branch> --open-pr`.
+  open a local forge review `bash tools/recipe-pr.sh grafana --open-pr` (GitLab
+  MR by default — `nos_agent_forge`; NOTE: Woodpecker CI watches Gitea, so it
+  does NOT fire for GitLab-forge MRs); trunk sync `tools/sync-trunk-to-gitlab.sh`;
+  promote `bash tools/promote-public.sh <branch> --open-pr`.
 - **MFA-on** (operator-gated, NOT cadence) — enrol TOTP on akadmin FIRST, flip
   `enforce_mfa: true`, run, then `grep authentik_break_glass_codes ~/.nos/secrets.yml`;
   verify Tier-2/3/4 do NOT get the Tier-1 MFA prompt.

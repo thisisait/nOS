@@ -1385,6 +1385,15 @@ gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
 gitlab_sidekiq_concurrency: 10  # Background job threads
 
+# ── T32.2: which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ──────
+# "gitlab" — agents open GitLab MERGE REQUESTS (operator review surface;
+#            native omniauth OIDC works → operator can actually sign in).
+# "gitea"  — legacy PR target (the Gitea oauth2 source row kept vanishing →
+#            SSO 500 → operator locked out of the UI; Gitea keeps Woodpecker).
+# Enable the GitLab side with `gitlab_agent_forge: true` in config.yml — it
+# provisions the nOS project + PAT (pazny.gitlab post-forge.yml).
+nos_agent_forge: "gitlab"
+
 # ==============================================================================
 # IIAB – OPEN WEBUI (chat UI for Ollama)
 # Requires: install_openclaw: true (Ollama must run on port 11434)

@@ -3,11 +3,12 @@
 #
 # The ONLY step in the local-first git flow that touches the public internet, and
 # it is OPERATOR-RUN — it holds the GitHub credential (via gh). Agents NEVER call
-# this; they only ever open local Gitea PRs (tools/recipe-pr.sh). See memory
+# this; they only ever open local forge MRs/PRs (tools/recipe-pr.sh — GitLab MR
+# by default via nos_agent_forge, Gitea PR legacy). See memory
 # `local-first-git-topology`.
 #
-# Flow (Model A): an agent drafts a recipe → opens a Gitea PR → operator reviews +
-# merges in Gitea. To share it upstream, the operator runs this on the host that
+# Flow (Model A): an agent drafts a recipe → opens a forge MR/PR → operator
+# reviews + merges on the forge. To share it upstream, the operator runs this on the host that
 # has the GitHub remote + gh auth: it pushes the branch to GitHub and opens a PR.
 # It NEVER merges (the GitHub PR is the public-review gate).
 #

@@ -31,23 +31,22 @@
 # Rails runner is the safest path — it writes directly to the User model without rake prompts.
 # Idempotent: sets the same password on every run (bcrypt re-hashes automatically),
 # so `password changed` always reports -> we fix changed_when on a stdout marker.
+# Standalone Ruby (files/anatomy/scripts/gitlab-root-password.rb) via stdin +
+# env pass-through — no Jinja-in-heredoc, no shell-quoting fragility, password
+# never in argv/ps. String CONCAT in the script — the previous escaped-quote-
+# inside-Ruby-interpolation was a SyntaxError that silently killed this whole
+# script on EVERY run since it shipped ("GitLab root pw: FAILED —" with empty
+# stdout; the parse error went to stderr, never shown). Review CRIT 2026-06-10.
+# KNOWN: GitLab's weak-password check rejects the prefix-derived default (it
+# contains "gitlab" → "commonly used combinations") — now VISIBLE in the status
+# below; set a custom gitlab_admin_password in credentials.yml to converge it.
 - name: "[pazny.gitlab Post] Reconverge root password via gitlab-rails runner"
-  ansible.builtin.shell: |
-    {{ docker_bin }} compose -p devops exec -T gitlab gitlab-rails runner '
-      user = User.find_by(username: "root")
-      if user.nil?
-        puts "ERROR: root user not found"
-        exit 1
-      end
-      user.password = {{ (gitlab_admin_password | default(global_password_prefix + "_pw_gitlab")) | to_json }}
-      user.password_confirmation = {{ (gitlab_admin_password | default(global_password_prefix + "_pw_gitlab")) | to_json }}
-      user.password_automatically_set = false
-      if user.save
-        puts "UPDATED"
-      else
-        puts "ERROR: #{user.errors.full_messages.join(\", \")}"
-      end
-    '
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -e NOS_GITLAB_ROOT_PW
+    -T gitlab gitlab-rails runner -
+    < "{{ playbook_dir }}/files/anatomy/scripts/gitlab-root-password.rb"
+  environment:
+    NOS_GITLAB_ROOT_PW: "{{ gitlab_admin_password | default(global_password_prefix + '_pw_gitlab') }}"
   register: _gitlab_pw_reset
   when: _gitlab_ready.status | default(0) == 200
   changed_when: "'UPDATED' in (_gitlab_pw_reset.stdout | default(''))"
@@ -60,5 +59,27 @@
       GitLab root pw:
       {{ 'updated' if ('UPDATED' in (_gitlab_pw_reset.stdout | default('')))
          else ('skipped (not ready)' if (_gitlab_ready.status | default(0) != 200)
-               else 'FAILED — ' ~ (_gitlab_pw_reset.stdout | default('unknown'))) }}
+               else 'FAILED — stdout: ' ~ (_gitlab_pw_reset.stdout | default(''))
+                    ~ ' stderr: ' ~ (_gitlab_pw_reset.stderr | default('') | truncate(300))) }}
   when: _gitlab_container.stdout | default('') | length > 0
+
+# ── T32.2 (2026-06-10): GitLab agent forge — local MR review surface. Opt-in;
+# default OFF. Provisions the nOS project + a PAT for tools/recipe-pr.sh.
+- name: "[pazny.gitlab Post] Wire local-first agent forge (MR surface)"
+  ansible.builtin.include_tasks: post-forge.yml
+  when:
+    - gitlab_agent_forge | default(false) | bool
+    - _gitlab_ready.status | default(0) == 200
+
+# Loud marker: forge requested but GitLab wasn't ready in the 600s wait → the
+# include above silently skipped. Without this the play exits 0 with no PAT and
+# no project, and the operator only finds out when recipe-pr.sh exits 2.
+- name: "[pazny.gitlab Post] WARN — forge requested but GitLab not ready (SKIPPED)"
+  ansible.builtin.debug:
+    msg: >-
+      gitlab_agent_forge=true but /-/readiness never returned 200 — the forge
+      provisioning (PAT + nOS project) was SKIPPED. Re-run once GitLab is up:
+      tools/nos-stacks.sh gitlab
+  when:
+    - gitlab_agent_forge | default(false) | bool
+    - _gitlab_ready.status | default(0) != 200

@@ -72,4 +72,7 @@
     line: 'authentik_recovery_break_glass_secret: "{{ authentik_recovery_break_glass_secret }}"'
     create: true
     mode: '0600'
+  # no_log — a -v/--diff run printed the break-glass value into the
+  # world-readable ansible.log (review 2026-06-10).
+  no_log: true
   tags: ['always', 'authentik', 'secrets', 'break-glass']
