@@ -35,3 +35,10 @@ gitlab_nos_repo_name: "nOS"
 gitlab_nos_repo_visibility: "private"
 gitlab_forge_token_name: "nos-agent-forge"
 gitlab_forge_token_scopes: ['api', 'write_repository']
+# SSO users granted MAINTAINER on the nOS project (the project is created
+# PRIVATE under root, so without membership the operator's omniauth user sees
+# an empty "Your projects" — bit live 2026-06-10). Default = akadmin (the
+# Authentik admin's omniauth-created GitLab user). Override in config.yml if
+# your SSO username differs; users who never logged into GitLab yet are
+# warn-skipped (log in once via Authentik, then re-run the gitlab tag).
+gitlab_forge_members: ['akadmin']
