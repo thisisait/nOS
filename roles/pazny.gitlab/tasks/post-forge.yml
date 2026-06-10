@@ -126,6 +126,53 @@
   changed_when: true
   no_log: true
 
+# ── 4. Share the project with the operator's SSO user(s) ─────────────────────
+# The project is PRIVATE under root — without membership the operator's
+# omniauth user sees an empty "Your projects" (live, 2026-06-10). MAINTAINER
+# (40) lets them review + merge MRs. Idempotent: 409 = already a member.
+- name: "[pazny.gitlab Forge] Resolve member user ids"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/api/v4/users?username={{ item }}"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_api_token }}"
+    status_code: [200]
+  loop: "{{ gitlab_forge_members | default([]) }}"
+  register: _forge_member_lookup
+  changed_when: false
+  no_log: true
+
+- name: "[pazny.gitlab Forge] Grant MAINTAINER on the nOS project"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/api/v4/projects/{{ gitlab_nos_repo_owner }}%2F{{ gitlab_nos_repo_name }}/members"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      user_id: "{{ item.json[0].id }}"
+      access_level: 40
+    status_code: [201, 409]
+  loop: "{{ _forge_member_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: (item.json | default([])) | length > 0
+  register: _forge_member_add
+  changed_when: _forge_member_add.status | default(0) == 201
+  no_log: true
+
+- name: "[pazny.gitlab Forge] WARN — member(s) without a GitLab user yet (skipped)"
+  ansible.builtin.debug:
+    msg: >-
+      gitlab_forge_members entry '{{ item.item }}' has no GitLab user yet —
+      omniauth creates it on FIRST login. Sign in via Authentik once, then
+      re-run: tools/nos-stacks.sh gitlab
+  loop: "{{ _forge_member_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: (item.json | default([])) | length == 0
+
 - name: "[pazny.gitlab Forge] Status"
   ansible.builtin.debug:
     msg: >-
