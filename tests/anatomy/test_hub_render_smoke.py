@@ -82,7 +82,7 @@ def test_hub_page_renders_without_500():
     # The lucide glyph wiring (0177022) must reach the DOM.
     assert "data-icon=" in html, "icon glyph data-icon missing"
     # And the icon assets are referenced so the visible payoff actually loads.
-    assert "lucide.min.js" in html, "lucide self-host script tag missing"
+    assert "lucide-slim.js" in html, "lucide self-host script tag missing (W6.5 slim)"
 
 
 def test_hub_page_renders_for_lower_tier_viewer():

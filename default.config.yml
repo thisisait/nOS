@@ -1243,7 +1243,7 @@ grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.2"               # CVE-2026-27876 (CVSS 9.1 file write → RCE)
+grafana_version: "12.4.4"               # CVE-2026-27876 pin + S2 freshness 2026-06-10 (patch line)
 prometheus_version: "v3.11.3"   # synced to role default (cleared version-pin shadow)
 loki_version: "3.7.2"           # synced to role default (cleared version-pin shadow)
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
@@ -1345,7 +1345,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_port: 5678
-n8n_version: "2.20.7"      # CVE-2026-44789/44790/44791 RCE fix (was 2.14.1); minimal fixed 2.x, same-major migrate-on-start
+n8n_version: "2.26.2"      # CVE-2026-4478x RCE pins; S2 freshness 2026-06-10 — same-major migrate-on-start
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -1381,7 +1381,7 @@ gitea_allow_only_external_registration: true
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
-gitlab_version: "18.10.3-ce.0"  # CVE-2026-5173 (websocket bypass CVSS 8.5), CVE-2026-1092 (DoS), CVE-2025-12664 (GraphQL DoS)
+gitlab_version: "18.10.8-ce.0"  # CVE pins + S2 freshness 2026-06-10 (18.10 patch line)
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repos, uploads, artifacts (large!)
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + keys (small but important)
 gitlab_timezone: "Europe/Prague"
@@ -1657,7 +1657,7 @@ stack_wait_tick_interval: 15
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.6.12"        # CVE-2026-33186 (gRPC auth bypass) + CVE-2026-33433 (BasicAuth spoofing). Was v3.6.11
+traefik_image_version: "v3.6.21"        # CVE-2026-33186/33433 pins + S2 freshness 2026-06-10 (3.6 patch line)
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
@@ -2404,7 +2404,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.35.4"            # CVE-2026-27802/27803 (priv escalation), CVE-2025-24364 (RCE)
+vaultwarden_version: "1.35.8"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
