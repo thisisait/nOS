@@ -232,12 +232,23 @@ class HTTPTransport(object):
         terminal failure after all retries are exhausted."""
         if not events:
             return
+        self._post_canonical(self.url, {"events": events})
+
+    def send_object(self, url, obj):
+        """POST a single canonical-JSON object to ``url`` with the same
+        HMAC scheme as :meth:`send_batch`. W6.1 (2026-06-10): used for the
+        playbook-failure notification to Bone ``/api/v1/notifications``
+        (which accepts single-object payloads). Raises TransportError on
+        terminal failure — callers decide whether that's fatal."""
+        self._post_canonical(url, obj)
+
+    def _post_canonical(self, url, payload):
         # Body MUST be canonical (sort_keys=True, ensure_ascii=True) so Bone's
         # reconstruction in events.py matches byte-for-byte. Bone parses the
         # JSON, then re-serialises with the same flags, then verifies HMAC
         # over (ts + "." + reconstructed_body). Any drift in serialisation
         # breaks the signature.
-        body = json.dumps({"events": events}, separators=(",", ":"),
+        body = json.dumps(payload, separators=(",", ":"),
                           sort_keys=True).encode("utf-8")
         ts = str(int(time.time()))
         headers = {
@@ -255,7 +266,7 @@ class HTTPTransport(object):
         last_err = None
         for attempt in range(1, self.max_retries + 1):
             try:
-                resp = requests.post(self.url, data=body, headers=headers,
+                resp = requests.post(url, data=body, headers=headers,
                                      timeout=self.timeout)
                 status = getattr(resp, "status_code", None)
                 if status is not None and 200 <= status < 300:
@@ -950,6 +961,47 @@ class CallbackModule(CallbackBase):
                    duration_ms=duration_ms,
                    recap=recap)
         self._flush()
+        self._emit_failure_notification(recap, duration_ms)
+
+    def _emit_failure_notification(self, recap, duration_ms):
+        """W6.1 (2026-06-10): a failed playbook run lands in the Wing inbox.
+
+        The events pipeline records every task, but nothing watched the
+        RECAP — a `failed=3` run scrolled past in ansible.log and the
+        operator-attention surface (Inbox) stayed empty. POST one HIGH
+        notification to Bone /api/v1/notifications (same HMAC scheme as
+        events) when failed/unreachable > 0. Best-effort: a notification
+        transport error must never fail the stats callback (no SQLite
+        fallback either — a stale failure alert replayed hours later is
+        worse than none).
+        """
+        failed = int(recap.get("failed", 0))
+        unreachable = int(recap.get("unreachable", 0))
+        if failed == 0 and unreachable == 0:
+            return
+        if self._http is None:
+            return
+        url = os.environ.get("WING_NOTIFICATIONS_URL") or re.sub(
+            r"/events$", "/notifications", self._url)
+        if not url.endswith("/notifications"):
+            return  # events URL has a non-standard shape; skip silently
+        mins = ("%.1f" % (duration_ms / 60000.0)) if duration_ms else "?"
+        payload = {
+            "severity": "high",
+            "title": "Playbook run failed: {} failed, {} unreachable".format(
+                failed, unreachable),
+            "body": "playbook: {}\nrun_id: {}\nduration: {} min\nrecap: {}".format(
+                self._playbook_name, self._run_id, mins,
+                json.dumps(recap, sort_keys=True)),
+            "actor_id": "operator",
+            "actor_action_id": self._run_id,
+            "metadata": {"recap": recap, "playbook": self._playbook_name},
+        }
+        try:
+            self._http.send_object(url, payload)
+        except Exception as exc:  # noqa: BLE001 — best-effort by design
+            sys.stderr.write(
+                "[wing_telemetry] failure notification POST failed: %s\n" % exc)
 
 
 # Allow the file to be imported under pytest without Ansible present, while
