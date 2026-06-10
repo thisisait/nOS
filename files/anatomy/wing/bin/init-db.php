@@ -48,6 +48,11 @@ $statements = [
 		domain          TEXT,
 		port            INTEGER,
 		url             TEXT,
+		-- W6.4 (2026-06-10): probe target when it differs from the card link.
+		-- Backend services (Prometheus, Loki, MariaDB, …) have no public url
+		-- but DO have a loopback health endpoint; tcp://host:port = TCP-only
+		-- liveness for DB-class services the HTTP probe can't reach.
+		health_url      TEXT,
 		network_exposed INTEGER NOT NULL DEFAULT 0,
 		has_web_ui      INTEGER NOT NULL DEFAULT 0,
 
@@ -350,6 +355,12 @@ $addMissingColumns = static function (SQLite3 $db, string $table, array $columns
 		}
 	}
 };
+
+// systems.health_url — W6.4 probe-target split (loopback health endpoints
+// for backend services + tcp:// liveness). Existing DBs pick it up here.
+$addMissingColumns($db, 'systems', [
+	'health_url' => 'TEXT',
+]);
 
 // events.patch_id — correlate events with apply-patches runs.
 $addMissingColumns($db, 'events', [
