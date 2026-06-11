@@ -134,3 +134,20 @@ def test_plan_forward_auth_has_no_oauth2():
         assert not ("authentik_provider_oauth2" in types
                     and "authentik_provider_proxy" in types), \
             f"{addr} has BOTH oauth2 and proxy providers (mode incoherence)"
+
+
+def test_registry_not_play_scoped_loaded():
+    """The service registry carries raw Jinja ({{ x_domain }}); loading it
+    play-wide (include_vars / vars_files) re-triggers the {{ vars }} eager-
+    resolve trap in nos_state (CLAUDE.md). It must only be loaded TASK-scoped
+    (a `vars:` lookup on the render task)."""
+    task = (REPO / "tasks/tofu-authentik.yml").read_text()
+    assert "tofu-authentik-services.yml" in task, "registry reference vanished"
+    # no play-scoped loaders of the registry
+    for n, line in enumerate(task.splitlines(), 1):
+        if "tofu-authentik-services.yml" in line:
+            ctx = "\n".join(task.splitlines()[max(0, n - 4):n])
+            assert "include_vars" not in ctx and "vars_files" not in ctx, \
+                f"registry loaded play-scoped near line {n} — use task-scoped vars"
+    # it must be a lookup (task-scoped)
+    assert "lookup('file'" in task and "from_yaml" in task
