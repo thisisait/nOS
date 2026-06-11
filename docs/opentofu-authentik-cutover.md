@@ -24,7 +24,48 @@ un-authored ones plan as destroys → catastrophic SSO outage. The guard makes
 the engine flip a no-op-or-nothing operation. You cannot accidentally nuke
 providers.
 
-## Cutover procedure
+## Blank-run cutover (the clean-slate path — recommended for the first test)
+
+A `blank=true` run wipes the Authentik DB, so the tenant comes up **empty** —
+no MTI-drifted providers, no orphans, nothing to import. OpenTofu then just
+**creates** the full SSO graph (`98 add / 0 change / 0 destroy`, verified). This
+is the safest cutover: there is nothing for the destroy guard to trip on.
+
+The data-driven HCL is **ready**: `state/tofu-authentik-services.yml` (39
+services, regenerated from the aggregated `authentik:` blocks by
+`tools/tofu-authentik-gen-registry.py`) → tfvars → `for_each` module. A blank
+with `authentik_engine: tofu` drops `10-oidc-apps` from the imperative loop
+(the other six blueprints — groups/MFA/RBAC/agents/enrollment/brand — still
+apply) and OpenTofu provisions providers+apps+outpost attachments.
+
+**Two test paths — pick by appetite:**
+
+### Path A (recommended): blueprint blank → prove tofu parity → flip
+1. `ansible-playbook main.yml -e blank=true` (engine stays `blueprint`,
+   default). Clean fresh tenant; validates the whole session's work end-to-end.
+2. On the clean tenant, prove tofu matches it:
+   `ansible-playbook main.yml --tags tofu-authentik -e manage_authentik_with_tofu=true`
+   (plan-only drift detector; import the freshly-created objects; iterate to
+   no-op). This is the parity proof the ADR sequenced.
+3. Flip `authentik_engine: tofu` and re-converge (no blank needed) once parity
+   holds. Reversible.
+
+### Path B (bold): tofu-engine blank in one shot
+Set BOTH `manage_authentik_with_tofu: true` and `authentik_engine: tofu`, then
+`ansible-playbook main.yml -e blank=true`. The empty tenant means tofu's plan is
+all-create / zero-destroy → the destroy guard passes → OpenTofu provisions the
+SSO graph directly; the imperative `10-oidc-apps` is skipped. **Higher stakes:**
+if a per-service attribute is wrong, SSO for that service is misconfigured until
+fixed — but the OTHER blueprints + a re-converge recover it, and flipping
+`authentik_engine` back to `blueprint` + re-converge fully restores the
+imperative path. Known gaps below still apply (outpost attachment, tier RBAC,
+agents, Tier-2).
+
+> **The blank itself is operator-run** (interactive sudo via `vars_prompt`,
+> maximally destructive — wipes all data + DBs). Trigger it yourself; this
+> runbook is the map.
+
+## Cutover procedure (existing-tenant, no blank)
 
 1. **Adopt the whole tenant** (one-time, SAFE — import + plan only, never applies):
    ```bash
