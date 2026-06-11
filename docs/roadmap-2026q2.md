@@ -1144,6 +1144,23 @@ A10 must land before Phase 5 — `actor_id` column is required for cryptographic
 attribution of conductor writes. Phase 5 pass = first non-operator end-to-end
 write to wing.db.
 
+**O26 — OpenTofu for the autowiring substrate, scoped to Authentik (2026-06-11):**
+After an Infisical SSO outage (Authentik MTI provider cascade — deleting the
+oauth2 sibling killed the working proxy), evaluated adopting OpenTofu/HCL
+broadly. Measured surface: the autowiring renders 7 artifact classes; 4 are
+nOS-internal (Pulse/notifications/hub/lifecycle, no provider), Docker would
+force abandoning compose-override, only Authentik (+ a Grafana subset) map
+cleanly. Decision: **NOT a broad rewrite** — keep `plugin.yml` as the single
+declarative SoT and the loader's 7-consumer fan-out. **DO** adopt OpenTofu as
+the reconcile ENGINE for the Authentik consumer only, GENERATING HCL from the
+harvested `authentik:` blocks (the Authentik provider models `provider_oauth2`
+/ `provider_proxy` as distinct resources + `outpost_provider_attachment` →
+today's cascade is structurally impossible; `tofu plan` is a free drift
+detector). Phased + reversible: Phase 0 = generate HCL + `plan`-only drift
+detector (zero risk, would have caught this incident); Phase 1 = flip apply,
+retire the MTI footgun handler. **OpenTofu, never Terraform** (BSL conflicts
+with all-FOSS). Full analysis: `docs/adr/0001-opentofu-for-autowiring.md`.
+
 **O25 — `{{ vars }}` retirement design (D1, 2026-06-11):**
 The 6 wholesale `{{ vars }}` loader sites hard-break on ansible-core 2.24.
 Empirically disproven shortcut: `hostvars[inventory_hostname]` carries only
