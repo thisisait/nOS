@@ -591,6 +591,11 @@ CREATE TABLE systems (
 		domain          TEXT,
 		port            INTEGER,
 		url             TEXT,
+		-- W6.4 (2026-06-10): probe target when it differs from the card link.
+		-- Backend services (Prometheus, Loki, MariaDB, …) have no public url
+		-- but DO have a loopback health endpoint; tcp://host:port = TCP-only
+		-- liveness for DB-class services the HTTP probe can't reach.
+		health_url      TEXT,
 		network_exposed INTEGER NOT NULL DEFAULT 0,
 		has_web_ui      INTEGER NOT NULL DEFAULT 0,
 
