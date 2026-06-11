@@ -1270,8 +1270,13 @@ tempo_retention: "168h"  # 7 days (traces tend to be larger)
 tempo_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/tempo"
 
 # ── Alloy – what to collect ───────────────────────────────────────────────────
-alloy_scrape_nginx: true           # nginx stub_status → Prometheus
-alloy_scrape_phpfpm: true          # PHP-FPM status → Prometheus
+# Both exporters instrument the HOST-NGINX leg (nginx stub_status + php-fpm
+# FCGI status). On a Traefik-primary host (install_nginx=false) php-fpm does
+# not run AND port 9000 belongs to Wing/FrankenPHP since A3.5 — the exporter
+# was firing FCGI bytes at Wing every Alloy scrape and hanging its own
+# /metrics (found by the W6.4 hub probe, 2026-06-11). Follow install_nginx.
+alloy_scrape_nginx: "{{ install_nginx | default(false) }}"
+alloy_scrape_phpfpm: "{{ install_nginx | default(false) }}"
 phpfpm_exporter_port: 9253         # Port of php-fpm_exporter
 alloy_scrape_mariadb: false        # MariaDB metrics (enable if install_mariadb: true)
 alloy_scrape_redis: true           # Redis metrics → Prometheus
