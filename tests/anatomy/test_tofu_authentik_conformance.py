@@ -75,7 +75,12 @@ def test_secrets_never_hardcoded_in_hcl():
         for line in body.splitlines():
             if "client_secret" in line and "=" in line:
                 rhs = line.split("=", 1)[1].strip()
-                assert rhs.startswith("var.") or rhs.startswith('"'), line
+                # allowed: var.* plumbing, a quoted ref, or a for_each map
+                # lookup (lookup(each.value,...) / each.value.client_secret).
+                ok = (rhs.startswith("var.") or rhs.startswith('"')
+                      or rhs.startswith("lookup(") or rhs.startswith("each.")
+                      or rhs.startswith("optional("))  # HCL type decl, not a value
+                assert ok, f"unexpected client_secret rhs in HCL: {line}"
                 assert "_pw_" not in rhs, f"literal secret in HCL: {line}"
 
 
@@ -101,17 +106,19 @@ def _plan_json():
 
 
 def test_plan_every_app_has_a_provider():
+    """Every module instance that creates an application must also create its
+    provider (proxy XOR oauth2). On a CREATE plan protocol_provider is
+    "known after apply" (computed), so we assert resource co-presence per
+    module rather than the computed value (the binding itself is pinned by the
+    offline test_module_app_always_bound_to_a_provider)."""
     plan = _plan_json()
-    apps, providers = [], []
-    for r in plan.get("planned_values", {}).get("root_module", {}).get("child_modules", []):
-        for res in r.get("resources", []):
-            if res["type"] == "authentik_application":
-                apps.append(res)
-            if res["type"] in ("authentik_provider_proxy", "authentik_provider_oauth2"):
-                providers.append(res)
-    for a in apps:
-        assert a["values"].get("protocol_provider") is not None, \
-            f"application {a['values'].get('slug')} has no bound provider"
+    for cm in plan.get("planned_values", {}).get("root_module", {}).get("child_modules", []):
+        types = [res["type"] for res in cm.get("resources", [])]
+        if "authentik_application" in types:
+            has_provider = ("authentik_provider_proxy" in types
+                            or "authentik_provider_oauth2" in types)
+            assert has_provider, \
+                f"{cm.get('address')} creates an app but no provider"
 
 
 def test_plan_forward_auth_has_no_oauth2():

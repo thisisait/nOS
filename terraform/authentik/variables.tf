@@ -8,17 +8,18 @@ variable "authentik_token" {
   description = "Authentik API token (authentik_bootstrap_token), bridged from the playbook."
 }
 
-# ── Per-service values (rendered into nos.auto.tfvars.json by the playbook) ──
-variable "infisical_url" {
-  type    = string
-  default = "https://vault.dev.local"
-}
-variable "grafana_url" {
-  type    = string
-  default = "https://grafana.dev.local"
-}
-variable "grafana_oidc_client_secret" {
-  type      = string
-  default   = ""
-  sensitive = true
+# The full service map — rendered into nos.auto.tfvars.json by the playbook
+# (tasks/tofu-authentik.yml) from state/tofu-authentik-services.yml. Keyed by slug.
+variable "authentik_services" {
+  description = "Per-service Authentik wiring, keyed by slug."
+  type = map(object({
+    mode          = string
+    name          = string
+    external_host = string
+    tier          = optional(number, 2)
+    client_id     = optional(string, "")
+    client_secret = optional(string, "")
+    redirect_uris = optional(list(string), [])
+  }))
+  default = {}
 }

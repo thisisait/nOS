@@ -1,7 +1,24 @@
-{
-  "authentik_url": "http://127.0.0.1:{{ authentik_port | default(9000) }}",
-  "authentik_token": "{{ authentik_bootstrap_token }}",
-  "infisical_url": "https://{{ infisical_domain | default('vault.dev.local') }}",
-  "grafana_url": "https://{{ grafana_domain | default('grafana.dev.local') }}",
-  "grafana_oidc_client_secret": "{{ authentik_oidc_grafana_client_secret | default(global_password_prefix + '_pw_oidc_grafana') }}"
-}
+{#- ADR-0001 Phase 1: build the authentik_services map from the committed
+    registry (state/tofu-authentik-services.yml, loaded as tofu_authentik_services).
+    Ansible resolves the nested Jinja in each registry value (domains/secrets)
+    at render time. STRUCTURE is in services.tf (for_each); this is just VALUES. -#}
+{%- set _svcmap = {} -%}
+{%- for s in tofu_authentik_services | default([]) -%}
+  {%- set _e = {
+        "mode": s.mode,
+        "name": s.name,
+        "external_host": s.external_host,
+        "tier": s.tier | default(2),
+        "client_id": s.client_id | default("nos-" ~ s.slug),
+        "client_secret": s.client_secret | default(""),
+        "redirect_uris": s.redirect_uris | default([]),
+      } -%}
+  {%- set _ = _svcmap.update({s.slug: _e}) -%}
+{%- endfor -%}
+{{
+  {
+    "authentik_url": "http://127.0.0.1:" ~ (authentik_port | default(9000)),
+    "authentik_token": authentik_bootstrap_token,
+    "authentik_services": _svcmap,
+  } | to_nice_json
+}}
