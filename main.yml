@@ -947,14 +947,10 @@
     # Plan-only — reports drift between hand-authored HCL and the live tenant;
     # ak apply_blueprint stays authoritative. Opt-in (kept out of normal runs):
     #   ansible-playbook main.yml --tags tofu-authentik -e manage_authentik_with_tofu=true
-    - name: "[tofu] Authentik OpenTofu engine (ADR-0001; plan-only unless engine=tofu)"
-      # Runs in a normal/blank converge when manage_authentik_with_tofu=true
-      # (so a blank with authentik_engine=tofu provisions SSO via OpenTofu).
-      # engine=blueprint (default) -> plan-only drift detector. The tag still
-      # allows explicit on-demand runs. NOT 'never' so the blank picks it up.
-      ansible.builtin.import_tasks: tasks/tofu-authentik.yml
-      when: manage_authentik_with_tofu | default(false) | bool
-      tags: ['tofu-authentik']
+    # NOTE: the OpenTofu Authentik engine task does NOT run here — it MUST run
+    # AFTER core-up (Authentik live). It is invoked post-core-up below (search
+    # "[tofu] Authentik OpenTofu engine"). Running it here would hit a dead API
+    # on a blank (core-up is ~550 lines further down).
 
     # ── GDPR storage-limitation purge (Art. 5(1)(e)) — explicit opt-in ──────
     # On-demand audit-log retention enforcement; dry-run unless
@@ -1510,6 +1506,23 @@
     - import_tasks: tasks/stacks/core-up.yml
       when: nos_docker_ready | default(true)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
+    # ── OpenTofu Authentik engine (ADR-0001) — runs HERE, after core-up, so
+    # Authentik is LIVE (its API + bootstrap token are up). engine=blueprint
+    # (default) → plan-only drift detector. engine=tofu → tofu apply provisions
+    # providers+apps+outpost attachments (the other six blueprints already
+    # applied in core-up still own groups/MFA/RBAC/agents/enrollment/brand).
+    # Path-B note: tier RBAC (20-rbac-policies, applied in core-up) binds to
+    # apps by slug — under engine=tofu those apps are created HERE, after that
+    # bind ran, so tier RBAC lands on the SECOND converge. SSO itself is live
+    # on the first pass. See docs/opentofu-authentik-cutover.md.
+    - name: "[tofu] Authentik OpenTofu engine (plan-only unless engine=tofu)"
+      ansible.builtin.import_tasks: tasks/tofu-authentik.yml
+      when:
+        - nos_docker_ready | default(true)
+        - manage_authentik_with_tofu | default(false) | bool
+        - install_authentik | default(false) | bool
+      tags: ['tofu-authentik', 'authentik', 'iam']
 
     # P0-1 MFA break-glass: seed an admin static fallback so a passkey-only admin
     # can't be locked out under enforce_mfa. Runs AFTER core-up (Authentik must be
