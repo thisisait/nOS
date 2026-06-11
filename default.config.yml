@@ -1457,7 +1457,7 @@ portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
 # (2026-06-10 review; the C1 pin gate doesn't scan base-stack templates).
-docker_socket_proxy_version: "0.4.2"
+docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was only the OCI label — pull fails bare)
 
 # ==============================================================================
 # INFRA – SPACETIMEDB (realtime DB, BSL 1.1)
