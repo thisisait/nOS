@@ -113,6 +113,23 @@ blueprint reapply + MTI reconcile handlers re-engage. The blueprint render
 (`10-oidc-apps.yaml`) is kept for at least one release; do not delete the
 renderer until the tofu engine has held no-op across several converges.
 
+## Edges to smooth before a Path-B (tofu-engine) blank
+
+- **Converge ordering.** The tofu task lives in the `tasks:` section (runs after
+  roles). On a blank, `20-rbac-policies` (still applied by the blueprint loop)
+  binds tier groups to apps by slug via `!Find` — those apps must EXIST when it
+  runs. If tofu creates the apps AFTER the blueprint handler flushes, the RBAC
+  `!Find` finds nothing. Verify the ordering (or re-converge once: the second
+  pass binds RBAC to the now-existing tofu apps). Path A sidesteps this entirely
+  (blueprint creates everything, then tofu adopts).
+- **Per-service attribute correctness.** The module's fixed timings
+  (`access_token_validity` etc.) + `redirect_uri_type` were tuned to two
+  services in Phase 0. A blank creates all 39; a wrong attribute misconfigures
+  that one service's SSO until corrected (recoverable).
+- **Agents + groups + MFA + enrollment + brand** are created by the SIX
+  blueprints that STILL apply under engine=tofu — tofu only owns
+  providers/apps/outpost-attachments. Confirm `30-agent-clients` etc. land.
+
 ## Known gaps (do not flip until closed)
 
 - **Outpost-provider attachment import id format** is unconfirmed — Phase 0
