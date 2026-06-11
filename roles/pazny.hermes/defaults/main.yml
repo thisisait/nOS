@@ -105,13 +105,20 @@ hermes_domain: "hermes{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 hermes_daemon_mode: false
 hermes_launchd_label: "eu.thisisait.nos.hermes"   # matches state/manifest.yml
 # ProgramArguments for the web-UI daemon. Parametric on purpose: the upstream
-# Hermes CLI verb that starts the FastAPI server is version-dependent, and the
+# Hermes CLI verb that starts the web server is version-dependent, and the
 # source is git-cloned (not vendored), so it can't be pinned from the repo.
-# hermes loads host/port from ~/.hermes/.env (HERMES_WEB_HOST/PORT). Override
-# this list if your hermes build uses a different verb than `web`.
+# v0.10.0 (2026.4.16, live-verified 2026-06-11): the verb is `dashboard`
+# with explicit --host/--port args (`web` was removed upstream — the old
+# default crash-looped the launchd agent at status 2, throttled 300s).
+# NO --insecure: loopback bind is the contract; Traefik fronts the route.
 hermes_web_command:
   - "{{ hermes_venv }}/bin/hermes"
-  - "web"
+  - "dashboard"
+  - "--host"
+  - "{{ hermes_web_host }}"
+  - "--port"
+  - "{{ hermes_web_port }}"
+  - "--no-open"
 
 # Manual modes (no launchd needed) — still available regardless of daemon_mode:
 #   hermes chat                # interactive TUI
