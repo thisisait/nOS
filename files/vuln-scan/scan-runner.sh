@@ -101,7 +101,12 @@ log "Scan cycle: $SCAN_CYCLE, Attack probe: $PROBE_NAME"
 # ── Build dynamic prompt ─────────────────────────────────────────────────────
 
 TIMESTAMP=$(date -Iseconds)
-DYNAMIC_PROMPT=$(cat <<PROMPT_EOF
+# Plain heredoc into a temp file — NOT $(cat <<EOF…): macOS /bin/bash 3.2
+# cannot parse a heredoc inside command substitution and aborts with
+# "unexpected EOF while looking for matching )" (live pulse run 2026-06-11;
+# the exec-bit fix let the script run for the first time and exposed this).
+PROMPT_FILE=$(mktemp -t nos-scan-prompt.XXXXXX)
+cat > "$PROMPT_FILE" <<PROMPT_EOF
 # NOS Vulnerability Scan — Batch Run
 
 **Timestamp:** $TIMESTAMP
@@ -137,7 +142,6 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
 - Read existing findings first to avoid duplicates
 - Update scan-state.json component timestamps after scanning
 PROMPT_EOF
-)
 
 # ── Emit scan.batch_started event ────────────────────────────────────────────
 
@@ -156,11 +160,12 @@ emit_event "scan.batch_started" "$(jq -nc \
 log "Dispatching Claude Code scan..."
 SCAN_STARTED_AT=$(date +%s)
 
-echo "$DYNAMIC_PROMPT" | claude --dangerously-skip-permissions -p - \
+claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
     --output-format text \
     2>>"$LOG_FILE" || {
     log "WARN: Claude Code scan returned non-zero exit"
 }
+rm -f "$PROMPT_FILE"
 
 # ── Update scan state ─────────────────────────────────────────────────────────
 
