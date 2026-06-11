@@ -35,6 +35,22 @@
 
 ---
 
+## Open follow-up (S-track) — infisical MTI render fix (2026-06-11)
+
+The infisical forward-auth gate was flaky: an orphan OAuth2Provider shared ONE
+`authentik_core.Provider` base row with the ProxyProvider (MTI). Deleting the
+oauth2 sibling cascades the shared base → kills the working proxy (live-proven
++ recovered by re-applying 10-oidc-apps + authentik-server restart). Gate is
+healthy now (302→auth, proxy in embedded outpost). **Durable fix owed:** the
+aggregator still emits an oauth2 identity for infisical (plugin keeps the
+schema-required client_id/secret) so the orphan reappears on apply — either
+(a) suppress OAuth2Provider render for `provider_type: forward_auth`, or
+(b) make the main.yml reconcile MTI-safe (skip `o.delete()` when the base row
+also has a proxy child). The v0.5-beta reconcile handler is a FOOTGUN on a
+shared-base tenant. See memory `autologin-coverage-ceilings`.
+NOTE: infisical CE has NO app-SSO by design (org-OIDC enterprise-locked) — the
+gate just controls ACCESS; login is infisical's own form. Not a bug.
+
 ## Revision #2 (2026-06-11) — overnight verification + live-incident sweep
 
 > Triggered by the operator: GitLab MR merged (agent forge), Hermes web UI
