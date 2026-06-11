@@ -47,3 +47,11 @@ files/anatomy/pulse/*.egg-info/
 files/anatomy/wing/tests/e2e/.services.json
 files/anatomy/wing/tests/e2e/.sweep-results.json
 docs/llm/security/scan.log
+
+# OpenTofu (ADR-0001 Phase 0) — state + tfvars are secret-bearing + machine-local
+terraform/**/.terraform/
+terraform/**/.terraform.tfstate*
+terraform/**/terraform.tfstate
+terraform/**/terraform.tfstate.*
+terraform/**/*.auto.tfvars.json
+terraform/**/tfplan

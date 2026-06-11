@@ -1972,6 +1972,9 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 authentik_version: "2026.5.2"                      # supersedes 2025.12.4 CVE-2026-25227 pin; current latest (2026-05)
 authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
+# ADR-0001 Phase 0: opt-in OpenTofu Authentik drift detector (plan-only).
+# Phase 1 will repurpose this flag to make `tofu apply` authoritative.
+manage_authentik_with_tofu: false
 authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
 authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
