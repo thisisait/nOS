@@ -847,3 +847,12 @@ services:
     install_flag: install_tailscale
     version_source: homebrew
     brew_formula: tailscale
+    # Health via the CLI probe, NOT brew-formula presence: the operator host
+    # runs Tailscale.app (system-extension variant; CLI shim at
+    # /usr/local/bin/tailscale) with no brew formula installed — the mirror
+    # reported healthy:false for a working VPN (scout side-find 2026-06-11).
+    health_check:
+      type: exec
+      command: "tailscale status --peers=false"
+      expect_rc: 0
+      timeout_sec: 5
