@@ -26,6 +26,10 @@
   vars:
     _tf_dir: "{{ playbook_dir }}/terraform/authentik"
   block:
+    - name: "[tofu-authentik] Load the service registry (state/tofu-authentik-services.yml)"
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/state/tofu-authentik-services.yml"
+
     - name: "[tofu-authentik] Render playbook-bridged tfvars (0600, secret-bearing)"
       ansible.builtin.template:
         src: "tofu/nos.auto.tfvars.json.j2"
