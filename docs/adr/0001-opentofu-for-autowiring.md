@@ -1,6 +1,11 @@
 # ADR-0001 — OpenTofu (HCL) for the autowiring substrate
 
-- **Status:** Proposed (2026-06-11) — decision pending operator approval
+- **Status:** Accepted + Phase 0 IMPLEMENTED & live-verified (2026-06-11);
+  Phase 1 machinery ready (NOT flipped — `authentik_engine: blueprint`).
+  Phase 0: `terraform/authentik/` + `modules/nos-authentik-app` + 2 services
+  (infisical/grafana) plan no-op against the live tenant; drift detector runs
+  via `--tags tofu-authentik`. Phase 1: destroy-guarded cutover flag +
+  `tools/tofu-authentik-adopt.sh` + `docs/opentofu-authentik-cutover.md`.
 - **Context trigger:** an Infisical SSO gate outage (MTI provider collision in
   Authentik) that took hand-`ak shell` reconciliation to fix — and during the
   fix, deleting the OAuth2 sibling cascade-deleted the working Proxy provider.
