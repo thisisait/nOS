@@ -70,8 +70,17 @@ def _fetch_hub(extra_groups: str = "nos-admins") -> tuple[int, str]:
 def test_hub_page_renders_without_500():
     """Render the /hub page as an admin viewer; assert 200 + a sys-card is
     present. A presenter signature drift / DI mismatch (like the live 500 the
-    cache-clear handler b6a5357 prevents) would surface here."""
+    cache-clear handler b6a5357 prevents) would surface here.
+
+    Live-flake guard (2026-06-11): this hits the RUNNING Wing daemon; a
+    playbook deploy restarting Wing mid-suite produced 3 false reds in two
+    days. One retry after a 3s settle distinguishes 'daemon restarting'
+    from a real render regression (which fails both attempts)."""
+    import time
     code, html = _fetch_hub("nos-admins")
+    if code != 200:
+        time.sleep(3)
+        code, html = _fetch_hub("nos-admins")
     # Tracy production "Server Error" is a 500 with a clean page; the cache-
     # cleared daemon should be 200.
     assert code == 200, f"/hub returned HTTP {code}\nfirst 400B:\n{html[:400]}"
