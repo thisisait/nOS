@@ -26,16 +26,19 @@
   vars:
     _tf_dir: "{{ playbook_dir }}/terraform/authentik"
   block:
-    - name: "[tofu-authentik] Load the service registry (state/tofu-authentik-services.yml)"
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/state/tofu-authentik-services.yml"
-
     - name: "[tofu-authentik] Render playbook-bridged tfvars (0600, secret-bearing)"
       ansible.builtin.template:
         src: "tofu/nos.auto.tfvars.json.j2"
         dest: "{{ _tf_dir }}/nos.auto.tfvars.json"
         mode: '0600'
       no_log: true
+      # TASK-SCOPED registry load — NOT include_vars (play-scoped). The registry
+      # values carry raw Jinja ({{ bookstack_domain }}); persisting them into the
+      # play namespace makes nos_state's `role_vars: "{{ vars }}"` eager-finalize
+      # choke ("bookstack_domain is undefined") — the documented {{ vars }} trap
+      # (CLAUDE.md). Task-scoped vars never enter that namespace.
+      vars:
+        tofu_authentik_services: "{{ (lookup('file', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
 
     - name: "[tofu-authentik] tofu init"
       ansible.builtin.command: "tofu init -input=false -no-color"
