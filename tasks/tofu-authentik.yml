@@ -39,19 +39,63 @@
         chdir: "{{ _tf_dir }}"
       changed_when: false
 
-    - name: "[tofu-authentik] tofu plan (drift detector — NO apply in Phase 0)"
-      ansible.builtin.command: "tofu plan -input=false -no-color -detailed-exitcode"
+    - name: "[tofu-authentik] tofu plan (-out so apply can be destroy-gated)"
+      ansible.builtin.command: "tofu plan -input=false -no-color -detailed-exitcode -out=tfplan"
       args:
         chdir: "{{ _tf_dir }}"
       register: _tofu_plan
-      # -detailed-exitcode: 0=no-drift, 2=drift, 1=error. Drift is informational
-      # in Phase 0, never a playbook failure.
+      # -detailed-exitcode: 0=no-drift, 2=drift, 1=error.
       changed_when: _tofu_plan.rc == 2
       failed_when: _tofu_plan.rc not in [0, 2]
+
+    # ── DESTROY GUARD (ADR-0001 Phase 1 safety rail) ────────────────────────
+    # The single rule that makes the engine flip safe: NEVER apply a plan that
+    # destroys anything. A partial-HCL tenant (e.g. 2 of 50 services authored)
+    # would plan to destroy the 48 un-authored providers → catastrophic SSO
+    # outage. Parse the plan JSON; refuse apply on any delete action.
+    - name: "[tofu-authentik] Read plan as JSON for the destroy guard"
+      ansible.builtin.command: "tofu show -json tfplan"
+      args:
+        chdir: "{{ _tf_dir }}"
+      register: _tofu_plan_json
+      changed_when: false
+
+    - name: "[tofu-authentik] Count destroy/replace actions"
+      ansible.builtin.set_fact:
+        _tofu_destroys: >-
+          {{ (_tofu_plan_json.stdout | from_json).resource_changes
+             | default([]) | selectattr('change.actions', 'contains', 'delete')
+             | list | length }}
 
     - name: "[tofu-authentik] Drift report"
       ansible.builtin.debug:
         msg: >-
-          Authentik OpenTofu drift: {{ 'DRIFT DETECTED (rc=2) — review the plan'
-          if _tofu_plan.rc == 2 else 'none (plan is no-op)' }}.
-          Phase 0 = plan-only; ak apply_blueprint remains authoritative.
+          Authentik OpenTofu: {{ 'DRIFT (rc=2)' if _tofu_plan.rc == 2 else 'no-op' }};
+          {{ _tofu_destroys }} destroy/replace action(s); engine=
+          {{ authentik_engine | default('blueprint') }}.
+          {{ 'PLAN-ONLY (ak apply_blueprint authoritative).'
+             if (authentik_engine | default('blueprint')) != 'tofu'
+             else 'APPLY mode.' }}
+
+    # ── APPLY — only when engine=tofu AND zero destroys ─────────────────────
+    - name: "[tofu-authentik] REFUSE apply — plan would destroy resources"
+      ansible.builtin.fail:
+        msg: >-
+          tofu plan would destroy/replace {{ _tofu_destroys }} resource(s) —
+          refusing to apply. This almost always means the tenant is only
+          partially authored in HCL (un-authored providers plan as destroys).
+          Author/import the full tenant (tools/tofu-authentik-adopt.sh) until the
+          plan is no-op before flipping authentik_engine=tofu.
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_destroys | int > 0
+
+    - name: "[tofu-authentik] tofu apply (engine=tofu, destroy-guard passed)"
+      ansible.builtin.command: "tofu apply -input=false -no-color tfplan"
+      args:
+        chdir: "{{ _tf_dir }}"
+      register: _tofu_apply
+      changed_when: "'0 added, 0 changed, 0 destroyed' not in _tofu_apply.stdout"
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_destroys | int == 0

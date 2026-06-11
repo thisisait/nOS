@@ -1975,6 +1975,12 @@ authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = Rust
 # ADR-0001 Phase 0: opt-in OpenTofu Authentik drift detector (plan-only).
 # Phase 1 will repurpose this flag to make `tofu apply` authoritative.
 manage_authentik_with_tofu: false
+# ADR-0001 Phase 1 authority switch: "blueprint" (default, ak apply_blueprint) |
+# "tofu" (OpenTofu authoritative — imperative blueprint reapply + MTI footgun
+# skipped). DO NOT flip to "tofu" until the WHOLE tenant is authored+imported in
+# HCL and `tofu plan` is no-op (tools/tofu-authentik-adopt.sh) — the destroy
+# guard refuses apply otherwise. Reversible: flip back to "blueprint".
+authentik_engine: "blueprint"
 authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
 authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
