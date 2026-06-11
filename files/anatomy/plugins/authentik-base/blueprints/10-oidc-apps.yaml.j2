@@ -31,7 +31,17 @@ metadata:
    per-plugin authentik:) with Tier-2 apps_runner extras (authentik_oidc_apps
    list, runtime-built from apps/<name>.yml manifests). Same blueprint
    handles both shapes — proven by aggregator-dry-run before the cutover. #}
-{% set _all_clients = (inputs.clients | default([])) + (authentik_oidc_apps | default([])) %}
+{# ADR-0001 Phase 1 (2026-06-11): Authentik AUTO-APPLIES every file in the
+   mounted /blueprints/custom (container start + inotify) — gating the
+   `ak apply_blueprint` loops alone is NOT enough. Under authentik_engine=tofu
+   the providers/apps/attachments layer belongs to OpenTofu, so this template
+   renders ZERO client entries (the first tofu-engine blank died on 36×
+   "provider with this name already exists" at `tofu apply`). The outpost
+   entry below survives, but its `providers:` key is omitted so a blueprint
+   apply can never unbind tofu-attached providers — only the outpost `config:`
+   (authentik_host) stays blueprint-owned. #}
+{% set _tofu_owns_clients = (authentik_engine | default('blueprint')) == 'tofu' %}
+{% set _all_clients = [] if _tofu_owns_clients else ((inputs.clients | default([])) + (authentik_oidc_apps | default([]))) %}
 
 entries:
 {% for c in _all_clients %}
@@ -155,6 +165,7 @@ entries:
     attrs:
       name: "authentik Embedded Outpost"
       type: "proxy"
+{% if not _tofu_owns_clients %}
       providers:
 {% for c in _all_clients %}
 {%- set _type_legacy = c.type | default(none) -%}
@@ -165,6 +176,7 @@ entries:
         - !Find [authentik_providers_proxy.proxyprovider, [name, "{{ _name }}"]]
 {% endif %}
 {% endfor %}
+{% endif %}
       config:
         authentik_host: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
         authentik_host_browser: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
