@@ -1152,13 +1152,17 @@ nOS-internal (Pulse/notifications/hub/lifecycle, no provider), Docker would
 force abandoning compose-override, only Authentik (+ a Grafana subset) map
 cleanly. Decision: **NOT a broad rewrite** — keep `plugin.yml` as the single
 declarative SoT and the loader's 7-consumer fan-out. **DO** adopt OpenTofu as
-the reconcile ENGINE for the Authentik consumer only, GENERATING HCL from the
-harvested `authentik:` blocks (the Authentik provider models `provider_oauth2`
+the reconcile ENGINE for the Authentik consumer only. **Authoring model revised
+2026-06-11 (operator pushback):** NOT generated from YAML (inner-platform trap)
+— services HAND-AUTHOR HCL via a thin `nos-authentik-app` module, VALUES bridged
+from the playbook via `tfvars.json`, nOS-required shape asserted by a conformance
+policy over `tofu plan -json`. The Authentik provider models `provider_oauth2`
 / `provider_proxy` as distinct resources + `outpost_provider_attachment` →
 today's cascade is structurally impossible; `tofu plan` is a free drift
-detector). Phased + reversible: Phase 0 = generate HCL + `plan`-only drift
-detector (zero risk, would have caught this incident); Phase 1 = flip apply,
-retire the MTI footgun handler. **OpenTofu, never Terraform** (BSL conflicts
+detector). Phased + reversible: Phase 0 = author HCL for 2-3 services + `import` + `plan`-only
+drift detector (zero risk, would have caught this incident); Phase 1 = `import`
+the whole tenant + flip apply, retire the MTI footgun handler; Phase 2 =
+extend to Grafana/Postgres/GitLab per-consumer via `import`+coexistence. **OpenTofu, never Terraform** (BSL conflicts
 with all-FOSS). Full analysis: `docs/adr/0001-opentofu-for-autowiring.md`.
 
 **O25 — `{{ vars }}` retirement design (D1, 2026-06-11):**

@@ -13,11 +13,15 @@
 > the surface is dominated by nOS-internal consumers no provider can touch, and
 > the one broad provider (Docker) would force abandoning the compose-override
 > pattern. **Do** adopt OpenTofu as the reconcile **engine for the Authentik
-> layer only**, keeping `plugin.yml` as the single source of truth and
-> *generating* HCL from the harvested `authentik:` blocks. Start **plan-only**
-> as a zero-risk drift detector (it would have caught the incident that
-> triggered this ADR), then flip the apply path. **OpenTofu, never Terraform**
-> (BSL conflicts with the all-FOSS principle).
+> layer only**. **Authoring model (revised 2026-06-11, §9):** services declare
+> their Authentik wiring as **hand-authored HCL** — a thin `nos-authentik-app`
+> module for the common case, raw resources for the exotic — with VALUES bridged
+> from the playbook via a generated `tfvars.json` and the nOS-required shape
+> enforced by a **conformance policy** over `tofu plan -json` (NOT a YAML→HCL
+> generator — that is the inner-platform trap). Start **plan-only** as a
+> zero-risk drift detector (it would have caught the incident that triggered
+> this ADR), then flip the apply path. **OpenTofu, never Terraform** (BSL
+> conflicts with the all-FOSS principle).
 
 ---
 
@@ -116,18 +120,23 @@ Evidence — the incident that triggered this ADR:
 
 ## 4. The architectural insight
 
-The `plugin.yml` **multi-consumer manifest is the right abstraction** and must
-not be replaced: a service declares all seven wiring blocks in one cohesive
-place and the loader fans them out. Splitting `authentik:` into a hand-written
-`.tf` would tear a service's identity across two files — worse cohesion.
+`plugin.yml` stays the source of truth for the **six nOS-internal consumers**
+(pulse, notification, hub, compose_extension, observability, lifecycle). The
+**Authentik consumer moves out** to its own representation, managed by a real
+engine. This is NOT a new kind of split: a service is *already* defined across a
+role (`compose.yml.j2`) **and** `plugin.yml` — adding a `.tf` for the one
+substrate with a typed API + mature provider is the same multi-file reality, one
+file per concern, each in its native engine.
 
-Therefore: **keep the manifest as SoT; swap the reconcile *engine* for the one
-consumer that needs it.** Generate HCL from the harvested `authentik:` blocks
-exactly as the loader generates `10-oidc-apps.yaml` today. HCL becomes a
-**generated render target**, never an authoring surface. nOS already values
-declarative state — `nos_state` (`manifest.yml` vs `~/.nos/state.yml`,
-merge-never-overwrite) is a home-grown `tfstate`. This is the same instinct with
-a battle-tested engine, applied where it pays.
+**Authoring model — revised (see §9):** the first draft of this ADR proposed
+*generating* HCL from the `authentik:` YAML block. That is the **inner-platform
+trap** — the generator's input schema must keep growing to mirror the provider's
+96 resources, reinventing HCL in YAML, and the author debugs generated code they
+never wrote. The better design (operator's insight, 2026-06-11): **author HCL
+directly**, bridge VALUES from the playbook, and assert the nOS-required shape
+with a conformance test. nOS already values declarative state — `nos_state`
+(`manifest.yml` vs `~/.nos/state.yml`, merge-never-overwrite) is a home-grown
+`tfstate`; this is the same instinct with a battle-tested engine.
 
 ---
 
@@ -136,7 +145,7 @@ a battle-tested engine, applied where it pays.
 | Option | Scope | Verdict |
 |---|---|---|
 | **A. Status quo** | imperative `ak apply_blueprint` | Cheap, but today's MTI-drift class recurs; no drift detection |
-| **B. OpenTofu — Authentik consumer only (generated HCL)** | replace artifact-class #1's engine | **RECOMMENDED.** Highest-value, smallest blast radius; manifest stays SoT |
+| **B. OpenTofu — Authentik consumer only, hand-authored HCL + module + conformance** | replace artifact-class #1's engine | **RECOMMENDED.** Highest-value, smallest blast radius; six other consumers stay in `plugin.yml` |
 | **C. OpenTofu — Authentik + Grafana + Postgres + GitLab** | #1 + clean-provider subset of #5/#6 | Defensible later, per-consumer; still leaves Pulse/notif/hub/lifecycle in loader |
 | **D. Broad rewrite incl. Docker/compose** | "HCL for as many services as possible" | **REJECT.** Kills compose-override; requires building Go providers for 4 internal consumers; 2nd-SoT split-brain |
 
@@ -146,24 +155,12 @@ autowiring is nOS-internal plumbing no provider reaches.
 
 ---
 
-## 6. Recommended path (phased, reversible)
+## 6. Recommended path
 
-- **Phase 0 — spike, ZERO risk (do now, in beta):** loader emits OpenTofu HCL
-  for the Authentik layer from the same aggregated `authentik:` blocks, behind a
-  feature flag. Run **`tofu plan` only** (no apply) as a read-only drift
-  detector; keep `ak apply_blueprint` authoritative. Acceptance: render parity
-  with the live blueprint across ≥3 converges + it flags a seeded drift. *This
-  alone would have caught the incident that triggered this ADR.*
-- **Phase 1 — flip apply (after Phase 0 proves parity):** `tofu apply` becomes
-  the Authentik authority; retire `ak apply_blueprint` for that layer; the
-  v0.5 MTI reconcile handler (a shared-base footgun) is deleted. `tfstate`
-  enters Infisical custody + the backup set. Drift-check `tofu plan` runs as a
-  Pulse job → W6.1 notification.
-- **Phase 2 — optional, per-consumer:** extend to Grafana (dashboards/DS) and
-  Postgres (roles/DBs/`pgcrypto`) and GitLab where the provider is clean and the
-  resource count is low. Each is an independent small TF root, gated, reversible.
-- **Never:** Docker/compose, Pulse jobs, notification routing, hub cards,
-  lifecycle hooks — stay in the loader.
+Superseded by the detailed phase plan in **§10**. Summary: Phase 0 = author HCL
++ `tofu plan`-only drift detector (zero risk); Phase 1 = flip apply, retire the
+MTI footgun; Phase 2 = extend to Grafana/Postgres/GitLab via `import` +
+coexistence. **Never:** Docker/compose, Pulse, notifications, hub, lifecycle.
 
 ---
 
@@ -174,13 +171,163 @@ worth committing to **now**, while in beta. The broad HCL rewrite is **not**
 justified by the evidence: the autowiring surface is dominated by nOS-internal
 consumers OpenTofu cannot touch, and the one broad provider would cost us the
 compose-override architecture. Lock the architecture as: **`plugin.yml` is the
-single declarative SoT; the loader fans out to seven consumers; OpenTofu is the
-reconcile engine for the Authentik consumer, generated from the manifest.**
+SoT for the six internal consumers; the Authentik consumer is hand-authored HCL
+(module + conformance test), VALUES bridged from the playbook; OpenTofu is its
+reconcile engine.**
 
 ## 8. Open questions before Phase 1 (not Phase 0)
 
 - `tfstate` storage on a single host: local file + Infisical-backed encryption,
   or a state backend? (Local file + backup set is likely fine for a home-lab.)
 - Locking model when both a blank run and a manual `tofu` could race.
-- Whether Tier-2 apps' `authentik:` blocks generate into the same TF root as
-  Tier-1 (they should — one Authentik, one state).
+- Tier-2 apps' Authentik wiring: a thin `authentik:` stanza in `apps/<name>.yml`
+  rendered into a **module instantiation** (lossless — 4 inputs, not the YAML→HCL
+  schema treadmill), preserving the "drop a manifest, no raw code" Tier-2 promise
+  while landing in the same single TF root as Tier-1.
+
+---
+
+## 9. Authoring model — generated vs hand-authored HCL (decided 2026-06-11)
+
+**Decision: hand-author HCL; do not generate it from YAML.** The operator's
+pushback was correct — a YAML→HCL generator is the inner-platform anti-pattern:
+
+| | Generate HCL from `authentik:` YAML | **Hand-author HCL (chosen)** |
+|---|---|---|
+| Expressiveness | Lossy — capped at whatever the YAML schema mirrors; exotic Authentik (custom flows, property mappings, RAC/SCIM, policy bindings) needs ever-growing schema | Full provider (96 resources) immediately |
+| Representations | Two (YAML authored, HCL runs) → debug generated code you didn't write | One — the source IS what runs; native `tofu validate`/`plan`/IDE |
+| Maintenance | A generator (Go/Python) + its tests + translation drift | A module + a policy test |
+| Ergonomics | "fill a block" (low skill) | "5-line module call" (comparable) or raw HCL (full power) |
+
+**The shape — three layers:**
+
+1. **`modules/nos-authentik-app`** — a reusable OpenTofu module encoding the
+   nOS-required wiring so you *cannot* instantiate it wrong: it creates the
+   `application`, the right provider for `mode` (`forward_auth`→`provider_proxy`,
+   `native_oidc`→`provider_oauth2`), the `outpost_provider_attachment` to the
+   embedded outpost, and the tier→group `policy_binding`. The common case is a
+   ~5-line call — as ergonomic as today's YAML block, but one representation:
+   ```hcl
+   module "infisical" {
+     source = "../modules/nos-authentik-app"
+     mode   = "forward_auth"          # proxy provider; no oauth2 ever created
+     slug   = "infisical"
+     name   = "Infisical"
+     domain = var.infisical_domain    # value from the playbook (see layer 2)
+     tier   = 1
+   }
+   ```
+   Because the module *never* creates an oauth2 provider for `forward_auth`, the
+   exact orphan-oauth2 / MTI-shared-base cascade that triggered this ADR is
+   impossible by construction. A service needing exotic Authentik drops the
+   module and writes raw resources — full escape hatch, no schema treadmill.
+
+2. **Values bridge — `tfvars.json` from the playbook.** Ansible owns VALUES
+   (domains, client secrets, tenant_domain, tier group names, the
+   `authentik_bootstrap_token`); HCL owns STRUCTURE. A playbook task renders
+   `terraform/authentik/nos.auto.tfvars.json` from the same vars the blueprint
+   uses today; the `.tf` references `var.*`. Clean separation: secrets never live
+   in `.tf` (they flow through tfvars.json, which is `0600` + Infisical custody +
+   in the backup set, same as `~/.nos/secrets.yml`). **No Jinja inside HCL.**
+
+3. **Conformance policy — assert nOS invariants over `tofu plan -json`.** Instead
+   of constraining *how* a service wires Authentik, assert the INVARIANTS every
+   service must satisfy, as a test over the plan JSON (pytest, or conftest/OPA):
+   - every `authentik_application` has a bound provider;
+   - every proxy/oauth2 provider has exactly one `outpost_provider_attachment`
+     to the embedded outpost (the today-incident guard);
+   - a `forward_auth` service declares **no** `provider_oauth2` (and vice-versa) —
+     mode/provider-type coherence;
+   - every app has a tier→group `policy_binding` (RBAC never forgotten);
+   - provider/app `name`/`slug` are unique (catches the MTI name collision at
+     plan time, before apply).
+   This replaces "the loader validates the `authentik:` block" with "the plan
+   must satisfy the nOS contract" — stronger, because it checks the *realized
+   graph*, not the input.
+
+**Cohesion cost, owned honestly:** a service's wiring now lives in role
+(`compose.yml.j2`) + `plugin.yml` (6 blocks) + `<svc>.tf` (Authentik). Three
+files. Mitigation: the `.tf` sits beside the role (`roles/pazny.<svc>/authentik.tf`)
+or in one central `terraform/authentik/services/<svc>.tf`; a `make new-service`
+scaffold drops all three stubs. The `plugin.yml` `authentik:` block is **removed**
+(no more dual representation); the loader stops harvesting it.
+
+---
+
+## 10. Phase plan (0 / 1 / 2)
+
+### Phase 0 — drift detector, ZERO risk (target: v0.6 spike branch)
+
+Goal: stand up the OpenTofu Authentik root in **read-only `plan`** while
+`ak apply_blueprint` stays authoritative. Catches drift; commits to nothing.
+
+1. `terraform/authentik/` root: pin `goauthentik/authentik` provider +
+   `.terraform.lock.hcl`; provider configured from `var.authentik_url` +
+   `var.authentik_bootstrap_token` (already minted by the playbook).
+2. `modules/nos-authentik-app` (layer-1 module) + hand-author HCL for **2–3
+   representative services** only: infisical (forward_auth — the incident
+   service), grafana (native_oidc auto-redirect), one agent client.
+3. Playbook task (tag `tofu-authentik`, default-off flag
+   `manage_authentik_with_tofu: false`) renders `nos.auto.tfvars.json` from the
+   existing Authentik vars; runs `tofu init` + **`tofu plan -detailed-exitcode`**;
+   does **NOT** apply. Plan diff → log + (optional) W6.1 notification.
+4. **`tofu import`** the 2–3 live objects so the plan reads as "no changes"
+   against reality — this proves the hand-authored HCL matches the running state.
+5. Conformance test (layer-3) over `tofu plan -json` in CI (pytest, offline:
+   `tofu plan` needs the API, so the CI leg runs `tofu validate` + the policy
+   over a fixture plan; the live plan-parity runs in the integration wet-test).
+
+**Acceptance:** `tofu plan` reads no-change against the live tenant for the 3
+services across ≥3 converges; a deliberately-seeded orphan (re-add an oauth2 for
+infisical) shows up as planned drift; conformance test green. *This alone makes
+the triggering incident visible before it breaks login.*
+
+### Phase 1 — flip apply, Authentik fully on OpenTofu (target: post-v0.6)
+
+1. Hand-author HCL for **all** Tier-1 services + agents + Tier-2 (via the thin
+   `authentik:`-stanza → module instantiation render, §8). `tofu import` every
+   live object first → first `apply` is a no-op (no destroy/recreate of the live
+   tenant — the whole tenant is adopted, not rebuilt).
+2. Flip `manage_authentik_with_tofu: true`: `tofu apply` becomes authoritative;
+   the loader stops emitting `10-oidc-apps.yaml`; **delete the v0.5 MTI reconcile
+   handler** (the shared-base footgun) and the `authentik:` harvest in the
+   aggregator.
+3. `tfstate` → `0600`, Infisical custody, joins the 3-2-1 backup set + a
+   `restore-verify` floor (it is now a recovery-critical secret-bearing artifact).
+4. A `tofu plan` drift-check Pulse job (read-only) → W6.1 "Authentik drifted"
+   notification. State-locking: the blank run and any manual `tofu` serialize on
+   a file lock (single host) — documented operator rule, no concurrent apply.
+
+**Rollback:** keep `10-oidc-apps.yaml` render behind the flag for one release;
+flipping the flag back restores the imperative path. Reversible until we delete
+the renderer.
+
+### Phase 2 — extend per-consumer, WITH coexistence (target: opportunistic, post-1)
+
+Each consumer is an **independent** small TF root, adopted via `import` so live
+state is never destroyed — this is the coexistence contract: TF and the existing
+Ansible-managed config must not double-manage. The boundary is explicit
+("owned-by: tofu" vs "owned-by: ansible") per resource class.
+
+| Consumer | Provider | Coexistence approach |
+|---|---|---|
+| **Grafana** dashboards/datasources/alerts | `grafana/grafana` | `import` existing dashboards; Ansible KEEPS Prometheus scrape config (file, no provider). TF owns dashboards/DS, Ansible owns the Alloy/Prom wiring — clean split, no overlap |
+| **PostgreSQL** roles/DBs/`pgcrypto`/SSL params | `cyrilgdn/postgresql` | `import` existing roles/DBs (created by `postgresql/tasks/post.yml`); flip ownership atomically per-DB; the **coexistence framework** (`nos_coexistence`, pg16+pg17 dual-track) is UNAFFECTED — it operates at the container/data layer, below TF's role/DB layer, so they compose |
+| **GitLab** project/CI vars/protected branches (forge) | `gitlabhq/gitlab` | `import` the agent-forge project + tokens; T32.2 forge wiring (currently `post-forge.yml` lineinfile) becomes declarative; coexists with Gitea (separate root) |
+
+Each Phase-2 consumer ships only when: (a) `import` makes the first plan a
+no-op, (b) a conformance test pins its nOS invariants, (c) the Ansible path is
+flagged off behind `manage_<x>_with_tofu`. No consumer is mandatory; skip any
+whose provider proves immature on inspection.
+
+**Never migrated:** Docker/compose (kills compose-override), Pulse jobs,
+notification routing, hub cards, lifecycle hooks — all stay in the loader.
+
+### Cross-phase: the frozen-toolchain + DR obligations
+
+- `tofu` binary version + `.terraform.lock.hcl` (provider pins) join the frozen
+  CI toolchain next to `requirements.lock.yml` / `ci-freeze.env`.
+- `tfvars.json` (secret-bearing) + `tfstate` (secret-bearing) → `0600` +
+  Infisical custody + backup set + `restore-verify` floors, BEFORE Phase 1.
+- A Linux note like PG-SSL: `tofu` must be installed cross-platform (apt/brew);
+  the integration wet-test gains a `tofu plan` parity leg.
