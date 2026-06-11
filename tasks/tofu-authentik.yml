@@ -1,0 +1,57 @@
+---
+# ADR-0001 Phase 0 — OpenTofu Authentik DRIFT DETECTOR (plan-only, opt-in).
+#
+# Renders the playbook-bridged tfvars, runs `tofu init` + `tofu plan` against
+# the live tenant, and reports drift. Does NOT apply — `ak apply_blueprint`
+# stays authoritative until Phase 1. Opt-in: `--tags tofu-authentik` AND
+# `-e manage_authentik_with_tofu=true` (default false). Requires `tofu` on PATH
+# (installed by tasks/python.yml / brew when nos_pkg_manager==homebrew).
+#
+# Cross-platform: OpenTofu via brew (macOS) / apt or release tarball (Linux).
+# OpenTofu, NEVER Terraform (BSL conflicts with the nOS all-FOSS principle).
+
+- name: "[tofu-authentik] Resolve tofu binary"
+  ansible.builtin.command: "command -v tofu"
+  register: _tofu_bin
+  changed_when: false
+  failed_when: false
+
+- name: "[tofu-authentik] Skip — tofu not installed"
+  ansible.builtin.debug:
+    msg: "tofu not on PATH — install OpenTofu (brew install opentofu) to run the Authentik drift check. Skipping."
+  when: _tofu_bin.rc != 0
+
+- name: "[tofu-authentik] Drift-check block"
+  when: _tofu_bin.rc == 0
+  vars:
+    _tf_dir: "{{ playbook_dir }}/terraform/authentik"
+  block:
+    - name: "[tofu-authentik] Render playbook-bridged tfvars (0600, secret-bearing)"
+      ansible.builtin.template:
+        src: "tofu/nos.auto.tfvars.json.j2"
+        dest: "{{ _tf_dir }}/nos.auto.tfvars.json"
+        mode: '0600'
+      no_log: true
+
+    - name: "[tofu-authentik] tofu init"
+      ansible.builtin.command: "tofu init -input=false -no-color"
+      args:
+        chdir: "{{ _tf_dir }}"
+      changed_when: false
+
+    - name: "[tofu-authentik] tofu plan (drift detector — NO apply in Phase 0)"
+      ansible.builtin.command: "tofu plan -input=false -no-color -detailed-exitcode"
+      args:
+        chdir: "{{ _tf_dir }}"
+      register: _tofu_plan
+      # -detailed-exitcode: 0=no-drift, 2=drift, 1=error. Drift is informational
+      # in Phase 0, never a playbook failure.
+      changed_when: _tofu_plan.rc == 2
+      failed_when: _tofu_plan.rc not in [0, 2]
+
+    - name: "[tofu-authentik] Drift report"
+      ansible.builtin.debug:
+        msg: >-
+          Authentik OpenTofu drift: {{ 'DRIFT DETECTED (rc=2) — review the plan'
+          if _tofu_plan.rc == 2 else 'none (plan is no-op)' }}.
+          Phase 0 = plan-only; ak apply_blueprint remains authoritative.

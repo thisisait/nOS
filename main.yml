@@ -932,6 +932,15 @@
       when: export_subject is defined and (export_subject | length) > 0
       tags: ['gdpr-export', 'never']
 
+    # ── OpenTofu Authentik drift detector (ADR-0001 Phase 0, opt-in) ────────
+    # Plan-only — reports drift between hand-authored HCL and the live tenant;
+    # ak apply_blueprint stays authoritative. Opt-in (kept out of normal runs):
+    #   ansible-playbook main.yml --tags tofu-authentik -e manage_authentik_with_tofu=true
+    - name: "[tofu] Authentik OpenTofu drift detector (opt-in, plan-only)"
+      ansible.builtin.import_tasks: tasks/tofu-authentik.yml
+      when: manage_authentik_with_tofu | default(false) | bool
+      tags: ['tofu-authentik', 'never']
+
     # ── GDPR storage-limitation purge (Art. 5(1)(e)) — explicit opt-in ──────
     # On-demand audit-log retention enforcement; dry-run unless
     # -e retention_confirm=true. Not scheduled. See docs/security-baseline.md §4.
