@@ -5,7 +5,7 @@
 > record) and [`docs/bones-and-wings-bulk-plan.md`](bones-and-wings-bulk-plan.md)
 > (multi-lane coordination plan).
 >
-> Last updated: 2026-06-11 • **v0.6 W/S/D batch EXECUTED** (see punch-list status table below).
+> Last updated: 2026-06-11 • **v0.6 batch EXECUTED + revision #2 (overnight verify + incident sweep)** — see the two status blocks below.
 > v0.5-beta tagged 2026-06-06 (SSO/MFA coherence + SEC-02/REM-043/MTI security
 > cluster). Since the tag, 22 commits landed on `dev` in 5 clusters: **backup/
 > restore overhaul** (3-2-1 split, restore contract repaired + gated; operator
@@ -34,6 +34,31 @@
 > vhost templates on Linux, fleet provisioning (p2p/server-client/mesh).
 
 ---
+
+## Revision #2 (2026-06-11) — overnight verification + live-incident sweep
+
+> Triggered by the operator: GitLab MR merged (agent forge), Hermes web UI
+> dead, Ollama HTTP 500. Commits `314c272d..ab55b604` + S2 live apply.
+>
+> **Overnight natural verifications — ALL GREEN:** backup 12 sources incl.
+> the 4 new dirs + "Backup OK" inbox notification; vuln-scan + gitleaks rc=0
+> with recovery notifications (the W6.1 emitter's first organic fires);
+> dashboard shows "Unread 5 → Open Inbox".
+>
+> **Incidents root-caused + fixed:**
+> | Incident | Root cause | Fix |
+> |---|---|---|
+> | Ollama 500 `llama-server not found` (ALL GGUF inference dead since 06-07) | homebrew-core 0.30.7 bottle is an MLX/imagegen-only build — no llama-server; formula fix on GitHub HEAD hadn't reached the API | local tap `pazny/local` + HEAD formula + `-DGGML_CCACHE=OFF` (superenv strips ccache at make-time) → keg 0.30.7_1; revert to core when the API formula carries llama-server (memory `ollama-brew-mlx-only-bottle`) |
+> | hermes.<tld> dead | (a) `hermes_daemon_mode` default OFF; (b) upstream v0.10.0 renamed `web`→`dashboard` → launchd crash-loop status 2 | daemon_mode on (operator config) + verb/args fix in role defaults; live: 18790→200, edge 302→Authentik |
+> | Nightly vuln-scan died after 4 log lines (rc=0!) | heredoc-inside-`$()` — macOS bash 3.2 can't parse it; the exec-bit fix let the script RUN for the first time and exposed it | prompt via mktemp + stdin redirect; `/bin/bash -n` green |
+> | php-fpm exporter "down" + FCGI bytes hammering Wing:9000 every Alloy scrape | exporter assumes php-fpm on 9000 — FrankenPHP took that port in A3.5; whole nginx-exporter leg ran on a Traefik-primary host | `alloy_scrape_{nginx,phpfpm}` follow `install_nginx`; bootout+removal tasks; node_exporter dropped from registry (removed-by-design service advertised forever-down) |
+> | tailscale `healthy:false` while VPN works | mirror derived health from brew-formula presence; host runs Tailscale.app (system extension) | manifest exec probe `tailscale status --peers=false` |
+> | GitLab forge `dev` fake-lead (FF-sync refused) | merged MR content reached trunk via the T32.2 commit → divergent old-base merge topology | archive ref `archive/pre-resync-20260611` + temp `allow_force_push` PATCH + force-sync + protection restored; NEVER promote a stale fork |
+>
+> **S2 live apply (this revision):** n8n 2.26.2 (migrate-on-start OK),
+> vaultwarden 1.35.8, traefik v3.6.21, **nextcloud:33** (the un-shadowed C2
+> pin finally live — container ran `stable` until today), gitlab 18.10.8
+> migrating. Hub flake test got a retry (3 false reds in 2 days).
 
 ## v0.6 punch list — EXECUTED 2026-06-10/11 (12/12 done or honestly scoped)
 
