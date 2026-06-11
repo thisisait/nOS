@@ -46,3 +46,4 @@ files/anatomy/pulse/*.egg-info/
 .debug-report-*.md
 files/anatomy/wing/tests/e2e/.services.json
 files/anatomy/wing/tests/e2e/.sweep-results.json
+docs/llm/security/scan.log
