@@ -27,16 +27,18 @@
 # a cold container a moment; if it never answers, we skip (the imperative path
 # or a later converge covers it).
 - name: "[tofu-authentik] Probe Authentik API reachability"
-  ansible.builtin.command: >-
-    curl -fsS -o /dev/null -m 5
-    -H "Authorization: Bearer {{ authentik_bootstrap_token }}"
-    http://127.0.0.1:{{ authentik_port | default(9000) }}/api/v3/core/users/me/
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9000) }}/api/v3/core/users/me/"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token }}"
+    timeout: 5
+    status_code: 200
   register: _ak_up
   changed_when: false
   failed_when: false
   retries: 12
   delay: 5
-  until: _ak_up.rc == 0
+  until: _ak_up.status | default(0) == 200
   when: _tofu_bin.rc == 0
   no_log: true
 
@@ -45,12 +47,12 @@
     msg: "Authentik API not answering on :{{ authentik_port | default(9000) }} — skipping the OpenTofu step (imperative path / next converge covers it)."
   when:
     - _tofu_bin.rc == 0
-    - _ak_up.rc | default(1) != 0
+    - _ak_up.status | default(0) != 200
 
 - name: "[tofu-authentik] Drift-check block"
   when:
     - _tofu_bin.rc == 0
-    - _ak_up.rc | default(1) == 0
+    - _ak_up.status | default(0) == 200
   vars:
     _tf_dir: "{{ playbook_dir }}/terraform/authentik"
   block:
