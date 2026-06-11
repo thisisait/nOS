@@ -686,18 +686,10 @@
   "type": "homebrew",
   "description": "Metrics and logs collector"
 }) %}
-{% set _ = _services.append({
-  "name": "node_exporter",
-  "id": "node_exporter",
-  "category": "observability",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "port": 9100,
-  "health_url": "http://127.0.0.1:9100/metrics",
-  "type": "homebrew",
-  "description": "macOS system metrics"
-}) %}
+{# node_exporter intentionally absent: removed from the playbook ("Alloy's
+   prometheus.exporter.unix replaces it") — the stale entry advertised an
+   eternally-down service on the Hub (W6.4 follow-up, 2026-06-11). #}
+{% if install_nginx | default(false) %}
 {% set _ = _services.append({
   "name": "nginx-exporter",
   "id": "nginx_exporter",
@@ -710,6 +702,8 @@
   "type": "binary",
   "description": "Nginx metrics"
 }) %}
+{% endif %}
+{% if install_nginx | default(false) %}
 {% set _ = _services.append({
   "name": "php-fpm_exporter",
   "id": "phpfpm_exporter",
@@ -722,6 +716,7 @@
   "type": "binary",
   "description": "PHP-FPM metrics"
 }) %}
+{% endif %}
 {% endif %}
 {% if install_php | default(true) %}
 {% set _ = _services.append({

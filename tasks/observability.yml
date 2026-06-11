@@ -182,11 +182,30 @@
     'already started' not in (svc_result.stdout | default('')) and
     'Bootstrap failed: 5' not in (svc_result.stderr | default(''))
 
+# ── Host-nginx-leg exporter REMOVAL (W6.4 follow-up, 2026-06-11) ─────────────
+# When the flags are off (Traefik-primary host), the agents must come DOWN —
+# install tasks merely skipping left the php-fpm exporter firing FCGI bytes
+# at Wing's 9000 (FrankenPHP took the port in A3.5) on every Alloy scrape.
+- name: Unload + remove nginx-prometheus-exporter (alloy_scrape_nginx off)
+  ansible.builtin.shell: |
+    launchctl bootout gui/$(id -u)/com.nginx.nginx-prometheus-exporter 2>/dev/null || true
+    rm -f "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist"
+  when: not (alloy_scrape_nginx | default(false) | bool)
+  changed_when: false
+
+- name: Unload + remove php-fpm_exporter (alloy_scrape_phpfpm off)
+  ansible.builtin.shell: |
+    launchctl bootout gui/$(id -u)/com.hipages.php-fpm-exporter 2>/dev/null || true
+    rm -f "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist"
+  when: not (alloy_scrape_phpfpm | default(false) | bool)
+  changed_when: false
+
 - name: Load nginx-prometheus-exporter launchd service
   ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.nginx.nginx-prometheus-exporter.plist
   register: nginx_exporter_launchctl
   changed_when: nginx_exporter_launchctl.rc == 0
   failed_when: false
+  when: alloy_scrape_nginx | default(false) | bool
 
 - name: Load php-fpm_exporter launchd service
   ansible.builtin.command: launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.hipages.php-fpm-exporter.plist
