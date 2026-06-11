@@ -792,6 +792,11 @@
         PYEOF
       changed_when: false
       failed_when: false
+      # ADR-0001 Phase 1: the MTI footgun is moot under OpenTofu (proxy/oauth2
+      # are distinct typed resources — no shared-base cascade). Skip when tofu
+      # is authoritative; the module guarantees a forward_auth svc never has an
+      # oauth2 provider in the first place.
+      when: (authentik_engine | default('blueprint')) != 'tofu'
 
     - name: Reapply authentik blueprints
       # 30-agent-clients added 2026-05-27: it was rendered but never
@@ -810,6 +815,10 @@
             ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
         done
       failed_when: false
+      # ADR-0001 Phase 1 cutover switch: when authentik_engine=tofu, OpenTofu is
+      # authoritative and the imperative blueprint reapply is skipped (reversible
+      # — flip back to 'blueprint' to restore this path). Default keeps blueprint.
+      when: (authentik_engine | default('blueprint')) != 'tofu'
 
   roles:
     # ── macOS-only host roles ───────────────────────────────────────────────
