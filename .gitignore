@@ -21,7 +21,10 @@ vision.md
 _credentials.yml
 .ansible-prefix-state
 .nos/
-.claude/
+# .claude is session-local EXCEPT skills/ (committed — the /devlog skill
+# is part of the devlog platform contract, test_devlog_skill_contract.py).
+.claude/*
+!.claude/skills/
 __pycache__/
 *.pyc
 tools/social-poster/index.html
