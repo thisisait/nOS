@@ -12,7 +12,7 @@
 # So the plugin only declares the proxy gate for the HTTP admin surface;
 # no app-level OIDC client makes sense.
 #
-# Q3 candidate per docs/track-q-residue-analysis.md — when SpacetimeDB
+# Q3 candidate per docs/archive/track-q-residue-analysis.md — when SpacetimeDB
 # matures to ship a multi-tenant admin UI, revisit. Until then this stub
 # is sufficient: Authentik gates /admin via forward_auth, module-level
 # auth uses SpacetimeDB's own crypto identity. **Stay proxy permanently.**

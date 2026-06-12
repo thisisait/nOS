@@ -142,7 +142,7 @@ the Q3 batch.
 |---|---|---|---|
 | **Q1c** | observability composition | Phase 1 | ✅ |
 | **Q2** | 35 OIDC services | Phase 1 | ✅ |
-| **D-series** | central `authentik_oidc_apps` retired; SSO trichotomy (`native_oidc / header_oidc / forward_auth`) | 2026-05-05 | ✅ — see `docs/native-sso-survey.md` + `docs/aggregator-parity-report.md` + `docs/upstream-pr-opportunities.md` |
+| **D-series** | central `authentik_oidc_apps` retired; SSO trichotomy (`native_oidc / header_oidc / forward_auth`) | 2026-05-05 | ✅ — see `docs/native-sso-survey.md` + `docs/archive/aggregator-parity-report.md` + `docs/upstream-pr-opportunities.md` |
 | **D2** | drop role-side OIDC env duplicates (12 rolí) | active | 🟡 — outline prototype `2324b6d`; 11 zbývá |
 | **Q3** | bluesky_pds, mcp_gateway (spacetimedb stub done) + 4 substrate exceptions | post-D2 | ⚪ |
 | **Q4-Q7** | Comms / Content / Dev-CI / Misc tiers | operator bandwidth | ⚪ |

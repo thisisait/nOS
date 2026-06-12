@@ -145,7 +145,7 @@ Once a Cowork session has shell pass + browser, it runs
   with the failure context and proposed direction; does NOT commit.
 
 The Cowork dispatch prompt lives at
-[`docs/cowork-wet-test-prompt.md`](cowork-wet-test-prompt.md).
+[`docs/archive/cowork-wet-test-prompt.md`](archive/cowork-wet-test-prompt.md).
 
 ---
 
@@ -156,7 +156,7 @@ The Cowork dispatch prompt lives at
   automates sections 6/7/9 (Python) and parts of 2/3/5/8 via smoke
   probes; sections 4/11 (Authentik admin UI, browser flow) stay manual
   until Track P proper lands real Playwright bodies.
-- [`wet-test-automation.md`](wet-test-automation.md) — Track P
+- [`archive/wet-test-automation.md`](archive/wet-test-automation.md) — Track P
   architecture (Playwright + Cowork loop). `post-blank.sh` is the
   shell-level primitive Cowork drives.
 - [`active-work.md`](active-work.md) — current sprint state.

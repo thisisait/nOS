@@ -4,7 +4,7 @@
 > target provider→client→box vision; the brand/URLs (`czechbot.eu`) predate the
 > nOS / This-is-AIT rebrand. For an accurate current-state reconciliation — what
 > is built vs greenfield, the topology mapping, and the recommended phased path —
-> see [fleet-review-2026q2.md](fleet-review-2026q2.md). Live config does **not**
+> see [archive/fleet-review-2026q2.md](archive/fleet-review-2026q2.md). Live config does **not**
 > consume this doc (e.g. `heartbeat_endpoint` defaults to empty, not the
 > `fleet.czechbot.eu` URL drawn below).
 

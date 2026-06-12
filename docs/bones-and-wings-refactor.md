@@ -917,7 +917,7 @@ PoC = end-to-end one plugin (gitleaks) + one agent (conductor) + the platform sk
 ### 8.2 Parallelization (if operator wants multiple agents)
 
 For the current planned bulk implementation batch, use the operational runbook
-in `docs/bones-and-wings-bulk-plan.md`. The notes below are the original
+in `docs/archive/bones-and-wings-bulk-plan.md`. The notes below are the original
 high-level dependency sketch; the bulk plan is the live coordination document
 for lane ownership, shared-file locks, merge order, and gate checks.
 

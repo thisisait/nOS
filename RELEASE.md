@@ -498,7 +498,7 @@ Czech-integration still absent."
 
 ### Fleet (review only)
 
-- `docs/fleet-review-2026q2.md` reconciles the aspirational fleet design with
+- `docs/archive/fleet-review-2026q2.md` reconciles the aspirational fleet design with
   reality (built vs greenfield), confirms the naming (fleet mode / Track F), maps
   the p2p / server-client / mesh topologies, and tees up the push-vs-pull
   control-plane decision. No live config changed.

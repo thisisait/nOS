@@ -71,7 +71,7 @@ milestone. Authoritative notes: [`RELEASE.md`](../RELEASE.md).
 | **Observability veins** | `grafana-wing` provisions the orphaned `wing_sqlite` datasource → SQLite dashboards populate; stub panels → real `agent_sessions`/`remediation_items` queries; idempotent `bin/ingest-{remediation,pentest}.php`; gitleaks 8.x scan fix. Gate `test_grafana_datasource_provisioned.py`. |
 | **Hub autowiring (P1/P2)** | `hub_card` harvest → `/hub` (lucide icons, tier, RBAC); Uptime-Kuma health_check probe; Nextcloud↔OnlyOffice. |
 | **Agent runtime** | `pulse-run-agent.sh` mkdir mutex serializes claude-CLI agents; session tokens + exit-verdict propagation. |
-| **Fleet (review)** | `docs/fleet-review-2026q2.md` — fleet mode / Track F reality vs aspiration; push-vs-pull decision teed up. |
+| **Fleet (review)** | `docs/archive/fleet-review-2026q2.md` — fleet mode / Track F reality vs aspiration; push-vs-pull decision teed up. |
 | **Validated by** | Full all-on run `ok=1201 failed=0`, 33/33 smoke; `tests/upgrades` 165 + anatomy green; ansible-lint 0. |
 
 ## v0.2-beta milestone (2026-05-23)
@@ -867,7 +867,7 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 6. Choose your track based on `docs/active-work.md`. Default order today
    (2026-05-03 evening): finish the security-hardening full-blank gate, then
    resume bones & wings at A3.5. For parallel B&W work, use
-   `docs/bones-and-wings-bulk-plan.md`.
+   `docs/archive/bones-and-wings-bulk-plan.md`.
 7. Read the track's "Files to touch" + "Exit criteria" before starting code.
 8. Pre-flight: `ansible-playbook main.yml --syntax-check` + `python3 -m pytest tests/apps tests/state_manager -q` should both pass cleanly.
 9. Always update the **Decision log** when making a non-trivial choice — future-you will thank you.
@@ -908,7 +908,7 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 ### Track Q — Autowiring debt consolidation **(post-PoC, first-class follow-on, 2026-05-03 elevated)**
 
-**Status: doctrine validated on 5 pilots 2026-05-03/04** (Woodpecker, Qdrant, Portainer, Grafana, Vaultwarden) under `files/anatomy/plugins/<service>-base/` — plugin manifest schema stable across Tier-1+role+peer-OAuth, Tier-2+new-substrate, Tier-1+API-driven-post (272-LOC harvest), Tier-1+observability-heavy, and Tier-1+`end_users`-GDPR shapes. Each draft includes a "harvest map" comment block (today's-surface → manifest-block) so the per-role Track Q sweep has a pre-built checklist. Lane D Grafana plugin loader side-effects implementation remains the **mass-migration gate**; per-role tune-and-thin (touch a role for any reason → harvest into draft) is the current incremental pattern. 7 batches × 3-5 days each = 4-6 weeks total at full Track Q tempo. Plan in `docs/bones-and-wings-refactor.md` §13.1; bulk-job coordination in `docs/bones-and-wings-bulk-plan.md`.
+**Status: doctrine validated on 5 pilots 2026-05-03/04** (Woodpecker, Qdrant, Portainer, Grafana, Vaultwarden) under `files/anatomy/plugins/<service>-base/` — plugin manifest schema stable across Tier-1+role+peer-OAuth, Tier-2+new-substrate, Tier-1+API-driven-post (272-LOC harvest), Tier-1+observability-heavy, and Tier-1+`end_users`-GDPR shapes. Each draft includes a "harvest map" comment block (today's-surface → manifest-block) so the per-role Track Q sweep has a pre-built checklist. Lane D Grafana plugin loader side-effects implementation remains the **mass-migration gate**; per-role tune-and-thin (touch a role for any reason → harvest into draft) is the current incremental pattern. 7 batches × 3-5 days each = 4-6 weeks total at full Track Q tempo. Plan in `docs/bones-and-wings-refactor.md` §13.1; bulk-job coordination in `docs/archive/bones-and-wings-bulk-plan.md`.
 
 **Doctrine** (refactor doc §1.1, "tendons & vessels"): every Tier-1 role post-Track-Q is install-only (defaults + main.yml + compose template + meta). All wiring lives in service + composition plugins under `files/anatomy/plugins/`. Net LOC delta projected: **-2000 to -3500** across ~50 distinct integrations.
 
@@ -957,7 +957,7 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 **R4 — Q-readiness sweep (0.5-1 d):**
 - Grep stale anatomy paths and role names.
-- Update `docs/bones-and-wings-refactor.md`, `files/anatomy/README.md`, `CLAUDE.md`, and `docs/bones-and-wings-bulk-plan.md`.
+- Update `docs/bones-and-wings-refactor.md`, `files/anatomy/README.md`, `CLAUDE.md`, and `docs/archive/bones-and-wings-bulk-plan.md`.
 - Exit with a green syntax check and anatomy tests.
 
 **Exit criteria:** all anatomy-control-plane references use `n_os.anatomy.*`; service roles remain `pazny.<service>` until individually thinned by Track Q; plugin manifests remain the only home for config+wiring; old `pazny.{bone,wing,pulse}` usage is either wrapper-compatible or explicitly documented as migrated.
@@ -967,14 +967,14 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 ### Track P — Automated wet-test (Playwright + Cowork) **(post-H stretch)**
 
 **Status: scaffolding seeded in Track E batch (commit chain `c7b5a4e..`).** File skeletons landed:
-- `docs/wet-test-automation.md` — architecture, Cowork session protocol, file layout, activation steps
+- `docs/archive/wet-test-automation.md` — architecture, Cowork session protocol, file layout, activation steps
 - `tests/e2e/tier2-wet-test.spec.ts` — Playwright skeleton mapping checklist sections 2/3/4/5/8/11 to `describe`/`test` blocks; every test currently calls `test.fixme()` so a `npx playwright test` reports "skipped" until Track P proper
 
 **Why this matters:** walking `docs/tier2-wet-test-checklist.md` by hand is tractable for 3-5 pilots but won't scale once the Tier-2 catalog reaches 10+. Operator's vision: a Cowork session driven Playwright suite that walks the 12 sections autonomously, files `fix(apps):` commits for low-risk failures (image tag bumps, healthcheck timing), and surfaces Cowork questions for anything that needs human judgment.
 
 **Activation (post-H):** `cd tests/e2e && npm ci && npx playwright install chromium`, then a Cowork session runs `npx playwright test --reporter=json` after each blank and acts on the JSON.
 
-**Exit criteria:** all 12 checklist sections have a corresponding Playwright test; Cowork session can drive a full wet-test from "blank just finished" to "all green, branch ready for review" hands-free; documented Cowork prompt template at `docs/cowork-wet-test-prompt.md`; operator confirms a successful end-to-end Cowork-driven wet test in the Decision log.
+**Exit criteria:** all 12 checklist sections have a corresponding Playwright test; Cowork session can drive a full wet-test from "blank just finished" to "all green, branch ready for review" hands-free; documented Cowork prompt template at `docs/archive/cowork-wet-test-prompt.md`; operator confirms a successful end-to-end Cowork-driven wet test in the Decision log.
 
 ---
 
@@ -1009,14 +1009,14 @@ trichotomy doctrine.
   compose-extension is authoritative).
 
 **Artifacts:** `docs/native-sso-survey.md`, `docs/upstream-pr-opportunities.md`,
-`docs/aggregator-parity-report.md`, `docs/multi-agent-batch.md`,
-`docs/track-q-residue-analysis.md`, `tools/aggregator-dry-run.py`,
+`docs/archive/aggregator-parity-report.md`, `docs/multi-agent-batch.md`,
+`docs/archive/track-q-residue-analysis.md`, `tools/aggregator-dry-run.py`,
 `tools/d12-annotate-plugins.py`.
 
 **Forward:** D2 batch (11 rolí), then A5 (Wing OpenAPI/DDL contracts),
 A7 (gitleaks plugin), A8 (conductor agent), A10 (audit trail), Phase
 5 ceremony (first non-operator end-to-end write to wing.db). Lane
-specs in `docs/bones-and-wings-bulk-plan.md`.
+specs in `docs/archive/bones-and-wings-bulk-plan.md`.
 
 ---
 

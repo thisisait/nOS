@@ -305,7 +305,7 @@
 # `render` actions reading from
 #   files/anatomy/plugins/grafana-base/provisioning/{datasources,dashboards}/all.yml.j2
 # Doctrine reference: docs/bones-and-wings-refactor.md §1.1 + Lane D in
-# docs/bones-and-wings-bulk-plan.md.
+# docs/archive/bones-and-wings-bulk-plan.md.
 
 - name: "[Core] Deploy blackbox-exporter configuration"
   ansible.builtin.copy:
