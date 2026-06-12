@@ -82,6 +82,14 @@ $configurator->addConfig(__DIR__ . '/../app/config/common.neon');
 if (is_file(__DIR__ . '/../app/config/local.neon')) {
 	$configurator->addConfig(__DIR__ . '/../app/config/local.neon');
 }
+// Deploy-nesting fix (2026-06-12): %appDir% is derived from the Configurator
+// CALLER's directory, so common.neon's %appDir%-relative agentsDir default
+// resolves correctly only under the web bootstrap (app/Bootstrap/Booting.php).
+// Here the caller is bin/, which made the CLI look in <wing>/../agents —
+// "agent.yml not found" on every deployed run. __DIR__/../../agents is valid
+// in BOTH trees: repo files/anatomy/wing/bin → files/anatomy/agents, deployed
+// ~/wing/app/bin → ~/wing/agents. Array config wins over earlier neon files.
+$configurator->addConfig(['parameters' => ['agentsDir' => __DIR__ . '/../../agents']]);
 $configurator->setDebugMode(false);
 
 $container = $configurator->createContainer();
