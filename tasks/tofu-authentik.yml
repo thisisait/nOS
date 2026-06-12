@@ -125,10 +125,12 @@
       ansible.builtin.fail:
         msg: >-
           tofu plan would destroy/replace {{ _tofu_destroys }} resource(s) —
-          refusing to apply. This almost always means the tenant is only
-          partially authored in HCL (un-authored providers plan as destroys).
-          Author/import the full tenant (tools/tofu-authentik-adopt.sh) until the
-          plan is no-op before flipping authentik_engine=tofu.
+          refusing to apply. Two known causes: (a) the tenant is only partially
+          authored in HCL (un-authored providers plan as destroys) — author/
+          import the full tenant (tools/tofu-authentik-adopt.sh) until the plan
+          is no-op; (b) a service flipped enabled→false (install_* off) and
+          dropped out of the registry filter — review the plan and run
+          `tofu apply tfplan` supervised (or let the next blank converge it).
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int > 0

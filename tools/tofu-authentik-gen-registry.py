@@ -89,6 +89,14 @@ def main() -> int:
             "name": c.get("name") or slug,
             "mode": mode,                       # native_oidc | forward_auth | header_oidc
             "tier": c.get("tier", 2),
+            # Enable expression VERBATIM (raw Jinja, e.g.
+            # "{{ install_erpnext | default(false) }}") — the generator runs
+            # WITHOUT template_vars, so it must never render this. The tfvars
+            # template resolves it at playbook time (full play-var scope) and
+            # skips falsy services. A block with no `enabled` field defaults
+            # to False — mirroring the blueprint filter in
+            # 10-oidc-apps.yaml.j2: `c.enabled | default(false) | bool`.
+            "enabled": c.get("enabled", False),
             "external_host": ext,
             "client_id": c.get("client_id") or f"nos-{slug}",
         }
