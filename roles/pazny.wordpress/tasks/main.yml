@@ -45,6 +45,16 @@
   notify: Restart wordpress
   when: wordpress_devlog_enabled | default(true)
 
+# Mirrors Authentik groups -> WP roles on every OIDC login (map JSON comes
+# from wordpress_rbac_role_map_json via the wordpress-base compose extension).
+- name: "[pazny.wordpress] Stage RBAC role-sync mu-plugin"
+  ansible.builtin.copy:
+    src: rbac-role-sync.php
+    dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/rbac-role-sync.php"
+    mode: '0644'
+  notify: Restart wordpress
+  when: install_authentik | default(false)
+
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

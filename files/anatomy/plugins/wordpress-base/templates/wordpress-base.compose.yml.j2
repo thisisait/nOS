@@ -47,6 +47,11 @@ services:
       WP_OIDC_LOGIN_TYPE: "{{ wordpress_oidc_login_type | default('button') }}"
 {% endif %}
       WP_OIDC_IDENTITY_KEY: "preferred_username"
+      # ── RBAC mirror (rbac-role-sync.php mu-plugin) ────────────────────────
+      # Authentik groups claim -> WP role, highest privilege wins, fallback
+      # subscriber. The map is a JSON STRING LITERAL var on purpose — to_json
+      # is an ansible filter and the vars-files stock-Jinja trap forbids it.
+      WP_OIDC_GROUP_ROLE_MAP: '{{ wordpress_rbac_role_map_json | default('') }}'
     extra_hosts:
       # Authentik OIDC endpoint resolves via host-gateway to the host's
       # Traefik. Without this alias, WP's container-internal DNS would

@@ -1124,6 +1124,19 @@ wordpress_devlog_enabled: true          # effective only with install_wordpress
 wordpress_devlog_bot_user: "nos-devlog-bot"
 wordpress_devlog_app_name: "nos-devlog"
 
+# Site polish (devlog presentation): theme + extra plugins installed/activated
+# idempotently by post.yml via wp-cli (wp.org slugs, all GPL).
+wordpress_theme: "generatepress"
+wordpress_extra_plugins: ["secure-custom-fields"]
+
+# RBAC mirror — Authentik groups -> WP roles, enforced on every OIDC login by
+# the rbac-role-sync.php mu-plugin (highest privilege wins; unmapped users
+# fall back to subscriber; local accounts untouched). JSON STRING literal on
+# purpose: to_json is an ansible filter and this value lands in the core-up
+# vars namespace (stock-Jinja trap). Operators with custom group names
+# (authentik_rbac_tiers) override this string in config.yml.
+wordpress_rbac_role_map_json: '{"nos-providers":"administrator","nos-admins":"administrator","nos-managers":"editor","nos-users":"author","nos-guests":"subscriber"}'
+
 # ==============================================================================
 # IIAB – NEXTCLOUD
 # ==============================================================================

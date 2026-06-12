@@ -18,6 +18,10 @@ services:
       # devlog: re-enable Application Passwords behind the TLS-terminating edge
       - {{ stacks_dir }}/iiab/wordpress/mu-plugins/devlog-app-passwords.php:/var/www/html/wp-content/mu-plugins/devlog-app-passwords.php:ro
 {% endif %}
+{% if install_authentik | default(false) %}
+      # RBAC mirror: Authentik groups -> WP roles on OIDC login
+      - {{ stacks_dir }}/iiab/wordpress/mu-plugins/rbac-role-sync.php:/var/www/html/wp-content/mu-plugins/rbac-role-sync.php:ro
+{% endif %}
     environment:
       WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
       WORDPRESS_DB_USER: "{{ wordpress_db_user }}"
