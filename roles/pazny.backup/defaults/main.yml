@@ -42,6 +42,18 @@ backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + 
 # live secrets.yml and brick SSO) — see tasks/restore.yml.
 backup_nos_state: true
 
+# OpenTofu Authentik state artifacts (ADR-0001 Phase 1) → tofu-state.tar.gz.
+# terraform.tfstate (+ its .backup sibling) and the rendered nos.auto.tfvars.json
+# are SECRET-BEARING (provider client_secrets, outpost tokens) and gitignored in
+# the repo checkout — before this they were in NO custody path, so disk loss
+# orphaned the tenant from state (docs/opentofu-authentik-cutover.md P1).
+# backup.sh skips a missing dir/file, so a blueprint-engine install costs nothing.
+# Restore: the generic stage of tasks/restore.yml downloads + decrypts the tar
+# into the restore workdir; re-seating it into the checkout is a deliberate
+# MANUAL step (never auto-extract over a live git working tree).
+backup_tofu_state: true
+backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
+
 # Docker NAMED volumes to tar+upload. mariadb_data was dropped — it is the raw
 # DB datadir, fully covered by the logical mariadb-dump (redundant). Add only
 # genuinely-stateful non-DB named volumes (operator: cross-check `docker volume
