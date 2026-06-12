@@ -1,149 +1,108 @@
 # OpenTofu Authentik cutover runbook (ADR-0001 Phase 1)
 
-How to move the Authentik consumer from the imperative blueprint engine
-(`ak apply_blueprint`) to OpenTofu authority — **safely, reversibly, gated on a
-proven no-op plan.** Read [ADR-0001](adr/0001-opentofu-for-autowiring.md) first.
+> **STATUS: CUTOVER COMPLETE (2026-06-12).** Path B (tofu-engine blank)
+> executed and converged: `tofu plan` reads no-op across the full tenant,
+> smoke catalog 48/48 URLs OK, all 39 enabled apps carry their RBAC tier
+> binding, agent clients (`30-agent-clients`) landed. `authentik_engine: tofu`
+> is the live authority. This document is now the operating reference +
+> archaeology of the five traps the cutover surfaced. Read
+> [ADR-0001](adr/0001-opentofu-for-autowiring.md) for the why.
 
 ## The two switches
 
 | Var | Default | Meaning |
 |---|---|---|
 | `manage_authentik_with_tofu` | `false` | Opt-in: run the OpenTofu task at all (Phase 0 drift detector + Phase 1 apply). |
-| `authentik_engine` | `"blueprint"` | Authority: `blueprint` = `ak apply_blueprint` is the source of truth (OpenTofu is plan-only/advisory). `tofu` = OpenTofu applies; the imperative blueprint reapply + the MTI footgun handler are **skipped**. |
+| `authentik_engine` | `"blueprint"` | Authority: `blueprint` = `ak apply_blueprint` is the source of truth (OpenTofu is plan-only/advisory). `tofu` = OpenTofu applies; the imperative blueprint reapply + the MTI footgun handler are **skipped** and the `10-oidc-apps` blueprint renders as a no-op. |
 
-Phase 0 = `manage_authentik_with_tofu: true`, `authentik_engine: blueprint`
-(drift detector). Phase 1 cutover = flip `authentik_engine: tofu` — **only after
-the whole tenant is authored + imported and `tofu plan` is no-op.**
+Ownership split under `engine=tofu`: **OpenTofu owns providers + applications
++ outpost attachments** (the `10-oidc-apps` layer). The other six blueprints —
+groups / MFA / RBAC policies / agent clients / enrollment / brand — **still
+apply imperatively** and that is by design, not a gap.
 
 ## The safety rail: the destroy guard
 
 `tasks/tofu-authentik.yml` parses `tofu show -json tfplan` and **refuses to
-apply if the plan contains ANY delete action.** The danger it blocks: importing
-the full tenant into state but authoring HCL for only some services makes the
-un-authored ones plan as destroys → catastrophic SSO outage. The guard makes
-the engine flip a no-op-or-nothing operation. You cannot accidentally nuke
-providers.
+apply if the plan contains ANY delete action.** The danger it blocks: a
+partially-authored tenant plans un-authored providers as destroys →
+catastrophic SSO outage. The guard makes any engine flip a no-op-or-nothing
+operation.
 
-## Blank-run cutover (the clean-slate path — recommended for the first test)
+## The five traps (all fixed + gated — archaeology)
 
-A `blank=true` run wipes the Authentik DB, so the tenant comes up **empty** —
-no MTI-drifted providers, no orphans, nothing to import. OpenTofu then just
-**creates** the full SSO graph (`98 add / 0 change / 0 destroy`, verified). This
-is the safest cutover: there is nothing for the destroy guard to trip on.
+Every one of these surfaced live during the 2026-06-11/12 cutover blanks and
+is pinned by a CI gate. If you touch this layer, read them first.
 
-The data-driven HCL is **ready**: `state/tofu-authentik-services.yml` (39
-services, regenerated from the aggregated `authentik:` blocks by
-`tools/tofu-authentik-gen-registry.py`) → tfvars → `for_each` module. A blank
-with `authentik_engine: tofu` drops `10-oidc-apps` from the imperative loop
-(the other six blueprints — groups/MFA/RBAC/agents/enrollment/brand — still
-apply) and OpenTofu provisions providers+apps+outpost attachments.
+1. **Authentik auto-applies mounted blueprints** (container start + inotify on
+   `/blueprints/custom`) — gating the `ak apply_blueprint` loops is NOT
+   enough. Blank #1 died on 36× "provider already exists": the rendered
+   `10-oidc-apps.yaml` had already created everything before `tofu apply`.
+   *Fix:* under `engine=tofu` the template renders ZERO client entries, and
+   the embedded-outpost entry keeps `config:` but OMITS `providers:` (a
+   blueprint apply must never unbind tofu-attached providers).
+   *Gate:* `tests/anatomy/test_tofu_engine_blueprint_noop.py`.
+2. **`lookup('file') | from_yaml` never resolves nested Jinja** (post-2.19
+   trust model). Blank #2 died on 22× `external_host: "Enter a valid URL"` —
+   tfvars carried literal `https://{{ x_domain }}`. *Fix:* the registry loads
+   via `lookup('template', ...)` so the FILE renders first.
+   *Gate:* `tests/anatomy/test_tofu_registry_bridge.py`.
+3. **`authentik_outpost_provider_attachment` races at default parallelism** —
+   the resource is a read-modify-write over the outpost's providers LIST (no
+   row-level m2m API). Blank #3 created 20 attachments in parallel;
+   last-writer-wins kept 11 and 9 forward_auth services 404'd at the outpost.
+   *Fix:* `tofu apply -parallelism=1` (serial, ~60s).
+   *Gate:* `test_tofu_registry_bridge.py::test_apply_is_serial`.
+4. **The registry generator was Tier-1-only** — `apps/<name>.yml` `authentik:`
+   blocks (documenso/roundcube/twofauth) had NO creator under `engine=tofu`
+   (blueprint no-op'd, registry missed them) → 404, no provider at all.
+   *Fix:* `tools/tofu-authentik-gen-registry.py` harvests app manifests like
+   the live loader does, plus slug dedupe (qdrant lives in BOTH tiers).
+   *Gate:* `test_tofu_registry_bridge.py::test_registry_covers_tier2_app_manifests`.
+5. **`internal_host_ssl_validation=false` never converges** — Authentik
+   normalizes the field back to `true` whenever `internal_host` is empty
+   (all our forward_single proxies route via Traefik), producing a perpetual
+   23-provider in-place diff. *Fix:* module default flipped to `true`.
 
-**Two test paths — pick by appetite:**
+## Operating the tofu engine (steady state)
 
-### Path A (recommended): blueprint blank → prove tofu parity → flip
-1. `ansible-playbook main.yml -e blank=true` (engine stays `blueprint`,
-   default). Clean fresh tenant; validates the whole session's work end-to-end.
-2. On the clean tenant, prove tofu matches it:
-   `ansible-playbook main.yml --tags tofu-authentik -e manage_authentik_with_tofu=true`
-   (plan-only drift detector; import the freshly-created objects; iterate to
-   no-op). This is the parity proof the ADR sequenced.
-3. Flip `authentik_engine: tofu` and re-converge (no blank needed) once parity
-   holds. Reversible.
-
-### Path B (bold): tofu-engine blank in one shot
-Set BOTH `manage_authentik_with_tofu: true` and `authentik_engine: tofu`, then
-`ansible-playbook main.yml -e blank=true`. The empty tenant means tofu's plan is
-all-create / zero-destroy → the destroy guard passes → OpenTofu provisions the
-SSO graph directly; the imperative `10-oidc-apps` is skipped. **Higher stakes:**
-if a per-service attribute is wrong, SSO for that service is misconfigured until
-fixed — but the OTHER blueprints + a re-converge recover it, and flipping
-`authentik_engine` back to `blueprint` + re-converge fully restores the
-imperative path. Known gaps below still apply (outpost attachment, tier RBAC,
-agents, Tier-2).
-
-> **The blank itself is operator-run** (interactive sudo via `vars_prompt`,
-> maximally destructive — wipes all data + DBs). Trigger it yourself; this
-> runbook is the map.
-
-## Cutover procedure (existing-tenant, no blank)
-
-1. **Adopt the whole tenant** (one-time, SAFE — import + plan only, never applies):
-   ```bash
-   tools/tofu-authentik-adopt.sh --plan
-   ```
-   This enumerates every live proxy/oauth2 provider + application (live count:
-   ~22 proxy + ~50 oauth2 + ~50 apps), writes `import {}` blocks, and runs
-   `tofu plan -generate-config-out=generated.tf` to bootstrap HCL from live
-   state. Both files are gitignored until reviewed.
-
-2. **Refactor + reconcile to no-op.** Review `generated.tf`; move flat resources
-   toward `module "nos-authentik-app"` calls where they fit (keep raw HCL for
-   the exotic). Iterate `tofu plan` until it reads **0 to add, 0 to change, 0 to
-   destroy**. The usual deltas (learned in Phase 0): `access_token_validity` /
-   `access_code_validity` timings, `redirect_uri_type: authorization` on oauth2
-   redirect URIs, `internal_host_ssl_validation` on proxies, and the tier RBAC
-   `policy_binding`s (20-rbac-policies uses expression policies — model or
-   accept a one-time normalizing change). Outpost-provider attachment import id
-   format is an open mechanics item — see Known gaps.
-
-3. **Custody the secret-bearing artifacts** BEFORE flipping: `nos.auto.tfvars.json`
-   and `terraform.tfstate` are `0600`, gitignored, and must join Infisical
-   custody + the 3-2-1 backup set + a `restore-verify` floor.
-
-4. **Flip authority** (reversible):
-   ```bash
-   # config.yml:  authentik_engine: "tofu"
-   ansible-playbook main.yml --tags tofu-authentik \
-     -e manage_authentik_with_tofu=true
-   ```
-   The task plans, runs the destroy guard, and applies **only if zero destroys**.
-   The imperative `Reapply authentik blueprints` + `Reconcile providers` handlers
-   are now skipped (gated on `authentik_engine != 'tofu'`).
-
-5. **Verify** the live tenant: SSO login on a forward_auth service (infisical)
-   and a native_oidc service (grafana); `tofu plan` reads no-op.
-
-6. **Drift job:** a read-only `tofu plan` Pulse job → W6.1 "Authentik drifted"
-   notification (wire after the flip).
+- **Full converge** (`ansible-playbook main.yml`) re-renders tfvars, plans,
+  destroy-guards, applies. **Layer-only converge** (sudo-free, agent-friendly):
+  `tools/nos-stacks.sh tofu-authentik`.
+- **Add a Tier-1 service:** plugin `authentik:` block →
+  `python3 tools/tofu-authentik-gen-registry.py` → commit the registry diff.
+- **Add a Tier-2 app:** `authentik:` stanza in `apps/<name>.yml` → same
+  regenerate + commit.
+- **Verify after any change:** `tofu plan` must return to no-op;
+  `python3 tools/nos-smoke.py` must stay green.
+- A blank with `authentik_engine: tofu` provisions the whole SSO graph from
+  scratch (validated: blank #3 + fixes → 48/48).
 
 ## Rollback
 
 Flip `authentik_engine` back to `"blueprint"` and re-run — the imperative
-blueprint reapply + MTI reconcile handlers re-engage. The blueprint render
-(`10-oidc-apps.yaml`) is kept for at least one release; do not delete the
-renderer until the tofu engine has held no-op across several converges.
+blueprint reapply + MTI reconcile handlers re-engage and `10-oidc-apps.yaml`
+renders its full client list again. Keep the blueprint renderer until the tofu
+engine has held no-op across several releases.
 
-## Edges to smooth before a Path-B (tofu-engine) blank
+## Open items (extracted 2026-06-12 — the post-cutover punch list)
 
-- **Converge ordering.** The tofu task lives in the `tasks:` section (runs after
-  roles). On a blank, `20-rbac-policies` (still applied by the blueprint loop)
-  binds tier groups to apps by slug via `!Find` — those apps must EXIST when it
-  runs. If tofu creates the apps AFTER the blueprint handler flushes, the RBAC
-  `!Find` finds nothing. Verify the ordering (or re-converge once: the second
-  pass binds RBAC to the now-existing tofu apps). Path A sidesteps this entirely
-  (blueprint creates everything, then tofu adopts).
-- **Per-service attribute correctness.** The module's fixed timings
-  (`access_token_validity` etc.) + `redirect_uri_type` were tuned to two
-  services in Phase 0. A blank creates all 39; a wrong attribute misconfigures
-  that one service's SSO until corrected (recoverable).
-- **Agents + groups + MFA + enrollment + brand** are created by the SIX
-  blueprints that STILL apply under engine=tofu — tofu only owns
-  providers/apps/outpost-attachments. Confirm `30-agent-clients` etc. land.
-
-## Known gaps (do not flip until closed)
-
-- **Outpost-provider attachment import id format** is unconfirmed — Phase 0
-  imported the proxy/oauth2/app cleanly but not the `outpost_provider_attachment`
-  (it shows as `1 to add`). Either crack the import id, or manage the embedded
-  outpost's provider list via a single `authentik_outpost` resource instead of
-  per-service attachments (pick ONE — both fighting over the list is drift).
-- **Tier RBAC expression policies** (20-rbac-policies) are not yet modeled in
-  HCL; reaching no-op on them needs either modeling or a one-time normalize.
-- **Agents** (oauth2 client_credentials clients, no app/outpost) are a distinct
-  shape; author them as bare `authentik_provider_oauth2` (no module).
-- **Tier-2 apps** authentik wiring: thin `authentik:` stanza in `apps/<name>.yml`
-  → module instantiation render (ADR-0001 §8), landing in the same TF root.
-
-Until these are closed and `tofu plan` is no-op across the full tenant, leave
-`authentik_engine: "blueprint"`. The destroy guard enforces this — apply refuses
-while any destroy remains.
+- **Secrets custody (P1):** `terraform/authentik/terraform.tfstate` +
+  `nos.auto.tfvars.json` are 0600 + gitignored but NOT yet in Infisical
+  custody / the 3-2-1 backup set / a `restore-verify` floor. Until then a
+  disk loss silently orphans the tenant from state (recoverable via blank or
+  adopt, but unplanned).
+- **Disabled-service filtering (P2):** the registry/tfvars include EVERY
+  declared service regardless of `install_*` flags — tofu creates providers +
+  apps for services that don't run (live: erpnext, spacetimedb, mailpit).
+  Harmless cosmetically (no route/container) but drifts from the blueprint-era
+  doctrine where `enabled:` reflected the install set, and it pollutes the
+  user-facing app library. Fix shape: carry the `enabled` Jinja expr into the
+  registry and filter in the tfvars template (it renders with full var scope).
+- **Drift Pulse job (P2):** read-only `tofu plan` on a cadence → "Authentik
+  drifted" notification (the W6.1 hook this doc always planned). Wire via a
+  `pulse_jobs:` block; plan-only, never applies.
+- **Adopt-path attachment import id (P3, existing-tenant only):**
+  `tools/tofu-authentik-adopt.sh` imports proxy/oauth2/app cleanly but the
+  `outpost_provider_attachment` import id format is unconfirmed (shows as
+  `1 to add`). Irrelevant for the blank path (fresh creates land in state);
+  matters only when adopting a long-lived tenant without a blank.
