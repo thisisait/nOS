@@ -19,6 +19,13 @@ resource "authentik_provider_oauth2" "this" {
   client_id           = coalesce(var.client_id, "nos-${var.slug}")
   client_secret       = var.client_secret
   client_type         = "confidential"
+  # Authentik 2026.5.x made grant_types an explicit ArrayField — a provider
+  # created WITHOUT it gets an empty list and every authorization_code
+  # request dies with invalid_request "The request is otherwise malformed"
+  # (first hit live: grafana + gitlab SSO logins after the tofu cutover;
+  # the 10-oidc-apps blueprint always set this). Minimal set, no ROPC —
+  # mirrors the blueprint + test_oauth2_grant_types.py doctrine.
+  grant_types         = ["authorization_code", "refresh_token"]
   authorization_flow  = var.authorization_flow_id
   authentication_flow = var.authentication_flow_id
   invalidation_flow   = var.invalidation_flow_id

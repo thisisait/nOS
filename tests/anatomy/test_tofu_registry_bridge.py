@@ -176,3 +176,18 @@ def test_disabled_service_filtered_from_tfvars():
         "authentik_services — the tfvars template must skip services whose "
         "rendered enabled value is falsy."
     )
+
+
+def test_oauth2_module_declares_grant_types():
+    """Authentik 2026.5.x made OAuth2Provider.grant_types an explicit
+    ArrayField — a provider created WITHOUT it has an empty list and every
+    authorization_code request dies with invalid_request "The request is
+    otherwise malformed" (live: grafana + gitlab SSO broke after the tofu
+    cutover; the blueprint always set the field). Mirror of
+    test_oauth2_grant_types.py for the HCL side: minimal set, no ROPC."""
+    module_tf = (REPO / "modules" / "nos-authentik-app" / "main.tf").read_text()
+    assert 'grant_types         = ["authorization_code", "refresh_token"]' in module_tf, (
+        "authentik_provider_oauth2 must declare grant_types "
+        '["authorization_code", "refresh_token"] — without it Authentik '
+        "2026.5.x+ rejects every native_oidc login."
+    )
