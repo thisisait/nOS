@@ -25,6 +25,12 @@ tofu_authentik_services:
   tier: 2
   external_host: https://{{ code_server_domain }}
   client_id: nos-code-server
+- slug: documenso
+  name: Documenso
+  mode: forward_auth
+  tier: 2
+  external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
+  client_id: nos-documenso
 - slug: erpnext
   name: ERPNext
   mode: native_oidc
@@ -239,6 +245,12 @@ tofu_authentik_services:
   tier: 1
   external_host: https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}
   client_id: nos-qdrant
+- slug: roundcube
+  name: Roundcube
+  mode: forward_auth
+  tier: 3
+  external_host: https://roundcube.apps.{{ tenant_domain | default('dev.local') }}
+  client_id: nos-roundcube
 - slug: snappymail
   name: SnappyMail
   mode: forward_auth
@@ -260,6 +272,12 @@ tofu_authentik_services:
   client_secret: '{{ global_password_prefix }}_pw_oidc_superset'
   redirect_uris:
   - https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth-authorized/authentik
+- slug: twofauth
+  name: 2FAuth
+  mode: forward_auth
+  tier: 3
+  external_host: https://twofauth.apps.{{ tenant_domain | default('dev.local') }}
+  client_id: nos-twofauth
 - slug: uptime-kuma
   name: Uptime Kuma
   mode: forward_auth
