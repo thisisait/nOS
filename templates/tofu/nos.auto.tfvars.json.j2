@@ -6,6 +6,17 @@
     STRUCTURE is in services.tf (for_each); this is just VALUES. -#}
 {%- set _svcmap = {} -%}
 {%- for s in tofu_authentik_services | default([]) -%}
+  {#- Disabled-service filter: the registry carries each client's enable
+      expression as raw Jinja; lookup('template') has already rendered it by
+      now, so `s.enabled` arrives as a STRING like "True"/"False" — coerce
+      with `bool`. Missing field = disabled, mirroring the blueprint filter
+      (10-oidc-apps.yaml.j2: `c.enabled | default(false) | bool`).
+      OPERATIONAL CONSEQUENCE: on an already-provisioned tenant, a service
+      that flips enabled→false drops out of var.authentik_services and plans
+      as a DESTROY — the destroy guard in tasks/tofu-authentik.yml then
+      refuses apply. The operator resolves via a supervised one-time apply
+      (review the plan, run `tofu apply tfplan` by hand) or the next blank. -#}
+  {%- if s.enabled | default(false) | bool -%}
   {%- set _e = {
         "mode": s.mode,
         "name": s.name,
@@ -16,6 +27,7 @@
         "redirect_uris": s.redirect_uris | default([]),
       } -%}
   {%- set _ = _svcmap.update({s.slug: _e}) -%}
+  {%- endif -%}
 {%- endfor -%}
 {{
   {

@@ -8,6 +8,7 @@ tofu_authentik_services:
   name: BookStack
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_bookstack | default(false) }}'
   external_host: https://{{ bookstack_domain }}
   client_id: nos-bookstack
   client_secret: '{{ global_password_prefix }}_pw_oidc_bookstack'
@@ -17,24 +18,28 @@ tofu_authentik_services:
   name: Calibre-Web
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_calibreweb | default(false) }}'
   external_host: https://{{ calibreweb_domain }}
   client_id: nos-calibre-web
 - slug: code-server
   name: code-server
   mode: forward_auth
   tier: 2
+  enabled: '{{ install_code_server | default(false) }}'
   external_host: https://{{ code_server_domain }}
   client_id: nos-code-server
 - slug: documenso
   name: Documenso
   mode: forward_auth
   tier: 2
+  enabled: true
   external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
   client_id: nos-documenso
 - slug: erpnext
   name: ERPNext
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_erpnext | default(false) }}'
   external_host: https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-erpnext
   client_secret: '{{ global_password_prefix }}_pw_oidc_erpnext'
@@ -44,12 +49,14 @@ tofu_authentik_services:
   name: Firefly III
   mode: header_oidc
   tier: 2
+  enabled: '{{ install_firefly | default(false) }}'
   external_host: https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-firefly
 - slug: freescout
   name: FreeScout
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_freescout | default(false) }}'
   external_host: https://{{ freescout_domain }}
   client_id: nos-freescout
   client_secret: '{{ global_password_prefix }}_pw_oidc_freescout'
@@ -59,6 +66,7 @@ tofu_authentik_services:
   name: Gitea
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_gitea | default(false) }}'
   external_host: https://{{ gitea_domain }}
   client_id: nos-gitea
   client_secret: '{{ global_password_prefix }}_pw_oidc_gitea'
@@ -68,6 +76,7 @@ tofu_authentik_services:
   name: GitLab
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_gitlab | default(false) }}'
   external_host: https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-gitlab
   client_secret: '{{ global_password_prefix }}_pw_oidc_gitlab'
@@ -77,6 +86,7 @@ tofu_authentik_services:
   name: Grafana
   mode: native_oidc
   tier: 1
+  enabled: '{{ install_observability | default(false) }}'
   external_host: https://{{ grafana_domain }}
   client_id: nos-grafana
   client_secret: '{{ global_password_prefix }}_pw_oidc_grafana'
@@ -86,6 +96,7 @@ tofu_authentik_services:
   name: HedgeDoc
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_hedgedoc | default(false) }}'
   external_host: https://{{ hedgedoc_domain }}
   client_id: nos-hedgedoc
   client_secret: '{{ global_password_prefix }}_pw_oidc_hedgedoc'
@@ -95,12 +106,14 @@ tofu_authentik_services:
   name: Hermes
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_hermes | default(false) }}'
   external_host: https://{{ hermes_domain }}
   client_id: nos-hermes
 - slug: homeassistant
   name: Home Assistant
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_homeassistant | default(false) }}'
   external_host: https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-homeassistant
   client_secret: '{{ global_password_prefix }}_pw_oidc_homeassistant'
@@ -110,18 +123,21 @@ tofu_authentik_services:
   name: Infisical
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_infisical | default(false) }}'
   external_host: https://{{ infisical_domain }}
   client_id: nos-infisical
 - slug: influxdb
   name: InfluxDB
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_influxdb | default(false) }}'
   external_host: https://{{ influxdb_domain }}
   client_id: nos-influxdb
 - slug: jellyfin
   name: Jellyfin
   mode: native_oidc
   tier: 4
+  enabled: '{{ install_jellyfin | default(false) }}'
   external_host: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-jellyfin
   client_secret: '{{ global_password_prefix }}_pw_oidc_jellyfin'
@@ -131,24 +147,28 @@ tofu_authentik_services:
   name: Kiwix
   mode: forward_auth
   tier: 4
+  enabled: '{{ install_kiwix | default(false) }}'
   external_host: https://{{ kiwix_domain }}
   client_id: nos-kiwix
 - slug: mailpit
   name: Mailpit
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_mailpit | default(false) }}'
   external_host: https://{{ mailpit_domain }}
   client_id: nos-mailpit
 - slug: metabase
   name: Metabase
   mode: forward_auth
   tier: 2
+  enabled: '{{ install_metabase | default(false) }}'
   external_host: https://{{ metabase_domain }}
   client_id: nos-metabase
 - slug: miniflux
   name: Miniflux
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_miniflux | default(false) }}'
   external_host: https://{{ miniflux_domain }}
   client_id: nos-miniflux
   client_secret: '{{ global_password_prefix }}_pw_oidc_miniflux'
@@ -158,6 +178,7 @@ tofu_authentik_services:
   name: n8n
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_n8n | default(false) }}'
   external_host: https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-n8n
   client_secret: '{{ global_password_prefix }}_pw_oidc_n8n'
@@ -168,6 +189,7 @@ tofu_authentik_services:
   name: Nextcloud
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_nextcloud | default(false) }}'
   external_host: https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-nextcloud
   client_secret: '{{ global_password_prefix }}_pw_oidc_nextcloud'
@@ -177,6 +199,7 @@ tofu_authentik_services:
   name: Node-RED
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_nodered | default(false) }}'
   external_host: https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-nodered
   client_secret: '{{ global_password_prefix }}_pw_oidc_nodered'
@@ -186,18 +209,21 @@ tofu_authentik_services:
   name: ntfy
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_ntfy | default(false) }}'
   external_host: https://{{ ntfy_domain }}
   client_id: nos-ntfy
 - slug: onlyoffice
   name: ONLYOFFICE
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_onlyoffice | default(false) }}'
   external_host: https://{{ onlyoffice_domain }}
   client_id: nos-onlyoffice
 - slug: open-webui
   name: Open WebUI
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_openwebui | default(false) }}'
   external_host: https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-openwebui
   client_secret: '{{ global_password_prefix }}_pw_oidc_openwebui'
@@ -207,12 +233,14 @@ tofu_authentik_services:
   name: OpenClaw
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_openclaw | default(false) }}'
   external_host: https://{{ openclaw_domain }}
   client_id: nos-openclaw
 - slug: outline
   name: Outline
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_outline | default(false) }}'
   external_host: https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-outline
   client_secret: '{{ global_password_prefix }}_pw_oidc_outline'
@@ -222,12 +250,14 @@ tofu_authentik_services:
   name: Paperclip
   mode: forward_auth
   tier: 2
+  enabled: '{{ install_paperclip | default(false) }}'
   external_host: https://{{ paperclip_domain }}
   client_id: nos-paperclip
 - slug: portainer
   name: Portainer
   mode: native_oidc
   tier: 1
+  enabled: '{{ install_portainer | default(false) }}'
   external_host: https://{{ portainer_domain }}
   client_id: nos-portainer
   client_secret: '{{ global_password_prefix }}_pw_oidc_portainer'
@@ -237,36 +267,42 @@ tofu_authentik_services:
   name: Puter
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_puter | default(false) }}'
   external_host: https://{{ puter_domain }}
   client_id: nos-puter
 - slug: qdrant
   name: Qdrant
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_qdrant | default(false) }}'
   external_host: https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}
   client_id: nos-qdrant
 - slug: roundcube
   name: Roundcube
   mode: forward_auth
   tier: 3
+  enabled: true
   external_host: https://roundcube.apps.{{ tenant_domain | default('dev.local') }}
   client_id: nos-roundcube
 - slug: snappymail
   name: SnappyMail
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_snappymail | default(false) }}'
   external_host: https://{{ snappymail_domain }}
   client_id: nos-snappymail
 - slug: spacetimedb
   name: SpacetimeDB
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_spacetimedb | default(false) }}'
   external_host: https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-spacetimedb
 - slug: superset
   name: Superset
   mode: native_oidc
   tier: 2
+  enabled: '{{ install_superset | default(false) }}'
   external_host: https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-superset
   client_secret: '{{ global_password_prefix }}_pw_oidc_superset'
@@ -276,18 +312,21 @@ tofu_authentik_services:
   name: 2FAuth
   mode: forward_auth
   tier: 3
+  enabled: true
   external_host: https://twofauth.apps.{{ tenant_domain | default('dev.local') }}
   client_id: nos-twofauth
 - slug: uptime-kuma
   name: Uptime Kuma
   mode: forward_auth
   tier: 3
+  enabled: '{{ install_uptime_kuma | default(false) }}'
   external_host: https://{{ uptime_kuma_domain }}
   client_id: nos-uptime-kuma
 - slug: vaultwarden
   name: Vaultwarden
   mode: native_oidc
   tier: 3
+  enabled: '{{ install_vaultwarden | default(false) }}'
   external_host: https://{{ vaultwarden_domain }}
   client_id: nos-vaultwarden
   client_secret: '{{ global_password_prefix }}_pw_oidc_vaultwarden'
@@ -297,18 +336,21 @@ tofu_authentik_services:
   name: Wing
   mode: forward_auth
   tier: 1
+  enabled: '{{ install_wing | default(false) }}'
   external_host: https://{{ wing_domain }}
   client_id: nos-wing
 - slug: woodpecker
   name: Woodpecker CI
   mode: forward_auth
   tier: 2
+  enabled: '{{ install_woodpecker | default(false) }}'
   external_host: https://{{ woodpecker_domain }}
   client_id: nos-woodpecker
 - slug: wordpress
   name: WordPress
   mode: native_oidc
   tier: 4
+  enabled: '{{ install_wordpress | default(false) }}'
   external_host: https://{{ wordpress_domain }}
   client_id: nos-wordpress
   client_secret: '{{ global_password_prefix }}_pw_oidc_wordpress'

@@ -21,6 +21,7 @@ This gate pins the fix:
 
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 
@@ -29,6 +30,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
 TOFU_TASKS = REPO / "tasks" / "tofu-authentik.yml"
+TFVARS_TEMPLATE = REPO / "templates" / "tofu" / "nos.auto.tfvars.json.j2"
 
 sys.path.insert(0, str(REPO / "files" / "anatomy"))
 
@@ -111,3 +113,66 @@ def test_registry_renders_and_parses_as_yaml():
             f"{svc.get('slug')}: external_host {host!r} is not a https URL "
             "after render — Authentik will 400 on 'Enter a valid URL'."
         )
+
+
+def test_registry_entries_carry_enabled():
+    """Disabled-service filtering: every registry entry must carry the raw
+    Jinja enable expression (e.g. '{{ install_erpnext | default(false) }}').
+    Without it the tfvars template's `enabled | default(false) | bool` filter
+    silently drops the service — an entry MISSING the field is a generator
+    regression, not an intentional disable."""
+    services = yaml.safe_load(REGISTRY.read_text())["tofu_authentik_services"]
+    missing = [s.get("slug") for s in services if "enabled" not in s]
+    assert not missing, (
+        f"registry entries missing 'enabled': {missing} — re-run "
+        "tools/tofu-authentik-gen-registry.py (it must carry each client's "
+        "enable expression verbatim)."
+    )
+
+
+def test_disabled_service_filtered_from_tfvars():
+    """End-to-end filter semantics: render the registry like
+    lookup('template') will (install_erpnext UNDEFINED → ChainableUndefined →
+    `default(false)` → the string 'False'), then render the tfvars template
+    over the parsed services and assert the disabled service never reaches
+    var.authentik_services while an enabled one does. The loader _jinja_env
+    registers both `bool` and `to_nice_json`, so the tfvars template renders
+    1:1 with the playbook's task-time templating."""
+    from module_utils.load_plugins import _jinja_env  # noqa: WPS433 (lazy)
+
+    env = _jinja_env()
+    rendered = env.from_string(REGISTRY.read_text()).render(
+        {
+            "tenant_domain": "dev.local",
+            "global_password_prefix": "test",
+            "install_gitea": True,
+            # install_erpnext deliberately UNDEFINED → renders "False"
+        }
+    )
+    services = yaml.safe_load(rendered)["tofu_authentik_services"]
+    by_slug = {s["slug"]: s for s in services}
+    # The rendered file quotes the value, so it arrives as the STRING "False"
+    # (not a YAML bool) — exactly what the tfvars `| bool` filter must coerce.
+    assert by_slug["erpnext"]["enabled"] == "False", (
+        f"expected erpnext enabled to render to the string 'False', got "
+        f"{by_slug['erpnext']['enabled']!r}"
+    )
+    tfvars = json.loads(
+        env.from_string(TFVARS_TEMPLATE.read_text()).render(
+            {
+                "tofu_authentik_services": services,
+                "authentik_bootstrap_token": "test-token",
+                "authentik_port": 9000,
+            }
+        )
+    )
+    svcmap = tfvars["authentik_services"]
+    assert "gitea" in svcmap, (
+        "install_gitea=True yet gitea missing from authentik_services — the "
+        "tfvars enabled-filter is over-eager (string 'True' must pass | bool)."
+    )
+    assert "erpnext" not in svcmap, (
+        "install_erpnext undefined (→ 'False') yet erpnext landed in "
+        "authentik_services — the tfvars template must skip services whose "
+        "rendered enabled value is falsy."
+    )
