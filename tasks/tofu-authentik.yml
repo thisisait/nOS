@@ -67,8 +67,14 @@
       # play namespace makes nos_state's `role_vars: "{{ vars }}"` eager-finalize
       # choke ("bookstack_domain is undefined") — the documented {{ vars }} trap
       # (CLAUDE.md). Task-scoped vars never enter that namespace.
+      # lookup('template'), NOT lookup('file'): post-2.19 data-tagging marks
+      # strings from file+from_yaml untrusted — nested Jinja in registry values
+      # is NEVER resolved, so tfvars shipped literal 'https://{{ x_domain }}'
+      # (blank #2: 22 proxy providers 400'd on "Enter a valid URL"). template
+      # lookup renders the FILE first (full var scope), then from_yaml parses
+      # resolved values.
       vars:
-        tofu_authentik_services: "{{ (lookup('file', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
+        tofu_authentik_services: "{{ (lookup('template', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
 
     - name: "[tofu-authentik] tofu init"
       ansible.builtin.command: "tofu init -input=false -no-color"

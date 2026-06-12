@@ -1,7 +1,9 @@
 {#- ADR-0001 Phase 1: build the authentik_services map from the committed
-    registry (state/tofu-authentik-services.yml, loaded as tofu_authentik_services).
-    Ansible resolves the nested Jinja in each registry value (domains/secrets)
-    at render time. STRUCTURE is in services.tf (for_each); this is just VALUES. -#}
+    registry (state/tofu-authentik-services.yml, loaded as tofu_authentik_services
+    via lookup('template') — the FILE render resolves the nested Jinja in each
+    registry value; post-2.19 data-tagging means lookup('file')+from_yaml would
+    leave them as literal '{{ x_domain }}' strings (untrusted, never templated).
+    STRUCTURE is in services.tf (for_each); this is just VALUES. -#}
 {%- set _svcmap = {} -%}
 {%- for s in tofu_authentik_services | default([]) -%}
   {%- set _e = {
