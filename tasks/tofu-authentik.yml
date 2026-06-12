@@ -133,8 +133,13 @@
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int > 0
 
+    # -parallelism=1: authentik_outpost_provider_attachment is a read-modify-
+    # write over the outpost's providers LIST (no row-level m2m API in the
+    # goauthentik provider). Default parallelism=10 races the writes — blank #3
+    # created 20 attachments, last-writer-wins kept 11, and 9 forward_auth
+    # services 404'd at the outpost. Serial apply is the honest fix (~60s).
     - name: "[tofu-authentik] tofu apply (engine=tofu, destroy-guard passed)"
-      ansible.builtin.command: "tofu apply -input=false -no-color tfplan"
+      ansible.builtin.command: "tofu apply -input=false -no-color -parallelism=1 tfplan"
       args:
         chdir: "{{ _tf_dir }}"
       register: _tofu_apply

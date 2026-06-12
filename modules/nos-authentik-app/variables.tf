@@ -36,6 +36,11 @@ variable "proxy_mode" {
   default = "forward_single"
 }
 variable "internal_host_ssl_validation" {
-  type    = bool
-  default = false
+  type = bool
+  # true matches Authentik's server-side default. With no internal_host set
+  # (forward_single proxies route via Traefik, not the outpost) Authentik
+  # normalizes the field back to true regardless of what the API write sent —
+  # default=false produced a PERPETUAL 23-provider in-place diff (true->false
+  # on every plan, re-applied forever, never converging).
+  default = true
 }
