@@ -29,6 +29,11 @@
   `autologin-coverage-ceilings`.
 - **Tofu adopt-path attachment import id** (existing-tenant migrations only) —
   `docs/opentofu-authentik-cutover.md` § Open items.
+- **Euro-office: full role swap after first stable** (summer 2026) — pilot
+  runs via `onlyoffice_image` flip (operator config.yml); rename
+  `pazny.onlyoffice` → eurooffice + plugin + manifest row once stable lands.
+  Documenso stays (euro-office has no e-signing). See devlog
+  `2026-06-13-euro-office-pilot`.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25, generated-namespace
   plan + `tools/loader-vars-report.py`); the flip needs a dedicated pre-2.24
   wet-test lane. Hard-breaks on ansible-core 2.24.
