@@ -45,6 +45,50 @@ def test_registry_loaded_via_template_lookup():
     )
 
 
+def test_apply_is_serial():
+    """blank #3: authentik_outpost_provider_attachment is read-modify-write
+    over the outpost providers LIST; parallel apply (default 10) raced 20
+    attachment writes and last-writer-wins kept 11 — 9 forward_auth services
+    404'd at the outpost. Apply must stay -parallelism=1."""
+    src = TOFU_TASKS.read_text()
+    apply_lines = [l for l in src.splitlines() if "tofu apply" in l and "command" in l]
+    assert apply_lines, "no tofu apply command found in tasks/tofu-authentik.yml"
+    for line in apply_lines:
+        assert "-parallelism=1" in line, (
+            f"tofu apply must run with -parallelism=1 (outpost m2m race): {line.strip()!r}"
+        )
+
+
+def test_registry_covers_tier2_app_manifests():
+    """Tier-2 apps/<name>.yml with an authentik: block must be in the
+    registry — under engine=tofu the blueprint render is a no-op, so tofu is
+    their ONLY provider-creator (blank #3: documenso/roundcube/twofauth had
+    no provider at all). Also: no duplicate slugs (qdrant appears via both a
+    Tier-1 plugin and a Tier-2 manifest; the tfvars map would silently keep
+    the last)."""
+    registry_slugs = [
+        s["slug"]
+        for s in yaml.safe_load(REGISTRY.read_text())["tofu_authentik_services"]
+    ]
+    assert len(registry_slugs) == len(set(registry_slugs)), (
+        "duplicate slugs in the registry — generator dedupe regressed"
+    )
+    apps_root = REPO / "apps"
+    for app_yml in sorted(apps_root.glob("*.yml")):
+        if app_yml.name.startswith("_") or ".draft" in app_yml.name:
+            continue
+        manifest = yaml.safe_load(app_yml.read_text()) or {}
+        ak = manifest.get("authentik") or {}
+        slug = ak.get("slug")
+        if not slug:
+            continue
+        assert slug in registry_slugs, (
+            f"apps/{app_yml.name} declares authentik.slug={slug!r} but the "
+            "registry misses it — re-run tools/tofu-authentik-gen-registry.py "
+            "(the generator must harvest app manifests, not just plugins)."
+        )
+
+
 def test_registry_renders_and_parses_as_yaml():
     """Render the registry like lookup('template') will (ChainableUndefined →
     unknown vars collapse to ''), then require valid YAML with zero surviving
