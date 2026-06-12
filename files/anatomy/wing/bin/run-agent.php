@@ -90,6 +90,14 @@ if (is_file(__DIR__ . '/../app/config/local.neon')) {
 // in BOTH trees: repo files/anatomy/wing/bin → files/anatomy/agents, deployed
 // ~/wing/app/bin → ~/wing/agents. Array config wins over earlier neon files.
 $configurator->addConfig(['parameters' => ['agentsDir' => __DIR__ . '/../../agents']]);
+// RobotLoader mirror of Booting.php: AgentKit keeps value objects beside their
+// aggregate (5 multi-class files, e.g. ToolSpec inside Agent.php) — composer's
+// PSR-4 can't autoload those, so a container build that touches them dies with
+// "Class not found" under the CLI bootstrap. The web bootstrap always had
+// RobotLoader; register it here too.
+$configurator->createRobotLoader()
+	->addDirectory(__DIR__ . '/../app')
+	->register();
 $configurator->setDebugMode(false);
 
 $container = $configurator->createContainer();
