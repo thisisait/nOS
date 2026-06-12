@@ -142,7 +142,7 @@ jobs:
           coverage: none
 
       - name: Install test dependencies.
-        run: pip3 install pytest pyyaml jsonschema httpx jinja2 requests
+        run: pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2
 
       - name: Run pytest suite.
         run: >
