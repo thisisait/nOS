@@ -2,9 +2,63 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.4-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.5-beta`.
 
 ---
+
+## v0.6-beta (2026-06-12)
+
+> **OpenTofu becomes the Authentik authority (ADR-0001 Phase 1 — complete).**
+> The SSO wiring layer — every provider, application, and outpost attachment —
+> is now declarative HCL applied by OpenTofu, replacing the imperative
+> `ak apply_blueprint` path for that layer (`authentik_engine: tofu`). The
+> cutover was executed the hard way (Path B: tofu-engine blank from scratch),
+> which surfaced and closed five structural traps plus three latent AgentKit
+> runner bugs — each pinned by a CI gate. Validated end-to-end: tofu-engine
+> blank `failed=0`, `tofu plan` no-op across the full tenant, smoke catalog
+> 48/48, e2e SSO journeys green, and a full conductor agent run.
+
+### OpenTofu Authentik cutover
+
+- **Ownership split:** OpenTofu owns providers + applications + outpost
+  attachments via one hand-authored `for_each` module
+  (`modules/nos-authentik-app`) over a committed, generated registry
+  (`state/tofu-authentik-services.yml` ← plugin + Tier-2 app-manifest
+  `authentik:` blocks). The other six blueprints (groups / MFA / RBAC /
+  agents / enrollment / brand) stay imperative by design.
+- **Safety rails:** destroy guard (apply refuses ANY delete in the plan) +
+  `-parallelism=1` (the outpost attachment is a read-modify-write list; the
+  default parallelism raced 20 writes and kept 11) + reversible engine flag.
+- **Five cutover traps fixed + gated** (full archaeology in
+  `docs/opentofu-authentik-cutover.md`): Authentik auto-applies mounted
+  blueprints (no-op render under tofu); `lookup('file')` never resolves
+  nested Jinja post-2.19 (`lookup('template')` bridge); the outpost m2m race;
+  Tier-2 app manifests missing from the registry; perpetual
+  `internal_host_ssl_validation` diff.
+- **Post-cutover punch list shipped same-day:** tofu state artifacts in the
+  nightly encrypted backup set (`run_tofu_state()`); disabled services
+  filtered out of the tfvars (no SSO objects for `install_*: false`); a daily
+  plan-only drift Pulse job (`authentik-tofu-drift-base`, never applies,
+  drift → A9 notification).
+
+### AgentKit runner — first live exercise
+
+The release sweep ran the AgentKit native trigger paths on a deployed box for
+the first time (the pulse claude-CLI runtime had masked them) and fixed three
+latent bugs: the CLI agents-root off-by-one (Nette `%appDir%` is
+bootstrap-caller-derived → `agentsDir` parameter + a CLI override valid in
+both the repo and deployed nesting), the operator-trigger 500 (`PHP_BINARY`
+is empty under FrankenPHP's embedded SAPI → `WING_PHP_BIN` → fallback chain),
+and a missing RobotLoader in the CLI bootstrap (AgentKit keeps value objects
+beside their aggregates — PSR-4 can't autoload them). Gate:
+`test_agentkit_runner_paths.py`. The claude-CLI runtime remains the live
+agent path (verified: full conductor self-test, exit 0, report event in Wing).
+
+### Validation
+
+Tofu-engine blank `failed=0` (ok=1418, all 8 stacks healthy) → smoke 48/48 →
+`tofu plan` rc=0 (full parity) → e2e SSO/web-UI journeys 8 passed → conductor
+full run rc=0. Anatomy suite: 1224 tests.
 
 ## v0.5-beta (2026-06-06)
 
