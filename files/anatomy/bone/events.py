@@ -91,6 +91,18 @@ VALID_TYPES = {
     #   consent_withdrawn — a subject withdrew (Art. 7(3)); result_json would
     #                        carry {consent_id?, subject, activity, rows}.
     "consent_granted", "consent_withdrawn",
+    # ── Devlog platform (docs/devlog/README.md, 2026-06-12) ────────────────
+    # Every WordPress write travels through devlog_lib.emit_bone_event with
+    # actor_id=agent:devlog. Wing's EventRepository whitelist must stay
+    # aligned (test_devlog_event_types.py).
+    #   devlog_entry_created/updated/deleted — tools/devlog-post.py writes to
+    #     on-site namespaces; result_json {namespace, slug, wp_post_id, title}.
+    #   devlog_sync_run — tasks/devlog-sync.yml bundle reconcile; result_json
+    #     {created, updated, deleted, unchanged, bundle_entries, dry_run}.
+    #   devlog_published — forward-ready (GH Pages deploy can't reach Bone;
+    #     a future operator-side post-release emit would use it).
+    "devlog_entry_created", "devlog_entry_updated", "devlog_entry_deleted",
+    "devlog_sync_run", "devlog_published",
 }
 
 

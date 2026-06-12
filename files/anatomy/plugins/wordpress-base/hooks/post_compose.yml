@@ -4,7 +4,9 @@
 #
 # Declarative post-compose sequence. Loader replays via `replay_api_calls`
 # now that Phase 2 C5 ships the runner with docker_exec + http support.
-# Mirrors roles/pazny.wordpress/tasks/post.yml byte-for-byte.
+# Mirrors the core-install/OIDC legs of roles/pazny.wordpress/tasks/post.yml.
+# DELIBERATELY NOT MIRRORED: tasks/devlog.yml (devlog bot + app password) —
+# the declarative runner cannot do register→set_fact→lineinfile persistence.
 # =============================================================================
 
 base_url: "http://127.0.0.1:{{ wordpress_port | default(8084) }}"

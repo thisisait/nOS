@@ -1115,6 +1115,15 @@ wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
 wordpress_admin_email: "{{ default_admin_email }}"
 
+# ── Devlog platform (docs/devlog/README.md) ──────────────────────────────────
+# WordPress presents the nOS devlog: nos-core namespace is repo-committed and
+# synced by tasks/devlog-sync.yml; on-site namespaces are written live via
+# tools/devlog-post.py. The bot's Application Password is WP-minted in
+# roles/pazny.wordpress/tasks/devlog.yml and persisted to ~/.nos/secrets.yml.
+wordpress_devlog_enabled: true          # effective only with install_wordpress
+wordpress_devlog_bot_user: "nos-devlog-bot"
+wordpress_devlog_app_name: "nos-devlog"
+
 # ==============================================================================
 # IIAB – NEXTCLOUD
 # ==============================================================================
@@ -2150,6 +2159,7 @@ authentik_agent_scopes:
   - "nos:security:write"         # append findings, update remediation status
   - "nos:security:scan"          # trigger ad-hoc scan run (between scheduled batches)
   - "nos:pentest:execute"        # actually run the inspektor's attack probes (high blast radius)
+  - "nos:devlog:write"           # publish/update devlog entries (WP REST via tools/devlog-post.py)
 
 # Default agents seeded into Authentik. Add custom agents by extending this
 # list in your local config.yml (Ansible vars_files merge appends).
@@ -2284,6 +2294,18 @@ authentik_agent_clients:
       - "nos:migrations:read"
       - "nos:upgrades:read"
       - "nos:patches:read"
+
+  - name: "nOS Devlog"
+    slug: "nos-devlog"
+    client_id: "nos-devlog"
+    client_secret: "{{ global_password_prefix }}_pw_agent_devlog"
+    # Devlog agent (devlog epic, 2026-06-12) — publishes narrative entries to
+    # WordPress (docs/devlog/README.md). The WP credential itself is an
+    # Application Password (WP has no client_credentials path); this client is
+    # the registered AUDIT identity per Track G doctrine — every devlog write
+    # lands in wing.db with actor_id=agent:devlog via Bone HMAC events.
+    capabilities:
+      - "nos:devlog:write"
 
 # Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
 # during the cutover (NOT recommended — both sides should agree on JWT only).

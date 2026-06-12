@@ -3,6 +3,9 @@
 # runner is LIVE, so files/anatomy/plugins/wordpress-base authoritatively replays the
 # post-start wiring. This role file is NOT retired — still invoked every run, and
 # runs idempotently ALONGSIDE the hook during the dual-safe transition.
+# SCOPE NOTE (devlog, 2026-06-12): the hook mirrors the core-install/OIDC legs
+# below ONLY. The devlog include at the end is role-only — the declarative
+# runner cannot do its register→set_fact→lineinfile secret persistence.
 #
 # ==============================================================================
 # pazny.wordpress/tasks/post.yml
@@ -112,3 +115,12 @@
   register: _wp_oidc_install
   changed_when: "'Plugin installed successfully' in (_wp_oidc_install.stdout | default(''))"
   failed_when: false
+
+# ── Devlog bot + Application Password (docs/devlog/README.md) ───────────
+# Role-only — see SCOPE NOTE in the header.
+- name: "[pazny.wordpress Post] Provision devlog bot + app password"
+  ansible.builtin.include_tasks: devlog.yml
+  when:
+    - wordpress_devlog_enabled | default(true)
+    - _wp_container.stdout | default('') | length > 0
+    - _wp_installed.rc | default(1) == 0 or (_wp_install.rc | default(1)) == 0

@@ -1,0 +1,61 @@
+---
+# ==============================================================================
+# tasks/devlog-sync.yml — reconcile the committed devlog bundle into WordPress
+#
+# Repo (state/devlog-bundle.jsonl, compiled by tools/devlog-compile.py) is the
+# source of truth for the nos-core namespace; the WP side is disposable
+# presentation. files/anatomy/scripts/devlog-sync.py does the REST upsert +
+# triple-guarded orphan delete and emits one devlog_sync_run Bone event.
+# Doctrine: docs/devlog/README.md. Skips gracefully when the app password has
+# not been minted yet (first run ordering: pazny.wordpress devlog.yml runs in
+# stack-up, before this) or the container is down.
+# ==============================================================================
+
+- name: "[Devlog] Check WordPress container is running"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps -q
+    --filter "label=com.docker.compose.project=iiab"
+    --filter "label=com.docker.compose.service=wordpress"
+  register: _devlog_wp_container
+  changed_when: false
+  failed_when: false
+
+- name: "[Devlog] Skip note (no credential or container yet)"
+  ansible.builtin.debug:
+    msg: >-
+      Devlog sync skipped:
+      {{ 'WordPress container not running' if (_devlog_wp_container.stdout | default('') | length == 0)
+         else 'app password not minted yet (re-run or --tags wordpress,devlog)' }}
+  when: >-
+    (_devlog_wp_container.stdout | default('') | length == 0)
+    or (wordpress_devlog_app_password | default('') | length == 0)
+
+- name: "[Devlog] Sync nos-core bundle into WordPress"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/files/anatomy/scripts/devlog-sync.py"
+  environment:
+    WP_BASE_URL: "http://127.0.0.1:{{ wordpress_port | default(8084) }}"
+    WP_BOT_USER: "{{ wordpress_devlog_bot_user }}"
+    WP_APP_PASSWORD: "{{ wordpress_devlog_app_password }}"
+    BUNDLE_PATH: "{{ playbook_dir }}/state/devlog-bundle.jsonl"
+    BONE_URL: "http://127.0.0.1:{{ bone_port | default(8099) }}"
+    WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default('') }}"
+    NOS_RUN_ID: ""
+    DRY_RUN: "{{ '1' if (devlog_sync_dry_run | default(false)) else '0' }}"
+  register: _devlog_sync
+  when:
+    - _devlog_wp_container.stdout | default('') | length > 0
+    - wordpress_devlog_app_password | default('') | length > 0
+  changed_when: >-
+    (_devlog_sync.stdout | default('{}') | from_json).created | default(0)
+    + (_devlog_sync.stdout | default('{}') | from_json).updated | default(0)
+    + (_devlog_sync.stdout | default('{}') | from_json).deleted | default(0) > 0
+  failed_when: _devlog_sync.rc | default(0) != 0
+  no_log: false
+
+- name: "[Devlog] Sync summary"
+  ansible.builtin.debug:
+    msg: "{{ _devlog_sync.stdout | from_json }}"
+  when: _devlog_sync.stdout is defined

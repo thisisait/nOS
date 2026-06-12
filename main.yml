@@ -1689,6 +1689,17 @@
       tags: ['service-registry', 'registry']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Devlog – sync the committed nos-core bundle into WordPress
+    # (docs/devlog/README.md; repo is SoT, WP side is disposable presentation)
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/devlog-sync.yml
+      when:
+        - install_wordpress | default(false)
+        - wordpress_devlog_enabled | default(true)
+        - nos_docker_ready | default(true)
+      tags: ['devlog', 'wordpress']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Heartbeat – fleet reporting daemon
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/heartbeat.yml

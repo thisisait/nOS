@@ -1,7 +1,7 @@
 # =============================================================================
 # pazny.wordpress — compose override fragment
-# Merged do `docker compose -p iiab up` v tasks/stacks/stack-up.yml pres
-# ansible.builtin.find nad {{ stacks_dir }}/iiab/overrides/*.yml.
+# Merged into `docker compose -p iiab up` by tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 # =============================================================================
 
 services:
@@ -14,6 +14,10 @@ services:
       - {{ wordpress_dir }}:/var/www/html
       # mu-plugin auto-loader: configures openid-connect-generic from env vars
       - {{ stacks_dir }}/iiab/wordpress/mu-plugins/oidc-bootstrap.php:/var/www/html/wp-content/mu-plugins/oidc-bootstrap.php:ro
+{% if wordpress_devlog_enabled | default(true) %}
+      # devlog: re-enable Application Passwords behind the TLS-terminating edge
+      - {{ stacks_dir }}/iiab/wordpress/mu-plugins/devlog-app-passwords.php:/var/www/html/wp-content/mu-plugins/devlog-app-passwords.php:ro
+{% endif %}
     environment:
       WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
       WORDPRESS_DB_USER: "{{ wordpress_db_user }}"

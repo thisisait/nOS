@@ -99,6 +99,12 @@ final class EventRepository
 		// MUST stay aligned with Bone's events.py VALID_TYPES (drift silently
 		// 400s a future consent audit event) — pinned by test_consent_registry.py.
 		'consent_granted', 'consent_withdrawn',
+		// ── Devlog platform (docs/devlog/README.md, 2026-06-12) ──────────
+		// WordPress devlog writes audited via Bone (actor_id=agent:devlog).
+		// MUST stay aligned with Bone's events.py VALID_TYPES — pinned by
+		// tests/anatomy/test_devlog_event_types.py.
+		'devlog_entry_created', 'devlog_entry_updated', 'devlog_entry_deleted',
+		'devlog_sync_run', 'devlog_published',
 	];
 
 	public function __construct(

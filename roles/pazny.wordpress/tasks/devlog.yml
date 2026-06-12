@@ -1,0 +1,134 @@
+---
+# ==============================================================================
+# pazny.wordpress/tasks/devlog.yml — devlog bot account + Application Password
+#
+# Implements the documented-but-never-implemented bot pattern from
+# docs/systems/wordpress/SKILLS.md for the devlog platform
+# (docs/devlog/README.md): a dedicated author-role user whose Application
+# Password is the credential for tools/devlog-post.py and
+# files/anatomy/scripts/devlog-sync.py (REST writes; every write also emits a
+# Bone audit event as actor_id=agent:devlog).
+#
+# Included from tasks/post.yml — ROLE-ONLY by design: the wordpress-base
+# post_compose hook mirrors the core-install/OIDC legs only, because the
+# declarative runner cannot do the register → set_fact → lineinfile secret
+# persistence below (same reason the gitea forge token lives in-role —
+# see roles/pazny.gitea/tasks/post-forge.yml).
+#
+# The app password is shown ONCE on create, so it persists into
+# ~/.nos/secrets.yml via lineinfile (NOT a template re-render, which runs
+# before stack-up and would clobber appended lines). Recreated when the
+# persisted secret is empty (fresh WP after blank=true).
+# ==============================================================================
+
+- name: "[pazny.wordpress Devlog] Check devlog bot user exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user get {{ wordpress_devlog_bot_user }}
+    --field=ID --allow-root 2>/dev/null
+  register: _wp_devlog_user
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.wordpress Devlog] Create devlog bot user (author role)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user create {{ wordpress_devlog_bot_user }}
+    devlog-bot@{{ tenant_domain | default('dev.local') }}
+    --role=author --display_name="nOS Devlog" --porcelain --allow-root
+  when: _wp_devlog_user.rc | default(1) != 0
+  register: _wp_devlog_user_create
+  changed_when: _wp_devlog_user_create.rc == 0
+  failed_when: false
+  no_log: true
+
+# Author role can publish/edit/delete OWN posts but cannot CREATE terms
+# (taxonomy manage_terms maps to manage_categories, an editor+ cap) — the
+# sync's ensure-category/ensure-tags REST calls 403 without it (first live
+# run, 2026-06-12). Grant exactly that one capability instead of widening
+# the whole role to editor (which could edit the operator's posts).
+- name: "[pazny.wordpress Devlog] Check bot capabilities"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user list-caps {{ wordpress_devlog_bot_user }}
+    --allow-root 2>/dev/null
+  register: _wp_devlog_caps
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.wordpress Devlog] Grant manage_categories to the bot"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user add-cap {{ wordpress_devlog_bot_user }}
+    manage_categories --allow-root
+  when: "'manage_categories' not in (_wp_devlog_caps.stdout | default(''))"
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.wordpress Devlog] List bot Application Passwords"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user application-password list
+    {{ wordpress_devlog_bot_user }} --fields=name --format=json --allow-root 2>/dev/null
+  register: _wp_devlog_pw_list
+  changed_when: false
+  failed_when: false
+
+# Recreate when the named password is absent (fresh WP) OR the persisted
+# secret is empty (blank=true wiped ~/.nos but WP survived — or vice versa;
+# either way the pair must be minted together to match).
+- name: "[pazny.wordpress Devlog] Decide whether the app password must be (re)minted"
+  ansible.builtin.set_fact:
+    _wp_devlog_pw_stale: >-
+      {{ (wordpress_devlog_app_password | default('') | length == 0)
+         or (wordpress_devlog_app_name not in
+             (_wp_devlog_pw_list.stdout | default('[]') | from_json
+              | map(attribute='name') | list)) }}
+  no_log: true
+
+- name: "[pazny.wordpress Devlog] Delete stale app passwords (re-mint pair)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user application-password delete
+    {{ wordpress_devlog_bot_user }} --all --allow-root
+  when:
+    - _wp_devlog_pw_stale | bool
+    - (_wp_devlog_pw_list.stdout | default('[]') | from_json | length) > 0
+  changed_when: true
+  failed_when: false
+
+- name: "[pazny.wordpress Devlog] Mint the Application Password"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp user application-password create
+    {{ wordpress_devlog_bot_user }} {{ wordpress_devlog_app_name }}
+    --porcelain --allow-root
+  when: _wp_devlog_pw_stale | bool
+  register: _wp_devlog_pw_create
+  changed_when: _wp_devlog_pw_create.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: "[pazny.wordpress Devlog] Load the new app password into the run (set_fact)"
+  ansible.builtin.set_fact:
+    wordpress_devlog_app_password: "{{ _wp_devlog_pw_create.stdout | trim }}"
+  when:
+    - _wp_devlog_pw_create.rc | default(1) == 0
+    - _wp_devlog_pw_create.stdout | default('') | trim | length > 0
+  no_log: true
+
+- name: "[pazny.wordpress Devlog] Persist the app password into ~/.nos/secrets.yml (in-role)"
+  # The central "[Secrets] Persist runtime secrets" render runs BEFORE stack-up
+  # reaches this task — a set_fact alone dies with the play (gitea forge
+  # precedent, adversarial-review CRIT 2026-06-10). lineinfile, NOT a template
+  # re-render.
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: '^wordpress_devlog_app_password:'
+    line: 'wordpress_devlog_app_password: "{{ wordpress_devlog_app_password }}"'
+    create: true
+    mode: '0600'
+  when:
+    - _wp_devlog_pw_create.rc | default(1) == 0
+    - _wp_devlog_pw_create.stdout | default('') | trim | length > 0
+  no_log: true

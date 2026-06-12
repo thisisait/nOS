@@ -34,6 +34,17 @@
     mode: '0644'
   notify: Restart wordpress
 
+# App Passwords are core-disabled on non-SSL requests; TLS terminates at
+# Traefik so WP only ever sees in-host hops. This mu-plugin re-enables them
+# for the devlog REST writes (docs/devlog/README.md § Audit doctrine).
+- name: "[pazny.wordpress] Stage devlog app-passwords mu-plugin"
+  ansible.builtin.copy:
+    src: devlog-app-passwords.php
+    dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/devlog-app-passwords.php"
+    mode: '0644'
+  notify: Restart wordpress
+  when: wordpress_devlog_enabled | default(true)
+
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
