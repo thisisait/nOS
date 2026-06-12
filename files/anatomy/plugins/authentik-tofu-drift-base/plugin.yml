@@ -1,0 +1,122 @@
+# =============================================================================
+# authentik-tofu-drift-base — scheduled read-only OpenTofu drift check
+# (ADR-0001 P2 / the W6.1 hook — docs/opentofu-authentik-cutover.md punch list)
+#
+# Registers the daily Pulse job that runs a READ-ONLY `tofu plan` against the
+# Authentik tenant (terraform/authentik/) and notifies the operator when the
+# live tenant has drifted from OpenTofu state. The apply path stays exclusively
+# in tasks/tofu-authentik.yml (destroy-guarded, -parallelism=1); this job NEVER
+# applies — it only plans and reports.
+#
+# type: scheduled-job (composition) — NOT a Docker service, no compose extension.
+#
+# PROVABLY INERT on a pre-cutover install: the catalog harvests pulse blocks
+# unconditionally (gdpr-breach-base precedent), so gating lives in the script —
+# run-tofu-drift.sh exits 0 with a skip line when the tofu binary OR
+# terraform/authentik/nos.auto.tfvars.json is absent (both only exist once the
+# operator has run the tofu cutover). No drift → quiet exit 0, no notification.
+# =============================================================================
+
+name: authentik-tofu-drift-base
+version: "0.1.0"
+description: >
+  Daily read-only `tofu plan -detailed-exitcode` over terraform/authentik/;
+  emits ONE "Authentik drifted" notification (medium) with the plan's one-line
+  resource-change summary, or a high-severity notification when the plan
+  errors. Plan-only — never applies. Inert until the tofu cutover has run.
+upstream: https://github.com/opentofu/opentofu
+license: MPL-2.0
+
+type:
+  - composition
+  - scheduled-job
+
+requires:
+  # Wing/Bone substrate: Pulse registration + the A9 notification endpoint.
+  role: pazny.wing
+
+# =============================================================================
+# PULSE JOB — harvested by files/anatomy/scripts/discover-pulse-catalog.py and
+# POSTed to /api/v1/pulse_jobs by roles/pazny.wing/tasks/post.yml
+# (idempotency key: authentik-tofu-drift-base:tofu-drift-plan — the catalog
+# derives plugin_name from this manifest's `name:` field, -base included).
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: tofu-drift-plan
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/plugins/authentik-tofu-drift-base/skills/run-tofu-drift.sh"
+      schedule: "30 5 * * *"    # 05:30 UTC daily; offset from gitleaks' 03:00 slot
+      jitter_min: 10
+      # Pulse SIGKILL backstop. The script's internal watchdog (default 540s)
+      # fires FIRST so the error-notification path runs instead of a silent
+      # kill (a SIGKILL'd run never reaches the notify code).
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        # BARE tokens (no `| default`) — discover-pulse-catalog.py does a
+        # LITERAL string replace keyed on "{{ playbook_dir }}"; the filter
+        # form never matches (gitleaks WING_EVENTS_HMAC_SECRET precedent,
+        # caught live 2026-05-25).
+        NOS_TOFU_DIR: "{{ playbook_dir }}/terraform/authentik"
+        # HMAC secret for Bone /api/v1/notifications. When unset the job
+        # still plans + logs, it just skips the notification emit.
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        BONE_API_URL: "http://127.0.0.1:9000"
+
+# =============================================================================
+# NOTIFICATIONS — canonical A9 severity routing (gitleaks precedent).
+# Drift is routed at medium (silent inbox — drift is reviewable, not a page);
+# a failed/timed-out plan is high (inbox + ntfy — the drift detector itself
+# is blind until fixed).
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+  # Python string.Template placeholders ($var / ${var}) — resolved by Bone
+  # at insert time against the emitter's `context` keys.
+  templates:
+    drift_detected:
+      title: "Authentik drifted from OpenTofu state"
+      body: |
+        **$summary**
+
+        Read-only `tofu plan` in `$tofu_dir` detected drift between the live
+        Authentik tenant and OpenTofu state.
+
+        $top_changes_md
+
+        Review with `tofu plan` in `$tofu_dir`, then reconverge via
+        `ansible-playbook main.yml --tags tofu-authentik` (destroy-guarded).
+        This job never applies.
+    plan_error:
+      title: "Authentik tofu drift check FAILED"
+      body: |
+        Read-only `tofu plan` in `$tofu_dir` exited with an error — the drift
+        detector is blind until this is fixed.
+
+        ```
+        $error_tail
+        ```
+
+# =============================================================================
+# GDPR — Article 30 register row (REQUIRED by plugin.schema.json + the loader).
+# The job processes only operator-authored IAM configuration metadata (tofu
+# plan output: provider/application resource names + diff summaries); no
+# data-subject PII ever enters the pipeline.
+# =============================================================================
+
+gdpr:
+  purpose: "Detect configuration drift between the live Authentik SSO tenant and its OpenTofu-managed desired state; notify the operator with the plan summary"
+  legal_basis: legitimate_interests
+  data_categories:
+    - iam_configuration_metadata    # resource names + change-summary lines from tofu plan
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []                    # local tofu binary against the local Authentik API; no external transfer
+  eu_residency: true

@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 70 (66 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (64)
+- **Processing activities:** 71 (67 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (65)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -908,6 +908,17 @@ paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Authentik Tofu Drift — `svc_authentik-tofu-drift`
+- **Purpose:** Detect configuration drift between the live Authentik SSO tenant and its OpenTofu-managed desired state; notify the operator with the plan summary
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `iam_configuration_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
