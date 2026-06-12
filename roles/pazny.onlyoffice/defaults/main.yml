@@ -13,6 +13,14 @@
 # with every host application that will embed the editor.
 # ==============================================================================
 
+# Image is a VAR to support the euro-office pilot (2026-06-13): the
+# Nextcloud/IONOS/Proton consortium fork ghcr.io/euro-office/documentserver
+# is JWT-compatible and multi-arch (arm64 verified). Flip in config.yml:
+#   onlyoffice_image: "ghcr.io/euro-office/documentserver"
+#   onlyoffice_version: "9.3.1"          # euro-office tag scheme differs
+# Documenso is NOT covered by euro-office (no e-signing) and stays.
+# Full role rename waits for the first euro-office stable (summer 2026).
+onlyoffice_image: "onlyoffice/documentserver"
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
 onlyoffice_domain: "office{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 onlyoffice_port: 3015                              # host -> container :80
