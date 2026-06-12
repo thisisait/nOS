@@ -71,12 +71,18 @@ def test_agentloader_neon_path_resolves_to_agents_dir():
     deployed hosts. The correct expression is `%appDir%/../../../agents`.
     """
     neon = COMMON_NEON.read_text(encoding="utf-8")
-    m = re.search(r"AgentLoader\(%appDir%/([^)]+)\)", neon)
-    assert m, "AgentLoader(%appDir%/...) not found in common.neon"
+    # 2026-06-12: the loader consumes the named %agentsDir% parameter (so the
+    # CLI bootstrap can override it — see test_agentkit_runner_paths.py); the
+    # web-resolved default lives in the parameters block.
+    assert "AgentLoader(%agentsDir%)" in neon, (
+        "AgentLoader must consume the %agentsDir% parameter (CLI-overridable)"
+    )
+    m = re.search(r"agentsDir:\s*%appDir%/(\S+)", neon)
+    assert m, "agentsDir: %appDir%/... parameter default not found in common.neon"
     resolved = (APP_DIR / m.group(1)).resolve()
     assert resolved == AGENTS_DIR.resolve(), (
-        f"AgentLoader path resolves to {resolved}, not {AGENTS_DIR}. The neon "
-        f"argument `%appDir%/{m.group(1)}` is wrong — %appDir% is the Bootstrap "
+        f"agentsDir default resolves to {resolved}, not {AGENTS_DIR}. The neon "
+        f"default `%appDir%/{m.group(1)}` is wrong — %appDir% is the Bootstrap "
         "dir, so the agent definitions are three levels up + /agents."
     )
     assert (resolved / "conductor" / "agent.yml").is_file(), (
