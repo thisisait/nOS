@@ -13,7 +13,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.5-
 > is now declarative HCL applied by OpenTofu, replacing the imperative
 > `ak apply_blueprint` path for that layer (`authentik_engine: tofu`). The
 > cutover was executed the hard way (Path B: tofu-engine blank from scratch),
-> which surfaced and closed five structural traps plus three latent AgentKit
+> which surfaced and closed six structural traps plus three latent AgentKit
 > runner bugs — each pinned by a CI gate. Validated end-to-end: tofu-engine
 > blank `failed=0`, `tofu plan` no-op across the full tenant, smoke catalog
 > 48/48, e2e SSO journeys green, and a full conductor agent run.
@@ -29,12 +29,16 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.5-
 - **Safety rails:** destroy guard (apply refuses ANY delete in the plan) +
   `-parallelism=1` (the outpost attachment is a read-modify-write list; the
   default parallelism raced 20 writes and kept 11) + reversible engine flag.
-- **Five cutover traps fixed + gated** (full archaeology in
+- **Six cutover traps fixed + gated** (full archaeology in
   `docs/opentofu-authentik-cutover.md`): Authentik auto-applies mounted
   blueprints (no-op render under tofu); `lookup('file')` never resolves
   nested Jinja post-2.19 (`lookup('template')` bridge); the outpost m2m race;
   Tier-2 app manifests missing from the registry; perpetual
-  `internal_host_ssl_validation` diff.
+  `internal_host_ssl_validation` diff; and **missing `grant_types`** —
+  Authentik 2026.5.x made it an explicit ArrayField, so tofu-created
+  providers rejected every native_oidc login with `invalid_request` while
+  forward_auth stayed green (now declared in the module AND probed live by
+  the new `tests/e2e/journeys/test_native_oidc_authorize.py`).
 - **Post-cutover punch list shipped same-day:** tofu state artifacts in the
   nightly encrypted backup set (`run_tofu_state()`); disabled services
   filtered out of the tfvars (no SSO objects for `install_*: false`); a daily
@@ -57,8 +61,9 @@ agent path (verified: full conductor self-test, exit 0, report event in Wing).
 ### Validation
 
 Tofu-engine blank `failed=0` (ok=1418, all 8 stacks healthy) → smoke 48/48 →
-`tofu plan` rc=0 (full parity) → e2e SSO/web-UI journeys 8 passed → conductor
-full run rc=0. Anatomy suite: 1224 tests.
+`tofu plan` rc=0 (full parity) → e2e SSO/web-UI journeys green incl. the new
+native_oidc authorize probe (18/18 providers) → agents: conductor + scout +
+remediator full runs rc=0. Anatomy suite: 1225 tests.
 
 ## v0.5-beta (2026-06-06)
 
