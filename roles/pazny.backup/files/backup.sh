@@ -47,6 +47,13 @@ DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
 NOS_STATE_DIR="{{ backup_home_dir }}"
 DO_STATE="{{ 'true' if backup_nos_state else 'false' }}"
 
+# OpenTofu Authentik state (ADR-0001 Phase 1): terraform.tfstate (+ .backup
+# sibling) and the rendered nos.auto.tfvars.json carry provider client_secrets
+# + outpost tokens, gitignored in the repo checkout — disk loss orphans the
+# tenant from tofu state unless they ride the nightly encrypted set.
+TOFU_STATE_DIR="{{ backup_tofu_state_dir }}"
+DO_TOFU_STATE="{{ 'true' if backup_tofu_state else 'false' }}"
+
 # Alpine image for volume/dir tar streaming — MUST match tasks/_restore_volume.yml
 # (a tag mismatch is a latent restore-extract drift). Single source: backup_alpine_image.
 ALPINE_IMAGE="{{ backup_alpine_image }}"
@@ -506,6 +513,53 @@ run_nos_state() {
     fi
 }
 
+run_tofu_state() {
+    [[ "${DO_TOFU_STATE}" != "true" ]] && return 0
+    [[ -d "${TOFU_STATE_DIR}" ]] || { log "tofu-state: ${TOFU_STATE_DIR} missing — skipping"; return 0; }
+
+    local date_str key start dur rc size
+    date_str="$(date -u +%Y-%m-%d)"
+    key="${date_str}/tofu-state.tar.gz${ENC_SUFFIX}"
+
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/tofu-state.tar.gz"; then
+        log "tofu-state: today's dump already exists, skipping"
+        status_append "tofu-state" 0 0 1
+        return 0
+    fi
+
+    # ONLY the secret-bearing artifacts (state + its sibling + rendered tfvars).
+    # NOT the whole terraform/authentik/ dir — the HCL is committed and the
+    # .terraform/ provider cache is reproducible via `tofu init`. Restore is
+    # download+decrypt-to-workdir; re-seating into the git checkout is manual
+    # (see tasks/restore.yml + the role defaults comment).
+    local present=""
+    [[ -f "${TOFU_STATE_DIR}/terraform.tfstate" ]] && present="${present} terraform.tfstate"
+    [[ -f "${TOFU_STATE_DIR}/terraform.tfstate.backup" ]] && present="${present} terraform.tfstate.backup"
+    [[ -f "${TOFU_STATE_DIR}/nos.auto.tfvars.json" ]] && present="${present} nos.auto.tfvars.json"
+    if [[ -z "${present}" ]]; then
+        log "tofu-state: no tfstate/tfvars under ${TOFU_STATE_DIR} — skipping (blueprint engine?)"
+        return 0
+    fi
+
+    log "tofu-state: tar-gz of ${TOFU_STATE_DIR} (${present# })"
+    start=$(now_ms)
+    # shellcheck disable=SC2086  # intentional word-split of the file list
+    tar -czf - -C "${TOFU_STATE_DIR}" ${present} \
+      | encrypt_stream \
+      | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+    rc=$?
+    dur=$(( $(now_ms) - start ))
+
+    if [[ "${rc}" -eq 0 ]]; then
+        size=$(s3_size "${key}")
+        log "tofu-state: OK (${size} bytes in ${dur}ms)"
+        status_append "tofu-state" "${size}" "${dur}" 1
+    else
+        log "tofu-state: FAILED (rc=${rc})"
+        status_append "tofu-state" 0 "${dur}" 0
+    fi
+}
+
 run_dirs() {
     # ${!arr[@]} index form is empty-safe under set -u in bash 3.2 (verified) —
     # no array-length form here (its brace-hash would break the Jinja render).
@@ -639,6 +693,7 @@ main() {
     run_dirs
     run_wing_db
     run_nos_state
+    run_tofu_state
     run_authentik
     rotate
 
