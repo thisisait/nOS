@@ -1,0 +1,59 @@
+# =============================================================================
+# pages.yml — publish the nos-core devlog to GitHub Pages on release tags.
+#
+# tools/devlog-render.py turns docs/devlog/nos-core/**/*.md into a static
+# site (index + per-entry pages + RSS). Deployment is Actions-artifact ONLY —
+# never enable "Pages from branch /docs" (docs/index.html is a separate
+# hand-made dashboard and must not collide). One-time operator step:
+# repo Settings → Pages → Source = GitHub Actions.
+# Doctrine: docs/devlog/README.md § Pipeline.
+# =============================================================================
+name: Devlog Pages
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install renderer deps (pin matches tools/devlog-compile.py)
+        run: pip3 install pyyaml markdown==3.10.2
+
+      - name: Render the devlog
+        run: python3 tools/devlog-render.py --out _site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
