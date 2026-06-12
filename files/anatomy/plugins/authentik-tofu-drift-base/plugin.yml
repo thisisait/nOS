@@ -38,8 +38,10 @@ requires:
 # =============================================================================
 # PULSE JOB — harvested by files/anatomy/scripts/discover-pulse-catalog.py and
 # POSTed to /api/v1/pulse_jobs by roles/pazny.wing/tasks/post.yml
-# (idempotency key: authentik-tofu-drift-base:tofu-drift-plan — the catalog
-# derives plugin_name from this manifest's `name:` field, -base included).
+# (idempotency key: authentik-tofu-drift:tofu-drift-plan — live-verified
+# 2026-06-12: discover-pulse-catalog.py STRIPS the -base suffix when deriving
+# plugin_name; Bone's template lookup tolerates both via its `<key>-base`
+# fallback in clients/wing.py).
 # =============================================================================
 
 pulse:

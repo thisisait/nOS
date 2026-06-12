@@ -220,8 +220,27 @@ final class AgentsPresenter extends BaseApiPresenter
 		$wingRoot = dirname(__DIR__, 3); // app/Presenters/Api -> wing root
 		$runnerPath = $wingRoot . '/bin/run-agent.php';
 
+		// PHP_BINARY is EMPTY under FrankenPHP's embedded SAPI (there is no
+		// CLI binary backing the worker), so proc_open threw "First element
+		// must contain a non-empty program name" on every operator-trigger
+		// (2026-06-12). Resolution order: explicit WING_PHP_BIN env (the
+		// launchd plist can pin it) → PHP_BINARY when non-empty (classic
+		// FPM/CLI SAPIs) → first executable brew/system php.
+		$phpBin = getenv('WING_PHP_BIN') ?: (PHP_BINARY !== '' ? PHP_BINARY : null);
+		if ($phpBin === null || !is_executable($phpBin)) {
+			foreach (['/opt/homebrew/bin/php', '/usr/local/bin/php', '/usr/bin/php'] as $candidate) {
+				if (is_executable($candidate)) {
+					$phpBin = $candidate;
+					break;
+				}
+			}
+		}
+		if ($phpBin === null || !is_executable($phpBin)) {
+			$this->sendError('No PHP CLI binary found for the agent runner (set WING_PHP_BIN)', 500);
+		}
+
 		$argv = [
-			PHP_BINARY,
+			$phpBin,
 			$runnerPath,
 			'--agent=' . $agentName,
 			'--trigger=operator',

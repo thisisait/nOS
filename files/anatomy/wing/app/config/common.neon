@@ -1,5 +1,11 @@
 parameters:
 	dataDir: %tempDir%/../data
+	# Agents root. %appDir% is bootstrap-relative (Nette derives it from the
+	# Configurator caller's directory), so this default only resolves for the
+	# WEB bootstrap (app/Bootstrap/Booting.php). The CLI (bin/run-agent.php)
+	# overrides agentsDir with a path valid in both the repo and deployed
+	# nesting — see the addConfig() there before changing this.
+	agentsDir: %appDir%/../../../agents
 
 application:
 	errorPresenter: Error
@@ -102,7 +108,7 @@ services:
 	# which from the deployed Bootstrap (~/wing/app/app/Bootstrap) is also
 	# ../../../agents. Two dots (the pre-2026-05-26 value) pointed at the
 	# nonexistent wing/agents — the catalog was always empty + /agents/<name> 404.
-	- App\AgentKit\AgentLoader(%appDir%/../../../agents)
+	- App\AgentKit\AgentLoader(%agentsDir%)
 	- App\AgentKit\Vault\CredentialResolver
 	- App\AgentKit\LLMClient\Factory
 	- App\AgentKit\Telemetry\AuditEmitter
