@@ -30,19 +30,57 @@ from module_utils import load_plugins  # noqa: E402
 OUT = REPO / "state" / "tofu-authentik-services.yml"
 
 
+def _load_app_manifests() -> list[dict]:
+    """Tier-2 apps/<name>.yml harvest — mirrors nos_plugin_loader.py (X.3).
+
+    The live loader passes app_manifests to run_aggregators, so the blueprint
+    path always covered Tier-2 authentik: blocks. This generator originally
+    didn't — blank #3 (engine=tofu) left documenso/roundcube/twofauth with NO
+    provider at all (404 at the outpost): the blueprint render is a no-op
+    under tofu and the registry was Tier-1-only. Same skip rules as the
+    loader: `_`-prefixed and `.draft` files ignored, malformed files skipped.
+    """
+    manifests: list[dict] = []
+    apps_root = REPO / "apps"
+    if not apps_root.is_dir():
+        return manifests
+    for app_yml in sorted(apps_root.iterdir()):
+        name = app_yml.name
+        if not (name.endswith(".yml") or name.endswith(".yaml")):
+            continue
+        if name.startswith("_") or ".draft" in name:
+            continue
+        try:
+            parsed = yaml.safe_load(app_yml.read_text()) or {}
+        except Exception:                                      # noqa: BLE001
+            continue
+        if isinstance(parsed, dict):
+            manifests.append(parsed)
+    return manifests
+
+
 def main() -> int:
     plugins = load_plugins.discover(REPO / "files/anatomy/plugins")
-    load_plugins.run_aggregators(plugins)  # NO template_vars — keep values as Jinja
+    # NO template_vars — keep values as Jinja
+    load_plugins.run_aggregators(plugins, app_manifests=_load_app_manifests())
     ab = {p.name: p for p in plugins}.get("authentik-base")
     if ab is None:
         print("FAIL: authentik-base plugin not discovered", file=sys.stderr)
         return 2
 
     services = []
+    seen_slugs: set[str] = set()
     for c in ab.inputs.get("clients", []):
         slug = c.get("slug")
         if not slug:
             continue
+        # Dedupe by slug — a service can appear via BOTH a Tier-1 plugin and a
+        # Tier-2 app manifest (qdrant does). Aggregation order is plugins
+        # first, so the plugin block wins; the tfvars map would otherwise
+        # silently keep the LAST entry.
+        if slug in seen_slugs:
+            continue
+        seen_slugs.add(slug)
         mode = c.get("mode") or c.get("provider_type")
         # external_host / launch_url carry the Jinja domain expr; keep verbatim.
         ext = c.get("external_host") or c.get("launch_url") or ""
