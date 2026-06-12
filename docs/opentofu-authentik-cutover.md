@@ -84,23 +84,32 @@ blueprint reapply + MTI reconcile handlers re-engage and `10-oidc-apps.yaml`
 renders its full client list again. Keep the blueprint renderer until the tofu
 engine has held no-op across several releases.
 
-## Open items (extracted 2026-06-12 — the post-cutover punch list)
+## Open items
 
-- **Secrets custody (P1):** `terraform/authentik/terraform.tfstate` +
-  `nos.auto.tfvars.json` are 0600 + gitignored but NOT yet in Infisical
-  custody / the 3-2-1 backup set / a `restore-verify` floor. Until then a
-  disk loss silently orphans the tenant from state (recoverable via blank or
-  adopt, but unplanned).
-- **Disabled-service filtering (P2):** the registry/tfvars include EVERY
-  declared service regardless of `install_*` flags — tofu creates providers +
-  apps for services that don't run (live: erpnext, spacetimedb, mailpit).
-  Harmless cosmetically (no route/container) but drifts from the blueprint-era
-  doctrine where `enabled:` reflected the install set, and it pollutes the
-  user-facing app library. Fix shape: carry the `enabled` Jinja expr into the
-  registry and filter in the tfvars template (it renders with full var scope).
-- **Drift Pulse job (P2):** read-only `tofu plan` on a cadence → "Authentik
-  drifted" notification (the W6.1 hook this doc always planned). Wire via a
-  `pulse_jobs:` block; plan-only, never applies.
+Punch list items #1–#3 (extracted 2026-06-12) **shipped the same day**:
+
+- ~~Secrets custody (P1)~~ — `run_tofu_state()` in `backup.sh` puts
+  `terraform.tfstate` (+`.backup`) + `nos.auto.tfvars.json` into the nightly
+  AES-256 set (Restic off-site copy #2 rides the bucket mirror); the generic
+  restore stage recovers them to the restore workdir (re-seating into the git
+  checkout is deliberately manual). Gate: `test_backup_restore_contract.py`.
+  Infisical custody skipped deliberately — no playbook-level infra-secret push
+  precedent exists, and tfstate is a rotating document, not a KV secret.
+- ~~Disabled-service filtering (P2)~~ — the registry carries each client's
+  `enabled` Jinja expr verbatim; the tfvars template filters falsy services
+  after the `lookup('template')` render. **Operational consequence:** on an
+  already-provisioned tenant a service flipping `enabled→false` plans as a
+  DESTROY and the guard refuses — review the plan and run `tofu apply tfplan`
+  supervised, or let the next blank converge it. Gate:
+  `test_tofu_registry_bridge.py` (enabled-carry + filter semantics).
+- ~~Drift Pulse job (P2)~~ — plugin `authentik-tofu-drift-base` runs
+  `tofu plan -detailed-exitcode -lock=false` daily (05:30, plan-only, never
+  applies — pinned by a mutating-verb sweep); drift → medium A9 notification,
+  error/timeout → high. Skips cleanly pre-cutover. Gate:
+  `test_tofu_drift_pulse_job.py`.
+
+Still open:
+
 - **Adopt-path attachment import id (P3, existing-tenant only):**
   `tools/tofu-authentik-adopt.sh` imports proxy/oauth2/app cleanly but the
   `outpost_provider_attachment` import id format is unconfirmed (shows as
