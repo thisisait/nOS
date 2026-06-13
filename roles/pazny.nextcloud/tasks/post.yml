@@ -160,6 +160,10 @@
     - { index: 0, domain: "{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}" }
     - { index: 1, domain: "localhost" }
     - { index: 2, domain: "127.0.0.1" }
+    # Internal service alias on the shared docker net — the ONLYOFFICE /
+    # euro-office docserver downloads files from NC via http://nextcloud/
+    # (StorageUrl), and NC rejects the Host as untrusted (400) without this.
+    - { index: 3, domain: "{{ nextcloud_internal_host | default('nextcloud') }}" }
   loop_control:
     label: "trusted_domains[{{ item.index }}] = {{ item.domain }}"
   when:
@@ -173,12 +177,12 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab
     exec -T -u www-data nextcloud
-    php occ config:system:set trusted_domains {{ idx + 3 }}
+    php occ config:system:set trusted_domains {{ idx + 4 }}
     --value={{ item | quote }}
   loop: "{{ service_extra_hosts | default([]) }}"
   loop_control:
     index_var: idx
-    label: "trusted_domains[{{ idx + 3 }}] = {{ item }}"
+    label: "trusted_domains[{{ idx + 4 }}] = {{ item }}"
   when:
     - _nc_container.stdout | default('') | length > 0
     - service_extra_hosts | default([]) | length > 0
@@ -252,6 +256,11 @@
     sh -c '{{ item }}'
   loop:
     - "php occ config:app:set onlyoffice DocumentServerUrl --value=https://{{ onlyoffice_domain }}/"
+    # NC -> docserver (server-to-server commands) over the shared docker net.
+    - "php occ config:app:set onlyoffice DocumentServerInternalUrl --value={{ onlyoffice_internal_url }}"
+    # docserver -> NC (download the file being edited) over the shared docker
+    # net; bypasses the public CF edge. Needs `nextcloud` in trusted_domains.
+    - "php occ config:app:set onlyoffice StorageUrl --value=http://{{ nextcloud_internal_host }}/"
     - "php occ config:app:set onlyoffice jwt_secret --value={{ onlyoffice_jwt_secret | quote }}"
   loop_control:
     label: "set onlyoffice {{ item.split(' ')[4] }}"

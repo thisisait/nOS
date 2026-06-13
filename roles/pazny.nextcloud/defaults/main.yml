@@ -26,3 +26,14 @@ nextcloud_db_host: "127.0.0.1"  # ignored when install_mariadb=true (network ali
 nextcloud_admin_user: "admin"
 nextcloud_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 nextcloud_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+
+# ── ONLYOFFICE / euro-office connector internal URLs ─────────────────────────
+# The browser loads the editor from the PUBLIC DocumentServerUrl, but the two
+# servers also call EACH OTHER server-to-server: NC→docserver (commands) and
+# docserver→NC (download the file being edited). Routing that through the
+# public Cloudflare edge is slow + flaky, so use the shared docker network
+# (both containers are on stacks_shared_network; cross-stack compose aliases =
+# the service names). `nextcloud` must be a trusted_domain for the docserver's
+# download callback (Host: nextcloud) to be accepted — added below.
+nextcloud_internal_host: "nextcloud"          # NC's service alias on the shared net
+onlyoffice_internal_url: "http://onlyoffice/" # docserver's service alias on the shared net
