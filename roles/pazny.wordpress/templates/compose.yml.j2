@@ -12,16 +12,16 @@ services:
       - "127.0.0.1:{{ wordpress_port | default(8084) }}:80"
     volumes:
       - {{ wordpress_dir }}:/var/www/html
-      # mu-plugin auto-loader: configures openid-connect-generic from env vars
-      - {{ stacks_dir }}/iiab/wordpress/mu-plugins/oidc-bootstrap.php:/var/www/html/wp-content/mu-plugins/oidc-bootstrap.php:ro
-{% if wordpress_devlog_enabled | default(true) %}
-      # devlog: re-enable Application Passwords behind the TLS-terminating edge
-      - {{ stacks_dir }}/iiab/wordpress/mu-plugins/devlog-app-passwords.php:/var/www/html/wp-content/mu-plugins/devlog-app-passwords.php:ro
-{% endif %}
-{% if install_authentik | default(false) %}
-      # RBAC mirror: Authentik groups -> WP roles on OIDC login
-      - {{ stacks_dir }}/iiab/wordpress/mu-plugins/rbac-role-sync.php:/var/www/html/wp-content/mu-plugins/rbac-role-sync.php:ro
-{% endif %}
+      # mu-plugins mounted as a DIRECTORY, not individual files: on a fresh
+      # blank wp-content/mu-plugins does not exist yet, and Docker cannot
+      # create single-FILE bind-mountpoints inside an external/virtiofs volume
+      # (wordpress_dir on /Volumes/...) — it fails hard with "mountpoint ... is
+      # outside of rootfs" and the whole iiab stack-up dies. A directory mount
+      # creates one mountpoint cleanly. The staging dir holds whatever the role
+      # staged (oidc-bootstrap always; devlog-app-passwords + rbac-role-sync
+      # conditionally) — WP loads every .php in it. WP core ships no mu-plugins,
+      # so the read-only mount shadows nothing on first-boot install.
+      - {{ stacks_dir }}/iiab/wordpress/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
     environment:
       WORDPRESS_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ wordpress_db_host | default('127.0.0.1') }}{% endif %}"
       WORDPRESS_DB_USER: "{{ wordpress_db_user }}"

@@ -45,8 +45,11 @@ def test_mu_plugin_hooks_both_actions():
 def test_mu_plugin_staged_and_mounted():
     main_tasks = (ROLE / "tasks/main.yml").read_text(encoding="utf-8")
     assert "rbac-role-sync.php" in main_tasks
+    # mu-plugins ship as ONE directory mount (single-file mounts break on a
+    # fresh blank with external/virtiofs storage — "outside of rootfs").
     compose = (ROLE / "templates/compose.yml.j2").read_text(encoding="utf-8")
-    assert "rbac-role-sync.php:/var/www/html/wp-content/mu-plugins/rbac-role-sync.php:ro" in compose
+    assert "/wp-content/mu-plugins:ro" in compose, "mu-plugins must be a directory mount"
+    assert "mu-plugins/rbac-role-sync.php:" not in compose, "no per-file mounts"
 
 
 def test_role_map_is_json_literal_covering_all_tiers():

@@ -64,10 +64,13 @@ def test_mu_plugin_staged_and_mounted():
     assert MU_PLUGIN.is_file()
     assert "wp_is_application_passwords_available" in MU_PLUGIN.read_text(encoding="utf-8")
     main_tasks = (ROLE / "tasks/main.yml").read_text(encoding="utf-8")
+    # Staged into the mu-plugins dir behind the devlog flag; the whole dir is
+    # mounted (single directory mount — file mounts break on a fresh blank with
+    # external/virtiofs storage), so WP loads it.
     assert "devlog-app-passwords.php" in main_tasks
+    assert "wordpress_devlog_enabled" in main_tasks
     compose = COMPOSE.read_text(encoding="utf-8")
-    assert "devlog-app-passwords.php:/var/www/html/wp-content/mu-plugins/devlog-app-passwords.php:ro" in compose
-    assert "wordpress_devlog_enabled" in compose
+    assert "/wp-content/mu-plugins:ro" in compose, "mu-plugins must be a directory mount"
 
 
 def test_hook_documents_the_non_mirror():
