@@ -79,9 +79,36 @@ document-server state — documents live in the host applications — so the
 reseed is safe.
 
 After that: container **healthy**, `/healthcheck` 200, and a real JWT-signed
-`ConvertService.ashx` round-trip produced a PDF (`endConvert: true`) on
-ARM64. The editing engine works; the browser-level Nextcloud embed is the
-remaining operator smoke test.
+`ConvertService.ashx` round-trip produced a PDF (`endConvert: true`) on ARM64.
+
+## Two more gaps before it was actually testable
+
+The editing *engine* worked, but `occ onlyoffice:documentserver --check` still
+failed — and that turned out to expose a **pre-existing** connector gap, not a
+euro-office one: the playbook set only `DocumentServerUrl` (the public URL the
+browser uses), never the two server-to-server URLs. So the doc server tried to
+download the file being edited from `localhost` and `ECONNREFUSED`'d. Fixed by
+wiring `DocumentServerInternalUrl` (`http://onlyoffice/`) and `StorageUrl`
+(`http://nextcloud/`) over the shared docker network, plus adding the internal
+`nextcloud` alias to `trusted_domains` (NC 400s an untrusted Host otherwise).
+Now `--check` reports *"Document server … 9.3.1.37 is successfully connected."*
+
+The second gap is blank-specific and sharp: euro-office **bakes its postgres
+cluster into the image and won't `initdb` an empty PGDATA**. A blank wipes
+`onlyoffice_db_dir`, so the empty bind mount would shadow the baked cluster and
+the container would restart-loop — failing the whole blank at the b2b
+health-wait. The role now seeds the cluster from the image when the db dir is
+fresh, gated to the euro-office image (the stock image self-`initdb`s, so it's
+left alone) and idempotent (skips once the cluster exists). The pilot is now
+blank-safe.
+
+## What pins it
+
+`test_onlyoffice_connector_urls.py` covers the internal URLs + the
+trusted-domain index shuffle + the blank-safe seed shape. The editing engine
+is reachable, the document round-trip is live, and a from-scratch blank will
+stand euro-office up cleanly — so the pilot is finally ready for real
+browser-level editing.
 
 ## What pins it
 
