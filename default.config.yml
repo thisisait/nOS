@@ -1781,7 +1781,7 @@ homeassistant_privileged: false
 homeassistant_admin_name: "Admin"
 homeassistant_admin_user: "admin"
 homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
-homeassistant_auth_oidc_version: "0.9.0"
+homeassistant_auth_oidc_version: "1.1.1"
 authentik_oidc_homeassistant_client_id: "nos-homeassistant"
 authentik_oidc_homeassistant_client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
 

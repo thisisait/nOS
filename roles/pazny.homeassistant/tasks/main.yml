@@ -72,41 +72,72 @@
     mode: '0644'
     timeout: 30
   register: _ha_oidc_dl
+  # A single 30s timeout silently dropped the component for weeks (the config
+  # references auth_oidc but custom_components/ was empty — audit 2026-06-13).
+  # Retry transient failures; the loud verify at the end of the block fails the
+  # play if the component still never lands.
+  until: _ha_oidc_dl.status_code | default(0) == 200
+  retries: 3
+  delay: 5
   when:
     - install_authentik
     - not (_ha_oidc_manifest.stat.exists | default(false))
   failed_when: false
 
-- name: "[pazny.homeassistant] Extract auth_oidc plugin"
-  ansible.builtin.unarchive:
-    src: "{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
-    dest: "{{ homeassistant_config_dir }}/"
-    remote_src: true
-    creates: "{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}"
-  when:
-    - install_authentik
-    - _ha_oidc_dl is defined
-    - _ha_oidc_dl.status_code is defined
-    - _ha_oidc_dl.status_code in [200, 304] or _ha_oidc_dl.changed | default(false)
-  failed_when: false
-
-- name: "[pazny.homeassistant] Move auth_oidc to custom_components/"
-  ansible.builtin.shell: |
-    set -e
-    SRC="{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}/custom_components/auth_oidc"
-    DST="{{ homeassistant_config_dir }}/custom_components/auth_oidc"
-    if [ -d "$SRC" ] && [ ! -d "$DST" ]; then
-      mv "$SRC" "$DST"
-    fi
-    rm -rf "{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}"
-    rm -f "{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
-  args:
+# Extract + install in ONE idempotent shell step gated on the TARBALL existing
+# (not on the download's status_code — which the until/retries wrapper renders
+# unreliable: the old unarchive `when` skipped silently, the move cleaned up,
+# and the component vanished — audit 2026-06-13). tar directly; replace any
+# stale DST; the trailing test -f makes rc reflect whether it actually landed.
+- name: "[pazny.homeassistant] Extract + install auth_oidc component"
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      TGZ="{{ homeassistant_config_dir }}/_auth_oidc.tar.gz"
+      WORK="{{ homeassistant_config_dir }}/hass-oidc-auth-{{ homeassistant_auth_oidc_version }}"
+      DST="{{ homeassistant_config_dir }}/custom_components/auth_oidc"
+      [ -s "$TGZ" ] || { echo "auth_oidc tarball missing/empty — download failed"; exit 0; }
+      rm -rf "$WORK"
+      tar -xzf "$TGZ" -C "{{ homeassistant_config_dir }}/"
+      if [ -d "$WORK/custom_components/auth_oidc" ]; then
+        rm -rf "$DST"
+        mv "$WORK/custom_components/auth_oidc" "$DST"
+      fi
+      rm -rf "$WORK" "$TGZ"
+      test -f "$DST/manifest.json"
+    executable: /bin/bash
     creates: "{{ homeassistant_config_dir }}/custom_components/auth_oidc/manifest.json"
   when:
     - install_authentik
     - not (_ha_oidc_manifest.stat.exists | default(false))
   failed_when: false
   notify: Restart homeassistant
+  notify: Restart homeassistant
+
+# Loud (but NON-FATAL) verify — configuration.yaml references the auth_oidc
+# component, so if the download/extract/move chain silently failed (every step
+# is failed_when:false), HA would boot WITHOUT the "Sign in with Authentik"
+# provider and nobody would notice (it was a DEAD PIN — v0.9.0 404'd — for
+# weeks). Surface it prominently, but do NOT abort the whole converge: HA OIDC
+# is one optional service and runs EARLY in stack render, so a hard fail here
+# would block every downstream service's post-wiring (incl. Gitea SSO).
+- name: "[pazny.homeassistant] Verify auth_oidc component landed"
+  ansible.builtin.stat:
+    path: "{{ homeassistant_config_dir }}/custom_components/auth_oidc/manifest.json"
+  register: _ha_oidc_final
+  when: install_authentik
+
+- name: "[pazny.homeassistant] WARN loudly if auth_oidc did not install"
+  ansible.builtin.debug:
+    msg: >-
+      ⚠️  HOME ASSISTANT SSO NOT INSTALLED — the auth_oidc component is absent
+      ({{ homeassistant_config_dir }}/custom_components/auth_oidc). HA will boot
+      WITHOUT the 'Sign in with Authentik' provider. Most likely the download of
+      homeassistant_auth_oidc_version={{ homeassistant_auth_oidc_version }}
+      failed (dead tag or network). Re-run --tags homeassistant once reachable.
+  when:
+    - install_authentik
+    - not (_ha_oidc_final.stat.exists | default(false))
 
 - name: "[pazny.homeassistant] Render secrets.yaml for OIDC credentials"
   ansible.builtin.copy:
@@ -137,9 +168,13 @@
         client_secret: !secret oidc_client_secret
         discovery_url: "https://{{ authentik_domain }}/application/o/homeassistant/.well-known/openid-configuration"
         display_name: "Authentik"
+        # v1.1.x schema: the 0.9-era automatic_user_linking /
+        # automatic_person_creation keys were REMOVED (the provider now always
+        # links/creates) and a strict CONFIG_SCHEMA rejects unknown keys —
+        # passing them makes HA refuse to load auth_oidc. include_groups_scope
+        # carries the Authentik groups claim for RBAC.
         features:
-          automatic_user_linking: true
-          automatic_person_creation: true
+          include_groups_scope: true
           default_redirect: {{ (sso_autologin_homeassistant | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool | string | lower }}
     create: true
   when: install_authentik

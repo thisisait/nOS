@@ -92,27 +92,23 @@
   no_log: true
   notify: Restart gitea
 
-# ── SSO-mandatory guard (2026-06-09) ──────────────────────────────────────
+# ── SSO-mandatory guard (2026-06-09; CLI-fixed 2026-06-13) ────────────────
 # SSO is mandatory: when the local sign-in form is HIDDEN (sso_autologin), the
 # "Sign in with Authentik" OAuth source MUST be registered — else login is
-# SSO-only with no working button = LOCKOUT. The source is registered by the
-# plugin-loader post_compose hook (tagged 'anatomy'), which a service-only
-# `--tags gitea` run SKIPS while still rendering the form-hide (tagged 'gitea').
-# This guard fails LOUD on that desync instead of silently locking the operator
-# out. It passes on a full / `--tags authentik,anatomy,gitea` run (post_compose
-# registers the source before this runs) and on `--tags gitea` when the source
-# already exists from a prior converge.
-- name: "[pazny.gitea Post] SSO guard — list identity providers"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
-    method: GET
-    headers:
-      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
-    status_code: [200]
+# SSO-only with no working button = LOCKOUT. The source is registered by
+# tasks/stacks/authentik_service_post.yml (`gitea admin auth add-oauth`); a
+# service-only `--tags gitea` run SKIPS it. This guard fails LOUD on that
+# desync. NOTE: the old guard queried `/api/v1/admin/identity-providers` — an
+# endpoint Gitea has at NO version — so it 404'd and could never SEE the
+# source; AND its fail had no source-absence condition (it would have fired
+# unconditionally if autologin were on). Both fixed: detect via the CLI, and
+# only fail when the source is genuinely absent.
+- name: "[pazny.gitea Post] SSO guard — list Authentik OAuth source"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p devops exec -T -u git gitea gitea admin auth list
   register: _gitea_idp_guard
   changed_when: false
   failed_when: false
-  no_log: true
   when:
     - _gitea_container.stdout | default('') | length > 0
     - install_authentik | default(false) | bool
@@ -123,15 +119,16 @@
     msg: |
       Gitea's local sign-in form is HIDDEN (sso_autologin) but no 'authentik'
       OAuth source is registered → SSO-only login with no working button =
-      LOCKOUT. The source is registered by the plugin-loader post_compose
-      (tagged 'anatomy'); a service-only `--tags gitea` run SKIPS it. Run the
-      full SSO wiring:
+      LOCKOUT. The source is registered by tasks/stacks/authentik_service_post.yml
+      via `gitea admin auth add-oauth`; a service-only `--tags gitea` run SKIPS
+      it. Run the full SSO wiring:
           ansible-playbook main.yml --tags authentik,anatomy,gitea
       (or a full run), then the 'Sign in with Authentik' button appears.
   when:
     - _gitea_container.stdout | default('') | length > 0
     - install_authentik | default(false) | bool
     - (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool
+    - "'authentik' not in (_gitea_idp_guard.stdout | default(''))"
     - _gitea_idp_guard.status | default(0) == 200
     - (_gitea_idp_guard.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | length) == 0
 

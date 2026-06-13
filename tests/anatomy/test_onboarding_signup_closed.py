@@ -62,11 +62,15 @@ def test_gitea_external_only_registration():
     assert "ALLOW_ONLY_EXTERNAL_REGISTRATION" in compose
     assert "gitea_allow_only_external_registration: true" in (REPO / "default.config.yml").read_text()
     # Group → admin sync: the Authentik OIDC source maps the groups claim, and a
-    # tier-1 Authentik user becomes a Gitea admin (no manual promotion).
+    # tier-1 Authentik user becomes a Gitea admin (no manual promotion). Gitea
+    # registers via the `gitea admin auth add-oauth` CLI (no REST endpoint
+    # exists at any version) — 2026-06-13 SSO audit fix.
     hook = (REPO / "files/anatomy/plugins/gitea-base/hooks/post_compose.yml").read_text()
-    assert 'group_claim_name: "groups"' in hook, "Gitea OIDC source must read the groups claim"
-    assert "admin_group:" in hook and "selectattr('tier', 'equalto', 1)" in hook, \
+    assert "--group-claim-name groups" in hook, "Gitea OIDC source must read the groups claim"
+    assert "--admin-group" in hook and "selectattr('tier', 'equalto', 1)" in hook, \
         "admin_group must derive from the tier-1 group set"
+    assert "add-oauth" in hook and "path: /api/v1/admin/identity-providers" not in hook, \
+        "Gitea must register via the CLI, not the non-existent REST endpoint"
 
 
 def test_group_to_admin_mapping_coverage():

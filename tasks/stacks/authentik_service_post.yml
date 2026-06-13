@@ -15,80 +15,125 @@
 #   • Nextcloud OIDC (113-192)         → nextcloud-base/lifecycle.post_compose
 # ==============================================================================
 
-# ── Gitea: register OAuth2 source via Admin API ─────────────────────────────
+# ── Gitea: register Authentik OAuth2 source via the CLI ─────────────────────
+# Gitea exposes NO REST endpoint for auth sources at ANY version — the old
+# POST /api/v1/admin/identity-providers 404'd, and failed_when:false + no_log
+# hid it, so the source NEVER registered (the "Gitea SSO lockout, oauth2
+# source row vanishes" saga — root-caused 2026-06-13 by the SSO audit).
+# Canonical path: `gitea admin auth add-oauth` (create) / `update-oauth --id`
+# (rotate), idempotency keyed off `gitea admin auth list`. Gitea is in the
+# devops compose stack (like nextcloud is in iiab). The secret-bearing
+# create/rotate stay no_log + failed_when:false; the secret-free Verify below
+# is the LOUD gate (mirrors the Nextcloud user_oidc fix).
 
-- name: "[Authentik->Gitea] Check if OAuth2 source exists"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
-    method: GET
-    headers:
-      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
-    status_code: [200]
-  register: _gitea_oauth_sources
+- name: "[Authentik->Gitea] Check Gitea container is running"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p devops exec -T -u git gitea gitea --version
+  register: _gitea_running
   when: install_gitea | default(false)
+  changed_when: false
   failed_when: false
-  no_log: true
 
-- name: "[Authentik->Gitea] Resolve existing auth source ID (for PATCH)"
-  ansible.builtin.set_fact:
-    _gitea_ak_source_id: >-
-      {{ (_gitea_oauth_sources.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | first | default({})).id | default(0) }}
+- name: "[Authentik->Gitea] Resolve existing authentik source ID"
+  ansible.builtin.shell:
+    cmd: >
+      set -o pipefail;
+      {{ docker_bin }} compose -p devops exec -T -u git gitea
+      gitea admin auth list | awk '$2=="authentik"{print $1; exit}'
+    executable: /bin/bash
+  register: _gitea_ak_id
   when:
     - install_gitea | default(false)
-    - _gitea_oauth_sources.status | default(0) == 200
-
-- name: "[Authentik->Gitea] Create OAuth2 authentication source (first-run)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers"
-    method: POST
-    headers:
-      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      type: "oauth2"
-      name: "authentik"
-      oauth2_config:
-        provider: "openidConnect"
-        client_id: "nos-gitea"
-        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
-        scopes: ["openid", "profile", "email"]
-    status_code: [200, 201]
-  when:
-    - install_gitea | default(false)
-    - _gitea_oauth_sources.status | default(0) == 200
-    - _gitea_ak_source_id | int == 0
+    - _gitea_running.rc | default(1) == 0
+  changed_when: false
   failed_when: false
-  no_log: true
 
-- name: "[Authentik->Gitea] PATCH existing auth source (client_secret rotation)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/admin/identity-providers/{{ _gitea_ak_source_id }}"
-    method: PATCH
-    headers:
-      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      type: "oauth2"
-      name: "authentik"
-      oauth2_config:
-        provider: "openidConnect"
-        client_id: "nos-gitea"
-        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
-        scopes: ["openid", "profile", "email"]
-    status_code: [200, 204]
-  register: _gitea_source_patch
+- name: "[Authentik->Gitea] Create Authentik OAuth2 source (first-run)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - compose
+      - "-p"
+      - devops
+      - exec
+      - "-T"
+      - "-u"
+      - git
+      - gitea
+      - gitea
+      - admin
+      - auth
+      - add-oauth
+      - "--name"
+      - authentik
+      - "--provider"
+      - openidConnect
+      - "--key"
+      - nos-gitea
+      - "--secret"
+      - "{{ global_password_prefix }}_pw_oidc_gitea"
+      - "--auto-discover-url"
+      - "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
+      - "--scopes"
+      - openid
+      - "--scopes"
+      - profile
+      - "--scopes"
+      - email
+      - "--group-claim-name"
+      - groups
+      - "--admin-group"
+      - "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}"
+  register: _gitea_oauth_create
   when:
     - install_gitea | default(false)
-    - _gitea_oauth_sources.status | default(0) == 200
-    - _gitea_ak_source_id | int > 0
-  changed_when: _gitea_source_patch.status | default(0) in [200, 204]
+    - _gitea_running.rc | default(1) == 0
+    - (_gitea_ak_id.stdout | default('') | trim) == ''
+  changed_when: _gitea_oauth_create.rc == 0
   failed_when: false
   no_log: true
   notify: Restart gitea
+
+- name: "[Authentik->Gitea] Rotate Authentik source secret (reconverge)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - compose
+      - "-p"
+      - devops
+      - exec
+      - "-T"
+      - "-u"
+      - git
+      - gitea
+      - gitea
+      - admin
+      - auth
+      - update-oauth
+      - "--id"
+      - "{{ _gitea_ak_id.stdout | trim }}"
+      - "--secret"
+      - "{{ global_password_prefix }}_pw_oidc_gitea"
+      - "--auto-discover-url"
+      - "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/gitea/.well-known/openid-configuration"
+  register: _gitea_oauth_update
+  when:
+    - install_gitea | default(false)
+    - _gitea_running.rc | default(1) == 0
+    - (_gitea_ak_id.stdout | default('') | trim) != ''
+  changed_when: _gitea_oauth_update.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: "[Authentik->Gitea] Verify the Authentik OAuth2 source is registered"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p devops exec -T -u git gitea gitea admin auth list
+  register: _gitea_oauth_verify
+  when:
+    - install_gitea | default(false)
+    - _gitea_running.rc | default(1) == 0
+  changed_when: false
+  failed_when: "'authentik' not in (_gitea_oauth_verify.stdout | default(''))"
 
 # ── Portainer: OAuth2 is configured in pazny.portainer/tasks/post.yml ───────
 # PUT /api/settings with OAuth2 params runs in core-up.yml immediately after infra start.

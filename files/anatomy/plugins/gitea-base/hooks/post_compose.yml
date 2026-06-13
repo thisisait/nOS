@@ -59,65 +59,38 @@ sequence:
       --must-change-password=false
     notify: Restart gitea
 
-  # Phase 2 — Authentik OAuth source via Admin API
-  # Maps to tasks/stacks/authentik_service_post.yml lines 1-79.
+  # Phase 2 — Authentik OAuth source via the gitea CLI.
+  # Gitea has NO REST endpoint for auth sources at ANY version — the old
+  # POST /api/v1/admin/identity-providers 404'd silently (root-caused
+  # 2026-06-13). Canonical path: `gitea admin auth add-oauth`. Mirrors
+  # tasks/stacks/authentik_service_post.yml. The replay runner splits cmd on
+  # whitespace and has no shell, so it cannot pipe to parse the numeric source
+  # id that `update-oauth --id` needs — the hook does create-if-absent; secret
+  # rotation/reconverge is owned by the role path. Bare (unquoted) tokens only:
+  # the derived secret + discovery URL + group names contain no spaces, so
+  # cmd.split() yields clean argv.
   - id: list_oauth_sources
     when: "install_authentik | bool"
-    method: GET
-    path: /api/v1/admin/identity-providers
-    auth:
-      type: basic
-      username: "{{ gitea_admin_user }}"
-      password: "{{ gitea_admin_password }}"
+    runner: docker_exec
+    container: gitea
+    compose_project: devops
+    user: git
+    cmd: gitea admin auth list
     register: _gitea_oauth_sources
 
   - id: create_authentik_source
     when: >
       install_authentik | bool
-      and _gitea_oauth_sources.status == 200
-      and (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | length) == 0
-    method: POST
-    path: /api/v1/admin/identity-providers
-    auth:
-      type: basic
-      username: "{{ gitea_admin_user }}"
-      password: "{{ gitea_admin_password }}"
-    body:
-      type: oauth2
-      name: authentik
-      config:
-        provider: openidConnect
-        client_id: "nos-gitea"
-        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
-        # Group → admin sync: Authentik's profile scope emits the user's group
-        # names in `groups`, so a tier-1 (nos-admins) Authentik user becomes a
-        # Gitea admin on OIDC login — no manual promotion. Derived from
-        # authentik_rbac_tiers (last tier-1 group = the admin group).
-        group_claim_name: "groups"
-        admin_group: "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}"
-
-  - id: update_authentik_source
-    when: >
-      install_authentik | bool
-      and _gitea_oauth_sources.status == 200
-      and (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | length) > 0
-    method: PATCH
-    # Resolve the source id inline from the registered list (the replay runner
-    # renders paths against the registers map). The old `{{ _gitea_ak_source_id }}`
-    # was never registered in this sequence → rendered empty → PATCH to a
-    # path with no id. (A19 latent fix, 2026-05-23.)
-    path: "/api/v1/admin/identity-providers/{{ (_gitea_oauth_sources.body | selectattr('name', 'equalto', 'authentik') | list | first | default({})).id | default(0) }}"
-    auth:
-      type: basic
-      username: "{{ gitea_admin_user }}"
-      password: "{{ gitea_admin_password }}"
-    body:
-      config:
-        client_id: "nos-gitea"
-        client_secret: "{{ global_password_prefix }}_pw_oidc_gitea"
-        open_id_connect_auto_discovery_url: "https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration"
-        # Group → admin sync (reconverged on every run; see create body above).
-        group_claim_name: "groups"
-        admin_group: "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}"
+      and 'authentik' not in (_gitea_oauth_sources.stdout | default(''))
+    runner: docker_exec
+    container: gitea
+    compose_project: devops
+    user: git
+    cmd: >
+      gitea admin auth add-oauth --name authentik --provider openidConnect
+      --key nos-gitea --secret {{ global_password_prefix }}_pw_oidc_gitea
+      --auto-discover-url https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration
+      --scopes openid --scopes profile --scopes email
+      --group-claim-name groups
+      --admin-group {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}
     notify: Restart gitea

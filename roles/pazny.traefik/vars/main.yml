@@ -55,7 +55,15 @@ traefik_auth_modes:
   outline: oidc
   portainer: oidc
   vaultwarden: oidc
-  woodpecker: oidc          # delegated via Gitea OAuth
+  woodpecker: oidc          # app-auth via Gitea OAuth — NOT forward-auth gated.
+                            # A forward_auth gate would be the documented
+                            # double-login anti-pattern (CLAUDE.md "Forward-auth
+                            # ≠ native-OIDC double-protection") AND it 302's the
+                            # playbook's own Woodpecker API post-wiring. The
+                            # unauth SPA shell loads but every API call 401s and
+                            # login redirects to Gitea OAuth — no data exposure.
+                            # (Audit 2026-06-13 flagged BYPASS; re-judged: app
+                            # auth is the gate here, route-gating is wrong.)
   hedgedoc: oidc
   bookstack: oidc
   superset: oidc            # SUPERSET_AUTH_TYPE=AUTH_OAUTH
