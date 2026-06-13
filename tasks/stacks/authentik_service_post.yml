@@ -168,7 +168,7 @@
     --discoveryuri="https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/nextcloud/.well-known/openid-configuration"
     --mapping-uid="preferred_username"
     --mapping-email="email"
-    --mapping-displayname="name"
+    --mapping-display-name="name"
   register: _nc_oidc_create
   when:
     - install_nextcloud | default(false)
@@ -196,3 +196,20 @@
   failed_when: false
   no_log: true
   notify: Restart nextcloud
+
+# Loud verify — the register/reconverge steps run no_log + failed_when:false
+# (they carry the client secret), so a CLI-arg drift used to fail SILENTLY and
+# the playbook reported success with SSO dead. The `--mapping-displayname` ->
+# `--mapping-display-name` rename in user_oidc 8.x hid behind exactly that for
+# weeks. Re-list providers (no secret in output) and fail LOUD if Authentik
+# still isn't registered. SSO is mandatory (memory sso-mandatory-never-local-form).
+- name: "[Authentik->Nextcloud] Verify OIDC provider is registered"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ user_oidc:provider
+  register: _nc_oidc_verify
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  changed_when: false
+  failed_when: "'authentik' not in (_nc_oidc_verify.stdout | default(''))"

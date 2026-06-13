@@ -39,6 +39,14 @@
   wet-test lane. Hard-breaks on ansible-core 2.24.
 - **Advisor/architect actor-id naming inconsistency** (scout side-find,
   2026-06-11) — normalize agent actor_id naming across the two upgrade agents.
+- **Gitea OIDC auth source empty (live, 2026-06-13)** — `gitea admin auth
+  list` shows no rows; the `[Authentik->Gitea]` register block in
+  `tasks/stacks/authentik_service_post.yml` is gated on a GET returning 200
+  and fails silently (`no_log` + `failed_when:false`) otherwise. Same
+  silent-failure class as the Nextcloud `--mapping-display-name` fix; likely
+  the documented "Gitea SSO lockout — oauth2 source row vanishes" saga
+  (memory `local-first-git-topology`). Needs a loud verify + root-cause of
+  the admin-API GET. Not yanked on yet (GitLab is the agent forge surface).
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
   track; the actual cutover (logical dump/restore + atomic switch) is still
   operator-gated.
