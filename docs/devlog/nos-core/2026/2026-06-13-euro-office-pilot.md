@@ -39,7 +39,11 @@ Three facts make the pilot almost embarrassingly cheap:
    `onlyoffice/documentserver`, so the existing Nextcloud / BookStack /
    Outline embed wiring (shared `onlyoffice_jwt_secret`) carries over
    unchanged.
-3. The version tags track upstream closely (9.3.1 vs our pinned 9.3.1.2).
+3. The fork is young enough that one rough edge surfaced immediately: the
+   9.3.1 "release" exists only as a *source* release — ghcr carries no
+   semver image tags yet, just `latest`/`main`/`develop` and CI branch
+   builds (the first pilot converge failed on exactly that, `9.3.1: not
+   found`). Preview status, confirmed the hard way.
 
 So the structural change is one variable: the role's compose template now
 renders `{{ onlyoffice_image }}:{{ onlyoffice_version }}`, defaulting to the
@@ -47,13 +51,37 @@ original image. The pilot flip lives in the operator's `config.yml`:
 
 ```yaml
 onlyoffice_image: "ghcr.io/euro-office/documentserver"
-onlyoffice_version: "9.3.1"
+onlyoffice_version: "latest"   # no semver image tags yet — re-pin at stable
 ```
 
 Revert = delete two lines and re-run `--tags onlyoffice`. The full role
 rename (`pazny.onlyoffice` → `pazny.eurooffice`, plugin manifest, manifest
 row, registry) deliberately waits for the first stable release — preview
 builds don't get to own a role name.
+
+## The migration trap the pilot earned
+
+The first live switch died twice, and both failures are worth their tuition:
+
+1. **The internal-PG bind mount carries the old image's identity.** The role
+   bind-mounts `/var/lib/postgresql`, and the existing cluster was
+   provisioned by OnlyOffice with a `onlyoffice` DB user — euro-office
+   authenticates as `eurooffice`, so docservice hung and the healthcheck
+   502'd while supervisor cheerfully reported everything RUNNING.
+2. **Euro-office's entrypoint cannot initdb an empty directory** — the
+   cluster is baked into the image layers, so an empty bind mount just
+   shadows it and PostgreSQL restart-loops on a missing `16/main`.
+
+The fix (now documented step-by-step in the role defaults): move the old DB
+dir aside as a dated backup, seed the bind from the image's baked cluster
+with a one-off `cp -a`, start. The internal PG holds only transient
+document-server state — documents live in the host applications — so the
+reseed is safe.
+
+After that: container **healthy**, `/healthcheck` 200, and a real JWT-signed
+`ConvertService.ashx` round-trip produced a PDF (`endConvert: true`) on
+ARM64. The editing engine works; the browser-level Nextcloud embed is the
+remaining operator smoke test.
 
 ## What pins it
 

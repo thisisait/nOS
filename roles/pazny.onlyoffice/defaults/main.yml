@@ -17,9 +17,23 @@
 # Nextcloud/IONOS/Proton consortium fork ghcr.io/euro-office/documentserver
 # is JWT-compatible and multi-arch (arm64 verified). Flip in config.yml:
 #   onlyoffice_image: "ghcr.io/euro-office/documentserver"
-#   onlyoffice_version: "9.3.1"          # euro-office tag scheme differs
+#   onlyoffice_version: "latest"   # ghcr has NO semver image tags yet
+#                                  # (preview; source release 9.3.1 only) —
+#                                  # re-pin the tag at first stable.
 # Documenso is NOT covered by euro-office (no e-signing) and stays.
 # Full role rename waits for the first euro-office stable (summer 2026).
+# MIGRATION TRAP (live, 2026-06-13): the bind-mounted internal PG
+# ({{ onlyoffice_db_dir }} -> /var/lib/postgresql) carries the OLD image's
+# cluster (user `onlyoffice`); euro-office authenticates as `eurooffice` ->
+# docservice hangs, healthcheck 502. AND its entrypoint cannot initdb an
+# empty dir (cluster is baked into image layers). Switch procedure:
+#   1. docker compose -p b2b stop onlyoffice
+#   2. mv <db_dir> <db_dir>.onlyoffice-backup-<date> && mkdir <db_dir>
+#   3. docker run --rm --entrypoint sh -v <db_dir>:/t <euro-office image> \
+#        -c 'cp -a /var/lib/postgresql/. /t/'
+#   4. docker compose -p b2b start onlyoffice   (healthy in ~2 min)
+# Internal PG holds only transient doc-server state; documents live in the
+# host apps (Nextcloud/BookStack/Outline), so the reseed is safe.
 onlyoffice_image: "onlyoffice/documentserver"
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
 onlyoffice_domain: "office{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
