@@ -23,6 +23,40 @@
     - "{{ onlyoffice_lib_dir }}"
     - "{{ onlyoffice_db_dir }}"
 
+# ── Euro-office blank-safe DB seed ───────────────────────────────────────────
+# The euro-office image bakes its postgres cluster into the image layers and
+# its entrypoint does NOT initdb an empty PGDATA. A fresh / blank-wiped db_dir
+# (empty bind mount) shadows the baked cluster, so the container restart-loops
+# on "16/main not accessible" and a blank fails at the b2b health-wait. The
+# stock onlyoffice image DOES initdb an empty dir, so seed ONLY for euro-office
+# and ONLY when the dir is fresh. Idempotent: skipped once the cluster exists.
+- name: "[pazny.onlyoffice] Detect a fresh (empty) embedded-postgres dir"
+  ansible.builtin.find:
+    paths: "{{ onlyoffice_db_dir }}"
+    file_type: any
+  register: _oo_db_contents
+  when: onlyoffice_image | default('onlyoffice/documentserver') is search('euro-office')
+  changed_when: false
+
+- name: "[pazny.onlyoffice] Seed euro-office postgres cluster from the image (blank-safe)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - run
+      - "--rm"
+      - "--entrypoint"
+      - sh
+      - "-v"
+      - "{{ onlyoffice_db_dir }}:/seed-target"
+      - "{{ onlyoffice_image | default('onlyoffice/documentserver') }}:{{ onlyoffice_version | default('latest') }}"
+      - "-c"
+      - "cp -a /var/lib/postgresql/. /seed-target/"
+  register: _oo_seed
+  when:
+    - onlyoffice_image | default('onlyoffice/documentserver') is search('euro-office')
+    - (_oo_db_contents.matched | default(0)) == 0
+  changed_when: _oo_seed.rc == 0
+
 - name: "[pazny.onlyoffice] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

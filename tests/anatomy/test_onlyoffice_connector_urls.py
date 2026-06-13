@@ -36,3 +36,16 @@ def test_internal_host_is_a_trusted_domain():
     assert "trusted_domains {{ idx + 4 }}" in POST
     assert "trusted_domains {{ idx + 3 }}" not in POST, \
         "extras must shift to idx+4 after the internal-host domain took index 3"
+
+
+def test_euro_office_db_seed_is_blank_safe():
+    # euro-office's image bakes its postgres cluster and won't initdb an empty
+    # PGDATA, so a blank (which wipes onlyoffice_db_dir) would restart-loop the
+    # container. The role must seed the cluster from the image when the dir is
+    # fresh — gated to the euro-office image (the stock image self-initdbs).
+    role = (REPO / "roles/pazny.onlyoffice/tasks/main.yml").read_text(encoding="utf-8")
+    assert "Seed euro-office postgres cluster" in role
+    assert "is search('euro-office')" in role, "seed must be euro-office-only"
+    assert "_oo_db_contents.matched | default(0)) == 0" in role, \
+        "seed must run only when the db dir is fresh/empty (idempotent)"
+    assert "cp -a /var/lib/postgresql/. /seed-target/" in role
