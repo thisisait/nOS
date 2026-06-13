@@ -190,6 +190,46 @@
   failed_when: false
   check_mode: false
 
+# ── Reverse-proxy awareness (trusted_proxies + overwrite URLs) ────────────────
+# NC sits behind Traefik AND the ONLYOFFICE/euro-office docserver calls it
+# internally via http://nextcloud/ (StorageUrl). Without trusted_proxies, NC
+# reads the docker GATEWAY ip as the client for EVERY request, so its
+# brute-force protection counts the whole fleet as one IP and 429s the operator
+# with "Too many requests from your network" after a few OIDC redirects /
+# connector callbacks (live 2026-06-13, first blank with the connector wired).
+# Trust the docker private ranges so NC reads the real client IP from
+# X-Forwarded-For; fix overwrite.cli.url (was https://localhost → wrong public
+# links from cron/notifications).
+- name: "[pazny.nextcloud Post] Set trusted_proxies (docker ranges)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set trusted_proxies {{ pidx }} --value={{ item | quote }}
+  loop: "{{ nextcloud_trusted_proxies | default(['172.16.0.0/12', '192.168.0.0/16', '10.0.0.0/8']) }}"
+  loop_control:
+    index_var: pidx
+    label: "trusted_proxies[{{ pidx }}] = {{ item }}"
+  when: _nc_container.stdout | default('') | length > 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.nextcloud Post] Set overwrite URLs (public domain + https)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set {{ item.key }} --value={{ item.value | quote }}
+  loop:
+    - { key: "overwrite.cli.url", value: "https://{{ nextcloud_domain }}" }
+    - { key: "overwritehost", value: "{{ nextcloud_domain }}" }
+    - { key: "overwriteprotocol", value: "https" }
+  loop_control:
+    label: "{{ item.key }} = {{ item.value }}"
+  when: _nc_container.stdout | default('') | length > 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
 # -- SSO autologin: force user_oidc as the default login method ----------
 # sso-autologin-plan.md Batch 2 — Nextcloud auto-redirect is NOT settable via
 # a compose env var; it requires the `user_oidc` app configured as the single

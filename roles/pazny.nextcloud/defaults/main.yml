@@ -37,3 +37,10 @@ nextcloud_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 # download callback (Host: nextcloud) to be accepted — added below.
 nextcloud_internal_host: "nextcloud"          # NC's service alias on the shared net
 onlyoffice_internal_url: "http://onlyoffice/" # docserver's service alias on the shared net
+
+# Reverse-proxy IPs NC trusts for X-Forwarded-For (real client IP). Docker
+# private ranges cover Traefik + the docserver on the shared/iiab nets; without
+# this NC sees one gateway IP for the whole fleet and brute-force-429s the
+# operator ("Too many requests from your network"). Tighten to specific subnets
+# only if you pin them — Docker reassigns subnets across blanks.
+nextcloud_trusted_proxies: ['172.16.0.0/12', '192.168.0.0/16', '10.0.0.0/8']
