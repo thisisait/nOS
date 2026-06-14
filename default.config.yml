@@ -1034,7 +1034,7 @@ mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data per
 # ==============================================================================
 
 install_postgresql: false
-postgresql_version: "16.13-alpine"      # CVE-2026-2005 (pgcrypto RCE), CVE-2026-2006 (multibyte RCE), CVE-2026-2004/2007 (buffer overflow). Was 16.10
+postgresql_version: "16.14-alpine"      # CVE-2026-6479 (SSL/GSS DoS, ssl=on relevant) + 16.14 patch line. Was 16.13 (CVE-2026-2004/2005/2006/2007)
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
