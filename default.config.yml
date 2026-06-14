@@ -1593,6 +1593,11 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # Removes the need to manually edit /etc/hosts
 # ==============================================================================
 
+# Known-good Homebrew dnsmasq release. Homebrew always installs the current
+# formula version; this pin documents the release nOS is validated against
+# (tested on macOS 27) and is the reference the restart handler's
+# plist-existence guard hardens around. Bump when a newer release is verified.
+dnsmasq_version: "2.91"                    # known-good Homebrew dnsmasq (macOS 27 validated)
 dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
 dnsmasq_dev_address: "127.0.0.1"          # Target for *.dev.local from localhost
 dnsmasq_port: 53                          # DNS port (53 = default)

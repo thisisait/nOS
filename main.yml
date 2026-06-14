@@ -671,12 +671,25 @@
       failed_when: false
 
     - name: Restart dnsmasq
+      # Mirror the nginx/alloy handler pattern: guard the launchctl
+      # unload/load behind a plist-existence check. The Homebrew dnsmasq
+      # formula installs the system LaunchDaemon at this path; if a future
+      # formula (macOS 27+) relocates the plist, an unguarded unload/load
+      # silently no-ops and DNS quietly breaks. The `[ -f "$plist" ]` guard
+      # makes a missing plist visible (no restart attempted) instead of
+      # masking it behind `2>/dev/null`.
       ansible.builtin.shell: |
-        sudo launchctl unload /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist 2>/dev/null
+        plist="/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"
+        if [ ! -f "$plist" ]; then
+          echo "WARN: dnsmasq plist not found at $plist — Homebrew formula path may have changed; skipping restart" >&2
+          exit 0
+        fi
+        sudo launchctl unload "$plist" 2>/dev/null
         sleep 1
-        sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist 2>/dev/null
+        sudo launchctl load "$plist" 2>/dev/null
       args:
         executable: /bin/bash
+      when: ansible_os_family == 'Darwin'
       failed_when: false
 
     - name: Restart ssh
