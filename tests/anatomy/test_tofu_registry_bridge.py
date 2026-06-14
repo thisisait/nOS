@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 
 import yaml
@@ -223,6 +224,76 @@ def test_adopt_emits_attachment_imports():
     assert "adopt_attach_" in src, (
         "each proxy provider must emit a paired attachment import block "
         "(adopt_attach_<name>) alongside the provider import."
+    )
+
+
+def _config_install_vars() -> set[str]:
+    """Every `install_*` key DEFINED in default.config.yml — the only vars that
+    resolve BEFORE tasks/tofu-authentik.yml runs (role defaults load later, in
+    stack-up). The registry's enabled expressions may reference only these."""
+    txt = (REPO / "default.config.yml").read_text()
+    return set(re.findall(r"(?m)^(install_[a-z0-9_]+):", txt))
+
+
+def test_registry_enabled_refs_are_defined_install_vars():
+    """STATIC validation of every registry `enabled` expression.
+
+    A typo in an install_* var name (e.g. `install_n8n_typo`) is INVISIBLE at
+    render time: ChainableUndefined + `| default(false)` collapses it to the
+    string 'False' — indistinguishable from a service legitimately toggled off,
+    so the tfvars `| bool` filter silently drops it and the service never gets
+    an Authentik provider. Same trap when the enabled field references a var
+    defined only in a role default (loaded during stack-up, AFTER
+    tasks/tofu-authentik.yml renders the tfvars) — it is undefined at render
+    time and renders to 'False'.
+
+    The only deterministic catch is static: every install_* identifier in an
+    enabled expression MUST be a key in default.config.yml (the source loaded
+    before core-up/tofu-authentik). This pins the contract and would have
+    surfaced the hermes_domain-class "referenced-but-loaded-too-late" bug.
+    """
+    defined = _config_install_vars()
+    services = yaml.safe_load(REGISTRY.read_text())["tofu_authentik_services"]
+    offenders: list[str] = []
+    for svc in services:
+        enabled = str(svc.get("enabled", ""))
+        for ident in re.findall(r"install_[a-z0-9_]+", enabled):
+            if ident not in defined:
+                offenders.append(f"{svc.get('slug')}: enabled refs {ident!r}")
+    assert not offenders, (
+        "registry enabled expression references an install_* var NOT defined in "
+        "default.config.yml — it renders to the string 'False' (ChainableUndefined "
+        "+ default) and SILENTLY disables the service. Fix the typo, or add a real "
+        "default to default.config.yml (a role default loads too late). Offenders:\n  "
+        + "\n  ".join(offenders)
+    )
+
+
+def test_registry_enabled_render_coerces_to_bool():
+    """END-TO-END render validation: render the registry with EVERY install_*
+    var from default.config.yml force-set True, then assert every entry's
+    rendered enabled value coerces to a real boolean (the tfvars `| bool` input
+    contract). A bare-literal `enabled: true` stays 'true'; a Jinja expression
+    resolves to 'True'/'False' — both are bool-coercible. An empty string (an
+    unresolved expression that produced nothing) is NOT, and fails here."""
+    from module_utils.load_plugins import _jinja_env  # noqa: WPS433 (lazy)
+
+    ctx = {
+        "tenant_domain": "dev.local",
+        "global_password_prefix": "test",
+    }
+    ctx.update({v: True for v in _config_install_vars()})
+    rendered = _jinja_env().from_string(REGISTRY.read_text()).render(ctx)
+    services = yaml.safe_load(rendered)["tofu_authentik_services"]
+    truthy = {"true", "false", "yes", "no", "1", "0", "on", "off"}
+    bad: list[str] = []
+    for svc in services:
+        val = str(svc.get("enabled", "")).strip().lower()
+        if val not in truthy:
+            bad.append(f"{svc.get('slug')}: enabled rendered to {svc.get('enabled')!r}")
+    assert not bad, (
+        "a registry enabled value did not render to a bool-coercible token — the "
+        "tfvars `| bool` filter will mis-handle it. Offenders:\n  " + "\n  ".join(bad)
     )
 
 
