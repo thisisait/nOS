@@ -62,7 +62,7 @@
   when:
     - _mb_ready.status | default(0) == 200
     - _mb_setup_token | default('') | length > 0
-  changed_when: _mb_setup.status | default(0) == 200
+  changed_when: (_mb_setup is defined) and (_mb_setup.status | default(0) == 200)
   failed_when: false
   no_log: true
 

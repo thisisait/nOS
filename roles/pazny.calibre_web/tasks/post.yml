@@ -73,7 +73,7 @@
     "
   register: _cw_pw_update
   when: _cw_ready.status | default(0) in [200, 302]
-  changed_when: "'UPDATED' in (_cw_pw_update.stdout | default(''))"
+  changed_when: (_cw_pw_update is defined) and ('UPDATED' in (_cw_pw_update.stdout | default('')))
   failed_when: false
   check_mode: false
   no_log: true

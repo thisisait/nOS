@@ -65,6 +65,6 @@
   when:
     - _pds_health.status | default(0) == 200
     - bluesky_pds_admin_handle in (_pds_accounts.stdout | default(''))
-  changed_when: _pds_pw_update.rc | default(1) == 0
+  changed_when: (_pds_pw_update is defined) and (_pds_pw_update.rc | default(1) == 0)
   failed_when: false
   no_log: true
