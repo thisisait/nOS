@@ -28,20 +28,21 @@ groups:
   - name: nos_apps_logs
     interval: 1m
     rules:
-      # Loki -> Prometheus log-pattern bridge.
-      # Convention: Alloy (or the Loki ruler, whichever A1 picks) translates
-      # configured log patterns into the synthetic counter
-      # `log_pattern_matches_total{pattern="<slug>", source="<container>"}`.
-      # The equivalent LogQL is:
+      # DEFERRED: Loki -> Prometheus log-pattern bridge has NOT shipped — the
+      # synthetic counter `log_pattern_matches_total{pattern=...}` has no
+      # producer (Alloy/Loki-ruler translation step is unbuilt), so this rule
+      # never fires. The equivalent LogQL is:
       #   count_over_time({container_name="b2b-outline-1"} |= "remaining connection slots" [10m]) > 0
-      # TODO: confirm the exact metric name once A1 ships the log-metric bridge.
+      # nos_status=deferred marks it dormant until the log-metric bridge lands.
       - alert: NosWarningOutlineDbConnFail
         expr: sum(increase(log_pattern_matches_total{pattern="outline_db_conn_fail"}[10m])) > 0
         for: 0m
         labels:
           severity: warning
           nos_domain: apps
+          nos_status: deferred
         annotations:
+          deferred_dependency: "log-metric bridge (log_pattern_matches_total — no producer)"
           summary: "Outline is hitting PostgreSQL connection ceiling"
           description: |
             Outline logs show "remaining connection slots are reserved" within the
@@ -81,17 +82,19 @@ groups:
             `docker compose exec firefly_iii php artisan migrate`.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningFireflyPendingMigrations.md"
 
-      # TODO: Paperclip does not yet expose a queue-depth metric. A1 is tracking
-      # this in the exporter backlog. When the metric `paperclip_queue_depth`
-      # appears, replace this vector with a real expression (e.g. `> 1000 for 10m`).
-      # Kept as a never-firing placeholder to document intent.
+      # DEFERRED: Paperclip exposes no queue-depth metric — `paperclip_queue_depth`
+      # has no producer, so this rule never fires. When the exporter ships,
+      # replace the vector with a real expression (e.g. `> 1000 for 10m`) and
+      # drop the nos_status=deferred label.
       - alert: NosWarningPaperclipQueueDepth
         expr: absent(paperclip_queue_depth) and vector(0) > 1
         for: 10m
         labels:
           severity: warning
           nos_domain: apps
+          nos_status: deferred
         annotations:
+          deferred_dependency: "Paperclip queue exporter (paperclip_queue_depth — no producer)"
           summary: "Paperclip scan queue deep (placeholder)"
           description: |
             Placeholder — Paperclip does not currently expose a queue_depth metric.
@@ -148,17 +151,19 @@ groups:
   - name: nos_apps_wave5_placeholders
     interval: 5m
     rules:
-      # Wave 5 integration: Wing will push a gauge per service indicating
-      # a newer upstream version is available. Until then, the metric is absent
-      # and this alert never fires.
-      # TODO: replace `absent(nos_upgrade_available)` wrapper once A5 ships the exporter.
+      # DEFERRED (Wave 5): Wing was to push a per-service gauge for an available
+      # upstream version, but the state_manager/Wing exporter has not shipped —
+      # `nos_upgrade_available` has no producer, so this alert never fires.
+      # nos_status=deferred marks it dormant until the exporter lands.
       - alert: NosInfoUpgradeAvailable
         expr: nos_upgrade_available == 1
         for: 1h
         labels:
           severity: info
           nos_domain: apps
+          nos_status: deferred
         annotations:
+          deferred_dependency: "state_manager/Wing upgrade exporter (nos_upgrade_available — no producer)"
           summary: "Upgrade available for {{ $labels.service }}"
           description: |
             Wing has detected a newer upstream version for
@@ -167,16 +172,19 @@ groups:
             `ansible-playbook main.yml -K --tags upgrade -e upgrade_service={{ $labels.service }}`.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosInfoUpgradeAvailable.md"
 
-      # Wave 5 integration: pazny.state_manager emits nos_migration_pending{slug=...}
-      # when a migration in migrations/ has not yet been applied on this host.
-      # TODO: confirm metric name once A5 merges the state_manager exporter hook.
+      # DEFERRED (Wave 5): pazny.state_manager was to emit nos_migration_pending{slug=...}
+      # for an unapplied migration, but the state_manager exporter hook has not
+      # shipped — `nos_migration_pending` has no producer, so this alert never
+      # fires. nos_status=deferred marks it dormant until the hook lands.
       - alert: NosInfoMigrationPending
         expr: nos_migration_pending == 1
         for: 30m
         labels:
           severity: info
           nos_domain: apps
+          nos_status: deferred
         annotations:
+          deferred_dependency: "state_manager exporter hook (nos_migration_pending — no producer)"
           summary: "Pending nOS migration: {{ $labels.slug }}"
           description: |
             Migration `{{ $labels.slug }}` has not been applied on this host.

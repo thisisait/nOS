@@ -10,15 +10,20 @@ groups:
   - name: nos_security_cve
     interval: 5m
     rules:
-      # Wing pushes `nos_cve_open{severity="HIGH|CRITICAL",cve="CVE-...",service="..."}` via its callback plugin.
-      # TODO: confirm exact label names when A5 ships the Wing pushgateway.
+      # DEFERRED: Wing was to push `nos_cve_open{severity=...,cve=...,service=...}`
+      # via a pushgateway, but neither the pushgateway nor the producer has
+      # shipped (Wing /metrics emits only nos_e2e_journey_* + nos_pulse_jobs) —
+      # `nos_cve_open` has no producer, so these CVE alerts never fire.
+      # nos_status=deferred marks them dormant until the pushgateway lands.
       - alert: NosCriticalCveFoundHigh
         expr: nos_cve_open{severity="HIGH"} > 0
         for: 1h
         labels:
           severity: critical
           nos_domain: security
+          nos_status: deferred
         annotations:
+          deferred_dependency: "Wing CVE pushgateway (nos_cve_open — no producer)"
           summary: "HIGH-severity CVE open: {{ $labels.cve }} ({{ $labels.service }})"
           description: |
             Wing reports {{ $value }} open HIGH-severity CVE(s) affecting
@@ -32,7 +37,9 @@ groups:
         labels:
           severity: critical
           nos_domain: security
+          nos_status: deferred
         annotations:
+          deferred_dependency: "Wing CVE pushgateway (nos_cve_open — no producer)"
           summary: "CRITICAL CVE open: {{ $labels.cve }} ({{ $labels.service }})"
           description: |
             Wing reports {{ $value }} open CRITICAL CVE(s) affecting
@@ -43,16 +50,20 @@ groups:
   - name: nos_security_secrets
     interval: 1h
     rules:
-      # Vaultwarden admin-token rotation monitor. Expects an exporter (or Wing
-      # hook) that publishes `nos_vaultwarden_admin_token_age_seconds`.
-      # TODO: add a scraper for the admin_token mtime in the vaultwarden role.
+      # DEFERRED: Vaultwarden admin-token rotation monitor expects an exporter
+      # (or Wing hook) publishing `nos_vaultwarden_admin_token_age_seconds`, but
+      # no scraper for the admin_token mtime exists in the vaultwarden role —
+      # the metric has no producer, so this rule never fires. nos_status=deferred
+      # marks it dormant until the scraper ships.
       - alert: NosWarningVaultwardenAdminTokenOld
         expr: nos_vaultwarden_admin_token_age_seconds > 180 * 86400
         for: 1h
         labels:
           severity: warning
           nos_domain: security
+          nos_status: deferred
         annotations:
+          deferred_dependency: "vaultwarden admin_token mtime scraper (nos_vaultwarden_admin_token_age_seconds — no producer)"
           summary: "Vaultwarden admin token >180 days old"
           description: |
             The Vaultwarden admin token has not been rotated in
@@ -63,17 +74,20 @@ groups:
   - name: nos_security_auth
     interval: 1m
     rules:
-      # Loki -> Prometheus log-pattern bridge (see 03-apps.yml for convention).
-      # Equivalent LogQL:
+      # DEFERRED: Loki -> Prometheus log-pattern bridge has not shipped (see
+      # 03-apps.yml) — `log_pattern_matches_total` has no producer, so this rule
+      # never fires. Equivalent LogQL:
       #   count_over_time({job="auth.log"} |= "sudo: authentication failure" [10m]) > 5
-      # TODO: confirm `log_pattern_matches_total` metric name with A1.
+      # nos_status=deferred marks it dormant until the log-metric bridge lands.
       - alert: NosWarningFailedSudoBurst
         expr: sum by (host) (increase(log_pattern_matches_total{pattern="sudo_auth_failure"}[10m])) > 5
         for: 0m
         labels:
           severity: warning
           nos_domain: security
+          nos_status: deferred
         annotations:
+          deferred_dependency: "log-metric bridge (log_pattern_matches_total — no producer)"
           summary: "Failed sudo burst on {{ $labels.host }}"
           description: |
             More than 5 failed sudo authentications in the last 10 minutes on
@@ -81,18 +95,20 @@ groups:
             misconfigured automation. Review the auth.log stream in Grafana Explore.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningFailedSudoBurst.md"
 
-      # Suspicious path scanning detection — common opportunistic bots probe for
-      # .env, /wp-admin, /admin.php. A sustained rate signals an active scan.
-      # Equivalent LogQL:
+      # DEFERRED: suspicious path-scanning detection rides the same unshipped
+      # log-metric bridge — `log_pattern_matches_total` has no producer, so this
+      # rule never fires. Equivalent LogQL:
       #   sum(rate({job="nginx"} |~ "/\.env|/wp-admin|/admin\.php" [5m])) > 0.5
-      # TODO: confirm `log_pattern_matches_total` metric name with A1.
+      # nos_status=deferred marks it dormant until the log-metric bridge lands.
       - alert: NosWarningSuspiciousNginxPath
         expr: sum(rate(log_pattern_matches_total{pattern="nginx_suspicious_path"}[5m])) > 0.5
         for: 5m
         labels:
           severity: warning
           nos_domain: security
+          nos_status: deferred
         annotations:
+          deferred_dependency: "log-metric bridge (log_pattern_matches_total — no producer)"
           summary: "Nginx receiving scans for sensitive paths"
           description: |
             Nginx is seeing {{ $value | printf "%.2f" }} req/s to suspicious paths

@@ -85,17 +85,21 @@ groups:
             returning non-2xx. Check the upstream container and Nginx vhost.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalProbeFail.md"
 
-      # TODO: requires blackbox_exporter 'dns' module configured in its config file.
-      # Agent A1 is currently wiring only http_2xx / tcp_connect modules. If/when
-      # the dns module lands, this rule activates automatically.
+      # DEFERRED: requires blackbox_exporter 'dns' module configured in its config
+      # file. The scrape config wires only http_2xx / tcp_connect modules, so
+      # `probe_dns_lookup_time_seconds` has NO producer today — this rule never
+      # fires. The nos_status=deferred label marks it as dormant (not active
+      # monitoring) until the dns module ships; then drop the label.
       - alert: NosWarningDnsResolutionFail
         expr: probe_dns_lookup_time_seconds == 0
         for: 5m
         labels:
           severity: warning
           nos_domain: network
+          nos_status: deferred
         annotations:
           summary: "DNS lookup failing for {{ $labels.instance }}"
+          deferred_dependency: "blackbox_exporter dns module (probe_dns_lookup_time_seconds — no producer)"
           description: |
             Blackbox DNS module reports a zero lookup time for {{ $labels.instance }},
             which indicates a resolution failure for 5 minutes. Check the upstream
