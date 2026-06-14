@@ -565,6 +565,15 @@ homebrew_installed_packages:
 # unconditionally — the formula itself only links if frankenphp is also in
 # `homebrew_installed_packages` AND install_wing is true (gate in
 # pazny.wing/tasks/main.yml).
+#
+# frankenphp_version: the FrankenPHP version proven on Apple Silicon arm64 (the
+# Homebrew arm64_sequoia bottle; older macOS / no bottle forces a source build).
+# pazny.wing/tasks/main.yml runs `frankenphp --version` post-install and fails
+# with a clear diagnostic if the landed binary does not report this version —
+# so a stale tap, a half-finished source build, or a missing bottle surfaces at
+# provision time, not as a silent Wing daemon segfault. Bump after re-validating
+# on the live host (`frankenphp --version`).
+frankenphp_version: "1.12.4"
 homebrew_taps:
   - dunglas/frankenphp
   - shivammathur/php

@@ -24,6 +24,29 @@ Changes to the app source or composer deps trigger a `Restart php-fpm` handler.
 - `ansible.posix` collection for the `synchronize` module
 - Play-level handler `Restart php-fpm` defined in the consuming playbook
 
+## FrankenPHP runtime (Apple Silicon)
+
+Wing runs on the **FrankenPHP single binary** (Caddy + PHP + Mercure + Vulcain)
+via host launchd — no PHP-FPM container. The version is pinned by
+`frankenphp_version` in `default.config.yml` (tested: **1.12.4**).
+
+- **One ARM64 binary across M1..M5.** FrankenPHP's Homebrew formula compiles a
+  native ARM64 binary; there are no per-chip sub-variants — the same binary runs
+  on every Apple Silicon generation (and macOS 26/27). The chip generation is
+  *not* a compatibility axis.
+- **Bottle vs source build.** Homebrew ships a pre-built `arm64_sequoia` bottle
+  for macOS 15+. On older macOS with no matching bottle, brew source-builds
+  FrankenPHP (needs a Go toolchain), which can fail silently — leaving Wing's
+  launchd daemon to segfault on a missing/partial binary.
+- **Version preflight gate.** `tasks/main.yml` runs `frankenphp --version` after
+  install and **fails with a clear diagnostic** if the landed binary does not
+  report `frankenphp_version`. A stale tap, a half-finished source build, or a
+  missing bottle surfaces at provision time, not as a silent daemon crash.
+- **Bumping the pin.** Re-validate on the live host (`frankenphp --version`),
+  then update `frankenphp_version` in `default.config.yml`. The
+  `tests/anatomy/test_wing_frankenphp_version_pin.py` gate keeps the pin and the
+  preflight wired together.
+
 ## Variables
 
 | Variable | Default | Description |

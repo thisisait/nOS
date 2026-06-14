@@ -157,6 +157,31 @@
         Linux: verify the GitHub release asset name/arch in this role.
   when: not _wing_frankenphp_stat.stat.exists
 
+# Version preflight — the landed binary must report frankenphp_version. Catches
+# a stale tap, a half-finished source build (no arm64_sequoia bottle on older
+# macOS), or a missing Linux release asset before launchd ever execs it. The
+# install path is architecture-agnostic (one ARM64 binary across M1..M5), so a
+# wrong/empty `--version` is the real signal, not the chip generation.
+- name: "[pazny.wing] Read frankenphp version"
+  ansible.builtin.command: "{{ _wing_frankenphp_bin }} --version"
+  register: _wing_frankenphp_ver
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.wing] Refuse on frankenphp version mismatch"
+  ansible.builtin.fail:
+    msg: |
+      frankenphp at {{ _wing_frankenphp_bin }} did not report the pinned
+      version {{ frankenphp_version }} (rc={{ _wing_frankenphp_ver.rc }}).
+        Reported: {{ _wing_frankenphp_ver.stdout | default('(none)') | trim }}
+        macOS: `brew upgrade dunglas/frankenphp/frankenphp` — the arm64_sequoia
+               bottle only exists on macOS 15+; older macOS source-builds (needs
+               Go). Then re-pin frankenphp_version in default.config.yml.
+        Linux: re-run to re-fetch the GitHub release static binary.
+  when: >-
+    _wing_frankenphp_ver.rc != 0
+    or ('FrankenPHP v' ~ frankenphp_version) not in (_wing_frankenphp_ver.stdout | default(''))
+
 # ── App source sync ──────────────────────────────────────────────────────────
 # Same rsync pattern as before — Wing source lives in files/anatomy/wing/
 # (anatomy A2). The exclude list keeps gitignored runtime artefacts out of
