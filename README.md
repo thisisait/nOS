@@ -3,7 +3,7 @@
 > **One stack. Forty services. Zero SaaS bills.**
 >
 > `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
-> An Ansible playbook that orchestrates 45+ roles, wires 40+ FOSS services together through one SSO,
+> An Ansible playbook that orchestrates 71 roles, wires 40+ FOSS services together through one SSO,
 > and turns an Apple Silicon Mac — or an Ubuntu 24.04 LTS host — into a reproducible, self-hosted, self-managing cloud.
 
 <p align="center">
