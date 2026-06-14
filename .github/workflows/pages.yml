@@ -23,7 +23,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Post-tag artifact gate. pages.yml fires on any `v*` tag push; the
+  # devlog-release.sh pre-flight is operator-gated and CANNOT run if someone
+  # cuts a tag by hand. This job re-validates the release artifacts AFTER the
+  # tag lands and gates the publish on them, so an incomplete release (missing
+  # devlog entry or RELEASE.md section) never reaches GitHub Pages.
+  validate:
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # need the tag ref itself, not just the tip commit
+
+      - name: Validate release artifacts are in sync with the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          fail() { echo "RELEASE-GATE FAIL: $*" >&2; exit 1; }
+
+          # 1. The tag must actually exist in git (defensive; the trigger
+          #    implies it, but a re-tag/lightweight edge could surprise us).
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null \
+            || fail "tag $TAG not found in git"
+          echo "ok: tag $TAG present"
+
+          # 2. A devlog entry must carry 'release: <tag>' in its front-matter.
+          grep -l "^release: $TAG\$" docs/devlog/nos-core/*/*.md >/dev/null 2>&1 \
+            || fail "no devlog entry with 'release: $TAG' — run /devlog release"
+          echo "ok: devlog entry present"
+
+          # 3. RELEASE.md must carry the matching '## <tag>' section header.
+          grep -q "^## $TAG\b" RELEASE.md \
+            || fail "RELEASE.md has no '## $TAG' section"
+          echo "ok: RELEASE.md section present"
+
+          echo "ALL RELEASE-GATE CHECKS GREEN for $TAG"
+
   build:
+    needs: validate
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
