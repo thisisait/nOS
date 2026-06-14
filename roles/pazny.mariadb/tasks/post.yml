@@ -55,6 +55,7 @@
     name: test
     state: absent
   failed_when: false
+  no_log: true  # login_password in module args; failed_when:false would leak it on error
   when: mariadb_conn is not failed
 
 - name: "[pazny.mariadb Post] Create databases"
