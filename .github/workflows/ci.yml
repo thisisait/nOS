@@ -238,6 +238,10 @@ jobs:
   integration:
     name: Integration (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Cap a hung run (stack-up timeout, Authentik migration hang) at 45 min so a
+    # deployment stall can't pin a runner for GitHub's 6h default ceiling. Budget:
+    # ~25min cold-blank playbook + ~10min idempotence re-run + margin.
+    timeout-minutes: 45
     # NON-BLOCKING (2026-06-08): the macOS hosted runner regressed the custom-module
     # interpreter path — nos_state runs on an auto-discovered python WITHOUT pyyaml
     # even though env / cfg `interpreter_python` / `-e ansible_python_interpreter`
@@ -406,6 +410,9 @@ jobs:
   integration-linux:
     name: Integration (ubuntu-24.04)
     runs-on: ubuntu-24.04
+    # Cap a hung run at 45 min (see the macOS Integration job) so a stalled
+    # deployment can't pin a runner for GitHub's 6h default ceiling.
+    timeout-minutes: 45
     env:
       PYTHONNOUSERSITE: '1'   # keep the venv ansible's sys.path clean (see macOS job)
     if: |
