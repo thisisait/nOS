@@ -45,6 +45,16 @@ services:
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
+    # Disable IPv6 in the container: the `auth.<tld>:host-gateway` extra_host
+    # (nextcloud-base plugin) resolves to BOTH a working IPv4 (192.168.65.254)
+    # and a DEAD IPv6 (fdc4:..::254) host-gateway. user_oidc's discovery fetch
+    # intermittently picks the IPv6 and fails with "Could not detect any host"
+    # → "Could not reach the OpenID Connect provider" at login (live 2026-06-14,
+    # the SSO redirect that survived a blank). NC speaks IPv4 to everything
+    # (mariadb/redis/connector/auth host-gateway), so dropping IPv6 is safe.
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+      net.ipv6.conf.default.disable_ipv6: "1"
     logging:
       driver: "json-file"
       options:

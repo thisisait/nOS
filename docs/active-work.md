@@ -39,16 +39,14 @@
   wet-test lane. Hard-breaks on ansible-core 2.24.
 - **Advisor/architect actor-id naming inconsistency** (scout side-find,
   2026-06-11) — normalize agent actor_id naming across the two upgrade agents.
-- **NC OIDC post-blank discovery race + broken IPv6 host-gateway
-  (2026-06-13)** — right after a blank, `user_oidc`'s discovery job failed
-  ~1/min with "Could not detect any host" until an NC restart cleared a
-  transient resolver state. The `auth.<tld>:host-gateway` extra_hosts
-  (nextcloud-base plugin) adds BOTH a working IPv4 (192.168.65.254) and a
-  DEAD IPv6 (`fdc4:..::254`, "could not connect") gateway. Self-recovered, so
-  not confirmed as the cause — but the dead IPv6 entry is a dual-stack
-  landmine. If it recurs, disable IPv6 in the NC container (sysctl) or pin the
-  extra_host to IPv4. Affects any server-side-OIDC service using the
-  host-gateway alias (wordpress/gitea pick IPv4 and are unaffected).
+- **Tofu post-blank state desync — FIXED 2026-06-14.** `blank-reset.yml`
+  never reset `terraform.tfstate` (it lives in the repo, not a data dir), so
+  stale provider pks survived blanks → `tofu apply` PUT to pks now owned by
+  OTHER providers ("name already exists"). Durable fix: blank now `rm`s the
+  tofu state (engine=tofu). The live desynced state was reconciled by hand
+  (state rm + re-import at authoritative client_id pks; plan now no-op).
+  Latent gap remains: tofu has no automatic adopt/reconcile for an existing
+  tenant, and the destroy-guard doesn't catch dangerous UPDATEs to wrong pks.
 - **Portainer SSO unverified read-only (2026-06-13 SSO audit)** —
   `/api/settings` needs an admin JWT, so the OAuth2 config couldn't be
   confirmed headlessly; the live converge also logs "FAILED to obtain admin
