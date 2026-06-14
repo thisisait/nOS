@@ -137,25 +137,62 @@
 
 # ── Portainer: OAuth2 is configured in pazny.portainer/tasks/post.yml ───────
 # PUT /api/settings with OAuth2 params runs in core-up.yml immediately after infra start.
-# Here we just verify that AuthenticationMethod == 3 (OAuth2) is active.
+# Here we LOUDLY verify that AuthenticationMethod == 3 (OAuth2) is active — a JWT
+# GET of /api/settings, not a /api/system/status liveness probe. The old soft path
+# (status-only + debug-only) hid an OAuth2 config failure behind a green run, exactly
+# like the Nextcloud user_oidc silent-failure saga (root-caused 2026-06-13): the
+# local login form still worked, so a dead SSO went unnoticed. Mirrors the loud
+# verify in roles/pazny.portainer/tasks/post.yml.
 
-- name: "[Authentik->Portainer] Verify OAuth2 is active"
+- name: "[Authentik->Portainer] Obtain admin JWT for verify"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
-    method: GET
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
+    method: POST
+    body_format: json
+    body:
+      Username: "admin"
+      Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
     status_code: [200]
-    timeout: 5
-  register: _portainer_oauth_verify
+    timeout: 10
+  register: _portainer_verify_auth
   when: install_portainer | default(false)
   failed_when: false
+  no_log: true
+
+- name: "[Authentik->Portainer] Verify AuthenticationMethod == 3 (OAuth2)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _portainer_verify_auth.json.jwt | default('') }}"
+    status_code: [200]
+    timeout: 10
+  register: _portainer_oauth_verify
+  when:
+    - install_portainer | default(false)
+    - _portainer_verify_auth.json.jwt | default('') | length > 0
+  failed_when:
+    - _portainer_oauth_verify.status | default(0) != 200
+      or (_portainer_oauth_verify.json.AuthenticationMethod | default(0) | int) != 3
+
+- name: "[Authentik->Portainer] Fail if SSO could not be verified"
+  ansible.builtin.fail:
+    msg: >-
+      Portainer SSO verify FAILED — could not obtain an admin JWT to read
+      /api/settings, so AuthenticationMethod==3 (OAuth2) is UNCONFIRMED.
+      The local login form still works, so this would otherwise hide a dead
+      SSO. Check the portainer admin password and post.yml PUT /api/settings.
+  when:
+    - install_portainer | default(false)
+    - (_portainer_verify_auth.json.jwt | default('') | length) == 0
 
 - name: "[Authentik->Portainer] OAuth2 status"
   ansible.builtin.debug:
     msg: >-
-      Portainer SSO: {{ 'OK - configured via post.yml (PUT /api/settings)'
-        if (_portainer_oauth_verify.status | default(0) == 200)
-        else 'Portainer UNREACHABLE - OAuth2 config may have failed, check post.yml log' }}
-  when: install_portainer | default(false)
+      Portainer SSO: OK — AuthenticationMethod=3 (OAuth2) active
+  when:
+    - install_portainer | default(false)
+    - (_portainer_oauth_verify.json.AuthenticationMethod | default(0) | int) == 3
 
 # ── Nextcloud: occ commands for user_oidc app ───────────────────────────────
 
