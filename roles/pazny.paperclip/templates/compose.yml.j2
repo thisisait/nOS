@@ -22,7 +22,12 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "3100"
-      DATABASE_URL: "postgresql://{{ paperclip_db_user }}:{{ (paperclip_db_password) | urlencode }}@postgresql:5432/{{ paperclip_db_name }}"
+      # REM-009 per-client require pinning — sslmode=require fails closed on
+      # no-TLS (enforces in-transit TLS where the server offers it). prefer
+      # when postgresql_ssl_enabled is off (Linux) keeps the wet-test green:
+      # TLS-if-offered, plaintext fallback. require never verifies the CA, so
+      # the self-signed server cert is fine.
+      DATABASE_URL: "postgresql://{{ paperclip_db_user }}:{{ (paperclip_db_password) | urlencode }}@postgresql:5432/{{ paperclip_db_name }}?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       PAPERCLIP_HOME: "/paperclip"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       # OpenClaw gateway URL — declared in defaults/main.yml and

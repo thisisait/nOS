@@ -68,3 +68,31 @@ def test_clients_do_not_regress_to_disable():
         "SSLMODE=prefer (its own default left connections plaintext even "
         "with the server offering TLS — observed live in pg_stat_ssl)"
     )
+
+
+def test_hedgedoc_paperclip_require_pin():
+    """REM-009 follow-up: hedgedoc + paperclip carried NO sslmode in their
+    connection strings (silent libpq default). Pin require-when-server-TLS,
+    prefer-when-not so Darwin fails closed and Linux (postgresql_ssl_enabled
+    off) keeps the wet-test green with plaintext fallback. A bare or disabled
+    connection string is a silent in-transit downgrade."""
+    pin = (
+        "sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) "
+        "else 'prefer' }}"
+    )
+    for rel, env in (
+        ("roles/pazny.hedgedoc/templates/compose.yml.j2", "CMD_DB_URL"),
+        ("roles/pazny.paperclip/templates/compose.yml.j2", "DATABASE_URL"),
+    ):
+        src = (REPO / rel).read_text()
+        assert "sslmode=disable" not in src, f"{rel} regressed to sslmode=disable"
+        line = next(
+            (ln for ln in src.splitlines() if ln.lstrip().startswith(env + ":")),
+            None,
+        )
+        assert line is not None, f"{rel} lost its {env} connection string"
+        assert pin in line, (
+            f"{rel} {env} must carry the conditional require/prefer sslmode "
+            f"pin so the server-offered TLS is enforced on Darwin without "
+            f"breaking the Linux wet-test"
+        )
