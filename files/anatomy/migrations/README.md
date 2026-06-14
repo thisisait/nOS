@@ -1,7 +1,7 @@
 # nOS Migrations
 
 Declarative, replayable, idempotent, rollback-first migration records. Executed by
-`library/nos_migrate.py`. Full authoring guide lives in `docs/migration-authoring.md`
+`library/nos_migrate.py`. Full authoring guide lives in `files/anatomy/docs/migration-authoring.md`
 (agent 9) — this file is the quick-start.
 
 ## File layout

@@ -187,7 +187,7 @@ ansible-playbook main.yml -K --tags coexistence -e coex_service=postgresql \
     -e coex_action=cutover
 ```
 
-See `docs/coexistence-playbook.md` for the full framework.
+See `files/anatomy/docs/coexistence-playbook.md` for the full framework.
 
 ---
 
@@ -300,7 +300,7 @@ idempotent per-source.
 
 - [`tasks/backup.yml`](../tasks/backup.yml) and `roles/pazny.backup/` — the
   producer side of this contract.
-- [`docs/coexistence-playbook.md`](coexistence-playbook.md) — test-restore
+- [`files/anatomy/docs/coexistence-playbook.md`](../files/anatomy/docs/coexistence-playbook.md) — test-restore
   pattern.
-- [`docs/framework-overview.md`](framework-overview.md) — migrations and
+- [`files/anatomy/docs/framework-overview.md`](../files/anatomy/docs/framework-overview.md) — migrations and
   upgrades, which sometimes pair with a restore.

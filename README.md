@@ -249,8 +249,8 @@ dashboard-preserving patterns), and dual-version coexistence for zero-downtime m
 upgrades. Every action emits structured events to Wing
 (`/migrations`, `/upgrades`, `/timeline`, `/coexistence` views).
 
-See [docs/framework-overview.md](docs/framework-overview.md) for the operator tour,
-and [docs/framework-plan.md](docs/framework-plan.md) for the authoritative spec.
+See [files/anatomy/docs/framework-overview.md](files/anatomy/docs/framework-overview.md) for the operator tour,
+and [files/anatomy/docs/framework-plan.md](files/anatomy/docs/framework-plan.md) for the authoritative spec.
 
 ### Notifications
 

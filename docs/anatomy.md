@@ -140,7 +140,7 @@ For an organ named `<organ>` (lowercase, ≤ 5 chars):
 | Local hostname | `<organ>.dev.local` | `bone.dev.local`, `wing.dev.local` |
 | PHP namespace | `App\Model\<Organ>Client` | `App\Model\BoneClient` |
 | Callback plugin | `callback_plugins/<organ>_telemetry.py` | `wing_telemetry.py` |
-| Docs page | `docs/<organ>-integration.md` or `docs/<organ>-plan.md` | `docs/wing-integration.md` |
+| Docs page | `files/anatomy/docs/<organ>-integration.md` or `files/anatomy/docs/<organ>-plan.md` | `files/anatomy/docs/wing-integration.md` |
 
 Exceptions kept on purpose:
 

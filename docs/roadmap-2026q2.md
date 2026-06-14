@@ -199,7 +199,7 @@ This is what Track E is for — close that gap with a real wet test.
 - [`docs/agent-operable-nos.md`](agent-operable-nos.md) — strategic vision (Spine, Eye, Ear, Hand anatomy extensions)
 - [`docs/domain-flip-operator-guide.md`](domain-flip-operator-guide.md) — Wedos + Cloudflare + ISP runbook for TLD flip
 - [`docs/security-triage.md`](security-triage.md) — CodeQL alert rationale + maintenance protocol
-- [`docs/framework-plan.md`](framework-plan.md) — state/migration/upgrade engine spec (older, authoritative for engine internals)
+- [`files/anatomy/docs/framework-plan.md`](../files/anatomy/docs/framework-plan.md) — state/migration/upgrade engine spec (older, authoritative for engine internals)
 - [`CLAUDE.md`](../CLAUDE.md) — repo instructions for AI assistants
 
 ### Live in working tree but uncommitted

@@ -27,7 +27,7 @@ One `ansible-playbook` run, ~20 minutes on an M4 Pro:
 | **Network** | Tailscale VPN, dnsmasq, optional SSH/Samba/VNC |
 | **External SSD** | Tiers heavy data (Ollama models, observability DBs, media, caches, GitLab, Docker disk image) onto `/Volumes/SSD1TB` |
 | **Governance** (opt-in, default-OFF) | MFA (TOTP + WebAuthn), tamper-evident audit hash-chain, breach-notification (Art-33/34 + NIS2), DSAR (Art-7/15/17/30), at-rest encryption gate, encrypted backup. Enable with `-e @profiles/gov-local.yml`. See [RELEASE.md](RELEASE.md) § Gov/GDPR + [docs/compliance/gov-readiness-audit-2026q2.md](docs/compliance/gov-readiness-audit-2026q2.md). |
-| **State & Migrations** | Declarative state (`~/.nos/state.yml`), auto-applied migrations (`files/anatomy/migrations/*.yml`), per-service upgrade recipes (`upgrades/*.yml` — pg_upgrade / mariadb-upgrade / Grafana dashboard-preserving), dual-version coexistence. Live in Wing at `/migrations`, `/upgrades`, `/timeline`, `/coexistence`. See [docs/framework-overview.md](docs/framework-overview.md). |
+| **State & Migrations** | Declarative state (`~/.nos/state.yml`), auto-applied migrations (`files/anatomy/migrations/*.yml`), per-service upgrade recipes (`upgrades/*.yml` — pg_upgrade / mariadb-upgrade / Grafana dashboard-preserving), dual-version coexistence. Live in Wing at `/migrations`, `/upgrades`, `/timeline`, `/coexistence`. See [files/anatomy/docs/framework-overview.md](files/anatomy/docs/framework-overview.md). |
 
 ---
 
