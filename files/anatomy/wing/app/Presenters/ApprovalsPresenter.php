@@ -25,6 +25,19 @@ use App\Model\EventRepository;
  * raised it as HIGH (any authenticated Authentik user, including tier-4
  * nos-guests, could rubber-stamp agent actions). Both the startup() gate
  * and the POST-only method gate close that vector.
+ *
+ * Persistence model — DEFERRED (no dedicated approval_requests table):
+ * Approval requests + decisions live in the `events` table as
+ * `agent_approval_request` / `agent_approval_decision` rows, paired on
+ * actor_action_id. This is BY DESIGN — events are the single source of
+ * truth for audit, so a side table would duplicate that lineage and risk
+ * drift. The read path goes through EventRepository (listPendingApprovals
+ * / listRecentDecisions), never raw SQL; the queue depth is bounded at 200.
+ * Revisit (dedicated table OR read-only /api/v1/approvals endpoint) only
+ * when a SECOND agent ships that programmatically gates on approvals —
+ * conductor (the single live agent) does not. ">100 pending" is an
+ * operational red flag, not a scaling trigger. Pinned by
+ * tests/anatomy/test_approval_queue_event_backed.py.
  */
 final class ApprovalsPresenter extends BasePresenter
 {
