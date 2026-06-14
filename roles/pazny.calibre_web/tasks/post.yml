@@ -12,16 +12,17 @@
 # ==============================================================================
 
 - name: "[pazny.calibre_web Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ calibreweb_port | default(8083) }}/"
-    method: GET
-    timeout: 5
-    status_code: [200, 302]
-  register: _cw_ready
-  until: _cw_ready.status | default(0) in [200, 302]
-  retries: 12
-  delay: 10
-  failed_when: false
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.calibre_web Post]"
+    wait_url: "http://127.0.0.1:{{ calibreweb_port | default(8083) }}/"
+    wait_status_codes: [200, 302]
+    wait_register_as: _cw_ready
+    wait_retries: 12
+    wait_delay: 10
+    wait_hard_fail: false
 
 - name: "[pazny.calibre_web Post] Login with default credentials"
   ansible.builtin.uri:

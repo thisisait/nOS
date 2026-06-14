@@ -10,16 +10,17 @@
 # ==============================================================================
 
 - name: "[pazny.n8n Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/healthz"
-    method: GET
-    timeout: 5
-    status_code: [200]
-  register: _n8n_ready
-  until: _n8n_ready.status | default(0) == 200
-  retries: 12
-  delay: 10
-  failed_when: false
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.n8n Post]"
+    wait_url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/healthz"
+    wait_status_codes: [200]
+    wait_register_as: _n8n_ready
+    wait_retries: 12
+    wait_delay: 10
+    wait_hard_fail: false
 
 - name: "[pazny.n8n Post] Check if owner already exists"
   ansible.builtin.uri:

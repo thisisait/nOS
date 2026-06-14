@@ -7,21 +7,24 @@
 # via in-container python (sqlite3 + passlib bcrypt).
 # ==============================================================================
 
+# hard-fail (wait_hard_fail: true) is the canonical 2026-05-08 fix: a silent
+# `failed_when: false` absorb here masked iiab-stack failures for ~25 min as
+# `Wait for API (N retries left)` loops. docker compose up --wait already gates
+# stack health (see stack-up.yml fail-fast); if we STILL can't reach the port
+# from the host that's a genuine split-brain to surface, not paper over. This is
+# the reference comment the ha/jellyfin/puter waits point back to.
 - name: "[pazny.open_webui Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/config"
-    method: GET
-    timeout: 5
-    status_code: [200]
-  register: _owui_ready
-  until: _owui_ready.status | default(0) == 200
-  retries: 12
-  delay: 10
-  # Removed `failed_when: false` (2026-05-08): silent absorb here masked
-  # iiab-stack failures for ~25 min as `Wait for API (1 retries left)` loops.
-  # docker compose up --wait already gates stack health (see stack-up.yml
-  # fail-fast); if we still can't reach the port from the host, that's a
-  # genuine split-brain to surface, not paper over.
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.open_webui Post]"
+    wait_url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/config"
+    wait_status_codes: [200]
+    wait_register_as: _owui_ready
+    wait_retries: 12
+    wait_delay: 10
+    wait_hard_fail: true
 
 # ── Ensure admin (DB-seed first-run, reconverge otherwise) ─────────────────
 # Pure-SSO + signup-off safe: we no longer POST the public signup endpoint

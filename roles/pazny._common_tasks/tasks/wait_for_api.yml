@@ -1,0 +1,49 @@
+---
+# ==============================================================================
+# pazny._common_tasks/tasks/wait_for_api.yml — canonical "Wait for API" loop
+#
+# Shared, parameter-driven replacement for the copy-pasted GET-until-ready block
+# that ~8 service post.yml files carried independently. Centralising it kills the
+# backport drift (e.g. the 2026-05-08 `failed_when: false` removal that masked a
+# ~25-min iiab cascade reached only 4 of the roles that needed it).
+#
+# Caller contract (pass via include_role vars:):
+#   wait_url           (req)  URL to poll with a GET
+#   wait_status_codes  (req)  list of HTTP codes that count as "up" (e.g. [200,302])
+#   wait_register_as   (req)  STRING name to alias the result into, so the caller's
+#                             existing downstream `<name>.status` reads keep working
+#                             unchanged (register: cannot be templated, so we
+#                             set_fact the result under the caller's var name).
+#   wait_retries       (opt)  default 12
+#   wait_delay         (opt)  default 10  (seconds between attempts)
+#   wait_timeout       (opt)  default 5   (per-request timeout)
+#   wait_headers       (opt)  default {}  (e.g. a Host: override for vhost routing)
+#   wait_name          (opt)  task-name prefix, e.g. "[pazny.n8n Post]"
+#   wait_hard_fail     (opt)  default false. false => `failed_when: false`
+#                             (best-effort; never aborts the play). true => the
+#                             loop must FAIL the play if the API never comes up
+#                             (the 2026-05-08 behaviour for ha/jellyfin/owui/puter).
+# ==============================================================================
+
+- name: "{{ wait_name | default('[wait_for_api]') }} Wait for API"
+  ansible.builtin.uri:
+    url: "{{ wait_url }}"
+    method: GET
+    timeout: "{{ wait_timeout | default(5) }}"
+    headers: "{{ wait_headers | default({}) }}"
+    status_code: "{{ wait_status_codes }}"
+  register: _wait_for_api
+  until: _wait_for_api.status | default(0) in wait_status_codes
+  retries: "{{ wait_retries | default(12) }}"
+  delay: "{{ wait_delay | default(10) }}"
+  # best-effort (default) absorbs the status mismatch; hard-fail re-asserts the
+  # module's own status_code gate so an unreachable API aborts the run.
+  failed_when: >-
+    {{ (wait_hard_fail | default(false) | bool)
+       and ((_wait_for_api.status | default(0)) not in wait_status_codes) }}
+
+# register: can't be templated, so alias the result under the caller's own var
+# name — every downstream `<name>.status` gate in the role keeps working verbatim.
+- name: "{{ wait_name | default('[wait_for_api]') }} Alias readiness result"
+  ansible.builtin.set_fact:
+    "{{ wait_register_as }}": "{{ _wait_for_api }}"

@@ -11,16 +11,18 @@
 # ==============================================================================
 
 - name: "[pazny.homeassistant Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ homeassistant_port }}/"
-    method: GET
-    timeout: 5
-    status_code: [200, 302]
-  register: _ha_ready
-  until: _ha_ready.status | default(0) in [200, 302]
-  retries: 20
-  delay: 10
-  # Removed `failed_when: false` (2026-05-08) — see open_webui post.yml comment.
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.homeassistant Post]"
+    wait_url: "http://127.0.0.1:{{ homeassistant_port }}/"
+    wait_status_codes: [200, 302]
+    wait_register_as: _ha_ready
+    wait_retries: 20
+    wait_delay: 10
+    # hard-fail: `failed_when: false` removed 2026-05-08 — see open_webui comment.
+    wait_hard_fail: true
 
 - name: "[pazny.homeassistant Post] Check onboarding status"
   ansible.builtin.uri:

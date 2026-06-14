@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: _common_tasks
+  namespace: pazny
+  author: Pázny
+  description: >-
+    Shared, parameter-driven task includes reused by other pazny.* roles
+    (e.g. the canonical "Wait for API" retry loop). Not a service role —
+    has no defaults/templates and is never invoked standalone.
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []

@@ -26,18 +26,21 @@
   check_mode: false
 
 - name: "[pazny.puter Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"
-    method: GET
-    timeout: 5
-    headers:
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.puter Post]"
+    wait_url: "http://127.0.0.1:{{ puter_port | default(5050) }}/healthcheck"
+    wait_status_codes: [200]
+    wait_register_as: _puter_ready
+    wait_retries: 15
+    wait_delay: 10
+    # Puter routes by vhost — the healthcheck needs the Host: header to match.
+    wait_headers:
       Host: "{{ puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-    status_code: [200]
-  register: _puter_ready
-  until: _puter_ready.status | default(0) == 200
-  retries: 15
-  delay: 10
-  # Removed `failed_when: false` (2026-05-08) — see open_webui post.yml comment.
+    # hard-fail: `failed_when: false` removed 2026-05-08 — see open_webui comment.
+    wait_hard_fail: true
 
 - name: "[pazny.puter Post] Check if admin user exists"
   ansible.builtin.shell: >

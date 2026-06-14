@@ -11,16 +11,17 @@
 # ==============================================================================
 
 - name: "[pazny.metabase Post] Wait for API"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/health"
-    method: GET
-    timeout: 5
-    status_code: [200]
-  register: _mb_ready
-  until: _mb_ready.status | default(0) == 200
-  retries: 20
-  delay: 10
-  failed_when: false
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.metabase Post]"
+    wait_url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/health"
+    wait_status_codes: [200]
+    wait_register_as: _mb_ready
+    wait_retries: 20
+    wait_delay: 10
+    wait_hard_fail: false
 
 - name: "[pazny.metabase Post] Check if setup already completed"
   ansible.builtin.uri:

@@ -23,10 +23,16 @@ _COUNT_RE = re.compile(r"orchestrates (\d+)\+? roles")
 
 
 def _filesystem_count() -> int:
+    # Count SERVICE roles only. `pazny._*` (underscore-prefixed) dirs are private
+    # shared-task libraries — e.g. pazny._common_tasks/tasks/wait_for_api.yml —
+    # not services, never invoked standalone, so they don't count toward the
+    # "orchestrates N roles" service tally the README advertises.
     return sum(
         1
         for d in ROLES_ROOT.iterdir()
-        if d.is_dir() and d.name.startswith("pazny.")
+        if d.is_dir()
+        and d.name.startswith("pazny.")
+        and not d.name.startswith("pazny._")
     )
 
 
