@@ -249,17 +249,29 @@
          install_nextcloud | default(false) or
          install_erpnext | default(false) or
          install_freescout | default(false) or
-         install_freepbx | default(false) }}
+         install_freepbx | default(false) or
+         install_bookstack | default(false) or
+         install_firefly | default(false) }}
     install_postgresql: >-
       {{ install_postgresql | default(false) or
+         install_authentik | default(false) or
+         install_infisical | default(false) or
+         install_paperclip | default(false) or
          install_outline | default(false) or
          install_metabase | default(false) or
-         install_superset | default(false) }}
+         install_superset | default(false) or
+         install_miniflux | default(false) or
+         install_hedgedoc | default(false) }}
     redis_docker: >-
       {{ redis_docker | default(false) or
+         install_authentik | default(false) or
+         install_infisical | default(false) or
          install_erpnext | default(false) or
          install_outline | default(false) or
-         install_superset | default(false) }}
+         install_superset | default(false) or
+         install_bookstack | default(false) or
+         install_firefly | default(false) or
+         install_onlyoffice | default(false) }}
 
 # ── 8. Data directories - remove (only for enabled services) ───────────
 - name: "[BLANK] Build list of data directories to remove"
