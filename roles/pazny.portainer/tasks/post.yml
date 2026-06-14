@@ -187,9 +187,14 @@
   ansible.builtin.debug:
     msg: >-
       Portainer OAuth2 setup:
-      {{ 'JWT obtained — proceeding with OAuth config'
-         if (_portainer_auth.json.jwt is defined and _portainer_auth.json.jwt | length > 0)
-         else 'FAILED to obtain JWT — OAuth config will be SKIPPED (check admin password)' }}
+      {% if _portainer_auth.json.jwt is defined and _portainer_auth.json.jwt | length > 0 %}
+      JWT obtained — proceeding with OAuth config
+      {% else %}
+      FAILED to obtain JWT (HTTP {{ _portainer_auth.status | default('-1') }}) — OAuth config SKIPPED.
+      Root-cause by status: 401/422 = wrong admin password (reconverge drift);
+      -1 = network/DNS (Portainer unreachable on 127.0.0.1:{{ portainer_port | default(9002) }});
+      5xx = Portainer internal error.
+      {% endif %}
   when:
     - _portainer_ready.status | default(0) in [200, 303]
     - install_authentik | default(false)
@@ -246,8 +251,13 @@
     status_code: [200]
     timeout: 10
   register: _portainer_settings_verify
+  # Read back the LIVE AuthenticationMethod whenever we hold a JWT — NOT only on a
+  # 200 PUT. If the PUT silently no-op'd or the settings drifted, this GET is the
+  # only headless confirmation that AuthMethod==3 actually landed; gating it on PUT
+  # success left a blind spot where the summary could never see the real value.
   when:
-    - _portainer_oauth_put.status | default(0) == 200
+    - _portainer_auth.json.jwt is defined
+    - _portainer_auth.json.jwt | length > 0
   failed_when: false
   no_log: true
 
@@ -262,7 +272,8 @@
       {% elif _portainer_auth.json.jwt is not defined or _portainer_auth.json.jwt | length == 0 %}
       SKIPPED — failed to obtain admin JWT (check admin password)
       {% else %}
-      FAILED — PUT /api/settings returned HTTP {{ _portainer_oauth_put.status | default('?') }}
+      FAILED — PUT /api/settings returned HTTP {{ _portainer_oauth_put.status | default('?') }};
+      live AuthMethod={{ _portainer_settings_verify.json.AuthenticationMethod | default('?') }} (1=internal, 3=OAuth2)
       {% endif %}
   when: install_authentik | default(false)
 
