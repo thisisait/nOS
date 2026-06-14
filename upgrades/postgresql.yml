@@ -145,6 +145,10 @@ recipes:
           docker exec {{ postgresql_container_name | default('nos-postgresql') }}
           pg_dumpall -U postgres --clean --if-exists
           > {{ '~/.nos/backups/' + upgrade_id + '/pgdumpall.sql' | expanduser }}
+        # Idempotency guard — parity with 15-to-16. A re-run of the operator
+        # cutover (e.g. after a mid-apply hiccup) must NOT re-fire pg_dumpall
+        # and overwrite the good pre-cutover dump with a post-wipe empty one.
+        creates: "~/.nos/backups/{{ upgrade_id }}/pgdumpall.sql"
 
     apply:
       - id: stop_service
