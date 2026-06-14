@@ -7,3 +7,4 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
     restart gitlab
+  failed_when: false

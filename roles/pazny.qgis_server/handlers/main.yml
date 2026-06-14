@@ -5,3 +5,4 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/engineering/docker-compose.yml" -p engineering
     restart qgis-server
+  failed_when: false

@@ -7,3 +7,4 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
     restart rustfs
+  failed_when: false

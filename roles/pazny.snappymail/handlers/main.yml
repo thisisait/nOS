@@ -6,3 +6,4 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
     restart snappymail
+  failed_when: false

@@ -8,3 +8,4 @@
       restart mcpo mcp-grafana 2>&1 || true
   args:
     executable: /bin/bash
+  failed_when: false
