@@ -31,6 +31,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
 TOFU_TASKS = REPO / "tasks" / "tofu-authentik.yml"
 TFVARS_TEMPLATE = REPO / "templates" / "tofu" / "nos.auto.tfvars.json.j2"
+ADOPT = REPO / "tools" / "tofu-authentik-adopt.sh"
 
 sys.path.insert(0, str(REPO / "files" / "anatomy"))
 
@@ -175,6 +176,53 @@ def test_disabled_service_filtered_from_tfvars():
         "install_erpnext undefined (→ 'False') yet erpnext landed in "
         "authentik_services — the tfvars template must skip services whose "
         "rendered enabled value is falsy."
+    )
+
+
+def test_adopt_emits_attachment_imports():
+    """Adopt-path attachment import id (P3, existing-tenant only).
+
+    A proxy provider is useless until it is bound to the embedded outpost —
+    forward_auth 404s otherwise. The adopt script must therefore import the
+    `authentik_outpost_provider_attachment` resources too, NOT just the
+    providers; if it omits them the adopt plan reads `N to add` for the
+    attachments and the operator hits a cryptic import failure.
+
+    Confirmed import id format (from the live terraform.tfstate: every
+    attachment serializes id = "<outpost_uuid>:<provider_pk>"). The provider
+    does not round-trip the `provider` attr into state, so the id is the only
+    carrier and must be exact: the script composes it as `${OUTPOST_ID}:<pk>`.
+    This gate pins both the enumeration AND the id shape.
+    """
+    src = ADOPT.read_text()
+
+    # the resource type is enumerated at all
+    assert "authentik_outpost_provider_attachment" in src, (
+        "tofu-authentik-adopt.sh must import "
+        "authentik_outpost_provider_attachment resources — a proxy provider "
+        "without its embedded-outpost binding 404s on forward_auth."
+    )
+
+    # the embedded outpost id is resolved via the instances API
+    assert "/outposts/instances/" in src, (
+        "adopt script must resolve the embedded outpost id "
+        "(GET /api/v3/outposts/instances/) to compose the attachment import id."
+    )
+    assert "authentik Embedded Outpost" in src, (
+        "adopt script must select the embedded outpost by name."
+    )
+
+    # the import id is composed as "<outpost_uuid>:<provider_pk>"
+    assert "{op}:{p['pk']}" in src, (
+        "attachment import id must be '<outpost_uuid>:<provider_pk>' — the "
+        "confirmed terraform.tfstate format. Any other shape imports with a "
+        "cryptic error and the operator has to debug the API by hand."
+    )
+
+    # each proxy provider yields BOTH a provider AND an attachment import block
+    assert "adopt_attach_" in src, (
+        "each proxy provider must emit a paired attachment import block "
+        "(adopt_attach_<name>) alongside the provider import."
     )
 
 

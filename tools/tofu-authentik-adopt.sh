@@ -51,13 +51,30 @@ import {
 EOF
 }
 
-# proxy providers
-echo "[adopt] enumerating proxy providers..."
+# embedded outpost id — needed to compose the attachment import ids below.
+# Import id format for authentik_outpost_provider_attachment is
+# "<outpost_uuid>:<provider_pk>" (confirmed from the live terraform.tfstate:
+# all attachments serialize as id = "<outpost_uuid>:<provider_pk>").
+echo "[adopt] resolving embedded outpost id..."
+OUTPOST_ID="$(curl -fsS "${auth[@]}" "$API/outposts/instances/?page_size=200" \
+  | python3 -c "import json,sys
+for o in json.load(sys.stdin)['results']:
+    if o.get('name')=='authentik Embedded Outpost':
+        print(o['pk']); break")"
+[ -n "$OUTPOST_ID" ] || { echo "[adopt] could not resolve embedded outpost id"; exit 2; }
+
+# proxy providers + their embedded-outpost attachments. Every proxy provider
+# (forward_auth/header_oidc) MUST be bound to the embedded outpost or forward
+# auth 404s — so each proxy provider yields TWO import blocks: the provider
+# and its attachment (id "<outpost_uuid>:<provider_pk>").
+echo "[adopt] enumerating proxy providers + outpost attachments..."
 curl -fsS "${auth[@]}" "$API/providers/proxy/?page_size=200" \
-  | python3 -c "import json,sys,re
+  | OUTPOST_ID="$OUTPOST_ID" python3 -c "import json,os,sys,re
+op=os.environ['OUTPOST_ID']
 for p in json.load(sys.stdin)['results']:
     a=re.sub(r'[^a-z0-9_]','_',p['name'].lower())
-    print(f\"authentik_provider_proxy adopt_{a} {p['pk']}\")" \
+    print(f\"authentik_provider_proxy adopt_{a} {p['pk']}\")
+    print(f\"authentik_outpost_provider_attachment adopt_attach_{a} {op}:{p['pk']}\")" \
   | while read -r t a id; do emit "$t" "$a" "$id" "$a"; done
 
 # oauth2 providers

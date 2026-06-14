@@ -110,8 +110,15 @@ Punch list items #1–#3 (extracted 2026-06-12) **shipped the same day**:
 
 Still open:
 
-- **Adopt-path attachment import id (P3, existing-tenant only):**
-  `tools/tofu-authentik-adopt.sh` imports proxy/oauth2/app cleanly but the
-  `outpost_provider_attachment` import id format is unconfirmed (shows as
-  `1 to add`). Irrelevant for the blank path (fresh creates land in state);
-  matters only when adopting a long-lived tenant without a blank.
+- ~~Adopt-path attachment import id (P3, existing-tenant only)~~ —
+  CONFIRMED + shipped. The `authentik_outpost_provider_attachment` import id is
+  `"<outpost_uuid>:<provider_pk>"` (verified against the live
+  `terraform.tfstate`: every attachment serializes with that id). The provider
+  does NOT round-trip the `provider` attribute into state — the import id is the
+  only carrier of the binding, so it must be exact.
+  `tools/tofu-authentik-adopt.sh` now resolves the embedded outpost id
+  (`GET /api/v3/outposts/instances/`, name `authentik Embedded Outpost`) and
+  emits one `authentik_outpost_provider_attachment` import block per proxy
+  provider (id `<outpost_uuid>:<provider_pk>`), so the adopt path lands the
+  attachments in state instead of planning them as `N to add`. Gate:
+  `test_tofu_registry_bridge.py::test_adopt_emits_attachment_imports`.
