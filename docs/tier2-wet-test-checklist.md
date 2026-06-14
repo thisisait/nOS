@@ -340,8 +340,6 @@ the fix-and-recover loop is much cheaper than a full re-blank.
 
 Commit: `feat(apps): tier-2 wet test verified — twofauth + roundcube + documenso live`
 Update [`docs/active-work.md`](active-work.md) — flip pointer to Track F (D10).
-Update [`.remember/remember.md`](../.remember/remember.md) — note Track E DONE,
-next track F.
 
 If a new pilot needs onboarding later (post-Track-F), use the Coolify
 hybrid importer (`tools/import-coolify-template.py`) and walk this

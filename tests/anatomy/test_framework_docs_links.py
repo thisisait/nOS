@@ -82,3 +82,30 @@ def test_no_stale_framework_doc_references():
         "files/anatomy/docs/ in anatomy A1; update the links:\n"
         + "\n".join(f"{f}\n" + "\n".join(lines) for f, lines in offenders.items())
     )
+
+
+# `.remember/` is operator-local runtime scratch (gitignored at .gitignore:19,
+# `.remember/*`); it is never committed and no `.remember/remember.md` exists.
+# tier2-wet-test-checklist.md once told the operator to update that absent file
+# — a broken link to a path that can never resolve from the tree. Trip if any
+# tracked markdown re-introduces a `.remember/` reference.
+_REMEMBER = re.compile(r"\.remember/")
+
+
+def test_no_gitignored_remember_dir_references():
+    """No tracked markdown may link into the gitignored .remember/ scratch dir."""
+    assert not (REPO / ".remember").exists(), (
+        ".remember/ is operator-local runtime scratch (gitignored) — it must "
+        "not be committed; docs may not assume it exists"
+    )
+    offenders: dict[str, list[str]] = {}
+    for path in _tracked_markdown():
+        for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+            if _REMEMBER.search(line):
+                rel = str(path.relative_to(REPO))
+                offenders.setdefault(rel, []).append(f"  L{lineno}: {line.strip()}")
+    assert not offenders, (
+        "Reference to the gitignored .remember/ scratch dir found — it never "
+        "exists in the tree, so the link is dead; remove it:\n"
+        + "\n".join(f"{f}\n" + "\n".join(lines) for f, lines in offenders.items())
+    )
