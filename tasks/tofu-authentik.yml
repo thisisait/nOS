@@ -103,18 +103,42 @@
       register: _tofu_plan_json
       changed_when: false
 
+    - name: "[tofu-authentik] Parse plan resource_changes"
+      ansible.builtin.set_fact:
+        _tofu_changes: "{{ (_tofu_plan_json.stdout | from_json).resource_changes | default([]) }}"
+
     - name: "[tofu-authentik] Count destroy/replace actions"
       ansible.builtin.set_fact:
         _tofu_destroys: >-
-          {{ (_tofu_plan_json.stdout | from_json).resource_changes
-             | default([]) | selectattr('change.actions', 'contains', 'delete')
+          {{ _tofu_changes
+             | selectattr('change.actions', 'contains', 'delete')
              | list | length }}
+
+    # ── DANGEROUS-UPDATE GUARD ──────────────────────────────────────────────
+    # A pure UPDATE (no delete in change.actions) on an Authentik lookup key
+    # silently breaks SSO: e.g. OAuth2Provider.client_id is the OIDC client
+    # identifier baked into every consumer's env — flipping it via a registry
+    # slug/override edit leaves the app authenticating with the OLD id while
+    # Authentik's provider now answers to the NEW one (token validation +
+    # discovery break). The destroy guard above only catches delete/replace,
+    # so this second pass refuses an in-place change to any immutable-by-
+    # contract field. Denylist is per resource type (see modules/nos-authentik
+    # -app/main.tf): client_id is the OIDC lookup key, external_host the proxy
+    # routing key, slug the application URL/lookup key. The detection lives in
+    # the `nos_tofu_immutable_field_updates` filter (filter_plugins/, normal
+    # play context — NOT the {{ vars }} loader, so a custom filter loads fine);
+    # a field is "dangerous" only when its before value is concrete AND after
+    # differs (a null/known-after-apply before is a CREATE, not a mutation).
+    - name: "[tofu-authentik] Detect dangerous in-place field updates"
+      ansible.builtin.set_fact:
+        _tofu_bad_updates: "{{ _tofu_changes | nos_tofu_immutable_field_updates }}"
 
     - name: "[tofu-authentik] Drift report"
       ansible.builtin.debug:
         msg: >-
           Authentik OpenTofu: {{ 'DRIFT (rc=2)' if _tofu_plan.rc == 2 else 'no-op' }};
-          {{ _tofu_destroys }} destroy/replace action(s); engine=
+          {{ _tofu_destroys }} destroy/replace action(s),
+          {{ _tofu_bad_updates | length }} dangerous-field update(s); engine=
           {{ authentik_engine | default('blueprint') }}.
           {{ 'PLAN-ONLY (ak apply_blueprint authoritative).'
              if (authentik_engine | default('blueprint')) != 'tofu'
@@ -135,6 +159,21 @@
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int > 0
 
+    - name: "[tofu-authentik] REFUSE apply — in-place change to an immutable field"
+      ansible.builtin.fail:
+        msg: >-
+          tofu plan would change {{ _tofu_bad_updates | length }} immutable
+          Authentik lookup field(s) in place — refusing to apply:
+          {{ _tofu_bad_updates | join('; ') }}. These (OAuth2Provider.client_id,
+          ProxyProvider.external_host, Application.slug) are baked into consumer
+          env / OIDC discovery; an in-place flip breaks SSO silently. Usual cause
+          is a registry slug change or a stray client_id/external_host override
+          in a plugin block — revert the registry edit, or migrate the reference
+          deliberately (recreate the provider) and re-run.
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_bad_updates | length > 0
+
     # -parallelism=1: authentik_outpost_provider_attachment is a read-modify-
     # write over the outpost's providers LIST (no row-level m2m API in the
     # goauthentik provider). Default parallelism=10 races the writes — blank #3
@@ -149,3 +188,4 @@
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int == 0
+        - _tofu_bad_updates | length == 0
