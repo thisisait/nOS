@@ -36,7 +36,11 @@ nextcloud_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 # the service names). `nextcloud` must be a trusted_domain for the docserver's
 # download callback (Host: nextcloud) to be accepted — added below.
 nextcloud_internal_host: "nextcloud"          # NC's service alias on the shared net
-onlyoffice_internal_url: "http://onlyoffice/" # docserver's service alias on the shared net
+# Derived from the docserver's COMPOSE SERVICE NAME (onlyoffice role default),
+# so the euro-office rename (onlyoffice_service_name: "eurooffice") moves the
+# alias here too — no second edit, no drift. default() keeps it resolvable even
+# when the onlyoffice role's defaults aren't in scope (e.g. nextcloud-only run).
+onlyoffice_internal_url: "http://{{ onlyoffice_service_name | default('onlyoffice') }}/"
 
 # Reverse-proxy IPs NC trusts for X-Forwarded-For (real client IP). Docker
 # private ranges cover Traefik + the docserver on the shared/iiab nets; without

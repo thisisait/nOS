@@ -13,7 +13,7 @@
 # =============================================================================
 
 services:
-  onlyoffice:
+  {{ onlyoffice_service_name | default('onlyoffice') }}:
     image: {{ onlyoffice_image | default('onlyoffice/documentserver') }}:{{ onlyoffice_version | default('9.3.1.2') }}
     restart: unless-stopped
     ports:

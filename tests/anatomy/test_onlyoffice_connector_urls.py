@@ -14,6 +14,10 @@ import pathlib
 REPO = pathlib.Path(__file__).resolve().parents[2]
 POST = (REPO / "roles/pazny.nextcloud/tasks/post.yml").read_text(encoding="utf-8")
 DEFAULTS = (REPO / "roles/pazny.nextcloud/defaults/main.yml").read_text(encoding="utf-8")
+OO_DEFAULTS = (REPO / "roles/pazny.onlyoffice/defaults/main.yml").read_text(encoding="utf-8")
+OO_COMPOSE = (
+    REPO / "roles/pazny.onlyoffice/templates/compose.yml.j2"
+).read_text(encoding="utf-8")
 
 
 def test_internal_urls_are_configured():
@@ -24,8 +28,32 @@ def test_internal_urls_are_configured():
 
 
 def test_internal_url_defaults_present():
-    assert 'onlyoffice_internal_url: "http://onlyoffice/"' in DEFAULTS
     assert 'nextcloud_internal_host: "nextcloud"' in DEFAULTS
+    # The connector URL is DERIVED from the docserver's compose service name so
+    # a euro-office role rename moves the alias in lockstep (see below). It must
+    # still resolve to http://onlyoffice/ at the stock default.
+    assert (
+        'onlyoffice_internal_url: "http://{{ onlyoffice_service_name'
+        " | default('onlyoffice') }}/\"" in DEFAULTS
+    )
+
+
+def test_service_name_is_a_var_resilient_to_rename():
+    # RESILIENCE: the docserver compose service name (= the docker-net alias the
+    # connector resolves) and the connector's internal URL must share ONE source
+    # of truth. Renaming the service (euro-office: onlyoffice -> eurooffice) must
+    # be a single var flip, not two hand-synced literals that can drift.
+    assert 'onlyoffice_service_name: "onlyoffice"' in OO_DEFAULTS, \
+        "onlyoffice role must declare the service name as a var with a default"
+    # Compose template renders the service block from the var, not a hard literal.
+    assert (
+        "{{ onlyoffice_service_name | default('onlyoffice') }}:" in OO_COMPOSE
+    ), "compose service declaration must be derived from onlyoffice_service_name"
+    assert "\n  onlyoffice:\n" not in OO_COMPOSE, \
+        "service name must not be hard-coded — derive it from the var"
+    # Nextcloud's connector URL references the same var, so the alias follows.
+    assert "onlyoffice_service_name" in DEFAULTS, \
+        "nextcloud connector URL must derive from onlyoffice_service_name"
 
 
 def test_internal_host_is_a_trusted_domain():

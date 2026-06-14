@@ -34,6 +34,12 @@
 #   4. docker compose -p b2b start onlyoffice   (healthy in ~2 min)
 # Internal PG holds only transient doc-server state; documents live in the
 # host apps (Nextcloud/BookStack/Outline), so the reseed is safe.
+# Compose SERVICE NAME = the docker-network alias the connector resolves
+# (http://<service>/). Parameterized so the euro-office role rename (flip
+# onlyoffice_service_name: "eurooffice") moves the alias AND the Nextcloud
+# connector's internal URL in lockstep — the nextcloud role derives
+# onlyoffice_internal_url from this var. Keep image/version flips separate.
+onlyoffice_service_name: "onlyoffice"
 onlyoffice_image: "onlyoffice/documentserver"
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
 onlyoffice_domain: "office{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
