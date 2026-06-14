@@ -145,6 +145,18 @@
       - "com.ollama.agent.plist"
       - "com.ollama.agent.plist.disabled"
       - "homebrew.mxcl.ollama.plist.disabled"
+      # Anatomy host daemons (eu.thisisait.nos.*) — each role renders its plist
+      # into ~/Library/LaunchAgents; without these a blank leaves stale plists
+      # pointing at wiped data dirs (gated by test_blank_reset_plist_discovery).
+      - "eu.thisisait.nos.bone.plist"
+      - "eu.thisisait.nos.pulse.plist"
+      - "eu.thisisait.nos.wing.plist"
+      - "eu.thisisait.nos.hermes.plist"
+      - "eu.thisisait.nos.heartbeat.plist"
+      - "eu.thisisait.nos.backup.rustfs.plist"
+      - "eu.thisisait.nos.backup.exporter.plist"
+      - "eu.thisisait.nos.backup.offsite.plist"
+      - "eu.thisisait.nos.acme-renew.plist"
   register: _blank_plists
 
 - name: "[BLANK] Unload LaunchAgents"
