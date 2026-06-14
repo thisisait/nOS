@@ -314,6 +314,7 @@ Never edit `composer.json` and commit without `composer.lock` updates. Same prin
 ## Apple Silicon Constraints
 
 - Target: ARM64 only (M1+). `homebrew_prefix: /opt/homebrew`.
+- **`homebrew_prefix` is ISA-bound, not die-variant-bound.** `default.config.yml` resolves it via `ansible_facts['machine'] == 'arm64'` → `/opt/homebrew`, else `/usr/local`. Homebrew keys its prefix on the instruction-set architecture (`arm64` vs `x86_64`), NOT the CPU die variant: every Apple Silicon family — M1, M2, M3, M4 (incl. Pro/Max/Ultra), M5+ — reports `machine == 'arm64'` and shares `/opt/homebrew`. So the conditional already covers all current and future Apple Silicon sub-variants; there is no per-die path to add. The `else /usr/local` branch is the Intel (`x86_64`) fallback, kept only for completeness — Intel Macs are out of scope post-macOS 27. Pinned by `tests/anatomy/test_homebrew_prefix_isa_bound.py`.
 - Ollama 0.19+: native MLX backend (57% faster prefill, 93% faster decode).
 - Docker Desktop for Mac (not Colima / Lima).
 
