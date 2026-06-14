@@ -144,6 +144,29 @@ def test_task_computes_and_enforces_the_update_guard():
         "apply is not gated on the dangerous-update set being empty"
 
 
+def test_destroy_guard_diagnoses_which_resources_before_refusing():
+    """When the destroy guard is about to refuse (engine=tofu, destroys>0), the
+    task must surface a diagnostic that names the exact destroyed resource
+    address(es) — not just a count — plus the paste-able supervised recovery
+    one-liner, BEFORE the fail. Operators flipping install_*=false otherwise
+    have to hand-parse the plan JSON to learn which service drops out."""
+    body = TASK.read_text()
+    # the diagnostic maps the deleting changes to their addresses
+    assert "map(attribute='address')" in body, \
+        "destroy diagnostic does not list the destroyed resource address(es)"
+    # paste-able supervised recovery command
+    assert "tofu apply -parallelism=1 tfplan" in body, \
+        "destroy diagnostic does not offer the supervised-apply one-liner"
+    # the diagnostic must run BEFORE the REFUSE-apply fail (ordering matters:
+    # a debug after the fail never prints)
+    diag = body.index("list resources the plan would destroy")
+    refuse = body.index("REFUSE apply — plan would destroy resources")
+    assert diag < refuse, "destroy diagnostic must precede the REFUSE fail"
+    # and it is gated on the same condition as the fail it precedes
+    assert body.count("_tofu_destroys | int > 0") >= 2, \
+        "destroy diagnostic not gated on engine=tofu AND destroys>0"
+
+
 def test_filter_is_discoverable_by_ansible():
     """ansible.cfg must point at filter_plugins/ so the play resolves the
     custom filter (it auto-discovers ./filter_plugins, but the explicit pin

@@ -145,6 +145,28 @@
              else 'APPLY mode.' }}
 
     # ── APPLY — only when engine=tofu AND zero destroys ─────────────────────
+    # Operator UX: when the destroy guard is about to refuse, name the exact
+    # resource address(es) the plan would delete (not just a count) plus the
+    # paste-able supervised-apply one-liner. The guard refusing with only a
+    # number forces the operator to hand-parse the plan JSON to learn which
+    # service flipped enabled→false — this debug surfaces it before the fail.
+    - name: "[tofu-authentik] Diagnose — list resources the plan would destroy"
+      ansible.builtin.debug:
+        msg: >-
+          DESTROY GUARD will refuse apply. {{ _tofu_destroys }} resource(s)
+          would be destroyed/replaced:
+          {{ _tofu_changes
+             | selectattr('change.actions', 'contains', 'delete')
+             | map(attribute='address') | list | join(', ') }}.
+          Cause: each is an Authentik object (provider/application/attachment)
+          for a service that flipped enabled→false (install_* off) or is not yet
+          authored in HCL. To recover after reviewing the plan, run supervised:
+          `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`
+          (or let the next blank converge the tenant).
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_destroys | int > 0
+
     - name: "[tofu-authentik] REFUSE apply — plan would destroy resources"
       ansible.builtin.fail:
         msg: >-
