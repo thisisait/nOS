@@ -19,6 +19,21 @@ Three long-lived branches (`feat → dev → master`), revived 2026-05-17 after 
 
 Worktrees branch off `dev` by default now (was `master`). The 2026-04-16 "never resurrect dev" rule is **superseded** — the three-tier flow is now load-bearing.
 
+### Branch protection — one-time operator setup
+
+The `master` protection above is **not** a workflow file — it is a GitHub repo-settings operation a fresh operator (or anyone forking nOS) MUST configure once, or direct pushes to `master` silently succeed and the release flow's PR gate is bypassed. The local `tools/git-hooks/pre-push` hook is a client-side backstop, not a substitute for the server-side rule.
+
+**GitHub — Repo Settings → Branches → add a rule for `master`:**
+
+- **Require a pull request before merging** (this is the `dev → master` PR gate).
+- **Require status checks to pass** + **Require branches to be up to date before merging** (this is the *fast-forward-only* guarantee — `master` can never diverge from a validated `dev`).
+- **Do not allow bypassing the above settings** — keep on so even admins go through the PR. (Sole-operator self-merge then needs `gh pr merge --rebase --admin`; see memory `nos-release-flow`.)
+- **Allow force pushes: disabled** and **Allow deletions: disabled** — this is the "branch lock".
+
+**Gitea mirror (local):** Repo → Settings → Branches → Branch Protection → `master`: enable "Block force push" + "Require pull requests" so the mirror lock matches GitHub.
+
+Verify after setup: `gh api repos/:owner/:repo/branches/master/protection` returns the rule (404 ⇒ unprotected — fix before the next release). `git push origin master` from a non-fast-forward state must be refused.
+
 ## Commit Convention
 
 - Format: **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, etc.)

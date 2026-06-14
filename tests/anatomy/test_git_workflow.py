@@ -34,6 +34,27 @@ def test_readme_links_to_branch_model():
 	assert "lock" in src.lower() or "protect" in src.lower()
 
 
+def test_claude_md_documents_branch_protection_setup():
+	"""The `master` PR-only + fast-forward-only + branch-lock rule is a
+	GitHub repo-settings operation, not a workflow file. CLAUDE.md must
+	document the one-time setup steps + a verification command so a fresh
+	operator (or a fork) cannot silently skip it and let direct pushes to
+	master through. Pins the master-branch-protection-not-documented gap."""
+	src = (REPO / "CLAUDE.md").read_text()
+	# A dedicated setup subsection exists.
+	assert "Branch protection" in src
+	# It names the GitHub repo-settings surface, not a workflow file.
+	assert "Settings" in src and "Branches" in src
+	# The three load-bearing rules are spelled out.
+	assert "Require a pull request" in src
+	assert "Require branches to be up to date" in src
+	assert "force push" in src.lower()
+	# A verification path exists (API check) so "is it set?" is answerable.
+	assert "branches/master/protection" in src
+	# The Gitea mirror lock is covered too (doctrine says BOTH remotes).
+	assert "Gitea" in src and "force push" in src.lower()
+
+
 def test_pre_push_hook_present_and_executable():
 	hook = REPO / "tools/git-hooks/pre-push"
 	assert hook.is_file(), "pre-push hook missing"
