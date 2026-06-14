@@ -112,7 +112,6 @@
     - not (_ha_oidc_manifest.stat.exists | default(false))
   failed_when: false
   notify: Restart homeassistant
-  notify: Restart homeassistant
 
 # Loud (but NON-FATAL) verify — configuration.yaml references the auth_oidc
 # component, so if the download/extract/move chain silently failed (every step
