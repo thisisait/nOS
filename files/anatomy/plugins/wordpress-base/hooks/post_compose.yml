@@ -95,3 +95,18 @@ sequence:
       wp plugin install daggerhart-openid-connect-generic
       --activate --allow-root
     accept_substring_in_stdout: "Plugin installed successfully"
+
+  # Verify the plugin is ACTUALLY active — no accept_substring escape hatch.
+  # `install_oidc_plugin` masks a wp.org timeout/404 (substring-or-nothing rc);
+  # this re-check registers the real `is-active` rc so a silent install failure
+  # surfaces in the replay summary. The role task post.yml carries the loud
+  # fail-fast (no failed_when) during the dual-safe transition.
+  - id: verify_oidc_plugin_active
+    when: >
+      install_authentik | bool
+      and _wp_container.state == 'running'
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: wp plugin is-active daggerhart-openid-connect-generic --allow-root
+    register: _wp_oidc_verify

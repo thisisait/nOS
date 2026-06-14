@@ -116,6 +116,21 @@
   changed_when: "'Plugin installed successfully' in (_wp_oidc_install.stdout | default(''))"
   failed_when: false
 
+# ── Verify OIDC plugin is ACTUALLY active (loud — NO failed_when) ───────
+# The install task above carries failed_when:false (idempotent re-run), which
+# masks a wp.org API timeout / 404. Without this gate the post task reports
+# success, the mu-plugin renders a broken config against a missing plugin, and
+# the operator hits a 404 on the Authentik redirect with NO OIDC button. This
+# step has NO failed_when — an inactive/missing plugin fails the run loud.
+- name: "[pazny.wordpress Post] Verify openid-connect-generic plugin is active (SSO gate)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T wordpress wp plugin is-active daggerhart-openid-connect-generic --allow-root
+  when:
+    - install_authentik | default(false)
+    - _wp_container.stdout | default('') | length > 0
+  changed_when: false
+
 # ── Site polish: theme + extra plugins (declarative, wp.org slugs) ──────
 # `wp theme/plugin install --activate` is a no-op when already present and
 # active, but it still hits the wp.org API — guard with is-active checks so
