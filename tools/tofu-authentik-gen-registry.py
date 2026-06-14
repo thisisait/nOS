@@ -100,6 +100,15 @@ def main() -> int:
             "external_host": ext,
             "client_id": c.get("client_id") or f"nos-{slug}",
         }
+        # oauth2 client fields (client_secret + redirect_uris) are emitted ONLY
+        # for native_oidc. forward_auth / header_oidc are proxy-provider services:
+        # carrying an oauth2 client field in their registry row is the data-layer
+        # ambiguity that fed the MTI shared-base cascade (infisical, 2026-06-02 —
+        # an orphan OAuth2Provider sharing the ProxyProvider's base Provider row).
+        # The Terraform module enforces XOR by construction (count gates), but
+        # this keeps the DATA explicit: a non-native_oidc row has NO oauth2 client
+        # fields by design, not by accident. Pinned by
+        # tests/anatomy/test_tofu_no_double_providers_on_forward_auth.py.
         if mode == "native_oidc":
             entry["client_secret"] = c.get("client_secret") or ""
             entry["redirect_uris"] = c.get("redirect_uris") or []
