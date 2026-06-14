@@ -5,8 +5,8 @@ Compact reference for how the four maintenance suites — **patch**, **migrate**
 state file. Use this as the single page to answer "where does this event/record
 actually land?".
 
-Long-form narratives live in [`framework-plan.md`](framework-plan.md),
-[`wing-integration.md`](wing-integration.md), and the per-suite
+Long-form narratives live in [`framework-plan.md`](../files/anatomy/docs/framework-plan.md),
+[`wing-integration.md`](../files/anatomy/docs/wing-integration.md), and the per-suite
 docs (`migration-authoring.md`, `upgrade-recipes.md`, `coexistence-playbook.md`).
 
 ---
@@ -174,9 +174,9 @@ suite API` commit) is the reference implementation — grep for `PATCH-` and
 
 ## See also
 
-- [`framework-plan.md`](framework-plan.md) — full design narrative.
-- [`wing-integration.md`](wing-integration.md) — URL / view / widget catalog.
-- [`migration-authoring.md`](migration-authoring.md) — how to write migrations.
-- [`upgrade-recipes.md`](upgrade-recipes.md) — how to write upgrade recipes.
-- [`coexistence-playbook.md`](coexistence-playbook.md) — dual-version rollouts.
+- [`framework-plan.md`](../files/anatomy/docs/framework-plan.md) — full design narrative.
+- [`wing-integration.md`](../files/anatomy/docs/wing-integration.md) — URL / view / widget catalog.
+- [`migration-authoring.md`](../files/anatomy/docs/migration-authoring.md) — how to write migrations.
+- [`upgrade-recipes.md`](../files/anatomy/docs/upgrade-recipes.md) — how to write upgrade recipes.
+- [`coexistence-playbook.md`](../files/anatomy/docs/coexistence-playbook.md) — dual-version rollouts.
 - `patches/_template.yml` — annotated patch recipe template.

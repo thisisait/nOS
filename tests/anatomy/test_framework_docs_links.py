@@ -147,3 +147,35 @@ def test_archive_relative_md_links_resolve():
         "level below docs/, so links to sibling guides need a `../` prefix:\n"
         + "\n".join(f"{f}\n" + "\n".join(lines) for f, lines in offenders.items())
     )
+
+
+# WHY (2026-06-14): docs/integration-map.md linked the six framework guides with
+# BARE filenames (e.g. `[framework-plan.md](framework-plan.md)`) — a form the
+# `_STALE` regex above can't catch because it has no `docs/` prefix. From docs/
+# a bare `framework-plan.md` resolves to the non-existent docs/framework-plan.md
+# (the guide moved to files/anatomy/docs/ in anatomy A1), so operators reading
+# the integration map in a markdown viewer got a 404 on every framework link.
+# Fixed by `../files/anatomy/docs/`-prefixing the links. This gate pins it:
+# every relative .md link in docs/integration-map.md MUST resolve on disk.
+INTEGRATION_MAP = REPO / "docs" / "integration-map.md"
+
+
+def test_integration_map_relative_md_links_resolve():
+    """Every relative .md link in docs/integration-map.md must resolve to a file."""
+    assert INTEGRATION_MAP.is_file(), "docs/integration-map.md must exist"
+    offenders: list[str] = []
+    for lineno, line in enumerate(
+        INTEGRATION_MAP.read_text().splitlines(), start=1
+    ):
+        for target in _MD_LINK.findall(line):
+            resolved = (INTEGRATION_MAP.parent / target).resolve()
+            if not resolved.is_file():
+                offenders.append(
+                    f"  L{lineno}: link target '{target}' does not resolve "
+                    f"(→ {resolved})"
+                )
+    assert not offenders, (
+        "Broken relative .md link(s) in docs/integration-map.md — the six "
+        "framework guides moved to files/anatomy/docs/ in anatomy A1, so links "
+        "need a `../files/anatomy/docs/` prefix:\n" + "\n".join(offenders)
+    )
