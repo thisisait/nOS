@@ -128,3 +128,52 @@ def test_intentional_shadow_list_has_no_rot():
         elif cfg[v] == roles[v][0]:
             stale.append("%s: now AGREES (config=role=%r) — remove from list" % (v, cfg[v]))
     assert not stale, "INTENTIONAL_SHADOW is stale:\n  " + "\n  ".join(stale)
+
+
+# --- CVE-citation drift across the three mariadb_version surfaces ------------
+# Sibling of the version-pin shadow: the VALUE (11.8.6) can agree across all
+# three files while the CVE comment that JUSTIFIES the pin drifts. That drift
+# bites an AUDITOR, not the runtime — three files claim different CVEs are
+# patched by the same image tag. default.config.yml is the source-of-truth
+# layer (it OUTRANKS the role default), so its comment must be the complete
+# citation; README.md + defaults/main.yml must not claim MORE than it does.
+
+_CVE_RE = re.compile(r"CVE-\d{4}-\d+")
+
+# (relative path, line-substring that anchors the mariadb_version pin line)
+_MARIADB_PIN_SITES = [
+    ("default.config.yml", 'mariadb_version: "11.8.6"'),
+    ("roles/pazny.mariadb/defaults/main.yml", 'mariadb_version: "11.8.6"'),
+    ("roles/pazny.mariadb/README.md", "`mariadb_version`"),
+]
+
+
+def _cves_on_anchored_line(path, anchor):
+    with open(os.path.join(ROOT, path)) as fh:
+        for line in fh:
+            if anchor in line:
+                return frozenset(_CVE_RE.findall(line))
+    raise AssertionError("anchor %r not found in %s" % (anchor, path))
+
+
+def test_mariadb_cve_citation_consistent_across_surfaces():
+    """The CVE list pinned to the mariadb 11.8.6 image must match across
+    default.config.yml, the role default, and the role README — otherwise an
+    operator reading any one surface gets a contradictory security claim.
+
+    Closes finding ``version-pin-shadow-mariadb``: README + defaults cited
+    'CVE-2026-32710 + CVE-2026-3494' but default.config.yml omitted the second.
+    """
+    cites = {path: _cves_on_anchored_line(path, anchor)
+             for path, anchor in _MARIADB_PIN_SITES}
+
+    distinct = set(cites.values())
+    assert len(distinct) == 1, (
+        "mariadb_version CVE citations disagree across surfaces "
+        "(default.config.yml is source-of-truth; align the others to it):\n  "
+        + "\n  ".join("%s: %s" % (p, sorted(c)) for p, c in cites.items()))
+
+    # guard against the citation being silently emptied on all three at once.
+    assert "CVE-2026-3494" in next(iter(distinct)), (
+        "CVE-2026-3494 (11.8.x audit-logging bypass, fixed in 11.8.6) dropped "
+        "from the mariadb_version citation — re-add it or justify removal.")
