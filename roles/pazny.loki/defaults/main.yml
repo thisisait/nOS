@@ -7,7 +7,7 @@
 # fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================
 
-loki_version: "3.7.2"
+loki_version: "3.7.2"                               # aligned with default.config.yml (source of truth — bump there too)
 loki_port: 3100
 loki_retention: "744h"   # 31 days
 loki_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/loki"

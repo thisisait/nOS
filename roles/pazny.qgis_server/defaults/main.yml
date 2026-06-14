@@ -6,7 +6,7 @@
 # Rosetta emulaci (`platform: linux/amd64`).
 # ==============================================================================
 
-qgis_version: "LTR"
+qgis_version: "LTR"                                 # default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 qgis_port: 8071
 qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 qgis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"

@@ -13,7 +13,7 @@
 # {{ traefik_dynamic_dir }}/middlewares.yml — fail-closed (PENTEST-002).
 # ==============================================================================
 
-traefik_image_version: "v3.6.21"                    # CVE pins + S2 freshness 2026-06-10 (patch line)
+traefik_image_version: "v3.6.21"                    # CVE pins + S2 freshness 2026-06-10 (patch line); aligned with default.config.yml (source of truth — bump there too)
 traefik_http_port: 80
 traefik_https_port: 443
 # Host port for the Traefik dashboard. Default 8082 — 8080=cadvisor,

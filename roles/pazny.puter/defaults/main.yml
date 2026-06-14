@@ -7,7 +7,7 @@
 # only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-puter_version: "latest"  # nos/puter:latest (built from files/puter/Dockerfile)
+puter_version: "latest"  # nos/puter:latest (built from files/puter/Dockerfile); default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 puter_port: 5050  # "05" as in "OS"
 puter_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 puter_api_domain: "api.os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

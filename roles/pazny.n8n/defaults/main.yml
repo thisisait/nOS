@@ -7,7 +7,7 @@
 # the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-n8n_version: "2.26.2"  # CVE-2026-4478x RCE pins; S2 freshness 2026-06-10 — same-major migrate-on-start, validate on next run
+n8n_version: "2.26.2"  # CVE-2026-4478x RCE pins; S2 freshness 2026-06-10 — same-major migrate-on-start, validate on next run; aligned with default.config.yml (source of truth — bump there too)
 n8n_port: 5678
 # SSRF protection (REM-043): block the HTTP Request node + webhooks from reaching
 # internal/private IPs (n8n built-in since 2.12; default-OFF upstream → default-ON

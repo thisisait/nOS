@@ -7,7 +7,7 @@
 # the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-metabase_version: "v0.61.2.6"
+metabase_version: "v0.61.2.6"                       # aligned with default.config.yml (source of truth — bump there too)
 metabase_port: 3002
 metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
 metabase_db_name: "metabase"

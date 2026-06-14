@@ -11,7 +11,7 @@
 # be revisited when Uptime Kuma v2.x ships stable OIDC.
 # ==============================================================================
 
-uptime_kuma_version: "1"                            # major-locked v1.x (last stable line).
+uptime_kuma_version: "1"                            # major-locked v1.x (last stable line).; default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 # NOTE (C1 2026-05-25): v1.x is EOL upstream; only v2.x gets updates. v2.x is a
 # breaking major (data migration + native OIDC). Staying on "1" (functional,
 # forward_auth-gated) is a deliberate decision — migrating to v2.x is a separate

@@ -53,6 +53,25 @@ def _scan_versions(path):
     return out
 
 
+# a role-default version line is "annotated" when it (or the line directly
+# above it) names the canonical layer. The source-of-truth comment makes the
+# shadow visible at the edit site, so an operator bumping the role default sees
+# the warning that default.config.yml outranks it.
+def _annotated_version_vars(path):
+    annotated = set()
+    with open(path) as fh:
+        lines = fh.read().splitlines()
+    for i, line in enumerate(lines):
+        m = _VER_RE.match(line)
+        if not m:
+            continue
+        tail = line.split("#", 1)[1].lower() if "#" in line else ""
+        prev = lines[i - 1].lower() if i > 0 else ""
+        if "default.config" in tail or "config.yml" in tail or "default.config" in prev:
+            annotated.add(m.group(1))
+    return annotated
+
+
 def _config_versions():
     return _scan_versions(os.path.join(ROOT, "default.config.yml"))
 
@@ -78,6 +97,25 @@ def test_no_unlisted_version_pin_shadow():
         "INTENTIONAL_SHADOW with a reason:\n  " + "\n  ".join(
             "%s: config=%r role=%r" % (v, mismatches[v][0], mismatches[v][1])
             for v in unlisted))
+
+
+def test_dual_pinned_role_defaults_point_to_config():
+    """Every role default shadowed by default.config.yml must carry a
+    source-of-truth comment at the edit site, so a bump there can't be a silent
+    dead pin. Adds the contract the n8n RCE incident exposed: the comment is not
+    decorative — it's the visible warning that default.config.yml outranks."""
+    cfg = _config_versions()
+    missing = []
+    for f in sorted(glob.glob(os.path.join(ROOT, "roles", "pazny.*", "defaults", "main.yml"))):
+        role_vars = _scan_versions(f)
+        annotated = _annotated_version_vars(f)
+        for var in role_vars:
+            if var in cfg and var not in annotated:
+                missing.append("%s in %s" % (var, os.path.relpath(f, ROOT)))
+    assert not missing, (
+        "Dual-pinned role-default version line lacks a 'default.config.yml' "
+        "source-of-truth comment (config OUTRANKS the role default — bumping "
+        "only here is a dead pin). Annotate each:\n  " + "\n  ".join(missing))
 
 
 def test_intentional_shadow_list_has_no_rot():

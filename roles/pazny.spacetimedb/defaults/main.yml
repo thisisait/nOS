@@ -24,7 +24,7 @@
 # NOT enabled to keep port 5432 free for pazny.postgresql.
 # ==============================================================================
 
-spacetimedb_version: "latest"                    # pin to a specific tag (e.g. "1.5") for production
+spacetimedb_version: "latest"                    # pin to a specific tag (e.g. "1.5") for production; aligned with default.config.yml (source of truth — bump there too)
 spacetimedb_port: 3030                           # host port → container 3000 (HTTP + WebSocket)
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_data_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/data"
