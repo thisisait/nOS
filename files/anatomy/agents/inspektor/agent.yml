@@ -58,3 +58,9 @@ metadata:
   ceremony_role: pentest-survey
   runner_status: deferred
   deferred_reason: needs trivy / grype / nuclei substrate integration
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "Contract-only (no live runner). Reserved: pentest survey completed, posted as events."
+  exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced findings requiring operator review."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."

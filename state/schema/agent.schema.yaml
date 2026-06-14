@@ -255,3 +255,49 @@ properties:
     type: object
     additionalProperties: true
     description: "Free-form key/value pairs, surfaced in Wing /agents UI."
+  exit_code_semantics:
+    type: object
+    additionalProperties: false
+    description: |
+      Per-agent exit-code contract (agent-exit-code-semantics, 2026-06-14).
+      pulse-run-agent.sh maps the process exit to A9 notification severity:
+        0    — success, no notification
+        1    — actionable findings, fires HIGH-severity notification
+        2+   — environment / auth / Wing error, fires CRITICAL notification
+      The runner's trichotomy is fixed; this block documents what exit 1
+      MEANS for THIS agent so the operator knows a HIGH notification is
+      "awaiting your review" vs an outright failure. A review-capable agent
+      (one whose system prompt emits the `NOS_AGENT_EXIT: 1` sentinel) MUST
+      declare exit_1 here; the gate test_agent_exit_semantics_documented
+      pins that. Prose-only agents (exit 0 always) still declare the block
+      so the contract is explicit, not assumed.
+    required:
+      - exit_0
+      - exit_1
+      - exit_2
+    properties:
+      exit_0:
+        type: string
+        minLength: 8
+        description: "What a clean exit 0 means for this agent."
+      exit_1:
+        type: string
+        minLength: 8
+        description: |
+          What exit 1 means — fires a HIGH-severity A9 notification. State
+          plainly that it is operator-review, not a failure (e.g. 'proposed
+          fixes pending approval in /approvals', 'detected drift requiring a
+          human decision'). For prose-only agents that never emit the
+          NOS_AGENT_EXIT sentinel, say so ('does not emit exit 1').
+      exit_2:
+        type: string
+        minLength: 8
+        description: "What exit 2+ means — fires a CRITICAL A9 notification."
+      emits_sentinel:
+        type: boolean
+        default: false
+        description: |
+          True when the agent's system prompt instructs the model to end its
+          report with the `NOS_AGENT_EXIT: N` sentinel that pulse-run-agent.sh
+          lifts into the process exit. False for prose-only agents (conductor)
+          that always exit 0 unless the runner itself errors.

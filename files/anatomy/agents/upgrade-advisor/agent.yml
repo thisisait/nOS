@@ -49,3 +49,9 @@ vault:
 metadata:
   ait_phase: W5-B4
   ceremony_role: upgrade-planning
+
+exit_code_semantics:
+  emits_sentinel: true
+  exit_0: "Nothing needed queueing (or only routine upgrades); the version matrix is at target."
+  exit_1: "Queued upgrade(s) pending operator review — apply via `ansible-playbook main.yml --tags upgrade`. Operator-review, not a failure. Fires a HIGH A9 notification."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."

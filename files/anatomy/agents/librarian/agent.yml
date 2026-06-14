@@ -56,3 +56,9 @@ metadata:
   ceremony_role: rag-recall
   runner_status: deferred
   deferred_reason: needs Qdrant corpus population pipeline
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "Contract-only (no live runner). Reserved: RAG recall completed, context posted as events."
+  exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced prior-art requiring operator review."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."

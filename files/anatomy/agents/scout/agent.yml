@@ -52,3 +52,9 @@ vault:
 metadata:
   ait_phase: A9.4
   ceremony_role: drift-visibility
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "Drift survey completed; delta report posted as events. Prose-only — exits 0 even when drift is detected (the operator decides whether drift is intentional)."
+  exit_1: "Does not emit exit 1. Detected drift lives in the report body for a human decision, not in the process exit."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."

@@ -47,3 +47,9 @@ vault:
 metadata:
   ait_phase: A8
   ceremony_role: first-non-operator-write
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "Self-test ceremony completed; health report posted as events. Prose-only — conductor always exits 0 unless the runner itself errors."
+  exit_1: "Does not emit exit 1. Conductor posts a markdown report, not a sentinel; findings live in the report body, not the process exit."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh (token, HMAC, claude CLI). Fires a CRITICAL A9 notification."

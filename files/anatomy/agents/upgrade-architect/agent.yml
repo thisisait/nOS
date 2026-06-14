@@ -47,3 +47,9 @@ vault:
 metadata:
   ait_phase: W5-B5
   ceremony_role: recipe-authoring
+
+exit_code_semantics:
+  emits_sentinel: true
+  exit_0: "Full recipe coverage; nothing needed drafting for the running version matrix."
+  exit_1: "Drafted recipe(s) / queued coexistence prep pending operator review in the report body. Operator-review, not a failure. Fires a HIGH A9 notification."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."

@@ -50,3 +50,9 @@ vault:
 metadata:
   ait_phase: A9.3
   ceremony_role: security-finding-triage
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "Triaged all open security findings; remediation proposals posted as events. Prose-only — exits 0 even when proposals exist (the operator decides what to apply)."
+  exit_1: "Does not emit exit 1. Proposals never auto-apply; they live in the report body for operator review, not in the process exit."
+  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
