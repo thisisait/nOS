@@ -122,3 +122,17 @@ Still open:
   provider (id `<outpost_uuid>:<provider_pk>`), so the adopt path lands the
   attachments in state instead of planning them as `N to add`. Gate:
   `test_tofu_registry_bridge.py::test_adopt_emits_attachment_imports`.
+
+## State files in `terraform/authentik/` — which is live
+
+The active state is **`terraform.tfstate`** (the most recently mtime'd one).
+OpenTofu writes a `terraform.tfstate.<epoch>.backup` on every apply, so the
+directory accumulates dozens of timestamped `*.backup` files over a working
+session. **They are transient and safe to delete** — read-only snapshots that no
+apply ever reads back; only `terraform.tfstate` is authoritative. They are
+gitignored (`terraform/**/terraform.tfstate.*`), so they never reach git, and a
+`blank=true` run wipes them all (`tasks/blank-reset.yml` now globs
+`terraform.tfstate.*.backup` alongside the singular `.backup`, pinned by
+`test_blank_reset_tofu_backups.py`). Nightly custody captures only the live
+`terraform.tfstate` (+ the singular `.backup`) via `run_tofu_state()` — not the
+timestamped pile.

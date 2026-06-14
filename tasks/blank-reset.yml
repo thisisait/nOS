@@ -180,6 +180,27 @@
     - terraform.tfstate.backup
   when: (authentik_engine | default('blueprint')) == 'tofu' or (manage_authentik_with_tofu | default(false) | bool)
 
+# OpenTofu writes a timestamped terraform.tfstate.<epoch>.backup on every apply.
+# These accumulate in the repo working tree (gitignored, but they pile up and
+# muddy which state is live). The reset above only removes the singular backup,
+# so wipe the timestamped ones too — keeping the blank's wipe-all contract honest.
+- name: "[BLANK] Find timestamped OpenTofu Authentik backups"
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/terraform/authentik"
+    patterns: "terraform.tfstate.*.backup"
+    use_regex: false
+  register: _blank_tofu_backups
+  when: (authentik_engine | default('blueprint')) == 'tofu' or (manage_authentik_with_tofu | default(false) | bool)
+
+- name: "[BLANK] Remove timestamped OpenTofu Authentik backups"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _blank_tofu_backups.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: (authentik_engine | default('blueprint')) == 'tofu' or (manage_authentik_with_tofu | default(false) | bool)
+
 # ── 5. Nginx - reset configuration ──────────────────────────────────────
 - name: "[BLANK] Remove nginx sites-enabled symlinks"
   ansible.builtin.shell: "rm -f {{ homebrew_prefix }}/etc/nginx/sites-enabled/*.conf"
