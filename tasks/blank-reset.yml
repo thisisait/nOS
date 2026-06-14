@@ -403,6 +403,13 @@
         (install_miniflux | default(false)) | ternary(
           [], [])
         +
+        (install_snappymail | default(false)) | ternary(
+          [snappymail_data_dir | default(ansible_facts['env']['HOME'] + '/snappymail')], [])
+        +
+        (install_spacetimedb | default(false)) | ternary(
+          [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
+           spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')], [])
+        +
         (install_mcp_gateway | default(false)) | ternary(
           [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
         +
