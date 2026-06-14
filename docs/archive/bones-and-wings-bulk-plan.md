@@ -2,8 +2,8 @@
 
 > Coordination plan for parallel agentic implementation of the
 > remaining anatomy phases. Authoritative status pointer:
-> [`docs/active-work.md`](active-work.md). Architecture + phase
-> tracker: [`docs/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).
+> [`docs/active-work.md`](../active-work.md). Architecture + phase
+> tracker: [`docs/bones-and-wings-refactor.md`](../bones-and-wings-refactor.md).
 >
 > **Current state (2026-05-05):** Lanes A (A3.5 Wing host-revert) and D
 > (A6.5 Grafana thin-role pilot) shipped and are deleted from this
@@ -11,7 +11,7 @@
 > + D-series (central authentik retirement) + β1 (SSO trichotomy)
 > shipped post-Lane-D. **Forward lanes:** B (Pulse Wing API), C (A5
 > contracts), E (A7 gitleaks), F (A8 conductor), G (A9 notifications),
-> H (A10 audit). Worker doctrine: [`docs/multi-agent-batch.md`](multi-agent-batch.md).
+> H (A10 audit). Worker doctrine: [`docs/multi-agent-batch.md`](../multi-agent-batch.md).
 
 ---
 

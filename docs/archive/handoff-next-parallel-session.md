@@ -7,7 +7,7 @@
 > * **Track B (AgentKit follow-ups)** — DONE.
 > * **Track C (Phase 5 ceremony)** — IN-FLIGHT, awaits operator-driven run.
 >
-> See [`docs/active-work.md`](active-work.md) for the current pointer.
+> See [`docs/active-work.md`](../active-work.md) for the current pointer.
 > This file is kept as the as-shipped record of the session's intent.
 
 **Read this first. Then load `CLAUDE.md` and `docs/multi-agent-batch.md` before spawning workers.**

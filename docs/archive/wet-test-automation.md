@@ -3,7 +3,7 @@
 > **Status:** scaffolding only (this batch). Full implementation post-H.
 >
 > Operator-driven motivation (2026-04-29): walking
-> [`docs/tier2-wet-test-checklist.md`](tier2-wet-test-checklist.md) by
+> [`docs/tier2-wet-test-checklist.md`](../tier2-wet-test-checklist.md) by
 > hand after every blank is necessary today but won't scale. Once the
 > nOS catalog grows past 5-10 Tier-2 apps, we need a Playwright suite +
 > Claude Cowork session that drives the 12 checklist sections
@@ -159,12 +159,12 @@ Post-Track-E batch the scaffolding got two real layers:
 
 - **`tools/post-blank.sh`** — operator-facing single-entry-point runner
   (wet pytest → nos-smoke → Wing UI deep-links). Documented in
-  [`docs/post-blank.md`](post-blank.md).
+  [`docs/post-blank.md`](../post-blank.md).
 - **`tests/wet/test_post_blank_state.py`** — 14 deterministic Python
   tests covering checklist sections 6/7/9 (SQLite GDPR rows, Bone JSONL
   events, smoke catalog runtime). These ARE active; they SKIP pre-blank
   and FAIL under `NOS_WET=1`.
-- **[`docs/archive/cowork-wet-test-prompt.md`](archive/cowork-wet-test-prompt.md)** —
+- **[`docs/archive/cowork-wet-test-prompt.md`](cowork-wet-test-prompt.md)** —
   the Cowork dispatch prompt; ready to paste into a Cowork session.
 
 What's still scaffold (= Track P proper, post-H): the Playwright
@@ -189,7 +189,7 @@ other sections have working automation today.
 - Cowork session can drive a full wet-test from "blank just finished"
   to "all green, branch ready for review" hands-free
 - Documented Cowork prompt template lives at
-  [`docs/archive/cowork-wet-test-prompt.md`](archive/cowork-wet-test-prompt.md) ✅
+  [`docs/archive/cowork-wet-test-prompt.md`](cowork-wet-test-prompt.md) ✅
   (drafted 2026-05-03)
 - Operator reports a successful end-to-end Cowork-driven wet test in
   a Decision log entry

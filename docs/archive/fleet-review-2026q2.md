@@ -5,7 +5,7 @@
 > server-client / mesh) — maybe it's called something else now, do a review."*
 >
 > This is that review. It reconciles the aspirational design
-> ([fleet-architecture.md](fleet-architecture.md)) with what the code actually
+> ([fleet-architecture.md](../fleet-architecture.md)) with what the code actually
 > does today, confirms the naming, maps the three topologies onto the existing
 > substrate, and recommends a phased path. **No live config was broken — the
 > staleness this review was expected to find mostly isn't real (see §5).**

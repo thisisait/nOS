@@ -109,3 +109,41 @@ def test_no_gitignored_remember_dir_references():
         "exists in the tree, so the link is dead; remove it:\n"
         + "\n".join(f"{f}\n" + "\n".join(lines) for f, lines in offenders.items())
     )
+
+
+# WHY (2026-06-14): docs/archive/ files were moved into the archive subdir but
+# their inline links kept bare filenames (e.g. `[active-work.md](active-work.md)`)
+# that point at sibling docs which actually live in the parent docs/ dir. From
+# docs/archive/ a bare `active-work.md` resolves to the non-existent
+# docs/archive/active-work.md, handing a 404 to anyone reading the archive in a
+# markdown viewer (GitHub UI / local renderer). Fixed by `../`-prefixing the
+# links to docs/<file>. This gate pins it: every relative .md link in
+# docs/archive/ MUST resolve to a file that exists on disk.
+ARCHIVE_DIR = REPO / "docs" / "archive"
+
+# Inline-link target capture: `](target)` where target is a relative path.
+# Skips absolute URLs (http/https/mailto), in-page anchors (#...), and
+# protocol-relative (//...).
+_MD_LINK = re.compile(r"\]\((?![a-z]+:|#|//)([^)#]+?\.md)(?:#[^)]*)?\)")
+
+
+def test_archive_relative_md_links_resolve():
+    """Every relative .md link inside docs/archive/ must resolve to a real file."""
+    if not ARCHIVE_DIR.is_dir():
+        return
+    offenders: dict[str, list[str]] = {}
+    for path in sorted(ARCHIVE_DIR.glob("*.md")):
+        for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+            for target in _MD_LINK.findall(line):
+                resolved = (path.parent / target).resolve()
+                if not resolved.is_file():
+                    rel = str(path.relative_to(REPO))
+                    offenders.setdefault(rel, []).append(
+                        f"  L{lineno}: link target '{target}' does not resolve "
+                        f"(→ {resolved})"
+                    )
+    assert not offenders, (
+        "Broken relative .md link(s) in docs/archive/ — archived docs sit one "
+        "level below docs/, so links to sibling guides need a `../` prefix:\n"
+        + "\n".join(f"{f}\n" + "\n".join(lines) for f, lines in offenders.items())
+    )
