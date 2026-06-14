@@ -116,6 +116,15 @@ aggregates:
   - from: consumer_block
     block_path: ui-extension
     output_var: hub_cards
+  # phi-hub-card-icon-gap (2026-06-14): harvest each installed peer's top-level
+  # `kind: backend` flag so /hub suppresses tiles for services with a domain
+  # route but no browser-root UI (daemons / APIs / OGC endpoints). Replaces the
+  # hardcoded HubPresenter::BACKEND_ONLY_SLUGS allow-list — a new backend plugin
+  # now auto-hides via its manifest, no PHP edit. Feature-flag gated like the
+  # hub_card harvest, so a disabled backend never lands in the sidecar.
+  - from: consumer_kind
+    block_path: kind
+    output_var: backend_kinds
 
 # Render target for the routing sidecar (read by Bone's clients/wing.py at
 # notification-insert time when the emitter omits explicit channels).
@@ -128,11 +137,17 @@ provisioning:
   hub_cards:
     template: templates/hub-cards.json.j2
     target: "{{ wing_home }}/app/data/hub-cards.json"
+  # phi-hub-card-icon-gap: the harvested `kind: backend` slugs, read by
+  # HubPresenter to suppress non-clickable tiles (dynamic allow-list).
+  backend_slugs:
+    template: templates/backend-slugs.json.j2
+    target: "{{ wing_home }}/app/data/backend-slugs.json"
 
 lifecycle:
   post_compose:
     - render: provisioning.notification_routing
     - render: provisioning.hub_cards
+    - render: provisioning.backend_slugs
 
 # =============================================================================
 # PULSE JOB — notification dispatch worker (Anatomy A9, 2026-05-16)

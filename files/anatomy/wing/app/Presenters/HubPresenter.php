@@ -29,8 +29,13 @@ final class HubPresenter extends BasePresenter
 	 * Backend services with no clickable browser UI; surface in /docker ps/
 	 * Grafana Explore, not in /hub. (2026-05-29: caught by the URL audit gate
 	 * as hard 404s on the public host — they have domain routes but no root.)
-	 * TODO: promote to a `kind: backend` flag on the plugin manifest so the
-	 * harvest can author this; today it's a small allow-list.
+	 *
+	 * phi-hub-card-icon-gap (2026-06-14): the authoritative list is now the
+	 * plugin-harvested `kind: backend` flag, rendered to backend-slugs.json by
+	 * the wing-base aggregator and read by backendOnlySlugs(). A new backend
+	 * plugin auto-hides via its manifest — no PHP edit. This constant survives
+	 * ONLY as the floor for non-plugin host services (nginx has no manifest)
+	 * and as the fallback when the sidecar is absent (older deploy).
 	 */
 	private const BACKEND_ONLY_SLUGS = [
 		'bluesky_pds', 'loki', 'tempo', 'prometheus', 'alloy', 'nginx',
@@ -38,6 +43,43 @@ final class HubPresenter extends BasePresenter
 		// surfaced by the all-on URL audit gate 2026-05-29.
 		'qgis_server',
 	];
+
+	/** Host services with no plugin manifest → can't carry `kind: backend`. */
+	private const BACKEND_NON_PLUGIN_FLOOR = ['nginx'];
+
+	/** @var list<string>|null memoised union of harvested slugs + the floor */
+	private ?array $backendOnly = null;
+
+	/**
+	 * Backend-only slugs: the plugin-harvested `kind: backend` list (from
+	 * backend-slugs.json) UNIONed with the non-plugin host floor. Falls back to
+	 * the full hardcoded constant when the sidecar is missing, so an older
+	 * deploy never regresses to showing 404-ing tiles.
+	 *
+	 * @return list<string>
+	 */
+	private function backendOnlySlugs(): array
+	{
+		if ($this->backendOnly !== null) {
+			return $this->backendOnly;
+		}
+		$dir = getenv('WING_DATA_DIR') ?: dirname(__DIR__, 2) . '/data';
+		$path = rtrim($dir, '/') . '/backend-slugs.json';
+		$harvested = [];
+		if (is_file($path)) {
+			$doc = json_decode((string) @file_get_contents($path), true);
+			if (is_array($doc) && is_array($doc['backend_slugs'] ?? null)) {
+				$harvested = array_map('strval', $doc['backend_slugs']);
+			}
+		}
+		// No sidecar (or empty) → fall back to the full hardcoded list so the
+		// gate never weakens; sidecar present → harvested + non-plugin floor.
+		$base = $harvested === [] ? self::BACKEND_ONLY_SLUGS : $harvested;
+		$this->backendOnly = array_values(array_unique(
+			array_merge($base, self::BACKEND_NON_PLUGIN_FLOOR)
+		));
+		return $this->backendOnly;
+	}
 
 	public function renderDefault(): void
 	{
@@ -50,11 +92,12 @@ final class HubPresenter extends BasePresenter
 		// (postgresql/redis/mariadb/dnsmasq — no domain_url, only ip_url) and
 		// backend services without a root UI. Render-time only; no DB write.
 		$cardsBySlug = $this->cards->bySlug();
-		$isClickable = static function (array $sys): bool {
+		$backendOnly = $this->backendOnlySlugs();
+		$isClickable = static function (array $sys) use ($backendOnly): bool {
 			if (empty($sys['domain_url'])) {
 				return false;   // TCP-only / no public host
 			}
-			if (in_array($sys['id'] ?? '', self::BACKEND_ONLY_SLUGS, true)) {
+			if (in_array($sys['id'] ?? '', $backendOnly, true)) {
 				return false;   // backend; surfaces via Grafana / clients
 			}
 			return true;

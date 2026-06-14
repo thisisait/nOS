@@ -20,6 +20,11 @@
     "description": {"type": "string"},
     "upstream": {"type": "string", "format": "uri"},
     "license": {"type": "string"},
+    "kind": {
+      "type": "string",
+      "enum": ["backend"],
+      "description": "Optional service-class marker harvested by the wing-base aggregator into backend-slugs.json. `backend`: the service has a domain route but no clickable browser-root UI (daemon / API / OGC endpoint) — Wing's /hub must suppress its tile (surfaces via Grafana Explore / native clients instead). Replaces the hardcoded HubPresenter::BACKEND_ONLY_SLUGS allow-list (phi-hub-card-icon-gap). Non-plugin host services (e.g. nginx) keep a minimal HubPresenter floor since they have no manifest."
+    },
     "type": {
       "type": "array",
       "minItems": 1,
@@ -51,7 +56,7 @@
         "required": ["from", "block_path", "output_var"],
         "additionalProperties": false,
         "properties": {
-          "from":       {"type": "string", "enum": ["consumer_block", "agent_profile", "app_manifest"]},
+          "from":       {"type": "string", "enum": ["consumer_block", "agent_profile", "app_manifest", "consumer_kind"], "description": "Harvest source. consumer_block/agent_profile/app_manifest harvest a DICT block by block_path; consumer_kind (phi-hub-card-icon-gap) harvests a top-level SCALAR field (e.g. `kind`) from each peer into {slug, <block_path>} entries."},
           "block_path": {"type": "string", "description": "Top-level key in target manifests to harvest (e.g. 'authentik')."},
           "output_var": {"type": "string", "description": "Where to deposit the aggregated list on this plugin's inputs.<output_var>."}
         }

@@ -25,6 +25,11 @@ description: |
 upstream: https://atproto.com/
 license: MIT
 
+# Backend service — AT Protocol PDS, interacted with via AT clients, no
+# browser-root UI. wing-base harvests this into backend-slugs.json so /hub
+# suppresses the tile (phi-hub-card-icon-gap; was BACKEND_ONLY_SLUGS).
+kind: backend
+
 type:
   - service
   - ui-extension

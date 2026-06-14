@@ -33,11 +33,34 @@ import pytest
 HARD_FAIL = {"404", "500", "502", "503", "ERR", "000"}
 OK_STATUSES = {"200", "301", "302", "307", "401", "403"}
 
-# Mirror HubPresenter::BACKEND_ONLY_SLUGS so the gate audits exactly what /hub
+# Mirror HubPresenter's backend-only set so the gate audits exactly what /hub
 # actually renders (otherwise it false-positives on systems the operator never
-# sees in the UI). When a slug is promoted to a manifest `kind: backend` flag,
-# both lists collapse to the manifest read.
-_BACKEND_ONLY = {"bluesky_pds", "loki", "tempo", "prometheus", "alloy", "nginx", "qgis_server"}
+# sees in the UI). phi-hub-card-icon-gap (2026-06-14): the list is now the
+# plugin-harvested `kind: backend` flag (run the real loader + render) UNIONed
+# with the non-plugin host floor (nginx has no manifest) — both lists collapsed
+# to the manifest read, no more duplicated hardcoded allow-list.
+def _backend_only() -> set[str]:
+    import json as _json
+    import pathlib
+    import sys as _sys
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    _sys.path.insert(0, str(repo / "files/anatomy/module_utils"))
+    import load_plugins as lp  # noqa: E402
+
+    plugins = lp.discover(repo / "files/anatomy/plugins")
+    lp.run_aggregators(plugins)
+    wing = next(p for p in plugins if p.name == "wing-base")
+    entries = wing.inputs.get("backend_kinds", [])
+    slugs = {
+        str(e["slug"]).replace("-", "_")
+        for e in entries
+        if e.get("kind") == "backend" and "slug" in e
+    }
+    return slugs | {"nginx"}  # non-plugin host floor (HubPresenter)
+
+
+_BACKEND_ONLY = _backend_only()
 
 
 def _wing_token() -> str | None:

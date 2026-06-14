@@ -24,6 +24,12 @@ description: |
 upstream: https://docs.qgis.org/latest/en/docs/server_manual/
 license: GPL-2.0-or-later
 
+# Backend service — OGC WMS/WFS/WCS endpoints under /ows, no browser-root UI.
+# Carries a hub_card for icon/metadata, but `kind: backend` makes wing-base
+# harvest it into backend-slugs.json so /hub suppresses the (404-ing) tile
+# (phi-hub-card-icon-gap; was HubPresenter::BACKEND_ONLY_SLUGS).
+kind: backend
+
 type:
   - service
   - ui-extension

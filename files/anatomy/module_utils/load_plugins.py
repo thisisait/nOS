@@ -310,6 +310,27 @@ def run_aggregators(plugins: list[Plugin],
                         block.setdefault("slug", p.name.replace("-base", ""))
                         block.setdefault("plugin_name", p.name)
                         harvested.append(block)
+            elif from_kind == "consumer_kind":
+                # phi-hub-card-icon-gap: harvest a top-level SCALAR manifest
+                # field (e.g. `kind: backend`) from every installed peer into
+                # a list of {slug, <block_path>} entries. Honors the same
+                # feature_flag gate as consumer_block, so a disabled backend
+                # service never lands in backend-slugs.json (mirrors the
+                # hub_card harvest semantics). Wing's /hub reads the rendered
+                # sidecar instead of the hardcoded BACKEND_ONLY_SLUGS list.
+                for p in plugins:
+                    if p.name == source.name:
+                        continue
+                    flag = (p.requires or {}).get("feature_flag")
+                    if tvars and flag and flag in tvars and not tvars.get(flag):
+                        continue
+                    val = p.manifest.get(block_path)
+                    if isinstance(val, str) and val:
+                        harvested.append({
+                            "slug": p.name.replace("-base", ""),
+                            "plugin_name": p.name,
+                            block_path: val,
+                        })
             elif from_kind == "agent_profile":
                 for ap in agent_profiles:
                     block = ap.get(block_path)

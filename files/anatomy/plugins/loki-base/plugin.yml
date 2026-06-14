@@ -23,6 +23,11 @@ description: |
 upstream: https://grafana.com/oss/loki/
 license: AGPL-3.0
 
+# Backend daemon — log store queried via Grafana Explore, no browser-root UI.
+# wing-base harvests this into backend-slugs.json so /hub suppresses the tile
+# (phi-hub-card-icon-gap; was HubPresenter::BACKEND_ONLY_SLUGS).
+kind: backend
+
 type:
   - service
 
