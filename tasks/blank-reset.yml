@@ -48,7 +48,7 @@
       ║  Will remain:                                                      ║
       ║    - ~/media/ (movies, music), ~/calibre/ (books)                  ║
       ║    - ~/.ollama/ (models — add flush_ollama=true to wipe)           ║
-      ║    - Homebrew packages (deep cleans cache, keeps packages)         ║
+      ║  {{ "- Homebrew packages kept (flush=deep also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
       ║                                                                    ║
       ║  After reset the playbook reinstalls everything with clean data.   ║
       ╚══════════════════════════════════════════════════════════════════════╝
@@ -81,6 +81,7 @@
     - iiab
     - observability
     - infra
+    - apps
     - devops
     - b2b
     - voip
