@@ -993,13 +993,14 @@
       "current_version": "0.6.35",
       "fix_version": null,
       "remediation_type": "config_change",
-      "remediation_detail": "PENTEST FINDING: Tool results re-injected as user messages enable multi-hop prompt injection. External data from tool responses can drive up to 30 rounds of tool execution via CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES=30. Mitigation: Reduce CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES to a lower value (e.g., 5). Be cautious with tools that fetch external content.",
-      "status": "pending",
+      "remediation_detail": "PENTEST FINDING: Tool results re-injected as user messages enable multi-hop prompt injection. External data from tool responses can drive up to 30 rounds of tool execution via CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES=30. Mitigation: Reduce CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES to a lower value (e.g., 5). Be cautious with tools that fetch external content. | RESOLVED 2026-06-14: roles/pazny.open_webui/templates/compose.yml.j2 pins CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES to {{ openwebui_max_tool_call_retries | default(5) }} (hardened default 5 vs upstream 30), operator-overridable via config.yml. Pinned by tests/anatomy/test_openwebui_tool_call_retries_capped.py.",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "pentest:code_review:openwebui-multi-hop-prompt-injection",
       "confidence": "medium",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_at": "2026-06-14T00:00:00Z"
     },
     {
       "id": "REM-056",
