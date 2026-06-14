@@ -7,4 +7,3 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
     restart bluesky-pds
-  failed_when: false

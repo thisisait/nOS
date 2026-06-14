@@ -8,4 +8,3 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
     restart woodpecker-server woodpecker-agent
-  failed_when: false

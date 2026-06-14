@@ -6,4 +6,3 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
     restart loki
-  failed_when: false

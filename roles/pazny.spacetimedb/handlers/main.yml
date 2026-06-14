@@ -3,4 +3,3 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
     restart spacetimedb
-  failed_when: false
