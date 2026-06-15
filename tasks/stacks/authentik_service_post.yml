@@ -144,55 +144,48 @@
 # local login form still worked, so a dead SSO went unnoticed. Mirrors the loud
 # verify in roles/pazny.portainer/tasks/post.yml.
 
-- name: "[Authentik->Portainer] Obtain admin JWT for verify"
+# ROBUST VERIFY via the UNAUTHENTICATED /api/settings/public endpoint.
+# The old verify obtained an admin JWT (POST /api/auth with the admin password)
+# to read /api/settings — but once OAuth2 is configured the internal admin login
+# can 422 (password drift, or Portainer rejecting internal auth), so a JWT was
+# unobtainable and the verify FAILED the converge even though SSO was ACTIVE
+# (live 2026-06-15: /api/auth=422 yet /api/settings/public AuthenticationMethod=3).
+# That coupled SSO verification to the admin-password state — the wrong invariant.
+# /api/settings/public returns AuthenticationMethod WITHOUT auth, so the check is
+# now password-independent: it fails ONLY when SSO is genuinely not active (≠3),
+# never on a password the verify can't use.
+- name: "[Authentik->Portainer] Read public settings (unauth — AuthenticationMethod)"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
-    method: POST
-    body_format: json
-    body:
-      Username: "admin"
-      Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings/public"
+    method: GET
     status_code: [200]
     timeout: 10
-  register: _portainer_verify_auth
+  register: _portainer_public
   when: install_portainer | default(false)
   failed_when: false
-  no_log: true
 
-- name: "[Authentik->Portainer] Verify AuthenticationMethod == 3 (OAuth2)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings"
-    method: GET
-    headers:
-      Authorization: "Bearer {{ _portainer_verify_auth.json.jwt | default('') }}"
-    status_code: [200]
-    timeout: 10
-  register: _portainer_oauth_verify
-  when:
-    - install_portainer | default(false)
-    - _portainer_verify_auth.json.jwt | default('') | length > 0
-  failed_when:
-    - _portainer_oauth_verify.status | default(0) != 200
-      or (_portainer_oauth_verify.json.AuthenticationMethod | default(0) | int) != 3
-
-- name: "[Authentik->Portainer] Fail if SSO could not be verified"
+- name: "[Authentik->Portainer] Fail if SSO is NOT active (AuthenticationMethod != 3)"
   ansible.builtin.fail:
     msg: >-
-      Portainer SSO verify FAILED — could not obtain an admin JWT to read
-      /api/settings, so AuthenticationMethod==3 (OAuth2) is UNCONFIRMED.
-      The local login form still works, so this would otherwise hide a dead
-      SSO. Check the portainer admin password and post.yml PUT /api/settings.
+      Portainer SSO verify FAILED — /api/settings/public reports
+      AuthenticationMethod={{ _portainer_public.json.AuthenticationMethod | default('unreadable') }}
+      (expected 3 = OAuth2). SSO is genuinely NOT active: the OAuth config
+      (roles/pazny.portainer post.yml PUT /api/settings) did not take, or
+      Portainer is not answering on :{{ portainer_port | default(9002) }}.
+      This reads the UNAUTHENTICATED public endpoint, so it is independent of the
+      admin password — a password drift no longer false-fails it.
   when:
     - install_portainer | default(false)
-    - (_portainer_verify_auth.json.jwt | default('') | length) == 0
+    - (_portainer_public.json.AuthenticationMethod | default(0) | int) != 3
 
 - name: "[Authentik->Portainer] OAuth2 status"
   ansible.builtin.debug:
     msg: >-
       Portainer SSO: OK — AuthenticationMethod=3 (OAuth2) active
+      (verified via unauthenticated /api/settings/public; password-independent)
   when:
     - install_portainer | default(false)
-    - (_portainer_oauth_verify.json.AuthenticationMethod | default(0) | int) == 3
+    - (_portainer_public.json.AuthenticationMethod | default(0) | int) == 3
 
 # ── Nextcloud: occ commands for user_oidc app ───────────────────────────────
 
