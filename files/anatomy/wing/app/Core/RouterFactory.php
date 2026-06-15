@@ -143,6 +143,10 @@ final class RouterFactory
 		$router->addRoute('migrations/<id>', 'Migrations:detail');
 		$router->addRoute('migrations', 'Migrations:default');
 		$router->addRoute('upgrades/<service>/<recipe>/queue', 'Upgrades:queueUpgrade');
+		// B4b: plan-choice modal commit target (migration in-place vs coexist).
+		// Browser CSRF form POSTs here; before /<service> + /<service>/<recipe>
+		// forms so 'plan-choice' isn't swallowed (Nette first-match-wins).
+		$router->addRoute('upgrades/<service>/<recipe>/plan-choice', 'Upgrades:planChoice');
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');

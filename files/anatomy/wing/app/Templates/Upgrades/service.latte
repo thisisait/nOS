@@ -3,6 +3,7 @@
 {block content}
 <link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
 <link rel="stylesheet" href="/assets/upgrades.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/coexistence.css?v={$basePath}">
 
 <div style="margin-bottom:12px">
 	<a href="/upgrades" style="font-size:12px;color:var(--text2)">&larr; All services</a>
@@ -54,12 +55,28 @@
 					</div>
 				{/if}
 				<div class="upg-recipe-actions">
+					{* B4b: Plan opens the plan-choice modal (migration in-place vs
+					   coexist + data copy). data-coexist-supported gates option (b);
+					   data-target seeds the coexistence port/version. The <noscript>
+					   below is the JS-off in-place fallback (queues migration mode). *}
 					<button type="button"
 							class="mig-btn"
-							data-action="plan"
+							data-action="open-plan-choice"
 							data-service="{$service}"
 							data-recipe-id="{$r['id']}"
+							data-target="{$r['to'] ?? ''}"
+							data-coexist-supported="{if !empty($r['coexistence_supported'])}1{else}0{/if}"
 							aria-label="Plan upgrade {$r['id']}">Plan</button>
+					<noscript>
+						<form method="post"
+							  action="{plink Upgrades:planChoice, service => $service, recipe => $r['id']}"
+							  style="display:inline">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							<input type="hidden" name="plan_mode" value="migration">
+							<input type="hidden" name="target_version" value="{$r['to'] ?? ''}">
+							<button type="submit" class="mig-btn" title="Queue in-place migration (JS off)">Plan (in-place)</button>
+						</form>
+					</noscript>
 					<button type="button"
 							class="mig-btn mig-btn-primary"
 							data-action="apply-upgrade"
@@ -81,5 +98,8 @@
 	{/foreach}
 {/if}
 
+{include '@plan-choice-modal.latte'}
+
 <script src="/assets/migrations.js?v={$basePath}" defer></script>
+<script src="/assets/upgrades-plan-choice.js?v={$basePath}" defer></script>
 {/block}

@@ -3,6 +3,7 @@
 {block content}
 <link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
 <link rel="stylesheet" href="/assets/upgrades.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/coexistence.css?v={$basePath}">
 
 <div class="upg-page-header">
 	<div>
@@ -72,11 +73,27 @@
 					{if !empty($row['planned'])}
 						<span class="badge badge-warning" title="Queued by {$row['planned_by']} — applies under --tags upgrade">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</span>
 					{elseif !empty($row['recipe_available']) && !empty($row['recipes'])}
-						<form method="post" action="{plink Upgrades:queueUpgrade, service => $row['service'], recipe => $row['recipes'][0]['recipe_id']}" style="display:inline">
-							<input type="hidden" name="_csrf" value="{$csrfToken}">
-							<input type="hidden" name="target_version" value="{$row['latest'] ?? ''}">
-							<button type="submit" class="mig-btn" title="Queue {$row['recipes'][0]['recipe_id']} → applied under --tags upgrade">Plan</button>
-						</form>
+						{* B4b: Plan opens the plan-choice modal. The matrix recipe rows
+						   (DB upgrade_recipes) don't carry coexistence_supported, so the
+						   coexist option (b) is offered on the per-service /upgrades/<svc>
+						   page (BoxAPI recipes carry the flag) — here data-coexist-supported
+						   is 0. The <noscript> form below is the JS-off in-place fallback. *}
+						<button type="button"
+								class="mig-btn"
+								data-action="open-plan-choice"
+								data-service="{$row['service']}"
+								data-recipe-id="{$row['recipes'][0]['recipe_id']}"
+								data-target="{$row['latest'] ?? ''}"
+								data-coexist-supported="0"
+								title="Plan {$row['recipes'][0]['recipe_id']}">Plan</button>
+						<noscript>
+							<form method="post" action="{plink Upgrades:planChoice, service => $row['service'], recipe => $row['recipes'][0]['recipe_id']}" style="display:inline">
+								<input type="hidden" name="_csrf" value="{$csrfToken}">
+								<input type="hidden" name="plan_mode" value="migration">
+								<input type="hidden" name="target_version" value="{$row['latest'] ?? ''}">
+								<button type="submit" class="mig-btn" title="Queue {$row['recipes'][0]['recipe_id']} → applied under --tags upgrade">Plan (in-place)</button>
+							</form>
+						</noscript>
 					{/if}
 					<a class="mig-btn" href="/upgrades/{$row['service']}"
 					   aria-label="Open upgrades for {$row['service']}">Recipes</a>
@@ -87,4 +104,8 @@
 </table>
 </div>
 {/if}
+
+{include '@plan-choice-modal.latte'}
+
+<script src="/assets/upgrades-plan-choice.js?v={$basePath}" defer></script>
 {/block}

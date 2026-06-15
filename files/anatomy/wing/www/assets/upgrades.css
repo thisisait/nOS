@@ -99,3 +99,23 @@
   background: rgba(57,210,192,0.14); color: var(--cyan);
   font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
 }
+
+/* Plan-choice modal (B4b) — reuses .coex-modal* from coexistence.css; these
+ * style the radio option cards. Extracted from the partial per the
+ * test_no_inline_style_blocks_in_templates hygiene gate. */
+.plan-choice-options { border: 0; padding: 0; margin: 0 0 4px; }
+.plan-choice-legend { font-size: 12px; color: var(--text2); margin-bottom: 8px; padding: 0; }
+.plan-choice-option {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px; margin-bottom: 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); cursor: pointer;
+}
+.plan-choice-option:has(input:checked) { border-color: var(--accent); }
+.plan-choice-option input[type="radio"] { margin-top: 2px; flex: 0 0 auto; }
+.plan-choice-option-body { display: flex; flex-direction: column; gap: 4px; }
+.plan-choice-option-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.plan-choice-option-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.plan-choice-option[data-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.plan-choice-option[data-disabled="true"] input[type="radio"] { cursor: not-allowed; }
+.plan-choice-coexist-na { font-size: 11px; color: var(--sev-breaking, var(--red)); }

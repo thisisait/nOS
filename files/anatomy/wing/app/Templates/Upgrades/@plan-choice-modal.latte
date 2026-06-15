@@ -1,0 +1,69 @@
+{*
+	Plan-choice modal (B4b) — included into both Upgrades/default.latte (matrix)
+	and Upgrades/service.latte (per-service recipes). The operator picks one of two
+	paths between the "Plan" click and the queue write:
+
+	  (a) Migration in-place (default) → upgrades_planned.plan_mode='migration'
+	  (b) Coexisting + data copy        → + a coexistence_planned track
+
+	Option (b)'s radio is ENABLED only when the recipe declares
+	coexistence_supported (the JS toggles it from data-coexist-supported on the
+	triggering control). A single hidden CSRF <form> posts to Upgrades:planChoice;
+	upgrades-plan-choice.js sets the hidden inputs + submits the real form (no
+	fetch — preserving the redirect+flash UX). The <noscript> in-place fallback
+	lives in the including templates, so a JS-off operator can still queue.
+*}
+<div class="coex-modal-backdrop plan-choice-backdrop" id="plan-choice-modal" hidden
+	 role="dialog" aria-modal="true" aria-labelledby="plan-choice-title">
+	<div class="coex-modal plan-choice-modal">
+		<h3 id="plan-choice-title">Plan upgrade for <strong id="plan-choice-svc"></strong></h3>
+		<p>
+			Queue <strong id="plan-choice-recipe"></strong>. Pick how the new version
+			rolls out — both paths only queue here; nothing applies until you run the
+			matching tag.
+		</p>
+
+		<form method="post" id="plan-choice-form" action="" style="margin:0">
+			<input type="hidden" name="_csrf" value="{$csrfToken}">
+			<input type="hidden" name="plan_mode" id="plan-choice-mode" value="migration">
+			<input type="hidden" name="target_version" id="plan-choice-target" value="">
+			<input type="hidden" name="port_offset" id="plan-choice-port" value="100">
+			<input type="hidden" name="data_copy" id="plan-choice-datacopy" value="1">
+
+			<fieldset class="plan-choice-options">
+				<legend class="plan-choice-legend">Rollout path</legend>
+
+				<label class="plan-choice-option" data-mode="migration">
+					<input type="radio" name="plan_choice_radio" value="migration" checked>
+					<span class="plan-choice-option-body">
+						<span class="plan-choice-option-title">(a) Migration in-place</span>
+						<span class="plan-choice-option-desc">
+							Upgrade the running version directly. Applies under
+							<code>ansible-playbook main.yml --tags upgrade</code>.
+						</span>
+					</span>
+				</label>
+
+				<label class="plan-choice-option" id="plan-choice-coexist-label" data-mode="coexist">
+					<input type="radio" name="plan_choice_radio" value="coexist" id="plan-choice-coexist-radio">
+					<span class="plan-choice-option-body">
+						<span class="plan-choice-option-title">(b) Coexisting new version, with a copy of the data</span>
+						<span class="plan-choice-option-desc">
+							Boot the new version side-by-side on a shifted port, copy the data,
+							then toggle it primary when ready. Needs a merged migration before
+							it can provision.
+						</span>
+						<span class="plan-choice-coexist-na" hidden>
+							This recipe does not support coexistence — only the in-place path is available.
+						</span>
+					</span>
+				</label>
+			</fieldset>
+		</form>
+
+		<div class="coex-modal-actions">
+			<button type="button" class="mig-btn" data-action="close-plan-choice">Cancel</button>
+			<button type="button" class="mig-btn mig-btn-primary" id="plan-choice-submit" data-action="submit-plan-choice">Queue plan</button>
+		</div>
+	</div>
+</div>

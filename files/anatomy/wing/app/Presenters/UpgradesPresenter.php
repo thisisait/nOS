@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\Model\EventRepository;
 use App\Model\UpgradeRepository;
 
 /**
@@ -23,6 +24,7 @@ final class UpgradesPresenter extends BasePresenter
 
 	public function __construct(
 		private UpgradeRepository $upgrades,
+		private EventRepository $events,
 	) {
 	}
 
@@ -87,6 +89,96 @@ final class UpgradesPresenter extends BasePresenter
 		};
 		$this->flashMessage($msg, $type);
 		$this->redirect('Upgrades:default');
+	}
+
+	/**
+	 * POST /upgrades/<service>/<recipe>/plan-choice — the browser commit target
+	 * for the plan-choice modal (B4b). The operator picks one of two paths in the
+	 * modal, the hidden CSRF form posts here:
+	 *   (a) plan_mode='migration' → in-place upgrade, no coexistence track
+	 *   (b) plan_mode='coexist'   → coexisting new version with a data copy
+	 *
+	 * CSRF-gated (requirePostMethod); planned_by is the forward-auth operator
+	 * identity (never body-supplied), matching actionQueueUpgrade. Reuses the same
+	 * repo method as the bearer API (UpgradeRepository::planUpgradeWithMode) so the
+	 * browser + agent paths write identical rows. Emits plan_choice_recorded
+	 * (Wing-side EventRepository::insert directly, like UsersPresenter), then
+	 * redirects to /coexistence (mode b) or /upgrades (mode a) with a flash —
+	 * preserving the redirect+flash UX (no JSON, no fetch).
+	 */
+	public function actionPlanChoice(string $service, string $recipe): void
+	{
+		$this->requirePostMethod();
+		$req = $this->getHttpRequest();
+		$mode = $req->getPost('plan_mode') === 'coexist' ? 'coexist' : 'migration';
+		$target = $req->getPost('target_version');
+		$portOffsetRaw = $req->getPost('port_offset');
+		$portOffset = is_numeric($portOffsetRaw) ? (int) $portOffsetRaw : 100;
+		// data_copy defaults TRUE (path (b) means "with a copy of the data"); an
+		// explicit '0'/'' unchecks it. Irrelevant for mode 'migration'.
+		$dataCopyRaw = $req->getPost('data_copy');
+		$dataCopy = $dataCopyRaw === null ? true : (bool) $dataCopyRaw;
+		$force = (bool) $req->getPost('force');
+		$plannedBy = (string) ($req->getHeader('X-Authentik-Username') ?? 'operator');
+		$plannedBy = $plannedBy !== '' ? $plannedBy : 'operator';
+
+		$result = $this->upgrades->planUpgradeWithMode(
+			$service,
+			$recipe,
+			is_string($target) && $target !== '' ? $target : null,
+			$plannedBy,
+			$mode,
+			$portOffset,
+			$dataCopy,
+			$force,
+		);
+
+		if (!empty($result['ok'])) {
+			$this->emitPlanChoiceRecorded($service, $recipe, $mode, $result, $dataCopy, $portOffset, $plannedBy);
+		}
+
+		[$msg, $type] = match ($result['status']) {
+			'queued'         => $mode === 'coexist'
+				? ["Planned {$service}/{$recipe} — coexist track queued; provision under: ansible-playbook main.yml --tags coexistence (after the migration MR is merged).", 'success']
+				: ["Planned {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade.", 'success'],
+			'already_queued' => ["{$service}/{$recipe} is already queued.", 'info'],
+			'mismatch'       => ["Refused — {$result['detail']}", 'error'],
+			default          => [$result['detail'] ?? 'No change.', 'info'],
+		};
+		$this->flashMessage($msg, $type);
+		// Mode (b) lands on /coexistence where the queued track + primary/secondary
+		// controls live; mode (a) stays on /upgrades.
+		$this->redirect($mode === 'coexist' ? 'Coexistence:default' : 'Upgrades:default');
+	}
+
+	/**
+	 * Best-effort plan_choice_recorded emit (upgrade_id-keyed §2.6 — mirrors the
+	 * bearer Api\UpgradesPresenter::emitPlanChoice). Never blocks the plan-choice
+	 * write: an audit failure must not abort the operator's action.
+	 *
+	 * @param array<string,mixed> $result
+	 */
+	private function emitPlanChoiceRecorded(string $service, string $recipe, string $mode, array $result, bool $dataCopy, int $portOffset, string $plannedBy): void
+	{
+		try {
+			$this->events->insert([
+				'type'       => 'plan_choice_recorded',
+				'task'       => 'plan-choice ' . $mode . ': ' . $service . '/' . $recipe,
+				'source'     => 'wing',
+				'actor_id'   => $plannedBy,
+				'upgrade_id' => isset($result['upgrade_id']) ? (string) $result['upgrade_id'] : null,
+				'result'     => [
+					'service'                => $service,
+					'recipe_id'              => $recipe,
+					'plan_mode'              => $mode,
+					'coexistence_planned_id' => $result['coexistence_planned_id'] ?? null,
+					'data_copy'              => $dataCopy,
+					'port_offset'            => $portOffset,
+				],
+			]);
+		} catch (\Throwable) {
+			// audit failure must not block the plan-choice write.
+		}
 	}
 
 	/**
