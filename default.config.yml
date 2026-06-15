@@ -2175,6 +2175,11 @@ authentik_agent_scopes:
   - "nos:state:write"
   - "nos:migrations:read"
   - "nos:migrations:apply"
+  # nos:migration:write (singular) — "author ONE migration record". B4a,
+  # 2026-06-16. Deliberately distinct from the plural nos:migrations:apply
+  # (the engine apply path). Declarative until a Bone route enforces it — the
+  # real gate stays the forge MR + the operator's merge (GATE 2).
+  - "nos:migration:write"
   - "nos:upgrades:read"
   - "nos:upgrades:apply"
   - "nos:patches:read"
@@ -2301,6 +2306,22 @@ authentik_agent_clients:
       - "nos:upgrades:read"
       - "nos:state:read"
       - "nos:coexistence:read"
+
+  - name: "nOS Migration Author"
+    slug: "nos-migration-author"
+    client_id: "nos-migration-author"
+    client_secret: "{{ global_password_prefix }}_pw_agent_migration_author"
+    # B4a migration-authoring agent. Promotes a MERGED recipe into the real
+    # migration record (files/anatomy/migrations/) + the <service>_version bump
+    # in default.config.yml, opened as a LOCAL forge MR (GATE 2). Read on
+    # upgrades/state/migrations/coexistence; nos:migration:write authors the
+    # one record. Never merges, never provisions.
+    capabilities:
+      - "nos:upgrades:read"
+      - "nos:state:read"
+      - "nos:migrations:read"
+      - "nos:coexistence:read"
+      - "nos:migration:write"
 
   - name: "nOS Conductor"
     slug: "nos-conductor"

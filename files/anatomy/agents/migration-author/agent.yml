@@ -1,0 +1,58 @@
+name: migration-author
+version: 1
+description: |
+  nOS migration-author — promotes a MERGED upgrade recipe into the real
+  committed codebase change. For a service whose recipe the operator has
+  reviewed + the operator's plan-choice (migration in-place | coexist), it
+  WRITES the imperative migration record under files/anatomy/migrations/ +
+  bumps <service>_version in default.config.yml, then opens a LOCAL forge
+  MERGE REQUEST for the operator to review + merge (GATE 2). It never merges,
+  never promotes to GitHub, never runs an apply tag, never provisions a track.
+  The forge MR + the operator's merge is the gate. Distinct from:
+    - upgrade-advisor: queues upgrades from EXISTING recipes.
+    - upgrade-architect: drafts the recipes that don't exist yet (recipe MR).
+    - migration-author: promotes a merged recipe → the real migration record +
+      version bump (migration MR).
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - mcp.tool_use
+    - wing.read
+    - wing.write
+    - events.write
+    - nos.migration.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+
+metadata:
+  ait_phase: B4a
+  ceremony_role: migration-authoring
+
+exit_code_semantics:
+  emits_sentinel: true
+  exit_0: "Nothing to author — no merged recipe gap, or the migration record already exists / is already merged-backed."
+  exit_1: "Authored a migration record + version bump and opened a local-forge MR pending operator review. Operator-review, not a failure. Fires a HIGH A9 notification."
+  exit_2: "Environment / forge / auth / Wing error inside pulse-run-agent.sh (or migration-pr.sh exit 2). Fires a CRITICAL A9 notification."
