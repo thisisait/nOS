@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# Coexistence — toggle a track as primary (the reversible operator cutover).
+#
+# Promote drives nos_coexistence action=promote_track: it reuses the cutover
+# mechanics (flip the active_track pointer + regenerate the vhost) AND stamps
+# the human-facing reversible state machine — the promoted track becomes
+# role=primary / read_only=False / promoted_at; the prior primary is demoted
+# to role=secondary / read_only=True with a cooling-off ttl_until — all in one
+# state write, so the single-primary invariant (active=1 ⟺ role='primary') is
+# never violated. Re-promoting the other track reverts the toggle (symmetric).
+#
+# dry_run defaults TRUE (mutating verb): plan first, then re-run with
+# coexist_dry_run=false to commit.
+#
+# Required extra-vars:
+#   coexist_service      -- service id
+#   coexist_target_tag   -- tag to become the new primary
+#
+# Optional:
+#   coexist_ttl_seconds  -- TTL applied to the demoted prior primary
+#                           (default: 7 days)
+#   coexist_force        -- promote a port-down target (default false)
+#   coexist_dry_run      -- plan without writing (default TRUE)
+#
+# Tagged 'never' so a normal playbook pass never auto-fires it — it runs only
+# when explicitly selected, via Bone (coexist-promote) or:
+#
+#   ansible-playbook main.yml --tags coexist-promote \
+#     -e coexist_service=postgresql -e coexist_target_tag=v17 \
+#     -e coexist_dry_run=false
+# =============================================================================
+
+- name: "[coexistence_promote] Validate inputs"
+  ansible.builtin.assert:
+    that:
+      - coexist_service is defined
+      - coexist_target_tag is defined
+  tags: ['coexist-promote', 'never']
+
+- name: "[coexistence_promote] Toggle {{ coexist_service }} primary -> {{ coexist_target_tag }}"
+  nos_coexistence:
+    action: promote_track
+    service: "{{ coexist_service }}"
+    target_tag: "{{ coexist_target_tag }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+    ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
+    force: "{{ coexist_force | default(false) | bool }}"
+    dry_run: "{{ coexist_dry_run | default(true) | bool }}"
+  register: _coexist_promote_result
+  tags: ['coexist-promote', 'never']
+
+- name: "[coexistence_promote] Summary"
+  ansible.builtin.debug:
+    msg: |
+      {{ coexist_service }}: {{ _coexist_promote_result.result.previous_primary | default('<none>') }}
+      -> {{ _coexist_promote_result.result.new_primary | default(coexist_target_tag) }}
+      (noop: {{ _coexist_promote_result.result.noop | default(false) }},
+       vhost: {{ _coexist_promote_result.result.nginx_vhost | default('<n/a>') }})
+  tags: ['coexist-promote', 'never']
+
+- name: "[coexistence_promote] Reload nginx (zero-downtime)"
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
+  register: _coexist_promote_reload
+  # Reload only when the module actually flipped the primary; a no-op promote
+  # (already-primary) or a dry-run leaves changed=0 → reload skipped.
+  changed_when: _coexist_promote_reload.rc | default(1) == 0
+  when:
+    - not (coexist_dry_run | default(true) | bool)
+    - _coexist_promote_result.changed | default(false) | bool
+  tags: ['coexist-promote', 'never']

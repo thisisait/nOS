@@ -101,3 +101,54 @@ def cleanup(service: str, tag: str, force: bool = False) -> dict[str, Any]:
         extra["coexist_force"] = "true"
     result = migrate_mod.invoke_playbook("coexist-cleanup", extra)
     return {"service": service, "tag": tag, "force": force, **result}
+
+
+def promote(
+    service: str,
+    tag: str,
+    dry_run: bool = True,
+    ttl_seconds: int | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Toggle-as-primary — the reversible operator cutover. Mirrors ``cutover``
+    but drives the new ``coexist-promote`` task (nos_coexistence promote_track):
+    flips active_track + role atomically. dry_run defaults TRUE (mutating verb)."""
+    err = _validate(service, tag)
+    if err is not None:
+        return {"error": err, "status": 400}
+    extra: dict[str, str] = {
+        "coexist_service": service,
+        "coexist_target_tag": tag,
+        "coexist_dry_run": "true" if dry_run else "false",
+    }
+    if force:
+        extra["coexist_force"] = "true"
+    if ttl_seconds is not None:
+        if not isinstance(ttl_seconds, int) or ttl_seconds < 0:
+            return {"error": "invalid ttl_seconds", "status": 400}
+        extra["coexist_ttl_seconds"] = str(ttl_seconds)
+    result = migrate_mod.invoke_playbook("coexist-promote", extra)
+    return {"service": service, "tag": tag, "dry_run": dry_run, **result}
+
+
+def deactivate(
+    service: str,
+    tag: str,
+    dry_run: bool = True,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Take a non-primary track out of rotation without destroying it. Mirrors
+    ``cleanup`` but drives the new ``coexist-deactivate`` task (nos_coexistence
+    deactivate_track): docker compose stop, data kept. dry_run defaults TRUE."""
+    err = _validate(service, tag)
+    if err is not None:
+        return {"error": err, "status": 400}
+    extra: dict[str, str] = {
+        "coexist_service": service,
+        "coexist_tag": tag,
+        "coexist_dry_run": "true" if dry_run else "false",
+    }
+    if force:
+        extra["coexist_force"] = "true"
+    result = migrate_mod.invoke_playbook("coexist-deactivate", extra)
+    return {"service": service, "tag": tag, "dry_run": dry_run, "force": force, **result}

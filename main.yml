@@ -991,6 +991,20 @@
       ansible.builtin.import_tasks: tasks/coexistence-apply.yml
       tags: ['coexistence', 'never']
 
+    # ── Coexistence lifecycle (B2) — promote / deactivate ───────────────────
+    # Toggle-as-primary (reversible cutover) + deactivate-secondary (stop, keep
+    # data). Off normal runs ('never'); reached only via Bone (coexist-promote /
+    # coexist-deactivate) or an explicit --tags. dry_run defaults TRUE.
+    #   ansible-playbook main.yml --tags coexist-promote \
+    #     -e coexist_service=postgresql -e coexist_target_tag=v17 -e coexist_dry_run=false
+    - name: "[Coexistence] Toggle a track as primary (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-promote.yml
+      tags: ['coexist-promote', 'never']
+
+    - name: "[Coexistence] Deactivate a non-primary track (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-deactivate.yml
+      tags: ['coexist-deactivate', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.

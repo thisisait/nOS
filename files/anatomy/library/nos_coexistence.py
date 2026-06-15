@@ -42,6 +42,33 @@ Actions
     nginx vhost is regenerated so the primary upstream now points to
     the new track.
 
+``promote_track``
+    Toggle-as-primary: the reversible operator-facing cutover.  Reuses
+    every ``cutover`` mechanic (flip ``active_track`` + regenerate the
+    vhost) and additionally stamps the human-facing reversible state
+    machine: the promoted track becomes ``role=primary`` /
+    ``lifecycle=primary`` / ``read_only=False`` / ``promoted_at`` while
+    the prior primary is demoted to ``role=secondary`` /
+    ``lifecycle=secondary`` / ``read_only=True`` (with the cooling-off
+    ``ttl_until``) -- all in the SAME state write, so the single-primary
+    invariant (``role='primary' ⟺ active=1``) never has two primaries.
+    Symmetric: re-promoting the other track reverts the toggle.  Refuses
+    a draft/cleaned/deactivated target (G-PROMOTE-LIFECYCLE), is a no-op
+    on the already-primary (G-PROMOTE-NOOP), and (when a ``port_probe``
+    is supplied) refuses a port-down target unless ``force`` (G-PROMOTE-
+    HEALTH).
+
+``deactivate_track``
+    Take a non-primary track out of rotation WITHOUT destroying it:
+    stamps ``role=deactivated`` / ``lifecycle=deactivated`` /
+    ``deactivated_at``, drops the track's upstream from the vhost, and
+    signals the caller to ``docker compose stop`` (NOT ``down`` -- the
+    container, its data dir and its compose override are all kept so the
+    track can be re-promoted within the TTL).  Refuses the current
+    primary unless ``force`` AND another track exists to fail over to
+    (G-DEACTIVATE-NOT-PRIMARY); refuses the only remaining track
+    (G-DEACTIVATE-LAST).
+
 ``cleanup_track``
     Remove a track.  Refuses to remove the currently active tag unless
     ``force=true``.  By default honors the track's ``ttl_until`` -- if
@@ -106,7 +133,8 @@ options:
   action:
     description: Sub-command.
     required: true
-    choices: [list_tracks, provision_track, cutover, cleanup_track]
+    choices: [list_tracks, provision_track, cutover, cleanup_track,
+              promote_track, deactivate_track]
     type: str
   service:
     description: Service id (e.g. grafana, postgresql).
@@ -119,6 +147,12 @@ options:
     type: str
   version:
     description: Service version this track pins.
+    type: str
+  source_migration_id:
+    description: The migrations_authored.migration_id this track is built
+      ON (recorded at provision; consumed at cutover -- the migration's
+      apply[] data-transform runs against the new track's cluster before
+      the pointer flip).
     type: str
   port:
     description: Explicit port.  When omitted, computed from base_port
@@ -663,11 +697,23 @@ def action_provision_track(params, state, ctx=None):
         "stack": stack,
         "started_at": _now_iso(),
         "read_only": False,
+        # Human-facing reversible state machine. The legacy active_track pointer
+        # stays the live-routing truth (active=1 ⟺ role='primary'); these mirror
+        # it so /coexistence can render a primary/secondary pair. A freshly
+        # provisioned (non-active) track is 'provisioned' until promoted.
+        "role": "provisioned",
+        "lifecycle": "provisioned",
     }
-    # First track becomes active automatically.
+    # The migration this track is built ON (consumed at cutover).
+    source_migration_id = params.get("source_migration_id")
+    if source_migration_id:
+        new_track["source_migration_id"] = source_migration_id
+    # First track becomes active automatically — and active ⟺ primary.
     svc_state["tracks"] = list(svc_state.get("tracks", [])) + [new_track]
     if not svc_state.get("active_track"):
         svc_state["active_track"] = tag
+        new_track["role"] = "primary"
+        new_track["lifecycle"] = "primary"
 
     vhost_body = render_nginx_vhost(service, svc_state, params) if web_service else None
 
@@ -740,6 +786,184 @@ def action_cutover(params, state, ctx=None):
             "new_active": target_tag,
             "nginx_vhost": vhost_path,
             "cutover_at": now,
+        },
+    }
+
+
+def _is_primary(track, active_track):
+    """role=primary ⟺ legacy active=1. The legacy ``active_track`` pointer is
+    the single source of truth; ``role`` is the human-facing mirror. A track is
+    primary iff it is the active track."""
+    return track is not None and track.get("tag") == active_track
+
+
+def action_promote_track(params, state, ctx=None):
+    """Toggle-as-primary -- the reversible operator cutover.
+
+    Reuses ``action_cutover`` mechanics (flip ``active_track`` + regenerate the
+    vhost) and additionally stamps the reversible primary/secondary state in the
+    SAME write so the single-primary invariant never sees two primaries:
+    promoted track -> role=primary/read_only=False/promoted_at, the prior
+    primary -> role=secondary/read_only=True/ttl_until.
+    """
+    service = params["service"]
+    target_tag = params.get("target_tag") or params.get("tag")
+    dry_run = bool(params.get("dry_run", True))   # dry_run defaults TRUE
+    force = bool(params.get("force", False))
+    ttl_seconds = params.get("ttl_seconds")
+
+    svc_state = _get_svc_state(state, service)
+    target = _find_track(svc_state, target_tag)
+
+    # G-PROMOTE-EXISTS: the target track must be provisioned.
+    if target is None:
+        return _err("promote target %r does not exist for %r" % (target_tag, service))
+
+    # G-PROMOTE-LIFECYCLE: a draft/cleaned/deactivated track is not promotable.
+    lifecycle = target.get("lifecycle") or target.get("role") or "provisioned"
+    if lifecycle in ("draft", "provisioning", "cleaned", "deactivated"):
+        return _err(
+            "promote target %r is %s -- only a provisioned/secondary track may "
+            "be promoted to primary" % (target_tag, lifecycle))
+
+    previous = svc_state.get("active_track")
+
+    # G-PROMOTE-NOOP: promoting the already-primary is a no-op.
+    if previous == target_tag:
+        return {"changed": False, "result": {
+            "previous_primary": previous, "new_primary": target_tag,
+            "noop": True,
+        }}
+
+    # G-PROMOTE-HEALTH: refuse a port-down target unless force. Only enforced
+    # when a probe is supplied (live runs pass ctx["port_probe"]); offline tests
+    # without a probe skip the network check, like provision.
+    ctx = ctx or {}
+    probe = ctx.get("port_probe")
+    if probe is not None and not force:
+        port = target.get("port")
+        if port and not _port_in_use(int(port), probe=probe):
+            return _err("promote target %r port %s is not answering; pass "
+                        "force=true to promote a down track" % (target_tag, port))
+
+    now = _now_iso()
+    svc_state["active_track"] = target_tag
+    for t in svc_state.get("tracks", []):
+        if t.get("tag") == target_tag:
+            # New primary.
+            t["role"] = "primary"
+            t["lifecycle"] = "primary"
+            t["read_only"] = False
+            t["promoted_at"] = now
+            t["cutover_at"] = now
+            t.pop("ttl_until", None)
+            t.pop("deactivated_at", None)
+        elif t.get("tag") == previous:
+            # Demote the prior primary in the SAME write (single-primary).
+            t["role"] = "secondary"
+            t["lifecycle"] = "secondary"
+            t["read_only"] = True
+            until = datetime.datetime.now(tz=datetime.timezone.utc) + \
+                datetime.timedelta(seconds=int(ttl_seconds or 7 * 24 * 3600))
+            t["ttl_until"] = until.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    vhost_path = _nginx_vhost_path(params["nginx_sites_dir"], service)
+    vhost_body = render_nginx_vhost(service, svc_state, params)
+
+    if not dry_run:
+        _ensure_parent(vhost_path)
+        with open(vhost_path, "w", encoding="utf-8") as fh:
+            fh.write(vhost_body)
+        _save_state(params["state_path"], state)
+
+    return {
+        "changed": True,
+        "result": {
+            "previous_primary": previous,
+            "new_primary": target_tag,
+            "nginx_vhost": vhost_path,
+            "promoted_at": now,
+            "dry_run": dry_run,
+        },
+    }
+
+
+def action_deactivate_track(params, state, ctx=None):
+    """Take a non-primary track out of rotation without destroying it.
+
+    Stamps role=deactivated/lifecycle=deactivated/deactivated_at, drops the
+    track's upstream from the vhost, and tells the caller to ``docker compose
+    stop`` (NOT down -- container + data + override are kept so the track can be
+    re-promoted within the TTL).
+    """
+    service = params["service"]
+    tag = params.get("tag")
+    force = bool(params.get("force", False))
+    dry_run = bool(params.get("dry_run", True))   # dry_run defaults TRUE
+
+    svc_state = _get_svc_state(state, service)
+    target = _find_track(svc_state, tag)
+    if target is None:
+        return _err("deactivate target %r does not exist for %r" % (tag, service))
+
+    tracks = svc_state.get("tracks", [])
+    active = svc_state.get("active_track")
+
+    # G-DEACTIVATE-LAST: refuse the only track (nothing to fail over to).
+    if len([t for t in tracks if t.get("lifecycle") != "deactivated"]) <= 1:
+        return _err("refusing to deactivate the only live track %r for %r "
+                    "(nothing to fall back to)" % (tag, service))
+
+    # G-DEACTIVATE-NOT-PRIMARY: refuse the active/primary track unless force
+    # AND another live track exists to fail over to.
+    if _is_primary(target, active):
+        failover = next((t for t in tracks
+                         if t.get("tag") != tag
+                         and t.get("lifecycle") != "deactivated"), None)
+        if not force:
+            return _err("refusing to deactivate the primary track %r for %r; "
+                        "promote another track first or pass force=true" % (tag, service))
+        if failover is None:
+            return _err("cannot deactivate primary %r -- no other live track to "
+                        "fail over to (would 502)" % tag)
+        # Force-deactivating the primary fails over to the next live track.
+        svc_state["active_track"] = failover.get("tag")
+        failover["role"] = "primary"
+        failover["lifecycle"] = "primary"
+        failover["read_only"] = False
+        failover["promoted_at"] = _now_iso()
+
+    now = _now_iso()
+    target["role"] = "deactivated"
+    target["lifecycle"] = "deactivated"
+    target["deactivated_at"] = now
+    target["read_only"] = True
+
+    vhost_path = _nginx_vhost_path(params["nginx_sites_dir"], service)
+    # Regenerated vhost no longer routes ?nos_track=<tag> to a stopped track:
+    # render from a view of state that omits the deactivated track's upstream.
+    vhost_state = {
+        "active_track": svc_state.get("active_track"),
+        "tracks": [t for t in tracks if t.get("tag") != tag],
+    }
+    vhost_body = render_nginx_vhost(service, vhost_state, params)
+
+    if not dry_run:
+        _ensure_parent(vhost_path)
+        with open(vhost_path, "w", encoding="utf-8") as fh:
+            fh.write(vhost_body)
+        _save_state(params["state_path"], state)
+
+    return {
+        "changed": True,
+        "result": {
+            "service": service,
+            "tag": tag,
+            "role": "deactivated",
+            "compose_action": "stop",   # caller does `docker compose stop`, NOT down
+            "nginx_vhost": vhost_path,
+            "deactivated_at": now,
+            "dry_run": dry_run,
         },
     }
 
@@ -888,6 +1112,10 @@ def run_action(params, ctx=None):
         return action_provision_track(params, state, ctx=ctx)
     if action == "cutover":
         return action_cutover(params, state, ctx=ctx)
+    if action == "promote_track":
+        return action_promote_track(params, state, ctx=ctx)
+    if action == "deactivate_track":
+        return action_deactivate_track(params, state, ctx=ctx)
     if action == "cleanup_track":
         return action_cleanup_track(params, state, ctx=ctx)
     return _err("unknown action %r" % action)
@@ -904,11 +1132,13 @@ def main():  # pragma: no cover - exercised only inside ansible
         argument_spec={
             "action": {"type": "str", "required": True,
                        "choices": ["list_tracks", "provision_track",
-                                   "cutover", "cleanup_track"]},
+                                   "cutover", "cleanup_track",
+                                   "promote_track", "deactivate_track"]},
             "service": {"type": "str"},
             "tag": {"type": "str"},
             "target_tag": {"type": "str"},
             "version": {"type": "str"},
+            "source_migration_id": {"type": "str"},
             "port": {"type": "int"},
             "base_port": {"type": "int"},
             "coexistence_port_offset": {"type": "int", "default": 10},

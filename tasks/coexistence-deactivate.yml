@@ -1,0 +1,86 @@
+---
+# =============================================================================
+# Coexistence — deactivate a non-primary track WITHOUT destroying it.
+#
+# Deactivate drives nos_coexistence action=deactivate_track: it stamps
+# role=deactivated / deactivated_at, drops the track's upstream from the vhost,
+# and signals a `docker compose stop` (NOT down — container + data + override
+# are all kept so the track can be re-promoted within the TTL). This is the
+# reversible, non-destructive sibling of coexist-cleanup (which is terminal).
+#
+# Guards: refuses the current primary unless coexist_force=true AND another
+# live track exists to fail over to (G-DEACTIVATE-NOT-PRIMARY); refuses the
+# only remaining track (G-DEACTIVATE-LAST).
+#
+# dry_run defaults TRUE (mutating verb).
+#
+# Required extra-vars:
+#   coexist_service   -- service id
+#   coexist_tag       -- track tag to deactivate
+#
+# Optional:
+#   coexist_force     -- deactivate the primary, failing over (default false)
+#   coexist_dry_run   -- plan without writing (default TRUE)
+#
+# Tagged 'never' so a normal playbook pass never auto-fires it — it runs only
+# when explicitly selected, via Bone (coexist-deactivate) or:
+#
+#   ansible-playbook main.yml --tags coexist-deactivate \
+#     -e coexist_service=postgresql -e coexist_tag=v16 \
+#     -e coexist_dry_run=false
+# =============================================================================
+
+- name: "[coexistence_deactivate] Validate inputs"
+  ansible.builtin.assert:
+    that:
+      - coexist_service is defined
+      - coexist_tag is defined
+  tags: ['coexist-deactivate', 'never']
+
+- name: "[coexistence_deactivate] Deactivate {{ coexist_service }}/{{ coexist_tag }}"
+  nos_coexistence:
+    action: deactivate_track
+    service: "{{ coexist_service }}"
+    tag: "{{ coexist_tag }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+    force: "{{ coexist_force | default(false) | bool }}"
+    dry_run: "{{ coexist_dry_run | default(true) | bool }}"
+  register: _coexist_deactivate_result
+  tags: ['coexist-deactivate', 'never']
+
+- name: "[coexistence_deactivate] Summary"
+  ansible.builtin.debug:
+    msg: |
+      Deactivated {{ coexist_service }}/{{ coexist_tag }}
+      - role: {{ _coexist_deactivate_result.result.role | default('deactivated') }}
+      - compose action: {{ _coexist_deactivate_result.result.compose_action | default('stop') }} (data kept)
+      - nginx vhost: {{ _coexist_deactivate_result.result.nginx_vhost | default('<n/a>') }}
+  tags: ['coexist-deactivate', 'never']
+
+- name: "[coexistence_deactivate] Stop the deactivated track container (keep data)"
+  # docker compose STOP — NOT down: the container, its data dir and its compose
+  # override are all kept so the track can be re-promoted within the TTL. The
+  # module stamps container_name=nos-<service>-<tag>, so stop by that name (no
+  # need to reassemble the stack's -f override flags). Matches the repo idiom
+  # ({{ docker_bin }} ... ) over the docker_compose_v2 module.
+  ansible.builtin.command: "{{ docker_bin | default('docker') }} stop nos-{{ coexist_service }}-{{ coexist_tag }}"
+  register: _coexist_deactivate_stop
+  failed_when: false
+  changed_when: _coexist_deactivate_stop.rc | default(1) == 0
+  when:
+    - not (coexist_dry_run | default(true) | bool)
+    - _coexist_deactivate_result.changed | default(false) | bool
+  tags: ['coexist-deactivate', 'never']
+
+- name: "[coexistence_deactivate] Reload nginx (drop the deactivated upstream)"
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
+  register: _coexist_deactivate_reload
+  changed_when: _coexist_deactivate_reload.rc | default(1) == 0
+  when:
+    - not (coexist_dry_run | default(true) | bool)
+    - _coexist_deactivate_result.changed | default(false) | bool
+  tags: ['coexist-deactivate', 'never']

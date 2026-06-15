@@ -521,6 +521,51 @@ async def coexistence_cleanup(
     return payload
 
 
+@app.post("/api/coexistence/{service}/promote/{tag}")
+async def coexistence_promote(
+    service: str,
+    tag: str,
+    body: dict | None = None,
+    _=Depends(require_scope("nos:coexistence:write")),
+):
+    """Toggle-as-primary — the reversible operator cutover. dry_run defaults
+    TRUE (mutating verb): the first call plans, dry_run=false commits."""
+    _require_framework()
+    payload = body or {}
+    dry_run = bool(payload.get("dry_run", True))
+    force = bool(payload.get("force"))
+    ttl_seconds = payload.get("ttl_seconds")
+    if ttl_seconds is not None:
+        if not isinstance(ttl_seconds, int) or ttl_seconds < 0:
+            raise HTTPException(status_code=400, detail="ttl_seconds must be a non-negative int")
+    result = _nos_coexistence.promote(
+        service, tag, dry_run=dry_run, ttl_seconds=ttl_seconds, force=force)
+    status = _status_from_payload(result)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=result.get("error", "promote failed"))
+    return result
+
+
+@app.post("/api/coexistence/{service}/deactivate/{tag}")
+async def coexistence_deactivate(
+    service: str,
+    tag: str,
+    body: dict | None = None,
+    _=Depends(require_scope("nos:coexistence:write")),
+):
+    """Deactivate a non-primary track (docker compose stop, data kept).
+    dry_run defaults TRUE (mutating verb)."""
+    _require_framework()
+    payload = body or {}
+    dry_run = bool(payload.get("dry_run", True))
+    force = bool(payload.get("force"))
+    result = _nos_coexistence.deactivate(service, tag, dry_run=dry_run, force=force)
+    status = _status_from_payload(result)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=result.get("error", "deactivate failed"))
+    return result
+
+
 # ---- /api/events + /api/v1/events (aliased) -------------------------------
 # Plugin's documented URL is /api/v1/events but main.py historically used the
 # unversioned form. Keep both registered so existing tests + the callback
