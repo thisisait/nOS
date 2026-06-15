@@ -7,14 +7,19 @@
 - name: Restart hermes
   ansible.builtin.shell: |
     UID_NUM=$(id -u)
+    PLIST=~/Library/LaunchAgents/{{ hermes_launchd_label }}.plist
     if launchctl print "gui/${UID_NUM}/{{ hermes_launchd_label }}" >/dev/null 2>&1; then
-      launchctl kickstart -k "gui/${UID_NUM}/{{ hermes_launchd_label }}"
-      echo "kickstarted"
+      # bootout+bootstrap, NOT kickstart -k: kickstart re-runs the EXISTING
+      # definition and never re-reads a changed ProgramArguments (e.g. a corrected
+      # venv path). A full reload is the only thing that converges a changed plist.
+      launchctl bootout "gui/${UID_NUM}/{{ hermes_launchd_label }}" 2>/dev/null || true
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "reloaded"
     else
       echo "not-loaded"
     fi
   register: _hermes_restart
-  changed_when: "'kickstarted' in _hermes_restart.stdout"
+  changed_when: "'reloaded' in _hermes_restart.stdout"
   when:
     - hermes_daemon_mode | default(false)
     - (nos_service_manager | default('launchd')) == 'launchd'

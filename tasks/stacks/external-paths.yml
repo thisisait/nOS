@@ -113,10 +113,15 @@
   ansible.builtin.set_fact:
     mcpo_data_dir: "{{ external_storage_root }}/mcpo"
 
-# ── Hermes Agent (workspace on SSD; config stays in ~/.hermes - hardcoded) ──
-# Hermes hardcodes the config path at ~/.hermes/config.yaml, cannot switch.
-# Only venv + sources on SSD for fast --blank (don't re-download hermes).
-- name: "[External SSD] Override Hermes Agent paths"
-  ansible.builtin.set_fact:
-    hermes_home: "{{ external_storage_root }}/hermes"
-    hermes_venv: "{{ external_storage_root }}/hermes/.venv"
+# ── Hermes Agent — NOT moved to the SSD (TCC, 2026-06-15) ──────────────────
+# Hermes runs as a launchd web-UI daemon (hermes_daemon_mode). A launchd-spawned
+# interpreter reads its venv (pyvenv.cfg + site) at startup, and macOS TCC DENIES
+# launchd reads of the external removable volume — the interpreter dies with
+# "PermissionError ... pyvenv.cfg → init_import_site" before any code runs, so
+# nothing binds 127.0.0.1:18790 and the gated hermes.<tld> upstream is dead
+# behind a healthy Authentik gate (CF/bad-gateway after login). The venv (and the
+# editable sources it imports at runtime) MUST stay under $HOME — the role default
+# ~/agents/hermes/.venv is provably readable by launchd. The old "fast --blank"
+# optimisation (venv + sources on SSD) is not worth a dead daemon, so the override
+# is removed entirely; Hermes is small and re-installs fast. Pinned by
+# tests/anatomy/test_hermes_venv_not_on_external_ssd.py.

@@ -196,24 +196,38 @@
     src: hermes.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ hermes_launchd_label }}.plist"
     mode: '0644'
+  register: _hermes_plist
   notify: Restart hermes
   when:
     - hermes_daemon_mode | default(false)
     - (nos_service_manager | default('launchd')) == 'launchd'
 
-- name: "[Hermes] Bootstrap launchd job (idempotent)"
+# Bootstrap when absent; RELOAD (bootout+bootstrap) when the plist content
+# changed. A content-changed plist — e.g. a corrected ProgramArguments venv path
+# off the TCC-blocked SSD — is NOT re-read by the old short-circuit-to-already-
+# loaded path (nor by kickstart -k): only a full bootout+bootstrap reloads a
+# changed ProgramArguments. This is the exact gap that left Hermes crash-looping
+# on the stale /Volumes/SSD1TB venv even after the plist was corrected on disk.
+- name: "[Hermes] Bootstrap / reload launchd job (converges a changed plist)"
   ansible.builtin.shell: |
     set -e
     PLIST=~/Library/LaunchAgents/{{ hermes_launchd_label }}.plist
     UID_NUM=$(id -u)
+    CHANGED="{{ (_hermes_plist is changed) | ternary('1', '0') }}"
     if launchctl print "gui/${UID_NUM}/{{ hermes_launchd_label }}" >/dev/null 2>&1; then
-      echo "already-loaded"
+      if [ "$CHANGED" = "1" ]; then
+        launchctl bootout "gui/${UID_NUM}/{{ hermes_launchd_label }}" 2>/dev/null || true
+        launchctl bootstrap gui/${UID_NUM} "$PLIST"
+        echo "reloaded"
+      else
+        echo "already-current"
+      fi
     else
       launchctl bootstrap gui/${UID_NUM} "$PLIST"
       echo "bootstrapped"
     fi
   register: _hermes_bootstrap
-  changed_when: "'bootstrapped' in _hermes_bootstrap.stdout"
+  changed_when: "('bootstrapped' in _hermes_bootstrap.stdout) or ('reloaded' in _hermes_bootstrap.stdout)"
   when:
     - hermes_daemon_mode | default(false)
     - (nos_service_manager | default('launchd')) == 'launchd'
