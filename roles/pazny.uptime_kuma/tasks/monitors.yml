@@ -39,6 +39,21 @@
   delay: 10
   failed_when: false
 
+# Is Kuma's internal login already disabled (the Authentik forward_auth gate is
+# the single SSO)? Read it early so the API-login-based password reconverge +
+# monitor setup below SKIP when auth is off — their login() would just fail
+# against a disableAuth=true Kuma and burn the retry budget for nothing.
+- name: "[pazny.uptime_kuma] Read current disableAuth setting"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin | default('docker') }} exec iiab-uptime-kuma-1 sqlite3 /app/data/kuma.db \"SELECT value FROM setting WHERE key='disableAuth';\""
+  register: _kuma_disableauth_cur
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.uptime_kuma] Expose auth-disabled fact"
+  ansible.builtin.set_fact:
+    _kuma_auth_disabled: "{{ (_kuma_disableauth_cur.stdout | default('') | trim) == 'true' }}"
+
 - name: "[pazny.uptime_kuma] Load state/manifest.yml"
   ansible.builtin.set_fact:
     _kuma_manifest: "{{ lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml }}"
@@ -244,6 +259,7 @@
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
+    - not (_kuma_auth_disabled | default(false))   # login() is moot once auth is off
 
 - name: "[pazny.uptime_kuma] Auto-create monitors / notifications / status page"
   ansible.builtin.command:
@@ -282,6 +298,7 @@
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
     - uptime_kuma_auto_monitors | default(true)
+    - not (_kuma_auth_disabled | default(false))   # API login() fails once auth is off
 
 - name: "[pazny.uptime_kuma] Monitor setup output"
   ansible.builtin.debug:
@@ -311,3 +328,30 @@
   ansible.builtin.debug:
     msg: "uptime-kuma-api pip install failed: {{ _kuma_pip.msg | default('unknown') }}. Monitors were not created."
   when: _kuma_pip.failed | default(false)
+
+# ── Single-SSO: disable Kuma's internal login (Authentik gate is the only one) ─
+# Kuma v1 has NO OIDC; behind the Authentik forward_auth gate its own login is a
+# pointless SECOND sign-in (the operator's "kuma still asks for a password after
+# Authentik" wart). Disable it so the embedded outpost is the only sign-in — Kuma
+# itself recommends this when reverse-proxy auth fronts it. GATED on
+# install_authentik so Kuma is NEVER left open without the gate, plus an opt-out.
+# Runs LAST so the API-login monitor setup above ran with auth still on (fresh
+# blank); idempotent via the early _kuma_auth_disabled read — only writes +
+# bounces Kuma when it is not already disabled, so steady-state is changed=0.
+- name: "[pazny.uptime_kuma] Disable internal login — Authentik gate is the only SSO"
+  ansible.builtin.shell: |
+    set -e
+    C=iiab-uptime-kuma-1
+    DOCKER="{{ docker_bin | default('docker') }}"
+    "$DOCKER" exec "$C" sqlite3 /app/data/kuma.db \
+      "INSERT INTO setting (key,value,type) VALUES ('disableAuth','true','general') ON CONFLICT(key) DO UPDATE SET value='true';"
+    "$DOCKER" restart "$C" >/dev/null
+    echo "disabled"
+  register: _kuma_disable
+  changed_when: "'disabled' in (_kuma_disable.stdout | default(''))"
+  failed_when: false
+  when:
+    - install_authentik | default(false)
+    - uptime_kuma_disable_internal_auth | default(true)
+    - not (_kuma_auth_disabled | default(false))
+    - _kuma_ready.status | default(0) | int in [200, 301, 302]

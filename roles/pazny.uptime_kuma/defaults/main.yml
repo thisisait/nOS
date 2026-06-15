@@ -7,8 +7,10 @@
 # default.config.yml — the monitor list lives in tasks/monitors.yml.
 #
 # SSO: Uptime Kuma v1.x has no native OIDC support. Access is gated via
-# the Authentik Nginx forward_auth outpost (proxy auth). Native OIDC will
-# be revisited when Uptime Kuma v2.x ships stable OIDC.
+# the Authentik forward_auth outpost (proxy auth), and Kuma's OWN internal
+# login is DISABLED (uptime_kuma_disable_internal_auth) so the Authentik gate
+# is the single sign-in — no pointless second password behind the gate. Native
+# OIDC will be revisited when Uptime Kuma v2.x ships stable OIDC.
 # ==============================================================================
 
 uptime_kuma_version: "1"                            # major-locked v1.x (last stable line).; default.config.yml is source of truth (config-wins is intentional; tag convention differs)
@@ -21,6 +23,11 @@ uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain 
 uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_auto_monitors: true                     # Automatically create monitors for all install_* services
+# Disable Kuma's internal login so the Authentik forward_auth gate is the SINGLE
+# sign-in (Kuma v1 has no OIDC; its own login behind the gate = double login).
+# Applied only when install_authentik is on — never leave Kuma open without the
+# gate. Set false to keep Kuma's native login (e.g. no-Authentik deploys).
+uptime_kuma_disable_internal_auth: true
 uptime_kuma_api_timeout: 45                         # setup-monitors.py per-event wait (s); lib default 10s hangs under blank-run load
 uptime_kuma_setup_retries: 2                        # re-attempt monitor setup (3 total) — Kuma API starves under peak blank load
 uptime_kuma_setup_retry_delay: 45                   # seconds between monitor-setup attempts (lets load settle)
