@@ -371,3 +371,51 @@ by design and by gate.
 - [ ] `ansible-playbook main.yml --syntax-check` clean; full anatomy suite green.
 - [ ] Commit on `feat/v0.7-overnight`, Conventional Commit, surgeon-tone body,
       no push. No live mutation anywhere in the change.
+
+---
+
+## LIVE ROOT-CAUSE & PROOF (2026-06-15) — the gap is WORSE than "existing tenant"
+
+The wet-test validation runs proved this is not just an existing-tenant-migration
+edge case — **the tofu state desyncs on EVERY non-blank converge**, so the steady-
+state `tofu` engine is not idempotent across re-runs:
+
+```
+non-blank #1 (17:22) → guard REFUSE (18 immutable in-place flips)
+blank        (17:54) → tofu apply PASSED (fresh DB+state, no-op)
+non-blank #2 (18:39) → guard REFUSE again — same 18, deterministic shift
+```
+
+**Mechanism (proven, not theorised):**
+- tofu tracks each provider by its Authentik **integer PK** (the resource `id`).
+- Live providers get **recreated at new PKs during core-up** — proven:
+  `nos-bookstack` moved PK **53 → 86**; its old PK 53 is now empty; the drift
+  maps every service slug onto another entity's value (agent clients / other
+  hosts) = a whole-table PK shift.
+- tofu's state still holds the old PKs → refresh reads whatever now occupies
+  them → "dangerous in-place client_id/external_host flip" → guard refuses
+  (correctly — applying would rename 18 live providers and break SSO silently).
+- **`10-oidc-apps.yaml` is NOT the churner** — its rendered form carries 0
+  oauth2/proxy provider entries (only the embedded-outpost ref), so the
+  "no-op render" cutover trap really is closed. **The exact step that recreates
+  the providers during core-up is STILL OPEN** and is the first task of the
+  durable fix (suspects: Authentik container recreate → blueprint re-bootstrap;
+  the agent-clients blueprint apply; an outpost/RBAC blueprint).
+
+**Stopgap shipped:** `tools/tofu-authentik-reconcile.sh` (commit `b365ca2f`)
+re-imports every `module.service[*]` provider + proxy attachment + application at
+its CURRENT live PK. Source of truth = **live `application.slug → application.provider`**
+(applications import by slug, which never desyncs — this is the stable bridge a
+durable fix should lean on). Verified: 40 services → `tofu plan -detailed-exitcode`=0.
+It is a STOPGAP — a full converge re-churns and undoes it.
+
+**Durable fix directions (pick during implementation):**
+1. **Stop the churn** — find the core-up step that recreates providers and make it
+   idempotent under `engine=tofu` (don't recreate tofu-owned objects).
+2. **Track by stable key** — have the preflight auto-reconcile `module.service[*]`
+   to the live PK via the `application.slug → provider` bridge *before* plan
+   (essentially fold `tofu-authentik-reconcile.sh` into `tasks/tofu-authentik.yml`
+   as a gated, dry-run-first preflight — exactly this plan's §-design, now with a
+   working reference implementation).
+- Validation that the fix works: blank, then **two** consecutive non-blank
+  converges must both read `tofu plan` no-op (today the 2nd always refuses).
