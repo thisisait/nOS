@@ -1,7 +1,7 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
   "last_full_scan": "2026-05-31T08:13:57Z",
-  "last_advisory_check": "2026-05-31T08:13:57Z",
+  "last_advisory_check": "2026-06-14T04:04:02+02:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
   "scan_cycle": 16,
   "scanner_version": "2.0.0",
@@ -57,12 +57,13 @@
       "status": "scanned"
     },
     "gitlab": {
-      "last_checked": "2026-04-09T18:00:00Z",
-      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_checked": "2026-06-14T04:04:02+02:00",
+      "last_cve_scan": "2026-06-14T04:04:02+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
-      "findings_count": 2,
-      "status": "scanned"
+      "last_attack_probe": "2026-06-14T04:04:02+02:00",
+      "findings_count": 3,
+      "status": "scanned",
+      "notes": "Verified current at 18.10.8-ce.0 (REM-091) — June 10 2026 patch line, covers CVE-2026-5173. 127.0.0.1-only bind, native OIDC, signup disabled, monitoring endpoints whitelisted to loopback+bridge."
     },
     "gitea": {
       "last_checked": "2026-04-10T12:00:00Z",
@@ -81,12 +82,13 @@
       "status": "scanned"
     },
     "wordpress": {
-      "last_checked": "2026-04-09T22:00:00Z",
-      "last_cve_scan": "2026-04-09T22:00:00Z",
+      "last_checked": "2026-06-14T04:04:02+02:00",
+      "last_cve_scan": "2026-06-14T04:04:02+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
-      "findings_count": 0,
-      "status": "scanned"
+      "last_attack_probe": "2026-06-14T04:04:02+02:00",
+      "findings_count": 2,
+      "status": "scanned",
+      "notes": "Core CVE-clean at 6.9.4 (REM-092, covers CVE-2026-3906). Probe surfaced REM-090: unhardened public unauth endpoints (xmlrpc.php, /wp-json/wp/v2/users enumeration, /?author=N, wp-login brute-force) — intentionally public CMS, defense-in-depth hardening pending."
     },
     "n8n": {
       "last_checked": "2026-04-11T18:00:00Z",
@@ -121,12 +123,13 @@
       "status": "scanned"
     },
     "freepbx": {
-      "last_checked": "2026-04-09T18:00:00Z",
-      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_checked": "2026-06-14T04:04:02+02:00",
+      "last_cve_scan": "2026-06-14T04:04:02+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
-      "findings_count": 2,
-      "status": "scanned"
+      "last_attack_probe": "2026-06-14T04:04:02+02:00",
+      "findings_count": 3,
+      "status": "scanned",
+      "notes": "New CRITICAL CVE-2026-46376 (unauth UCP via hardcoded creds, CVSS 9.1) = REM-089, VENDOR-BLOCKED (tiredofit image abandoned 2022, joins REM-014/046). Mitigated: install_freepbx=false, web UI loopback-only, oidc:none + no domain_var = not Traefik-routed."
     },
     "mariadb": {
       "last_checked": "2026-04-10T12:00:00Z",
@@ -137,12 +140,13 @@
       "status": "scanned"
     },
     "postgresql": {
-      "last_checked": "2026-04-09T18:00:00Z",
-      "last_cve_scan": "2026-04-09T18:00:00Z",
+      "last_checked": "2026-06-14T04:04:02+02:00",
+      "last_cve_scan": "2026-06-14T04:04:02+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
-      "findings_count": 2,
-      "status": "scanned"
+      "last_attack_probe": "2026-06-14T04:04:02+02:00",
+      "findings_count": 3,
+      "status": "scanned",
+      "notes": "REM-088: pin 16.13-alpine is one patch behind the May 14 2026 release (16.14, 11 CVEs, 4x CVSS 8.8). CVE-2026-6479 SSL/GSS DoS is unauth-relevant now that ssl=on. Probe: 127.0.0.1-only + Docker shared_net, password auth, no HTTP endpoint — no external unauth surface."
     },
     "redis": {
       "last_checked": "2026-04-10T12:00:00Z",
@@ -329,28 +333,28 @@
       "status": "scanned"
     },
     "bone": {
-      "last_checked": null,
-      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_checked": "2026-06-13T04:08:12+02:00",
+      "last_cve_scan": "2026-06-13T04:08:12+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
+      "last_attack_probe": "2026-06-13T04:08:12+02:00",
       "findings_count": 0,
       "status": "scanned",
-      "notes": "nOS anatomy FastAPI bridge \u2014 localhost:8099"
+      "notes": "nOS anatomy FastAPI bridge — localhost:8099"
     },
     "wing": {
-      "last_checked": null,
-      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_checked": "2026-06-13T04:08:12+02:00",
+      "last_cve_scan": "2026-06-13T04:08:12+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
+      "last_attack_probe": "2026-06-13T04:08:12+02:00",
       "findings_count": 0,
       "status": "scanned",
-      "notes": "nOS anatomy FrankenPHP dashboard \u2014 localhost:9000"
+      "notes": "nOS anatomy FrankenPHP dashboard — localhost:9000"
     },
     "pulse": {
-      "last_checked": null,
-      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_checked": "2026-06-13T04:08:12+02:00",
+      "last_cve_scan": "2026-06-13T04:08:12+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
+      "last_attack_probe": "2026-06-13T04:08:12+02:00",
       "findings_count": 0,
       "status": "scanned",
       "notes": "nOS anatomy launchd job scheduler"
@@ -412,34 +416,38 @@
       "status": "scanned"
     },
     "mailpit": {
-      "last_checked": null,
-      "last_cve_scan": "2026-05-07T02:10:30Z",
+      "last_checked": "2026-06-13T04:08:12+02:00",
+      "last_cve_scan": "2026-06-13T04:08:12+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
+      "last_attack_probe": "2026-06-13T04:08:12+02:00",
       "findings_count": 0,
       "status": "scanned"
     },
     "spacetimedb": {
-      "last_checked": null,
-      "last_cve_scan": null,
+      "last_checked": "2026-06-13T04:08:12+02:00",
+      "last_cve_scan": "2026-06-13T04:08:12+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": null,
+      "last_attack_probe": "2026-06-13T04:08:12+02:00",
       "findings_count": 0,
-      "status": "pending",
+      "status": "scanned",
       "notes": "BSL 1.1, internal-SaaS use only"
     },
     "postgres": {
-      "last_cve_scan": "2026-05-07T02:10:30Z",
-      "status": "scanned"
+      "last_checked": "2026-06-14T04:04:02+02:00",
+      "last_cve_scan": "2026-06-14T04:04:02+02:00",
+      "last_attack_probe": "2026-06-14T04:04:02+02:00",
+      "findings_count": 3,
+      "status": "scanned",
+      "notes": "Alias of the postgresql component (role pazny.postgresql, image postgres:16.13-alpine). See the postgresql entry + REM-088 (16.14 bump)."
     }
   },
   "rotation": {
     "next_batch": [
-      "postgresql",
-      "redis",
-      "freepbx",
       "homeassistant",
-      "bluesky_pds"
+      "bluesky_pds",
+      "rustfs",
+      "qgis_server",
+      "erpnext"
     ],
     "strategy": "oldest_first"
   },
@@ -447,7 +455,10 @@
     {
       "cycle_mod": 0,
       "name": "unauthenticated_endpoint_scan",
-      "description": "Scan for endpoints accessible without authentication"
+      "description": "Scan for endpoints accessible without authentication",
+      "last_run": "2026-06-14T04:04:02+02:00",
+      "findings": 1,
+      "note": "Cycle 16 over postgres/gitlab/freepbx/postgresql/wordpress. 1 real finding: REM-090 (WordPress public xmlrpc/REST-user-enum/author-enum/wp-login, MEDIUM). postgresql/postgres loopback+shared_net password-auth only; gitlab loopback + native-OIDC + signup-off; freepbx loopback-only + not Traefik-routed (CVE-2026-46376 not externally reachable)."
     },
     {
       "cycle_mod": 1,
@@ -482,7 +493,7 @@
       "description": "Identify services without resource limits vulnerable to DoS",
       "last_run": "2026-05-07T02:15:18Z",
       "findings": 0,
-      "note": "All 62 nOS-managed (compose) containers have both mem_limit + cpu limits set \u2014 REM-004 sweep effective. 3 ad-hoc hashicorp/terraform-mcp-server:0.4.0 containers running unlimited (Claude Code MCP runtime, out of nOS scope; oldest 2026-05-03)"
+      "note": "All 62 nOS-managed (compose) containers have both mem_limit + cpu limits set — REM-004 sweep effective. 3 ad-hoc hashicorp/terraform-mcp-server:0.4.0 containers running unlimited (Claude Code MCP runtime, out of nOS scope; oldest 2026-05-03)"
     },
     {
       "cycle_mod": 7,
@@ -491,7 +502,8 @@
     }
   ],
   "attack_probes_completed": [
-    "ssrf_vector_analysis"
+    "ssrf_vector_analysis",
+    "unauthenticated_endpoint_scan"
   ],
   "last_full_scan_summary": {
     "scanner": "trivy 0.70.0 (manual Inspektor-substrate rescan)",
