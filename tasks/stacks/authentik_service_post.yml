@@ -230,6 +230,27 @@
   failed_when: false
   changed_when: false
 
+# user_oidc fetches the discovery doc with Nextcloud's IClientService, which
+# enforces `allow_local_remote_servers`. The discovery host (auth.<tld>) resolves
+# — via the container's extra_hosts:host-gateway — to the PRIVATE host-gateway IP
+# (192.168.65.254), so with the default (false) NC's SSRF guard BLOCKS the fetch
+# and the browser login dies with "Could not reach the OpenID Connect provider"
+# (live-root-caused 2026-06-15; a raw curl from the container succeeds and masks
+# it — only NC's own client enforces the guard, which is why earlier probes missed
+# it). Allow local-remote requests so the local IdP is reachable. Required on
+# PUBLIC tenants too: extra_hosts routes auth.<tld> to the private gateway
+# regardless of the public LE cert.
+- name: "[Authentik->Nextcloud] Allow server-side requests to the local IdP (OIDC discovery)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ config:system:set allow_local_remote_servers --value=true --type=boolean
+  register: _nc_allow_local
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  failed_when: false
+  changed_when: "'set to' in (_nc_allow_local.stdout | default(''))"
+
 # Two-step: CREATE if it does not exist, UPDATE if it does. `occ user_oidc:provider`
 # without update-if-exists flag FAILS on duplicate, so we need two
 # separate tasks. The update flag differs across versions - failed_when: false

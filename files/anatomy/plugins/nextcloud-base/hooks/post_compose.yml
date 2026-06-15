@@ -50,6 +50,19 @@ sequence:
     cmd: php occ user_oidc:provider
     register: _nc_oidc_check
 
+  # The discovery host (auth.<tld>) resolves via extra_hosts:host-gateway to the
+  # PRIVATE host-gateway IP, so NC's IClientService SSRF guard (default off)
+  # BLOCKS the discovery fetch → browser login "Could not reach the OpenID
+  # Connect provider" (live 2026-06-15). Allow local-remote requests. Required on
+  # public tenants too (extra_hosts routes auth to the private gateway).
+  - id: allow_local_idp
+    when: "_nc_running.state == 'running'"
+    runner: docker_exec
+    container: nextcloud
+    compose_project: iiab
+    user: www-data
+    cmd: php occ config:system:set allow_local_remote_servers --value=true --type=boolean
+
   - id: register_authentik_provider
     when: >
       _nc_running.state == 'running'
