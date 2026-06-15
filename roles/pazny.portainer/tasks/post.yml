@@ -170,6 +170,95 @@
                else ('DRIFT — manual reset required' if (_portainer_admin_check.status | default(0) == 204) else 'fresh install')) }}
   when: _portainer_ready.status | default(0) in [200, 303]
 
+# ── ADMIN-PASSWORD DRIFT SELF-HEAL ───────────────────────────────────────────
+# Portainer's admin password can only be rotated via the API WITH the old
+# password (PUT /passwd above). When BOTH the current AND previous prefixes fail
+# to log in (admin exists but its password is unknown — an interrupted/partial
+# provisioning, like an aborted blank, left it drifted), the reconverge is stuck,
+# OAuth/SSO config below is SKIPPED, and the loud SSO verify correctly FAILS the
+# run. Portainer holds NO user data — its admin, endpoints, settings and OAuth
+# are 100% reprovisioned by this role — so the robust heal is to wipe its BoltDB,
+# which drops the unknown admin → the admin-init path (and the OAuth login below)
+# re-create it with the CONFIG password. Wiping the BoltDB is destructive of
+# Portainer's local config only; per manual-over-auto doctrine it is OPT-IN via
+# portainer_admin_auto_reset (default false). Off → a loud, paste-able diagnostic.
+- name: "[pazny.portainer Post] Detect admin-password DRIFT (neither prefix logs in)"
+  ansible.builtin.set_fact:
+    _portainer_pw_drift: >-
+      {{ (_portainer_admin_check.status | default(0) == 204)
+         and (_portainer_auth_new.status | default(0) != 200)
+         and (_portainer_auth_old.status | default(0) != 200) }}
+  when: _portainer_ready.status | default(0) in [200, 303]
+
+- name: "[pazny.portainer Post] Auto-heal admin DRIFT — reset the BoltDB (opt-in)"
+  when:
+    - _portainer_pw_drift | default(false) | bool
+    - portainer_admin_auto_reset | default(false) | bool
+  block:
+    - name: "[pazny.portainer Post] DRIFT heal — stop Portainer"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} stop infra-portainer-1"
+      changed_when: true
+
+    - name: "[pazny.portainer Post] DRIFT heal — remove BoltDB (admin store; reprovisioned)"
+      ansible.builtin.file:
+        path: "{{ portainer_data_dir }}/portainer.db"
+        state: absent
+
+    - name: "[pazny.portainer Post] DRIFT heal — start Portainer (fresh admin-init window)"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} start infra-portainer-1"
+      changed_when: true
+
+    - name: "[pazny.portainer Post] DRIFT heal — wait for API"
+      ansible.builtin.include_role:
+        name: pazny._common_tasks
+        tasks_from: wait_for_api.yml
+      vars:
+        wait_name: "[pazny.portainer Post] (drift-heal re-wait)"
+        wait_url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
+        wait_status_codes: [200]
+        wait_register_as: _portainer_ready_heal
+        wait_retries: 12
+        wait_delay: 5
+        wait_hard_fail: false
+
+    - name: "[pazny.portainer Post] DRIFT heal — re-init admin with the config password"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/admin/init"
+        method: POST
+        body_format: json
+        body:
+          Username: "admin"
+          Password: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer') }}"
+        status_code: [200]
+        timeout: 10
+      register: _portainer_admin_reinit
+      changed_when: _portainer_admin_reinit.status | default(0) == 200
+      failed_when: false
+      no_log: true
+
+    - name: "[pazny.portainer Post] DRIFT heal — result"
+      ansible.builtin.debug:
+        msg: >-
+          Portainer admin DRIFT auto-healed: BoltDB wiped + admin re-initialized
+          {{ 'OK with the config password' if (_portainer_admin_reinit.status | default(0) == 200)
+             else 'FAILED (admin-init window may need a 2nd pass) — re-run --tags portainer' }}.
+          Endpoints/OAuth are reprovisioned below.
+
+- name: "[pazny.portainer Post] DRIFT but auto-reset OFF — loud actionable diagnostic"
+  ansible.builtin.debug:
+    msg: >-
+      Portainer admin password DRIFT — admin exists but neither the current nor
+      previous prefix logs in, so OAuth/SSO config is SKIPPED and the SSO verify
+      will FAIL this run. Portainer holds no user data (config is reprovisioned).
+      Heal by EITHER: (a) re-run with -e portainer_admin_auto_reset=true ; OR
+      (b) manually — `{{ docker_bin | default('docker') }} stop infra-portainer-1
+      && rm -f {{ portainer_data_dir }}/portainer.db &&
+      {{ docker_bin | default('docker') }} start infra-portainer-1` then re-run
+      `--tags portainer,stacks`.
+  when:
+    - _portainer_pw_drift | default(false) | bool
+    - not (portainer_admin_auto_reset | default(false) | bool)
+
 - name: "[pazny.portainer Post] Get auth token for admin (for OAuth2 config)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"

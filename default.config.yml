@@ -1485,6 +1485,12 @@ portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API +
 portainer_version: "2.27.3"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
+# Self-heal an admin-password DRIFT (admin exists but neither the current nor
+# previous prefix logs in — left by an interrupted/partial provisioning). true =
+# wipe Portainer's BoltDB so admin-init recreates the admin with the config
+# password (Portainer holds no user data — endpoints/OAuth are reprovisioned).
+# Default false (manual-over-auto): off gives a loud, paste-able heal diagnostic.
+portainer_admin_auto_reset: false
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
 # (2026-06-10 review; the C1 pin gate doesn't scan base-stack templates).

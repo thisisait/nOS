@@ -11,6 +11,10 @@ portainer_version: "2.27.3"                         # CVE-2025-68121 pin (transi
 portainer_port: 9002                                # 9000/9001 rezervovano pro RustFS
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
+# Opt-in self-heal of an admin-password DRIFT (see post.yml). Authoritative
+# default lives in default.config.yml (loads before core-up, dodging the
+# {{ vars }} trap); this mirror keeps the role independent.
+portainer_admin_auto_reset: false
 portainer_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 portainer_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
