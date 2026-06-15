@@ -167,6 +167,76 @@ final class MigrationAuthoredRepository
 		return ['ok' => true, 'status' => $status, 'detail' => 'review status updated'];
 	}
 
+	/**
+	 * The forge-merge write (GATE 2) — the ONLY path to review_status='merged'.
+	 *
+	 * Deliberately SEPARATE from setReviewStatus() (which hard-refuses 'merged'):
+	 * `merged` + `committed_sha` are reachable only after the operator merges the
+	 * local-forge MR. No Wing UI / API can reach this — it is driven exclusively
+	 * by the PULL path (tools/migration-pr.sh --mark-merged → bin/promote-migration.php,
+	 * or the next-deploy ingest pass). §7-Q1: PULL model (no inbound forge webhook).
+	 *
+	 * Idempotent + UNIQUE-safe: the UNIQUE(service, recipe_id, review_status) index
+	 * means a second merged row for the same (service,recipe) would collide, so we
+	 * delete-prior any stale 'merged' row for that pair first (the same trick
+	 * insertAuthored() uses for draft/in_review). A re-run on an already-merged row
+	 * is a no-op that simply re-stamps committed_sha/updated_at.
+	 *
+	 * @return array{ok:bool, status:string, detail:string, id:int|null,
+	 *         uuid:string, service:string, recipe_id:string, migration_id:string|null,
+	 *         migration_uuid:string, committed_sha:string,
+	 *         applied_migration_id:string|null, already_merged:bool}
+	 */
+	public function markMerged(int $id, string $committedSha, ?string $appliedMigrationId = null): array
+	{
+		$row = $this->db->table('migrations_authored')->where('id', $id)->fetch();
+		if ($row === null) {
+			return [
+				'ok' => false, 'status' => 'not_found', 'detail' => 'no such authored migration',
+				'id' => null, 'uuid' => '', 'service' => '', 'recipe_id' => '',
+				'migration_id' => null, 'migration_uuid' => '', 'committed_sha' => '',
+				'applied_migration_id' => null, 'already_merged' => false,
+			];
+		}
+		$service = (string) $row->service;
+		$recipeId = (string) $row->recipe_id;
+		$alreadyMerged = ((string) $row->review_status === 'merged');
+
+		// Drop any OTHER stale 'merged' row for the same (service,recipe) so the
+		// flip doesn't trip UNIQUE(service,recipe_id,review_status). Never delete
+		// the row we are about to update (id != this).
+		if (!$alreadyMerged) {
+			$this->db->table('migrations_authored')
+				->where('service', $service)->where('recipe_id', $recipeId)
+				->where('review_status', 'merged')->where('id != ?', $id)->delete();
+		}
+
+		$update = [
+			'review_status' => 'merged',
+			'committed_sha' => $committedSha,
+			'updated_at'    => gmdate('c'),
+		];
+		if ($appliedMigrationId !== null && $appliedMigrationId !== '') {
+			$update['applied_migration_id'] = $appliedMigrationId;
+		}
+		$this->db->table('migrations_authored')->where('id', $id)->update($update);
+
+		return [
+			'ok' => true,
+			'status' => 'merged',
+			'detail' => $alreadyMerged ? 'already merged — committed_sha re-stamped' : 'review status flipped to merged',
+			'id' => $id,
+			'uuid' => (string) $row->uuid,
+			'service' => $service,
+			'recipe_id' => $recipeId,
+			'migration_id' => $row->migration_id !== null ? (string) $row->migration_id : null,
+			'migration_uuid' => (string) $row->uuid,
+			'committed_sha' => $committedSha,
+			'applied_migration_id' => $appliedMigrationId !== null && $appliedMigrationId !== '' ? $appliedMigrationId : null,
+			'already_merged' => $alreadyMerged,
+		];
+	}
+
 	/** RFC-4122 v4 UUID (matches the AgentKit / invitations uuid idiom). */
 	private function uuid4(): string
 	{
