@@ -65,3 +65,19 @@ def test_flag_has_real_default_before_core_up():
     # default.config.yml (a role default would be too late — the {{ vars }} trap).
     assert "portainer_admin_auto_reset: false" in CONFIG, \
         "portainer_admin_auto_reset must default in default.config.yml (loads before core-up)"
+
+
+def test_idempotent_when_sso_already_active():
+    # Once OAuth2 is active (AuthenticationMethod==3) Portainer's internal admin
+    # login 422s by design, so the password machinery is MOOT. A re-converge must
+    # NOT raise a false DRIFT and must NOT retry the OAuth config — else every run
+    # alarms even though SSO is fine. Pinned: read AuthMethod from the unauth public
+    # endpoint, exclude ==3 from drift, gate the OAuth-config JWT fetch on != 3.
+    assert "/api/settings/public" in POST and "_portainer_authmethod" in POST, \
+        "post.yml must read AuthenticationMethod from the unauth public endpoint"
+    drift = POST[POST.find("Detect admin-password DRIFT"):POST.find("Auto-heal admin DRIFT")]
+    assert "_portainer_authmethod | default(0) | int != 3" in drift, \
+        "drift must be FALSE when SSO is already active (==3) — no false alarm"
+    jwt = POST[POST.find("Get auth token for admin"):POST.find("SSO already active")]
+    assert "_portainer_authmethod | default(0) | int != 3" in jwt, \
+        "the OAuth-config JWT fetch must be skipped when SSO is already active (idempotent)"

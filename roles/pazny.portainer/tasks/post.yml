@@ -51,6 +51,27 @@
   failed_when: false
   when: _portainer_ready.status | default(0) in [200, 303]
 
+# Current SSO state, read UNAUTHENTICATED (/api/settings/public carries
+# AuthenticationMethod). Once OAuth2 is active (==3) Portainer's internal admin
+# login 422s by design (OAuth is the only path), so the admin-password machinery
+# below (reconverge, drift-detect, OAuth config) is MOOT — gating it on !=3 keeps
+# a re-converge from raising a false "DRIFT" / "OAuth SKIPPED" alarm every run.
+- name: "[pazny.portainer Post] Read AuthenticationMethod (unauth public settings)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/settings/public"
+    method: GET
+    status_code: [200]
+    timeout: 5
+  register: _portainer_public_pre
+  changed_when: false
+  failed_when: false
+  when: _portainer_ready.status | default(0) in [200, 303]
+
+- name: "[pazny.portainer Post] Expose current AuthenticationMethod fact"
+  ansible.builtin.set_fact:
+    _portainer_authmethod: "{{ _portainer_public_pre.json.AuthenticationMethod | default(0) | int }}"
+  when: _portainer_ready.status | default(0) in [200, 303]
+
 # ── Admin-init window guard (cold-blank gotcha) ─────────────────────────────
 # Portainer's admin-init API window is ~5 min from CONTAINER START. On a cold
 # blank the run can reach this task long after that (blank-confirm pause + slow
@@ -187,7 +208,8 @@
     _portainer_pw_drift: >-
       {{ (_portainer_admin_check.status | default(0) == 204)
          and (_portainer_auth_new.status | default(0) != 200)
-         and (_portainer_auth_old.status | default(0) != 200) }}
+         and (_portainer_auth_old.status | default(0) != 200)
+         and (_portainer_authmethod | default(0) | int != 3) }}
   when: _portainer_ready.status | default(0) in [200, 303]
 
 - name: "[pazny.portainer Post] Auto-heal admin DRIFT — reset the BoltDB (opt-in)"
@@ -273,8 +295,21 @@
   when:
     - _portainer_ready.status | default(0) in [200, 303]
     - install_authentik | default(false)
+    - _portainer_authmethod | default(0) | int != 3   # already OAuth2 → skip (idempotent)
   failed_when: false
   no_log: true
+
+- name: "[pazny.portainer Post] SSO already active — OAuth config skipped (idempotent)"
+  ansible.builtin.debug:
+    msg: >-
+      Portainer OAuth2 already active (AuthenticationMethod=3) — config PUT skipped.
+      {{ 'NOTE: local admin login differs from the config password (break-glass only;
+      SSO is unaffected). Set portainer_admin_auto_reset=true to restore local login.'
+         if (_portainer_auth_new.status | default(0) != 200) else '' }}
+  when:
+    - _portainer_ready.status | default(0) in [200, 303]
+    - install_authentik | default(false)
+    - _portainer_authmethod | default(0) | int == 3
 
 - name: "[pazny.portainer Post] OAuth2 auth token status"
   ansible.builtin.debug:
@@ -291,6 +326,7 @@
   when:
     - _portainer_ready.status | default(0) in [200, 303]
     - install_authentik | default(false)
+    - _portainer_authmethod | default(0) | int != 3   # already active → the 'already active' note above covers it
 
 - name: "[pazny.portainer Post] Configure OAuth2 settings (Authentik)"
   ansible.builtin.uri:
@@ -358,8 +394,8 @@
   ansible.builtin.debug:
     msg: >-
       Portainer OAuth2:
-      {% if _portainer_settings_verify.json.AuthenticationMethod | default(0) | int == 3 %}
-      OK — AuthMethod=3 (OAuth2), SSO enabled, token exchange via Docker internal HTTP
+      {% if (_portainer_settings_verify.json.AuthenticationMethod | default(0) | int == 3) or (_portainer_authmethod | default(0) | int == 3) %}
+      OK — AuthMethod=3 (OAuth2), SSO active{{ ' (config skipped — already active)' if (_portainer_settings_verify.json.AuthenticationMethod is not defined) else ', token exchange via Docker internal HTTP' }}
       {% elif _portainer_oauth_put.status | default(0) == 200 %}
       PUT accepted but verification shows AuthMethod={{ _portainer_settings_verify.json.AuthenticationMethod | default('?') }} — check manually
       {% elif _portainer_auth.json.jwt is not defined or _portainer_auth.json.jwt | length == 0 %}
