@@ -105,6 +105,32 @@ final class EventRepository
 		// tests/anatomy/test_devlog_event_types.py.
 		'devlog_entry_created', 'devlog_entry_updated', 'devlog_entry_deleted',
 		'devlog_sync_run', 'devlog_published',
+		// ── Agentic upgrade→migration→coexistence epic — 8 NEW types (B1) ─
+		// Twin rule (NON-NEGOTIABLE, one commit): every type here MUST also be
+		// in Bone's events.py VALID_TYPES or an agent's Bone-proxied POST 400s
+		// (the 2026-05-17 remediator incident). Pinned by the extended
+		// tests/anatomy/test_devlog_event_types.py twin-parity gate. Emitter /
+		// FK-column / result_json contracts:
+		//   plan_choice_recorded — UpgradesPresenter::actionPlanChoice; upgrade_id;
+		//     {service, recipe_id, plan_mode, coexistence_planned_id?, data_copy, port_offset}.
+		//   migration_authored    — migration-author agent; migration_id (holds uuid);
+		//     {service, recipe_id, migration_uuid, artifact_kind, artifact_path,
+		//     from_version, to_version}.
+		//   migration_pr_opened   — migration-author via migration-pr.sh; migration_id;
+		//     {migration_uuid, forge, mr_url, forge_branch}.
+		//   migration_promoted    — operator forge-merge (webhook / --mark-merged);
+		//     migration_id; {migration_uuid, committed_sha, applied_migration_id?}.
+		//   migration_rejected    — operator reject; migration_id; {migration_uuid, rejected_reason}.
+		//   coexistence_promote   — toggle-as-primary; coexist_svc;
+		//     {coexistence_service, from_tag, to_tag, ttl_until}.
+		//   coexistence_demote    — deactivate-secondary / implicit demote; coexist_svc;
+		//     {coexistence_service, tag, from_role, to_role}.
+		//   coexistence_cancel    — cancel queued; coexist_svc;
+		//     {coexistence_service, tag, planned_id, reason}.
+		'plan_choice_recorded',
+		'migration_authored', 'migration_pr_opened',
+		'migration_promoted', 'migration_rejected',
+		'coexistence_promote', 'coexistence_demote', 'coexistence_cancel',
 	];
 
 	public function __construct(

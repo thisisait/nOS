@@ -698,3 +698,47 @@ CREATE TABLE IF NOT EXISTS coexistence_planned (
     UNIQUE (service, tag, status)
 );
 CREATE INDEX IF NOT EXISTS idx_coexistence_planned_status ON coexistence_planned (status);
+
+-- migrations_authored: the recipe→migration promotion record (agentic
+-- upgrade→migration→coexistence epic, Phase B / B1). The hub that joins all
+-- three islands — distinct from migrations_applied (the runtime execution
+-- mirror); THIS is the authoring/review artifact the migration-author agent
+-- writes when it promotes a merged upgrade recipe into a real committed
+-- migration record + version bump. `review_status` reaches 'merged' ONLY
+-- through the operator's local-forge MR merge (GATE 2) — no agent / Wing API
+-- can flip it. The UNIQUE(service, recipe_id, review_status) mirrors
+-- upgrades_planned.UNIQUE(service,recipe_id,status) so the repo uses the same
+-- delete-prior pattern to flip draft → in_review → merged without a collision.
+-- NEW table → lives here (CREATE TABLE IF NOT EXISTS); columns on EXISTING
+-- coexistence/upgrade tables go in bin/init-db.php's ALTER sweep instead.
+CREATE TABLE IF NOT EXISTS migrations_authored (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,            -- UUID4 == authoring agent_sessions.uuid / actor_action_id
+    service         TEXT NOT NULL,                  -- soft FK upgrade_recipes.service
+    recipe_id       TEXT NOT NULL,                  -- soft FK upgrade_recipes.recipe_id (the promoted recipe)
+    migration_id    TEXT,                           -- files/anatomy/migrations/<ISO>-<slug>.yml id (== filename)
+    plan_mode       TEXT NOT NULL DEFAULT 'migration', -- migration | coexist (carried from the plan-choice)
+    from_version    TEXT,
+    to_version      TEXT,
+    severity        TEXT,                           -- patch | minor | breaking | security (mirrors recipe)
+    title           TEXT NOT NULL,
+    artifact_kind   TEXT NOT NULL DEFAULT 'migration_yaml', -- migration_yaml | recipe_apply_body | role_task
+    artifact_path   TEXT,                           -- repo-relative path the MR touches
+    forge           TEXT,                           -- gitlab | gitea
+    mr_url          TEXT,                           -- LOCAL forge MR/PR URL (NEVER GitHub)
+    forge_branch    TEXT,                           -- fix/migration-<svc>-<ts>
+    committed_sha   TEXT,                           -- set once review_status=merged
+    review_status   TEXT NOT NULL DEFAULT 'draft',  -- draft | in_review | merged | rejected | superseded
+    rejected_reason TEXT,
+    author_agent    TEXT NOT NULL DEFAULT 'migration-author', -- == actor_id minus "agent:"
+    session_uuid    TEXT,                           -- soft FK agent_sessions.uuid (lineage deep-link)
+    actor_id        TEXT,                           -- agent:migration-author (or operator on manual promote)
+    actor_action_id TEXT,                           -- == session_uuid
+    applied_migration_id TEXT,                       -- soft FK migrations_applied.id once it RUNS
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (service, recipe_id, review_status)       -- one live draft/in_review per (svc,recipe); delete-prior to flip
+);
+CREATE INDEX IF NOT EXISTS idx_mig_authored_service ON migrations_authored (service);
+CREATE INDEX IF NOT EXISTS idx_mig_authored_status  ON migrations_authored (review_status);
+CREATE INDEX IF NOT EXISTS idx_mig_authored_session ON migrations_authored (session_uuid);

@@ -103,6 +103,64 @@ VALID_TYPES = {
     #     a future operator-side post-release emit would use it).
     "devlog_entry_created", "devlog_entry_updated", "devlog_entry_deleted",
     "devlog_sync_run", "devlog_published",
+    # ── Drift backfill (agentic upgrade→migration→coexistence epic, B1) ─────
+    # These already live in Wing's EventRepository::VALID_TYPES but were ABSENT
+    # from Bone — a pre-existing drift. The migration-author agent emits through
+    # AgentKit (agent_session_*…) when run via the runtime, and those traverse
+    # Bone; without these here the agent's session events would 400 exactly like
+    # the 2026-05-17 remediator_report incident. Backfilled in the SAME commit as
+    # the 8 new types below so the twins re-align (test_devlog_event_types.py-style
+    # twin-parity gate now pins both halves).
+    #   patch_* — apply-patches engine (mirrors upgrade_* / migration_*).
+    "patch_start", "patch_step_ok", "patch_step_failed", "patch_end",
+    #   AgentKit lifecycle (A14) — every agent session emits start + end;
+    #   coordinator sessions also emit thread_*; outcome-driven sessions emit
+    #   iteration_*; tool use + grader decisions + outbound/inbound webhooks +
+    #   vault resolution complete the family. actor_action_id == agent_sessions.uuid.
+    "agent_session_start", "agent_session_end",
+    "agent_thread_start", "agent_thread_end",
+    "agent_iteration_start", "agent_iteration_end",
+    "agent_tool_use", "agent_tool_result",
+    "agent_message", "agent_grader_decision",
+    "agent_webhook_dispatch", "agent_webhook_receipt",
+    "agent_vault_resolved",
+    #   Agent approval workflow (A11 — /approvals UI).
+    "agent_approval_request", "agent_approval_decision",
+    #   Big-red-button platform halt (A12 — /admin emergency control).
+    "admin_emergency_halt", "admin_emergency_resume",
+    #   E2E journey telemetry (A13 — non-interactive end-to-end testing).
+    "e2e_journey_start", "e2e_journey_step", "e2e_journey_end",
+    # ── Agentic upgrade→migration→coexistence epic — the 8 NEW types (B1) ───
+    # Twin rule (NON-NEGOTIABLE, one commit): every type here MUST also be in
+    # Wing's EventRepository::VALID_TYPES or an agent's Bone-proxied POST 400s.
+    # See docs/plans/agentic-upgrade-migration-coexistence-design.md §2.6 for
+    # the emitter / FK-column / result_json contract of each.
+    #   plan_choice_recorded — UpgradesPresenter::actionPlanChoice; uses upgrade_id;
+    #     result_json {service, recipe_id, plan_mode, coexistence_planned_id?,
+    #     data_copy, port_offset}.
+    "plan_choice_recorded",
+    #   migration_authored — migration-author agent; uses migration_id (holds uuid);
+    #     result_json {service, recipe_id, migration_uuid, artifact_kind,
+    #     artifact_path, from_version, to_version}.
+    "migration_authored",
+    #   migration_pr_opened — migration-author (via migration-pr.sh); uses
+    #     migration_id; result_json {migration_uuid, forge, mr_url, forge_branch}.
+    "migration_pr_opened",
+    #   migration_promoted — operator forge-merge (webhook / --mark-merged); uses
+    #     migration_id; result_json {migration_uuid, committed_sha, applied_migration_id?}.
+    "migration_promoted",
+    #   migration_rejected — operator reject; uses migration_id; result_json
+    #     {migration_uuid, rejected_reason}.
+    "migration_rejected",
+    #   coexistence_promote — toggle-as-primary; uses coexist_svc; result_json
+    #     {coexistence_service, from_tag, to_tag, ttl_until}.
+    "coexistence_promote",
+    #   coexistence_demote — deactivate-secondary / implicit demote; uses
+    #     coexist_svc; result_json {coexistence_service, tag, from_role, to_role}.
+    "coexistence_demote",
+    #   coexistence_cancel — cancel queued; uses coexist_svc; result_json
+    #     {coexistence_service, tag, planned_id, reason}.
+    "coexistence_cancel",
 }
 
 

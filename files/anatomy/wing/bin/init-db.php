@@ -567,6 +567,59 @@ $addMissingColumns($db, 'coexistence_planned', [
 	'target_version' => 'TEXT',
 ]);
 
+// ── Agentic upgrade→migration→coexistence epic (Phase B / B1) ────────────
+// New columns on the EXISTING coexistence/upgrade tables land here (the
+// schema-extensions.sql CREATE TABLE IF NOT EXISTS is a no-op on a pre-existing
+// wing.db; ALTER is the migration vehicle). The migrations_authored TABLE is
+// NEW so it lives in schema-extensions.sql, NOT here. Types/defaults documented
+// in docs/plans/agentic-upgrade-migration-coexistence-design.md §2.2-2.4.
+
+// coexistence_tracks — human-facing reversible primary/secondary state machine.
+// `role`/`lifecycle` are the new state; the legacy `active 0/1` stays the live-
+// routing pointer (active=1 ⟺ role='primary') so every existing reader keeps
+// working untouched. source_migration_id is the soft FK to the migration this
+// track is built ON (consumed at cutover via nos_migrate action=apply).
+$addMissingColumns($db, 'coexistence_tracks', [
+	'role'                => "TEXT NOT NULL DEFAULT 'secondary'",
+	'lifecycle'           => "TEXT NOT NULL DEFAULT 'provisioned'",
+	'source_migration_id' => 'TEXT',
+	'promoted_at'         => 'TEXT',
+	'deactivated_at'      => 'TEXT',
+]);
+// Single-primary DB invariant — created AFTER the sweep (role must exist first;
+// same ordering discipline as idx_events_row_hash + the WORM triggers). The
+// toggle writer demotes the old primary → 'secondary' in the SAME transaction
+// as it promotes the new one, so a legitimate toggle never trips this; it only
+// blocks a bug that would leave two primaries for one service.
+$db->exec(
+	'CREATE UNIQUE INDEX IF NOT EXISTS uq_coexist_one_primary '
+	. "ON coexistence_tracks (service) WHERE role = 'primary'"
+);
+
+// coexistence_planned — cancel + plan-choice link + data-copy flag. The
+// `cancelled` status was a documented enum value never written; cancelPlanned()
+// makes it real. parent_upgrade_id back-links the path-(b) plan that spawned
+// this row; source_migration_uuid is the migration the track is built ON;
+// data_copy drives the cutover-time dump/restore (path (b) "with a copy").
+$addMissingColumns($db, 'coexistence_planned', [
+	'parent_upgrade_id'     => 'INTEGER',
+	'source_migration_uuid' => 'TEXT',
+	'data_copy'             => 'INTEGER NOT NULL DEFAULT 1',
+	'cancelled_at'          => 'TEXT',
+	'cancelled_by'          => 'TEXT',
+]);
+
+// upgrades_planned — the plan-choice branch point. plan_mode default 'migration'
+// means a legacy row reads as today's only behaviour (in-place); coexistence_planned_id
+// + migration_uuid back-link the chosen path. The existing UNIQUE(service,recipe_id,status)
+// is untouched.
+$addMissingColumns($db, 'upgrades_planned', [
+	'plan_mode'              => "TEXT NOT NULL DEFAULT 'migration'",
+	'coexistence_planned_id' => 'INTEGER',
+	'migration_uuid'         => 'TEXT',
+	'plan_choice_at'         => 'TEXT',
+]);
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

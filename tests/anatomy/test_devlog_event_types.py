@@ -24,6 +24,41 @@ DEVLOG_TYPES = (
     "devlog_published",
 )
 
+# ── Agentic upgrade→migration→coexistence epic — 8 new types (Phase B / B1) ──
+# Same twin-parity contract as DEVLOG_TYPES: every type below MUST appear in
+# BOTH Bone's events.py VALID_TYPES and Wing's EventRepository::VALID_TYPES, or
+# an agent's Bone-proxied POST silently 400s (the 2026-05-17 remediator_report
+# incident). See docs/plans/agentic-upgrade-migration-coexistence-design.md §2.6.
+UPGRADE_COEXIST_B1_TYPES = (
+    "plan_choice_recorded",
+    "migration_authored",
+    "migration_pr_opened",
+    "migration_promoted",
+    "migration_rejected",
+    "coexistence_promote",
+    "coexistence_demote",
+    "coexistence_cancel",
+)
+
+# ── Pre-existing drift backfilled in B1 (Wing carried these; Bone did not) ──
+# The migration-author emits through AgentKit (agent_session_*…) when run via
+# the runtime, and those traverse Bone. B1 backfills the AgentKit + patch_* +
+# approval + admin-emergency + e2e families into Bone so the migration-author's
+# session events don't 400. This gate pins that the backfill stays in BOTH twins.
+B1_BACKFILL_TYPES = (
+    "patch_start", "patch_step_ok", "patch_step_failed", "patch_end",
+    "agent_session_start", "agent_session_end",
+    "agent_thread_start", "agent_thread_end",
+    "agent_iteration_start", "agent_iteration_end",
+    "agent_tool_use", "agent_tool_result",
+    "agent_message", "agent_grader_decision",
+    "agent_webhook_dispatch", "agent_webhook_receipt",
+    "agent_vault_resolved",
+    "agent_approval_request", "agent_approval_decision",
+    "admin_emergency_halt", "admin_emergency_resume",
+    "e2e_journey_start", "e2e_journey_step", "e2e_journey_end",
+)
+
 
 def test_bone_whitelists_devlog_types():
     src = BONE.read_text(encoding="utf-8")
@@ -45,6 +80,31 @@ def test_presenter_validates_via_repository_constant():
         "EventsPresenter no longer validates via EventRepository::VALID_TYPES — "
         "devlog types must be added to its own whitelist too"
     )
+
+
+def test_bone_whitelists_b1_upgrade_coexist_types():
+    """The 8 new B1 event types are all present in Bone's VALID_TYPES."""
+    src = BONE.read_text(encoding="utf-8")
+    for t in UPGRADE_COEXIST_B1_TYPES:
+        assert f'"{t}"' in src, f"Bone VALID_TYPES missing B1 type {t}"
+
+
+def test_wing_repository_whitelists_b1_upgrade_coexist_types():
+    """The 8 new B1 event types are all present in Wing's VALID_TYPES (twin)."""
+    src = PHP_REPO.read_text(encoding="utf-8")
+    for t in UPGRADE_COEXIST_B1_TYPES:
+        assert f"'{t}'" in src, f"Wing EventRepository VALID_TYPES missing B1 type {t}"
+
+
+def test_b1_backfill_types_present_in_both_twins():
+    """The AgentKit/patch_*/approval/admin/e2e drift backfilled by B1 is in BOTH
+    twins — without it the migration-author's AgentKit session events 400 at Bone.
+    """
+    bone = BONE.read_text(encoding="utf-8")
+    php = PHP_REPO.read_text(encoding="utf-8")
+    for t in B1_BACKFILL_TYPES:
+        assert f'"{t}"' in bone, f"Bone VALID_TYPES missing backfill type {t}"
+        assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing backfill type {t}"
 
 
 def test_emitters_use_whitelisted_types():

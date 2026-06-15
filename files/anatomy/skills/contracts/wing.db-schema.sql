@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (40)
+-- TABLES (41)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -163,7 +163,7 @@ CREATE TABLE coexistence_planned (
     planned_by    TEXT NOT NULL DEFAULT 'operator',
     status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
     planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    applied_at    TEXT,
+    applied_at    TEXT, parent_upgrade_id INTEGER, source_migration_uuid TEXT, data_copy INTEGER NOT NULL DEFAULT 1, cancelled_at TEXT, cancelled_by TEXT,
     UNIQUE (service, tag, status)
 );
 
@@ -179,7 +179,7 @@ CREATE TABLE coexistence_tracks (
     started_at    TEXT,
     cutover_at    TEXT,
     ttl_until     TEXT,
-    updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now')), role TEXT NOT NULL DEFAULT 'secondary', lifecycle TEXT NOT NULL DEFAULT 'provisioned', source_migration_id TEXT, promoted_at TEXT, deactivated_at TEXT,
     UNIQUE(service, tag)
 );
 
@@ -348,6 +348,35 @@ CREATE TABLE migrations_applied (
     rolled_back_from  TEXT,
     event_run_id      TEXT,
     raw_record_json   TEXT                  -- full migration record
+);
+
+CREATE TABLE migrations_authored (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,            -- UUID4 == authoring agent_sessions.uuid / actor_action_id
+    service         TEXT NOT NULL,                  -- soft FK upgrade_recipes.service
+    recipe_id       TEXT NOT NULL,                  -- soft FK upgrade_recipes.recipe_id (the promoted recipe)
+    migration_id    TEXT,                           -- files/anatomy/migrations/<ISO>-<slug>.yml id (== filename)
+    plan_mode       TEXT NOT NULL DEFAULT 'migration', -- migration | coexist (carried from the plan-choice)
+    from_version    TEXT,
+    to_version      TEXT,
+    severity        TEXT,                           -- patch | minor | breaking | security (mirrors recipe)
+    title           TEXT NOT NULL,
+    artifact_kind   TEXT NOT NULL DEFAULT 'migration_yaml', -- migration_yaml | recipe_apply_body | role_task
+    artifact_path   TEXT,                           -- repo-relative path the MR touches
+    forge           TEXT,                           -- gitlab | gitea
+    mr_url          TEXT,                           -- LOCAL forge MR/PR URL (NEVER GitHub)
+    forge_branch    TEXT,                           -- fix/migration-<svc>-<ts>
+    committed_sha   TEXT,                           -- set once review_status=merged
+    review_status   TEXT NOT NULL DEFAULT 'draft',  -- draft | in_review | merged | rejected | superseded
+    rejected_reason TEXT,
+    author_agent    TEXT NOT NULL DEFAULT 'migration-author', -- == actor_id minus "agent:"
+    session_uuid    TEXT,                           -- soft FK agent_sessions.uuid (lineage deep-link)
+    actor_id        TEXT,                           -- agent:migration-author (or operator on manual promote)
+    actor_action_id TEXT,                           -- == session_uuid
+    applied_migration_id TEXT,                       -- soft FK migrations_applied.id once it RUNS
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (service, recipe_id, review_status)       -- one live draft/in_review per (svc,recipe); delete-prior to flip
 );
 
 CREATE TABLE notifications (
@@ -657,7 +686,7 @@ CREATE TABLE upgrades_planned (
     status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
     notes         TEXT,
     planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    applied_at    TEXT,
+    applied_at    TEXT, plan_mode TEXT NOT NULL DEFAULT 'migration', coexistence_planned_id INTEGER, migration_uuid TEXT, plan_choice_at TEXT,
     UNIQUE (service, recipe_id, status)
 );
 
@@ -704,7 +733,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (79)
+-- INDEXS (83)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -780,6 +809,12 @@ CREATE INDEX idx_gitleaks_severity          ON gitleaks_findings(severity, resol
 CREATE INDEX idx_memory_agent_name ON agent_memory_stores (agent_name);
 
 CREATE INDEX idx_memory_updated    ON agent_memory_stores (updated_at);
+
+CREATE INDEX idx_mig_authored_service ON migrations_authored (service);
+
+CREATE INDEX idx_mig_authored_session ON migrations_authored (session_uuid);
+
+CREATE INDEX idx_mig_authored_status  ON migrations_authored (review_status);
 
 CREATE INDEX idx_migrations_applied_at ON migrations_applied(applied_at);
 
@@ -860,6 +895,8 @@ CREATE INDEX idx_user_inv_tenant      ON user_invitations(tenant);
 CREATE UNIQUE INDEX uq_agent_credentials   ON agent_credentials(vault_id, scope);
 
 CREATE UNIQUE INDEX uq_agent_iterations    ON agent_iterations(session_uuid, iteration);
+
+CREATE UNIQUE INDEX uq_coexist_one_primary ON coexistence_tracks (service) WHERE role = 'primary';
 
 CREATE UNIQUE INDEX uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
 
