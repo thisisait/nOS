@@ -51,6 +51,10 @@ services:
 	- App\Model\MigrationRepository
 	- App\Model\UpgradeRepository
 	- App\Model\CoexistenceRepository
+	# Authored-migration promotion record (Phase B / B3): the recipe→migration
+	# review artifact the migration-author writes + the operator reviews on the
+	# local forge. Distinct from MigrationRepository (runtime applied mirror).
+	- App\Model\MigrationAuthoredRepository
 
 	# Pulse — scheduled-job catalog + run history (Anatomy P0.2, 2026-05-04).
 	# Tables pulse_jobs + pulse_runs declared in db/schema-extensions.sql

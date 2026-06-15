@@ -39,25 +39,77 @@ final class CoexistenceRepository
 	 * Queue a coexistence provision (idempotent on service+tag+status).
 	 * planned_by is the validated caller identity (attribution).
 	 *
-	 * @return array{ok:bool, status:string, detail:string}
+	 * B3 (Phase B): the trailing $parentUpgradeId / $dataCopy / $sourceMigrationUuid
+	 * args wire the plan-choice link. They default to "no link" so every existing
+	 * caller (Api\CoexistencePresenter::actionQueue, the architect path) keeps its
+	 * five-arg signature unchanged; UpgradeRepository::planUpgradeWithMode passes
+	 * them when the operator picks path-(b) "coexisting with data copy".
+	 *
+	 * @return array{ok:bool, status:string, detail:string, id:int|null}
 	 */
-	public function planCoexistence(string $service, string $tag, int $portOffset, string $plannedBy, ?string $targetVersion = null, ?string $reason = null): array
-	{
+	public function planCoexistence(
+		string $service,
+		string $tag,
+		int $portOffset,
+		string $plannedBy,
+		?string $targetVersion = null,
+		?string $reason = null,
+		?int $parentUpgradeId = null,
+		bool $dataCopy = true,
+		?string $sourceMigrationUuid = null
+	): array {
 		$exists = $this->db->table('coexistence_planned')
 			->where('service', $service)->where('tag', $tag)->where('status', 'planned')->fetch();
 		if ($exists) {
-			return ['ok' => false, 'status' => 'already_queued', 'detail' => 'already queued'];
+			return ['ok' => false, 'status' => 'already_queued', 'detail' => 'already queued', 'id' => (int) $exists->id];
 		}
 		$this->db->table('coexistence_planned')->insert([
-			'service'        => $service,
-			'tag'            => $tag,
-			'target_version' => $targetVersion,
-			'port_offset'    => $portOffset,
-			'reason'         => $reason,
-			'planned_by'     => $plannedBy,
-			'status'         => 'planned',
+			'service'               => $service,
+			'tag'                   => $tag,
+			'target_version'        => $targetVersion,
+			'port_offset'           => $portOffset,
+			'reason'                => $reason,
+			'planned_by'            => $plannedBy,
+			'status'                => 'planned',
+			'parent_upgrade_id'     => $parentUpgradeId,
+			'source_migration_uuid' => $sourceMigrationUuid,
+			'data_copy'             => $dataCopy ? 1 : 0,
 		]);
-		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued'];
+		$id = (int) $this->db->getConnection()->getPdo()->lastInsertId();
+		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued', 'id' => $id];
+	}
+
+	/**
+	 * Cancel a queued (status='planned') coexistence provision — the missing
+	 * dequeue (the 'cancelled' enum value was documented but never written).
+	 *
+	 * Pure Wing-DB op, NO host mutation: a queued row was never provisioned, so
+	 * there is no container/override/vhost to tear down (that is the destructive
+	 * cleanup path with its own guards). Refuses (ok=false) when there is no
+	 * matching 'planned' row. Uses the same delete-prior trick as
+	 * markPlannedApplied so a prior 'cancelled' marker can't trip the
+	 * UNIQUE(service,tag,status) constraint.
+	 *
+	 * @return array{ok:bool, status:string, detail:string}
+	 */
+	public function cancelPlanned(string $service, string $tag, string $cancelledBy): array
+	{
+		$planned = $this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'planned')->fetch();
+		if ($planned === null) {
+			return ['ok' => false, 'status' => 'not_queued', 'detail' => 'no planned coexistence row to cancel'];
+		}
+		// Drop any prior terminal 'cancelled' marker first — UNIQUE(service,tag,status).
+		$this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'cancelled')->delete();
+		$this->db->table('coexistence_planned')
+			->where('service', $service)->where('tag', $tag)->where('status', 'planned')
+			->update([
+				'status'       => 'cancelled',
+				'cancelled_at' => gmdate('c'),
+				'cancelled_by' => $cancelledBy,
+			]);
+		return ['ok' => true, 'status' => 'cancelled', 'detail' => 'cancelled'];
 	}
 
 	/** Mark a queued coexistence provision applied (delete-prior avoids the UNIQUE collision). */
@@ -184,6 +236,38 @@ final class CoexistenceRepository
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/cleanup/' . rawurlencode($tag),
 			['force' => $force],
+		);
+	}
+
+	/**
+	 * Toggle-as-primary — the reversible operator cutover (B3 → Bone B2 route).
+	 * dry_run defaults TRUE (mutating verb): the first call plans, dry_run=false
+	 * commits. Bone's promote_track flips active_track + role atomically (demotes
+	 * the prior primary in the same txn → the single-primary index never trips).
+	 */
+	public function promote(string $service, string $tag, bool $dryRun = true, ?int $ttlSeconds = null): array
+	{
+		$body = ['dry_run' => $dryRun];
+		if ($ttlSeconds !== null) {
+			$body['ttl_seconds'] = $ttlSeconds;
+		}
+		return $this->box->post(
+			'/api/coexistence/' . rawurlencode($service) . '/promote/' . rawurlencode($tag),
+			$body,
+		);
+	}
+
+	/**
+	 * Deactivate a non-primary track (B3 → Bone B2 route): docker compose stop
+	 * (NOT down — keeps the container, data, and override). dry_run defaults
+	 * TRUE. Bone's deactivate_track refuses the active primary unless force AND a
+	 * failover target exists (G-DEACTIVATE-NOT-PRIMARY).
+	 */
+	public function deactivate(string $service, string $tag, bool $force = false, bool $dryRun = true): array
+	{
+		return $this->box->post(
+			'/api/coexistence/' . rawurlencode($service) . '/deactivate/' . rawurlencode($tag),
+			['dry_run' => $dryRun, 'force' => $force],
 		);
 	}
 }

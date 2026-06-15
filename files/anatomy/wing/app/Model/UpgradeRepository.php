@@ -18,6 +18,10 @@ final class UpgradeRepository
 		private Explorer $db,
 		private BoneClient $box,
 		private EventRepository $events,
+		// B3 (Phase B): the plan-choice path-(b) "coexist" branch hands off to the
+		// coexistence queue. Injected as a Nette DI service (both repos are listed
+		// in app/config/common.neon, autowired by type) — no container edits.
+		private CoexistenceRepository $coexistence,
 	) {
 	}
 
@@ -178,6 +182,82 @@ final class UpgradeRepository
 			'notes'          => $notes,
 		]);
 		return ['ok' => true, 'status' => 'queued', 'detail' => 'queued'];
+	}
+
+	/**
+	 * Plan-choice branch point (B3 §3.1/§5): queue an upgrade AND stamp the
+	 * operator's chosen path. Reuses planUpgrade() — keeping the recipeMismatch()
+	 * guard intact — then writes the plan-mode link rows:
+	 *
+	 *   mode='migration' → just stamps upgrades_planned.plan_mode='migration'
+	 *                      (today's in-place behaviour, no track).
+	 *   mode='coexist'   → also calls CoexistenceRepository::planCoexistence()
+	 *                      with parent_upgrade_id + data_copy, then back-links
+	 *                      upgrades_planned.coexistence_planned_id.
+	 *
+	 * Returns the same shape as planUpgrade() plus the link ids so the presenter
+	 * can render the dry-run preview / emit plan_choice_recorded.
+	 *
+	 * @return array{ok:bool, status:string, detail:string, upgrade_id:int|null, coexistence_planned_id:int|null}
+	 */
+	public function planUpgradeWithMode(
+		string $service,
+		string $recipeId,
+		?string $targetVersion,
+		string $plannedBy,
+		string $mode = 'migration',
+		int $portOffset = 100,
+		bool $dataCopy = true,
+		bool $force = false,
+		?string $notes = null
+	): array {
+		$mode = ($mode === 'coexist') ? 'coexist' : 'migration';
+		$result = $this->planUpgrade($service, $recipeId, $targetVersion, $plannedBy, $notes, $force);
+		if (!$result['ok']) {
+			// mismatch / already_queued — surface as-is, write no link rows.
+			return $result + ['upgrade_id' => null, 'coexistence_planned_id' => null];
+		}
+
+		// The just-queued (or existing) planned row carries the id we link from.
+		$planned = $this->db->table('upgrades_planned')
+			->where('service', $service)->where('recipe_id', $recipeId)->where('status', 'planned')->fetch();
+		$upgradeId = $planned !== null ? (int) $planned->id : null;
+
+		$coexistencePlannedId = null;
+		if ($mode === 'coexist') {
+			$tag = $this->coexistTag($targetVersion);
+			$coex = $this->coexistence->planCoexistence(
+				$service, $tag, $portOffset, $plannedBy, $targetVersion, 'plan-choice (b) coexist', $upgradeId, $dataCopy,
+			);
+			$coexistencePlannedId = $coex['id'] ?? null;
+		}
+
+		if ($planned !== null) {
+			$update = ['plan_mode' => $mode, 'plan_choice_at' => gmdate('c')];
+			if ($coexistencePlannedId !== null) {
+				$update['coexistence_planned_id'] = $coexistencePlannedId;
+			}
+			$this->db->table('upgrades_planned')->where('id', $upgradeId)->update($update);
+		}
+
+		return $result + [
+			'upgrade_id'             => $upgradeId,
+			'coexistence_planned_id' => $coexistencePlannedId,
+		];
+	}
+
+	/**
+	 * Derive the coexistence track tag from a target version: '17.2' → 'v17',
+	 * '2.13.1' → 'v2', falling back to 'new' when the version is unknown. Matches
+	 * the §8 walkthrough's v17 tag for the pg16→17 acceptance run.
+	 */
+	private function coexistTag(?string $targetVersion): string
+	{
+		if ($targetVersion === null || $targetVersion === '') {
+			return 'new';
+		}
+		$major = explode('.', ltrim($targetVersion, 'vV'))[0] ?? '';
+		return $major !== '' ? 'v' . $major : 'new';
 	}
 
 	/**

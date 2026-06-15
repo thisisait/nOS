@@ -56,6 +56,10 @@ final class RouterFactory
 		$api->addRoute('api/v1/state/services[/<id>]', 'State:services');
 		$api->addRoute('api/v1/state/sync', 'State:sync');
 		$api->addRoute('api/v1/state', 'State:default');
+		// B3: the migration-author producer. /authored BEFORE the general
+		// /<id> + [/<id>] forms (Nette first-match-wins) so 'authored' isn't
+		// swallowed as a migration id.
+		$api->addRoute('api/v1/migrations/authored', 'Migrations:authored');
 		$api->addRoute('api/v1/migrations/<id>/preview', 'Migrations:preview');
 		$api->addRoute('api/v1/migrations/<id>/apply', 'Migrations:apply');
 		$api->addRoute('api/v1/migrations/<id>/rollback', 'Migrations:rollback');
@@ -65,6 +69,9 @@ final class RouterFactory
 		// before the general /<service>/<recipe> (Nette is first-match).
 		$api->addRoute('api/v1/upgrades/planned', 'Upgrades:planned');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/queue', 'Upgrades:queue');
+		// B3: plan-choice branch (migration vs coexist). Before the general
+		// /<service>/<recipe> form (first-match-wins).
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan-choice', 'Upgrades:planChoice');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan', 'Upgrades:plan');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply', 'Upgrades:apply');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
@@ -83,6 +90,12 @@ final class RouterFactory
 		$api->addRoute('api/v1/coexistence/<service>/queue', 'Coexistence:queue');
 		$api->addRoute('api/v1/coexistence/<service>/provision', 'Coexistence:provision');
 		$api->addRoute('api/v1/coexistence/<service>/cutover', 'Coexistence:cutover');
+		// B3: toggle-as-primary / deactivate-secondary / cancel-queued. The
+		// reversible lifecycle verbs (proxy promote/deactivate to Bone, cancel is
+		// Wing-DB-only). Before /cleanup/<tag> + the /<service> catch-alls.
+		$api->addRoute('api/v1/coexistence/<service>/promote', 'Coexistence:promote');
+		$api->addRoute('api/v1/coexistence/<service>/deactivate', 'Coexistence:deactivate');
+		$api->addRoute('api/v1/coexistence/<service>/cancel', 'Coexistence:cancel');
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');
 		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
 

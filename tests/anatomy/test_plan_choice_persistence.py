@@ -1,4 +1,5 @@
-"""Anatomy CI gate — plan-choice / coexistence state-machine schema (Phase B / B1).
+"""Anatomy CI gate — plan-choice / coexistence state-machine schema + link writes
+(Phase B / B1 schema, B3 repos+API).
 
 Pins the B1 data-model surface from
 docs/plans/agentic-upgrade-migration-coexistence-design.md §2:
@@ -12,9 +13,22 @@ docs/plans/agentic-upgrade-migration-coexistence-design.md §2:
     column, so it is created AFTER the sweep (same ordering rule as
     idx_events_row_hash / idx_gdpr_consent_active).
 
+…and the B3 repos+API link writes (§3.1/§5):
+
+  - UpgradeRepository::planUpgradeWithMode stamps upgrades_planned.plan_mode and,
+    for the coexist branch, writes coexistence_planned.parent_upgrade_id + the
+    back-link upgrades_planned.coexistence_planned_id.
+  - CoexistenceRepository::planCoexistence carries the trailing parentUpgradeId /
+    dataCopy and persists them.
+  - Api\\UpgradesPresenter::actionPlanChoice defaults dry_run TRUE and rejects a
+    body-supplied identity (anti-spoof).
+  - the routes for plan-choice / promote / deactivate / cancel / migrations
+    authored are registered.
+
 Static source assertions catch a regression even where php is unavailable; the
 functional fresh-DB build (skipped if php/sqlite3 is missing) proves the columns,
-table, and partial-index invariant actually materialize.
+table, and partial-index invariant actually materialize AND that the link columns
+round-trip a coexist plan-choice.
 """
 from __future__ import annotations
 
@@ -29,6 +43,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "files/anatomy/wing/db/schema-extensions.sql"
 INITDB = REPO / "files/anatomy/wing/bin/init-db.php"
+MODEL = REPO / "files/anatomy/wing/app/Model"
+API = REPO / "files/anatomy/wing/app/Presenters/Api"
+ROUTER = REPO / "files/anatomy/wing/app/Core/RouterFactory.php"
 
 # migrations_authored — the recipe→migration promotion record (NEW table).
 MIG_AUTHORED_COLS = [
@@ -189,6 +206,166 @@ def test_fresh_db_materializes_schema_and_enforces_one_primary():
                 "INSERT INTO coexistence_tracks(service,tag,role) "
                 "VALUES('pg','v17','secondary')"
             )
+        finally:
+            con.close()
+
+
+# ── B3: repos + API link writes ────────────────────────────────────────────
+
+def test_plan_upgrade_with_mode_writes_links():
+    """UpgradeRepository::planUpgradeWithMode stamps plan_mode and, for coexist,
+    writes parent_upgrade_id into coexistence_planned AND back-links
+    coexistence_planned_id onto upgrades_planned."""
+    src = (MODEL / "UpgradeRepository.php").read_text()
+    assert "function planUpgradeWithMode" in src, "planUpgradeWithMode missing"
+    # The coexist branch hands off to the coexistence queue with the parent id.
+    assert "planCoexistence" in src, "coexist branch must call planCoexistence"
+    assert "'plan_mode'" in src and "$mode" in src, "must stamp plan_mode"
+    assert "'coexistence_planned_id'" in src, "must back-link coexistence_planned_id"
+    # Reuses planUpgrade (keeps the recipeMismatch guard) rather than re-inserting.
+    assert "$this->planUpgrade(" in src, "must reuse planUpgrade (mismatch guard intact)"
+
+
+def test_plan_coexistence_carries_parent_upgrade_id():
+    """CoexistenceRepository::planCoexistence accepts the trailing
+    parentUpgradeId + dataCopy and persists parent_upgrade_id + data_copy."""
+    src = (MODEL / "CoexistenceRepository.php").read_text()
+    assert "?int $parentUpgradeId" in src, "planCoexistence must accept parentUpgradeId"
+    assert "'parent_upgrade_id'" in src, "must persist parent_upgrade_id"
+    assert "'data_copy'" in src, "must persist data_copy"
+    # cancelPlanned writes the never-before-written 'cancelled' status.
+    assert "function cancelPlanned" in src, "cancelPlanned (the missing dequeue) missing"
+    assert "'cancelled'" in src and "'cancelled_at'" in src, "cancel must stamp cancelled + cancelled_at"
+
+
+def test_coexistence_repo_promote_deactivate_passthroughs():
+    """promote/deactivate are BoxAPI passthroughs to the B2 Bone routes."""
+    src = (MODEL / "CoexistenceRepository.php").read_text()
+    assert "function promote" in src and "/promote/" in src, "promote passthrough missing"
+    assert "function deactivate" in src and "/deactivate/" in src, "deactivate passthrough missing"
+
+
+def test_upgrade_repo_injects_coexistence_repository():
+    """UpgradeRepository wires CoexistenceRepository via the constructor (Nette
+    DI), and both repos are registered in common.neon (autowired by type)."""
+    src = (MODEL / "UpgradeRepository.php").read_text()
+    assert "private CoexistenceRepository $coexistence" in src, "must inject CoexistenceRepository"
+    neon = (REPO / "files/anatomy/wing/app/config/common.neon").read_text()
+    assert "App\\Model\\CoexistenceRepository" in neon
+    assert "App\\Model\\MigrationAuthoredRepository" in neon, "new repo must be DI-registered"
+
+
+def test_migration_authored_repo_review_status_gate():
+    """MigrationAuthoredRepository exists and setReviewStatus REFUSES 'merged' —
+    merged is the forge-merge's exclusive write (GATE 2), never Wing's."""
+    path = MODEL / "MigrationAuthoredRepository.php"
+    assert path.is_file(), "MigrationAuthoredRepository missing"
+    src = path.read_text()
+    for m in ("function forService", "function listReviewable", "function setReviewStatus", "function insertAuthored"):
+        assert m in src, f"MigrationAuthoredRepository missing {m}"
+    # The gate: only in_review / rejected are settable by Wing.
+    assert "['in_review', 'rejected']" in src, "Wing must only set in_review / rejected"
+    assert "'draft'" in src, "insertAuthored must land at draft"
+
+
+def test_plan_choice_api_dry_run_default_true_and_anti_spoof():
+    """Api\\UpgradesPresenter::actionPlanChoice defaults dry_run TRUE and rejects
+    a body-supplied planned_by (anti-spoof, bearer-derived identity)."""
+    src = (API / "UpgradesPresenter.php").read_text()
+    assert "function actionPlanChoice" in src, "actionPlanChoice missing"
+    # dry_run defaults true: explicit cast of body['dry_run'] with a true fallback.
+    assert "array_key_exists('dry_run', $body) ? (bool) $body['dry_run'] : true" in src, \
+        "dry_run must default TRUE"
+    assert "planned_by is derived from the bearer token identity" in src, "anti-spoof gate missing"
+    assert "plan_choice_recorded" in src, "must emit plan_choice_recorded"
+
+
+def test_coexistence_api_lifecycle_actions_anti_spoof():
+    """Api\\CoexistencePresenter gains cancel/promote/deactivate; each rejects a
+    body-supplied identity and (cancel) emits coexistence_cancel."""
+    src = (API / "CoexistencePresenter.php").read_text()
+    for m in ("function actionCancel", "function actionPromote", "function actionDeactivate"):
+        assert m in src, f"CoexistencePresenter missing {m}"
+    assert "cancelled_by is derived from the bearer token identity" in src
+    assert "actor_id is derived from the bearer token identity" in src
+    assert "coexistence_cancel" in src and "coexistence_promote" in src and "coexistence_demote" in src
+
+
+def test_migrations_authored_producer_anti_spoof():
+    """POST /api/v1/migrations/authored: author_agent/actor_id are bearer-derived,
+    never body-supplied (same anti-spoof gate as actionQueue)."""
+    src = (API / "MigrationsPresenter.php").read_text()
+    assert "function actionAuthored" in src, "actionAuthored producer missing"
+    assert "author_agent / actor_id are derived from the bearer token identity" in src
+    assert "migration_authored" in src and "migration_pr_opened" in src
+
+
+def test_b3_routes_registered():
+    """The plan-choice / lifecycle / authored routes are registered, and the
+    catch-all-swallowable ones come BEFORE their generic siblings."""
+    src = ROUTER.read_text()
+    assert "Upgrades:planChoice" in src
+    assert "Coexistence:promote" in src and "Coexistence:deactivate" in src and "Coexistence:cancel" in src
+    assert "Migrations:authored" in src
+    # first-match-wins ordering: /authored before [/<id>]; promote/deactivate/cancel
+    # before /cleanup/<tag>; plan-choice before the general /<service>/<recipe>.
+    assert src.index("Migrations:authored") < src.index("api/v1/migrations[/<id>]")
+    assert src.index("Coexistence:cancel") < src.index("Coexistence:cleanup")
+    assert src.index("Upgrades:planChoice") < src.index("api/v1/upgrades/<service>/<recipe>'")
+
+
+# ── Functional proof: a coexist plan-choice round-trips the link columns ────
+
+@pytest.mark.skipif(
+    shutil.which("php") is None, reason="php unavailable — skip live DB build"
+)
+def test_fresh_db_round_trips_plan_choice_links():
+    """A fresh init-db'd wing.db persists the plan-choice link columns the way
+    planUpgradeWithMode writes them: a coexist upgrades_planned row carrying
+    plan_mode='coexist' + coexistence_planned_id, joined to a coexistence_planned
+    row carrying the same parent_upgrade_id."""
+    with tempfile.TemporaryDirectory(prefix="wing-b3-") as tmp:
+        proc = subprocess.run(
+            ["php", str(INITDB), f"--data-dir={tmp}"],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, f"init-db.php failed: {proc.stderr}"
+        con = sqlite3.connect(str(pathlib.Path(tmp) / "wing.db"))
+        try:
+            # The upgrade-side row (mode b).
+            cur = con.execute(
+                "INSERT INTO upgrades_planned(service,recipe_id,status,plan_mode) "
+                "VALUES('postgresql','16-to-17','planned','coexist')"
+            )
+            upgrade_id = cur.lastrowid
+            # The coexistence-side row back-references the upgrade row.
+            cur = con.execute(
+                "INSERT INTO coexistence_planned"
+                "(service,tag,status,parent_upgrade_id,data_copy) "
+                "VALUES('postgresql','v17','planned',?,1)",
+                (upgrade_id,),
+            )
+            coexist_id = cur.lastrowid
+            # …and the upgrade row back-links the coexistence row.
+            con.execute(
+                "UPDATE upgrades_planned SET coexistence_planned_id=? WHERE id=?",
+                (coexist_id, upgrade_id),
+            )
+            con.commit()
+
+            # The join the matrix / consumer relies on must resolve both ways.
+            row = con.execute(
+                "SELECT u.plan_mode, u.coexistence_planned_id, c.parent_upgrade_id, c.data_copy "
+                "FROM upgrades_planned u "
+                "JOIN coexistence_planned c ON c.id = u.coexistence_planned_id "
+                "WHERE u.id = ?",
+                (upgrade_id,),
+            ).fetchone()
+            assert row is not None, "link join did not resolve"
+            assert row[0] == "coexist", "plan_mode not persisted"
+            assert row[1] == coexist_id, "coexistence_planned_id back-link wrong"
+            assert row[2] == upgrade_id, "parent_upgrade_id not persisted"
+            assert row[3] == 1, "data_copy not persisted"
         finally:
             con.close()
 

@@ -234,6 +234,29 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  '/api/v1/coexistence/{service}/cancel':
+    post:
+      summary: dequeue a planned provision      [B3]
+      operationId: Coexistence_cancel_post
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
   '/api/v1/coexistence/{service}/cleanup/{tag}':
     post:
       summary: tear down stale track (force flag)
@@ -266,6 +289,52 @@ paths:
     post:
       summary: atomic switch to target_tag
       operationId: Coexistence_cutover_post
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/coexistence/{service}/deactivate':
+    post:
+      summary: stop a non-primary track        [B3]
+      operationId: Coexistence_deactivate_post
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/coexistence/{service}/promote':
+    post:
+      summary: toggle-as-primary (reversible)  [B3]
+      operationId: Coexistence_promote_post
       tags:
         - Coexistence
       responses:
@@ -868,6 +937,23 @@ paths:
     get:
       summary: list { applied, pending } (via BoxAPI)
       operationId: Migrations_default_get
+      tags:
+        - Migrations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  /api/v1/migrations/authored:
+    post:
+      summary: 'migration-author producer: INSERT a'
+      operationId: Migrations_authored_post
       tags:
         - Migrations
       responses:
@@ -1967,6 +2053,34 @@ paths:
     post:
       summary: dry-run a recipe; returns the plan + diff
       operationId: Upgrades_plan_post
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/plan-choice':
+    post:
+      summary: 'plan-choice branch: migration vs coexist  [B3]'
+      operationId: Upgrades_planChoice_post
       tags:
         - Upgrades
       responses:
