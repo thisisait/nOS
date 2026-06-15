@@ -47,6 +47,12 @@ final class UpgradeRepository
 		foreach ($this->db->table('upgrades_planned')->where('status', 'planned') as $p) {
 			$planned[$p->service] = $p->toArray();
 		}
+		// B4c: live coexistence tracks keyed by service. When a service is running
+		// a dual-version scenario, the matrix shows it TWICE (primary + secondary)
+		// with a compact deep-link to /coexistence#<service> (the authoritative
+		// toggle lives there — no duplicated toggle logic in the matrix). Reads the
+		// local mirror (cheap; same store as pendingCutoverCount).
+		$coexistTracks = $this->coexistenceTracksByService();
 		// Installed versions from ~/.nos/state.yml — the authoritative source the
 		// upgrade-engine itself reads (keyed by the same lowercase service ids as
 		// the recipes). systems.version is unreliable (mostly NULL), which left
@@ -79,7 +85,7 @@ final class UpgradeRepository
 			};
 			// At-target = installed already equals the only/next target.
 			$atTarget = $inst !== null && ($inst === $stable);
-			$out[] = [
+			$base = [
 				'id'               => $service,
 				'service'          => $service,
 				'category'         => null,
@@ -99,6 +105,25 @@ final class UpgradeRepository
 				'planned_target'   => $planned[$service]['target_version'] ?? null,
 				'planned_by'       => $planned[$service]['planned_by'] ?? null,
 			];
+
+			// B4c: a coexisting service renders as TWO rows (primary + secondary),
+			// each carrying a coexist_role + the live track tag/version so the
+			// template shows a role badge and a deep-link to /coexistence#<service>
+			// (the single source of toggle truth). A non-coexisting service is one
+			// plain row, exactly as before.
+			$tracks = $coexistTracks[$service] ?? [];
+			if (count($tracks) > 1) {
+				foreach ($tracks as $t) {
+					$out[] = $base + [
+						'coexist_role'    => (string) ($t['role'] ?? ($t['active'] ? 'primary' : 'secondary')),
+						'coexist_tag'     => $t['tag'] ?? null,
+						'coexist_version' => $t['version'] ?? null,
+						'coexist_active'  => !empty($t['active']),
+					];
+				}
+			} else {
+				$out[] = $base;
+			}
 		}
 		return $out;
 	}
@@ -126,6 +151,25 @@ final class UpgradeRepository
 			if (is_array($info) && !empty($info['installed'])) {
 				$out[(string) $svc] = (string) $info['installed'];
 			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Live coexistence tracks keyed by service (B4c), read from the local mirror
+	 * (`coexistence_tracks`). Primary first (role='primary' / active=1), so the
+	 * matrix renders the active version on top. A service with 0 or 1 track is
+	 * still returned but the matrix only doubles when count > 1.
+	 *
+	 * @return array<string,array<int,array<string,mixed>>>
+	 */
+	private function coexistenceTracksByService(): array
+	{
+		$out = [];
+		// active DESC → role='primary'/active=1 first; tag ASC for a stable order.
+		foreach ($this->db->table('coexistence_tracks')->order('service ASC, active DESC, tag ASC') as $r) {
+			$item = $r->toArray();
+			$out[(string) $item['service']][] = $item;
 		}
 		return $out;
 	}

@@ -140,6 +140,13 @@ final class RouterFactory
 		$router->addRoute('help', 'Help:default');
 
 		// State & Migration Framework browser routes (agent 7)
+		// B4c: operator review verbs for the agent-authored proposals (the
+		// /migrations "Proposed" column). mark-reviewed/mark-rejected flip
+		// review_status in_review/rejected (NEVER merged — that's the forge's
+		// GATE-2 write). Specific verb routes BEFORE migrations/<id> so the
+		// first-match-wins router doesn't swallow 'mark-reviewed' as a detail id.
+		$router->addRoute('migrations/<id>/mark-reviewed', 'Migrations:markReviewed');
+		$router->addRoute('migrations/<id>/mark-rejected', 'Migrations:markRejected');
 		$router->addRoute('migrations/<id>', 'Migrations:detail');
 		$router->addRoute('migrations', 'Migrations:default');
 		$router->addRoute('upgrades/<service>/<recipe>/queue', 'Upgrades:queueUpgrade');
@@ -150,6 +157,13 @@ final class RouterFactory
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');
+		// B4c: reversible coexistence toggle verbs (browser, operator path). The
+		// authoritative toggle-as-primary / deactivate-secondary / cancel-queued
+		// controls. Specific routes BEFORE the bare 'coexistence' catch-all so the
+		// first-match-wins router hits the verb form first.
+		$router->addRoute('coexistence/<service>/toggle-primary', 'Coexistence:togglePrimary');
+		$router->addRoute('coexistence/<service>/deactivate-secondary', 'Coexistence:deactivateSecondary');
+		$router->addRoute('coexistence/<service>/cancel', 'Coexistence:cancel');
 		$router->addRoute('coexistence', 'Coexistence:default');
 
 		// GDPR browser route (Track D, 2026-04-26)

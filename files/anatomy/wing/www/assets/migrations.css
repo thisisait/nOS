@@ -35,8 +35,13 @@
 .mig-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
 }
+/* B4c: the Proposed (agent drafts) column makes /migrations a 3-up grid. */
+.mig-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 1200px) {
+  .mig-grid-3 { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 900px) {
-  .mig-grid { grid-template-columns: 1fr; }
+  .mig-grid, .mig-grid-3 { grid-template-columns: 1fr; }
 }
 
 .mig-column {

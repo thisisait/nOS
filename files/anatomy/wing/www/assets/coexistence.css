@@ -124,3 +124,83 @@
   border: 1px dashed var(--border); border-radius: 8px;
   font-size: 14px;
 }
+
+/* ── B4c: primary/secondary pair, role badges, queued rows, proposals ── */
+
+.coex-pair {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.coex-card-primary { border-color: rgba(63, 185, 80, 0.4); }
+.coex-card-secondary { opacity: 0.95; }
+
+.coex-role-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.coex-role-primary {
+  color: var(--green); border-color: rgba(63, 185, 80, 0.4);
+  background: rgba(63, 185, 80, 0.12);
+}
+.coex-role-secondary {
+  color: var(--text2); background: var(--bg);
+}
+.coex-role-queued {
+  color: var(--accent); border-color: rgba(91, 143, 217, 0.4);
+  background: rgba(91, 143, 217, 0.12);
+}
+.coex-active-note { font-size: 11px; color: var(--green); }
+
+.coex-queued {
+  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+}
+.coex-queued-hdr {
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;
+}
+.coex-queued-hdr .count {
+  display: inline-block; min-width: 18px; text-align: center;
+  font-size: 11px; padding: 0 5px; margin-left: 4px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text2);
+}
+.coex-queued-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); margin-bottom: 6px;
+}
+.coex-queued-meta { font-size: 11px; color: var(--text2); }
+.coex-queued-cancel { margin-left: auto; }
+
+/* Proposals strip (per-service /upgrades + /migrations Proposed column) */
+.mig-proposed-strip {
+  margin: 0 0 16px 0; padding: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); border-radius: 8px;
+}
+.mig-proposed-strip h3 {
+  font-size: 13px; font-weight: 600; margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: 0.03em; color: var(--text2);
+}
+.mig-proposal-card {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); margin-bottom: 8px;
+}
+.mig-proposal-card:last-child { margin-bottom: 0; }
+.mig-proposal-meta { font-size: 11px; color: var(--text2); }
+.mig-review-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border);
+  color: var(--text2); background: var(--surface);
+}
+.mig-review-badge.review-draft { color: var(--accent); border-color: rgba(91, 143, 217, 0.4); }
+.mig-review-badge.review-in_review { color: var(--orange, #e8a23b); border-color: rgba(232, 162, 59, 0.4); }
+.mig-mr-link { margin-left: auto; }
+
+/* Matrix 2x coexist rows on /upgrades (B4c) */
+.upg-coexist-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 5px; font-size: 11px;
+}
+.upg-coexist-link { color: var(--accent); font-size: 11px; }

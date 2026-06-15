@@ -9,6 +9,35 @@
 	<a href="/upgrades" style="font-size:12px;color:var(--text2)">&larr; All services</a>
 </div>
 
+{* B4c: Proposals strip — agent-authored migration drafts (migrations_authored).
+   The FIRST place the local-forge MR link surfaces in the UI. The operator NEVER
+   merges in Wing: Review MR → sends them to the local GitLab forge (GATE 2);
+   Lineage → deep-links the authoring agent_sessions run. *}
+{if !empty($drafts)}
+	<div class="mig-proposed-strip">
+		<h3>Proposals — agent-authored migration drafts</h3>
+		{foreach $drafts as $d}
+			<div class="mig-proposal-card" data-uuid="{$d['uuid']}">
+				<span class="mig-review-badge review-{$d['review_status']}">{$d['review_status']}</span>
+				<span class="coex-track-tag">{$d['migration_id'] ?? $d['uuid']}</span>
+				<span class="mig-proposal-meta">{$d['artifact_kind']}</span>
+				{if !empty($d['from_version']) || !empty($d['to_version'])}
+					<span class="mig-proposal-meta">{$d['from_version'] ?? '?'} &rarr; {$d['to_version'] ?? '?'}</span>
+				{/if}
+				<span class="mig-proposal-meta">by {$d['author_agent']}</span>
+				{if !empty($d['mr_url'])}
+					<a class="mig-btn mig-mr-link" href="{$d['mr_url']}" target="_blank" rel="noopener"
+					   title="Review + merge on the local forge (GATE 2 — Wing never merges)">Review MR &rarr;</a>
+				{/if}
+				{if !empty($d['session_uuid'])}
+					<a class="mig-btn" href="/agents/{$d['author_agent']}/sessions/{$d['session_uuid']}"
+					   title="Authoring run lineage">Lineage</a>
+				{/if}
+			</div>
+		{/foreach}
+	</div>
+{/if}
+
 <div class="upg-svc-hdr">
 	<div>
 		<h2>{$service}</h2>

@@ -7,7 +7,7 @@
 <div class="coex-page-header">
 	<div>
 		<h2>Coexistence</h2>
-		<div class="sub">Dual-version tracks running side by side. Cutover flips the active track atomically. TTL determines when the legacy track is cleaned up.</div>
+		<div class="sub">Dual-version tracks running side by side. <strong>Toggle as primary</strong> flips live routing atomically (reversible); the prior primary becomes a read-only secondary with a cooling TTL. <strong>Deactivate</strong> stops a secondary (data kept). Queued provisions can be cancelled before they ever boot.</div>
 	</div>
 </div>
 
@@ -15,53 +15,57 @@
 	<div class="coex-empty">
 		No coexistence tracks currently active.
 		<p style="margin-top:8px;font-size:12px;color:var(--text2)">
-			Provision a track with <code>ansible-playbook main.yml --tags coexist-provision</code>.
+			Queue one from <a href="/upgrades" style="color:var(--accent)">/upgrades</a> (Plan → coexist), or provision with <code>ansible-playbook main.yml --tags coexist-provision</code>.
 		</p>
 	</div>
 {else}
 	{foreach $services as $service => $svc}
-		<section class="coex-service" data-service="{$service}">
+		<section class="coex-service" id="{$service}" data-service="{$service}">
 			<div class="coex-service-hdr">
 				<h3>{$service}</h3>
 				<span class="svc-meta">
 					Active track: <strong style="color:var(--green);font-family:'SF Mono',monospace">{$svc['active_track'] ?? '—'}</strong>
-					{if !empty($svc['category'])} &middot; {$svc['category']}{/if}
 				</span>
 			</div>
 
-			<div class="coex-tracks">
-				{foreach $svc['tracks'] as $track}
-					{var $isActive = ($svc['active_track'] ?? '') === $track['tag']}
-					<article class="coex-track" data-active="{$isActive ? '1' : '0'}" data-tag="{$track['tag']}">
+			{* ── Primary / secondary PAIR (B4c) ── *}
+			<div class="coex-pair">
+				{* Primary card *}
+				{if $svc['primary']}
+					{var $p = $svc['primary']}
+					<article class="coex-track coex-card-primary" data-active="1" data-tag="{$p['tag']}">
 						<div class="coex-track-hdr">
+							<span class="coex-role-badge coex-role-primary">primary</span>
+							<span class="coex-track-tag">{$p['tag']}</span>
+							<span class="coex-track-version">{$p['version']}</span>
+						</div>
+						<div class="coex-track-meta">
+							{if !empty($p['port'])}<span class="k">port</span><span class="v">{$p['port']}</span>{/if}
+							{if !empty($p['promoted_at'])}<span class="k">promoted</span><span class="v">{$p['promoted_at']}</span>{/if}
+							{if !empty($p['data_path'])}<span class="k">data</span><span class="v" title="{$p['data_path']}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">{$p['data_path']}</span>{/if}
+						</div>
+						<div class="coex-track-actions">
+							<span class="coex-active-note">serving live traffic</span>
+						</div>
+					</article>
+				{/if}
+
+				{* Secondary cards *}
+				{foreach $svc['secondaries'] as $track}
+					<article class="coex-track coex-card-secondary" data-active="0" data-tag="{$track['tag']}">
+						<div class="coex-track-hdr">
+							<span class="coex-role-badge coex-role-secondary">{$track['role'] ?? 'secondary'}</span>
 							<span class="coex-track-tag">{$track['tag']}</span>
 							<span class="coex-track-version">{$track['version']}</span>
-							{if !empty($track['read_only'])}
-								<span class="coex-ro" title="Read-only">RO</span>
-							{/if}
+							{if !empty($track['read_only'])}<span class="coex-ro" title="Read-only">RO</span>{/if}
 						</div>
-
 						<div class="coex-track-meta">
-							{if !empty($track['port'])}
-								<span class="k">port</span><span class="v">{$track['port']}</span>
-							{/if}
-							{if !empty($track['data_path'])}
-								<span class="k">data</span><span class="v" title="{$track['data_path']}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">{$track['data_path']}</span>
-							{/if}
-							{if !empty($track['started_at'])}
-								<span class="k">started</span><span class="v">{$track['started_at']}</span>
-							{/if}
-							{if !empty($track['cutover_at'])}
-								<span class="k">cutover</span><span class="v">{$track['cutover_at']}</span>
-							{/if}
+							{if !empty($track['port'])}<span class="k">port</span><span class="v">{$track['port']}</span>{/if}
+							{if !empty($track['data_path'])}<span class="k">data</span><span class="v" title="{$track['data_path']}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">{$track['data_path']}</span>{/if}
 						</div>
 
 						{if !empty($track['ttl_until'])}
-							<div class="coex-ttl"
-								 data-ttl-until="{$track['ttl_until']}"
-								 data-urgency="normal"
-								 role="timer"
-								 aria-label="Time until cleanup">
+							<div class="coex-ttl" data-ttl-until="{$track['ttl_until']}" data-urgency="normal" role="timer" aria-label="Time until cleanup">
 								<span class="coex-ttl-icon" aria-hidden="true">&#9203;</span>
 								<span>TTL</span>
 								<span class="coex-ttl-value" data-role="ttl-value">{$track['ttl_until']}</span>
@@ -69,55 +73,97 @@
 						{/if}
 
 						<div class="coex-track-actions">
-							{if !$isActive}
+							{* Toggle-as-primary — reversible cutover, typed-confirm PRIMARY *}
+							<button type="button"
+									class="mig-btn mig-btn-primary"
+									data-action="toggle-primary"
+									data-service="{$service}"
+									data-tag="{$track['tag']}"
+									aria-label="Toggle {$track['tag']} to primary">Toggle as primary</button>
+							{* Deactivate — non-destructive stop, window.confirm *}
+							{if ($track['role'] ?? '') !== 'deactivated'}
 								<button type="button"
-										class="mig-btn mig-btn-primary"
-										data-action="cutover"
+										class="mig-btn"
+										data-action="deactivate-secondary"
 										data-service="{$service}"
-										data-target-tag="{$track['tag']}"
-										aria-label="Cutover to track {$track['tag']}">Cutover</button>
+										data-tag="{$track['tag']}"
+										aria-label="Deactivate secondary {$track['tag']}">Deactivate</button>
 							{/if}
+							{* Cleanup — destructive, existing typed-CUTOVER-modal-class flow *}
 							<button type="button"
 									class="mig-btn mig-btn-danger"
 									data-action="cleanup-track"
 									data-service="{$service}"
 									data-tag="{$track['tag']}"
-									{if $isActive}disabled title="Cannot clean up active track"{/if}
 									aria-label="Clean up track {$track['tag']}">Cleanup</button>
 						</div>
 					</article>
 				{/foreach}
 			</div>
+
+			{* ── Queued provisions (B4c — listPlanned, never read before) ── *}
+			{if !empty($svc['queued'])}
+				<div class="coex-queued">
+					<div class="coex-queued-hdr">Queued provisions <span class="count">{count($svc['queued'])}</span></div>
+					{foreach $svc['queued'] as $q}
+						<div class="coex-queued-row" data-tag="{$q['tag']}">
+							<span class="coex-role-badge coex-role-queued">queued</span>
+							<span class="coex-track-tag">{$q['tag']}</span>
+							{if !empty($q['target_version'])}<span class="coex-track-version">{$q['target_version']}</span>{/if}
+							{if !empty($q['port_offset'])}<span class="coex-queued-meta">port +{$q['port_offset']}</span>{/if}
+							{if isset($q['data_copy'])}<span class="coex-queued-meta">{if $q['data_copy']}with data copy{else}empty{/if}</span>{/if}
+							{if !empty($q['planned_by'])}<span class="coex-queued-meta">by {$q['planned_by']}</span>{/if}
+							<button type="button"
+									class="mig-btn mig-btn-danger coex-queued-cancel"
+									data-action="cancel-coexist"
+									data-service="{$service}"
+									data-tag="{$q['tag']}"
+									aria-label="Cancel queued provision {$q['tag']}">Cancel</button>
+						</div>
+					{/foreach}
+				</div>
+			{/if}
 		</section>
 	{/foreach}
 {/if}
 
-{* Cutover confirm modal *}
-<div class="coex-modal-backdrop" id="coex-cutover-modal" hidden role="dialog" aria-modal="true" aria-labelledby="coex-cutover-title">
+{* ── Hidden CSRF forms — the widget JS submits the matching one after a confirm.
+   A13.7: state-changing browser actions go through POST forms, never <a href>. ── *}
+<form method="post" id="coex-toggle-form" action="" style="display:none">
+	<input type="hidden" name="_csrf" value="{$csrfToken}">
+	<input type="hidden" name="target_tag" id="coex-toggle-target-tag" value="">
+</form>
+<form method="post" id="coex-deactivate-form" action="" style="display:none">
+	<input type="hidden" name="_csrf" value="{$csrfToken}">
+	<input type="hidden" name="tag" id="coex-deactivate-tag" value="">
+</form>
+<form method="post" id="coex-cancel-form" action="" style="display:none">
+	<input type="hidden" name="_csrf" value="{$csrfToken}">
+	<input type="hidden" name="tag" id="coex-cancel-tag" value="">
+</form>
+
+{* Toggle-as-primary typed-confirm modal (reuses the cutover modal styling) *}
+<div class="coex-modal-backdrop" id="coex-toggle-modal" hidden role="dialog" aria-modal="true" aria-labelledby="coex-toggle-title">
 	<div class="coex-modal">
-		<h3 id="coex-cutover-title"><span class="warn" aria-hidden="true">!</span> Confirm cutover</h3>
+		<h3 id="coex-toggle-title"><span class="warn" aria-hidden="true">!</span> Toggle as primary</h3>
 		<p>
-			Cutover flips the active track for
-			<strong id="coex-cutover-svc"></strong>
-			to <strong id="coex-cutover-tag"></strong>.
-			Nginx upstream is updated atomically; the previous active track becomes read-only.
+			Promote
+			<strong id="coex-toggle-svc"></strong>
+			track <strong id="coex-toggle-tag"></strong>
+			to primary. Live traffic routes to it on the next request; the prior
+			primary becomes a read-only secondary with a cooling TTL (reversible —
+			re-toggle the other track to roll back).
 		</p>
 		<div class="impact">
-			<strong>Impact:</strong> Users are routed to the new version on their next request.
-			The previous track remains available read-only until its TTL expires or you clean it up.
+			<strong>Reversible:</strong> the prior primary keeps its data + container; re-promote it within the TTL to revert.
 		</div>
-		<label for="coex-cutover-input" style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">
-			Type <code style="color:var(--text);font-weight:700">CUTOVER</code> to proceed
+		<label for="coex-toggle-input" style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">
+			Type <code style="color:var(--text);font-weight:700">PRIMARY</code> to proceed
 		</label>
-		<input type="text"
-			   class="coex-modal-confirm"
-			   id="coex-cutover-input"
-			   autocomplete="off"
-			   spellcheck="false"
-			   aria-describedby="coex-cutover-desc">
+		<input type="text" class="coex-modal-confirm" id="coex-toggle-input" autocomplete="off" spellcheck="false">
 		<div class="coex-modal-actions">
-			<button type="button" class="mig-btn" data-action="close-cutover">Cancel</button>
-			<button type="button" class="mig-btn mig-btn-danger" id="coex-cutover-submit" data-action="confirm-cutover" disabled>Confirm cutover</button>
+			<button type="button" class="mig-btn" data-action="close-toggle">Cancel</button>
+			<button type="button" class="mig-btn mig-btn-primary" id="coex-toggle-submit" data-action="confirm-toggle" disabled>Toggle as primary</button>
 		</div>
 	</div>
 </div>

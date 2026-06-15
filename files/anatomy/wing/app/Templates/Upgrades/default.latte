@@ -46,6 +46,17 @@
 							{if !empty($row['category'])}
 								<div class="cat">{$row['category']}</div>
 							{/if}
+							{* B4c: a coexisting service renders TWICE (primary + secondary).
+							   The role badge + version + a deep-link to the authoritative
+							   toggle on /coexistence#<service> (no duplicated toggle here). *}
+							{if !empty($row['coexist_role'])}
+								<div class="upg-coexist-row">
+									<span class="coex-role-badge coex-role-{$row['coexist_role'] === 'primary' ? 'primary' : 'secondary'}">{$row['coexist_role']}</span>
+									{if !empty($row['coexist_tag'])}<span class="coex-track-tag">{$row['coexist_tag']}</span>{/if}
+									{if !empty($row['coexist_version'])}<span class="coex-track-version">{$row['coexist_version']}</span>{/if}
+									<a class="upg-coexist-link" href="/coexistence#{$row['service']}" title="Toggle primary / deactivate on /coexistence">toggle &rarr;</a>
+								</div>
+							{/if}
 						</div>
 					</div>
 				</td>

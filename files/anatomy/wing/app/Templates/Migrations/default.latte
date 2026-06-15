@@ -2,6 +2,7 @@
 
 {block content}
 <link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+<link rel="stylesheet" href="/assets/coexistence.css?v={$basePath}">
 
 <div class="mig-page-header">
 	<div>
@@ -9,13 +10,66 @@
 		<div class="sub">Data-driven, replayable system migrations. Each record declares detect, action, verify, and rollback.</div>
 	</div>
 	<div class="mig-counts">
+		<span class="mig-count"><strong>{count($proposed ?? [])}</strong> proposed</span>
 		<span class="mig-count"><strong n:tag-if="true">{count($pending ?? [])}</strong> pending</span>
 		<span class="mig-count"><strong>{count($applied ?? [])}</strong> applied</span>
 	</div>
 </div>
 
-<div class="mig-grid">
-	{* ── PENDING (left) ── *}
+<div class="mig-grid mig-grid-3">
+	{* ── PROPOSED (agent drafts, B4c) ── *}
+	<section class="mig-column" aria-labelledby="mig-col-proposed">
+		<h3 id="mig-col-proposed">
+			Proposed <span style="font-weight:400;color:var(--text2);font-size:12px">(agent drafts)</span>
+			<span class="count">{count($proposed ?? [])}</span>
+		</h3>
+
+		{if !empty($proposed)}
+			{foreach $proposed as $d}
+				<article class="mig-card" data-uuid="{$d['uuid']}" tabindex="0">
+					<div class="mig-card-header">
+						<span class="mig-review-badge review-{$d['review_status']}">{$d['review_status']}</span>
+						<div class="mig-card-title">{$d['title']}</div>
+					</div>
+					<div class="mig-card-meta">
+						<span class="mig-id">{$d['migration_id'] ?? $d['uuid']}</span>
+						<span>{$d['service']}</span>
+						{if !empty($d['from_version']) || !empty($d['to_version'])}
+							<span>{$d['from_version'] ?? '?'} &rarr; {$d['to_version'] ?? '?'}</span>
+						{/if}
+						<span>by {$d['author_agent']}</span>
+					</div>
+					<div class="mig-card-actions">
+						{* GATE 2: the operator reviews + MERGES on the local forge, never
+						   in Wing. This link is the first MR surface in the UI. *}
+						{if !empty($d['mr_url'])}
+							<a class="mig-btn mig-btn-primary" href="{$d['mr_url']}" target="_blank" rel="noopener"
+							   title="Review + merge on the local forge (Wing never merges)">Review MR &rarr;</a>
+						{/if}
+						{* mark-reviewed / mark-rejected — Tier-1 POST forms (A13.7). They
+						   flip review_status in_review/rejected; merged is the forge's write. *}
+						<form method="post" action="{plink Migrations:markReviewed, id => $d['id']}" style="display:inline">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							<button type="submit" class="mig-btn" aria-label="Mark {$d['migration_id'] ?? $d['uuid']} in review">Mark reviewed</button>
+						</form>
+						<form method="post" action="{plink Migrations:markRejected, id => $d['id']}" style="display:inline">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							<button type="submit" class="mig-btn mig-btn-danger" aria-label="Reject {$d['migration_id'] ?? $d['uuid']}">Reject</button>
+						</form>
+						{if !empty($d['session_uuid'])}
+							<a class="mig-btn" href="/agents/{$d['author_agent']}/sessions/{$d['session_uuid']}" title="Authoring run lineage">Lineage</a>
+						{/if}
+					</div>
+				</article>
+			{/foreach}
+		{else}
+			<div class="mig-empty">
+				<div>No agent-authored proposals awaiting review.</div>
+			</div>
+		{/if}
+	</section>
+
+	{* ── PENDING (middle) ── *}
 	<section class="mig-column" aria-labelledby="mig-col-pending">
 		<h3 id="mig-col-pending">
 			Pending

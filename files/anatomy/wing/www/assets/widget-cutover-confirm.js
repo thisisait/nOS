@@ -1,13 +1,23 @@
-/* Wing — Coexistence cutover + cleanup UI.
+/* Wing — Coexistence cutover + reversible primary/secondary toggle UI.
  *
- * Cutover is destructive, so we require a typed confirmation ("CUTOVER") before
- * submitting. Also updates TTL countdowns every second.
+ * Cutover + toggle-as-primary are destructive to live routing, so we require a
+ * typed confirmation ("CUTOVER" / "PRIMARY") before submitting. Deactivate +
+ * cancel are non-destructive (data kept / queued row only) → a window.confirm.
+ *
+ * Two submit paths by design:
+ *   - cutover / cleanup  → fetch() to the bearer-style /api/v1 surface (legacy).
+ *   - toggle-primary / deactivate-secondary / cancel-coexist (B4c, operator path)
+ *     → submit the real hidden CSRF <form> so the browser presenter handles the
+ *       mutation and the server redirect+flash UX is preserved (no fetch).
+ *
+ * Also updates TTL countdowns every second.
  */
 (function () {
 	'use strict';
 
 	const API = '/api/v1';
 	const CONFIRM_PHRASE = 'CUTOVER';
+	const TOGGLE_PHRASE = 'PRIMARY';
 
 	// ── API helpers ──
 	async function apiPost(path, body) {
@@ -21,7 +31,7 @@
 		return res.json();
 	}
 
-	// ── Modal state ──
+	// ── Cutover modal state (legacy fetch path) ──
 	const modal = {
 		root: null, svcLabel: null, tagLabel: null, input: null, submit: null,
 		service: null, tag: null, lastFocus: null,
@@ -61,7 +71,7 @@
 		}
 	};
 
-	function onEsc(e) { if (e.key === 'Escape') modal.close(); }
+	function onEsc(e) { if (e.key === 'Escape') { modal.close(); toggleModal.close(); } }
 
 	function onInput() {
 		if (!modal.input) return;
@@ -99,6 +109,92 @@
 			btn.disabled = false;
 			btn.textContent = orig;
 		}
+	}
+
+	// ── Toggle-as-primary modal state (B4c — submits a real CSRF form) ──
+	const toggleModal = {
+		root: null, svcLabel: null, tagLabel: null, input: null, submit: null,
+		service: null, tag: null, lastFocus: null,
+
+		ensure() {
+			this.root = document.getElementById('coex-toggle-modal');
+			this.svcLabel = document.getElementById('coex-toggle-svc');
+			this.tagLabel = document.getElementById('coex-toggle-tag');
+			this.input = document.getElementById('coex-toggle-input');
+			this.submit = document.getElementById('coex-toggle-submit');
+			return !!this.root;
+		},
+
+		open(service, tag) {
+			if (!this.ensure()) return;
+			this.service = service;
+			this.tag = tag;
+			this.svcLabel.textContent = service;
+			this.tagLabel.textContent = tag;
+			this.input.value = '';
+			this.input.setAttribute('aria-invalid', 'false');
+			this.submit.disabled = true;
+			this.lastFocus = document.activeElement;
+			this.root.hidden = false;
+			setTimeout(() => this.input.focus(), 0);
+			document.addEventListener('keydown', onEsc);
+		},
+
+		close() {
+			if (!this.root) return;
+			this.root.hidden = true;
+			this.service = null;
+			this.tag = null;
+			document.removeEventListener('keydown', onEsc);
+			if (this.lastFocus && typeof this.lastFocus.focus === 'function') this.lastFocus.focus();
+		}
+	};
+
+	function onToggleInput() {
+		if (!toggleModal.input) return;
+		const ok = toggleModal.input.value.trim() === TOGGLE_PHRASE;
+		toggleModal.input.setAttribute('aria-invalid', ok ? 'false' : (toggleModal.input.value ? 'true' : 'false'));
+		toggleModal.submit.disabled = !ok;
+	}
+
+	// Submit the real hidden CSRF <form> → browser presenter handles the mutation
+	// and redirects with a flash (no fetch — preserves the server redirect UX).
+	function onToggleConfirm() {
+		if (!toggleModal.service || !toggleModal.tag) return;
+		const form = document.getElementById('coex-toggle-form');
+		const tagInput = document.getElementById('coex-toggle-target-tag');
+		if (!form || !tagInput) return;
+		form.action = `/coexistence/${encodeURIComponent(toggleModal.service)}/toggle-primary`;
+		tagInput.value = toggleModal.tag;
+		toggleModal.submit.disabled = true;
+		toggleModal.submit.textContent = 'Toggling…';
+		form.submit();
+	}
+
+	function onDeactivate(btn) {
+		const service = btn.dataset.service;
+		const tag = btn.dataset.tag;
+		if (!window.confirm(`Deactivate track "${tag}" for ${service}?\n\nThe container is stopped but its data + override are kept — re-promote it within the TTL to roll back. This refuses the active primary unless a failover target exists.`)) return;
+		const form = document.getElementById('coex-deactivate-form');
+		const tagInput = document.getElementById('coex-deactivate-tag');
+		if (!form || !tagInput) return;
+		form.action = `/coexistence/${encodeURIComponent(service)}/deactivate-secondary`;
+		tagInput.value = tag;
+		btn.disabled = true;
+		form.submit();
+	}
+
+	function onCancelCoexist(btn) {
+		const service = btn.dataset.service;
+		const tag = btn.dataset.tag;
+		if (!window.confirm(`Cancel the queued provision "${tag}" for ${service}?\n\nThe track was never provisioned — this only dequeues it (no container/data to remove).`)) return;
+		const form = document.getElementById('coex-cancel-form');
+		const tagInput = document.getElementById('coex-cancel-tag');
+		if (!form || !tagInput) return;
+		form.action = `/coexistence/${encodeURIComponent(service)}/cancel`;
+		tagInput.value = tag;
+		btn.disabled = true;
+		form.submit();
 	}
 
 	// ── TTL countdown ──
@@ -155,6 +251,27 @@
 					e.preventDefault();
 					onCleanup(btn);
 					break;
+				// ── B4c reversible toggle verbs ──
+				case 'toggle-primary':
+					e.preventDefault();
+					toggleModal.open(btn.dataset.service, btn.dataset.tag);
+					break;
+				case 'close-toggle':
+					e.preventDefault();
+					toggleModal.close();
+					break;
+				case 'confirm-toggle':
+					e.preventDefault();
+					onToggleConfirm();
+					break;
+				case 'deactivate-secondary':
+					e.preventDefault();
+					onDeactivate(btn);
+					break;
+				case 'cancel-coexist':
+					e.preventDefault();
+					onCancelCoexist(btn);
+					break;
 			}
 		});
 
@@ -168,6 +285,19 @@
 				if (e.key === 'Enter' && !modal.submit.disabled) {
 					e.preventDefault();
 					onConfirm();
+				}
+			});
+		}
+
+		if (toggleModal.ensure()) {
+			toggleModal.input.addEventListener('input', onToggleInput);
+			toggleModal.root.addEventListener('click', function (e) {
+				if (e.target === toggleModal.root) toggleModal.close();
+			});
+			toggleModal.input.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter' && !toggleModal.submit.disabled) {
+					e.preventDefault();
+					onToggleConfirm();
 				}
 			});
 		}

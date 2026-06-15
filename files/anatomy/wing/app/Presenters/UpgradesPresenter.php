@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presenters;
 
 use App\Model\EventRepository;
+use App\Model\MigrationAuthoredRepository;
 use App\Model\UpgradeRepository;
 
 /**
@@ -25,6 +26,10 @@ final class UpgradesPresenter extends BasePresenter
 	public function __construct(
 		private UpgradeRepository $upgrades,
 		private EventRepository $events,
+		// B4c: the per-service Proposals strip surfaces the agent-authored
+		// migrations_authored drafts (with the local-forge MR link). Read-only
+		// here; the producer write is the bearer Api\MigrationsPresenter.
+		private MigrationAuthoredRepository $authored,
 	) {
 	}
 
@@ -186,6 +191,9 @@ final class UpgradesPresenter extends BasePresenter
 	 *   service:  string
 	 *   data:     array|null  — { service, docs_url, recipes: [...] } from BoxAPI
 	 *   history:  list<array> — past applied upgrades for this service
+	 *   drafts:   list<array> — agent-authored migration proposals (B4c): the
+	 *                           Proposals strip above the recipe cards, each with
+	 *                           a Review MR → (local forge) + Lineage deep-link.
 	 *   notFound: bool
 	 */
 	public function renderService(string $service): void
@@ -195,5 +203,6 @@ final class UpgradesPresenter extends BasePresenter
 		$this->template->data = $data;
 		$this->template->notFound = $data === null;
 		$this->template->history = $this->upgrades->history($service);
+		$this->template->drafts = $this->authored->forService($service);
 	}
 }
