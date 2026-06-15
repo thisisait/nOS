@@ -411,11 +411,19 @@ It is a STOPGAP — a full converge re-churns and undoes it.
 
 **Durable fix directions (pick during implementation):**
 1. **Stop the churn** — find the core-up step that recreates providers and make it
-   idempotent under `engine=tofu` (don't recreate tofu-owned objects).
-2. **Track by stable key** — have the preflight auto-reconcile `module.service[*]`
-   to the live PK via the `application.slug → provider` bridge *before* plan
-   (essentially fold `tofu-authentik-reconcile.sh` into `tasks/tofu-authentik.yml`
-   as a gated, dry-run-first preflight — exactly this plan's §-design, now with a
-   working reference implementation).
-- Validation that the fix works: blank, then **two** consecutive non-blank
-  converges must both read `tofu plan` no-op (today the 2nd always refuses).
+   idempotent under `engine=tofu`. **Abandoned:** the providers are `managed=None`
+   (no blueprint owns them) and no playbook step bulk-deletes them, so there is no
+   single churner to eliminate — the desync is an emergent artifact of state-reset +
+   partial/aborted converges. Self-reconciliation is the robust answer instead.
+2. **Track by stable key — ✅ IMPLEMENTED 2026-06-15 (commit `aa6986bd`).** The
+   preflight auto-reconciles `module.service[*]` to the live PK via the
+   `application.slug → provider` bridge *before* plan. Drift-conditional (no-op
+   when aligned), IDENTITY-only (attributes still diffed → a real config edit still
+   trips the guard), best-effort (plan+guard stay the rails), never `tofu apply`.
+   Wired into `tasks/tofu-authentik.yml` (engine-gated), tool
+   `tools/tofu-authentik-reconcile.sh --preflight`, gate
+   `tests/anatomy/test_tofu_reconcile_preflight.py`.
+- **Validation still owed (wet-test):** blank, then **two** consecutive non-blank
+  converges must both read `tofu plan` no-op (before the fix the 2nd always refused).
+  Offline gates + syntax-check are green; the live two-converge proof is the
+  acceptance test the operator runs next.
