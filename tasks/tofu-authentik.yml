@@ -82,6 +82,42 @@
         chdir: "{{ _tf_dir }}"
       changed_when: false
 
+    # ── SELF-RECONCILE PREFLIGHT (state-PK ⇄ live-PK; idempotent) ────────────
+    # tofu tracks each provider by its Authentik integer PK (resource id). Those
+    # PKs can drift out from under the state — a blank state-reset that didn't
+    # fully align, a provider recreate, a manual change — so the plan below reads
+    # a "dangerous in-place client_id/external_host flip" and the guard REFUSES,
+    # even though the live SSO is correct. This is the recurring non-blank desync
+    # (root-cause + proof: docs/plans/v07-no-auto-adopt.md § LIVE ROOT-CAUSE;
+    # providers are managed=None, no blueprint owns them, so there is no single
+    # churner to eliminate — the engine must self-reconcile instead).
+    #
+    # Re-points each module.service[*] provider (+ proxy attachment + app) at its
+    # CURRENT live PK, DRIFT-CONDITIONAL (a no-op when already aligned), via the
+    # STABLE bridge live application.slug → application.provider (apps import by
+    # slug, never desync). IDENTITY ONLY — attributes are still compared by the
+    # plan below, so a REAL config change (a genuine immutable-field edit) still
+    # trips the guard. Best-effort: if it can't run, the plan+guard below remain
+    # the authoritative rails (the run degrades to today's refuse-on-drift, never
+    # a silent apply). Only under engine=tofu (imperative path has no tofu state).
+    - name: "[tofu-authentik] Self-reconcile state PKs to live (idempotent preflight)"
+      ansible.builtin.command: "{{ playbook_dir }}/tools/tofu-authentik-reconcile.sh --preflight"
+      args:
+        chdir: "{{ _tf_dir }}"
+      environment:
+        AUTHENTIK_PORT: "{{ authentik_port | default(9000) }}"
+      register: _tofu_reconcile
+      changed_when: "_tofu_reconcile.stdout is search('reconciled=[1-9]')"
+      failed_when: false
+      when: (authentik_engine | default('blueprint')) == 'tofu'
+
+    - name: "[tofu-authentik] Reconcile preflight summary"
+      ansible.builtin.debug:
+        msg: >-
+          tofu self-reconcile: {{ (_tofu_reconcile.stdout_lines | default([]) | select('search', 'reconciled=') | first) | default('skipped (engine!=tofu or unreachable)') }}
+          {{ '— rc=' ~ _tofu_reconcile.rc ~ ' (best-effort; plan+guard below are the rails)' if (_tofu_reconcile.rc | default(0)) != 0 else '' }}
+      when: (authentik_engine | default('blueprint')) == 'tofu'
+
     - name: "[tofu-authentik] tofu plan (-out so apply can be destroy-gated)"
       ansible.builtin.command: "tofu plan -input=false -no-color -detailed-exitcode -out=tfplan"
       args:
