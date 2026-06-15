@@ -49,6 +49,30 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
   `portainer_admin_auto_reset` heals a real drift. Gates
   `test_portainer_sso_verify_loud.py`, `test_portainer_admin_self_heal.py`.
 
+### SSO fleet hardening (live-diagnosed)
+
+A read-only multi-agent SSO fleet diagnosis (`docs/sso-fleet-diagnosis-2026-06.md`)
+proved the SSO layer healthy and surfaced the real, recurring bugs:
+
+- **Nextcloud OIDC — `allow_local_remote_servers`.** The browser login died with
+  "Could not reach the OpenID Connect provider": user_oidc fetches discovery via
+  NC's IClientService, whose SSRF guard (default off) blocked the call because
+  `auth.<tld>` resolves through `extra_hosts:host-gateway` to a PRIVATE IP. A raw
+  curl masked it (only NC's own client enforces the guard). Enabled in both OIDC
+  paths (needed on public tenants too). Gate `test_nextcloud_oidc_local_idp.py`.
+- **Hermes daemon — off the TCC-blocked SSD.** The forward_auth gate was healthy
+  but the upstream daemon crash-looped: its launchd venv lived on `/Volumes/SSD1TB`
+  and macOS TCC denies launchd reads there. Moved back under `$HOME`; the reload
+  now bootout+bootstraps so a changed plist actually re-reads. Gate
+  `test_hermes_venv_not_on_external_ssd.py`.
+- **Uptime Kuma — single sign-in.** Kuma v1 has no OIDC, so its own login behind
+  the Authentik gate was a pointless second password. Disabled (gated on
+  install_authentik, idempotent, monitor-setup-safe). Gate `test_kuma_single_login.py`.
+- **Working-as-designed, documented:** forward_auth services have no in-app SSO
+  button by design; the XOAUTH2-via-forward_auth webmail SSO is architecturally
+  impossible (the proxy forwards no token) — the master-user path is scoped as a
+  deferred greenfield epic (`docs/plans/v07-webmail-stalwart-oidc-single-login.md`).
+
 ### Security / CVE sweep (overnight review)
 
 - PostgreSQL `16.13 → 16.14-alpine` (REM-088); Open WebUI tool-call retry cap
