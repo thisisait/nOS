@@ -2,7 +2,93 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.5-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-beta`.
+
+---
+
+## v0.7-beta (2026-06-15)
+
+> **The converge becomes idempotent.** v0.6 made OpenTofu the Authentik
+> authority but only ever proved it on a *blank*. The first time the operator
+> ran a second, non-blank converge, the tofu engine refused every plan —
+> Authentik re-issues provider PKs on each converge, so the state pointed at
+> stale IDs and the destroy guard correctly fired with no single object to
+> blame. This tag makes `authentik_engine: tofu` survive re-runs, fixes the
+> matching Portainer SSO false-failure, and lands an overnight multi-agent
+> review (~40 mechanical fixes + 48 staged plan docs + a RAG architecture MVP).
+> No new services; a non-`+all` run is behaviourally unchanged except that
+> re-converges now succeed where they used to fail loud.
+
+### OpenTofu Authentik — idempotent across non-blank converges
+
+- **The bug, root-caused live:** provider PKs churn out from under the tofu
+  state on every non-blank converge (the providers are `managed=None` — no
+  single churner to eliminate), so `tofu plan` read a dangerous in-place
+  `client_id`/`external_host` flip and the destroy guard refused *every* re-run.
+- **The fix:** a pre-plan **self-reconcile preflight**
+  (`tasks/tofu-authentik.yml` + `tools/tofu-authentik-reconcile.sh --preflight`)
+  re-points `module.service[*]` at the live PK via the stable
+  `application.slug → provider` bridge *before* planning. Drift-conditional
+  (no-op when aligned), **identity-only** (attributes are still diffed, so a
+  real config edit still trips the guard), best-effort (plan + guard stay the
+  rails), never calls `tofu apply`, backs up state first. The destroy guard also
+  now catches dangerous in-place UPDATEs to immutable lookup fields. Proven by a
+  3-converge arc (non-blank REFUSE → blank `failed=0` → non-blank `failed=0`
+  end-to-end). Gate: `tests/anatomy/test_tofu_reconcile_preflight.py`.
+
+### Portainer SSO — verify-via-public, no false drift
+
+- Once OAuth2 is active, Portainer's internal admin login `422`s **by design**,
+  so the JWT-based SSO verify (`POST /api/auth` → `GET /api/settings`)
+  false-failed the converge though SSO was healthy, and raised a scary
+  "DRIFT — manual reset" + "OAuth SKIPPED" on every re-run.
+- Fix: read the **unauthenticated** `/api/settings/public` and fail loud **only**
+  when `AuthenticationMethod != 3` (genuine dead SSO) — password-independent.
+  Drift excludes `==3`; the OAuth-config JWT fetch is skipped when already active
+  (break-glass drift downgraded to info, no heal — don't nuke working SSO). Opt-in
+  `portainer_admin_auto_reset` heals a real drift. Gates
+  `test_portainer_sso_verify_loud.py`, `test_portainer_admin_self_heal.py`.
+
+### Security / CVE sweep (overnight review)
+
+- PostgreSQL `16.13 → 16.14-alpine` (REM-088); Open WebUI tool-call retry cap
+  (REM-055); Redis `requirepass` + client-auth (REM-003); nginx fail-closed
+  locations (REM-048) + `X-authentik` header-overwrite (REM-047) gated;
+  hedgedoc/paperclip Postgres SSL require-pinned; MariaDB test-db drop `no_log`'d
+  (secret-leak fix) + CVE-citation synced across three sites.
+
+### Blank-reset correctness
+
+- Reset evicts **all** anatomy LaunchAgent plists, wipes the tofu Authentik
+  state (so a clean-slate converge re-creates aligned PKs) + timestamped state
+  backups + snappymail/spacetimedb bind dirs; the confirmation prompt and DB
+  auto-deps were re-synced to the *real* wipe behaviour. New blank-safety gates.
+
+### CI / release + docs
+
+- Integration jobs capped at a 45-min timeout; GH Pages publish gated on
+  release-artifact validation; shared actions → v6; `master` branch-protection
+  setup documented. The overnight review staged 48 plan docs (Darwin-27 horizon,
+  ansible-core 2.24 jump, `{{ vars }}` retirement Phase-1, euro-office toggle,
+  SSO hardening, ISDS/eIDAS scaffold, retention enforcement) + a RAG-memory MVP
+  architecture; a premature "restart-handler fail-loud" change was reverted (the
+  rendered command was broken) and re-planned.
+
+### Verification
+
+- `failed=0` on the confirm converge (idempotent, end-to-end) and the blank;
+  tofu no-REFUSE on the second converge (the run that always refused before);
+  Portainer SSO verify OK via the public endpoint. Offline: anatomy 1474 passed,
+  ci-local frozen 1:1 gate OK, ansible-lint production clean, lockfile in sync.
+
+### Known / residual
+
+- The tofu reconcile is **identity-only** + best-effort — it re-aligns PKs but a
+  genuine attribute edit still trips the destroy guard (by design). Carried from
+  v0.6: gov is scaffolding (ISDS / NIA-eIDAS greenfield, retention is metadata);
+  the MTI provider-flip reconcile is still hard-coded to the known flip set; the
+  restart-handler corrective fix (per-class container restart) is planned, not yet
+  shipped (only the safety revert landed).
 
 ---
 

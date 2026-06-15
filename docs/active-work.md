@@ -6,17 +6,19 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-06-12 • v0.6-beta released (re-cut same day after the
-> grant_types trap #6); OpenTofu Authentik cutover (ADR-0001 Phase 1) live.
+> Last updated: 2026-06-15 • v0.7-beta tag prep (feat/v0.7-overnight validated
+> end-to-end; tofu self-reconcile + Portainer SSO durable fixes — converge idempotent).
 
 ## Now (current track)
 
-**Devlog platform + docs consolidation epic** (plan:
-`~/.claude/plans/federated-hugging-snowflake.md`, approved 2026-06-12):
-- A: docs/archive/ + this file slimmed (done in this pass) + doctrine rule
-- B: `docs/devlog/` tree + bundle compiler + WP bot/app-password + sync engine
-  + `/devlog` skill + Bone event types + `nos-devlog` agent identity + backfill
-- C: `tools/devlog-release.sh` ceremony + GH Pages publishing of nos-core devlog
+**v0.7-beta tag prep** (feat/v0.7-overnight, validated live; offline suite green):
+- **tofu self-reconcile preflight** — `authentik_engine: tofu` is now idempotent
+  across non-blank converges (was REFUSING every re-run; PK churn). PROVEN by the
+  3-converge arc. `aa6986bd` + tool `tools/tofu-authentik-reconcile.sh`.
+- **Portainer SSO** — verify via unauth `/api/settings/public` (password-independent),
+  idempotent converge (no false DRIFT), opt-in admin self-heal. `0a49bb8c` `9c5b4e0e`.
+- **Overnight review** — ~40 mechanical fixes + 48 plan docs + RAG arch (review-ready,
+  NOT implemented). Remaining for the tag: RELEASE.md + devlog, then dev→master.
 
 ## Open follow-ups
 
@@ -27,8 +29,6 @@
   for `provider_type: forward_auth`, or make the main.yml MTI reconcile skip
   `o.delete()` when the base row has a proxy child. See memory
   `autologin-coverage-ceilings`.
-- **Tofu adopt-path attachment import id** (existing-tenant migrations only) —
-  `docs/opentofu-authentik-cutover.md` § Open items.
 - **Euro-office: full role swap after first stable** (summer 2026) — pilot
   runs via `onlyoffice_image` flip (operator config.yml); rename
   `pazny.onlyoffice` → eurooffice + plugin + manifest row once stable lands.
@@ -39,20 +39,13 @@
   wet-test lane. Hard-breaks on ansible-core 2.24.
 - **Advisor/architect actor-id naming inconsistency** (scout side-find,
   2026-06-11) — normalize agent actor_id naming across the two upgrade agents.
-- **Tofu post-blank state desync — FIXED 2026-06-14.** `blank-reset.yml`
-  never reset `terraform.tfstate` (it lives in the repo, not a data dir), so
-  stale provider pks survived blanks → `tofu apply` PUT to pks now owned by
-  OTHER providers ("name already exists"). Durable fix: blank now `rm`s the
-  tofu state (engine=tofu). The live desynced state was reconciled by hand
-  (state rm + re-import at authoritative client_id pks; plan now no-op).
-  Latent gap remains: tofu has no automatic adopt/reconcile for an existing
-  tenant, and the destroy-guard doesn't catch dangerous UPDATEs to wrong pks.
-- **Portainer SSO unverified read-only (2026-06-13 SSO audit)** —
-  `/api/settings` needs an admin JWT, so the OAuth2 config couldn't be
-  confirmed headlessly; the live converge also logs "FAILED to obtain admin
-  JWT" on the OAuth setup. Confirm `AuthenticationMethod==3` with a Portainer
-  admin token, and root-cause the JWT-obtain failure in
-  `roles/pazny.portainer/tasks/post.yml`.
+- **Tofu non-blank desync — CLOSED 2026-06-15** (durable). Provider PKs churn
+  out from under the state every non-blank converge (providers are `managed=None`,
+  no single churner) → the guard refused every re-run. Fix: a drift-conditional,
+  identity-only **self-reconcile preflight** before `tofu plan`
+  (`tools/tofu-authentik-reconcile.sh --preflight`, via the stable
+  `application.slug → provider` bridge). PROVEN live (3-converge arc). The
+  destroy-guard now also catches dangerous in-place UPDATEs (`d4647b49`).
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
   track; the actual cutover (logical dump/restore + atomic switch) is still
   operator-gated.
@@ -86,11 +79,11 @@
 
 | Surface | State |
 |---|---|
-| Release | `v0.6-beta` (2026-06-12, re-cut; tofu Authentik cutover) |
-| Last verified | tofu-engine blank `failed=0`; smoke 48/48; authorize probe 18/18 |
-| Suites | anatomy 1225 passed; ansible-lint production clean; syntax clean |
+| Release | `v0.7-beta` prep — `feat/v0.7-overnight` validated, `dev→master` pending |
+| Last verified | confirm converge `failed=0` (idempotent); blank `failed=0`; tofu no-REFUSE |
+| Suites | anatomy 1474 passed; ci-local frozen gate OK; ansible-lint production clean |
 | CI | dev light lane green; `Integration (ubuntu-24.04)` = gating wet-test |
-| Authentik | engine=tofu owns providers/apps/attachments; 6 blueprints imperative |
+| Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
 | Remediation queue | 14 pending / 71 resolved / 2 vendor-blocked |
 
 ## Update protocol

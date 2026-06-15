@@ -88,7 +88,7 @@
     # fully align, a provider recreate, a manual change — so the plan below reads
     # a "dangerous in-place client_id/external_host flip" and the guard REFUSES,
     # even though the live SSO is correct. This is the recurring non-blank desync
-    # (root-cause + proof: docs/plans/v07-no-auto-adopt.md § LIVE ROOT-CAUSE;
+    # (root-cause + proof: docs/archive/v07-no-auto-adopt.md § LIVE ROOT-CAUSE;
     # providers are managed=None, no blueprint owns them, so there is no single
     # churner to eliminate — the engine must self-reconcile instead).
     #
