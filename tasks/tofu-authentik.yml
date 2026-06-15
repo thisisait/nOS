@@ -114,7 +114,7 @@
     - name: "[tofu-authentik] Reconcile preflight summary"
       ansible.builtin.debug:
         msg: >-
-          tofu self-reconcile: {{ (_tofu_reconcile.stdout_lines | default([]) | select('search', 'reconciled=') | first) | default('skipped (engine!=tofu or unreachable)') }}
+          tofu self-reconcile: {{ (_tofu_reconcile.stdout_lines | default([]) | select('search', 'reconciled=|no state yet') | list | last) | default('preflight skipped (API unreachable)', true) }}
           {{ '— rc=' ~ _tofu_reconcile.rc ~ ' (best-effort; plan+guard below are the rails)' if (_tofu_reconcile.rc | default(0)) != 0 else '' }}
       when: (authentik_engine | default('blueprint')) == 'tofu'
 
