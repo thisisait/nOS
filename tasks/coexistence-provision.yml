@@ -54,6 +54,11 @@
     service: "{{ coexist_service }}"
     tag: "{{ coexist_tag }}"
     version: "{{ coexist_version }}"
+    # The migration this track is built ON (recorded at provision, consumed at
+    # cutover/promote — nos_coexistence runs nos_migrate action=apply against
+    # this new track before flipping the pointer). Omitted for plain single-
+    # version tracks (no migration data move).
+    source_migration_id: "{{ coexist_source_migration_id | default(omit) }}"
     port: "{{ coexist_port | default(omit) }}"
     base_port: "{{ coexist_base_port | default(omit) }}"
     coexistence_port_offset: "{{ coexist_port_offset | default(10) }}"

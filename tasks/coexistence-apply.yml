@@ -12,10 +12,14 @@
 #     ansible-playbook main.yml --tags coexistence -e coexist_dry_run=true
 # ==============================================================================
 
-- name: "[Coexistence] Read planned-coexistence queue from Wing"
+# --list-gated annotates each planned row with the G-PROVISION-MIGRATED gate
+# (plan_mode + source_migration_uuid + migration_merged). A coexist track may
+# only provision once its linked migrations_authored row reaches
+# review_status='merged' (GATE 2 — the operator's local-forge MR merge).
+- name: "[Coexistence] Read planned-coexistence queue from Wing (with provision gate)"
   ansible.builtin.command:
     cmd: >-
-      php bin/planned-coexistence.php --list
+      php bin/planned-coexistence.php --list-gated
       --data-dir={{ wing_data_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app/data') }}
     chdir: "{{ wing_app_dir | default(ansible_facts['env']['HOME'] ~ '/wing/app') }}"
   register: _coexist_raw
@@ -25,9 +29,40 @@
 
 - name: "[Coexistence] Parse planned queue"
   ansible.builtin.set_fact:
-    _coexist_planned: >-
+    _coexist_queue: >-
       {{ (_coexist_raw.stdout | default('[]') | trim | from_json)
          if (_coexist_raw.stdout | default('') | trim | length > 0) else [] }}
+  tags: ['coexistence']
+
+# G-PROVISION-MIGRATED: split the queue on the merge gate. A coexist row whose
+# migration is NOT yet merged (migration_merged=false) is BLOCKED from
+# provisioning — it stays queued until the operator merges its migration MR on
+# the local forge (GATE 2). plan_mode='migration'/legacy rows carry no migration
+# prerequisite (the CLI sets migration_merged=true for them) and pass straight
+# through. This is the layered-model enforcer made structural: no agent can flip
+# a recipe to a running parallel track without an operator forge-merge.
+- name: "[Coexistence] Apply G-PROVISION-MIGRATED gate"
+  ansible.builtin.set_fact:
+    _coexist_planned: >-
+      {{ _coexist_queue | selectattr('migration_merged', 'defined')
+         | selectattr('migration_merged') | list }}
+    _coexist_blocked: >-
+      {{ _coexist_queue | rejectattr('migration_merged', 'defined') | list
+         + (_coexist_queue | selectattr('migration_merged', 'defined')
+            | rejectattr('migration_merged') | list) }}
+  tags: ['coexistence']
+
+- name: "[Coexistence] Refuse coexist tracks whose migration is not yet merged"
+  ansible.builtin.debug:
+    msg: |-
+      G-PROVISION-MIGRATED: {{ _coexist_blocked | length }} queued track(s)
+      BLOCKED — their migration is not yet merged on the local forge (GATE 2).
+      Provision is refused until the operator reviews + merges the migration MR.
+      {% for c in _coexist_blocked %}
+        - {{ c.service }}/{{ c.tag }} (plan_mode={{ c.plan_mode | default('?') }},
+          source_migration={{ c.source_migration_uuid | default('<none>') }})
+      {% endfor %}
+  when: _coexist_blocked | length > 0
   tags: ['coexistence']
 
 # state/manifest.yml is the authoritative service→{stack, port_var} source
@@ -66,6 +101,11 @@
     coexist_tag: "{{ item.tag }}"
     coexist_version: "{{ item.target_version }}"
     coexist_port_offset: "{{ item.port_offset | default(10) }}"
+    # Record the migration this coexist track is built ON (the merged
+    # migrations_authored.migration_id, resolved by --list-gated). The cutover/
+    # promote hook reads it back from state and runs the data move before the
+    # pointer flip. Plain queue rows carry none → omit.
+    coexist_source_migration_id: "{{ item.source_migration_id | default(omit) }}"
     # Land the track in the service's real compose stack (manifest.stack);
     # fall back to the module default if the service isn't in the manifest.
     coexist_stack: >-

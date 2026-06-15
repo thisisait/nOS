@@ -12,6 +12,15 @@
 #                           honours it unless respect_ttl=false.
 #   coexist_dry_run      -- plan without writing (default: false)
 #
+# Coexistence-consumes-migration (B5): when the cutover TARGET was provisioned
+# ON a migration (its source_migration_id is set in state), the migration's
+# apply[] data-transform IS the cutover procedure. This task runs
+# `nos_migrate action=apply migration_id=<source_migration_id>` against the new
+# track's empty cluster FIRST, threading the new track's port / data_path / tag
+# as extra-vars, and only flips the active_track pointer (with
+# migration_applied=true so the module does not double-apply) once the migration
+# verifies. Fail closed: a migration failure aborts before the pointer flip.
+#
 # Does NOT stop the previous track: it stays running (read_only for
 # stateful services) until the operator runs ``coexist-cleanup``.
 #
@@ -28,6 +37,67 @@
       - coexist_target_tag is defined
   tags: ['coexist-cutover']
 
+# Read the current track state so we can detect whether the cutover target was
+# built ON a migration (source_migration_id). list_tracks is a pure read.
+- name: "[coexistence_cutover] Read tracks for {{ coexist_service }}"
+  nos_coexistence:
+    action: list_tracks
+    service: "{{ coexist_service }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+  register: _coexist_cutover_tracks
+  changed_when: false
+  tags: ['coexist-cutover']
+
+- name: "[coexistence_cutover] Resolve the target track + its source_migration_id"
+  ansible.builtin.set_fact:
+    _coexist_cutover_target: >-
+      {{ (_coexist_cutover_tracks.result.tracks[coexist_service].tracks
+          | default([]))
+         | selectattr('tag', 'equalto', coexist_target_tag)
+         | list | first | default({}) }}
+  tags: ['coexist-cutover']
+
+- name: "[coexistence_cutover] Note migration consumption"
+  ansible.builtin.debug:
+    msg: >-
+      cutover target {{ coexist_service }}/{{ coexist_target_tag }} is built ON
+      migration {{ _coexist_cutover_target.source_migration_id }} — running its
+      data-transform against the new track BEFORE the pointer flip.
+  when: _coexist_cutover_target.source_migration_id | default('') | length > 0
+  tags: ['coexist-cutover']
+
+# Run the migration's apply[] data-transform against the NEW track's cluster.
+# The new track's port / data_path / tag are threaded as extra-vars so the
+# migration's pg_dumpall dump → restore targets the new (empty) cluster, not
+# the live one. Skipped when the target carries no source_migration_id (the
+# ordinary single-version cutover) — those tracks flip with no data move.
+- name: "[coexistence_cutover] Run the source migration against the new track"
+  nos_migrate:
+    action: apply
+    migration_id: "{{ _coexist_cutover_target.source_migration_id }}"
+    migrations_dir: "{{ playbook_dir }}/files/anatomy/migrations"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+    dry_run: "{{ coexist_dry_run | default(false) | bool }}"
+  register: _coexist_cutover_migration
+  when: _coexist_cutover_target.source_migration_id | default('') | length > 0
+  # Fail closed: a migration failure must abort BEFORE the pointer flips.
+  failed_when:
+    - _coexist_cutover_migration is defined
+    - _coexist_cutover_migration.success is defined
+    - not _coexist_cutover_migration.success
+  vars:
+    # Thread the new track's runtime tokens so the migration record's
+    # detect/action steps target the new cluster. The migration recipe reads
+    # these as {{ coexist_* }} tokens (the same names render_compose_override /
+    # the provision task use).
+    coexist_port: "{{ _coexist_cutover_target.port | default(omit) }}"
+    coexist_data_path: "{{ _coexist_cutover_target.data_path | default(omit) }}"
+    coexist_tag: "{{ coexist_target_tag }}"
+    coexist_version: "{{ _coexist_cutover_target.version | default(omit) }}"
+  tags: ['coexist-cutover']
+
 - name: "[coexistence_cutover] Flip active track for {{ coexist_service }} -> {{ coexist_target_tag }}"
   nos_coexistence:
     action: cutover
@@ -39,6 +109,10 @@
     domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
     state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
     ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
+    # The migration (if any) already ran above — tell the module not to re-run it.
+    # The module still enforces the gate (a target with source_migration_id and
+    # migration_applied=false would refuse), so this is the only safe combination.
+    migration_applied: "{{ (_coexist_cutover_target.source_migration_id | default('') | length > 0) | bool }}"
     dry_run: "{{ coexist_dry_run | default(false) | bool }}"
   register: _coexist_cutover_result
   tags: ['coexist-cutover']
@@ -49,6 +123,9 @@
       {{ coexist_service }}: {{ _coexist_cutover_result.result.previous_active | default('<none>') }}
       -> {{ _coexist_cutover_result.result.new_active }}
       (vhost: {{ _coexist_cutover_result.result.nginx_vhost }})
+      {% if _coexist_cutover_target.source_migration_id | default('') | length > 0 %}
+      migration: {{ _coexist_cutover_target.source_migration_id }} ({{ 'dry-run' if (coexist_dry_run | default(false) | bool) else 'applied' }})
+      {% endif %}
   tags: ['coexist-cutover']
 
 - name: "[coexistence_cutover] Reload nginx (zero-downtime)"

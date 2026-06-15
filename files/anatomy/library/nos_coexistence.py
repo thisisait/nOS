@@ -42,6 +42,18 @@ Actions
     nginx vhost is regenerated so the primary upstream now points to
     the new track.
 
+    **Coexistence-consumes-migration (B5):** when the cutover TARGET was
+    provisioned ON a migration (its ``source_migration_id`` is set), the
+    migration's ``apply[]`` data-transform IS the cutover procedure.  The
+    action runs ``nos_migrate action=apply migration_id=<source_migration_id>``
+    against the new track's empty cluster BEFORE flipping the pointer, threading
+    the new track's port / data_path / tag as engine tokens.  Only after the
+    migration's ``verify`` passes does the pointer flip.  Fail closed: with a
+    ``source_migration_id`` but no reachable migration engine (and
+    ``migration_applied`` unset), the action REFUSES rather than flip without the
+    data move.  On the live path the surrounding task runs the migration as a
+    preceding ``nos_migrate`` task and passes ``migration_applied=true``.
+
 ``promote_track``
     Toggle-as-primary: the reversible operator-facing cutover.  Reuses
     every ``cutover`` mechanic (flip ``active_track`` + regenerate the
@@ -154,6 +166,15 @@ options:
       apply[] data-transform runs against the new track's cluster before
       the pointer flip).
     type: str
+  migration_applied:
+    description: Set true by tasks/coexistence-cutover.yml when the migration's
+      data-transform was already run by a preceding nos_migrate action=apply
+      task. The cutover/promote action then enforces the migration gate WITHOUT
+      re-running the data move (no double-apply). When the target track carries
+      a source_migration_id and this flag is false, the action runs the migration
+      in-process (or refuses, failing closed).
+    type: bool
+    default: false
   port:
     description: Explicit port.  When omitted, computed from base_port
       + track_index * coexistence_port_offset.
@@ -740,14 +761,82 @@ def action_provision_track(params, state, ctx=None):
     }
 
 
+def _resolve_migrate_apply(ctx):
+    """Locate the migration-engine apply path the cutover hook consumes.
+
+    Priority:
+      1. ``ctx["migrate_apply"]`` -- an injected callable
+         ``(migration_id, tokens, dry_run) -> {"success": bool, "error"?}``.
+         The live task passes a real one; unit tests stub it. This mirrors the
+         existing ``ctx["port_probe"]`` injection idiom exactly.
+      2. The in-process ``nos_migrate`` engine (``engine_apply`` resolving by
+         ``migration_id`` against ``ctx["migrations_dir"]``) when importable.
+      3. None -- the caller must fail the cutover closed (never flip the pointer
+         without the data move having run).
+    """
+    if ctx and ctx.get("migrate_apply") is not None:
+        return ctx["migrate_apply"]
+
+    migrations_dir = (ctx or {}).get("migrations_dir")
+    if not migrations_dir:
+        return None
+
+    # Import the live migration engine the same dual-path way nos_migrate.py
+    # does (ansible.module_utils first, repo-root module_utils fallback). The
+    # engine resolves the record by id and runs its detect/action/verify/rollback
+    # steps -- the SAME action=apply path --tags upgrade/migrate uses.
+    _eng = None
+    try:  # pragma: no cover - ansible context
+        from ansible.module_utils import nos_migrate_engine as _eng  # type: ignore
+    except Exception:  # noqa: BLE001
+        try:
+            _here = os.path.dirname(os.path.abspath(__file__))
+            _repo_root = os.path.dirname(_here)
+            if _repo_root not in sys.path:
+                sys.path.insert(0, _repo_root)
+            import module_utils.nos_migrate_engine as _eng  # type: ignore
+        except Exception:  # pragma: no cover
+            _eng = None
+    if _eng is None:
+        return None
+
+    def _engine_apply(migration_id, tokens, dry_run):
+        # Locate the record by id in migrations_dir (engine_apply consumes a
+        # record dict, not an id -- resolve it the way nos_migrate._resolve_record
+        # does: scan, then fall back to <dir>/<id>.yml).
+        record = None
+        for rec_id, _path, loaded in _eng.list_migrations(migrations_dir):
+            if rec_id == migration_id:
+                record = loaded
+                break
+        if record is None:
+            direct = os.path.join(migrations_dir, "%s.yml" % migration_id)
+            if os.path.isfile(direct):
+                record = _eng.load_record(direct)
+        if record is None:
+            return {"success": False,
+                    "error": "migration %r not found in %s" % (migration_id, migrations_dir)}
+        m_ctx = dict((ctx or {}).get("migrate_ctx") or {})
+        m_ctx.setdefault("dry_run", bool(dry_run))
+        # Thread the new track's runtime tokens (port / data_path / tag) so the
+        # migration's data-transform targets the NEW cluster, not the live one.
+        m_ctx.setdefault("tokens", {})
+        m_ctx["tokens"].update(tokens or {})
+        return _eng.apply(record, ctx=m_ctx, dry_run=bool(dry_run))
+
+    return _engine_apply
+
+
 def action_cutover(params, state, ctx=None):
     service = params["service"]
     target_tag = params["target_tag"]
     dry_run = bool(params.get("dry_run", False))
     ttl_seconds = params.get("ttl_seconds")
+    ctx = ctx or {}
 
     svc_state = _get_svc_state(state, service)
-    if _find_track(svc_state, target_tag) is None:
+    target = _find_track(svc_state, target_tag)
+    if target is None:
         return _err("cutover target %r does not exist for %r" % (target_tag, service))
 
     previous = svc_state.get("active_track")
@@ -756,6 +845,50 @@ def action_cutover(params, state, ctx=None):
             "previous_active": previous, "new_active": target_tag,
             "noop": True,
         }}
+
+    # Coexistence-consumes-migration (B5): when the NEW track was provisioned ON
+    # a migration (its source_migration_id is set), the migration's apply[] data-
+    # transform IS the cutover procedure. Run it against the new track's empty
+    # cluster BEFORE flipping the pointer -- only after its verify passes do we
+    # promote the new version. Fail closed: never flip without the data move.
+    # On the live path tasks/coexistence-cutover.yml runs the migration as a
+    # preceding nos_migrate action=apply task and passes migration_applied=true,
+    # so the module enforces the gate without double-applying.
+    migration_result = None
+    source_migration_id = target.get("source_migration_id")
+    already_applied = bool(params.get("migration_applied", False))
+    if source_migration_id and not already_applied:
+        migrate_apply = _resolve_migrate_apply(ctx)
+        if migrate_apply is None:
+            return _err(
+                "cutover target %r is built ON migration %r but no migration "
+                "engine is reachable (set ctx['migrate_apply'] or "
+                "ctx['migrations_dir']); refusing to flip the pointer without "
+                "running the data move" % (target_tag, source_migration_id),
+                source_migration_id=source_migration_id)
+        tokens = {
+            "coexist_service": service,
+            "coexist_tag": target_tag,
+            "coexist_port": target.get("port"),
+            "coexist_data_path": target.get("data_path"),
+            "coexist_version": target.get("version"),
+        }
+        try:
+            migration_result = migrate_apply(source_migration_id, tokens, dry_run)
+        except Exception as exc:  # noqa: BLE001 - surface as a clean cutover error
+            return _err("cutover migration %r raised: %s"
+                        % (source_migration_id, exc),
+                        source_migration_id=source_migration_id)
+        if not (isinstance(migration_result, dict)
+                and migration_result.get("success")):
+            err = (migration_result.get("error")
+                   if isinstance(migration_result, dict) else None) \
+                or "migration did not report success"
+            return _err(
+                "cutover migration %r failed: %s -- pointer NOT flipped"
+                % (source_migration_id, err),
+                source_migration_id=source_migration_id,
+                migration=migration_result)
 
     svc_state["active_track"] = target_tag
     now = _now_iso()
@@ -786,6 +919,8 @@ def action_cutover(params, state, ctx=None):
             "new_active": target_tag,
             "nginx_vhost": vhost_path,
             "cutover_at": now,
+            "source_migration_id": source_migration_id,
+            "migration": migration_result,
         },
     }
 
@@ -846,6 +981,50 @@ def action_promote_track(params, state, ctx=None):
             return _err("promote target %r port %s is not answering; pass "
                         "force=true to promote a down track" % (target_tag, port))
 
+    # Coexistence-consumes-migration (B5): toggle-as-primary is the reversible
+    # cutover, so it consumes the migration the SAME way action_cutover does.
+    # When the promoted track was built ON a migration (source_migration_id set),
+    # run that migration's data-transform against the new track BEFORE flipping
+    # the pointer. Fail closed -- never promote without the data move. The reverse
+    # toggle (re-promoting the original primary) has no source_migration_id, so it
+    # never re-runs the dump/restore. migration_applied=true lets the live task
+    # run the data move via a preceding nos_migrate task without a double-apply.
+    migration_result = None
+    source_migration_id = target.get("source_migration_id")
+    already_applied = bool(params.get("migration_applied", False))
+    if source_migration_id and not already_applied:
+        migrate_apply = _resolve_migrate_apply(ctx)
+        if migrate_apply is None:
+            return _err(
+                "promote target %r is built ON migration %r but no migration "
+                "engine is reachable (set ctx['migrate_apply'] or "
+                "ctx['migrations_dir']); refusing to flip the pointer without "
+                "running the data move" % (target_tag, source_migration_id),
+                source_migration_id=source_migration_id)
+        tokens = {
+            "coexist_service": service,
+            "coexist_tag": target_tag,
+            "coexist_port": target.get("port"),
+            "coexist_data_path": target.get("data_path"),
+            "coexist_version": target.get("version"),
+        }
+        try:
+            migration_result = migrate_apply(source_migration_id, tokens, dry_run)
+        except Exception as exc:  # noqa: BLE001
+            return _err("promote migration %r raised: %s"
+                        % (source_migration_id, exc),
+                        source_migration_id=source_migration_id)
+        if not (isinstance(migration_result, dict)
+                and migration_result.get("success")):
+            err = (migration_result.get("error")
+                   if isinstance(migration_result, dict) else None) \
+                or "migration did not report success"
+            return _err(
+                "promote migration %r failed: %s -- pointer NOT flipped"
+                % (source_migration_id, err),
+                source_migration_id=source_migration_id,
+                migration=migration_result)
+
     now = _now_iso()
     svc_state["active_track"] = target_tag
     for t in svc_state.get("tracks", []):
@@ -884,6 +1063,8 @@ def action_promote_track(params, state, ctx=None):
             "nginx_vhost": vhost_path,
             "promoted_at": now,
             "dry_run": dry_run,
+            "source_migration_id": source_migration_id,
+            "migration": migration_result,
         },
     }
 
@@ -1139,6 +1320,7 @@ def main():  # pragma: no cover - exercised only inside ansible
             "target_tag": {"type": "str"},
             "version": {"type": "str"},
             "source_migration_id": {"type": "str"},
+            "migration_applied": {"type": "bool", "default": False},
             "port": {"type": "int"},
             "base_port": {"type": "int"},
             "coexistence_port_offset": {"type": "int", "default": 10},

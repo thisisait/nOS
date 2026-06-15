@@ -13,9 +13,19 @@ Pins the three constraints the Lifecycle API (design §5) is built on:
 * **cancel-only-planned** — bin/planned-coexistence.php --cancel flips a
   status=planned row to cancelled but REFUSES (exit 1) when there is no planned
   row (an applied track must go deactivate → cleanup, not cancel).
+* **coexistence-consumes-migration (B5)** — when the cutover/promote TARGET was
+  provisioned ON a migration (source_migration_id set), the action runs the
+  migration's data-transform BEFORE flipping the pointer and FAILS CLOSED (no
+  flip) on a migration error or an unreachable engine. A migration_applied=true
+  flag (set by the live task that already ran the migration) suppresses the
+  in-module apply without dropping the gate.
+* **G-PROVISION-MIGRATED (B5)** — bin/planned-coexistence.php --list-gated marks
+  a plan_mode='coexist' row migration_merged=false until its linked
+  migrations_authored row reaches review_status='merged' (GATE 2); a
+  plan_mode='migration'/legacy row is unconditionally open (migration_merged=true).
 
-The module half runs pure-python (no docker / nginx); the cancel half drives
-the real PHP CLI against a synthetic wing.db, skipped if php is absent.
+The module half runs pure-python (no docker / nginx); the cancel + gate halves
+drive the real PHP CLI against a synthetic wing.db, skipped if php is absent.
 """
 
 from __future__ import annotations
@@ -320,6 +330,146 @@ def test_deactivate_missing_track_fails(env):
 
 
 # --------------------------------------------------------------------------- #
+# coexistence-consumes-migration (B5) — cutover / promote run the migration's   #
+# data-transform BEFORE the pointer flip, and fail closed without it.           #
+# --------------------------------------------------------------------------- #
+
+def _spy_migrate(record, success=True, error=None):
+    """A ctx['migrate_apply'] stub: records its calls and returns a fake engine
+    result. The real engine signature the module calls is
+    (migration_id, tokens, dry_run) -> {"success": bool, "error"?}."""
+    def _apply(migration_id, tokens, dry_run):
+        record.append({"migration_id": migration_id, "tokens": dict(tokens or {}),
+                       "dry_run": dry_run})
+        return {"success": success, "error": error,
+                "steps_applied": 2 if success else 0}
+    return _apply
+
+
+def test_cutover_without_migration_flips_cleanly(env):
+    # No source_migration_id → plain cutover, no migration hook needed.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    res = lib.run_action(_common(env, action="cutover", target_tag="v17",
+                                 ttl_seconds=3600))
+    assert res["changed"] is True
+    assert res["result"]["new_active"] == "v17"
+    assert res["result"]["source_migration_id"] is None
+    assert res["result"]["migration"] is None
+    assert _active(env) == "v17"
+
+
+def test_cutover_runs_migration_before_pointer_flip(env):
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="cutover", target_tag="v17", ttl_seconds=3600),
+        ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res["changed"] is True
+    # The migration ran with the new track's runtime tokens threaded.
+    assert len(calls) == 1
+    assert calls[0]["migration_id"] == "2026-06-15-postgresql-16-to-17"
+    assert calls[0]["tokens"]["coexist_tag"] == "v17"
+    assert calls[0]["tokens"]["coexist_data_path"] == \
+        str(env["tmp_path"] / "data" / "grafana-v17")
+    # Pointer flipped only after the migration succeeded.
+    assert _active(env) == "v17"
+    assert res["result"]["source_migration_id"] == "2026-06-15-postgresql-16-to-17"
+    assert res["result"]["migration"]["success"] is True
+
+
+def test_cutover_fails_closed_on_migration_error(env):
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="cutover", target_tag="v17"),
+        ctx={"migrate_apply": _spy_migrate(calls, success=False,
+                                           error="restore failed")})
+    assert res.get("failed") is True
+    assert "NOT flipped" in res["msg"]
+    # The pointer is UNCHANGED — v16 still primary (fail closed).
+    assert _active(env) == "v16"
+
+
+def test_cutover_refuses_when_no_migration_engine_reachable(env):
+    # source_migration_id set but NO migrate_apply hook AND no migrations_dir →
+    # the module cannot run the data move, so it refuses to flip (fail closed).
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    res = lib.run_action(_common(env, action="cutover", target_tag="v17"),
+                         ctx={})
+    assert res.get("failed") is True
+    assert "no migration engine is reachable" in res["msg"]
+    assert _active(env) == "v16"
+
+
+def test_cutover_migration_applied_flag_skips_inmodule_apply(env):
+    # The live task ran the migration itself and passes migration_applied=true:
+    # the module must NOT re-run it (no double-apply) but still flips the pointer.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="cutover", target_tag="v17",
+                migration_applied=True),
+        ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res["changed"] is True
+    assert calls == []          # the in-module apply was suppressed
+    assert _active(env) == "v17"
+
+
+def test_promote_runs_migration_before_pointer_flip(env):
+    # Toggle-as-primary is the reversible cutover → it consumes the migration the
+    # same way. The forward toggle runs it; the reverse toggle (no
+    # source_migration_id on v16) does NOT re-run it.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="promote_track", target_tag="v17"),
+        ctx={"migrate_apply": _spy_migrate(calls), "port_probe": _port_up})
+    assert res["changed"] is True
+    assert len(calls) == 1
+    assert calls[0]["migration_id"] == "2026-06-15-postgresql-16-to-17"
+    assert _active(env) == "v17"
+    # Reverse toggle: v16 has no source_migration_id → no migration re-run.
+    lib.run_action(_common(env, action="promote_track", target_tag="v16"),
+                   ctx={"migrate_apply": _spy_migrate(calls), "port_probe": _port_up})
+    assert len(calls) == 1      # still just the one forward call
+    assert _active(env) == "v16"
+
+
+def test_promote_fails_closed_on_migration_error(env):
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    res = lib.run_action(
+        _common(env, action="promote_track", target_tag="v17"),
+        ctx={"migrate_apply": _spy_migrate([], success=False, error="boom"),
+             "port_probe": _port_up})
+    assert res.get("failed") is True
+    assert "NOT flipped" in res["msg"]
+    # v16 still primary (the migration error blocked the promote).
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert _active(env) == "v16"
+    assert tracks["v16"]["role"] == "primary"
+
+
+# --------------------------------------------------------------------------- #
 # cancel-only-planned — bin/planned-coexistence.php --cancel                    #
 # --------------------------------------------------------------------------- #
 
@@ -410,3 +560,144 @@ def test_cancel_requires_service_and_tag(tmp_path):
     )
     assert proc.returncode == 2
     assert "requires --service and --tag" in proc.stderr
+
+
+# --------------------------------------------------------------------------- #
+# G-PROVISION-MIGRATED — bin/planned-coexistence.php --list-gated               #
+#                                                                              #
+# A plan_mode='coexist' queued track may ONLY provision once its linked        #
+# migrations_authored row reaches review_status='merged' (GATE 2). The CLI     #
+# surfaces this as migration_merged; tasks/coexistence-apply.yml filters on it.#
+# --------------------------------------------------------------------------- #
+
+import json  # noqa: E402  (kept local to the gate section)
+
+
+def _make_gated_db(
+    data_dir: pathlib.Path,
+    *,
+    plan_mode: str,
+    review_status: str | None,
+    migration_uuid: str = "11111111-1111-4111-8111-111111111111",
+    migration_id: str = "2026-06-15-postgresql-16-to-17",
+) -> None:
+    """Seed wing.db with the full plan-choice chain so --list-gated can resolve
+    the G-PROVISION-MIGRATED gate: a planned coexistence_planned row →
+    parent_upgrade_id → upgrades_planned (plan_mode) and source_migration_uuid →
+    migrations_authored (review_status). review_status=None seeds no authored row
+    (the migration was never authored → gate closed)."""
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(str(data_dir / "wing.db"))
+    db.executescript(
+        """
+        CREATE TABLE upgrades_planned (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            service TEXT NOT NULL,
+            recipe_id TEXT,
+            status TEXT NOT NULL DEFAULT 'planned',
+            plan_mode TEXT NOT NULL DEFAULT 'migration'
+        );
+        CREATE TABLE coexistence_planned (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            service TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            target_version TEXT,
+            port_offset INTEGER DEFAULT 10,
+            status TEXT NOT NULL DEFAULT 'planned',
+            applied_at TEXT,
+            parent_upgrade_id INTEGER,
+            source_migration_uuid TEXT,
+            data_copy INTEGER NOT NULL DEFAULT 1,
+            cancelled_at TEXT,
+            cancelled_by TEXT,
+            UNIQUE (service, tag, status)
+        );
+        CREATE TABLE migrations_authored (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uuid TEXT NOT NULL UNIQUE,
+            service TEXT NOT NULL,
+            recipe_id TEXT NOT NULL,
+            migration_id TEXT,
+            plan_mode TEXT NOT NULL DEFAULT 'migration',
+            title TEXT NOT NULL DEFAULT 'pg 16→17',
+            review_status TEXT NOT NULL DEFAULT 'draft',
+            author_agent TEXT NOT NULL DEFAULT 'migration-author'
+        );
+        """
+    )
+    db.execute(
+        "INSERT INTO upgrades_planned (id, service, recipe_id, plan_mode) "
+        "VALUES (7, 'postgresql', 'postgresql-16-to-17', ?)",
+        (plan_mode,),
+    )
+    db.execute(
+        "INSERT INTO coexistence_planned "
+        "(service, tag, target_version, status, parent_upgrade_id, source_migration_uuid) "
+        "VALUES ('postgresql', 'v17', '17', 'planned', 7, ?)",
+        (migration_uuid,),
+    )
+    if review_status is not None:
+        db.execute(
+            "INSERT INTO migrations_authored "
+            "(uuid, service, recipe_id, migration_id, plan_mode, review_status) "
+            "VALUES (?, 'postgresql', 'postgresql-16-to-17', ?, 'coexist', ?)",
+            (migration_uuid, migration_id, review_status),
+        )
+    db.commit()
+    db.close()
+
+
+def _list_gated(data_dir: pathlib.Path):
+    proc = subprocess.run(
+        [_PHP, str(_CLI), "--list-gated", f"--data-dir={data_dir}"],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout.strip())
+
+
+@pytest.mark.skipif(_PHP is None, reason="php not installed")
+def test_gate_blocks_coexist_until_migration_merged(tmp_path):
+    # plan_mode=coexist, migration authored but NOT merged (in_review) → blocked.
+    data_dir = tmp_path / "wing" / "app" / "data"
+    _make_gated_db(data_dir, plan_mode="coexist", review_status="in_review")
+    rows = _list_gated(data_dir)
+    assert len(rows) == 1
+    assert rows[0]["plan_mode"] == "coexist"
+    assert rows[0]["migration_merged"] is False
+    # No merged migration → no source_migration_id surfaced.
+    assert rows[0]["source_migration_id"] is None
+
+
+@pytest.mark.skipif(_PHP is None, reason="php not installed")
+def test_gate_opens_once_migration_merged(tmp_path):
+    # plan_mode=coexist, migration merged → gate open + carries the migration_id
+    # the provisioned track records as source_migration_id (cutover consumes it).
+    data_dir = tmp_path / "wing" / "app" / "data"
+    _make_gated_db(data_dir, plan_mode="coexist", review_status="merged")
+    rows = _list_gated(data_dir)
+    assert len(rows) == 1
+    assert rows[0]["migration_merged"] is True
+    assert rows[0]["source_migration_id"] == "2026-06-15-postgresql-16-to-17"
+
+
+@pytest.mark.skipif(_PHP is None, reason="php not installed")
+def test_gate_blocks_coexist_with_no_authored_migration(tmp_path):
+    # plan_mode=coexist but the migration was never authored at all → blocked.
+    data_dir = tmp_path / "wing" / "app" / "data"
+    _make_gated_db(data_dir, plan_mode="coexist", review_status=None)
+    rows = _list_gated(data_dir)
+    assert len(rows) == 1
+    assert rows[0]["migration_merged"] is False
+
+
+@pytest.mark.skipif(_PHP is None, reason="php not installed")
+def test_gate_open_for_migration_mode_row(tmp_path):
+    # plan_mode=migration (in-place, no parallel track) → no migration prereq,
+    # gate unconditionally open (the legacy queue behaviour is preserved).
+    data_dir = tmp_path / "wing" / "app" / "data"
+    _make_gated_db(data_dir, plan_mode="migration", review_status=None)
+    rows = _list_gated(data_dir)
+    assert len(rows) == 1
+    assert rows[0]["plan_mode"] == "migration"
+    assert rows[0]["migration_merged"] is True

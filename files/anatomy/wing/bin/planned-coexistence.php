@@ -9,6 +9,15 @@ declare(strict_types=1);
  *
  *   --list   → JSON array of {service, tag, target_version, port_offset} for
  *              status=planned rows (the consumer provisions each).
+ *   --list-gated → like --list but each row also carries the G-PROVISION-MIGRATED
+ *              gate fields {plan_mode, source_migration_uuid, migration_merged}.
+ *              A plan_mode='coexist' row may ONLY provision once its linked
+ *              migrations_authored row reaches review_status='merged' (GATE 2 —
+ *              the operator's local-forge MR merge). tasks/coexistence-apply.yml
+ *              filters on migration_merged so a coexist track whose migration is
+ *              not yet merged is refused (skipped) until the operator merges.
+ *              A plan_mode='migration' (or unlinked legacy) row has no migration
+ *              prerequisite → migration_merged=true (gate open).
  *   --mark-applied --service=S --tag=T  → flip the row to status=applied.
  *   --cancel --service=S --tag=T        → flip a queued row to status=cancelled
  *              (the missing dequeue; pure Wing-DB op, NO host mutation — a
@@ -18,12 +27,12 @@ declare(strict_types=1);
  * --data-dir defaults to ~/wing/app/data.
  */
 
-$opts = getopt('', ['list', 'mark-applied', 'cancel', 'service:', 'tag:', 'reason:', 'data-dir:']);
+$opts = getopt('', ['list', 'list-gated', 'mark-applied', 'cancel', 'service:', 'tag:', 'reason:', 'data-dir:']);
 $dataDir = $opts['data-dir'] ?? (getenv('HOME') . '/wing/app/data');
 $dbPath = rtrim($dataDir, '/') . '/wing.db';
 
 if (!is_file($dbPath)) {
-    if (isset($opts['list'])) {
+    if (isset($opts['list']) || isset($opts['list-gated'])) {
         echo "[]\n";
     }
     exit(0);
@@ -40,6 +49,70 @@ if (isset($opts['list'])) {
             'tag'            => $r['tag'],
             'target_version' => $r['target_version'],
             'port_offset'    => (int) ($r['port_offset'] ?? 10),
+        ];
+    }
+    echo json_encode($rows) . "\n";
+    exit(0);
+}
+
+if (isset($opts['list-gated'])) {
+    // Each planned row, annotated with the G-PROVISION-MIGRATED gate. The
+    // plan_mode comes from the linked upgrades_planned row (parent_upgrade_id);
+    // a coexist row's migration prerequisite is a migrations_authored row at
+    // review_status='merged' whose uuid == coexistence_planned.source_migration_uuid
+    // (the migration the track is built ON). Only a forge merge (GATE 2) sets
+    // 'merged' — no agent / Wing API can. plan_mode='migration' (or an unlinked
+    // legacy row) carries no migration prerequisite, so migration_merged=true.
+    // Resolve the merged migration the track is built ON. Returns the
+    // migrations_authored.migration_id (the files/anatomy/migrations/<id>.yml id
+    // the track records as source_migration_id and the cutover hook consumes via
+    // nos_migrate action=apply) when a merged row matches the uuid, else null.
+    $mergedMigrationId = static function (PDO $db, string $uuid): ?string {
+        if ($uuid === '') {
+            return null;
+        }
+        $q = $db->prepare(
+            "SELECT migration_id FROM migrations_authored
+             WHERE uuid = :u AND review_status = 'merged' LIMIT 1"
+        );
+        $q->execute([':u' => $uuid]);
+        $row = $q->fetch(PDO::FETCH_ASSOC);
+        if ($row === false) {
+            return null;
+        }
+        // A merged row with a NULL migration_id is still a gate pass (the merge
+        // happened); fall back to the empty string so the gate reads as merged.
+        return (string) ($row['migration_id'] ?? '');
+    };
+
+    $rows = [];
+    foreach ($db->query(
+        "SELECT cp.service, cp.tag, cp.target_version, cp.port_offset,
+                cp.source_migration_uuid AS source_migration_uuid,
+                up.plan_mode AS plan_mode
+         FROM coexistence_planned cp
+         LEFT JOIN upgrades_planned up ON up.id = cp.parent_upgrade_id
+         WHERE cp.status = 'planned'"
+    ) as $r) {
+        $planMode = $r['plan_mode'] ?? 'migration';
+        $sourceUuid = (string) ($r['source_migration_uuid'] ?? '');
+        // A coexist row gates on a merged migration; anything else is open.
+        $migrationId = null;
+        if ($planMode === 'coexist') {
+            $migrationId = $mergedMigrationId($db, $sourceUuid);
+            $merged = $migrationId !== null;
+        } else {
+            $merged = true;
+        }
+        $rows[] = [
+            'service'               => $r['service'],
+            'tag'                   => $r['tag'],
+            'target_version'        => $r['target_version'],
+            'port_offset'           => (int) ($r['port_offset'] ?? 10),
+            'plan_mode'             => $planMode,
+            'source_migration_uuid' => $sourceUuid !== '' ? $sourceUuid : null,
+            'source_migration_id'   => ($migrationId !== null && $migrationId !== '') ? $migrationId : null,
+            'migration_merged'      => $merged,
         ];
     }
     echo json_encode($rows) . "\n";
@@ -103,6 +176,6 @@ if (isset($opts['cancel'])) {
     exit(0);
 }
 
-fwrite(STDERR, "usage: planned-coexistence.php --list | --mark-applied --service=S --tag=T"
+fwrite(STDERR, "usage: planned-coexistence.php --list | --list-gated | --mark-applied --service=S --tag=T"
     . " | --cancel --service=S --tag=T [--reason=R] [--data-dir=PATH]\n");
 exit(2);
