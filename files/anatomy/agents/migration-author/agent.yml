@@ -20,9 +20,21 @@ model:
 
 system_prompt_path: system.md
 
+# Q8/A2 (2026-06-16): migration-author runs NATIVELY in AgentKit (was the
+# pulse-run-agent.sh CLI). tools/run-migration-author.sh now fires
+# `bin/run-agent.php --agent=migration-author --trigger=operator` so the run
+# lands in agent_sessions/threads/iterations + OTel spans → Wing /agents +
+# Grafana 22-ai-agents + Tempo. The gated migration-file-write tool (A1) is the
+# write surface (path-allowlisted to files/anatomy/migrations/ + default.config.yml,
+# scope nos.migration.write — already in capability_scopes below). The forge MR
+# (tools/migration-pr.sh) is a deterministic post-step the trigger layer runs
+# AFTER the session ends — NOT an LLM tool — so AgentKit gains visibility, not
+# git/network reach. The flat migration-author.yml profile + pulse CLI stay as
+# the operator/CI fallback (delete neither).
 tools:
-  - id: bash-read-only
-  - id: mcp-wing
+  - id: bash-read-only       # cat/grep upgrades/<svc>.yml, _template.yml, migration.schema.json, state/manifest.yml
+  - id: mcp-wing             # GET /api/v1/upgrades, POST /migrations/authored, POST /events
+  - id: migration-file-write # NEW (A2) — write the migration YAML + bump default.config.yml (gated)
 
 multiagent:
   type: solo
@@ -48,11 +60,12 @@ vault:
     - scope: mcp-wing
 
 metadata:
-  ait_phase: B4a
+  ait_phase: A2
   ceremony_role: migration-authoring
+  runtime: agentkit            # native AgentKit (Q8/A2); flat profile = CLI fallback
 
 exit_code_semantics:
   emits_sentinel: true
-  exit_0: "Nothing to author — no merged recipe gap, or the migration record already exists / is already merged-backed."
-  exit_1: "Authored a migration record + version bump and opened a local-forge MR pending operator review. Operator-review, not a failure. Fires a HIGH A9 notification."
-  exit_2: "Environment / forge / auth / Wing error inside pulse-run-agent.sh (or migration-pr.sh exit 2). Fires a CRITICAL A9 notification."
+  exit_0: "Nothing to author — no merged recipe gap, or the migration record already exists / is already merged-backed. The trigger layer skips the MR post-step (no path_written migration file)."
+  exit_1: "Authored a migration record + version bump (via migration-file-write). The trigger layer then runs tools/migration-pr.sh --open-pr as a deterministic post-step → local-forge MR pending operator review (GATE 2). Operator-review, not a failure. Fires a HIGH A9 notification."
+  exit_2: "Environment / auth / Wing error inside the AgentKit Runner (or the migration-pr.sh post-step exit 2 — forge unavailable). Fires a CRITICAL A9 notification."
