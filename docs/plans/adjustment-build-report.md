@@ -1,21 +1,27 @@
 # Adjustment-round build report — `feat/migration-author-agentkit`
 
-> **Honest, read-only verification report (2026-06-16).** Verifies the adjustment-round work
-> (A1–A5) on `feat/migration-author-agentkit` (off `dev`) against the spec
-> `docs/plans/agentic-upgrade-adjustments-design.md`. No live apply was performed: only
-> `--syntax-check`, the offline pytest suites, and the frozen-venv `tools/ci-local.sh`
-> read-only gate. The entire deliverable is code on this branch + a review-gated MR to the
-> local GitLab forge. Nothing deploys.
+> **Honest, read-only verification report (2026-06-16, refreshed).** Verifies the adjustment-round
+> work (A1–A5) on `feat/migration-author-agentkit` (off `dev`) against the spec
+> `docs/plans/agentic-upgrade-migration-coexistence-design.md` (§7-RESOLVED). No live apply was
+> performed: only `--syntax-check`, the offline pytest suites, and the frozen-venv
+> `tools/ci-local.sh` read-only gate. The entire deliverable is code on this branch + the existing
+> review-gated MR #3 to the local GitLab forge (`root/nOS → dev`). Nothing deploys.
+>
+> **Refresh note:** the prior revision of this report (commit `f323492f`) recorded A3 as
+> *NEEDS-REVIEW (visual)* and **A4 as NOT BUILT** — that was honest at the time it was written. Two
+> commits landed **after** that report: `e36a6abe` (A3 event-twin completion) and `647c4086`
+> (the full A4 Copy-data verb + B5 undo). **A3 and A4 are now built and gated GREEN.** This revision
+> reflects the NOW-complete state and was re-verified against the working tree.
 
 ## Per-step verdict
 
 | Step | Deviation (§7-RESOLVED) | Status | Reality |
 |---|---|---|---|
-| **A1** | Q8 — AgentKit gated file-write tool **+ security gate** | **GREEN** | Built + fully gated. |
+| **A1** | Q8 — AgentKit gated file-write tool **+ security gate** | **GREEN** | Built + fully gated (16 path-escape refusal tests). |
 | **A2** | Q8 — migration-author runs natively in AgentKit | **GREEN** | Built + gated; CLI fallback retained. |
-| **A3** | Q5 — Wing "Promote to migration" Tier-1 button → AgentKit | **NEEDS-REVIEW (visual)** | Built; backend gated; the rendered button + window.confirm needs a human look. |
-| **A4** | Q3 — manual re-runnable "Copy data" + UNDO the B5 auto-at-cutover hook | **NEEDS-REVIEW — NOT BUILT** | The B5 auto-at-cutover hook is **still intact**; no `copy_data` verb / route / task / Bone / UI was added. This is a decision point, not a visual one. |
-| **A5** | Q4 — TTL `[3,60]` default 7 + one-click rollback / forward typed-confirm | **GREEN** | Built + gated end-to-end. |
+| **A3** | Q5 — Wing "Promote to migration" Tier-1 button → AgentKit | **GREEN (1 visual check)** | Built + gated end-to-end; rendered button + `window.confirm` is the only human-eyeball item. |
+| **A4** | Q3 — manual re-runnable "Copy data" + UNDO the B5 auto-at-cutover hook | **GREEN (1 visual check)** | **Now built.** Explicit `copy_data` verb across module/task/Bone/Wing/UI; B5 auto-hook removed from cutover+promote; state-machine tests re-pointed. |
+| **A5** | Q4 — TTL `[3,60]` default 7 + one-click rollback / forward typed-confirm | **GREEN (1 visual check)** | Built + gated end-to-end. |
 
 ---
 
@@ -93,15 +99,16 @@ Tempo); no dashboard edit.
 
 ---
 
-## A3 — Wing "Promote to migration" button → AgentKit — BUILT; needs VISUAL review
+## A3 — Wing "Promote to migration" button → AgentKit — GREEN (1 visual check)
 
-Backend is built and gated; the rendered UI needs a human look (the part that can't be pinned
-offline).
+Built and gated end-to-end. The only item a human must eyeball is the rendered surface (which the
+offline gates cannot pin).
 
 - **Shared spawn service** `files/anatomy/wing/app/AgentKit/OperatorTrigger.php` extracted from
   `Api\AgentsPresenter::spawnRunner` — array-form `proc_open` (execve direct, never `/bin/sh`),
   server-side session UUID, detached stdio, env-name charset validation, typed
-  `OperatorTriggerException`. Both the bearer API and the button call the one audited path.
+  `OperatorTriggerException`. Both the bearer API and the button call the one audited path. Gate
+  `tests/anatomy/test_agentkit_operator_trigger.py`.
 - **Presenter** `UpgradesPresenter::actionPromoteToMigration($service, $recipe)` — Tier-1 inherited
   (`$minAccessTier = 1`), `requirePostMethod()` (CSRF), operator read from `X-Authentik-Username`
   (never body), `migrationGap()` guard against an empty session, spawns the agent **as itself**
@@ -111,7 +118,7 @@ offline).
 - **Route** `upgrades/<service>/<recipe>/promote-to-migration` registered **before** the
   `upgrades/<service>` catch-all (Nette first-match-wins). No new API route — the session is
   observed via the existing `/api/v1/agent-sessions/<uuid>` poll.
-- **Event twin** `migration_promote_requested` added to both `files/anatomy/bone/events.py` and
+- **Event twin** `migration_promote_requested` added to **both** `files/anatomy/bone/events.py` and
   `files/anatomy/wing/app/Model/EventRepository.php` `VALID_TYPES`; pinned by
   `test_devlog_event_types.py`.
 - **Button** in `files/anatomy/wing/app/Templates/Upgrades/service.latte`: a self-contained hidden
@@ -130,48 +137,67 @@ offline).
 
 ---
 
-## A4 — manual "Copy data" + UNDO the B5 auto hook — NOT BUILT (decision needed)
+## A4 — manual "Copy data" + UNDO the B5 auto hook — GREEN (1 visual check)
 
-**This is the honest gap.** The design's §5 called for a full reversal: rip the B5 auto-at-cutover
-data-transform out of `action_cutover` / `action_promote_track`, and add a new first-class
-`copy_data` verb (module action + `tasks/coexistence-copy-data.yml` + `main.yml` import + Bone
-`copy_data()` + `POST /api/coexistence/<svc>/copy-data/<tag>` + Wing `copyData` repo /
-presenters / routes + a "Copy data" UI button). **None of that was implemented on this branch.**
+**Now built.** Commit `647c4086` reverses the overnight B5 default exactly as §5 specified: the
+auto-at-cutover/promote data-transform is **removed**, and the data move becomes a first-class,
+operator-fired, re-runnable `copy_data` verb. The flow is now
+`provision(empty) → [Copy data] → [Promote primary]`, where promote is a pure pointer-flip.
 
-Evidence (verified against the working tree, 2026-06-16):
+**The verb, end-to-end (verified against the working tree, 2026-06-16):**
 
-- `files/anatomy/library/nos_coexistence.py` — the **only** change is the A5 TTL fallback constant +
-  the demotion stamp. There is **no `action_copy_data`**, and the B5 blocks in `action_cutover` /
-  `action_promote_track` are **untouched**.
-- `tasks/coexistence-cutover.yml` — still runs the migration auto-at-cutover (the B5 pre-run task
-  "Run the source migration against the new track" + `migration_applied:` arg are intact;
-  header still reads "the migration already ran above").
-- `tasks/coexistence-copy-data.yml` — **does not exist**.
-- `RouterFactory.php` — **no** `copy-data` route (API or browser).
-- No `bone/coexistence.py` / `bone/main.py` copy-data change; no Wing `copyData` /
-  `actionCopyData`; no "Copy data" button in `Coexistence/default.latte`.
-- `tests/anatomy/test_coexistence_state_machine.py` — **still carries the 6 B5 auto-apply tests**
-  (`test_cutover_runs_migration_before_pointer_flip`, `…_fails_closed_on_migration_error`,
-  `…_refuses_when_no_migration_engine_reachable`, `…_migration_applied_flag_skips_inmodule_apply`,
-  `test_promote_runs_migration_before_pointer_flip`, `…_fails_closed_on_migration_error`) that §5.5
-  said to delete; there are **no `copy_data` tests**.
+- **Module** `files/anatomy/library/nos_coexistence.py` — new `action_copy_data(params, state, ctx)`
+  registered in the dispatch table (`if action == "copy_data": return action_copy_data(...)`). It
+  runs the track's recorded `source_migration_id` data move into the **secondary's empty cluster**,
+  then stamps `data_copied_at`. Three guards, all gated:
+  - **G-COPY-HAS-MIGRATION** — refuse a track with no `source_migration_id` (an empty provision has
+    nothing to copy).
+  - **G-COPY-NOT-PRIMARY** — refuse copying INTO the active primary (never dump into the cluster
+    serving live traffic).
+  - **G-COPY-ENGINE** — fail closed if no migration engine is reachable.
+- **Task** `tasks/coexistence-copy-data.yml` — reads tracks (`list_tracks`, pure read), resolves the
+  target + its `source_migration_id`, runs `nos_migrate action=apply` against the secondary's
+  cluster (port/data_path/version threaded as `coexist_*` tokens), then stamps `data_copied_at`.
+  **`dry_run` defaults TRUE** (mutating verb — first call plans, `dry_run=false` commits). Tagged
+  `['coexist-copy-data', 'never']` so a normal pass never auto-fires it; imported in `main.yml`
+  with the same tags.
+- **Bone** `POST /api/coexistence/{service}/copy-data/{tag}` (`files/anatomy/bone/main.py`) →
+  `files/anatomy/bone/coexistence.py::copy_data()` → drives the `coexist-copy-data` task.
+  `dry_run` defaults TRUE.
+- **Wing** — `CoexistenceRepository::copyData`, `Api\CoexistencePresenter` +
+  `CoexistencePresenter::actionCopyData`, and routes
+  `api/v1/coexistence/<service>/copy-data` + `coexistence/<service>/copy-data` in `RouterFactory`.
+- **UI** — `Coexistence/default.latte` renders a `data-action="copy-data"` "↓ Copy data" button per
+  track with a `data_copied_at` recency tooltip (and a `(no data yet)` affordance when never
+  copied); `widget-cutover-confirm.js` adds the `copy-data` delegation case. The sub-header was
+  rewritten to the new explicit lifecycle: **provision (empty) → Copy data → Toggle as primary**.
+- **Event twin** `coexistence_copy_data` in **both** `files/anatomy/bone/events.py` and
+  `files/anatomy/wing/app/Model/EventRepository.php` `VALID_TYPES`; pinned by
+  `test_devlog_event_types.py`.
 
-**Net:** the as-built coexistence flow is the **overnight-build default** — the migration
-data-transform runs **implicitly at cutover/promote** (B5), fail-closed before the pointer flip.
-The §7-RESOLVED Q3 deviation (explicit `provision → [Copy data] → [Promote primary]`, promote =
-pointer-flip-only) is **not in this branch**.
+**B5 undo, verified:**
 
-> **A4 is a DECISION, not a visual review.** Two honest paths for the operator/reviewer:
-> 1. **Build A4 as specified** (a follow-up commit set on this branch) — full `copy_data` verb +
->    B5 undo + the state-machine test surgery in §5.5.
-> 2. **Accept the as-built implicit-at-cutover behavior** and amend the §7-RESOLVED Q3 decision (the
->    overnight default is safe and fail-closed; the trade is implicit coupling vs explicit operator
->    control of freshness).
-> Either way, the report must not claim A4 shipped — **it did not**.
+- `tasks/coexistence-cutover.yml` — the B5 pre-run ("Run the source migration against the new track"
+  + `migration_applied:` arg) is **gone** (no `migration_already ran` / `Run the source migration` /
+  `migration_applied` strings remain). `tasks/coexistence-promote.yml` likewise no longer runs the
+  data-transform — promote is pointer-flip-only.
+- `nos_coexistence.action_cutover` / `action_promote_track` — the in-line B5 data move is removed;
+  comments point the reader at the new `copy_data` verb. Result-shape stability preserved.
+
+**State-machine test surgery (§5.5), verified:** the 6 B5 auto-apply tests are **gone**; in their
+place `tests/anatomy/test_coexistence_state_machine.py` carries 7 new `copy_data` tests —
+`test_copy_data_runs_migration_into_secondary`, `…_is_rerunnable`,
+`…_refuses_without_source_migration`, `…_refuses_copy_into_primary`, `…_fails_closed_on_migration_error`,
+`…_refuses_when_no_engine_reachable`, `…_migration_applied_flag_just_stamps` — all passing.
+
+> **NEEDS VISUAL REVIEW (A4):** that the "↓ Copy data" button renders per track on `/coexistence`,
+> that the `data_copied_at` recency tooltip / `(no data yet)` affordance reads correctly, and that
+> the rewritten sub-header lifecycle copy (provision → Copy data → Toggle as primary) is clear.
+> The backend + state machine are pinned offline; the rendered surface is the human check.
 
 ---
 
-## A5 — TTL `[3,60]` default 7 + one-click rollback / forward typed-confirm — GREEN
+## A5 — TTL `[3,60]` default 7 + one-click rollback / forward typed-confirm — GREEN (1 visual check)
 
 Built end-to-end and gated:
 
@@ -182,7 +208,7 @@ Built end-to-end and gated:
   (`(x|int) == x` integer-ness check, stock Jinja only) and derives
   `coexist_secondary_ttl_seconds`; imported in `main.yml` with `tags: ['always', 'coexistence',
   'coexist-promote', 'coexist-cutover']` so it fires on a Bone-spawned `--tags coexist-promote` run.
-- **Task fallback swap** in `coexistence-promote.yml` (L51) and `coexistence-cutover.yml` (L111):
+- **Task fallback swap** in `coexistence-promote.yml` and `coexistence-cutover.yml`:
   `coexist_ttl_seconds | default(coexist_secondary_ttl_seconds | default(7 * 24 * 3600))` — explicit
   override → config-derived → last-ditch literal. Wing keeps passing `ttlSeconds=null`, so the
   configured value flows with zero Wing change.
@@ -212,26 +238,43 @@ Gates GREEN: `test_coexistence_state_machine.py` (`test_ttl_validate_task_pins_3
 ## What needs VISUAL review (rendered Wing UI — not pinnable offline)
 
 These are deployed-Wing surfaces; the offline gates pin structure (data-actions, routes, CSRF,
-confirm logic), but a human must eyeball the render:
+confirm logic), but a human must eyeball the render. All three are the **only** open items — every
+backend, state-machine, and security invariant is GREEN.
 
 1. **A3 "Promote to migration" button** on `/upgrades/<service>` recipe cards — renders for
    unapplied recipes, `window.confirm` copy, success flash deep-link to the agent session.
-2. **A5 rollback vs forward controls** on `/coexistence` — the one-click `↩ Roll back to <tag>`
-   button on the just-demoted prior primary vs the typed-`PRIMARY` modal on every other secondary;
-   `data_*` recency / sub-header copy.
-3. **(If A4 is later built)** the "Copy data" button + `data_copied_at` recency — **does not exist
-   today**.
+2. **A4 "↓ Copy data" button** on `/coexistence` — renders per track, the `data_copied_at` recency
+   tooltip / `(no data yet)` affordance, and the rewritten lifecycle sub-header copy.
+3. **A5 rollback vs forward controls** on `/coexistence` — the one-click `↩ Roll back to <tag>`
+   button on the just-demoted prior primary vs the typed-`PRIMARY` modal on every other secondary.
 
 ---
 
-## The flow change (as-built vs as-designed)
+## The flow change (now matches as-designed)
 
 - **As designed (§7-RESOLVED Q3):** `provision(empty) → [operator: Copy data] → [operator: Promote
   primary]`, with promote a pointer-flip-only operation.
-- **As built on this branch:** `provision → cutover/promote`, where the migration data-transform
-  runs **implicitly at cutover/promote** (the overnight B5 hook), fail-closed before the flip. The
-  explicit manual Copy-data verb is **not present** (A4 not built). A5's one-click rollback +
-  `[3,60]` TTL **is** present and wired through the existing promote path.
+- **As built on this branch (now):** **the same.** A4 removed the implicit B5 data-transform from
+  cutover/promote and added the explicit, re-runnable `copy_data` verb (dry-run-default, fail-closed
+  guards). Promote is now pointer-flip-only. A5's one-click rollback + `[3,60]`-clamped configurable
+  TTL is wired through the existing promote path. The implicit-at-cutover coupling the prior report
+  flagged is **gone** — freshness is the operator's explicit call (re-run Copy data right before
+  Promote).
+
+---
+
+## A1 security gate (restated — the load-bearing safety boundary)
+
+The whole adjustment round hangs on A1's gate because it is what lets the migration-author agent
+**author files** without ever reaching the live system:
+
+- The tool writes **only** the working tree (two allow-listed targets), commits nothing, makes
+  nothing live. The review-MR-then-operator-merge boundary (GATE 2) is unchanged.
+- 16 static-source refusal tests (`test_agentkit_write_tool_scope.py`) pin traversal / absolute /
+  symlink-escape / allowlist / filename-shape / size-cap / fail-soft / audit-leak.
+- The A4 `copy_data` verb and the A3 promote spawn both inherit the same dry-run-default +
+  fail-closed + operator-as-supervisor safety model — destructive moves plan first, commit only on
+  an explicit `dry_run=false`.
 
 ---
 
@@ -239,11 +282,15 @@ confirm logic), but a human must eyeball the render:
 
 | Gate | Result |
 |---|---|
-| `python3 -m pytest -q tests/anatomy` | **1610 passed, 3 skipped** |
+| `python3 -m pytest -q tests/anatomy` | **1617 passed, 3 skipped** |
 | `python3 -m pytest -q tests/upgrades tests/migrations` | **178 passed, 6 skipped** |
 | `ansible-playbook main.yml --syntax-check` | **clean** (`playbook: main.yml`) |
 | `tools/ci-local.sh` (frozen venv: ansible-core 2.21.0 + Python 3.13.13, lockfile collections) | **OK** — core filters load; `main.yml` syntax clean |
-| Design-referenced gate subset (A1–A5 + security + schema + stock-jinja + event twins) | **138 passed** |
+| A1 security gate (`test_agentkit_write_tool_scope.py`) | **16 passed** |
+| Design-referenced gate subset (A1–A5 + security + schema + stock-jinja + event twins) | **135 passed** |
+
+The anatomy count rose **1610 → 1617** (+7) since the prior report: the new A3 event-twin assertions
+and the A4 `copy_data` state-machine + event-twin tests, minus the deleted B5 auto-apply tests.
 
 No live apply was performed: no `--tags` run, no docker, no `blank`, no write to the live
 `~/wing/app/data/wing.db`, no Postgres cutover, no agent run against the host. The frozen-venv gate
@@ -254,15 +301,16 @@ is read-only (filter-load probe + syntax-check).
 ## Bottom line
 
 - **A1 GREEN** — gated write tool + a comprehensive security gate; every path-escape refusal
-  (traversal / absolute / symlink / allowlist) is pinned and passing.
+  (traversal / absolute / symlink / allowlist) is pinned and passing. This is the safety boundary
+  that lets the agent author without reaching live.
 - **A2 GREEN** — native AgentKit run is the default, CLI fallback retained.
-- **A3 BUILT** — backend gated; the rendered button + confirm need a visual look.
-- **A4 NOT BUILT** — the B5 auto-at-cutover hook is intact; the manual Copy-data verb + B5 undo are
-  absent. A decision is required: build it, or amend the Q3 decision to accept the as-built
-  implicit-at-cutover behavior.
+- **A3 GREEN** — backend + event twin + gates complete; the rendered button + confirm is the one
+  visual check.
+- **A4 GREEN** — the Copy-data verb is **now built** end-to-end (module/task/Bone/Wing/UI + event
+  twin), the B5 auto-at-cutover hook is removed from cutover **and** promote, and the state-machine
+  tests were re-pointed (6 B5 tests deleted → 7 `copy_data` tests added). The "↓ Copy data" button
+  is the one visual check.
 - **A5 GREEN** — `[3,60]`-clamped configurable TTL + one-click rollback / typed-forward, wired
-  through the existing promote path; the rendered asymmetry needs a visual look.
-- **Full offline suite GREEN.** Delivery is the review-gated MR to the local GitLab forge; nothing
-  deploys.
-</content>
-</invoke>
+  through the existing promote path; the rendered asymmetry is the one visual check.
+- **Full offline suite GREEN.** Delivery is the existing review-gated MR #3 to the local GitLab
+  forge; nothing deploys.
