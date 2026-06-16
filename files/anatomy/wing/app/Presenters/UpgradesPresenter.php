@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\AgentKit\OperatorTrigger;
+use App\AgentKit\OperatorTriggerException;
 use App\Model\EventRepository;
 use App\Model\MigrationAuthoredRepository;
 use App\Model\UpgradeRepository;
@@ -30,6 +32,11 @@ final class UpgradesPresenter extends BasePresenter
 		// migrations_authored drafts (with the local-forge MR link). Read-only
 		// here; the producer write is the bearer Api\MigrationsPresenter.
 		private MigrationAuthoredRepository $authored,
+		// A3.2 (Q5/2026-06-16): the "Promote to migration" button fires the
+		// native AgentKit migration-author through the SHARED spawn path (also
+		// used by the bearer Api\AgentsPresenter). One audited place keeps the
+		// actor-as-itself / operator-as-supervisor split honest.
+		private OperatorTrigger $operatorTrigger,
 	) {
 	}
 
@@ -183,6 +190,136 @@ final class UpgradesPresenter extends BasePresenter
 			]);
 		} catch (\Throwable) {
 			// audit failure must not block the plan-choice write.
+		}
+	}
+
+	// A3.2: the migration-author runs AS ITSELF — its own Authentik client
+	// (authentik_agent_clients[nos-migration-author], holds nos:migration:write).
+	// The operator who pressed the button is captured separately as triggered_by
+	// (in the prompt + the supervision event), NEVER as the agent's actor_id.
+	// Doctrine: the agent's audit identity is its scope; the operator supervises.
+	private const MIGRATION_AUTHOR_AGENT = 'migration-author';
+	private const MIGRATION_AUTHOR_ACTOR = 'nos-migration-author';
+
+	/**
+	 * POST /upgrades/<service>/<recipe>/promote-to-migration (A3.2, Q5) —
+	 * the Tier-1 "Promote to migration" button. Fires the NATIVE AgentKit
+	 * migration-author (OperatorTrigger spawn → agent_sessions/threads/iterations
+	 * + OTel → Wing /agents + Grafana 22-ai-agents), which writes the migration
+	 * YAML + a default.config.yml version bump (gated migration-file-write tool)
+	 * and reports under `## Migration author report`. The forge MR (GATE 2) is
+	 * the wall — the button makes NOTHING live.
+	 *
+	 * Tier-1 inherited ($minAccessTier=1, BasePresenter::startup). CSRF via
+	 * requirePostMethod. The operator identity is read from the forward-auth
+	 * header (never the body) and travels as NOS_TRIGGERED_BY + the audit
+	 * actor_id of the supervision event; the agent spawns under its OWN client.
+	 * Guarded by migrationGap() so a missing recipe / no-gap never opens an empty
+	 * session.
+	 */
+	public function actionPromoteToMigration(string $service, string $recipe): void
+	{
+		$this->requirePostMethod();
+		$triggeredBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
+		$triggeredBy = $triggeredBy !== '' ? $triggeredBy : 'operator';
+
+		// Guard: refuse if the recipe doesn't exist (no empty session).
+		if (!$this->migrationGap($service, $recipe)) {
+			$this->flashMessage(
+				"Refused — no recipe '{$recipe}' for {$service} to promote (nothing to author).",
+				'error',
+			);
+			$this->redirect('Upgrades:service', ['service' => $service]);
+		}
+
+		// Per-run context the migration-author's system prompt reads (the flat
+		// profile documents these env keys). NOS_TRIGGERED_BY records the
+		// supervising operator WITHOUT making them the agent's actor.
+		$prompt = "Promote the merged recipe to a migration record.\n"
+			. "NOS_MIGRATION_SERVICE={$service}\n"
+			. "NOS_MIGRATION_RECIPE_ID={$recipe}\n"
+			. "NOS_TRIGGERED_BY={$triggeredBy}\n";
+		$env = [
+			'NOS_MIGRATION_SERVICE'   => $service,
+			'NOS_MIGRATION_RECIPE_ID' => $recipe,
+			'NOS_TRIGGERED_BY'        => $triggeredBy,
+		];
+
+		try {
+			$res = $this->operatorTrigger->spawn(
+				agent: self::MIGRATION_AUTHOR_AGENT,
+				actorId: self::MIGRATION_AUTHOR_ACTOR,
+				prompt: $prompt,
+				env: $env,
+			);
+		} catch (OperatorTriggerException $exc) {
+			$this->flashMessage("Could not start the migration-author agent — {$exc->getMessage()}", 'error');
+			$this->redirect('Upgrades:service', ['service' => $service]);
+		}
+
+		$sessionUuid = (string) $res['session_uuid'];
+		// Audit the OPERATOR's supervision action (operator identity, NOT the
+		// agent's). Best-effort: an audit failure must not abort the spawn.
+		$this->emitPromoteRequested($service, $recipe, $sessionUuid, $triggeredBy);
+
+		$this->flashMessage(
+			"Started migration-author for {$service}/{$recipe} — it writes a migration YAML + version bump, "
+			. "then opens a review MR (GATE 2; nothing goes live). "
+			. "Lineage: /agents/migration-author/sessions/{$sessionUuid}",
+			'success',
+		);
+		$this->redirect('Upgrades:service', ['service' => $service]);
+	}
+
+	/**
+	 * True when the named recipe exists for the service (a real migration
+	 * candidate) — the guard that keeps actionPromoteToMigration from spawning an
+	 * empty session for a typo'd or absent recipe id. Reads the offline matrix
+	 * (same source the page renders), so it never depends on a live Bone call.
+	 */
+	private function migrationGap(string $service, string $recipe): bool
+	{
+		if ($service === '' || $recipe === '') {
+			return false;
+		}
+		foreach ($this->upgrades->matrix() as $row) {
+			if ((string) ($row['service'] ?? $row['id'] ?? '') !== $service) {
+				continue;
+			}
+			foreach (($row['recipes'] ?? []) as $r) {
+				if ((string) ($r['id'] ?? '') === $recipe) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Best-effort migration_promote_requested emit (A3.4) — the operator's
+	 * button-press supervision event, distinct from the agent's own
+	 * `agent_session_` / `agent_tool_` lineage. actor_id is the operator; result
+	 * carries the spawned session_uuid so the supervision row deep-links the run.
+	 * Never blocks the spawn: an audit failure must not surface as a UI error
+	 * after the agent already started.
+	 */
+	private function emitPromoteRequested(string $service, string $recipe, string $sessionUuid, string $triggeredBy): void
+	{
+		try {
+			$this->events->insert([
+				'type'     => 'migration_promote_requested',
+				'task'     => 'promote-to-migration: ' . $service . '/' . $recipe,
+				'source'   => 'wing',
+				'actor_id' => $triggeredBy,
+				'result'   => [
+					'service'      => $service,
+					'recipe_id'    => $recipe,
+					'session_uuid' => $sessionUuid,
+					'agent'        => self::MIGRATION_AUTHOR_AGENT,
+				],
+			]);
+		} catch (\Throwable) {
+			// audit failure must not block the operator's action.
 		}
 	}
 

@@ -701,3 +701,115 @@ def test_gate_open_for_migration_mode_row(tmp_path):
     assert len(rows) == 1
     assert rows[0]["plan_mode"] == "migration"
     assert rows[0]["migration_merged"] is True
+
+
+# --------------------------------------------------------------------------- #
+# A5 (§6) — TTL [3,60] default 7 + one-click rollback (demoted_from_primary_at) #
+# --------------------------------------------------------------------------- #
+
+import datetime as _dt  # noqa: E402  (kept local to the A5 section)
+
+_TTL_VALIDATE = _REPO / "tasks" / "coexistence-ttl-validate.yml"
+_DEFAULT_CONFIG = _REPO / "default.config.yml"
+
+
+def test_ttl_validate_task_pins_3_to_60_inclusive():
+    """tasks/coexistence-ttl-validate.yml clamps coexistence_secondary_ttl_days
+    to the inclusive range [3, 60] using STOCK Jinja only (the {{ vars }}
+    eager-resolve trap forbids non-core filters in the bound)."""
+    doc = yaml.safe_load(_TTL_VALIDATE.read_text())
+    assert isinstance(doc, list) and doc, "ttl-validate task list did not parse"
+    assert_block = next(
+        (t for t in doc if "ansible.builtin.assert" in t), None)
+    assert assert_block is not None, "no assert task in coexistence-ttl-validate.yml"
+    thats = assert_block["ansible.builtin.assert"]["that"]
+    joined = "\n".join(thats)
+    assert ">= 3" in joined, "the [3,60] clamp must assert >= 3"
+    assert "<= 60" in joined, "the [3,60] clamp must assert <= 60"
+    # STOCK Jinja only in the bound — `int` is a core builtin (allowed); `bool`
+    # and `regex_*` are NOT (they are ansible filter plugins → {{ vars }} trap).
+    assert "| bool" not in joined, "TTL bound must not use the | bool filter (stock-Jinja only)"
+    assert "regex_" not in joined, "TTL bound must not use a regex_* filter (stock-Jinja only)"
+    # The derive step must produce the config-seconds the tasks fall through to.
+    derive = next((t for t in doc if "ansible.builtin.set_fact" in t), None)
+    assert derive is not None, "ttl-validate must derive coexist_secondary_ttl_seconds"
+    assert "coexist_secondary_ttl_seconds" in derive["ansible.builtin.set_fact"]
+
+
+def test_ttl_default_is_seven_and_a_bare_literal():
+    """default.config.yml carries coexistence_secondary_ttl_days as a BARE
+    literal 7 (no filter / no expression) — the {{ vars }} eager-resolve trap
+    requires it, and the default is 7 (the §7-RESOLVED Q4 deviation)."""
+    cfg = yaml.safe_load(_DEFAULT_CONFIG.read_text())
+    assert cfg.get("coexistence_secondary_ttl_days") == 7, (
+        "coexistence_secondary_ttl_days must default to a bare integer 7"
+    )
+    # The YAML value parses to a plain int (not a templated string) → bare literal.
+    assert isinstance(cfg["coexistence_secondary_ttl_days"], int)
+
+
+def test_promote_stamps_demoted_prior_primary(env):
+    """promote_track stamps demoted_from_primary_at on the just-demoted prior
+    primary (the one-click-rollback target) and leaves the NEW primary unstamped
+    — exactly one track carries the marker."""
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    lib.run_action(_common(env, action="promote_track", target_tag="v17"),
+                   ctx={"port_probe": _port_up})
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    # The demoted prior primary v16 is stamped; the new primary v17 is not.
+    assert tracks["v16"].get("demoted_from_primary_at"), (
+        "the just-demoted prior primary must carry demoted_from_primary_at"
+    )
+    assert "demoted_from_primary_at" not in tracks["v17"], (
+        "the new primary must NOT carry the rollback stamp"
+    )
+    stamped = [tag for tag, t in tracks.items() if t.get("demoted_from_primary_at")]
+    assert stamped == ["v16"], "exactly one track may carry the rollback stamp"
+
+
+def test_rollback_clears_stamp_on_re_promote(env):
+    """Re-promoting the stamped (demoted) prior primary clears its stamp (it is
+    primary again) and stamps the OTHER track instead — still exactly one."""
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    # Forward: v17 primary, v16 stamped.
+    lib.run_action(_common(env, action="promote_track", target_tag="v17"),
+                   ctx={"port_probe": _port_up})
+    # Rollback: re-promote v16 → its stamp clears, v17 becomes the stamped one.
+    lib.run_action(_common(env, action="promote_track", target_tag="v16"),
+                   ctx={"port_probe": _port_up})
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert "demoted_from_primary_at" not in tracks["v16"], (
+        "re-promoted v16 must drop the rollback stamp (it is primary again)"
+    )
+    assert tracks["v17"].get("demoted_from_primary_at"), (
+        "the newly-demoted v17 must now carry the rollback stamp"
+    )
+    stamped = [tag for tag, t in tracks.items() if t.get("demoted_from_primary_at")]
+    assert stamped == ["v17"], "exactly one track may carry the rollback stamp after rollback"
+
+
+def test_configured_ttl_applied_on_demotion(env):
+    """The ttl_seconds threaded into promote_track sets the demoted track's
+    ttl_until — a configured 3-day TTL lands ~3 days out, NOT the 7-day fallback."""
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    three_days = 3 * 24 * 3600
+    before = _dt.datetime.now(tz=_dt.timezone.utc)
+    lib.run_action(
+        _common(env, action="promote_track", target_tag="v17", ttl_seconds=three_days),
+        ctx={"port_probe": _port_up})
+    v16 = next(t for t in _tracks(env) if t["tag"] == "v16")
+    until = _dt.datetime.strptime(v16["ttl_until"], "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=_dt.timezone.utc)
+    delta = (until - before).total_seconds()
+    # ~3 days (allow a generous minute of execution slack); must NOT be the 7-day
+    # fallback (which would be > 6 days out).
+    assert abs(delta - three_days) < 120, (
+        f"demoted ttl_until should be ~3 days out, got {delta}s"
+    )
+    assert delta < 6 * 24 * 3600, "configured 3-day TTL must not fall back to 7 days"

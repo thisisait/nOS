@@ -79,6 +79,13 @@ final class CoexistencePresenter extends BasePresenter
 					$primary = $t;
 					$activeTag = $t['tag'] ?? null;
 				} else {
+					// A5 (§6.6): the just-demoted prior primary carries
+					// demoted_from_primary_at (stamped by promote_track, round-trips
+					// via Bone /api/coexistence). It is THE one-click-rollback target
+					// — re-promote it to revert. At most one secondary is ever
+					// stamped (only the previous-primary branch sets it), so the
+					// template's "exactly one rollback target" assumption holds.
+					$t['is_rollback_target'] = !empty($t['demoted_from_primary_at']);
 					$secondaries[] = $t;
 				}
 			}

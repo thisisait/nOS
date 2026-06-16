@@ -1700,6 +1700,17 @@ stack_up_wait_timeout: 540
 # the log. 15s is a good balance of heartbeat freshness vs task-count noise.
 stack_wait_tick_interval: 15
 
+# coexistence_secondary_ttl_days: cooling window applied to the PRIOR primary
+# when a coexistence track is promoted (it becomes a read-only secondary). This
+# is the one-click-rollback window — re-promote the demoted track within it to
+# revert. VALIDATED to the inclusive range [3, 60] days by
+# tasks/coexistence-ttl-validate.yml; an out-of-range value fails the run early
+# with a clear CLI message. Kept a BARE literal here (no filter, no expression)
+# per the {{ vars }} eager-resolve trap — the [3,60] clamp lives in the TASK,
+# not in this file. Default 7 (the §7-RESOLVED Q4 deviation: configurable,
+# was fixed 7).
+coexistence_secondary_ttl_days: 7
+
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 

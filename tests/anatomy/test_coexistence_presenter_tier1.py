@@ -271,3 +271,78 @@ def test_js_registers_toggle_verbs():
     assert "coex-toggle-form" in src and ".submit()" in src, (
         "toggle/deactivate/cancel must submit the real CSRF form (form.submit())"
     )
+
+
+# ── A5 (§6.6): rollback one-click vs forward typed-confirm ───────────
+
+
+def test_presenter_flags_rollback_target():
+    """renderDefault() derives is_rollback_target from the demoted_from_primary_at
+    stamp (round-tripped via Bone /api/coexistence). That single field — not a
+    version-string heuristic — is how the template knows which secondary is the
+    one-click rollback target."""
+    src = COEX_PRESENTER.read_text()
+    assert "is_rollback_target" in src, (
+        "CoexistencePresenter must set is_rollback_target on each secondary"
+    )
+    assert "demoted_from_primary_at" in src, (
+        "is_rollback_target must derive from demoted_from_primary_at (the "
+        "promote_track stamp), not a version heuristic"
+    )
+    # Must be derived from the stamp's presence, not hard-coded true.
+    assert re.search(
+        r"is_rollback_target['\"]\]\s*=\s*!empty\(\$[A-Za-z_]+\['demoted_from_primary_at'\]\)",
+        src,
+    ), "is_rollback_target must be !empty($t['demoted_from_primary_at'])"
+
+
+def test_template_splits_forward_and_rollback_controls():
+    """The secondary card branches on is_rollback_target: a rollback-primary
+    one-click button for the demoted prior primary, the typed-confirm
+    toggle-primary button for every other secondary."""
+    src = COEX_LATTE.read_text()
+    assert 'data-action="rollback-primary"' in src, (
+        "Coexistence template missing the one-click rollback-primary control"
+    )
+    assert 'data-action="toggle-primary"' in src, (
+        "Coexistence template must keep the typed-confirm toggle-primary control"
+    )
+    # The two controls must be mutually-exclusive on the is_rollback_target flag.
+    assert "is_rollback_target" in src, (
+        "the rollback vs toggle split must branch on $track['is_rollback_target']"
+    )
+    # rollback branch comes after the is_rollback_target test (inside it).
+    flag_idx = src.find("is_rollback_target")
+    rollback_idx = src.find('data-action="rollback-primary"')
+    assert flag_idx != -1 and rollback_idx != -1 and flag_idx < rollback_idx, (
+        "rollback-primary must render inside the is_rollback_target branch"
+    )
+
+
+def test_rollback_is_one_click_forward_is_typed():
+    """Rollback (onRollback) is a single window.confirm posting the SAME shared
+    coex-toggle-form — NOT the typed TOGGLE_PHRASE modal. The forward path keeps
+    the typed-PRIMARY modal. The asymmetry is purely client-side confirm friction
+    inverted to match risk."""
+    src = JS.read_text()
+    # rollback-primary delegated.
+    assert "'rollback-primary'" in src or '"rollback-primary"' in src, (
+        "widget-cutover-confirm.js missing the rollback-primary data-action case"
+    )
+    # onRollback exists, uses window.confirm (one-click) + the shared toggle form.
+    m = re.search(r"function onRollback\(btn\)\s*\{(.+?)\n\t\}", src, re.DOTALL)
+    assert m, "onRollback(btn) function not found"
+    body = m.group(1)
+    assert "window.confirm" in body, (
+        "onRollback must be a single window.confirm (one-click), not a typed modal"
+    )
+    assert "coex-toggle-form" in body, (
+        "onRollback must submit the SAME shared coex-toggle-form (same endpoint)"
+    )
+    assert "TOGGLE_PHRASE" not in body, (
+        "onRollback must NOT use the typed TOGGLE_PHRASE — rollback is one-click"
+    )
+    # Forward path still pins the typed phrase constant.
+    assert "const TOGGLE_PHRASE = 'PRIMARY'" in src, (
+        "the forward toggle must keep the typed-PRIMARY confirm (TOGGLE_PHRASE)"
+    )

@@ -157,6 +157,12 @@ services:
 	- App\AgentKit\Runner
 	- App\AgentKit\Coordinator
 
+	# A3.1 (2026-06-16): the operator-trigger spawn path, extracted from
+	# Api\AgentsPresenter::spawnRunner so the bearer API + the Tier-1 "Promote to
+	# migration" button (UpgradesPresenter) spawn the runner through ONE audited
+	# place (execve array form, server-side UUID). Autowired (takes AgentLoader).
+	- App\AgentKit\OperatorTrigger
+
 	# Dreams (memory consolidation, post-A14 follow-up B-Dreams, 2026-05-07).
 	- App\AgentKit\Memory\MemoryStore
 	- App\AgentKit\Memory\Dreamer

@@ -111,3 +111,22 @@ Open the next batch from fresh `master` after the previous wave merges.
 ---
 
 ## Modernization / tech-debt
+
+---
+
+## General ideas
+1. custom iOS+android "nOS user" app?
+   - Generative UI - voice/chat driven 
+     - On-demand + generic web UI for work across multiple nOS apps/systems - abstraction which allows user to make changes(via API) in a single app instead of opening multiple apps and websites.
+
+2. Scripts for single-use data transfers e.g.:
+   - gitea/gitHub/bitBucket -> gitLab
+   - fakturoid/fakturovač -> firefly
+   - excel/google spreadsheets -> (almost any nOS system - tdb: define xlsx structures)
+   - Vault <-> Infiscal
+   - ? -> Authentik
+
+3. Blockchain for enterprise cross sevice state/data verification ledger
+    - contract based data transactions
+    - GDPR contracts in blockchan?
+    - crypto(our proof-of-nos-enhancement token) wallet

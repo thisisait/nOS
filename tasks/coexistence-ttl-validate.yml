@@ -1,0 +1,42 @@
+---
+# =============================================================================
+# Coexistence — validate + derive the cooling TTL (A5, §6.2, 2026-06-16).
+#
+# `coexistence_secondary_ttl_days` (default.config.yml, a BARE literal default 7)
+# is the one-click-rollback cooling window applied to the PRIOR primary when a
+# track is promoted. The [3,60]-day clamp lives HERE in a task — NOT in the
+# vars file (a vars-file value must stay a bare literal per the {{ vars }}
+# eager-resolve trap) and NOT in the module (the module just consumes the
+# already-derived ttl_seconds). This preflight:
+#
+#   1. asserts the configured value is an integer in the inclusive range
+#      [3, 60] — a clear CLI failure BEFORE Bone spawns the promote/cutover run,
+#   2. derives `coexist_secondary_ttl_seconds` (days × 86400) that
+#      coexistence-promote.yml / coexistence-cutover.yml fall through to when no
+#      explicit `coexist_ttl_seconds` override is passed.
+#
+# STOCK-Jinja only: `int` is a core builtin (allowed); `bool` / `regex_*` are
+# not. `(x|int) == x` is the integer-ness check — float 7.5 fails (7 != 7.5),
+# a non-numeric string ints to 0 and fails (0 != "abc").
+#
+# Imported in main.yml with tags ['always', ...] so it ALSO fires on a
+# Bone-spawned `--tags coexist-promote` / `--tags coexist-cutover` run.
+# =============================================================================
+
+- name: "[coexistence_ttl] Validate coexistence_secondary_ttl_days is in [3, 60]"
+  ansible.builtin.assert:
+    that:
+      - coexistence_secondary_ttl_days is defined
+      - (coexistence_secondary_ttl_days | int) == coexistence_secondary_ttl_days
+      - (coexistence_secondary_ttl_days | int) >= 3
+      - (coexistence_secondary_ttl_days | int) <= 60
+    fail_msg: >-
+      coexistence_secondary_ttl_days must be an integer in [3, 60] days
+      (got: {{ coexistence_secondary_ttl_days | default('<undefined>') }}). Set it in config.yml.
+    quiet: true
+  tags: ['always', 'coexistence', 'coexist-promote', 'coexist-cutover']
+
+- name: "[coexistence_ttl] Derive the cooling TTL in seconds"
+  ansible.builtin.set_fact:
+    coexist_secondary_ttl_seconds: "{{ (coexistence_secondary_ttl_days | int) * 24 * 3600 }}"
+  tags: ['always', 'coexistence', 'coexist-promote', 'coexist-cutover']

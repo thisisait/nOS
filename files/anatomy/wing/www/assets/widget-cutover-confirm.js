@@ -4,6 +4,13 @@
  * typed confirmation ("CUTOVER" / "PRIMARY") before submitting. Deactivate +
  * cancel are non-destructive (data kept / queued row only) → a window.confirm.
  *
+ * A5 (§6.6) — asymmetric promote: the just-demoted prior primary (the known-good
+ * rollback target) gets a ONE-CLICK window.confirm rollback button instead of the
+ * typed-PRIMARY modal. Both hit the SAME toggle-primary endpoint via the shared
+ * coex-toggle-form — the asymmetry is purely client-side confirm friction,
+ * inverted to match risk (forward = less-proven new version = typed friction;
+ * rollback = known-good = fast escape hatch).
+ *
  * Two submit paths by design:
  *   - cutover / cleanup  → fetch() to the bearer-style /api/v1 surface (legacy).
  *   - toggle-primary / deactivate-secondary / cancel-coexist (B4c, operator path)
@@ -171,6 +178,25 @@
 		form.submit();
 	}
 
+	// A5 (§6.6): one-click rollback to the just-demoted known-good prior primary.
+	// Hits the SAME server endpoint as the typed-PRIMARY toggle (the shared
+	// coex-toggle-form → /coexistence/<svc>/toggle-primary → promote_track); the
+	// ONLY difference is a single window.confirm instead of the typed modal —
+	// rollback returns to the lower-risk known-good version, so fast escape-hatch
+	// friction (not typed friction) matches the risk. NOT the TOGGLE_PHRASE path.
+	function onRollback(btn) {
+		const service = btn.dataset.service;
+		const tag = btn.dataset.tag;
+		if (!window.confirm(`Roll back ${service} to track "${tag}"?\n\nThis re-promotes the just-demoted known-good primary. Live traffic routes to it on the next request (reversible).`)) return;
+		const form = document.getElementById('coex-toggle-form');
+		const tagInput = document.getElementById('coex-toggle-target-tag');
+		if (!form || !tagInput) return;
+		form.action = `/coexistence/${encodeURIComponent(service)}/toggle-primary`;
+		tagInput.value = tag;
+		btn.disabled = true;
+		form.submit();
+	}
+
 	function onDeactivate(btn) {
 		const service = btn.dataset.service;
 		const tag = btn.dataset.tag;
@@ -255,6 +281,11 @@
 				case 'toggle-primary':
 					e.preventDefault();
 					toggleModal.open(btn.dataset.service, btn.dataset.tag);
+					break;
+				// A5: one-click rollback (no typed phrase) → same toggle endpoint.
+				case 'rollback-primary':
+					e.preventDefault();
+					onRollback(btn);
 					break;
 				case 'close-toggle':
 					e.preventDefault();

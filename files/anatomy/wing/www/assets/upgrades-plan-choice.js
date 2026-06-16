@@ -112,6 +112,22 @@
 				case 'open-plan-choice':   e.preventDefault(); modal.open(btn); break;
 				case 'close-plan-choice':  e.preventDefault(); modal.close(); break;
 				case 'submit-plan-choice': e.preventDefault(); modal.submit(); break;
+				case 'promote-to-migration': {
+					// A3.2 (Q5): lightweight supervision gate for the native AgentKit
+					// migration-author. NON-destructive (working-tree write + review MR,
+					// makes nothing live), so a single window.confirm — not a typed
+					// PRIMARY modal — is the right friction. On cancel, block the submit
+					// of the CSRF <form> the button lives in; on confirm, let it through.
+					const svc = btn.dataset.service || '';
+					const recipe = btn.dataset.recipeId || '';
+					const ok = window.confirm(
+						'Promote ' + svc + '/' + recipe + ' to a migration record? This ' +
+						'starts the migration-author agent (writes a migration YAML + ' +
+						'version bump, opens a review MR). Nothing goes live.'
+					);
+					if (!ok) { e.preventDefault(); }
+					break;
+				}
 			}
 		});
 

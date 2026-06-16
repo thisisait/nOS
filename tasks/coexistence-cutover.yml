@@ -108,7 +108,7 @@
     nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
     domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
     state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
-    ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
+    ttl_seconds: "{{ coexist_ttl_seconds | default(coexist_secondary_ttl_seconds | default(7 * 24 * 3600)) }}"
     # The migration (if any) already ran above — tell the module not to re-run it.
     # The module still enforces the gate (a target with source_migration_id and
     # migration_applied=false would refuse), so this is the only safe combination.

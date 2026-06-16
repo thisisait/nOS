@@ -19,7 +19,8 @@
 #
 # Optional:
 #   coexist_ttl_seconds  -- TTL applied to the demoted prior primary
-#                           (default: 7 days)
+#                           (default: coexistence_secondary_ttl_days from config;
+#                            validated to [3,60] days, default 7)
 #   coexist_force        -- promote a port-down target (default false)
 #   coexist_dry_run      -- plan without writing (default TRUE)
 #
@@ -48,7 +49,7 @@
     nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
     domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
     state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
-    ttl_seconds: "{{ coexist_ttl_seconds | default(7 * 24 * 3600) }}"
+    ttl_seconds: "{{ coexist_ttl_seconds | default(coexist_secondary_ttl_seconds | default(7 * 24 * 3600)) }}"
     force: "{{ coexist_force | default(false) | bool }}"
     dry_run: "{{ coexist_dry_run | default(true) | bool }}"
   register: _coexist_promote_result

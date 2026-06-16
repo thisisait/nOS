@@ -53,6 +53,13 @@ BROWSER_PRESENTER = WING_APP / "Presenters" / "AgentsPresenter.php"
 ROUTER = WING_APP / "Core" / "RouterFactory.php"
 RUN_AGENT_BIN = REPO_ROOT / "files" / "anatomy" / "wing" / "bin" / "run-agent.php"
 DETAIL_LATTE = WING_APP / "Templates" / "Agents" / "detail.latte"
+# A3.1 (2026-06-16): the spawn body (PHP-bin resolution, argv array, proc_open
+# execve, server-side UUID) was EXTRACTED from Api\AgentsPresenter::spawnRunner
+# into the shared App\AgentKit\OperatorTrigger so the bearer API + the Tier-1
+# "Promote to migration" button spawn through ONE audited path. The spawn-shape
+# gates below follow the code into OperatorTrigger; the presenter keeps the
+# anti-spoof / POST-dispatch / 202-response-shape contracts.
+OPERATOR_TRIGGER = WING_APP / "AgentKit" / "OperatorTrigger.php"
 
 
 def _read(path: Path) -> str:
@@ -126,14 +133,18 @@ def test_spawn_uses_proc_open_array_form_not_shell():
     class A14.1 closed in BashReadOnlyTool. Equally, the shell-form
     primitives must not appear in the spawn helper. escapeshellarg is
     a smell: array form needs no shell escaping at all, so its presence
-    near the spawn means someone built a string."""
-    src = _read(API_PRESENTER)
+    near the spawn means someone built a string.
+
+    A3.1: the spawn body lives in App\\AgentKit\\OperatorTrigger::spawn (extracted
+    from the former Api\\AgentsPresenter::spawnRunner) — the shared, audited spawn
+    path both the bearer API and the Tier-1 button call."""
+    src = _read(OPERATOR_TRIGGER)
     m = re.search(
-        r"private function spawnRunner\([^)]*\)\s*:\s*\??(int|null|\?int)\s*\{(.+?)\n\t\}\n",
+        r"public function spawn\(.+?\)\s*:\s*array\s*\{(.+?)\n\t\}\n",
         src, re.DOTALL,
     )
-    assert m, "spawnRunner method not found in Api\\AgentsPresenter"
-    body = m.group(2)
+    assert m, "spawn() method not found in App\\AgentKit\\OperatorTrigger"
+    body = m.group(1)
 
     # POSITIVE: proc_open must be called with an array variable as the
     # first argument (we look for the conventional $argv name and the
@@ -191,11 +202,18 @@ def test_response_is_202_with_session_uuid():
     assert m, "startSession method not found"
     body = m.group(1)
 
-    # session_uuid generated server-side BEFORE spawn.
-    assert "generateUuidV4()" in body or "generateUuid" in body, (
-        "startSession must generate the session_uuid server-side BEFORE "
-        "spawning the runner -- the 202 response hands the UUID back to "
-        "the operator immediately so polling can begin."
+    # session_uuid is generated server-side BEFORE the 202 — A3.1 moved the actual
+    # generateUuidV4() into OperatorTrigger::spawn, which returns it in $res so the
+    # presenter hands it back immediately for polling. Either the in-presenter
+    # generate (legacy) OR the spawn-result read satisfies the contract.
+    ot_src = _read(OPERATOR_TRIGGER)
+    assert "generateUuidV4()" in ot_src or "generateUuid" in ot_src, (
+        "OperatorTrigger::spawn must generate the session_uuid server-side."
+    )
+    assert "$res['session_uuid']" in body or "generateUuidV4()" in body or "generateUuid" in body, (
+        "startSession must obtain the session_uuid server-side BEFORE responding "
+        "-- the 202 hands the UUID back to the operator immediately so polling "
+        "can begin (A3.1: read it from OperatorTrigger::spawn's $res)."
     )
     # Response shape: sendSuccess with HTTP 202 Accepted + session_uuid +
     # status='starting'. 202 (not 201) because the agent_sessions row has not

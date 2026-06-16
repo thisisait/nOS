@@ -983,6 +983,15 @@
       ansible.builtin.import_tasks: tasks/upgrade-engine.yml
       tags: ['upgrade', 'never']
 
+    # ── Coexistence cooling-TTL validate + derive (A5, §6.2) ────────────────
+    # Clamps coexistence_secondary_ttl_days to [3,60] (clear CLI failure) and
+    # derives coexist_secondary_ttl_seconds for promote/cutover to fall through
+    # to. Tagged 'always' so it ALSO fires under a Bone-spawned --tags
+    # coexist-promote / coexist-cutover run (the inner tasks share the tags).
+    - name: "[Coexistence] Validate + derive the cooling TTL"
+      ansible.builtin.import_tasks: tasks/coexistence-ttl-validate.yml
+      tags: ['always', 'coexistence', 'coexist-promote', 'coexist-cutover']
+
     # ── Coexistence apply (W5-B5c) ──────────────────────────────────────────
     # Consumes the coexistence_planned queue (upgrade-architect / operator) and
     # provisions each parallel track. Off normal runs; --tags coexistence only.

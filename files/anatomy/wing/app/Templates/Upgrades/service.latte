@@ -113,6 +113,30 @@
 							data-recipe-id="{$r['id']}"
 							data-severity="{$r['severity']}"
 							aria-label="Apply upgrade {$r['id']}">Apply</button>
+					{* A3.2 (Q5): Promote to migration — fires the native AgentKit
+					   migration-author. Tier-1 (inherited; presenter gates). The
+					   self-contained hidden CSRF form + a JS-delegated window.confirm
+					   (upgrades-plan-choice.js, case 'promote-to-migration') is the
+					   lightweight supervision gate — appropriate because this is
+					   NON-destructive (working-tree write + review MR, makes nothing
+					   live), so a typed-PRIMARY modal would be overkill. The _csrf
+					   input is the FIRST child of <form> (SEC-14 placement; keeps it
+					   inside the CSRF sweep's lookahead window even though the {plink}
+					   action carries a `=>` arrow). Rendered for unapplied recipes
+					   (an already-applied recipe has nothing to author). *}
+					{if empty($r['applied'])}
+						<form method="post" style="display:inline"
+							  action="{plink Upgrades:promoteToMigration, service => $service, recipe => $r['id']}">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							<button type="submit"
+									class="mig-btn"
+									data-action="promote-to-migration"
+									data-service="{$service}"
+									data-recipe-id="{$r['id']}"
+									title="Author the migration record + version bump via the migration-author agent (writes a review MR; nothing goes live)"
+									aria-label="Promote {$r['id']} to a migration">Promote to migration</button>
+						</form>
+					{/if}
 					{if !empty($r['applied'])}
 						<button type="button"
 								class="mig-btn mig-btn-danger"

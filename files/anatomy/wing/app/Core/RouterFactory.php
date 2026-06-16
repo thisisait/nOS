@@ -154,6 +154,13 @@ final class RouterFactory
 		// Browser CSRF form POSTs here; before /<service> + /<service>/<recipe>
 		// forms so 'plan-choice' isn't swallowed (Nette first-match-wins).
 		$router->addRoute('upgrades/<service>/<recipe>/plan-choice', 'Upgrades:planChoice');
+		// A3.2 (Q5/2026-06-16): Tier-1 "Promote to migration" button → fires the
+		// native AgentKit migration-author (OperatorTrigger spawn). POST-only,
+		// CSRF-gated; before the /<service> catch-all (first-match-wins). The
+		// session is observed via the existing /api/v1/agent-sessions/<uuid> poll
+		// — no new API route. Spawns the migration YAML + version bump write; the
+		// review MR (GATE 2) is the wall, nothing goes live.
+		$router->addRoute('upgrades/<service>/<recipe>/promote-to-migration', 'Upgrades:promoteToMigration');
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');

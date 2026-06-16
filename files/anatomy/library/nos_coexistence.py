@@ -306,6 +306,18 @@ SUPPORTED_SERVICES = {
 }
 
 
+# Coexistence cooling-TTL default (the one-click-rollback window). When a track
+# is promoted the prior primary becomes a read-only secondary with this cooling
+# window. The operator-configurable value (``coexistence_secondary_ttl_days``)
+# is VALIDATED to the inclusive range [3, 60] days by
+# ``tasks/coexistence-ttl-validate.yml`` (the clamp lives in a TASK, not here:
+# a vars-file value must stay a bare literal per the {{ vars }} eager-resolve
+# trap, and the derived seconds reach this module via the ``ttl_seconds`` param).
+# This last-ditch fallback (7 days) only fires if the demotion runs with no
+# ttl_seconds threaded at all — e.g. an offline unit test or a skipped validate.
+_FALLBACK_TTL_SECONDS = 7 * 24 * 3600   # default 7 days, as seconds
+
+
 # ---------------------------------------------------------------------------
 # state.yml helpers
 
@@ -1037,13 +1049,22 @@ def action_promote_track(params, state, ctx=None):
             t["cutover_at"] = now
             t.pop("ttl_until", None)
             t.pop("deactivated_at", None)
+            # A5 (§6.5): the new primary is NOT a rollback target. Clear any stamp
+            # left from a prior demotion so a re-promote drops the marker — this is
+            # what guarantees "exactly one rollback target" across a toggle.
+            t.pop("demoted_from_primary_at", None)
         elif t.get("tag") == previous:
             # Demote the prior primary in the SAME write (single-primary).
             t["role"] = "secondary"
             t["lifecycle"] = "secondary"
             t["read_only"] = True
+            # A5 (§6.5): stamp the just-demoted known-good prior primary as THE
+            # one-click-rollback target. Only the previous-primary branch matches
+            # (exactly one active primary before the flip), so at most one track
+            # ever carries this — the property the Wing rollback button relies on.
+            t["demoted_from_primary_at"] = now
             until = datetime.datetime.now(tz=datetime.timezone.utc) + \
-                datetime.timedelta(seconds=int(ttl_seconds or 7 * 24 * 3600))
+                datetime.timedelta(seconds=int(ttl_seconds or _FALLBACK_TTL_SECONDS))
             t["ttl_until"] = until.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     vhost_path = _nginx_vhost_path(params["nginx_sites_dir"], service)

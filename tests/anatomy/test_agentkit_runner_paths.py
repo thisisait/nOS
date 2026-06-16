@@ -27,6 +27,10 @@ WING = REPO / "files" / "anatomy" / "wing"
 RUN_AGENT = WING / "bin" / "run-agent.php"
 COMMON_NEON = WING / "app" / "config" / "common.neon"
 AGENTS_PRESENTER = WING / "app" / "Presenters" / "Api" / "AgentsPresenter.php"
+# A3.1 (2026-06-16): the spawn body (WING_PHP_BIN resolution + argv array) was
+# extracted from Api\AgentsPresenter::spawnRunner into the shared
+# App\AgentKit\OperatorTrigger::spawn. The PHP-bin gate follows the code.
+OPERATOR_TRIGGER = WING / "app" / "AgentKit" / "OperatorTrigger.php"
 
 
 def test_common_neon_uses_agents_dir_parameter():
@@ -52,9 +56,11 @@ def test_run_agent_cli_overrides_agents_dir():
 
 
 def test_spawn_runner_never_uses_bare_php_binary():
-    src = AGENTS_PRESENTER.read_text()
+    # A3.1: the spawn body lives in OperatorTrigger::spawn (extracted from the
+    # former Api\AgentsPresenter::spawnRunner). The PHP-bin gate follows it.
+    src = OPERATOR_TRIGGER.read_text()
     assert "WING_PHP_BIN" in src, (
-        "AgentsPresenter::spawnRunner lost the WING_PHP_BIN resolution — "
+        "OperatorTrigger::spawn lost the WING_PHP_BIN resolution — "
         "PHP_BINARY is empty under FrankenPHP's embedded SAPI and proc_open "
         "throws 'First element must contain a non-empty program name' (500 on "
         "every operator trigger)."
@@ -63,7 +69,7 @@ def test_spawn_runner_never_uses_bare_php_binary():
     import re
 
     argv_blocks = re.findall(r"\$argv\s*=\s*\[\s*([^,]+),", src)
-    assert argv_blocks, "no $argv array found in AgentsPresenter"
+    assert argv_blocks, "no $argv array found in OperatorTrigger"
     for first in argv_blocks:
         assert first.strip() != "PHP_BINARY", (
             "argv[0] is the raw PHP_BINARY constant again — empty under "

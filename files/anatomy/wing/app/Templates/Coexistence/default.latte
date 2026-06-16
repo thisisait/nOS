@@ -7,7 +7,7 @@
 <div class="coex-page-header">
 	<div>
 		<h2>Coexistence</h2>
-		<div class="sub">Dual-version tracks running side by side. <strong>Toggle as primary</strong> flips live routing atomically (reversible); the prior primary becomes a read-only secondary with a cooling TTL. <strong>Deactivate</strong> stops a secondary (data kept). Queued provisions can be cancelled before they ever boot.</div>
+		<div class="sub">Dual-version tracks running side by side. <strong>Toggle as primary</strong> flips live routing atomically (reversible) behind a typed-<code>PRIMARY</code> confirm; the prior primary becomes a read-only secondary with a cooling TTL and a <strong>one-click Roll back</strong> button (returning to the known-good version is the low-risk direction). <strong>Deactivate</strong> stops a secondary (data kept). Queued provisions can be cancelled before they ever boot.</div>
 	</div>
 </div>
 
@@ -73,13 +73,32 @@
 						{/if}
 
 						<div class="coex-track-actions">
-							{* Toggle-as-primary — reversible cutover, typed-confirm PRIMARY *}
-							<button type="button"
-									class="mig-btn mig-btn-primary"
-									data-action="toggle-primary"
-									data-service="{$service}"
-									data-tag="{$track['tag']}"
-									aria-label="Toggle {$track['tag']} to primary">Toggle as primary</button>
+							{* A5 (§6.6): asymmetric promote controls. The just-demoted
+							   prior primary (is_rollback_target) gets a ONE-CLICK rollback
+							   button — returning to the known-good older version is the
+							   low-risk direction, so a single window.confirm is the right
+							   friction. Every OTHER secondary keeps the typed-PRIMARY
+							   modal (promoting a less-proven new version). BOTH post the
+							   same coex-toggle-form to the same toggle-primary route — the
+							   asymmetry is purely client-side confirm friction. *}
+							{if !empty($track['is_rollback_target'])}
+								{* Rollback — one-click, window.confirm (known-good prior primary) *}
+								<button type="button"
+										class="mig-btn mig-btn-primary"
+										data-action="rollback-primary"
+										data-service="{$service}"
+										data-tag="{$track['tag']}"
+										title="One-click rollback to the just-demoted known-good primary"
+										aria-label="Roll back to {$track['tag']}">&#8617; Roll back to {$track['tag']}</button>
+							{else}
+								{* Toggle-as-primary — reversible cutover, typed-confirm PRIMARY *}
+								<button type="button"
+										class="mig-btn mig-btn-primary"
+										data-action="toggle-primary"
+										data-service="{$service}"
+										data-tag="{$track['tag']}"
+										aria-label="Toggle {$track['tag']} to primary">Toggle as primary</button>
+							{/if}
 							{* Deactivate — non-destructive stop, window.confirm *}
 							{if ($track['role'] ?? '') !== 'deactivated'}
 								<button type="button"

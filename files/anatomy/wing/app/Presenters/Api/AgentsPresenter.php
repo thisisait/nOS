@@ -6,6 +6,8 @@ namespace App\Presenters\Api;
 
 use App\AgentKit\AgentLoader;
 use App\AgentKit\AgentLoadException;
+use App\AgentKit\OperatorTrigger;
+use App\AgentKit\OperatorTriggerException;
 use App\Model\AgentSessionRepository;
 use Nette\Http\IResponse;
 
@@ -46,6 +48,12 @@ final class AgentsPresenter extends BaseApiPresenter
 	public function __construct(
 		private AgentLoader $loader,
 		private AgentSessionRepository $sessions,
+		// A3.1 (2026-06-16): the spawn body (PHP-bin resolution, argv array,
+		// proc_open execve, UUID) moved into the shared OperatorTrigger so the
+		// Tier-1 "Promote to migration" button (UpgradesPresenter) and this
+		// bearer API spawn the runner through ONE audited path. The
+		// actor-from-bearer anti-spoof guard stays here (presenter-local).
+		private OperatorTrigger $operatorTrigger,
 	) {
 		parent::__construct();
 	}
@@ -174,112 +182,35 @@ final class AgentsPresenter extends BaseApiPresenter
 			$this->sendError('actor_id unavailable — token validation drift', 500);
 		}
 
-		$sessionUuid = self::generateUuidV4();
-		$pid = $this->spawnRunner($name, $sessionUuid, $actorId, $prompt, $vault);
+		// A3.1: spawn through the shared OperatorTrigger (execve array form, UUID
+		// generated server-side). On a structural failure it throws
+		// OperatorTriggerException whose code is HTTP-shaped — map straight to
+		// sendError, preserving the prior inline-spawn error contract (500 no
+		// PHP binary / proc_open false; 404 unknown agent — though we already
+		// load()'d above).
+		try {
+			$res = $this->operatorTrigger->spawn(
+				agent: $name,
+				actorId: $actorId,
+				prompt: $prompt,
+				vault: $vault,
+			);
+		} catch (OperatorTriggerException $exc) {
+			$code = $exc->getCode();
+			$this->sendError($exc->getMessage(), $code >= 400 && $code < 600 ? $code : 500);
+		}
 
 		// 202 Accepted (not 201 Created): the runner is still starting, the
 		// agent_sessions row has not been written yet, and the resource will
 		// only exist when the child boots. The poll_url returns 404 for ~200ms
 		// then 200 once the row lands; the UI tolerates that as 'starting'.
 		$this->sendSuccess([
-			'session_uuid' => $sessionUuid,
+			'session_uuid' => $res['session_uuid'],
 			'status' => 'starting',
 			'agent_name' => $name,
 			'actor_id' => $actorId,
-			'pid' => $pid,
-			'poll_url' => "/api/v1/agent-sessions/{$sessionUuid}",
+			'pid' => $res['pid'],
+			'poll_url' => "/api/v1/agent-sessions/{$res['session_uuid']}",
 		], IResponse::S202_Accepted);
-	}
-
-	/**
-	 * Spawn `php bin/run-agent.php` as a non-blocking child via proc_open
-	 * ARRAY form (execve direct, no /bin/sh). Returns the child PID.
-	 *
-	 * Why array form, not string + escapeshellarg: A14.1 found the prior
-	 * BashReadOnlyTool implementation built a string command and handed it
-	 * to proc_open, which delegates to /bin/sh -c. Even with escapeshellarg
-	 * on every value, sh is in the loop and a future refactor that drops
-	 * an escape (or accepts a value with embedded NUL / newline / backslash
-	 * continuation) reopens the injection path. Array form sidesteps the
-	 * shell entirely — argv slots have hard boundaries, no metacharacter
-	 * has any meaning, and the LLM/operator-supplied values reach the
-	 * child verbatim as discrete strings.
-	 *
-	 * The child's stdin/stdout/stderr are redirected to /dev/null so the
-	 * parent HTTP request can return 202 without waiting on the pipes.
-	 * proc_close is intentionally NOT called — that would block until the
-	 * child exits. We let the OS reap the child via SIGCHLD.
-	 */
-	private function spawnRunner(
-		string $agentName,
-		string $sessionUuid,
-		string $actorId,
-		?string $prompt,
-		?string $vault,
-	): ?int {
-		$wingRoot = dirname(__DIR__, 3); // app/Presenters/Api -> wing root
-		$runnerPath = $wingRoot . '/bin/run-agent.php';
-
-		// PHP_BINARY is EMPTY under FrankenPHP's embedded SAPI (there is no
-		// CLI binary backing the worker), so proc_open threw "First element
-		// must contain a non-empty program name" on every operator-trigger
-		// (2026-06-12). Resolution order: explicit WING_PHP_BIN env (the
-		// launchd plist can pin it) → PHP_BINARY when non-empty (classic
-		// FPM/CLI SAPIs) → first executable brew/system php.
-		$phpBin = getenv('WING_PHP_BIN') ?: (PHP_BINARY !== '' ? PHP_BINARY : null);
-		if ($phpBin === null || !is_executable($phpBin)) {
-			foreach (['/opt/homebrew/bin/php', '/usr/local/bin/php', '/usr/bin/php'] as $candidate) {
-				if (is_executable($candidate)) {
-					$phpBin = $candidate;
-					break;
-				}
-			}
-		}
-		if ($phpBin === null || !is_executable($phpBin)) {
-			$this->sendError('No PHP CLI binary found for the agent runner (set WING_PHP_BIN)', 500);
-		}
-
-		$argv = [
-			$phpBin,
-			$runnerPath,
-			'--agent=' . $agentName,
-			'--trigger=operator',
-			'--actor=' . $actorId,
-			'--session-uuid=' . $sessionUuid,
-		];
-		if ($prompt !== null) {
-			$argv[] = '--prompt=' . $prompt;
-		}
-		if ($vault !== null) {
-			$argv[] = '--vault=' . $vault;
-		}
-
-		$descriptors = [
-			0 => ['file', '/dev/null', 'r'],
-			1 => ['file', '/dev/null', 'w'],
-			2 => ['file', '/dev/null', 'w'],
-		];
-
-		$proc = proc_open($argv, $descriptors, $pipes, $wingRoot);
-		if (!is_resource($proc)) {
-			$this->sendError('Failed to spawn agent runner (proc_open returned false)', 500);
-		}
-		$status = proc_get_status($proc);
-		// Intentionally detach: closing the process resource would wait for
-		// the child to exit, defeating the non-blocking 202 contract.
-		// The OS reaps the child via SIGCHLD. PID captured for telemetry.
-		return is_array($status) && isset($status['pid']) ? (int) $status['pid'] : null;
-	}
-
-	/**
-	 * RFC 4122 v4 UUID. Hand-rolled because random_bytes is core (no deps)
-	 * and we don't need ramsey/uuid for one call site.
-	 */
-	private static function generateUuidV4(): string
-	{
-		$data = random_bytes(16);
-		$data[6] = chr((ord($data[6]) & 0x0f) | 0x40); // version 4
-		$data[8] = chr((ord($data[8]) & 0x3f) | 0x80); // variant 10
-		return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 	}
 }
