@@ -68,7 +68,8 @@ properties:
           type: string
           enum:
             - bash-read-only
-            - bash-write
+            - bash-write            # reserved placeholder, no impl (kept)
+            - migration-file-write  # gated, path-allowlisted (Q8/A1, 2026-06-16)
             - mcp-wing
             - mcp-bone
             - mcp-pulse

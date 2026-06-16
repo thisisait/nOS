@@ -143,6 +143,15 @@
         <key>INSTANCE_NAME</key>
         <string>{{ instance_name | default('nos') }}</string>
 
+        <!-- Q8/A1 (2026-06-16): repo working-tree root for AgentKit's
+             MigrationWriteTool. The migration YAML dir + default.config.yml
+             live in the nOS playbook CHECKOUT (not the deployed Wing tree),
+             and the daemon cwd is unstable — so the native AgentKit spawn
+             path inherits the checkout root here. Empty → the tool fail-softs
+             (reason repo_root), never writes to the wrong place. -->
+        <key>NOS_REPO_ROOT</key>
+        <string>{{ playbook_dir }}</string>
+
         <!-- SSO autologin custom preloader (Batch 5). HubPresenter reads these
              via getenv(): the splash route is dormant unless the flag is "1",
              and the warmer/redirect fallback honours the timeout (clamped to

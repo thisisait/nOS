@@ -7,6 +7,14 @@ parameters:
 	# nesting — see the addConfig() there before changing this.
 	agentsDir: %appDir%/../../../agents
 
+	# Repo working-tree root for MigrationWriteTool (Q8/A1, 2026-06-16). The
+	# migration YAML dir + default.config.yml live in the nOS playbook CHECKOUT,
+	# not the deployed Wing tree, and the daemon cwd is unstable — so the tool
+	# takes this explicit root. Env-overridden by the Wing daemon plist /
+	# migration-author Pulse env (NOS_REPO_ROOT={{ playbook_dir }}). Empty →
+	# the tool fail-softs (reason repo_root), never writes to the wrong place.
+	nosRepoRoot: ::getenv(NOS_REPO_ROOT)
+
 application:
 	errorPresenter: Error
 	mapping:
@@ -131,11 +139,16 @@ services:
 	    - register(@App\AgentKit\Tools\BashReadOnlyTool)
 	    - register(@App\AgentKit\Tools\McpWingTool)
 	    - register(@App\AgentKit\Tools\McpBoneTool)
+	    # Q8/A1: gated migration file-write tool (path-allowlisted to
+	    # files/anatomy/migrations/ + default.config.yml; escape-refused).
+	    - register(@App\AgentKit\Tools\MigrationWriteTool)
 
 	# Tools
 	- App\AgentKit\Tools\BashReadOnlyTool
 	- App\AgentKit\Tools\McpWingTool
 	- App\AgentKit\Tools\McpBoneTool
+	# Q8/A1: %nosRepoRoot% is the repo working-tree root (NOS_REPO_ROOT env).
+	- App\AgentKit\Tools\MigrationWriteTool(%nosRepoRoot%)
 
 	# Shared HTTP client for tools + adapters
 	- GuzzleHttp\Client

@@ -85,6 +85,11 @@ pulse:
       paused_reason: "migration-author is on-demand; tools/run-migration-author.sh fires it"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        # Q8/A1 (2026-06-16): repo working-tree root for MigrationWriteTool.
+        # The CLI fallback shares the same checkout root the native AgentKit
+        # plist exports, so the gated write tool resolves its allowlist
+        # identically on both runtimes. Empty → tool fail-softs (repo_root).
+        NOS_REPO_ROOT: "{{ playbook_dir }}"
         NOS_AGENT_NAME: "migration-author"
         NOS_AGENT_CLIENT_ID: "nos-migration-author"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_migration_author"
