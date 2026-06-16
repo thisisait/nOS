@@ -131,6 +131,14 @@ final class EventRepository
 		'migration_authored', 'migration_pr_opened',
 		'migration_promoted', 'migration_rejected',
 		'coexistence_promote', 'coexistence_demote', 'coexistence_cancel',
+		// ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ──
+		// The OPERATOR's supervision event for the button press — distinct from
+		// the spawned agent's own agent_session_*/agent_tool_* lineage.
+		//   migration_promote_requested — UpgradesPresenter::actionPromoteToMigration;
+		//     actor_id=operator (X-Authentik-Username, NEVER the agent); source='wing';
+		//     result_json {service, recipe_id, session_uuid, agent}. Twin of Bone's
+		//     events.py — pinned by test_devlog_event_types.py.
+		'migration_promote_requested',
 	];
 
 	public function __construct(

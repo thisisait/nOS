@@ -59,6 +59,16 @@ B1_BACKFILL_TYPES = (
     "e2e_journey_start", "e2e_journey_step", "e2e_journey_end",
 )
 
+# ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ───────────
+# The operator's supervision event for the button press
+# (UpgradesPresenter::emitPromoteRequested). Same NON-NEGOTIABLE twin-parity
+# contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
+# EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
+# 400s. See docs/plans/agentic-upgrade-adjustments-design.md §4.5.
+A3_PROMOTE_BUTTON_TYPES = (
+    "migration_promote_requested",
+)
+
 
 def test_bone_whitelists_devlog_types():
     src = BONE.read_text(encoding="utf-8")
@@ -105,6 +115,32 @@ def test_b1_backfill_types_present_in_both_twins():
     for t in B1_BACKFILL_TYPES:
         assert f'"{t}"' in bone, f"Bone VALID_TYPES missing backfill type {t}"
         assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing backfill type {t}"
+
+
+def test_a3_promote_button_type_present_in_both_twins():
+    """A3 (Q5): the operator's `migration_promote_requested` supervision event for
+    the "Promote to migration" button is in BOTH twins. UpgradesPresenter emits it
+    Wing-side; the twin keeps a Bone-proxied replay/forward of the row from 400'ing
+    (the 2026-05-17 remediator incident class). One-commit twin rule.
+    """
+    bone = BONE.read_text(encoding="utf-8")
+    php = PHP_REPO.read_text(encoding="utf-8")
+    for t in A3_PROMOTE_BUTTON_TYPES:
+        assert f'"{t}"' in bone, f"Bone VALID_TYPES missing A3 type {t}"
+        assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing A3 type {t}"
+
+
+def test_a3_promote_presenter_emits_the_twinned_type():
+    """The emitter and the whitelist agree: UpgradesPresenter emits exactly the
+    `migration_promote_requested` type the twins whitelist (catches a future rename
+    on one side only — the emitter or the whitelist drifting apart)."""
+    presenter = (
+        REPO / "files/anatomy/wing/app/Presenters/UpgradesPresenter.php"
+    ).read_text(encoding="utf-8")
+    for t in A3_PROMOTE_BUTTON_TYPES:
+        assert f"'{t}'" in presenter, (
+            f"UpgradesPresenter no longer emits {t} — emitter/whitelist drift"
+        )
 
 
 def test_emitters_use_whitelisted_types():

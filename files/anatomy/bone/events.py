@@ -161,6 +161,17 @@ VALID_TYPES = {
     #   coexistence_cancel — cancel queued; uses coexist_svc; result_json
     #     {coexistence_service, tag, planned_id, reason}.
     "coexistence_cancel",
+    # ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ───────
+    # The OPERATOR's supervision event for the button press — distinct from the
+    # spawned agent's own agent_session_*/agent_tool_* lineage. Emitted by
+    # UpgradesPresenter::emitPromoteRequested with actor_id = the operator
+    # (X-Authentik-Username, NEVER the agent), source='wing'. Twin rule
+    # (NON-NEGOTIABLE, one commit): also in Wing's EventRepository::VALID_TYPES,
+    # else a Bone-proxied replay/forward of this row 400s. Pinned by
+    # tests/anatomy/test_devlog_event_types.py.
+    #   migration_promote_requested — UpgradesPresenter::actionPromoteToMigration;
+    #     actor_id=operator; result_json {service, recipe_id, session_uuid, agent}.
+    "migration_promote_requested",
 }
 
 
