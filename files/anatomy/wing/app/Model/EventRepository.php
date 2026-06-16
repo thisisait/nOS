@@ -131,6 +131,13 @@ final class EventRepository
 		'migration_authored', 'migration_pr_opened',
 		'migration_promoted', 'migration_rejected',
 		'coexistence_promote', 'coexistence_demote', 'coexistence_cancel',
+		// ── A4 (Q3/2026-06-16): manual re-runnable "Copy data" action ──────
+		// The relocated B5 data move (explicit verb, not auto-at-cutover).
+		// Emitted by Api\CoexistencePresenter::actionCopyData on a COMMITTED
+		// copy only (dry_run=false AND Bone 2xx); coexist_svc; result_json
+		// {coexistence_service, tag, source_migration_id, data_copied_at}. Twin
+		// of Bone's events.py — pinned by test_devlog_event_types.py.
+		'coexistence_copy_data',
 		// ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ──
 		// The OPERATOR's supervision event for the button press — distinct from
 		// the spawned agent's own agent_session_*/agent_tool_* lineage.

@@ -131,6 +131,28 @@ def promote(
     return {"service": service, "tag": tag, "dry_run": dry_run, **result}
 
 
+def copy_data(
+    service: str,
+    tag: str,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    """Manual, re-runnable "Copy data" into a secondary track (A4 / Q3). Mirrors
+    ``promote``/``deactivate`` but drives the new ``coexist-copy-data`` task
+    (nos_coexistence copy_data): runs the track's recorded migration data move
+    into the SECONDARY's empty cluster, idempotently, then stamps
+    data_copied_at. NO pointer flip. dry_run defaults TRUE (mutating verb)."""
+    err = _validate(service, tag)
+    if err is not None:
+        return {"error": err, "status": 400}
+    extra: dict[str, str] = {
+        "coexist_service": service,
+        "coexist_tag": tag,
+        "coexist_dry_run": "true" if dry_run else "false",
+    }
+    result = migrate_mod.invoke_playbook("coexist-copy-data", extra)
+    return {"service": service, "tag": tag, "dry_run": dry_run, **result}
+
+
 def deactivate(
     service: str,
     tag: str,

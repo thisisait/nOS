@@ -11,11 +11,18 @@
  * inverted to match risk (forward = less-proven new version = typed friction;
  * rollback = known-good = fast escape hatch).
  *
+ * A4 (§5.2) — manual "Copy data": a one-click window.confirm button on each
+ * secondary that carries a recorded source_migration_id. It runs the track's
+ * migration data move into the SECONDARY's empty cluster (non-destructive → no
+ * typed phrase) via the shared coex-copy-form → /coexistence/<svc>/copy-data.
+ * Re-runnable: run it right before a promote for freshness.
+ *
  * Two submit paths by design:
  *   - cutover / cleanup  → fetch() to the bearer-style /api/v1 surface (legacy).
- *   - toggle-primary / deactivate-secondary / cancel-coexist (B4c, operator path)
- *     → submit the real hidden CSRF <form> so the browser presenter handles the
- *       mutation and the server redirect+flash UX is preserved (no fetch).
+ *   - toggle-primary / deactivate-secondary / copy-data / cancel-coexist (B4c +
+ *     A4, operator path) → submit the real hidden CSRF <form> so the browser
+ *     presenter handles the mutation and the server redirect+flash UX is
+ *     preserved (no fetch).
  *
  * Also updates TTL countdowns every second.
  */
@@ -197,6 +204,25 @@
 		form.submit();
 	}
 
+	// A4 (§5.2): manual, re-runnable "Copy data" into a secondary track. Runs the
+	// track's recorded migration data move (pg_dumpall → restore) into the
+	// secondary's empty cluster, then stamps data_copied_at. Non-destructive
+	// (writes only into the empty secondary) → a single window.confirm, no typed
+	// phrase. Submits the shared coex-copy-form → /coexistence/<svc>/copy-data →
+	// CoexistencePresenter::actionCopyData → Bone copy_data. Re-run before promote.
+	function onCopyData(btn) {
+		const service = btn.dataset.service;
+		const tag = btn.dataset.tag;
+		if (!window.confirm(`Copy data into ${service} track "${tag}"?\n\nThis runs the track's migration data move (pg_dumpall → restore) into the secondary's cluster. Re-runnable — run it right before Promote to capture the latest data. Nothing goes live (no pointer flip).`)) return;
+		const form = document.getElementById('coex-copy-form');
+		const tagInput = document.getElementById('coex-copy-tag');
+		if (!form || !tagInput) return;
+		form.action = `/coexistence/${encodeURIComponent(service)}/copy-data`;
+		tagInput.value = tag;
+		btn.disabled = true;
+		form.submit();
+	}
+
 	function onDeactivate(btn) {
 		const service = btn.dataset.service;
 		const tag = btn.dataset.tag;
@@ -294,6 +320,11 @@
 				case 'confirm-toggle':
 					e.preventDefault();
 					onToggleConfirm();
+					break;
+				// A4: one-click copy-data (no typed phrase) → shared coex-copy-form.
+				case 'copy-data':
+					e.preventDefault();
+					onCopyData(btn);
 					break;
 				case 'deactivate-secondary':
 					e.preventDefault();

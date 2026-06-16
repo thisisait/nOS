@@ -7,7 +7,7 @@
 <div class="coex-page-header">
 	<div>
 		<h2>Coexistence</h2>
-		<div class="sub">Dual-version tracks running side by side. <strong>Toggle as primary</strong> flips live routing atomically (reversible) behind a typed-<code>PRIMARY</code> confirm; the prior primary becomes a read-only secondary with a cooling TTL and a <strong>one-click Roll back</strong> button (returning to the known-good version is the low-risk direction). <strong>Deactivate</strong> stops a secondary (data kept). Queued provisions can be cancelled before they ever boot.</div>
+		<div class="sub">Dual-version tracks running side by side. Lifecycle: <strong>provision (empty)</strong> &rarr; <strong>Copy data</strong> &rarr; <strong>Toggle as primary</strong>. <strong>Copy data</strong> runs the track's migration data move into the secondary's cluster (re-runnable — run it right before promote for freshness). <strong>Toggle as primary</strong> is a pure pointer flip (reversible) behind a typed-<code>PRIMARY</code> confirm; the prior primary becomes a read-only secondary with a cooling TTL and a <strong>one-click Roll back</strong> button (returning to the known-good version is the low-risk direction). <strong>Deactivate</strong> stops a secondary (data kept). Queued provisions can be cancelled before they ever boot.</div>
 	</div>
 </div>
 
@@ -73,6 +73,24 @@
 						{/if}
 
 						<div class="coex-track-actions">
+							{* A4 (§5.2 / Q3): manual, re-runnable "Copy data". Runs the
+							   track's recorded migration data move into THIS secondary's
+							   empty cluster (re-run right before Promote for freshness).
+							   Placed BEFORE the promote controls so the flow reads
+							   copy → promote. Gated on a recorded source_migration_id and
+							   a non-primary role (never copy INTO the live primary —
+							   G-COPY-NOT-PRIMARY backstops it server-side). Shows
+							   data_copied_at recency. Non-destructive (writes only into the
+							   empty secondary) → one-click window.confirm in the widget. *}
+							{if !empty($track['source_migration_id']) && ($track['role'] ?? '') !== 'primary'}
+								<button type="button"
+										class="mig-btn"
+										data-action="copy-data"
+										data-service="{$service}"
+										data-tag="{$track['tag']}"
+										title="{if !empty($track['data_copied_at'])}Last copied: {$track['data_copied_at']} — re-run before Promote for freshness{else}No data copied yet — run before Promote{/if}"
+										aria-label="Copy data into {$track['tag']}">&#8595; Copy data{if empty($track['data_copied_at'])} <span class="coex-copy-pending">(no data yet)</span>{/if}</button>
+							{/if}
 							{* A5 (§6.6): asymmetric promote controls. The just-demoted
 							   prior primary (is_rollback_target) gets a ONE-CLICK rollback
 							   button — returning to the known-good older version is the
@@ -151,6 +169,10 @@
 <form method="post" id="coex-toggle-form" action="" style="display:none">
 	<input type="hidden" name="_csrf" value="{$csrfToken}">
 	<input type="hidden" name="target_tag" id="coex-toggle-target-tag" value="">
+</form>
+<form method="post" id="coex-copy-form" action="" style="display:none">
+	<input type="hidden" name="_csrf" value="{$csrfToken}">
+	<input type="hidden" name="tag" id="coex-copy-tag" value="">
 </form>
 <form method="post" id="coex-deactivate-form" action="" style="display:none">
 	<input type="hidden" name="_csrf" value="{$csrfToken}">

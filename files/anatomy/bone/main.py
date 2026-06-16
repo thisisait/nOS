@@ -566,6 +566,27 @@ async def coexistence_deactivate(
     return result
 
 
+@app.post("/api/coexistence/{service}/copy-data/{tag}")
+async def coexistence_copy_data(
+    service: str,
+    tag: str,
+    body: dict | None = None,
+    _=Depends(require_scope("nos:coexistence:write")),
+):
+    """Manual, re-runnable "Copy data" into a secondary track (A4 / Q3): run the
+    track's recorded migration data move into the secondary's empty cluster,
+    idempotently, then stamp data_copied_at. NO pointer flip. dry_run defaults
+    TRUE (mutating verb): the first call plans, dry_run=false commits."""
+    _require_framework()
+    payload = body or {}
+    dry_run = bool(payload.get("dry_run", True))
+    result = _nos_coexistence.copy_data(service, tag, dry_run=dry_run)
+    status = _status_from_payload(result)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=result.get("error", "copy_data failed"))
+    return result
+
+
 # ---- /api/events + /api/v1/events (aliased) -------------------------------
 # Plugin's documented URL is /api/v1/events but main.py historically used the
 # unversioned form. Keep both registered so existing tests + the callback

@@ -15,6 +15,7 @@ use App\Model\EventRepository;
  * POST /api/v1/coexistence/<service>/cutover            — atomic switch to target_tag
  * POST /api/v1/coexistence/<service>/promote            — toggle-as-primary (reversible)  [B3]
  * POST /api/v1/coexistence/<service>/deactivate         — stop a non-primary track        [B3]
+ * POST /api/v1/coexistence/<service>/copy-data          — copy data into a secondary       [A4]
  * POST /api/v1/coexistence/<service>/cancel             — dequeue a planned provision      [B3]
  * POST /api/v1/coexistence/<service>/cleanup/<tag>      — tear down stale track (force flag)
  */
@@ -143,6 +144,41 @@ final class CoexistencePresenter extends BaseApiPresenter
 				'tag'                 => $tag,
 				'from_role'           => 'secondary',
 				'to_role'             => 'deactivated',
+			]);
+		}
+		$this->proxyBoxApi($resp);
+	}
+
+	/**
+	 * POST /api/v1/coexistence/<service>/copy-data — manual, re-runnable
+	 * "Copy data" into a secondary track (A4 / Q3). The relocated B5 data move:
+	 * runs the track's recorded migration data-transform into the SECONDARY's
+	 * empty cluster, idempotently, then stamps data_copied_at. NO pointer flip.
+	 * dry_run defaults TRUE (mutating verb). Identity NEVER body-supplied (anti-
+	 * spoof, same gate as actionPromote). Emits coexistence_copy_data ONLY on a
+	 * committed move (dry_run=false AND Bone 2xx) so a dry-run plan or a guard
+	 * refusal leaves no false "copied" row.
+	 */
+	public function actionCopyData(string $service): void
+	{
+		$this->requireMethod('POST');
+		$body = $this->getJsonBody();
+		if (isset($body['actor_id'])) {
+			$this->sendError('actor_id is derived from the bearer token identity, not the body', 400);
+		}
+		if (empty($body['tag'])) {
+			$this->sendError('tag is required');
+		}
+		$tag = (string) $body['tag'];
+		$dryRun = array_key_exists('dry_run', $body) ? (bool) $body['dry_run'] : true;
+		$resp = $this->coexistence->copyData($service, $tag, $dryRun);
+		if (!$dryRun && (int) ($resp['status'] ?? 502) < 400) {
+			$respBody = is_array($resp['body'] ?? null) ? $resp['body'] : [];
+			$this->emit('coexistence_copy_data', $service, $tag, [
+				'coexistence_service'  => $service,
+				'tag'                  => $tag,
+				'source_migration_id'  => $respBody['result']['source_migration_id'] ?? null,
+				'data_copied_at'       => $respBody['result']['data_copied_at'] ?? null,
 			]);
 		}
 		$this->proxyBoxApi($resp);

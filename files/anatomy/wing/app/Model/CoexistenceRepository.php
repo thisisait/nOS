@@ -270,4 +270,22 @@ final class CoexistenceRepository
 			['dry_run' => $dryRun, 'force' => $force],
 		);
 	}
+
+	/**
+	 * Manual, re-runnable "Copy data" into a secondary track (A4 / Q3 → Bone
+	 * copy-data route). Runs the track's recorded migration data move
+	 * (pg_dumpall → restore) into the SECONDARY's empty cluster, idempotently,
+	 * then stamps data_copied_at. NO pointer flip — the operator re-runs it right
+	 * before a promote to capture the latest data. dry_run defaults TRUE (the
+	 * mutating verb); the committed move passes dry_run=false. Bone's copy_data
+	 * refuses a track with no source_migration_id (G-COPY-HAS-MIGRATION) and
+	 * refuses copying INTO the active primary (G-COPY-NOT-PRIMARY).
+	 */
+	public function copyData(string $service, string $tag, bool $dryRun = true): array
+	{
+		return $this->box->post(
+			'/api/coexistence/' . rawurlencode($service) . '/copy-data/' . rawurlencode($tag),
+			['dry_run' => $dryRun],
+		);
+	}
 }

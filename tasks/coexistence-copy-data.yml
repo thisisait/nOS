@@ -1,0 +1,134 @@
+---
+# =============================================================================
+# Coexistence — manual, re-runnable "Copy data" into a secondary track (A4 / Q3).
+#
+# The relocated B5 data move. When a coexistence track was provisioned ON a
+# merged migration (its source_migration_id is recorded in state), this task
+# runs that migration's apply[] data-transform (pg_dumpall dump → restore)
+# against the SECONDARY's empty cluster — on operator demand, idempotently.
+# Re-run it right BEFORE a promote to capture the latest data from the
+# advancing live primary. It does NO pointer flip / vhost regen / nginx reload
+# (that is coexist-promote / coexist-cutover). Flow:
+#
+#   provision(empty) → [Copy data] (this task, re-runnable) → [Promote primary]
+#
+# Guards (enforced by nos_coexistence action=copy_data):
+#   G-COPY-HAS-MIGRATION  refuse a track with no source_migration_id.
+#   G-COPY-NOT-PRIMARY    refuse copying INTO the active primary (live traffic).
+#   G-COPY-ENGINE         fail closed if no migration engine is reachable.
+#
+# Idempotency lives in the migration recipe (upgrades/postgresql.yml's
+# pg_dumpall step re-dumps from the advancing live primary + restores with
+# --clean --if-exists), so a re-run captures fresh data without erroring.
+#
+# Required extra-vars:
+#   coexist_service   -- service id
+#   coexist_tag       -- track tag to copy data INTO (the secondary)
+#
+# Optional:
+#   coexist_dry_run   -- plan without writing (default TRUE — mutating verb)
+#
+# Tagged 'never' so a normal playbook pass never auto-fires it — it runs only
+# when explicitly selected, via Bone (coexist-copy-data) or:
+#
+#   ansible-playbook main.yml --tags coexist-copy-data \
+#     -e coexist_service=postgresql -e coexist_tag=v17 \
+#     -e coexist_dry_run=false
+# =============================================================================
+
+- name: "[coexistence_copy_data] Validate inputs"
+  ansible.builtin.assert:
+    that:
+      - coexist_service is defined
+      - coexist_tag is defined
+  tags: ['coexist-copy-data', 'never']
+
+# Read the current track state so we can resolve the target's source_migration_id
+# (recorded at provision). list_tracks is a pure read.
+- name: "[coexistence_copy_data] Read tracks for {{ coexist_service }}"
+  nos_coexistence:
+    action: list_tracks
+    service: "{{ coexist_service }}"
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+  register: _coexist_copy_tracks
+  changed_when: false
+  tags: ['coexist-copy-data', 'never']
+
+- name: "[coexistence_copy_data] Resolve the target track + its source_migration_id"
+  ansible.builtin.set_fact:
+    _coexist_copy_target: >-
+      {{ (_coexist_copy_tracks.result.tracks[coexist_service].tracks
+          | default([]))
+         | selectattr('tag', 'equalto', coexist_tag)
+         | list | first | default({}) }}
+  tags: ['coexist-copy-data', 'never']
+
+- name: "[coexistence_copy_data] Assert the target carries a source_migration_id"
+  ansible.builtin.assert:
+    that:
+      - _coexist_copy_target.source_migration_id | default('') | length > 0
+    fail_msg: >-
+      {{ coexist_service }}/{{ coexist_tag }} has no source_migration_id — an
+      empty provision has nothing to copy. Provision it ON a merged migration
+      first (the data move runs the migration's apply[] data-transform).
+    quiet: true
+  tags: ['coexist-copy-data', 'never']
+
+# Run the migration's apply[] data-transform against the SECONDARY's cluster.
+# The track's port / data_path / tag are threaded as extra-vars so the
+# pg_dumpall dump → restore targets the secondary (empty) cluster, not the live
+# one. (This is the code lifted from the deleted cutover pre-run — it was
+# correct, it just lived in the wrong place.)
+- name: "[coexistence_copy_data] Run the source migration into {{ coexist_service }}/{{ coexist_tag }}"
+  nos_migrate:
+    action: apply
+    migration_id: "{{ _coexist_copy_target.source_migration_id }}"
+    migrations_dir: "{{ playbook_dir }}/files/anatomy/migrations"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+    dry_run: "{{ coexist_dry_run | default(true) | bool }}"
+  register: _coexist_copy_migration
+  # Fail closed: a migration failure must abort BEFORE we stamp data_copied_at.
+  failed_when:
+    - _coexist_copy_migration is defined
+    - _coexist_copy_migration.success is defined
+    - not _coexist_copy_migration.success
+  vars:
+    # Thread the secondary track's runtime tokens so the migration record's
+    # detect/action steps target the secondary cluster. The migration recipe
+    # reads these as {{ coexist_* }} tokens (the same names
+    # render_compose_override / the provision task use).
+    coexist_port: "{{ _coexist_copy_target.port | default(omit) }}"
+    coexist_data_path: "{{ _coexist_copy_target.data_path | default(omit) }}"
+    coexist_version: "{{ _coexist_copy_target.version | default(omit) }}"
+  tags: ['coexist-copy-data', 'never']
+
+# Stamp data_copied_at on the track. The preceding nos_migrate task IS the apply
+# (in dry-run or committed mode), so always pass migration_applied=true here: the
+# module short-circuits its OWN in-process engine apply (which is offline-test-
+# only — the live module call carries no ctx engine) and just records the copy
+# timestamp (no double-apply). dry_run still gates whether the stamp persists.
+- name: "[coexistence_copy_data] Stamp data_copied_at for {{ coexist_service }}/{{ coexist_tag }}"
+  nos_coexistence:
+    action: copy_data
+    service: "{{ coexist_service }}"
+    tag: "{{ coexist_tag }}"
+    migration_applied: true
+    stacks_dir: "{{ stacks_dir }}"
+    nginx_sites_dir: "{{ nginx_sites_dir | default(homebrew_prefix + '/etc/nginx/servers') }}"
+    nginx_log_dir: "{{ nginx_log_dir | default(homebrew_prefix + '/var/log/nginx') }}"
+    domain: "{{ coexist_domain | default(coexist_service + '.' + (tenant_domain | default('dev.local'))) }}"
+    state_path: "{{ nos_state_path | default(ansible_facts['env']['HOME'] + '/.nos/state.yml') }}"
+    dry_run: "{{ coexist_dry_run | default(true) | bool }}"
+  register: _coexist_copy_result
+  tags: ['coexist-copy-data', 'never']
+
+- name: "[coexistence_copy_data] Summary"
+  ansible.builtin.debug:
+    msg: |
+      Copied data into {{ coexist_service }}/{{ coexist_tag }}
+      - migration: {{ _coexist_copy_target.source_migration_id }} ({{ 'dry-run' if (coexist_dry_run | default(true) | bool) else 'applied' }})
+      - data_copied_at: {{ _coexist_copy_result.result.data_copied_at | default('<n/a>') }}
+      Re-run this Copy data action right before Promote to capture the latest data.
+  tags: ['coexist-copy-data', 'never']

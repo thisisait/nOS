@@ -204,3 +204,7 @@
   margin-top: 5px; font-size: 11px;
 }
 .upg-coexist-link { color: var(--accent); font-size: 11px; }
+
+/* A4 (Q3): manual "Copy data" pending hint — the secondary has a recorded
+   migration but no data_copied_at yet (run Copy data before Promote). */
+.coex-copy-pending { font-size: 10px; color: var(--orange, #e8a23b); font-weight: 600; }

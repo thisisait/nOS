@@ -160,6 +160,34 @@ final class CoexistencePresenter extends BasePresenter
 	}
 
 	/**
+	 * POST /coexistence/<service>/copy-data — manual, re-runnable "Copy data"
+	 * into a secondary track (A4 / Q3). The relocated B5 data move: runs the
+	 * track's recorded migration data-transform into the SECONDARY's empty
+	 * cluster, idempotently, then stamps data_copied_at. NO pointer flip — the
+	 * operator re-runs it right before a promote for freshness. Non-destructive
+	 * (writes only into the empty secondary) → window.confirm, no typed phrase.
+	 * dry_run=false: this is the committed copy. Identity is the forward-auth
+	 * operator (never body-supplied), matching actionDeactivateSecondary.
+	 */
+	public function actionCopyData(string $service): void
+	{
+		$this->requirePostMethod();
+		$tag = (string) ($this->getHttpRequest()->getPost('tag') ?? '');
+		if ($tag === '') {
+			$this->flashMessage('Refused — tag is required to copy data into a track.', 'error');
+			$this->redirect('Coexistence:default');
+		}
+		$resp = $this->coexistence->copyData($service, $tag, false);
+		[$msg, $type] = $this->classify(
+			$resp,
+			"Copied data into {$service}/{$tag} (re-run before Promote for freshness).",
+			"Copy data into {$tag} failed",
+		);
+		$this->flashMessage($msg, $type);
+		$this->redirect('Coexistence:default');
+	}
+
+	/**
 	 * POST /coexistence/<service>/cancel — the missing dequeue (B4c). Pure
 	 * Wing-DB op: a queued (status='planned') provision was never provisioned, so
 	 * there is no container/override/vhost to tear down. Refuses when there's no

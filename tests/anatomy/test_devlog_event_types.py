@@ -69,6 +69,16 @@ A3_PROMOTE_BUTTON_TYPES = (
     "migration_promote_requested",
 )
 
+# ── A4 (Q3/2026-06-16): manual re-runnable "Copy data" action ───────────────
+# The relocated B5 data move (Api\CoexistencePresenter::actionCopyData, emitted
+# only on a committed copy: dry_run=false AND Bone 2xx). Same NON-NEGOTIABLE
+# twin-parity contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
+# EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
+# 400s. See docs/plans/agentic-upgrade-adjustments-design.md §5.4.
+A4_COPY_DATA_TYPES = (
+    "coexistence_copy_data",
+)
+
 
 def test_bone_whitelists_devlog_types():
     src = BONE.read_text(encoding="utf-8")
@@ -128,6 +138,34 @@ def test_a3_promote_button_type_present_in_both_twins():
     for t in A3_PROMOTE_BUTTON_TYPES:
         assert f'"{t}"' in bone, f"Bone VALID_TYPES missing A3 type {t}"
         assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing A3 type {t}"
+
+
+def test_a4_copy_data_type_present_in_both_twins():
+    """A4 (Q3): the `coexistence_copy_data` audit event for the manual,
+    re-runnable "Copy data" action is in BOTH twins. Api\\CoexistencePresenter
+    emits it Wing-side on a committed copy; the twin keeps a Bone-proxied
+    replay/forward of the row from 400'ing (the 2026-05-17 remediator incident
+    class). One-commit twin rule.
+    """
+    bone = BONE.read_text(encoding="utf-8")
+    php = PHP_REPO.read_text(encoding="utf-8")
+    for t in A4_COPY_DATA_TYPES:
+        assert f'"{t}"' in bone, f"Bone VALID_TYPES missing A4 type {t}"
+        assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing A4 type {t}"
+
+
+def test_a4_copy_data_presenter_emits_the_twinned_type():
+    """The emitter and the whitelist agree: Api\\CoexistencePresenter emits
+    exactly the `coexistence_copy_data` type the twins whitelist, ONLY on a
+    committed move (catches a future rename / a drift between emitter + whitelist).
+    """
+    presenter = (
+        REPO / "files/anatomy/wing/app/Presenters/Api/CoexistencePresenter.php"
+    ).read_text(encoding="utf-8")
+    for t in A4_COPY_DATA_TYPES:
+        assert f"'{t}'" in presenter, (
+            f"Api\\CoexistencePresenter no longer emits {t} — emitter/whitelist drift"
+        )
 
 
 def test_a3_promote_presenter_emits_the_twinned_type():

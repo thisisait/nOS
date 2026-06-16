@@ -13,12 +13,18 @@ Pins the three constraints the Lifecycle API (design §5) is built on:
 * **cancel-only-planned** — bin/planned-coexistence.php --cancel flips a
   status=planned row to cancelled but REFUSES (exit 1) when there is no planned
   row (an applied track must go deactivate → cleanup, not cancel).
-* **coexistence-consumes-migration (B5)** — when the cutover/promote TARGET was
-  provisioned ON a migration (source_migration_id set), the action runs the
-  migration's data-transform BEFORE flipping the pointer and FAILS CLOSED (no
-  flip) on a migration error or an unreachable engine. A migration_applied=true
-  flag (set by the live task that already ran the migration) suppresses the
-  in-module apply without dropping the gate.
+* **pointer-flip-only + manual copy_data (A4 / Q3, 2026-06-16)** — the B5
+  auto-at-cutover hook was REVERTED: cutover/promote are now dumb, instantaneous
+  pointer flips that run NO migration data-transform (they echo the target's
+  source_migration_id for visibility but never apply it). The data move is the
+  explicit, re-runnable `copy_data` verb: it runs the track's recorded migration
+  apply[] data-transform into the SECONDARY's empty cluster, stamps
+  data_copied_at, does NO pointer flip, and FAILS CLOSED (not stamped) on a
+  migration error / unreachable engine. Guards: refuse a track with no
+  source_migration_id (G-COPY-HAS-MIGRATION), refuse copying INTO the active
+  primary (G-COPY-NOT-PRIMARY). A migration_applied=true flag (set by the live
+  task that already ran the migration) suppresses the in-module apply and just
+  stamps data_copied_at without dropping the engine-reachable gate.
 * **G-PROVISION-MIGRATED (B5)** — bin/planned-coexistence.php --list-gated marks
   a plan_mode='coexist' row migration_merged=false until its linked
   migrations_authored row reaches review_status='merged' (GATE 2); a
@@ -330,8 +336,9 @@ def test_deactivate_missing_track_fails(env):
 
 
 # --------------------------------------------------------------------------- #
-# coexistence-consumes-migration (B5) — cutover / promote run the migration's   #
-# data-transform BEFORE the pointer flip, and fail closed without it.           #
+# A4 / Q3 (2026-06-16) — cutover / promote are POINTER FLIPS ONLY: they run NO   #
+# migration data-transform. The B5 auto-at-cutover hook was REVERTED. The data   #
+# move is the explicit, re-runnable copy_data verb.                              #
 # --------------------------------------------------------------------------- #
 
 def _spy_migrate(record, success=True, error=None):
@@ -360,7 +367,12 @@ def test_cutover_without_migration_flips_cleanly(env):
     assert _active(env) == "v17"
 
 
-def test_cutover_runs_migration_before_pointer_flip(env):
+def test_cutover_with_source_migration_does_NOT_apply_it(env):
+    # A4 / Q3: even when the cutover TARGET was provisioned ON a migration, the
+    # cutover NEVER runs the migration's data-transform — it is a pointer flip
+    # ONLY (the data move is the copy_data verb). The migrate_apply spy must be
+    # untouched, and the flip still happens. source_migration_id is echoed for
+    # visibility; the migration result key is always None.
     _provision(env, "v16", "16")
     _provision(env, "v17", "17",
                data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
@@ -370,69 +382,16 @@ def test_cutover_runs_migration_before_pointer_flip(env):
         _common(env, action="cutover", target_tag="v17", ttl_seconds=3600),
         ctx={"migrate_apply": _spy_migrate(calls)})
     assert res["changed"] is True
-    # The migration ran with the new track's runtime tokens threaded.
-    assert len(calls) == 1
-    assert calls[0]["migration_id"] == "2026-06-15-postgresql-16-to-17"
-    assert calls[0]["tokens"]["coexist_tag"] == "v17"
-    assert calls[0]["tokens"]["coexist_data_path"] == \
-        str(env["tmp_path"] / "data" / "grafana-v17")
-    # Pointer flipped only after the migration succeeded.
+    assert calls == []          # NO migration ran at cutover
     assert _active(env) == "v17"
     assert res["result"]["source_migration_id"] == "2026-06-15-postgresql-16-to-17"
-    assert res["result"]["migration"]["success"] is True
+    assert res["result"]["migration"] is None
 
 
-def test_cutover_fails_closed_on_migration_error(env):
-    _provision(env, "v16", "16")
-    _provision(env, "v17", "17",
-               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
-               source_migration_id="2026-06-15-postgresql-16-to-17")
-    calls = []
-    res = lib.run_action(
-        _common(env, action="cutover", target_tag="v17"),
-        ctx={"migrate_apply": _spy_migrate(calls, success=False,
-                                           error="restore failed")})
-    assert res.get("failed") is True
-    assert "NOT flipped" in res["msg"]
-    # The pointer is UNCHANGED — v16 still primary (fail closed).
-    assert _active(env) == "v16"
-
-
-def test_cutover_refuses_when_no_migration_engine_reachable(env):
-    # source_migration_id set but NO migrate_apply hook AND no migrations_dir →
-    # the module cannot run the data move, so it refuses to flip (fail closed).
-    _provision(env, "v16", "16")
-    _provision(env, "v17", "17",
-               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
-               source_migration_id="2026-06-15-postgresql-16-to-17")
-    res = lib.run_action(_common(env, action="cutover", target_tag="v17"),
-                         ctx={})
-    assert res.get("failed") is True
-    assert "no migration engine is reachable" in res["msg"]
-    assert _active(env) == "v16"
-
-
-def test_cutover_migration_applied_flag_skips_inmodule_apply(env):
-    # The live task ran the migration itself and passes migration_applied=true:
-    # the module must NOT re-run it (no double-apply) but still flips the pointer.
-    _provision(env, "v16", "16")
-    _provision(env, "v17", "17",
-               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
-               source_migration_id="2026-06-15-postgresql-16-to-17")
-    calls = []
-    res = lib.run_action(
-        _common(env, action="cutover", target_tag="v17",
-                migration_applied=True),
-        ctx={"migrate_apply": _spy_migrate(calls)})
-    assert res["changed"] is True
-    assert calls == []          # the in-module apply was suppressed
-    assert _active(env) == "v17"
-
-
-def test_promote_runs_migration_before_pointer_flip(env):
-    # Toggle-as-primary is the reversible cutover → it consumes the migration the
-    # same way. The forward toggle runs it; the reverse toggle (no
-    # source_migration_id on v16) does NOT re-run it.
+def test_promote_with_source_migration_does_NOT_apply_it(env):
+    # A4 / Q3: promote (toggle-as-primary) is the reversible pointer flip — it
+    # never runs the target's migration data-transform either. The spy stays
+    # empty even with a probe up; the flip still happens.
     _provision(env, "v16", "16")
     _provision(env, "v17", "17",
                data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
@@ -442,31 +401,141 @@ def test_promote_runs_migration_before_pointer_flip(env):
         _common(env, action="promote_track", target_tag="v17"),
         ctx={"migrate_apply": _spy_migrate(calls), "port_probe": _port_up})
     assert res["changed"] is True
+    assert calls == []          # NO migration ran at promote
+    assert _active(env) == "v17"
+    assert res["result"]["source_migration_id"] == "2026-06-15-postgresql-16-to-17"
+    assert res["result"]["migration"] is None
+
+
+# --------------------------------------------------------------------------- #
+# A4 / Q3 — copy_data: the manual, re-runnable data move into the SECONDARY.    #
+# --------------------------------------------------------------------------- #
+
+def test_copy_data_runs_migration_into_secondary(env):
+    # copy_data runs the secondary's recorded migration apply[] into ITS empty
+    # cluster (tokens target the secondary), stamps data_copied_at, and does NO
+    # pointer flip (v16 stays primary).
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="copy_data", tag="v17"),
+        ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res["changed"] is True
+    # The migration ran with the SECONDARY track's runtime tokens threaded.
     assert len(calls) == 1
     assert calls[0]["migration_id"] == "2026-06-15-postgresql-16-to-17"
-    assert _active(env) == "v17"
-    # Reverse toggle: v16 has no source_migration_id → no migration re-run.
-    lib.run_action(_common(env, action="promote_track", target_tag="v16"),
-                   ctx={"migrate_apply": _spy_migrate(calls), "port_probe": _port_up})
-    assert len(calls) == 1      # still just the one forward call
+    assert calls[0]["tokens"]["coexist_tag"] == "v17"
+    assert calls[0]["tokens"]["coexist_data_path"] == \
+        str(env["tmp_path"] / "data" / "grafana-v17")
+    # NO pointer flip — v16 still primary; v17 stamped with data_copied_at.
     assert _active(env) == "v16"
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert tracks["v17"].get("data_copied_at")
+    assert res["result"]["data_copied_at"] == tracks["v17"]["data_copied_at"]
 
 
-def test_promote_fails_closed_on_migration_error(env):
+def test_copy_data_is_rerunnable(env):
+    # copy_data is idempotent on demand — the operator runs it again right before
+    # a promote to capture the latest data. Running it twice calls the engine
+    # twice, never flips the pointer, never errors.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    spy = _spy_migrate(calls)
+    res1 = lib.run_action(_common(env, action="copy_data", tag="v17"),
+                          ctx={"migrate_apply": spy})
+    res2 = lib.run_action(_common(env, action="copy_data", tag="v17"),
+                          ctx={"migrate_apply": spy})
+    assert res1["changed"] is True and res2["changed"] is True
+    assert len(calls) == 2          # the engine ran on each re-run
+    assert _active(env) == "v16"    # still no flip
+
+
+def test_copy_data_refuses_without_source_migration(env):
+    # G-COPY-HAS-MIGRATION: an empty provision (no source_migration_id) has
+    # nothing to copy → refuse, no stamp.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    calls = []
+    res = lib.run_action(_common(env, action="copy_data", tag="v17"),
+                         ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res.get("failed") is True
+    assert "no source_migration_id" in res["msg"]
+    assert calls == []
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert "data_copied_at" not in tracks["v17"]
+
+
+def test_copy_data_refuses_copy_into_primary(env):
+    # G-COPY-NOT-PRIMARY: never dump INTO the active primary serving live
+    # traffic. v16 is primary and carries a source_migration_id → refuse.
+    _provision(env, "v16", "16",
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"))
+    calls = []
+    res = lib.run_action(_common(env, action="copy_data", tag="v16"),
+                         ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res.get("failed") is True
+    assert "active primary" in res["msg"]
+    assert calls == []              # never reached the engine
+
+
+def test_copy_data_fails_closed_on_migration_error(env):
+    # A migration error must NOT stamp data_copied_at (fail closed — a claimed
+    # copy that never happened is worse than no copy).
     _provision(env, "v16", "16")
     _provision(env, "v17", "17",
                data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
                source_migration_id="2026-06-15-postgresql-16-to-17")
     res = lib.run_action(
-        _common(env, action="promote_track", target_tag="v17"),
-        ctx={"migrate_apply": _spy_migrate([], success=False, error="boom"),
-             "port_probe": _port_up})
+        _common(env, action="copy_data", tag="v17"),
+        ctx={"migrate_apply": _spy_migrate([], success=False, error="restore failed")})
     assert res.get("failed") is True
-    assert "NOT flipped" in res["msg"]
-    # v16 still primary (the migration error blocked the promote).
+    assert "data NOT copied" in res["msg"]
     tracks = {t["tag"]: t for t in _tracks(env)}
-    assert _active(env) == "v16"
-    assert tracks["v16"]["role"] == "primary"
+    assert "data_copied_at" not in tracks["v17"]
+    assert _active(env) == "v16"    # no flip either
+
+
+def test_copy_data_refuses_when_no_engine_reachable(env):
+    # G-COPY-ENGINE: source_migration_id set but NO migrate_apply hook AND no
+    # migrations_dir → the module cannot run the data move, so it refuses
+    # (fail closed) rather than stamp a copy that never ran.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    res = lib.run_action(_common(env, action="copy_data", tag="v17"), ctx={})
+    assert res.get("failed") is True
+    assert "no migration engine is reachable" in res["msg"]
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert "data_copied_at" not in tracks["v17"]
+
+
+def test_copy_data_migration_applied_flag_just_stamps(env):
+    # The live task ran nos_migrate apply itself and passes migration_applied=true:
+    # copy_data must NOT re-run the in-module engine (no double-apply) but still
+    # stamp data_copied_at.
+    _provision(env, "v16", "16")
+    _provision(env, "v17", "17",
+               data_path=str(env["tmp_path"] / "data" / "grafana-v17"),
+               source_migration_id="2026-06-15-postgresql-16-to-17")
+    calls = []
+    res = lib.run_action(
+        _common(env, action="copy_data", tag="v17", migration_applied=True),
+        ctx={"migrate_apply": _spy_migrate(calls)})
+    assert res["changed"] is True
+    assert calls == []              # the in-module apply was suppressed
+    tracks = {t["tag"]: t for t in _tracks(env)}
+    assert tracks["v17"].get("data_copied_at")
+    assert _active(env) == "v16"    # still no flip
 
 
 # --------------------------------------------------------------------------- #

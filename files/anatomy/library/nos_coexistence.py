@@ -42,17 +42,29 @@ Actions
     nginx vhost is regenerated so the primary upstream now points to
     the new track.
 
-    **Coexistence-consumes-migration (B5):** when the cutover TARGET was
-    provisioned ON a migration (its ``source_migration_id`` is set), the
-    migration's ``apply[]`` data-transform IS the cutover procedure.  The
-    action runs ``nos_migrate action=apply migration_id=<source_migration_id>``
-    against the new track's empty cluster BEFORE flipping the pointer, threading
-    the new track's port / data_path / tag as engine tokens.  Only after the
-    migration's ``verify`` passes does the pointer flip.  Fail closed: with a
-    ``source_migration_id`` but no reachable migration engine (and
-    ``migration_applied`` unset), the action REFUSES rather than flip without the
-    data move.  On the live path the surrounding task runs the migration as a
-    preceding ``nos_migrate`` task and passes ``migration_applied=true``.
+    **Pointer flip ONLY (A4 / Q3, 2026-06-16):** cutover is a dumb,
+    instantaneous pointer flip — it runs NO migration data-transform.  The B5
+    auto-at-cutover hook was reverted: the data move (``pg_dumpall`` →
+    restore into the secondary's cluster) is now an explicit, re-runnable
+    ``copy_data`` verb the operator fires on demand BEFORE promoting.  The
+    cutover echoes the target's ``source_migration_id`` in ``result`` for
+    visibility but never applies it.  Flow: ``provision(empty)`` →
+    ``[copy_data]`` → ``[cutover/promote]``.
+
+``copy_data``
+    Run the track's recorded migration (``source_migration_id``) data-
+    transform against the SECONDARY's (empty) cluster — idempotently, on
+    operator demand, re-runnable right before a promote so the secondary
+    captures the latest data.  This is the relocated B5 data move: the
+    ``nos_migrate action=apply`` engine path that used to fire implicitly
+    inside cutover/promote now lives here and ONLY here.  Stamps
+    ``data_copied_at`` on the track; does NO pointer flip / vhost regen /
+    nginx reload.  Guards: ``G-COPY-HAS-MIGRATION`` (refuse a track with no
+    ``source_migration_id``), ``G-COPY-NOT-PRIMARY`` (refuse copying INTO
+    the active primary serving live traffic), ``G-COPY-ENGINE`` (fail closed
+    if no migration engine is reachable).  ``migration_applied=true`` (set by
+    the live task after it ran the ``nos_migrate`` apply itself) short-
+    circuits the in-module apply and just stamps ``data_copied_at``.
 
 ``promote_track``
     Toggle-as-primary: the reversible operator-facing cutover.  Reuses
@@ -140,13 +152,14 @@ module: nos_coexistence
 short_description: Manage nOS dual-version (coexistence) tracks.
 description:
   - See module docstring for the full contract.  Implements
-    list_tracks / provision_track / cutover / cleanup_track.
+    list_tracks / provision_track / cutover / cleanup_track /
+    promote_track / deactivate_track / copy_data.
 options:
   action:
     description: Sub-command.
     required: true
     choices: [list_tracks, provision_track, cutover, cleanup_track,
-              promote_track, deactivate_track]
+              promote_track, deactivate_track, copy_data]
     type: str
   service:
     description: Service id (e.g. grafana, postgresql).
@@ -162,17 +175,21 @@ options:
     type: str
   source_migration_id:
     description: The migrations_authored.migration_id this track is built
-      ON (recorded at provision; consumed at cutover -- the migration's
-      apply[] data-transform runs against the new track's cluster before
-      the pointer flip).
+      ON (recorded at provision; CONSUMED by the copy_data action -- the
+      migration's apply[] data-transform runs against the secondary track's
+      cluster on operator demand, re-runnable). cutover/promote echo it for
+      visibility but never apply it (A4 / Q3: the data move left the pointer
+      flip).
     type: str
   migration_applied:
-    description: Set true by tasks/coexistence-cutover.yml when the migration's
-      data-transform was already run by a preceding nos_migrate action=apply
-      task. The cutover/promote action then enforces the migration gate WITHOUT
-      re-running the data move (no double-apply). When the target track carries
-      a source_migration_id and this flag is false, the action runs the migration
-      in-process (or refuses, failing closed).
+    description: Consumed by the copy_data action, IGNORED by cutover/promote
+      (A4 / Q3, 2026-06-16). Set true by tasks/coexistence-copy-data.yml when
+      the migration's data-transform was already run by a preceding
+      nos_migrate action=apply task; copy_data then just stamps data_copied_at
+      WITHOUT re-running the in-module engine apply (no double-apply). When
+      false and the target carries a source_migration_id, copy_data runs the
+      migration in-process (or refuses, failing closed). cutover and promote
+      are dumb pointer flips and never read this flag.
     type: bool
     default: false
   port:
@@ -858,49 +875,15 @@ def action_cutover(params, state, ctx=None):
             "noop": True,
         }}
 
-    # Coexistence-consumes-migration (B5): when the NEW track was provisioned ON
-    # a migration (its source_migration_id is set), the migration's apply[] data-
-    # transform IS the cutover procedure. Run it against the new track's empty
-    # cluster BEFORE flipping the pointer -- only after its verify passes do we
-    # promote the new version. Fail closed: never flip without the data move.
-    # On the live path tasks/coexistence-cutover.yml runs the migration as a
-    # preceding nos_migrate action=apply task and passes migration_applied=true,
-    # so the module enforces the gate without double-applying.
-    migration_result = None
+    # A4 / Q3 (2026-06-16): cutover is a POINTER FLIP ONLY. The B5 auto-at-
+    # cutover hook (run the target's migration data-transform here before the
+    # flip) was REVERTED -- the data move (pg_dumpall -> restore into the
+    # secondary's cluster) is now the explicit, re-runnable `copy_data` verb the
+    # operator fires on demand. We read source_migration_id ONLY to echo it in
+    # result for visibility; cutover never applies it (and never reads
+    # migration_applied). Freshness is the operator's call: re-run copy_data
+    # right before this flip.
     source_migration_id = target.get("source_migration_id")
-    already_applied = bool(params.get("migration_applied", False))
-    if source_migration_id and not already_applied:
-        migrate_apply = _resolve_migrate_apply(ctx)
-        if migrate_apply is None:
-            return _err(
-                "cutover target %r is built ON migration %r but no migration "
-                "engine is reachable (set ctx['migrate_apply'] or "
-                "ctx['migrations_dir']); refusing to flip the pointer without "
-                "running the data move" % (target_tag, source_migration_id),
-                source_migration_id=source_migration_id)
-        tokens = {
-            "coexist_service": service,
-            "coexist_tag": target_tag,
-            "coexist_port": target.get("port"),
-            "coexist_data_path": target.get("data_path"),
-            "coexist_version": target.get("version"),
-        }
-        try:
-            migration_result = migrate_apply(source_migration_id, tokens, dry_run)
-        except Exception as exc:  # noqa: BLE001 - surface as a clean cutover error
-            return _err("cutover migration %r raised: %s"
-                        % (source_migration_id, exc),
-                        source_migration_id=source_migration_id)
-        if not (isinstance(migration_result, dict)
-                and migration_result.get("success")):
-            err = (migration_result.get("error")
-                   if isinstance(migration_result, dict) else None) \
-                or "migration did not report success"
-            return _err(
-                "cutover migration %r failed: %s -- pointer NOT flipped"
-                % (source_migration_id, err),
-                source_migration_id=source_migration_id,
-                migration=migration_result)
 
     svc_state["active_track"] = target_tag
     now = _now_iso()
@@ -932,7 +915,9 @@ def action_cutover(params, state, ctx=None):
             "nginx_vhost": vhost_path,
             "cutover_at": now,
             "source_migration_id": source_migration_id,
-            "migration": migration_result,
+            # A4 / Q3: cutover runs no migration -> always None (the data move
+            # is the copy_data verb). Kept for result-shape stability.
+            "migration": None,
         },
     }
 
@@ -993,49 +978,15 @@ def action_promote_track(params, state, ctx=None):
             return _err("promote target %r port %s is not answering; pass "
                         "force=true to promote a down track" % (target_tag, port))
 
-    # Coexistence-consumes-migration (B5): toggle-as-primary is the reversible
-    # cutover, so it consumes the migration the SAME way action_cutover does.
-    # When the promoted track was built ON a migration (source_migration_id set),
-    # run that migration's data-transform against the new track BEFORE flipping
-    # the pointer. Fail closed -- never promote without the data move. The reverse
-    # toggle (re-promoting the original primary) has no source_migration_id, so it
-    # never re-runs the dump/restore. migration_applied=true lets the live task
-    # run the data move via a preceding nos_migrate task without a double-apply.
-    migration_result = None
+    # A4 / Q3 (2026-06-16): promote (toggle-as-primary) is a POINTER FLIP ONLY,
+    # the reversible sibling of cutover. The B5 auto-at-promote hook (run the
+    # target's migration data-transform here before the flip) was REVERTED -- the
+    # data move is the explicit, re-runnable `copy_data` verb the operator fires
+    # on demand right before this toggle. We read source_migration_id ONLY to
+    # echo it in result; promote never applies it (and never reads
+    # migration_applied). This keeps promote non-destructive and instantaneous --
+    # it never silently runs a 12-minute Postgres dump mid-toggle.
     source_migration_id = target.get("source_migration_id")
-    already_applied = bool(params.get("migration_applied", False))
-    if source_migration_id and not already_applied:
-        migrate_apply = _resolve_migrate_apply(ctx)
-        if migrate_apply is None:
-            return _err(
-                "promote target %r is built ON migration %r but no migration "
-                "engine is reachable (set ctx['migrate_apply'] or "
-                "ctx['migrations_dir']); refusing to flip the pointer without "
-                "running the data move" % (target_tag, source_migration_id),
-                source_migration_id=source_migration_id)
-        tokens = {
-            "coexist_service": service,
-            "coexist_tag": target_tag,
-            "coexist_port": target.get("port"),
-            "coexist_data_path": target.get("data_path"),
-            "coexist_version": target.get("version"),
-        }
-        try:
-            migration_result = migrate_apply(source_migration_id, tokens, dry_run)
-        except Exception as exc:  # noqa: BLE001
-            return _err("promote migration %r raised: %s"
-                        % (source_migration_id, exc),
-                        source_migration_id=source_migration_id)
-        if not (isinstance(migration_result, dict)
-                and migration_result.get("success")):
-            err = (migration_result.get("error")
-                   if isinstance(migration_result, dict) else None) \
-                or "migration did not report success"
-            return _err(
-                "promote migration %r failed: %s -- pointer NOT flipped"
-                % (source_migration_id, err),
-                source_migration_id=source_migration_id,
-                migration=migration_result)
 
     now = _now_iso()
     svc_state["active_track"] = target_tag
@@ -1085,6 +1036,119 @@ def action_promote_track(params, state, ctx=None):
             "promoted_at": now,
             "dry_run": dry_run,
             "source_migration_id": source_migration_id,
+            # A4 / Q3: promote runs no migration -> always None (the data move is
+            # the copy_data verb). Kept for result-shape stability.
+            "migration": None,
+        },
+    }
+
+
+def action_copy_data(params, state, ctx=None):
+    """Manual, re-runnable "Copy data" — the relocated B5 data move (A4 / Q3).
+
+    Runs the track's recorded migration (``source_migration_id``) apply[] data-
+    transform against the SECONDARY's (empty) cluster, idempotently, on operator
+    demand. This is the ONLY consumer of ``_resolve_migrate_apply`` now: the
+    ``nos_migrate action=apply`` path that used to fire implicitly inside
+    cutover/promote lives here and ONLY here. It does NO pointer flip, NO vhost
+    regen, NO nginx reload -- it just moves data into the secondary and stamps
+    ``data_copied_at`` so the operator can re-run it right before a promote.
+
+    Guards:
+      G-COPY-HAS-MIGRATION  refuse a track with no source_migration_id (an empty
+                            provision has nothing to copy).
+      G-COPY-NOT-PRIMARY    refuse copying INTO the active primary (never dump
+                            into the cluster serving live traffic).
+      G-COPY-ENGINE         fail closed if no migration engine is reachable
+                            (same contract B5 enforced, re-used here).
+
+    ``migration_applied=true`` short-circuits the in-module apply (the live task
+    already ran the nos_migrate apply itself) -- copy_data then just stamps
+    ``data_copied_at`` without re-running the engine (no double-apply).
+    """
+    service = params["service"]
+    tag = params.get("tag") or params.get("target_tag")
+    dry_run = bool(params.get("dry_run", True))   # dry_run defaults TRUE
+    ctx = ctx or {}
+
+    svc_state = _get_svc_state(state, service)
+    target = _find_track(svc_state, tag)
+    if target is None:
+        return _err("copy_data target %r does not exist for %r" % (tag, service))
+
+    # G-COPY-HAS-MIGRATION: an empty provision has no data move to run.
+    source_migration_id = target.get("source_migration_id")
+    if not source_migration_id:
+        return _err(
+            "copy_data target %r for %r has no source_migration_id -- an empty "
+            "provision has nothing to copy (provision it ON a merged migration "
+            "first)" % (tag, service))
+
+    # G-COPY-NOT-PRIMARY: never dump INTO the cluster serving live traffic.
+    active = svc_state.get("active_track")
+    if _is_primary(target, active):
+        return _err(
+            "copy_data refuses to copy INTO the active primary %r for %r -- the "
+            "data move targets the SECONDARY's empty cluster, never the live one"
+            % (tag, service),
+            source_migration_id=source_migration_id)
+
+    # migration_applied=true: the live task ran nos_migrate apply itself -> skip
+    # the in-module engine apply and just stamp data_copied_at (no double-apply).
+    migration_result = None
+    already_applied = bool(params.get("migration_applied", False))
+    if not already_applied:
+        # G-COPY-ENGINE: fail closed if no migration engine is reachable.
+        migrate_apply = _resolve_migrate_apply(ctx)
+        if migrate_apply is None:
+            return _err(
+                "copy_data target %r is built ON migration %r but no migration "
+                "engine is reachable (set ctx['migrate_apply'] or "
+                "ctx['migrations_dir']); refusing to claim a data copy that "
+                "never ran" % (tag, source_migration_id),
+                source_migration_id=source_migration_id)
+        tokens = {
+            "coexist_service": service,
+            "coexist_tag": tag,
+            "coexist_port": target.get("port"),
+            "coexist_data_path": target.get("data_path"),
+            "coexist_version": target.get("version"),
+        }
+        try:
+            migration_result = migrate_apply(source_migration_id, tokens, dry_run)
+        except Exception as exc:  # noqa: BLE001 - surface as a clean copy error
+            return _err("copy_data migration %r raised: %s"
+                        % (source_migration_id, exc),
+                        source_migration_id=source_migration_id)
+        if not (isinstance(migration_result, dict)
+                and migration_result.get("success")):
+            err = (migration_result.get("error")
+                   if isinstance(migration_result, dict) else None) \
+                or "migration did not report success"
+            return _err(
+                "copy_data migration %r failed: %s -- data NOT copied"
+                % (source_migration_id, err),
+                source_migration_id=source_migration_id,
+                migration=migration_result)
+
+    # Stamp the copy timestamp. On a dry_run we plan (return the timestamp) but
+    # do not persist state -- mirrors promote/deactivate dry_run semantics.
+    now = _now_iso()
+    if not dry_run:
+        for t in svc_state.get("tracks", []):
+            if t.get("tag") == tag:
+                t["data_copied_at"] = now
+                break
+        _save_state(params["state_path"], state)
+
+    return {
+        "changed": True,
+        "result": {
+            "service": service,
+            "tag": tag,
+            "source_migration_id": source_migration_id,
+            "data_copied_at": now,
+            "dry_run": dry_run,
             "migration": migration_result,
         },
     }
@@ -1318,6 +1382,8 @@ def run_action(params, ctx=None):
         return action_promote_track(params, state, ctx=ctx)
     if action == "deactivate_track":
         return action_deactivate_track(params, state, ctx=ctx)
+    if action == "copy_data":
+        return action_copy_data(params, state, ctx=ctx)
     if action == "cleanup_track":
         return action_cleanup_track(params, state, ctx=ctx)
     return _err("unknown action %r" % action)
@@ -1335,7 +1401,8 @@ def main():  # pragma: no cover - exercised only inside ansible
             "action": {"type": "str", "required": True,
                        "choices": ["list_tracks", "provision_track",
                                    "cutover", "cleanup_track",
-                                   "promote_track", "deactivate_track"]},
+                                   "promote_track", "deactivate_track",
+                                   "copy_data"]},
             "service": {"type": "str"},
             "tag": {"type": "str"},
             "target_tag": {"type": "str"},

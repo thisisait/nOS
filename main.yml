@@ -1014,6 +1014,18 @@
       ansible.builtin.import_tasks: tasks/coexistence-deactivate.yml
       tags: ['coexist-deactivate', 'never']
 
+    # ── Coexistence copy-data (A4 / Q3) — the relocated B5 data move ─────────
+    # Manual, re-runnable "Copy data": run the secondary track's recorded
+    # migration data-transform (pg_dumpall → restore) into its empty cluster,
+    # on operator demand, right before a promote. Pointer flip stays in
+    # coexist-promote/coexist-cutover. Off normal runs ('never'); reached via
+    # Bone (coexist-copy-data) or an explicit --tags. dry_run defaults TRUE.
+    #   ansible-playbook main.yml --tags coexist-copy-data \
+    #     -e coexist_service=postgresql -e coexist_tag=v17 -e coexist_dry_run=false
+    - name: "[Coexistence] Copy data into a secondary track (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-copy-data.yml
+      tags: ['coexist-copy-data', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.

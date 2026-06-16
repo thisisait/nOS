@@ -161,6 +161,16 @@ VALID_TYPES = {
     #   coexistence_cancel — cancel queued; uses coexist_svc; result_json
     #     {coexistence_service, tag, planned_id, reason}.
     "coexistence_cancel",
+    # ── A4 (Q3/2026-06-16): manual re-runnable "Copy data" action ───────────
+    # The relocated B5 data move (now an explicit verb, not auto-at-cutover).
+    # Emitted by Api\CoexistencePresenter::actionCopyData on a COMMITTED copy
+    # only (dry_run=false AND Bone 2xx), source='wing', actor_id = the operator
+    # (never body-supplied). Twin rule (NON-NEGOTIABLE, one commit): also in
+    # Wing's EventRepository::VALID_TYPES, else a Bone-proxied replay 400s.
+    # Pinned by tests/anatomy/test_devlog_event_types.py.
+    #   coexistence_copy_data — uses coexist_svc; result_json
+    #     {coexistence_service, tag, source_migration_id, data_copied_at}.
+    "coexistence_copy_data",
     # ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ───────
     # The OPERATOR's supervision event for the button press — distinct from the
     # spawned agent's own agent_session_*/agent_tool_* lineage. Emitted by

@@ -95,6 +95,9 @@ final class RouterFactory
 		// Wing-DB-only). Before /cleanup/<tag> + the /<service> catch-alls.
 		$api->addRoute('api/v1/coexistence/<service>/promote', 'Coexistence:promote');
 		$api->addRoute('api/v1/coexistence/<service>/deactivate', 'Coexistence:deactivate');
+		// A4 (Q3): manual re-runnable "Copy data" into a secondary (tag in body,
+		// uniform with promote/deactivate). Before /cleanup/<tag> + catch-alls.
+		$api->addRoute('api/v1/coexistence/<service>/copy-data', 'Coexistence:copyData');
 		$api->addRoute('api/v1/coexistence/<service>/cancel', 'Coexistence:cancel');
 		$api->addRoute('api/v1/coexistence/<service>/cleanup/<tag>', 'Coexistence:cleanup');
 		$api->addRoute('api/v1/coexistence', 'Coexistence:default');
@@ -170,6 +173,9 @@ final class RouterFactory
 		// first-match-wins router hits the verb form first.
 		$router->addRoute('coexistence/<service>/toggle-primary', 'Coexistence:togglePrimary');
 		$router->addRoute('coexistence/<service>/deactivate-secondary', 'Coexistence:deactivateSecondary');
+		// A4 (Q3): manual re-runnable "Copy data" into a secondary track. Before
+		// the bare 'coexistence' catch-all (first-match-wins).
+		$router->addRoute('coexistence/<service>/copy-data', 'Coexistence:copyData');
 		$router->addRoute('coexistence/<service>/cancel', 'Coexistence:cancel');
 		$router->addRoute('coexistence', 'Coexistence:default');
 

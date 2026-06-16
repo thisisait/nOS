@@ -10,6 +10,12 @@
 # state write, so the single-primary invariant (active=1 ⟺ role='primary') is
 # never violated. Re-promoting the other track reverts the toggle (symmetric).
 #
+# POINTER FLIP ONLY (A4 / Q3, 2026-06-16): promote runs NO migration data-
+# transform (the B5 auto-at-promote hook was REVERTED). The data move is the
+# explicit, re-runnable "Copy data" action — run tasks/coexistence-copy-data.yml
+# (coexist-copy-data) right BEFORE this toggle to capture the latest data into
+# the secondary's cluster. Flow: provision(empty) → [Copy data] → [Promote].
+#
 # dry_run defaults TRUE (mutating verb): plan first, then re-run with
 # coexist_dry_run=false to commit.
 #
