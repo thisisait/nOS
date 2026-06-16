@@ -436,3 +436,23 @@ The first real end-to-end exercise — every step an agent/operator action visib
 ### Morning supervision
 
 The operator reviews the MR on the local forge, answers the §7 open questions (which gate the final shape), and — once satisfied — merges + runs a **supervised** playbook. Only then can pg16→17 (§8) be driven through the live UI. Nothing in the overnight run touches the live host or merges.
+
+---
+
+## 7-RESOLVED — operator decisions (2026-06-16) + the adjustment round
+
+The §7 open questions were resolved by the operator. The overnight build (`feat/agentic-upgrade-coexistence`, merged to `dev` `d37c5f9f`) shipped the §7 **defaults**; this **adjustment round** applies the four deviations. The build agents for the adjustment round MUST honor these as the source of truth.
+
+**As built (no change needed):**
+- **Q1 pull** ✅ — Wing learns of the merge via `migration-pr.sh --mark-merged` / next-deploy ingest; no inbound Bone webhook.
+- **Q2 declarative** ✅ — `nos:migration:write` is the agent's audit identity; the forge MR + operator merge is the real gate.
+- **Q6 Tier-1 (admin)** ✅ — all coexistence toggle/cancel/copy/promote controls are admin-only.
+- **Q7 pg-only first** ✅ — author `postgresql 16→17` only on the first run; `uptime_kuma 1→2` (migration-only, `coexistence_supported=false`) deferred until PG is proven.
+
+**Deviations to BUILD (the adjustment round):**
+- **Q8 — AgentKit-native migration-author (was: `pulse-run-agent.sh` CLI).** migration-author runs NATIVELY in AgentKit so it appears in Wing `/agents`, creates `agent_sessions`/`threads`/`iterations`, and emits OTel spans → Grafana `22-ai-agents` + the timeline (one unified runtime for all operational agents). **Requires a NEW gated file-write tool in AgentKit's `ToolRegistry`** — scoped to the repo working tree, PATH-ALLOWLISTED to exactly the migration YAML dir (`files/anatomy/migrations/`) + `default.config.yml`, NO path escape, every write audited (`agent_tool_use`/`agent_tool_result` events). **Security is unchanged: the write tool makes NOTHING live — the review MR + operator merge remains the wall.** Pin the write-tool path-scope + escape-refusal with a security gate.
+- **Q5 — Wing "Promote to migration" button → AgentKit (was: CLI-first).** The agent is fired by a Wing `/upgrades` Tier-1 "Promote to migration" button → Bone → AgentKit `run-agent` (NOT the CLI wrapper as the primary path). The CLI wrapper `run-migration-author.sh` may remain as an operator/CI fallback.
+- **Q3 — manual "Copy data" action (was: auto data-copy at cutover).** The data move (`pg_dumpall` dump → restore into the secondary's fresh cluster) is an EXPLICIT operator-triggered action in the coexistence/migration UI section, SEPARATE from the promote toggle, and **RE-RUNNABLE** (idempotent into the secondary cluster) so the operator runs it right before promote to capture the latest data. **UNDO the B5 auto-at-cutover hook** — cutover no longer implicitly runs the migration's data-transform; the explicit "Copy data" action does. Flow becomes: provision (empty) → **[operator: Copy data]** → **[operator: Promote primary]**. (Freshness: re-run "Copy data" right before promote; no implicit final-sync coupling.)
+- **Q4 — TTL configurable [3,60] default 7; rollback one-click (was: fixed 7).** `coexistence_secondary_ttl_days` is operator-configurable, VALIDATED to the inclusive range **[3, 60]** days, default **7**. Forward promote keeps the typed `PRIMARY` confirm; the **rollback** (re-promote the prior primary) is **ONE-CLICK** (fast, emergency-friendly).
+
+The adjustment round is built agent-driven on `feat/migration-author-agentkit` (off `dev`), review-gated MR, NO live run — same charter as §9. Its build spec is synthesized into `docs/plans/agentic-upgrade-adjustments-design.md`.
