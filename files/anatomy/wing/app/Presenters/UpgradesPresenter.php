@@ -104,6 +104,88 @@ final class UpgradesPresenter extends BasePresenter
 	}
 
 	/**
+	 * POST /upgrades/<service>/cancel-planned (F3, 2026-06-18) — the Tier-1
+	 * "Unqueue" control on a planned row. Resets a planned upgrade back to
+	 * unqueued so the operator can re-run the plan-choice flow to TEST it — via
+	 * the machinery, NOT a hand DB poke. Reuses UpgradeRepository::cancelPlanned
+	 * (flips status planned → cancelled by id; no parallel path).
+	 *
+	 * Tier-1 inherited ($minAccessTier=1, BasePresenter::startup). CSRF via
+	 * requirePostMethod. The operator identity is read from the forward-auth
+	 * header (never the body) and travels as the audit actor_id. The matrix maps
+	 * one planned row per service, so the route keys on <service>; an optional
+	 * posted recipe_id disambiguates if more than one recipe is queued.
+	 */
+	public function actionCancelPlanned(string $service): void
+	{
+		$this->requirePostMethod();
+		$triggeredBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
+		$triggeredBy = $triggeredBy !== '' ? $triggeredBy : 'operator';
+		$recipeWanted = (string) ($this->getHttpRequest()->getPost('recipe_id') ?? '');
+
+		// Resolve the planned row id from service (and recipe, when posted) — the
+		// only place we read the queue; cancelPlanned() then guards on status.
+		$planned = null;
+		foreach ($this->upgrades->listPlanned() as $row) {
+			if ((string) ($row['service'] ?? '') !== $service) {
+				continue;
+			}
+			if ($recipeWanted !== '' && (string) ($row['recipe_id'] ?? '') !== $recipeWanted) {
+				continue;
+			}
+			$planned = $row;
+			break;
+		}
+
+		if ($planned === null || !isset($planned['id'])) {
+			$this->flashMessage("Refused — no planned upgrade for {$service} to unqueue.", 'error');
+			$this->redirect('Upgrades:default');
+		}
+
+		$this->upgrades->cancelPlanned((int) $planned['id']);
+		$this->emitUpgradeUnqueued($service, $planned, $triggeredBy);
+
+		$recipe = (string) ($planned['recipe_id'] ?? '');
+		$this->flashMessage(
+			"Unqueued {$service}" . ($recipe !== '' ? "/{$recipe}" : '')
+			. " — Plan it again to re-run the plan-choice flow.",
+			'success',
+		);
+		$this->redirect('Upgrades:default');
+	}
+
+	/**
+	 * Best-effort upgrade_unqueued emit (F3) — the operator's unqueue supervision
+	 * event. actor_id is the operator; result carries the row identity so the
+	 * audit reconstructs which queued upgrade was reset. Never blocks the cancel:
+	 * an audit failure must not surface as a UI error after the row already
+	 * flipped to cancelled.
+	 *
+	 * @param array<string,mixed> $planned
+	 */
+	private function emitUpgradeUnqueued(string $service, array $planned, string $triggeredBy): void
+	{
+		try {
+			$this->events->insert([
+				'type'       => 'upgrade_unqueued',
+				'task'       => 'unqueue-planned: ' . $service
+					. (isset($planned['recipe_id']) ? '/' . (string) $planned['recipe_id'] : ''),
+				'source'     => 'wing',
+				'actor_id'   => $triggeredBy,
+				'upgrade_id' => isset($planned['id']) ? (string) $planned['id'] : null,
+				'result'     => [
+					'service'        => $service,
+					'recipe_id'      => $planned['recipe_id'] ?? null,
+					'target_version' => $planned['target_version'] ?? null,
+					'planned_by'     => $planned['planned_by'] ?? null,
+				],
+			]);
+		} catch (\Throwable) {
+			// audit failure must not block the operator's action.
+		}
+	}
+
+	/**
 	 * POST /upgrades/<service>/<recipe>/plan-choice — the browser commit target
 	 * for the plan-choice modal (B4b). The operator picks one of two paths in the
 	 * modal, the hidden CSRF form posts here:

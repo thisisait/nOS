@@ -94,6 +94,20 @@
 						   title="Queued by {$row['planned_by']}{if !empty($row['planned_recipe_id'])} ({$row['planned_recipe_id']}){/if} — applies under --tags upgrade. View the recipe (what it will do).">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</a>
 						<a class="mig-btn upg-planned-recipe-link" href="/upgrades/{$row['service']}{$plannedAnchor}"
 						   aria-label="View the planned recipe for {$row['service']}">view recipe</a>
+						{* F3: Unqueue resets the queued row (planned → cancelled) so the
+						   operator can Plan it again and re-run the plan-choice flow to
+						   TEST it — the machinery path, never a hand DB poke. POST form +
+						   window.confirm on the button (the lightweight supervision gate;
+						   non-destructive — a queued row was never provisioned). The
+						   confirm lives on the button, not the <form>, so the _csrf input
+						   stays adjacent to the form tag (CSRF-sweep gate). *}
+						<form method="post" action="{plink Upgrades:cancelPlanned, service => $row['service']}" style="display:inline">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">
+							{if !empty($row['planned_recipe_id'])}<input type="hidden" name="recipe_id" value="{$row['planned_recipe_id']}">{/if}
+							<button type="submit" class="mig-btn upg-unqueue-btn"
+							        onclick="return window.confirm('Unqueue the planned upgrade for {$row['service']}? It returns to unplanned so you can Plan it again and re-run the plan-choice flow. Nothing is applied.');"
+							        title="Unqueue {$row['service']} — reset the planned upgrade to re-test the plan-choice flow">Unqueue</button>
+						</form>
 					{elseif !empty($row['recipe_available']) && !empty($row['recipes'])}
 						{var $matrixRecipeId = $row['next_recipe_id'] ?? $row['recipes'][0]['recipe_id']}
 						{* B4b/F1: Plan opens the plan-choice modal. The matrix plans the

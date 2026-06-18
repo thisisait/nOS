@@ -79,6 +79,17 @@ A4_COPY_DATA_TYPES = (
     "coexistence_copy_data",
 )
 
+# ── F3 (2026-06-18): Unqueue / Cancel a planned upgrade (Tier-1) ─────────────
+# The operator's supervision event for the "Unqueue" control on a planned
+# upgrade row (UpgradesPresenter::emitUpgradeUnqueued — the machinery path to
+# reset a queued upgrade and re-run the plan-choice flow for a re-test). Same
+# NON-NEGOTIABLE twin-parity contract: must be in BOTH Bone's events.py
+# VALID_TYPES and Wing's EventRepository::VALID_TYPES, else a Bone-proxied
+# replay/forward of the row 400s (the 2026-05-17 remediator incident class).
+F3_UNQUEUE_TYPES = (
+    "upgrade_unqueued",
+)
+
 
 def test_bone_whitelists_devlog_types():
     src = BONE.read_text(encoding="utf-8")
@@ -176,6 +187,32 @@ def test_a3_promote_presenter_emits_the_twinned_type():
         REPO / "files/anatomy/wing/app/Presenters/UpgradesPresenter.php"
     ).read_text(encoding="utf-8")
     for t in A3_PROMOTE_BUTTON_TYPES:
+        assert f"'{t}'" in presenter, (
+            f"UpgradesPresenter no longer emits {t} — emitter/whitelist drift"
+        )
+
+
+def test_f3_unqueue_type_present_in_both_twins():
+    """F3: the operator's `upgrade_unqueued` supervision event for the "Unqueue"
+    control on a planned upgrade is in BOTH twins. UpgradesPresenter emits it
+    Wing-side; the twin keeps a Bone-proxied replay/forward of the row from
+    400'ing (the 2026-05-17 remediator incident class). One-commit twin rule.
+    """
+    bone = BONE.read_text(encoding="utf-8")
+    php = PHP_REPO.read_text(encoding="utf-8")
+    for t in F3_UNQUEUE_TYPES:
+        assert f'"{t}"' in bone, f"Bone VALID_TYPES missing F3 type {t}"
+        assert f"'{t}'" in php, f"Wing EventRepository VALID_TYPES missing F3 type {t}"
+
+
+def test_f3_unqueue_presenter_emits_the_twinned_type():
+    """The emitter and the whitelist agree: UpgradesPresenter emits exactly the
+    `upgrade_unqueued` type the twins whitelist (catches a future rename on one
+    side only — the emitter or the whitelist drifting apart)."""
+    presenter = (
+        REPO / "files/anatomy/wing/app/Presenters/UpgradesPresenter.php"
+    ).read_text(encoding="utf-8")
+    for t in F3_UNQUEUE_TYPES:
         assert f"'{t}'" in presenter, (
             f"UpgradesPresenter no longer emits {t} — emitter/whitelist drift"
         )

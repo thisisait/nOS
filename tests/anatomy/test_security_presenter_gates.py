@@ -73,9 +73,13 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         # (enforced by BasePresenter::startup()) rather than a startup()
         # override. Added 2026-05-30 after security-review flagged the missing
         # gate (same A13.7 class as ApprovalsPresenter).
+        # actionCancelPlanned (F3, 2026-06-18) flips a queued upgrades_planned
+        # row planned → cancelled (the "Unqueue" control, the machinery path to
+        # re-test the plan-choice flow). Same Tier-1 + CSRF boundary as
+        # actionQueueUpgrade — a GET-based unqueue would be a phishing-link CSRF.
         "UpgradesPresenter",
         PRESENTERS / "UpgradesPresenter.php",
-        ["actionQueueUpgrade"],
+        ["actionQueueUpgrade", "actionCancelPlanned"],
     ),
     (
         # BreachesPresenter (gov P1) — Tier-1 READ-ONLY GDPR breach register +

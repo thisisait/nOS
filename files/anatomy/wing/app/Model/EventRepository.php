@@ -146,6 +146,16 @@ final class EventRepository
 		//     result_json {service, recipe_id, session_uuid, agent}. Twin of Bone's
 		//     events.py — pinned by test_devlog_event_types.py.
 		'migration_promote_requested',
+		// ── F3 (2026-06-18): Unqueue / Cancel a planned upgrade (Tier-1) ───
+		// The operator resets a planned upgrade from the /upgrades matrix (the
+		// machinery path to re-run plan-choice for a re-test). Emitted by
+		// UpgradesPresenter::emitUpgradeUnqueued, actor_id=operator
+		// (X-Authentik-Username, NEVER the agent), source='wing'; reuses
+		// UpgradeRepository::cancelPlanned (planned → cancelled); uses
+		// upgrade_id; result_json {service, recipe_id, target_version,
+		// planned_by}. Twin of Bone's events.py — pinned by
+		// test_devlog_event_types.py.
+		'upgrade_unqueued',
 	];
 
 	public function __construct(

@@ -164,6 +164,11 @@ final class RouterFactory
 		// — no new API route. Spawns the migration YAML + version bump write; the
 		// review MR (GATE 2) is the wall, nothing goes live.
 		$router->addRoute('upgrades/<service>/<recipe>/promote-to-migration', 'Upgrades:promoteToMigration');
+		// F3 (2026-06-18): Tier-1 "Unqueue" control on a planned upgrade — resets
+		// the queued row (planned → cancelled) so the operator can re-run the
+		// plan-choice flow to TEST it, via the machinery (not a hand DB poke).
+		// POST-only, CSRF-gated; before the /<service> catch-all (first-match-wins).
+		$router->addRoute('upgrades/<service>/cancel-planned', 'Upgrades:cancelPlanned');
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');

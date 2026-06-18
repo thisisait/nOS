@@ -182,6 +182,18 @@ VALID_TYPES = {
     #   migration_promote_requested — UpgradesPresenter::actionPromoteToMigration;
     #     actor_id=operator; result_json {service, recipe_id, session_uuid, agent}.
     "migration_promote_requested",
+    # ── F3 (2026-06-18): Unqueue / Cancel a planned upgrade (Tier-1) ────────
+    # The operator resets a planned upgrade from the /upgrades matrix (the
+    # machinery path to re-run the plan-choice flow for a re-test, instead of a
+    # hand DB poke). Emitted by UpgradesPresenter::emitUpgradeUnqueued with
+    # actor_id = the operator (X-Authentik-Username, NEVER the agent),
+    # source='wing'; reuses UpgradeRepository::cancelPlanned (status planned →
+    # cancelled). Twin rule (NON-NEGOTIABLE, one commit): also in Wing's
+    # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of this
+    # row 400s. Pinned by tests/anatomy/test_devlog_event_types.py.
+    #   upgrade_unqueued — UpgradesPresenter::actionCancelPlanned; uses upgrade_id;
+    #     result_json {service, recipe_id, target_version, planned_by}.
+    "upgrade_unqueued",
 }
 
 
