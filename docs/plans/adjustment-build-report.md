@@ -314,3 +314,116 @@ is read-only (filter-load probe + syntax-check).
   through the existing promote path; the rendered asymmetry is the one visual check.
 - **Full offline suite GREEN.** Delivery is the existing review-gated MR #3 to the local GitLab
   forge; nothing deploys.
+
+---
+
+## UI-fix round — F1 / F2 / F3 (2026-06-18) — all GREEN
+
+> **Read-only verification (re-run 2026-06-18).** Three follow-up UI fixes landed **after** the
+> A1–A5 report above (commits `e2d086fb`, `50923e6a`, `749284d1`). They close the gaps the A3/A4/A5
+> visual notes surfaced on the `/upgrades` matrix and its plan-choice modal. No live apply: only the
+> offline pytest suites, `--syntax-check`, and the frozen-venv `tools/ci-local.sh` gate. Output is
+> code on `feat/migration-author-agentkit`.
+
+| Fix | What it closes | Status | Reality |
+|---|---|---|---|
+| **F1** | `coexistence_supported` must flow recipe → `upgrade_recipes` → matrix → plan-choice modal (enable/disable option B + tooltip) | **GREEN** | Built + gated (`test_plan_choice_persistence.py` +189, `test_plan_choice_ui.py`). |
+| **F2** | A planned row must **show / link** the recipe (what the queued upgrade will do) | **GREEN** | Built + gated (`test_planned_recipe_link.py` +140). |
+| **F3** | A Tier-1 **Unqueue / Cancel** control on a planned upgrade (machinery, enables re-test) | **GREEN** | Built + gated (`test_devlog_event_types.py`, `test_security_presenter_gates.py` Tier-1). |
+
+### F1 — coexistence flag flows recipe → matrix → modal — GREEN
+
+The plan-choice modal's option (b) "coexist" radio was hardcoded off on the `/upgrades` **matrix**,
+greying it out even for `postgresql` / `grafana` (which *are* `coexistence_supported`). The flag now
+flows truthfully:
+
+- **Schema** — `upgrade_recipes.coexistence_supported INTEGER NOT NULL DEFAULT 0` added to both
+  `db/schema-extensions.sql` (CREATE TABLE) and the `init-db.php` `$addMissingColumns` sweep (so
+  existing DBs pick it up; SQLite has no bool → 0/1).
+- **Ingest** — `bin/ingest-upgrade-recipes.php` reads `coexistence_supported` from each
+  `upgrades/*.yml` recipe and `DELETE`+reinserts every row with the real 0/1 flag.
+- **Repository** — `UpgradeRepository` resolves `$next` (the lowest applicable / next step the
+  matrix plans) and exports `coexistence_supported` + `next_recipe_id` from **that** recipe, so the
+  modal plans the SAME recipe the flag describes.
+- **JS** — `upgrades-plan-choice.js` reads `data-coexist-supported`, disables the radio when 0, and
+  adds a hover **tooltip** (`This recipe does not support coexistence`) + un-hides the inline NA
+  notice; on a supported recipe it removes the tooltip and clears a stale checked state.
+
+> **NEEDS VISUAL REVIEW (F1):** that switch (b) "coexist" is **enabled** in the plan-choice modal for
+> `postgresql` (coexistence_supported) and **disabled with the tooltip** for `grafana` (or whichever
+> recipe is not coexistence_supported), on the `/upgrades` matrix Plan click — not only on
+> `/upgrades/<svc>`. The flag plumbing is pinned offline; the rendered enable/disable + tooltip is
+> the human check.
+
+### F2 — planned row shows / links the recipe — GREEN
+
+A queued row previously rendered only a static "planned" badge with no way to see WHAT it would do.
+The matrix is **not** a second recipe-rendering surface — it now deep-links the single one:
+
+- **Repository** — exports `planned_recipe_id` from the queued row.
+- **`default.latte`** — the badge becomes an `<a>` to `/upgrades/<service>#recipe-<id>` (deep-anchor
+  when the planned recipe id is known, else the service page), plus a sibling **"view recipe"** link;
+  the title carries the planner + recipe id.
+- **`service.latte`** — each recipe `<article>` gains `id="recipe-<id>"` as the deep-link target, so
+  the badge lands directly on the card that renders that recipe's steps / changelog. The matrix
+  links here; it never duplicates the rendering.
+
+> **NEEDS VISUAL REVIEW (F2):** that a planned row's badge + "view recipe" link navigate to the
+> correct recipe card on `/upgrades/<service>` and the `#recipe-<id>` anchor scrolls to it. The link
+> targets + anchor id are pinned offline; the navigation is the human check.
+
+### F3 — Tier-1 Unqueue / Cancel on a planned upgrade — GREEN
+
+There was no machinery path to reset a planned upgrade — re-testing the plan-choice flow meant a
+hand DB poke (the "vibing on the OS not nOS" anti-pattern). The Unqueue control closes that:
+
+- **Presenter** — `UpgradesPresenter::actionCancelPlanned($service)` is **Tier-1 inherited**
+  (`$minAccessTier = 1`, `BasePresenter::startup`), `requirePostMethod()` (CSRF — a GET unqueue
+  would be a phishing-link CSRF), operator read from `X-Authentik-Username` (never the body). It
+  resolves the planned row by service (+ optional posted `recipe_id`), reuses
+  `UpgradeRepository::cancelPlanned(id)` (status `planned → cancelled`, no parallel path), and
+  flashes a "Plan it again" hint. A best-effort `emitUpgradeUnqueued` audit emit never blocks the
+  cancel.
+- **Route** — `upgrades/<service>/cancel-planned` registered **before** the `upgrades/<service>`
+  catch-all (Nette first-match-wins). No new API route.
+- **Event twin** — `upgrade_unqueued` added to **both** `files/anatomy/bone/events.py` and Wing's
+  `EventRepository::VALID_TYPES` (one commit), `actor_id` = operator; pinned by
+  `test_devlog_event_types.py`.
+- **Button** — `default.latte` renders an inline POST `<form>` (`_csrf` adjacent to the form tag —
+  CSRF-sweep placement, optional `recipe_id` hidden input) with a `window.confirm` on the **button**
+  (the lightweight supervision gate — non-destructive, a queued row was never provisioned).
+- **Security gate** — `test_security_presenter_gates.py` now pins `actionCancelPlanned` alongside
+  `actionQueueUpgrade` as a Tier-1 + CSRF-gated action on `UpgradesPresenter`.
+
+> **NEEDS VISUAL REVIEW (F3):** that the **Unqueue** button renders on a planned row, the
+> `window.confirm` copy reads correctly, and after confirming the row returns to **unplanned** (so
+> Plan can be clicked again to re-run the plan-choice flow). The Tier-1 + CSRF + event twin are GREEN
+> offline; the rendered reset cycle is the human check.
+
+### Still needs VISUAL review after redeploy (F1 / F2 / F3)
+
+1. **F1 — plan-choice modal switch B** on the `/upgrades` **matrix**: enabled for `postgresql`,
+   disabled + tooltip for `grafana` (the matrix path, not just `/upgrades/<svc>`).
+2. **F2 — planned badge links to the recipe**: the "planned" badge + "view recipe" link land on the
+   correct `#recipe-<id>` card on `/upgrades/<service>`.
+3. **F3 — Unqueue resets a planned upgrade**: the Unqueue button + confirm flips the row back to
+   unplanned, re-enabling the Plan flow for a re-test.
+
+### Suite result (UI-fix round re-run, offline gates — all GREEN, read-only)
+
+| Gate | Result |
+|---|---|
+| `python3 -m pytest -q tests/anatomy` | **1634 passed, 4 skipped** |
+| `python3 -m pytest -q tests/upgrades tests/migrations` | **178 passed, 6 skipped** |
+| `ansible-playbook main.yml --syntax-check` | **clean** (`playbook: main.yml`) |
+| `tools/ci-local.sh` (frozen venv: ansible-core 2.21.0 + Python 3.13.13, lockfile collections) | **OK** — core filters load; `main.yml` syntax clean |
+| F1/F2/F3 gate subset (`test_plan_choice_persistence` + `test_plan_choice_ui` + `test_planned_recipe_link` + `test_devlog_event_types` + `test_security_presenter_gates`) | **78 passed, 1 skipped** |
+
+The anatomy count rose **1617 → 1634** (+17) since the A1–A5 report: the F1 plan-choice-persistence
+suite (+189 assertions across the new file), the F2 planned-recipe-link suite (+140), and the F3
+event-twin + Tier-1 security-gate additions.
+
+No live apply was performed: no `--tags` run, no docker, no `blank`, no write to the live
+`~/wing/app/data/wing.db`, no agent run against the host. The frozen-venv gate is read-only
+(filter-load probe + syntax-check). Delivery remains the existing review-gated MR #3 to the local
+GitLab forge; nothing deploys.
