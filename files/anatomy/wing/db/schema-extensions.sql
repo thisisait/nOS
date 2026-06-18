@@ -657,6 +657,7 @@ CREATE TABLE IF NOT EXISTS upgrade_recipes (
     severity      TEXT,                     -- patch | minor | breaking
     docs_url      TEXT,
     title         TEXT,
+    coexistence_supported INTEGER NOT NULL DEFAULT 0,  -- the recipe's coexistence_supported flag (B4b plan-choice option (b) gate)
     ingested_at   TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (service, recipe_id)
 );

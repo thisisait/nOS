@@ -84,25 +84,28 @@
 					{if !empty($row['planned'])}
 						<span class="badge badge-warning" title="Queued by {$row['planned_by']} — applies under --tags upgrade">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</span>
 					{elseif !empty($row['recipe_available']) && !empty($row['recipes'])}
-						{* B4b: Plan opens the plan-choice modal. The matrix recipe rows
-						   (DB upgrade_recipes) don't carry coexistence_supported, so the
-						   coexist option (b) is offered on the per-service /upgrades/<svc>
-						   page (BoxAPI recipes carry the flag) — here data-coexist-supported
-						   is 0. The <noscript> form below is the JS-off in-place fallback. *}
+						{var $matrixRecipeId = $row['next_recipe_id'] ?? $row['recipes'][0]['recipe_id']}
+						{* B4b/F1: Plan opens the plan-choice modal. The matrix plans the
+						   next applicable recipe ($next), and data-coexist-supported now
+						   flows truthfully from upgrade_recipes.coexistence_supported
+						   (ingested from the recipe YAML) — so option (b) is enabled for
+						   coexistence-capable recipes (postgresql/grafana) and greyed out
+						   (with a tooltip) otherwise, exactly as on /upgrades/<svc>. The
+						   <noscript> form below is the JS-off in-place fallback. *}
 						<button type="button"
 								class="mig-btn"
 								data-action="open-plan-choice"
 								data-service="{$row['service']}"
-								data-recipe-id="{$row['recipes'][0]['recipe_id']}"
-								data-target="{$row['latest'] ?? ''}"
-								data-coexist-supported="0"
-								title="Plan {$row['recipes'][0]['recipe_id']}">Plan</button>
+								data-recipe-id="{$matrixRecipeId}"
+								data-target="{$row['stable'] ?? $row['latest'] ?? ''}"
+								data-coexist-supported="{if !empty($row['coexistence_supported'])}1{else}0{/if}"
+								title="Plan {$matrixRecipeId}">Plan</button>
 						<noscript>
-							<form method="post" action="{plink Upgrades:planChoice, service => $row['service'], recipe => $row['recipes'][0]['recipe_id']}" style="display:inline">
+							<form method="post" action="{plink Upgrades:planChoice, service => $row['service'], recipe => $matrixRecipeId}" style="display:inline">
 								<input type="hidden" name="_csrf" value="{$csrfToken}">
 								<input type="hidden" name="plan_mode" value="migration">
-								<input type="hidden" name="target_version" value="{$row['latest'] ?? ''}">
-								<button type="submit" class="mig-btn" title="Queue {$row['recipes'][0]['recipe_id']} → applied under --tags upgrade">Plan (in-place)</button>
+								<input type="hidden" name="target_version" value="{$row['stable'] ?? $row['latest'] ?? ''}">
+								<button type="submit" class="mig-btn" title="Queue {$matrixRecipeId} → applied under --tags upgrade">Plan (in-place)</button>
 							</form>
 						</noscript>
 					{/if}

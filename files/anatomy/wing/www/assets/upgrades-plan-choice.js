@@ -3,8 +3,9 @@
  * Sits between the "Plan" click and the queue write on /upgrades + /upgrades/<svc>.
  * The operator picks (a) Migration in-place (default) or (b) Coexisting new version
  * with a data copy. Option (b) is enabled only when the triggering control declares
- * data-coexist-supported="1" (BoxAPI recipes carry coexistence_supported; the matrix
- * rows do not, so they pass 0).
+ * data-coexist-supported="1". The flag flows truthfully from the recipe both on the
+ * /upgrades matrix (upgrade_recipes.coexistence_supported, ingested from the recipe
+ * YAML — F1) and on /upgrades/<svc> (BoxAPI recipes carry coexistence_supported).
  *
  * Vanilla data-action delegation — same pattern as migrations.js /
  * widget-cutover-confirm.js. NO fetch: submit-plan-choice sets the hidden inputs and
@@ -69,6 +70,15 @@
 			if (!this.coexistLabel || !this.coexistRadio) return;
 			this.coexistRadio.disabled = !supported;
 			this.coexistLabel.setAttribute('data-disabled', supported ? 'false' : 'true');
+			// Hover tooltip on the disabled option + the inline NA notice. Both
+			// reflect the recipe's coexistence_supported (F1: flows from
+			// upgrade_recipes.coexistence_supported on the matrix, the recipe YAML
+			// on /upgrades/<svc>). Enabled → no tooltip, NA notice hidden.
+			if (supported) {
+				this.coexistLabel.removeAttribute('title');
+			} else {
+				this.coexistLabel.setAttribute('title', 'This recipe does not support coexistence');
+			}
 			if (this.coexistNa) this.coexistNa.hidden = supported;
 			if (!supported && this.coexistRadio.checked) {
 				this.coexistRadio.checked = false;

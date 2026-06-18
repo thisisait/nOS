@@ -38,8 +38,8 @@ $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->exec('DELETE FROM upgrade_recipes');
 
 $ins = $db->prepare(
-    'INSERT INTO upgrade_recipes (service, recipe_id, from_pattern, to_version, severity, docs_url, title)
-     VALUES (:service, :recipe_id, :from_pattern, :to_version, :severity, :docs_url, :title)'
+    'INSERT INTO upgrade_recipes (service, recipe_id, from_pattern, to_version, severity, docs_url, title, coexistence_supported)
+     VALUES (:service, :recipe_id, :from_pattern, :to_version, :severity, :docs_url, :title, :coexistence_supported)'
 );
 
 $count = 0;
@@ -71,6 +71,9 @@ foreach (glob(rtrim($recipesDir, '/') . '/*.yml') ?: [] as $file) {
             ':severity'     => (string) ($recipe['severity'] ?? 'minor'),
             ':docs_url'     => $docsUrl,
             ':title'        => (string) $title,
+            // F1: the per-recipe coexistence_supported flag → /upgrades matrix →
+            // plan-choice modal option (b) gate. Stored as 0/1 (SQLite has no bool).
+            ':coexistence_supported' => !empty($recipe['coexistence_supported']) ? 1 : 0,
         ]);
         $count++;
     }

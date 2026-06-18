@@ -69,6 +69,10 @@ UPGRADES_PLANNED_NEW = [
     "plan_mode", "coexistence_planned_id", "migration_uuid", "plan_choice_at",
 ]
 
+INGEST = REPO / "files/anatomy/wing/bin/ingest-upgrade-recipes.php"
+TEMPLATES = REPO / "files/anatomy/wing/app/Templates/Upgrades"
+UPGRADES_DIR = REPO / "upgrades"
+
 
 # ── New TABLE lives in schema-extensions.sql ───────────────────────────────
 
@@ -366,6 +370,191 @@ def test_fresh_db_round_trips_plan_choice_links():
             assert row[1] == coexist_id, "coexistence_planned_id back-link wrong"
             assert row[2] == upgrade_id, "parent_upgrade_id not persisted"
             assert row[3] == 1, "data_copy not persisted"
+        finally:
+            con.close()
+
+
+# ── F1: coexistence_supported flows recipe → upgrade_recipes → matrix → modal ─
+#
+# Live bug (operator visual review of /upgrades): the plan-choice modal ALWAYS
+# greyed out option (b) "coexisting" because the matrix rows did not carry
+# coexistence_supported (the DB column / template hardcoded data-coexist-supported
+# =0). End-to-end fix: recipe YAML coexistence_supported → upgrade_recipes column →
+# UpgradeRepository::matrix() row field → default.latte data-attr → modal radio.
+
+def test_upgrade_recipes_has_coexistence_supported_column_in_schema():
+    """The upgrade_recipes CREATE TABLE declares coexistence_supported so a FRESH
+    wing.db carries it (the ingest fills it per-recipe)."""
+    create = _create_table_block(SCHEMA.read_text(), "upgrade_recipes")
+    assert "coexistence_supported" in create, (
+        "upgrade_recipes must declare coexistence_supported in schema-extensions.sql"
+    )
+
+
+def test_upgrade_recipes_coexistence_column_in_alter_sweep():
+    """An EXISTING wing.db (CREATE TABLE IF NOT EXISTS is a no-op there) picks up
+    coexistence_supported via the init-db.php ALTER sweep — else the column never
+    materializes on upgrade and the matrix flag is always NULL/false."""
+    src = INITDB.read_text()
+    assert "$addMissingColumns($db, 'upgrade_recipes'" in src, (
+        "upgrade_recipes must be ALTER-swept for coexistence_supported"
+    )
+    sweep = _sweep_block(src, "upgrade_recipes")
+    assert "'coexistence_supported'" in sweep, (
+        "upgrade_recipes ALTER sweep missing coexistence_supported"
+    )
+
+
+def test_ingest_stores_coexistence_supported_from_recipe():
+    """ingest-upgrade-recipes.php reads the per-recipe coexistence_supported flag
+    and INSERTs it into the upgrade_recipes column (0/1)."""
+    src = INGEST.read_text()
+    assert ":coexistence_supported" in src and "coexistence_supported)" in src, (
+        "INSERT must bind coexistence_supported"
+    )
+    assert "$recipe['coexistence_supported']" in src, (
+        "ingest must read coexistence_supported off each recipe"
+    )
+
+
+def test_matrix_row_carries_coexistence_supported_from_next_recipe():
+    """UpgradeRepository::matrix() stamps coexistence_supported onto each row from
+    the applicable/next recipe (the one the matrix Plan modal queues), not a
+    hardcoded false."""
+    src = (MODEL / "UpgradeRepository.php").read_text()
+    assert "'coexistence_supported' => $coexistSupported" in src, (
+        "matrix() must add coexistence_supported to the row"
+    )
+    assert "$next['coexistence_supported']" in src, (
+        "the flag must come from the planned ($next) recipe"
+    )
+    # The matrix Plan modal must plan the SAME recipe the flag describes.
+    assert "'next_recipe_id'" in src and "$next['recipe_id']" in src, (
+        "matrix() must surface next_recipe_id so the modal plans the flagged recipe"
+    )
+
+
+def test_matrix_template_passes_coexist_supported_truthfully():
+    """default.latte derives data-coexist-supported from the row's
+    coexistence_supported (was hardcoded data-coexist-supported=0)."""
+    src = (TEMPLATES / "default.latte").read_text()
+    assert 'data-coexist-supported="0"' not in src, (
+        "default.latte must NOT hardcode data-coexist-supported=0"
+    )
+    assert "$row['coexistence_supported']" in src, (
+        "default.latte must read the row's coexistence_supported"
+    )
+    assert "data-coexist-supported=" in src
+    # service.latte continues to read the per-recipe flag.
+    svc = (TEMPLATES / "service.latte").read_text()
+    assert "$r['coexistence_supported']" in svc
+
+
+def test_plan_choice_js_disables_radio_and_tooltips_when_unsupported():
+    """upgrades-plan-choice.js disables option (b) off data-coexist-supported and
+    shows a 'does not support coexistence' tooltip when disabled."""
+    src = (REPO / "files/anatomy/wing/www/assets/upgrades-plan-choice.js").read_text()
+    assert "coexistSupported = btn.dataset.coexistSupported === '1'" in src, (
+        "JS must read data-coexist-supported"
+    )
+    assert "this.coexistRadio.disabled = !supported" in src, (
+        "JS must disable the (b) radio when unsupported"
+    )
+    assert "does not support coexistence" in src, (
+        "JS must set a tooltip when coexistence is unsupported"
+    )
+
+
+@pytest.mark.skipif(
+    shutil.which("php") is None, reason="php unavailable — skip live DB build"
+)
+def test_fresh_db_upgrade_recipes_coexistence_column_round_trips():
+    """A fresh init-db'd wing.db carries upgrade_recipes.coexistence_supported and
+    round-trips a 0/1 flag (vendor-free: a direct INSERT, no Symfony\\Yaml). Proves
+    the schema/ALTER path the matrix row reads from, independent of the ingest's
+    composer deps."""
+    with tempfile.TemporaryDirectory(prefix="wing-f1c-") as tmp:
+        proc = subprocess.run(
+            ["php", str(INITDB), f"--data-dir={tmp}"],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, f"init-db.php failed: {proc.stderr}"
+        con = sqlite3.connect(str(pathlib.Path(tmp) / "wing.db"))
+        try:
+            cols = {r[1] for r in con.execute("PRAGMA table_info(upgrade_recipes)")}
+            assert "coexistence_supported" in cols, "column did not materialize"
+            con.execute(
+                "INSERT INTO upgrade_recipes(service,recipe_id,coexistence_supported) "
+                "VALUES('postgresql','pg-16-to-17',1)"
+            )
+            con.execute(
+                "INSERT INTO upgrade_recipes(service,recipe_id,coexistence_supported) "
+                "VALUES('erpnext','erp-x-to-y',0)"
+            )
+            con.commit()
+            got = dict(con.execute(
+                "SELECT recipe_id, coexistence_supported FROM upgrade_recipes "
+                "ORDER BY recipe_id"
+            ).fetchall())
+            assert got["pg-16-to-17"] == 1, "coexistence flag did not round-trip (enable b)"
+            assert got["erp-x-to-y"] == 0, "non-coexistence recipe must store 0 (disable b)"
+            # The DEFAULT is 0 so a legacy/omitted recipe disables (b) safely.
+            con.execute("INSERT INTO upgrade_recipes(service,recipe_id) VALUES('x','x-r')")
+            con.commit()
+            dflt = con.execute(
+                "SELECT coexistence_supported FROM upgrade_recipes WHERE recipe_id='x-r'"
+            ).fetchone()[0]
+            assert dflt == 0, "coexistence_supported must DEFAULT 0"
+        finally:
+            con.close()
+
+
+@pytest.mark.skipif(
+    shutil.which("php") is None, reason="php unavailable — skip live ingest build"
+)
+@pytest.mark.skipif(
+    not (REPO / "files/anatomy/wing/vendor/autoload.php").is_file(),
+    reason="wing vendor/ not installed (composer) — ingest needs Symfony\\Yaml",
+)
+def test_fresh_db_ingest_round_trips_coexistence_supported():
+    """A fresh init-db'd wing.db, ingested from the REAL upgrades/*.yml, persists
+    coexistence_supported truthfully per recipe: postgresql=1 (coexistence_supported
+    in the recipe YAML), and at least one recipe (e.g. erpnext / gitlab) =0. This is
+    the end-to-end recipe-YAML → column proof the matrix row reads from."""
+    with tempfile.TemporaryDirectory(prefix="wing-f1-") as tmp:
+        proc = subprocess.run(
+            ["php", str(INITDB), f"--data-dir={tmp}"],
+            capture_output=True, text=True,
+        )
+        assert proc.returncode == 0, f"init-db.php failed: {proc.stderr}"
+        ing = subprocess.run(
+            ["php", str(INGEST),
+             f"--recipes-dir={UPGRADES_DIR}", f"--data-dir={tmp}"],
+            capture_output=True, text=True,
+        )
+        assert ing.returncode == 0, f"ingest failed: {ing.stderr}"
+        con = sqlite3.connect(str(pathlib.Path(tmp) / "wing.db"))
+        try:
+            # The column exists on the fresh DB.
+            cols = {r[1] for r in con.execute("PRAGMA table_info(upgrade_recipes)")}
+            assert "coexistence_supported" in cols, "column did not materialize"
+            # postgresql recipes are coexistence_supported=true in the YAML → 1.
+            pg = con.execute(
+                "SELECT DISTINCT coexistence_supported FROM upgrade_recipes "
+                "WHERE service='postgresql'"
+            ).fetchall()
+            assert pg, "no postgresql recipes ingested"
+            assert all(r[0] == 1 for r in pg), (
+                "postgresql recipes must ingest coexistence_supported=1 (enable (b))"
+            )
+            # Some recipe is correctly 0 (e.g. erpnext / gitlab / authentik) → (b)
+            # stays disabled with the tooltip, proving the flag is not all-true.
+            zeros = con.execute(
+                "SELECT COUNT(*) FROM upgrade_recipes WHERE coexistence_supported=0"
+            ).fetchone()[0]
+            assert zeros > 0, (
+                "expected at least one non-coexistence recipe (e.g. erpnext) to ingest 0"
+            )
         finally:
             con.close()
 

@@ -620,6 +620,15 @@ $addMissingColumns($db, 'upgrades_planned', [
 	'plan_choice_at'         => 'TEXT',
 ]);
 
+// upgrade_recipes.coexistence_supported (F1) — the per-recipe coexistence flag,
+// ingested from upgrades/*.yml. Carries the recipe's coexistence_supported into
+// the /upgrades matrix → plan-choice modal option (b) enable/disable. Existing
+// DBs pick it up here (schema-extensions.sql CREATE TABLE is a no-op on an
+// existing table); the ingest then DELETE+reinserts every row with the real flag.
+$addMissingColumns($db, 'upgrade_recipes', [
+	'coexistence_supported' => 'INTEGER NOT NULL DEFAULT 0',
+]);
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

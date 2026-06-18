@@ -77,6 +77,15 @@ final class UpgradeRepository
 			$next = $applicable !== [] ? end($applicable) : $svcRecipes[0];   // lowest applicable, else highest
 			$stable = $next['to_version'] ?? $latest;
 			$sev = $next['severity'] ?? 'minor';
+			// F1: the plan-choice modal's option (b) "coexist" radio is enabled
+			// only when the recipe being planned declares coexistence_supported.
+			// The matrix plans $next (the applicable/next step), so the flag must
+			// come from THAT recipe — ingested from the recipe YAML into the
+			// upgrade_recipes.coexistence_supported column (0/1). Without this the
+			// matrix's "Plan" modal hardcoded the option off, greying it out even
+			// for postgresql/grafana (which ARE coexistence_supported).
+			$coexistSupported = !empty($next['coexistence_supported']);
+			$nextRecipeId = (string) ($next['recipe_id'] ?? ($svcRecipes[0]['recipe_id'] ?? ''));
 			$sevClass = match ($sev) {
 				'breaking'             => 'breaking',
 				'security', 'critical' => 'critical',
@@ -101,6 +110,11 @@ final class UpgradeRepository
 				'recipe_available' => true,
 				'recipe_count'     => count($svcRecipes),
 				'recipes'          => $svcRecipes,
+				// F1: the next applicable recipe + its coexistence flag, so the
+				// matrix's Plan modal plans the SAME recipe the flag describes and
+				// enables/disables option (b) truthfully (was hardcoded off).
+				'next_recipe_id'        => $nextRecipeId,
+				'coexistence_supported' => $coexistSupported,
 				'planned'          => isset($planned[$service]),
 				'planned_target'   => $planned[$service]['target_version'] ?? null,
 				'planned_by'       => $planned[$service]['planned_by'] ?? null,

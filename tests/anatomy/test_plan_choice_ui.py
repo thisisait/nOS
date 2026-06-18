@@ -148,9 +148,15 @@ def _template_wires_modal(path: Path) -> str:
 
 def test_default_template_wires_plan_choice():
     src = _template_wires_modal(DEFAULT_LATTE)
-    # Matrix rows lack coexistence_supported → option (b) disabled there.
-    assert 'data-coexist-supported="0"' in src, (
-        "matrix Plan control must pass data-coexist-supported=0 (recipe rows lack the flag)"
+    # F1: the matrix row now CARRIES coexistence_supported (ingested into the
+    # upgrade_recipes column, stamped onto the matrix row from the planned recipe).
+    # The Plan control passes it truthfully — the old hardcoded
+    # data-coexist-supported="0" (which greyed out (b) even for postgresql) is gone.
+    assert 'data-coexist-supported="0"' not in src, (
+        "matrix Plan control must NOT hardcode data-coexist-supported=0 (F1: flow the flag)"
+    )
+    assert "$row['coexistence_supported']" in src, (
+        "matrix Plan control must gate data-coexist-supported on the row's coexistence_supported"
     )
 
 
