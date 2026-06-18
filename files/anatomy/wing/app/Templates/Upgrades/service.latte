@@ -58,7 +58,12 @@
 	</div>
 {else}
 	{foreach $recipes as $r}
-		<article class="upg-recipe" data-recipe-id="{$r['id']}">
+		{* F2: id="recipe-<id>" is the deep-link target for the matrix's
+		   "planned" badge (default.latte → /upgrades/<svc>#recipe-<id>), so a
+		   queued upgrade's badge lands directly on the card that renders its
+		   steps/changelog. The card body below is the single recipe-rendering
+		   surface; the matrix only links here. *}
+		<article id="recipe-{$r['id']}" class="upg-recipe" data-recipe-id="{$r['id']}">
 			<div class="upg-recipe-hdr">
 				<span class="sev-badge sev-{$r['severity']}">{$r['severity']}</span>
 				<span class="upg-recipe-from-to">

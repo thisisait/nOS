@@ -119,3 +119,11 @@
 .plan-choice-option[data-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 .plan-choice-option[data-disabled="true"] input[type="radio"] { cursor: not-allowed; }
 .plan-choice-coexist-na { font-size: 11px; color: var(--sev-breaking, var(--red)); }
+
+/* F2: the matrix "planned" badge is a deep-link to the recipe card on
+ * /upgrades/<service>#recipe-<id> (where the steps/changelog render) — keep it
+ * looking like a badge (no underline, inherit the warning colour) with a cursor
+ * affordance, and add a small inline "view recipe" link beside it. */
+.upg-planned-link { text-decoration: none; cursor: pointer; }
+.upg-planned-link:hover { text-decoration: underline; }
+.upg-planned-recipe-link { margin-left: 6px; }

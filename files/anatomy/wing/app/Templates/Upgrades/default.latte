@@ -82,7 +82,18 @@
 				</td>
 				<td class="upg-action-col">
 					{if !empty($row['planned'])}
-						<span class="badge badge-warning" title="Queued by {$row['planned_by']} — applies under --tags upgrade">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</span>
+						{* F2: the "planned" badge is a LINK to the recipe — /upgrades/<service>
+						   renders the recipe cards (steps/changelog), so the operator can see
+						   WHAT the queued upgrade will do. When the planned recipe id is known
+						   the link deep-anchors that card (#recipe-<id>); otherwise it lands on
+						   the service page. The matrix never duplicates recipe rendering — it
+						   only links to the single surface that owns it. *}
+						{var $plannedAnchor = !empty($row['planned_recipe_id']) ? '#recipe-' . $row['planned_recipe_id'] : ''}
+						<a class="badge badge-warning upg-planned-link"
+						   href="/upgrades/{$row['service']}{$plannedAnchor}"
+						   title="Queued by {$row['planned_by']}{if !empty($row['planned_recipe_id'])} ({$row['planned_recipe_id']}){/if} — applies under --tags upgrade. View the recipe (what it will do).">planned{if $row['planned_target']} &rarr; {$row['planned_target']}{/if}</a>
+						<a class="mig-btn upg-planned-recipe-link" href="/upgrades/{$row['service']}{$plannedAnchor}"
+						   aria-label="View the planned recipe for {$row['service']}">view recipe</a>
 					{elseif !empty($row['recipe_available']) && !empty($row['recipes'])}
 						{var $matrixRecipeId = $row['next_recipe_id'] ?? $row['recipes'][0]['recipe_id']}
 						{* B4b/F1: Plan opens the plan-choice modal. The matrix plans the

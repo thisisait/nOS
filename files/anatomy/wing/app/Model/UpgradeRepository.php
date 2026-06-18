@@ -118,6 +118,12 @@ final class UpgradeRepository
 				'planned'          => isset($planned[$service]),
 				'planned_target'   => $planned[$service]['target_version'] ?? null,
 				'planned_by'       => $planned[$service]['planned_by'] ?? null,
+				// F2: the recipe id behind a queued upgrade, so the matrix's
+				// "planned" badge can deep-link to the SPECIFIC recipe card on
+				// /upgrades/<service>#recipe-<id> (where the steps/changelog
+				// already render). The detail page is the single recipe-rendering
+				// surface — the matrix only links to it, never duplicates it.
+				'planned_recipe_id' => $planned[$service]['recipe_id'] ?? null,
 			];
 
 			// B4c: a coexisting service renders as TWO rows (primary + secondary),
