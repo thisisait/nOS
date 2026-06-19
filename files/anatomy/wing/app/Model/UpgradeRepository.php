@@ -380,15 +380,102 @@ final class UpgradeRepository
 	}
 
 	/**
-	 * All recipes for a given service.
+	 * All recipes for a given service — built OFFLINE from the local
+	 * upgrade_recipes catalog, the SAME source matrix() reads.
+	 *
+	 * F4 (2026-06-19): the /upgrades/<service> detail page rendered EMPTY because
+	 * this method sourced its `{service, docs_url, recipes:[]}` from a live Bone
+	 * call (`GET /api/upgrades/<service>`) that returns null/empty here — while
+	 * matrix() (the /upgrades list, which renders recipes fine) reads the local
+	 * SQLite table. The detail page is the single recipe-rendering surface (F2
+	 * deep-link target `#recipe-<id>`), so it MUST NOT depend on a live Bone call.
+	 *
+	 * Recipes come from `SELECT … FROM upgrade_recipes WHERE service = ?`, ordered
+	 * `to_version DESC` (matrix's order → [0] is the latest target). Each recipe
+	 * is mapped to the keys service.latte reads (id, from_regex, to, severity,
+	 * notes, changelog_url, coexistence_supported, applied). `applied` is a
+	 * best-effort flag from the local upgrades_applied mirror.
+	 *
+	 * BoxAPI is kept ONLY as an OPTIONAL best-effort overlay (e.g. an `upstream`
+	 * latest-version field): it NEVER empties the recipe list and a Bone outage
+	 * is invisible to the operator.
+	 *
+	 * Returns null ONLY when the service has no recipes at all (so the presenter's
+	 * `notFound` stays correct — true iff there is genuinely nothing to render).
+	 *
+	 * @return array{service:string, docs_url:?string, recipes:array<int,array<string,mixed>>, upstream?:?string}|null
 	 */
 	public function forService(string $service): ?array
 	{
-		$resp = $this->box->get('/api/upgrades/' . rawurlencode($service));
-		if ($resp['status'] >= 400 || !is_array($resp['body'])) {
+		// Applied recipe ids for this service (local mirror) → the per-card
+		// "applied" flag. Best-effort; an empty/absent mirror just means no flags.
+		$applied = [];
+		foreach ($this->db->table('upgrades_applied')->where('service', $service) as $a) {
+			if (!empty($a->recipe_id)) {
+				$applied[(string) $a->recipe_id] = true;
+			}
+		}
+
+		$recipes = [];
+		$docsUrl = null;
+		foreach (
+			$this->db->table('upgrade_recipes')
+				->where('service', $service)
+				->order('to_version DESC') as $r
+		) {
+			$row = $r->toArray();
+			$recipeId = (string) ($row['recipe_id'] ?? '');
+			// docs_url for the "Upstream docs" link — first non-empty recipe value.
+			if ($docsUrl === null && !empty($row['docs_url'])) {
+				$docsUrl = (string) $row['docs_url'];
+			}
+			$recipes[] = [
+				// service.latte recipe-card keys (mapped from the catalog columns).
+				'id'                    => $recipeId,
+				'recipe_id'             => $recipeId,
+				'from_regex'            => $row['from_pattern'] ?? null,
+				'from_pattern'          => $row['from_pattern'] ?? null,
+				'to'                    => $row['to_version'] ?? null,
+				'to_version'            => $row['to_version'] ?? null,
+				'severity'              => $row['severity'] ?? 'minor',
+				// `title` is the catalog's human description → the card's notes line;
+				// `docs_url` doubles as the per-recipe changelog link.
+				'notes'                 => $row['title'] ?? null,
+				'title'                 => $row['title'] ?? null,
+				'changelog_url'         => $row['docs_url'] ?? null,
+				'docs_url'              => $row['docs_url'] ?? null,
+				'coexistence_supported' => !empty($row['coexistence_supported']),
+				'applied'               => isset($applied[$recipeId]),
+			];
+		}
+
+		// notFound when the service has no recipes at all (presenter's `notFound`).
+		if ($recipes === []) {
 			return null;
 		}
-		return $resp['body'];
+
+		$out = [
+			'service'  => $service,
+			'docs_url' => $docsUrl,
+			'recipes'  => $recipes,
+		];
+
+		// Best-effort BoxAPI overlay: enrich with the live `upstream` latest
+		// version when Bone answers, but NEVER let a Bone outage empty the page.
+		// The recipe cards already come from the local catalog above.
+		try {
+			$resp = $this->box->get('/api/upgrades/' . rawurlencode($service));
+			if (($resp['status'] ?? 500) < 400 && is_array($resp['body'] ?? null)) {
+				$upstream = $resp['body']['upstream'] ?? null;
+				if ($upstream !== null && $upstream !== '') {
+					$out['upstream'] = (string) $upstream;
+				}
+			}
+		} catch (\Throwable) {
+			// Bone unreachable — the local catalog is authoritative; ignore.
+		}
+
+		return $out;
 	}
 
 	/**

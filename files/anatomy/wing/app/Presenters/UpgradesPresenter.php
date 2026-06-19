@@ -407,13 +407,18 @@ final class UpgradesPresenter extends BasePresenter
 
 	/**
 	 * Template vars:
-	 *   service:  string
-	 *   data:     array|null  — { service, docs_url, recipes: [...] } from BoxAPI
-	 *   history:  list<array> — past applied upgrades for this service
-	 *   drafts:   list<array> — agent-authored migration proposals (B4c): the
-	 *                           Proposals strip above the recipe cards, each with
-	 *                           a Review MR → (local forge) + Lineage deep-link.
-	 *   notFound: bool
+	 *   service:         string
+	 *   data:            array|null — { service, docs_url, recipes: [...] } from the
+	 *                                 LOCAL upgrade_recipes catalog (F4: no live Bone)
+	 *   recipes:         list<array> — spread from $data so service.latte's
+	 *                                 top-level {$recipes} renders the cards
+	 *   docs_url:        ?string    — upstream-docs link (from the recipe rows)
+	 *   installed:       ?string    — installed version (same source as /upgrades)
+	 *   installed_class: string     — version badge class
+	 *   category:        ?string
+	 *   history:         list<array> — past applied upgrades for this service
+	 *   drafts:          list<array> — agent-authored migration proposals (B4c)
+	 *   notFound:        bool        — true ONLY when the service has no recipes
 	 */
 	public function renderService(string $service): void
 	{
@@ -421,6 +426,31 @@ final class UpgradesPresenter extends BasePresenter
 		$this->template->service = $service;
 		$this->template->data = $data;
 		$this->template->notFound = $data === null;
+
+		// F4: service.latte reads top-level {$recipes}/{$docs_url}/{$installed}/…,
+		// NOT {$data[...]} — so the recipe cards (and the empty-state guard) hinge
+		// on these being set. Without the spread the page rendered the "No upgrade
+		// recipes" empty state even when forService() returned recipes.
+		$this->template->recipes = $data['recipes'] ?? [];
+		$this->template->docs_url = $data['docs_url'] ?? null;
+
+		// Installed version + badge class, taken from the same matrix the /upgrades
+		// list renders (keeps the detail header consistent with the list row).
+		$installed = null;
+		$installedClass = 'unknown';
+		$category = null;
+		foreach ($this->upgrades->matrix() as $row) {
+			if ((string) ($row['service'] ?? $row['id'] ?? '') === $service) {
+				$installed = $row['installed'] ?? null;
+				$installedClass = (string) ($row['installed_class'] ?? 'unknown');
+				$category = $row['category'] ?? null;
+				break;
+			}
+		}
+		$this->template->installed = $installed;
+		$this->template->installed_class = $installedClass;
+		$this->template->category = $category;
+
 		$this->template->history = $this->upgrades->history($service);
 		$this->template->drafts = $this->authored->forService($service);
 	}
