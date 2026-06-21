@@ -1,0 +1,54 @@
+---
+# macOS-as-managed-upgrade: install the cross-reboot continuation login agent.
+# Spec: docs/plans/macos-as-managed-upgrade-target.md (Increment 2).
+#
+# macOS-only by design: a macOS update is a macOS concept, and the resume agent
+# is a launchd LaunchAgent. The whole file is gated on the launchd service
+# manager, so a Linux host skips it cleanly (no systemd-user equivalent in v0).
+
+- name: "[OS-Resume] Ensure ~/.nos runtime dir exists (agent log + plan live here)"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+    state: directory
+    mode: '0700'
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['os-resume']
+
+- name: "[OS-Resume] Ensure continuation scripts are executable"
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/{{ item }}"
+    mode: '0755'
+  loop:
+    - files/anatomy/scripts/nos-boot-id.sh
+    - files/anatomy/scripts/nos-os-resume.sh
+    - files/anatomy/scripts/nos-os-settle.sh
+    - tools/nos-os-update-arm.sh
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['os-resume']
+
+- name: "[OS-Resume] Deploy launchd login agent plist"
+  ansible.builtin.template:
+    src: eu.thisisait.nos.resume.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.resume.plist"
+    mode: '0644'
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['os-resume']
+
+# Idempotence probe (same idiom as tasks/heartbeat.yml): `launchctl list <label>`
+# rc 0 = already loaded, so a steady-state re-run is changed=0.
+- name: "[OS-Resume] Check whether the resume agent is already loaded"
+  ansible.builtin.command: "launchctl list eu.thisisait.nos.resume"
+  register: _os_resume_loaded
+  changed_when: false
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['os-resume']
+
+- name: "[OS-Resume] Load the resume login agent"
+  ansible.builtin.command: >
+    launchctl load -w {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/eu.thisisait.nos.resume.plist
+  register: _os_resume_load
+  changed_when: _os_resume_loaded.rc | default(1) != 0
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['os-resume']

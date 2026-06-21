@@ -379,7 +379,8 @@
   ansible.builtin.shell: |
     set -euo pipefail
     if [ "$(uname -s)" = "Darwin" ]; then
-      sysctl -n kern.boottime | sed -E 's/.*sec = ([0-9]+).*/\1/'
+      # FIRST integer = boot epoch seconds (anchored sed; a greedy `.*sec=` grabs usec).
+      sysctl -n kern.boottime | sed -E 's/^[^0-9]*([0-9]+).*/\1/'
     else
       cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown
     fi

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>eu.thisisait.nos.resume</string>
+  <!--
+    Cross-reboot continuation: fires the resume executor at EVERY login
+    (RunAtLoad). It is a no-op unless a continuation plan is armed AND the host
+    rebooted into a different macOS since. One-shot per login (KeepAlive false) —
+    it checks the plan and exits; we never want it restarted in a loop.
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>{{ playbook_dir }}/files/anatomy/scripts/nos-os-resume.sh</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/.nos/os-resume-agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ ansible_facts['env']['HOME'] }}/.nos/os-resume-agent.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>{{ ansible_facts['env']['HOME'] }}</string>
+    <!--
+      A login agent inherits a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) which
+      lacks jq (Homebrew) and the docker CLI. Prepend the Homebrew + Docker-CLI
+      dirs so resume/settle can find jq, docker, etc. (sysctl/sw_vers/osascript
+      live in the system dirs already).
+    -->
+    <key>PATH</key>
+    <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+</dict>
+</plist>

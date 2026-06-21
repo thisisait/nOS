@@ -1755,6 +1755,15 @@
       tags: ['heartbeat', 'fleet']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # macOS-as-managed-upgrade: cross-reboot continuation login agent. Installs
+    # the resume LaunchAgent (a no-op unless an OS update is armed). macOS-only
+    # (self-gated to launchd). Install just this: --tags os-resume.
+    # ──────────────────────────────────────────────────────────────────────────
+    - import_tasks: tasks/os-resume.yml
+      when: install_os_resume | default(true)
+      tags: ['os-resume']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Backup – Restic automated backups
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/backup.yml

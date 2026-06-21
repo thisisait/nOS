@@ -132,6 +132,12 @@ fail_on_stack_errors: true
 # flips it true. Bypass a false-negative detection with -e nos_skip_at_rest_check=true.
 require_disk_encryption: false
 
+# ── macOS-as-managed-upgrade: cross-reboot continuation agent ────────────────
+# Installs the resume LaunchAgent (macOS-only) that settles nOS automatically
+# after an operator-triggered macOS update + restart. A no-op unless an update
+# is armed (tools/nos-os-update-arm.sh). See docs/plans/macos-as-managed-upgrade-target.md.
+install_os_resume: true
+
 # ── Fleet / Heartbeat ────────────────────────────────────────────────────────
 configure_heartbeat: false                # Heartbeat daemon for fleet reporting
 heartbeat_endpoint: ""                    # URL of the fleet management server

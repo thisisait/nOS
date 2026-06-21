@@ -153,6 +153,7 @@
       - "eu.thisisait.nos.wing.plist"
       - "eu.thisisait.nos.hermes.plist"
       - "eu.thisisait.nos.heartbeat.plist"
+      - "eu.thisisait.nos.resume.plist"
       - "eu.thisisait.nos.backup.rustfs.plist"
       - "eu.thisisait.nos.backup.exporter.plist"
       - "eu.thisisait.nos.backup.offsite.plist"
