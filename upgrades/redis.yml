@@ -6,9 +6,9 @@ maintainers: ["pazny"]
 notes: |
   Redis minor/major bumps are generally transparent: RDB/AOF on-disk format
   is backward-compatible across 6.x/7.x/8.x. The standard procedure is
-  restart on the new image. nos uses Redis only as a cache for Authentik
-  and a transient queue for Node-RED / n8n, so data loss on restart is
-  acceptable — we still snapshot for safety.
+  restart on the new image. nos uses Redis as a shared cache/queue for
+  Authentik, Infisical, Outline, Superset, Firefly, ERPNext, BookStack and
+  OnlyOffice, so data loss on restart is acceptable — we still snapshot for safety.
 
 recipes:
   - id: "redis-7-to-8"
@@ -26,6 +26,16 @@ recipes:
     requires:
       min_disk_free_gb: 1
       service_healthy: true
+
+    reset:
+      scope: stack
+      estimated_sec: 60
+      affected_services: [redis, authentik, infisical, outline, superset, firefly, erpnext, bookstack, onlyoffice]
+      reason: >-
+        compose.set_image_tag bounces the redis container (floor=container),
+        escalated to stack because Redis is a shared cache/queue forcing every
+        consumer (Authentik, Infisical, Outline, Superset, Firefly, ERPNext,
+        BookStack, OnlyOffice) to reconnect.
 
     pre:
       - id: backup_data
@@ -105,6 +115,16 @@ recipes:
     requires:
       min_disk_free_gb: 1
       service_healthy: true
+
+    reset:
+      scope: stack
+      estimated_sec: 60
+      affected_services: [redis, authentik, infisical, outline, superset, firefly, erpnext, bookstack, onlyoffice]
+      reason: >-
+        Forward-coverage track with identical steps (compose.set_image_tag ->
+        container floor); escalated to stack as a shared cache whose recreate
+        forces every consumer (Authentik, Infisical, Outline, Superset, Firefly,
+        ERPNext, BookStack, OnlyOffice) to reconnect. No-op when installed==to.
 
     pre:
       - id: backup_data

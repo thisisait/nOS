@@ -618,6 +618,12 @@ $addMissingColumns($db, 'upgrades_planned', [
 	'coexistence_planned_id' => 'INTEGER',
 	'migration_uuid'         => 'TEXT',
 	'plan_choice_at'         => 'TEXT',
+	// Reset-scope / session-safety (Phase 2): the resolved blast radius survives
+	// queue → apply so the badge persists and the engine knows how to launch.
+	// All constant-default (SQLite ADD COLUMN discipline).
+	'reset_scope'            => 'TEXT',
+	'session_risk'           => 'INTEGER NOT NULL DEFAULT 0',
+	'run_mode'               => "TEXT NOT NULL DEFAULT 'attached'",
 ]);
 
 // upgrade_recipes.coexistence_supported (F1) — the per-recipe coexistence flag,
@@ -627,6 +633,14 @@ $addMissingColumns($db, 'upgrades_planned', [
 // existing table); the ingest then DELETE+reinserts every row with the real flag.
 $addMissingColumns($db, 'upgrade_recipes', [
 	'coexistence_supported' => 'INTEGER NOT NULL DEFAULT 0',
+	// Reset-scope (Phase 1): the AUTHORED reset block JSON as written in
+	// upgrades/<svc>.yml — bin/ingest-upgrade-recipes.php stores it verbatim and
+	// does NOT derive the floor (the engine's resolve_reset does that at apply
+	// time). NULL means the recipe authored no reset; the UI treats NULL as the
+	// 'container' display floor. A CI gate (test_upgrade_reset_floor.py) pins that
+	// every shipped recipe authors scope >= its derived floor, so the authored
+	// value the matrix displays never understates risk. Mirrors coexistence_supported.
+	'reset_json'            => 'TEXT',
 ]);
 
 $db->close();

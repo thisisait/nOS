@@ -38,8 +38,8 @@ $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->exec('DELETE FROM upgrade_recipes');
 
 $ins = $db->prepare(
-    'INSERT INTO upgrade_recipes (service, recipe_id, from_pattern, to_version, severity, docs_url, title, coexistence_supported)
-     VALUES (:service, :recipe_id, :from_pattern, :to_version, :severity, :docs_url, :title, :coexistence_supported)'
+    'INSERT INTO upgrade_recipes (service, recipe_id, from_pattern, to_version, severity, docs_url, title, coexistence_supported, reset_json)
+     VALUES (:service, :recipe_id, :from_pattern, :to_version, :severity, :docs_url, :title, :coexistence_supported, :reset_json)'
 );
 
 $count = 0;
@@ -63,6 +63,14 @@ foreach (glob(rtrim($recipesDir, '/') . '/*.yml') ?: [] as $file) {
             continue;
         }
         $title = $recipe['title'] ?? (trim(strtok((string) ($recipe['notes'] ?? ''), "\n")) ?: $recipe['id']);
+        // Reset-scope (Phase 1): persist the AUTHORED reset block (JSON) when the
+        // recipe declares one, else NULL. We do NOT derive a floor here — the engine
+        // (files/anatomy/module_utils/.../reset_scope.py) derives + escalates at apply
+        // time from the real step types, which is the authoritative path. The UI treats
+        // a NULL reset_json as the 'container' floor for display only. Mirrors the
+        // coexistence_supported extraction (DELETE+reinsert keeps it idempotent).
+        $reset = (isset($recipe['reset']) && is_array($recipe['reset'])) ? $recipe['reset'] : null;
+        $resetJson = $reset !== null ? json_encode($reset) : null;
         $ins->execute([
             ':service'      => $service,
             ':recipe_id'    => (string) $recipe['id'],
@@ -74,6 +82,7 @@ foreach (glob(rtrim($recipesDir, '/') . '/*.yml') ?: [] as $file) {
             // F1: the per-recipe coexistence_supported flag → /upgrades matrix →
             // plan-choice modal option (b) gate. Stored as 0/1 (SQLite has no bool).
             ':coexistence_supported' => !empty($recipe['coexistence_supported']) ? 1 : 0,
+            ':reset_json'   => $resetJson,
         ]);
         $count++;
     }

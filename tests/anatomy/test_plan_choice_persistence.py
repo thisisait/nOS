@@ -409,9 +409,12 @@ def test_ingest_stores_coexistence_supported_from_recipe():
     """ingest-upgrade-recipes.php reads the per-recipe coexistence_supported flag
     and INSERTs it into the upgrade_recipes column (0/1)."""
     src = INGEST.read_text()
-    assert ":coexistence_supported" in src and "coexistence_supported)" in src, (
-        "INSERT must bind coexistence_supported"
-    )
+    # coexistence_supported is bound and present in the INSERT column list —
+    # tolerate a trailing column after it (Phase 1 reset added reset_json, so the
+    # list is now `..., coexistence_supported, reset_json)`, not `...supported)`).
+    assert ":coexistence_supported" in src and (
+        "coexistence_supported)" in src or "coexistence_supported," in src
+    ), "INSERT must bind coexistence_supported"
     assert "$recipe['coexistence_supported']" in src, (
         "ingest must read coexistence_supported off each recipe"
     )

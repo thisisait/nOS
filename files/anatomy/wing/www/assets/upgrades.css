@@ -120,6 +120,43 @@
 .plan-choice-option[data-disabled="true"] input[type="radio"] { cursor: not-allowed; }
 .plan-choice-coexist-na { font-size: 11px; color: var(--sev-breaking, var(--red)); }
 
+/* Phase 2 — disruption preview (reset scope) + run_mode group. The badge colour
+ * escalates with the scope: container = minor, stack = breaking, host_* =
+ * critical. See docs/plans/upgrade-reset-scope-and-session-safety.md. */
+.plan-choice-disruption {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin: 0 0 8px;
+}
+.plan-choice-disruption-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text2);
+}
+.plan-choice-disruption-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); color: var(--text2); background: var(--bg);
+}
+.plan-choice-disruption-badge[data-scope="none"],
+.plan-choice-disruption-badge[data-scope="container"] {
+  color: var(--sev-minor); border-color: rgba(91,143,217,0.3); background: rgba(91,143,217,0.08);
+}
+.plan-choice-disruption-badge[data-scope="stack"] {
+  color: var(--sev-breaking); border-color: rgba(232,162,59,0.3); background: rgba(232,162,59,0.08);
+}
+.plan-choice-disruption-badge[data-scope="host_app"],
+.plan-choice-disruption-badge[data-scope="host_reboot"] {
+  color: var(--sev-critical); border-color: rgba(224,92,92,0.3); background: rgba(224,92,92,0.08);
+}
+.plan-choice-disruption-detail {
+  flex: 1 1 100%; font-size: 11px; color: var(--text2); line-height: 1.5;
+}
+.plan-choice-session-warning {
+  margin: 0 0 8px; padding: 10px 12px; border-radius: 6px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--sev-critical);
+  border: 1px solid rgba(224,92,92,0.3); background: rgba(224,92,92,0.08);
+}
+.plan-choice-runmode { border: 0; padding: 0; margin: 0 0 8px; }
+
 /* F2: the matrix "planned" badge is a deep-link to the recipe card on
  * /upgrades/<service>#recipe-<id> (where the steps/changelog render) — keep it
  * looking like a badge (no underline, inherit the warning colour) with a cursor
@@ -127,3 +164,24 @@
 .upg-planned-link { text-decoration: none; cursor: pointer; }
 .upg-planned-link:hover { text-decoration: underline; }
 .upg-planned-recipe-link { margin-left: 6px; }
+
+/* Phase 3: persistent host_reboot-pending banner. A successful host_reboot-class
+ * upgrade stages the change but nOS never auto-reboots — the operator must reboot
+ * to finish. Reuses the critical-severity callout palette (matches
+ * .plan-choice-session-warning) so it reads as a high-priority, action-required
+ * notice; sits at the very top of /upgrades until the marker clears. */
+.upg-reboot-banner {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 8px;
+  border: 1px solid rgba(224,92,92,0.3); background: rgba(224,92,92,0.08);
+}
+.upg-reboot-banner-icon { font-size: 16px; line-height: 1.3; color: var(--sev-critical); }
+.upg-reboot-banner-body { flex: 1 1 auto; }
+.upg-reboot-banner-title {
+  display: block; font-size: 13px; color: var(--sev-critical); margin-bottom: 4px;
+}
+.upg-reboot-banner-detail { font-size: 12px; color: var(--text2); line-height: 1.55; }
+.upg-reboot-banner-detail code {
+  font-family: 'SF Mono', monospace; font-size: 11px;
+}
+.upg-reboot-banner-ts { display: block; margin-top: 4px; color: var(--text2); opacity: 0.85; }

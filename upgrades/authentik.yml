@@ -32,6 +32,16 @@ recipes:
       service_healthy: true
       other_services_healthy: ["postgresql", "redis"]
 
+    reset:
+      scope: stack
+      estimated_sec: 240
+      affected_services: [authentik]
+      reason: >-
+        Major SSO upgrade: compose.set_image_tag force-recreates both
+        authentik-server+worker (container floor); escalated to stack because the
+        central SSO restart + forward-only Django migrations make every
+        forward_auth/native_oidc consumer reconnect and re-auth.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -115,6 +125,16 @@ recipes:
       service_healthy: true
       other_services_healthy: ["postgresql", "redis"]
 
+    reset:
+      scope: stack
+      estimated_sec: 180
+      affected_services: [authentik]
+      reason: >-
+        Cross-year image swap (2025->2026) of the central SSO recreates
+        server+worker (container floor); escalated to stack — the SSO restart +
+        forward-only DB migrations force all downstream OIDC/forward-auth
+        consumers to reconnect.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -184,6 +204,16 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
       other_services_healthy: ["postgresql", "redis"]
+
+    reset:
+      scope: stack
+      estimated_sec: 180
+      affected_services: [authentik]
+      reason: >-
+        At-target forward-coverage track (to==installed 2026.5.2); if it ever
+        applies it recreates server+worker (container floor) — escalated to stack
+        for the same central-SSO restart/downstream-reconnect blast radius as the
+        other authentik recipes.
 
     pre:
       - id: backup_data

@@ -304,6 +304,16 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             # Fall through to whatever the controller passed; engine will
             # surface a clear error if the recipe is empty.
             pass
+    # Resolve the blast-radius (reset) block: derive a floor from the recipe's
+    # step types, escalate the authored reset.scope to it (authored may only
+    # raise the floor), and surface scope + session_risk additively in every
+    # return path. Pure helper, no side effects — safe on the dry-run path too.
+    try:
+        from ansible.module_utils.nos_upgrade_actions.reset_scope import resolve_reset  # type: ignore
+    except ImportError:
+        from module_utils.nos_upgrade_actions.reset_scope import resolve_reset  # type: ignore
+    _reset = resolve_reset(recipe, service=service)
+
     run_ts = upgrade.get("run_ts", "")
     installed = upgrade.get("installed", "")
     recipe_id = recipe.get("id", "unknown")
@@ -445,6 +455,8 @@ def _apply_upgrade(upgrade, ctx, dry_run):
                 "error": "could not create backup dir for %s: %s" % (upgrade_id, exc),
                 "upgrade_id": upgrade_id, "service": service,
                 "steps_applied": 0, "duration_sec": 0,
+                "reset": _reset, "reset_scope": _reset["scope"],
+                "session_risk": _reset["session_risk"],
             }
 
     # NOTE: dry-run is NOT short-circuited here anymore. The phases below run
@@ -465,6 +477,8 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             "error": err, "upgrade_id": upgrade_id, "service": service,
             "steps_applied": len(all_applied),
             "duration_sec": int(_time.monotonic() - started),
+            "reset": _reset, "reset_scope": _reset["scope"],
+            "session_risk": _reset["session_risk"],
         }
 
     # Apply phase (no rollback on failure — state may be inconsistent but
@@ -477,6 +491,8 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             "error": err, "upgrade_id": upgrade_id, "service": service,
             "steps_applied": len(all_applied),
             "duration_sec": int(_time.monotonic() - started),
+            "reset": _reset, "reset_scope": _reset["scope"],
+            "session_risk": _reset["session_risk"],
         }
 
     # Post phase (rollback on failure)
@@ -491,6 +507,8 @@ def _apply_upgrade(upgrade, ctx, dry_run):
             "rollback_error": rb_err, "upgrade_id": upgrade_id, "service": service,
             "steps_applied": len(all_applied),
             "duration_sec": int(_time.monotonic() - started),
+            "reset": _reset, "reset_scope": _reset["scope"],
+            "session_risk": _reset["session_risk"],
         }
 
     result = {
@@ -503,11 +521,21 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         "to_version": recipe.get("to"),
         "steps_applied": len(all_applied),
         "duration_sec": int(_time.monotonic() - started),
+        "reset": _reset,
+        "reset_scope": _reset["scope"],
+        "session_risk": _reset["session_risk"],
     }
     if dry_run:
         # Nothing mutated — surface the per-step validation preview (action type
         # + would_* hints) so Wing / the operator sees exactly what an apply
         # WOULD do before confirming.
+        #
+        # Phase-3 contract (docs/plans/upgrade-reset-scope-and-session-safety.md
+        # §"Execution side"): a dry-run apply_upgrade is ALSO the engine's reset
+        # PREVIEW — `reset`/`reset_scope`/`session_risk` (set above, derived via
+        # resolve_reset at ~L315) are returned UNCONDITIONALLY on every path so
+        # the upgrade-engine pre-apply gate can decide whether to pause WITHOUT
+        # applying anything. Do not strip them from the dry-run return.
         result["steps"] = [{"phase": p, "id": s, "result": r}
                            for (p, s, r) in all_applied]
     return result

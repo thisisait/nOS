@@ -27,6 +27,20 @@
       }
     },
 
+    "reset": {
+      "type": ["object", "null"],
+      "description": "Blast-radius declaration; FORWARD-READY (Phase 4) on migrations — resolve_reset() folds legacy downtime.estimated_sec -> reset.estimated_sec and downtime.services_affected -> reset.affected_services when reset is absent, but no migration code path consumes it yet (the live consumer is the upgrade engine). session_risk derived: scope in {host_app, host_reboot}.",
+      "required": ["scope"],
+      "additionalProperties": false,
+      "properties": {
+        "scope":              { "type": "string", "enum": ["none", "container", "stack", "host_app", "host_reboot"] },
+        "estimated_sec":      { "type": "integer", "minimum": 0 },
+        "affected_services":  { "type": "array", "items": { "type": "string" } },
+        "affected_host_apps": { "type": "array", "items": { "type": "string" } },
+        "reason":             { "type": "string" }
+      }
+    },
+
     "applies_if":    { "$ref": "#/definitions/predicate" },
     "preconditions": { "type": "array", "items": { "$ref": "#/definitions/precondition" } },
     "post_verify":   { "type": "array", "items": { "$ref": "#/definitions/precondition" } },

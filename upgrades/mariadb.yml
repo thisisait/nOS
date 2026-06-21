@@ -20,8 +20,8 @@ recipes:
     notes: |
       11.x renames several *_create_options system variables, removes
       SUPER privilege for certain legacy actions, and tightens
-      InnoDB defaults. nos apps (WordPress, Nextcloud, Gitea, FreeScout,
-      BookStack, HedgeDoc) have been tested on 11.4.
+      InnoDB defaults. nos apps (WordPress, Nextcloud, FreeScout,
+      BookStack, Firefly, ERPNext) have been tested on 11.4.
 
     coexistence_supported: true
     coexistence_port_offset: 100
@@ -29,6 +29,15 @@ recipes:
     requires:
       min_disk_free_gb: 3
       service_healthy: true
+
+    reset:
+      scope: stack
+      estimated_sec: 120
+      affected_services: [mariadb, wordpress, nextcloud, bookstack, firefly, erpnext, freescout, freepbx]
+      reason: >-
+        Major 10->11 stops/restarts the shared infra MariaDB (compose
+        stop->image bump->up + mariadb-upgrade), forcing all consumers to
+        reconnect.
 
     pre:
       - id: backup_data
@@ -131,6 +140,14 @@ recipes:
     requires:
       min_disk_free_gb: 3
       service_healthy: true
+
+    reset:
+      scope: stack
+      estimated_sec: 75
+      affected_services: [mariadb, wordpress, nextcloud, bookstack, firefly, erpnext, freescout, freepbx]
+      reason: >-
+        In-major 11.x patch still does a full compose stop->image bump->up of the
+        shared MariaDB, taking the DB offline so all consumers reconnect.
 
     pre:
       - id: backup_data

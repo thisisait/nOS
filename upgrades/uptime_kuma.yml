@@ -44,6 +44,15 @@ recipes:
       min_disk_free_gb: 1
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 180
+      affected_services: [uptime_kuma]
+      reason: >-
+        Single compose.set_image_tag bump of iiab/uptime-kuma; only this
+        self-contained container (embedded SQLite, no downstream consumers)
+        force-recreates and runs its one-way schema migration on first 2.x boot.
+
     pre:
       # The data dir IS the database — this backup is the only rollback path
       # once 2.x migrates the schema.

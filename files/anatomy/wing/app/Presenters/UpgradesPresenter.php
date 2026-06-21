@@ -71,6 +71,13 @@ final class UpgradesPresenter extends BasePresenter
 		$this->template->countsBySeverity = $counts;
 		$this->template->upgradeAvailable = $available;
 		$this->template->plannedCount = count($this->upgrades->listPlanned());
+
+		// Phase 3: the host_reboot-pending banner. The upgrade-engine writes
+		// ~/.nos/reboot-required.json after a successful host_reboot-class apply
+		// (it never auto-reboots — manual over auto). UpgradeRepository::rebootMarker()
+		// reads the runtime sidecar and returns null on an absent/malformed marker,
+		// so $rebootPending is null → the template renders no banner.
+		$this->template->rebootPending = $this->upgrades->rebootMarker();
 	}
 
 	/**
@@ -213,6 +220,12 @@ final class UpgradesPresenter extends BasePresenter
 		$dataCopyRaw = $req->getPost('data_copy');
 		$dataCopy = $dataCopyRaw === null ? true : (bool) $dataCopyRaw;
 		$force = (bool) $req->getPost('force');
+		// Phase 2: run_mode is the chosen execution shape (attached | detached |
+		// stage_then_reboot). Validate against the closed set here too; the repo
+		// re-validates (defence in depth) and recomputes session_risk server-side.
+		$runMode = $req->getPost('run_mode');
+		$runMode = in_array($runMode, ['attached', 'detached', 'stage_then_reboot'], true)
+			? $runMode : 'attached';
 		$plannedBy = (string) ($req->getHeader('X-Authentik-Username') ?? 'operator');
 		$plannedBy = $plannedBy !== '' ? $plannedBy : 'operator';
 
@@ -225,17 +238,21 @@ final class UpgradesPresenter extends BasePresenter
 			$portOffset,
 			$dataCopy,
 			$force,
+			null,
+			$runMode,
 		);
 
 		if (!empty($result['ok'])) {
-			$this->emitPlanChoiceRecorded($service, $recipe, $mode, $result, $dataCopy, $portOffset, $plannedBy);
+			$this->emitPlanChoiceRecorded($service, $recipe, $mode, $result, $dataCopy, $portOffset, $plannedBy, $runMode);
 		}
 
 		[$msg, $type] = match ($result['status']) {
 			'queued'         => $mode === 'coexist'
 				? ["Planned {$service}/{$recipe} — coexist track queued; provision under: ansible-playbook main.yml --tags coexistence (after the migration MR is merged).", 'success']
-				: ["Planned {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade.", 'success'],
-			'already_queued' => ["{$service}/{$recipe} is already queued.", 'info'],
+				: (in_array($runMode, ['detached', 'stage_then_reboot'], true)
+					? ["Planned {$service}/{$recipe} ({$runMode}) — launch detached so a host restart can't drop your session: tools/nos-upgrade-detached.sh {$service} {$recipe}", 'success']
+					: ["Planned {$service}/{$recipe} — applies on: ansible-playbook main.yml --tags upgrade.", 'success']),
+			'already_queued' => ["{$service}/{$recipe} is already queued — its run mode was left unchanged. Unqueue it first to re-plan.", 'info'],
 			'mismatch'       => ["Refused — {$result['detail']}", 'error'],
 			default          => [$result['detail'] ?? 'No change.', 'info'],
 		};
@@ -252,7 +269,7 @@ final class UpgradesPresenter extends BasePresenter
 	 *
 	 * @param array<string,mixed> $result
 	 */
-	private function emitPlanChoiceRecorded(string $service, string $recipe, string $mode, array $result, bool $dataCopy, int $portOffset, string $plannedBy): void
+	private function emitPlanChoiceRecorded(string $service, string $recipe, string $mode, array $result, bool $dataCopy, int $portOffset, string $plannedBy, string $runMode = 'attached'): void
 	{
 		try {
 			$this->events->insert([
@@ -268,6 +285,12 @@ final class UpgradesPresenter extends BasePresenter
 					'coexistence_planned_id' => $result['coexistence_planned_id'] ?? null,
 					'data_copy'              => $dataCopy,
 					'port_offset'            => $portOffset,
+					// Phase 2: the execution shape + resolved blast radius (run_mode
+					// from the operator; reset_scope/session_risk recomputed in the
+					// repo from the recipe's authored reset — never client-trusted).
+					'run_mode'               => $runMode,
+					'reset_scope'            => $result['reset_scope'] ?? null,
+					'session_risk'           => $result['session_risk'] ?? null,
 				],
 			]);
 		} catch (\Throwable) {

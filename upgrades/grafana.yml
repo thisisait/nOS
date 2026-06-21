@@ -30,6 +30,15 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 45
+      affected_services: [grafana]
+      reason: >-
+        apply step compose.set_image_tag force-recreates only the grafana
+        container; pre/post are backup+http (none floor); standalone
+        observability service with no downstream consumers.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -95,6 +104,15 @@ recipes:
     requires:
       min_disk_free_gb: 2
       service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 45
+      affected_services: [grafana]
+      reason: >-
+        same shape: compose.set_image_tag image bump recreates the grafana
+        container only; backup/dashboard-export pre + http.wait/uri post imply no
+        extra restart; no shared-DB cascade.
 
     pre:
       - id: backup_data
@@ -168,6 +186,15 @@ recipes:
     requires:
       min_disk_free_gb: 2
       service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 45
+      affected_services: [grafana]
+      reason: >-
+        at-target forward-coverage track; mirrored apply still uses
+        compose.set_image_tag (container recreate) so the floor is container even
+        though to==installed queues nothing; no consumers reconnect.
 
     pre:
       - id: backup_data

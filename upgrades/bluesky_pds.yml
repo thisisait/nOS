@@ -32,6 +32,15 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 45
+      affected_services: [bluesky_pds]
+      reason: >-
+        Only process-affecting action is apply/rollback compose.recreate of the
+        single bluesky-pds container; PDS is self-contained (not a shared DB), so
+        no consumer cascade and no semantic escalation.
+
     pre:
       - id: snapshot_pds_data
         type: backup.volume

@@ -28,6 +28,16 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 60
+      affected_services: [paperclip]
+      reason: >-
+        Only step-with-restart is compose.set_image_tag on devops/paperclip;
+        pre/post are read-only pg_dump+backup+psql verify; paperclip is an app
+        container with no downstream consumers, so just its own container
+        force-recreates.
+
     pre:
       - id: backup_db
         type: exec.shell

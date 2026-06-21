@@ -5,6 +5,26 @@
 <link rel="stylesheet" href="/assets/upgrades.css?v={$basePath}">
 <link rel="stylesheet" href="/assets/coexistence.css?v={$basePath}">
 
+{* Phase 3: persistent host_reboot-pending banner. Rendered ONLY when the
+   upgrade-engine left ~/.nos/reboot-required.json (a successful host_reboot-class
+   apply staged the change but the engine never auto-reboots — manual over auto).
+   $rebootPending is null when the marker is absent/malformed → no banner. The
+   operator reboots the host to finish; the marker clears on the next clean run. *}
+{if $rebootPending}
+	<div class="upg-reboot-banner" role="alert" aria-live="polite">
+		<span class="upg-reboot-banner-icon" aria-hidden="true">&#9888;</span>
+		<div class="upg-reboot-banner-body">
+			<strong class="upg-reboot-banner-title">Reboot pending to finish {$rebootPending['service'] ?? 'an'} upgrade</strong>
+			<div class="upg-reboot-banner-detail">
+				The host must be rebooted to complete
+				<strong>{$rebootPending['service'] ?? '(unknown service)'}</strong>{if !empty($rebootPending['recipe_id'])} / <code>{$rebootPending['recipe_id']}</code>{/if}.
+				The upgrade is staged but does not take effect until you reboot — nOS never reboots the host automatically.
+				{if !empty($rebootPending['requested_at'])}<span class="upg-reboot-banner-ts">Staged {$rebootPending['requested_at']}.</span>{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
 <div class="upg-page-header">
 	<div>
 		<h2>Upgrades</h2>
@@ -124,6 +144,12 @@
 								data-recipe-id="{$matrixRecipeId}"
 								data-target="{$row['stable'] ?? $row['latest'] ?? ''}"
 								data-coexist-supported="{if !empty($row['coexistence_supported'])}1{else}0{/if}"
+								data-session-risk="{if !empty($row['session_risk'])}1{else}0{/if}"
+								data-reset-scope="{$row['reset_scope'] ?? 'container'}"
+								data-estimated-sec="{$row['reset']['estimated_sec'] ?? ''}"
+								data-affected-services="{($row['reset']['affected_services'] ?? [])|implode:', '}"
+								data-affected-host-apps="{($row['reset']['affected_host_apps'] ?? [])|implode:', '}"
+								data-reset-reason="{$row['reset']['reason'] ?? ''}"
 								title="Plan {$matrixRecipeId}">Plan</button>
 						<noscript>
 							<form method="post" action="{plink Upgrades:planChoice, service => $row['service'], recipe => $matrixRecipeId}" style="display:inline">

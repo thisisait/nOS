@@ -31,6 +31,23 @@ recipes:
       min_disk_free_gb: 5
       service_healthy: true
 
+    reset:
+      scope: stack
+      estimated_sec: 600
+      affected_services:
+        - erpnext-backend
+        - erpnext-frontend
+        - erpnext-queue-short
+        - erpnext-queue-long
+        - erpnext-scheduler
+        - erpnext-configurator
+      reason: >-
+        recreate_b2b force-recreates all 6 erpnext-* containers
+        (backend/frontend/queue-short/queue-long/scheduler/configurator) in one
+        compose up against the shared sites volume; multi-container bounce
+        escalates the compose.set_image_tag container floor to stack. No host
+        daemon or DB-engine restart (MariaDB only dumped read-only).
+
     pre:
       - id: bench_backup
         type: exec.shell

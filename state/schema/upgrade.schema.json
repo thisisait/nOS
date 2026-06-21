@@ -73,6 +73,7 @@
           "minimum": 1,
           "description": "Port offset for the new track (e.g. grafana 3000 + 10 -> 3010) when coexistence_supported=true."
         },
+        "reset": { "$ref": "#/definitions/reset" },
 
         "requires": {
           "type": "object",
@@ -125,7 +126,29 @@
         "description": { "type": "string" },
         "when":        { "type": "string", "description": "Optional Jinja2 condition evaluated in the Ansible context." },
         "ignore_errors": { "type": "boolean", "default": false },
-        "timeout_sec": { "type": "integer", "minimum": 1 }
+        "timeout_sec": { "type": "integer", "minimum": 1 },
+        "affected_services": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional per-step reset hint. Services beyond `service` (self) raise this step's derived floor to `stack` (the derive-floor stack escalation). step.additionalProperties is true, so this is documentation only."
+        }
+      }
+    },
+
+    "reset": {
+      "type": "object",
+      "description": "Blast-radius declaration. The engine derives a floor from the step/action types and ESCALATES this to it (authored value may only raise the floor, never lower it). session_risk is derived: scope in {host_app, host_reboot}.",
+      "required": ["scope"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": ["none", "container", "stack", "host_app", "host_reboot"]
+        },
+        "estimated_sec":      { "type": "integer", "minimum": 0 },
+        "affected_services":  { "type": "array", "items": { "type": "string" } },
+        "affected_host_apps": { "type": "array", "items": { "type": "string" } },
+        "reason":             { "type": "string" }
       }
     }
   }

@@ -937,6 +937,11 @@ sudoers_custom_config: ""
 # Automates everything from "Manual settings to automate someday" + developer defaults
 # ==============================================================================
 
+# Defer GUI restarts: apply Finder/Dock settings but DON'T killall mid-run (a
+# killall flickers the GUI and on a heavy host can drop the IDE/session); false
+# = legacy immediate restart. Restart Finder/Dock out-of-band or log out to apply.
+defer_gui_restarts: true
+
 # ── Finder ────────────────────────────────────────────────────────────────────
 macos_finder_show_hidden_files: true          # Show hidden files (Cmd+Shift+.)
 macos_finder_show_extensions: true           # Show file extensions

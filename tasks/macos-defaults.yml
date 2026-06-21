@@ -105,10 +105,22 @@
     type: bool
     value: true
 
+# Session-aware (2026-06-20): a `killall Finder` mid-run flickers the GUI and,
+# on a heavy host (a blank brings up ~50 containers), can ripple into the IDE.
+# Defer by default — apply the settings now, restart Finder out-of-band. Set
+# defer_gui_restarts=false for byte-identical legacy behaviour (immediate kill).
 - name: "[Finder] Restart Finder to apply changes"
   ansible.builtin.command: killall Finder
   changed_when: false
   failed_when: false
+  when: not (defer_gui_restarts | default(true) | bool)
+
+- name: "[Finder] Defer restart (settings applied; restart out-of-band)"
+  ansible.builtin.debug:
+    msg: >-
+      Finder settings applied; defer_gui_restarts=true so Finder was NOT
+      restarted mid-run. Restart it or log out to apply (killall Finder).
+  when: defer_gui_restarts | default(true) | bool
 
 # ── KEYBOARD ──────────────────────────────────────────────────────────────────
 
@@ -233,10 +245,19 @@
     type: string
     value: "{{ macos_dock_minimize_effect | default('scale') }}"
 
+# Session-aware (2026-06-20): see the Finder note above — same defer logic.
 - name: "[Dock] Restart Dock to apply changes"
   ansible.builtin.command: killall Dock
   changed_when: false
   failed_when: false
+  when: not (defer_gui_restarts | default(true) | bool)
+
+- name: "[Dock] Defer restart (settings applied; restart out-of-band)"
+  ansible.builtin.debug:
+    msg: >-
+      Dock settings applied; defer_gui_restarts=true so Dock was NOT
+      restarted mid-run. Restart it or log out to apply (killall Dock).
+  when: defer_gui_restarts | default(true) | bool
 
 # ── SAFARI (developer settings) ───────────────────────────────────────────────
 # NOTE: com.apple.Safari is a sandboxed container since macOS 10.14; writing via

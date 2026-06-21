@@ -32,6 +32,15 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 45
+      affected_services: [bookstack]
+      reason: >-
+        Single-app image bump: compose.set_image_tag force-recreates only
+        b2b-bookstack-1; backups/http.wait/migrate:status are read-only, MariaDB
+        is a dependency not a bounced consumer.
+
     pre:
       - id: backup_db
         type: exec.shell

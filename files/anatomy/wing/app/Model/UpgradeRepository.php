@@ -86,6 +86,18 @@ final class UpgradeRepository
 			// for postgresql/grafana (which ARE coexistence_supported).
 			$coexistSupported = !empty($next['coexistence_supported']);
 			$nextRecipeId = (string) ($next['recipe_id'] ?? ($svcRecipes[0]['recipe_id'] ?? ''));
+			// Reset-scope (Phase 1): decode the next recipe's resolved reset block —
+			// the matrix plans $next, so the blast-radius badge must describe THAT
+			// recipe (same reasoning as coexistence_supported above). NULL reset_json
+			// → 'container' floor for display (a recipe with restart-class steps but
+			// no authored reset must never read as no-restart); the engine derives the
+			// real floor at apply time. session_risk is recomputed from scope, never
+			// trusted from a stored bool ("derived not authored" doctrine).
+			// Mirror coexistence_supported: NO [0] fallback. For a stepping-stone
+			// upgrade ($next != latest) the badge must describe $next — borrowing
+			// the latest recipe's reset_json would mis-state the planned scope. A
+			// NULL on $next resolves to the 'container' display floor for $next.
+			$resetData = $this->decodeReset($next['reset_json'] ?? null);
 			$sevClass = match ($sev) {
 				'breaking'             => 'breaking',
 				'security', 'critical' => 'critical',
@@ -115,6 +127,12 @@ final class UpgradeRepository
 				// enables/disables option (b) truthfully (was hardcoded off).
 				'next_recipe_id'        => $nextRecipeId,
 				'coexistence_supported' => $coexistSupported,
+				// Reset-scope (Phase 1): the resolved reset block + scalar scope +
+				// derived session_risk for the disruption preview in the plan-choice
+				// modal (Phase 2 reads $row['reset_scope']/$row['session_risk']).
+				'reset'            => $resetData['reset'],
+				'reset_scope'      => $resetData['scope'],
+				'session_risk'     => $resetData['session_risk'],
 				'planned'          => isset($planned[$service]),
 				'planned_target'   => $planned[$service]['target_version'] ?? null,
 				'planned_by'       => $planned[$service]['planned_by'] ?? null,
@@ -176,6 +194,49 @@ final class UpgradeRepository
 	}
 
 	/**
+	 * The host_reboot pending marker (Phase 3), or null when none is present.
+	 *
+	 * The upgrade-engine writes ~/.nos/reboot-required.json after a successful
+	 * host_reboot-class apply — completing the change needs a full machine reboot
+	 * (the engine NEVER auto-reboots; destructive-op safety = manual over auto).
+	 * Wing surfaces it as a persistent /upgrades banner until the operator reboots
+	 * (which clears the marker). Read from the SAME ~/.nos/ runtime sidecar the
+	 * engine + state_manager use; Wing runs as launchd so getenv('HOME') resolves
+	 * to the operator home (same convention installedVersionsFromState() uses).
+	 *
+	 * Honest-absent: a missing OR malformed marker returns null (no banner) — an
+	 * unreadable sidecar must never crash the page or spuriously nag.
+	 *
+	 * @return array<string,mixed>|null { service, recipe_id, upgrade_id, scope, requested_at }
+	 */
+	public function rebootMarker(): ?array
+	{
+		$home = getenv('HOME') ?: '';
+		if ($home === '') {
+			return null;
+		}
+		$path = $home . '/.nos/reboot-required.json';
+		if (!is_file($path)) {
+			return null;
+		}
+		$raw = @file_get_contents($path);
+		if ($raw === false || $raw === '') {
+			return null;
+		}
+		try {
+			$marker = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			return null;
+		}
+		// A well-formed marker is a JSON object; anything else (array/scalar/null)
+		// is malformed → no banner.
+		if (!is_array($marker) || $marker === [] || array_is_list($marker)) {
+			return null;
+		}
+		return $marker;
+	}
+
+	/**
 	 * Live coexistence tracks keyed by service (B4c), read from the local mirror
 	 * (`coexistence_tracks`). Primary first (role='primary' / active=1), so the
 	 * matrix renders the active version on top. A service with 0 or 1 track is
@@ -192,6 +253,64 @@ final class UpgradeRepository
 			$out[(string) $item['service']][] = $item;
 		}
 		return $out;
+	}
+
+	/**
+	 * Decode an upgrade_recipes.reset_json cell into the spread shape the matrix +
+	 * detail cards use (Phase 1). Mirrors how coexistence_supported is normalised,
+	 * but for the resolved reset block:
+	 *
+	 *   - `reset`        — the decoded authored block (or [] when NULL/garbage).
+	 *   - `scope`        — the reset.scope, defaulting to 'container' when absent.
+	 *                      A NULL reset_json means the recipe authored no reset and
+	 *                      the engine derives the real floor at apply time; for
+	 *                      DISPLAY we never read it as 'none' (a recipe with restart-
+	 *                      class steps must not look like a no-restart change).
+	 *   - `session_risk` — DERIVED from scope (scope ∈ {host_app, host_reboot}),
+	 *                      recomputed here rather than trusting any stored bool
+	 *                      ("derived not authored" doctrine).
+	 *
+	 * @return array{reset:array<string,mixed>, scope:string, session_risk:bool}
+	 */
+	private function decodeReset(?string $resetJson): array
+	{
+		$decoded = ($resetJson !== null && $resetJson !== '')
+			? json_decode($resetJson, true)
+			: null;
+		// Normalize to an array BEFORE reading any key — a truthy scalar reset_json
+		// (e.g. a bare number/string that json_decode returns as int/string) would
+		// otherwise trigger an "array offset on scalar" warning on $reset['scope'].
+		$reset = is_array($decoded) ? $decoded : [];
+		// A malformed authored block could carry a non-array affected_* value;
+		// force arrays so the Latte `|implode` in the disruption badge is type-safe.
+		foreach (['affected_services', 'affected_host_apps'] as $k) {
+			if (isset($reset[$k]) && !is_array($reset[$k])) {
+				$reset[$k] = [];
+			}
+		}
+		$scope = is_string($reset['scope'] ?? null) ? $reset['scope'] : 'container';
+		return [
+			'reset'        => $reset,
+			'scope'        => $scope,
+			'session_risk' => in_array($scope, ['host_app', 'host_reboot'], true),
+		];
+	}
+
+	/**
+	 * Resolve a single recipe's reset block by service+recipe_id — the SAME
+	 * decode the matrix runs per row, but scoped to the recipe being planned.
+	 * Used by planUpgradeWithMode() to snapshot reset_scope + session_risk onto
+	 * the queued row. An unknown recipe (no row) decodes a NULL reset_json → the
+	 * 'container' display floor (a recipe with restart-class steps must never read
+	 * as no-restart), session_risk false.
+	 *
+	 * @return array{reset:array<string,mixed>, scope:string, session_risk:bool}
+	 */
+	private function resetForRecipe(string $service, string $recipeId): array
+	{
+		$recipe = $this->db->table('upgrade_recipes')
+			->where('service', $service)->where('recipe_id', $recipeId)->fetch();
+		return $this->decodeReset($recipe !== null ? ($recipe->reset_json ?? null) : null);
 	}
 
 	/**
@@ -262,7 +381,7 @@ final class UpgradeRepository
 	 * Returns the same shape as planUpgrade() plus the link ids so the presenter
 	 * can render the dry-run preview / emit plan_choice_recorded.
 	 *
-	 * @return array{ok:bool, status:string, detail:string, upgrade_id:int|null, coexistence_planned_id:int|null}
+	 * @return array{ok:bool, status:string, detail:string, upgrade_id:int|null, coexistence_planned_id:int|null, reset_scope?:string, session_risk?:bool, run_mode?:string}
 	 */
 	public function planUpgradeWithMode(
 		string $service,
@@ -273,9 +392,28 @@ final class UpgradeRepository
 		int $portOffset = 100,
 		bool $dataCopy = true,
 		bool $force = false,
-		?string $notes = null
+		?string $notes = null,
+		string $runMode = 'attached'
 	): array {
 		$mode = ($mode === 'coexist') ? 'coexist' : 'migration';
+		// Phase 2: run_mode is the operator's chosen execution shape. Validate it
+		// against the closed set; anything else falls back to 'attached' (the only
+		// safe default — never trust a body value into a free-text column).
+		$runMode = in_array($runMode, ['attached', 'detached', 'stage_then_reboot'], true)
+			? $runMode : 'attached';
+		// Phase 2: resolve THIS recipe's authored reset block (same source the
+		// matrix decodes for the disruption preview) so the queued row snapshots the
+		// blast radius. session_risk is RECOMPUTED from the resolved scope, never
+		// trusted from the client ("derived not authored" doctrine — see decodeReset).
+		$reset = $this->resetForRecipe($service, $recipeId);
+		$resetScope = $reset['scope'];
+		$sessionRisk = $reset['session_risk'];
+		// Defence in depth (mirrors the JS gate, which only offers stage_then_reboot
+		// for a host_reboot scope): a crafted POST of stage_then_reboot against a
+		// non-host_reboot recipe is downgraded so the stored snapshot stays honest.
+		if ($runMode === 'stage_then_reboot' && $resetScope !== 'host_reboot') {
+			$runMode = $sessionRisk ? 'detached' : 'attached';
+		}
 		$result = $this->planUpgrade($service, $recipeId, $targetVersion, $plannedBy, $notes, $force);
 		if (!$result['ok']) {
 			// mismatch / already_queued — surface as-is, write no link rows.
@@ -297,7 +435,18 @@ final class UpgradeRepository
 		}
 
 		if ($planned !== null) {
-			$update = ['plan_mode' => $mode, 'plan_choice_at' => gmdate('c')];
+			// Phase 2: snapshot the resolved reset scope + the derived session_risk
+			// + the operator's run_mode onto the queued row (columns already exist —
+			// reset_scope TEXT / session_risk INTEGER / run_mode TEXT). These are a
+			// UI/audit snapshot; the engine re-resolves the AUTHORED reset at apply
+			// time via reset_scope.resolve_reset() (source of truth there).
+			$update = [
+				'plan_mode'      => $mode,
+				'plan_choice_at' => gmdate('c'),
+				'reset_scope'    => $resetScope,
+				'session_risk'   => $sessionRisk ? 1 : 0,
+				'run_mode'       => $runMode,
+			];
 			if ($coexistencePlannedId !== null) {
 				$update['coexistence_planned_id'] = $coexistencePlannedId;
 			}
@@ -307,6 +456,11 @@ final class UpgradeRepository
 		return $result + [
 			'upgrade_id'             => $upgradeId,
 			'coexistence_planned_id' => $coexistencePlannedId,
+			// Phase 2: hand back the snapshotted execution-shape fields so the
+			// presenter can fold them into the plan_choice_recorded audit payload.
+			'reset_scope'            => $resetScope,
+			'session_risk'           => $sessionRisk,
+			'run_mode'               => $runMode,
 		];
 	}
 
@@ -445,6 +599,12 @@ final class UpgradeRepository
 				'changelog_url'         => $row['docs_url'] ?? null,
 				'docs_url'              => $row['docs_url'] ?? null,
 				'coexistence_supported' => !empty($row['coexistence_supported']),
+				// Reset-scope (Phase 1): per-recipe card carries the resolved reset
+				// block + scalar scope + derived session_risk, mirroring the matrix()
+				// spread (NULL reset_json → 'container' floor; session_risk recomputed).
+				'reset'                 => ($cardReset = $this->decodeReset($row['reset_json'] ?? null))['reset'],
+				'reset_scope'           => $cardReset['scope'],
+				'session_risk'          => $cardReset['session_risk'],
 				'applied'               => isset($applied[$recipeId]),
 			];
 		}

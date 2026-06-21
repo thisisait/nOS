@@ -36,6 +36,15 @@ recipes:
       min_disk_free_gb: 10
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 720
+      affected_services: [gitlab]
+      reason: >-
+        Single compose.set_image_tag recreate of the self-contained Omnibus
+        gitlab container (internal PG+Redis bundled, no shared-DB consumers
+        cascade); backup/http.wait/migrate-status steps are none-floor.
+
     pre:
       - id: gitlab_backup
         type: exec.shell
@@ -88,6 +97,15 @@ recipes:
       min_disk_free_gb: 10
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 720
+      affected_services: [gitlab]
+      reason: >-
+        Apply is one compose.set_image_tag of the gitlab service only; Omnibus is
+        a single stateful container so the bump force-recreates just
+        devops-gitlab-1, no stack-wide consumer reconnect.
+
     pre:
       - id: gitlab_backup
         type: exec.shell
@@ -133,6 +151,15 @@ recipes:
     requires:
       min_disk_free_gb: 5
       service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 540
+      affected_services: [gitlab]
+      reason: >-
+        Security patch/minor image bump via a single compose.set_image_tag
+        recreate of the gitlab container; pre-backup and http.wait readiness are
+        none-floor, no host or shared-stack restart.
 
     pre:
       - id: gitlab_backup

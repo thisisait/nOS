@@ -32,6 +32,15 @@ recipes:
       min_disk_free_gb: 2
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 120
+      affected_services: [firefly]
+      reason: >-
+        Image-tag bump via compose.set_image_tag recreates only the firefly
+        container; pre/post steps are backups + in-container artisan
+        migrate/self-heal/health-wait, no shared-DB or host restart.
+
     pre:
       - id: backup_db
         type: exec.shell

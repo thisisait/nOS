@@ -1,7 +1,7 @@
 {*
-	Plan-choice modal (B4b) — included into both Upgrades/default.latte (matrix)
-	and Upgrades/service.latte (per-service recipes). The operator picks one of two
-	paths between the "Plan" click and the queue write:
+	Plan-choice modal (B4b + Phase 2) — included into both Upgrades/default.latte
+	(matrix) and Upgrades/service.latte (per-service recipes). The operator picks
+	one of two paths between the "Plan" click and the queue write:
 
 	  (a) Migration in-place (default) → upgrades_planned.plan_mode='migration'
 	  (b) Coexisting + data copy        → + a coexistence_planned track
@@ -12,6 +12,18 @@
 	upgrades-plan-choice.js sets the hidden inputs + submits the real form (no
 	fetch — preserving the redirect+flash UX). The <noscript> in-place fallback
 	lives in the including templates, so a JS-off operator can still queue.
+
+	Phase 2 — disruption preview + run_mode (see
+	docs/plans/upgrade-reset-scope-and-session-safety.md §"Wing /upgrades surface",
+	§"Run mode"). Above the rollout radios the modal renders the recipe's reset
+	SCOPE as a human badge ("Container restart (~30s)" / "Stack bounce — N services
+	(~90s)" / "Requires host reboot (~2 min)"). When the scope is session-risky
+	(host_app / host_reboot — JS reads data-session-risk) the modal additionally
+	shows a warning callout AND a run_mode radio group (Detached default /
+	Attached, plus "Stage, then reboot" only for host_reboot). Non-session-risk
+	recipes show the badge only — the hidden run_mode input stays 'attached', posted
+	implicitly. The preview is JS-populated from data-* on the trigger button (same
+	channel as data-coexist-supported); the partial is a static singleton.
 *}
 <div class="coex-modal-backdrop plan-choice-backdrop" id="plan-choice-modal" hidden
 	 role="dialog" aria-modal="true" aria-labelledby="plan-choice-title">
@@ -29,6 +41,63 @@
 			<input type="hidden" name="target_version" id="plan-choice-target" value="">
 			<input type="hidden" name="port_offset" id="plan-choice-port" value="100">
 			<input type="hidden" name="data_copy" id="plan-choice-datacopy" value="1">
+			<input type="hidden" name="run_mode" id="plan-choice-runmode" value="attached">
+
+			{* Phase 2 disruption preview — JS fills #plan-choice-disruption-badge
+			   (scope label + ~estimated_sec) from the trigger button's data-*; the
+			   session-risk callout + run_mode fieldset are hidden until JS unhides
+			   them for host_app / host_reboot scopes. *}
+			<div class="plan-choice-disruption" id="plan-choice-disruption">
+				<span class="plan-choice-disruption-label">Disruption</span>
+				<span class="plan-choice-disruption-badge" id="plan-choice-disruption-badge"
+					  data-scope="container"></span>
+				<span class="plan-choice-disruption-detail" id="plan-choice-disruption-detail" hidden></span>
+			</div>
+
+			<div class="plan-choice-session-warning" id="plan-choice-session-warning" hidden role="alert">
+				Applying this can disconnect your IDE / terminal session. Run it
+				detached so the upgrade survives losing this connection.
+			</div>
+
+			<fieldset class="plan-choice-runmode" id="plan-choice-runmode-fieldset" hidden>
+				<legend class="plan-choice-legend">Run mode</legend>
+
+				<label class="plan-choice-option" data-runmode="detached">
+					<input type="radio" name="plan_runmode_radio" value="detached" id="plan-choice-runmode-detached" checked>
+					<span class="plan-choice-option-body">
+						<span class="plan-choice-option-title">Detached (recommended)</span>
+						<span class="plan-choice-option-desc">
+							Hand the upgrade to the host runner and return immediately —
+							it keeps going even if this session drops.
+						</span>
+					</span>
+				</label>
+
+				<label class="plan-choice-option" data-runmode="attached">
+					<input type="radio" name="plan_runmode_radio" value="attached">
+					<span class="plan-choice-option-body">
+						<span class="plan-choice-option-title">Attached</span>
+						<span class="plan-choice-option-desc">
+							Stream the run in the foreground. If this session disconnects
+							mid-apply the upgrade is interrupted.
+						</span>
+					</span>
+				</label>
+
+				{* Only meaningful for a host_reboot scope — JS unhides it just for
+				   that case (a stack/container bounce never needs a reboot stage). *}
+				<label class="plan-choice-option" id="plan-choice-runmode-stage-label"
+					   data-runmode="stage_then_reboot" hidden>
+					<input type="radio" name="plan_runmode_radio" value="stage_then_reboot" id="plan-choice-runmode-stage">
+					<span class="plan-choice-option-body">
+						<span class="plan-choice-option-title">Stage, then reboot</span>
+						<span class="plan-choice-option-desc">
+							Prepare everything now and reboot the host as the final step,
+							so the disruptive change lands on a clean boot.
+						</span>
+					</span>
+				</label>
+			</fieldset>
 
 			<fieldset class="plan-choice-options">
 				<legend class="plan-choice-legend">Rollout path</legend>

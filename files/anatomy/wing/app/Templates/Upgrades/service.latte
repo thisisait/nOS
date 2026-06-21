@@ -100,6 +100,12 @@
 							data-recipe-id="{$r['id']}"
 							data-target="{$r['to'] ?? ''}"
 							data-coexist-supported="{if !empty($r['coexistence_supported'])}1{else}0{/if}"
+							data-session-risk="{if !empty($r['session_risk'])}1{else}0{/if}"
+							data-reset-scope="{$r['reset_scope'] ?? 'container'}"
+							data-estimated-sec="{$r['reset']['estimated_sec'] ?? ''}"
+							data-affected-services="{($r['reset']['affected_services'] ?? [])|implode:', '}"
+							data-affected-host-apps="{($r['reset']['affected_host_apps'] ?? [])|implode:', '}"
+							data-reset-reason="{$r['reset']['reason'] ?? ''}"
 							aria-label="Plan upgrade {$r['id']}">Plan</button>
 					<noscript>
 						<form method="post"

@@ -28,6 +28,15 @@ recipes:
       min_disk_free_gb: 3
       service_healthy: true
 
+    reset:
+      scope: container
+      estimated_sec: 75
+      affected_services: [rustfs]
+      reason: >-
+        Image bump via compose.set_image_tag force-recreates only the
+        iiab-rustfs-1 container; pre/post are fs snapshot + S3 list/diff + http
+        health-wait, no shared-DB cascade or host op.
+
     pre:
       - id: snapshot_data
         type: exec.shell

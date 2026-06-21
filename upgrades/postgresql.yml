@@ -31,6 +31,25 @@ recipes:
       min_disk_free_gb: 5
       service_healthy: true
 
+    reset:
+      scope: stack
+      estimated_sec: 150
+      affected_services:
+        - postgresql
+        - authentik
+        - infisical
+        - outline
+        - hedgedoc
+        - metabase
+        - miniflux
+        - paperclip
+        - superset
+      reason: >-
+        Shared single PG cluster: pg_dumpall/wipe/restore + container recreate
+        forces every nOS consumer (authentik, infisical, outline, hedgedoc, etc.)
+        to reconnect; floor is container (compose.* only), escalated to stack for
+        the shared-DB cascade.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -132,6 +151,25 @@ recipes:
     requires:
       min_disk_free_gb: 5
       service_healthy: true
+
+    reset:
+      scope: stack
+      estimated_sec: 150
+      affected_services:
+        - postgresql
+        - authentik
+        - infisical
+        - outline
+        - hedgedoc
+        - metabase
+        - miniflux
+        - paperclip
+        - superset
+      reason: >-
+        Motivating stack-scope upgrade in the design doc: shared single PG
+        cluster dump/restore + container recreate cold-restarts every consumer;
+        floor container (compose.* steps, no host-disruptive op), escalated to
+        stack because all consumers reconnect.
 
     pre:
       - id: backup_data

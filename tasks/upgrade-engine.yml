@@ -179,6 +179,94 @@
   tags: ['upgrade']
 
 # ------------------------------------------------------------------------------
+# Reset-scope PREVIEW pass + session-risk pre-apply gate (Phase 3)
+# ------------------------------------------------------------------------------
+# Spec: docs/plans/upgrade-reset-scope-and-session-safety.md §"Execution side".
+#
+# Before ANY mutation we run apply_upgrade with dry_run:true over every eligible
+# recipe. That call mutates nothing (backup dir + state writes are gated on
+# `not dry_run` in nos_migrate.py) but returns the engine-DERIVED reset block
+# per recipe — scope, session_risk, estimated_sec, affected_services/host_apps —
+# floor-escalated, so a recipe with a host_app/host_reboot floor but no authored
+# reset still reports the risk. We then pause ONCE, and only when at least one
+# eligible recipe is session_risk (scope host_app|host_reboot).
+#
+# A session_risk upgrade can drop the controlling terminal/IDE; the pause exists
+# so the operator can re-launch detached. NON-session_risk upgrades (container /
+# stack) are unaffected by this gate — they proceed exactly as before.
+
+- name: "[Upgrade] PREVIEW — resolve reset scope per recipe (dry-run, no side effects)"
+  # dry_run:true → nos_migrate validates every step and returns the resolved
+  # reset block WITHOUT applying. Independent of the operator's real
+  # upgrade_dry_run choice: even a wet run needs the derived scope to decide
+  # whether to pause. failed_when:false — a recipe that fails dry-run validation
+  # still surfaces its reset (every return path in _apply_upgrade spreads it),
+  # and the real apply loop below reports the failure authoritatively.
+  nos_migrate:
+    action: apply_upgrade
+    upgrade:
+      service: "{{ item.service }}"
+      recipe: { id: "{{ item.recipe.id }}" }
+      installed: "{{ item.installed }}"
+      recipe_path: "{{ item.recipe_path }}"
+      run_ts: "{{ _upgrade_run_ts }}"
+      tmpl_vars: "{{ _upgrade_render_vars | default({}) }}"
+    dry_run: true
+  loop: "{{ _upgrade_jobs }}"
+  loop_control:
+    label: "{{ item.service }}:{{ item.recipe.id }}"
+  register: _upgrade_preview
+  failed_when: false
+  changed_when: false
+  tags: ['upgrade']
+
+- name: "[Upgrade] Identify session-risk recipes (scope host_app|host_reboot)"
+  ansible.builtin.set_fact:
+    # Each preview result spreads session_risk + reset.* (see nos_migrate.py
+    # _apply_upgrade success/failure return dicts). A recipe is a session risk
+    # when its DERIVED scope sits in {host_app, host_reboot}.
+    _session_risk_jobs: >-
+      {{ (_upgrade_preview.results | default([]))
+         | selectattr('session_risk', 'defined')
+         | selectattr('session_risk', 'eq', true)
+         | list }}
+  tags: ['upgrade']
+
+- name: "[Upgrade] Confirm session-risk upgrades (host_app / host_reboot)"
+  # Modeled on tasks/pre-migrate.yml's breaking-migration confirm. Fires ONLY
+  # for session_risk recipes. Triple escape hatch so it NEVER hangs a
+  # non-interactive / detached / CI run:
+  #   - auto_migrate=true          (shared framework auto-apply flag)
+  #   - upgrade_confirmed=true     (Phase-3 explicit pre-confirm extra-var; the
+  #                                 detached launcher passes this)
+  #   - upgrade_dry_run=true       (a preview run never blocks)
+  ansible.builtin.pause:
+    prompt: |-
+      {% set jobs = _session_risk_jobs | default([]) %}
+      ⚠ {{ jobs | length }} eligible upgrade(s) are SESSION-RISK — they may
+      restart a host app or reboot the machine and DROP this terminal/IDE session:
+      {% for j in jobs %}
+      {% set est = j.reset.estimated_sec | default(none) %}
+      {% set why = j.reset.reason | default('') | trim %}
+        - {{ j.service }} ({{ j.recipe_id | default('?') }}): scope={{ j.reset_scope | default('?') }}{% if est is not none %}, ~{{ est }}s downtime{% endif %}
+      {% if why | length > 0 %}    {{ why }}
+      {% endif %}
+      {% endfor %}
+      Recommended: cancel (Ctrl+C then A) and re-launch DETACHED so a host
+      restart cannot kill the run:
+        tools/nos-upgrade-detached.sh {{ (jobs | map(attribute='service') | unique | join(' ')) }}
+      Press ENTER to proceed ATTACHED anyway (you may lose this session).
+  when:
+    - (_session_risk_jobs | default([]) | length) > 0
+    - not (auto_migrate | default(false) | bool)
+    - not (upgrade_confirmed | default(false) | bool)
+    - not (upgrade_dry_run | default(false) | bool)
+    # --check on an interactive TTY must not prompt (pause has no check-mode
+    # short-circuit); matches the repo's other interactive-pause idiom.
+    - not (ansible_check_mode | default(false) | bool)
+  tags: ['upgrade']
+
+# ------------------------------------------------------------------------------
 # Render-var context (2026-05-30)
 # ------------------------------------------------------------------------------
 # Recipe steps reference play-vars ({{ rustfs_data_dir }}, {{ postgresql_port
@@ -272,6 +360,173 @@
     - (item.item.service ~ ':' ~ item.item.recipe.id) in (_planned_keys | default([]))
     - item.success | default(false) | bool
   changed_when: true
+  failed_when: false
+  tags: ['upgrade']
+
+# ------------------------------------------------------------------------------
+# Reboot-required marker + A9 HIGH notification (Phase 3)
+# ------------------------------------------------------------------------------
+# A SUCCESSFULLY-applied host_reboot-class recipe leaves the host needing a
+# restart to fully settle. We drop a single ~/.nos/reboot-required.json sidecar
+# marker (read by Wing's /upgrades banner; last-writer-wins if >1 host_reboot
+# recipe succeeds in one run — one host restart satisfies them all) and emit a
+# HIGH A9 notification via Bone. host_app-class needs NO marker — it restarts an
+# app, not the machine. Skipped on dry-run. Each marker records the boot id at
+# write time; the clear task below removes any marker from a PRIOR boot (the host
+# has since restarted → the banner's job is done), honoring 'clears on restart'.
+
+- name: "[Upgrade] Capture current boot id (reboot-marker freshness)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if [ "$(uname -s)" = "Darwin" ]; then
+      sysctl -n kern.boottime | sed -E 's/.*sec = ([0-9]+).*/\1/'
+    else
+      cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown
+    fi
+  register: _nos_boot_id
+  changed_when: false
+  check_mode: false
+  tags: ['upgrade']
+
+- name: "[Upgrade] Find existing reboot-required markers"
+  ansible.builtin.find:
+    paths: "{{ ansible_facts['env']['HOME'] }}/.nos"
+    patterns: "reboot-required*.json"
+  register: _reboot_markers
+  tags: ['upgrade']
+
+- name: "[Upgrade] Clear stale reboot-required markers (host restarted since)"
+  # The marker's recorded boot id differs from the live one ⇒ the host has been
+  # restarted since the upgrade ⇒ the pending-restart is satisfied; drop it.
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _reboot_markers.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  # Extract boot_id by regex, NOT from_json — a corrupt non-empty marker would
+  # make from_json throw; regex_search returns None on no match, so a garbled or
+  # boot_id-less marker resolves to '' != the live boot id and is treated as
+  # stale (removed), which is the desired self-healing behaviour.
+  when: >-
+    (lookup('file', item.path, errors='ignore')
+      | regex_search('"boot_id"\s*:\s*"([^"]*)"', '\1') | default('', true))
+    != (_nos_boot_id.stdout | default('') | trim)
+  tags: ['upgrade']
+
+- name: "[Upgrade] Identify successfully-applied host_reboot recipes"
+  ansible.builtin.set_fact:
+    _reboot_jobs: >-
+      {{ (_upgrade_results.results | default([]))
+         | selectattr('success', 'defined')
+         | selectattr('success', 'eq', true)
+         | selectattr('reset_scope', 'defined')
+         | selectattr('reset_scope', 'eq', 'host_reboot')
+         | list }}
+  when: not (upgrade_dry_run | default(false) | bool)
+  tags: ['upgrade']
+
+- name: "[Upgrade] Ensure ~/.nos exists for the reboot marker"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+    state: directory
+    mode: "0700"
+  when:
+    - not (upgrade_dry_run | default(false) | bool)
+    - (_reboot_jobs | default([]) | length) > 0
+  tags: ['upgrade']
+
+- name: "[Upgrade] Write reboot-required marker (~/.nos/reboot-required.json)"
+  # Single marker — the Wing reader UpgradeRepository::rebootMarker() reads this
+  # exact path. boot_id is recorded so the clear task above detects a later
+  # restart and removes it. NOTE: in the rare case >1 host_reboot recipe succeeds
+  # in one run the last marker wins (the banner names a single service) —
+  # acceptable because ONE host restart satisfies every pending host_reboot.
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/reboot-required.json"
+    mode: "0644"
+    content: >-
+      {{
+        {
+          'service': item.service | default('unknown'),
+          'recipe_id': item.recipe_id | default('unknown'),
+          'upgrade_id': item.upgrade_id | default(''),
+          'scope': item.reset_scope | default('host_reboot'),
+          'estimated_sec': item.reset.estimated_sec | default(none),
+          'reason': item.reset.reason | default(''),
+          'requested_at': _upgrade_run_ts,
+          'boot_id': _nos_boot_id.stdout | default('') | trim
+        } | to_nice_json
+      }}
+  loop: "{{ _reboot_jobs | default([]) }}"
+  loop_control:
+    label: "{{ item.service | default('?') }}:{{ item.recipe_id | default('?') }}"
+  when:
+    - not (upgrade_dry_run | default(false) | bool)
+    - (_reboot_jobs | default([]) | length) > 0
+  tags: ['upgrade']
+
+- name: "[Upgrade] Emit HIGH A9 'reboot_required' notification via Bone"
+  # Canonical A9 emit (HMAC-signed POST to Bone /api/v1/notifications). Uses a
+  # LITERAL title+body+channels — NOT template+context: a template name only
+  # resolves if a harvested plugin manifest registers it, and upgrade-engine is a
+  # tasks/ flow, not a files/anatomy/plugins/* manifest, so 'reboot_required'
+  # would 404 in Bone's _lookup_template -> 400 -> the notification is silently
+  # dropped under failed_when:false. A literal title+body bypasses the lookup and
+  # lands via the on_high routing fallback (channels listed explicitly to page).
+  # Skips quietly when the HMAC secret is unset (CI / a host without Wing).
+  # sort_keys + compact canonical body is load-bearing — Bone re-canonicalizes
+  # before verifying the signature.
+  # environment: pass the HMAC secret + Bone URL into the shell (mirrors
+  # tasks/devlog-sync.yml). Without this the shell's $WING_EVENTS_HMAC_SECRET is
+  # unset and the task ALWAYS self-skips, so the notification would never fire.
+  environment:
+    WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default('') }}"
+    BONE_URL: "http://127.0.0.1:{{ bone_port | default(8099) }}"
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      if [ -z "${WING_EVENTS_HMAC_SECRET:-}" ]; then
+        echo "INFO: WING_EVENTS_HMAC_SECRET unset — skipping reboot_required notification"
+        exit 0
+      fi
+      body=$(jq -n \
+        --arg svc {{ item.service | default('unknown') | quote }} \
+        --arg rid {{ item.recipe_id | default('unknown') | quote }} \
+        --arg uid {{ item.upgrade_id | default('') | quote }} \
+        --arg scope {{ item.reset_scope | default('host_reboot') | quote }} \
+        '{severity: "high",
+          title: ("Reboot pending to finish " + $svc + " upgrade"),
+          body: ("A host_reboot-class upgrade (" + $rid + ") was applied for " + $svc + ". The host must be restarted to finish settling — nOS never restarts the machine for you."),
+          channels: ["wing-inbox", "ntfy"],
+          origin_plugin: "upgrade-engine",
+          actor_id: "engine:upgrade",
+          actor_action_id: $uid,
+          metadata: {service: $svc, recipe_id: $rid, scope: $scope}}')
+      compact=$(echo "$body" | jq --sort-keys -c .)
+      ts=$(date +%s)
+      sig=$(printf '%s.%s' "$ts" "$compact" \
+            | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
+            | awk '{print $NF}')
+      code=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -X POST \
+        -H "X-Wing-Timestamp: $ts" \
+        -H "X-Wing-Signature: $sig" \
+        -H "Content-Type: application/json" \
+        -d "$compact" \
+        "${BONE_URL:-http://127.0.0.1:9000}/api/v1/notifications" 2>&1 || echo "000")
+      if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+        echo "INFO: reboot_required notification emitted (service={{ item.service | default('?') }})"
+      else
+        echo "WARN: reboot_required notification POST returned HTTP $code"
+      fi
+  loop: "{{ _reboot_jobs | default([]) }}"
+  loop_control:
+    label: "{{ item.service | default('?') }}:{{ item.recipe_id | default('?') }}"
+  when:
+    - not (upgrade_dry_run | default(false) | bool)
+    - (_reboot_jobs | default([]) | length) > 0
+  changed_when: false
   failed_when: false
   tags: ['upgrade']
 

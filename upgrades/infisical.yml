@@ -30,6 +30,15 @@ recipes:
       service_healthy: true
       other_services_healthy: ["postgresql"]
 
+    reset:
+      scope: container
+      estimated_sec: 60
+      affected_services: [infisical]
+      reason: >-
+        compose.set_image_tag force-recreates only the infisical container;
+        pg_dump/psql exec.shell are docker-exec backups (not host-disruptive, no
+        DB restart), so floor stays container and no stack escalation.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -108,6 +117,16 @@ recipes:
       service_healthy: true
       other_services_healthy: ["postgresql"]
 
+    reset:
+      scope: container
+      estimated_sec: 60
+      affected_services: [infisical]
+      reason: >-
+        Same shape as the 0.60->0.70 recipe: a single compose.set_image_tag
+        recreate of infisical; backup/restore exec.shell hit postgres via docker
+        exec but never restart it, so postgres is a precondition not a
+        forced-reconnect consumer.
+
     pre:
       - id: backup_data
         type: backup.volume
@@ -180,6 +199,15 @@ recipes:
       min_disk_free_gb: 1
       service_healthy: true
       other_services_healthy: ["postgresql"]
+
+    reset:
+      scope: container
+      estimated_sec: 60
+      affected_services: [infisical]
+      reason: >-
+        At-target forward-coverage track (to == installed v0.160.4) with the same
+        apply shape: compose.set_image_tag recreates only the infisical
+        container; no shared-DB restart, no host-disruptive step, so container.
 
     pre:
       - id: backup_data
