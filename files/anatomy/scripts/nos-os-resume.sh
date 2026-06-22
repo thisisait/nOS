@@ -71,18 +71,26 @@ rc=$?
 # One-shot: archive the plan so logins don't re-run settle in a loop.
 mv "$PLAN" "${PLAN%.json}-done-${ts}.json" 2>/dev/null || rm -f "$PLAN"
 
-# Record a machine-readable result Wing can surface later (increment 3).
+# Record a machine-readable result Wing can surface later (increment 3). Count
+# WARN / ATTENTION lines so the result + notification are honest: a WARN must not
+# read as fully "clean" (rc only tracks ATTENTION = sudo/GUI-needed items).
+warns="$(grep -c '^WARN:' "$log" 2>/dev/null)"; warns="${warns:-0}"
+attn="$(grep -c 'ATTENTION:' "$log" 2>/dev/null)"; attn="${attn:-0}"
 res="${NOS_DIR}/os-resume-result.json"
-jq -n --arg ob "${os_before:-}" --arg on "$os_now" --arg t "$ts" --argjson rc "$rc" --arg log "$log" \
-  '{kind:"os-resume", os_before:$ob, os_after:$on, settled_at:$t, settle_rc:$rc, log:$log, clean:($rc==0)}' \
+jq -n --arg ob "${os_before:-}" --arg on "$os_now" --arg t "$ts" --argjson rc "$rc" \
+  --argjson warns "$warns" --argjson attn "$attn" --arg log "$log" \
+  '{kind:"os-resume", os_before:$ob, os_after:$on, settled_at:$t, settle_rc:$rc,
+    warnings:$warns, attention:$attn, log:$log, clean:($rc==0 and $warns==0)}' \
   > "$res" 2>/dev/null || true
 
 # Tell the operator (they are at the machine — a native notification is enough
 # for v0; the A9/Bone fanout comes in increment 3).
-if [ "$rc" -eq 0 ]; then
-  msg="nOS settled after the macOS update (${os_before:-?} → ${os_now}). All clear."
+if [ "$rc" -ne 0 ]; then
+  msg="nOS settle after the macOS update needs attention (${attn} item(s)) — see ${log}."
+elif [ "$warns" -gt 0 ]; then
+  msg="nOS settled after the macOS update (${os_before:-?} → ${os_now}) with ${warns} warning(s) — see ${log}."
 else
-  msg="nOS settle after the macOS update needs attention — see ${log}."
+  msg="nOS settled after the macOS update (${os_before:-?} → ${os_now}). All clear."
 fi
 osascript -e "display notification \"${msg}\" with title \"nOS\"" >/dev/null 2>&1 || true
 echo "[nos-os-resume] settle rc=${rc}; plan archived; ${msg}" | tee -a "$log"

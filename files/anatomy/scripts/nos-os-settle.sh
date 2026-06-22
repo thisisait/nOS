@@ -48,12 +48,19 @@ else
 fi
 
 section "Python interpreter"
-pyver="$(python3 --version 2>&1 | awk '{print $2}')"
 want="$(tr -d ' \n' < "$REPO/.python-version" 2>/dev/null || echo '')"
+# Resolve the interpreter nOS ACTUALLY uses — the pyenv shim, evaluated with the
+# repo as CWD so it reads .python-version. A bare `python3` under the login
+# agent's minimal PATH (no ~/.pyenv/shims) resolves to Homebrew's python and
+# falsely WARNs: the live 26.3.1 -> 26.5.1 test hit exactly this (Homebrew was
+# 3.14.6 while the pinned pyenv shim was correctly 3.13.13).
+py="${HOME}/.pyenv/shims/python3"
+[ -x "$py" ] || py="python3"
+pyver="$(cd "$REPO" && "$py" --version 2>&1 | awk '{print $2}')"
 if [ -n "$want" ] && [ "$pyver" != "$want" ]; then
-  note "WARN: python3 is '$pyver', pinned '$want' — run 'pyenv rehash' / check PATH before a playbook run."
+  note "WARN: nOS python3 is '$pyver', pinned '$want' — run 'pyenv rehash' / check PATH before a playbook run."
 else
-  note "OK: python3 ${pyver:-unknown}."
+  note "OK: python3 ${pyver:-unknown} (pyenv shim)."
 fi
 
 section "Command Line Tools"
