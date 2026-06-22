@@ -26,8 +26,9 @@ BOOTID = SCRIPTS / "nos-boot-id.sh"
 RESUME = SCRIPTS / "nos-os-resume.sh"
 SETTLE = SCRIPTS / "nos-os-settle.sh"
 ARM = REPO / "tools" / "nos-os-update-arm.sh"
+NOTIFY = SCRIPTS / "nos-notify.sh"
 
-ALL_SCRIPTS = [BOOTID, RESUME, SETTLE, ARM]
+ALL_SCRIPTS = [BOOTID, RESUME, SETTLE, ARM, NOTIFY]
 
 
 @pytest.mark.parametrize("script", ALL_SCRIPTS, ids=lambda p: p.name)
@@ -100,6 +101,29 @@ def test_arm_writes_a_plan_resume_accepts(tmp_path: Path):
     r = subprocess.run(["bash", str(RESUME)], cwd=str(REPO), env=env, capture_output=True, text=True)
     assert r.returncode == 0
     assert plan.exists(), "resume must leave the plan armed when the host has not rebooted"
+
+
+# ── Increment 3 — A9/Bone notification fanout ─────────────────────────────────
+
+def test_notify_is_literal_payload_and_best_effort():
+    """nos-notify must POST a LITERAL title+body+channels (a template would 404 in
+    Bone -> 400 -> dropped, the upgrade-engine lesson), HMAC-sign, read the secret
+    from env or ~/.nos/secrets.yml, and be a silent no-op when deps/secret/Bone are
+    missing (it runs at login-time settle and must never fail its caller)."""
+    body = NOTIFY.read_text()
+    assert '"template"' not in body and "template:" not in body, "notify must not use a Bone template"
+    assert "title" in body and "channels" in body
+    assert "WING_EVENTS_HMAC_SECRET" in body and "secrets.yml" in body, "must source the HMAC secret"
+    assert "openssl dgst -sha256 -hmac" in body and "X-Wing-Signature" in body, "must HMAC-sign the POST"
+    assert "command -v" in body and "exit 0" in body, "must be best-effort (no-op on missing deps)"
+    assert "sudo " not in body
+
+
+def test_resume_fans_an_a9_notification():
+    body = RESUME.read_text()
+    assert "nos-notify.sh" in body, "resume must emit an A9 notification via nos-notify.sh"
+    # severity derives from the settle outcome (attention -> high, warn -> medium, else info)
+    assert 'sev="high"' in body and 'sev="medium"' in body and 'sev="info"' in body
 
 
 # ── Increment 2 — launchd login agent + playbook install ──────────────────────

@@ -22,6 +22,7 @@
     - files/anatomy/scripts/nos-boot-id.sh
     - files/anatomy/scripts/nos-os-resume.sh
     - files/anatomy/scripts/nos-os-settle.sh
+    - files/anatomy/scripts/nos-notify.sh
     - tools/nos-os-update-arm.sh
   when: (nos_service_manager | default('launchd')) == 'launchd'
   tags: ['os-resume']

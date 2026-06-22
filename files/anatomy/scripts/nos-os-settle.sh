@@ -34,9 +34,12 @@ if command -v docker >/dev/null 2>&1; then
   fi
   if docker info >/dev/null 2>&1; then
     note "OK: Docker daemon up."
-    unhealthy="$(docker ps --filter health=unhealthy -q 2>/dev/null | wc -l | tr -d ' ')"
-    if [ "${unhealthy:-0}" -gt 0 ]; then
-      note "WARN: ${unhealthy} container(s) unhealthy — consider: tools/nos-stacks.sh"
+    # Name the unhealthy containers (not just a count) so the post-update report
+    # is actionable — a macOS/Docker update can break a service via a changed
+    # filesystem-driver behaviour (e.g. gitlab puma realpath ENOTSUP on VirtioFS).
+    unhealthy="$(docker ps --filter health=unhealthy --format '{{.Names}}' 2>/dev/null | paste -sd, -)"
+    if [ -n "$unhealthy" ]; then
+      note "WARN: unhealthy container(s): ${unhealthy} — inspect: docker logs <name> (or tools/nos-stacks.sh)"
     fi
   else
     note "ATTENTION: Docker daemon still down after wait — stacks will not run until Docker Desktop is up."

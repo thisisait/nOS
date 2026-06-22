@@ -59,12 +59,35 @@ LaunchAgent runs at first **GUI login** (not pre-login) — which is fine, the
 operator logs in to use the machine; a LaunchDaemon would run earlier but lacks
 the user/Docker context.
 
-## Increment 3 / 4 — later
+## Live validation (2026-06-21/22)
 
-- A9/Bone notification of the settle outcome (v0 uses a native `osascript`
-  notification + a `~/.nos/os-resume-result.json` Wing can surface).
-- First-class Wing surface + a `host_reboot` recipe `upgrades/macos.yml` so a
-  macOS update is planned through `/upgrades` like any other upgrade target.
+The real **26.3.1 → 26.5.1** update PASSED end-to-end: the agent detected the
+reboot-into-a-new-OS at login, ran settle, archived the plan, and notified —
+`os-resume-result.json` = `clean:true`. Two findings, both addressed:
+- settle's python check ran under the login agent's PATH (no `~/.pyenv/shims`) →
+  falsely WARNed on Homebrew's 3.14.6; now resolves the pyenv shim from the repo
+  (the interpreter nOS actually uses, 3.13.13). Result is now WARN-honest.
+- the update transiently broke gitlab (puma 7.2.0 `realdirpath` `Errno::ENOTSUP`
+  on its unix socket — a VirtioFS behaviour change; crash-looped ~8 min then
+  **self-healed**). Motivated Inc 3a (settle names the unhealthy container).
+
+## Increment 3 — notification + Wing surface (3a/3b SHIPPED)
+
+- **3a (shipped):** settle NAMES the unhealthy container(s), not just a count —
+  actionable post-update report.
+- **3b (shipped):** resume fans a real **A9/Bone notification** (wing-inbox +
+  ntfy) via `files/anatomy/scripts/nos-notify.sh` — literal title+body+channels
+  (a template would 400 in Bone), HMAC secret from `~/.nos/secrets.yml`,
+  best-effort, severity from the settle outcome. Keeps the native osascript popup.
+  Live-tested (Bone accepted, HTTP 2xx).
+- **3c (next):** Wing `/upgrades` surface — an "armed" badge + a last-settle
+  card from `~/.nos/os-resume-result.json`.
+
+## Increment 4 — first-class upgrade target (next)
+
+A `host_reboot` recipe `upgrades/macos.yml` so a macOS update is planned through
+`/upgrades` like any other target: the plan-choice "arm" writes the continuation
+plan; the recipe's `post` IS the settle.
 
 ## Honest limits
 

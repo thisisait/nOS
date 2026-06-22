@@ -87,11 +87,17 @@ jq -n --arg ob "${os_before:-}" --arg on "$os_now" --arg t "$ts" --argjson rc "$
 # for v0; the A9/Bone fanout comes in increment 3).
 if [ "$rc" -ne 0 ]; then
   msg="nOS settle after the macOS update needs attention (${attn} item(s)) — see ${log}."
+  sev="high"
 elif [ "$warns" -gt 0 ]; then
   msg="nOS settled after the macOS update (${os_before:-?} → ${os_now}) with ${warns} warning(s) — see ${log}."
+  sev="medium"
 else
   msg="nOS settled after the macOS update (${os_before:-?} → ${os_now}). All clear."
+  sev="info"
 fi
+# A9/Bone fanout (wing-inbox + ntfy) — persistent + reviewable beyond the popup.
+"$HERE/nos-notify.sh" "$sev" "nOS macOS update settled (${os_before:-?} → ${os_now})" "$msg" >> "$log" 2>&1 || true
+# Native macOS popup — immediate, the operator is at the machine post-login.
 osascript -e "display notification \"${msg}\" with title \"nOS\"" >/dev/null 2>&1 || true
 echo "[nos-os-resume] settle rc=${rc}; plan archived; ${msg}" | tee -a "$log"
 exit 0
