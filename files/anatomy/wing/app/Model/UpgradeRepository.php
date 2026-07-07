@@ -237,6 +237,56 @@ final class UpgradeRepository
 	}
 
 	/**
+	 * Read a ~/.nos/<name> JSON sidecar as an object, else null (absent/malformed).
+	 * Honest-absent — an unreadable sidecar never crashes the page. (rebootMarker()
+	 * keeps its own inline read to preserve its gate test; this is the shared
+	 * reader for the macOS os-update surface below.)
+	 */
+	private function readNosObject(string $name): ?array
+	{
+		$home = getenv('HOME') ?: '';
+		if ($home === '') {
+			return null;
+		}
+		$path = $home . '/.nos/' . $name;
+		if (!is_file($path)) {
+			return null;
+		}
+		$raw = @file_get_contents($path);
+		if ($raw === false || $raw === '') {
+			return null;
+		}
+		try {
+			$data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			return null;
+		}
+		if (!is_array($data) || $data === [] || array_is_list($data)) {
+			return null;
+		}
+		return $data;
+	}
+
+	/**
+	 * macOS-as-managed-upgrade surface (Increment 3c): the ARMED continuation plan
+	 * (~/.nos/continuation-plan.json — a macOS update is staged; safe to update +
+	 * restart) and the LAST settle result (~/.nos/os-resume-result.json —
+	 * os_before -> os_after, clean/warnings) written by the login-agent resume.
+	 * Returns null when neither sidecar is present (nothing to surface).
+	 *
+	 * @return array{armed:?array<string,mixed>, last_settle:?array<string,mixed>}|null
+	 */
+	public function osUpdateState(): ?array
+	{
+		$armed = $this->readNosObject('continuation-plan.json');
+		$lastSettle = $this->readNosObject('os-resume-result.json');
+		if ($armed === null && $lastSettle === null) {
+			return null;
+		}
+		return ['armed' => $armed, 'last_settle' => $lastSettle];
+	}
+
+	/**
 	 * Live coexistence tracks keyed by service (B4c), read from the local mirror
 	 * (`coexistence_tracks`). Primary first (role='primary' / active=1), so the
 	 * matrix renders the active version on top. A service with 0 or 1 track is

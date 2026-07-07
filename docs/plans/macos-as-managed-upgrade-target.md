@@ -80,8 +80,11 @@ reboot-into-a-new-OS at login, ran settle, archived the plan, and notified —
   (a template would 400 in Bone), HMAC secret from `~/.nos/secrets.yml`,
   best-effort, severity from the settle outcome. Keeps the native osascript popup.
   Live-tested (Bone accepted, HTTP 2xx).
-- **3c (next):** Wing `/upgrades` surface — an "armed" badge + a last-settle
-  card from `~/.nos/os-resume-result.json`.
+- **3c (shipped):** Wing `/upgrades` surface — `UpgradeRepository::osUpdateState()`
+  reads the `~/.nos/continuation-plan.json` (armed) + `os-resume-result.json` (last
+  settle) sidecars; `default.latte` renders an "armed" badge + a last-settle card
+  (os_before → os_after, clean/warnings), gated so an absent sidecar renders
+  nothing. Goes live on the next Wing deploy.
 
 ## Increment 4 — first-class upgrade target (next)
 

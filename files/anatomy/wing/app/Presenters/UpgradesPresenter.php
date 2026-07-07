@@ -78,6 +78,11 @@ final class UpgradesPresenter extends BasePresenter
 		// reads the runtime sidecar and returns null on an absent/malformed marker,
 		// so $rebootPending is null → the template renders no banner.
 		$this->template->rebootPending = $this->upgrades->rebootMarker();
+
+		// Increment 3c: macOS-as-managed-upgrade surface — the armed continuation
+		// plan (safe-to-update badge) + the last login-agent settle result. Null
+		// when the ~/.nos sidecars are absent → the template renders nothing.
+		$this->template->osUpdate = $this->upgrades->osUpdateState();
 	}
 
 	/**

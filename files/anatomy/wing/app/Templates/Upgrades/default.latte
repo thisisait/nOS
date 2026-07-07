@@ -25,6 +25,35 @@
 	</div>
 {/if}
 
+{* Increment 3c: macOS-as-managed-upgrade surface. The ARMED continuation plan
+   (safe to update + restart) and/or the LAST login-agent settle result. Both are
+   null when the ~/.nos sidecars are absent → the whole card renders nothing.
+   The operator triggers the macOS update; nOS handles the continuity. *}
+{if $osUpdate !== null}
+	<div class="upg-os-card">
+		<div class="upg-os-card-head">
+			<span class="upg-os-icon" aria-hidden="true">&#63743;</span>
+			<strong>macOS update</strong>
+		</div>
+		{if !empty($osUpdate['armed'])}
+			<div class="upg-os-armed" role="status">
+				<strong>Armed</strong> — a macOS update is staged. Safe to run the macOS update + restart now; nOS settles automatically after you log back in.
+				{if !empty($osUpdate['armed']['os_version_before'])}<span class="upg-os-ts">Current: {$osUpdate['armed']['os_version_before']}{if !empty($osUpdate['armed']['os_build_before'])} ({$osUpdate['armed']['os_build_before']}){/if}.</span>{/if}
+				{if !empty($osUpdate['armed']['armed_at'])}<span class="upg-os-ts">Armed {$osUpdate['armed']['armed_at']}.</span>{/if}
+			</div>
+		{/if}
+		{if !empty($osUpdate['last_settle'])}
+			{var $s = $osUpdate['last_settle']}
+			<div class="upg-os-settle {if !empty($s['clean'])}is-clean{else}is-warn{/if}" role="status">
+				<strong>Last settle:</strong>
+				{if !empty($s['os_before']) || !empty($s['os_after'])}{$s['os_before'] ?? '?'} &rarr; {$s['os_after'] ?? '?'} — {/if}
+				{if !empty($s['clean'])}clean{else}{($s['attention'] ?? 0)} attention, {($s['warnings'] ?? 0)} warning(s) — see log{/if}.
+				{if !empty($s['settled_at'])}<span class="upg-os-ts">{$s['settled_at']}.</span>{/if}
+			</div>
+		{/if}
+	</div>
+{/if}
+
 <div class="upg-page-header">
 	<div>
 		<h2>Upgrades</h2>
