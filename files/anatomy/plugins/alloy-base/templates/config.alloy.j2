@@ -69,10 +69,10 @@ loki.write "default" {
 
 otelcol.receiver.otlp "default" {
   grpc {
-    endpoint = "0.0.0.0:{{ alloy_otlp_grpc_port | default(4317) }}"
+    endpoint = "{{ alloy_otlp_bind_addr | default('127.0.0.1') }}:{{ alloy_otlp_grpc_port | default(4317) }}"
   }
   http {
-    endpoint = "0.0.0.0:{{ alloy_otlp_http_port | default(4318) }}"
+    endpoint = "{{ alloy_otlp_bind_addr | default('127.0.0.1') }}:{{ alloy_otlp_http_port | default(4318) }}"
   }
 
   output {

@@ -425,10 +425,10 @@ loki.write "default" {
 // Alloy listens on alloy_otlp_*_port (4317/4318) and forwards to Tempo on tempo_otlp_*_port (4327/4328)
 otelcol.receiver.otlp "default" {
   grpc {
-    endpoint = "0.0.0.0:{{ alloy_otlp_grpc_port | default(4317) }}"
+    endpoint = "{{ alloy_otlp_bind_addr | default('127.0.0.1') }}:{{ alloy_otlp_grpc_port | default(4317) }}"
   }
   http {
-    endpoint = "0.0.0.0:{{ alloy_otlp_http_port | default(4318) }}"
+    endpoint = "{{ alloy_otlp_bind_addr | default('127.0.0.1') }}:{{ alloy_otlp_http_port | default(4318) }}"
   }
 
   output {

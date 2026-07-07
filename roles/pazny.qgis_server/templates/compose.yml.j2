@@ -14,6 +14,17 @@ services:
     image: kartoza/qgis-server:{{ qgis_version | default('latest') }}
     platform: linux/amd64    # amd64 only - Docker Desktop emulates via Rosetta
     restart: unless-stopped
+    # Restart-loop fix: kartoza's /entrypoint.sh does a non-idempotent
+    # `ln -s conf-available/qgis.conf conf-enabled/qgis.conf`, and apache leaves a
+    # pid file — BOTH persist across `restart:` (same container, the writable layer
+    # survives a restart), so every restart hits `ln: File exists` + `httpd (pid 1)
+    # already running` and loops (Restarting(0)). Pre-clean the stale symlink + pid
+    # files, then run the original entrypoint with its original CMD ($@).
+    entrypoint:
+      - /bin/bash
+      - -c
+      - "rm -f /etc/apache2/conf-enabled/qgis.conf /var/run/apache2/apache2.pid /run/apache2/apache2.pid 2>/dev/null; exec /entrypoint.sh \"$@\""
+      - bash
     ports:
       - "127.0.0.1:{{ qgis_port | default(8071) }}:80"
     volumes:

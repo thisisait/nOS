@@ -142,7 +142,7 @@ async def health():
 
 
 @app.get("/api/health/aggregate")
-async def health_aggregate():
+async def health_aggregate(_=Depends(require_scope("nos:state:read"))):
     """Aggregated health — fan-out to every registered service.
 
     Pre-P0.15 this was /api/health. Kept fully compatible (same response
@@ -170,8 +170,9 @@ async def health_aggregate():
 
 
 @app.get("/api/services")
-async def services():
-    """Return service-registry.json content."""
+async def services(_=Depends(require_scope("nos:state:read"))):
+    """Return service-registry.json content. Scope-gated (REM-110): the registry
+    exposes every internal hostname/port/version — unauthenticated recon fuel."""
     path = Path(SERVICE_REGISTRY_PATH)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="service-registry.json not found")
@@ -179,8 +180,9 @@ async def services():
 
 
 @app.get("/api/status")
-async def status():
-    """Box identity and basic status."""
+async def status(_=Depends(require_scope("nos:state:read"))):
+    """Box identity and basic status. Scope-gated (REM-110) — leaks the nOS
+    version + hostname. The O(1) /api/health liveness probe stays ungated."""
     version = "unknown"
     version_path = Path(VERSION_FILE)
     if version_path.is_file():

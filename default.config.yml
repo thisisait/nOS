@@ -341,6 +341,11 @@ enable_remote_management: false   # Apple Remote Desktop (ARD) – full manageme
 
 # ── Observability – Grafana LGTM stack ────────────────────────────────────────
 install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+# REM-107: Alloy OTLP receiver bind. 127.0.0.1 = loopback-only (on-host apps only —
+# the secure default; Alloy is a HOST process, so 0.0.0.0 exposed 4317/4318 to the
+# LAN/Tailscale unauthenticated). Set 0.0.0.0 ONLY for cross-host telemetry, then
+# firewall 4317/4318 to a trusted subnet (the receiver has no auth extension).
+alloy_otlp_bind_addr: "127.0.0.1"
 install_influxdb: false           # InfluxDB 2.x – time-series DB [Docker]
 
 # ── IIAB – self-hosted knowledge & productivity services ──────────────────────
