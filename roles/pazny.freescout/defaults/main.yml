@@ -6,7 +6,7 @@
 # default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
-freescout_version: "php8.3-1.17.159"         # tiredofit img build; bundles FreeScout 1.8.219 (>=1.8.212; fixes REM-069/070/071); aligned with default.config.yml (source of truth — bump there too)
+freescout_version: "2.1.3-php8.3"            # nfrastack img (tiredofit EOL @1.17.999); bundles FreeScout 1.8.226 (fixes REM-118 CVE-2026-53595 9.4 + 3); aligned with default.config.yml (source of truth — bump there too)
 freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 freescout_port: 8090
 freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
