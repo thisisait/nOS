@@ -25,6 +25,10 @@ services:
       - -c
       - "rm -f /etc/apache2/conf-enabled/qgis.conf /var/run/apache2/apache2.pid /run/apache2/apache2.pid 2>/dev/null; exec /entrypoint.sh \"$@\""
       - bash
+    # compose `entrypoint:` CLEARS the image CMD (apache2 -DFOREGROUND), so the
+    # wrapper's "$@" is empty and apache never starts (container exits 0 → loop).
+    # Restore the CMD explicitly so entrypoint.sh's `exec "$@"` launches apache.
+    command: ["apache2", "-DFOREGROUND"]
     ports:
       - "127.0.0.1:{{ qgis_port | default(8071) }}:80"
     volumes:
