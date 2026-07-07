@@ -18,6 +18,12 @@ services:
       dockerfile: Dockerfile
     image: nos/puter:{{ puter_version | default('latest') }}
     restart: unless-stopped
+    # Upstream puter:latest's default CMD preloads telemetry (`node -r
+    # ./dist/src/backend/telemetry.js …`), which require()s @opentelemetry/auto-
+    # instrumentations-node — a module the base image stopped bundling → the
+    # backend crash-loops (MODULE_NOT_FOUND, exit 1). OTEL auto-instrumentation is
+    # optional; start puter without the preload (NODE_OPTIONS source-maps kept).
+    command: ["node", "./dist/src/backend/index.js"]
     ports:
 {% if services_lan_access | default(false) %}
       - "{{ puter_port | default(5050) }}:4100"
