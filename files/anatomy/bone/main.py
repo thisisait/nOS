@@ -427,6 +427,18 @@ async def upgrades_apply(service: str, recipe_id: str, _=Depends(require_scope("
     return payload
 
 
+@app.post("/api/upgrades/{service}/{recipe_id}/apply-detached")
+async def upgrades_apply_detached(service: str, recipe_id: str, _=Depends(require_scope("nos:upgrades:apply"))):
+    """Launch the upgrade detached (run_mode=detached, or the session_risk recipe
+    apply() refused with 409). Survives the operator's session dying."""
+    _require_framework()
+    payload = _nos_upgrades.apply_detached(service, recipe_id)
+    status = _status_from_payload(payload)
+    if status >= 400:
+        raise HTTPException(status_code=status, detail=payload.get("error", "detached apply failed"))
+    return payload
+
+
 # ---- /api/patches ---------------------------------------------------------
 
 

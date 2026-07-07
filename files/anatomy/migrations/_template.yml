@@ -33,6 +33,20 @@ downtime:
   estimated_sec: 30
   services_affected: [authentik, bone]
 
+# Blast-radius / session-safety — mirrors the upgrade-recipe `reset` block. When a
+# migration is PROMOTED from an upgrade recipe, CARRY the recipe's `reset` here
+# verbatim (the migration-author agent must copy it). scope is one of
+# none | container | stack | host_app | host_reboot; session_risk
+# (host_app|host_reboot) is DERIVED by the engine (resolve_reset), never authored,
+# and must be >= the floor implied by this migration's own step actions. The
+# engine folds a legacy `downtime:` into reset when reset is absent — but author it.
+reset:
+  scope: container
+  estimated_sec: 30
+  affected_services: [authentik]
+  # affected_host_apps: ["Docker Desktop"]   # only meaningful for host_app / host_reboot
+  reason: "one line — why this blast radius"
+
 # GATE — this entire migration is eligible only when applies_if evaluates true.
 # If false, nos_migrate skips the migration and records nothing.
 applies_if:

@@ -48,6 +48,12 @@ the existing `nos_migrate action=apply` engine path).
      inverse `rollback:` on the relevant steps. Use `exec.shell` (with
      `allow_shell: true` at the top) for the dump/restore/image-bump bodies, the
      same shape the recipe `apply[]` carries.
+   - **carry the recipe's top-level `reset` block onto the migration VERBATIM**
+     (scope + estimated_sec + affected_services + reason). The engine derives
+     session_risk (host_app|host_reboot) from it, and the migration gate REJECTS
+     an authored scope below the floor implied by the migration's own step
+     actions — so a promoted host_reboot/host_app recipe MUST keep its scope. If
+     the recipe has no `reset`, omit it (the engine derives a container floor).
    - `post_verify` asserts the new version is live.
    The `migration_file_write` tool refuses any path outside
    `files/anatomy/migrations/` + `default.config.yml` — that refusal is by

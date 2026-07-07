@@ -24,8 +24,11 @@ Score the migration-author run. Return strict JSON
    `state/schema/migration.schema.json`: `id` == filename, `applies_if` gating on
    the installed=from track (idempotency), each step with
    `detect`/`action`/`verify`/`rollback`, and a `post_verify` asserting the new
-   version. For `plan_mode=coexist`, the data-transform steps are isolated +
-   re-runnable against an empty target cluster.
+   version. When the source recipe declares a `reset` block, the migration
+   CARRIES it (scope + estimated_sec + affected_services + reason) — a session-risk
+   (host_app|host_reboot) recipe must not be silently downgraded. For
+   `plan_mode=coexist`, the data-transform steps are isolated + re-runnable
+   against an empty target cluster.
 6. **Report shape.** `## Migration author report` with Opened migration MR / Plan
    mode / Recommendations, and the `migrations_authored` row POSTed.
 

@@ -221,6 +221,23 @@ def test_authored_low_scope_cannot_lower_host_reboot_floor():
     }
 
 
+def test_migration_shape_derive_floor():
+    """A migration record carries steps[].action.type (not pre/apply/post + type).
+    derive_floor must classify those migration action verbs too, so the migration
+    the migration-author promotes carries a floor-consistent reset block."""
+    assert derive_floor({"steps": [{"action": {"type": "launchd.kickstart"}}]}) == "host_app"
+    assert derive_floor({"steps": [{"action": {"type": "docker.compose_override_rename"}}]}) == "stack"
+    assert derive_floor({"steps": [{"action": {"type": "fs.mv"}}]}) == "none"
+    assert derive_floor({"steps": [{"action": {"type": "exec.shell", "command": "sudo reboot"}}]}) == "host_reboot"
+
+
+def test_migration_authored_scope_escalates_to_step_floor():
+    m = {"reset": {"scope": "container"}, "steps": [{"action": {"type": "launchd.kickstart"}}]}
+    r = resolve_reset(m)
+    assert r["scope"] == "host_app" and r["session_risk"] is True
+    assert r["reset_floor_raised"] == {"authored": "container", "derived": "host_app", "resolved": "host_app"}
+
+
 def test_shipped_recipes_author_scope_at_or_above_floor():
     """The Wing matrix/plan-choice displays the AUTHORED scope verbatim (ingest
     stores it, does NOT derive; a missing reset shows the NULL->'container'

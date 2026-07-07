@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,10 @@ UPGRADES_DIR = Path(
 
 _SERVICE_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 _RECIPE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+
+# A host_app/host_reboot recipe can restart a host app or reboot the machine and
+# drop the operator's session — it must run DETACHED, never attached under Bone.
+_SESSION_RISK_SCOPES = ("host_app", "host_reboot")
 
 
 def _load_service_file(service: str) -> dict[str, Any] | None:
@@ -119,6 +124,18 @@ def get_recipe(service: str, recipe_id: str) -> dict[str, Any] | None:
     return None
 
 
+def _recipe_reset_scope(service: str, recipe_id: str) -> str | None:
+    """The recipe's AUTHORED reset.scope. The recipe consistency gate guarantees a
+    host_app/host_reboot-floor recipe authors a reset, so the authored scope
+    reflects the true blast radius — no need to import the Ansible-only
+    resolve_reset here."""
+    got = get_recipe(service, recipe_id)
+    if not got:
+        return None
+    reset = got.get("recipe", {}).get("reset")
+    return reset.get("scope") if isinstance(reset, dict) else None
+
+
 def _validate(service: str, recipe_id: str) -> str | None:
     if not _SERVICE_RE.match(service):
         return "invalid service"
@@ -149,8 +166,62 @@ def apply(service: str, recipe_id: str) -> dict[str, Any]:
     err = _validate(service, recipe_id)
     if err is not None:
         return {"error": err, "status": 400 if err != "recipe not found" else 404}
+    # Session-safety policy: a host_app/host_reboot recipe must NOT run attached
+    # under Bone. Bone runs the playbook non-interactively (no TTY), so the
+    # engine's session-risk pause would HANG until timeout; and running it attached
+    # is exactly the risk the feature exists to prevent. Refuse — the operator's
+    # path for such a recipe is apply-detached (which they explicitly chose).
+    scope = _recipe_reset_scope(service, recipe_id)
+    if scope in _SESSION_RISK_SCOPES:
+        return {
+            "error": "session_risk recipe must run detached",
+            "status": 409,
+            "scope": scope,
+            "service": service,
+            "recipe_id": recipe_id,
+            "hint": f"POST /api/upgrades/{service}/{recipe_id}/apply-detached",
+        }
     result = migrate_mod.invoke_playbook(
         "upgrade",
         {"upgrade_service": service, "upgrade_recipe_id": recipe_id},
     )
     return {"service": service, "recipe_id": recipe_id, "applied": True, **result}
+
+
+def apply_detached(service: str, recipe_id: str) -> dict[str, Any]:
+    """Launch the upgrade DETACHED via tools/nos-upgrade-detached.sh — the operator
+    chose run_mode=detached, or a session_risk recipe was routed here from apply().
+    The launcher backgrounds the ansible run and returns immediately with a log
+    path + pid. Because Bone is a stable launchd daemon (not the operator's
+    session), the detached run survives the operator's IDE/terminal dying — the
+    whole point of the feature."""
+    err = _validate(service, recipe_id)
+    if err is not None:
+        return {"error": err, "status": 400 if err != "recipe not found" else 404}
+    repo = Path(str(migrate_mod.PLAYBOOK_DIR))
+    launcher = repo / "tools" / "nos-upgrade-detached.sh"
+    if not launcher.is_file():
+        return {"error": "detached launcher not found", "status": 500}
+    try:
+        proc = subprocess.Popen(
+            ["/bin/bash", str(launcher), service, recipe_id],
+            cwd=str(repo),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        # The launcher backgrounds the run and returns immediately, so its own
+        # stdout (log path + pid) arrives fast; the timeout is just a backstop.
+        out, _ = proc.communicate(timeout=60)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        return {"error": "detached launcher did not return in time", "status": 500}
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"detached launch failed: {exc}", "status": 500}
+    return {
+        "service": service,
+        "recipe_id": recipe_id,
+        "detached": True,
+        "returncode": proc.returncode,
+        "output": out,
+    }

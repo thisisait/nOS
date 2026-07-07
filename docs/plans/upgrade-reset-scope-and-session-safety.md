@@ -1,7 +1,7 @@
 # Upgrade/migration reset-scope + session-safety — design plan
 
-Status: PHASES 0–3 BUILT (2026-06-20), pending a local playbook wet-test; Phase 4
-(migration-author propagation + Bone-wired "plan → detached" button) still open. A
+Status: PHASES 0–4 BUILT (Phase 4: 2026-07-07). The macOS-update continuity flow
+is live-validated; the reset-scope blank wet-test is still owed. A
 discrete extension of the
 [agentic upgrade → migration → coexistence epic](agentic-upgrade-migration-coexistence.md);
 read that first for the layered RECIPE → MIGRATION → COEXISTENCE model and the
@@ -14,7 +14,15 @@ read that first for the layered RECIPE → MIGRATION → COEXISTENCE model and t
 > + `reboot_required` marker/clear/banner + A9 notification) are all in the working
 > tree, gated by the full anatomy suite + ansible-lint (production profile). Two
 > multi-agent build workflows + adversarial review; all review findings fixed.
-> **Phase 4 is the only remaining work.**
+> **Phase 4 shipped 2026-07-07:** the migration-author agent carries the recipe's
+> `reset` into authored migrations (pinned by a deterministic migration reset-floor
+> gate in `tests/migrations/` that `migration-pr.sh` runs); Bone `apply()` refuses a
+> session_risk recipe (409 → detached) so it can never run attached under Bone's
+> TTY-less playbook; and the plan→detached chain (Wing `applyDetached` → Bone
+> `apply-detached` → `nos-upgrade-detached.sh`) is wired. Remaining: the reset-scope
+> **blank wet-test**, and a thin UI touch to auto-route a `run_mode=detached` apply
+> button to the new endpoint (the session_risk refuse already forces detached for
+> the dangerous recipes).
 
 ## Why this exists (the trigger)
 

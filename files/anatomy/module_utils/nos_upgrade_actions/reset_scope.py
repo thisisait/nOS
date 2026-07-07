@@ -173,22 +173,46 @@ def step_floor(step, recipe, service=None):
 
 
 def derive_floor(recipe, service=None):
-    """Max derived floor over pre + apply + post.
+    """Max derived floor for an upgrade recipe OR a migration record.
 
-    The ``rollback`` phase is deliberately EXCLUDED: it runs only on a failed
-    post-phase and its blast radius is assumed <= the apply floor (rollback is
-    the inverse of apply). Including it would over-escalate recipes whose
-    recovery merely restores data.
+    Upgrade recipes carry ``pre``/``apply``/``post`` arrays of steps whose ``type``
+    is the action; migration records carry ``steps[]`` whose ``action.{type,
+    command,shell}`` carries it. Both shapes are handled (a recipe never has
+    ``steps`` and a migration never has the phase arrays, so there is no double
+    count). The ``rollback`` phase / a step's ``rollback:`` action is deliberately
+    EXCLUDED: it runs only on failure and its blast radius is assumed <= the apply
+    floor. Including it would over-escalate a recipe whose recovery merely restores.
     """
     floor = "none"
     if not isinstance(recipe, dict):
         return floor
     svc = _effective_service(recipe, service)
+
+    def _raise(f):
+        return f if SCOPE_RANK[f] > SCOPE_RANK[floor] else floor
+
+    # Upgrade-recipe shape.
     for phase in ("pre", "apply", "post"):
         for step in recipe.get(phase) or []:
-            f = step_floor(step, recipe, svc)
-            if SCOPE_RANK[f] > SCOPE_RANK[floor]:
-                floor = f
+            floor = _raise(step_floor(step, recipe, svc))
+
+    # Migration-record shape: normalize each step's action into a recipe-like step
+    # so step_floor classifies it (launchd.* -> host_app,
+    # docker.compose_override_rename -> stack, exec.shell -> denylist scan).
+    for step in recipe.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        action = step.get("action") or {}
+        if not isinstance(action, dict):
+            continue
+        norm = {"type": action.get("type")}
+        for k in ("cmd", "command", "shell"):
+            if isinstance(action.get(k), str):
+                norm[k] = action[k]
+        if step.get("affected_services") is not None:
+            norm["affected_services"] = step.get("affected_services")
+        floor = _raise(step_floor(norm, recipe, svc))
+
     return floor
 
 

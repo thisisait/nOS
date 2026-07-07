@@ -73,6 +73,7 @@ final class RouterFactory
 		// /<service>/<recipe> form (first-match-wins).
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan-choice', 'Upgrades:planChoice');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan', 'Upgrades:plan');
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply-detached', 'Upgrades:applyDetached');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply', 'Upgrades:apply');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
 		$api->addRoute('api/v1/upgrades/<service>', 'Upgrades:service');

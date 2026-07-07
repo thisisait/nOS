@@ -710,4 +710,16 @@ final class UpgradeRepository
 			'/api/upgrades/' . rawurlencode($service) . '/' . rawurlencode($recipeId) . '/apply',
 		);
 	}
+
+	/**
+	 * Launch the upgrade DETACHED (run_mode=detached, or a session_risk recipe
+	 * that plain apply() refuses with 409). Bone shells to nos-upgrade-detached.sh
+	 * so the run survives the operator's session dying. Phase-4 plan->detached.
+	 */
+	public function applyDetached(string $service, string $recipeId): array
+	{
+		return $this->box->post(
+			'/api/upgrades/' . rawurlencode($service) . '/' . rawurlencode($recipeId) . '/apply-detached',
+		);
+	}
 }

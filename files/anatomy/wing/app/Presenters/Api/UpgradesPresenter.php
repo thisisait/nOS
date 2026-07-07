@@ -68,6 +68,18 @@ final class UpgradesPresenter extends BaseApiPresenter
 	}
 
 	/**
+	 * POST /api/v1/upgrades/{service}/{recipe}/apply-detached — Phase-4
+	 * plan->detached. The operator chose run_mode=detached (or a session_risk
+	 * recipe was routed here). Bone launches nos-upgrade-detached.sh so the run
+	 * survives the operator's session dying mid-upgrade.
+	 */
+	public function actionApplyDetached(string $service, string $recipe): void
+	{
+		$this->requireMethod('POST');
+		$this->proxyBoxApi($this->upgrades->applyDetached($service, $recipe));
+	}
+
+	/**
 	 * POST /api/v1/upgrades/{service}/{recipe}/queue — queue an upgrade as
 	 * planned (W5-B2). The upgrade-engine applies the queue under --tags
 	 * upgrade. planned_by is ALWAYS the validated bearer-token identity
