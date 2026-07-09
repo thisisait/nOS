@@ -23,11 +23,24 @@ WING = REPO / "files" / "anatomy" / "wing" / "app"
 
 @pytest.fixture()
 def bone_upgrades(tmp_path, monkeypatch):
+    import sys  # noqa: PLC0415
+
     monkeypatch.syspath_prepend(str(BONE))
+    # Bone's upgrades.py and its siblings (`import migrations`, `import state`)
+    # share bare top-level names with the test packages tests/upgrades/,
+    # tests/migrations/, tests/state_manager→state. Once pytest collects those,
+    # they shadow sys.modules, so bone's `import upgrades`/`import migrations`
+    # resolve to the TEST packages (no UPGRADES_DIR / invoke_playbook). Drop the
+    # cached names so syspath_prepend(BONE) above resolves each to files/anatomy/
+    # bone/*.py (monkeypatch restores sys.modules after the test).
+    for _name in ("upgrades", "migrations", "state"):
+        monkeypatch.delitem(sys.modules, _name, raising=False)
     try:
         import upgrades  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001
         pytest.skip(f"bone upgrades not importable standalone: {exc}")
+    if not hasattr(upgrades, "UPGRADES_DIR"):  # collision guard (should not trigger)
+        pytest.skip("resolved a non-Bone 'upgrades' module (name collision)")
     (tmp_path / "demo.yml").write_text(textwrap.dedent("""\
         service: demo
         recipes:
