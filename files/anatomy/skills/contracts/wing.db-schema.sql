@@ -658,6 +658,8 @@ CREATE TABLE upgrade_recipes (
     severity      TEXT,                     -- patch | minor | breaking
     docs_url      TEXT,
     title         TEXT,
+    coexistence_supported INTEGER NOT NULL DEFAULT 0,  -- the recipe's coexistence_supported flag (B4b plan-choice option (b) gate)
+    reset_json    TEXT,                     -- AUTHORED reset block JSON (scope/estimated_sec/affected_services/...) from upgrades/<svc>.yml, stored verbatim; NOT derived — the engine's resolve_reset derives the floor at apply time. NULL = no authored reset (UI shows 'container' floor). Mirrors coexistence_supported.
     ingested_at   TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (service, recipe_id)
 );
@@ -685,6 +687,9 @@ CREATE TABLE upgrades_planned (
     planned_by    TEXT NOT NULL DEFAULT 'operator',
     status        TEXT NOT NULL DEFAULT 'planned',   -- planned | applied | cancelled
     notes         TEXT,
+    reset_scope   TEXT,                                 -- resolved reset.scope at plan time (none|container|stack|host_app|host_reboot)
+    session_risk  INTEGER NOT NULL DEFAULT 0,           -- derived: reset_scope in {host_app,host_reboot}
+    run_mode      TEXT NOT NULL DEFAULT 'attached',     -- attached | detached | stage_then_reboot
     planned_at    TEXT NOT NULL DEFAULT (datetime('now')),
     applied_at    TEXT, plan_mode TEXT NOT NULL DEFAULT 'migration', coexistence_planned_id INTEGER, migration_uuid TEXT, plan_choice_at TEXT,
     UNIQUE (service, recipe_id, status)

@@ -93,6 +93,51 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Coexistence Cleanup
+  /api/coexistence/{service}/copy-data/{tag}:
+    post:
+      description: 'Manual, re-runnable "Copy data" into a secondary track (A4 / Q3): run the
+
+        track''s recorded migration data move into the secondary''s empty cluster,
+
+        idempotently, then stamp data_copied_at. NO pointer flip. dry_run defaults
+
+        TRUE (mutating verb): the first call plans, dry_run=false commits.'
+      operationId: coexistence_copy_data_api_coexistence__service__copy_data__tag__post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: tag
+        required: true
+        schema:
+          title: Tag
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Copy Data
   /api/coexistence/{service}/cutover:
     post:
       operationId: coexistence_cutover_api_coexistence__service__cutover_post
@@ -124,6 +169,88 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Coexistence Cutover
+  /api/coexistence/{service}/deactivate/{tag}:
+    post:
+      description: 'Deactivate a non-primary track (docker compose stop, data kept).
+
+        dry_run defaults TRUE (mutating verb).'
+      operationId: coexistence_deactivate_api_coexistence__service__deactivate__tag__post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: tag
+        required: true
+        schema:
+          title: Tag
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Deactivate
+  /api/coexistence/{service}/promote/{tag}:
+    post:
+      description: 'Toggle-as-primary — the reversible operator cutover. dry_run defaults
+
+        TRUE (mutating verb): the first call plans, dry_run=false commits.'
+      operationId: coexistence_promote_api_coexistence__service__promote__tag__post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: tag
+        required: true
+        schema:
+          title: Tag
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - additionalProperties: true
+                type: object
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Coexistence Promote
   /api/coexistence/{service}/provision:
     post:
       operationId: coexistence_provision_api_coexistence__service__provision_post
@@ -546,7 +673,9 @@ paths:
       summary: Run Tag
   /api/services:
     get:
-      description: Return service-registry.json content.
+      description: 'Return service-registry.json content. Scope-gated (REM-110): the registry
+
+        exposes every internal hostname/port/version — unauthenticated recon fuel.'
       operationId: services_api_services_get
       responses:
         '200':
@@ -634,7 +763,9 @@ paths:
       summary: State Service
   /api/status:
     get:
-      description: Box identity and basic status.
+      description: 'Box identity and basic status. Scope-gated (REM-110) — leaks the nOS
+
+        version + hostname. The O(1) /api/health liveness probe stays ungated.'
       operationId: status_api_status_get
       responses:
         '200':
@@ -734,6 +865,38 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Upgrades Apply
+  /api/upgrades/{service}/{recipe_id}/apply-detached:
+    post:
+      description: 'Launch the upgrade detached (run_mode=detached, or the session_risk recipe
+
+        apply() refused with 409). Survives the operator''s session dying.'
+      operationId: upgrades_apply_detached_api_upgrades__service___recipe_id__apply_detached_post
+      parameters:
+      - in: path
+        name: service
+        required: true
+        schema:
+          title: Service
+          type: string
+      - in: path
+        name: recipe_id
+        required: true
+        schema:
+          title: Recipe Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Upgrades Apply Detached
   /api/upgrades/{service}/{recipe_id}/plan:
     post:
       operationId: upgrades_plan_api_upgrades__service___recipe_id__plan_post

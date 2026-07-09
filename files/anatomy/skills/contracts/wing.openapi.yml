@@ -285,6 +285,29 @@ paths:
           required: true
           schema:
             type: string
+  '/api/v1/coexistence/{service}/copy-data':
+    post:
+      summary: copy data into a secondary       [A4]
+      operationId: Coexistence_copyData_post
+      tags:
+        - Coexistence
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
   '/api/v1/coexistence/{service}/cutover':
     post:
       summary: atomic switch to target_tag
@@ -2025,6 +2048,34 @@ paths:
     post:
       summary: execute a recipe; returns run_id + tail
       operationId: Upgrades_apply_post
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/apply-detached':
+    get:
+      summary: 'Upgrades::actionapplyDetached'
+      operationId: Upgrades_applyDetached_get
       tags:
         - Upgrades
       responses:
