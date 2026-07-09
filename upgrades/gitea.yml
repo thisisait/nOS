@@ -1,0 +1,122 @@
+---
+service: gitea
+allow_shell: true   # sqlite online-backup + restore + image-bump steps need exec.shell
+docs_url: "https://docs.gitea.com/administration/upgrade-from-gitea"
+maintainers: ["pazny"]
+notes: |
+  Authored by the upgrade-architect agent (focused run 2026-07-09, event id 108),
+  operator-committed. The agent corrected two REM-099 ticket assumptions via live
+  inspection of the running devops-gitea-1 container:
+
+    1. DB backend is sqlite3, NOT MariaDB — GITEA__database__DB_TYPE=sqlite3 in
+       both the running container and roles/pazny.gitea/templates/compose.yml.j2.
+       The DB backup is therefore a transactionally-consistent sqlite `.backup`
+       (sqlite3 3.49.2 CLI is in-image), not a mariadb-dump.
+    2. Gitea has no /-/readiness (that path is GitLab's — returns 404). The
+       verified health endpoint is GET /api/healthz → 200 (the in-container
+       healthcheck probes /api/v1/version). The post http.wait uses /api/healthz.
+
+  IN-PLACE SAME-ORG TAG BUMP — read this: unlike freescout's cross-org migration,
+  the image ORG does not change (gitea/gitea 1.25 → gitea/gitea 1.26), so this is
+  a clean compose.set_image_tag drive. 1.25→1.26 keeps the sqlite engine and runs
+  forward-only migrations in-container on first boot (no coexistence track needed).
+  The sqlite DB lives inside {{ gitea_data_dir }} (bind-mounted to /data), so the
+  data-dir volume backup captures repos + config + attachments, and the separate
+  sqlite `.backup` captures a consistent DB snapshot layered on restore.
+
+  REM-099 (CRITICAL): 1.25.x is END-OF-LIFE — 1.25.5 (2026-03-13) was the last
+  1.25 release, no backports since 2026-04. Every fix landed only in 1.26.x:
+  CVE-2026-27771 (unauth private package/OCI registry reads — the headline, and
+  Gitea's package registry is enabled with a native_oidc/200-at-edge Traefik
+  route), CVE-2026-22874 (webhook SSRF), OAuth2 scope bypass (CVE-2026-28699/
+  28744), CVE-2026-27775 (pre-receive multi-ref permission escalation). Target is
+  EXACTLY 1.26.4: 1.26.3 shipped a repo-code-page context-deadline regression and
+  1.26.2 misses three 1.26.3 CRITICALs.
+
+  SHADOW-PIN BUMP IS MANDATORY in the follow-up migration MR: gitea_version lives
+  in BOTH default.config.yml (wins by vars_files precedence) AND
+  roles/pazny.gitea/defaults/main.yml — bump both 1.25.5 → 1.26.4 or a plain
+  `ansible-playbook main.yml` re-render reverts this applied upgrade.
+
+  DEFENSE-IN-DEPTH (post-upgrade hardening notes, not recipe steps): set
+  GITEA__security__REVERSE_PROXY_TRUSTED_PROXIES to loopback (127.0.0.0/8,::1/128)
+  and weigh REQUIRE_SIGNIN_VIEW to gate anonymous package/OCI reads (it also blocks
+  anonymous public-repo clone — check A16 mirror / T32 forge usage first).
+
+recipes:
+  - id: "gitea-1.25-to-1.26"
+    from_regex: "^1\\.25\\."
+    to: "1.26.4"
+    severity: security
+    changelog_url: "https://blog.gitea.com/release-of-1.26.4/"
+    release_date: "2026-06-30"
+    notes: |
+      Gitea 1.25.5 (EOL) → 1.26.4. Closes REM-099. Same-org tag bump; forward-only
+      in-container migrations run on first 1.26 boot, so the health gate allows a
+      generous window. Rollback reverts the tag and restores the pre-upgrade data
+      dir + the consistent sqlite snapshot.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 120
+      affected_services: [gitea]
+      reason: >-
+        Single-app recreate: only devops-gitea-1 bounces (compose recreate on the
+        new tag). No shared DB (embedded sqlite in the data volume); backups + the
+        http health gate are read-only. First 1.26 boot runs forward-only schema
+        migrations so the health gate allows a generous window.
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec devops-gitea-1 sqlite3 /data/gitea/gitea.db
+          ".backup '/tmp/gitea-{{ upgrade_id }}.db'"
+          && docker cp devops-gitea-1:/tmp/gitea-{{ upgrade_id }}.db
+          ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          && docker exec devops-gitea-1 rm -f /tmp/gitea-{{ upgrade_id }}.db
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/healthz"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          cp ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          {{ gitea_data_dir }}/gitea/gitea.db
+        allow_shell: true
