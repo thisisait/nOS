@@ -1296,7 +1296,7 @@ loki_version: "3.7.2"           # synced to role default (cleared version-pin sh
 grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
-gitea_version: "1.25.5"                 # CVE-2026-gitea-template-traversal (authenticated RCE)
+gitea_version: "1.26.4"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"

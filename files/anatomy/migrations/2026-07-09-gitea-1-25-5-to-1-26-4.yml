@@ -1,0 +1,209 @@
+---
+# ==============================================================================
+# nOS migration record — gitea 1.25.5 (EOL) → 1.26.4 (REM-099, security)
+#
+# PROMOTED from the merged upgrade recipe upgrades/gitea.yml
+# (recipe id: gitea-1.25-to-1.26, from_regex ^1\.25\., to 1.26.4).
+# Authored by the migration-author agent 2026-07-09; travels in the SAME MR as
+# the gitea_version bump in default.config.yml (config wins by vars_files
+# precedence — without the bump a plain main.yml re-render reverts the tag).
+#
+# NOTE (migration-engine contract): unlike upgrade recipes, migration records
+# are NOT Jinja-rendered — every recipe token has been resolved to a concrete
+# literal here (data dir ~/gitea, port 3003, stack devops, container
+# devops-gitea-1, sqlite db /data/gitea/gitea.db in-container).
+# ==============================================================================
+
+id: "2026-07-09-gitea-1-25-5-to-1-26-4"
+title: "Gitea 1.25.5 (EOL) -> 1.26.4 security upgrade (REM-099)"
+summary: |
+  Bumps the devops-stack Gitea from the end-of-life 1.25 line to 1.26.4 —
+  closing REM-099 (CVE-2026-27771 unauth private package/OCI registry reads,
+  CVE-2026-22874 webhook SSRF, CVE-2026-28699/28744 OAuth2 scope bypass,
+  CVE-2026-27775 pre-receive permission escalation). Takes a consistent sqlite
+  online-backup + a data-dir snapshot first; forward-only in-container schema
+  migrations run on first 1.26 boot.
+# Recipe severity is `security`, and migration.schema.json allows it — but the
+# engine's validate_record enum (nos_migrate_engine._SEVERITY_VALUES) only
+# accepts patch|minor|breaking and would refuse the record at load time.
+# Classified `minor` (same-org tag bump, forward-only in-container migrations);
+# the security nature is carried in tags + summary. Engine/schema drift
+# reported to the operator.
+severity: minor
+authors: ["agent:migration-author"]
+created_at: "2026-07-09"
+
+tags: [upgrade-promotion, gitea, rem-099, security]
+references:
+  - "https://blog.gitea.com/release-of-1.26.4/"
+  - "https://docs.gitea.com/administration/upgrade-from-gitea"
+notes: |
+  Same-org in-place tag bump (gitea/gitea 1.25 -> 1.26): no coexistence track
+  needed (recipe declares coexistence_supported: false). DB backend is sqlite3
+  (verified in the running devops-gitea-1 container — NOT MariaDB), so the DB
+  backup is a transactionally-consistent `sqlite3 .backup` (sqlite3 CLI is
+  in-image), layered on top of the plain data-dir copy. Target is EXACTLY
+  1.26.4: 1.26.3 shipped a repo-code-page context-deadline regression and
+  1.26.2 misses three 1.26.3 CRITICALs (per the merged recipe notes).
+  Health endpoint is GET /api/healthz -> 200 (Gitea has no /-/readiness; that
+  path is GitLab's). Rollback reverts the override tag and restores the
+  pre-upgrade data dir + the consistent sqlite snapshot.
+  Shadow-pin note: gitea_version also exists in roles/pazny.gitea/defaults/
+  main.yml (1.25.5) — default.config.yml wins by vars_files precedence, so the
+  role default is inert; syncing it is a cosmetic follow-up for the reviewer.
+
+allow_shell: true
+
+# Carried VERBATIM from the recipe's reset block (per _template.yml doctrine).
+reset:
+  scope: container
+  estimated_sec: 120
+  affected_services: [gitea]
+  reason: >-
+    Single-app recreate: only devops-gitea-1 bounces (compose recreate on the
+    new tag). No shared DB (embedded sqlite in the data volume); backups + the
+    http health gate are read-only. First 1.26 boot runs forward-only schema
+    migrations so the health gate allows a generous window.
+
+# Idempotency hinge — eligible only while the devops override still pins a
+# 1.25.x tag (recipe from_regex ^1\.25\. ; 1.25.5 was the final 1.25 release).
+# Once the override says 1.26.4 this is false and the engine gates the
+# migration out.
+applies_if:
+  any_of:
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.5" }
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.4" }
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.3" }
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.2" }
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.1" }
+    - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.25.0" }
+
+preconditions:
+  # Recipe `requires.service_healthy` proxy: the rendered override must exist
+  # (the devops stack has been brought up at least once on this host).
+  - { type: fs_path_exists, path: "~/stacks/devops/overrides/gitea.yml" }
+  # The sqlite DB must be where the backup step expects it (bind mount ~/gitea).
+  - { type: fs_path_exists, path: "~/gitea/gitea/gitea.db" }
+  - { type: no_active_coexistence }
+
+steps:
+  # ── recipe pre.backup_db ────────────────────────────────────────────────────
+  - id: "backup_db"
+    description: "Consistent sqlite online-backup of gitea.db out of the running container."
+    detect:
+      # Run only while the snapshot is absent (re-run safe).
+      negate: true
+      fs_path_exists: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea.db"
+    action:
+      type: exec.shell
+      allow_shell: true
+      shell: "true"
+      cmd: >-
+        mkdir -p "$HOME/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4" &&
+        docker exec devops-gitea-1 sqlite3 /data/gitea/gitea.db
+        ".backup '/tmp/gitea-2026-07-09-migration.db'" &&
+        docker cp devops-gitea-1:/tmp/gitea-2026-07-09-migration.db
+        "$HOME/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea.db" &&
+        docker exec devops-gitea-1 rm -f /tmp/gitea-2026-07-09-migration.db
+    verify:
+      - fs_path_exists: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea.db"
+    # No rollback on purpose: if the backup itself fails nothing has changed
+    # yet, and on a later-step failure the snapshot MUST survive for the
+    # bump_image_tag rollback to restore from.
+    on_failure: abort
+
+  # ── recipe pre.backup_data ──────────────────────────────────────────────────
+  - id: "backup_data"
+    description: "Snapshot the gitea data dir (~/gitea: repos, config, attachments) before the bump."
+    detect:
+      negate: true
+      fs_path_exists: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea-data"
+    action:
+      type: exec.shell
+      allow_shell: true
+      shell: "true"
+      cmd: >-
+        mkdir -p "$HOME/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4" &&
+        cp -a "$HOME/gitea"
+        "$HOME/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea-data"
+    verify:
+      - fs_path_exists: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea-data"
+    # Same doctrine as backup_db: keep the snapshot on later-step rollback.
+    on_failure: abort
+
+  # ── recipe apply.bump_image_tag ─────────────────────────────────────────────
+  - id: "bump_image_tag"
+    description: "Set gitea/gitea:1.26.4 in the devops compose override and recreate the container."
+    detect:
+      # Needed only while the override is NOT already on 1.26.4.
+      negate: true
+      compose_image_tag_is: { service: gitea, stack: devops, tag: "1.26.4" }
+    action:
+      type: exec.shell
+      allow_shell: true
+      shell: "true"
+      cmd: >-
+        f="$HOME/stacks/devops/overrides/gitea.yml" &&
+        sed -e 's|\(image:[[:space:]]*gitea/gitea:\)1\.25\.[0-9][0-9]*|\11.26.4|' "$f" > "$f.tmp" &&
+        mv "$f.tmp" "$f" &&
+        cd "$HOME/stacks/devops" &&
+        docker compose -f docker-compose.yml
+        $(for o in overrides/*.yml; do printf ' -f %s' "$o"; done)
+        up -d gitea
+    verify:
+      - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.26.4" }
+    rollback:
+      # Mirrors the recipe rollback set (revert_image_tag + restore_data +
+      # restore_db): stop the container, revert the tag, restore the
+      # pre-upgrade data dir + the consistent sqlite snapshot, recreate on
+      # 1.25.5. Guarded on the snapshot dir so a rollback without backups
+      # never rm -rf's live data.
+      type: exec.shell
+      allow_shell: true
+      shell: "true"
+      cmd: >-
+        b="$HOME/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4" &&
+        f="$HOME/stacks/devops/overrides/gitea.yml" &&
+        cd "$HOME/stacks/devops" &&
+        docker compose -f docker-compose.yml
+        $(for o in overrides/*.yml; do printf ' -f %s' "$o"; done)
+        stop gitea &&
+        sed -e 's|\(image:[[:space:]]*gitea/gitea:\)1\.26\.4|\11.25.5|' "$f" > "$f.tmp" &&
+        mv "$f.tmp" "$f" &&
+        if [ -d "$b/gitea-data" ]; then
+        rm -rf "$HOME/gitea" && cp -a "$b/gitea-data" "$HOME/gitea";
+        fi &&
+        if [ -f "$b/gitea.db" ]; then
+        cp "$b/gitea.db" "$HOME/gitea/gitea/gitea.db";
+        fi &&
+        docker compose -f docker-compose.yml
+        $(for o in overrides/*.yml; do printf ' -f %s' "$o"; done)
+        up -d gitea
+
+  # ── recipe post.wait_healthy ────────────────────────────────────────────────
+  - id: "wait_healthy"
+    description: "Wait up to 300s for GET /api/healthz -> 200 (first 1.26 boot runs forward-only schema migrations)."
+    detect:
+      # Only meaningful once the override carries the new tag.
+      compose_image_tag_is: { service: gitea, stack: devops, tag: "1.26.4" }
+    action:
+      type: exec.shell
+      allow_shell: true
+      shell: "true"
+      changed: false
+      cmd: >-
+        i=0; while [ "$i" -lt 60 ]; do
+        curl -fsS -o /dev/null "http://127.0.0.1:3003/api/healthz" && exit 0;
+        i=$((i+1)); sleep 5;
+        done;
+        echo "gitea /api/healthz not 200 within 300s" >&2; exit 1
+    rollback:
+      type: noop
+      reason: "Read-only health probe — nothing to undo; a failure here triggers the bump_image_tag rollback (tag revert + data/db restore)."
+
+# Post-migration verification — the override must pin the new version and the
+# pre-upgrade snapshots must exist for the operator's safety window.
+post_verify:
+  - compose_image_tag_is: { service: gitea, stack: devops, tag: "1.26.4" }
+  - { type: fs_path_exists, path: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea.db" }
+  - { type: fs_path_exists, path: "~/.nos/backups/2026-07-09-gitea-1-25-5-to-1-26-4/gitea-data" }
