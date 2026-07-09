@@ -6,9 +6,19 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
 
 ---
 
-## v0.7-beta (2026-06-15)
+## v0.7-beta (2026-07-09)
 
-> **The converge becomes idempotent.** v0.6 made OpenTofu the Authentik
+> **The converge becomes idempotent — and the security backlog's live-exploitable
+> tip is closed.** This tag spans v0.6 → 2026-07-09 in two arcs. The first
+> (2026-06-15) made `authentik_engine: tofu` survive non-blank re-runs. The second
+> (late-June → 2026-07-09) closed the live-exploitable CRITICAL CVEs, brought the
+> full ~61-container converge to green, and shipped the **first agent-authored
+> upgrade recipe** (Gitea 1.25 EOL → 1.26.4) driven end-to-end through the nOS
+> Wing/AgentKit agents. No new services; a non-`+all` run is behaviourally
+> unchanged except that re-converges now succeed where they used to fail loud and
+> the FreeScout / Bone / Alloy / Gitea CVE exposure is remediated.
+>
+> **Arc 1 — idempotency (2026-06-15).** v0.6 made OpenTofu the Authentik
 > authority but only ever proved it on a *blank*. The first time the operator
 > ran a second, non-blank converge, the tofu engine refused every plan —
 > Authentik re-issues provider PKs on each converge, so the state pointed at
@@ -16,8 +26,6 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
 > blame. This tag makes `authentik_engine: tofu` survive re-runs, fixes the
 > matching Portainer SSO false-failure, and lands an overnight multi-agent
 > review (~40 mechanical fixes + 48 staged plan docs + a RAG architecture MVP).
-> No new services; a non-`+all` run is behaviourally unchanged except that
-> re-converges now succeed where they used to fail loud.
 
 ### OpenTofu Authentik — idempotent across non-blank converges
 
@@ -98,21 +106,100 @@ proved the SSO layer healthy and surfaced the real, recurring bugs:
   architecture; a premature "restart-handler fail-loud" change was reverted (the
   rendered command was broken) and re-planned.
 
+### Security cluster — live-exploitable CRITICALs closed (2026-07-08)
+
+_Arc 2 begins here (late-June → 2026-07-09)._
+
+- **REM-118 FreeScout (CVE-2026-53595, CVSS 9.4 — unauth account takeover).** The
+  pinned tiredofit `php8.3-1.17.159` (FreeScout 1.8.219) is exploitable via a
+  `%20`/empty `invite_hash` collision at `/user-setup` on MySQL/MariaDB. Fixed by
+  the cross-org migration to **nfrastack 2.1.3-php8.3** (FreeScout 1.8.226) —
+  tiredofit EOL'd the 1.17 line; `SITE_URL` → `APP_URL`. Shipped `upgrades/freescout.yml`
+  (the first real upgrade recipe) to wrap the transition with DB-dump + health-gate + rollback.
+- **REM-110 Bone — unauth recon scope-gated.** The `/api/services`, `/api/status`,
+  `/api/health/aggregate` endpoints leaked every internal hostname/port/version to
+  anonymous callers. Now `require_scope("nos:state:read")`-gated (liveness `/api/health`
+  stays open); PyJWT floor bumped `>=2.13.0` (CVE-2026-32597/48525 residuals).
+- **REM-107 Alloy — OTLP loopback bind.** The OTLP gRPC/HTTP receivers bound
+  `0.0.0.0`; now `{{ alloy_otlp_bind_addr | default('127.0.0.1') }}`.
+
+### Stacks converge-green — three degraded services unblocked
+
+The STRICT `wait-stacks-healthy` gate had three services failing on a full run:
+
+- **qgis** — a compose `entrypoint:` override *clears the image CMD*, so an
+  idempotent stale-lock guard left Apache with no args → exit-0 restart loop.
+  Restored `command: ["apache2", "-DFOREGROUND"]`.
+- **gitlab** — puma 7.x `File.realdirpath()` on a VirtioFS-backed unix socket
+  returns `Errno::ENOTSUP` → crash-loop. Put the rails sockets dir on a `tmpfs`.
+- **puter** — upstream `puter:latest` preloads `-r telemetry.js`, which `require()`s
+  a module the base image stopped bundling → `MODULE_NOT_FOUND` crash. Dropped the
+  preload via an explicit `command:`.
+
+Live-verified: **61 containers, 0 unhealthy, 0 restarting**; `failed=0`.
+
+### Gitea 1.25 (EOL) → 1.26.4 — first agent-authored upgrade recipe (REM-099)
+
+The Gitea 1.25 line is end-of-life; the unauth **CVE-2026-27771** (private
+package/OCI registry served to anonymous pulls) + a cluster of 1.26-only fixes
+(webhook SSRF, OAuth2 scope bypass, pre-receive multi-ref escalation) forced the
+bump. This is the **first upgrade driven end-to-end through the nOS Wing/AgentKit
+agents**, operator-supervised:
+
+- **upgrade-architect** authored `upgrades/gitea.yml` — and corrected two ticket
+  assumptions by live-inspecting the running container: the DB backend is **sqlite3**
+  (not MariaDB → sqlite `.backup`, not mariadb-dump), and Gitea has **no `/-/readiness`**
+  (that's GitLab's; the verified health gate is `GET /api/healthz`).
+- **migration-author** wrote the migration record + the mandatory shadow-pin bump
+  (`gitea_version` 1.25.5 → 1.26.4 in `default.config.yml`, source-of-truth wins).
+- Recipe: `gitea-1.25-to-1.26`, `^1\.25\.` → `1.26.4`, security, container-scope,
+  coexistence off (in-place same-org tag bump), self-disabling after apply.
+
+### CI red→green
+
+CI had been red on `dev` for three commits (pre-existing):
+
+- **Pytest** — a Python module shadow: `test_upgrade_apply_detached_wiring.py`
+  lazily imported `tests/upgrades/__init__.py` (+ sibling `migrations`/`state`
+  shadows) instead of Bone's `upgrades.py`, failing the `UPGRADES_DIR`/`invoke_playbook`
+  monkeypatch. Fixed by clearing the cached bare names so `syspath_prepend(BONE)` wins.
+- **Contracts drift** — bone/wing OpenAPI + wing DB-schema snapshots were stale vs
+  prior code (REM-110 scope-gate docstrings, coexistence copy-data route,
+  plan-choice/detached schema columns). Regenerated; now idempotent.
+
 ### Verification
 
-- `failed=0` on the confirm converge (idempotent, end-to-end) and the blank;
-  tofu no-REFUSE on the second converge (the run that always refused before);
-  Portainer SSO verify OK via the public endpoint. Offline: anatomy 1474 passed,
-  ci-local frozen 1:1 gate OK, ansible-lint production clean, lockfile in sync.
+- **Arc 1 (2026-06-15):** `failed=0` on the confirm converge (idempotent,
+  end-to-end) and the blank; tofu no-REFUSE on the second converge (the run that
+  always refused before); Portainer SSO verify OK via the public endpoint.
+- **Arc 2 (2026-07-09):** full converge `ok=1321 failed=0`, **61 containers /
+  0 unhealthy**; e2e journeys **10/10** live-green (RBAC tiers, operator login,
+  native OIDC, approval/halt-resume); offline suite **2301 passed / 0 errors**
+  (CI-exact); contracts idempotent; **CI green on all jobs**. The Gitea 1.26.4
+  upgrade is *armed* (pin bumped) and validated by recipe/schema/gate — its
+  live-apply lands on the operator's next converge (STRICT health-wait is the gate).
 
 ### Known / residual
 
+- **Gitea 1.26.4 upgrade is armed, not yet live-applied.** The pin is bumped and
+  the recipe/migration validated, but the STRICT-health-wait converge that proves
+  1.26.4 comes up healthy runs on the operator's next `ansible-playbook main.yml`
+  (or blank). This is the release-validation gate before the tag is cut.
+- **Version-pin drift wave (~28 items remaining, 1 CRITICAL: REM-002 Woodpecker).**
+  Gitea (REM-099) was the first closed via the agentic recipe path; GitLab
+  (REM-016, target moved 18.11.6 → 18.11.7 on the 2026-07-09 re-scan) and the rest
+  are mechanical same-org bumps. Authoritative: `docs/roadmap.md`.
 - The tofu reconcile is **identity-only** + best-effort — it re-aligns PKs but a
   genuine attribute edit still trips the destroy guard (by design). Carried from
   v0.6: gov is scaffolding (ISDS / NIA-eIDAS greenfield, retention is metadata);
   the MTI provider-flip reconcile is still hard-coded to the known flip set; the
   restart-handler corrective fix (per-class container restart) is planned, not yet
   shipped (only the safety revert landed).
+- **GitLab root password** rejected by GitLab's dictionary policy on converge
+  (`Password must not contain commonly used combinations`) — non-fatal status only;
+  GitLab uses native OIDC (SSO login works), root pw is break-glass. Cosmetic;
+  regenerate without dictionary words to silence it. FreePBX CVEs vendor-blocked
+  (abandoned image); ERPNext parked; Bluesky PDS federation needs public DNS.
 
 ---
 

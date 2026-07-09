@@ -6,19 +6,23 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-06-15 • v0.7-beta tag prep (feat/v0.7-overnight validated
-> end-to-end; tofu self-reconcile + Portainer SSO durable fixes — converge idempotent).
+> Last updated: 2026-07-09 • v0.7-beta ready to tag (arc 1 idempotency +
+> arc 2 security/converge-green/first-agent-recipe; CI green, e2e 10/10).
 
 ## Now (current track)
 
-**v0.7-beta tag prep** (feat/v0.7-overnight, validated live; offline suite green):
-- **tofu self-reconcile preflight** — `authentik_engine: tofu` is now idempotent
-  across non-blank converges (was REFUSING every re-run; PK churn). PROVEN by the
-  3-converge arc. `aa6986bd` + tool `tools/tofu-authentik-reconcile.sh`.
-- **Portainer SSO** — verify via unauth `/api/settings/public` (password-independent),
-  idempotent converge (no false DRIFT), opt-in admin self-heal. `0a49bb8c` `9c5b4e0e`.
-- **Overnight review** — ~40 mechanical fixes + 48 plan docs + RAG arch (review-ready,
-  NOT implemented). Remaining for the tag: RELEASE.md + devlog, then dev→master.
+**v0.7-beta — ready to tag, pending operator validation converge.** Two arcs on
+`dev` (`5bd11c8c`), CI green on all jobs:
+- **Arc 1 (2026-06-15):** tofu self-reconcile preflight (idempotent non-blank
+  converge) + Portainer SSO verify-via-public. Validated live (3-converge arc).
+- **Arc 2 (2026-07-09):** security cluster closed (REM-118 FreeScout CVSS-9.4,
+  REM-110 Bone scope-gate, REM-107 Alloy loopback); stacks converge-green (qgis/
+  gitlab/puter; 61 containers, 0 unhealthy); **first agent-authored upgrade recipe**
+  Gitea 1.25→1.26.4 (REM-099) via upgrade-architect + migration-author; CI red→green
+  (module-shadow + contracts drift).
+- **NEXT (operator):** run `ansible-playbook main.yml` (or blank) to live-apply +
+  validate the Gitea 1.26.4 upgrade under STRICT health-wait → if `failed=0`,
+  `dev→master` PR + tag `v0.7-beta` (admin bypass, see memory `nos-release-flow`).
 
 ## Open follow-ups
 
@@ -46,12 +50,23 @@
   (`tools/tofu-authentik-reconcile.sh --preflight`, via the stable
   `application.slug → provider` bridge). PROVEN live (3-converge arc). The
   destroy-guard now also catches dangerous in-place UPDATEs (`d4647b49`).
+- **Version-pin drift wave (post-Gitea):** ~28 pending, 1 CRITICAL (REM-002
+  Woodpecker). Gitea (REM-099) closed first via the agentic recipe path — the
+  template for the rest (GitLab REM-016 → 18.11.7, etc.). Mechanical same-org bumps.
+- **Architect at-target refresh drafts (2026-07-09 sweep, uncommitted):** the
+  upgrade-architect also drafted `freescout-2.1-current`, `gitlab-18-to-current`
+  → 18.10.8, `grafana-12-current` → 12.4.4 (installed ahead of the recipe `to:`).
+  Low priority — commit when touching those services. Report: event 105 in wing.db.
+- **Migration engine severity-enum drift:** `nos_migrate_engine.validate_record`
+  accepts only `patch|minor|breaking`, but `migration.schema.json` (+ recipes)
+  allow `security` — the Gitea migration was recorded as `minor` as a workaround.
+  Add `security` to `_SEVERITY_VALUES` so security migrations keep the signal.
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
-  track; the actual cutover (logical dump/restore + atomic switch) is still
-  operator-gated.
-- **Security backlog:** 14 pending / 71 resolved / 2 vendor-blocked
-  (`docs/llm/security/remediation-queue.json`); Phase C hardening + Phase D
-  architectural remain.
+  track; queued by upgrade-advisor this session (`coexistence_planned`); the actual
+  cutover (logical dump/restore + atomic switch) is still operator-gated.
+- **Security backlog:** ~36 pending / 79 resolved / 3 vendor-blocked
+  (`docs/llm/security/remediation-queue.json`); dominated by the pin wave above.
+  Phase C hardening + Phase D architectural remain.
 - **Gov P0 (profile-gated, not blocking non-gov):** ISDS + NIA/eIDAS federation
   (greenfield), retention enforcement (metadata only today) —
   `docs/compliance/gov-readiness-audit-2026q2.md`.
@@ -79,12 +94,13 @@
 
 | Surface | State |
 |---|---|
-| Release | `v0.7-beta` prep — `feat/v0.7-overnight` validated, `dev→master` pending |
-| Last verified | confirm converge `failed=0` (idempotent); blank `failed=0`; tofu no-REFUSE |
-| Suites | anatomy 1474 passed; ci-local frozen gate OK; ansible-lint production clean |
-| CI | dev light lane green; `Integration (ubuntu-24.04)` = gating wet-test |
+| Release | `v0.7-beta` ready to tag on `dev` (`5bd11c8c`); pending operator validation converge |
+| Last verified | converge `ok=1321 failed=0`, 61 containers / 0 unhealthy; e2e 10/10 live |
+| Suites | anatomy 1753 passed; CI-exact 2301 passed / 0 errors; syntax + yamllint clean |
+| CI | **all jobs green** on dev HEAD (pytest + contracts drift were red 3 commits, now fixed) |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
-| Remediation queue | 14 pending / 71 resolved / 2 vendor-blocked |
+| Upgrades | Gitea 1.26.4 armed (agent-authored recipe+migration); PG17 coexistence queued |
+| Remediation queue | ~36 pending / 79 resolved / 3 vendor-blocked (pin wave dominant) |
 
 ## Update protocol
 

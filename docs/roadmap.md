@@ -23,10 +23,52 @@ Alloy unauth OTLP (REM-107), and the three degraded services that were failing t
 STRICT health gate (qgis, gitlab-VirtioFS, puter). **The converge is green** (61
 containers, 0 unhealthy).
 
-What remains is **burn-down + epic acceptance**: a 29-item version-pin wave (two
-CRITICALs left — Gitea EOL + a Woodpecker misconfig), the never-exercised upgrade/
-migration acceptance criteria, and a large **doc-reconciliation** debt so an agent or
+What remains is **burn-down + epic acceptance**: a version-pin wave (one CRITICAL
+left after Gitea — a Woodpecker misconfig), the never-exercised upgrade/migration
+acceptance criteria, and a large **doc-reconciliation** debt so an agent or
 contributor stops taking the stale docs as source-of-truth.
+
+## Road to first stable (v1.0)
+
+**What "stable" means** — v1.0 is the general self-hosted platform reaching
+production-trust for a single-operator home lab. It is NOT gov-readiness (ISDS/
+NIA/eIDAS/retention stay a profile-gated post-1.0 track) and NOT full Linux
+parity (OpenClaw/Hermes/fleet are post-1.0). Exit criteria (definition of done):
+
+1. **Security floor** — zero CRITICAL/HIGH in the remediation queue on a fresh
+   full scan. Vendor-blocked FreePBX = documented accept-risk (`install_freepbx:false`
+   default). The pin wave is burned to zero.
+2. **Reproducible blank** — `blank=true` installs the known-good profile
+   end-to-end `failed=0`, every container healthy, on a genuinely clean host.
+   This is the core nOS invariant and must be re-proven at the RC.
+3. **Epic acceptance exercised on real workloads** — (a) a same-org upgrade
+   applied live (Gitea 1.26.4 ✅ armed, apply-validate pending); (b) a real
+   migration authored *and applied*; (c) one coexistence cutover completed
+   end-to-end (PG 16→17). These prove the frameworks, not just their tests.
+4. **CI fully green incl. the gating Integration wet-test** (Linux + macOS lanes).
+5. **Healthcheck coverage** — STRICT `wait-stacks-healthy` gates *every* service
+   (no booted-but-broken container passing as `running=ready`).
+6. **Docs reconciled + a freshness gate** — CLAUDE.md / roadmap / RELEASE / active-work
+   mutually consistent; a machine-checkable staleness gate so NOW can't silently rot.
+7. **Feature freeze** on the beta service surface during stabilization.
+
+**Milestone sequence** (tags cut from `master`, operator-validated per
+`nos-release-flow`):
+
+- **v0.7-beta (2026-07-09, this tag)** — security tip closed, converge green,
+  first agent-authored upgrade recipe (Gitea). CI green.
+- **v0.8-beta — "burn-down"** — version-pin wave → zero CRITICAL/HIGH; Gitea 1.26.4
+  live-applied; `fix/sso-mfa-posture` (8 live-bug fixes) + sso-autologin epic merged;
+  healthcheck coverage for the health-blind containers; Bone dep-lockfile.
+- **v0.9-beta / RC — "epic acceptance"** — PG 16→17 cutover done end-to-end; first
+  real migration authored + applied; doc reconciliation complete + freshness gate;
+  Integration wet-test green on both OS; **blank reproducibility re-proven**.
+- **v1.0.0 (stable)** — all exit criteria met; feature freeze; gov + Linux parity
+  explicitly scoped as post-1.0 tracks (v1.x / a gov edition).
+
+**Nearest critical path to v1.0:** finish the pin wave (esp. REM-002 Woodpecker
+CRITICAL) → apply+validate Gitea 1.26.4 live → PG 16→17 cutover (unblocks epic
+acceptance + the first real migration) → healthcheck coverage → RC blank re-prove.
 
 ## Shipped this session (2026-07-08) — reconcile into changelogs
 
@@ -48,24 +90,37 @@ contributor stops taking the stale docs as source-of-truth.
   cross-org bump; full backup→verify→rollback for future same-org 2.x bumps).
 - Queue tally: **pending 36 / resolved 79 / vendor-blocked 3** (of 118).
 
+## Shipped this session (2026-07-09) — reconcile into changelogs
+
+- **Gitea 1.25 EOL → 1.26.4 (REM-099) — first agent-authored upgrade recipe**, driven
+  end-to-end through the Wing/AgentKit agents (upgrade-architect + migration-author),
+  operator-supervised. Architect live-corrected two ticket assumptions (sqlite not
+  MariaDB; `/api/healthz` not `/-/readiness`). `upgrades/gitea.yml` + migration record
+  + shadow-pin bump. Armed at 1.26.4; live-apply pending operator converge.
+- **CI red→green** — CI had been red on `dev` 3 commits: a pytest module-shadow
+  (`tests/upgrades` shadowing Bone's `upgrades.py` + sibling `migrations`/`state`)
+  and stale contract snapshots (bone/wing OpenAPI + wing DB-schema). Both fixed;
+  full suite 2301 passed / 0 errors, contracts idempotent.
+- **v0.7-beta prepped** — RELEASE.md expanded (arc 1 idempotency + arc 2 security/
+  converge-green/first-recipe), `active-work.md` re-anchored (was 3+ weeks stale),
+  this roadmap given a **Road-to-v1.0** section. Tag pending operator validation converge.
+- Live re-verified: converge `failed=0`, 61 containers / 0 unhealthy, e2e **10/10**.
+
 ## NOW — the immediate queue
 
-1. **[M] Version-pin drift wave — 29 pending `version_bump` items**, incl. **two
-   CRITICALs**: **REM-099 Gitea 1.25.x EOL → 1.26** (CVE-2026-27771 serves private
-   packages to anonymous pulls) and **REM-002 Woodpecker misconfig**. The rest are
-   mechanical HIGH/MEDIUM bumps (nginx, ollama, rustfs×2, openwebui, mariadb, redis,
-   n8n, gitlab XSS, erpnext, jellyfin FFmpeg, portainer, dnsmasq, mailpit, outline,
-   homeassistant, uptime-kuma, tileserver, puter). Bump `default.config.yml` (wins
-   over role defaults), then **verify the running image tag** (version-pin-shadow
-   trap). Gitea 1.26 is a major-line jump → do it as the **first same-org upgrade
-   recipe** (§P1), not a blind bump.
-2. **[S/M] Re-anchor `active-work.md` + resolve the v0.7-beta state** — the NOW pointer
-   is frozen at 2026-06-15 ("v0.7-beta tag prep"), ~40 commits behind HEAD
-   (`f7f0176a`); RELEASE.md declares v0.7-beta shipped but **no git tag exists**
-   (latest `v0.6-beta`). Either cut the tag or demote to unreleased.
-3. **[S] Doc reconciliation pass** (§ below) — security counts everywhere → **36/79/3
-   of 118**; the shipped-this-session list into CLAUDE.md "Recently shipped" +
-   RELEASE.md; the plan-header lags.
+1. **[operator] Validate + apply on-host** — run `ansible-playbook main.yml` (or blank)
+   to live-apply the armed Gitea 1.26.4 upgrade under STRICT health-wait. If `failed=0`,
+   cut `v0.7-beta` (`dev→master` PR + admin bypass, `nos-release-flow`).
+2. **[M] Version-pin drift wave — ~28 pending `version_bump` items** (Gitea done),
+   **one CRITICAL left: REM-002 Woodpecker misconfig**. The rest are mechanical
+   HIGH/MEDIUM bumps (nginx, ollama, rustfs×2, openwebui, mariadb, redis, n8n,
+   **gitlab REM-016 → 18.11.7** (re-scan moved the target), erpnext, jellyfin FFmpeg,
+   portainer, dnsmasq, mailpit, outline, homeassistant, uptime-kuma, tileserver, puter).
+   Bump `default.config.yml` (wins over role defaults), then **verify the running image
+   tag** (version-pin-shadow trap). Use the Gitea recipe as the template for same-org bumps.
+3. **[S] Doc reconciliation tail** (§ below) — active-work counts ✅ + RELEASE July
+   section ✅ done this session; remaining: plan-header lags, archive the resolved
+   `v07-*` dumps.
 
 ## Backlog
 
