@@ -99,6 +99,31 @@ lifecycle:
         timeout: 120
 
 # =============================================================================
+# PULSE — embedding sync (feeds the libSQL vector corpus in keap.db)
+# =============================================================================
+# Trust-boundary split: KEAP's container decides WHAT to embed (the /agent/v1
+# embeddings/pending diff); this host-side job decides HOW — host-loopback
+# Ollama (nomic-embed-text, 768-dim) → POST /agent/v1/embeddings. The
+# container on gated_net cannot reach a host daemon, so live embedding stays
+# host-side by design. Idempotent: corpus current → no-op exit 0.
+
+pulse:
+  jobs:
+    - name: keap-embed-sync
+      runner: subprocess
+      command: "python3 {{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
+      schedule: "45 4 * * *"    # 04:45 UTC daily; offset from gitleaks 03:00 + tofu-drift 05:30
+      jitter_min: 10
+      max_runtime_s: 900        # first full run embeds ~800 texts (~2 min on MLX); headroom for corpus growth
+      max_concurrent: 1
+      env:
+        # BARE tokens — the Pulse catalog does a LITERAL replace (gitleaks
+        # WING_EVENTS_HMAC_SECRET precedent); Ansible pre-renders the values.
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+        OLLAMA_URL: "http://127.0.0.1:11434"
+
+# =============================================================================
 # OBSERVABILITY — Loki labels
 # =============================================================================
 
