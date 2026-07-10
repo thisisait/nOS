@@ -43,6 +43,14 @@ services:
       # Agent-surface bearer tokens (scope-split, R9): read-only vs read+write.
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+{% if keap_ollama_url | default('') %}
+      # Optional live embedder for free-text semantic search. Stored vectors
+      # come from the host-side keap-embed-sync Pulse job either way; this
+      # only embeds ad-hoc QUERY text. Docker Desktop (Mac): set to
+      # http://host.docker.internal:11434. Linux host-gateway cannot reach a
+      # loopback-bound Ollama, hence default-off.
+      KEAP_OLLAMA_URL: "{{ keap_ollama_url }}"
+{% endif %}
     networks:
       # SEC-02: Traefik-only gated_net (no iiab_net / shared_net). KEAP has no
       # container-side deps — Qdrant/embeddings go through host-side Bone.
