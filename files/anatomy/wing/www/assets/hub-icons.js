@@ -11,6 +11,9 @@
     'ai-chat':     'message-square-text',
     'chart-line':  'trending-up',
     'ci-pipeline': 'git-branch',
+    // keap-base (cortex) declares `compass` (knowledge exploration); the slim
+    // subset carries no compass glyph — `map` is the closest (knowledge map).
+    'compass':     'map',
     'docker':      'container',
     'git':         'git-branch',
     // W6.5: was a silent miss — homeassistant-base declares it, no lucide

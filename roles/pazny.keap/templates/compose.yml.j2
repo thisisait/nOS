@@ -1,0 +1,56 @@
+# =============================================================================
+# pazny.keap — compose override fragment (CORTEX / knowledge layer)
+# Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Built from source: the role clones nos-keap at {{ keap_repo_ref }} and
+# `docker compose up` builds nos/keap from the clone (puter precedent). The
+# image's Dockerfile bakes a HEALTHCHECK on /api/health, so the STRICT
+# in-stream health-wait (A19) sees a real health state.
+#
+# Does not declare top-level networks: — gated_net is defined (external) in
+# templates/stacks/iiab/docker-compose.yml.j2. SEC-02: KEAP joins ONLY the
+# Traefik-only gated_net — its header_oidc identity (server/identity.ts)
+# trusts X-Authentik-* headers, so peers must not reach :8080. Traefik (also
+# on gated_net) routes it via traefik_container_upstreams (keap: 8080).
+#
+# The 127.0.0.1 port publish is NOT for Traefik — it is the AGENT SURFACE:
+# host-side AgentKit processes call http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1
+# with scope-split bearer tokens (RO/RW). Containers cannot reach
+# Docker-published loopback ports (A19-verified), and KEAP_TRUSTED_PROXY=1
+# makes header-less /api requests 401 instead of falling back to a dev
+# identity — so the loopback surface cannot forge or inherit human identity.
+# =============================================================================
+
+services:
+  keap:
+    build:
+      context: {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}
+      dockerfile: Dockerfile
+    image: nos/keap:{{ keap_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ keap_port | default(8091) }}:8080"
+    volumes:
+      - {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}:/data
+    environment:
+      PORT: "8080"
+      KEAP_DATA_DIR: /data
+      # Reject header-less /api requests (401) — the container only ever sees
+      # legitimate identity headers via Traefik's authentik@file on gated_net.
+      KEAP_TRUSTED_PROXY: "1"
+      KEAP_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+      # Agent-surface bearer tokens (scope-split, R9): read-only vs read+write.
+      KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+      KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+    networks:
+      # SEC-02: Traefik-only gated_net (no iiab_net / shared_net). KEAP has no
+      # container-side deps — Qdrant/embeddings go through host-side Bone.
+      - gated_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ keap_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ keap_cpus | default(docker_cpus_light) }}

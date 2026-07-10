@@ -143,6 +143,13 @@ tofu_authentik_services:
   client_secret: '{{ global_password_prefix }}_pw_oidc_jellyfin'
   redirect_uris:
   - https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/redirect/Authentik
+- slug: keap
+  name: "KEAP \u2014 Knowledge Explorer"
+  mode: header_oidc
+  tier: 3
+  enabled: '{{ install_keap | default(false) }}'
+  external_host: https://{{ keap_domain | default('keap' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+  client_id: nos-keap
 - slug: kiwix
   name: Kiwix
   mode: forward_auth

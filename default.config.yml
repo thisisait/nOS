@@ -400,6 +400,9 @@ install_iiab_terminal: false      # TUI access via SSH for anyone on LAN [requir
 # ── Web desktop ───────────────────────────────────────────────────────────────
 install_puter: true              # Puter – cloud OS web desktop (multi-user, AI, iframe apps) [Docker]
 
+# ── Knowledge / cortex ────────────────────────────────────────────────────────
+install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
+
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]
 install_code_server: false        # code-server – VS Code in the browser [Docker]
@@ -2002,6 +2005,18 @@ puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache for multi-user (MB)
 puter_admin_email: "{{ default_admin_email }}"
 puter_admin_password: "{{ global_password_prefix }}_pw_puter"
+
+# ==============================================================================
+# KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)
+# Built from source by roles/pazny.keap (git clone at keap_repo_ref, puter-
+# style compose build). Human surface behind header_oidc SSO; agent surface
+# /agent/v1 on the loopback port for AgentKit (scope-split bearer tokens).
+# ==============================================================================
+
+keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+keap_port: 8091                                # loopback publish; also the AgentKit surface
+keap_version: "0.1.0"                          # nos/keap local build tag (source ref pinned by keap_repo_ref in the role)
+keap_data_dir: "{{ ansible_facts['env']['HOME'] }}/keap/data"
 
 # ==============================================================================
 # PAPERCLIP – multi-agent orchestration platform

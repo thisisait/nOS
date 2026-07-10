@@ -1,0 +1,154 @@
+# =============================================================================
+# keap-base — service plugin (CORTEX, 2026-07-10)
+#
+# Status: live manifest. KEAP (Knowledge Explorer and Preserver) is the
+# CORTEX of the nOS anatomy — the knowledge layer of the brain. Where Bone
+# carries signals, Wing observes, and Pulse keeps time, the cortex REMEMBERS:
+# curated taxonomy (790 nodes), content links resolved into the live content
+# services (Kiwix, Calibre-Web, Nextcloud, Open WebUI), a capture/
+# preservation review queue, and an agent-facing knowledge API (/agent/v1)
+# that gives AgentKit agents a queryable map of what knowledge exists and
+# where it lives locally.
+#
+# Source lives OUTSIDE nOS (thisisait/nos-keap after the org transfer;
+# budweis-dev origin until then) — roles/pazny.keap git-clones the pinned ref
+# and builds nos/keap from source (hermes clone + puter build precedents).
+#
+# SSO: header_oidc (firefly-base pattern) — the Authentik proxy outpost
+# injects X-Authentik-uid/-username/-email/-groups; server/identity.ts keys
+# per-user rows on uid and 401s header-less /api requests
+# (KEAP_TRUSTED_PROXY=1). SEC-02: the container joins ONLY the Traefik-only
+# gated_net so peers cannot forge identity headers. The loopback-published
+# port is the AgentKit surface (scope-split bearer tokens), unreachable from
+# containers (A19-verified).
+# =============================================================================
+
+name: keap-base
+version: 0.1.0
+description: |
+  KEAP — Knowledge Explorer and Preserver (the nOS cortex).
+
+  Wiring layer for header-OIDC authenticated access via Authentik proxy
+  outpost. The role `pazny.keap` keeps install-only responsibilities
+  (clone, build, ports, volumes, env); this plugin owns the Traefik label
+  hygiene + Authentik tier binding + GDPR Article 30 row + Wing /hub card.
+upstream: https://github.com/budweis-dev/knowledge-explorer-and-preserver
+license: MIT  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "keap-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.keap
+  feature_flag: install_keap
+  variables:
+    - keap_port
+    - keap_domain
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — header_oidc (Authentik outpost → X-Authentik-* headers)
+# =============================================================================
+# KEAP's Express backend (server/identity.ts) consumes X-Authentik-uid /
+# -username / -email / -groups injected by the proxy outpost and auto-scopes
+# every user row by uid. β1.A trichotomy: this is **header_oidc** — true SSO
+# from the user POV (no in-app login screen), no per-app OIDC client. To go
+# native_oidc later: flip mode/provider_type, add redirect_uris/scopes
+# (miniflux-base shape) and an OIDC client lib in the backend.
+
+authentik:
+  mode: header_oidc
+  provider_type: header_oidc
+  client_id: nos-keap
+  client_secret: "{{ global_password_prefix }}_pw_oidc_keap"
+  slug: keap
+  name: 'KEAP — Knowledge Explorer'
+  enabled: "{{ install_keap | default(false) }}"
+  launch_url: "https://{{ keap_domain | default('keap' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  tier: 3
+
+# =============================================================================
+# COMPOSE-EXTENSION — Traefik label hygiene (file provider is authoritative)
+# =============================================================================
+compose_extension:
+  template: templates/keap-base.compose.yml.j2
+  target_stack: iiab
+  target_service: keap
+  hardening_refs: []
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ keap_port }}/api/health"
+        timeout: 120
+
+# =============================================================================
+# OBSERVABILITY — Loki labels
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: keap
+      stack: iiab
+      tier: "3"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Per-user knowledge-exploration state (learning progress, todos, saved
+    bookmarks), operator-curated taxonomy content links, and page metadata
+    captured by the companion userscript or submitted by nOS agents for
+    human review.
+  legal_basis: legitimate_interests
+  data_categories:
+    - username            # X-Authentik-uid/-username/-groups (identity + RBAC)
+    - email
+    - behavioural_data    # learning progress, completion state
+    - user_generated_content  # captured page metadata, todos, bookmarks
+  data_subjects:
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "Knowledge Explorer"
+    icon: compass
+    url: "https://{{ keap_domain }}"
+    tier: 3
+    description: "Cortex — taxonomy, content links & preservation"
+    health_check: "https://{{ keap_domain }}/api/health"
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

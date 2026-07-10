@@ -420,6 +420,19 @@ services:
     oidc: proxy
     rbac_tier: 3
 
+  - id: keap
+    category: knowledge
+    stack: iiab
+    install_flag: install_keap
+    version_var: keap_version
+    version_source: docker_image
+    image: nos/keap
+    domain_var: keap_domain
+    port_var: keap_port
+    data_path_var: keap_data_dir
+    oidc: proxy
+    rbac_tier: 3
+
   - id: vaultwarden
     category: vault
     stack: iiab

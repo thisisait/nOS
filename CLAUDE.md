@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 71 Ansible roles under the `pazny.*` namespace, 67 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 72 Ansible roles under the `pazny.*` namespace, 68 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a web desktop (Puter), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -93,10 +93,11 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 - **Veins** (carriers) — Bone↔Wing HTTP, callback telemetry, plugin-loader hook channels.
 - **Tendons** (cross-service wiring) — what each plugin's `lifecycle:` block declares (renders, dashboard provisioning, post-API setup).
 - **Nerves** — agentic feedback loops: A8 conductor → Pulse jobs → audit lineage. Components are live (A8 conductor agent, A14 AgentKit runtime, `actor_action_id` audit lineage); the scheduled *closed-loop* conductor (auto-run on a cadence) is still queued.
+- **Cortex** (KEAP — external repo `budweis-dev/knowledge-explorer-and-preserver` → `thisisait/nos-keap`, deployed by `roles/pazny.keap` + `keap-base` plugin) — the knowledge layer of the brain: curated ~790-node taxonomy, content links resolved into the live content services (Kiwix, Calibre-Web, Nextcloud, Open WebUI), a capture/preservation review queue, and the agent-facing knowledge API (`/agent/v1`, loopback + scope-split bearer tokens) that AgentKit agents query. Unlike Bone/Wing/Pulse it runs as a Docker service (iiab stack, `header_oidc`, `gated_net`-only per SEC-02), built from a git-cloned source at `keap_repo_ref`.
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
-### Role-based service delivery (71 roles under `pazny.*`)
+### Role-based service delivery (72 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
@@ -158,7 +159,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 |-------|------|
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo, InfluxDB |
-| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
+| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, KEAP (cortex), Vaultwarden, ntfy, Miniflux |
 | **apps** | Tier-2 manifest-driven apps (apps_runner — Documenso, 2FAuth, Qdrant, Roundcube) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
@@ -194,7 +195,7 @@ Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC provi
   - **file/API-driven:** Gitea (Admin API), Nextcloud (`occ`), Portainer (`PUT /api/settings`), ERPNext (Frappe Social Login Key via bench), Home Assistant (auth_oidc HACS plugin), Jellyfin (SSO-Auth server plugin), Superset (`OAUTH_PROVIDERS` in superset_config.py)
 
 - **`header_oidc`** — Authentik proxy outpost forwards `Remote-User` / `Remote-Email` headers; service auto-creates the local user from headers. True SSO from the user POV (no service-side login screen) but no per-app OIDC client.
-  - Firefly III (β1.A 2026-05-05)
+  - Firefly III (β1.A 2026-05-05), KEAP/cortex (`X-Authentik-uid`-keyed per-user rows, 2026-07-10)
 
 - **`forward_auth`** — pure access gate. Authentik session = "you're in"; service has no per-user state. Same Authentik provider object as header_oidc.
   - Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Puter, Wing, code-server, ntfy, InfluxDB (OSS), ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant, SnappyMail, Woodpecker (route gate on top of Gitea-OAuth app-auth)

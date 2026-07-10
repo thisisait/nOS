@@ -216,6 +216,14 @@ services:
            PAT); financial data export via the subject's own data-export
            endpoint."
 
+  - id: svc_keap
+    flag: install_keap
+    method: manual
+    note: "SQLite on keap_data volume; rows keyed by X-Authentik-uid — sqlite3
+           SELECT WHERE user_id=<uid> (progress/todos/captures). Settings-page
+           self-export + admin export endpoint planned in nos-keap Admin CMS;
+           flip to method:api once verified."
+
   - id: svc_bluesky-pds
     flag: install_bluesky_pds
     method: manual

@@ -1,0 +1,19 @@
+{# keap-base — Traefik label hygiene for keap (cortex).
+
+Renders into:
+  {{ stacks_dir }}/iiab/overrides/keap-base.yml
+
+Docker Compose merges this with the role's primary override fragment.
+The `authentik@file` middleware lives in the Traefik file provider
+(`roles/pazny.traefik/templates/dynamic/middlewares.yml.j2`) — this
+plugin only wires services INTO that middleware.
+#}
+services:
+  keap:
+    labels:
+      # Tier-1 service — routed by the Traefik FILE provider (state/manifest.yml →
+      # services.yml: correct INTERNAL port 8080 via traefik_container_upstreams +
+      # header_oidc forward-auth middleware). enable=false → the docker provider
+      # skips this container; the @file router is authoritative (prevents the
+      # same-priority @docker/@file collision that 502'd puter/kiwix/ntfy).
+      - "traefik.enable=false"

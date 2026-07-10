@@ -99,6 +99,8 @@ traefik_auth_modes:
   code_server: proxy
   ntfy: proxy               # has its own user DB but admin UI is gated
   firefly: proxy
+  keap: proxy               # header_oidc — outpost must stay in path to inject
+                            # X-Authentik-* identity headers (firefly pattern)
   influxdb: proxy           # admin UI gated; token-based API still works
   mailpit: proxy            # admin tier
   mcp_gateway: proxy
@@ -193,6 +195,7 @@ traefik_container_upstreams:
   onlyoffice:    { port: 80 }
   ntfy:          { port: 80 }
   puter:         { port: 4100 }
+  keap:          { port: 8080 }
   kiwix:         { port: 8080 }
   nodered:       { port: 1880 }
   n8n:           { port: 5678 }

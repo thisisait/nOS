@@ -81,6 +81,7 @@
 - { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
 - { name: "[Stacks] pazny.puter render", ansible.builtin.include_role: { name: pazny.puter, apply: { tags: ['puter'] } }, when: "install_puter | default(false)", tags: ['puter'] }
+- { name: "[Stacks] pazny.keap render", ansible.builtin.include_role: { name: pazny.keap, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
 - { name: "[Stacks] pazny.ntfy render", ansible.builtin.include_role: { name: pazny.ntfy, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.miniflux render", ansible.builtin.include_role: { name: pazny.miniflux, apply: { tags: ['miniflux'] } }, when: "install_miniflux | default(false)", tags: ['miniflux'] }

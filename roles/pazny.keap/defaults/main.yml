@@ -1,0 +1,27 @@
+---
+# ==============================================================================
+# pazny.keap — role defaults
+#
+# KEAP (Knowledge Explorer and Preserver) — the CORTEX of the nOS anatomy:
+# the knowledge layer of the brain. Curated taxonomy, content links into the
+# live content services (Kiwix, Calibre-Web, Nextcloud, Open WebUI), a
+# capture/preservation review queue, and an agent-facing knowledge API
+# (/agent/v1) consumed by the AgentKit runtime.
+#
+# Operator-facing pins (domain/port/version/repo) live in default.config.yml
+# — these are fallbacks only (version-pin shadow rule: bump default.config.yml,
+# not here).
+# ==============================================================================
+
+keap_home: "{{ ansible_facts['env']['HOME'] }}/keap"
+keap_src_dir: "{{ keap_home }}/src"
+
+# Upstream repo — becomes https://github.com/thisisait/nos-keap after the
+# planned org transfer; until then the budweis-dev origin is authoritative.
+keap_repo_url: "https://github.com/budweis-dev/knowledge-explorer-and-preserver.git"
+# Pin a release tag once the first one is cut (R10: branches make
+# `--tags keap` builds non-reproducible; a broken ref breaks the run).
+keap_repo_ref: "rework/nos-base-blueprint"
+
+keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+keap_cpus: "{{ docker_cpus_light | default(1) }}"

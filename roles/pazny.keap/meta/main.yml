@@ -1,0 +1,15 @@
+galaxy_info:
+  role_name: keap
+  namespace: pazny
+  author: Pázny
+  description: KEAP knowledge system (cortex) in Docker compose override (nOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []
+
+collections: []

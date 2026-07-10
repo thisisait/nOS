@@ -1,0 +1,54 @@
+---
+# ==============================================================================
+# pazny.keap/tasks/main.yml — CORTEX (knowledge layer)
+#
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# clones the nos-keap repo at the pinned ref (git-clone build precedent:
+# roles/pazny.hermes), then renders the compose override fragment to
+# {{ stacks_dir }}/iiab/overrides/keap.yml which stack-up.yml collects via
+# `find` and passes as an additional -f flag. The image is built from the
+# clone by `docker compose up` (build-from-source precedent: pazny.puter).
+# ==============================================================================
+
+- name: "[pazny.keap] Ensure home and data directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}"
+    - "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}"
+
+- name: "[pazny.keap] Clone nos-keap repository (pinned ref)"
+  ansible.builtin.git:
+    repo: "{{ keap_repo_url }}"
+    dest: "{{ keap_src_dir }}"
+    version: "{{ keap_repo_ref }}"
+    force: false
+    depth: 1
+  register: _keap_clone
+  failed_when:
+    - _keap_clone.rc is defined
+    - _keap_clone.rc | default(0) != 0
+    - "'Already up to date' not in (_keap_clone.msg | default(''))"
+  notify: Restart keap
+
+- name: "[pazny.keap] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/keap.yml"
+    mode: '0600'
+  notify: Restart keap
+
+- name: "[pazny.keap] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       KEAP cortex ready (starts via the IIAB stack)
+      ══════════════════════════════════════════════════════
+       URL:       https://{{ keap_domain | default('keap' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+       Port:      {{ keap_port | default(8091) }} (loopback; agent surface /agent/v1)
+       Source:    {{ keap_src_dir }} @ {{ keap_repo_ref }}
+       Data:      {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}
+       SSO:       header_oidc (X-Authentik-* via gated_net; KEAP_TRUSTED_PROXY=1)
+      ══════════════════════════════════════════════════════

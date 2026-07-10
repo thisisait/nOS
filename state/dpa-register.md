@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 71 (67 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (65)
+- **Processing activities:** 72 (68 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (66)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -312,6 +312,20 @@ session data. Telemetry from physical IoT devices stays on-host.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`, `household_members`
 - **Data categories:** `device_telemetry`, `sensor_history`, `automation_definitions`, `user_accounts`, `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** 'iiab' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Keap — `svc_keap`
+- **Purpose:** Per-user knowledge-exploration state (learning progress, todos, saved
+bookmarks), operator-curated taxonomy content links, and page metadata
+captured by the companion userscript or submitted by nOS agents for
+human review.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `end_users`
+- **Data categories:** `username`, `email`, `behavioural_data`, `user_generated_content`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
