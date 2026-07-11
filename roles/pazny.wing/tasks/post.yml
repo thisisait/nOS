@@ -441,6 +441,11 @@
     NOS_KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw | default('') }}"
     NOS_KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro | default('') }}"
     NOS_LIBRARIAN_WING_API_TOKEN: "{{ librarian_wing_api_token | default('') }}"
+    # keap-consolidate (cortex dream sweep): capture-tier token + source roots.
+    NOS_KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture | default('') }}"
+    NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default('') }}"
+    NOS_CONSOLIDATE_FS_ROOTS: "{{ (nextcloud_data_dir | default('')) ~ ':' ~ (ansible_facts['env']['HOME'] ~ '/keap/inbox') }}"
+    NOS_CONSOLIDATE_DB_EXCLUDE: "{{ mariadb_databases | default([]) | map(attribute='name') | join(',') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

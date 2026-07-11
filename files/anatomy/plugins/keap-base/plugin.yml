@@ -125,6 +125,27 @@ pulse:
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
         OLLAMA_URL: "http://127.0.0.1:11434"
 
+    # Cortex consolidator (the "dream" sweep, 04:15 — opens the night
+    # shift): walks raw data piles (Nextcloud files, ~/keap/inbox drop dir,
+    # operator-imported MariaDB databases) and registers new/changed items
+    # as datapoints via the unified intake (capture-tier token — the
+    # consolidator is a FEEDER, it can never read the corpus). Night order:
+    # consolidate 04:15 -> embed-sync 04:45 -> lint 05:15 -> librarian.
+    - name: keap-consolidate
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/keap-consolidate.py"
+      schedule: "15 4 * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+        NOS_CONSOLIDATE_FS_ROOTS: "{{ consolidate_fs_roots }}"
+        NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
+        NOS_CONSOLIDATE_DB_EXCLUDE: "{{ consolidate_db_exclude }}"
+        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
+
     # Knowledge lint (Karpathy's third operation, vector-extended): the
     # container runs the deterministic checks (nos-keap server/lint.ts) and
     # keeps the findings lifecycle; this job just triggers the run AFTER the

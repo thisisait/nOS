@@ -100,6 +100,10 @@ def _build_substitutions() -> dict[str, str]:
         "{{ keap_agent_token_rw }}":      _env("NOS_KEAP_AGENT_TOKEN_RW"),
         "{{ keap_agent_token_ro }}":      _env("NOS_KEAP_AGENT_TOKEN_RO"),
         "{{ librarian_wing_api_token }}": _env("NOS_LIBRARIAN_WING_API_TOKEN"),
+        "{{ keap_agent_token_capture }}": _env("NOS_KEAP_AGENT_TOKEN_CAPTURE"),
+        "{{ mariadb_root_password }}":    _env("NOS_MARIADB_ROOT_PASSWORD"),
+        "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
+        "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
     }
 
 

@@ -18,6 +18,9 @@
   loop:
     - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}"
     - "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}"
+    # Universal drop dir — anything copied here becomes a datapoint on the
+    # next keap-consolidate sweep (the operator's "dump it, sort it later").
+    - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}/inbox"
 
 - name: "[pazny.keap] Clone nos-keap repository (pinned ref)"
   ansible.builtin.git:
