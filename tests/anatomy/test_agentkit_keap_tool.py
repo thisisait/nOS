@@ -43,12 +43,14 @@ def test_tool_write_surface_is_allowlisted():
     through an LLM tool; widening this list is a doctrine change, not a
     refactor."""
     src = TOOL_PHP.read_text()
-    m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", src)
+    m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", src, re.DOTALL)
     assert m, "McpKeapTool must declare POST_ALLOWLIST"
-    paths = sorted(re.findall(r"'([^']+)'", m.group(1)))
-    assert paths == ["/agent/v1/captures", "/agent/v1/objects"], (
-        f"POST allowlist drifted: {paths}"
-    )
+    paths = sorted(re.findall(r"'(/[^']+)'", m.group(1)))
+    assert paths == [
+        "/agent/v1/captures",
+        "/agent/v1/lint/verdict",
+        "/agent/v1/objects",
+    ], f"POST allowlist drifted: {paths}"
     assert "in_array($path, self::POST_ALLOWLIST, true)" in src, (
         "McpKeapTool must enforce the POST allowlist"
     )

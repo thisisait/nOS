@@ -233,6 +233,24 @@
     or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — librarian (cortex L2 knowledge judge)"
+  # Judges the KEAP lint intake queue (overlap-review/near-duplicate pairs).
+  # Client nos-librarian pre-provisioned in authentik_agent_clients; this adds
+  # the api_tokens row so its report events authenticate.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ librarian_wing_api_token }}
+      - --name=librarian
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_librarian_token
+  changed_when: >
+    'Created' in (_wing_librarian_token.stdout | default(''))
+    or 'Updated' in (_wing_librarian_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — scout (A9.4 drift-visibility agent)"
   # Read-only drift detector. Same provision-token.php pattern as conductor +
   # remediator; the Authentik client (nos-scout) was already pre-provisioned
@@ -421,6 +439,8 @@
     # them from these Ansible-rendered values.
     NOS_KEAP_PORT: "{{ keap_port | default(8091) }}"
     NOS_KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw | default('') }}"
+    NOS_KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro | default('') }}"
+    NOS_LIBRARIAN_WING_API_TOKEN: "{{ librarian_wing_api_token | default('') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

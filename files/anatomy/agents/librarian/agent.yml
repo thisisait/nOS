@@ -57,8 +57,12 @@ vault:
 metadata:
   ait_phase: A9.4-contract-only
   ceremony_role: rag-recall
-  runner_status: deferred
-  deferred_reason: corpus live (KEAP libSQL via mcp-keap); Pulse runner + ceremony wiring pending
+  runner_status: on-demand
+  deferred_reason: >-
+    runner live 2026-07-11 (flat profile files/anatomy/agents/librarian.yml,
+    Pulse job librarian:judge-lint-queue paused per on-demand doctrine;
+    tools/run-librarian.sh fires it). Intake = KEAP lint overlap-review /
+    near-duplicate findings; verdicts via /agent/v1/lint/verdict.
 
 exit_code_semantics:
   emits_sentinel: false

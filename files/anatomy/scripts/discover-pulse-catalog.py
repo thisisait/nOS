@@ -98,6 +98,8 @@ def _build_substitutions() -> dict[str, str]:
         # carries these bare tokens; wing post.yml Ansible-renders the values.
         "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
         "{{ keap_agent_token_rw }}":      _env("NOS_KEAP_AGENT_TOKEN_RW"),
+        "{{ keap_agent_token_ro }}":      _env("NOS_KEAP_AGENT_TOKEN_RO"),
+        "{{ librarian_wing_api_token }}": _env("NOS_LIBRARIAN_WING_API_TOKEN"),
     }
 
 

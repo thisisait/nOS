@@ -40,7 +40,11 @@ final class McpKeapTool implements ToolInterface
 	private const MAX_RESPONSE_BYTES = 16_384;
 
 	/** The ONLY writable paths — widening this list is a doctrine change. */
-	private const POST_ALLOWLIST = ['/agent/v1/captures', '/agent/v1/objects'];
+	private const POST_ALLOWLIST = [
+		'/agent/v1/captures',      // preserve a page into the review queue
+		'/agent/v1/objects',       // create an OKF index card
+		'/agent/v1/lint/verdict',  // librarian Layer-2 judgment on a lint finding
+	];
 
 	private string $baseUrl;
 	private string $tokenRo;
