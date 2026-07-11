@@ -73,6 +73,19 @@
         <key>BONE_SECRET</key>
         <string>{{ bone_secret | default('') }}</string>
 
+{% if install_keap | default(false) %}
+        <!-- KEAP cortex agent surface (loopback :{{ keap_port | default(8091) }}).
+             Consumed by App\AgentKit\Tools\McpKeapTool (mcp-keap): GETs ride
+             the read-only token, POST /agent/v1/captures rides read-write.
+             CredentialResolver maps vault scope 'mcp-keap' -> KEAP_AGENT_TOKEN_RO. -->
+        <key>KEAP_API_URL</key>
+        <string>http://127.0.0.1:{{ keap_port | default(8091) }}</string>
+        <key>KEAP_AGENT_TOKEN_RO</key>
+        <string>{{ keap_agent_token_ro | default('') }}</string>
+        <key>KEAP_AGENT_TOKEN_RW</key>
+        <string>{{ keap_agent_token_rw | default('') }}</string>
+{% endif %}
+
         <!-- HMAC secret for /api/v1/events POST (callback plugin + conductor
              agent_run_start/end events). Same value as BONE_SECRET — Bone
              signs outbound, Wing verifies inbound. EventsPresenter::checkHmac()

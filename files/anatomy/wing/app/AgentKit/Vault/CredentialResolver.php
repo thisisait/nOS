@@ -130,6 +130,7 @@ final class CredentialResolver
 			'openclaw-api'  => 'OPENCLAW_API_KEY',
 			'mcp-wing'      => 'WING_API_TOKEN',
 			'mcp-bone'      => 'BONE_SECRET',
+			'mcp-keap'      => 'KEAP_AGENT_TOKEN_RO',
 		];
 		return $known[$scope] ?? strtoupper(str_replace('-', '_', $scope));
 	}

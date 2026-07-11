@@ -2,19 +2,19 @@ name: librarian
 version: 1
 description: |
   nOS librarian — knowledge / RAG agent. Surfaces "have we seen this
-  before?" context from prior agent runs + remediation history. Reads
-  the embeddings substrate (Qdrant) for semantic similarity over past
-  findings, agent reports, and operator decisions.
+  before?" context from prior agent runs + remediation history, and
+  queries the KEAP cortex (mcp-keap) for semantic recall over the
+  curated knowledge taxonomy, captures and notes.
 
-  **STATUS: contract-only (2026-05-17).** The AgentKit profile is
-  shipped so the catalog under /agents displays the spec, but no Pulse
-  runner exists yet — librarian needs Qdrant to be POPULATED before its
-  RAG queries produce meaningful results. Today Qdrant has zero
-  embeddings (the ingestion pipeline lands with a future "embed agent
-  outputs on event_insert" hook). Triggering on this profile via the CLI
-  returns an "awaiting corpus" message rather than running RAG over an
-  empty store. The Authentik client `nos-librarian` is pre-provisioned
-  and reserved.
+  **STATUS: contract-only (2026-05-17; corpus landed 2026-07-11).** The
+  AgentKit profile is shipped so the catalog under /agents displays the
+  spec, but no Pulse runner exists yet. The original blocker — an empty
+  embeddings substrate — is GONE: KEAP's libSQL vector corpus is live
+  (790 taxonomy nodes embedded, keap-embed-sync Pulse job keeps it
+  current) and reachable via the mcp-keap tool. What remains is the
+  runner itself (Pulse job + ceremony wiring). Qdrant is no longer a
+  prerequisite; it stays reserved for a future agent-outputs corpus.
+  The Authentik client `nos-librarian` is pre-provisioned and reserved.
 
 model:
   primary: anthropic-claude-opus-4-7
@@ -26,6 +26,7 @@ tools:
   - id: bash-read-only
   - id: mcp-wing
   - id: mcp-bone
+  - id: mcp-keap
 
 multiagent:
   type: solo
@@ -41,6 +42,7 @@ audit:
     - mcp.tool_use
     - wing.read
     - bone.read
+    - keap.read
     - events.write
     - audit.read
   pii_classification: none
@@ -50,12 +52,13 @@ vault:
     - scope: anthropic-api
     - scope: mcp-wing
     - scope: mcp-bone
+    - scope: mcp-keap
 
 metadata:
   ait_phase: A9.4-contract-only
   ceremony_role: rag-recall
   runner_status: deferred
-  deferred_reason: needs Qdrant corpus population pipeline
+  deferred_reason: corpus live (KEAP libSQL via mcp-keap); Pulse runner + ceremony wiring pending
 
 exit_code_semantics:
   emits_sentinel: false

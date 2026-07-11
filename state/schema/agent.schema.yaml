@@ -73,6 +73,7 @@ properties:
             - mcp-wing
             - mcp-bone
             - mcp-pulse
+            - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
         config:
           type: object
           description: "Tool-specific config; opaque to the schema."
