@@ -125,6 +125,23 @@ pulse:
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
         OLLAMA_URL: "http://127.0.0.1:11434"
 
+    # Knowledge lint (Karpathy's third operation, vector-extended): the
+    # container runs the deterministic checks (nos-keap server/lint.ts) and
+    # keeps the findings lifecycle; this job just triggers the run AFTER the
+    # embed sync (fresh vectors) and fans NEW findings into A9. Standing
+    # findings never re-alert.
+    - name: keap-lint
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/keap-lint.py"
+      schedule: "15 5 * * *"    # 05:15 UTC — after keap-embed-sync (04:45+jitter)
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      env:
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
+
 # =============================================================================
 # OBSERVABILITY — Loki labels
 # =============================================================================
