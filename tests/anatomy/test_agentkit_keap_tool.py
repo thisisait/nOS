@@ -51,6 +51,7 @@ def test_tool_write_surface_is_allowlisted():
         "/agent/v1/lint/verdict",
         "/agent/v1/objects",
         "/agent/v1/promotions",
+        "/agent/v1/taxonomy/propose",
     ], f"POST allowlist drifted: {paths}"
     assert "in_array($path, self::POST_ALLOWLIST, true)" in src, (
         "McpKeapTool must enforce the POST allowlist"
