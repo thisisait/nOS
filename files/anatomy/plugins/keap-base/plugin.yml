@@ -111,7 +111,9 @@ pulse:
   jobs:
     - name: keap-embed-sync
       runner: subprocess
-      command: "python3 {{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
+      # Wing's pulse_jobs API requires an ABSOLUTE command path (no leading
+      # interpreter word) — the script is executable with a python3 shebang.
+      command: "{{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
       schedule: "45 4 * * *"    # 04:45 UTC daily; offset from gitleaks 03:00 + tofu-drift 05:30
       jitter_min: 10
       max_runtime_s: 900        # first full run embeds ~800 texts (~2 min on MLX); headroom for corpus growth
