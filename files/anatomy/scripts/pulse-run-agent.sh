@@ -217,7 +217,7 @@ TOKEN_RESP=$(curl -sS -w "\n%{http_code}" \
     --data-urlencode "grant_type=client_credentials" \
     --data-urlencode "client_id=${CLIENT_ID}" \
     --data-urlencode "client_secret=${CLIENT_SECRET}" \
-    "${_scope_args[@]}" \
+    ${_scope_args[@]+"${_scope_args[@]}"} \
     "${TOKEN_URL}" 2>&1) || _die "curl to Authentik failed"
 
 TOKEN_BODY=$(echo "$TOKEN_RESP" | sed '$d')   # all lines except the last (portable; macOS BSD head lacks `-n -N`)

@@ -73,6 +73,11 @@ system_prompt: |
   7. Exit 0 when everything judged `fine` (or empty queue); exit 1 when
      any duplicate/contradiction verdict was issued (operator review).
 
+# ── Authentik client scopes (matches authentik_agent_clients::nos-librarian) ──
+capabilities:
+  - nos:state:read
+  - nos:security:read
+
 # ── Notification routing (A9) ─────────────────────────────────────────────────
 # Contradictions page; duplicates go inbox; the rest is report-only.
 notification:
