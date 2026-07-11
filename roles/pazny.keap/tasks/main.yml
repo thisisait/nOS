@@ -40,6 +40,22 @@
     mode: '0600'
   notify: Restart keap
 
+# Public bearer-only ingest route (DEVICE entry point — AR glasses etc.).
+# A 4th file in Traefik's watched conf.d next to the traefik-role-rendered
+# {services,middlewares,tls}.yml; Traefik merges all files in the dir.
+- name: "[pazny.keap] Render public ingest route (keap-ingest.yml)"
+  ansible.builtin.template:
+    src: traefik-ingest.yml.j2
+    dest: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ingest.yml"
+    mode: '0644'
+  when: keap_public_ingest | default(true)
+
+- name: "[pazny.keap] Remove public ingest route when disabled"
+  ansible.builtin.file:
+    path: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ingest.yml"
+    state: absent
+  when: not (keap_public_ingest | default(true))
+
 - name: "[pazny.keap] Print info"
   ansible.builtin.debug:
     msg: |

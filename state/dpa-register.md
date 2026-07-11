@@ -320,12 +320,14 @@ session data. Telemetry from physical IoT devices stays on-host.
 
 #### Keap — `svc_keap`
 - **Purpose:** Per-user knowledge-exploration state (learning progress, todos, saved
-bookmarks), operator-curated taxonomy content links, and page metadata
-captured by the companion userscript or submitted by nOS agents for
-human review.
+bookmarks), operator-curated taxonomy content links, and captures
+submitted for human review through the unified intake: the companion
+userscript, nOS agents, and field DEVICES (AR glasses / mobile
+companions posting text, transcripts, geo-tagged moments and
+media-by-reference to /ingest/v1).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `end_users`
-- **Data categories:** `username`, `email`, `behavioural_data`, `user_generated_content`
+- **Data categories:** `username`, `email`, `behavioural_data`, `user_generated_content`, `location_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)

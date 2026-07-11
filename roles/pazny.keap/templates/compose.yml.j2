@@ -40,9 +40,11 @@ services:
       # legitimate identity headers via Traefik's authentik@file on gated_net.
       KEAP_TRUSTED_PROXY: "1"
       KEAP_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
-      # Agent-surface bearer tokens (scope-split, R9): read-only vs read+write.
+      # Agent-surface bearer tokens (scope-split, R9): read-only vs read+write,
+      # plus the DEVICE tier (write-only /ingest/v1 intake — AR glasses etc.).
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+      KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
 {% if keap_ollama_url | default('') %}
       # Optional live embedder for free-text semantic search. Stored vectors
       # come from the host-side keap-embed-sync Pulse job either way; this

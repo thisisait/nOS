@@ -1,0 +1,32 @@
+# =============================================================================
+# keap-ingest.yml — public bearer-only ingest route (rendered by pazny.keap;
+# lives in Traefik's watched conf.d next to the role-rendered services.yml).
+#
+# THE device entry point: AR glasses / mobile companions in the field POST
+# capture envelopes to https://{{ keap_domain }}/ingest/v1/capture. The route
+# deliberately carries NO authentik@file middleware — devices cannot walk an
+# SSO browser flow. Security model:
+#   1. bearer-only: the /ingest surface (nos-keap server/intake.ts) 401s
+#      without the capture-tier token and NEVER reads X-Authentik-* headers,
+#      so this route cannot be used to forge a human identity on /api.
+#   2. write-only blast radius: the capture token can feed the review queue,
+#      never read the knowledge base (token tier doctrine, server/tokens.ts).
+#   3. edge rate limit below — a lost token can spam the queue, not flood it.
+# PathPrefix makes this rule longer (= higher default priority) than the
+# plain Host() SSO router in services.yml; priority pinned anyway.
+# =============================================================================
+http:
+  routers:
+    keap-ingest:
+      rule: "Host(`{{ keap_domain }}`) && PathPrefix(`/ingest/v1`)"
+      entryPoints: ["websecure"]
+      service: "keap"
+      priority: 200
+      tls: {}
+      middlewares: ["keap-ingest-ratelimit@file", "security-headers@file"]
+
+  middlewares:
+    keap-ingest-ratelimit:
+      rateLimit:
+        average: 5     # sustained captures/s per source IP — generous for a wearable
+        burst: 30      # offline-buffer flush headroom
