@@ -44,6 +44,7 @@ final class McpKeapTool implements ToolInterface
 		'/agent/v1/captures',      // preserve a page into the review queue
 		'/agent/v1/objects',       // create an OKF index card
 		'/agent/v1/lint/verdict',  // librarian Layer-2 judgment on a lint finding
+		'/agent/v1/promotions',    // PROPOSE capture->object (moderator decides)
 	];
 
 	private string $baseUrl;
