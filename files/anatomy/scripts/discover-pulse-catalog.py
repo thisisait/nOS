@@ -94,6 +94,10 @@ def _build_substitutions() -> dict[str, str]:
         "{{ mail_recipient }}":           _env("NOS_MAIL_RECIPIENT"),
         "{{ mail_digest_floor_val }}":    _env("NOS_MAIL_DIGEST_FLOOR"),
         "{{ mail_digest_cron }}":         _env("NOS_MAIL_DIGEST_CRON"),
+        # keap-embed-sync (cortex Phase 6, 2026-07-11): keap-base/plugin.yml
+        # carries these bare tokens; wing post.yml Ansible-renders the values.
+        "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
+        "{{ keap_agent_token_rw }}":      _env("NOS_KEAP_AGENT_TOKEN_RW"),
     }
 
 
