@@ -36,13 +36,21 @@ def test_tool_class_exists_with_id_and_scopes():
     )
 
 
-def test_tool_write_surface_is_captures_only():
-    """POST is allowlisted to /agent/v1/captures — the review-queue write.
-    A broader write surface (embeddings, admin) must NOT go through an LLM
-    tool; widening this allowlist is a doctrine change, not a refactor."""
+def test_tool_write_surface_is_allowlisted():
+    """POST is allowlisted to exactly two knowledge-preservation writes:
+    /agent/v1/captures (review queue) and /agent/v1/objects (index cards,
+    ROADMAP S1). A broader write surface (embeddings, admin) must NOT go
+    through an LLM tool; widening this list is a doctrine change, not a
+    refactor."""
     src = TOOL_PHP.read_text()
-    assert "$path !== '/agent/v1/captures'" in src, (
-        "McpKeapTool must refuse POST to anything but /agent/v1/captures"
+    m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", src)
+    assert m, "McpKeapTool must declare POST_ALLOWLIST"
+    paths = sorted(re.findall(r"'([^']+)'", m.group(1)))
+    assert paths == ["/agent/v1/captures", "/agent/v1/objects"], (
+        f"POST allowlist drifted: {paths}"
+    )
+    assert "in_array($path, self::POST_ALLOWLIST, true)" in src, (
+        "McpKeapTool must enforce the POST allowlist"
     )
     assert "str_starts_with($path, '/agent/v1/')" in src, (
         "McpKeapTool must confine paths to /agent/v1/*"

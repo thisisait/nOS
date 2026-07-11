@@ -11,10 +11,11 @@ use GuzzleHttp\Exception\GuzzleException;
 /**
  * MCP-style wrapper around KEAP (the cortex) — the agent-facing knowledge
  * surface at /agent/v1/*. Same shape as McpWingTool but scope-split at the
- * KEAP token level: GETs ride the read-only token, the single permitted
- * write (POST /agent/v1/captures — "preserve this for human review") rides
- * the read-write token. Anything else KEAP exposes for writing (embeddings
- * upsert) belongs to the keap-embed-sync Pulse job, not to an LLM tool.
+ * KEAP token level: GETs ride the read-only token; the two permitted writes
+ * ride the read-write token — POST /agent/v1/captures ("preserve this page
+ * for human review") and POST /agent/v1/objects (create an OKF index card,
+ * ROADMAP S1). Anything else KEAP exposes for writing (embeddings upsert)
+ * belongs to the keap-embed-sync Pulse job, not to an LLM tool.
  *
  * Why this tool exists at all: KEAP's loopback port is the ONLY agent path
  * to the knowledge corpus. The container sits alone with Traefik on the
@@ -28,11 +29,18 @@ use GuzzleHttp\Exception\GuzzleException;
  *   GET  /agent/v1/taxonomy/node/{id}      detail + curated notes + link
  *   GET  /agent/v1/search/semantic?q=      vector search (libSQL corpus)
  *   GET  /agent/v1/content/resolve?ref=    ref -> live nOS service URL
+ *   GET  /agent/v1/objects                 list knowledge objects (index cards)
  *   POST /agent/v1/captures                submit a capture (review queue)
+ *   POST /agent/v1/objects                 create a knowledge object; [[node-id]]
+ *                                          refs in the body anchor it in the
+ *                                          explorer's nebula layer
  */
 final class McpKeapTool implements ToolInterface
 {
 	private const MAX_RESPONSE_BYTES = 16_384;
+
+	/** The ONLY writable paths — widening this list is a doctrine change. */
+	private const POST_ALLOWLIST = ['/agent/v1/captures', '/agent/v1/objects'];
 
 	private string $baseUrl;
 	private string $tokenRo;
@@ -66,10 +74,11 @@ final class McpKeapTool implements ToolInterface
 	{
 		return new ToolSchema(
 			name: 'mcp_keap',
-			description: 'Query the KEAP knowledge cortex via /agent/v1/*: taxonomy FTS + semantic ' .
-				'(vector) search, node detail with curated notes, content-ref resolution into live ' .
-				'nOS services. POST is allowed ONLY to /agent/v1/captures (preserve a finding into ' .
-				'the human review queue). Returns up to 16 KiB of the JSON response body verbatim.',
+			description: 'Query the KEAP knowledge cortex via /agent/v1/*: taxonomy FTS + hybrid ' .
+				'semantic search, node detail with curated notes, knowledge objects (index cards), ' .
+				'content-ref resolution into live nOS services. POST is allowed ONLY to ' .
+				'/agent/v1/captures (preserve a page for review) and /agent/v1/objects (create an ' .
+				'index card; [[node-id]] refs anchor it). Returns up to 16 KiB of the response verbatim.',
 			inputSchema: [
 				'type' => 'object',
 				'required' => ['method', 'path'],
@@ -80,11 +89,12 @@ final class McpKeapTool implements ToolInterface
 					],
 					'path' => [
 						'type' => 'string',
-						'description' => 'Path beginning with /agent/v1/. POST only to /agent/v1/captures.',
+						'description' => 'Path beginning with /agent/v1/. POST only to /agent/v1/captures or /agent/v1/objects.',
 					],
 					'body' => [
 						'type' => 'object',
-						'description' => 'JSON body (POST only): {title, description?, url?, domain?, metadata?}.',
+						'description' => 'JSON body (POST only). captures: {title, description?, url?, domain?, metadata?}. ' .
+							'objects: {type, title, body?, resource?, tags?}.',
 					],
 				],
 			],
@@ -103,8 +113,8 @@ final class McpKeapTool implements ToolInterface
 		if (!str_starts_with($path, '/agent/v1/')) {
 			return ToolResult::error("path must start with /agent/v1/; got {$path}");
 		}
-		if ($method === 'POST' && $path !== '/agent/v1/captures') {
-			return ToolResult::error('POST is allowed only to /agent/v1/captures');
+		if ($method === 'POST' && !in_array($path, self::POST_ALLOWLIST, true)) {
+			return ToolResult::error('POST is allowed only to: ' . implode(', ', self::POST_ALLOWLIST));
 		}
 
 		$token = $method === 'POST' ? $this->tokenRw : $this->tokenRo;
