@@ -46,6 +46,7 @@ final class McpKeapTool implements ToolInterface
 		'/agent/v1/lint/verdict',  // librarian Layer-2 judgment on a lint finding
 		'/agent/v1/promotions',    // PROPOSE capture->object (moderator decides)
 		'/agent/v1/taxonomy/propose', // PROPOSE a new node (Track T; zone-governed)
+		'/agent/v1/taxonomy/describe', // PROPOSE curated descriptions (K1; kind=desc, moderated)
 	];
 
 	private string $baseUrl;

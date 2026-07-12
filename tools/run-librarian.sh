@@ -14,12 +14,13 @@
 # on a fixed cron.
 #
 # Usage:
-#   bash tools/run-librarian.sh           # judge the intake queue
-#   bash tools/run-librarian.sh --dry-run # pre-flight only
+#   bash tools/run-librarian.sh            # judge the lint intake queue
+#   bash tools/run-librarian.sh --describe # K1: one taxonomy-describe batch
+#   bash tools/run-librarian.sh --dry-run  # pre-flight only (either mode)
 #
 # Exit codes:
 #   0 — queue empty or everything judged fine
-#   1 — duplicate/contradiction verdict(s) issued — read the report
+#   1 — verdict(s)/proposal(s) await the moderator — read the report
 #   2 — pre-flight failed (missing dep / unreachable service / no job row)
 # =============================================================================
 
@@ -27,6 +28,7 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WING_DB="${WING_DB_PATH:-${HOME}/wing/app/data/wing.db}"
+MODE="judge"
 JOB_ID_PATTERN="%:judge-lint-queue"
 DRY_RUN=0
 REPORT_FILE="${LIBRARIAN_REPORT_FILE:-${HOME}/.nos/librarian-report-$(date +%Y%m%dT%H%M%S).md}"
@@ -34,12 +36,16 @@ REPORT_FILE="${LIBRARIAN_REPORT_FILE:-${HOME}/.nos/librarian-report-$(date +%Y%m
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
+        --describe)
+            MODE="describe"
+            JOB_ID_PATTERN="%:describe-taxonomy"
+            ;;
         -h|--help)
-            sed -n '2,23p' "$0" | sed 's/^# \?//'
+            sed -n '2,24p' "$0" | sed 's/^# \?//'
             exit 0
             ;;
         *)
-            echo "ERROR: unknown arg '$arg' (use --dry-run or --help)" >&2
+            echo "ERROR: unknown arg '$arg' (use --describe, --dry-run or --help)" >&2
             exit 2
             ;;
     esac
@@ -80,14 +86,31 @@ KEAP_HEALTH=$(curl -sS -o /dev/null -w "%{http_code}" "$KEAP_URL/agent/v1/health
 [[ "$KEAP_HEALTH" == "200" ]] || _die "KEAP $KEAP_URL/agent/v1/health returned $KEAP_HEALTH"
 echo "✓ KEAP $KEAP_URL/agent/v1/health → 200"
 
-INTAKE_COUNT=0
-for check in overlap-review near-duplicate; do
-    N=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
-        "$KEAP_URL/agent/v1/lint?check=$check&unjudged=1&limit=500" 2>/dev/null \
-        | jq -r '.data.findings | length' 2>/dev/null || echo 0)
-    INTAKE_COUNT=$((INTAKE_COUNT + N))
-done
-echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT"
+# Mode-aware intake size: judge = unjudged lint findings; describe = nodes
+# still lacking a curated description (K1). Reused for the post-flight delta.
+_intake_count() {
+    local total=0 n
+    if [[ "$MODE" == "describe" ]]; then
+        total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
+            "$KEAP_URL/agent/v1/taxonomy/describe/pending?limit=1" 2>/dev/null \
+            | jq -r '.data.total' 2>/dev/null || echo 0)
+    else
+        for check in overlap-review near-duplicate; do
+            n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
+                "$KEAP_URL/agent/v1/lint?check=$check&unjudged=1&limit=500" 2>/dev/null \
+                | jq -r '.data.findings | length' 2>/dev/null || echo 0)
+            total=$((total + n))
+        done
+    fi
+    echo "$total"
+}
+
+INTAKE_COUNT=$(_intake_count)
+if [[ "$MODE" == "describe" ]]; then
+    echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT"
+else
+    echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT"
+fi
 
 AK_URL=$(echo "$JOB_ENV_JSON" | jq -r '.NOS_AUTHENTIK_URL // ""')
 if [[ -n "$AK_URL" ]]; then
@@ -110,8 +133,12 @@ fi
 
 if [[ "$INTAKE_COUNT" -eq 0 ]]; then
     echo
-    echo "Intake queue is EMPTY — nothing to judge; not burning an agent run."
-    echo "(Run tools/nos-stacks.sh keap + the keap-lint job first if you expected findings.)"
+    if [[ "$MODE" == "describe" ]]; then
+        echo "Describe backlog is EMPTY — every node carries a description; not burning an agent run."
+    else
+        echo "Intake queue is EMPTY — nothing to judge; not burning an agent run."
+        echo "(Run tools/nos-stacks.sh keap + the keap-lint job first if you expected findings.)"
+    fi
     exit 0
 fi
 
@@ -150,13 +177,7 @@ echo
 POST_RUN_REPORT_COUNT=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM events WHERE source = 'librarian';")
 EVENT_DELTA=$((POST_RUN_REPORT_COUNT - PRE_RUN_REPORT_COUNT))
 
-REMAINING=0
-for check in overlap-review near-duplicate; do
-    N=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
-        "$KEAP_URL/agent/v1/lint?check=$check&unjudged=1&limit=500" 2>/dev/null \
-        | jq -r '.data.findings | length' 2>/dev/null || echo 0)
-    REMAINING=$((REMAINING + N))
-done
+REMAINING=$(_intake_count)
 JUDGED=$((INTAKE_COUNT - REMAINING))
 
 LATEST_ACTION_ID=$(sqlite3 -json "$WING_DB" \
@@ -175,7 +196,11 @@ fi
     echo
     echo "**run_id:** \`$PULSE_RUN_ID\`"
     echo "**judgment exit:** \`$RUN_EXIT\`"
-    echo "**intake:** \`$INTAKE_COUNT\` → **judged:** \`$JUDGED\` → **remaining unjudged:** \`$REMAINING\`"
+    if [[ "$MODE" == "describe" ]]; then
+        echo "**backlog:** \`$INTAKE_COUNT\` → **proposed this run:** \`$JUDGED\` → **still undescribed:** \`$REMAINING\`"
+    else
+        echo "**intake:** \`$INTAKE_COUNT\` → **judged:** \`$JUDGED\` → **remaining unjudged:** \`$REMAINING\`"
+    fi
     echo "**librarian events written:** \`$EVENT_DELTA\`"
     echo
     if [[ -n "$REPORT_MD" ]]; then
@@ -194,6 +219,12 @@ fi
     echo
     if [[ "$RUN_EXIT" -eq 0 ]]; then
         echo "**GREEN** — queue judged; nothing escalated."
+    elif [[ "$RUN_EXIT" -eq 1 && "$MODE" == "describe" ]]; then
+        echo "**REVIEW** — description batch proposed (the normal outcome)."
+        echo
+        echo "1. KEAP Admin › Moderation → bulk-approve the desc batch."
+        echo "2. Next keap-embed-sync re-embeds the approved nodes."
+        echo "3. Re-run tools/run-librarian.sh --describe for the next batch."
     elif [[ "$RUN_EXIT" -eq 1 ]]; then
         echo "**REVIEW** — verdict(s) or proposal(s) await the moderator."
         echo

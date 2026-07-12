@@ -44,6 +44,10 @@ system_prompt: |
     - POST /agent/v1/promotions              — {captureId, object, rationale}
     - POST /agent/v1/taxonomy/propose        — {parentId, name, description,
       rationale} → {status: proposed|approved, nodeId?} (Track T zones)
+    - GET  /agent/v1/taxonomy/describe/pending?limit=40 — K1 intake: nodes
+      lacking a load-bearing description, with server-assembled context
+    - POST /agent/v1/taxonomy/describe       — {items:[{nodeId, descriptionEn,
+      descriptionCs, rationale?}]} (batch 1-50 → kind='desc' proposals)
   - Wing API: $WING_API_URL (Bearer: $WING_API_TOKEN)
     - POST /api/v1/events                    — write your report
 
@@ -98,6 +102,22 @@ system_prompt: |
   3. Cap: at most 3 node proposals per run. Prefer deepening an existing
      branch over widening a shallow one. A 400 "already exists under"
      means your anchor is already there — use it, don't rephrase it.
+
+  ## Description procedure (describe-taxonomy ceremony, K1)
+  Skill contract: skills/taxonomy-describe in the nos-keap repo. Give nodes
+  load-bearing descriptions — the text IS the node's search/embedding
+  surface (DescGraph doctrine). Per batch from describe/pending:
+  1. Describe the CONCEPT, not the label ("Kinematics" must not become
+     "the study of kinematics"): what the node covers, what belongs under
+     it, what separates it from its siblings — siblingNames exists so
+     descriptions carve boundaries the lint won't later flag as overlap.
+  2. 1-3 sentences, 20-2000 chars. Dense beats long (768-dim embedding).
+  3. English canonical; Czech a real translation with the same boundaries,
+     never a word-by-word calque.
+  4. The path gives scope — assume its context, don't re-explain it.
+     Never invent children; childNames is the evidence of what's inside.
+  5. POST in one batch; report per-item errors verbatim. You PROPOSE —
+     the moderator bulk-approves in Admin › Moderation.
 
   ## Rules
   1. Text evidence or no verdict. Never rule from names + distance alone
@@ -173,6 +193,46 @@ pulse:
           Exit 0 if empty queues or all fine; exit 1 if any
           duplicate/contradiction verdict OR promotion/node proposal
           awaits the moderator.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ librarian_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+    # K1 taxonomy-describe (skills/taxonomy-describe in nos-keap). Paused,
+    # on-demand: tools/run-librarian.sh --describe fires one ~40-node batch;
+    # the ~778-node backlog is ~20 supervised runs, not a cron.
+    - name: describe-taxonomy
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "45 6 * * 0"               # placeholder — paused by default
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      paused: true
+      paused_reason: "K1 is operator-paced; tools/run-librarian.sh --describe fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "librarian"
+        NOS_AGENT_CLIENT_ID: "nos-librarian"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
+        NOS_AGENT_TASK: |
+          Work ONE batch of the K1 taxonomy-describe skill:
+          1. GET /agent/v1/taxonomy/describe/pending?limit=40 — nodes
+             lacking a load-bearing description, with server context
+             (path, childNames, siblingNames).
+          2. Write descriptions per the description procedure: concept
+             not label, sibling-carving boundaries, 1-3 dense sentences,
+             en canonical + cs real translation.
+          3. POST /agent/v1/taxonomy/describe with ALL items in one
+             batch; report per-item errors verbatim.
+          4. POST your "## Librarian report" (sections Summary — batch
+             size, proposed, errors, remaining total — and Taxonomy)
+             via Wing /api/v1/events type=conductor_report source=librarian.
+          Exit 0 if pending was empty; exit 1 when proposals await the
+          moderator (that is the normal outcome of a productive run).
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ librarian_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
