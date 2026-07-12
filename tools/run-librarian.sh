@@ -195,11 +195,12 @@ fi
     if [[ "$RUN_EXIT" -eq 0 ]]; then
         echo "**GREEN** — queue judged; nothing escalated."
     elif [[ "$RUN_EXIT" -eq 1 ]]; then
-        echo "**REVIEW** — duplicate/contradiction verdict(s) issued."
+        echo "**REVIEW** — verdict(s) or proposal(s) await the moderator."
         echo
-        echo "1. Read \`Librarian's own report\` → Escalations."
+        echo "1. Read \`Librarian's own report\` → Escalations + Taxonomy."
         echo "2. Escalated findings sit in KEAP Admin › Lint at medium/high."
         echo "3. Merge duplicates / resolve contradictions in the Admin CMS."
+        echo "4. Promotion + node proposals sit in KEAP Admin › Moderation."
     else
         echo "**RED** — run failed at exit \`$RUN_EXIT\` (env/auth error). Read stdout above."
     fi
