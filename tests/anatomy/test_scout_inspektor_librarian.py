@@ -91,33 +91,65 @@ def test_discover_pulse_catalog_substitutes_scout_token():
     assert "NOS_SCOUT_WING_API_TOKEN" in src
 
 
-# ── Inspektor + Librarian (contract-only) ─────────────────────────────
+# ── Inspektor (contract-only) + Librarian (live, on-demand) ───────────
 
 
-def test_inspektor_librarian_agentkit_only():
-    """Both ship as AgentKit-side profiles (agent.yml + system.md +
-    rubric.md) but NO Pulse profile — their runners depend on tooling
-    (trivy/grype/nuclei for inspektor; Qdrant corpus for librarian)
-    that hasn't landed yet. Explicit `runner_status: deferred` in
-    agent.yml metadata documents the gap."""
-    for name in ("inspektor", "librarian"):
-        d = AGENTS / name
-        for f in ("agent.yml", "system.md", "rubric.md"):
-            assert (d / f).is_file(), f"{name}/{f} missing"
-        # Top-level <name>.yml MUST NOT exist (no Pulse profile = no runner).
-        assert not (AGENTS / f"{name}.yml").is_file(), (
-            f"{name}.yml exists but the runner is documented as deferred — "
-            f"either ship the Pulse profile OR remove the .yml file. "
-            f"Half-shipped state is the worst of both worlds."
-        )
-        # AgentKit metadata declares the deferred status.
-        agent = yaml.safe_load((d / "agent.yml").read_text())
-        meta = agent.get("metadata") or {}
-        assert meta.get("runner_status") == "deferred"
-        assert meta.get("deferred_reason"), (
-            f"{name}/agent.yml must explain WHY the runner is deferred "
-            f"(metadata.deferred_reason)"
-        )
+def test_inspektor_agentkit_only():
+    """Inspektor ships as an AgentKit-side profile (agent.yml + system.md
+    + rubric.md) but NO Pulse profile — its runner depends on a
+    trivy/grype/nuclei substrate that hasn't landed yet. Explicit
+    `runner_status: deferred` in agent.yml metadata documents the gap."""
+    d = AGENTS / "inspektor"
+    for f in ("agent.yml", "system.md", "rubric.md"):
+        assert (d / f).is_file(), f"inspektor/{f} missing"
+    # Top-level inspektor.yml MUST NOT exist (no Pulse profile = no runner).
+    assert not (AGENTS / "inspektor.yml").is_file(), (
+        "inspektor.yml exists but the runner is documented as deferred — "
+        "either ship the Pulse profile OR remove the .yml file. "
+        "Half-shipped state is the worst of both worlds."
+    )
+    agent = yaml.safe_load((d / "agent.yml").read_text())
+    meta = agent.get("metadata") or {}
+    assert meta.get("runner_status") == "deferred"
+    assert meta.get("deferred_reason"), (
+        "inspektor/agent.yml must explain WHY the runner is deferred "
+        "(metadata.deferred_reason)"
+    )
+
+
+def test_librarian_runner_live_on_demand():
+    """Librarian's runner went LIVE 2026-07-11 (cortex Layer 2): flat
+    Pulse profile librarian.yml + AgentKit profile, fired on demand by
+    tools/run-librarian.sh — the Pulse row stays paused by doctrine.
+    This gate pins the whole shape so neither half regresses to the
+    pre-runner state (and the ceremony keeps its taxonomy-growth leg)."""
+    d = AGENTS / "librarian"
+    for f in ("agent.yml", "system.md", "rubric.md"):
+        assert (d / f).is_file(), f"librarian/{f} missing"
+    flat_path = AGENTS / "librarian.yml"
+    assert flat_path.is_file(), (
+        "librarian.yml (flat Pulse profile) missing — the runner shipped "
+        "2026-07-11; removing it silently kills tools/run-librarian.sh"
+    )
+    flat = yaml.safe_load(flat_path.read_text())
+    jobs = ((flat.get("pulse") or {}).get("jobs")) or []
+    judge = next((j for j in jobs if j.get("name") == "judge-lint-queue"), None)
+    assert judge, "librarian.yml must declare the judge-lint-queue pulse job"
+    assert judge.get("paused") is True, (
+        "judge-lint-queue must stay paused=true (on-demand doctrine — "
+        "tools/run-librarian.sh is the trigger, not cron)"
+    )
+    prompt = flat.get("system_prompt") or ""
+    # The three ceremony legs: verdicts, promotions, taxonomy growth.
+    assert "/agent/v1/lint/verdict" in prompt
+    assert "/agent/v1/promotions" in prompt
+    assert "/agent/v1/taxonomy/propose" in prompt, (
+        "librarian's system prompt lost the taxonomy-growth leg "
+        "(frog-depth node proposals, Track T)"
+    )
+    agent = yaml.safe_load((d / "agent.yml").read_text())
+    meta = agent.get("metadata") or {}
+    assert meta.get("runner_status") == "on-demand"
 
 
 def test_inspektor_carries_write_scope():
