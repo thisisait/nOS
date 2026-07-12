@@ -47,6 +47,7 @@ final class McpKeapTool implements ToolInterface
 		'/agent/v1/promotions',    // PROPOSE capture->object (moderator decides)
 		'/agent/v1/taxonomy/propose', // PROPOSE a new node (Track T; zone-governed)
 		'/agent/v1/taxonomy/describe', // PROPOSE curated descriptions (K1; kind=desc, moderated)
+		'/agent/v1/taxonomy/brief',   // PROPOSE node articles with vazby (kind=brief, moderated)
 	];
 
 	private string $baseUrl;

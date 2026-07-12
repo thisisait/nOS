@@ -51,6 +51,7 @@ def test_tool_write_surface_is_allowlisted():
         "/agent/v1/lint/verdict",
         "/agent/v1/objects",
         "/agent/v1/promotions",
+        "/agent/v1/taxonomy/brief",
         "/agent/v1/taxonomy/describe",
         "/agent/v1/taxonomy/propose",
     ], f"POST allowlist drifted: {paths}"

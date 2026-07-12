@@ -48,6 +48,10 @@ system_prompt: |
       lacking a load-bearing description, with server-assembled context
     - POST /agent/v1/taxonomy/describe       — {items:[{nodeId, descriptionEn,
       descriptionCs, rationale?}]} (batch 1-50 → kind='desc' proposals)
+    - GET  /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=N — brief
+      intake, root-first by level (context incl. the K1 description)
+    - POST /agent/v1/taxonomy/brief          — {items:[{nodeId, briefEn,
+      briefCs, rationale?}]} (batch 1-20 → kind='brief' proposals)
   - Wing API: $WING_API_URL (Bearer: $WING_API_TOKEN)
     - POST /api/v1/events                    — write your report
 
@@ -118,6 +122,23 @@ system_prompt: |
      Never invent children; childNames is the evidence of what's inside.
   5. POST in one batch; report per-item errors verbatim. You PROPOSE —
      the moderator bulk-approves in Admin › Moderation.
+
+  ## Brief procedure (brief-taxonomy ceremony)
+  Skill contract: skills/taxonomy-brief in the nos-keap repo. The K1
+  description is the node's abstract; the brief is its ARTICLE — several
+  explanatory paragraphs with links. Per batch from brief/pending:
+  1. 2-4 paragraphs (300-12000 chars en): first WHAT the field is and
+     covers; then HOW it connects — siblings sharing a boundary, children
+     anchoring its subfields, cross-branch relatives; close with where to
+     learn more.
+  2. Vazby are MANDATORY: at least one [[node-id]] (server refuses
+     without; unknown ids refused). 2-5 well-chosen vazby, links a reader
+     would genuinely jump to. Plus 1-3 external [text](url) links to
+     durable canonical sources.
+  3. briefCs is a REAL translation with the same paragraphs, vazby and
+     links. Build on the K1 description (in context) — never contradict it.
+  4. POST in one batch; report per-item errors verbatim. The moderator
+     bulk-approves; approval merges into the curated note layer.
 
   ## Rules
   1. Text evidence or no verdict. Never rule from names + distance alone
@@ -193,6 +214,47 @@ pulse:
           Exit 0 if empty queues or all fine; exit 1 if any
           duplicate/contradiction verdict OR promotion/node proposal
           awaits the moderator.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ librarian_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+    # taxonomy-brief (skills/taxonomy-brief in nos-keap). Paused, on-demand:
+    # tools/run-librarian.sh --brief fires one ~10-node batch, root-first
+    # (anchor core = 107 nodes ≈ 11 runs). Deeper levels: raise maxLevel in
+    # the task once the core reads well.
+    - name: brief-taxonomy
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "50 6 * * 0"               # placeholder — paused by default
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      paused: true
+      paused_reason: "brief sweep is operator-paced; tools/run-librarian.sh --brief fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "librarian"
+        NOS_AGENT_CLIENT_ID: "nos-librarian"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
+        NOS_AGENT_TASK: |
+          Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
+          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=1 —
+             anchor-core nodes lacking an article, with server context
+             (path, K1 description, childNames, siblingNames).
+          2. Write briefs per the brief procedure: 2-4 paragraphs en +
+             real cs translation, 2-5 [[node-id]] vazby (mandatory),
+             1-3 durable external links, building on the K1 description.
+          3. POST /agent/v1/taxonomy/brief with ALL items in one batch;
+             report per-item errors verbatim.
+          4. POST your "## Librarian report" (sections Summary — batch
+             size, proposed, errors, remaining total — and Taxonomy)
+             via Wing /api/v1/events type=conductor_report source=librarian.
+          Exit 0 if pending was empty; exit 1 when proposals await the
+          moderator (the normal outcome of a productive run).
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ librarian_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

@@ -16,7 +16,8 @@
 # Usage:
 #   bash tools/run-librarian.sh            # judge the lint intake queue
 #   bash tools/run-librarian.sh --describe # K1: one taxonomy-describe batch
-#   bash tools/run-librarian.sh --dry-run  # pre-flight only (either mode)
+#   bash tools/run-librarian.sh --brief    # one taxonomy-brief batch (root)
+#   bash tools/run-librarian.sh --dry-run  # pre-flight only (any mode)
 #
 # Exit codes:
 #   0 — queue empty or everything judged fine
@@ -40,12 +41,16 @@ for arg in "$@"; do
             MODE="describe"
             JOB_ID_PATTERN="%:describe-taxonomy"
             ;;
+        --brief)
+            MODE="brief"
+            JOB_ID_PATTERN="%:brief-taxonomy"
+            ;;
         -h|--help)
             sed -n '2,24p' "$0" | sed 's/^# \?//'
             exit 0
             ;;
         *)
-            echo "ERROR: unknown arg '$arg' (use --describe, --dry-run or --help)" >&2
+            echo "ERROR: unknown arg '$arg' (use --describe, --brief, --dry-run or --help)" >&2
             exit 2
             ;;
     esac
@@ -94,6 +99,11 @@ _intake_count() {
         total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
             "$KEAP_URL/agent/v1/taxonomy/describe/pending?limit=1" 2>/dev/null \
             | jq -r '.data.total' 2>/dev/null || echo 0)
+    elif [[ "$MODE" == "brief" ]]; then
+        # Root sweep scope must match the job's maxLevel=1.
+        total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
+            "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=1" 2>/dev/null \
+            | jq -r '.data.total' 2>/dev/null || echo 0)
     else
         for check in overlap-review near-duplicate; do
             n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
@@ -106,11 +116,11 @@ _intake_count() {
 }
 
 INTAKE_COUNT=$(_intake_count)
-if [[ "$MODE" == "describe" ]]; then
-    echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT"
-else
-    echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT"
-fi
+case "$MODE" in
+    describe) echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT" ;;
+    brief)    echo "✓ Brief backlog (root nodes without an article, maxLevel=1): $INTAKE_COUNT" ;;
+    *)        echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT" ;;
+esac
 
 AK_URL=$(echo "$JOB_ENV_JSON" | jq -r '.NOS_AUTHENTIK_URL // ""')
 if [[ -n "$AK_URL" ]]; then
@@ -135,6 +145,8 @@ if [[ "$INTAKE_COUNT" -eq 0 ]]; then
     echo
     if [[ "$MODE" == "describe" ]]; then
         echo "Describe backlog is EMPTY — every node carries a description; not burning an agent run."
+    elif [[ "$MODE" == "brief" ]]; then
+        echo "Brief backlog is EMPTY — the root taxonomy carries its articles; not burning an agent run."
     else
         echo "Intake queue is EMPTY — nothing to judge; not burning an agent run."
         echo "(Run tools/nos-stacks.sh keap + the keap-lint job first if you expected findings.)"
@@ -196,8 +208,8 @@ fi
     echo
     echo "**run_id:** \`$PULSE_RUN_ID\`"
     echo "**judgment exit:** \`$RUN_EXIT\`"
-    if [[ "$MODE" == "describe" ]]; then
-        echo "**backlog:** \`$INTAKE_COUNT\` → **proposed this run:** \`$JUDGED\` → **still undescribed:** \`$REMAINING\`"
+    if [[ "$MODE" == "describe" || "$MODE" == "brief" ]]; then
+        echo "**backlog:** \`$INTAKE_COUNT\` → **proposed this run:** \`$JUDGED\` → **still pending:** \`$REMAINING\`"
     else
         echo "**intake:** \`$INTAKE_COUNT\` → **judged:** \`$JUDGED\` → **remaining unjudged:** \`$REMAINING\`"
     fi
@@ -219,12 +231,12 @@ fi
     echo
     if [[ "$RUN_EXIT" -eq 0 ]]; then
         echo "**GREEN** — queue judged; nothing escalated."
-    elif [[ "$RUN_EXIT" -eq 1 && "$MODE" == "describe" ]]; then
-        echo "**REVIEW** — description batch proposed (the normal outcome)."
+    elif [[ "$RUN_EXIT" -eq 1 && ( "$MODE" == "describe" || "$MODE" == "brief" ) ]]; then
+        echo "**REVIEW** — $MODE batch proposed (the normal outcome)."
         echo
-        echo "1. KEAP Admin › Moderation → bulk-approve the desc batch."
+        echo "1. KEAP Admin › Moderation → bulk-approve the $MODE batch."
         echo "2. Next keap-embed-sync re-embeds the approved nodes."
-        echo "3. Re-run tools/run-librarian.sh --describe for the next batch."
+        echo "3. Re-run tools/run-librarian.sh --$MODE for the next batch."
     elif [[ "$RUN_EXIT" -eq 1 ]]; then
         echo "**REVIEW** — verdict(s) or proposal(s) await the moderator."
         echo
