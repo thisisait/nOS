@@ -222,9 +222,10 @@ pulse:
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
 
     # taxonomy-brief (skills/taxonomy-brief in nos-keap). Paused, on-demand:
-    # tools/run-librarian.sh --brief fires one ~10-node batch, root-first
-    # (anchor core = 107 nodes ≈ 11 runs). Deeper levels: raise maxLevel in
-    # the task once the core reads well.
+    # tools/run-librarian.sh --brief fires one ~10-node batch, root-first.
+    # PILOT SCOPE: maxLevel=0 (the 12 categories, 2 runs) — the operator
+    # judges quality in moderation before the sweep widens (raise maxLevel
+    # here AND in run-librarian.sh's intake count together).
     - name: brief-taxonomy
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
@@ -242,9 +243,10 @@ pulse:
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
         NOS_AGENT_TASK: |
           Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
-          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=1 —
-             anchor-core nodes lacking an article, with server context
-             (path, K1 description, childNames, siblingNames).
+          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=0 —
+             category nodes (level 0 pilot) lacking an article, with
+             server context (path, K1 description, childNames,
+             siblingNames).
           2. Write briefs per the brief procedure: 2-4 paragraphs en +
              real cs translation, 2-5 [[node-id]] vazby (mandatory),
              1-3 durable external links, building on the K1 description.
