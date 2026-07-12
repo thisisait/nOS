@@ -21,7 +21,7 @@ keap_src_dir: "{{ keap_home }}/src"
 keap_repo_url: "https://github.com/budweis-dev/knowledge-explorer-and-preserver.git"
 # Pin a release tag once the first one is cut (R10: branches make
 # `--tags keap` builds non-reproducible; a broken ref breaks the run).
-keap_repo_ref: "v0.7.2"
+keap_repo_ref: "v0.7.3"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"
