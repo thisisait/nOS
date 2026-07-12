@@ -7,9 +7,12 @@ chain — tool class, schema enum, DI registration, credential mapping,
 daemon env plumbing (both platforms), and the librarian roster — so a
 partial refactor can't silently strand one link of it.
 
-Also pins the write-surface doctrine: the tool may POST ONLY to
-/agent/v1/captures. Embeddings upserts belong to the keap-embed-sync
-Pulse job, never to an LLM tool.
+Also pins the write-surface doctrine: the tool may POST only to the
+proposal/moderation paths in POST_ALLOWLIST (captures, objects, lint
+verdict, promotions, taxonomy propose/describe/brief) — every one a
+proposal a moderator decides, never an approve path. Embeddings upserts
+and lint runs belong to the keap-embed-sync / keap-lint Pulse jobs, never
+to an LLM tool.
 """
 
 from __future__ import annotations
@@ -37,11 +40,13 @@ def test_tool_class_exists_with_id_and_scopes():
 
 
 def test_tool_write_surface_is_allowlisted():
-    """POST is allowlisted to exactly two knowledge-preservation writes:
-    /agent/v1/captures (review queue) and /agent/v1/objects (index cards,
-    ROADMAP S1). A broader write surface (embeddings, admin) must NOT go
-    through an LLM tool; widening this list is a doctrine change, not a
-    refactor."""
+    """POST is allowlisted to exactly seven proposal/moderation paths:
+    captures (review queue), objects (index cards, ROADMAP S1), lint
+    verdict, promotions, and the taxonomy propose/describe/brief ceremonies
+    (K1 + brief, kind-tagged, moderated). Every one is a proposal a
+    moderator decides — no approve path. A broader write surface
+    (embeddings, lint run, admin) must NOT go through an LLM tool; widening
+    this list is a doctrine change, not a refactor."""
     src = TOOL_PHP.read_text()
     m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", src, re.DOTALL)
     assert m, "McpKeapTool must declare POST_ALLOWLIST"

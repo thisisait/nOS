@@ -46,7 +46,7 @@ for arg in "$@"; do
             JOB_ID_PATTERN="%:brief-taxonomy"
             ;;
         -h|--help)
-            sed -n '2,24p' "$0" | sed 's/^# \?//'
+            sed -n '2,25p' "$0" | sed 's/^# \?//'
             exit 0
             ;;
         *)
@@ -93,22 +93,32 @@ echo "✓ KEAP $KEAP_URL/agent/v1/health → 200"
 
 # Mode-aware intake size: judge = unjudged lint findings; describe = nodes
 # still lacking a curated description (K1). Reused for the post-flight delta.
+# Returns a bare integer on success, or the literal "ERR" when KEAP answers
+# with a non-numeric body — an auth failure ({"error":…} → jq prints "null")
+# or an older deployment missing the endpoint (HTML 404). `// empty` + the
+# numeric guard turn those into "ERR" so the caller can _die cleanly at
+# pre-flight instead of a false-green "backlog EMPTY" or a set -u crash.
 _intake_count() {
     local total=0 n
     if [[ "$MODE" == "describe" ]]; then
-        total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
+        n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
             "$KEAP_URL/agent/v1/taxonomy/describe/pending?limit=1" 2>/dev/null \
-            | jq -r '.data.total' 2>/dev/null || echo 0)
+            | jq -r '.data.total // empty' 2>/dev/null || true)
+        [[ "$n" =~ ^[0-9]+$ ]] || { echo "ERR"; return; }
+        total=$n
     elif [[ "$MODE" == "brief" ]]; then
-        # Scope must match the job task's maxLevel (pilot: 0 = categories).
-        total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
+        # Scope must match the job task's maxLevel (anchor core = 0-1).
+        n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
             "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=1" 2>/dev/null \
-            | jq -r '.data.total' 2>/dev/null || echo 0)
+            | jq -r '.data.total // empty' 2>/dev/null || true)
+        [[ "$n" =~ ^[0-9]+$ ]] || { echo "ERR"; return; }
+        total=$n
     else
         for check in overlap-review near-duplicate; do
             n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
                 "$KEAP_URL/agent/v1/lint?check=$check&unjudged=1&limit=500" 2>/dev/null \
-                | jq -r '.data.findings | length' 2>/dev/null || echo 0)
+                | jq -r '.data.findings | length' 2>/dev/null || true)
+            [[ "$n" =~ ^[0-9]+$ ]] || { echo "ERR"; return; }
             total=$((total + n))
         done
     fi
@@ -116,6 +126,7 @@ _intake_count() {
 }
 
 INTAKE_COUNT=$(_intake_count)
+[[ "$INTAKE_COUNT" =~ ^[0-9]+$ ]] || _die "KEAP intake count unreadable — check $KEAP_URL reachability, the $MODE endpoint, and KEAP_AGENT_TOKEN_RO (auth 401/403 returns a non-numeric body)."
 case "$MODE" in
     describe) echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT" ;;
     brief)    echo "✓ Brief backlog (nodes without an article, maxLevel=1 anchor-core sweep): $INTAKE_COUNT" ;;
@@ -175,6 +186,7 @@ fi
 export PULSE_RUN_ID="librarian-manual-$(date +%s)"
 
 OUTPUT_FILE=$(mktemp /tmp/librarian-output-XXXXX)
+trap 'rm -f "$ENV_FILE" "$OUTPUT_FILE"' EXIT
 RUN_EXIT=0
 (
     # shellcheck disable=SC1090
@@ -189,8 +201,15 @@ echo
 POST_RUN_REPORT_COUNT=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM events WHERE source = 'librarian';")
 EVENT_DELTA=$((POST_RUN_REPORT_COUNT - PRE_RUN_REPORT_COUNT))
 
+# Post-flight: the LLM run is already spent, so a transient read failure must
+# NOT crash before the report is written — degrade the delta to "?" instead.
 REMAINING=$(_intake_count)
-JUDGED=$((INTAKE_COUNT - REMAINING))
+if [[ "$REMAINING" =~ ^[0-9]+$ ]]; then
+    JUDGED=$((INTAKE_COUNT - REMAINING))
+else
+    REMAINING="?"
+    JUDGED="?"
+fi
 
 LATEST_ACTION_ID=$(sqlite3 -json "$WING_DB" \
     "SELECT actor_action_id FROM events WHERE source = 'librarian' AND ts >= '$RUN_START_ISO' ORDER BY id ASC LIMIT 1;" \

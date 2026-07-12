@@ -11,11 +11,12 @@ use GuzzleHttp\Exception\GuzzleException;
 /**
  * MCP-style wrapper around KEAP (the cortex) — the agent-facing knowledge
  * surface at /agent/v1/*. Same shape as McpWingTool but scope-split at the
- * KEAP token level: GETs ride the read-only token; the two permitted writes
- * ride the read-write token — POST /agent/v1/captures ("preserve this page
- * for human review") and POST /agent/v1/objects (create an OKF index card,
- * ROADMAP S1). Anything else KEAP exposes for writing (embeddings upsert)
- * belongs to the keap-embed-sync Pulse job, not to an LLM tool.
+ * KEAP token level: GETs ride the read-only token; the permitted writes ride
+ * the read-write token. Every write is a PROPOSAL into the moderation queue —
+ * captures, OKF objects, lint verdicts, promotions, and the taxonomy
+ * propose/describe/brief ceremonies (see POST_ALLOWLIST). There is no approve
+ * path. Anything else KEAP exposes for writing (embeddings upsert, lint run)
+ * belongs to the keap-embed-sync / keap-lint Pulse jobs, not to an LLM tool.
  *
  * Why this tool exists at all: KEAP's loopback port is the ONLY agent path
  * to the knowledge corpus. The container sits alone with Traefik on the
@@ -80,13 +81,16 @@ final class McpKeapTool implements ToolInterface
 
 	public function schema(): ToolSchema
 	{
+		// Derive the allowed-POST wording from the constant so the tool
+		// description can never drift from the enforced allowlist again.
+		$postPaths = implode(', ', self::POST_ALLOWLIST);
 		return new ToolSchema(
 			name: 'mcp_keap',
 			description: 'Query the KEAP knowledge cortex via /agent/v1/*: taxonomy FTS + hybrid ' .
 				'semantic search, node detail with curated notes, knowledge objects (index cards), ' .
-				'content-ref resolution into live nOS services. POST is allowed ONLY to ' .
-				'/agent/v1/captures (preserve a page for review) and /agent/v1/objects (create an ' .
-				'index card; [[node-id]] refs anchor it). Returns up to 16 KiB of the response verbatim.',
+				'content-ref resolution into live nOS services. Every POST is a PROPOSAL — a ' .
+				'moderator decides; there is no approve path. POST is allowed ONLY to: ' . $postPaths .
+				'. Returns up to 16 KiB of the response verbatim.',
 			inputSchema: [
 				'type' => 'object',
 				'required' => ['method', 'path'],
@@ -97,12 +101,15 @@ final class McpKeapTool implements ToolInterface
 					],
 					'path' => [
 						'type' => 'string',
-						'description' => 'Path beginning with /agent/v1/. POST only to /agent/v1/captures or /agent/v1/objects.',
+						'description' => 'Path beginning with /agent/v1/. POST only to: ' . $postPaths . '.',
 					],
 					'body' => [
 						'type' => 'object',
 						'description' => 'JSON body (POST only). captures: {title, description?, url?, domain?, metadata?}. ' .
-							'objects: {type, title, body?, resource?, tags?}.',
+							'objects: {type, title, body?, resource?, tags?}. lint/verdict: {findingId, verdict, note}. ' .
+							'promotions: {captureId, object, rationale}. taxonomy/propose: {parentId, name, description, rationale}. ' .
+							'taxonomy/describe: {items:[{nodeId, descriptionEn, descriptionCs, rationale?}]}. ' .
+							'taxonomy/brief: {items:[{nodeId, briefEn, briefCs, rationale?}]}.',
 					],
 				],
 			],

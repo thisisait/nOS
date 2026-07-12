@@ -30,10 +30,12 @@
     force: false
     depth: 1
   register: _keap_clone
-  failed_when:
-    - _keap_clone.rc is defined
-    - _keap_clone.rc | default(0) != 0
-    - "'Already up to date' not in (_keap_clone.msg | default(''))"
+  # No custom failed_when: the git module is already idempotent (up-to-date =
+  # changed:false, never failed) and signals real fetch/checkout failures via
+  # fail_json. The old override ANDed `rc is defined` first, but the module's
+  # fetch-failure path calls fail_json WITHOUT rc — so an unfetchable/unpushed
+  # ref was reclassified as ok and the PREVIOUS checkout got built under the
+  # NEW image tag. Let the module's own failure signal through.
   notify: Restart keap
 
 - name: "[pazny.keap] Render compose override fragment"

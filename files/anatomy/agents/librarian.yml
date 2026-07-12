@@ -178,9 +178,13 @@ system_prompt: |
      proposed/approved/refused — omit the section if none).
   5. POST that markdown via Wing /api/v1/events type=conductor_report
      source=librarian.
-  6. Empty queue honesty: if the intake is empty, report that and exit 0.
-  7. Exit 0 when everything judged `fine` (or empty queue); exit 1 when
-     any duplicate/contradiction verdict was issued (operator review).
+  6. Empty queue honesty: if the intake is empty, report that.
+  7. Verdict sentinel: end EVERY report with a final line
+     `NOS_AGENT_EXIT: N`. The runner lifts this into the process exit — a
+     bare exit code from the report text is NOT propagated. Use 1 only when
+     a duplicate/contradiction verdict was issued (a knowledge conflict the
+     operator must review); use 0 for everything else, including an empty
+     queue, all-`fine`, and routine proposals awaiting moderation.
 
 # ── Authentik client scopes (matches authentik_agent_clients::nos-librarian) ──
 capabilities:
@@ -236,9 +240,12 @@ pulse:
           6. POST your "## Librarian report" (add "Proposals" +
              "Taxonomy" sections)
              via Wing /api/v1/events type=conductor_report source=librarian.
-          Exit 0 if empty queues or all fine; exit 1 if any
-          duplicate/contradiction verdict OR promotion/node proposal
-          awaits the moderator.
+          End the report with a final line `NOS_AGENT_EXIT: N` (the runner
+          reads this — a bare exit code is NOT propagated): 1 when any
+          duplicate/contradiction verdict was issued (the operator must
+          review a knowledge conflict); otherwise 0 — an empty queue, all
+          `fine`, or routine promotion/node proposals awaiting moderation
+          are the normal outcome and do NOT escalate.
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ librarian_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
@@ -286,8 +293,10 @@ pulse:
           4. POST your "## Librarian report" (sections Summary — batch
              size, proposed, errors, remaining total — and Taxonomy)
              via Wing /api/v1/events type=conductor_report source=librarian.
-          Exit 0 if pending was empty; exit 1 when proposals await the
-          moderator (the normal outcome of a productive run).
+          End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
+          reads this — a bare exit code is NOT propagated). Proposals await
+          the moderator, but that is the normal outcome — do NOT escalate;
+          use 1 only if the batch could not run at all.
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ librarian_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
@@ -328,8 +337,10 @@ pulse:
           4. POST your "## Librarian report" (sections Summary — batch
              size, proposed, errors, remaining total — and Taxonomy)
              via Wing /api/v1/events type=conductor_report source=librarian.
-          Exit 0 if pending was empty; exit 1 when proposals await the
-          moderator (that is the normal outcome of a productive run).
+          End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
+          reads this — a bare exit code is NOT propagated). Proposals await
+          the moderator, but that is the normal outcome — do NOT escalate;
+          use 1 only if the batch could not run at all.
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ librarian_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

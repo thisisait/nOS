@@ -133,12 +133,26 @@ def test_librarian_runner_live_on_demand():
     )
     flat = yaml.safe_load(flat_path.read_text())
     jobs = ((flat.get("pulse") or {}).get("jobs")) or []
-    judge = next((j for j in jobs if j.get("name") == "judge-lint-queue"), None)
-    assert judge, "librarian.yml must declare the judge-lint-queue pulse job"
-    assert judge.get("paused") is True, (
-        "judge-lint-queue must stay paused=true (on-demand doctrine — "
-        "tools/run-librarian.sh is the trigger, not cron)"
-    )
+    by_name = {j.get("name"): j for j in jobs}
+    # All three ceremonies must exist, stay paused (on-demand), and pin a
+    # cost-tier model — dropping NOS_AGENT_MODEL silently reverts a bulk job
+    # to the operator's flagship default (the point of the model-tier commit).
+    expected_tiers = {
+        "judge-lint-queue": "sonnet",
+        "describe-taxonomy": "haiku",
+        "brief-taxonomy": "sonnet",
+    }
+    for name, tier in expected_tiers.items():
+        job = by_name.get(name)
+        assert job, f"librarian.yml must declare the {name} pulse job"
+        assert job.get("paused") is True, (
+            f"{name} must stay paused=true (on-demand doctrine — "
+            "tools/run-librarian.sh is the trigger, not cron)"
+        )
+        assert (job.get("env") or {}).get("NOS_AGENT_MODEL") == tier, (
+            f"{name} must pin NOS_AGENT_MODEL={tier} so the bulk ceremony "
+            "never inherits the operator's flagship default"
+        )
     prompt = flat.get("system_prompt") or ""
     # The three ceremony legs: verdicts, promotions, taxonomy growth.
     assert "/agent/v1/lint/verdict" in prompt
