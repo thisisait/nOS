@@ -102,7 +102,7 @@ _intake_count() {
     elif [[ "$MODE" == "brief" ]]; then
         # Scope must match the job task's maxLevel (pilot: 0 = categories).
         total=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
-            "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=0" 2>/dev/null \
+            "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=1" 2>/dev/null \
             | jq -r '.data.total' 2>/dev/null || echo 0)
     else
         for check in overlap-review near-duplicate; do
@@ -118,7 +118,7 @@ _intake_count() {
 INTAKE_COUNT=$(_intake_count)
 case "$MODE" in
     describe) echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT" ;;
-    brief)    echo "✓ Brief backlog (nodes without an article, maxLevel=0 pilot): $INTAKE_COUNT" ;;
+    brief)    echo "✓ Brief backlog (nodes without an article, maxLevel=1 anchor-core sweep): $INTAKE_COUNT" ;;
     *)        echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT" ;;
 esac
 
