@@ -140,6 +140,29 @@ system_prompt: |
   4. POST in one batch; report per-item errors verbatim. The moderator
      bulk-approves; approval merges into the curated note layer.
 
+  ## House style (ALL authored text — descriptions and briefs)
+  The corpus reads as ONE reference work, not 790 separate essays. Every
+  proposed text follows the same grammar, register and structure:
+  1. Register: encyclopedic, present tense, active voice. No hedging
+     ("arguably", "quite"), no filler intensifiers, no meta-language
+     ("This node/category covers...") — the first sentence names the
+     concept and its genus directly ("Kinematics is the geometry of
+     motion...", "Kinematika je geometrie pohybu...").
+  2. Terminology is fixed: one term per concept, reused verbatim across
+     nodes. Siblings carving a shared boundary use the SAME term for it
+     on both sides. Czech uses established Czech terminology, never
+     word-by-word calques of the English.
+  3. Brief markdown structure: plain paragraphs separated by blank
+     lines — no headings, no bullet lists, no tables, no blockquotes.
+     [[node-id]] vazby sit inline in the sentence that states the
+     relation (never a "see also" tail); external [text](url) links sit
+     inline with the source's proper name as link text — never "here",
+     "zde" or a bare URL.
+  4. briefCs mirrors the English 1:1: same paragraph count, same vazby,
+     same external links, same terminology discipline.
+  5. No rhetorical questions, no direct address of the reader, no
+     exclamation marks.
+
   ## Rules
   1. Text evidence or no verdict. Never rule from names + distance alone
      (captures excepted, see above — and then only when decisive).
@@ -191,6 +214,8 @@ pulse:
         NOS_AGENT_CLIENT_ID: "nos-librarian"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
+        # Judgment calls need reasoning but not the flagship tier.
+        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Work the KEAP lint intake queue:
           1. GET /agent/v1/lint?check=overlap-review&unjudged=1&limit=20
@@ -241,15 +266,18 @@ pulse:
         NOS_AGENT_CLIENT_ID: "nos-librarian"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
+        # Briefs are the operator-facing articles — sonnet, not the flagship.
+        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
           1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=0 —
              category nodes (level 0 pilot) lacking an article, with
              server context (path, K1 description, childNames,
              siblingNames).
-          2. Write briefs per the brief procedure: 2-4 paragraphs en +
-             real cs translation, 2-5 [[node-id]] vazby (mandatory),
-             1-3 durable external links, building on the K1 description.
+          2. Write briefs per the brief procedure AND the house style:
+             2-4 paragraphs en + real cs translation, 2-5 [[node-id]]
+             vazby (mandatory), 1-3 durable external links, building
+             on the K1 description.
           3. POST /agent/v1/taxonomy/brief with ALL items in one batch;
              report per-item errors verbatim.
           4. POST your "## Librarian report" (sections Summary — batch
@@ -282,14 +310,16 @@ pulse:
         NOS_AGENT_CLIENT_ID: "nos-librarian"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
+        # Bulk 1-3-sentence descriptions — haiku carries the whole backlog.
+        NOS_AGENT_MODEL: "haiku"
         NOS_AGENT_TASK: |
           Work ONE batch of the K1 taxonomy-describe skill:
           1. GET /agent/v1/taxonomy/describe/pending?limit=40 — nodes
              lacking a load-bearing description, with server context
              (path, childNames, siblingNames).
-          2. Write descriptions per the description procedure: concept
-             not label, sibling-carving boundaries, 1-3 dense sentences,
-             en canonical + cs real translation.
+          2. Write descriptions per the description procedure AND the
+             house style: concept not label, sibling-carving boundaries,
+             1-3 dense sentences, en canonical + cs real translation.
           3. POST /agent/v1/taxonomy/describe with ALL items in one
              batch; report per-item errors verbatim.
           4. POST your "## Librarian report" (sections Summary — batch

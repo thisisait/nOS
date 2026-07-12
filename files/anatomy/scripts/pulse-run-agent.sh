@@ -285,6 +285,10 @@ CLAUDE_ARGS=(--print --output-format json --permission-mode bypassPermissions)
 # permission gating at the inner-claude layer is redundant and blocks
 # every Bash/curl call the ceremony needs.
 [[ -n "$SYSTEM_PROMPT" ]] && CLAUDE_ARGS+=(--system-prompt "$SYSTEM_PROMPT")
+# `NOS_AGENT_MODEL` (pulse_jobs.env_json): pins the model tier per ceremony.
+# Without it claude falls back to the operator's default — the most expensive
+# tier — which bulk jobs like taxonomy-describe must never inherit.
+[[ -n "${NOS_AGENT_MODEL:-}" ]] && CLAUDE_ARGS+=(--model "$NOS_AGENT_MODEL")
 
 # Capture the JSON envelope on stdout; keep stderr separate so a warning
 # line can't corrupt the JSON parse.
