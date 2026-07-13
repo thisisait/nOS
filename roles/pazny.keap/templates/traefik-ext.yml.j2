@@ -33,5 +33,7 @@ http:
   middlewares:
     keap-ext-ratelimit:
       rateLimit:
-        average: 10    # sustained req/s per source IP — an extension is bursty but light
-        burst: 40      # pairing + initial context/taxonomy prefetch headroom
+        average: 30    # sustained req/s per source IP — /context/resolve fires
+                       # per selection/navigation and bursts well past 10/s
+        burst: 120     # generous headroom; still bounds the unauthenticated
+                       # pairing bootstrap. Bearer-authed reads are cheap.
