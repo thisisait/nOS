@@ -9,7 +9,7 @@
 # are re-creatable, notes in the DB are not lost).
 # ==============================================================================
 
-hedgedoc_version: "1.10.7"
+hedgedoc_version: "1.11.0"                # REM-121: CVE-2026-58486 YAML alias-expansion DoS (CVSS 8.3) fixed 1.11.0
 hedgedoc_domain: "hedgedoc{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 hedgedoc_port: 3012
 hedgedoc_data_dir: "{{ ansible_facts['env']['HOME'] }}/hedgedoc/uploads"

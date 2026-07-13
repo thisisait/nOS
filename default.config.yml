@@ -1053,7 +1053,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.8.6"               # CVE-2026-32710 + CVE-2026-3494 fixed; bumped from 11.4.10 which crashed on FK ALTER on Apple Silicon Docker Desktop (broke BookStack migration #10)
+mariadb_version: "11.8.8"               # REM-102: 4 May-Jun 2026 CVEs incl. CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway); prior 11.8.6 CVE-2026-32710/3494; 11.4.10 crashed FK ALTER on Apple Silicon
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data persistence outside the container
 
@@ -1078,7 +1078,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "8.0"                    # supersedes 7.4.6-alpine CVE-2025-49844 pin (RediShell RCE)
+redis_version: "8.6.3"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
@@ -1400,7 +1400,7 @@ grafana_dashboards:
 
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_port: 5678
-n8n_version: "2.26.2"      # CVE-2026-4478x RCE pins; S2 freshness 2026-06-10 — same-major migrate-on-start
+n8n_version: "2.28.1"      # REM-109: Jun-24-2026 advisory cluster (4 HIGH, CVSS 7.1-7.6) fixed 2.28.1; prior 2.26.2 CVE-2026-4478x; same-major migrate-on-start
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -1436,7 +1436,7 @@ gitea_allow_only_external_registration: true
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
-gitlab_version: "18.10.8-ce.0"  # CVE pins + S2 freshness 2026-06-10 (18.10 patch line)
+gitlab_version: "18.11.7-ce.0"  # REM-111: Jun-24-2026 GitLab security release version-flagged 18.10.8; 18.11 patch line
 gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repos, uploads, artifacts (large!)
 gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + keys (small but important)
 gitlab_timezone: "Europe/Prague"
@@ -1481,7 +1481,7 @@ openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
 woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC for agents (internal)
-woodpecker_version: "v3"                # latest tag removed, must be semver (v3/v3.x/v3.x.y)
+woodpecker_version: "v3.14.1"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1
 woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
 woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
@@ -1534,7 +1534,7 @@ spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboard
 
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
-jellyfin_version: "10.11.8"             # CVE-2025-31499 (FFmpeg argument injection → RCE)
+jellyfin_version: "10.11.10"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE)
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
 jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
