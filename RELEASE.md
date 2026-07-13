@@ -14,8 +14,8 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
 > capture surface, per-tier data-table sharing, and the backup/restore + agent
 > wiring that makes the cortex a first-class, durable nOS service. No behaviour
 > change for a non-`+keap` run; `install_keap: true` (default) now ships a
-> fully-populated, agent-fed knowledge base. Draft — the `dev → master` PR
-> release cuts the tag.
+> fully-populated, agent-fed knowledge base. This single `v0.8-beta` tag
+> absorbs the v0.7-beta line (which was never cut) plus the KEAP GA.
 
 ### KEAP cortex v1.0.0 — GA
 
