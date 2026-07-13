@@ -2333,6 +2333,18 @@ authentik_agent_clients:
       - "nos:upgrades:read"
       - "nos:patches:read"
 
+  - name: "nOS Curator"
+    slug: "nos-curator"
+    client_id: "nos-curator"
+    client_secret: "{{ global_password_prefix }}_pw_agent_curator"
+    # Taxonomy reconciler — librarian's active sibling. Sweeps the KEAP votable
+    # zone (L>=3), lints, and PROPOSES desc/node/relation edits into the
+    # moderation panel (propose-only; the moderator decides). Same read scopes as
+    # the librarian; KEAP writes ride the KEAP_AGENT_TOKEN_RW seam, not these.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+
   - name: "nOS Scout"
     slug: "nos-scout"
     client_id: "nos-scout"

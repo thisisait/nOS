@@ -1,0 +1,81 @@
+name: curator
+version: 1
+description: |
+  nOS curator — the librarian's active sibling and the taxonomy's
+  reconciler. Where the librarian FILLS (describes, briefs, judges lint)
+  and never modifies, the curator RESHAPES: it sweeps the votable zone
+  (level >= min_level, default 3), acts as an advanced linter, and
+  proposes rename / rewrite / renumber / create / delete / rewire edits
+  into the moderation panel for the operator to approve. Nothing
+  auto-applies — every change is a promotion the moderator decides.
+
+  Recursive self-improving loop: approved edits re-embed, sharpening the
+  semantic neighborhoods the next pass reasons over; rejected proposals
+  teach taste via a house-style memo. Traversal is staleness-ordered with
+  epsilon random hops; a work-log (curator_runs + curator_visits) makes an
+  overnight run resumable after a kill/OOM.
+
+  **STATUS: P0 read-only pilot (2026-07-14).** Ships desc-kind proposals
+  only, through the existing describe seam — zero new app-side proposal
+  seams. node-edit / node-delete / relation (incl. cross-domain bridges)
+  and the anchor-edit / self-tuning loops land in P1-P3 (see
+  docs/plans/keap-curator-agent.md). The Authentik client `nos-curator`
+  is provisioned alongside `nos-librarian`.
+
+model:
+  primary: anthropic-claude-opus-4-7
+  fallback: openclaw-qwen-coder-32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+  - id: mcp-bone
+  - id: mcp-keap
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - wing.read
+    - bone.read
+    - keap.read
+    - keap.write
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+    - scope: mcp-bone
+    - scope: mcp-keap
+
+metadata:
+  ait_phase: curator-P0-pilot
+  ceremony_role: taxonomy-reconcile
+  runner_status: on-demand
+  plan_ref: docs/plans/keap-curator-agent.md
+  deferred_reason: >-
+    P0 pilot live 2026-07-14 (flat profile files/anatomy/agents/curator.yml,
+    Pulse job curator:curator-sweep paused per on-demand doctrine;
+    tools/run-curator.sh fires it). Sweeps the curator frontier
+    (/agent/v1/curator/frontier), lints, proposes desc rewrites via
+    /agent/v1/taxonomy/describe, and checkpoints /agent/v1/curator/visit.
+    node-edit / delete / relation seams deferred to P1-P3.
+
+exit_code_semantics:
+  emits_sentinel: true
+  exit_0: "Sweep completed; visits checkpointed. Any desc proposals await the moderator — the normal, non-escalating outcome."
+  exit_1: "Structural findings queued for operator review (a duplicate / contradiction / misparent the moderator must adjudicate)."
+  exit_2: "Environment / auth / Wing or KEAP error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
