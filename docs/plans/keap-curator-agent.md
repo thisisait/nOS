@@ -1,6 +1,36 @@
 # KEAP Curator — a recursive self-improving taxonomy reconciler
 
-**Status:** PLAN (2026-07-13). **Author trigger:** operator wants an autonomous
+**Status:** P0 BUILT (2026-07-14), awaiting deploy + first run.
+
+> ### P0 build state (2026-07-14)
+> **Implemented, committed, gates green — NOT yet deployed/run.**
+> - **nos-keap `feat/curator`** (commits `74bf84a` work-log+frontier API, `794a1dd` anchor):
+>   `curator_runs`+`curator_visits` in `server/db.ts` SCHEMA[] + accessors
+>   (`curatorVisitMap`/`start`/`finishCuratorRun`/`recordCuratorVisit`); agent routes
+>   `GET /agent/v1/curator/anchor` (L0-2 frame, §7), `GET .../frontier` (staleness-first,
+>   cooldown-skipped), `POST .../run/start|finish` + `.../visit`. desc rewrites ride the
+>   existing `proposeDescription` seam — zero new proposal seams. tsc + `build:server` clean.
+> - **nOS `dev`** (commits `4b9aac78` profile+runner+client, `6785b4e2` anchor wiring):
+>   flat `files/anatomy/agents/curator.yml` (sweep procedure, house style, propose-only,
+>   `NOS_AGENT_EXIT` sentinel, paused `curator-sweep` Pulse job); AgentKit
+>   `curator/{agent.yml,system.md,rubric.md}` (passes `test_agent_schema` +
+>   `test_agent_exit_semantics`, `emits_sentinel=true`); `tools/run-curator.sh`;
+>   `nos-curator` Authentik client + `curator_wing_api_token`. Full anatomy suite 1778 pass.
+> - **The linter in P0 is the agent's LLM judgment** guided by the system prompt (house-style +
+>   boundary lint over the frontier). Deterministic `lint.ts` checks (stub-description,
+>   name-hygiene, relation-desert, cross-domain-bridge-candidate, misparented) are **P1** —
+>   they drive node-edit/relation proposals whose seams don't exist yet.
+>
+> **Remaining to first-run (the 04:40 timer's job):** FF `feat/curator`→`main` on nos-keap →
+> annotated tag **`v1.4.0`** → bump nOS `keap_repo_ref`+`keap_version` to `1.4.0` →
+> `tools/nos-stacks.sh keap` (rebuild image; `initDb` creates the two tables) → a targeted
+> playbook run so the `curator-sweep` Pulse job + `nos-curator` client land in wing.db →
+> **backup KEAP db first** (`docker exec iiab-keap-1 sqlite3 /app/data/keap.db ".backup …"`) →
+> `bash tools/run-curator.sh --dry-run` then a real `tools/run-curator.sh`. Verify
+> `curator_runs`/`curator_visits` rows + desc proposals in Admin › Moderace as
+> `proposed_by=agent:curator`. Container `iiab-keap-1` is healthy as of the build.
+
+**Original author trigger:** operator wants an autonomous
 overnight agent that walks the KEAP taxonomy from L≥3, acts as (1) an advanced
 linter and (2) a node repairer, and proposes *edit / create / delete / rewire*
 changes into the moderation panel for approval — polishing the DB and re-embedding
