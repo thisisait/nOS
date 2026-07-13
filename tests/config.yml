@@ -72,7 +72,7 @@ install_authentik: false         # Requires PostgreSQL + Redis Docker
 install_infisical: false         # Requires PostgreSQL + Redis Docker
 install_vaultwarden: false       # Docker
 install_puter: false             # Docker
-install_keap: false              # Docker; built from a private-source git clone (budweis-dev/knowledge-explorer-and-preserver) the CI runner can't auth to — off like every other Docker stack in the wet-test
+install_keap: false              # Docker; built from a private-source git clone (thisisait/nos-keap) the CI runner can't auth to — off like every other Docker stack in the wet-test
 
 configure_dotfiles: false   # Geerlingguy dotfiles - unneeded in CI
 configure_sublime: false

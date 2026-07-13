@@ -10,8 +10,8 @@
 # that gives AgentKit agents a queryable map of what knowledge exists and
 # where it lives locally.
 #
-# Source lives OUTSIDE nOS (thisisait/nos-keap after the org transfer;
-# budweis-dev origin until then) — roles/pazny.keap git-clones the pinned ref
+# Source lives OUTSIDE nOS (thisisait/nos-keap, org-transferred 2026-07-13
+# from the budweis-dev origin) — roles/pazny.keap git-clones the pinned ref
 # and builds nos/keap from source (hermes clone + puter build precedents).
 #
 # SSO: header_oidc (firefly-base pattern) — the Authentik proxy outpost
@@ -32,7 +32,7 @@ description: |
   outpost. The role `pazny.keap` keeps install-only responsibilities
   (clone, build, ports, volumes, env); this plugin owns the Traefik label
   hygiene + Authentik tier binding + GDPR Article 30 row + Wing /hub card.
-upstream: https://github.com/budweis-dev/knowledge-explorer-and-preserver
+upstream: https://github.com/thisisait/nos-keap
 license: MIT  # plugin manifest is repo-licensed
 
 type:
