@@ -20,7 +20,7 @@ Pulse keeps time; the cortex holds the curated knowledge map:
 | Piece | Where |
 |---|---|
 | Role (clone + build + compose) | `roles/pazny.keap/` |
-| Source repo | `thisisait/nos-keap` (private; org-transferred 2026-07-13) |
+| Source repo | `thisisait/nos-keap` (public; org-transferred 2026-07-13) |
 | SSO | `header_oidc` — outpost injects `X-Authentik-*`, backend keys rows on uid |
 | Network | `gated_net` only (SEC-02); loopback publish = AgentKit surface |
 | Traefik | file provider row (`state/manifest.yml`) + `traefik_container_upstreams: keap: {port: 8080}` |

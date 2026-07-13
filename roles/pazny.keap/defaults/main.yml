@@ -17,8 +17,9 @@ keap_home: "{{ ansible_facts['env']['HOME'] }}/keap"
 keap_src_dir: "{{ keap_home }}/src"
 
 # Upstream repo — org-transferred 2026-07-13 from budweis-dev/knowledge-explorer-
-# -and-preserver to thisisait/nos-keap (old path still redirects). Private, so a
-# credential-less runner (CI) can't clone it — install_keap is off in tests/config.yml.
+# -and-preserver to thisisait/nos-keap (public; old path still redirects). CI still
+# skips it (install_keap off in tests/config.yml) to avoid a heavy Docker image
+# build, same as every other Docker stack in the wet-test — not an auth limit now.
 keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # Pin a release tag once the first one is cut (R10: branches make
 # `--tags keap` builds non-reproducible; a broken ref breaks the run).
