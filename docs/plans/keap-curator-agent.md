@@ -117,6 +117,32 @@ to build, §8):
 Only proposals with `confidence ≥ proposal_confidence_floor` are queued, capped
 at `max_proposals_per_run` so the panel never floods.
 
+### 5.3 Cross-domain relation weaver (a first-class curator edit)
+The deep-import epic (memory `keap-domain-deep-import-epic`) grafted math, chem,
+and bio to physics-level depth, but **every domain's relations are within-domain
+only** — math has no edge to the ToE physics cluster, chem none to bio, etc. That
+missing inter-domain web is the real "AI brain" payoff, and closing it is an
+**explicit curator responsibility**, not a byproduct of polish:
+
+- **What it edits:** `relation`-kind proposals (§5.2 / §8.3) whose `from` and `to`
+  live in *different top-level domains* — the math↔physics↔chem↔bio bridges (and
+  any future domain pair: CS↔math, earth-sci↔physics, …).
+- **How it finds them:** the `cross-domain-bridge-candidate` lint check (§5.1) —
+  high embedding similarity across a domain boundary with no existing edge — is
+  the primary signal; ε random hops (§4) biased toward hub nodes surface the rest.
+  Every proposal carries the concrete bridge rationale (shared structure /
+  shared-math / duality / limit / conflict) as its typed `type`, same palette the
+  ToE overlay already renders.
+- **Guardrails:** cross-domain proposals are tagged `scope=cross-domain` and
+  counted under a **separate cap** `max_cross_domain_proposals_per_run` (default
+  15) so a single run can't flood the panel with speculative bridges; they favor
+  `explored=barely` (frontier) so the operator sees them as hypotheses to confirm,
+  not settled facts. `enable_cross_domain_relations` (default **true**) gates them.
+
+This makes weaving the inter-domain graph a named deliverable of the curator, land-
+ing in P1 alongside the `relation` seam (§13) — the sweep doesn't just clean each
+domain in isolation, it stitches them into one navigable cosmos.
+
 ## 6. Token-surplus polish + re-embed
 When a sweep pass finishes with budget left (or the queue is at back-pressure and
 awaiting the operator), switch to **polish mode**:
@@ -126,7 +152,7 @@ awaiting the operator), switch to **polish mode**:
 2. **Tighten** — micro-`node-edit` proposals that sharpen already-decent
    descriptions toward the house style.
 3. **Weave** — `relation` proposals for the strongest missing typed cross-links,
-   prioritizing **cross-domain bridges** (the real "AI brain" payoff).
+   prioritizing **cross-domain bridges** per §5.3 (the real "AI brain" payoff).
 4. **Re-lint** — `POST /agent/v1/lint/run` to surface what the fresh state reveals.
 
 ## 7. L0–2 anchor core — in the system prompt, proposable
@@ -202,7 +228,8 @@ propagated via the `NOS_AGENT_EXIT:` sentinel.
 `revisit_cooldown_days`(14) · `proposal_confidence_floor`(0.7) ·
 `max_proposals_per_run`(40) · `token_budget` / `max_runtime_s` ·
 `enable_node_edit`(true) · `enable_node_delete`(**false**) ·
-`enable_relation_proposals`(true) · `enable_anchor_proposals`(**false**) ·
+`enable_relation_proposals`(true) · `enable_cross_domain_relations`(true) ·
+`max_cross_domain_proposals_per_run`(15) · `enable_anchor_proposals`(**false**) ·
 `enable_self_tuning`(**false**) · `polish_when_surplus`(true) ·
 `reembed_on_surplus`(true) · `subtree_scope`(e.g. `02.01.04` to sweep one domain) ·
 `lint_checks`(per-check on/off) · cost tiers `model_lint`(haiku) /
@@ -213,7 +240,8 @@ propagated via the `NOS_AGENT_EXIT:` sentinel.
   emitting `desc`-kind proposals only (reuses existing seam). Proves traversal,
   cursor, cost, taste — zero new app-side risk.
 - **P1 (repair):** build `node-edit` + `relation` seams (§8.1/§8.3) + panel cases;
-  enable rename/redesc/renumber + relation weaving (incl. cross-domain bridges).
+  enable rename/redesc/renumber + relation weaving, including the §5.3 cross-domain
+  bridge weaver as a named P1 deliverable (math↔physics↔chem↔bio).
 - **P2 (structural):** `node-delete`/merge seam, guarded + off by default.
 - **P3 (recursive):** house-style memo, approve/reject learning, `anchor-edit`,
   self-tuning — the full self-improving loop.
