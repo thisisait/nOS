@@ -2619,6 +2619,7 @@ backup_notify_enabled: true
 backup_notify_url: "http://127.0.0.1:8099/api/v1/notifications"
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wing store
+backup_keap_db: "{{ install_keap | default(false) }}"  # sqlite3 .backup of the KEAP cortex store (taxonomy, tables, vectors)
 backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)
 # Client-side encryption (GDPR Art.32 / NIS2 at-rest). OFF only for a throw-away
 # dev target with no PII. The passphrase is the ONLY key to every object —

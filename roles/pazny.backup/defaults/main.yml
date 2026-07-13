@@ -36,6 +36,8 @@ backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 # lineage) — a host file, not a container. sqlite3 .dump → wing-db.sql.gz.
 backup_wing_db: "{{ install_wing | default(true) }}"
 backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
+backup_keap_db: "{{ install_keap | default(false) }}"
+backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
 
 # Runtime state side-car: ~/.nos/{secrets,state}.yml → nos-state.tar.gz.
 # Restore of this is GATED behind restore_state=true (it can clobber a NEWER

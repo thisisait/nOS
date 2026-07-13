@@ -42,6 +42,15 @@ DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
 WING_DB_PATH="{{ backup_wing_db_path }}"
 DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
 
+# KEAP cortex libSQL store (taxonomy, curated descriptions/briefs, data-table
+# registry + rows, and the libSQL vector embeddings corpus) — a host file
+# under the container's bind-mounted data dir. Backed up with sqlite3 online
+# `.backup` (NOT `.dump`): WAL-consistent, and the vector index uses
+# libsql_vector_idx() which a plain `.dump`/replay cannot reconstruct on host
+# sqlite3. A binary page copy sidesteps that and stays crash-consistent.
+KEAP_DB_PATH="{{ backup_keap_db_path }}"
+DO_KEAP="{{ 'true' if backup_keap_db else 'false' }}"
+
 # Runtime state side-car: ~/.nos/{secrets,state}.yml (encryption keys, tokens,
 # upgrades_applied history). Tarred; status/log artifacts excluded.
 NOS_STATE_DIR="{{ backup_home_dir }}"
@@ -469,6 +478,57 @@ run_wing_db() {
     fi
 }
 
+run_keap_db() {
+    [[ "${DO_KEAP}" != "true" ]] && return 0
+    if ! command -v sqlite3 >/dev/null 2>&1; then
+        log "keap-db: sqlite3 not on PATH — skipping (install sqlite3 to back up keap.db)"
+        status_append "keap-db" 0 0 0
+        return 0
+    fi
+    if [[ ! -f "${KEAP_DB_PATH}" ]]; then
+        log "keap-db: ${KEAP_DB_PATH} not found — skipping"
+        return 0
+    fi
+
+    local date_str key start dur rc size tmp
+    date_str="$(date -u +%Y-%m-%d)"
+    key="${date_str}/keap-db.gz${ENC_SUFFIX}"
+
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/keap-db.gz"; then
+        log "keap-db: today's backup already exists, skipping"
+        status_append "keap-db" 0 0 1
+        return 0
+    fi
+
+    # Online backup to a temp file (WAL-consistent, vector-index-safe), then
+    # gzip+encrypt+upload the binary DB.
+    log "keap-db: sqlite3 .backup of ${KEAP_DB_PATH}"
+    start=$(now_ms)
+    tmp="$(mktemp -t nos-keap-XXXXXX)"
+    if ! sqlite3 "${KEAP_DB_PATH}" ".backup '${tmp}'"; then
+        rm -f "${tmp}"
+        dur=$(( $(now_ms) - start ))
+        log "keap-db: FAILED (.backup rc!=0)"
+        status_append "keap-db" 0 "${dur}" 0
+        return 0
+    fi
+    gzip -c "${tmp}" \
+      | encrypt_stream \
+      | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+    rc=$?
+    rm -f "${tmp}"
+    dur=$(( $(now_ms) - start ))
+
+    if [[ "${rc}" -eq 0 ]]; then
+        size=$(s3_size "${key}")
+        log "keap-db: OK (${size} bytes in ${dur}ms)"
+        status_append "keap-db" "${size}" "${dur}" 1
+    else
+        log "keap-db: FAILED (rc=${rc})"
+        status_append "keap-db" 0 "${dur}" 0
+    fi
+}
+
 run_nos_state() {
     [[ "${DO_STATE}" != "true" ]] && return 0
     [[ -d "${NOS_STATE_DIR}" ]] || { log "nos-state: ${NOS_STATE_DIR} missing — skipping"; return 0; }
@@ -692,6 +752,7 @@ main() {
     run_volumes
     run_dirs
     run_wing_db
+    run_keap_db
     run_nos_state
     run_tofu_state
     run_authentik

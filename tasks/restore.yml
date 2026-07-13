@@ -11,6 +11,7 @@
 #     volume-<name>.tar.gz       Docker named volume tarball
 #     dir-<name>.tar.gz          host-bind dir (gitea/gitlab repos)
 #     wing-db.sql.gz             Wing SQLite store (sqlite3 .dump)
+#     keap-db.gz                 KEAP cortex libSQL store (sqlite3 .backup, binary)
 #     nos-state.tar.gz           ~/.nos/{secrets,state}.yml (GATED: -e restore_state=true)
 #     authentik-blueprints.json  Authentik export (durable state restores via the postgres dump)
 #
@@ -508,6 +509,84 @@
         {{ ('launchctl bootstrap gui/' ~ wing_uid ~ ' ' ~ ansible_facts['env']['HOME'] ~ '/Library/LaunchAgents/' ~ wing_label ~ '.plist')
            if (nos_service_manager | default('launchd')) == 'launchd'
            else ('systemctl --user start ' ~ wing_label) }}
+      changed_when: true
+      failed_when: false
+
+# 5e-2. KEAP cortex libSQL store (keap-db.gz) --------------------------------
+# NOT a sqlite3 replay: the backup is a binary online-`.backup` copy (the
+# vector index uses libsql_vector_idx(), which host sqlite3 can't rebuild from
+# a .dump). Restore = gunzip the binary DB straight into place. KEAP is a
+# Docker container, so stop it first to release the WAL lock, then start it.
+- name: "[Restore][keap-db] Restore keap.db (binary .backup copy)"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'keap-db') | list | length > 0
+    - not ansible_check_mode
+  vars:
+    keap_db_target: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
+  # block/rescue/always so a failed decompress can NEVER leave keap stopped
+  # with its DB renamed away: snapshot → gunzip → summary; roll back on fail;
+  # always restart the container.
+  block:
+    - name: "[Restore][keap-db] Pre-flight: require gunzip (BEFORE mutating keap.db)"  # noqa: command-instead-of-shell
+      ansible.builtin.shell: command -v gunzip
+      changed_when: false
+
+    - name: "[Restore][keap-db] Resolve backup file + start time"
+      ansible.builtin.set_fact:
+        keap_t0: "{{ lookup('pipe', 'date +%s') }}"
+        keap_db_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'keap-db')
+             | map(attribute='file') | list | last }}
+
+    - name: "[Restore][keap-db] Stop keap container (frees the WAL lock)"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} stop iiab-keap-1"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][keap-db] Snapshot current keap.db (non-clobbering)"
+      ansible.builtin.command: >-
+        mv -n "{{ keap_db_target }}" "{{ keap_db_target }}.pre-restore-{{ restore_date }}"
+      args:
+        removes: "{{ keap_db_target }}"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][keap-db] Rebuild keap.db from the binary backup"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c "{{ restore_workdir }}/{{ keap_db_file }}" > "{{ keap_db_target }}"
+      args:
+        executable: /bin/bash
+      register: keap_db_replay
+      changed_when: keap_db_replay.rc == 0
+
+    - name: "[Restore][keap-db] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'keap-db', 'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (keap_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','keap-db')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+  rescue:
+    - name: "[Restore][keap-db] FAILED — roll the pre-restore snapshot back"
+      ansible.builtin.command: >-
+        mv -f "{{ keap_db_target }}.pre-restore-{{ restore_date }}" "{{ keap_db_target }}"
+      args:
+        removes: "{{ keap_db_target }}.pre-restore-{{ restore_date }}"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][keap-db] Re-raise the failure"
+      ansible.builtin.fail:
+        msg: >-
+          keap-db restore failed (gunzip missing, or a corrupt/partial backup).
+          The live keap.db was rolled back from the .pre-restore snapshot and the
+          keap container is being restarted. Pick a different restore_date, then retry.
+  always:
+    - name: "[Restore][keap-db] Ensure keap container is restarted"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} start iiab-keap-1"
       changed_when: true
       failed_when: false
 
