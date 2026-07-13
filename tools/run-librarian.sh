@@ -109,7 +109,7 @@ _intake_count() {
     elif [[ "$MODE" == "brief" ]]; then
         # Scope must match the job task's maxLevel (anchor core = 0-1).
         n=$(curl -sS -H "Authorization: Bearer $KEAP_RO" \
-            "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=1" 2>/dev/null \
+            "$KEAP_URL/agent/v1/taxonomy/brief/pending?limit=1&maxLevel=2" 2>/dev/null \
             | jq -r '.data.total // empty' 2>/dev/null || true)
         [[ "$n" =~ ^[0-9]+$ ]] || { echo "ERR"; return; }
         total=$n
@@ -129,7 +129,7 @@ INTAKE_COUNT=$(_intake_count)
 [[ "$INTAKE_COUNT" =~ ^[0-9]+$ ]] || _die "KEAP intake count unreadable — check $KEAP_URL reachability, the $MODE endpoint, and KEAP_AGENT_TOKEN_RO (auth 401/403 returns a non-numeric body)."
 case "$MODE" in
     describe) echo "✓ Describe backlog (nodes without a load-bearing description): $INTAKE_COUNT" ;;
-    brief)    echo "✓ Brief backlog (nodes without an article, maxLevel=1 anchor-core sweep): $INTAKE_COUNT" ;;
+    brief)    echo "✓ Brief backlog (nodes without an article, maxLevel=2 sweep): $INTAKE_COUNT" ;;
     *)        echo "✓ Intake queue (unjudged overlap/duplicate findings): $INTAKE_COUNT" ;;
 esac
 

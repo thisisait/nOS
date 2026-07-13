@@ -255,9 +255,9 @@ pulse:
 
     # taxonomy-brief (skills/taxonomy-brief in nos-keap). Paused, on-demand:
     # tools/run-librarian.sh --brief fires one ~10-node batch, root-first.
-    # SWEEP SCOPE: maxLevel=1 (anchor core) — the level-0 pilot passed the
-    # operator's quality review 2026-07-12; deeper levels widen here AND in
-    # run-librarian.sh's intake count together.
+    # SWEEP SCOPE: maxLevel=2 — anchor core (L0-1) approved 2026-07-13;
+    # widening one depth at a time (operator moderates each wave). Move this
+    # AND run-librarian.sh's intake count together.
     # PILOT (closed): maxLevel=0 (the 12 categories, 2 runs) — the operator
     # judges quality in moderation before the sweep widens (raise maxLevel
     # here AND in run-librarian.sh's intake count together).
@@ -280,8 +280,8 @@ pulse:
         NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
-          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=1 —
-             anchor-core nodes (level 0-1 sweep) lacking an article, with
+          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=2 —
+             nodes (level 0-2 sweep) lacking an article, with
              server context (path, K1 description, childNames,
              siblingNames).
           2. Write briefs per the brief procedure AND the house style:
