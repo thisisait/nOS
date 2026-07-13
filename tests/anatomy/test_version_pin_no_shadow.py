@@ -38,7 +38,6 @@ INTENTIONAL_SHADOW = {
     "puter_version":          ("config pins an exact tag; role default is 'latest'"),
     "qgis_version":           ("config pins 'latest'; role default is the 'LTR' channel"),
     "uptime_kuma_version":    ("config pins an exact patch; role default is the major-track tag"),
-    "woodpecker_version":     ("config pins the major track 'v3'; role default is an exact patch"),
     "wordpress_version":      ("config pins the bare version; role keeps the -phpX-apache variant"),
 }
 
@@ -142,8 +141,8 @@ _CVE_RE = re.compile(r"CVE-\d{4}-\d+")
 
 # (relative path, line-substring that anchors the mariadb_version pin line)
 _MARIADB_PIN_SITES = [
-    ("default.config.yml", 'mariadb_version: "11.8.6"'),
-    ("roles/pazny.mariadb/defaults/main.yml", 'mariadb_version: "11.8.6"'),
+    ("default.config.yml", 'mariadb_version: "11.8.8"'),
+    ("roles/pazny.mariadb/defaults/main.yml", 'mariadb_version: "11.8.8"'),
     ("roles/pazny.mariadb/README.md", "`mariadb_version`"),
 ]
 

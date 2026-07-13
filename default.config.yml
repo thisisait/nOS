@@ -1053,7 +1053,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.8.8"               # REM-102: 4 May-Jun 2026 CVEs incl. CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway); prior 11.8.6 CVE-2026-32710/3494; 11.4.10 crashed FK ALTER on Apple Silicon
+mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
 mariadb_port: 3306
 mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data persistence outside the container
 

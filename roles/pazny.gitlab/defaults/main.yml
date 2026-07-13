@@ -7,7 +7,7 @@
 # live in top-level default.credentials.yml.
 # ==============================================================================
 
-gitlab_version: "18.10.8-ce.0"          # aligned with default.config.yml (S2 freshness 2026-06-10)
+gitlab_version: "18.11.7-ce.0"          # REM-111: Jun-24-2026 security release (flagged 18.10.8); 18.11 patch line; aligned with default.config.yml (source of truth)
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929                  # Internal HTTP port (nginx handles SSL)
 gitlab_ssh_port: 2224                   # Git SSH (22=system, 2222=Gitea)

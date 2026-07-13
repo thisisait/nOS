@@ -11,7 +11,7 @@
 # (vars_files > role defaults).
 # ==============================================================================
 
-redis_version: "8.0"                                 # supersedes 7.4.6-alpine CVE-2025-49844 pin (RediShell RCE); aligned with default.config.yml (source of truth — bump there too)
+redis_version: "8.6.3"                               # REM-103: off the EOL 8.0 branch; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE); aligned with default.config.yml (source of truth — bump there too)
 redis_port: 6379
 redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 redis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"

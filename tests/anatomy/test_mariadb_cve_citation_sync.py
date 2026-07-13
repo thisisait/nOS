@@ -28,13 +28,15 @@ CONFIG = os.path.join(ROOT, "default.config.yml")
 ROLE_DEFAULT = os.path.join(ROOT, "roles", "pazny.mariadb", "defaults", "main.yml")
 README = os.path.join(ROOT, "roles", "pazny.mariadb", "README.md")
 
-# The release that carries BOTH cited fixes. REM-031 (CVE-2026-32710) +
-# REM-067 (CVE-2026-3494, 11.8.x-branch audit-log bypass) both land in 11.8.6.
-PINNED_VERSION = "11.8.6"
+# The release that carries all cited fixes. REM-031 (CVE-2026-32710) +
+# REM-067 (CVE-2026-3494, 11.8.x-branch audit-log bypass) land in 11.8.6;
+# REM-102 bumps to 11.8.8 to also carry CVE-2026-49261 (wsrep_notify_cmd RCE,
+# not reachable single-node but patched anyway).
+PINNED_VERSION = "11.8.8"
 
 # Every CVE the pinned release is cited as closing. Adding a CVE here forces it
 # into all three sites; orphaning it in any site fails the gate.
-CITED_CVES = ("CVE-2026-32710", "CVE-2026-3494")
+CITED_CVES = ("CVE-2026-49261", "CVE-2026-32710", "CVE-2026-3494")
 
 _PIN_RE = re.compile(r'^mariadb_version:\s*["\']?([\d.]+)["\']?', re.M)
 

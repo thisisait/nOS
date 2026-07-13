@@ -32,7 +32,7 @@ Two invocation modes from `tasks/stacks/core-up.yml`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `mariadb_version` | `11.8.6` | CVE-2026-32710 + CVE-2026-3494 patched. Bumped from 11.4.10 which crashed on FK ALTER (BookStack migration #10) on Apple Silicon Docker Desktop. |
+| `mariadb_version` | `11.8.8` | CVE-2026-49261 + CVE-2026-32710 + CVE-2026-3494 patched. Bumped from 11.4.10 which crashed on FK ALTER (BookStack migration #10) on Apple Silicon Docker Desktop. |
 | `mariadb_port` | `3306` | Exposed on `127.0.0.1` only |
 | `mariadb_data_dir` | `~/mariadb/data` | DEPRECATED: data now lives in Docker named volume `mariadb_data` (Apple Silicon Docker Desktop's VirtIOFS bind mount crashes InnoDB during FK ALTER). Backups via `mariadb-dump`, not filesystem snapshot. The variable is still consumed by external-paths and blank-reset for the legacy bind-mount path; harmless now (path won't exist). |
 | `mariadb_mem_limit` | `{{ docker_mem_limit_standard }}` | Defaults to `1g` |
