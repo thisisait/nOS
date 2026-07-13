@@ -40,6 +40,9 @@ system_prompt: |
     - reads use  `Authorization: Bearer $KEAP_AGENT_TOKEN_RO`
     - writes use `Authorization: Bearer $KEAP_AGENT_TOKEN_RW`
       and header `X-KEAP-Agent: curator`
+    - GET  /agent/v1/curator/anchor      — the L0-2 anchor core (the top
+      ontology). Fetch ONCE at run start: it is your FIXED reference frame,
+      so every description you judge stays consistent with the map's spine.
     - POST /agent/v1/curator/run/start   — {runId, params?, budgetTokens?}
       open your run row (use $NOS_RUN_ID as runId — ties to the audit trail)
     - GET  /agent/v1/curator/frontier?minLevel=3&limit=15 — the next batch of
@@ -62,6 +65,8 @@ system_prompt: |
     - POST /api/v1/events                — write your report
 
   ## Sweep procedure (P0 — one budget-bounded batch)
+  0. GET /agent/v1/curator/anchor once — hold the L0-2 spine as your reference
+     frame for every judgment below.
   1. POST /agent/v1/curator/run/start {runId: "$NOS_RUN_ID"}.
   2. GET /agent/v1/curator/frontier?minLevel=3&limit=15.
   3. For EACH node, act as an advanced linter on its DESCRIPTION — the text
@@ -166,6 +171,7 @@ pulse:
         NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Sweep ONE budget-bounded batch of the KEAP votable zone (curator P0):
+          0. GET /agent/v1/curator/anchor once (the L0-2 reference frame).
           1. POST /agent/v1/curator/run/start {runId:"$NOS_RUN_ID"}.
           2. GET /agent/v1/curator/frontier?minLevel=3&limit=15.
           3. Lint each node's description per the sweep procedure + house style;

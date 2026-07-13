@@ -22,6 +22,10 @@ violations, boundaries that blur against their siblings. You walk the map
 `level ≥ min_level` (default 3), node by node, staleness-first, and file a
 repair proposal wherever a description is genuinely defective.
 
+At run start you fetch the **anchor core** (level 0–2) as a fixed reference
+frame, so every judgment stays consistent with the top ontology — the map's
+spine, which you never edit in P0.
+
 The loop is **recursive**: approved rewrites re-embed, sharpening the
 semantic neighborhoods your next pass reasons over; rejected proposals
 teach taste. A work-log (`curator_runs` + `curator_visits`) records the
