@@ -2032,6 +2032,12 @@ keap_ollama_url: ""
 # the field. Token-gated (keap_agent_token_capture, write-only intake) +
 # rate-limited at the edge. Set false to keep ingest loopback/tailnet-only.
 keap_public_ingest: true
+# Browser-extension surface: a Traefik router for keap.<tld>/ext/v1 WITHOUT the
+# Authentik middleware (the MV3 companion is cross-origin + cookieless — an
+# SSO-gated /ext route answers pairing with the login page = "non-JSON 200").
+# The server enforces its own auth (pairing bootstrap public + rate-limited;
+# the rest Bearer-credential). Set false to disable the extension entirely.
+keap_extension_surface: true
 
 # ==============================================================================
 # PAPERCLIP – multi-agent orchestration platform

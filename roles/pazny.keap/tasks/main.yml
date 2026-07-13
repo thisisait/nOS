@@ -61,6 +61,24 @@
     state: absent
   when: not (keap_public_ingest | default(true))
 
+# Browser-extension surface (/ext/v1) — a 5th conf.d file, NO authentik@file
+# (an extension is cross-origin + cookieless; an SSO-gated route would answer
+# pairing with the login page → the "non-JSON 200" the flow hits). The server
+# enforces its own auth (pairing bootstrap public + rate-limited; the rest
+# Bearer). Gated on the extension being wanted; default on with install_keap.
+- name: "[pazny.keap] Render browser-extension route (keap-ext.yml)"
+  ansible.builtin.template:
+    src: traefik-ext.yml.j2
+    dest: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ext.yml"
+    mode: '0644'
+  when: keap_extension_surface | default(true)
+
+- name: "[pazny.keap] Remove browser-extension route when disabled"
+  ansible.builtin.file:
+    path: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ext.yml"
+    state: absent
+  when: not (keap_extension_surface | default(true))
+
 - name: "[pazny.keap] Print info"
   ansible.builtin.debug:
     msg: |

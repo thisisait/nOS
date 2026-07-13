@@ -1,0 +1,37 @@
+# =============================================================================
+# keap-ext.yml — browser-extension surface route (rendered by pazny.keap into
+# Traefik's watched conf.d next to services.yml + keap-ingest.yml).
+#
+# The MV3 companion talks to https://{{ keap_domain }}/ext/v1/*. Like the
+# device /ingest route, this deliberately carries NO authentik@file middleware:
+# an extension is a cross-origin caller and the browser does NOT attach the
+# Authentik SameSite session cookie to its fetches, so an SSO-gated /ext route
+# would answer every request with the Authentik LOGIN PAGE (HTML 200) — exactly
+# the "non-JSON response (200)" the pairing flow hits. Security model:
+#   1. the /ext surface (nos-keap server/extension/routes.ts) runs BEFORE the
+#      identity middleware and NEVER reads X-Authentik-* headers, so it cannot
+#      forge a human identity on /api.
+#   2. pairing bootstrap (POST /ext/v1/pairings + /exchange) is intentionally
+#      unauthenticated — the human APPROVES the user_code in the SSO-gated
+#      browser UI (/api/extension/pairings/:code/approve, which STAYS behind
+#      authentik). Everything else on /ext/v1 requires the paired Bearer
+#      credential (extensionAuth).
+#   3. edge rate limit below bounds abuse of the unauthenticated bootstrap.
+# PathPrefix makes this rule longer (= higher default priority) than the plain
+# Host() SSO router in services.yml; priority pinned anyway.
+# =============================================================================
+http:
+  routers:
+    keap-ext:
+      rule: "Host(`{{ keap_domain }}`) && PathPrefix(`/ext/v1`)"
+      entryPoints: ["websecure"]
+      service: "keap"
+      priority: 200
+      tls: {}
+      middlewares: ["keap-ext-ratelimit@file", "security-headers@file"]
+
+  middlewares:
+    keap-ext-ratelimit:
+      rateLimit:
+        average: 10    # sustained req/s per source IP — an extension is bursty but light
+        burst: 40      # pairing + initial context/taxonomy prefetch headroom
