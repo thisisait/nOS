@@ -6,7 +6,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
 
 ---
 
-## v0.8-beta (DRAFT — on `dev`, master ceremony pending)
+## v0.8-beta (2026-07-13)
 
 > **The cortex reaches 1.0.** This arc lands **KEAP — the knowledge organ of
 > the nOS anatomy — at its first GA (`nos/keap:1.0.0`)**, integrated Tier-1 and

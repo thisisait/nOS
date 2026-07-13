@@ -6,7 +6,7 @@ namespace: nos-core
 summary: "KEAP — the knowledge organ of the nOS anatomy — reaches its first GA (nos/keap:1.0.0), integrated Tier-1 and on by default. This arc lands the Track K knowledge-filling epic (778/778 load-bearing K1 descriptions plus node-article briefs for levels 0-2, agent-authored on cost-tiered models under one house style, embedded locally via Ollama), a MV3 browser capture extension with its own Authentik-free /ext/v1 edge route, per-tier data-table sharing with an opt-in fixture seed, and the backup/restore + agent wiring that make the cortex a durable, first-class service. Cut as an annotated v1.0.0 on the app release branch; nOS pinned and deployed (smoke 49/49); feat/keap-cortex fast-forwarded to dev."
 tags: [keap, cortex, knowledge, release, rbac, extension, backup, taxonomy, ollama]
 release: v0.8-beta
-status: draft
+
 actors: [pazny, claude]
 related: [RELEASE.md, docs/roadmap.md]
 ---
