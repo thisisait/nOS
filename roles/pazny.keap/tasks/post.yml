@@ -1,0 +1,30 @@
+---
+# Post-start: optionally seed illustrative demo data tables so a fresh install
+# shows the TableStore with real, OLAP-shaped content instead of an empty grid.
+# Opt-in (keap_seed_fixtures) + once-only (the `creates` marker), matching
+# KEAP's "empty state is real state" doctrine. The seed script is itself
+# idempotent (fixed fixture ids), so a re-run without the marker is safe too.
+# Runs here — after the stack-up health-wait — so the container is healthy and
+# its loopback API is answering before we exec the seed.
+
+- name: "[pazny.keap] Seed demo data tables (opt-in, once)"
+  ansible.builtin.command:
+    cmd: >-
+      {{ docker_bin }} exec iiab-keap-1 node deploy/seed-fixtures.mjs
+    creates: "{{ keap_home }}/.fixtures-seeded"
+  register: _keap_seed
+  changed_when: "'created' in (_keap_seed.stdout | default(''))"
+  failed_when:
+    - _keap_seed.rc is defined
+    - _keap_seed.rc != 0
+  when: keap_seed_fixtures | default(true) | bool
+
+- name: "[pazny.keap] Mark fixtures as seeded (skip on later converges)"
+  ansible.builtin.file:
+    path: "{{ keap_home }}/.fixtures-seeded"
+    state: touch
+    mode: '0644'
+  when:
+    - keap_seed_fixtures | default(true) | bool
+    - _keap_seed is defined
+    - _keap_seed is not skipped

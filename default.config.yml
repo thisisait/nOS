@@ -2017,6 +2017,11 @@ keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default
 keap_port: 8091                                # loopback publish; also the AgentKit surface
 keap_version: "0.8.0-rc.5"                          # nos/keap local build tag (source ref pinned by keap_repo_ref in the role)
 keap_data_dir: "{{ ansible_facts['env']['HOME'] }}/keap/data"
+# Seed a few illustrative demo data tables (Reading Log / Field Log / Home
+# Inventory, one per share scope) on a fresh install so the TableStore shows
+# real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
+# file); the seed is idempotent. Set false to keep a pristine empty install.
+keap_seed_fixtures: true
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):
 # "http://host.docker.internal:11434". Default off — Linux host-gateway
