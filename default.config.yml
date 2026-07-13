@@ -2015,7 +2015,7 @@ puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
-keap_version: "1.0.0"                          # nos/keap local build tag (source ref pinned by keap_repo_ref in the role)
+keap_version: "1.1.0"                     # nos/keap local build tag (source ref pinned by keap_repo_ref in the role)
 keap_data_dir: "{{ ansible_facts['env']['HOME'] }}/keap/data"
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
