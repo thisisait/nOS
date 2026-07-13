@@ -6,6 +6,67 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-
 
 ---
 
+## v0.8-beta (DRAFT — on `dev`, master ceremony pending)
+
+> **The cortex reaches 1.0.** This arc lands **KEAP — the knowledge organ of
+> the nOS anatomy — at its first GA (`nos/keap:1.0.0`)**, integrated Tier-1 and
+> enabled by default. It spans the Track K knowledge-filling epic, a browser
+> capture surface, per-tier data-table sharing, and the backup/restore + agent
+> wiring that makes the cortex a first-class, durable nOS service. No behaviour
+> change for a non-`+keap` run; `install_keap: true` (default) now ships a
+> fully-populated, agent-fed knowledge base. Draft — the `dev → master` PR
+> release cuts the tag.
+
+### KEAP cortex v1.0.0 — GA
+
+- **Track K — knowledge filling, complete.** The seed 790-node taxonomy went
+  from mostly-empty to a populated reference work, agent-authored and
+  human-moderated end-to-end: **778/778 K1 descriptions** (the load-bearing
+  search/embedding text, DescGraph doctrine) plus **node-article briefs** for
+  levels 0–2 (abstract → article with mandatory `[[node-id]]` vazby + durable
+  external links). Authored by the `librarian` agent on cost-tiered models
+  (`NOS_AGENT_MODEL` per ceremony: describe = haiku, brief/judge = sonnet — so a
+  bulk sweep never inherits the operator's flagship default), under a shared
+  **house-style** contract (one encyclopedic voice, fixed terminology, cs
+  mirrors en 1:1). Embeddings are generated **locally** via Ollama
+  (`nomic-embed-text`, zero API cost). A `listPromotions` LIMIT-200 blindness
+  that let the dup-guards re-serve nodes past 200 open proposals was closed
+  (`db.openPromotions()` uncapped + an init-time dedupe).
+- **Browser extension (MV3) capture surface.** An operator-installable
+  companion pairs to a KEAP instance and captures pages/selections into the
+  review queue. The `/ext/v1` surface gets its **own Traefik router without the
+  Authentik middleware** (mirroring the `/ingest` device route) — an extension
+  is a cross-origin, cookieless caller, so an SSO-gated route answered pairing
+  with the login page; the server enforces its own pairing-bootstrap +
+  Bearer-credential auth. Security review fixes shipped: RustFS row-id
+  path-traversal guard, brief-renderer `javascript:`-URL XSS block, and a
+  fail-closed CSRF guard on the pairing-approval endpoints.
+- **Data tables — global RBAC tiers + sharing.** The R2′ TableStore now honours
+  the four nOS Authentik tiers: a widened `visibility` scope
+  (`private | tier-managers | tier-users | tier-guests | shared`, no migration)
+  threaded through read/list access, guests read-only, and a `PATCH` route to
+  re-scope a table after creation. An opt-in **fixture seed**
+  (`keap_seed_fixtures`, once-only) offers a fresh install three illustrative,
+  OLAP-shaped demo tables (one per scope) so the grid — and the RBAC — is
+  legible on first boot.
+- **Backup/restore + admin.** KEAP's libSQL store (`keap.db` — taxonomy, curated
+  text, table registry+rows, and the vector corpus) joins the nightly backup via
+  sqlite3 online `.backup` (WAL-consistent, and vector-index-safe where a
+  `.dump` is not) with a matching container-aware restore path. The Admin ›
+  Taxonomy tab was rebuilt from a sparse metadata overlay onto the real
+  790-node tree (names + K1 descriptions, depth-indented, filterable). The
+  agent surface (`mcp-keap` tool + `librarian` runner) and the moderated
+  promotion pipeline round out the GA.
+
+### Release mechanics
+
+- `keap_repo_ref: v1.0.0` + `keap_version: 1.0.0`; the cortex source is pinned to
+  the annotated GA tag on the app repo's release branch. Live-verified:
+  `nos/keap:1.0.0` healthy, converge `failed=0`, smoke `49/49`, RBAC tier matrix
+  + fixture seed + `/ext/v1` JSON all confirmed against the live edge.
+
+---
+
 ## v0.7-beta (2026-07-09)
 
 > **The converge becomes idempotent — and the security backlog's live-exploitable
