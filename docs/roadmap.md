@@ -28,6 +28,34 @@ left after Gitea — a Woodpecker misconfig), the never-exercised upgrade/migrat
 acceptance criteria, and a large **doc-reconciliation** debt so an agent or
 contributor stops taking the stale docs as source-of-truth.
 
+## Trajectory (timeline)
+
+> Living chart — last ~10 breakthroughs → current state → planned steps. Update on
+> every bigger roadmap change.
+
+```mermaid
+timeline
+    title nOS — breakthroughs → now → next
+    section Shipped
+        v0.4 : Linux port — Ubuntu blank green (gating CI wet-test)
+        v0.5 : SSO/MFA coherence + SEC-02 header-trust network isolation
+        Tofu : OpenTofu Authentik cutover (ADR-0001 Phase 1)
+        Sec-16 : security tip closed · converge green (61 ctrs, 0 unhealthy)
+        Upgrade : first agent-authored upgrade recipe (Gitea 1.26.4)
+        KEAP 1.0 : cortex GA — Track K (778 K1 + L0-2 node-articles)
+        Curator : taxonomy-reconciler agent live (propose-only)
+        Fable : 8 empty core-physics branches filled (529 records)
+        Knowledge : git-SoT ingest pipeline (dump↔ingest round-trip, role-wired)
+    section Now
+        State : converge green · KEAP knowledge SoT live · idempotent role-driven ingest
+    section Next
+        v0.8 : version-pin wave to 0 CRITICAL/HIGH · Gitea 1.26.4 live-apply
+        Epic : PG 16→17 cutover · first real migration authored+applied
+        Docs : reconciliation + machine-checkable freshness gate
+        v1.0 : blank reproducibility re-proven · feature freeze
+        KEAP+ : L0 enrichment · physics-core dataTable · custom/community taxonomy view
+```
+
 ## Road to first stable (v1.0)
 
 **What "stable" means** — v1.0 is the general self-hosted platform reaching
@@ -105,6 +133,28 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   converge-green/first-recipe), `active-work.md` re-anchored (was 3+ weeks stale),
   this roadmap given a **Road-to-v1.0** section. Tag pending operator validation converge.
 - Live re-verified: converge `failed=0`, 61 containers / 0 unhealthy, e2e **10/10**.
+
+## Shipped this session (2026-07-14) — KEAP knowledge pipeline
+
+- **Fable ontology review** — one `claude-fable-5` pass (no sub-agents, full context)
+  blessed the L0-2 spine (0 edits) and authored **529 records** filling the 8 empty
+  named core-physics branches (`01.01.03`-`.10`), EN + flawless CS. Live in the corpus.
+- **Curator agent** live (propose-only taxonomy reconciler; full L≥3 sweep, convergence
+  proven) — see memory `keap-curator-agent-build`.
+- **Git-SoT knowledge pipeline** (`docs/plans/keap-knowledge-ingest-pipeline.md`) — the
+  live DB is now populated *from git*, idempotently, by the `pazny.keap` role:
+  - `knowledge/canonical/<L0>/<L1>.json` = the SoT (95 files / **1565 curated records**
+    / 2231 relations), captured by `knowledge/dump.mjs` — including **770 seed-override
+    descriptions** (the Track K node-articles that had lived DB-only).
+  - `knowledge/ingest.mjs` = single idempotent import (per-file sha256 marker in
+    `knowledge_imports`; `--dry-run`); replaces the per-domain importers.
+  - **Round-trip identity proven** (`ingest→dump→diff==0`, CI-gated) + `lint.mjs`
+    (schema/house-style/no-Cyrillic) — the keap repo's first CI.
+  - Role wiring VALIDATED live: RO bind-mount of canonical, ingest after health-wait,
+    conditional restart, embed-sync kick. First converge applied 95 domains + markers;
+    re-run = 0 applied / 95 skipped (idempotent); corpus 1585 nodes intact.
+  - Dockerfile simplified — image ships *tools not data* (kills the per-file COPY
+    manifest); data changes ride the git ref, no image rebuild.
 
 ## NOW — the immediate queue
 
@@ -195,6 +245,22 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   upstream — "democratisation of positions." Turns today's hardcoded community graph into
   a community-governed one. Also: **user-data hot-reload** (non-taxonomy data materialises
   live, no restart) vs. the core-taxonomy git-ingest+restart path.
+- **[M] KEAP L0 description enrichment** — the 12 top-level sciences (`01`-`12`) carry only
+  terse seed strings in `src/game/data/taxonomy.ts` (e.g. "Study of natural phenomena"),
+  NOT the rich Track-K node-articles L1+ got, and are absent from `knowledge/`. Enrich all
+  12 to Track-K depth as `seed-override` records in canonical (or migrate the whole L0-2
+  seed-description layer out of the hardcoded TS into `knowledge/` — end the split SoT).
+- **[M/L] KEAP physics-core dataTable** — formulas (LaTeX), discoverers/authorities, and
+  scientific citations (DOI) are *structured* data that fit the prose description/brief
+  layer poorly. Model them as KEAP **dataTables** (e.g. `physics-formulas`: node_id, name,
+  latex, discoverer, year, doi; plus `authorities`/`citations`), attached to taxonomy nodes
+  by node_id — a structured data layer beside the taxonomy/description SoT. Same pattern
+  generalises to other exact sciences.
+- **[S] KEAP provenance-folder cleanup** — the pre-dump derivation artifacts
+  (`knowledge/{physics,math,chem,bio,toe}/*-{blocks,scaffold,import,concept-graph}.json`)
+  are superseded by `knowledge/canonical/` (the SoT). Decide together: retire them (git
+  history preserves) vs. relocate under `knowledge/_provenance/` with a README. The physics
+  folder is the odd one out (fable went straight to import bundles — no blocks/scaffold).
 
 ## Cross-cutting risks
 - **VirtioFS is a class-risk, not a one-off** — the gitlab puma `realdirpath ENOTSUP`
