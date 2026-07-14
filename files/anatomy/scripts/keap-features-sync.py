@@ -43,7 +43,9 @@ def http_json(url, body=None, token=None, timeout=120):
     if token:
         req.add_header("authorization", f"Bearer {token}")
     with urllib.request.urlopen(req, timeout=timeout) as res:
-        return json.loads(res.read().decode())
+        out = json.loads(res.read().decode())
+    # KEAP wraps success payloads in {success, data}; unwrap to the payload.
+    return out.get("data", out) if isinstance(out, dict) else out
 
 
 def main() -> int:
