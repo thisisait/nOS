@@ -306,6 +306,21 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   tree-baked (U1 intact). Stability: fixed-exemplar axes beat PCA (which recomputes with the
   corpus); a rewritten description shifts colour/size — acceptable, and the derived-features
   job re-runs with embed-sync.
+- **[L/XL] KEAP node metadata + external dataset linkage (linked-data cortex)** — enrich
+  each node beyond description/brief with structured metadata: **dates** (discovery / key
+  events → a temporal axis + timeline render), **schema.org typing** (nodes become typed
+  entities — `ScholarlyArticle`, `Person`, `Event`, `Dataset`, … → entity-type facets +
+  typed celestial forms), and **links to external educational/scientific/professional
+  datasets** (open corpora, possibly Spark-processed). Turns the taxonomy into a linked-
+  data knowledge graph and unlocks a whole new tier of **lenses** (recency, entity-type,
+  provenance, citation-count) and **renders** (temporal orbits, typed bodies). Storage:
+  a `node_metadata`/JSON-LD layer beside `node_features`; the git-SoT canonical format
+  gains an optional `meta`/`links` block. Big epic — scope after the render hierarchy lands.
+- **[M] KEAP relation-layer lenses (edge switching)** — links render primarily as the
+  **taxonomy tree** (structural spine); a future lens switches the edge layer to other
+  relation types (typed `brief-xref`/research relations, semantic-similarity k-NN,
+  temporal precedence, cross-domain bridges). The "Vazby" toggle is the seed; generalise
+  it into a lens-driven edge-layer picker (tree ↔ relations ↔ similarity ↔ …).
 - **[S] KEAP brief-xref render gate** — the 1696 `source='brief-xref'` typed relations
   (lifted from brief `[[id]]` links, 2026-07-14) render by default (`type != 'related-
   concept'`); gate them behind `source` or a dedicated toggle in `graph.ts`/SidePanel so
