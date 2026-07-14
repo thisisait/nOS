@@ -107,3 +107,67 @@ than 300 shallow records.
   API (loopback + forward-auth). The 2026-07-14 corruption came from exactly that.
 - Propose-only: nothing auto-applies; the operator approves bundles + anchor edits.
 - Anchor (L0-2) edits re-bake U1 — rare + supervised only.
+
+---
+
+## RUN RESULT (2026-07-14) — fable pass DONE, ingestion PREPARED (not applied)
+
+**fable verdict:** anchor spine **blessed** — `change_needed: false`, zero L0-2
+edits (the two dual-classifications — SE under CS+Engineering, Logic under Formal
+Sciences+Philosophy — are valid cross-listings, not defects). Structural finding:
+every L1 science except Physics parked content under a dense "Disciplines"
+catch-all (Chemistry 133 / Biology 142 / MSC 218 nodes); Physics left its 8
+*named* settled fields empty graph-wide → **importance × sparsity maxed, zero
+duplication risk**. fable authored **529 records** for all 8:
+`01.01.03`–`.10` (Thermo/EM/Relativity/Nuclear/Particle/Astro/Geo/Biophysics) =
+**40 pillars + 83 blocks + 406 briefs**, each with house-style EN + 1:1 flawless
+CS (fixed a genitive-government slip, a calque, an orthography slip; zero
+Cyrillic; all lengths in range). Output: `state/fable/ontology-review-output.json`
+(nOS `dev`).
+
+**Ingestion design — Option B (fill the named branches), chosen + mechanically
+proven:** fable rooted content at the pre-existing *named* seed L2 branches, NOT a
+new "Physics Disciplines" catch-all (the cleaner ontology; for physics there is no
+catch-all to duplicate). The named L2s live in the static seed (`src/game/data/
+taxonomy.ts`), so pillars graft as **ext L3/L4 children under a seed L2** — the
+**ToE precedent** (ext L2 `01.01.11` under seed L1 `01.01`) proves ext-under-seed
+registers + gets an appended layout point **without a re-bake**
+(`layout.ts:154` `layout.get(parentId)` resolves the seed L2's baked position).
+
+**Prepared machinery (committed, NOT applied):**
+- `tools/keap-fable-to-bundles.py` (nOS) — pure transform, fable output → 8
+  per-domain bundles. No DB access.
+- 8 `deploy/phys-*-import.json` (nos-keap `feat/curator`) — 40 pillars + 83 blocks,
+  `rootIsSeed:true`, EN+CS. Pillar ids index-aligned (verified misaligned=0).
+- `deploy/import-domain.mjs` generalized (back-compat): `rootIsSeed` skips the root
+  insert + scopes the idempotent reset to descendants (seed row/desc/**baked
+  layout** survive); carries `descriptionCs` for root/pillar/block (was EN-only).
+
+**Operator run recipe (supervised — live DB mutation):**
+1. Review the branch diff + the 8 bundles (`git -C ~/projects/knowledge-explorer-and-preserver log -p -1`).
+2. Bump the rc pins in nOS: `keap_repo_ref` stays `feat/curator`, bump
+   `keap_version` → `1.4.0-rc.2` (importer + bundles must be baked into the image).
+3. `tools/nos-stacks.sh keap` (rebuild the image with the new deploy/ contents).
+4. Import all 8 (raw-SQL inserts; ONE restart materialises them):
+   `for k in phys-thermo phys-em phys-relativity phys-nuclear phys-particle phys-astro phys-geo phys-biophys; do docker exec iiab-keap-1 node deploy/$k-import.json; done`
+   — wait, the importer takes the KEY as argv, so:
+   `for k in phys-thermo phys-em phys-relativity phys-nuclear phys-particle phys-astro phys-geo phys-biophys; do docker exec iiab-keap-1 node deploy/import-domain.mjs $k; done`
+5. `docker restart iiab-keap-1` (boot: registerExtNode → applyDescriptionOverride
+   → rebuildFts → ensureLayout **append**; expect `[layout] appended 123 grown
+   star(s)`, NOT `baked` — U1 intact, `layoutVersion` unchanged).
+6. `docker exec iiab-keap-1 node deploy/keap-embed-sync.mjs` (or the role's
+   embed-sync task) so the new descriptions get 768-dim embeddings for search.
+7. Verify via the graph API (loopback + forward-auth, **never host sqlite3**):
+   `01.01.03`–`.10` now carry L3/L4 subtrees; semantic search returns the new
+   blocks; smoke green. Review the cluster under Physics in `/explore`.
+
+**Deliberately deferred (fable's judgment calls, for a follow-up):**
+- The **named-vs-catch-all reconciliation** for Chemistry/Biology/Earth/Astronomy
+  (their content lives under "Disciplines" catch-alls; whether to fold the named
+  empty branches into them, or vice-versa, is a bigger design question — do NOT
+  parallel-fill and create graph-wide duplication).
+- Astrophysics `01.01.08` was scoped to *physics of objects/processes*; the
+  observational/object-classification half belongs to the (also empty) Astronomy
+  `01.05` — flag when populating `01.05`.
+- Typed cross-block **relations** for these branches (fable produced blocks+briefs,
+  no relation overlay) — a P1 relation-weaving pass (the curator's real payoff).
