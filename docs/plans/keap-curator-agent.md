@@ -1,7 +1,22 @@
 # KEAP Curator — a recursive self-improving taxonomy reconciler
 
-**Status:** P0 BUILT (2026-07-14), awaiting deploy + first run.
+**Status:** P0 DEPLOYED + LIVE (2026-07-14, rc build). Validated end-to-end; corpus already well-described so P1 is the real value.
 
+> ### P0 deploy state (2026-07-14)
+> **LIVE** on rc build `feat/curator` / keap `1.4.0-rc.1` (pins UNCOMMITTED — cut
+> `v1.4.0` tag + commit the pin after a review pass). `nos-curator` client +
+> `curator-sweep` pulse job (paused) landed via `nos-stacks.sh "authentik,wing,core,stacks"`.
+> ~11 real runs, ~75 nodes swept: **correct no-churn discipline** (dense
+> descriptions left fine, one genuine boundary defect caught at `02.02.06.01
+> Kernel Design`). **Calibration:** frontier descLen 231–388, ~0 stubs → desc
+> value is low, P1 (relations) is the payoff; each run now emits a **P1-signals**
+> report section. **Reliability fix (`93fefba`):** cursor advance is deterministic
+> server-side (`frontier?...&runId=` checkpoints served nodes). **⚠️ Incident:**
+> host `sqlite3` on the live libSQL keap DB corrupted it → restored from the
+> pre-curator backup (corpus intact, nothing of value lost). HARD RULE: inspect
+> the keap DB only via the app `/agent/v1` API, never host sqlite3. Full detail:
+> memory `keap-curator-agent-build`.
+>
 > ### P0 build state (2026-07-14)
 > **Implemented, committed, gates green — NOT yet deployed/run.**
 > - **nos-keap `feat/curator`** (commits `74bf84a` work-log+frontier API, `794a1dd` anchor):
