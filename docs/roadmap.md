@@ -187,6 +187,14 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
 - **[M] Consolidate the roadmap surface** (this doc) + triage the 49 `v07-*.md` shadow
   backlog; **add a machine-checkable active-work freshness gate** (the 150-line ceiling
   is pinned but nothing pins freshness — which is why it drifted 3+ weeks).
+- **[L/XL] KEAP custom taxonomy view + community cloud push** — the git-SoT knowledge
+  pipeline (`docs/plans/keap-knowledge-ingest-pipeline.md`) ships the **community** view
+  (curated, git-tracked, hardcoded today). Deferred: a per-user **custom** view that
+  applies the user's *local taxonomy proposals* on top of community (edits are proposals,
+  never direct mutations), and a **community-cloud push** that promotes accepted proposals
+  upstream — "democratisation of positions." Turns today's hardcoded community graph into
+  a community-governed one. Also: **user-data hot-reload** (non-taxonomy data materialises
+  live, no restart) vs. the core-taxonomy git-ingest+restart path.
 
 ## Cross-cutting risks
 - **VirtioFS is a class-risk, not a one-off** — the gitlab puma `realdirpath ENOTSUP`
