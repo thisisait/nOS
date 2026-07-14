@@ -1,0 +1,2846 @@
+{
+  "anchor_verdict": {
+    "change_needed": false,
+    "rationale": "The 12 top-level categories and their L1/L2 spine are coherent and complete: the natural / formal / applied / social / humanities / arts axis is standard, and the survival-through-post-disaster-rebuilding tail is a deliberate, internally consistent 'knowledge ark' design that should not be second-guessed. No top-level science is missing and no L1 is badly miscategorised. Two dual-classifications exist by design (Software Engineering under both CS 02.02.04 and Engineering 03.01.10; Logic under Formal Sciences 02.03 and Philosophy 05.02.05) but both are legitimate cross-listings, not defects, and re-baking the layout to merge them would cost more than it fixes. The physics asymmetry — 8 settled core fields sit empty while a Quantum-Gravity cluster is deeply built — is a CONTENT gap, not a spine flaw: the L2 branches themselves are named and placed correctly, they simply need L3/L4 populated. Bless the spine.",
+    "proposed_edits": []
+  },
+  "priority_domains": [
+    {
+      "branch_id": "01.01.03",
+      "name": "Thermodynamics",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "Settled foundational physics governing heat, energy and entropy; underpins every engine, chemical reaction, engineering process and the arrow of time. Completely empty."
+    },
+    {
+      "branch_id": "01.01.04",
+      "name": "Electromagnetism",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "One of the four fundamental interactions and the basis of all electrical technology, optics and modern electronics. A first-tier gap in any science reference."
+    },
+    {
+      "branch_id": "01.01.05",
+      "name": "Relativity",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "Einstein's theories of space, time and gravity; the framework behind GPS, cosmology and black-hole physics. Foundational and fully settled, yet absent."
+    },
+    {
+      "branch_id": "01.01.06",
+      "name": "Nuclear Physics",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "The physics of the nucleus — binding energy, radioactivity, fission and fusion — powering reactors, medicine, dating methods and stellar energy. Empty."
+    },
+    {
+      "branch_id": "01.01.07",
+      "name": "Particle Physics",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "The Standard Model of matter and its interactions, the deepest settled account of what the universe is made of. A cornerstone gap."
+    },
+    {
+      "branch_id": "01.01.08",
+      "name": "Astrophysics",
+      "current_points": 0,
+      "gap_severity": "high",
+      "why_important": "The physics of stars, compact objects and the interstellar medium — how the universe makes and destroys structure. High importance, empty."
+    },
+    {
+      "branch_id": "01.01.09",
+      "name": "Geophysics",
+      "current_points": 0,
+      "gap_severity": "medium",
+      "why_important": "The physics of the Earth — seismology, geomagnetism, geodynamics — foundational to hazard science and planetary understanding. Empty but narrower than the core fields."
+    },
+    {
+      "branch_id": "01.01.10",
+      "name": "Biophysics",
+      "current_points": 0,
+      "gap_severity": "medium",
+      "why_important": "Physical principles applied to living systems, bridging physics and biology. Important and empty, but a hybrid field better kept lighter than the pure core."
+    }
+  ],
+  "pillars": [
+    {
+      "id": "01.01.03.01",
+      "name": "Laws of Thermodynamics",
+      "description_en": "The four foundational laws that govern energy, heat and entropy in every physical system, from the zeroth law defining temperature to the third law's absolute-zero limit.",
+      "description_cs": "Čtyři základní zákony, jimiž se řídí energie, teplo a entropie v každém fyzikálním systému — od nultého zákona definujícího teplotu po třetí zákon a mez absolutní nuly."
+    },
+    {
+      "id": "01.01.03.02",
+      "name": "Thermodynamic Potentials & Relations",
+      "description_en": "The state functions — internal energy, enthalpy, Helmholtz and Gibbs free energy — and the Maxwell relations and Legendre transforms that connect them.",
+      "description_cs": "Stavové funkce — vnitřní energie, entalpie, Helmholtzova a Gibbsova volná energie — a Maxwellovy relace a Legendreovy transformace, které je propojují."
+    },
+    {
+      "id": "01.01.03.03",
+      "name": "Heat Engines & Cycles",
+      "description_en": "How cyclic processes convert heat into work, the efficiency limits imposed by the second law, and the idealised cycles that model real engines and refrigerators.",
+      "description_cs": "Jak cyklické děje přeměňují teplo na práci, meze účinnosti dané druhým zákonem a idealizované cykly modelující reálné motory a chladicí zařízení."
+    },
+    {
+      "id": "01.01.03.04",
+      "name": "Phase Transitions & Equilibria",
+      "description_en": "Changes of state and coexistence of phases: phase diagrams, latent heat, the Clausius-Clapeyron relation, and the classification and criticality of transitions.",
+      "description_cs": "Změny skupenství a koexistence fází: fázové diagramy, latentní teplo, Clausiova–Clapeyronova rovnice a klasifikace a kritičnost přechodů."
+    },
+    {
+      "id": "01.01.03.05",
+      "name": "Statistical Mechanics",
+      "description_en": "The microscopic foundation of thermodynamics: how the statistics of many particles gives rise to macroscopic laws through ensembles, the partition function and entropy as counting.",
+      "description_cs": "Mikroskopický základ termodynamiky: jak statistika mnoha částic vede k makroskopickým zákonům pomocí souborů, partiční funkce a entropie jako počítání stavů."
+    },
+    {
+      "id": "01.01.03.06",
+      "name": "Kinetic Theory & Transport",
+      "description_en": "The dynamics of molecular motion and how it carries mass, momentum and energy: the kinetic theory of gases and the transport processes of diffusion, viscosity and conduction.",
+      "description_cs": "Dynamika molekulárního pohybu a jak přenáší hmotu, hybnost a energii: kinetická teorie plynů a transportní děje difuze, viskozity a vedení tepla."
+    },
+    {
+      "id": "01.01.04.01",
+      "name": "Electrostatics",
+      "description_en": "The physics of stationary electric charge: Coulomb's law, the electric field and potential, Gauss's law, and the behaviour of conductors and capacitors.",
+      "description_cs": "Fyzika nehybného elektrického náboje: Coulombův zákon, elektrické pole a potenciál, Gaussův zákon a chování vodičů a kondenzátorů."
+    },
+    {
+      "id": "01.01.04.02",
+      "name": "Magnetostatics",
+      "description_en": "The physics of steady currents and their magnetic fields: the Biot-Savart and Ampère laws, magnetic force, and the magnetic properties of matter.",
+      "description_cs": "Fyzika ustálených proudů a jejich magnetických polí: Biotův–Savartův a Ampérův zákon, magnetická síla a magnetické vlastnosti látek."
+    },
+    {
+      "id": "01.01.04.03",
+      "name": "Electrodynamics",
+      "description_en": "Time-varying fields and their unification: electromagnetic induction, the displacement current, and Maxwell's equations as the complete classical field theory.",
+      "description_cs": "Časově proměnná pole a jejich sjednocení: elektromagnetická indukce, posuvný proud a Maxwellovy rovnice jako úplná klasická teorie pole."
+    },
+    {
+      "id": "01.01.04.04",
+      "name": "Electromagnetic Waves & Optics",
+      "description_en": "The propagation of electromagnetic fields as waves: the electromagnetic spectrum, energy and momentum transport, and the optics of reflection, refraction and interference.",
+      "description_cs": "Šíření elektromagnetického pole ve formě vln: elektromagnetické spektrum, přenos energie a hybnosti a optika odrazu, lomu a interference."
+    },
+    {
+      "id": "01.01.04.05",
+      "name": "Electromagnetism in Matter",
+      "description_en": "How materials respond to fields: polarization and dielectrics, magnetization and magnetic materials, conduction, and the resulting macroscopic field equations.",
+      "description_cs": "Jak látky reagují na pole: polarizace a dielektrika, magnetizace a magnetické materiály, vedení proudu a výsledné makroskopické rovnice pole."
+    },
+    {
+      "id": "01.01.04.06",
+      "name": "Circuits & Electromagnetic Technology",
+      "description_en": "The engineering physics of circuits and devices: Ohm's and Kirchhoff's laws, alternating current, and the electromagnetic principles behind motors, generators and antennas.",
+      "description_cs": "Technická fyzika obvodů a zařízení: Ohmův a Kirchhoffovy zákony, střídavý proud a elektromagnetické principy motorů, generátorů a antén."
+    },
+    {
+      "id": "01.01.05.01",
+      "name": "Special Relativity",
+      "description_en": "Einstein's 1905 theory of space and time in inertial frames: the constancy of the speed of light, the relativity of simultaneity, time dilation and length contraction, and the Lorentz transformation.",
+      "description_cs": "Einsteinova teorie prostoru a času z roku 1905 v inerciálních soustavách: stálost rychlosti světla, relativita současnosti, dilatace času a kontrakce délek a Lorentzova transformace."
+    },
+    {
+      "id": "01.01.05.02",
+      "name": "Relativistic Dynamics",
+      "description_en": "Mechanics at high speed: relativistic momentum and energy, the mass-energy equivalence, four-vectors, and the union of space and time into Minkowski spacetime.",
+      "description_cs": "Mechanika při vysokých rychlostech: relativistická hybnost a energie, ekvivalence hmoty a energie, čtyřvektory a sjednocení prostoru a času do Minkowského časoprostoru."
+    },
+    {
+      "id": "01.01.05.03",
+      "name": "General Relativity",
+      "description_en": "Einstein's geometric theory of gravity: the equivalence principle, curved spacetime, geodesic motion, and the field equations relating curvature to energy and momentum.",
+      "description_cs": "Einsteinova geometrická teorie gravitace: princip ekvivalence, zakřivený časoprostor, pohyb po geodetikách a rovnice pole spojující křivost s energií a hybností."
+    },
+    {
+      "id": "01.01.05.04",
+      "name": "Gravitation & Spacetime Solutions",
+      "description_en": "Solutions of the field equations and their physics: black holes, gravitational waves, and the exact geometries that describe stars, collapsed objects and the expanding universe.",
+      "description_cs": "Řešení rovnic pole a jejich fyzika: černé díry, gravitační vlny a přesné geometrie popisující hvězdy, zhroucené objekty a rozpínající se vesmír."
+    },
+    {
+      "id": "01.01.05.05",
+      "name": "Tests & Applications of Relativity",
+      "description_en": "The experimental confirmation and practical use of relativity, from Mercury's perihelion and light bending to gravitational-wave detection and the relativistic corrections in satellite navigation.",
+      "description_cs": "Experimentální potvrzení a praktické využití relativity, od stáčení perihelia Merkuru a ohybu světla po detekci gravitačních vln a relativistické korekce v družicové navigaci."
+    },
+    {
+      "id": "01.01.06.01",
+      "name": "Nuclear Structure",
+      "description_en": "The composition and organisation of the atomic nucleus: protons and neutrons, binding energy, nuclear size and shape, and the models that explain nuclear stability.",
+      "description_cs": "Složení a uspořádání atomového jádra: protony a neutrony, vazebná energie, velikost a tvar jádra a modely vysvětlující jadernou stabilitu."
+    },
+    {
+      "id": "01.01.06.02",
+      "name": "Radioactivity & Decay",
+      "description_en": "The spontaneous transformation of unstable nuclei: alpha, beta and gamma decay, decay laws and half-lives, decay chains, and the applications of radioactive dating and tracing.",
+      "description_cs": "Samovolná přeměna nestabilních jader: alfa, beta a gama rozpad, zákony rozpadu a poločasy, rozpadové řady a využití radioaktivního datování a značkování."
+    },
+    {
+      "id": "01.01.06.03",
+      "name": "Nuclear Reactions",
+      "description_en": "Induced transformations of nuclei: reaction kinematics and cross sections, conservation laws, and the mechanisms of scattering, capture and transmutation.",
+      "description_cs": "Vynucené přeměny jader: kinematika reakcí a účinné průřezy, zákony zachování a mechanismy rozptylu, záchytu a transmutace."
+    },
+    {
+      "id": "01.01.06.04",
+      "name": "Fission, Fusion & Energy",
+      "description_en": "The two routes to nuclear energy: the splitting of heavy nuclei and the merging of light ones, the physics of chain reactions and confinement, and their use in reactors and weapons.",
+      "description_cs": "Dvě cesty k jaderné energii: štěpení těžkých jader a slučování lehkých, fyzika řetězových reakcí a udržení a jejich využití v reaktorech a zbraních."
+    },
+    {
+      "id": "01.01.06.05",
+      "name": "Applied & Astrophysical Nuclear Physics",
+      "description_en": "Nuclear physics in practice and in the cosmos: nuclear medicine and radiation detection, radiation protection, and the nucleosynthesis that forges the elements in stars.",
+      "description_cs": "Jaderná fyzika v praxi a ve vesmíru: nukleární medicína a detekce záření, radiační ochrana a nukleosyntéza, která ve hvězdách vytváří prvky."
+    },
+    {
+      "id": "01.01.07.01",
+      "name": "The Standard Model",
+      "description_en": "The theory of elementary particles and their interactions: the quarks and leptons of matter, the gauge bosons carrying forces, and the Higgs boson that gives them mass.",
+      "description_cs": "Teorie elementárních částic a jejich interakcí: kvarky a leptony tvořící hmotu, kalibrační bosony přenášející síly a Higgsův boson, který jim dodává hmotnost."
+    },
+    {
+      "id": "01.01.07.02",
+      "name": "Fundamental Interactions",
+      "description_en": "The forces between particles as gauge field theories: quantum electrodynamics, the strong interaction and quantum chromodynamics, and the weak interaction with electroweak unification.",
+      "description_cs": "Síly mezi částicemi jako kalibrační teorie pole: kvantová elektrodynamika, silná interakce a kvantová chromodynamika a slabá interakce s elektroslabým sjednocením."
+    },
+    {
+      "id": "01.01.07.03",
+      "name": "Symmetries & Conservation Laws",
+      "description_en": "The symmetry principles organising particle physics: conservation laws from continuous symmetries, the discrete symmetries C, P and T, and the spontaneous symmetry breaking behind mass generation.",
+      "description_cs": "Principy symetrie uspořádávající částicovou fyziku: zákony zachování ze spojitých symetrií, diskrétní symetrie C, P a T a spontánní narušení symetrie za vznikem hmotnosti."
+    },
+    {
+      "id": "01.01.07.04",
+      "name": "Experimental Particle Physics",
+      "description_en": "How particles are produced and observed: accelerators and colliders, detector technologies, and the statistical analysis by which discoveries are established.",
+      "description_cs": "Jak se částice vytvářejí a pozorují: urychlovače a srážeče, detekční technologie a statistická analýza, kterou se prokazují objevy."
+    },
+    {
+      "id": "01.01.07.05",
+      "name": "Beyond the Standard Model",
+      "description_en": "The open questions and proposed extensions: neutrino mass and oscillation, the identity of dark matter, supersymmetry and grand unification, and the matter-antimatter asymmetry of the universe.",
+      "description_cs": "Otevřené otázky a navrhovaná rozšíření: hmotnost a oscilace neutrin, povaha temné hmoty, supersymetrie a velké sjednocení a asymetrie hmoty a antihmoty ve vesmíru."
+    },
+    {
+      "id": "01.01.08.01",
+      "name": "Stellar Structure & Evolution",
+      "description_en": "The physics of stars: hydrostatic and thermal balance, energy generation by fusion, the main sequence, and the evolution of stars from birth to their final states.",
+      "description_cs": "Fyzika hvězd: hydrostatická a tepelná rovnováha, uvolňování energie fúzí, hlavní posloupnost a vývoj hvězd od zrození po jejich konečné stavy."
+    },
+    {
+      "id": "01.01.08.02",
+      "name": "Compact Objects",
+      "description_en": "The dense remnants of stellar death: white dwarfs, neutron stars and stellar black holes, supported against gravity by degeneracy pressure or not at all.",
+      "description_cs": "Husté pozůstatky zániku hvězd: bílí trpaslíci, neutronové hvězdy a hvězdné černé díry, držené proti gravitaci degeneračním tlakem, nebo vůbec ne."
+    },
+    {
+      "id": "01.01.08.03",
+      "name": "Interstellar Medium & Star Formation",
+      "description_en": "The gas and dust between the stars and the collapse that turns it into new stars: molecular clouds, gravitational instability, and the physics of accretion and protostars.",
+      "description_cs": "Plyn a prach mezi hvězdami a kolaps, který jej mění v nové hvězdy: molekulární mračna, gravitační nestabilita a fyzika akrece a protohvězd."
+    },
+    {
+      "id": "01.01.08.04",
+      "name": "Galactic & Extragalactic Astrophysics",
+      "description_en": "The structure and dynamics of galaxies and the largest systems: galactic rotation and dark matter, active galactic nuclei, and clusters and the cosmic web.",
+      "description_cs": "Struktura a dynamika galaxií a největších soustav: rotace galaxií a temná hmota, aktivní galaktická jádra a kupy galaxií a kosmická síť."
+    },
+    {
+      "id": "01.01.08.05",
+      "name": "High-Energy & Multi-Messenger Astrophysics",
+      "description_en": "The most violent phenomena and the many channels that reveal them: supernovae and their remnants, cosmic rays, gamma-ray bursts, and observation through light, particles and gravitational waves.",
+      "description_cs": "Nejprudší jevy a mnoho kanálů, jimiž se projevují: supernovy a jejich pozůstatky, kosmické záření, záblesky gama a pozorování světlem, částicemi a gravitačními vlnami."
+    },
+    {
+      "id": "01.01.09.01",
+      "name": "Seismology & Earth's Interior",
+      "description_en": "The study of seismic waves and what they reveal about the planet's layered structure: earthquake sources, wave propagation, and the crust, mantle and core.",
+      "description_cs": "Studium seismických vln a toho, co odhalují o vrstevnaté stavbě planety: zdroje zemětřesení, šíření vln a kůra, plášť a jádro."
+    },
+    {
+      "id": "01.01.09.02",
+      "name": "Geomagnetism & the Geodynamo",
+      "description_en": "The Earth's magnetic field, its generation by convection in the liquid outer core, its variations and reversals, and the record it leaves in rocks.",
+      "description_cs": "Magnetické pole Země, jeho vznik konvekcí v tekutém vnějším jádru, jeho proměny a přepólování a záznam, který zanechává v horninách."
+    },
+    {
+      "id": "01.01.09.03",
+      "name": "Gravity, Geodesy & Earth's Shape",
+      "description_en": "The Earth's gravity field and figure: geodesy and reference surfaces, gravity anomalies, isostasy, and the measurement of the planet's shape and rotation.",
+      "description_cs": "Tíhové pole a tvar Země: geodézie a referenční plochy, tíhové anomálie, izostáze a měření tvaru a rotace planety."
+    },
+    {
+      "id": "01.01.09.04",
+      "name": "Geodynamics & Plate Tectonics",
+      "description_en": "The physics driving the solid Earth's motion: mantle convection, plate tectonics, and the heat flow and deformation that shape the surface.",
+      "description_cs": "Fyzika pohánějící pohyb pevné Země: konvekce v plášti, desková tektonika a tepelný tok a deformace, jež utvářejí povrch."
+    },
+    {
+      "id": "01.01.10.01",
+      "name": "Molecular Biophysics",
+      "description_en": "The physics of biological macromolecules: protein structure and folding, molecular motors, and the forces and energetics that govern molecular machines.",
+      "description_cs": "Fyzika biologických makromolekul: struktura a sbalování bílkovin, molekulární motory a síly a energetika řídící molekulární stroje."
+    },
+    {
+      "id": "01.01.10.02",
+      "name": "Membrane & Neural Biophysics",
+      "description_en": "The physics of cell membranes and excitable cells: ion transport and membrane potentials, the action potential, and the electrical signalling of nerves.",
+      "description_cs": "Fyzika buněčných membrán a dráždivých buněk: transport iontů a membránové potenciály, akční potenciál a elektrická signalizace nervů."
+    },
+    {
+      "id": "01.01.10.03",
+      "name": "Biomechanics",
+      "description_en": "The mechanics of living matter: the material properties of tissues, the forces in movement and locomotion, and fluid flow in circulation and respiration.",
+      "description_cs": "Mechanika živé hmoty: materiálové vlastnosti tkání, síly při pohybu a lokomoci a proudění tekutin v oběhu a dýchání."
+    },
+    {
+      "id": "01.01.10.04",
+      "name": "Biophysical Techniques",
+      "description_en": "The physical methods that image and probe living systems: structural determination, single-molecule and optical techniques, and the physics of medical imaging.",
+      "description_cs": "Fyzikální metody zobrazující a zkoumající živé systémy: určování struktury, jednomolekulové a optické techniky a fyzika lékařského zobrazování."
+    }
+  ],
+  "new_blocks": [
+    {
+      "parent_pillar_id": "01.01.03.01",
+      "parent_pillar_name": "Laws of Thermodynamics",
+      "slug": "zeroth-law",
+      "name": "Zeroth Law & Temperature",
+      "description_en": "Defines thermal equilibrium and temperature: if two systems are each in equilibrium with a third, they are in equilibrium with each other, making temperature a consistent, transitive property.",
+      "description_cs": "Definuje tepelnou rovnováhu a teplotu: jsou-li dva systémy v rovnováze se třetím, jsou v rovnováze i navzájem, což činí z teploty konzistentní, tranzitivní veličinu.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Thermal equilibrium",
+          "definition": "State in which no net heat flows between systems in contact, so their temperatures are equal."
+        },
+        {
+          "name": "Temperature scales",
+          "definition": "Empirical (Celsius, Fahrenheit) and absolute (Kelvin) scales measuring the degree of thermal agitation."
+        },
+        {
+          "name": "Thermometry",
+          "definition": "Measurement of temperature via a property that varies reproducibly with it, such as gas volume or resistance."
+        },
+        {
+          "name": "Transitivity of equilibrium",
+          "definition": "The logical basis of the zeroth law that lets temperature label equivalence classes of systems."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.01",
+      "parent_pillar_name": "Laws of Thermodynamics",
+      "slug": "first-law",
+      "name": "First Law & Internal Energy",
+      "description_en": "Energy conservation for thermodynamic systems: the change in internal energy equals heat added minus work done, so heat and work are two forms of the same conserved quantity.",
+      "description_cs": "Zachování energie pro termodynamické systémy: změna vnitřní energie se rovná dodanému teplu zmenšenému o vykonanou práci, takže teplo a práce jsou dvě formy téže zachovávané veličiny.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Internal energy",
+          "definition": "The total microscopic kinetic and potential energy of a system, a state function."
+        },
+        {
+          "name": "Heat and work",
+          "definition": "The two path-dependent ways energy crosses a system boundary."
+        },
+        {
+          "name": "Work of expansion",
+          "definition": "Pressure-volume work done by or on a gas as its volume changes."
+        },
+        {
+          "name": "Enthalpy",
+          "definition": "The combination U + pV, convenient for processes at constant pressure."
+        },
+        {
+          "name": "Heat capacity",
+          "definition": "The heat required to raise a system's temperature by one degree, at constant volume or pressure."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.01",
+      "parent_pillar_name": "Laws of Thermodynamics",
+      "slug": "second-law-entropy",
+      "name": "Second Law & Entropy",
+      "description_en": "Entropy of an isolated system never decreases, setting the direction of spontaneous change and the irreversibility of natural processes; it forbids perfect conversion of heat into work.",
+      "description_cs": "Entropie izolovaného systému nikdy neklesá, což určuje směr samovolných dějů a nevratnost přírodních procesů; zakazuje dokonalou přeměnu tepla na práci.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Entropy",
+          "definition": "A state function measuring the dispersal of energy and the number of accessible microstates."
+        },
+        {
+          "name": "Clausius statement",
+          "definition": "Heat does not spontaneously flow from a colder to a hotter body."
+        },
+        {
+          "name": "Kelvin-Planck statement",
+          "definition": "No cyclic process can convert heat entirely into work with no other effect."
+        },
+        {
+          "name": "Reversible vs irreversible",
+          "definition": "Idealised quasi-static processes conserve total entropy; real processes generate it."
+        },
+        {
+          "name": "Arrow of time",
+          "definition": "The thermodynamic asymmetry that distinguishes past from future via increasing entropy."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.01",
+      "parent_pillar_name": "Laws of Thermodynamics",
+      "slug": "third-law",
+      "name": "Third Law & Absolute Zero",
+      "description_en": "As temperature approaches absolute zero the entropy of a perfect crystal approaches a constant minimum, implying absolute zero is unattainable in finitely many steps.",
+      "description_cs": "Když se teplota blíží absolutní nule, entropie dokonalého krystalu se blíží konstantnímu minimu, z čehož plyne, že absolutní nuly nelze dosáhnout konečným počtem kroků.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Nernst heat theorem",
+          "definition": "Entropy change of a reaction approaches zero as temperature approaches absolute zero."
+        },
+        {
+          "name": "Residual entropy",
+          "definition": "Nonzero ground-state entropy in disordered solids such as glasses or ice."
+        },
+        {
+          "name": "Unattainability",
+          "definition": "No finite sequence of processes can cool a system to exactly absolute zero."
+        },
+        {
+          "name": "Cryogenics",
+          "definition": "The production and study of very low temperatures approaching the absolute-zero limit."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.02",
+      "parent_pillar_name": "Thermodynamic Potentials & Relations",
+      "slug": "free-energy",
+      "name": "Free Energies",
+      "description_en": "Helmholtz and Gibbs free energies combine energy and entropy into potentials whose minima locate equilibrium at constant temperature-volume or temperature-pressure, and whose changes bound available work.",
+      "description_cs": "Helmholtzova a Gibbsova volná energie spojují energii a entropii do potenciálů, jejichž minima určují rovnováhu při konstantní teplotě a objemu či teplotě a tlaku a jejichž změny omezují využitelnou práci.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Helmholtz free energy",
+          "definition": "F = U - TS, minimised at equilibrium at constant temperature and volume."
+        },
+        {
+          "name": "Gibbs free energy",
+          "definition": "G = H - TS, minimised at equilibrium at constant temperature and pressure."
+        },
+        {
+          "name": "Spontaneity criterion",
+          "definition": "A process is spontaneous when the relevant free energy decreases."
+        },
+        {
+          "name": "Chemical potential",
+          "definition": "The change in free energy when one particle is added, driving mass transfer and reaction."
+        },
+        {
+          "name": "Maximum work",
+          "definition": "The free-energy change sets the greatest useful work extractable from a process."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.02",
+      "parent_pillar_name": "Thermodynamic Potentials & Relations",
+      "slug": "maxwell-relations",
+      "name": "Maxwell Relations & State Functions",
+      "description_en": "Equality of mixed second derivatives of the thermodynamic potentials yields the Maxwell relations, linking hard-to-measure quantities such as entropy changes to measurable pressure, volume and temperature data.",
+      "description_cs": "Rovnost smíšených druhých derivací termodynamických potenciálů dává Maxwellovy relace, které spojují obtížně měřitelné veličiny, jako jsou změny entropie, s měřitelnými daty o tlaku, objemu a teplotě.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "State function",
+          "definition": "A quantity determined by the current state, independent of the path taken to reach it."
+        },
+        {
+          "name": "Exact differential",
+          "definition": "The mathematical property of state functions ensuring path-independent changes."
+        },
+        {
+          "name": "Legendre transform",
+          "definition": "The operation generating one potential from another by swapping conjugate variables."
+        },
+        {
+          "name": "Conjugate variables",
+          "definition": "Paired quantities such as pressure-volume and temperature-entropy whose product is energy."
+        },
+        {
+          "name": "Response functions",
+          "definition": "Measurable derivatives such as compressibility and thermal expansion linked by the relations."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.03",
+      "parent_pillar_name": "Heat Engines & Cycles",
+      "slug": "carnot-cycle",
+      "name": "Carnot Cycle & Efficiency",
+      "description_en": "The Carnot cycle of two isothermal and two adiabatic steps is the most efficient possible heat engine between two reservoirs, its efficiency fixed by their temperatures alone and independent of the working substance.",
+      "description_cs": "Carnotův cyklus ze dvou izotermických a dvou adiabatických dějů je nejúčinnějším možným tepelným strojem mezi dvěma zásobníky; jeho účinnost je dána pouze jejich teplotami a nezávisí na pracovní látce.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Carnot efficiency",
+          "definition": "The maximum efficiency 1 - T_cold/T_hot achievable between two heat reservoirs."
+        },
+        {
+          "name": "Reversible cycle",
+          "definition": "An idealised cycle run infinitely slowly so total entropy is conserved."
+        },
+        {
+          "name": "Isothermal process",
+          "definition": "A step at constant temperature during which heat is exchanged with a reservoir."
+        },
+        {
+          "name": "Adiabatic process",
+          "definition": "A step with no heat exchange, so all energy change is mechanical work."
+        },
+        {
+          "name": "Carnot's theorem",
+          "definition": "No engine between two reservoirs can exceed the efficiency of a reversible one."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.03",
+      "parent_pillar_name": "Heat Engines & Cycles",
+      "slug": "engine-cycles",
+      "name": "Practical Engine & Refrigeration Cycles",
+      "description_en": "Real engines and refrigerators approximate idealised cycles — Otto, Diesel, Brayton, Rankine and the reversed vapour-compression cycle — each trading efficiency, power and practicality for a given application.",
+      "description_cs": "Reálné motory a chladicí zařízení aproximují idealizované cykly — Ottův, Dieselův, Braytonův, Rankinův a obrácený kompresní chladicí cyklus — z nichž každý pro danou aplikaci volí kompromis mezi účinností, výkonem a praktičností.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Otto cycle",
+          "definition": "The idealised cycle of a spark-ignition petrol engine."
+        },
+        {
+          "name": "Diesel cycle",
+          "definition": "The compression-ignition cycle with heat added at constant pressure."
+        },
+        {
+          "name": "Rankine cycle",
+          "definition": "The steam power cycle used in most thermal and nuclear power stations."
+        },
+        {
+          "name": "Brayton cycle",
+          "definition": "The gas-turbine and jet-engine cycle of continuous compression, combustion and expansion."
+        },
+        {
+          "name": "Refrigeration cycle",
+          "definition": "A reversed cycle that moves heat from cold to hot using input work."
+        },
+        {
+          "name": "Coefficient of performance",
+          "definition": "The ratio of useful heating or cooling to the work input of a heat pump."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.04",
+      "parent_pillar_name": "Phase Transitions & Equilibria",
+      "slug": "phase-diagrams",
+      "name": "Phase Diagrams & Coexistence",
+      "description_en": "Phase diagrams map which state of matter is stable at each pressure and temperature, with coexistence lines where phases meet, a triple point where three coexist, and a critical point where liquid and gas become indistinguishable.",
+      "description_cs": "Fázové diagramy znázorňují, které skupenství je stabilní při daném tlaku a teplotě, s koexistenčními křivkami, kde se fáze setkávají, trojným bodem, kde koexistují tři fáze, a kritickým bodem, kde se kapalina a plyn stávají nerozlišitelnými.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Triple point",
+          "definition": "The unique pressure and temperature at which solid, liquid and gas coexist."
+        },
+        {
+          "name": "Critical point",
+          "definition": "The endpoint of the liquid-gas line beyond which the two phases merge."
+        },
+        {
+          "name": "Clausius-Clapeyron relation",
+          "definition": "The equation giving the slope of a coexistence line from latent heat and volume change."
+        },
+        {
+          "name": "Latent heat",
+          "definition": "The heat absorbed or released during a phase change at constant temperature."
+        },
+        {
+          "name": "Gibbs phase rule",
+          "definition": "The relation fixing the number of independent variables among coexisting phases."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.04",
+      "parent_pillar_name": "Phase Transitions & Equilibria",
+      "slug": "critical-phenomena",
+      "name": "Critical Phenomena & Order Parameters",
+      "description_en": "Near a continuous phase transition, fluctuations grow to all scales and thermodynamic quantities follow universal power laws set by critical exponents, independent of microscopic detail — the domain of universality classes.",
+      "description_cs": "V blízkosti spojitého fázového přechodu narůstají fluktuace na všech škálách a termodynamické veličiny se řídí univerzálními mocninnými zákony určenými kritickými exponenty, nezávislými na mikroskopických detailech — jde o oblast tříd univerzality.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Order parameter",
+          "definition": "A quantity that is zero in one phase and nonzero in the other, marking the transition."
+        },
+        {
+          "name": "Critical exponents",
+          "definition": "The universal powers describing how quantities diverge or vanish near the critical point."
+        },
+        {
+          "name": "Universality",
+          "definition": "The independence of critical behaviour from microscopic details, set by symmetry and dimension."
+        },
+        {
+          "name": "First- vs second-order",
+          "definition": "Transitions with a latent heat and jump versus continuous ones with diverging susceptibility."
+        },
+        {
+          "name": "Correlation length",
+          "definition": "The distance over which fluctuations are correlated, diverging at the critical point."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.05",
+      "parent_pillar_name": "Statistical Mechanics",
+      "slug": "ensembles",
+      "name": "Statistical Ensembles",
+      "description_en": "Statistical mechanics computes macroscopic properties by averaging over ensembles of microstates — microcanonical at fixed energy, canonical at fixed temperature, grand canonical at fixed chemical potential — that reproduce thermodynamics.",
+      "description_cs": "Statistická mechanika počítá makroskopické vlastnosti průměrováním přes soubory mikrostavů — mikrokanonický při dané energii, kanonický při dané teplotě, velký kanonický při daném chemickém potenciálu — které reprodukují termodynamiku.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Microstate",
+          "definition": "A complete specification of the positions and momenta of all particles."
+        },
+        {
+          "name": "Microcanonical ensemble",
+          "definition": "The set of microstates at fixed energy, volume and particle number."
+        },
+        {
+          "name": "Canonical ensemble",
+          "definition": "The distribution of a system in thermal contact with a heat bath at fixed temperature."
+        },
+        {
+          "name": "Grand canonical ensemble",
+          "definition": "The distribution allowing exchange of both energy and particles with a reservoir."
+        },
+        {
+          "name": "Boltzmann distribution",
+          "definition": "The probability of a microstate falling off exponentially with its energy over kT."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.05",
+      "parent_pillar_name": "Statistical Mechanics",
+      "slug": "partition-function",
+      "name": "Partition Function & Entropy",
+      "description_en": "The partition function sums Boltzmann factors over all microstates and is the generating function from which every thermodynamic quantity follows; Boltzmann's entropy S = k ln W ties entropy to the count of accessible microstates.",
+      "description_cs": "Partiční funkce sčítá Boltzmannovy faktory přes všechny mikrostavy a je vytvořující funkcí, z níž plyne každá termodynamická veličina; Boltzmannova entropie S = k ln W spojuje entropii s počtem dostupných mikrostavů.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Partition function",
+          "definition": "The sum over states weighting each by its Boltzmann factor, encoding all thermodynamics."
+        },
+        {
+          "name": "Boltzmann entropy",
+          "definition": "Entropy as the logarithm of the number of microstates times Boltzmann's constant."
+        },
+        {
+          "name": "Free energy from Z",
+          "definition": "The Helmholtz free energy given directly by minus kT times the log of the partition function."
+        },
+        {
+          "name": "Equipartition theorem",
+          "definition": "Each quadratic degree of freedom carries an average energy of one half kT."
+        },
+        {
+          "name": "Fluctuations",
+          "definition": "Statistical variations of energy and particle number, related to heat capacity and compressibility."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.05",
+      "parent_pillar_name": "Statistical Mechanics",
+      "slug": "quantum-statistics",
+      "name": "Quantum Statistics",
+      "description_en": "Indistinguishable quantum particles obey Fermi-Dirac or Bose-Einstein statistics, explaining electron degeneracy in metals and stars, blackbody radiation, and Bose-Einstein condensation, with classical statistics as the dilute limit.",
+      "description_cs": "Nerozlišitelné kvantové částice se řídí Fermiho–Diracovou nebo Boseho–Einsteinovou statistikou, což vysvětluje degeneraci elektronů v kovech a hvězdách, záření černého tělesa a Boseho–Einsteinovu kondenzaci, přičemž klasická statistika je jejich zředěnou limitou.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Fermi-Dirac statistics",
+          "definition": "The distribution of fermions obeying the Pauli exclusion principle."
+        },
+        {
+          "name": "Bose-Einstein statistics",
+          "definition": "The distribution of bosons, which can occupy the same state without limit."
+        },
+        {
+          "name": "Degeneracy pressure",
+          "definition": "The pressure from the exclusion principle supporting white dwarfs and neutron stars."
+        },
+        {
+          "name": "Blackbody radiation",
+          "definition": "The thermal photon spectrum explained by quantising electromagnetic modes."
+        },
+        {
+          "name": "Bose-Einstein condensate",
+          "definition": "A macroscopic occupation of the ground state at very low temperature."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.06",
+      "parent_pillar_name": "Kinetic Theory & Transport",
+      "slug": "kinetic-theory-gases",
+      "name": "Kinetic Theory of Gases",
+      "description_en": "Treating a gas as many colliding point particles derives pressure, temperature and the ideal-gas law from mechanics, and gives the Maxwell-Boltzmann distribution of molecular speeds and the mean free path between collisions.",
+      "description_cs": "Pojetí plynu jako mnoha srážejících se hmotných bodů odvozuje tlak, teplotu a stavovou rovnici ideálního plynu z mechaniky a dává Maxwellovo–Boltzmannovo rozdělení rychlostí molekul a střední volnou dráhu mezi srážkami.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Ideal gas law",
+          "definition": "The relation pV = NkT linking pressure, volume and temperature of a dilute gas."
+        },
+        {
+          "name": "Maxwell-Boltzmann distribution",
+          "definition": "The statistical distribution of molecular speeds in a gas at equilibrium."
+        },
+        {
+          "name": "Mean free path",
+          "definition": "The average distance a molecule travels between successive collisions."
+        },
+        {
+          "name": "Pressure from momentum",
+          "definition": "Gas pressure as the momentum transfer of molecules striking the walls."
+        },
+        {
+          "name": "Real gas equations",
+          "definition": "Corrections such as the van der Waals equation accounting for molecular size and attraction."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.03.06",
+      "parent_pillar_name": "Kinetic Theory & Transport",
+      "slug": "transport-processes",
+      "name": "Transport Processes",
+      "description_en": "Gradients of concentration, velocity or temperature drive fluxes of matter, momentum and heat — diffusion, viscosity and thermal conduction — each described by a linear transport law and a molecular transport coefficient.",
+      "description_cs": "Gradienty koncentrace, rychlosti nebo teploty vyvolávají toky látky, hybnosti a tepla — difuzi, viskozitu a vedení tepla — z nichž každý popisuje lineární transportní zákon a molekulární transportní koeficient.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Diffusion",
+          "definition": "Net transport of particles down a concentration gradient, described by Fick's laws."
+        },
+        {
+          "name": "Viscosity",
+          "definition": "The transport of momentum across a velocity gradient in a flowing fluid."
+        },
+        {
+          "name": "Thermal conduction",
+          "definition": "The transport of heat down a temperature gradient, described by Fourier's law."
+        },
+        {
+          "name": "Onsager reciprocity",
+          "definition": "Symmetry relations among coupled transport coefficients near equilibrium."
+        },
+        {
+          "name": "Non-equilibrium thermodynamics",
+          "definition": "The framework describing entropy production in systems with steady fluxes."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.01",
+      "parent_pillar_name": "Electrostatics",
+      "slug": "coulomb-law",
+      "name": "Coulomb's Law & Electric Force",
+      "description_en": "The force between point charges is proportional to their product and inversely proportional to the square of their separation, directed along the line joining them; this inverse-square law is the foundation of electrostatics.",
+      "description_cs": "Síla mezi bodovými náboji je úměrná jejich součinu a nepřímo úměrná druhé mocnině jejich vzdálenosti a míří podél jejich spojnice; tento zákon převrácené druhé mocniny je základem elektrostatiky.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Electric charge",
+          "definition": "The conserved property of matter that is the source of electromagnetic force, quantised in units of e."
+        },
+        {
+          "name": "Coulomb's law",
+          "definition": "The inverse-square force law between two point charges."
+        },
+        {
+          "name": "Superposition",
+          "definition": "The net force from many charges as the vector sum of individual Coulomb forces."
+        },
+        {
+          "name": "Permittivity",
+          "definition": "The constant characterising how a medium reduces the electrostatic force within it."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.01",
+      "parent_pillar_name": "Electrostatics",
+      "slug": "electric-field-potential",
+      "name": "Electric Field & Potential",
+      "description_en": "The electric field assigns a force-per-charge vector to every point in space, and the electric potential its energy-per-charge; the field is the gradient of the potential, and field lines and equipotentials visualise both.",
+      "description_cs": "Elektrické pole přiřazuje každému bodu prostoru vektor síly na jednotku náboje a elektrický potenciál energii na jednotku náboje; pole je gradientem potenciálu a siločáry a ekvipotenciály obojí znázorňují.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Electric field",
+          "definition": "The force per unit charge experienced by a test charge at a point."
+        },
+        {
+          "name": "Electric potential",
+          "definition": "The potential energy per unit charge, measured in volts."
+        },
+        {
+          "name": "Field-potential relation",
+          "definition": "The field equals minus the spatial gradient of the potential."
+        },
+        {
+          "name": "Dipole",
+          "definition": "A pair of equal and opposite charges whose field falls off faster than a single charge."
+        },
+        {
+          "name": "Equipotential surface",
+          "definition": "A surface of constant potential, everywhere perpendicular to the field."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.01",
+      "parent_pillar_name": "Electrostatics",
+      "slug": "gauss-law",
+      "name": "Gauss's Law",
+      "description_en": "The electric flux through any closed surface equals the enclosed charge divided by the permittivity; this restatement of the inverse-square law exploits symmetry to compute fields of charged spheres, lines and planes.",
+      "description_cs": "Elektrický tok libovolnou uzavřenou plochou se rovná uzavřenému náboji dělenému permitivitou; toto přeformulování zákona převrácené druhé mocniny využívá symetrie k výpočtu polí nabitých koulí, přímek a rovin.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Electric flux",
+          "definition": "The amount of electric field passing through a surface."
+        },
+        {
+          "name": "Gauss's law",
+          "definition": "The relation between the flux through a closed surface and the charge it encloses."
+        },
+        {
+          "name": "Gaussian surface",
+          "definition": "An imaginary closed surface chosen to exploit symmetry in field calculations."
+        },
+        {
+          "name": "Divergence form",
+          "definition": "The differential statement that the field's divergence equals charge density over permittivity."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.01",
+      "parent_pillar_name": "Electrostatics",
+      "slug": "conductors-capacitance",
+      "name": "Conductors & Capacitance",
+      "description_en": "In a conductor charge redistributes until the interior field vanishes and the surface is equipotential; capacitance measures the charge stored per unit voltage between conductors, storing energy in the electric field.",
+      "description_cs": "Ve vodiči se náboj přerozdělí, dokud vnitřní pole nezmizí a povrch není ekvipotenciální; kapacita udává náboj uložený na jednotku napětí mezi vodiči a ukládá energii v elektrickém poli.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Electrostatic shielding",
+          "definition": "The cancellation of interior fields by a conductor, the basis of the Faraday cage."
+        },
+        {
+          "name": "Capacitance",
+          "definition": "The ratio of stored charge to the voltage between two conductors."
+        },
+        {
+          "name": "Capacitor",
+          "definition": "A device of two conductors storing energy in the field between them."
+        },
+        {
+          "name": "Field energy density",
+          "definition": "The energy stored per unit volume in an electric field, proportional to its square."
+        },
+        {
+          "name": "Dielectric in a capacitor",
+          "definition": "An insulating filling that raises capacitance by reducing the internal field."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.02",
+      "parent_pillar_name": "Magnetostatics",
+      "slug": "magnetic-field-force",
+      "name": "Magnetic Field & Force",
+      "description_en": "Moving charges and currents create magnetic fields and feel forces in them: the Lorentz force acts perpendicular to both velocity and field, curving charged trajectories and driving the operation of motors.",
+      "description_cs": "Pohybující se náboje a proudy vytvářejí magnetické pole a působí na ně v něm síla: Lorentzova síla míří kolmo k rychlosti i poli, zakřivuje dráhy nabitých částic a pohání motory.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Lorentz force",
+          "definition": "The force qv×B on a charge moving through a magnetic field, plus the electric part."
+        },
+        {
+          "name": "Magnetic field",
+          "definition": "The vector field produced by currents and felt by moving charges, denoted B."
+        },
+        {
+          "name": "Cyclotron motion",
+          "definition": "The circular path of a charged particle in a uniform magnetic field."
+        },
+        {
+          "name": "Force on a current",
+          "definition": "The force on a current-carrying wire in a field, the basis of the electric motor."
+        },
+        {
+          "name": "Magnetic dipole moment",
+          "definition": "The measure of a current loop's strength as a source of magnetic field."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.02",
+      "parent_pillar_name": "Magnetostatics",
+      "slug": "ampere-biot-savart",
+      "name": "Ampère's & Biot-Savart Laws",
+      "description_en": "The Biot-Savart law gives the field of an arbitrary current element, while Ampère's law relates the field circulating around a loop to the enclosed current, providing a symmetry shortcut for fields of wires, solenoids and toroids.",
+      "description_cs": "Biotův–Savartův zákon dává pole libovolného proudového elementu, zatímco Ampérův zákon spojuje pole cirkulující kolem smyčky s uzavřeným proudem a poskytuje symetrickou zkratku pro pole vodičů, solenoidů a toroidů.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Biot-Savart law",
+          "definition": "The field contribution of an infinitesimal current element."
+        },
+        {
+          "name": "Ampère's law",
+          "definition": "The relation between the field's circulation around a loop and the enclosed current."
+        },
+        {
+          "name": "Solenoid",
+          "definition": "A coil producing a nearly uniform field along its axis."
+        },
+        {
+          "name": "Magnetic flux",
+          "definition": "The amount of magnetic field passing through a surface."
+        },
+        {
+          "name": "No magnetic monopoles",
+          "definition": "The law that magnetic field lines have no sources or sinks, so flux through any closed surface is zero."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.02",
+      "parent_pillar_name": "Magnetostatics",
+      "slug": "magnetic-materials",
+      "name": "Magnetism in Matter",
+      "description_en": "Materials respond to fields through the alignment of atomic magnetic moments, classified as diamagnetic, paramagnetic and ferromagnetic, the last retaining magnetisation below the Curie temperature and underlying permanent magnets.",
+      "description_cs": "Látky reagují na pole uspořádáním atomárních magnetických momentů a dělí se na diamagnetické, paramagnetické a feromagnetické, přičemž poslední si pod Curieovou teplotou udržují magnetizaci a tvoří základ permanentních magnetů.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Diamagnetism",
+          "definition": "Weak repulsion from a field, present in all matter, from induced opposing moments."
+        },
+        {
+          "name": "Paramagnetism",
+          "definition": "Weak attraction from the partial alignment of permanent atomic moments."
+        },
+        {
+          "name": "Ferromagnetism",
+          "definition": "Strong, retained magnetisation from spontaneous alignment in magnetic domains."
+        },
+        {
+          "name": "Curie temperature",
+          "definition": "The temperature above which ferromagnetic order is lost to thermal agitation."
+        },
+        {
+          "name": "Hysteresis",
+          "definition": "The lag of magnetisation behind the applied field, storing energy in magnetic memory."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.03",
+      "parent_pillar_name": "Electrodynamics",
+      "slug": "faraday-induction",
+      "name": "Electromagnetic Induction",
+      "description_en": "A changing magnetic flux through a circuit induces an electromotive force, with the induced current opposing the change; Faraday's law of induction and Lenz's rule govern generators, transformers and inductors.",
+      "description_cs": "Měnící se magnetický tok obvodem indukuje elektromotorické napětí, přičemž indukovaný proud se změně brání; Faradayův zákon indukce a Lenzovo pravidlo řídí generátory, transformátory a cívky.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Faraday's law",
+          "definition": "The induced electromotive force equals minus the rate of change of magnetic flux."
+        },
+        {
+          "name": "Lenz's law",
+          "definition": "The induced current flows so as to oppose the flux change that causes it."
+        },
+        {
+          "name": "Inductance",
+          "definition": "The property relating induced voltage to the rate of change of current."
+        },
+        {
+          "name": "Transformer",
+          "definition": "A device coupling two coils by shared flux to change alternating voltage."
+        },
+        {
+          "name": "Eddy currents",
+          "definition": "Circulating currents induced in bulk conductors by changing fields."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.03",
+      "parent_pillar_name": "Electrodynamics",
+      "slug": "maxwell-equations",
+      "name": "Maxwell's Equations",
+      "description_en": "Four equations — Gauss's laws for electricity and magnetism, Faraday's law, and the Ampère-Maxwell law with its displacement current — unify all classical electromagnetism and predict self-propagating electromagnetic waves.",
+      "description_cs": "Čtyři rovnice — Gaussovy zákony pro elektřinu a magnetismus, Faradayův zákon a Ampérův–Maxwellův zákon s posuvným proudem — sjednocují celý klasický elektromagnetismus a předpovídají samovolně se šířící elektromagnetické vlny.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Displacement current",
+          "definition": "Maxwell's term letting a changing electric field act as a source of magnetic field."
+        },
+        {
+          "name": "Field unification",
+          "definition": "The demonstration that electric and magnetic fields are aspects of one electromagnetic field."
+        },
+        {
+          "name": "Continuity equation",
+          "definition": "Charge conservation implied by the structure of Maxwell's equations."
+        },
+        {
+          "name": "Electromagnetic potentials",
+          "definition": "The scalar and vector potentials from which the fields are derived, with gauge freedom."
+        },
+        {
+          "name": "Wave prediction",
+          "definition": "The result that the equations admit waves travelling at the speed of light."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.04",
+      "parent_pillar_name": "Electromagnetic Waves & Optics",
+      "slug": "em-waves",
+      "name": "Electromagnetic Waves & Spectrum",
+      "description_en": "Oscillating electric and magnetic fields propagate as transverse waves at the speed of light, spanning a continuous spectrum from radio to gamma rays and carrying energy and momentum through the Poynting vector and radiation pressure.",
+      "description_cs": "Kmitající elektrické a magnetické pole se šíří jako příčné vlny rychlostí světla, pokrývají spojité spektrum od rádiových vln po gama záření a přenášejí energii a hybnost prostřednictvím Poyntingova vektoru a tlaku záření.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Speed of light",
+          "definition": "The propagation speed of electromagnetic waves in vacuum, a universal constant."
+        },
+        {
+          "name": "Electromagnetic spectrum",
+          "definition": "The full range of wavelengths from radio through visible light to gamma rays."
+        },
+        {
+          "name": "Poynting vector",
+          "definition": "The directional energy flux carried by an electromagnetic wave."
+        },
+        {
+          "name": "Polarization",
+          "definition": "The orientation of the wave's electric-field oscillation, linear, circular or elliptical."
+        },
+        {
+          "name": "Radiation pressure",
+          "definition": "The momentum transferred by electromagnetic waves onto surfaces they strike."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.04",
+      "parent_pillar_name": "Electromagnetic Waves & Optics",
+      "slug": "geometric-wave-optics",
+      "name": "Reflection, Refraction & Interference",
+      "description_en": "At boundaries light reflects and refracts according to the laws of reflection and Snell's law, while its wave nature produces interference and diffraction; these govern lenses, mirrors, gratings and imaging.",
+      "description_cs": "Na rozhraních se světlo odráží a láme podle zákona odrazu a Snellova zákona, zatímco jeho vlnová povaha vytváří interferenci a difrakci; tyto jevy řídí čočky, zrcadla, mřížky a zobrazování.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Snell's law",
+          "definition": "The relation between angles of incidence and refraction at a boundary via refractive indices."
+        },
+        {
+          "name": "Total internal reflection",
+          "definition": "Complete reflection above a critical angle, the basis of optical fibres."
+        },
+        {
+          "name": "Interference",
+          "definition": "The superposition of waves producing bright and dark fringes."
+        },
+        {
+          "name": "Diffraction",
+          "definition": "The bending and spreading of waves around obstacles and through apertures."
+        },
+        {
+          "name": "Dispersion",
+          "definition": "The variation of refractive index with wavelength, splitting white light into colours."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.05",
+      "parent_pillar_name": "Electromagnetism in Matter",
+      "slug": "dielectrics-polarization",
+      "name": "Dielectrics & Polarization",
+      "description_en": "An electric field polarises a dielectric by displacing bound charge, weakening the internal field and defining the permittivity; the displacement field D separates free from bound charge in the macroscopic equations.",
+      "description_cs": "Elektrické pole polarizuje dielektrikum posunutím vázaného náboje, čímž oslabuje vnitřní pole a definuje permitivitu; pole elektrické indukce D odděluje volný náboj od vázaného v makroskopických rovnicích.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Polarization",
+          "definition": "The dipole moment per unit volume induced in a dielectric by a field."
+        },
+        {
+          "name": "Electric displacement",
+          "definition": "The field D combining the applied field and the medium's polarization."
+        },
+        {
+          "name": "Relative permittivity",
+          "definition": "The factor by which a dielectric reduces the field, also called the dielectric constant."
+        },
+        {
+          "name": "Bound charge",
+          "definition": "The effective surface and volume charge arising from aligned dipoles."
+        },
+        {
+          "name": "Dielectric breakdown",
+          "definition": "The field strength at which an insulator becomes conducting."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.06",
+      "parent_pillar_name": "Circuits & Electromagnetic Technology",
+      "slug": "circuit-laws",
+      "name": "Circuit Laws & AC Analysis",
+      "description_en": "Ohm's law relates voltage, current and resistance, Kirchhoff's laws enforce charge and energy conservation at nodes and loops, and alternating-current analysis uses impedance and phasors to handle capacitors and inductors.",
+      "description_cs": "Ohmův zákon spojuje napětí, proud a odpor, Kirchhoffovy zákony zajišťují zachování náboje a energie v uzlech a smyčkách a analýza střídavého proudu používá impedanci a fázory k popisu kondenzátorů a cívek.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Ohm's law",
+          "definition": "The proportionality of current to voltage through a resistance."
+        },
+        {
+          "name": "Kirchhoff's laws",
+          "definition": "Conservation of current at nodes and of voltage around loops."
+        },
+        {
+          "name": "Impedance",
+          "definition": "The generalisation of resistance to alternating-current circuits with reactance."
+        },
+        {
+          "name": "Resonance",
+          "definition": "The frequency at which an inductor and capacitor exchange energy with minimal impedance."
+        },
+        {
+          "name": "Power in circuits",
+          "definition": "The rate of energy transfer, with real and reactive parts in AC systems."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.04.06",
+      "parent_pillar_name": "Circuits & Electromagnetic Technology",
+      "slug": "motors-generators-antennas",
+      "name": "Motors, Generators & Antennas",
+      "description_en": "Electromagnetic induction and the force on currents underlie machines that convert between electrical and mechanical energy — motors and generators — while accelerating charges in antennas radiate the electromagnetic waves of communication.",
+      "description_cs": "Elektromagnetická indukce a síla na proudy tvoří základ strojů přeměňujících elektrickou a mechanickou energii — motorů a generátorů — zatímco zrychlované náboje v anténách vyzařují elektromagnetické vlny pro komunikaci.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Electric motor",
+          "definition": "A machine converting electrical energy to rotation via force on current loops."
+        },
+        {
+          "name": "Electric generator",
+          "definition": "A machine converting mechanical motion to electricity by induction."
+        },
+        {
+          "name": "Antenna",
+          "definition": "A conductor that radiates or receives electromagnetic waves from accelerating charge."
+        },
+        {
+          "name": "Waveguide",
+          "definition": "A structure that confines and directs electromagnetic waves along its length."
+        },
+        {
+          "name": "Electromagnetic radiation from acceleration",
+          "definition": "The principle that only accelerating charges radiate energy as waves."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.01",
+      "parent_pillar_name": "Special Relativity",
+      "slug": "postulates-simultaneity",
+      "name": "Postulates & Relativity of Simultaneity",
+      "description_en": "Special relativity rests on two postulates — the laws of physics are the same in all inertial frames and the speed of light is invariant — from which simultaneity becomes relative: events simultaneous in one frame need not be in another.",
+      "description_cs": "Speciální teorie relativity stojí na dvou postulátech — fyzikální zákony jsou stejné ve všech inerciálních soustavách a rychlost světla je invariantní — z nichž plyne relativita současnosti: události současné v jedné soustavě nemusí být současné v jiné.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Principle of relativity",
+          "definition": "The laws of physics take the same form in every inertial frame."
+        },
+        {
+          "name": "Invariance of light speed",
+          "definition": "The speed of light in vacuum is the same for all observers regardless of motion."
+        },
+        {
+          "name": "Inertial frame",
+          "definition": "A reference frame in which a free body moves in a straight line at constant speed."
+        },
+        {
+          "name": "Relativity of simultaneity",
+          "definition": "Whether two separated events are simultaneous depends on the observer's motion."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.01",
+      "parent_pillar_name": "Special Relativity",
+      "slug": "time-dilation-length-contraction",
+      "name": "Time Dilation & Length Contraction",
+      "description_en": "Moving clocks run slow and moving rods contract along their motion, by the Lorentz factor; these reciprocal effects preserve the invariant speed of light and are confirmed by decaying particles and precision clocks.",
+      "description_cs": "Pohybující se hodiny jdou pomaleji a pohybující se tyče se ve směru pohybu zkracují o Lorentzův faktor; tyto vzájemné jevy zachovávají invariantní rychlost světla a potvrzují je rozpadající se částice a přesné hodiny.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Time dilation",
+          "definition": "The slowing of a moving clock as seen from a frame in which it moves."
+        },
+        {
+          "name": "Length contraction",
+          "definition": "The shortening of a moving object along its direction of motion."
+        },
+        {
+          "name": "Lorentz factor",
+          "definition": "The factor gamma quantifying dilation and contraction, growing without bound near light speed."
+        },
+        {
+          "name": "Proper time",
+          "definition": "The time measured by a clock carried along a worldline, an invariant."
+        },
+        {
+          "name": "Twin paradox",
+          "definition": "The asymmetric ageing of a travelling twin, resolved by the acceleration of the return."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.01",
+      "parent_pillar_name": "Special Relativity",
+      "slug": "lorentz-transformation",
+      "name": "Lorentz Transformation & Velocity Addition",
+      "description_en": "The Lorentz transformation mixes space and time coordinates between inertial frames, replacing the Galilean transformation; it yields the relativistic velocity-addition rule that keeps the speed of light as an unreachable limit.",
+      "description_cs": "Lorentzova transformace mísí prostorové a časové souřadnice mezi inerciálními soustavami a nahrazuje Galileovu transformaci; dává relativistické pravidlo skládání rychlostí, které udržuje rychlost světla jako nedosažitelnou mez.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Lorentz transformation",
+          "definition": "The linear transformation of coordinates between inertial frames preserving the light speed."
+        },
+        {
+          "name": "Velocity addition",
+          "definition": "The rule combining velocities so their sum never exceeds the speed of light."
+        },
+        {
+          "name": "Relativistic Doppler effect",
+          "definition": "The frequency shift of light from relative motion, including a transverse component."
+        },
+        {
+          "name": "Invariant interval",
+          "definition": "The spacetime separation of events, agreed on by all inertial observers."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.02",
+      "parent_pillar_name": "Relativistic Dynamics",
+      "slug": "mass-energy",
+      "name": "Mass-Energy Equivalence",
+      "description_en": "Energy and mass are equivalent, related by E = mc squared, so a body's rest energy is enormous and any energy has inertia; this underlies nuclear binding energy, particle creation and the energetics of stars.",
+      "description_cs": "Energie a hmota jsou ekvivalentní, spojené vztahem E = mc na druhou, takže klidová energie tělesa je obrovská a každá energie má setrvačnost; to je základem jaderné vazebné energie, vzniku částic a energetiky hvězd.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Rest energy",
+          "definition": "The energy mc squared a body possesses by virtue of its mass alone."
+        },
+        {
+          "name": "Relativistic momentum",
+          "definition": "Momentum that grows faster than velocity and diverges near light speed."
+        },
+        {
+          "name": "Energy-momentum relation",
+          "definition": "The invariant relation E squared = (pc) squared + (mc squared) squared."
+        },
+        {
+          "name": "Massless particles",
+          "definition": "Particles such as photons that carry energy and momentum but no rest mass and move at light speed."
+        },
+        {
+          "name": "Binding energy",
+          "definition": "The mass deficit released when bound systems form, powering nuclear reactions."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.02",
+      "parent_pillar_name": "Relativistic Dynamics",
+      "slug": "spacetime-fourvectors",
+      "name": "Minkowski Spacetime & Four-Vectors",
+      "description_en": "Space and time unite into four-dimensional Minkowski spacetime with an indefinite metric; physical quantities become four-vectors and tensors whose invariant magnitudes all observers agree on, making the laws manifestly frame-independent.",
+      "description_cs": "Prostor a čas se spojují do čtyřrozměrného Minkowského časoprostoru s indefinitní metrikou; fyzikální veličiny se stávají čtyřvektory a tenzory, na jejichž invariantních velikostech se shodnou všichni pozorovatelé, čímž jsou zákony zjevně nezávislé na soustavě.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Minkowski spacetime",
+          "definition": "The flat four-dimensional continuum of special relativity with a light-cone structure."
+        },
+        {
+          "name": "Worldline",
+          "definition": "The path of a particle through spacetime."
+        },
+        {
+          "name": "Light cone",
+          "definition": "The surface separating causally connected events from those that cannot interact."
+        },
+        {
+          "name": "Four-vector",
+          "definition": "A four-component quantity transforming under the Lorentz transformation, such as four-momentum."
+        },
+        {
+          "name": "Causality",
+          "definition": "The ordering of cause and effect preserved because no signal outpaces light."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.03",
+      "parent_pillar_name": "General Relativity",
+      "slug": "equivalence-principle",
+      "name": "Equivalence Principle",
+      "description_en": "Gravitational and inertial mass are identical, so a freely falling observer feels no gravity and a uniform acceleration is locally indistinguishable from a gravitational field; this equivalence is the seed of general relativity.",
+      "description_cs": "Gravitační a setrvačná hmotnost jsou totožné, takže volně padající pozorovatel gravitaci necítí a rovnoměrné zrychlení je lokálně nerozlišitelné od gravitačního pole; tato ekvivalence je zárodkem obecné teorie relativity.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Equivalence principle",
+          "definition": "The local equivalence of a gravitational field and an accelerating frame."
+        },
+        {
+          "name": "Free fall",
+          "definition": "Motion under gravity alone, in which an observer feels weightless."
+        },
+        {
+          "name": "Gravitational time dilation",
+          "definition": "The slowing of clocks deeper in a gravitational potential."
+        },
+        {
+          "name": "Gravitational redshift",
+          "definition": "The lengthening of a photon's wavelength as it climbs out of a gravity well."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.03",
+      "parent_pillar_name": "General Relativity",
+      "slug": "curved-spacetime-field-equations",
+      "name": "Curved Spacetime & Field Equations",
+      "description_en": "Gravity is the curvature of spacetime produced by energy and momentum; matter tells spacetime how to curve through Einstein's field equations, and spacetime tells matter how to move along geodesics.",
+      "description_cs": "Gravitace je zakřivení časoprostoru způsobené energií a hybností; hmota určuje, jak se má časoprostor zakřivit, prostřednictvím Einsteinových rovnic pole, a časoprostor určuje hmotě, jak se má pohybovat po geodetikách.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Spacetime curvature",
+          "definition": "The geometric deviation from flatness that manifests as gravity."
+        },
+        {
+          "name": "Geodesic",
+          "definition": "The straightest possible path in curved spacetime, followed by free-falling bodies."
+        },
+        {
+          "name": "Einstein field equations",
+          "definition": "The equations relating spacetime curvature to the energy-momentum of matter."
+        },
+        {
+          "name": "Metric tensor",
+          "definition": "The field encoding distances and times, the dynamical variable of general relativity."
+        },
+        {
+          "name": "Cosmological constant",
+          "definition": "A uniform energy of space driving accelerated expansion, added to the field equations."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.04",
+      "parent_pillar_name": "Gravitation & Spacetime Solutions",
+      "slug": "black-holes",
+      "name": "Black Holes",
+      "description_en": "When gravity overwhelms all support, matter collapses to a region from which not even light escapes, bounded by an event horizon and characterised by mass, charge and spin; observations confirm them at stellar and galactic scales.",
+      "description_cs": "Když gravitace přemůže veškerou oporu, hmota se zhroutí do oblasti, z níž neunikne ani světlo, ohraničené horizontem událostí a charakterizované hmotností, nábojem a rotací; pozorování je potvrzují na hvězdných i galaktických škálách.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Event horizon",
+          "definition": "The boundary beyond which no signal can escape a black hole."
+        },
+        {
+          "name": "Schwarzschild solution",
+          "definition": "The exact spacetime of a non-rotating spherical mass."
+        },
+        {
+          "name": "Singularity",
+          "definition": "The region of formally infinite curvature at a black hole's centre, where the theory breaks down."
+        },
+        {
+          "name": "Kerr solution",
+          "definition": "The spacetime of a rotating black hole, dragging spacetime around it."
+        },
+        {
+          "name": "Hawking radiation",
+          "definition": "The predicted thermal emission that lets black holes slowly evaporate."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.04",
+      "parent_pillar_name": "Gravitation & Spacetime Solutions",
+      "slug": "gravitational-waves",
+      "name": "Gravitational Waves",
+      "description_en": "Accelerating masses radiate ripples of spacetime curvature travelling at the speed of light; first detected in 2015 from merging black holes, they open a new observational window on the most violent events in the universe.",
+      "description_cs": "Zrychlující se hmoty vyzařují vlnění zakřivení časoprostoru šířící se rychlostí světla; poprvé detekované v roce 2015 ze splývajících černých děr otevírají nové pozorovací okno na nejprudší děje ve vesmíru.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Gravitational wave",
+          "definition": "A propagating oscillation of spacetime curvature emitted by accelerating masses."
+        },
+        {
+          "name": "Binary inspiral",
+          "definition": "The spiralling merger of two compact objects, a strong wave source."
+        },
+        {
+          "name": "Interferometric detection",
+          "definition": "The measurement of tiny length changes by laser interferometers such as LIGO."
+        },
+        {
+          "name": "Multi-messenger astronomy",
+          "definition": "The combined observation of gravitational waves and electromagnetic or particle signals."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.05",
+      "parent_pillar_name": "Tests & Applications of Relativity",
+      "slug": "classical-tests",
+      "name": "Classical Tests of Relativity",
+      "description_en": "General relativity was confirmed by the anomalous precession of Mercury's perihelion, the bending of starlight by the Sun, and the gravitational redshift of light, and continues to pass ever more precise experimental tests.",
+      "description_cs": "Obecná teorie relativity byla potvrzena anomálním stáčením perihelia Merkuru, ohybem hvězdného světla Sluncem a gravitačním rudým posuvem světla a nadále obstává ve stále přesnějších experimentálních testech.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Perihelion precession",
+          "definition": "The excess rotation of Mercury's orbit explained by general relativity."
+        },
+        {
+          "name": "Light deflection",
+          "definition": "The bending of light by mass, first measured during a solar eclipse."
+        },
+        {
+          "name": "Shapiro delay",
+          "definition": "The extra travel time of light passing near a massive body."
+        },
+        {
+          "name": "Frame dragging",
+          "definition": "The twisting of spacetime by a rotating mass, measured by orbiting gyroscopes."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.05.05",
+      "parent_pillar_name": "Tests & Applications of Relativity",
+      "slug": "gps-relativity",
+      "name": "Relativity in Navigation & Technology",
+      "description_en": "Satellite navigation must correct for both special-relativistic time dilation from orbital speed and general-relativistic speed-up from weaker gravity, without which position errors would accumulate at kilometres per day.",
+      "description_cs": "Družicová navigace musí korigovat jak speciálně-relativistickou dilataci času z orbitální rychlosti, tak obecně-relativistické zrychlení hodin ze slabší gravitace, bez čehož by chyby polohy narůstaly o kilometry za den.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "GPS time correction",
+          "definition": "The net relativistic clock adjustment applied to navigation satellites."
+        },
+        {
+          "name": "Orbital time dilation",
+          "definition": "The special-relativistic slowing of a fast-moving satellite clock."
+        },
+        {
+          "name": "Altitude clock speed-up",
+          "definition": "The general-relativistic quickening of a clock in weaker gravity."
+        },
+        {
+          "name": "Precision timekeeping",
+          "definition": "The use of relativity in atomic clocks and geodesy at sub-nanosecond accuracy."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.01",
+      "parent_pillar_name": "Nuclear Structure",
+      "slug": "nucleons-binding",
+      "name": "Nucleons & Binding Energy",
+      "description_en": "The nucleus is bound protons and neutrons held by the strong nuclear force; the binding energy per nucleon peaks near iron, explaining why fusion of light nuclei and fission of heavy ones both release energy.",
+      "description_cs": "Jádro tvoří vázané protony a neutrony držené silnou jadernou silou; vazebná energie na nukleon dosahuje maxima poblíž železa, což vysvětluje, proč fúze lehkých jader i štěpení těžkých uvolňují energii.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Nucleon",
+          "definition": "A proton or neutron, the constituents of the nucleus."
+        },
+        {
+          "name": "Strong nuclear force",
+          "definition": "The short-range attraction binding nucleons against electrostatic repulsion."
+        },
+        {
+          "name": "Binding energy",
+          "definition": "The energy needed to disassemble a nucleus, reflected in a mass deficit."
+        },
+        {
+          "name": "Mass defect",
+          "definition": "The difference between a nucleus's mass and the sum of its free nucleons."
+        },
+        {
+          "name": "Binding-energy curve",
+          "definition": "The variation of binding energy per nucleon with mass number, peaking at iron."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.01",
+      "parent_pillar_name": "Nuclear Structure",
+      "slug": "nuclear-models",
+      "name": "Nuclear Models",
+      "description_en": "Complementary models capture nuclear behaviour: the liquid-drop model explains binding and fission energetics, while the shell model explains magic numbers and spins through nucleons filling quantised energy levels.",
+      "description_cs": "Doplňující se modely popisují chování jádra: kapkový model vysvětluje vazebnou energii a energetiku štěpení, zatímco slupkový model vysvětluje magická čísla a spiny pomocí nukleonů zaplňujících kvantované energetické hladiny.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Liquid-drop model",
+          "definition": "A model treating the nucleus as an incompressible charged drop."
+        },
+        {
+          "name": "Semi-empirical mass formula",
+          "definition": "The formula estimating binding energy from volume, surface, Coulomb and other terms."
+        },
+        {
+          "name": "Shell model",
+          "definition": "A model of nucleons in quantised orbitals explaining stability patterns."
+        },
+        {
+          "name": "Magic numbers",
+          "definition": "Nucleon counts giving closed shells and exceptional stability."
+        },
+        {
+          "name": "Nuclear spin",
+          "definition": "The total angular momentum of a nucleus, important in magnetic resonance."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.02",
+      "parent_pillar_name": "Radioactivity & Decay",
+      "slug": "decay-modes",
+      "name": "Modes of Radioactive Decay",
+      "description_en": "Unstable nuclei shed energy by emitting an alpha particle, converting a neutron and proton through beta decay, or releasing a gamma photon; each mode changes the nucleus in a characteristic way governed by conservation laws.",
+      "description_cs": "Nestabilní jádra se zbavují energie vyzářením částice alfa, přeměnou neutronu a protonu při beta rozpadu nebo uvolněním fotonu gama; každý způsob mění jádro charakteristickým způsobem daným zákony zachování.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Alpha decay",
+          "definition": "Emission of a helium nucleus, reducing mass number by four."
+        },
+        {
+          "name": "Beta decay",
+          "definition": "Conversion of a neutron to a proton or vice versa, emitting an electron or positron and a neutrino."
+        },
+        {
+          "name": "Gamma decay",
+          "definition": "Emission of a high-energy photon as an excited nucleus relaxes."
+        },
+        {
+          "name": "Electron capture",
+          "definition": "Absorption of an inner electron converting a proton to a neutron."
+        },
+        {
+          "name": "Q-value",
+          "definition": "The energy released in a decay, shared as kinetic energy of the products."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.02",
+      "parent_pillar_name": "Radioactivity & Decay",
+      "slug": "decay-law-dating",
+      "name": "Decay Law, Half-Life & Dating",
+      "description_en": "Radioactive decay is a random process with a fixed probability per unit time, giving exponential decay and a characteristic half-life; the steady clock this provides underlies radiometric dating and radioactive tracing.",
+      "description_cs": "Radioaktivní rozpad je náhodný děj s pevnou pravděpodobností za jednotku času, což vede k exponenciálnímu poklesu a charakteristickému poločasu rozpadu; tyto stálé hodiny jsou základem radiometrického datování a radioaktivního značkování.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Half-life",
+          "definition": "The time for half the nuclei in a sample to decay."
+        },
+        {
+          "name": "Exponential decay law",
+          "definition": "The rule that activity falls off exponentially with time."
+        },
+        {
+          "name": "Activity",
+          "definition": "The number of decays per unit time in a radioactive sample."
+        },
+        {
+          "name": "Decay chain",
+          "definition": "A sequence of decays leading from an unstable parent to a stable end nucleus."
+        },
+        {
+          "name": "Radiometric dating",
+          "definition": "Determining age from the ratio of parent to daughter isotopes, as in carbon-14 dating."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.03",
+      "parent_pillar_name": "Nuclear Reactions",
+      "slug": "reaction-cross-sections",
+      "name": "Reactions & Cross Sections",
+      "description_en": "In a nuclear reaction incident particles transform a target nucleus, conserving nucleon number, charge, energy and momentum; the cross section quantifies reaction probability, peaking sharply at resonances.",
+      "description_cs": "Při jaderné reakci dopadající částice přeměňují terčové jádro za zachování počtu nukleonů, náboje, energie a hybnosti; účinný průřez udává pravděpodobnost reakce a dosahuje ostrých maxim při rezonancích.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Cross section",
+          "definition": "The effective target area measuring the probability of a nuclear reaction."
+        },
+        {
+          "name": "Reaction kinematics",
+          "definition": "The application of energy and momentum conservation to reaction products."
+        },
+        {
+          "name": "Compound nucleus",
+          "definition": "A short-lived excited nucleus formed and then decaying during a reaction."
+        },
+        {
+          "name": "Resonance",
+          "definition": "A sharp peak in cross section when the energy matches a nuclear excited state."
+        },
+        {
+          "name": "Transmutation",
+          "definition": "The conversion of one element into another by a nuclear reaction."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.04",
+      "parent_pillar_name": "Fission, Fusion & Energy",
+      "slug": "nuclear-fission",
+      "name": "Nuclear Fission",
+      "description_en": "A heavy nucleus splits into lighter fragments, releasing energy and free neutrons that can sustain a chain reaction; controlled in reactors by moderators and control rods, uncontrolled it drives fission weapons.",
+      "description_cs": "Těžké jádro se rozštěpí na lehčí fragmenty, přičemž uvolní energii a volné neutrony schopné udržet řetězovou reakci; v reaktorech se řídí moderátory a regulačními tyčemi, neřízené pohání štěpné zbraně.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Induced fission",
+          "definition": "Splitting of a heavy nucleus triggered by neutron absorption."
+        },
+        {
+          "name": "Chain reaction",
+          "definition": "A self-sustaining sequence in which fission neutrons induce further fissions."
+        },
+        {
+          "name": "Critical mass",
+          "definition": "The minimum amount of fissile material needed to sustain a chain reaction."
+        },
+        {
+          "name": "Moderator",
+          "definition": "A material slowing neutrons to increase the fission probability in a reactor."
+        },
+        {
+          "name": "Fission products",
+          "definition": "The radioactive fragments and neutrons produced by fission."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.04",
+      "parent_pillar_name": "Fission, Fusion & Energy",
+      "slug": "nuclear-fusion",
+      "name": "Nuclear Fusion",
+      "description_en": "Light nuclei merge into a heavier one, releasing large energy per nucleon but requiring immense temperature and pressure to overcome their electrostatic repulsion; fusion powers the stars and is pursued for terrestrial energy.",
+      "description_cs": "Lehká jádra se slučují do těžšího a uvolňují velkou energii na nukleon, avšak vyžadují obrovskou teplotu a tlak k překonání elektrostatického odpuzování; fúze pohání hvězdy a usiluje se o ni jako o pozemský zdroj energie.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Fusion reaction",
+          "definition": "The merging of light nuclei into a heavier one with energy release."
+        },
+        {
+          "name": "Coulomb barrier",
+          "definition": "The electrostatic repulsion that fusing nuclei must overcome."
+        },
+        {
+          "name": "Thermonuclear ignition",
+          "definition": "The condition where fusion becomes self-sustaining through its own heat."
+        },
+        {
+          "name": "Magnetic confinement",
+          "definition": "Holding hot plasma with magnetic fields, as in a tokamak."
+        },
+        {
+          "name": "Inertial confinement",
+          "definition": "Compressing fuel by lasers or beams to reach fusion conditions."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.05",
+      "parent_pillar_name": "Applied & Astrophysical Nuclear Physics",
+      "slug": "nuclear-medicine-detection",
+      "name": "Nuclear Medicine & Radiation Detection",
+      "description_en": "Radioactive isotopes and radiation are harnessed for imaging and therapy and detected by instruments that convert ionisation into measurable signals; radiation protection limits exposure through shielding, distance and time.",
+      "description_cs": "Radioaktivní izotopy a záření se využívají k zobrazování a léčbě a detekují je přístroje, které převádějí ionizaci na měřitelný signál; radiační ochrana omezuje ozáření pomocí stínění, vzdálenosti a času.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Radiotracer",
+          "definition": "A radioactive label following a substance through a body or system."
+        },
+        {
+          "name": "Positron emission tomography",
+          "definition": "Imaging that reconstructs positron-emitter distribution in the body."
+        },
+        {
+          "name": "Radiotherapy",
+          "definition": "The use of ionising radiation to destroy diseased tissue."
+        },
+        {
+          "name": "Geiger counter",
+          "definition": "A detector registering individual ionising events as pulses."
+        },
+        {
+          "name": "Radiation protection",
+          "definition": "Limiting dose through shielding, distance and exposure time."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.06.05",
+      "parent_pillar_name": "Applied & Astrophysical Nuclear Physics",
+      "slug": "nucleosynthesis",
+      "name": "Nucleosynthesis",
+      "description_en": "The chemical elements are forged by nuclear reactions: the lightest in the first minutes of the Big Bang, heavier ones by fusion in stellar cores, and the heaviest by rapid neutron capture in supernovae and neutron-star mergers.",
+      "description_cs": "Chemické prvky vznikají jadernými reakcemi: nejlehčí v prvních minutách velkého třesku, těžší fúzí v jádrech hvězd a nejtěžší rychlým záchytem neutronů v supernovách a při splývání neutronových hvězd.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Big Bang nucleosynthesis",
+          "definition": "The formation of hydrogen, helium and lithium in the early universe."
+        },
+        {
+          "name": "Stellar nucleosynthesis",
+          "definition": "The building of elements up to iron by fusion in stars."
+        },
+        {
+          "name": "s-process",
+          "definition": "Slow neutron capture building heavy nuclei in evolved stars."
+        },
+        {
+          "name": "r-process",
+          "definition": "Rapid neutron capture forming the heaviest elements in explosive events."
+        },
+        {
+          "name": "Cosmic abundance",
+          "definition": "The observed proportions of the elements set by these processes."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.01",
+      "parent_pillar_name": "The Standard Model",
+      "slug": "quarks-leptons",
+      "name": "Quarks & Leptons",
+      "description_en": "Matter is built from two families of spin-half fermions: six quarks, which combine into protons, neutrons and other hadrons, and six leptons, including the electron and its neutrino, arranged in three generations of increasing mass.",
+      "description_cs": "Hmota je tvořena dvěma rodinami fermionů se spinem jedna polovina: šesti kvarky, které se skládají do protonů, neutronů a dalších hadronů, a šesti leptony, mezi něž patří elektron a jeho neutrino, uspořádanými do tří generací s rostoucí hmotností.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Quark",
+          "definition": "A fermion carrying colour charge that combines to form hadrons, never seen in isolation."
+        },
+        {
+          "name": "Lepton",
+          "definition": "A fermion without colour charge, such as the electron, muon, tau and their neutrinos."
+        },
+        {
+          "name": "Generations",
+          "definition": "The three families of quarks and leptons, differing mainly in mass."
+        },
+        {
+          "name": "Hadron",
+          "definition": "A composite particle of quarks bound by the strong force, either a baryon or a meson."
+        },
+        {
+          "name": "Antiparticle",
+          "definition": "A partner with opposite charges to a given particle, produced together with it."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.01",
+      "parent_pillar_name": "The Standard Model",
+      "slug": "gauge-bosons-higgs",
+      "name": "Gauge Bosons & the Higgs",
+      "description_en": "Forces are carried by spin-one gauge bosons — the photon, the gluons and the W and Z — while the spin-zero Higgs boson, discovered in 2012, arises from the field whose interaction endows particles with mass.",
+      "description_cs": "Síly přenášejí kalibrační bosony se spinem jedna — foton, gluony a bosony W a Z — zatímco Higgsův boson se spinem nula, objevený v roce 2012, pochází z pole, jehož interakce dodává částicím hmotnost.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Photon",
+          "definition": "The massless carrier of the electromagnetic force."
+        },
+        {
+          "name": "Gluon",
+          "definition": "The carrier of the strong force, itself colour-charged."
+        },
+        {
+          "name": "W and Z bosons",
+          "definition": "The massive carriers of the weak force."
+        },
+        {
+          "name": "Higgs boson",
+          "definition": "The excitation of the Higgs field, confirmed in 2012."
+        },
+        {
+          "name": "Higgs mechanism",
+          "definition": "The process giving mass to the weak bosons and fermions through symmetry breaking."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.02",
+      "parent_pillar_name": "Fundamental Interactions",
+      "slug": "qed-qcd",
+      "name": "Quantum Electrodynamics & Chromodynamics",
+      "description_en": "Quantum electrodynamics describes the electromagnetic interaction of charged particles by photon exchange to extraordinary precision, while quantum chromodynamics describes the strong force among quarks and gluons, with confinement and asymptotic freedom.",
+      "description_cs": "Kvantová elektrodynamika popisuje elektromagnetickou interakci nabitých částic výměnou fotonů s mimořádnou přesností, zatímco kvantová chromodynamika popisuje silnou sílu mezi kvarky a gluony s uvězněním a asymptotickou volností.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Quantum electrodynamics",
+          "definition": "The quantum field theory of light and charged matter, tested to extreme precision."
+        },
+        {
+          "name": "Feynman diagram",
+          "definition": "A pictorial term in the perturbative expansion of a scattering amplitude."
+        },
+        {
+          "name": "Colour charge",
+          "definition": "The strong-force analogue of electric charge, carried by quarks and gluons."
+        },
+        {
+          "name": "Confinement",
+          "definition": "The property that colour-charged particles cannot exist in isolation."
+        },
+        {
+          "name": "Asymptotic freedom",
+          "definition": "The weakening of the strong force at short distances and high energies."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.02",
+      "parent_pillar_name": "Fundamental Interactions",
+      "slug": "weak-electroweak",
+      "name": "Weak Interaction & Electroweak Unification",
+      "description_en": "The weak interaction changes particle flavour and causes beta decay through massive W and Z bosons; at high energy it merges with electromagnetism into a single electroweak force, unified in the Standard Model.",
+      "description_cs": "Slabá interakce mění vůni částic a způsobuje beta rozpad prostřednictvím hmotných bosonů W a Z; při vysokých energiích splývá s elektromagnetismem do jediné elektroslabé síly sjednocené ve standardním modelu.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Weak interaction",
+          "definition": "The short-range force responsible for flavour change and beta decay."
+        },
+        {
+          "name": "Flavour change",
+          "definition": "The conversion of one quark or lepton type into another via the weak force."
+        },
+        {
+          "name": "Electroweak unification",
+          "definition": "The theory merging electromagnetism and the weak force at high energy."
+        },
+        {
+          "name": "Neutrino interaction",
+          "definition": "The exclusively weak coupling that makes neutrinos so penetrating."
+        },
+        {
+          "name": "Parity violation",
+          "definition": "The weak force's distinction between left- and right-handed particles."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.03",
+      "parent_pillar_name": "Symmetries & Conservation Laws",
+      "slug": "symmetries-noether",
+      "name": "Symmetries & Conservation",
+      "description_en": "Every continuous symmetry implies a conserved quantity by Noether's theorem, so energy, momentum and charge conservation reflect symmetries of space, time and gauge; particle physics is organised around such symmetry principles.",
+      "description_cs": "Každá spojitá symetrie implikuje zachovávanou veličinu podle Noetherové věty, takže zachování energie, hybnosti a náboje odráží symetrie prostoru, času a kalibrace; částicová fyzika je uspořádána kolem takových principů symetrie.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Noether's theorem",
+          "definition": "The correspondence between continuous symmetries and conservation laws."
+        },
+        {
+          "name": "Gauge symmetry",
+          "definition": "The local symmetry underlying each fundamental interaction."
+        },
+        {
+          "name": "Conserved quantum numbers",
+          "definition": "Quantities such as baryon and lepton number preserved in interactions."
+        },
+        {
+          "name": "Isospin",
+          "definition": "An approximate symmetry treating protons and neutrons as two states of one particle."
+        },
+        {
+          "name": "Spontaneous symmetry breaking",
+          "definition": "A symmetric theory with an asymmetric ground state, central to mass generation."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.03",
+      "parent_pillar_name": "Symmetries & Conservation Laws",
+      "slug": "cpt-symmetry",
+      "name": "Discrete Symmetries & CP Violation",
+      "description_en": "The discrete operations of charge conjugation, parity and time reversal are individually violated by the weak force; their combination CPT is exact, and CP violation is essential to explaining why the universe contains more matter than antimatter.",
+      "description_cs": "Diskrétní operace nábojového sdružení, parity a obrácení času jsou jednotlivě narušovány slabou silou; jejich kombinace CPT je přesná a narušení CP je klíčové pro vysvětlení, proč vesmír obsahuje více hmoty než antihmoty.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Parity",
+          "definition": "The symmetry under spatial reflection, violated by the weak interaction."
+        },
+        {
+          "name": "Charge conjugation",
+          "definition": "The operation exchanging particles with their antiparticles."
+        },
+        {
+          "name": "CP violation",
+          "definition": "The small asymmetry between matter and antimatter behaviour."
+        },
+        {
+          "name": "CPT theorem",
+          "definition": "The exact combined symmetry required by relativistic quantum field theory."
+        },
+        {
+          "name": "Baryon asymmetry",
+          "definition": "The cosmic excess of matter over antimatter that CP violation helps explain."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.04",
+      "parent_pillar_name": "Experimental Particle Physics",
+      "slug": "accelerators-colliders",
+      "name": "Accelerators & Colliders",
+      "description_en": "Particle accelerators raise charged particles to high energy with electric and magnetic fields and collide them to create new particles from energy; colliders such as the Large Hadron Collider probe the smallest scales.",
+      "description_cs": "Urychlovače částic zvyšují energii nabitých částic pomocí elektrických a magnetických polí a srážejí je, aby z energie vznikaly nové částice; srážeče, jako je Velký hadronový srážeč, zkoumají nejmenší škály.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Particle accelerator",
+          "definition": "A machine boosting charged particles to high energy using electromagnetic fields."
+        },
+        {
+          "name": "Collider",
+          "definition": "An accelerator crossing two beams to maximise collision energy."
+        },
+        {
+          "name": "Centre-of-mass energy",
+          "definition": "The energy available in a collision to create new particles."
+        },
+        {
+          "name": "Synchrotron",
+          "definition": "A circular accelerator with fields ramped in step with rising particle energy."
+        },
+        {
+          "name": "Luminosity",
+          "definition": "The measure of collision rate determining how often rare processes occur."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.04",
+      "parent_pillar_name": "Experimental Particle Physics",
+      "slug": "detectors-discovery",
+      "name": "Detectors & Discovery",
+      "description_en": "Layered detectors track charged particles, measure their momentum and energy, and identify them by their signatures; a discovery is claimed only when a signal exceeds background at the stringent five-sigma statistical level.",
+      "description_cs": "Vrstvené detektory sledují nabité částice, měří jejich hybnost a energii a identifikují je podle jejich signatur; objev se prohlašuje teprve tehdy, když signál překročí pozadí na přísné statistické úrovni pěti sigma.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Tracking detector",
+          "definition": "A device recording the paths of charged particles in a magnetic field."
+        },
+        {
+          "name": "Calorimeter",
+          "definition": "A detector measuring particle energy by absorbing it in dense material."
+        },
+        {
+          "name": "Particle identification",
+          "definition": "Distinguishing particle types from their tracks and energy deposits."
+        },
+        {
+          "name": "Five-sigma criterion",
+          "definition": "The statistical threshold conventionally required to claim a discovery."
+        },
+        {
+          "name": "Background rejection",
+          "definition": "The removal of known processes to isolate a sought-after signal."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.05",
+      "parent_pillar_name": "Beyond the Standard Model",
+      "slug": "neutrino-physics",
+      "name": "Neutrino Physics",
+      "description_en": "Neutrinos oscillate between flavours as they travel, proving they have tiny nonzero masses unexplained by the Standard Model; their nature, mass ordering and possible role in matter-antimatter asymmetry are active frontiers.",
+      "description_cs": "Neutrina během letu oscilují mezi vůněmi, což dokazuje, že mají nepatrné nenulové hmotnosti, jež standardní model nevysvětluje; jejich povaha, uspořádání hmotností a možná role v asymetrii hmoty a antihmoty jsou aktivní hranice výzkumu.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Neutrino oscillation",
+          "definition": "The periodic change of neutrino flavour in flight, implying nonzero mass."
+        },
+        {
+          "name": "Mass hierarchy",
+          "definition": "The unknown ordering of the three neutrino mass states."
+        },
+        {
+          "name": "Majorana neutrino",
+          "definition": "The open possibility that the neutrino is its own antiparticle."
+        },
+        {
+          "name": "Sterile neutrino",
+          "definition": "A hypothesised neutrino interacting only through gravity and mixing."
+        },
+        {
+          "name": "Neutrinoless double beta decay",
+          "definition": "A sought-after rare process that would reveal a Majorana nature."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.07.05",
+      "parent_pillar_name": "Beyond the Standard Model",
+      "slug": "bsm-unification",
+      "name": "Dark Matter, Supersymmetry & Unification",
+      "description_en": "The Standard Model omits gravity, dark matter and the origin of its parameters; proposed extensions include supersymmetry, grand unified theories merging the forces, and candidate dark-matter particles, none yet confirmed.",
+      "description_cs": "Standardní model opomíjí gravitaci, temnou hmotu a původ svých parametrů; navrhovaná rozšíření zahrnují supersymetrii, teorie velkého sjednocení slučující síly a kandidátní částice temné hmoty, žádné však dosud nebylo potvrzeno.",
+      "explored": "barely",
+      "brief_concepts": [
+        {
+          "name": "Dark matter",
+          "definition": "The unseen mass whose gravity shapes galaxies, of unknown particle identity."
+        },
+        {
+          "name": "Supersymmetry",
+          "definition": "A proposed symmetry pairing fermions with bosons, so far unobserved."
+        },
+        {
+          "name": "Grand unified theory",
+          "definition": "A theory merging the strong, weak and electromagnetic forces at high energy."
+        },
+        {
+          "name": "Hierarchy problem",
+          "definition": "The puzzle of why the Higgs mass is so far below the unification scale."
+        },
+        {
+          "name": "Proton decay",
+          "definition": "A predicted rare decay of the proton in many unified theories, not yet seen."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.01",
+      "parent_pillar_name": "Stellar Structure & Evolution",
+      "slug": "stellar-structure",
+      "name": "Stellar Structure & Energy Generation",
+      "description_en": "A star is a self-gravitating ball of plasma in hydrostatic equilibrium, its inward gravity balanced by outward pressure sustained by nuclear fusion in the core; energy flows outward by radiation and convection to the surface.",
+      "description_cs": "Hvězda je samogravitující koule plazmatu v hydrostatické rovnováze, jejíž dovnitř mířící gravitaci vyvažuje ven mířící tlak udržovaný jadernou fúzí v jádru; energie proudí ven zářením a konvekcí k povrchu.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Hydrostatic equilibrium",
+          "definition": "The balance between gravity and pressure that keeps a star stable."
+        },
+        {
+          "name": "Proton-proton chain",
+          "definition": "The dominant hydrogen-fusion sequence powering low-mass stars."
+        },
+        {
+          "name": "CNO cycle",
+          "definition": "A catalytic hydrogen-fusion cycle dominant in more massive stars."
+        },
+        {
+          "name": "Radiative and convective transport",
+          "definition": "The two ways energy moves from a star's core to its surface."
+        },
+        {
+          "name": "Luminosity",
+          "definition": "The total power a star radiates, set by its mass and structure."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.01",
+      "parent_pillar_name": "Stellar Structure & Evolution",
+      "slug": "stellar-evolution",
+      "name": "Stellar Evolution",
+      "description_en": "Stars evolve as they exhaust their nuclear fuel, moving off the main sequence to become giants and shedding or exploding their outer layers; the mass of a star determines its lifetime and its final fate.",
+      "description_cs": "Hvězdy se vyvíjejí, jak spotřebovávají jaderné palivo, opouštějí hlavní posloupnost, stávají se obry a odvrhávají nebo vybuchují své vnější vrstvy; hmotnost hvězdy určuje její délku života i konečný osud.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Main sequence",
+          "definition": "The long stable phase of core hydrogen fusion where most stars spend their lives."
+        },
+        {
+          "name": "Hertzsprung-Russell diagram",
+          "definition": "The plot of luminosity against temperature mapping stellar populations."
+        },
+        {
+          "name": "Red giant phase",
+          "definition": "The swelling of a star after core hydrogen is exhausted."
+        },
+        {
+          "name": "Planetary nebula",
+          "definition": "The ejected envelope of a dying low-mass star, leaving a white dwarf."
+        },
+        {
+          "name": "Mass-lifetime relation",
+          "definition": "The rule that more massive stars burn brighter and die far sooner."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.02",
+      "parent_pillar_name": "Compact Objects",
+      "slug": "white-dwarfs-neutron-stars",
+      "name": "White Dwarfs & Neutron Stars",
+      "description_en": "White dwarfs and neutron stars are the collapsed cores of dead stars, held up by electron and neutron degeneracy pressure respectively; each has a maximum mass beyond which collapse continues, the Chandrasekhar and Tolman-Oppenheimer-Volkoff limits.",
+      "description_cs": "Bílí trpaslíci a neutronové hvězdy jsou zhroucená jádra mrtvých hvězd, držená degeneračním tlakem elektronů, respektive neutronů; každý má maximální hmotnost, za níž kolaps pokračuje — Chandrasekharovu a Tolmanovu–Oppenheimerovu–Volkoffovu mez.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Degeneracy pressure",
+          "definition": "The quantum pressure from the exclusion principle supporting compact stars."
+        },
+        {
+          "name": "Chandrasekhar limit",
+          "definition": "The maximum mass of a white dwarf, about 1.4 solar masses."
+        },
+        {
+          "name": "Neutron star",
+          "definition": "An ultradense stellar remnant composed largely of neutrons."
+        },
+        {
+          "name": "Pulsar",
+          "definition": "A rapidly rotating magnetised neutron star seen as pulses of radiation."
+        },
+        {
+          "name": "Tolman-Oppenheimer-Volkoff limit",
+          "definition": "The maximum mass of a neutron star before black-hole collapse."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.02",
+      "parent_pillar_name": "Compact Objects",
+      "slug": "stellar-black-holes-accretion",
+      "name": "Stellar Black Holes & Accretion",
+      "description_en": "When collapse exceeds all support a stellar black hole forms; matter falling onto compact objects releases enormous energy as it forms a hot accretion disc, making X-ray binaries and quasars among the brightest sources in the sky.",
+      "description_cs": "Když kolaps překročí veškerou oporu, vzniká hvězdná černá díra; hmota padající na kompaktní objekty uvolňuje při tvorbě horkého akrečního disku obrovskou energii, což činí z rentgenových dvojhvězd a kvasarů jedny z nejjasnějších zdrojů na obloze.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Stellar black hole",
+          "definition": "A black hole formed by the collapse of a massive star's core."
+        },
+        {
+          "name": "Accretion disc",
+          "definition": "A disc of infalling matter heated to radiate as it spirals inward."
+        },
+        {
+          "name": "X-ray binary",
+          "definition": "A compact object accreting from a companion star, bright in X-rays."
+        },
+        {
+          "name": "Relativistic jet",
+          "definition": "A collimated outflow launched from near an accreting compact object."
+        },
+        {
+          "name": "Eddington limit",
+          "definition": "The luminosity at which radiation pressure halts further accretion."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.03",
+      "parent_pillar_name": "Interstellar Medium & Star Formation",
+      "slug": "interstellar-medium",
+      "name": "The Interstellar Medium",
+      "description_en": "The space between stars holds gas and dust in phases from cold molecular clouds to hot ionised plasma, enriched by stellar death and cycled into new stars; its physics governs cooling, heating and the chemistry of space.",
+      "description_cs": "Prostor mezi hvězdami obsahuje plyn a prach ve fázích od chladných molekulárních mračen po horké ionizované plazma, obohacovaný zánikem hvězd a znovu zapojovaný do nových hvězd; jeho fyzika řídí ochlazování, ohřev a chemii vesmíru.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Molecular cloud",
+          "definition": "A cold dense region of gas where stars form."
+        },
+        {
+          "name": "Interstellar dust",
+          "definition": "Fine solid grains that redden starlight and seed molecule formation."
+        },
+        {
+          "name": "Ionised gas",
+          "definition": "Hot plasma around massive stars, glowing as emission nebulae."
+        },
+        {
+          "name": "Interstellar extinction",
+          "definition": "The dimming and reddening of starlight by intervening dust."
+        },
+        {
+          "name": "Cosmic cycle of matter",
+          "definition": "The recycling of gas from dying stars into new generations."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.03",
+      "parent_pillar_name": "Interstellar Medium & Star Formation",
+      "slug": "star-formation",
+      "name": "Star Formation",
+      "description_en": "Stars are born when a molecular cloud becomes gravitationally unstable and fragments and collapses, forming protostars that accrete through discs and ignite fusion once their cores reach the required temperature.",
+      "description_cs": "Hvězdy se rodí, když se molekulární mračno stane gravitačně nestabilním, rozpadne se a zhroutí, přičemž vznikají protohvězdy, které akreují skrze disky a zažehnou fúzi, jakmile jejich jádra dosáhnou potřebné teploty.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Jeans instability",
+          "definition": "The condition under which a gas cloud collapses under its own gravity."
+        },
+        {
+          "name": "Protostar",
+          "definition": "A forming star still accreting from its birth cloud."
+        },
+        {
+          "name": "Protoplanetary disc",
+          "definition": "The disc of gas and dust around a young star from which planets form."
+        },
+        {
+          "name": "Initial mass function",
+          "definition": "The distribution of masses with which stars are born."
+        },
+        {
+          "name": "Bipolar outflow",
+          "definition": "The jets of gas ejected along the poles of a forming star."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.04",
+      "parent_pillar_name": "Galactic & Extragalactic Astrophysics",
+      "slug": "galaxy-dynamics-dark-matter",
+      "name": "Galaxy Dynamics & Dark Matter",
+      "description_en": "Galaxies are gravitationally bound systems of stars, gas and dark matter; their flat rotation curves reveal far more mass than the visible stars provide, the primary evidence for dark matter haloes surrounding them.",
+      "description_cs": "Galaxie jsou gravitačně vázané soustavy hvězd, plynu a temné hmoty; jejich ploché rotační křivky odhalují mnohem více hmoty, než poskytují viditelné hvězdy, což je hlavní důkaz pro halo temné hmoty, jež je obklopují.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Rotation curve",
+          "definition": "The orbital speed of stars versus distance from a galaxy's centre."
+        },
+        {
+          "name": "Dark matter halo",
+          "definition": "The extended invisible mass whose gravity binds a galaxy."
+        },
+        {
+          "name": "Galaxy morphology",
+          "definition": "The classification of galaxies as spiral, elliptical or irregular."
+        },
+        {
+          "name": "Galactic dynamics",
+          "definition": "The gravitational motion of stars and gas within a galaxy."
+        },
+        {
+          "name": "Galaxy mergers",
+          "definition": "The collisions that reshape galaxies and trigger star formation."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.04",
+      "parent_pillar_name": "Galactic & Extragalactic Astrophysics",
+      "slug": "agn-large-scale",
+      "name": "Active Galactic Nuclei & Large-Scale Structure",
+      "description_en": "A supermassive black hole accreting at a galaxy's centre powers active galactic nuclei and quasars, while galaxies themselves cluster into filaments and voids forming the cosmic web, the largest structure in the universe.",
+      "description_cs": "Supermasivní černá díra akreující ve středu galaxie pohání aktivní galaktická jádra a kvasary, zatímco samotné galaxie se shlukují do vláken a prázdnot tvořících kosmickou síť, největší strukturu ve vesmíru.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Supermassive black hole",
+          "definition": "The million-to-billion-solar-mass black hole at a galaxy's core."
+        },
+        {
+          "name": "Quasar",
+          "definition": "An extremely luminous active galactic nucleus in the distant universe."
+        },
+        {
+          "name": "Galaxy cluster",
+          "definition": "A gravitationally bound assembly of hundreds to thousands of galaxies."
+        },
+        {
+          "name": "Cosmic web",
+          "definition": "The filamentary large-scale arrangement of galaxies and dark matter."
+        },
+        {
+          "name": "Gravitational lensing",
+          "definition": "The bending of light by mass, used to map dark matter and magnify distant sources."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.05",
+      "parent_pillar_name": "High-Energy & Multi-Messenger Astrophysics",
+      "slug": "supernovae-cosmic-rays",
+      "name": "Supernovae & Cosmic Rays",
+      "description_en": "Massive stars end in supernova explosions that disperse newly forged elements and drive shock waves accelerating cosmic rays — high-energy particles that pervade the galaxy and strike the Earth's atmosphere.",
+      "description_cs": "Hmotné hvězdy končí výbuchy supernov, které rozptylují nově vytvořené prvky a vytvářejí rázové vlny urychlující kosmické záření — vysokoenergetické částice, jež prostupují galaxií a dopadají na zemskou atmosféru.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Core-collapse supernova",
+          "definition": "The explosion of a massive star when its iron core collapses."
+        },
+        {
+          "name": "Type Ia supernova",
+          "definition": "The thermonuclear detonation of a white dwarf, a cosmic standard candle."
+        },
+        {
+          "name": "Supernova remnant",
+          "definition": "The expanding shocked shell left by a supernova."
+        },
+        {
+          "name": "Cosmic rays",
+          "definition": "High-energy charged particles from space, accelerated by shocks and other sources."
+        },
+        {
+          "name": "Shock acceleration",
+          "definition": "The mechanism boosting particles to high energy at astrophysical shock fronts."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.08.05",
+      "parent_pillar_name": "High-Energy & Multi-Messenger Astrophysics",
+      "slug": "multi-messenger",
+      "name": "Multi-Messenger Astrophysics",
+      "description_en": "The universe is now observed through several messengers — electromagnetic radiation across the spectrum, neutrinos, cosmic rays and gravitational waves — whose combination pinpoints events such as neutron-star mergers and gamma-ray bursts.",
+      "description_cs": "Vesmír se nyní pozoruje prostřednictvím několika poslů — elektromagnetického záření napříč spektrem, neutrin, kosmického záření a gravitačních vln — jejichž kombinace přesně určuje děje, jako je splývání neutronových hvězd a záblesky gama.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Gamma-ray burst",
+          "definition": "The brightest electromagnetic explosion, from collapsing stars or merging compact objects."
+        },
+        {
+          "name": "Neutrino astronomy",
+          "definition": "Observation of astrophysical neutrinos that escape dense sources."
+        },
+        {
+          "name": "Gravitational-wave astronomy",
+          "definition": "The detection of spacetime ripples from merging compact objects."
+        },
+        {
+          "name": "Kilonova",
+          "definition": "The optical glow of a neutron-star merger forging heavy elements."
+        },
+        {
+          "name": "Messenger coincidence",
+          "definition": "The joint detection of one event across multiple channels, localising its source."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.01",
+      "parent_pillar_name": "Seismology & Earth's Interior",
+      "slug": "seismic-waves",
+      "name": "Seismic Waves & Earthquakes",
+      "description_en": "Earthquakes radiate elastic seismic waves — fast compressional P-waves, slower shear S-waves, and surface waves — whose travel times and paths are recorded on seismographs and used to locate sources and measure magnitude.",
+      "description_cs": "Zemětřesení vyzařují elastické seismické vlny — rychlé podélné vlny P, pomalejší příčné vlny S a povrchové vlny — jejichž časy šíření a dráhy zaznamenávají seismografy a používají se k lokalizaci ohnisek a měření magnituda.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "P-wave",
+          "definition": "The fastest seismic wave, a compressional wave travelling through solids and liquids."
+        },
+        {
+          "name": "S-wave",
+          "definition": "A shear wave travelling only through solids, revealing the liquid outer core by its absence."
+        },
+        {
+          "name": "Surface waves",
+          "definition": "Slower waves confined to the surface that cause most earthquake damage."
+        },
+        {
+          "name": "Seismograph",
+          "definition": "The instrument recording ground motion from seismic waves."
+        },
+        {
+          "name": "Magnitude",
+          "definition": "A logarithmic measure of an earthquake's energy release, such as the moment magnitude."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.01",
+      "parent_pillar_name": "Seismology & Earth's Interior",
+      "slug": "earth-interior",
+      "name": "Earth's Internal Structure",
+      "description_en": "Seismic waves refract and reflect at internal boundaries, revealing the Earth's layers: a thin crust, a solid convecting mantle, a liquid outer core generating the magnetic field, and a solid inner core.",
+      "description_cs": "Seismické vlny se lámou a odrážejí na vnitřních rozhraních a odhalují vrstvy Země: tenkou kůru, pevný konvektující plášť, tekuté vnější jádro generující magnetické pole a pevné vnitřní jádro.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Crust",
+          "definition": "The thin outermost rocky layer, continental or oceanic."
+        },
+        {
+          "name": "Mantle",
+          "definition": "The thick solid layer that convects slowly over geological time."
+        },
+        {
+          "name": "Outer core",
+          "definition": "The liquid iron layer whose motion generates the magnetic field."
+        },
+        {
+          "name": "Inner core",
+          "definition": "The solid iron-nickel centre of the Earth."
+        },
+        {
+          "name": "Seismic discontinuity",
+          "definition": "A depth where wave speed changes abruptly, marking a layer boundary."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.02",
+      "parent_pillar_name": "Geomagnetism & the Geodynamo",
+      "slug": "geodynamo",
+      "name": "The Geomagnetic Field & Geodynamo",
+      "description_en": "The Earth generates a magnetic field by dynamo action in its convecting liquid outer core; the field shields the surface from the solar wind, drifts and weakens over time, and reverses polarity at irregular intervals.",
+      "description_cs": "Země generuje magnetické pole dynamovým působením ve svém konvektujícím tekutém vnějším jádru; pole chrání povrch před slunečním větrem, s časem se posouvá a slábne a v nepravidelných intervalech přepóluje.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Geodynamo",
+          "definition": "The self-sustaining generation of the magnetic field by core convection."
+        },
+        {
+          "name": "Magnetosphere",
+          "definition": "The region of space dominated by the Earth's field, deflecting the solar wind."
+        },
+        {
+          "name": "Geomagnetic reversal",
+          "definition": "The occasional flip of the field's north and south polarity."
+        },
+        {
+          "name": "Palaeomagnetism",
+          "definition": "The record of past field directions frozen into rocks."
+        },
+        {
+          "name": "Secular variation",
+          "definition": "The slow change of the field's strength and direction over decades to centuries."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.03",
+      "parent_pillar_name": "Gravity, Geodesy & Earth's Shape",
+      "slug": "gravity-geodesy",
+      "name": "Gravity Field & Geodesy",
+      "description_en": "Geodesy measures the Earth's shape, orientation and gravity field; departures of gravity from a uniform ellipsoid, the anomalies, map density variations and the isostatic balance of crustal loads on the mantle.",
+      "description_cs": "Geodézie měří tvar, orientaci a tíhové pole Země; odchylky tíže od rovnoměrného elipsoidu, tíhové anomálie, mapují změny hustoty a izostatickou rovnováhu zatížení kůry na plášti.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Geoid",
+          "definition": "The equipotential surface of the gravity field approximating mean sea level."
+        },
+        {
+          "name": "Reference ellipsoid",
+          "definition": "The smooth mathematical figure approximating the Earth's shape."
+        },
+        {
+          "name": "Gravity anomaly",
+          "definition": "The difference between measured and predicted gravity, revealing subsurface density."
+        },
+        {
+          "name": "Isostasy",
+          "definition": "The buoyant equilibrium of crustal blocks floating on the denser mantle."
+        },
+        {
+          "name": "Satellite geodesy",
+          "definition": "The use of satellites to measure the Earth's shape, gravity and rotation."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.04",
+      "parent_pillar_name": "Geodynamics & Plate Tectonics",
+      "slug": "plate-tectonics",
+      "name": "Plate Tectonics",
+      "description_en": "The Earth's rigid outer shell is broken into plates that move over the ductile mantle, interacting at boundaries where they spread apart, collide or slide past one another, driving earthquakes, volcanism and mountain building.",
+      "description_cs": "Tuhý vnější obal Země je rozlámán na desky, které se pohybují po tvárném plášti a vzájemně na sebe působí na rozhraních, kde se rozestupují, srážejí nebo se míjejí, čímž pohánějí zemětřesení, vulkanismus a horotvornou činnost.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Lithospheric plate",
+          "definition": "A rigid segment of the outer Earth that moves as a unit."
+        },
+        {
+          "name": "Divergent boundary",
+          "definition": "A boundary where plates spread apart and new crust forms."
+        },
+        {
+          "name": "Convergent boundary",
+          "definition": "A boundary where plates collide, forming subduction zones or mountains."
+        },
+        {
+          "name": "Transform boundary",
+          "definition": "A boundary where plates slide horizontally past each other."
+        },
+        {
+          "name": "Subduction",
+          "definition": "The sinking of one plate beneath another into the mantle."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.09.04",
+      "parent_pillar_name": "Geodynamics & Plate Tectonics",
+      "slug": "mantle-convection-heat",
+      "name": "Mantle Convection & Earth's Heat",
+      "description_en": "Heat from the planet's formation and radioactive decay drives slow convection in the solid mantle, the engine of plate motion; measured surface heat flow constrains the planet's thermal history and internal dynamics.",
+      "description_cs": "Teplo z formování planety a z radioaktivního rozpadu pohání pomalou konvekci v pevném plášti, motor pohybu desek; měřený povrchový tepelný tok omezuje tepelnou historii planety a její vnitřní dynamiku.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Mantle convection",
+          "definition": "The slow creeping flow of the solid mantle transporting heat outward."
+        },
+        {
+          "name": "Radiogenic heat",
+          "definition": "Heat produced by the decay of radioactive isotopes in the Earth."
+        },
+        {
+          "name": "Heat flow",
+          "definition": "The rate at which heat escapes through the Earth's surface."
+        },
+        {
+          "name": "Mantle plume",
+          "definition": "An upwelling of hot mantle feeding volcanic hotspots."
+        },
+        {
+          "name": "Rheology",
+          "definition": "The deformation behaviour of rock that lets the solid mantle flow over long times."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.01",
+      "parent_pillar_name": "Molecular Biophysics",
+      "slug": "protein-folding",
+      "name": "Protein Structure & Folding",
+      "description_en": "Proteins fold from linear chains into specific three-dimensional shapes that determine their function, driven toward a free-energy minimum by hydrophobic, electrostatic and hydrogen-bonding forces; misfolding underlies several diseases.",
+      "description_cs": "Bílkoviny se sbalují z lineárních řetězců do specifických trojrozměrných tvarů určujících jejich funkci, vedeny k minimu volné energie hydrofobními, elektrostatickými a vodíkovými vazbami; chybné sbalení je základem několika onemocnění.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Protein folding",
+          "definition": "The process by which a polypeptide chain adopts its functional three-dimensional structure."
+        },
+        {
+          "name": "Free-energy landscape",
+          "definition": "The funnel of conformational energies guiding a protein to its native state."
+        },
+        {
+          "name": "Hydrophobic effect",
+          "definition": "The tendency of nonpolar groups to cluster away from water, driving folding."
+        },
+        {
+          "name": "Conformational change",
+          "definition": "A functional shape change of a protein in response to binding or signals."
+        },
+        {
+          "name": "Misfolding",
+          "definition": "Incorrect folding producing aggregates linked to disease."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.01",
+      "parent_pillar_name": "Molecular Biophysics",
+      "slug": "molecular-motors",
+      "name": "Molecular Motors & Machines",
+      "description_en": "Molecular motors convert chemical energy into directed motion and force, walking along filaments or rotating within membranes; they power muscle contraction, intracellular transport and the synthesis of the cell's energy currency.",
+      "description_cs": "Molekulární motory přeměňují chemickou energii na řízený pohyb a sílu, kráčejí podél filament nebo rotují v membránách; pohánějí svalový stah, nitrobuněčný transport a syntézu energetické měny buňky.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Molecular motor",
+          "definition": "A protein converting chemical energy into mechanical work."
+        },
+        {
+          "name": "ATP hydrolysis",
+          "definition": "The energy-releasing reaction powering most molecular motors."
+        },
+        {
+          "name": "Cytoskeletal transport",
+          "definition": "The motor-driven movement of cargo along filaments within cells."
+        },
+        {
+          "name": "Brownian ratchet",
+          "definition": "A mechanism rectifying random thermal motion into directed movement."
+        },
+        {
+          "name": "Rotary motor",
+          "definition": "A membrane machine such as the one synthesising the cell's energy currency by rotation."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.02",
+      "parent_pillar_name": "Membrane & Neural Biophysics",
+      "slug": "membrane-transport",
+      "name": "Membrane Potentials & Ion Transport",
+      "description_en": "Cell membranes maintain electrical potentials by selectively transporting ions through channels and pumps; the resulting gradients store energy and set the resting potential from which excitable cells generate signals.",
+      "description_cs": "Buněčné membrány udržují elektrické potenciály selektivním transportem iontů skrze kanály a pumpy; vzniklé gradienty ukládají energii a určují klidový potenciál, z něhož dráždivé buňky vytvářejí signály.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Membrane potential",
+          "definition": "The voltage difference across a cell membrane."
+        },
+        {
+          "name": "Ion channel",
+          "definition": "A membrane protein allowing specific ions to flow down their gradient."
+        },
+        {
+          "name": "Ion pump",
+          "definition": "A protein using energy to move ions against their gradient."
+        },
+        {
+          "name": "Nernst potential",
+          "definition": "The equilibrium voltage for an ion set by its concentration ratio."
+        },
+        {
+          "name": "Resting potential",
+          "definition": "The steady membrane voltage of an unstimulated cell."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.02",
+      "parent_pillar_name": "Membrane & Neural Biophysics",
+      "slug": "action-potential",
+      "name": "The Action Potential & Nerve Signalling",
+      "description_en": "Excitable cells fire action potentials — rapid, self-propagating reversals of membrane potential driven by voltage-gated ion channels — which carry electrical signals along nerves, as captured by the Hodgkin-Huxley model.",
+      "description_cs": "Dráždivé buňky generují akční potenciály — rychlé, samovolně se šířící obrácení membránového potenciálu poháněná napěťově řízenými iontovými kanály — které přenášejí elektrické signály podél nervů, jak popisuje Hodgkinův–Huxleyův model.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Action potential",
+          "definition": "A rapid all-or-nothing reversal of membrane potential that propagates along a cell."
+        },
+        {
+          "name": "Voltage-gated channel",
+          "definition": "An ion channel that opens in response to membrane voltage."
+        },
+        {
+          "name": "Hodgkin-Huxley model",
+          "definition": "The quantitative model of the action potential from ionic currents."
+        },
+        {
+          "name": "Saltatory conduction",
+          "definition": "The jumping of nerve impulses between gaps in the myelin sheath, speeding signalling."
+        },
+        {
+          "name": "Synaptic transmission",
+          "definition": "The passing of a signal between cells at a synapse."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.03",
+      "parent_pillar_name": "Biomechanics",
+      "slug": "tissue-mechanics-locomotion",
+      "name": "Tissue Mechanics & Locomotion",
+      "description_en": "Biomechanics applies the mechanics of materials and forces to living tissue: bones, muscles and tendons carry loads and store elastic energy, and the physics of levers and gaits governs how organisms move.",
+      "description_cs": "Biomechanika aplikuje mechaniku materiálů a sil na živou tkáň: kosti, svaly a šlachy nesou zatížení a ukládají pružnou energii a fyzika pák a chůze určuje, jak se organismy pohybují.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Tissue elasticity",
+          "definition": "The stress-strain response of biological materials such as bone and tendon."
+        },
+        {
+          "name": "Muscle mechanics",
+          "definition": "The force-length and force-velocity behaviour of contracting muscle."
+        },
+        {
+          "name": "Lever systems",
+          "definition": "The skeletal arrangements of bones and muscles acting as levers."
+        },
+        {
+          "name": "Gait",
+          "definition": "The mechanical pattern of legged locomotion optimising energy and stability."
+        },
+        {
+          "name": "Scaling laws",
+          "definition": "How mechanical demands change with organism size."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.03",
+      "parent_pillar_name": "Biomechanics",
+      "slug": "biofluid-dynamics",
+      "name": "Biological Fluid Dynamics",
+      "description_en": "The flow of biological fluids follows the physics of hydrodynamics adapted to living systems: blood circulates through branching vessels, air moves through the lungs, and microorganisms swim at low Reynolds number where viscosity dominates.",
+      "description_cs": "Proudění biologických tekutin se řídí fyzikou hydrodynamiky přizpůsobenou živým systémům: krev obíhá větvícími se cévami, vzduch proudí plícemi a mikroorganismy plavou při nízkém Reynoldsově čísle, kde převládá viskozita.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "Haemodynamics",
+          "definition": "The physics of blood flow through the circulatory system."
+        },
+        {
+          "name": "Poiseuille flow",
+          "definition": "The pressure-driven laminar flow of fluid through a tube."
+        },
+        {
+          "name": "Low Reynolds number",
+          "definition": "The viscosity-dominated regime in which microorganisms swim."
+        },
+        {
+          "name": "Respiratory flow",
+          "definition": "The mechanics of air movement in breathing."
+        },
+        {
+          "name": "Wall shear stress",
+          "definition": "The frictional force of flowing fluid on vessel walls, sensed by cells."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.04",
+      "parent_pillar_name": "Biophysical Techniques",
+      "slug": "structural-single-molecule",
+      "name": "Structural & Single-Molecule Methods",
+      "description_en": "Physical techniques resolve biological structure and dynamics down to single molecules: X-ray crystallography, cryo-electron microscopy and nuclear magnetic resonance yield atomic structures, while optical tweezers and single-molecule fluorescence probe individual molecules at work.",
+      "description_cs": "Fyzikální techniky rozlišují biologickou strukturu a dynamiku až na úroveň jednotlivých molekul: rentgenová krystalografie, kryoelektronová mikroskopie a nukleární magnetická rezonance dávají atomární struktury, zatímco optická pinzeta a jednomolekulová fluorescence zkoumají jednotlivé molekuly při práci.",
+      "explored": "partially",
+      "brief_concepts": [
+        {
+          "name": "X-ray crystallography",
+          "definition": "Determining atomic structure from the diffraction of X-rays by a crystal."
+        },
+        {
+          "name": "Cryo-electron microscopy",
+          "definition": "Imaging frozen biomolecules at near-atomic resolution by electron microscopy."
+        },
+        {
+          "name": "Nuclear magnetic resonance",
+          "definition": "Probing molecular structure and dynamics through nuclear spin resonance."
+        },
+        {
+          "name": "Optical tweezers",
+          "definition": "Trapping and manipulating single molecules or particles with focused light."
+        },
+        {
+          "name": "Single-molecule fluorescence",
+          "definition": "Observing individual molecules by the light they emit."
+        }
+      ]
+    },
+    {
+      "parent_pillar_id": "01.01.10.04",
+      "parent_pillar_name": "Biophysical Techniques",
+      "slug": "medical-imaging-physics",
+      "name": "Physics of Medical Imaging",
+      "description_en": "Medical imaging applies physics to see inside the body without surgery: X-ray and computed tomography use ionising radiation, magnetic resonance imaging uses nuclear spins in magnetic fields, and ultrasound uses reflected sound waves.",
+      "description_cs": "Lékařské zobrazování aplikuje fyziku k pohledu dovnitř těla bez operace: rentgen a výpočetní tomografie využívají ionizující záření, magnetická rezonance využívá jaderné spiny v magnetickém poli a ultrazvuk využívá odražené zvukové vlny.",
+      "explored": "well",
+      "brief_concepts": [
+        {
+          "name": "Computed tomography",
+          "definition": "Reconstruction of cross-sectional images from many X-ray projections."
+        },
+        {
+          "name": "Magnetic resonance imaging",
+          "definition": "Imaging based on the nuclear magnetic resonance of tissue protons."
+        },
+        {
+          "name": "Ultrasound imaging",
+          "definition": "Imaging from the echoes of high-frequency sound waves."
+        },
+        {
+          "name": "Contrast mechanism",
+          "definition": "The physical property that distinguishes tissues in an image."
+        },
+        {
+          "name": "Spatial resolution",
+          "definition": "The finest detail an imaging method can resolve."
+        }
+      ]
+    }
+  ]
+}
