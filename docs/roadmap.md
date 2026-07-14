@@ -287,6 +287,29 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   preservation half** (L0 domains 03–12, esp. 09–12 single-node stubs — KEAP's namesake)
   with real `ext` subtrees. L0 enrichment (the 12 top-level node-articles) shipped
   2026-07-14 on `feat/l0-enrichment`.
+- **[L] KEAP semantic lens over the star-map** — every node has a 768-dim embedding
+  (local Ollama, `keap-embed-sync`, libSQL vector layer); use it to drive the star-map's
+  *appearance* channels without touching position. The U1 positions are structural (the
+  taxonomy tree) and baked/append-only — so embeddings must NOT move stars, but color/
+  size/texture/rotation are free. Derive interpretable **semantic axes** two ways: (a)
+  dimensionality reduction (PCA/UMAP/t-SNE) 768→2-3 axes = statistically-optimal but
+  unnamed; (b) **difference-vector axes** `embed(A)−embed(B)` between exemplars =
+  interpretable + more stable (concrete↔abstract, micro↔macro scale, empirical↔formal,
+  static↔dynamic), then project each node. **Channel map:** size→centrality (mean cosine
+  sim to neighbours / distance from domain centroid, or embedding norm); hue→projection on
+  a semantic axis (gradient); texture/material→categorical facet (k-means cluster over
+  embeddings); rotation→embedding direction vs a chosen axis. **Architecture:** an offline
+  job beside `keap-embed-sync` computes the projections → stores a few scalar "derived
+  features" per node → `GraphCanvas` maps them to channels behind a "semantic lens on/off"
+  toggle (like the relations toggle) — a few scalars per node, never 768-dim in the
+  renderer. **Split that makes it clean:** embeddings drive appearance only; positions stay
+  tree-baked (U1 intact). Stability: fixed-exemplar axes beat PCA (which recomputes with the
+  corpus); a rewritten description shifts colour/size — acceptable, and the derived-features
+  job re-runs with embed-sync.
+- **[S] KEAP brief-xref render gate** — the 1696 `source='brief-xref'` typed relations
+  (lifted from brief `[[id]]` links, 2026-07-14) render by default (`type != 'related-
+  concept'`); gate them behind `source` or a dedicated toggle in `graph.ts`/SidePanel so
+  the graph isn't over-dense.
 - **[S] KEAP provenance-folder cleanup** — the pre-dump derivation artifacts
   (`knowledge/{physics,math,chem,bio,toe}/*-{blocks,scaffold,import,concept-graph}.json`)
   are superseded by `knowledge/canonical/` (the SoT). Decide together: retire them (git
