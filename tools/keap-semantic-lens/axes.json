@@ -1,0 +1,26 @@
+{
+ "_doc": "Versioned exemplar config for the semantic-lens axes. Each axis = normalize(mean(embed(positive)) - mean(embed(negative))); a node's score = its unit embedding projected on the axis. 'High' = toward the positive pole (named first). Multi-phrase poles are averaged for robustness. Changing these re-defines the semantic space — bump _version and recompute. Validated 2026-07-14 on the live 1462-node corpus.",
+ "_version": 1,
+ "model": "nomic-embed-text",
+ "axes": {
+  "abstractness": {
+   "positive": ["abstract theory", "pure abstract concept", "formal abstraction", "general theoretical principle"],
+   "negative": ["concrete tangible example", "specific physical object", "practical hands-on application", "real-world instance"]
+  },
+  "scale": {
+   "_note": "positive = macro/cosmic, negative = micro/subatomic",
+   "positive": ["cosmic astronomical scale", "vast galactic universe", "planetary global system"],
+   "negative": ["subatomic microscopic scale", "tiny molecular particle", "atomic quantum level"]
+  },
+  "formalness": {
+   "_note": "positive = formal/deductive, negative = empirical/data-driven",
+   "positive": ["formal mathematical logic", "axiomatic deductive proof", "abstract symbolic system"],
+   "negative": ["empirical experimental observation", "measured evidence from data", "laboratory field study"]
+  },
+  "dynamism": {
+   "_note": "positive = dynamic/temporal, negative = static/structural",
+   "positive": ["dynamic changing process evolving over time", "flow motion and transformation"],
+   "negative": ["static unchanging fixed structure", "stable permanent configuration"]
+  }
+ }
+}
