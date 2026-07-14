@@ -23,7 +23,7 @@ keap_src_dir: "{{ keap_home }}/src"
 keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # Pin a release tag once the first one is cut (R10: branches make
 # `--tags keap` builds non-reproducible; a broken ref breaks the run).
-keap_repo_ref: "v1.3.0"
+keap_repo_ref: "feat/curator"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"

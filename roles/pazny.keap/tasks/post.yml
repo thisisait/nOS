@@ -28,3 +28,62 @@
     - keap_seed_fixtures | default(true) | bool
     - _keap_seed is defined
     - _keap_seed is not skipped
+
+# ── Knowledge ingest (git SoT → live DB, idempotent) ─────────────────────────
+# knowledge/canonical is bind-mounted RO from the clone; knowledge/ingest.mjs
+# applies only the domain files whose sha256 changed (knowledge_imports marker),
+# so this is a no-op on a steady converge and a full load on a blank. A restart
+# materialises any applied change (registerExtNode → applyDescriptionOverride →
+# rebuildFts → ensureLayout APPEND — U1 layout of existing stars never re-bakes).
+# Embeddings for new nodes are filled by the nightly keap-embed-sync Pulse job.
+- name: "[pazny.keap] Ingest canonical knowledge (idempotent, git SoT → live DB)"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} exec iiab-keap-1 node knowledge/ingest.mjs"
+  register: _keap_ingest
+  changed_when: false
+  failed_when:
+    - _keap_ingest.rc is defined
+    - _keap_ingest.rc != 0
+  when: install_keap | default(false) | bool
+
+- name: "[pazny.keap] Parse ingest result (did anything apply?)"
+  ansible.builtin.set_fact:
+    _keap_ingest_changed: >-
+      {{ ((_keap_ingest.stdout_lines | default([]) | select('match', '^INGEST_RESULT ') | first
+          | default('INGEST_RESULT {}')) | regex_replace('^INGEST_RESULT ', '') | from_json).get('changed', false) }}
+  when:
+    - install_keap | default(false) | bool
+    - _keap_ingest is not skipped
+
+- name: "[pazny.keap] Restart keap to materialise applied knowledge"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} restart iiab-keap-1"
+  changed_when: true
+  when:
+    - install_keap | default(false) | bool
+    - _keap_ingest_changed | default(false) | bool
+
+- name: "[pazny.keap] Wait for keap healthy after knowledge materialisation"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} inspect -f '{{ '{{' }}.State.Health.Status{{ '}}' }}' iiab-keap-1"
+  register: _keap_health
+  until: _keap_health.stdout == 'healthy'
+  retries: 30
+  delay: 5
+  changed_when: false
+  when:
+    - install_keap | default(false) | bool
+    - _keap_ingest_changed | default(false) | bool
+
+# Best-effort: kick embeddings for the freshly-materialised nodes now instead of
+# waiting for the nightly Pulse job. Never fails the play (Ollama may be busy/off;
+# the scheduled keap-embed-sync is the guarantee).
+- name: "[pazny.keap] Kick keap-embed-sync for new knowledge (best-effort)"
+  ansible.builtin.command:
+    cmd: "{{ ansible_python_interpreter | default('python3') }} {{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
+  register: _keap_embed
+  changed_when: false
+  failed_when: false
+  when:
+    - install_keap | default(false) | bool
+    - _keap_ingest_changed | default(false) | bool

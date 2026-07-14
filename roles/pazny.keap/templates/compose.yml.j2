@@ -33,6 +33,11 @@ services:
       - "127.0.0.1:{{ keap_port | default(8091) }}:8080"
     volumes:
       - {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}:/data
+      # Knowledge SoT (git-tracked canonical) mounted READ-ONLY from the clone —
+      # knowledge/ingest.mjs (post.yml) reads it and applies idempotently. A RO
+      # bind-mount is not a docker volume (no volume spam); data changes ride the
+      # git ref, never an image rebuild.
+      - {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}/knowledge/canonical:/app/knowledge/canonical:ro
     environment:
       PORT: "8080"
       KEAP_DATA_DIR: /data
