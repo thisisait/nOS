@@ -80,12 +80,26 @@ projection basis whenever the corpus changes (every node's colour jumps). The
 
 ## Phases
 1. **PoC** ✅ — difference-vector axes validated on the live corpus.
-2. **Exemplar config + host embed** — commit the exemplar phrase-sets; a host step
-   that embeds them → axis vectors.
-3. **`node_features` table + `/features/recompute` endpoint + compute** — container
-   projects + stores; idempotent; `features_hash`.
-4. **Offline Pulse job** (`keap-features-sync`) — orchestrates 2→3 after embed-sync.
-5. **GraphCanvas semantic-lens toggle** — channel mapping + axis picker + legend.
+2. **Exemplar config** ✅ — `tools/keap-semantic-lens/axes.json` (versioned phrase-sets).
+3. **`node_features` table + pipeline endpoints** ✅ — `server/db.ts` table +
+   `readTaxonomyVectors`/`upsertNodeFeatures`/`getNodeFeatures`; `GET /agent/v1/
+   features/vectors` (bulk export) + `POST /agent/v1/features` (upsert); `/api/graph`
+   node payload gains a `features` block. Server TS typechecks clean.
+4. **Offline Pulse job** ✅ — `files/anatomy/scripts/keap-features-sync.py`
+   (host: fetch vectors → embed exemplars via Ollama → project + centrality + k-means
+   → POST). Registered in `keap-base/plugin.yml` at 05:00 (after embed-sync, before
+   lint). Reuses the validated numpy compute (Option B).
+5. **GraphCanvas semantic-lens** — render logic ✅ (`nodeColor`/`nodeSize` gained a
+   backward-compatible `lens?: LensState` param: colour by axis projection, size by
+   centrality; dormant until wired). **Remaining (needs the running app to tune
+   visually):** (a) thread a `lens` state into the ForceGraph3D `nodeColor`/`nodeVal`
+   accessors; (b) ensure the API→CanvasNode mapping carries `features`; (c) a
+   SidePanel toggle + axis picker + legend; (d) optional texture=cluster / rotation
+   channels. All the data (embeddings→features→payload) is in place; this is UI wiring.
+
+**Activation:** nothing runs until the next keap rebuild (new image ships the endpoints
++ table) and `keap-embed-sync` populates embeddings for the freshly-added content
+(physics/L0/bio/chem/earth/math), after which `keap-features-sync` fills `node_features`.
 
 ## Guardrails
 - Embeddings drive **appearance only** — never position (U1 baked layout is inviolate).

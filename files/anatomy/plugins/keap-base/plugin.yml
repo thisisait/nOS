@@ -125,6 +125,24 @@ pulse:
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
         OLLAMA_URL: "http://127.0.0.1:11434"
 
+    # Semantic-lens feature sync (05:00 — after embed-sync, before lint):
+    # projects each node's embedding onto the exemplar-difference axes +
+    # centrality + k-means, upserts node_features (GraphCanvas colour/size/
+    # texture channels). Appearance only — never touches the baked U1 positions.
+    # Idempotent; no embeddings yet -> no-op. See docs/plans/keap-semantic-lens.md.
+    - name: keap-features-sync
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/keap-features-sync.py"
+      schedule: "0 5 * * *"     # 05:00 UTC — between embed-sync (04:45) and lint (05:15)
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+        OLLAMA_URL: "http://127.0.0.1:11434"
+
     # Cortex consolidator (the "dream" sweep, 04:15 — opens the night
     # shift): walks raw data piles (Nextcloud files, ~/keap/inbox drop dir,
     # operator-imported MariaDB databases) and registers new/changed items
