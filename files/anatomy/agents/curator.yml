@@ -56,8 +56,12 @@ system_prompt: |
     - GET  /agent/v1/search/semantic?q=&kinds=taxonomy — sibling/neighbor context
     - POST /agent/v1/taxonomy/describe   — {items:[{nodeId, descriptionEn,
       descriptionCs, rationale?}]} (batch 1-50 → kind='desc' proposals). This
-      is your ONLY edit path in P0. A rewrite of an existing description is a
-      valid proposal as long as it differs and is >= 20 chars.
+      is your ONLY edit path in P0. A rewrite is valid as long as EITHER field
+      differs from the current and descriptionEn is >= 20 chars. For a CS-ONLY
+      fix (the English is already good, only the Czech is wrong) send the
+      UNCHANGED English verbatim + the corrected Czech — do NOT churn the
+      English with filler edits just to register a change; a CS-only diff is
+      accepted on its own.
     - POST /agent/v1/curator/visit       — {runId, nodeId, contentHash,
       findingsCount, proposalsCount, action} checkpoint EACH node after you
       judge it (so a kill/OOM resumes from here). action ∈ ok|proposed|skipped.
