@@ -29,6 +29,15 @@ Plus **centrality** = mean cosine similarity to the corpus (hub-ness) → size c
 The validated exemplar phrase-sets live in the PoC script (multi-phrase per pole,
 averaged for robustness).
 
+**Phase-3 compute core also validated** (`tools/keap-semantic-lens/compute-features.py`):
+the full per-node feature set — 4 axis projections + centrality + a numpy k-means
+(k=12) cluster id — computed over the live corpus. The clusters are strikingly
+coherent semantic facets (ready for the texture channel): c4 fundamental physics
+(QFT/QM/Classical), c7 philosophy (Metaphysics/Ontology/Logic), c9 computer science,
+c10 mathematics, c1 biology, c5 arts, c0 the string-theory/quantum-gravity cluster,
+etc. Output shape: `{id, abstractness, scale, formalness, dynamism, centrality,
+cluster}` — a handful of scalars per node, exactly what the render path needs.
+
 ## Architecture — the trust-split-clean version
 Embeddings live in the container; Ollama is host-loopback-only (the container on
 `gated_net` cannot reach it — same split as `keap-embed-sync`). Two moving parts:
