@@ -279,6 +279,14 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   latex, discoverer, year, doi; plus `authorities`/`citations`), attached to taxonomy nodes
   by node_id — a structured data layer beside the taxonomy/description SoT. Same pattern
   generalises to other exact sciences.
+- **[M] KEAP knowledge-quality follow-ups (from the 2026-07-14 holistic fable review)** —
+  (1) **deep Czech backfill**: ~322 L4 leaves still lack `cs`, concentrated in the four
+  deeply-grown domains (01.01/01.02/01.03/02.01) — a verified translation pass. (2) **lift
+  brief `[[id]]` cross-links into first-class typed `relations`** (economics/geoscience/
+  mechanics briefs already carry them) — a low-risk coherence gain. (3) **fill the sparse
+  preservation half** (L0 domains 03–12, esp. 09–12 single-node stubs — KEAP's namesake)
+  with real `ext` subtrees. L0 enrichment (the 12 top-level node-articles) shipped
+  2026-07-14 on `feat/l0-enrichment`.
 - **[S] KEAP provenance-folder cleanup** — the pre-dump derivation artifacts
   (`knowledge/{physics,math,chem,bio,toe}/*-{blocks,scaffold,import,concept-graph}.json`)
   are superseded by `knowledge/canonical/` (the SoT). Decide together: retire them (git
