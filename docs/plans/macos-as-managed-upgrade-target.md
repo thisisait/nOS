@@ -1,8 +1,10 @@
 # macOS as a managed upgrade target — design + build log
 
-Status: BUILDING (operator-confirmed 2026-06-21). Increment 1 (continuation
-scripts) shipped + validated; Increment 2 (launchd + playbook install) next. An
-extension of the reset-scope / `host_reboot` machinery
+Status: SHIPPED — Increments 1-3c all landed + **live-validated on a real
+26.3.1→26.5.1 update** (as of 2026-07-14). `tasks/os-resume.yml` is wired into
+`main.yml`. OPEN: **Increment 4** — a first-class `upgrades/macos.yml`
+`host_reboot` recipe (resolve the reboot-spanning recipe-modeling question first).
+An extension of the reset-scope / `host_reboot` machinery
 ([upgrade-reset-scope-and-session-safety.md](upgrade-reset-scope-and-session-safety.md)).
 
 ## Why

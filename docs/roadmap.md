@@ -1,11 +1,11 @@
 # nOS roadmap
 
 Canonical, prioritized roadmap — the single forward-planning surface. Supersedes
-the scattered ones (`active-work.md` is the NOW pointer only; `roadmap-2026q2.md`
-+ the 49 `v07-*.md` dumps + RELEASE prose should be triaged/archived — see
-§"Doc reconciliation"). Produced by an 8-agent state-of-nOS audit (2026-07-07),
-**revised 2026-07-08** after the security-batch + converge-green session — grounded
-in code + git + the live install, not the docs.
+the scattered ones (`active-work.md` is the NOW pointer only). Produced by an
+8-agent state-of-nOS audit (2026-07-07), **revised 2026-07-08** (security-batch +
+converge-green) and **2026-07-14** (KEAP knowledge pipeline + a plan-doc triage:
+the 59 `docs/plans/` were surveyed, 14 done/resolved archived, opens folded into
+the backlog below). Grounded in code + git + the live install, not the docs.
 
 ## The through-line
 
@@ -234,9 +234,32 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   never subject-purged) + DSAR/export bundle encryption.
 - **[M] RustFS / OpenWebUI / Woodpecker CVE clusters** (pending, not vendor-blocked).
 - **[M] Wing-on-Linux validation** (drop the `install_wing:false` stale workaround).
-- **[M] Consolidate the roadmap surface** (this doc) + triage the 49 `v07-*.md` shadow
-  backlog; **add a machine-checkable active-work freshness gate** (the 150-line ceiling
-  is pinned but nothing pins freshness — which is why it drifted 3+ weeks).
+- **[S] Roadmap consolidation** — ✅ 2026-07-14: the 59 plan docs were triaged (2-agent
+  survey); 14 done/resolved moved to `docs/archive/`, the opens folded into this backlog
+  (below). Remaining: **add a machine-checkable active-work freshness gate** (the 150-line
+  ceiling is pinned but nothing pins freshness — which is why it drifted 3+ weeks).
+- **[M] macOS 27 forward-compat hardening** — one epic folding the 14 `v07-darwin27-*`
+  notes. **6 useful now regardless of macOS 27:** Docker-Desktop version-floor preflight,
+  mkcert CAROOT single-source + CA-present assert, macOS/arch version-gate preflight,
+  hard-pin `interpreter_python` (defeat auto-discovery custom-module crash), version-pin
+  Ollama (currently `state:latest`) + llama-server preflight, modernize the `launchctl`
+  load path. Forward-horizon: py3.14 workaround consolidation, VirtioFS doctrine (above),
+  the 2.24 jump (tech-debt), Homebrew tap/pmset/softwareupdate/TCC-sandbox guards.
+- **[M] native_oidc runtime-verify + regression gate** — one epic folding the 7 `v07-sso-*`
+  notes: file/API-driven native_oidc services (Home Assistant `auth_oidc`, Jellyfin
+  `SSO-Auth.xml`, Nextcloud/Gitea) render config but have **no loud runtime-load verify**,
+  so a silent failure regresses SSO invisibly. Add post-setup verify + gate; pin the
+  order-sensitive Jellyfin XML schema; strengthen `test_sso_doctrine.py` to assert wiring
+  not just the mode label; gate the Superset/Metabase SSO-ceiling classifications.
+- **[M] State-drift reconciliation + restart-handler fail-loud** — (a) observed state
+  drift is computed then dropped; escalate/reconcile it. (b) Re-apply the 49 broken
+  docker-restart handler commands' fail-loud (supersedes the reverted `992dfab9`).
+- **[S] Small hardening tail (folded v07)** — central docker log-rotation default across
+  the 63 compose `logging:` blocks; WordPress unauth-surface block/rate-limit at Traefik
+  (REM-114); Uptime-Kuma 1→2.2.1 SSTI recipe (REM-073); FreePBX risk-acceptance flag
+  (fail-closed, CVE-cited); Authentik `2026.5.2` pin propagation (3 drifted surfaces);
+  Tier-2 apps_runner update-semantics gate; blank-reset external-storage + nginx-dir
+  contract gates; WP RBAC last-admin floor; advisor/architect name-contract pin.
 - **[L/XL] KEAP custom taxonomy view + community cloud push** — the git-SoT knowledge
   pipeline (`docs/plans/keap-knowledge-ingest-pipeline.md`) ships the **community** view
   (curated, git-tracked, hardcoded today). Deferred: a per-user **custom** view that
@@ -289,12 +312,13 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   (role is PARKED, not flaky-with-retry).
 - **RELEASE.md** — cut the v0.7-beta tag or demote; add a July section (os-resume /
   reset-scope / Phase-4 / the security batch).
-- `docs/plans/macos-as-managed-upgrade-target.md` header — says "Inc 2 next" but Inc
-  2-3c shipped; header lags its own body ~3 increments.
-- `docs/plans/agentic-upgrade-migration-coexistence.md` + memory — reframe
-  "VISION/DESIGN-FIRST" → mid-Phase-B (B1-B6 + A1-A5 landed); note the first recipe shipped.
+- `docs/plans/macos-as-managed-upgrade-target.md` header — ✅ 2026-07-14: reframed to
+  "SHIPPED, Inc 1-3c live-validated; Inc 4 open".
+- `docs/plans/agentic-upgrade-migration-coexistence.md` header — ✅ 2026-07-14: reframed
+  "VISION/DESIGN-FIRST" → "MID-BUILD Phase B; B7 pg16→17 open" (memory still to update).
 - `docs/sso-autologin-plan.md` + memory — flip from greenfield to shipped-on-dev.
 - `docs/sso-and-attribution.md` — stale "not running on schedule"; only inspektor +
   librarian are runner-less.
-- Archive (grep inbound first): `adjustment-build-report.md`, `phase-b-build-report.md`,
-  the resolved `v07-sec-*`/`v07-tofu-*`/`v07-sso-*-verify-ok.md` docs.
+- Archive — ✅ DONE 2026-07-14: 14 done/resolved plan docs moved to `docs/archive/`
+  (`adjustment-build-report`, `phase-b-build-report`, `agentic-upgrade-adjustments-design`
+  + 11 resolved `v07-*`). Inbound refs repointed. 45 plan docs remain (active/open).

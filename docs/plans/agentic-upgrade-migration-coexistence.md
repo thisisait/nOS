@@ -1,8 +1,10 @@
 # Agentic upgrade → migration → coexistence — architecture plan
 
-Status: VISION / DESIGN-FIRST EPIC (operator-confirmed 2026-06-15). This is the
-next major build after the v0.7-beta tag. Authored as a handoff so it survives a
-conversation compact — pick it up from here.
+Status: MID-BUILD — Phase B (as of 2026-07-14). B1-B6 + the A1-A5 adjustment round
+landed; the **first agent-authored upgrade recipe (Gitea 1.26.4)** shipped through
+the flow. OPEN: **B7 — the live PG 16→17 coexistence cutover** (the epic's own
+acceptance criterion, operator-supervised) + the reset-scope blank wet-test. The
+buildable spec is `agentic-upgrade-migration-coexistence-design.md`.
 
 ## The core principle (the "stop vibing on the OS, not nOS" correction)
 

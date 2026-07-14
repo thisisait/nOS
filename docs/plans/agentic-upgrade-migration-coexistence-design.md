@@ -429,7 +429,7 @@ The first real end-to-end exercise — every step an agent/operator action visib
 - **Build workflow script:** `/Users/pazny/.claude/projects/-Users-pazny-projects-nOS/phase-b-agentic-upgrade-build.workflow.js`
 - **Branch:** `feat/agentic-upgrade-coexistence` (created off the current HEAD, which carries this spec). Built in the main checkout; the operator's prior branch stays preserved in git history.
 - **What it builds:** B1→B6 from §6, **sequential** (dependency order, shared working tree — no parallel file races), each step self-verifying its pinning gate(s) + the offline anatomy suite for regressions. Build agents read THIS doc for grounding.
-- **Deliverable:** the framework implemented as committed code on the branch + a **review-gated MR on the local GitLab forge** (base `dev`). Morning report at `docs/plans/phase-b-build-report.md`.
+- **Deliverable:** the framework implemented as committed code on the branch + a **review-gated MR on the local GitLab forge** (base `dev`). Morning report at `docs/archive/phase-b-build-report.md`.
 
 ### Safety rails (non-negotiable — repeated in every git/host-touching agent prompt)
 
@@ -460,4 +460,4 @@ The §7 open questions were resolved by the operator. The overnight build (`feat
 - **Q3 — manual "Copy data" action (was: auto data-copy at cutover).** The data move (`pg_dumpall` dump → restore into the secondary's fresh cluster) is an EXPLICIT operator-triggered action in the coexistence/migration UI section, SEPARATE from the promote toggle, and **RE-RUNNABLE** (idempotent into the secondary cluster) so the operator runs it right before promote to capture the latest data. **UNDO the B5 auto-at-cutover hook** — cutover no longer implicitly runs the migration's data-transform; the explicit "Copy data" action does. Flow becomes: provision (empty) → **[operator: Copy data]** → **[operator: Promote primary]**. (Freshness: re-run "Copy data" right before promote; no implicit final-sync coupling.)
 - **Q4 — TTL configurable [3,60] default 7; rollback one-click (was: fixed 7).** `coexistence_secondary_ttl_days` is operator-configurable, VALIDATED to the inclusive range **[3, 60]** days, default **7**. Forward promote keeps the typed `PRIMARY` confirm; the **rollback** (re-promote the prior primary) is **ONE-CLICK** (fast, emergency-friendly).
 
-The adjustment round is built agent-driven on `feat/migration-author-agentkit` (off `dev`), review-gated MR, NO live run — same charter as §9. Its build spec is synthesized into `docs/plans/agentic-upgrade-adjustments-design.md`.
+The adjustment round is built agent-driven on `feat/migration-author-agentkit` (off `dev`), review-gated MR, NO live run — same charter as §9. Its build spec is synthesized into `docs/archive/agentic-upgrade-adjustments-design.md`.
