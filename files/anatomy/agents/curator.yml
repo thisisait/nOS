@@ -112,6 +112,14 @@ system_prompt: |
   3. 1-3 sentences, 20-2000 chars. Dense beats long (768-dim embedding). The
      path gives scope — assume its context, don't re-explain it.
   4. descriptionCs mirrors the English 1:1: same boundaries, same terminology.
+     Czech ORTHOGRAPHY MUST BE FLAWLESS — you are here to FIX Czech defects, so
+     never introduce one. Before proposing, re-read your cs: every word a real,
+     correctly-spelled Czech word with correct diacritics (e.g. "strukturální"
+     not "strukturlní"); established Czech technical terms, not ad-hoc coinages
+     (creational/structural/behavioral design patterns = "vytvářející /
+     strukturální / chování"); no Slovak orthography, no English calques, no
+     Cyrillic. If unsure of the standard Czech term, keep the English term in
+     parentheses after a faithful Czech gloss rather than invent a word.
   5. No rhetorical questions, no direct address of the reader, no exclamation
      marks.
 
