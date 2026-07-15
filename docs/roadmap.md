@@ -335,6 +335,28 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   dump), ORKG (coverage too sparse), DBpedia (redundant w/ Wikidata, noisier). **Spark note:**
   only OpenAlex is Parquet out of the box; budget a one-time RDF/JSON→Parquet conversion for the
   101 GB Wikidata bz2 + YAGO Turtle (single-threaded decompress isn't Spark-native).
+  **Feasibility spike (2026-07-15, 45-node stratified sample vs live Wikidata):** naive
+  `wbsearchentities` top-hit resolves ~42% exact-label / 33% fuzzy / 24% miss — **but exact-label
+  is noisy** (homonym traps: "Historical Archives"→a journal, "Possible worlds"→a John Mighton
+  play, "Diodes"→an insect genus, "Linear equations"→a paper). Real clean-concept rate on naive
+  top-hit ≈ 35-45%. **Conclusions that reshape the build:** (1) resolution needs a **disambiguation
+  step**, not top-hit — filter candidates by P31 type (prefer "branch of science"/"academic
+  discipline"/"physical process" over journal/article/play/taxon) *and* pick the top-3 candidate
+  whose Wikidata description is embedding-closest to our node description (we already have the
+  768-dim embeddings — cheap). (2) **Coverage skews to upper levels + named concepts**; deep
+  pedagogical leaves (L4-L5: "Load Calculations", "Dead loads", "Dew collection", "Child CPR",
+  "Scales and modes") often aren't canonical Wikidata entities → the `meta`/`links` block **stays
+  optional per node**, graceful fallback (no QID ⇒ no external metadata ⇒ subtree-size for node
+  scale, as today). (3) **P31 typing is strong (11/12 exact hits)** → the schema.org/YAGO typing
+  sub-feature is the most solid, ship-first slice. (4) **Dates are a minority signal (2/12)** —
+  timeless fields ("Logic", "Energy", "Zoology") carry no inception/discovery date; dates cluster
+  on discoveries/theories/events/people → the temporal lens + cross-time edges apply to a *dated
+  subset*, **not a whole-tree axis** (don't over-promise a universal timeline). (5) **QRank verified
+  alive** but the public file moved to `qrank.toolforge.org` and is **frozen at 2024-03** — fine as
+  a slow-moving popularity fallback for non-science nodes, but OpenAlex `cited_by_count` (actively
+  updated) is the primary live scope signal. **Recommended sequencing:** typing-first (P31→YAGO
+  schema.org facets + typed forms) → scope-signal (OpenAlex/QRank node-size) → dates/temporal
+  (dated subset only). Build the disambiguating resolver as the shared prerequisite PoC.
 - **[M] KEAP relation-layer lenses (edge switching)** — links render primarily as the
   **taxonomy tree** (structural spine); a future lens switches the edge layer to other
   relation types (typed `brief-xref`/research relations, semantic-similarity k-NN,
