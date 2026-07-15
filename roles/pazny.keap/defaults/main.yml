@@ -21,9 +21,11 @@ keap_src_dir: "{{ keap_home }}/src"
 # skips it (install_keap off in tests/config.yml) to avoid a heavy Docker image
 # build, same as every other Docker stack in the wet-test — not an auth limit now.
 keap_repo_url: "https://github.com/thisisait/nos-keap.git"
-# Pin a release tag once the first one is cut (R10: branches make
-# `--tags keap` builds non-reproducible; a broken ref breaks the run).
-keap_repo_ref: "v1.5.0"
+# Immutable release tag (R10: branches make `--tags keap` builds non-
+# reproducible; a force-pushed branch silently changes what gets built under
+# the same image tag). v1.6.2 == the former feat/keap-linked-data tree +
+# version self-report sync.
+keap_repo_ref: "v1.6.2"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"

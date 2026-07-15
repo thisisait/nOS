@@ -45,6 +45,11 @@ services:
       # legitimate identity headers via Traefik's authentik@file on gated_net.
       KEAP_TRUSTED_PROXY: "1"
       KEAP_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+      # Canonical public origin — server/routes.ts CSRF same-origin guard +
+      # /ext/v1 pairing canonicalOrigin. Without it a non-browser client (no
+      # Sec-Fetch-Site) 403s under KEAP_TRUSTED_PROXY, and the extension can't
+      # self-configure its instance URL.
+      KEAP_PUBLIC_URL: "https://{{ keap_domain }}"
       # Agent-surface bearer tokens (scope-split, R9): read-only vs read+write,
       # plus the DEVICE tier (write-only /ingest/v1 intake — AR glasses etc.).
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
