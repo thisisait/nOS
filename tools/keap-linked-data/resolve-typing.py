@@ -273,6 +273,10 @@ def main():
                     help="node-embeddings json (GET /agent/v1/features/vectors) — enables semantic disambiguation")
     ap.add_argument("--ollama", default=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     ap.add_argument("--model", default="nomic-embed-text")
+    ap.add_argument("--post", default=None,
+                    help="KEAP API base (e.g. http://127.0.0.1:8091) — POST high+med tier to node_metadata")
+    ap.add_argument("--token", default=os.environ.get("KEAP_AGENT_TOKEN_RW", ""),
+                    help="RW agent bearer token for --post")
     a = ap.parse_args()
 
     g = json.load(open(a.graph))
@@ -330,6 +334,26 @@ def main():
         print(f"  {t:12}: {n}")
     print(f"\nwrote {a.out}")
 
+    # optional: POST the high+med tier to the KEAP container (node_metadata layer)
+    if a.post:
+        payload = [{"node_id": r["id"], "qid": r["qid"], "keap_type": r.get("keap_type"),
+                    "schema_type": r.get("schema_type"), "wd_label": r.get("label"),
+                    "confidence": r["conf"]}
+                   for r in rows if r["conf"] in ("high", "med") and r.get("qid")]
+        if not a.token:
+            print("keap-linked-data: --post needs --token (KEAP_AGENT_TOKEN_RW)", file=sys.stderr)
+            return 1
+        req = urllib.request.Request(a.post.rstrip("/") + "/agent/v1/metadata",
+            data=json.dumps({"model": "wikidata", "metadata": payload}).encode(),
+            headers={"content-type": "application/json",
+                     "authorization": f"Bearer {a.token}",
+                     "x-keap-agent": "keap-linked-data"}, method="POST")
+        with urllib.request.urlopen(req, timeout=120) as r:
+            out = json.loads(r.read().decode())
+        out = out.get("data", out)
+        print(f"posted {len(payload)} high+med rows -> upserted {out.get('upserted', 0)}")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
