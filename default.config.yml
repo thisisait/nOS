@@ -1734,7 +1734,7 @@ coexistence_secondary_ttl_days: 7
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.6.21"        # CVE-2026-33186/33433 pins + S2 freshness 2026-06-10 (3.6 patch line)
+traefik_image_version: "v3.6.23"        # REM-127 CVE-2026-54763/54764 (ForwardAuth underscore-header strip bypass + X-Forwarded-Proto inject); +33186/33433 pins
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
