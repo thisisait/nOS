@@ -13,20 +13,27 @@ temporal axis.
 ## resolve-typing.py
 
 ```bash
-# node list = GET http://127.0.0.1:8091/api/graph (loopback + X-Authentik-* headers)
+# node list + node embeddings via loopback (X-Authentik headers / RO agent token)
 curl -s -H "X-Authentik-Username: <you>" -H "X-Authentik-Groups: nos-providers|nos-admins" \
      http://127.0.0.1:8091/api/graph -o graph.json
-python3 resolve-typing.py --graph graph.json --out qid-typing.json --cache wd-cache.json
+curl -s -H "authorization: Bearer $KEAP_AGENT_TOKEN_RO" \
+     http://127.0.0.1:8091/agent/v1/features/vectors -o vectors.json
+python3 resolve-typing.py --graph graph.json --vectors vectors.json \
+     --out qid-typing.json --cache wd-cache.json
 ```
 
 Read-only against the public Wikidata API; every response is cached to `--cache`
 so a re-run (e.g. after tuning the type buckets) is instant and re-queries nothing.
+`--vectors` enables semantic disambiguation (needs Ollama `nomic-embed-text`); the
+per-node cosine map is cached to `<vectors>.sem.json` so bucket iteration stays fast.
+Omit `--vectors` for a lexical-only pass.
 
 ### Why not naive top-hit
 
 The 2026-07-15 feasibility spike showed `wbsearchentities` top-hit is ~40% and
 **homonym-trapped**: a node named "Diodes" matches an insect genus, "Possible
-worlds" a John Mighton play, "Chemistry" a European journal. Two guards fix it:
+worlds" a John Mighton play, "Chemistry" a European journal, "Maritime" a region
+of Togo, "Heaps" a surname. Three guards fix it:
 
 1. **Disambiguation at search time** — score the top-6 candidates by their
    Wikidata `description` gloss (deny `journal|article|play|film|genus|…`, allow
@@ -36,6 +43,12 @@ worlds" a John Mighton play, "Chemistry" a European journal. Two guards fix it:
    any whose P31 is a *specific publication/artwork/media instance* (scholarly
    article, thesis, patent, painting, book edition, …) — those are homonyms that
    beat the label match because their gloss carried no deny keyword.
+3. **Semantic veto/boost** (`--vectors`) — embed each candidate's Wikidata gloss
+   via Ollama and cosine it against our node's own embedding (fetched from the
+   container, same nomic space). A candidate scores `+SEM_W·cosine`; a best-pick
+   under cosine `0.45` is vetoed even on an exact label. This is what rejects
+   "Maritime→region of Togo" (cos 0.41) and flips "Heaps→surname" to the CS sense
+   (cos 0.72) — the wrong-sense errors the lexical guards can't see.
 
 ### Output (`qid-typing.json`)
 
@@ -49,12 +62,17 @@ match — node carries no external identity, graceful fallback).
 | Level | nodes | usable (high+med) |
 |-------|-------|-------------------|
 | L0 | 12 | 41% |
-| L1 | 95 | 70% |
-| L2 | 255 | 69% |
-| L3 | 476 | 48% |
+| L1 | 95 | 69% |
+| L2 | 255 | 66% |
+| L3 | 476 | 47% |
 | L4 | 897 | 15% |
 | L5 | 15 | 6% |
-| **all** | **1750** | **35%** |
+| **all** | **1750** | **34%** (high 395 / med 212) |
+
+Semantic disambiguation trades a few `med` for precision (wrong-sense rejects)
+and promotes correct-sense matches to `high` (339→395) — the usable set is smaller
+but cleaner. Lexical-only (no `--vectors`) yields ~618 usable but leaks wrong-sense
+homonyms like Maritime→Togo.
 
 The spine resolves the **structural upper tree well** (L0-L3 disciplines/fields/
 named concepts ≈ 55-70%) and the **deep pedagogical leaves poorly** (L4-L5 ≈ 15%

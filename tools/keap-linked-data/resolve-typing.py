@@ -53,16 +53,77 @@ REJECT_P31 = re.compile(r"\barticle\b|thesis|dissertation|preprint|painting|scul
 BUCKETS = [  # (regex on P31 english label, keap_bucket, schema_type)
     (r"academic discipline|branch of|field of|\bscience\b|study of|subfield|specialty|academic major", "discipline", "Intangible"),
     (r"theory|\blaw\b|principle|hypothesis|paradigm|\bmodel\b|\beffect\b|conjecture|theorem", "theory", "Intangible"),
-    (r"process|phenomen|reaction|interaction|mechanism|transition|\bmotion\b|\bcycle\b|economic activity|industry", "process", "Intangible"),
+    (r"process|phenomen|reaction|interaction|mechanism|transition|\bmotion\b|\bcycle\b|economic activity|industry|human activity|\bactivity\b|\bhobby\b|human impact|environmental issue", "process", "Intangible"),
     (r"physical quantity|\bproperty\b|constant|\bunit\b|dimension|\bmeasure\b|form of energy", "quantity", "Intangible"),
     (r"chemical|compound|\belement\b|\bparticle\b|\bmaterial\b|substance|mineral|molecule|\bions?\b", "substance", "ChemicalSubstance"),
     (r"taxon|species|genus|organism|\bfamily\b|bacteri|\bplant\b|\banimal\b", "organism", "Taxon"),
-    (r"\bhuman\b|\bperson\b|profession|occupation", "person", "Person"),
+    (r"human being|^human$|\bperson\b", "person", "Person"),
     (r"\bevent\b|\bwar\b|period|\bera\b|epoch|revolution|\bmovement\b|battle", "event", "Event"),
-    (r"technolog|device|machine|\btool\b|software|algorithm|instrument|equipment|technique|\bcraft\b|\btrade\b", "technology", "Product"),
-    (r"geograph|location|region|country|\bcity\b|body of water|mountain|\bplace\b|continent", "place", "Place"),
+    (r"technolog|device|machine|\btool\b|software|algorithm|instrument|equipment|technique|\bcraft\b|\btrade\b|\bskill\b|profession|occupation", "technology", "Product"),
+    (r"geograph|location|region|country|\bcity\b|body of water|mountain|\bplace\b|continent|settlement", "place", "Place"),
     (r"\bwork\b|document|\bbook\b|standard|framework|\blanguage\b", "work", "CreativeWork"),
 ]
+
+SEM_W = 4.5  # weight of the semantic (embedding cosine) term in candidate scoring
+
+
+def search_key(name):
+    """Cache key for a node's wbsearchentities call — MUST match http_json()."""
+    return urllib.parse.urlencode(sorted({
+        "action": "wbsearchentities", "search": name, "language": "en",
+        "format": "json", "limit": "6"}.items()))
+
+
+def _normalize(v):
+    n = sum(x * x for x in v) ** 0.5 or 1.0
+    return [x / n for x in v]
+
+
+def _dot(a, b):
+    return sum(x * y for x, y in zip(a, b))
+
+
+def embed_ollama(texts, model, url, timeout=300):
+    body = json.dumps({"model": model, "input": texts}).encode()
+    req = urllib.request.Request(url.rstrip("/") + "/api/embed", data=body,
+                                 headers={"content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        out = json.loads(r.read().decode())
+    return [_normalize(e) for e in out["embeddings"]]
+
+
+def build_semantic(nodes, cache, vectors_path, model, url, chunk=64):
+    """{node_id: {qid: cosine}} — semantic closeness of our node's embedding to
+    each candidate's Wikidata description gloss (embedded in the SAME nomic space).
+    Kills wrong-sense label matches (Maritime->'region of Togo'). Pure-python
+    cosine (768-dim dot) — no numpy dependency."""
+    vres = json.load(open(vectors_path))
+    vres = vres.get("data", vres)
+    nv = {it["id"]: _normalize(it["vector"]) for it in vres.get("vectors", [])}
+    cand, descs = {}, set()
+    for n in nodes:
+        d = cache.get(search_key(n["name"]))
+        if not d:
+            continue
+        lst = [(h["id"], h.get("description", "")) for h in d.get("search", [])[:6]]
+        cand[n["id"]] = lst
+        descs.update(ds for _, ds in lst if ds)
+    descs = sorted(descs)
+    print(f"  semantic: embedding {len(descs)} unique candidate glosses...", file=sys.stderr)
+    dvec = {}
+    for i in range(0, len(descs), chunk):
+        part = descs[i:i + chunk]
+        embs = embed_ollama(part, model, url)
+        for t, e in zip(part, embs):
+            dvec[t] = e
+    sem = {}
+    for nid, lst in cand.items():
+        base = nv.get(nid)
+        if base is None:
+            continue
+        sem[nid] = {qid: _dot(base, dvec[ds]) for qid, ds in lst if ds in dvec}
+    return sem
+
 
 def http_json(params, cache, timeout=25, retries=3):
     key = urllib.parse.urlencode(sorted(params.items()))
@@ -106,7 +167,7 @@ def score_candidate(node_name, node_desc, cand):
     return s, label, desc
 
 
-def resolve(nodes, cache, limit=None):
+def resolve(nodes, cache, limit=None, sem=None):
     picked = {}  # node_id -> {qid,label,desc,score,conf}
     todo = nodes[:limit] if limit else nodes
     for i, n in enumerate(todo):
@@ -117,21 +178,31 @@ def resolve(nodes, cache, limit=None):
         if not hits:
             picked[n["id"]] = {"qid": None, "conf": "none", "reason": "no-hit"}
             continue
-        scored = [score_candidate(name, n.get("description", ""), h) + (h["id"],) for h in hits]
+        nsem = sem.get(n["id"], {}) if sem else {}
+        scored = []
+        for h in hits:
+            s, label, desc = score_candidate(name, n.get("description", ""), h)
+            s += SEM_W * nsem.get(h["id"], 0.0)
+            scored.append((s, label, desc, h["id"]))
         scored.sort(key=lambda t: t[0], reverse=True)
         best_s, best_label, best_desc, best_qid = scored[0]
+        cos = nsem.get(best_qid, None)
         exact = best_label.strip().lower() == name.strip().lower()
         allow = bool(ALLOW.search(best_desc)) and not DENY.search(best_desc)
-        if best_s < 0:
+        # a strong semantic mismatch vetoes even an exact label (wrong-sense trap)
+        if sem and cos is not None and cos < 0.45:
+            conf = "none"; best_qid = None; reason = "sem-veto"
+        elif best_s < 0:
             conf = "none"; best_qid = None; reason = "all-denied"
-        elif exact and allow:
-            conf = "high"; reason = "exact+type"
+        elif (exact or (sem and cos is not None and cos >= 0.62)) and allow:
+            conf = "high"; reason = "exact/sem+type"
         elif exact or (allow and best_s >= 2.0):
             conf = "med"; reason = "exact|type+overlap"
         else:
             conf = "low"; reason = "weak"
         picked[n["id"]] = {"qid": best_qid, "label": best_label, "desc": best_desc,
-                           "score": round(best_s, 2), "conf": conf, "reason": reason}
+                           "score": round(best_s, 2), "conf": conf, "reason": reason,
+                           "cos": round(cos, 3) if cos is not None else None}
         if (i + 1) % 100 == 0:
             print(f"  ...resolved {i+1}/{len(todo)} (cache {len(cache)})", file=sys.stderr)
     return picked
@@ -198,14 +269,32 @@ def main():
     ap.add_argument("--out", default="qid-typing.json")
     ap.add_argument("--cache", default="wd-cache.json")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--vectors", default=None,
+                    help="node-embeddings json (GET /agent/v1/features/vectors) — enables semantic disambiguation")
+    ap.add_argument("--ollama", default=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
+    ap.add_argument("--model", default="nomic-embed-text")
     a = ap.parse_args()
 
     g = json.load(open(a.graph))
     nodes = g.get("data", g)["nodes"]
     cache = json.load(open(a.cache)) if os.path.exists(a.cache) else {}
     print(f"resolving {len(nodes)} nodes (cache {len(cache)})...", file=sys.stderr)
+    sem = None
+    if a.vectors:
+        sem_cache = a.vectors + ".sem.json"
+        if os.path.exists(sem_cache):
+            sem = json.load(open(sem_cache))
+            print(f"  semantic: loaded {len(sem)} cached node-cosine maps", file=sys.stderr)
+        else:
+            # search cache must be warm first (semantic reads cached candidates)
+            for n in (nodes[:a.limit] if a.limit else nodes):
+                http_json({"action": "wbsearchentities", "search": n["name"],
+                            "language": "en", "format": "json", "limit": "6"}, cache)
+            sem = build_semantic(nodes[:a.limit] if a.limit else nodes, cache,
+                                 a.vectors, a.model, a.ollama)
+            json.dump(sem, open(sem_cache, "w"))
     try:
-        picked = resolve(nodes, cache, a.limit)
+        picked = resolve(nodes, cache, a.limit, sem)
         add_typing(picked, cache)
     finally:
         json.dump(cache, open(a.cache, "w"))
