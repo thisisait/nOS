@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""keap-linked-data — typing-first slice of the KEAP external-enrichment epic.
+
+Resolve each KEAP concept node to a Wikidata QID with a DISAMBIGUATION step
+(not naive top-hit — the 2026-07-15 feasibility spike showed top-hit is ~40%
+noisy, homonym-trapped: journals/plays/insect-genera win on exact label), then
+pull P31 (instance-of) and bucket it into a KEAP render type + a schema.org-ish
+class. Emits a reviewable artifact `qid-typing.json`; nothing lands in the
+canonical/DB until the operator reviews quality.
+
+Disambiguation is cheap: `wbsearchentities` already returns each candidate's
+`description` (effectively a type gloss — "scientific journal" vs "branch of
+mathematics"), so we score top-N candidates by description allow/deny keywords +
+label match + lexical overlap with our node description — no per-candidate P31
+fetch. P31 is fetched only for the FINAL chosen QIDs (batched) to produce typing.
+
+Read-only against public Wikidata. Responses cached to --cache for resumability.
+Design + spike: docs/roadmap.md (KEAP node metadata + external dataset linkage).
+
+Usage:
+  python3 resolve-typing.py --graph graph.json --out qid-typing.json [--limit N]
+  # graph.json = GET http://127.0.0.1:8091/api/graph (nodes[].{id,name,level,description})
+"""
+from __future__ import annotations
+import argparse, json, os, re, sys, time, urllib.request, urllib.parse
+from collections import Counter
+
+WD = "https://www.wikidata.org/w/api.php"
+UA = "KEAP-enrichment/1.0 (research; pazny.develop@gmail.com)"
+
+# --- type scoring on the candidate's Wikidata description (the cheap gloss) ---
+DENY = re.compile(r"\b(journal|article|paper|play|film|movie|album|song|single|"
+                  r"band|video game|novel|book|manga|anime|episode|series|"
+                  r"genus|species|taxon|family of|order of|surname|given name|"
+                  r"disambiguation|company|enterprise|brand|website|magazine|"
+                  r"footballer|actor|actress|musician|painter|singer|writer)\b", re.I)
+ALLOW = re.compile(r"\b(discipline|science|branch of|field of|area of|study of|"
+                   r"subfield|theory|law of|principle|hypothesis|model|paradigm|"
+                   r"process|phenomen|reaction|interaction|mechanism|method|"
+                   r"technique|concept|notion|physical quantity|property|constant|"
+                   r"class of|type of|form of|system of|study|analysis)\b", re.I)
+
+# --- P31 types that mean "this is a specific publication/artwork/media instance",
+#     never an abstract concept — a homonym trap that beat the label match. Reject. ---
+REJECT_P31 = re.compile(r"\barticle\b|thesis|dissertation|preprint|painting|sculpture|"
+                        r"comic|\bchapter\b|clinical trial|\bfilm\b|\balbum\b|\bsong\b|"
+                        r"\bnovel\b|manga|anime|\bepisode\b|\bplay\b|magazine|newspaper|"
+                        r"\bwebsite\b|video game|\bband\b|musical work|literary work|"
+                        r"\bmovie\b|television series|photograph|drawing|poem\b|"
+                        r"\bpatent\b|version, edition|scientific publication", re.I)
+
+# --- P31 label -> KEAP render bucket (primary facet) + schema.org-ish class ---
+BUCKETS = [  # (regex on P31 english label, keap_bucket, schema_type)
+    (r"academic discipline|branch of|field of|\bscience\b|study of|subfield|specialty|academic major", "discipline", "Intangible"),
+    (r"theory|\blaw\b|principle|hypothesis|paradigm|\bmodel\b|\beffect\b|conjecture|theorem", "theory", "Intangible"),
+    (r"process|phenomen|reaction|interaction|mechanism|transition|\bmotion\b|\bcycle\b|economic activity|industry", "process", "Intangible"),
+    (r"physical quantity|\bproperty\b|constant|\bunit\b|dimension|\bmeasure\b|form of energy", "quantity", "Intangible"),
+    (r"chemical|compound|\belement\b|\bparticle\b|\bmaterial\b|substance|mineral|molecule|\bions?\b", "substance", "ChemicalSubstance"),
+    (r"taxon|species|genus|organism|\bfamily\b|bacteri|\bplant\b|\banimal\b", "organism", "Taxon"),
+    (r"\bhuman\b|\bperson\b|profession|occupation", "person", "Person"),
+    (r"\bevent\b|\bwar\b|period|\bera\b|epoch|revolution|\bmovement\b|battle", "event", "Event"),
+    (r"technolog|device|machine|\btool\b|software|algorithm|instrument|equipment|technique|\bcraft\b|\btrade\b", "technology", "Product"),
+    (r"geograph|location|region|country|\bcity\b|body of water|mountain|\bplace\b|continent", "place", "Place"),
+    (r"\bwork\b|document|\bbook\b|standard|framework|\blanguage\b", "work", "CreativeWork"),
+]
+
+def http_json(params, cache, timeout=25, retries=3):
+    key = urllib.parse.urlencode(sorted(params.items()))
+    if key in cache:
+        return cache[key]
+    url = WD + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    for i in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                out = json.loads(r.read().decode())
+            cache[key] = out
+            time.sleep(0.12)
+            return out
+        except Exception as e:
+            if i == retries - 1:
+                raise
+            time.sleep(1.5 * (i + 1))
+
+
+def tokens(s):
+    return set(re.findall(r"[a-z]{4,}", (s or "").lower()))
+
+
+def score_candidate(node_name, node_desc, cand):
+    """Higher = better. cand from wbsearchentities."""
+    label = cand.get("label", "")
+    desc = cand.get("description", "")
+    s = 0.0
+    if label.strip().lower() == node_name.strip().lower():
+        s += 3.0
+    elif node_name.strip().lower() in label.strip().lower() or label.strip().lower() in node_name.strip().lower():
+        s += 1.0
+    if DENY.search(desc):
+        s -= 4.0
+    if ALLOW.search(desc):
+        s += 2.0
+    # lexical overlap between our description and the candidate gloss
+    ov = tokens(node_desc) & tokens(desc)
+    s += min(len(ov), 4) * 0.4
+    return s, label, desc
+
+
+def resolve(nodes, cache, limit=None):
+    picked = {}  # node_id -> {qid,label,desc,score,conf}
+    todo = nodes[:limit] if limit else nodes
+    for i, n in enumerate(todo):
+        name = n["name"]
+        d = http_json({"action": "wbsearchentities", "search": name,
+                        "language": "en", "format": "json", "limit": "6"}, cache)
+        hits = d.get("search", [])
+        if not hits:
+            picked[n["id"]] = {"qid": None, "conf": "none", "reason": "no-hit"}
+            continue
+        scored = [score_candidate(name, n.get("description", ""), h) + (h["id"],) for h in hits]
+        scored.sort(key=lambda t: t[0], reverse=True)
+        best_s, best_label, best_desc, best_qid = scored[0]
+        exact = best_label.strip().lower() == name.strip().lower()
+        allow = bool(ALLOW.search(best_desc)) and not DENY.search(best_desc)
+        if best_s < 0:
+            conf = "none"; best_qid = None; reason = "all-denied"
+        elif exact and allow:
+            conf = "high"; reason = "exact+type"
+        elif exact or (allow and best_s >= 2.0):
+            conf = "med"; reason = "exact|type+overlap"
+        else:
+            conf = "low"; reason = "weak"
+        picked[n["id"]] = {"qid": best_qid, "label": best_label, "desc": best_desc,
+                           "score": round(best_s, 2), "conf": conf, "reason": reason}
+        if (i + 1) % 100 == 0:
+            print(f"  ...resolved {i+1}/{len(todo)} (cache {len(cache)})", file=sys.stderr)
+    return picked
+
+
+def batched(seq, n):
+    for i in range(0, len(seq), n):
+        yield seq[i:i + n]
+
+
+def add_typing(picked, cache):
+    """Fetch P31 for chosen QIDs (batched), then P31-target labels, then bucket."""
+    qids = sorted({p["qid"] for p in picked.values() if p.get("qid")})
+    p31_of = {}
+    for chunk in batched(qids, 45):
+        d = http_json({"action": "wbgetentities", "ids": "|".join(chunk),
+                        "format": "json", "props": "claims"}, cache)
+        for qid, ent in d.get("entities", {}).items():
+            tgt = []
+            for c in ent.get("claims", {}).get("P31", []):
+                try:
+                    tgt.append(c["mainsnak"]["datavalue"]["value"]["id"])
+                except (KeyError, TypeError):
+                    pass
+            p31_of[qid] = tgt
+    # label the P31 target qids
+    tgt_ids = sorted({t for ts in p31_of.values() for t in ts})
+    lbl = {}
+    for chunk in batched(tgt_ids, 45):
+        d = http_json({"action": "wbgetentities", "ids": "|".join(chunk),
+                        "format": "json", "props": "labels", "languages": "en"}, cache)
+        for qid, ent in d.get("entities", {}).items():
+            lbl[qid] = ent.get("labels", {}).get("en", {}).get("value", "")
+    # bucket each node
+    for p in picked.values():
+        q = p.get("qid")
+        if not q:
+            continue
+        types = [(t, lbl.get(t, "")) for t in p31_of.get(q, [])]
+        p["p31"] = types
+        # P31 post-filter: a publication/artwork instance is a homonym trap that
+        # slipped the search-description deny (paper without an abstract gloss) —
+        # reject outright, the node simply carries no confident external identity.
+        if any(REJECT_P31.search(tl) for _, tl in types):
+            p["qid"] = None; p["conf"] = "none"; p["reason"] = "p31-reject"
+            p.pop("keap_type", None); p.pop("schema_type", None)
+            continue
+        bucket = schema = None
+        for _, tlabel in types:
+            for rx, b, sch in BUCKETS:
+                if re.search(rx, tlabel, re.I):
+                    bucket, schema = b, sch
+                    break
+            if bucket:
+                break
+        p["keap_type"] = bucket or "concept"
+        p["schema_type"] = schema or "DefinedTerm"
+    return picked
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--graph", default="graph.json")
+    ap.add_argument("--out", default="qid-typing.json")
+    ap.add_argument("--cache", default="wd-cache.json")
+    ap.add_argument("--limit", type=int, default=None)
+    a = ap.parse_args()
+
+    g = json.load(open(a.graph))
+    nodes = g.get("data", g)["nodes"]
+    cache = json.load(open(a.cache)) if os.path.exists(a.cache) else {}
+    print(f"resolving {len(nodes)} nodes (cache {len(cache)})...", file=sys.stderr)
+    try:
+        picked = resolve(nodes, cache, a.limit)
+        add_typing(picked, cache)
+    finally:
+        json.dump(cache, open(a.cache, "w"))
+
+    # attach node meta for the review artifact
+    by_id = {n["id"]: n for n in nodes}
+    rows = []
+    for nid, p in picked.items():
+        n = by_id[nid]
+        rows.append({"id": nid, "name": n["name"], "level": n["level"], **p})
+    rows.sort(key=lambda r: r["id"])
+    json.dump({"count": len(rows), "nodes": rows}, open(a.out, "w"), indent=1, ensure_ascii=False)
+
+    # stats
+    conf = Counter(r["conf"] for r in rows)
+    by_lvl = {}
+    for r in rows:
+        by_lvl.setdefault(r["level"], Counter())[r["conf"]] += 1
+    typ = Counter(r.get("keap_type") for r in rows if r.get("qid"))
+    N = len(rows)
+    usable = conf["high"] + conf["med"]
+    print(f"\n=== typing resolution over {N} nodes ===")
+    for c in ("high", "med", "low", "none"):
+        print(f"  {c:5}: {conf[c]:4}  ({100*conf[c]//N}%)")
+    print(f"  USABLE (high+med): {usable} ({100*usable//N}%)")
+    print("\n=== confidence by level ===")
+    for lvl in sorted(by_lvl):
+        c = by_lvl[lvl]
+        tot = sum(c.values())
+        print(f"  L{lvl}: {tot:4} nodes  high+med={c['high']+c['med']:4} ({100*(c['high']+c['med'])//tot}%)")
+    print("\n=== KEAP type buckets (resolved nodes) ===")
+    for t, n in typ.most_common():
+        print(f"  {t:12}: {n}")
+    print(f"\nwrote {a.out}")
+
+
+if __name__ == "__main__":
+    main()
