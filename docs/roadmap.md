@@ -316,11 +316,39 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   provenance, citation-count) and **renders** (temporal orbits, typed bodies). Storage:
   a `node_metadata`/JSON-LD layer beside `node_features`; the git-SoT canonical format
   gains an optional `meta`/`links` block. Big epic — scope after the render hierarchy lands.
+  **Enrichment spine (KB survey 2026-07-15):** each KEAP node is an abstract *concept*, so
+  the spine must be a concept/entity KB, not a paper KB. Recommended stack — (1) **Wikidata
+  QID** as the primary external key (CC0; the LOD hub — one ingest reaches MeSH/Getty/GeoNames/
+  DOI/ORCID/OpenAlex via typed ID properties; richest temporal vocab anywhere: inception P571,
+  *discovery date* P575, *point in time* P585 → directly powers the cross-time edge heuristic);
+  (2) **YAGO 4.5** as the schema.org-typing + clean-taxonomy overlay (native schema.org top
+  classes, joins 1:1 to the QID spine — turns "typing via messy P279 chains" into real typed
+  entities; license flag: CC-BY-**SA** share-alike, resolve before redistributing enriched
+  metadata); (3) **OpenAlex** for the science branches' scope-signal + dataset links (CC0, the
+  *only* natively-Spark candidate — ships **Parquet on S3**; `cited_by_count` = a real
+  citation-count node-size driver; Domain→Field→Subfield→Topic maps onto science sub-trees);
+  (4) **QRank** (CC0, tiny QID→popularity-rank CSV from Wikimedia pageviews) as the *universal*
+  node-size driver for the non-science half where OpenAlex citations don't apply — **verify the
+  qrank.wmcloud.org source still lives before committing**. Attach-don't-spine: DataCite/Crossref
+  (CC0) for outbound dataset/work links via DOI; MeSH/Getty AAT/GeoNames pulled per-node only
+  where Wikidata already carries the cross-ID. Avoid as spine: BabelNet (non-commercial + no open
+  dump), ORKG (coverage too sparse), DBpedia (redundant w/ Wikidata, noisier). **Spark note:**
+  only OpenAlex is Parquet out of the box; budget a one-time RDF/JSON→Parquet conversion for the
+  101 GB Wikidata bz2 + YAGO Turtle (single-threaded decompress isn't Spark-native).
 - **[M] KEAP relation-layer lenses (edge switching)** — links render primarily as the
   **taxonomy tree** (structural spine); a future lens switches the edge layer to other
   relation types (typed `brief-xref`/research relations, semantic-similarity k-NN,
   temporal precedence, cross-domain bridges). The "Vazby" toggle is the seed; generalise
   it into a lens-driven edge-layer picker (tree ↔ relations ↔ similarity ↔ …).
+  **Cross-time / cross-distance link heuristic (inspiration, 2026-07-15):** the most alive
+  edges aren't nearest-neighbour — they leap across *time* or *domain* (a modern concept
+  wired to a centuries-older ancestor, physics↔biology bridges). A curator/librarian agent
+  should explicitly propose "connect over temporal/domain distance", not just cosine-closest
+  siblings. This only becomes computable once nodes carry **dates** and **cross-KB identity**
+  — so it lands *with* the schema.org + external-dataset (Spark) enrichment epic above, not
+  before: temporal precedence edges come from the metadata `dates`, cross-domain bridges from
+  shared external identifiers / typed relations. (Seed idea from an Obsidian+MCP PKM writeup;
+  the mechanic maps onto our lift-xrefs + relation-layer picker.)
 - **[S] KEAP brief-xref render gate** — the 1696 `source='brief-xref'` typed relations
   (lifted from brief `[[id]]` links, 2026-07-14) render by default (`type != 'related-
   concept'`); gate them behind `source` or a dedicated toggle in `graph.ts`/SidePanel so
