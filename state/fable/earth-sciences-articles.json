@@ -1,0 +1,1605 @@
+{
+  "branches": [
+    {
+      "branch_id": "01.04.01",
+      "name": "Geology",
+      "pillars": [
+        {
+          "name": "Petrology",
+          "en": "Studies the origin, composition, texture, and classification of rocks, tracing how melts, sediments, and pre-existing rocks transform into the three great rock families under distinct pressure-temperature regimes.",
+          "cs": "Zkoumá původ, složení, strukturu a klasifikaci hornin a sleduje, jak se z tavenin, sedimentů a starších hornin za odlišných tlakově-teplotních režimů utvářejí tři velké skupiny hornin.",
+          "blocks": [
+            {
+              "name": "Igneous petrology",
+              "en": "Examines rocks crystallized from magma or lava, linking mineral assemblage and texture to cooling rate and melt chemistry, from coarse plutonic granite to fine-grained volcanic basalt.",
+              "cs": "Zkoumá horniny vykrystalizované z magmatu nebo lávy a spojuje minerální složení a strukturu s rychlostí chladnutí a chemismem taveniny, od hrubozrnného hlubinného granitu po jemnozrnný výlevný bazalt.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Bowen's reaction series", "definition": "The predictable sequence in which silicate minerals crystallize from a cooling magma, controlling the mineralogy of the resulting rock."},
+                {"name": "Fractional crystallization", "definition": "Progressive removal of early-formed crystals from a melt, driving the residual magma toward more silica-rich compositions."},
+                {"name": "Plutonic vs volcanic", "definition": "The distinction between slowly cooled intrusive rocks with large crystals and rapidly cooled extrusive rocks with fine or glassy textures."}
+              ]
+            },
+            {
+              "name": "Sedimentary petrology",
+              "en": "Analyzes rocks formed by deposition, compaction, and cementation of weathered detritus, chemical precipitates, or organic material, reading grain size and composition as a record of transport and environment.",
+              "cs": "Analyzuje horniny vzniklé usazováním, stlačením a stmelením zvětralého detritu, chemických sraženin či organického materiálu a čte velikost a složení zrn jako záznam transportu a prostředí.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Clastic rocks", "definition": "Sedimentary rocks built from fragments of pre-existing rock, classified chiefly by grain size into conglomerate, sandstone, siltstone, and shale."},
+                {"name": "Diagenesis", "definition": "The physical and chemical changes that turn loose sediment into solid rock at low temperature and pressure after burial."},
+                {"name": "Chemical & biogenic sediments", "definition": "Rocks such as limestone or evaporites formed by precipitation from solution or accumulation of organic remains."}
+              ]
+            },
+            {
+              "name": "Metamorphic petrology",
+              "en": "Studies rocks recrystallized in the solid state under elevated heat, pressure, and chemically active fluids, using index minerals and fabric to reconstruct the metamorphic grade and tectonic path.",
+              "cs": "Zkoumá horniny překrystalované v pevném stavu za zvýšené teploty, tlaku a působení chemicky aktivních fluid a využívá indexové minerály a stavbu k rekonstrukci stupně metamorfózy a tektonické dráhy.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Metamorphic facies", "definition": "A set of mineral assemblages that indicate a specific range of pressure and temperature during metamorphism."},
+                {"name": "Foliation", "definition": "The planar alignment of platy minerals produced by directed stress, defining textures such as slate, schist, and gneiss."},
+                {"name": "Contact vs regional metamorphism", "definition": "The contrast between localized heating around an intrusion and broad transformation driven by mountain-building tectonics."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Structural Geology & Tectonics",
+          "en": "Describes how rocks deform and how lithospheric plates move, connecting outcrop-scale faults and folds to the global engine of plate tectonics that builds mountains and opens oceans.",
+          "cs": "Popisuje, jak se horniny deformují a jak se pohybují litosférické desky, a propojuje zlomy a vrásy v měřítku odkryvu s globálním motorem deskové tektoniky, který vytváří pohoří a otevírá oceány.",
+          "blocks": [
+            {
+              "name": "Plate tectonics",
+              "en": "The unifying theory that Earth's rigid outer shell is broken into plates that diverge, converge, and slide past one another, driven by mantle convection and slab pull.",
+              "cs": "Sjednocující teorie, podle níž je pevný vnější obal Země rozlámán na desky, jež se od sebe vzdalují, sbíhají a posouvají podél sebe, poháněné konvekcí v plášti a tahem podsouvané desky.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Divergent boundary", "definition": "A plate margin where plates move apart and new lithosphere forms by seafloor spreading, as at mid-ocean ridges."},
+                {"name": "Subduction", "definition": "The sinking of one plate beneath another at a convergent margin, recycling lithosphere into the mantle and feeding volcanism."},
+                {"name": "Transform boundary", "definition": "A margin where plates slide horizontally past each other, conserving lithosphere and generating shallow earthquakes."},
+                {"name": "Wilson cycle", "definition": "The repeated opening and closing of ocean basins through rifting, spreading, subduction, and continental collision."}
+              ]
+            },
+            {
+              "name": "Faults & folds",
+              "en": "The primary structures of brittle and ductile deformation, where fractures with displacement accommodate stress in cool rock and bends record flow in warmer, ductile conditions.",
+              "cs": "Základní struktury křehké a duktilní deformace, kde zlomy s posunem uvolňují napětí v chladných horninách a vrásy zaznamenávají tečení v teplejších, duktilních podmínkách.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Normal & reverse faults", "definition": "Dip-slip fractures produced by extension and compression respectively, offsetting rock along an inclined plane."},
+                {"name": "Anticline & syncline", "definition": "Convex-up and concave-up folds that arch or trough layered rock under compression."},
+                {"name": "Stress & strain", "definition": "The force per area applied to rock and the resulting change in shape or volume that it undergoes."}
+              ]
+            },
+            {
+              "name": "Orogeny",
+              "en": "The mountain-building process arising from plate convergence, thickening and deforming the crust through folding, thrusting, and magmatism over tens of millions of years.",
+              "cs": "Proces vrásnění vznikající při konvergenci desek, jenž zesiluje a deformuje kůru vrásněním, přesouváním a magmatismem po desítky milionů let.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Collisional orogeny", "definition": "Mountain building where two continents collide, as in the Himalaya raised by the India-Eurasia collision."},
+                {"name": "Nappe", "definition": "A large body of rock thrust many kilometers over underlying units along a low-angle fault during intense compression."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Stratigraphy & Sedimentology",
+          "en": "Orders layered rocks in time and space and reconstructs the depositional environments that produced them, providing the temporal framework for reading Earth history from strata.",
+          "cs": "Uspořádává vrstevnaté horniny v čase a prostoru a rekonstruuje usazovací prostředí, jež je vytvořilo, čímž poskytuje časový rámec pro čtení dějin Země z vrstev.",
+          "blocks": [
+            {
+              "name": "Stratigraphic principles",
+              "en": "The foundational laws by which relative age is inferred from layered rocks, ordering events without numerical dates.",
+              "cs": "Základní zákony, podle nichž se z vrstevnatých hornin odvozuje relativní stáří a řadí se události bez číselného datování.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Superposition", "definition": "In an undisturbed sequence, younger layers lie above older ones."},
+                {"name": "Original horizontality", "definition": "Sediments are deposited in nearly horizontal layers, so tilting indicates later deformation."},
+                {"name": "Cross-cutting relationships", "definition": "A feature that cuts across rock is younger than the rock it disrupts."}
+              ]
+            },
+            {
+              "name": "Sedimentary environments",
+              "en": "The distinct settings—fluvial, deltaic, marine, aeolian, glacial—each imprinting characteristic grain textures, structures, and fossils onto accumulating sediment.",
+              "cs": "Odlišná prostředí – říční, deltová, mořská, eolická, ledovcová – z nichž každé vtiskuje hromadícímu se sedimentu charakteristickou zrnitost, struktury a zkameněliny.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Facies", "definition": "A body of sediment with distinctive characteristics reflecting the conditions under which it formed."},
+                {"name": "Sedimentary structures", "definition": "Features such as cross-bedding and ripple marks that record the flow conditions during deposition."}
+              ]
+            },
+            {
+              "name": "Sequence stratigraphy",
+              "en": "Interprets stratal packages bounded by unconformities as the product of changing sea level and sediment supply, linking depositional geometry to base-level cycles.",
+              "cs": "Vykládá vrstevní soubory ohraničené diskordancemi jako výsledek měnící se hladiny moře a přísunu sedimentu a spojuje usazovací geometrii s cykly bazální úrovně.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Unconformity", "definition": "A buried erosional or non-depositional surface representing a gap in the geologic record."},
+                {"name": "Transgression & regression", "definition": "The landward and seaward migration of the shoreline as relative sea level rises or falls."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Geomorphology",
+          "en": "Studies landforms and the surface processes—weathering, erosion, transport, and deposition by water, wind, and ice—that sculpt the Earth's evolving topography.",
+          "cs": "Zkoumá tvary zemského povrchu a povrchové procesy – zvětrávání, erozi, transport a ukládání vodou, větrem a ledem – které utvářejí vyvíjející se reliéf Země.",
+          "blocks": [
+            {
+              "name": "Weathering & erosion",
+              "en": "The in-place breakdown of rock by mechanical and chemical processes and the subsequent removal of loosened material by gravity, water, wind, or ice.",
+              "cs": "Rozpad horniny na místě mechanickými a chemickými pochody a následné odnášení uvolněného materiálu gravitací, vodou, větrem či ledem.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Physical weathering", "definition": "Mechanical disintegration of rock through frost wedging, thermal stress, and abrasion without chemical change."},
+                {"name": "Chemical weathering", "definition": "Decomposition of minerals by reactions such as hydrolysis, oxidation, and dissolution, altering rock composition."},
+                {"name": "Mass wasting", "definition": "The downslope movement of rock and soil under gravity, ranging from slow creep to rapid landslides."}
+              ]
+            },
+            {
+              "name": "Fluvial landforms",
+              "en": "Features shaped by running water, from erosional valleys and canyons to depositional floodplains, deltas, and alluvial fans that dominate most continental surfaces.",
+              "cs": "Tvary formované tekoucí vodou, od erozních údolí a kaňonů po akumulační nivy, delty a náplavové kužely, které převládají na většině pevninského povrchu.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Meander", "definition": "A sinuous bend of a river channel that migrates laterally by eroding its outer bank and depositing on the inner."},
+                {"name": "Drainage basin", "definition": "The land area from which all precipitation drains to a common outlet through a network of channels."}
+              ]
+            },
+            {
+              "name": "Aeolian & karst landscapes",
+              "en": "Distinctive terrains produced by wind transport in arid regions and by dissolution of soluble bedrock, yielding dunes, loess, caves, and sinkholes.",
+              "cs": "Osobité krajiny vytvořené transportem větrem v suchých oblastech a rozpouštěním rozpustného podloží, dávající vzniknout dunám, spraši, jeskyním a závrtům.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Dune", "definition": "A mound or ridge of wind-blown sand whose shape reflects sand supply and prevailing wind direction."},
+                {"name": "Karst", "definition": "Terrain formed by dissolution of limestone or other soluble rock, characterized by caves, sinkholes, and underground drainage."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Geochronology & Earth History",
+          "en": "Establishes the absolute and relative ages of rocks and events, assembling them into the geologic time scale that chronicles 4.6 billion years of planetary evolution.",
+          "cs": "Stanovuje absolutní a relativní stáří hornin a událostí a skládá je do geologické časové stupnice, jež zaznamenává 4,6 miliardy let vývoje planety.",
+          "blocks": [
+            {
+              "name": "Radiometric dating",
+              "en": "Determines numerical ages by measuring the decay of naturally occurring radioactive isotopes, whose constant half-lives act as precise geological clocks.",
+              "cs": "Určuje číselné stáří měřením rozpadu přirozeně se vyskytujících radioaktivních izotopů, jejichž konstantní poločasy fungují jako přesné geologické hodiny.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Half-life", "definition": "The time required for half of a radioactive isotope in a sample to decay, fixed for each isotope."},
+                {"name": "Parent-daughter ratio", "definition": "The measured proportion of an original isotope to its decay product, used to calculate elapsed time."},
+                {"name": "Radiocarbon dating", "definition": "The use of carbon-14 decay to date organic material up to about fifty thousand years old."}
+              ]
+            },
+            {
+              "name": "Geologic time scale",
+              "en": "The hierarchical division of Earth history into eons, eras, periods, and epochs, defined by major biological and physical events preserved in the rock record.",
+              "cs": "Hierarchické členění dějin Země na eony, éry, periody a epochy, vymezené velkými biologickými a fyzikálními událostmi zachovanými v horninovém záznamu.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Eon", "definition": "The largest division of geologic time, such as the Phanerozoic spanning abundant complex life."},
+                {"name": "Golden spike (GSSP)", "definition": "A globally agreed reference point in a rock section that defines the lower boundary of a time unit."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Economic & Engineering Geology",
+          "en": "Applies geological knowledge to locating mineral and energy resources and to assessing ground conditions for construction and natural-hazard mitigation.",
+          "cs": "Uplatňuje geologické poznatky při vyhledávání nerostných a energetických surovin a při posuzování základových poměrů pro stavebnictví a zmírňování přírodních rizik.",
+          "blocks": [
+            {
+              "name": "Ore deposits",
+              "en": "Concentrations of economically valuable minerals formed by hydrothermal, magmatic, or sedimentary processes that enrich metals far above crustal averages.",
+              "cs": "Nahromadění ekonomicky cenných nerostů vzniklá hydrotermálními, magmatickými či sedimentárními procesy, jež obohacují kovy daleko nad průměr zemské kůry.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Hydrothermal deposit", "definition": "An ore body precipitated from hot mineral-bearing fluids circulating through fractures in rock."},
+                {"name": "Placer deposit", "definition": "A concentration of dense resistant minerals such as gold, sorted and accumulated by flowing water."}
+              ]
+            },
+            {
+              "name": "Petroleum geology",
+              "en": "The study of the source, migration, and trapping of hydrocarbons, integrating organic-rich source rocks, permeable reservoirs, and impermeable seals into productive systems.",
+              "cs": "Nauka o zdroji, migraci a zachycování uhlovodíků, jež spojuje organicky bohaté zdrojové horniny, propustné kolektory a nepropustné izolátory do produktivních systémů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Source rock", "definition": "An organic-rich sediment that generates hydrocarbons when heated during burial."},
+                {"name": "Reservoir & trap", "definition": "A porous rock that stores hydrocarbons and the geometric configuration that prevents their escape."}
+              ]
+            },
+            {
+              "name": "Geotechnical & geohazards",
+              "en": "Evaluates the mechanical behavior of soil and rock for engineering, and identifies hazards such as landslides, subsidence, and swelling ground that threaten infrastructure.",
+              "cs": "Hodnotí mechanické chování zemin a hornin pro inženýrské stavby a rozpoznává rizika jako sesuvy, poklesy a bobtnající podloží, jež ohrožují infrastrukturu.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Slope stability", "definition": "The resistance of an inclined mass of soil or rock to failure by sliding under gravity."},
+                {"name": "Bearing capacity", "definition": "The maximum load per area that a soil or rock foundation can support without failure."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.02",
+      "name": "Meteorology",
+      "pillars": [
+        {
+          "name": "Atmospheric Structure & Composition",
+          "en": "Describes the vertical layering of the atmosphere and its gaseous makeup, establishing the physical stage on which all weather and radiative processes unfold.",
+          "cs": "Popisuje vertikální vrstvení atmosféry a její plynné složení a vymezuje tak fyzikální prostor, v němž probíhají veškeré počasí a zářivé procesy.",
+          "blocks": [
+            {
+              "name": "Layers of the atmosphere",
+              "en": "The concentric shells—troposphere, stratosphere, mesosphere, thermosphere—distinguished by their temperature gradients and the physical processes that dominate each.",
+              "cs": "Soustředné vrstvy – troposféra, stratosféra, mezosféra, termosféra – odlišené svými teplotními gradienty a fyzikálními procesy, jež v každé z nich převládají.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Troposphere", "definition": "The lowest layer where temperature falls with height and virtually all weather occurs."},
+                {"name": "Tropopause", "definition": "The boundary capping the troposphere where the temperature decline halts, limiting vertical mixing."},
+                {"name": "Ozone layer", "definition": "A stratospheric region of concentrated ozone that absorbs harmful ultraviolet radiation and warms the stratosphere."}
+              ]
+            },
+            {
+              "name": "Atmospheric composition",
+              "en": "The mixture of nitrogen, oxygen, argon, and trace gases, with variable water vapor and aerosols that critically govern weather, radiation, and air quality.",
+              "cs": "Směs dusíku, kyslíku, argonu a stopových plynů s proměnlivou vodní párou a aerosoly, které zásadně ovlivňují počasí, záření a kvalitu ovzduší.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Permanent vs variable gases", "definition": "Gases with nearly constant proportions such as nitrogen versus those like water vapor that vary in time and place."},
+                {"name": "Aerosols", "definition": "Tiny suspended solid or liquid particles that scatter light and serve as nuclei for cloud droplet formation."}
+              ]
+            },
+            {
+              "name": "Radiation balance",
+              "en": "The exchange of incoming solar shortwave and outgoing terrestrial longwave radiation whose net imbalance across latitudes drives atmospheric motion.",
+              "cs": "Výměna přicházejícího slunečního krátkovlnného a odcházejícího zemského dlouhovlnného záření, jejíž čistá nerovnováha mezi zeměpisnými šířkami pohání pohyb atmosféry.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Albedo", "definition": "The fraction of incident solar radiation reflected by a surface or the atmosphere."},
+                {"name": "Longwave emission", "definition": "The infrared radiation emitted by the Earth and atmosphere that carries energy back to space."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Atmospheric Thermodynamics",
+          "en": "Governs how air changes temperature, pressure, and moisture as it rises, sinks, and mixes, setting the conditions under which clouds and storms can develop.",
+          "cs": "Řídí, jak se vzduch mění v teplotě, tlaku a vlhkosti při stoupání, klesání a míšení, a stanovuje podmínky, za nichž mohou vznikat oblaka a bouře.",
+          "blocks": [
+            {
+              "name": "Adiabatic processes",
+              "en": "Temperature changes in rising or sinking air caused purely by expansion or compression without heat exchange, quantified by the dry and moist lapse rates.",
+              "cs": "Změny teploty ve stoupajícím či klesajícím vzduchu způsobené výhradně rozpínáním nebo stlačováním bez výměny tepla, vyjádřené suchoadiabatickým a nasyceně adiabatickým gradientem.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Dry adiabatic lapse rate", "definition": "The rate of about 9.8 degrees Celsius per kilometer at which unsaturated rising air cools."},
+                {"name": "Moist adiabatic lapse rate", "definition": "The lower cooling rate of saturated rising air, reduced by latent heat released during condensation."}
+              ]
+            },
+            {
+              "name": "Atmospheric stability",
+              "en": "The tendency of displaced air to return to or accelerate away from its origin, determined by comparing the environmental lapse rate to the adiabatic rate.",
+              "cs": "Sklon vychýleného vzduchu vracet se k výchozí poloze nebo se od ní vzdalovat, určený porovnáním teplotního gradientu prostředí s adiabatickým gradientem.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Stable air", "definition": "Air that resists vertical displacement and returns to its original level, suppressing cloud growth."},
+                {"name": "Unstable air", "definition": "Air in which a displaced parcel keeps rising, promoting convection and towering clouds."},
+                {"name": "Temperature inversion", "definition": "A layer where temperature increases with height, strongly suppressing vertical motion and trapping pollutants."}
+              ]
+            },
+            {
+              "name": "Humidity & moisture",
+              "en": "The water-vapor content of air and its measures—mixing ratio, relative humidity, dew point—that determine when saturation and condensation occur.",
+              "cs": "Obsah vodní páry ve vzduchu a jeho míry – směšovací poměr, relativní vlhkost, rosný bod – které určují, kdy nastává nasycení a kondenzace.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Relative humidity", "definition": "The ratio of actual water vapor present to the maximum the air can hold at that temperature."},
+                {"name": "Dew point", "definition": "The temperature to which air must be cooled at constant pressure to reach saturation."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Atmospheric Dynamics",
+          "en": "Explains the forces and balances that set air in motion, from the pressure-gradient force to the Coriolis effect, producing the winds and circulations of the planet.",
+          "cs": "Vysvětluje síly a rovnováhy, jež uvádějí vzduch do pohybu, od síly tlakového gradientu po Coriolisův jev, a vytvářejí větry a cirkulace planety.",
+          "blocks": [
+            {
+              "name": "Pressure gradient & geostrophic wind",
+              "en": "The balance between the force driving air from high to low pressure and the deflecting Coriolis force, yielding winds that flow nearly parallel to isobars aloft.",
+              "cs": "Rovnováha mezi silou hnající vzduch z vyššího do nižšího tlaku a odklánějící Coriolisovou silou, dávající vzniknout větrům proudícím ve výšce téměř rovnoběžně s izobarami.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Pressure gradient force", "definition": "The force per unit mass directed from high toward low pressure that initiates air movement."},
+                {"name": "Geostrophic wind", "definition": "The theoretical wind resulting from balance between the pressure gradient and Coriolis forces, blowing parallel to isobars."}
+              ]
+            },
+            {
+              "name": "Coriolis effect & general circulation",
+              "en": "The apparent deflection of moving air by Earth's rotation, organizing the atmosphere into the trade winds, westerlies, and three circulation cells per hemisphere.",
+              "cs": "Zdánlivé odklánění pohybujícího se vzduchu rotací Země, jež uspořádává atmosféru do pasátů, západních větrů a tří cirkulačních buněk na každé polokouli.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Coriolis effect", "definition": "The deflection of moving objects to the right in the Northern Hemisphere and left in the Southern due to Earth's rotation."},
+                {"name": "Hadley cell", "definition": "The tropical circulation loop of rising air near the equator and sinking air near thirty degrees latitude."},
+                {"name": "Trade winds & westerlies", "definition": "The persistent surface wind belts of the tropics and mid-latitudes generated by the circulation cells."}
+              ]
+            },
+            {
+              "name": "Jet streams",
+              "en": "Fast, narrow ribbons of upper-level wind concentrated along strong temperature gradients, steering surface weather systems and separating air masses.",
+              "cs": "Rychlé úzké pásy větru ve vyšších hladinách soustředěné podél silných teplotních gradientů, jež usměrňují přízemní tlakové útvary a oddělují vzduchové hmoty.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Polar jet stream", "definition": "A powerful upper-level wind at mid-latitudes along the boundary between polar and warmer air."},
+                {"name": "Rossby waves", "definition": "Large meandering north-south undulations of the jet stream that shape the progression of weather."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Cloud Physics & Precipitation",
+          "en": "Explains how water vapor condenses onto nuclei to form cloud droplets and ice crystals, and how these grow until they fall as rain, snow, or hail.",
+          "cs": "Vysvětluje, jak vodní pára kondenzuje na jádrech a vytváří oblačné kapičky a ledové krystalky a jak tyto rostou, dokud nespadnou jako déšť, sníh či kroupy.",
+          "blocks": [
+            {
+              "name": "Cloud formation",
+              "en": "The condensation of vapor onto aerosol nuclei when rising air cools to saturation, producing suspended droplets or ice crystals that constitute clouds.",
+              "cs": "Kondenzace páry na aerosolových jádrech, když se stoupající vzduch ochladí k nasycení, jež vytváří vznášející se kapičky nebo ledové krystalky tvořící oblaka.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Condensation nuclei", "definition": "Microscopic particles onto which water vapor condenses to begin forming cloud droplets."},
+                {"name": "Lifting mechanisms", "definition": "Processes such as convection, orographic ascent, and frontal lifting that raise air to its saturation level."}
+              ]
+            },
+            {
+              "name": "Precipitation mechanisms",
+              "en": "The growth of cloud particles to precipitable size through collision-coalescence in warm clouds and the Bergeron process in mixed-phase clouds.",
+              "cs": "Růst oblačných částic na srážkovou velikost prostřednictvím spojování při srážkách v teplých oblacích a Bergeronova procesu v oblacích smíšené fáze.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Collision-coalescence", "definition": "The merging of falling droplets that collide, dominant in warm clouds without ice."},
+                {"name": "Bergeron process", "definition": "The growth of ice crystals at the expense of supercooled droplets in mixed-phase clouds, producing most mid-latitude precipitation."}
+              ]
+            },
+            {
+              "name": "Cloud classification",
+              "en": "The systematic naming of clouds by altitude and form, from low stratus and cumulus to high cirrus, encoding the atmospheric conditions that generate them.",
+              "cs": "Systematické pojmenování oblaků podle výšky a tvaru, od nízkých stratů a kumulů po vysoké cirry, jež zachycuje atmosférické podmínky, které je vytvářejí.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Cumulus", "definition": "Detached, heaped clouds with flat bases and cauliflower tops formed by convection."},
+                {"name": "Stratus", "definition": "Uniform layered clouds covering the sky in a featureless sheet, often producing drizzle."},
+                {"name": "Cirrus", "definition": "Thin, wispy high-altitude clouds composed of ice crystals."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Synoptic & Mesoscale Meteorology",
+          "en": "Studies weather-producing systems from continental-scale fronts and cyclones down to individual thunderstorms and tornadoes, the phenomena of daily forecasts.",
+          "cs": "Zkoumá útvary tvořící počasí od kontinentálních front a cyklon až po jednotlivé bouřky a tornáda – jevy každodenních předpovědí.",
+          "blocks": [
+            {
+              "name": "Air masses & fronts",
+              "en": "Large bodies of air with uniform temperature and humidity, and the boundaries between them where contrasting air meets to trigger clouds and precipitation.",
+              "cs": "Rozsáhlé objemy vzduchu s jednotnou teplotou a vlhkostí a rozhraní mezi nimi, kde se střetává kontrastní vzduch a spouští oblačnost a srážky.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Cold front", "definition": "The leading edge of advancing cold air that lifts warm air steeply, often producing intense but brief storms."},
+                {"name": "Warm front", "definition": "The boundary where warm air overrides retreating cold air, bringing gradual widespread precipitation."},
+                {"name": "Occluded front", "definition": "A front formed when a cold front overtakes a warm front, lifting warm air off the surface."}
+              ]
+            },
+            {
+              "name": "Cyclones & anticyclones",
+              "en": "Rotating low- and high-pressure systems that organize surface weather, with converging rising air bringing storms and diverging sinking air bringing clear skies.",
+              "cs": "Rotující útvary nízkého a vysokého tlaku, jež organizují přízemní počasí; sbíhající se stoupající vzduch přináší bouře, rozbíhající se klesající vzduch jasnou oblohu.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Mid-latitude cyclone", "definition": "A large low-pressure system with fronts that dominates weather in temperate zones."},
+                {"name": "Tropical cyclone", "definition": "An intense warm-core storm fueled by ocean heat, known as a hurricane or typhoon at full strength."}
+              ]
+            },
+            {
+              "name": "Thunderstorms & tornadoes",
+              "en": "Deep convective storms driven by instability and moisture, capable of producing lightning, hail, damaging winds, and rotating funnels that reach the ground.",
+              "cs": "Hluboké konvektivní bouře poháněné instabilitou a vlhkostí, schopné vytvářet blesky, kroupy, ničivý vítr a rotující chobotnice dosahující k zemi.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Supercell", "definition": "A long-lived thunderstorm with a persistent rotating updraft that produces the most violent tornadoes and hail."},
+                {"name": "Wind shear", "definition": "The change of wind speed or direction with height that organizes and sustains severe storms."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Weather Forecasting",
+          "en": "Predicts future atmospheric states by combining dense observations with numerical models that integrate the governing physical equations forward in time.",
+          "cs": "Předpovídá budoucí stavy atmosféry spojováním hustých pozorování s numerickými modely, jež integrují řídící fyzikální rovnice dopředu v čase.",
+          "blocks": [
+            {
+              "name": "Numerical weather prediction",
+              "en": "The computational solution of the fluid-dynamics and thermodynamics equations on a grid, advancing an initial atmospheric state to forecast its evolution.",
+              "cs": "Výpočetní řešení rovnic dynamiky tekutin a termodynamiky na síti, jež posouvá počáteční stav atmosféry vpřed k předpovědi jejího vývoje.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Data assimilation", "definition": "The process of blending observations into a model to produce the best estimate of the current atmospheric state."},
+                {"name": "Ensemble forecasting", "definition": "Running many slightly perturbed model runs to quantify forecast uncertainty."},
+                {"name": "Chaos & predictability limit", "definition": "The sensitive dependence on initial conditions that caps useful weather forecasts at roughly two weeks."}
+              ]
+            },
+            {
+              "name": "Observation & remote sensing",
+              "en": "The global network of surface stations, radiosondes, radar, and satellites that measures the atmosphere and supplies the initial data models require.",
+              "cs": "Globální síť přízemních stanic, radiosond, radarů a družic, jež měří atmosféru a dodává počáteční data, která modely potřebují.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Weather radar", "definition": "An instrument that emits microwaves and detects their reflection off precipitation to map its location and intensity."},
+                {"name": "Radiosonde", "definition": "A balloon-borne instrument package that measures the vertical profile of temperature, humidity, and wind."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.03",
+      "name": "Oceanography",
+      "pillars": [
+        {
+          "name": "Physical Oceanography",
+          "en": "Studies the motion and physical properties of seawater—currents, waves, tides, temperature, and salinity structure—that transport heat and mass across the global ocean.",
+          "cs": "Zkoumá pohyb a fyzikální vlastnosti mořské vody – proudy, vlny, přílivy, teplotní a salinitní strukturu – jež přenášejí teplo a hmotu napříč světovým oceánem.",
+          "blocks": [
+            {
+              "name": "Ocean circulation",
+              "en": "The system of wind-driven surface currents and density-driven deep flow that redistributes heat globally, coupling the ocean to climate over decades to millennia.",
+              "cs": "Soustava větrem hnaných povrchových proudů a hustotou řízeného hlubinného proudění, jež globálně přerozděluje teplo a spojuje oceán s klimatem v měřítku desetiletí až tisíciletí.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Gyres", "definition": "Large rotating systems of surface currents driven by prevailing winds and shaped by the Coriolis effect."},
+                {"name": "Thermohaline circulation", "definition": "The deep overturning flow driven by differences in water density from temperature and salinity."},
+                {"name": "Ekman transport", "definition": "The net movement of wind-driven surface water at an angle to the wind due to Earth's rotation."},
+                {"name": "Upwelling", "definition": "The rise of cold nutrient-rich deep water to the surface where winds push surface water away."}
+              ]
+            },
+            {
+              "name": "Ocean waves",
+              "en": "The oscillations of the sea surface generated chiefly by wind, transferring energy across ocean basins without net transport of water until they break on shore.",
+              "cs": "Kmity mořské hladiny vytvářené převážně větrem, jež přenášejí energii přes oceánské pánve bez čistého transportu vody, dokud se nezlomí u břehu.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Wave anatomy", "definition": "The crest, trough, wavelength, and period that describe a wave's geometry and energy."},
+                {"name": "Swell", "definition": "Regular long-period waves that have traveled beyond the storm that generated them."},
+                {"name": "Tsunami", "definition": "A long-wavelength wave generated by a sudden displacement of the seafloor, such as an earthquake."}
+              ]
+            },
+            {
+              "name": "Tides",
+              "en": "The periodic rise and fall of sea level produced by the gravitational pull of the Moon and Sun combined with Earth's rotation.",
+              "cs": "Periodické stoupání a klesání hladiny moře vyvolané gravitačním působením Měsíce a Slunce ve spojení s rotací Země.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Spring & neap tides", "definition": "The maximal and minimal tidal ranges when the Sun and Moon align or oppose at right angles."},
+                {"name": "Tidal range", "definition": "The vertical difference between consecutive high and low water, varying with coastal geometry."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Chemical Oceanography",
+          "en": "Examines the chemical composition of seawater and the biogeochemical cycles of elements and gases that regulate ocean fertility and the global carbon budget.",
+          "cs": "Zkoumá chemické složení mořské vody a biogeochemické cykly prvků a plynů, jež řídí úrodnost oceánu a globální uhlíkovou bilanci.",
+          "blocks": [
+            {
+              "name": "Seawater composition & salinity",
+              "en": "The dissolved salts giving seawater its near-constant ionic proportions, with salinity controlling density and thereby driving deep circulation.",
+              "cs": "Rozpuštěné soli dávající mořské vodě její téměř stálé iontové poměry, přičemž salinita řídí hustotu, a tím pohání hlubinnou cirkulaci.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Salinity", "definition": "The total mass of dissolved salts per unit mass of seawater, averaging about 35 grams per kilogram."},
+                {"name": "Principle of constant proportions", "definition": "The observation that the major dissolved ions occur in nearly fixed ratios regardless of total salinity."}
+              ]
+            },
+            {
+              "name": "Ocean carbon cycle",
+              "en": "The uptake, storage, and release of carbon by the ocean through solubility and biological pumps, making the sea the largest active reservoir of atmospheric carbon.",
+              "cs": "Příjem, uložení a uvolňování uhlíku oceánem prostřednictvím rozpustnostní a biologické pumpy, které z moře činí největší aktivní zásobárnu atmosférického uhlíku.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Solubility pump", "definition": "The dissolution of carbon dioxide into cold dense surface water that then sinks, transporting carbon to depth."},
+                {"name": "Biological pump", "definition": "The transfer of carbon to the deep sea via sinking organic matter produced by plankton."},
+                {"name": "Ocean acidification", "definition": "The decline in seawater pH as absorbed carbon dioxide forms carbonic acid."}
+              ]
+            },
+            {
+              "name": "Nutrients & dissolved gases",
+              "en": "The distribution of nitrogen, phosphorus, and silica that limits primary production, and of oxygen and carbon dioxide that structure marine chemistry with depth.",
+              "cs": "Rozložení dusíku, fosforu a křemíku, jež limituje primární produkci, a kyslíku a oxidu uhličitého, jež s hloubkou utvářejí mořskou chemii.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Limiting nutrient", "definition": "The essential element in shortest supply that constrains the rate of biological production."},
+                {"name": "Oxygen minimum zone", "definition": "A depth range where dissolved oxygen is severely depleted by respiration and weak ventilation."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Biological Oceanography",
+          "en": "Investigates marine life and the ecological processes that link organisms to the physical and chemical ocean, from microscopic plankton to whole ecosystems.",
+          "cs": "Zkoumá mořský život a ekologické procesy, jež propojují organismy s fyzikálním a chemickým oceánem, od mikroskopického planktonu po celé ekosystémy.",
+          "blocks": [
+            {
+              "name": "Marine primary production",
+              "en": "The photosynthetic fixation of carbon by phytoplankton in the sunlit surface layer, forming the base of nearly all ocean food webs.",
+              "cs": "Fotosyntetická fixace uhlíku fytoplanktonem v osvětlené povrchové vrstvě, jež tvoří základ téměř všech oceánských potravních sítí.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Phytoplankton", "definition": "Microscopic drifting algae that perform most of the ocean's photosynthesis."},
+                {"name": "Photic zone", "definition": "The sunlit upper layer of the ocean where photosynthesis can occur."}
+              ]
+            },
+            {
+              "name": "Marine ecosystems",
+              "en": "The organized communities of the coral reef, open ocean, deep sea, and polar seas, each shaped by light, temperature, and nutrient availability.",
+              "cs": "Organizovaná společenstva korálových útesů, otevřeného oceánu, hlubokého moře a polárních moří, z nichž každé je utvářeno světlem, teplotou a dostupností živin.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Coral reef", "definition": "A biologically diverse structure built by colonial coral animals in warm shallow tropical seas."},
+                {"name": "Hydrothermal vent community", "definition": "A deep-sea ecosystem sustained by chemosynthesis around superheated mineral-rich springs."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marine Geology",
+          "en": "Studies the structure, sediments, and evolution of the ocean floor, revealing seafloor spreading, deep-sea deposition, and the record of past ocean conditions.",
+          "cs": "Zkoumá stavbu, sedimenty a vývoj oceánského dna a odhaluje rozpínání dna, hlubokomořské usazování a záznam dřívějších oceánských podmínek.",
+          "blocks": [
+            {
+              "name": "Seafloor topography",
+              "en": "The major features of the ocean bottom—continental margins, abyssal plains, mid-ocean ridges, and trenches—that record the tectonic life cycle of oceanic crust.",
+              "cs": "Hlavní útvary oceánského dna – kontinentální okraje, abysální roviny, středooceánské hřbety a hlubokomořské příkopy – jež zaznamenávají tektonický životní cyklus oceánské kůry.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Mid-ocean ridge", "definition": "An undersea mountain chain where new oceanic crust forms by seafloor spreading."},
+                {"name": "Ocean trench", "definition": "A deep, narrow depression marking where oceanic crust subducts into the mantle."},
+                {"name": "Abyssal plain", "definition": "A flat deep-ocean floor blanketed by fine sediment far from continents."}
+              ]
+            },
+            {
+              "name": "Marine sediments",
+              "en": "The accumulating deposits of terrigenous, biogenic, and authigenic origin that blanket the seafloor and archive climatic and biological history.",
+              "cs": "Hromadící se usazeniny terigenního, biogenního a autigenního původu, jež pokrývají mořské dno a uchovávají klimatické a biologické dějiny.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Biogenic ooze", "definition": "Deep-sea sediment composed mainly of the microscopic shells of plankton."},
+                {"name": "Turbidite", "definition": "A graded sediment deposit laid down by a dense sediment-laden current flowing down the continental slope."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Ocean-Atmosphere Interaction",
+          "en": "Examines the coupled exchange of heat, moisture, momentum, and gases between sea and air that drives climate variability on seasonal to interannual scales.",
+          "cs": "Zkoumá provázanou výměnu tepla, vlhkosti, hybnosti a plynů mezi mořem a ovzduším, jež pohání proměnlivost klimatu v měřítku od sezonního po meziroční.",
+          "blocks": [
+            {
+              "name": "El Niño–Southern Oscillation",
+              "en": "The dominant mode of interannual climate variability, in which coupled shifts of tropical Pacific sea-surface temperature and trade winds reorganize global weather.",
+              "cs": "Převládající způsob meziroční klimatické proměnlivosti, při němž provázané změny teploty povrchu tropického Pacifiku a pasátů přeskupují globální počasí.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "El Niño", "definition": "The warm phase marked by weakened trade winds and warming of the eastern tropical Pacific."},
+                {"name": "La Niña", "definition": "The cool phase with strengthened trade winds and cooler eastern Pacific waters."},
+                {"name": "Teleconnection", "definition": "A statistical linkage between climate anomalies in widely separated regions."}
+              ]
+            },
+            {
+              "name": "Air-sea heat & gas exchange",
+              "en": "The transfer of energy through evaporation, radiation, and conduction, and of gases such as carbon dioxide and oxygen across the sea surface.",
+              "cs": "Přenos energie odpařováním, zářením a vedením a plynů jako oxid uhličitý a kyslík přes mořskou hladinu.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Latent heat flux", "definition": "The energy the ocean loses to the atmosphere through evaporation of surface water."},
+                {"name": "Gas transfer velocity", "definition": "The rate at which a gas crosses the air-sea interface, controlled largely by wind and turbulence."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Coastal & Estuarine Processes",
+          "en": "Studies the dynamic zone where land, sea, and rivers meet, governed by waves, tides, and sediment transport that continually reshape shorelines.",
+          "cs": "Zkoumá dynamickou zónu, kde se stýkají pevnina, moře a řeky, řízenou vlnami, přílivy a transportem sedimentu, jež neustále přetváří pobřeží.",
+          "blocks": [
+            {
+              "name": "Coastal dynamics",
+              "en": "The interplay of wave energy, longshore currents, and sediment supply that erodes and builds beaches, spits, and barrier islands.",
+              "cs": "Souhra energie vln, podél pobřeží proudících proudů a přísunu sedimentu, jež erodují a budují pláže, kosy a bariérové ostrovy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Longshore drift", "definition": "The transport of sediment along a shoreline by waves striking the coast at an angle."},
+                {"name": "Barrier island", "definition": "A long offshore sand ridge parallel to the coast that shields the mainland from waves."}
+              ]
+            },
+            {
+              "name": "Estuaries",
+              "en": "Semi-enclosed coastal bodies where freshwater rivers mix with seawater, creating salinity gradients that sustain highly productive transitional ecosystems.",
+              "cs": "Polouzavřené pobřežní útvary, kde se sladkovodní řeky mísí s mořskou vodou a vytvářejí salinitní gradienty udržující vysoce produktivní přechodové ekosystémy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Salt wedge", "definition": "A layer of denser seawater intruding beneath outflowing river water in a stratified estuary."},
+                {"name": "Estuarine circulation", "definition": "The two-layer flow of seaward surface freshwater over landward-moving bottom seawater."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.04",
+      "name": "Climatology",
+      "pillars": [
+        {
+          "name": "Climate System & Energy Balance",
+          "en": "Treats climate as the coupled system of atmosphere, ocean, land, ice, and biosphere whose long-term state is set by the planetary radiation budget and its feedbacks.",
+          "cs": "Pojímá klima jako provázaný systém atmosféry, oceánu, pevniny, ledu a biosféry, jehož dlouhodobý stav určuje planetární zářivá bilance a její zpětné vazby.",
+          "blocks": [
+            {
+              "name": "Global energy budget",
+              "en": "The long-term balance between absorbed solar radiation and emitted terrestrial radiation that fixes Earth's mean temperature.",
+              "cs": "Dlouhodobá rovnováha mezi pohlceným slunečním zářením a vyzářeným zemským zářením, jež stanovuje střední teplotu Země.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Radiative equilibrium", "definition": "The steady state in which outgoing longwave radiation matches absorbed solar radiation."},
+                {"name": "Latitudinal energy imbalance", "definition": "The surplus of energy in the tropics and deficit at the poles that drives heat transport toward higher latitudes."}
+              ]
+            },
+            {
+              "name": "Greenhouse effect",
+              "en": "The warming produced when atmospheric gases absorb and re-emit terrestrial infrared radiation, raising surface temperature above the radiative-equilibrium value.",
+              "cs": "Oteplení vznikající, když atmosférické plyny pohlcují a znovu vyzařují zemské infračervené záření, čímž zvyšují teplotu povrchu nad hodnotu zářivé rovnováhy.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Greenhouse gases", "definition": "Gases such as water vapor, carbon dioxide, and methane that absorb infrared radiation and warm the atmosphere."},
+                {"name": "Radiative forcing", "definition": "A change in the energy balance measured in watts per square meter caused by an external factor."}
+              ]
+            },
+            {
+              "name": "Feedback mechanisms",
+              "en": "The internal responses that amplify or dampen an initial climate change, such as ice-albedo and water-vapor feedbacks that determine climate sensitivity.",
+              "cs": "Vnitřní odezvy, jež zesilují nebo tlumí počáteční klimatickou změnu, jako je zpětná vazba led-albedo a vodní páry, které určují klimatickou citlivost.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Ice-albedo feedback", "definition": "A positive loop in which melting bright ice exposes dark surfaces that absorb more heat and drive further melting."},
+                {"name": "Water-vapor feedback", "definition": "The amplification of warming as a warmer atmosphere holds more water vapor, itself a greenhouse gas."},
+                {"name": "Climate sensitivity", "definition": "The equilibrium warming expected from a doubling of atmospheric carbon dioxide."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Climate Classification & Controls",
+          "en": "Organizes the world's climates into coherent types and identifies the geographic factors—latitude, elevation, ocean currents, continentality—that determine them.",
+          "cs": "Uspořádává klimata světa do soudržných typů a určuje zeměpisné činitele – zeměpisnou šířku, nadmořskou výšku, mořské proudy, kontinentalitu – které je určují.",
+          "blocks": [
+            {
+              "name": "Köppen classification",
+              "en": "The widely used scheme that groups climates by temperature and precipitation thresholds tied to characteristic vegetation, from tropical to polar.",
+              "cs": "Široce užívaný systém, jenž třídí klimata podle prahů teploty a srážek vázaných na charakteristickou vegetaci, od tropického po polární.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Climate zones", "definition": "The five broad groups—tropical, dry, temperate, continental, and polar—of the classification."},
+                {"name": "Climograph", "definition": "A graph combining monthly temperature and precipitation used to characterize and compare climates."}
+              ]
+            },
+            {
+              "name": "Climate controls",
+              "en": "The physical factors governing regional climate, including latitude, altitude, distance from the sea, prevailing winds, and ocean currents.",
+              "cs": "Fyzikální činitele řídící regionální klima, včetně zeměpisné šířky, nadmořské výšky, vzdálenosti od moře, převládajících větrů a mořských proudů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Continentality", "definition": "The greater temperature range of inland regions compared with the moderating influence of the sea."},
+                {"name": "Rain shadow", "definition": "The dry region on the leeward side of a mountain range where descending air suppresses precipitation."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Paleoclimatology",
+          "en": "Reconstructs climates of the geologic past from natural archives, revealing the range of natural variability and the mechanisms behind glacial cycles.",
+          "cs": "Rekonstruuje klimata geologické minulosti z přírodních archivů a odhaluje rozsah přirozené proměnlivosti a mechanismy stojící za ledovcovými cykly.",
+          "blocks": [
+            {
+              "name": "Climate proxies",
+              "en": "Indirect indicators such as ice cores, tree rings, and sediment isotopes that record past temperature, precipitation, and atmospheric composition.",
+              "cs": "Nepřímé ukazatele jako ledovcové vrty, letokruhy a izotopy v sedimentech, jež zaznamenávají dřívější teplotu, srážky a složení atmosféry.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Ice core", "definition": "A cylinder of glacial ice whose trapped air bubbles and layering preserve a continuous climate record."},
+                {"name": "Oxygen isotope ratio", "definition": "The ratio of oxygen-18 to oxygen-16 in shells or ice used to infer past temperature and ice volume."},
+                {"name": "Dendroclimatology", "definition": "The reconstruction of past climate from the width and density of annual tree rings."}
+              ]
+            },
+            {
+              "name": "Ice ages & Milankovitch cycles",
+              "en": "The alternation of glacial and interglacial periods paced by cyclic variations in Earth's orbit that modulate the seasonal distribution of sunlight.",
+              "cs": "Střídání dob ledových a meziledových udávané cyklickými změnami oběžné dráhy Země, jež modulují sezonní rozložení slunečního záření.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Eccentricity, obliquity, precession", "definition": "The three orbital parameters whose cyclic variation alters insolation and paces glacial cycles."},
+                {"name": "Glacial-interglacial cycle", "definition": "The roughly 100,000-year alternation between extensive ice sheets and warmer interglacial conditions."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Climate Change & Anthropogenic Forcing",
+          "en": "Analyzes the ongoing warming driven by human greenhouse-gas emissions, using observations and models to attribute change and project future scenarios.",
+          "cs": "Analyzuje probíhající oteplování hnané lidskými emisemi skleníkových plynů a pomocí pozorování a modelů přisuzuje změnu a projektuje budoucí scénáře.",
+          "blocks": [
+            {
+              "name": "Greenhouse gas forcing",
+              "en": "The positive radiative forcing from rising concentrations of carbon dioxide, methane, and nitrous oxide released by fossil fuels, agriculture, and land use.",
+              "cs": "Kladné zářivé působení z rostoucích koncentrací oxidu uhličitého, metanu a oxidu dusného uvolňovaných fosilními palivy, zemědělstvím a využíváním půdy.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Keeling curve", "definition": "The continuous record of rising atmospheric carbon dioxide measured since 1958 at Mauna Loa."},
+                {"name": "Carbon budget", "definition": "The cumulative emissions consistent with limiting warming to a chosen temperature target."}
+              ]
+            },
+            {
+              "name": "Climate modeling",
+              "en": "The use of coupled numerical models simulating atmosphere, ocean, land, and ice to project climate under specified emission pathways.",
+              "cs": "Užití provázaných numerických modelů simulujících atmosféru, oceán, pevninu a led k projekci klimatu za daných emisních scénářů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "General circulation model", "definition": "A three-dimensional model solving the physical equations of the climate system on a global grid."},
+                {"name": "Emission scenario", "definition": "A plausible future trajectory of greenhouse-gas emissions used as input to climate projections."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Regional & Applied Climatology",
+          "en": "Applies climate science at local scales, characterizing microclimates, urban effects, and recurring variability patterns relevant to society and planning.",
+          "cs": "Uplatňuje klimatologii v lokálním měřítku, charakterizuje mikroklima, městské vlivy a opakující se způsoby proměnlivosti významné pro společnost a plánování.",
+          "blocks": [
+            {
+              "name": "Microclimates & urban climate",
+              "en": "The local modification of climate by surface cover, topography, and cities, most visibly the warming of built-up areas relative to their surroundings.",
+              "cs": "Lokální pozměnění klimatu povrchovým krytem, terénem a městy, nejnápadněji oteplení zastavěných ploch oproti jejich okolí.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Urban heat island", "definition": "The elevated temperature of a city compared with its rural surroundings caused by dark surfaces and waste heat."},
+                {"name": "Microclimate", "definition": "The distinctive climate of a small area shaped by local surface and topographic conditions."}
+              ]
+            },
+            {
+              "name": "Climate variability modes",
+              "en": "Recurring large-scale patterns such as the North Atlantic Oscillation and monsoons that reorganize regional weather over months to years.",
+              "cs": "Opakující se rozsáhlé vzory jako Severoatlantická oscilace a monzuny, jež přeskupují regionální počasí v měřítku měsíců až let.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "North Atlantic Oscillation", "definition": "A seesaw in atmospheric pressure between Iceland and the Azores that steers European winter weather."},
+                {"name": "Monsoon", "definition": "A seasonal reversal of prevailing winds that brings pronounced wet and dry seasons, driven by land-sea heating contrasts."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.05",
+      "name": "Paleontology",
+      "pillars": [
+        {
+          "name": "Taphonomy & Fossilization",
+          "en": "Studies how organisms decay, are buried, and become fossils, and the biases this imposes on the fossil record's completeness and interpretation.",
+          "cs": "Zkoumá, jak organismy rozkládají, jak jsou pohřbívány a jak se stávají zkamenělinami, a jaké zkreslení to vnáší do úplnosti a výkladu fosilního záznamu.",
+          "blocks": [
+            {
+              "name": "Fossilization processes",
+              "en": "The physical and chemical pathways—burial, mineral replacement, and lithification—by which organic remains are preserved in rock over geologic time.",
+              "cs": "Fyzikální a chemické cesty – pohřbení, nahrazení minerály a zpevnění – jimiž se organické zbytky uchovávají v hornině po geologicky dlouhou dobu.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Permineralization", "definition": "The filling of pore spaces in tissue by dissolved minerals that harden, preserving fine internal structure."},
+                {"name": "Molds & casts", "definition": "The impression left by a dissolved organism and the replica formed when that void later fills with sediment."}
+              ]
+            },
+            {
+              "name": "Types of preservation",
+              "en": "The spectrum of fossil quality from common hard-part remains to rare soft-tissue and trace fossils that expand our view of ancient life.",
+              "cs": "Škála kvality zkamenělin od běžných zbytků tvrdých částí po vzácné zkameněliny měkkých tkání a stopové zkameněliny, jež rozšiřují náš pohled na dávný život.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Lagerstätte", "definition": "A rare fossil deposit of exceptional preservation, often including soft tissues."},
+                {"name": "Trace fossil", "definition": "A preserved record of activity such as tracks, burrows, or coprolites rather than the organism's body."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Invertebrate Paleontology",
+          "en": "Documents the fossil record of animals without backbones, which dominate the marine record and provide the workhorse fossils for dating rock strata.",
+          "cs": "Dokumentuje fosilní záznam bezobratlých živočichů, kteří převládají v mořském záznamu a poskytují klíčové zkameněliny pro datování horninových vrstev.",
+          "blocks": [
+            {
+              "name": "Trilobites & arthropods",
+              "en": "The extinct segmented arthropods that flourished throughout the Paleozoic, serving as index fossils and revealing early animal diversification.",
+              "cs": "Vyhynulí členovci se segmentovaným tělem, kteří vzkvétali po celý paleozoikum a slouží jako vůdčí zkameněliny a odhalují raný rozvoj živočichů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Trilobite", "definition": "A three-lobed marine arthropod, one of the most abundant and diverse fossils of the Paleozoic era."},
+                {"name": "Exoskeleton molting", "definition": "The periodic shedding of the hard outer covering that produces many arthropod fossils."}
+              ]
+            },
+            {
+              "name": "Molluscs & brachiopods",
+              "en": "Shelled invertebrates whose durable calcium-carbonate skeletons make them among the most common and stratigraphically useful marine fossils.",
+              "cs": "Ulitnatí a lasturnatí bezobratlí, jejichž odolné vápenaté schránky z nich činí jedny z nejběžnějších a stratigraficky nejužitečnějších mořských zkamenělin.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Ammonite", "definition": "An extinct coiled cephalopod whose rapidly evolving shell forms are prime index fossils of the Mesozoic."},
+                {"name": "Brachiopod", "definition": "A bivalved marine animal, superficially clam-like but distinct, abundant in Paleozoic seas."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vertebrate Paleontology",
+          "en": "Traces the fossil history of backboned animals from early fishes through the rise of tetrapods, dinosaurs, and mammals, charting major evolutionary transitions.",
+          "cs": "Sleduje fosilní dějiny obratlovců od raných ryb přes vzestup čtvernožců, dinosaurů a savců a mapuje velké evoluční přechody.",
+          "blocks": [
+            {
+              "name": "Fishes & tetrapod origins",
+              "en": "The evolution of vertebrates from jawless fishes to jawed fishes and the fin-to-limb transition that brought vertebrate life onto land.",
+              "cs": "Vývoj obratlovců od bezčelistnatých ryb k čelistnatým rybám a přechod od ploutve k končetině, jenž přivedl obratlovce na souš.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Sarcopterygian", "definition": "A lobe-finned fish lineage whose sturdy fins foreshadow the limbs of land vertebrates."},
+                {"name": "Tiktaalik", "definition": "A transitional fossil bridging fish and early tetrapods with both gills and weight-bearing fins."}
+              ]
+            },
+            {
+              "name": "Dinosaurs & Mesozoic reptiles",
+              "en": "The dominant terrestrial and marine reptiles of the Mesozoic, whose diversity, physiology, and bird ancestry are central problems of the discipline.",
+              "cs": "Převládající suchozemští a mořští plazi druhohor, jejichž rozmanitost, fyziologie a ptačí předci jsou ústředními otázkami oboru.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Dinosauria", "definition": "A clade of archosaurian reptiles that dominated terrestrial ecosystems for over 160 million years."},
+                {"name": "Bird origins", "definition": "The evolutionary derivation of birds from small feathered theropod dinosaurs."},
+                {"name": "K–Pg extinction", "definition": "The asteroid-linked mass extinction that ended the non-avian dinosaurs 66 million years ago."}
+              ]
+            },
+            {
+              "name": "Mammalian evolution",
+              "en": "The rise of mammals from synapsid ancestors and their Cenozoic diversification into the dominant large-bodied land animals after the dinosaurs' demise.",
+              "cs": "Vzestup savců ze synapsidních předků a jejich kenozoické rozrůznění v převládající velké suchozemské živočichy po zániku dinosaurů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Synapsid", "definition": "The amniote lineage, including mammal ancestors, defined by a single opening behind each eye socket."},
+                {"name": "Cenozoic radiation", "definition": "The rapid diversification of mammals into vacant ecological roles after the end-Cretaceous extinction."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Paleobotany & Micropaleontology",
+          "en": "Studies fossil plants and microscopic organisms, which record the greening of the continents and provide the finest-scale tools for dating and environmental reconstruction.",
+          "cs": "Zkoumá fosilní rostliny a mikroskopické organismy, jež zaznamenávají ozelenění kontinentů a poskytují nejjemnější nástroje pro datování a rekonstrukci prostředí.",
+          "blocks": [
+            {
+              "name": "Fossil plants",
+              "en": "The record of terrestrial vegetation from early land plants through coal-forming forests to flowering plants, tracking the colonization and greening of land.",
+              "cs": "Záznam suchozemské vegetace od raných suchozemských rostlin přes uhlotvorné lesy po krytosemenné rostliny, jenž sleduje osídlení a ozelenění souše.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Carboniferous coal forests", "definition": "Vast swampy forests whose accumulated plant matter formed most of the world's coal."},
+                {"name": "Angiosperm radiation", "definition": "The rapid mid-Cretaceous diversification of flowering plants that transformed terrestrial ecosystems."}
+              ]
+            },
+            {
+              "name": "Microfossils",
+              "en": "The abundant microscopic remains of plankton and pollen that enable high-resolution biostratigraphy and paleoenvironmental analysis of sediment cores.",
+              "cs": "Hojné mikroskopické zbytky planktonu a pylu, jež umožňují vysoce rozlišenou biostratigrafii a paleoenvironmentální analýzu sedimentových jader.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Foraminifera", "definition": "Single-celled marine protists with calcite shells, key microfossils for dating and paleoclimate."},
+                {"name": "Palynology", "definition": "The study of fossil pollen and spores used to reconstruct past vegetation and climate."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Evolutionary Paleobiology & Biostratigraphy",
+          "en": "Interprets the fossil record to understand evolutionary patterns, mass extinctions, and the use of fossil successions to correlate and date rock strata worldwide.",
+          "cs": "Vykládá fosilní záznam k pochopení evolučních vzorů, hromadných vymírání a využití sledu zkamenělin ke korelaci a datování horninových vrstev po celém světě.",
+          "blocks": [
+            {
+              "name": "Mass extinctions",
+              "en": "The episodes of rapid, widespread loss of biodiversity that punctuate the fossil record and reset the course of evolution, notably the Big Five.",
+              "cs": "Epizody rychlého plošného úbytku biodiverzity, jež přerušují fosilní záznam a přesměrovávají chod evoluce, zejména takzvaných Velkých pět.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Permian-Triassic extinction", "definition": "The most severe extinction in Earth history, eliminating the majority of marine species."},
+                {"name": "Background vs mass extinction", "definition": "The distinction between the steady baseline rate of species loss and catastrophic global pulses."}
+              ]
+            },
+            {
+              "name": "Biostratigraphy",
+              "en": "The correlation and relative dating of rock strata by their contained fossil assemblages, using rapidly evolving, widespread species as time markers.",
+              "cs": "Korelace a relativní datování horninových vrstev podle obsažených společenstev zkamenělin s využitím rychle se vyvíjejících rozšířených druhů jako časových značek.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Index fossil", "definition": "A widespread, short-lived species used to identify and correlate the age of the rock containing it."},
+                {"name": "Faunal succession", "definition": "The principle that fossil organisms follow one another through strata in a definite, recognizable order."}
+              ]
+            },
+            {
+              "name": "Evolutionary patterns",
+              "en": "The macroevolutionary tempo and mode read from fossils, including debates over gradual versus punctuated change and adaptive radiations.",
+              "cs": "Makroevoluční tempo a způsob čtený ze zkamenělin, včetně sporů o postupnou versus přerušovanou změnu a adaptivní radiace.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Punctuated equilibrium", "definition": "The model that species remain stable for long spans then change rapidly during brief speciation events."},
+                {"name": "Adaptive radiation", "definition": "The rapid diversification of a lineage into many forms exploiting new ecological opportunities."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.06",
+      "name": "Mineralogy",
+      "pillars": [
+        {
+          "name": "Crystallography",
+          "en": "Studies the ordered internal atomic arrangement of crystals and its expression as external symmetry, providing the geometric foundation for identifying minerals.",
+          "cs": "Zkoumá uspořádané vnitřní atomové uspořádání krystalů a jeho projev v podobě vnější symetrie a poskytuje geometrický základ pro určování minerálů.",
+          "blocks": [
+            {
+              "name": "Crystal systems & symmetry",
+              "en": "The seven crystal systems into which all crystalline solids fall, defined by their axial relationships and the symmetry operations they possess.",
+              "cs": "Sedm krystalových soustav, do nichž spadají všechny krystalické látky, vymezených vztahy os a operacemi symetrie, jimiž disponují.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Crystal system", "definition": "One of seven categories—such as cubic or hexagonal—grouping crystals by their axial geometry."},
+                {"name": "Symmetry elements", "definition": "The rotation axes, mirror planes, and inversion centers that describe a crystal's internal order."},
+                {"name": "Miller indices", "definition": "A notation of three integers specifying the orientation of a crystal face or plane."}
+              ]
+            },
+            {
+              "name": "Crystal lattice & defects",
+              "en": "The periodic three-dimensional array of atoms defining a crystal, and the point, line, and planar imperfections that govern many physical properties.",
+              "cs": "Periodické trojrozměrné uspořádání atomů vymezující krystal a bodové, čárové a plošné poruchy, jež řídí mnohé fyzikální vlastnosti.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Unit cell", "definition": "The smallest repeating volume that, translated in three dimensions, builds the entire crystal lattice."},
+                {"name": "Lattice defect", "definition": "An irregularity such as a vacancy or dislocation that disrupts the perfect atomic array and alters behavior."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Crystal Chemistry",
+          "en": "Relates a mineral's composition and bonding to its atomic structure, explaining how ionic size and charge dictate which structures form and substitute.",
+          "cs": "Vztahuje složení a vazby minerálu k jeho atomové stavbě a vysvětluje, jak velikost a náboj iontů určují, které struktury vznikají a zastupují se.",
+          "blocks": [
+            {
+              "name": "Silicate structures",
+              "en": "The classification of the dominant rock-forming minerals by how their silica tetrahedra link, from isolated to fully polymerized frameworks.",
+              "cs": "Klasifikace převládajících horninotvorných minerálů podle způsobu propojení jejich křemíkových čtyřstěnů, od izolovaných po plně polymerizované skelety.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Silica tetrahedron", "definition": "The fundamental building block of a silicon atom bonded to four oxygen atoms, the unit of all silicate minerals."},
+                {"name": "Polymerization degree", "definition": "The extent to which silica tetrahedra share oxygen atoms, distinguishing silicate structural classes."}
+              ]
+            },
+            {
+              "name": "Isomorphism & solid solution",
+              "en": "The substitution of ions of similar size and charge within a fixed structure, producing continuous compositional series such as the plagioclase feldspars.",
+              "cs": "Nahrazování iontů podobné velikosti a náboje v pevné struktuře, jež vytváří spojité kompoziční řady jako plagioklasové živce.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Solid solution", "definition": "A mineral series in which one ion progressively replaces another without changing the crystal structure."},
+                {"name": "Coupled substitution", "definition": "The paired exchange of ions that together preserve overall electrical neutrality."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Physical & Optical Mineralogy",
+          "en": "Examines the observable and optical properties by which minerals are identified, linking each property to underlying crystal structure and bonding.",
+          "cs": "Zkoumá pozorovatelné a optické vlastnosti, podle nichž se minerály určují, a spojuje každou vlastnost s podkladovou krystalovou stavbou a vazbou.",
+          "blocks": [
+            {
+              "name": "Physical properties",
+              "en": "The diagnostic characteristics—hardness, cleavage, luster, streak, and density—that permit rapid hand-specimen identification of minerals.",
+              "cs": "Diagnostické znaky – tvrdost, štěpnost, lesk, vryp a hustota – jež umožňují rychlé určení minerálů podle ručních vzorků.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Mohs hardness scale", "definition": "A relative ranking of mineral scratch resistance from talc at one to diamond at ten."},
+                {"name": "Cleavage", "definition": "The tendency of a mineral to break along planes of structural weakness into flat surfaces."},
+                {"name": "Luster", "definition": "The way a mineral surface reflects light, described as metallic, vitreous, or earthy among others."}
+              ]
+            },
+            {
+              "name": "Optical mineralogy",
+              "en": "The identification of minerals from their interaction with polarized light under the microscope, exploiting refraction, birefringence, and interference colors.",
+              "cs": "Určování minerálů podle jejich interakce s polarizovaným světlem pod mikroskopem, jež využívá lom, dvojlom a interferenční barvy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Birefringence", "definition": "The splitting of light into two rays with different velocities in an anisotropic crystal."},
+                {"name": "Extinction", "definition": "The position at which a crystal appears dark between crossed polarizers, diagnostic of its orientation and identity."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Systematic Mineralogy & Genesis",
+          "en": "Classifies minerals by chemical composition into major groups and explains the geological environments in which each characteristically forms.",
+          "cs": "Třídí minerály podle chemického složení do hlavních skupin a vysvětluje geologická prostředí, v nichž se každá charakteristicky tvoří.",
+          "blocks": [
+            {
+              "name": "Mineral classification",
+              "en": "The chemical taxonomy of minerals into classes—silicates, oxides, sulfides, carbonates, sulfates, and others—by their dominant anion group.",
+              "cs": "Chemická taxonomie minerálů do tříd – silikáty, oxidy, sulfidy, uhličitany, sírany a další – podle jejich převládající aniontové skupiny.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Mineral class", "definition": "A grouping such as sulfides or carbonates defined by the principal anion or anionic complex."},
+                {"name": "Native elements", "definition": "Minerals composed of a single uncombined element, such as gold, copper, or diamond."}
+              ]
+            },
+            {
+              "name": "Mineral formation environments",
+              "en": "The distinct settings—magmatic, hydrothermal, metamorphic, and sedimentary—that produce characteristic mineral assemblages by their pressure, temperature, and fluids.",
+              "cs": "Odlišná prostředí – magmatická, hydrotermální, metamorfní a sedimentární – jež svým tlakem, teplotou a fluidy vytvářejí charakteristická minerální společenstva.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Hydrothermal mineral", "definition": "A mineral precipitated from hot aqueous fluids circulating through rock fractures."},
+                {"name": "Evaporite mineral", "definition": "A mineral such as halite or gypsum formed by the evaporation of saline water."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.07",
+      "name": "Volcanology",
+      "pillars": [
+        {
+          "name": "Magma & Igneous Processes",
+          "en": "Studies how molten rock is generated in the mantle and crust and how its composition and physical properties determine the character of the volcanism it feeds.",
+          "cs": "Zkoumá, jak vzniká roztavená hornina v plášti a kůře a jak její složení a fyzikální vlastnosti určují povahu vulkanismu, který živí.",
+          "blocks": [
+            {
+              "name": "Magma generation",
+              "en": "The partial melting of rock through decompression, addition of volatiles, or heating that produces magma at spreading ridges, subduction zones, and hotspots.",
+              "cs": "Částečné tavení horniny dekompresí, přidáním těkavých látek nebo zahřátím, jež vytváří magma na riftových hřbetech, v subdukčních zónách a nad horkými skvrnami.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Decompression melting", "definition": "The formation of magma when rising mantle rock melts as pressure decreases without added heat."},
+                {"name": "Flux melting", "definition": "The lowering of a rock's melting point by water and volatiles released from a subducting plate."},
+                {"name": "Hotspot", "definition": "A persistent volcanic center fed by a deep mantle plume, largely independent of plate boundaries."}
+              ]
+            },
+            {
+              "name": "Magma composition & rheology",
+              "en": "The silica and volatile content controlling magma viscosity and gas retention, which together dictate whether an eruption is gentle or violently explosive.",
+              "cs": "Obsah oxidu křemičitého a těkavých látek řídící viskozitu magmatu a zadržování plynů, jež společně určují, zda je erupce mírná, nebo prudce explozivní.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Viscosity", "definition": "A magma's resistance to flow, increasing with silica content and controlling eruption style."},
+                {"name": "Volatile content", "definition": "The dissolved gases such as water and carbon dioxide whose exsolution drives explosive eruptions."},
+                {"name": "Magma types", "definition": "The compositional spectrum from fluid basaltic to viscous rhyolitic magma."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Eruption Dynamics",
+          "en": "Analyzes the physical mechanisms by which magma reaches and exits the surface, spanning the continuum from quiet lava effusion to catastrophic explosive fragmentation.",
+          "cs": "Analyzuje fyzikální mechanismy, jimiž magma dosahuje povrchu a vystupuje z něj, v celém rozpětí od klidného výlevu lávy po katastrofickou explozivní fragmentaci.",
+          "blocks": [
+            {
+              "name": "Effusive eruptions",
+              "en": "The relatively gentle outpouring of low-viscosity lava that flows across the surface to build shields and lava plateaus.",
+              "cs": "Poměrně mírný výron nízkoviskózní lávy, jež proudí po povrchu a buduje štítové sopky a lávové plošiny.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Lava flow", "definition": "A stream of molten rock advancing across the surface, forming pahoehoe or aa textures as it cools."},
+                {"name": "Fissure eruption", "definition": "The emission of lava along an elongated crack rather than a central vent."}
+              ]
+            },
+            {
+              "name": "Explosive eruptions",
+              "en": "The violent fragmentation of viscous gas-rich magma that ejects ash and pumice into towering columns and generates lethal pyroclastic flows.",
+              "cs": "Prudká fragmentace viskózního plynem bohatého magmatu, jež vyvrhuje popel a pemzu do vysokých sloupců a vytváří smrtící pyroklastické proudy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Pyroclastic flow", "definition": "A fast, ground-hugging avalanche of hot gas and volcanic debris, among the deadliest volcanic hazards."},
+                {"name": "Plinian eruption", "definition": "A sustained explosive eruption producing a high stratospheric column of gas and ash."},
+                {"name": "Volcanic Explosivity Index", "definition": "A logarithmic scale rating eruption magnitude by erupted volume and column height."}
+              ]
+            },
+            {
+              "name": "Volcanic products",
+              "en": "The solid, liquid, and gaseous materials expelled during eruptions, from lava and tephra to volcanic gases that influence climate.",
+              "cs": "Pevné, kapalné a plynné materiály vyvržené při erupcích, od lávy a tefry po vulkanické plyny ovlivňující klima.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Tephra", "definition": "Fragmental material of all sizes ejected explosively and transported through the air."},
+                {"name": "Volcanic gas", "definition": "Emissions such as water vapor, carbon dioxide, and sulfur dioxide released from magma."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Volcanic Landforms",
+          "en": "Classifies the edifices and structures built and destroyed by volcanic activity, whose shape records the eruption style and magma type that formed them.",
+          "cs": "Třídí tělesa a struktury budované a ničené sopečnou činností, jejichž tvar zaznamenává styl erupce a typ magmatu, který je vytvořil.",
+          "blocks": [
+            {
+              "name": "Volcano types",
+              "en": "The principal volcanic edifices—shield, stratovolcano, and cinder cone—distinguished by their profile, size, and the eruptions that construct them.",
+              "cs": "Hlavní sopečná tělesa – štítová sopka, stratovulkán a struskový kužel – rozlišená svým profilem, velikostí a erupcemi, jež je budují.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Shield volcano", "definition": "A broad gently sloped volcano built by fluid basaltic lava flows."},
+                {"name": "Stratovolcano", "definition": "A steep-sided composite cone of alternating lava and pyroclastic layers, prone to explosive eruptions."},
+                {"name": "Cinder cone", "definition": "A small steep hill built from ejected fragments accumulating around a single vent."}
+              ]
+            },
+            {
+              "name": "Calderas & craters",
+              "en": "The depressions formed by collapse of a partly emptied magma chamber or by explosive excavation, marking the largest volcanic events.",
+              "cs": "Sníženiny vzniklé zborcením částečně vyprázdněné magmatické komory nebo explozivním vyhloubením, jež značí největší sopečné události.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Caldera", "definition": "A large basin formed when the roof of an emptied magma chamber collapses after a major eruption."},
+                {"name": "Supervolcano", "definition": "A volcanic system capable of an eruption exceeding a thousand cubic kilometers of material."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Volcanic Hazards & Monitoring",
+          "en": "Assesses the threats volcanoes pose to people and the geophysical surveillance techniques used to detect unrest and forecast eruptions.",
+          "cs": "Hodnotí hrozby, jež sopky představují pro lidi, a geofyzikální metody sledování používané k rozpoznání neklidu a předpovědi erupcí.",
+          "blocks": [
+            {
+              "name": "Volcanic hazards",
+              "en": "The direct and indirect dangers of eruptions, including pyroclastic flows, lahars, ashfall, and gas emissions that endanger life and disrupt climate and aviation.",
+              "cs": "Přímá a nepřímá nebezpečí erupcí, včetně pyroklastických proudů, laharů, spadu popela a emisí plynů, jež ohrožují život a narušují klima a letectví.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Lahar", "definition": "A fast-moving mudflow of volcanic debris and water descending a volcano's flanks."},
+                {"name": "Ashfall", "definition": "The settling of airborne volcanic ash that collapses roofs, damages engines, and harms health."}
+              ]
+            },
+            {
+              "name": "Volcano monitoring",
+              "en": "The continuous measurement of seismicity, ground deformation, and gas emission that signals magma movement and underpins eruption forecasting.",
+              "cs": "Nepřetržité měření seismicity, deformace terénu a emisí plynů, jež signalizuje pohyb magmatu a je základem předpovědi erupcí.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Volcanic tremor", "definition": "Continuous seismic vibration caused by moving magma and fluids, often preceding eruption."},
+                {"name": "Ground deformation", "definition": "The swelling or subsidence of a volcano's surface as magma accumulates or drains, tracked by GPS and radar."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.08",
+      "name": "Seismology",
+      "pillars": [
+        {
+          "name": "Seismic Waves",
+          "en": "Studies the elastic waves radiated by earthquakes and their propagation through the Earth, whose behavior encodes both the source and the medium they traverse.",
+          "cs": "Zkoumá elastické vlny vyzářené zemětřeseními a jejich šíření Zemí, jejichž chování v sobě nese informaci o zdroji i o prostředí, jímž procházejí.",
+          "blocks": [
+            {
+              "name": "Body waves (P & S)",
+              "en": "The compressional and shear waves that travel through the Earth's interior, whose differing speeds and paths reveal deep structure and time the earthquake.",
+              "cs": "Podélné a příčné vlny procházející nitrem Země, jejichž odlišné rychlosti a dráhy odhalují hlubinnou stavbu a určují čas zemětřesení.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "P-wave", "definition": "The fastest seismic wave, a compressional wave that travels through solids and liquids."},
+                {"name": "S-wave", "definition": "A slower shear wave that travels only through solids, its absence revealing the liquid outer core."},
+                {"name": "Travel-time curve", "definition": "The relation between wave arrival time and distance used to locate earthquakes and probe structure."}
+              ]
+            },
+            {
+              "name": "Surface waves",
+              "en": "The waves confined near the Earth's surface that travel slower than body waves but carry the largest amplitudes, causing most earthquake damage.",
+              "cs": "Vlny omezené blízko zemského povrchu, jež se šíří pomaleji než prostorové vlny, ale nesou největší amplitudy a způsobují většinu škod při zemětřesení.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Love wave", "definition": "A horizontally polarized shear surface wave that produces side-to-side ground motion."},
+                {"name": "Rayleigh wave", "definition": "A surface wave producing a rolling elliptical ground motion, responsible for much shaking damage."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Earthquake Source Physics",
+          "en": "Explains how stress accumulates and releases on faults to generate earthquakes, and how their size, location, and rupture geometry are quantified.",
+          "cs": "Vysvětluje, jak se na zlomech hromadí a uvolňuje napětí, čímž vznikají zemětřesení, a jak se určuje jejich velikost, poloha a geometrie porušení.",
+          "blocks": [
+            {
+              "name": "Fault rupture & elastic rebound",
+              "en": "The model in which slowly stored elastic strain in rock is suddenly released as the rock snaps along a fault, radiating seismic waves.",
+              "cs": "Model, v němž se pomalu nahromaděné elastické napětí v hornině náhle uvolní, když hornina praskne podél zlomu a vyzáří seismické vlny.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Elastic rebound theory", "definition": "The concept that rocks bend under accumulating stress and rebound sharply when they fracture, causing an earthquake."},
+                {"name": "Hypocenter & epicenter", "definition": "The point of rupture at depth and the point on the surface directly above it."},
+                {"name": "Aftershocks", "definition": "The sequence of smaller earthquakes following a main shock as the crust readjusts."}
+              ]
+            },
+            {
+              "name": "Magnitude & intensity",
+              "en": "The distinct measures of an earthquake's released energy and of the shaking experienced at a location, quantified by the moment magnitude and intensity scales.",
+              "cs": "Odlišné míry uvolněné energie zemětřesení a otřesů pociťovaných na daném místě, vyjádřené momentovou magnitudou a stupnicí intenzity.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Moment magnitude", "definition": "A logarithmic measure of the total energy released, based on fault area, slip, and rock rigidity."},
+                {"name": "Mercalli intensity", "definition": "A scale rating the observed effects and damage of shaking at a particular place."}
+              ]
+            },
+            {
+              "name": "Focal mechanisms",
+              "en": "The determination of fault orientation and slip direction from the pattern of seismic wave first motions, revealing the tectonic stress that drove the quake.",
+              "cs": "Určení orientace zlomu a směru posunu z rozložení prvních pohybů seismických vln, jež odhaluje tektonické napětí, které zemětřesení vyvolalo.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Beachball diagram", "definition": "The graphical representation of a focal mechanism showing the fault type and orientation."},
+                {"name": "Fault type solution", "definition": "The identification of normal, reverse, or strike-slip motion from the radiated wave pattern."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Earth Structure from Seismology",
+          "en": "Uses the propagation of seismic waves as a probe of the planet's inaccessible interior, resolving its layered structure and lateral heterogeneity.",
+          "cs": "Využívá šíření seismických vln jako sondu do nedostupného nitra planety a rozlišuje jeho vrstevnatou stavbu a boční nehomogenitu.",
+          "blocks": [
+            {
+              "name": "Internal structure",
+              "en": "The division of the Earth into crust, mantle, and core, inferred from the refraction, reflection, and shadow zones of seismic waves.",
+              "cs": "Rozdělení Země na kůru, plášť a jádro odvozené z lomu, odrazu a stínových zón seismických vln.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Seismic discontinuity", "definition": "A depth where wave velocity changes abruptly, marking a boundary such as the Moho or core-mantle boundary."},
+                {"name": "Shadow zone", "definition": "A range of surface distances where certain waves fail to arrive, revealing the liquid outer core."}
+              ]
+            },
+            {
+              "name": "Seismic tomography",
+              "en": "The three-dimensional imaging of the Earth's interior from the travel times of many crossing seismic rays, mapping hot upwellings and cold sinking slabs.",
+              "cs": "Trojrozměrné zobrazování nitra Země z dob doběhu mnoha křížících se seismických paprsků, jež mapuje horké výstupy a chladné klesající desky.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Velocity anomaly", "definition": "A region where wave speed deviates from average, indicating temperature or compositional differences."},
+                {"name": "Slab imaging", "definition": "The detection of cold subducted plates as fast-velocity zones descending into the mantle."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Seismic Hazard & Engineering",
+          "en": "Translates seismological knowledge into estimates of earthquake risk and into warning and design measures that reduce loss of life and property.",
+          "cs": "Převádí seismologické poznatky do odhadů zemětřesného rizika a do varovných a projektových opatření, jež snižují ztráty na životech a majetku.",
+          "blocks": [
+            {
+              "name": "Seismic hazard assessment",
+              "en": "The probabilistic estimation of the ground shaking a site may experience, combining fault activity, recurrence, and local soil amplification.",
+              "cs": "Pravděpodobnostní odhad otřesů, jimž může být místo vystaveno, jenž spojuje aktivitu zlomů, opakování a místní zesílení půdou.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Ground motion prediction", "definition": "An empirical relation estimating shaking intensity as a function of magnitude and distance."},
+                {"name": "Site amplification", "definition": "The intensification of shaking where soft sediments magnify seismic waves."}
+              ]
+            },
+            {
+              "name": "Earthquake early warning",
+              "en": "Systems that detect the fast, weak P-wave and issue alerts seconds before the destructive S and surface waves arrive.",
+              "cs": "Systémy, jež zachytí rychlou slabou P-vlnu a vydají výstrahu vteřiny před příchodem ničivých S-vln a povrchových vln.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "P-wave detection", "definition": "The rapid recognition of the first-arriving compressional wave to trigger a warning."},
+                {"name": "Warning lead time", "definition": "The interval between alert and strong shaking, allowing automatic protective actions."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.09",
+      "name": "Hydrology",
+      "pillars": [
+        {
+          "name": "Hydrological Cycle",
+          "en": "Describes the continuous circulation of water among ocean, atmosphere, and land through evaporation, precipitation, and runoff that governs freshwater availability.",
+          "cs": "Popisuje nepřetržitý oběh vody mezi oceánem, atmosférou a pevninou prostřednictvím výparu, srážek a odtoku, jenž řídí dostupnost sladké vody.",
+          "blocks": [
+            {
+              "name": "Precipitation & evapotranspiration",
+              "en": "The atmospheric input of water to land and its return by evaporation and plant transpiration, the two dominant fluxes of the terrestrial water balance.",
+              "cs": "Atmosférický přísun vody na pevninu a její návrat výparem a transpirací rostlin, dva převládající toky pevninské vodní bilance.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Evapotranspiration", "definition": "The combined loss of water to the atmosphere from soil evaporation and plant transpiration."},
+                {"name": "Interception", "definition": "The precipitation captured by vegetation surfaces before it reaches the ground."}
+              ]
+            },
+            {
+              "name": "Water balance",
+              "en": "The accounting of inflows, outflows, and storage change for a region or basin, expressing conservation of water over a defined period.",
+              "cs": "Bilancování přítoků, odtoků a změny zásoby pro oblast nebo povodí, jež vyjadřuje zachování vody za vymezené období.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Water budget equation", "definition": "The balance stating that precipitation equals evapotranspiration plus runoff plus change in storage."},
+                {"name": "Residence time", "definition": "The average time a water molecule spends in a reservoir such as a lake or aquifer."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Surface Water Hydrology",
+          "en": "Studies water flowing and stored on the land surface, from rainfall-generated runoff through river networks to lakes, quantifying streamflow and flood behavior.",
+          "cs": "Zkoumá vodu proudící a uloženou na zemském povrchu, od odtoku vzniklého ze srážek přes říční sítě po jezera, a kvantifikuje průtok a chování povodní.",
+          "blocks": [
+            {
+              "name": "Runoff & streamflow",
+              "en": "The generation of surface flow when rainfall exceeds infiltration, and its concentration into channels whose discharge integrates the response of a catchment.",
+              "cs": "Vznik povrchového odtoku, když srážky převýší vsak, a jeho soustředění do koryt, jejichž průtok shrnuje odezvu povodí.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Discharge", "definition": "The volume of water passing a river cross-section per unit time."},
+                {"name": "Hydrograph", "definition": "A plot of streamflow over time showing a catchment's response to a rainfall event."},
+                {"name": "Infiltration", "definition": "The entry of water into the soil, whose capacity determines how much rainfall becomes runoff."}
+              ]
+            },
+            {
+              "name": "Rivers & drainage basins",
+              "en": "The organization of surface water into channel networks draining defined catchments, whose geometry controls flow routing and sediment transport.",
+              "cs": "Uspořádání povrchové vody do říčních sítí odvodňujících vymezená povodí, jejichž geometrie řídí postup průtoku a transport sedimentu.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Watershed divide", "definition": "The topographic boundary separating adjacent drainage basins."},
+                {"name": "Stream order", "definition": "A hierarchical numbering of channels reflecting the branching structure of a river network."}
+              ]
+            },
+            {
+              "name": "Floods",
+              "en": "The overtopping of channels when discharge exceeds capacity, characterized statistically by recurrence intervals for hazard assessment and design.",
+              "cs": "Vybřežení koryt, když průtok překročí kapacitu, statisticky charakterizované dobami opakování pro hodnocení rizika a navrhování.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Return period", "definition": "The average interval between floods of a given magnitude, used to define design events."},
+                {"name": "Flash flood", "definition": "A rapid inundation from intense rainfall over a short time, often in steep or urban catchments."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Groundwater Hydrology",
+          "en": "Studies water stored and moving beneath the surface within porous rock and sediment, the largest accessible reservoir of unfrozen freshwater.",
+          "cs": "Zkoumá vodu uloženou a pohybující se pod povrchem v propustných horninách a sedimentech – největší dostupnou zásobárnu nezamrzlé sladké vody.",
+          "blocks": [
+            {
+              "name": "Aquifers",
+              "en": "The subsurface bodies of permeable rock or sediment that store and transmit usable quantities of groundwater, classified by confinement and recharge.",
+              "cs": "Podpovrchová tělesa propustných hornin nebo sedimentů, jež zadržují a předávají využitelné množství podzemní vody, tříděná podle napjatosti a doplňování.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Water table", "definition": "The upper surface of the saturated zone where pore pressure equals atmospheric pressure."},
+                {"name": "Confined aquifer", "definition": "A water-bearing layer bounded above and below by impermeable beds, often under pressure."},
+                {"name": "Porosity & permeability", "definition": "The fraction of void space in a material and its capacity to transmit fluid through connected pores."}
+              ]
+            },
+            {
+              "name": "Groundwater flow",
+              "en": "The slow movement of water through porous media driven by hydraulic gradients, governed quantitatively by Darcy's law.",
+              "cs": "Pomalý pohyb vody porézním prostředím hnaný hydraulickými gradienty, kvantitativně popsaný Darcyho zákonem.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Darcy's law", "definition": "The relation that groundwater discharge is proportional to hydraulic conductivity and the hydraulic gradient."},
+                {"name": "Hydraulic head", "definition": "The energy of groundwater per unit weight, whose spatial gradient drives flow."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Water Quality & Hydrochemistry",
+          "en": "Examines the chemical and biological constituents of natural waters and the processes that transport and transform contaminants through hydrological systems.",
+          "cs": "Zkoumá chemické a biologické složky přírodních vod a procesy, jež přenášejí a přeměňují znečišťující látky hydrologickými systémy.",
+          "blocks": [
+            {
+              "name": "Water quality parameters",
+              "en": "The physical, chemical, and biological indicators—pH, dissolved oxygen, nutrients, and pathogens—that define water's suitability for use and ecosystems.",
+              "cs": "Fyzikální, chemické a biologické ukazatele – pH, rozpuštěný kyslík, živiny a patogeny – jež vymezují vhodnost vody pro užití a ekosystémy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Dissolved oxygen", "definition": "The amount of oxygen present in water, essential for aquatic life and an index of pollution."},
+                {"name": "Eutrophication", "definition": "The over-enrichment of water with nutrients that triggers algal blooms and oxygen depletion."}
+              ]
+            },
+            {
+              "name": "Contaminant transport",
+              "en": "The movement of dissolved and suspended pollutants through surface and groundwater by advection, dispersion, and reaction.",
+              "cs": "Pohyb rozpuštěných a suspendovaných znečišťujících látek povrchovou a podzemní vodou advekcí, disperzí a reakcí.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Advection-dispersion", "definition": "The combined bulk transport and spreading of a solute carried by flowing water."},
+                {"name": "Contaminant plume", "definition": "The spreading zone of pollution migrating away from a source through an aquifer."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Applied Hydrology & Water Resources",
+          "en": "Applies hydrological understanding to predict water availability and manage its allocation, storage, and protection for human and ecological needs.",
+          "cs": "Uplatňuje hydrologické poznatky k předpovědi dostupnosti vody a k řízení jejího rozdělování, uchovávání a ochrany pro lidské a ekologické potřeby.",
+          "blocks": [
+            {
+              "name": "Hydrological modeling",
+              "en": "The mathematical simulation of catchment processes to forecast streamflow, floods, and water balance under varying climate and land use.",
+              "cs": "Matematická simulace procesů v povodí k předpovědi průtoku, povodní a vodní bilance za měnícího se klimatu a využívání půdy.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Rainfall-runoff model", "definition": "A model transforming precipitation input into predicted streamflow at a catchment outlet."},
+                {"name": "Model calibration", "definition": "The adjustment of model parameters so simulated flows match observed records."}
+              ]
+            },
+            {
+              "name": "Water resource management",
+              "en": "The planning and governance of water supply, storage, and demand across sectors to balance competing uses and sustain aquatic ecosystems.",
+              "cs": "Plánování a správa zásobování vodou, jejího uchovávání a poptávky napříč odvětvími k vyvážení konkurenčních užití a udržení vodních ekosystémů.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Integrated water resources management", "definition": "A coordinated approach balancing social, economic, and ecological water demands within a basin."},
+                {"name": "Environmental flow", "definition": "The water regime maintained in a river to sustain its ecosystems and services."}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "branch_id": "01.04.10",
+      "name": "Glaciology",
+      "pillars": [
+        {
+          "name": "Glacier Formation & Mass Balance",
+          "en": "Studies how snow transforms into glacier ice and how the yearly gain and loss of mass determine whether a glacier advances, retreats, or holds steady.",
+          "cs": "Zkoumá, jak se sníh mění v ledovcový led a jak roční přírůstek a úbytek hmoty určují, zda ledovec postupuje, ustupuje, nebo stagnuje.",
+          "blocks": [
+            {
+              "name": "Snow to ice transformation",
+              "en": "The progressive densification of accumulated snow through firn into solid glacier ice as burial expels air and welds crystals.",
+              "cs": "Postupné zhušťování nahromaděného sněhu přes firn na pevný ledovcový led, jak pohřbení vytlačuje vzduch a spéká krystaly.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Firn", "definition": "Partially compacted granular snow that has survived a melt season on its way to becoming glacier ice."},
+                {"name": "Densification", "definition": "The compaction of snow and firn under its own weight into denser ice over years to centuries."}
+              ]
+            },
+            {
+              "name": "Mass balance & equilibrium line",
+              "en": "The net difference between accumulation and ablation over a year, whose sign controls a glacier's growth and whose boundary is the equilibrium line.",
+              "cs": "Čistý rozdíl mezi akumulací a ablací za rok, jehož znaménko řídí růst ledovce a jehož hranicí je rovnovážná čára.",
+              "explored": "well",
+              "brief_concepts": [
+                {"name": "Accumulation & ablation", "definition": "The gain of mass by snowfall and its loss by melting, sublimation, and calving."},
+                {"name": "Equilibrium line altitude", "definition": "The elevation where annual accumulation exactly balances ablation, a sensitive climate indicator."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Glacier Dynamics",
+          "en": "Explains how glacier ice deforms and slides under gravity, the mechanisms controlling flow velocity, and the unstable behaviors of surging and calving.",
+          "cs": "Vysvětluje, jak se ledovcový led deformuje a klouže pod tíhou, mechanismy řídící rychlost toku a nestabilní chování při ledovcových výdutích a odlamování.",
+          "blocks": [
+            {
+              "name": "Ice flow & deformation",
+              "en": "The movement of glaciers by internal creep of ice crystals and by basal sliding, whose combination sets the flow rate and surface features.",
+              "cs": "Pohyb ledovců vnitřním tečením ledových krystalů a klouzáním po podloží, jejichž kombinace určuje rychlost toku a povrchové tvary.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Basal sliding", "definition": "The movement of a glacier over its bed, lubricated by meltwater at the ice-rock interface."},
+                {"name": "Internal deformation", "definition": "The slow flow of ice by creep of its crystals under gravitational stress."},
+                {"name": "Crevasse", "definition": "A deep open fracture formed where a glacier flows over uneven terrain and the brittle surface ice cracks."}
+              ]
+            },
+            {
+              "name": "Glacial surging & calving",
+              "en": "The episodic rapid advance of surge-type glaciers and the breaking off of ice at tidewater and lake margins, dominant loss processes for many ice masses.",
+              "cs": "Občasný rychlý postup výdutových ledovců a odlamování ledu na mořských a jezerních okrajích – převládající procesy úbytku mnoha ledových hmot.",
+              "explored": "barely",
+              "brief_concepts": [
+                {"name": "Glacier surge", "definition": "A sudden brief period of greatly accelerated flow followed by a long quiescent phase."},
+                {"name": "Calving", "definition": "The breaking away of ice blocks from a glacier terminus into water, forming icebergs."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Glacial Geomorphology",
+          "en": "Studies the erosional and depositional landforms created by glaciers, which record the extent and behavior of past and present ice masses.",
+          "cs": "Zkoumá erozní a akumulační tvary vytvořené ledovci, jež zaznamenávají rozsah a chování dřívějších i současných ledových hmot.",
+          "blocks": [
+            {
+              "name": "Glacial erosion",
+              "en": "The sculpting of bedrock by ice through plucking and abrasion, carving cirques, U-shaped valleys, and fjords that mark glaciated terrain.",
+              "cs": "Opracování skalního podloží ledem vylamováním a obrusem, jež vytesává kary, údolí tvaru U a fjordy, které značí zaledněnou krajinu.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Cirque", "definition": "A bowl-shaped hollow eroded at the head of a glacier where it originates."},
+                {"name": "U-shaped valley", "definition": "A steep-sided glacially carved valley, contrasting with the V-shape of river valleys."},
+                {"name": "Striations", "definition": "Scratches gouged into bedrock by rock fragments dragged along the glacier base, recording ice flow direction."}
+              ]
+            },
+            {
+              "name": "Glacial deposition",
+              "en": "The laying down of transported debris as ice melts, forming moraines, till, and outwash that map former ice positions and meltwater flow.",
+              "cs": "Ukládání transportovaného materiálu při tání ledu, jež vytváří morény, till a fluvioglaciální sedimenty mapující dřívější polohy ledu a odtok tavné vody.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Moraine", "definition": "A ridge or mound of unsorted debris deposited directly by a glacier at its margins or terminus."},
+                {"name": "Till", "definition": "The unsorted, unstratified sediment deposited directly by glacier ice."},
+                {"name": "Outwash", "definition": "Stratified sediment carried and sorted by meltwater streams flowing from a glacier."}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Ice Sheets & Cryosphere",
+          "en": "Examines the continental ice sheets and the wider frozen realm of permafrost and sea ice, central to global sea level and climate feedbacks.",
+          "cs": "Zkoumá kontinentální ledovcové štíty a širší zmrzlou říši permafrostu a mořského ledu, jež jsou klíčové pro globální hladinu moře a klimatické zpětné vazby.",
+          "blocks": [
+            {
+              "name": "Ice sheets & sea level",
+              "en": "The vast Antarctic and Greenland ice masses whose growth and melt drive the largest changes in global sea level over glacial cycles and today.",
+              "cs": "Rozsáhlé antarktické a grónské ledové hmoty, jejichž růst a tání pohánějí největší změny globální hladiny moře během ledovcových cyklů i v současnosti.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Ice sheet", "definition": "A continental-scale mass of glacial ice exceeding fifty thousand square kilometers, as on Antarctica and Greenland."},
+                {"name": "Ice shelf", "definition": "A floating extension of an ice sheet over the ocean that buttresses the flow of ice behind it."},
+                {"name": "Sea-level contribution", "definition": "The rise in ocean level produced when land ice melts and adds water to the sea."}
+              ]
+            },
+            {
+              "name": "Permafrost & sea ice",
+              "en": "The perennially frozen ground of high latitudes and the seasonally forming sea ice, both sensitive climate indicators and carbon-cycle actors.",
+              "cs": "Trvale zmrzlá půda vysokých zeměpisných šířek a sezonně vznikající mořský led, oba citlivé klimatické ukazatele a činitelé uhlíkového cyklu.",
+              "explored": "partially",
+              "brief_concepts": [
+                {"name": "Permafrost", "definition": "Ground that remains at or below freezing for at least two consecutive years, storing vast amounts of carbon."},
+                {"name": "Sea ice", "definition": "Frozen seawater that forms and melts seasonally, strongly influencing polar albedo and ocean circulation."}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
