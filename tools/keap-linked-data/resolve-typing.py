@@ -387,14 +387,14 @@ def main():
             print("keap-linked-data: --post needs --token (KEAP_AGENT_TOKEN_RW)", file=sys.stderr)
             return 1
         req = urllib.request.Request(a.post.rstrip("/") + "/agent/v1/metadata",
-            data=json.dumps({"model": "wikidata", "metadata": payload}).encode(),
+            data=json.dumps({"model": "wikidata", "metadata": payload, "replace": True}).encode(),
             headers={"content-type": "application/json",
                      "authorization": f"Bearer {a.token}",
                      "x-keap-agent": "keap-linked-data"}, method="POST")
         with urllib.request.urlopen(req, timeout=120) as r:
             out = json.loads(r.read().decode())
         out = out.get("data", out)
-        print(f"posted {len(payload)} high+med rows -> upserted {out.get('upserted', 0)}")
+        print(f"posted {len(payload)} high+med rows -> upserted {out.get('upserted', 0)}, pruned {out.get('pruned', 0)}")
     return 0
 
 
