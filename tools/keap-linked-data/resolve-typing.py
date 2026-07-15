@@ -208,6 +208,37 @@ def resolve(nodes, cache, limit=None, sem=None):
     return picked
 
 
+def attach_scope(picked, qrank_path):
+    """Join our resolved QIDs against the QRank dump (QID -> Wikimedia-pageview
+    popularity) → a knowledge-scope signal. scope_norm is log-min-max 0-1 over the
+    resolved set (raw QRank is heavy-tailed). Nodes with a QID absent from QRank
+    keep scope=None. Streams the gz, keeping only our ~600 qids in memory."""
+    import gzip, math
+    want = {p["qid"] for p in picked.values() if p.get("qid")}
+    rank = {}
+    with gzip.open(qrank_path, "rt") as f:
+        f.readline()  # header "Entity,QRank"
+        for line in f:
+            qid, _, val = line.partition(",")
+            if qid in want:
+                try:
+                    rank[qid] = int(val)
+                except ValueError:
+                    pass
+    if not rank:
+        return 0
+    vals = sorted(rank.values())
+    lo, span = math.log(vals[0]), (math.log(vals[-1]) - math.log(vals[0])) or 1.0
+    n = 0
+    for p in picked.values():
+        q = p.get("qid")
+        if q in rank:
+            p["scope_rank"] = rank[q]
+            p["scope_norm"] = round((math.log(rank[q]) - lo) / span, 4)
+            n += 1
+    return n
+
+
 def batched(seq, n):
     for i in range(0, len(seq), n):
         yield seq[i:i + n]
@@ -273,6 +304,8 @@ def main():
                     help="node-embeddings json (GET /agent/v1/features/vectors) — enables semantic disambiguation")
     ap.add_argument("--ollama", default=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     ap.add_argument("--model", default="nomic-embed-text")
+    ap.add_argument("--qrank", default=None,
+                    help="path to qrank.csv.gz — join resolved QIDs → scope-signal (node_metadata.scope_rank/norm)")
     ap.add_argument("--post", default=None,
                     help="KEAP API base (e.g. http://127.0.0.1:8091) — POST high+med tier to node_metadata")
     ap.add_argument("--token", default=os.environ.get("KEAP_AGENT_TOKEN_RW", ""),
@@ -302,6 +335,9 @@ def main():
         add_typing(picked, cache)
     finally:
         json.dump(cache, open(a.cache, "w"))
+    if a.qrank:
+        scored = attach_scope(picked, a.qrank)
+        print(f"  scope: joined {scored} nodes against QRank", file=sys.stderr)
 
     # attach node meta for the review artifact
     by_id = {n["id"]: n for n in nodes}
@@ -338,7 +374,8 @@ def main():
     if a.post:
         payload = [{"node_id": r["id"], "qid": r["qid"], "keap_type": r.get("keap_type"),
                     "schema_type": r.get("schema_type"), "wd_label": r.get("label"),
-                    "confidence": r["conf"]}
+                    "confidence": r["conf"], "scope_rank": r.get("scope_rank"),
+                    "scope_norm": r.get("scope_norm")}
                    for r in rows if r["conf"] in ("high", "med") and r.get("qid")]
         if not a.token:
             print("keap-linked-data: --post needs --token (KEAP_AGENT_TOKEN_RW)", file=sys.stderr)
