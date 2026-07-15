@@ -47,11 +47,12 @@ REJECT_P31 = re.compile(r"\barticle\b|thesis|dissertation|preprint|painting|scul
                         r"\bnovel\b|manga|anime|\bepisode\b|\bplay\b|magazine|newspaper|"
                         r"\bwebsite\b|video game|\bband\b|musical work|literary work|"
                         r"\bmovie\b|television series|photograph|drawing|poem\b|"
-                        r"\bpatent\b|version, edition|scientific publication", re.I)
+                        r"\bpatent\b|version, edition|scientific publication|"
+                        r"\bjournal\b|monograph|\bforum\b|\baward\b|encycloped", re.I)
 
 # --- P31 label -> KEAP render bucket (primary facet) + schema.org-ish class ---
 BUCKETS = [  # (regex on P31 english label, keap_bucket, schema_type)
-    (r"academic discipline|branch of|field of|\bscience\b|study of|subfield|specialty|academic major", "discipline", "Intangible"),
+    (r"academic discipline|branch of|field of|\bsciences?\b|study of|subfield|specialty|academic major|technical sciences", "discipline", "Intangible"),
     (r"theory|\blaw\b|principle|hypothesis|paradigm|\bmodel\b|\beffect\b|conjecture|theorem", "theory", "Intangible"),
     (r"process|phenomen|reaction|interaction|mechanism|transition|\bmotion\b|\bcycle\b|economic activity|industry|human activity|\bactivity\b|\bhobby\b|human impact|environmental issue", "process", "Intangible"),
     (r"physical quantity|\bproperty\b|constant|\bunit\b|dimension|\bmeasure\b|form of energy", "quantity", "Intangible"),
@@ -198,6 +199,11 @@ def resolve(nodes, cache, limit=None, sem=None):
             conf = "high"; reason = "exact/sem+type"
         elif exact or (allow and best_s >= 2.0):
             conf = "med"; reason = "exact|type+overlap"
+        elif sem and cos is not None and cos >= 0.68:
+            # strong semantic agreement rescues a correct entity whose terse WD
+            # gloss carried no allow-keyword (Newton's laws, Black Holes, …). The
+            # P31 post-filter still vetoes wrong high-cosine matches (awards etc).
+            conf = "med"; reason = "sem-strong"
         else:
             conf = "low"; reason = "weak"
         picked[n["id"]] = {"qid": best_qid, "label": best_label, "desc": best_desc,
