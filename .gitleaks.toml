@@ -19,6 +19,10 @@ description = "Verified false positives — docblocks, test fixtures, docs place
 #    no literal credential on the line.
 # 4) README.md (historical) — Czech docs placeholder "silne-heslo" /
 #    "nahodny-64-char-hex" example values.
+# 5) GHSA advisory identifiers (GHSA-xxxx-xxxx-xxxx) cited across
+#    docs/llm/security/ + remediation-queue.json — public GitHub Security
+#    Advisory IDs, not credentials. Format-anchored (lowercase base32), so it
+#    cannot mask a real high-entropy key (remediator triage, 2026-07-15).
 paths = [
     '''files/anatomy/wing/app/Security/ForwardAuthUserStorage\.php''',
     '''tests/anatomy/test_pulse_redact\.py''',
@@ -28,4 +32,5 @@ paths = [
 regexes = [
     '''silne-heslo''',
     '''nahodny-64-char-hex''',
+    '''GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}''',
 ]
