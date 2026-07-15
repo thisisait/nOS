@@ -46,10 +46,13 @@ timeline
         Curator : taxonomy-reconciler agent live (propose-only)
         Fable : 8 empty core-physics branches filled (529 records)
         Knowledge : git-SoT ingest pipeline (dump↔ingest round-trip, role-wired)
+        Cortex : KEAP wired as anatomy organ (role+plugin, header_oidc, gated_net) · v1.6.2 pinned
+        Sec-127 : REM-127 traefik CVE-2026-54763 closed live · scout+remediator run
     section Now
-        State : converge green · KEAP knowledge SoT live · idempotent role-driven ingest
+        State : converge green · cortex live+coherent · GitLab forge reconciled (0 fake-leads)
     section Next
-        v0.8 : version-pin wave to 0 CRITICAL/HIGH · Gitea 1.26.4 live-apply
+        Release : reconcile master (480 behind · beta tags dev-only) → promote → cut next tag
+        v0.8 : version-pin wave to 0 CRITICAL/HIGH · Gitea 1.26.4 live-apply · wing.db WAL fix
         Epic : PG 16→17 cutover · first real migration authored+applied
         Docs : reconciliation + machine-checkable freshness gate
         v1.0 : blank reproducibility re-proven · feature freeze
@@ -83,11 +86,14 @@ parity (OpenClaw/Hermes/fleet are post-1.0). Exit criteria (definition of done):
 **Milestone sequence** (tags cut from `master`, operator-validated per
 `nos-release-flow`):
 
-- **v0.7-beta (2026-07-09, this tag)** — security tip closed, converge green,
-  first agent-authored upgrade recipe (Gitea). CI green.
-- **v0.8-beta — "burn-down"** — version-pin wave → zero CRITICAL/HIGH; Gitea 1.26.4
-  live-applied; `fix/sso-mfa-posture` (8 live-bug fixes) + sso-autologin epic merged;
-  healthcheck coverage for the health-blind containers; Bone dep-lockfile.
+- **Release-state reality (2026-07-15):** `v0.6-beta` (06-12) and `v0.8-beta` (07-13)
+  tags exist **on dev only**; `v0.7-beta` was never cut; master is stuck at 2026-05-30.
+  The tags-on-dev, trunk-stale split must be reconciled (NOW #0) before the next cut —
+  otherwise "released" versions never reach the protected trunk.
+- **v0.8-beta — "burn-down"** (tag exists on dev; promote to master) — version-pin wave
+  → zero CRITICAL/HIGH; Gitea 1.26.4 live-applied; `fix/sso-mfa-posture` (8 live-bug
+  fixes) + sso-autologin epic merged; healthcheck coverage for the health-blind
+  containers; Bone dep-lockfile; wing.db WAL fix.
 - **v0.9-beta / RC — "epic acceptance"** — PG 16→17 cutover done end-to-end; first
   real migration authored + applied; doc reconciliation complete + freshness gate;
   Integration wet-test green on both OS; **blank reproducibility re-proven**.
@@ -156,7 +162,44 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   - Dockerfile simplified — image ships *tools not data* (kills the per-file COPY
     manifest); data changes ride the git ref, no image rebuild.
 
+## Shipped this session (2026-07-15) — cortex-as-organ + security + forge hygiene
+
+- **KEAP wired as the CORTEX anatomy organ** (was on `feat/keap-cortex`, now dev):
+  `roles/pazny.keap` + `keap-base` plugin — header_oidc, `gated_net`-only (SEC-02),
+  loopback agent surface (`/agent/v1` scope-split RO/RW/CAPTURE tokens), pulse jobs
+  (embed-sync / features-sync / consolidate / lint), public ingest + browser-extension
+  routes. Smoke green: `nos/keap` built from the GitHub clone, container healthy,
+  `keap.<tld>` 302→Authentik. Cortex added to CLAUDE.md anatomy + header_oidc bucket.
+- **Version coherence closed** — nOS pins the immutable tag `keap_repo_ref: v1.6.2`
+  (was the moving `feat/keap-linked-data`; R10), `keap_version: 1.6.2`; KEAP
+  `package.json` 1.0.0→1.6.2 (it had self-reported 1.0.0 under a 1.5.1-rc.4 image
+  label — all three now agree). Added `KEAP_PUBLIC_URL` (server CSRF + /ext/v1
+  canonicalOrigin) and `consolidate_fs_roots/db_exclude` defaults (an undefined-var
+  eager-resolve landmine that would abort any `install_keap` converge).
+- **REM-127 Traefik CVE-2026-54763/54764** — ForwardAuth underscore-header strip
+  bypass (`X_authentik_groups` survives `Header.Del` → identity/RBAC forgery on the SSO
+  gate) + X-Forwarded-Proto inject. Bumped `traefik_image_version` v3.6.21→**v3.6.23**,
+  live-verified `infra-traefik-1` healthy + routes green; queue → resolved
+  (**31 pending / 88 resolved / 3 vendor-blocked** of 122).
+- **Security agents run** (stale since 2026-06-15): scout drift-scan surfaced a HIGH
+  (wing.db write-lock contention, see P1) + a MEDIUM telemetry gap; remediator triage
+  cleared the two open findings (GHSA advisory-IDs mis-flagged by gitleaks →
+  allowlisted, `gitleaks detect` now clean).
+- **GitLab forge reconciled** — the 3 open MRs (#2/#3/#4 = the upgrade→migration→
+  coexistence epic) were **stale fake-leads** (content already on dev via the GitHub
+  trunk); closed with provenance notes + GitLab `dev` force-synced to trunk
+  (`archive/dev-fakelead-ed11b624` preserves the old tip). 0 open MRs.
+
 ## NOW — the immediate queue
+
+0. **[operator] Master release reconciliation — release debt is 6 weeks deep.** master
+   tip is **2026-05-30** (480 commits behind dev); `v0.6-beta` + `v0.8-beta` were tagged
+   on **dev only**, never promoted to the protected trunk, and `v0.7-beta` was never cut
+   despite the milestone note. master is a **strict ancestor of dev → clean fast-forward**.
+   Reconcile: push dev, then `dev→master` (`gh pr merge --rebase --admin`, `nos-release-flow`),
+   which makes the beta tags master-reachable; then cut the next tag *from master* so the
+   trunk and the tags stop diverging.
+
 
 1. **[operator] Validate + apply on-host** — run `ansible-playbook main.yml` (or blank)
    to live-apply the armed Gitea 1.26.4 upgrade under STRICT health-wait. If `failed=0`,
@@ -207,6 +250,12 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   agent_* tables are unpurged.
 - **[S] Infisical MTI oauth2/proxy orphan render fix** — the aggregator still emits an
   orphan OAuth2Provider for a forward_auth service; reappears every apply.
+- **[S] wing.db write-lock contention** (scout HIGH, 2026-07-15) — `gdpr-breach:breach-
+  deadline-scan` (`rc=3 escalate failed: database is locked`) + `wing:dispatch-
+  notifications` (`SQLite3Exception` at `dispatch-notifications.php:104`) fail on a
+  `database is locked` **4×/7d — structural, not transient**, each recovering the next
+  hourly run. Fix: WAL mode + `busy_timeout` on the wing.db writer paths. Recurs hourly
+  until fixed; low blast radius (self-recovers) but noisy + a real concurrency defect.
 
 ### P2 — feature tails + robustness
 - **[M] VirtioFS class-risk doctrine** — the gitlab puma socket is **fixed** (tmpfs,
