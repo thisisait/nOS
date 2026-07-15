@@ -87,10 +87,30 @@ event · technology · place · work · concept` (fallback). Drives the entity-t
 lens and typed celestial forms. Tune `BUCKETS` / `REJECT_P31` at the top of the
 script and re-run (cache-fast) to refine.
 
+## Scope-signal (QRank) — `--qrank`
+
+Join the resolved QIDs against the **QRank** dump (`qrank.toolforge.org/download/
+qrank.csv.gz`, ~105 MB, `Entity,QRank` = QID → Wikimedia-pageview popularity) to
+get a knowledge-scope signal per node — a real external "how important/broad is
+this concept" measure that can drive render node-size (vs. today's subtree-size).
+
+```bash
+curl -sL https://qrank.toolforge.org/download/qrank.csv.gz -o qrank.csv.gz
+python3 resolve-typing.py --graph graph.json --vectors vectors.json \
+     --qrank qrank.csv.gz --post http://127.0.0.1:8091   # RW token via env
+```
+
+`scope_rank` = raw QRank; `scope_norm` = log-min-max 0-1 over the resolved set
+(QRank is heavy-tailed). Landed in `node_metadata`, served as `node.meta.scopeRank
+/scopeNorm`. Sanity: AI/Roman Empire/Renaissance top out ~1.0; Barley/Boiling/
+Oats bottom ~0.25. ~48 of the 607 QIDs are absent from QRank (no scope, graceful).
+The QRank public file is frozen at 2024-03 — fine for a slow-moving popularity
+signal; OpenAlex `cited_by_count` is the live alternative for science branches.
+
 ## Next (post-review, not built)
 
-- Storage: an optional `meta`/`links` block in the git-SoT canonical format +
-  a `node_metadata` table beside `node_features`; land only high/med confidence.
-- Wire as a Pulse job (parity with `keap-features-sync`) for periodic refresh.
-- Scope-signal (OpenAlex `cited_by_count` / QRank) → node size; dates (P571/575/
-  585, dated subset only) → temporal axis. See `docs/roadmap.md`.
+- Promote reviewed QIDs into the git-SoT canonical `meta` block (permanence);
+  optionally wire as a Pulse job (parity with `keap-features-sync`) — though the
+  QID/scope resolution is stable, so occasional re-runs beat a nightly recompute.
+- OpenAlex `cited_by_count` (science-branch scope, live) + dates (P571/575/585,
+  dated subset only) → temporal axis. See `docs/roadmap.md`.
