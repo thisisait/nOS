@@ -1820,7 +1820,7 @@ firefly_domain: "firefly{{ _host_alias_seg }}.{{ tenant_domain | default('dev.lo
 # apps fallback expressions used 'office.' / 'influx.' which would have
 # diverged — those defaults still fire when these vars are undefined,
 # but with these top-level defs they're authoritative.
-onlyoffice_domain: "onlyoffice{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+onlyoffice_domain: "office{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 influxdb_domain: "influxdb{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 
 nodered_port: 1880
