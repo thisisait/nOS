@@ -32,7 +32,6 @@ snappymail_port: 3008
 
 # Data directory — persists admin settings, plugins, and cache.
 # SnappyMail is stateless (no DB); everything is in this directory.
-snappymail_data_dir: "{{ ansible_facts['env']['HOME'] }}/snappymail"
 
 # Resource limits — lightweight PHP app, generous for a webmail client.
 snappymail_mem_limit: "{{ docker_mem_limit_light | default('256m') }}"

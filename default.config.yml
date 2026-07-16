@@ -34,6 +34,67 @@ tenant_domain: "dev.local"                # Primary TLD; all FQDNs resolve here
 host_alias: ""                            # Per-host segment ("" drops it; "lab" yields bone.lab.dev.local)
 apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (Coolify-imported et al.)
 
+# ── Filesystem doctrine (docs/doctrine/filesystem.md) ─────────────────────────
+# Single persistent-data root. Every service data/config path derives from this
+# in its ROLE default (not here) — see the doctrine. Point at an SSD by setting
+# this one var; ~/.nos stays the runtime sidecar (never persistent data).
+nos_data_root: "{{ ansible_facts['env']['HOME'] }}/nos"
+# Short per-tenant slug for the on-disk tree (full domain kept as tenant_domain).
+nos_tenant_slug: "{{ (tenant_domain | default('dev.local')).split('.')[0] }}"
+
+# ── FS doctrine — derived service paths (docs/doctrine/filesystem.md) ─────────
+# Global (referenced by core-up dir-creation + blank-reset before roles run, so
+# they must resolve pre-core-up); value mirrors each role default. The config-
+# surface-revision epic will DRY this via a trap-safe generator.
+authentik_data_dir: "{{ nos_data_root }}/platform/services/authentik/data"
+bluesky_pds_data_dir: "{{ nos_data_root }}/platform/services/bluesky_pds/data"
+bookstack_data_dir: "{{ nos_data_root }}/platform/services/bookstack/data"
+calibreweb_books_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/books"
+calibreweb_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/config"
+code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
+erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
+freepbx_data_dir: "{{ nos_data_root }}/platform/services/freepbx/data"
+freescout_data_dir: "{{ nos_data_root }}/platform/services/freescout/data"
+gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
+gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
+gitlab_data_dir: "{{ nos_data_root }}/platform/services/gitlab/data"
+grafana_data_dir: "{{ nos_data_root }}/platform/services/grafana/data"
+hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
+homeassistant_config_dir: "{{ nos_data_root }}/platform/services/homeassistant/config"
+infisical_data_dir: "{{ nos_data_root }}/platform/services/infisical/data"
+influxdb_config_dir: "{{ nos_data_root }}/platform/services/influxdb/config"
+influxdb_data_dir: "{{ nos_data_root }}/platform/services/influxdb/data"
+jellyfin_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/jellyfin/config"
+keap_data_dir: "{{ nos_data_root }}/platform/services/keap/data"
+kiwix_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/kiwix/data"
+mailpit_data_dir: "{{ nos_data_root }}/platform/services/mailpit/data"
+maps_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/maps/data"
+mariadb_data_dir: "{{ nos_data_root }}/platform/services/mariadb/data"
+mcpo_data_dir: "{{ nos_data_root }}/platform/services/mcpo/data"
+metabase_data_dir: "{{ nos_data_root }}/platform/services/metabase/data"
+nextcloud_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/nextcloud/data"
+nodered_data_dir: "{{ nos_data_root }}/platform/services/nodered/data"
+ntfy_data_dir: "{{ nos_data_root }}/platform/services/ntfy/data"
+onlyoffice_data_dir: "{{ nos_data_root }}/platform/services/onlyoffice/data"
+openwebui_data_dir: "{{ nos_data_root }}/platform/services/openwebui/data"
+outline_data_dir: "{{ nos_data_root }}/platform/services/outline/data"
+paperclip_data_dir: "{{ nos_data_root }}/platform/services/paperclip/data"
+portainer_data_dir: "{{ nos_data_root }}/platform/services/portainer/data"
+postgresql_data_dir: "{{ nos_data_root }}/platform/services/postgresql/data"
+puter_config_dir: "{{ nos_data_root }}/platform/services/puter/config"
+puter_data_dir: "{{ nos_data_root }}/platform/services/puter/data"
+qgis_data_dir: "{{ nos_data_root }}/platform/services/qgis/data"
+redis_data_dir: "{{ nos_data_root }}/platform/services/redis/data"
+rustfs_data_dir: "{{ nos_data_root }}/platform/services/rustfs/data"
+snappymail_data_dir: "{{ nos_data_root }}/platform/services/snappymail/data"
+spacetimedb_data_dir: "{{ nos_data_root }}/platform/services/spacetimedb/data"
+stalwart_data_dir: "{{ nos_data_root }}/platform/services/stalwart/data"
+superset_data_dir: "{{ nos_data_root }}/platform/services/superset/data"
+uptime_kuma_data_dir: "{{ nos_data_root }}/platform/services/uptime_kuma/data"
+vaultwarden_data_dir: "{{ nos_data_root }}/platform/services/vaultwarden/data"
+watchtower_data_dir: "{{ nos_data_root }}/platform/services/watchtower/data"
+woodpecker_data_dir: "{{ nos_data_root }}/platform/services/woodpecker/data"
+
 # Normalize host_alias by stripping leading/trailing dots. Operators may
 # accidentally type '.lab' or 'lab.' — both should produce a clean '.lab'
 # segment without double-dot artefacts in the rendered FQDN.
@@ -1055,7 +1116,6 @@ sublime_package_control:
 mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # OVERRIDE in credentials.yml!
 mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
 mariadb_port: 3306
-mariadb_data_dir: "{{ ansible_facts['env']['HOME'] }}/mariadb/data"   # data persistence outside the container
 
 # ==============================================================================
 # INFRA – POSTGRESQL (shared DB for Authentik, Infisical, Outline, Metabase, Superset, Paperclip)
@@ -1066,7 +1126,6 @@ postgresql_version: "16.14-alpine"      # CVE-2026-6479 (SSL/GSS DoS, ssl=on rel
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
-postgresql_data_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/data"
 # Live container name (compose project = stack, so <stack>-<service>-1). Used by
 # upgrade recipes' docker-exec dump/restore steps; default 'nos-postgresql' was wrong.
 postgresql_container_name: "infra-postgresql-1"
@@ -1079,7 +1138,6 @@ mariadb_container_name: "infra-mariadb-1"
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
 redis_version: "8.6.3"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
-redis_data_dir: "{{ ansible_facts['env']['HOME'] }}/redis/data"
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
@@ -1171,7 +1229,6 @@ wordpress_rbac_role_map_json: '{"nos-providers":"administrator","nos-admins":"ad
 
 nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
-nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
 nextcloud_db_password: "{{ global_password_prefix }}_pw_nextcloud"
@@ -1193,7 +1250,6 @@ nextcloud_port: 8085                    # Local container port (nginx proxy)
 kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 kiwix_port: 8888                           # Local kiwix-serve port
 kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/kiwix/kiwix-serve)
-kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"       # Put .zim files here
 
 # Init ZIM — downloaded automatically on first blank run so Kiwix can start
 # with a working demo (no manual onboarding step). based-cooking is ~10 MB
@@ -1219,7 +1275,6 @@ kiwix_zim_files: []
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 maps_port: 8081                               # 8080 taken by Traefik dashboard
 maps_tileserver_version: "latest"                  # Docker image tag (maptiler/tileserver-gl)
-maps_data_dir: "{{ ansible_facts['env']['HOME'] }}/maps"        # Put .mbtiles files here
 
 # Init MBTiles — small file downloaded automatically so tileserver starts.
 # Default: Zurich demo (~2 MB) from tileserver-gl test fixtures — proof of life.
@@ -1296,7 +1351,6 @@ observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana
 grafana_version: "12.4.4"               # CVE-2026-27876 pin + S2 freshness 2026-06-10 (patch line)
 prometheus_version: "v3.11.3"   # synced to role default (cleared version-pin shadow)
 loki_version: "3.7.2"           # synced to role default (cleared version-pin shadow)
-grafana_data_dir: "{{ stacks_dir }}/observability/grafana/data"
 
 # Gitea Docker
 gitea_version: "1.26.4"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4
@@ -1415,7 +1469,6 @@ n8n_admin_lastname: "nOS"
 gitea_domain: "git{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=reserve → Gitea on 3003
 gitea_ssh_port: 2222
-gitea_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitea"
 gitea_admin_user: "{{ ansible_facts['user_id'] }}"
 gitea_admin_password: "{{ global_password_prefix }}_pw_gitea"
 gitea_admin_email: ""                          # FILL IN!
@@ -1437,8 +1490,6 @@ gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
 gitlab_version: "18.11.7-ce.0"  # REM-111: Jun-24-2026 GitLab security release version-flagged 18.10.8; 18.11 patch line
-gitlab_data_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab"          # Repos, uploads, artifacts (large!)
-gitlab_config_dir: "{{ ansible_facts['env']['HOME'] }}/gitlab-config" # gitlab.rb + keys (small but important)
 gitlab_timezone: "Europe/Prague"
 gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
@@ -1461,7 +1512,6 @@ nos_agent_forge: "gitlab"
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_port: 3004             # Internal container port 8080 → host 3004
 openwebui_version: "0.9.6"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
-openwebui_data_dir: "{{ ansible_facts['env']['HOME'] }}/openwebui"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
@@ -1482,7 +1532,6 @@ woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC for agents (internal)
 woodpecker_version: "v3.14.1"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1
-woodpecker_data_dir: "{{ ansible_facts['env']['HOME'] }}/woodpecker"
 woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
@@ -1502,7 +1551,6 @@ woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
 portainer_version: "2.33.8"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
-portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 # Self-heal an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
@@ -1523,7 +1571,6 @@ docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was o
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
 spacetimedb_version: "latest"           # pin to a specific tag (e.g. "1.5") for production
-spacetimedb_data_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/data"
 spacetimedb_keys_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
@@ -1536,7 +1583,6 @@ jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | de
 jellyfin_port: 8096
 jellyfin_version: "10.11.10"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE)
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
-jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
@@ -1549,7 +1595,6 @@ jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_port: 3001
 uptime_kuma_version: "1.23.13"   # specific pin (REM-067 SSTI in notification templates partially mitigated; v2.2.1 covers fully but breaking config-schema migration deferred to Phase D)
-uptime_kuma_data_dir: "{{ ansible_facts['env']['HOME'] }}/uptime-kuma"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
@@ -1574,7 +1619,6 @@ uptime_kuma_docker_host_monitors: false           # Optional Docker healthcheck 
 calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 calibreweb_port: 8083
 calibreweb_version: "0.6.26"   # lscr.io/linuxserver/calibre-web
-calibreweb_books_dir: "{{ ansible_facts['env']['HOME'] }}/calibre"   # Calibre library
 calibreweb_timezone: "Europe/Prague"
 
 # ==============================================================================
@@ -1584,7 +1628,6 @@ calibreweb_timezone: "Europe/Prague"
 snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 snappymail_port: 3008
 snappymail_image: "djmaze/snappymail:latest"
-snappymail_data_dir: "{{ ansible_facts['env']['HOME'] }}/snappymail"
 
 # ==============================================================================
 # TAILSCALE – WireGuard mesh VPN
@@ -1784,7 +1827,6 @@ nodered_port: 1880
 # Real default here (not only in role defaults) — referenced by
 # backup_dirs_to_dump above, which the core-up eager `{{ vars }}` resolve
 # walks BEFORE the nodered role loads (test_config_stock_jinja_only gate).
-nodered_data_dir: "{{ ansible_facts['env']['HOME'] }}/nodered/data"
 # Node-RED runtime defaults (D2 promotion, 2026-05-17): previously these
 # lived only as `| default(...)` chains inside the compose template, which
 # made operator overrides invisible to nos-smoke + config introspection.
@@ -1808,7 +1850,6 @@ bookstack_port: 3013
 firefly_port: 3014
 # Data dirs promoted from role defaults so the upgrade engine can resolve them
 # in play scope (recipes reference these for backup/restore steps).
-bookstack_data_dir: "{{ ansible_facts['env']['HOME'] }}/bookstack/config"
 firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"
 firefly_export_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/export"
 onlyoffice_port: 3015
@@ -1822,7 +1863,6 @@ homeassistant_version: "2026.6.0"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypa
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
-homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 # true = privileged + network_mode: host → mDNS/Bonjour auto-discovery
 # Warning (macOS): host mode reaches into the Docker VM network, not the Mac's physical network.
 # Full Bonjour/mDNS on Mac requires a native HA install or host networking
@@ -1843,7 +1883,6 @@ rustfs_version: "1.0.0-beta.9"         # CVE-2025-68926 baseline + alpha.91 mult
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-rustfs_data_dir: "{{ ansible_facts['env']['HOME'] }}/rustfs/data"
 rustfs_access_key: "{{ global_password_prefix }}_pw_rustfs_access"
 rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 
@@ -1867,7 +1906,6 @@ erpnext_experimental_override: false
 # `b2b_erpnext_sites` is the live storage; this var is referenced by
 # tasks/post.yml when reading site_config.json + bench migrate. Operators
 # pointing external storage at sites use this override.
-erpnext_data_dir: "{{ ansible_facts['env']['HOME'] }}/erpnext/sites"
 authentik_oidc_erpnext_client_id: "nos-erpnext"
 authentik_oidc_erpnext_client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
 
@@ -1879,7 +1917,6 @@ authentik_oidc_erpnext_client_secret: "{{ global_password_prefix }}_pw_oidc_erpn
 freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 freescout_port: 8090
 freescout_version: "2.1.3-php8.3"        # nfrastack image (tiredofit EOL @1.17.999); bundles FreeScout 1.8.226 — fixes REM-118 (CVE-2026-53595 9.4 unauth takeover + 3 more), was php8.3-1.17.159
-freescout_data_dir: "{{ ansible_facts['env']['HOME'] }}/freescout/data"
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
 freescout_db_password: "{{ global_password_prefix }}_pw_freescout"
@@ -1899,7 +1936,6 @@ authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_fr
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
 outline_version: "1.8.0-1"      # synced to role default; boots + runs DB migrations (1.6->1.8)
-outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"
 outline_db_user: "outline"
 outline_db_password: "{{ global_password_prefix }}_pw_outline"
@@ -1918,7 +1954,6 @@ freepbx_iax_port: 4569                 # IAX2 protocol
 freepbx_rtp_start: 10000              # RTP media start port
 freepbx_rtp_end: 10100                # RTP media end port
 freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/freepbx Docker image abandoned upstream 2022-04-30; latest published tag is 5.2.0 (2022). No maintained ARM64 FOSS alternative. CRITICAL CVEs (CVSS 10.0/9.3) UNFIXABLE in this image — operators running freepbx accept the risk. Track docs/llm/security/remediation-queue.json items REM-014/046 for status changes.
-freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
 freepbx_db_password: "{{ global_password_prefix }}_pw_freepbx"
@@ -1931,7 +1966,6 @@ freepbx_timezone: "Europe/Prague"
 qgis_domain: "gis{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 qgis_port: 8071
 qgis_version: "latest"                 # WARNING: amd64 only (runs via Rosetta emulation on ARM64)
-qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 
 # ==============================================================================
 # DATA – METABASE (BI dashboards)
@@ -1941,7 +1975,6 @@ qgis_data_dir: "{{ ansible_facts['env']['HOME'] }}/qgis"
 metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 metabase_port: 3002
 metabase_version: "v0.61.2.6"   # synced to role default (cleared version-pin shadow)
-metabase_data_dir: "{{ ansible_facts['env']['HOME'] }}/metabase"
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ global_password_prefix }}_pw_metabase"
@@ -1959,7 +1992,6 @@ metabase_admin_last_name: "nOS"
 superset_domain: "superset{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 superset_port: 8089
 superset_version: "6.0.0-dev"           # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi). -dev tag required — see roles/pazny.superset/defaults/main.yml (non-dev image lacks psycopg2).
-superset_data_dir: "{{ ansible_facts['env']['HOME'] }}/superset"
 superset_db_name: "superset"
 superset_db_user: "superset"
 superset_db_password: "{{ global_password_prefix }}_pw_superset"
@@ -1983,7 +2015,6 @@ authentik_oidc_superset_client_secret: "{{ global_password_prefix }}_pw_oidc_sup
 bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true)) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
-bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generate: openssl rand -hex 32
@@ -2000,8 +2031,6 @@ puter_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default(
 puter_api_domain: "api.os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 puter_port: 5050                               # "05" as in "OS"
 puter_version: "v2.5.1"                        # ghcr.io/heyputer/puter (local build tag; Dockerfile FROM pinned separately)
-puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
-puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512                       # File cache for multi-user (MB)
 puter_admin_email: "{{ default_admin_email }}"
 puter_admin_password: "{{ global_password_prefix }}_pw_puter"
@@ -2016,7 +2045,6 @@ puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
 keap_version: "1.6.2"                          # nos/keap image tag — MUST match keap_repo_ref (v1.6.2) so the label is honest
-keap_data_dir: "{{ ansible_facts['env']['HOME'] }}/keap/data"
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
@@ -2057,7 +2085,6 @@ consolidate_db_exclude: ""
 paperclip_domain: "paperclip{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 paperclip_port: 3006                              # 3100 collides with Loki
 paperclip_version: "sha-b9a80dc"         # ghcr.io/paperclipai/paperclip (no semver tags published)
-paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
 paperclip_db_name: "paperclip"
 paperclip_db_user: "paperclip"
 paperclip_db_password: "{{ global_password_prefix }}_pw_paperclip"
@@ -2095,7 +2122,6 @@ manage_authentik_with_tofu: false
 # HCL and `tofu plan` is no-op (tools/tofu-authentik-adopt.sh) — the destroy
 # guard refuses apply otherwise. Reversible: flip back to "blueprint".
 authentik_engine: "blueprint"
-authentik_data_dir: "{{ ansible_facts['env']['HOME'] }}/authentik"
 authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
 authentik_db_user: "authentik"
@@ -2466,7 +2492,6 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 infisical_version: "v0.160.4"   # synced to role default (cleared version-pin shadow)
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
-infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
 infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
 infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
 infisical_db_name: "infisical"
@@ -2585,7 +2610,6 @@ nos_infisical_projects:
 vaultwarden_version: "1.36.0"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
-vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"
 vaultwarden_signups_allowed: false                 # Admin creates accounts
 vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
 # SSO_ONLY hides the email+master-password login form → only "Continue with SSO"

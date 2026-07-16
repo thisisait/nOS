@@ -11,7 +11,6 @@
 paperclip_version: "latest"   # upstream publishes only latest (no fixed/semver tags); default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 paperclip_domain: "paperclip{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 paperclip_port: 3006                              # 3100 collides with Loki on the host
-paperclip_data_dir: "{{ ansible_facts['env']['HOME'] }}/paperclip"
 paperclip_db_name: "paperclip"
 paperclip_db_user: "paperclip"
 paperclip_deployment_mode: "authenticated"       # Docker binds 0.0.0.0 inside the container

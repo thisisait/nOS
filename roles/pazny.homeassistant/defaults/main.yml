@@ -11,7 +11,6 @@ homeassistant_version: "2026.6.0"                     # CVE-2026-34205 pin (Supe
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
-homeassistant_config_dir: "{{ ansible_facts['env']['HOME'] }}/homeassistant"
 
 # true = privileged + network_mode: host -> mDNS/Bonjour auto-discovery
 # Note (macOS): host mode reaches the Docker VM network, not the physical Mac network.

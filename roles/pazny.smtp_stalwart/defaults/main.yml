@@ -36,7 +36,6 @@ install_smtp_stalwart: false
 # Wing's invite flow consumes the JMAP API via Principal/set methodCalls
 # (see App\Model\StalwartProvisioner).
 stalwart_image: "stalwartlabs/stalwart:v0.16.6"
-stalwart_data_dir: "{{ ansible_facts['env']['HOME'] }}/stalwart"
 
 # Public hostname for the mail server. Defaults to mail.<tenant_domain>.
 stalwart_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

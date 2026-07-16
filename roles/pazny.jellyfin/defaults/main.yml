@@ -11,7 +11,6 @@ jellyfin_version: "10.11.10"                        # REM-119: CVE-2026-48793 (J
 jellyfin_port: 8096
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_lan_access: true                           # true = port dostupny z LAN
-jellyfin_config_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/config"
 jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"

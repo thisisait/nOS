@@ -12,7 +12,6 @@
 nodered_version: "4.0.9"                              # stable multi-arch tag (nodered/node-red)
 nodered_domain: "nodered{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nodered_port: 1880                                    # Node-RED default
-nodered_data_dir: "{{ ansible_facts['env']['HOME'] }}/nodered/data"
 nodered_timezone: "Europe/Prague"
 nodered_uid: 1000                                     # default UID v nodered/node-red image
 nodered_gid: 1000

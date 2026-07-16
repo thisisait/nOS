@@ -40,5 +40,12 @@ isolation is genuine there.
 subtree their scope authorizes — the tool layer enforces `realpath ∈ scope` (AgentKit gating).
 
 **Single-user today → breaking-OK.** No in-place migration recipe; a `--blank --full` rebuilds
-under the tree. Roles carry *derived* path defaults (`{{ nos_data_root }}/…`), not hand-written
-absolutes — keeps `default.config.yml` lean.
+under the tree.
+
+**Paths are GLOBAL, derived, single-source.** Every service path is defined once in
+`default.config.yml` as `{{ nos_data_root }}/<class>/<svc>/<leaf>` — **not** in role defaults.
+They must be global because they are referenced *before the owning role runs*: core-up
+dir-creation, blank-reset, and the **plugin/wiring loader** (`template_vars: {{ vars }}`) all
+read them, and a role-default-only value trips the eager-resolve trap (some plugin.yml refs
+lack a `| default()`, so they hard-fail). Single-source (config-only, no role shadow) is also
+what keeps the surface lean.

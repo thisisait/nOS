@@ -94,10 +94,18 @@ Nextcloud's per-user store at the FS level would be wrong.
 
 ## 5. Resolver + collapse of external-paths.yml
 
-- New var `nos_data_root` (default `{{ HOME }}/nos`). Every class-1 default becomes
-  `<svc>_data_dir: "{{ nos_data_root }}/platform/services/<svc>"`; class-2 →
-  `{{ nos_data_root }}/tenants/{{ tenant_slug }}/shared/<svc>"`; class-3 paths resolve
-  per-uid at request/provision time.
+- New var `nos_data_root` (default `{{ HOME }}/nos`). Every path is defined ONCE in
+  `default.config.yml` (the single global source) as
+  `<svc>_data_dir: "{{ nos_data_root }}/platform/services/<svc>/<leaf>"` (class 1) or
+  `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/<svc>/<leaf>` (class 2);
+  class-3 paths resolve per-uid at request/provision time (P2).
+- **Why config-single-source, not role defaults** (learned in P1, 2026-07-16): these vars
+  are referenced *before the owning role runs* — core-up dir-creation (`core-up.yml`),
+  `blank-reset`, and the **plugin/wiring loader** (invoked `template_vars: {{ vars }}`).
+  A role-default-only value is undefined in that eager-resolve namespace and aborts the run
+  (`| default()` does NOT save it, and some `plugin.yml` path refs have no default at all).
+  So paths live in `default.config.yml` (global) and NOT in role defaults — which is also
+  fewer total lines than the old scattered config-shadow-role pattern (net −22 in P1).
 - **`external-paths.yml` collapses to ONE knob**: set `nos_data_root` to
   `/Volumes/SSDxTB/nos` and the entire tree relocates — replacing 47 per-path overrides.
   (Keep a thin compat shim for any path that must diverge.)

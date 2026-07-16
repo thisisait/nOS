@@ -11,8 +11,6 @@ puter_version: "latest"  # nos/puter:latest (built from files/puter/Dockerfile);
 puter_port: 5050  # "05" as in "OS"
 puter_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 puter_api_domain: "api.os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-puter_data_dir: "{{ ansible_facts['env']['HOME'] }}/puter"
-puter_config_dir: "{{ ansible_facts['env']['HOME'] }}/puter/config"
 puter_file_cache_mb: 512  # File cache for multi-user (MB)
 puter_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 puter_cpus: "{{ docker_cpus_standard | default('1.0') }}"

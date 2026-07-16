@@ -32,7 +32,6 @@
 # ==============================================================================
 
 watchtower_image: "nickfedor/watchtower:1.16.1"
-watchtower_data_dir: "{{ ansible_facts['env']['HOME'] }}/watchtower"
 
 # How often to scan for new images (cron expression — Go cron, 6 fields).
 # Default: every day at 04:30 local. Avoid the on-the-hour avalanche when

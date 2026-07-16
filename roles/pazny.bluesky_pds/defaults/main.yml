@@ -18,7 +18,6 @@ bluesky_pds_version: "0.4"                          # aligned with default.confi
 # Federation only works on the public-TLD path (needs DNS + LE cert).
 bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true) | bool) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
-bluesky_pds_data_dir: "{{ ansible_facts['env']['HOME'] }}/bluesky-pds"
 bluesky_pds_invite_required: true                   # Invite-only registrace
 bluesky_pds_email_smtp_url: ""                      # Prazdne = email notifikace vypnute
 bluesky_pds_email_from: ""                          # Default: noreply@bsky.dev.lan

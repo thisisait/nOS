@@ -11,7 +11,6 @@
 ntfy_version: "v2.23.0"                               # CVE-2026-39087 fix (was v2.21.0); https://github.com/binwiederhier/ntfy/releases
 ntfy_domain: "ntfy{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 ntfy_port: 2586                                        # unikatni host port (kolize-free)
-ntfy_data_dir: "{{ ansible_facts['env']['HOME'] }}/ntfy/data"
 ntfy_base_url: "https://{{ ntfy_domain }}"
 ntfy_cache_duration: "12h"
 ntfy_attachment_total_size_limit: "5G"

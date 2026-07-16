@@ -14,7 +14,6 @@
 kiwix_version: "3.8.2"                              # aligned with default.config.yml (source of truth — bump there too)
 kiwix_port: 8888
 kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-kiwix_data_dir: "{{ ansible_facts['env']['HOME'] }}/kiwix"
 
 # Default to a tiny (~10 MB) demo ZIM so blank reaches a working Kiwix UI
 # without manual onboarding. Override or set to "" in config.yml to opt out.

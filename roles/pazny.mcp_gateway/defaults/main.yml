@@ -20,7 +20,6 @@ mcpo_version: "main"          # upstream publishes only main/latest (no semver t
 mcpo_domain: "mcp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mcpo_port: 8765                                         # host port
 mcpo_api_key: "{{ global_password_prefix }}_pw_mcpo"    # bearer token for OpenWebUI
-mcpo_data_dir: "{{ ansible_facts['env']['HOME'] }}/mcpo"
 mcpo_image: "ghcr.io/open-webui/mcpo"
 
 # ── Per-server toggles ────────────────────────────────────────────────────────

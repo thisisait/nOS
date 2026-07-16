@@ -10,7 +10,6 @@
 infisical_version: "v0.160.4"                       # aligned with default.config.yml (source of truth — bump there too)
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
-infisical_data_dir: "{{ ansible_facts['env']['HOME'] }}/infisical"
 infisical_db_name: "infisical"
 infisical_db_user: "infisical"
 infisical_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"

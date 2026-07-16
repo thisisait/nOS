@@ -19,7 +19,6 @@ nextcloud_version: "33"                             # aligned with default.confi
 nextcloud_port: 8085
 nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
-nextcloud_data_dir: "{{ ansible_facts['env']['HOME'] }}/nextcloud-data"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
 nextcloud_db_host: "127.0.0.1"  # ignored when install_mariadb=true (network alias 'mariadb' from iiab_net is used)

@@ -11,7 +11,6 @@
 outline_version: "1.8.0-1"                          # aligned with default.config.yml (source of truth — bump there too)
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
-outline_data_dir: "{{ ansible_facts['env']['HOME'] }}/outline/data"
 outline_db_name: "outline"
 outline_db_user: "outline"
 outline_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"

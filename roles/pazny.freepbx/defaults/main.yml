@@ -13,7 +13,6 @@ freepbx_sip_port: 5060                   # SIP signaling (UDP+TCP)
 freepbx_iax_port: 4569                   # IAX2 protokol
 freepbx_rtp_start: 10000                 # RTP media start port
 freepbx_rtp_end: 10100                   # RTP media end port
-freepbx_data_dir: "{{ ansible_facts['env']['HOME'] }}/freepbx"
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
 freepbx_timezone: "Europe/Prague"
