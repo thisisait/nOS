@@ -1918,12 +1918,14 @@
       "fix_version": "v15.104.3",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-10 (2026-06-30) CVE scan. The pinned erpnext_version v15.98.1 is version-flagged by a May-2026 ERPNext advisory cluster. CONFIRMED v15-affecting headline: CVE-2026-44446 (HIGH, CWE-89 SQL injection via missing input validation) has a DUAL-LINE fix in ERPNext 15.104.3 AND 16.14.0 -> v15.98.1 < 15.104.3, so the pin is squarely in the affected window (high confidence). The broader github.com/frappe/erpnext/security/advisories cluster: CVE-2026-44442 (GHSA-cg5w-7g26-p3w9, CRITICAL CVSS 9.9 -- authorization bypass: a low-priv authenticated user modifies data outside their assigned role scope because certain API endpoints fail to verify permissions; advisory cites fix 16.9.1) + CVE-2026-44447 (GHSA-q65v-fm9p-9vh3, HIGH CVSS 8.8 -- SQL injection via missing input validation; advisory cites fix 16.9.0) + the HIGH SQLi/XSS set (GHSA-6fm9-g88m-hxr7 / GHSA-j669-ghv2-gmqg / GHSA-wj7p-g62h-jh38 SQLi; GHSA-r99h-h44m-89m2 stored XSS in Dashboards/Tools/Portals) and the MODERATE set (GHSA-mhm9-75w7-423r EDI-module XXE -> authed local file read, GHSA-6ffr-92hr-3394 path-traversal, GHSA-m4m4-j2m2-7fcw authed SSRF, GHSA-444j-g95x-5pqv doc-modification). The advisory metadata for 44442/44447 cites only v16 fix versions (16.9.1 / 16.9.0) so their precise v15 backport release is MEDIUM-confidence, but the confirmed dual-line CVE-2026-44446 (v15 fix 15.104.3) proves the v15.98.1 pin sits in the vulnerable window for this cluster. PROBE (unauthenticated_endpoint_scan): EVERY item in the cluster requires AUTHENTICATION (low-priv) -- NONE is unauthenticated, so this is NOT a new unauth-endpoint exposure; the prior unauth ERPNext item CVE-2026-27471 (CVSS 9.3 unauth doc access) stays resolved at v15.98.1 via REM-017. ERPNext's only intentionally-public surface remains its own login + /api/method/frappe.ping health. MITIGATED beyond the auth requirement: install_erpnext=false AND hard-blocked at role-load (requires erpnext_experimental_override=true -- the strongest perimeter gate in the fleet, REM-008 context) -> ZERO live exposure; 127.0.0.1:8082 loopback bind; native-OIDC (own login). ACTION: bump erpnext_version v15.98.1 -> v15.104.3 (latest v15.x stable; clears the confirmed v15 SQLi backport and any v15 backports of the cluster) in default.config.yml + roles/pazny.erpnext/defaults/main.yml together (version-pin-shadow rule). Lands as an acceptance criterion of the deferred ERPNext rework (REM-008). REM-017/041 (CVE-2026-27471 + the CVE-2025-52039..52050 SQLi cluster) remain resolved at the current pin.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/frappe/erpnext/security/advisories/GHSA-cg5w-7g26-p3w9 (CVE-2026-44442) ; https://github.com/frappe/erpnext/security/advisories/GHSA-q65v-fm9p-9vh3 (CVE-2026-44447) ; https://www.thehackerwire.com/erpnext-critical-authorization-bypass-cve-2026-44442/ ; https://www.thehackerwire.com/erpnext-sql-injection-cve-2026-44447/ ; https://app.opencve.io/cve/?vendor=frappe",
       "confidence": "high",
       "found_at": "2026-06-30T04:08:00+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "N/A in this deployment \u2014 install_erpnext=false (default) and the role is HARD-BLOCKED at load (requires erpnext_experimental_override=true; parked for rework, see roles/pazny.erpnext/README.md). Not running, no attack surface. The v15.104.3 bump applies only if/when erpnext is un-parked; recorded as the target pin for that supervised enable."
     },
     {
       "id": "REM-116",
@@ -2138,8 +2140,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 21,
-      "resolved": 98,
+      "pending": 20,
+      "resolved": 99,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,
