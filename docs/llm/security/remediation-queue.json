@@ -1855,12 +1855,14 @@
       "fix_version": "v1.30.3",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-9 (2026-06-29). The pinned mailpit_version v1.30.0 (set in the C1 sweep 2026-05-25) is version-flagged by a post-v1.30.0 advisory cluster: CVE-2026-55187 (GHSA-w4mc-hhc6-xp28, MODERATE) -- incomplete SSRF protection in tools.IsInternalIP() that misses IPv6 transition/mapped forms, so the Link Check / HTML Check API can still be steered at internal services; affected v1.29.2..<=1.30.1, FIXED 1.30.2 -> v1.30.0 is vulnerable. Plus GHSA-28pq-6qxg-wg5r (MODERATE, unbounded-JSON memory-exhaustion DoS -> request body-size cap extended to all JSON API endpoints, FIXED 1.30.1) and the v1.30.3 (2026-06-27) link-check rate-limiting hardening. The HIGH unauth item CVE-2026-45713 (GHSA-fpxj-m5q8-fphw, unauthenticated remote OOM via arbitrarily large emails over SMTP/HTTP, affected <1.29.8) is ALREADY fixed in v1.30.0 -> covered, no exposure. REM-081/082/083/084/085 (the Jan/Feb SSRF/CSWSH/header-injection cluster) remain resolved at v1.30.0. MITIGATED: install_mailpit=true (DEFAULT ON, so version hygiene matters) BUT traefik_auth_modes.mailpit=proxy (authentik@file forward-auth gates the UI + Link/HTML Check + JSON API at mail.<tld>) + the container host-maps only to 127.0.0.1:8025 (UI/REST) and 127.0.0.1:1025 (SMTP) loopback -> the SSRF and JSON-DoS HTTP endpoints are NOT anonymously reachable over the edge; residual is the loopback SMTP ingestion path (already DoS-fixed in 1.30.0). ACTION: bump mailpit_version v1.30.0 -> v1.30.3 (latest) in roles/pazny.mailpit/defaults/main.yml.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/axllent/mailpit/security/advisories/GHSA-w4mc-hhc6-xp28 ; https://github.com/axllent/mailpit/security/advisories/GHSA-28pq-6qxg-wg5r ; https://github.com/axllent/mailpit/security/advisories/GHSA-fpxj-m5q8-fphw ; https://github.com/axllent/mailpit/releases",
       "confidence": "high",
       "found_at": "2026-06-29T04:05:22+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "pin bumped in roles/pazny.mailpit/defaults (mailpit_version v1.30.3); not currently deployed (install_mailpit=false in operator config.yml) \u2014 applies on enable."
     },
     {
       "id": "REM-113",
@@ -2054,12 +2056,14 @@
       "fix_version": "v2.23.0",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-24 RE-SCAN (2026-07-09, unauthenticated_endpoint_scan). The pinned ntfy_version v2.22.0 (roles/pazny.ntfy/defaults/main.yml) is version-flagged by GHSA-j8hr-p342-xrmh -- a stored XSS via SVG attachment preview: an attacker uploads a crafted SVG, and when a victim previews that attachment in the ntfy web UI the SVG's script executes same-origin (blob-URL preview). Affects <= v2.22.0, FIXED in v2.23.0 (commit 2911340 restricts the publish-dialog local-file preview to png/jpg/gif/webp). This is a repo-level advisory with NO CVE assigned (absent from the global GitHub Advisory DB + OSV.dev, which return zero ntfy entries); no official CVSS -- stored-XSS class, rated MEDIUM here. REACHABILITY: this is AUTHENTICATED-VICTIM / CLIENT-SIDE -- code runs only when an authenticated user previews the malicious attachment; there is NO unauthenticated server-side trigger, so it is OUT of scope for the unauthenticated_endpoint_scan focus and does not present as an anon endpoint hit. MITIGATED at the nOS perimeter: install_ntfy=false (off by default), traefik_auth_modes.ntfy=proxy (authentik@file forward-auth gates the web UI + admin surface at ntfy.<tld>, so the preview path sits behind the Authentik wall), container host-maps only to 127.0.0.1:2586 loopback (LAN bind only when services_lan_access=true) -> the vulnerable preview flow is not anonymously edge-reachable = insider-scoped authed XSS. CURRENCY: v2.22.0 is 3 minor releases behind latest v2.25.0 (v2.23.0 added anti-enumeration per-visitor topic-creation rate-limit; v2.24.0 fixed case-insensitive ACL topic-matching on SQLite; v2.25.0 switched token/ID/magic-link generation to crypto/rand). CVE-2026-39087 (the SSRF via unanchored web-push URL regex, NVD 6.4) stays RESOLVED at v2.22.0 = REM-087 (the v2.21->v2.22 bump was the fix, re-verified). ACTION (defense-in-depth, low urgency): bump ntfy_version v2.22.0 -> v2.25.0 (min v2.23.0) in roles/pazny.ntfy/defaults/main.yml; clears the stored-SVG-XSS plus the ACL/token-entropy hardening.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/binwiederhier/ntfy/blob/main/docs/releases.md ; https://www.getastra.com/blog/vulnerability/stored-xss-in-ntfy/ ; https://nvd.nist.gov/vuln/detail/CVE-2026-39087",
       "confidence": "high",
       "found_at": "2026-07-09T04:14:00+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "live-verified: iiab-ntfy-1 running binwiederhier/ntfy:v2.23.0 healthy."
     },
     {
       "id": "REM-125",
@@ -2070,12 +2074,14 @@
       "fix_version": "1.36.0",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-25 RE-SCAN (2026-07-11, unauthenticated_endpoint_scan). Vaultwarden 1.36.0 (the current release, superseding the 1.35.x line) ships a cluster of security advisories NOT present in the pinned vaultwarden_version 1.35.8 (default.config.yml + role default in sync); several are UNAUTHENTICATED = the probe-relevant leg the prior batch-11 REM-095 disposition (resolved at 1.35.8) did not yet cover. Advisories (private/pending-CVE at release, GHSA-tracked): (1) SSO Login CSRF -- GHSA-pfp2-jhgq-6hg5 + GHSA-w6h6-8r66-hcv7 (UNAUTH, cross-site request forgery against the SSO auth callback -> can bind/complete an SSO login flow chosen by the attacker); (2) User/Organization Enumeration -- GHSA-hxqh-ff5p-wfr3 (UNAUTH info-disclosure, distinguishes existing vs non-existing accounts/orgs); (3) SSRF via Icon Endpoint -- GHSA-72vh-x5jq-m82g (UNAUTH server-side request forgery via the /icons/ favicon fetcher -> internal-network probing); (4) SSO Existing-User Binding -- GHSA-j4j8-gpvj-7fqr + GHSA-6x5c-84vm-5j56 (auth-bypass class, binds an SSO identity onto an existing local user). nOS runs Vaultwarden with SSO via Authentik OIDC, so the SSO-flow legs (1)+(4) are in the applicable surface. ALREADY COVERED at 1.35.8 (no action, logged for lineage): CVE-2026-43912 (cross-organization data access, fixed 1.35.5) -- 1.35.8 > 1.35.5. MITIGATED at the nOS perimeter: 127.0.0.1:8062 loopback bind (services_lan_access=false blocks direct host access), native_oidc Tier-3 Authentik gate on the edge route (traefik_auth_modes.vaultwarden=oidc, 200 at edge -- own login + Authentik button, NOT forward-auth), SIGNUPS_ALLOWED=false. The SSO CSRF / icon SSRF / enumeration legs require reaching the Vaultwarden HTTP surface, which on the default posture is loopback + the Authentik-fronted route -> not anonymously edge-reachable in the same way an internet-exposed instance would be = residual is insider/LAN-scoped, hence MEDIUM not HIGH. ACTION: bump vaultwarden_version 1.35.8 -> 1.36.0 in default.config.yml AND roles/pazny.vaultwarden/defaults/main.yml together (version-pin-shadow rule); 1.36.0 also bundles Web Vault 2026.4.1 (carries CVE-2026-27801/27802/27803/27898 web-vault fixes already covered server-side) and adds item-archiving + a prelogin password endpoint (behavior-additive). REM-095 (1.35.4/1.35.5 authed cluster) + REM-019/049/050 remain resolved at the pin.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/dani-garcia/vaultwarden/releases/tag/1.36.0 ; https://github.com/dani-garcia/vaultwarden/security/advisories ; https://www.thehackerwire.com/vaultwarden-cross-organization-data-access-cve-2026-43912/",
       "confidence": "medium",
       "found_at": "2026-07-11T04:12:00+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "live-verified: iiab-vaultwarden-1 running vaultwarden/server:1.36.0 healthy."
     },
     {
       "id": "REM-126",
@@ -2121,8 +2127,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 30,
-      "resolved": 89,
+      "pending": 27,
+      "resolved": 92,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,

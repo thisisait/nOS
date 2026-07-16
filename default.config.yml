@@ -2582,7 +2582,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.35.8"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
+vaultwarden_version: "1.36.0"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_data_dir: "{{ ansible_facts['env']['HOME'] }}/vaultwarden"

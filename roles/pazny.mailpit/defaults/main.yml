@@ -18,7 +18,7 @@
 # Image:   axllent/mailpit (linux/arm64 native)
 # ==============================================================================
 
-mailpit_version: "v1.30.0"
+mailpit_version: "v1.30.3"
 mailpit_smtp_port: 1025                              # SMTP listen port (apps relay here)
 mailpit_ui_port: 8025                                # Web UI / REST API port
 mailpit_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
