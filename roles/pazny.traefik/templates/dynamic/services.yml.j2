@@ -70,6 +70,12 @@ http:
 {% if s.id == 'miniflux' and ((sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool) %}
 {% set _extra_mw = _extra_mw + ['miniflux-autologin@file'] %}
 {% endif %}
+{# Document server (OnlyOffice / euro-office): never edge-cache a live-collab
+   editor — its secure_link-signed /cache/* URLs get CloudFlare-cached (empty
+   during the conversion race → "Download failed"). Force no-store. #}
+{% if s.id in ['onlyoffice', 'euro_office'] %}
+{% set _extra_mw = _extra_mw + ['docserver-nocache@file'] %}
+{% endif %}
 {% if _auth == 'proxy' %}
       middlewares: {{ (['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% else %}

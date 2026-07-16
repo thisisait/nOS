@@ -43,6 +43,20 @@ http:
         scheme: https
         permanent: true
 
+    # ── Document-server no-cache (OnlyOffice / euro-office) ────────────────
+    # OnlyOffice `/cache/*` URLs are dynamic, secure_link-signed and session-
+    # specific, but the docserver's baked nginx sets NO Cache-Control on them —
+    # so an edge (CloudFlare) default-caches them (cf-cache-status HIT,
+    # max-age=14400). A request racing the docserver's conversion then caches an
+    # EMPTY response and every later open serves 0 bytes → "Download failed".
+    # A live-collaboration editor must never be edge-cached. Force no-store on
+    # every docserver response, so caching is inert even when proxied (2026-07-16).
+    docserver-nocache:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "no-store, no-cache, must-revalidate, max-age=0"
+          Pragma: "no-cache"
+
     # ── Compression ───────────────────────────────────────────────────────
     compress:
       compress: {}
