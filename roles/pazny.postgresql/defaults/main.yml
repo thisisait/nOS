@@ -23,7 +23,6 @@ postgresql_root_user: "postgres"
 # Linux note: PG requires the key owned by postgres-uid or root — the
 # host-user-owned bind mount fails there; needs the root-chown leg first.
 postgresql_ssl_enabled: "{{ ansible_os_family == 'Darwin' }}"
-postgresql_certs_dir: "{{ ansible_facts['env']['HOME'] }}/postgresql/certs"
 postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 

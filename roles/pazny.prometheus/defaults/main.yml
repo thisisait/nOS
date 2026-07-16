@@ -10,6 +10,5 @@
 prometheus_version: "v3.11.3"                       # aligned with default.config.yml (source of truth — bump there too)
 prometheus_port: 9090
 prometheus_retention: "30d"
-prometheus_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/prometheus"
 prometheus_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 prometheus_cpus: "{{ docker_cpus_standard | default('1.0') }}"

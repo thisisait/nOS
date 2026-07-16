@@ -44,9 +44,6 @@ onlyoffice_image: "onlyoffice/documentserver"
 onlyoffice_version: "9.3.1.2"                      # CE stable (Apr 2026)
 onlyoffice_domain: "office{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 onlyoffice_port: 3015                              # host -> container :80
-onlyoffice_logs_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/logs"
-onlyoffice_lib_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/lib"
-onlyoffice_db_dir: "{{ ansible_facts['env']['HOME'] }}/onlyoffice/db"
 onlyoffice_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 onlyoffice_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 

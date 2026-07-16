@@ -39,6 +39,18 @@ isolation is genuine there.
 (fork swaps, remaps) mount doctrine paths, never invent new ones. Agents may only touch a
 subtree their scope authorizes — the tool layer enforces `realpath ∈ scope` (AgentKit gating).
 
+**What is IN the tree vs intentionally OUTSIDE (P1 + P1b, 2026-07-16).** Every *service*
+data/config path derives from `nos_data_root` — the 48 P1 vars (data/config/books) + the P1b
+engine vars (onlyoffice db/lib/logs, loki/prometheus/tempo storage, jellyfin cache, spacetimedb
+keys, pg certs, firefly up/export, code-server workspace). **Intentionally OUTSIDE the tree**
+(host-owned or not-service-data — moving them would be wrong): host daemons (wing/bone/hermes/
+openclaw app+runtime+state dirs), host binaries + tap installs (homebrew, opencode, ollama
+models — also blank-persisted), the `~/.nos` runtime sidecar (+ node-exporter textfile under it),
+the `~/stacks` compose root, TLS cert dir, and large user-provided media (`~/media`, blank-kept)
++ `~/projects/{nextcloud,wordpress}` source dirs. A stateful non-blank converge AFTER a path
+move remounts to the new empty path and breaks the service — so on a live (non-blank) system,
+finish path changes with a `--blank --full`, don't converge stateful services piecemeal.
+
 **Single-user today → breaking-OK.** No in-place migration recipe; a `--blank --full` rebuilds
 under the tree.
 

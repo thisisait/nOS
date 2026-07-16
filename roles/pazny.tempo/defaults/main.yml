@@ -12,6 +12,5 @@ tempo_http_port: 3200
 tempo_otlp_grpc_port: 4327   # Tempo internal OTLP gRPC (Alloy -> Tempo)
 tempo_otlp_http_port: 4328   # Tempo internal OTLP HTTP (Alloy -> Tempo)
 tempo_retention: "168h"   # 7 days (traces tend to be bulkier than metrics/logs)
-tempo_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/tempo"
 tempo_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 tempo_cpus: "{{ docker_cpus_light | default('0.5') }}"

@@ -10,6 +10,5 @@
 loki_version: "3.7.2"                               # aligned with default.config.yml (source of truth — bump there too)
 loki_port: 3100
 loki_retention: "744h"   # 31 days
-loki_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/loki"
 loki_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 loki_cpus: "{{ docker_cpus_standard | default('1.0') }}"

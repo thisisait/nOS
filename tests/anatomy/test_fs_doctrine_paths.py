@@ -36,6 +36,31 @@ def test_root_vars_defined():
     assert re.search(r'^nos_tenant_slug:\s*"', CFG, re.M), "nos_tenant_slug missing from default.config.yml"
 
 
+# P1b (2026-07-16) — service-ENGINE paths that were still scattered after P1
+# (onlyoffice db/lib/logs, observability TSDB storage, jellyfin cache, spacetimedb
+# keys, pg certs, firefly up/export, code-server workspace). All platform-class,
+# global in default.config.yml (referenced by core-up/observability + the wiring
+# loader before the role runs). Host-daemon/binary/framework/runtime/external-
+# persist/large-user-media paths are intentionally OUTSIDE the tree (documented).
+P1B_ENGINE_VARS = {
+    "onlyoffice_db_dir", "onlyoffice_lib_dir", "onlyoffice_logs_dir",
+    "loki_storage_path", "prometheus_storage_path", "tempo_storage_path",
+    "jellyfin_cache_dir", "spacetimedb_keys_dir", "postgresql_certs_dir",
+    "firefly_upload_dir", "firefly_export_dir", "code_server_workspace_dir",
+}
+
+
+def test_p1b_engine_paths_derive_from_root():
+    bad = []
+    for v in sorted(P1B_ENGINE_VARS):
+        m = re.search(rf'^{v}:\s*"([^"]*)"', CFG, re.M)
+        if not m:
+            bad.append(f"{v} MISSING from default.config.yml (must be global)")
+        elif "{{ nos_data_root }}/platform/services" not in m.group(1):
+            bad.append(f"{v} = {m.group(1)} (must derive from nos_data_root/platform/services)")
+    assert not bad, "P1b engine paths off-doctrine:\n" + "\n".join(bad)
+
+
 def test_config_paths_derive_from_root():
     """Path vars in default.config.yml must be GLOBAL + derive from nos_data_root.
 

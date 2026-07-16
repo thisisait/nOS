@@ -1363,15 +1363,15 @@ grafana_analytics: false    # Disable telemetry
 
 # ── Prometheus ────────────────────────────────────────────────────────────────
 prometheus_retention: "30d"
-prometheus_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/prometheus"
+prometheus_storage_path: "{{ nos_data_root }}/platform/services/prometheus/storage"
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
 loki_retention: "744h"   # 31 days
-loki_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/loki"
+loki_storage_path: "{{ nos_data_root }}/platform/services/loki/storage"
 
 # ── Tempo ─────────────────────────────────────────────────────────────────────
 tempo_retention: "168h"  # 7 days (traces tend to be larger)
-tempo_storage_path: "{{ ansible_facts['env']['HOME'] }}/observability/tempo"
+tempo_storage_path: "{{ nos_data_root }}/platform/services/tempo/storage"
 
 # ── Alloy – what to collect ───────────────────────────────────────────────────
 # Both exporters instrument the HOST-NGINX leg (nginx stub_status + php-fpm
@@ -1571,7 +1571,7 @@ docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was o
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
 spacetimedb_version: "latest"           # pin to a specific tag (e.g. "1.5") for production
-spacetimedb_keys_dir: "{{ ansible_facts['env']['HOME'] }}/spacetimedb/keys"
+spacetimedb_keys_dir: "{{ nos_data_root }}/platform/services/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
 
@@ -1583,7 +1583,7 @@ jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | de
 jellyfin_port: 8096
 jellyfin_version: "10.11.10"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE)
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
-jellyfin_cache_dir: "{{ ansible_facts['env']['HOME'] }}/jellyfin/cache"
+jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
 jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
@@ -1850,8 +1850,8 @@ bookstack_port: 3013
 firefly_port: 3014
 # Data dirs promoted from role defaults so the upgrade engine can resolve them
 # in play scope (recipes reference these for backup/restore steps).
-firefly_upload_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/upload"
-firefly_export_dir: "{{ ansible_facts['env']['HOME'] }}/firefly/export"
+firefly_upload_dir: "{{ nos_data_root }}/platform/services/firefly/upload"
+firefly_export_dir: "{{ nos_data_root }}/platform/services/firefly/export"
 onlyoffice_port: 3015
 influxdb_port: 8086
 mcpo_port: 8765
@@ -2075,6 +2075,12 @@ keap_extension_surface: true
 # empty-string keeps the eager-resolve loader happy (the job filters empties).
 consolidate_fs_roots: ""
 consolidate_db_exclude: ""
+# FS doctrine P1b — additional service-engine paths (global for core-up/loader refs)
+onlyoffice_db_dir: "{{ nos_data_root }}/platform/services/onlyoffice/db"
+onlyoffice_lib_dir: "{{ nos_data_root }}/platform/services/onlyoffice/lib"
+onlyoffice_logs_dir: "{{ nos_data_root }}/platform/services/onlyoffice/logs"
+postgresql_certs_dir: "{{ nos_data_root }}/platform/services/postgresql/certs"
+code_server_workspace_dir: "{{ nos_data_root }}/platform/services/code_server/workspace"
 
 # ==============================================================================
 # PAPERCLIP – multi-agent orchestration platform
