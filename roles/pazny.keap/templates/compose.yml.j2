@@ -38,6 +38,14 @@ services:
       # bind-mount is not a docker volume (no volume spam); data changes ride the
       # git ref, never an image rebuild.
       - {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}/knowledge/canonical:/app/knowledge/canonical:ro
+{% if keap_fs_sync | default(true) %}
+      # FS-doctrine mirror (KEAP v1.7.0 server/fs-sync.ts): the per-user tree
+      # {{ nos_data_root }}/tenants/<slug>/users/<uid>/{documents,library,inbox}
+      # mounted READ-ONLY so KEAP turns per-user files into knowledge objects
+      # WITHOUT ever writing them. Docs land here from Puter/euro-office (class-3);
+      # fs-sync attributes per user (server/graph.ts keeps users' trees separate).
+      - {{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users:/user-files:ro
+{% endif %}
     environment:
       PORT: "8080"
       KEAP_DATA_DIR: /data
@@ -55,6 +63,13 @@ services:
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
       KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+{% if keap_fs_sync | default(true) %}
+      # FS-sync (v1.7.0): mirror per-user files → knowledge objects. Root is the
+      # RO-mounted doctrine per-user tree; sync the class-3 content subdirs.
+      KEAP_USER_FILES_DIR: /user-files
+      KEAP_FS_SYNC_DIRS: "{{ keap_fs_sync_dirs | default('documents,library,inbox') }}"
+      KEAP_FS_SYNC_INTERVAL_S: "{{ keap_fs_sync_interval_s | default(300) }}"
+{% endif %}
 {% if keap_ollama_url | default('') %}
       # Optional live embedder for free-text semantic search. Stored vectors
       # come from the host-side keap-embed-sync Pulse job either way; this

@@ -21,6 +21,9 @@
     # Universal drop dir — anything copied here becomes a datapoint on the
     # next keap-consolidate sweep (the operator's "dump it, sort it later").
     - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}/inbox"
+    # FS-sync mount parent (KEAP v1.7.0): the doctrine per-user tree KEAP mounts
+    # RO. Ensure it exists so Docker doesn't create a root-owned mount point.
+    - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users"
 
 - name: "[pazny.keap] Clone nos-keap repository (pinned ref)"
   ansible.builtin.git:

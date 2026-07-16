@@ -2066,6 +2066,12 @@ keap_public_ingest: true
 # The server enforces its own auth (pairing bootstrap public + rate-limited;
 # the rest Bearer-credential). Set false to disable the extension entirely.
 keap_extension_surface: true
+# FS-doctrine mirror (KEAP v1.7.0 fs-sync): RO-mount the per-user doctrine tree
+# ({{ nos_data_root }}/tenants/<slug>/users) so per-user files (Puter/euro-office
+# documents, library, inbox — class 3) become knowledge objects, per-user attributed.
+keap_fs_sync: true
+keap_fs_sync_dirs: "documents,library,inbox"
+keap_fs_sync_interval_s: 300
 # Cortex consolidator ("dream" sweep) inputs. Colon-separated filesystem roots
 # the keap-consolidate Pulse job walks for new/changed datapoints (e.g.
 # "{{ ansible_facts['env']['HOME'] }}/keap/inbox:{{ ansible_facts['env']['HOME'] }}/nextcloud-data");
