@@ -79,6 +79,7 @@ if (!file_exists($wingDb)) {
 
 try {
 	$db = new SQLite3($wingDb);
+	$db->busyTimeout(5000); // WAL is on-file; per-conn timeout prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 	$db->enableExceptions(true);
 } catch (\Throwable $exc) {
 	fwrite(STDERR, "fatal: cannot open wing.db: {$exc->getMessage()}\n");

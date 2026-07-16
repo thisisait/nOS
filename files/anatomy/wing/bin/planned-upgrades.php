@@ -29,6 +29,7 @@ if (!is_file($dbPath)) {
 }
 
 $db = new PDO('sqlite:' . $dbPath);
+$db->setAttribute(PDO::ATTR_TIMEOUT, 5); // seconds; prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 if (isset($opts['list'])) {

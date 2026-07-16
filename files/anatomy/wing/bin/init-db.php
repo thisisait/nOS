@@ -23,6 +23,7 @@ $dbPath = $dataDir . '/wing.db';
 $isNew = !file_exists($dbPath);
 
 $db = new SQLite3($dbPath);
+$db->busyTimeout(5000); // WAL is on-file; per-conn timeout prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 $db->enableExceptions(true);
 $db->exec('PRAGMA journal_mode = WAL');
 $db->exec('PRAGMA foreign_keys = ON');

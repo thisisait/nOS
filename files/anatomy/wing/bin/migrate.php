@@ -31,6 +31,7 @@ if (!file_exists($dbPath)) {
 }
 
 $db = new SQLite3($dbPath);
+$db->busyTimeout(5000); // WAL is on-file; per-conn timeout prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 $db->enableExceptions(true);
 $db->exec('PRAGMA journal_mode = WAL');
 // Foreign keys deliberately OFF during legacy JSON to SQLite import

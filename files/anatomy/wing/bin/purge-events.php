@@ -47,6 +47,7 @@ if (!is_file($db)) {
 
 try {
     $sqlite = new SQLite3($db, SQLITE3_OPEN_READWRITE);
+    $sqlite->busyTimeout(5000); // WAL is on-file; per-conn timeout prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 } catch (\Throwable $e) {
     fwrite(STDERR, "Cannot open {$db}: " . $e->getMessage() . "\n");
     exit(3);
