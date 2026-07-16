@@ -214,9 +214,10 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
 1. **[operator] Validate + apply on-host** — run `ansible-playbook main.yml` (or blank)
    to live-apply the armed Gitea 1.26.4 upgrade under STRICT health-wait. If `failed=0`,
    cut `v0.7-beta` (`dev→master` PR + admin bypass, `nos-release-flow`).
-2. **[M] Version-pin drift wave — ~28 pending `version_bump` items** (Gitea done),
-   **one CRITICAL left: REM-002 Woodpecker misconfig**. The rest are mechanical
-   HIGH/MEDIUM bumps (nginx, ollama, rustfs×2, openwebui, mariadb, redis, n8n,
+2. **[M] Version-pin drift wave — ~28 pending `version_bump` items** (Gitea done;
+   **REM-002 Woodpecker resolved 2026-07-16 — the queue is now 0-CRITICAL pending**).
+   All that remains is mechanical HIGH/MEDIUM bumps (nginx, ollama, rustfs×2, openwebui,
+   mariadb, redis, n8n,
    **gitlab REM-016 → 18.11.7** (re-scan moved the target), erpnext, jellyfin FFmpeg,
    portainer, dnsmasq, mailpit, outline, homeassistant, uptime-kuma, tileserver, puter).
    Bump `default.config.yml` (wins over role defaults), then **verify the running image
@@ -265,6 +266,12 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   gate + live-deployed (`--tags wing`). See the shipped block above.
 
 ### P2 — feature tails + robustness
+- **[S] Woodpecker rootless/socketless agent backend** (spun off from REM-002, 2026-07-16)
+  — the CRITICAL misconfig is resolved (admin-only repo activation + no privileged
+  plugins, live-verified), but `WOODPECKER_BACKEND=docker` still mounts the docker
+  socket. Defense-in-depth for the single-operator lab (bounds blast radius if the
+  admin's own pipeline is supply-chain-compromised): evaluate a rootless / socket-proxied
+  agent backend. Accept-risk default until then.
 - **[M] VirtioFS class-risk doctrine** — the gitlab puma socket is **fixed** (tmpfs,
   this session), but the pattern is a class-risk: consolidate the ~6 scattered VirtioFS
   workarounds behind a doctrine doc + pytest gate + greppable `# VFS-DOCTRINE:` markers

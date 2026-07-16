@@ -28,12 +28,14 @@
       "fix_version": null,
       "remediation_type": "config_change",
       "remediation_detail": "Enable Woodpecker trusted repos feature. Restrict pipeline execution to approved repos only. Consider switching to rootless Docker backend for agent isolation. | PARTIAL (2026-06-10 review): WOODPECKER_REPO_OWNERS restricts repo activation to the admin user, WOODPECKER_OPEN=false, WOODPECKER_PLUGINS_PRIVILEGED defaults empty, WOODPECKER_AUTHENTICATE_PUBLIC_REPOS=false. Remaining: rootless agent backend evaluation.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-07-16",
+      "resolution": "Primary config_change remediation (restrict pipeline execution to approved repos) live-verified on devops-woodpecker-server-1: WOODPECKER_OPEN=false, WOODPECKER_REPO_OWNERS=pazny (admin-only repo activation), WOODPECKER_PLUGINS_PRIVILEGED= (empty), WOODPECKER_AUTHENTICATE_PUBLIC_REPOS=false. The CRITICAL exploitable path (arbitrary repo activation -> privileged pipeline -> docker-socket escape) is closed at the activation gate: only the admin operator can create pipelines, against their own Gitea repos (single-operator trust model). Residual defense-in-depth item (rootless/socketless agent backend, WOODPECKER_BACKEND=docker) reclassified to a P2 hardening backlog item (accept-risk default for a single-operator lab, mirrors the FreePBX accept-risk pattern) -- NOT a live-exploitable CRITICAL."
     },
     {
       "id": "REM-003",
@@ -2119,8 +2121,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 31,
-      "resolved": 88,
+      "pending": 30,
+      "resolved": 89,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,
