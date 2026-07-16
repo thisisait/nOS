@@ -1,0 +1,26 @@
+# nOS Doctrine
+
+**The constitution layer.** Each file here states *one* set of absolutely-key,
+load-bearing decisions in **10–80 lines** — terse enough to read in a minute, stable
+enough that changing one is a deliberate act. Detail, rationale, and phasing live in
+`docs/plans/` and `docs/` guides; doctrine files are the *canonical decision*, not the
+essay.
+
+**Rule:** if a design choice is one that a future contributor (or agent) could
+plausibly get wrong by guessing, it belongs here. Keep each file short — if it grows
+past ~80 lines, the detail belongs in a `docs/plans/` or `docs/` companion, linked from
+the doctrine file.
+
+## Files
+
+| Doctrine | Defines | Status |
+|---|---|---|
+| [filesystem.md](filesystem.md) | storage layout, `nos_data_root`, data classes, isolation | ✅ v1 |
+| table-naming.md | DB table / column naming conventions | planned |
+| taxonomy.md | taxonomy / ontology term definitions (L0–L4, node/pillar/block, relations) | planned |
+| agentkit.md | agent tool-mediation, scopes, FS/RBAC gating | planned |
+| pulse.md | scheduled-job contract (job ids, tokens, catalog substitution) | planned |
+| wing.md | Wing identity, RBAC tiers, DB-writer contract | planned |
+
+Add a row when you add a file. Doctrine files are **live doctrine** (per
+`docs/devlog/README.md` — `.md` = doctrine, devlog = history).
