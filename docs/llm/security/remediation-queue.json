@@ -64,12 +64,14 @@
       "fix_version": "see version-pins-proposal.json",
       "remediation_type": "version_bump",
       "remediation_detail": "Pin 23 Docker images to specific semver tags. Priority: vaultwarden, openwebui (currently :main!), portainer, traefik, grafana, gitlab, gitea, n8n. Apply version-pins-proposal.json recommendations to default.config.yml. | 2026-05-31 trivy rescan confirms scale: 585 CRITICAL / 5002 HIGH fixable across 61 images, overwhelmingly stale-base-image OS packages \u2014 image-tag freshness + watchtower is the lever.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_at": "2026-07-16",
+      "resolution": "Priority set (the 8 named security-critical images) all on specific semver, verified image-by-image 2026-07-16: vaultwarden 1.36.0, openwebui 0.9.6 (was the flagged \":main\"), portainer 2.33.8, traefik v3.6.23, grafana 12.4.4, gitlab 18.11.7-ce.0, gitea 1.26.4, n8n 2.28.1. The HIGH concern (priority images on floating tags) is closed. Residual: 6 NON-priority internal sidecars still on upstream-floating tags (mcpo:main and euro-office documentserver:latest are floating BY UPSTREAM/PILOT DESIGN; mcp-grafana, qgis kartoza, tileserver maptiler, snappymail) -> digest-pin hardening tracked as P2 (all gated_net/internal, low exposure)."
     },
     {
       "id": "REM-005",
@@ -2152,8 +2154,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 14,
-      "resolved": 103,
+      "pending": 13,
+      "resolved": 104,
       "vendor-blocked": 4,
       "wontfix": 1
     },
