@@ -58,7 +58,17 @@ Not everything can (or should) be filesystem-isolated per user. Classify every s
 |---|---|---|---|
 | **1 — Platform engine** | DBs, caches, indexes, service internals (mariadb, postgres, redis, authentik, grafana, gitea, keap.db, …). Single-purpose infra or app that manages multi-user *internally*. | `platform/services/<svc>/` | Not user-scoped; 0700 operator. Unified + structured, not FS-isolated per user. |
 | **2 — Tenant-shared content** | App-managed multi-user content stores (Nextcloud data, calibre **library**, Jellyfin media, Kiwix ZIMs, WordPress). The **app** enforces per-user access. | `tenants/<t>/shared/<svc>/` | One dir per tenant; the app does multi-user. nOS gives the mount, app owns ACLs. |
-| **3 — FS-native per-user** | Filesystem-native per-user data: **Puter files, euro-office documents, KEAP inbox, agent scratch**. No app-internal multi-user — the filesystem *is* the boundary. | `tenants/<t>/users/<uid>/…` | **Real nOS-level isolation**: 0700 owner dirs + per-user mount scoping. This is where isolation actually bites. |
+| **3 — FS-native per-user** | Filesystem-native per-user data: **Puter files, euro-office documents, calibre library (operator decision 2026-07-16: personal), KEAP inbox, agent scratch**. No app-internal multi-user — the filesystem *is* the boundary. | `tenants/<t>/users/<uid>/…` | **Real nOS-level isolation**: 0700 owner dirs + per-user mount scoping. This is where isolation actually bites. |
+
+> **Decisions locked 2026-07-16:** (1) `nos_data_root` = **absolute path, default `~/nos`,
+> works out-of-the-box** (external SSD is just a different absolute value, not special-cased).
+> (2) short `nos_tenant_slug` (e.g. `pazny`), full domain kept separately. (3) **calibre library
+> is PER-USER (class 3)**, not tenant-shared — sharing is a separate roadmap item (see §9).
+> (4) macOS cannot give real per-user POSIX isolation (single UID) → on macOS multi-tenant =
+> **multiple instances / more HW**; the **playbook must be Linux-"real-server"-ready** where
+> distinct UIDs make per-user 0700 isolation genuine. **Single-user reality:** the system has one
+> user today, so **breaking changes are acceptable without an in-place migration** — the test is a
+> `--blank --full` run, so P1 is clean role defaults, NOT a migration recipe (see §7-8).
 
 **Consequence:** the user's "isolate" goal is fully achievable for **class 3** (and
 that is exactly the euro-office/Puter/KEAP/agent flow). Classes 1–2 get "unify +
@@ -110,34 +120,52 @@ instance or request-scoped bind); class-1/2 mount their single dir. Enforcement 
 mount scoping + POSIX perms; Docker-Desktop-on-macOS UID mapping quirks noted as a
 Phase-3 risk (VirtioFS / PUID:PGID alignment).
 
-## 7. Migration — a proper nOS migration, never ad-hoc
+## 7. No migration recipe — single-user, breaking-OK
 
-Moving 42 live dirs into the tree is a **data migration**, authored as
-`files/anatomy/migrations/<date>-fs-doctrine.yml` with `detect`/`action`/`verify`/
-`rollback` per step, converge-driven, idempotent, **opt-in** (`-e migrate_fs_doctrine=
-true`; breaking-migration confirm gate). Never `mv` volumes by hand. New/blank installs
-get the tree natively; existing installs migrate explicitly under supervision.
+Because the system has exactly one user today (operator decision 2026-07-16), there is
+**no in-place data migration** — a `--blank --full` run rebuilds everything under the new
+tree. This deletes the P4 "migrate 42 live dirs" work entirely and keeps the roles clean:
+each role's default simply *points at the new path*, and the next blank creates it there.
+(If a multi-tenant "real server" later needs in-place moves without a blank, author a
+proper `files/anatomy/migrations/<date>-fs-doctrine.yml` then — not now.)
 
-## 8. Phasing
+## 8. Phasing (revised — no migration)
 
 - **P0 — Design (this doc) + review.** ← we are here. No data moves.
-- **P1 — Resolver + native layout.** Introduce `nos_data_root`; reclassify all 42
-  defaults under the tree (class 1/2). Blank installs get the structured tree.
-  external-paths.yml → single `nos_data_root` knob. Gate: `test_fs_doctrine_paths.py`
-  (every `*_data_dir` resolves under `nos_data_root`, correct class).
-- **P2 — Per-user tree + class-3.** `tenants/<t>/users/<uid>/{documents,inbox,agents}`;
-  rewire the KEAP consolidator roots + Puter user-file mounts. Unblocks euro-office/KEAP.
-- **P3 — Isolation hardening.** perms model + per-user mount scoping + macOS UID-mapping.
-- **P4 — Migration recipe** for existing installs (§7); calibre-web→Autocaliweb lands here
-  (its library is already at the class-2 doctrine path by P1).
+- **P1 — Resolver + native layout.** Introduce `nos_data_root` (+ `nos_tenant_slug`);
+  reclassify all 42 `*_data_dir`/`*_config_dir` defaults under the tree by class. Collapse
+  `external-paths.yml` to the single `nos_data_root` knob. Gate `test_fs_doctrine_paths.py`
+  (every path resolves under `nos_data_root`, correct class). **Clean role defaults, no
+  bloat** — validated by the operator's `--blank --full`.
+- **P2 — Per-user tree + class-3.** `tenants/<t>/users/<uid>/{documents,library,inbox,
+  agents}`; rewire KEAP consolidator roots + Puter user-file mounts + calibre-web→
+  Autocaliweb (library now a class-3 per-user doctrine path). Unblocks euro-office/KEAP.
+- **P3 — Isolation + agent enforcement.** POSIX perms (Linux real UIDs) + per-user mount
+  scoping; **AgentKit tool-layer FS scoping** — `BashReadOnlyTool` + a new FS-write tool
+  must reject any path outside the agent's authorized `tenants/<t>/users/<uid>` scope
+  (agents already have NO arbitrary bash — execve-argv-allowlisted read-only — the gap is
+  path-scope). RBAC→FS: the agent session carries its tenant/user scope; the tool checks
+  the resolved realpath against it. **KEAP DataTables RBAC is the proven precedent**
+  (owner+visibility+tier, live-verified 2026-07-16: cross-user read/write both 404).
 
-## 9. Open questions for the operator
+## 9. Related threads (spun to roadmap)
 
-1. Root default: `{{ HOME }}/nos` vs XDG `{{ HOME }}/.local/share/nos` vs external-first?
-2. `tenant_slug` derivation (full domain vs a short slug) — affects on-disk path length.
-3. Class-2 boundary calls: is the **calibre library** tenant-shared or per-user? (Books
-   feel shared; personal reading progress is per-user and already lives in KEAP.)
-4. macOS single-UID reality: real per-user POSIX ownership needs distinct UIDs; on a
-   single-operator Mac all containers run as one user. Is per-user isolation a **Linux/
-   multi-tenant-host** guarantee, with macOS single-operator getting structure-only?
+All four original open questions are **decided** (see the boxed note in §3). Adjacent work
+this epic surfaced:
+
+- **Calibre / content sharing** (calibre is per-user; sharing deferred). The robust,
+  low-duplication shape: **KEAP owns the sharing relationship as a DB row** (visibility +
+  owner — the DataTables/content model is already sharing-ready and RBAC-enforced,
+  live-verified), files live once in a shared content store, per-user "library" is a
+  DB-filtered view — *not* file duplication. A symlink-per-share works but is more fragile
+  (broken links across container mount boundaries). Prefer DB-row visibility over symlinks.
+  → roadmap.
+- **`config.yml`/`default.config.yml` bloat** — the config surface is outgrowing itself
+  (42 path vars among ~87 toggles + hundreds of tuning vars). A separate config-revision
+  pass (group/namespace/derive) is due; P1 should *reduce* path-var lines where a derivation
+  removes them, not add. → roadmap.
+- **AgentKit SW gating** (the §8-P3 enforcement, worth its own design) — agents call tools
+  not bash (already true: `BashReadOnlyTool` is execve-argv-allowlisted read-only); the gap
+  is (a) FS path-scoping so a tool refuses a "foreign" (non-authorized) subtree, (b) a
+  future FS-write tool that is scope-checked from birth, (c) RBAC→FS mapping in the DB. → roadmap.
 ```

@@ -236,14 +236,31 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   ad-hoc remap), (c) the Puter→euro-office→KEAP document flow (documents need a structured
   home the KEAP consolidator auto-maps). Design classifies data into 3 classes (platform
   engine / tenant-shared app-content / FS-native per-user), introduces a single
-  `nos_data_root` root (collapsing external-paths.yml), and phases P1 resolver → P2
-  per-user tree + KEAP/euro-office wiring → P3 isolation → P4 migration. **Release-green
-  now depends on this**: the last 3 HIGH (uptime_kuma v2 Phase-D deferral, calibre-web
-  Autocaliweb) are architecture-gated, not quick pins.
+  `nos_data_root` root (collapsing external-paths.yml). **Simplified 2026-07-16: single-user
+  → breaking-OK, NO migration recipe** (a `--blank --full` rebuilds under the new tree); P1
+  is clean role defaults, not a data-move. Decisions locked: `nos_data_root` absolute default
+  `~/nos` (OOTB), short `nos_tenant_slug`, calibre per-user (class 3), macOS = structure-only /
+  multi-instance while the playbook stays Linux-real-server-ready. Phases: P1 resolver → P2
+  per-user tree + KEAP/euro-office wiring → P3 isolation + AgentKit FS-scope enforcement.
+  **Release-green now depends on this**: the last 3 HIGH (uptime_kuma v2 Phase-D deferral,
+  calibre-web Autocaliweb) are architecture-gated, not quick pins.
 - **euro-office document flow** (folds into the FS doctrine P2) — Puter (`os.<tld>`) create
   → euro-office editor → files in `tenants/<t>/users/<uid>/documents/` → auto-mapped to
   KEAP. Current bug: euro-office welcome page renders but the sample document doesn't open;
   triage after the FS-doctrine P1/P2 gives documents a home.
+- **[M] AgentKit SW gating** (FS doctrine §8-P3, own design) — agents already have NO
+  arbitrary bash (`BashReadOnlyTool` is execve-argv-allowlisted read-only + scoped MCP
+  tools). Gaps: (a) FS **path-scoping** so a tool refuses a non-authorized subtree, (b) a
+  scope-checked FS-**write** tool, (c) RBAC→FS mapping (agent session carries its
+  tenant/user scope; tool checks realpath ∈ scope). KEAP DataTables RBAC is the proven
+  precedent (owner+visibility+tier, live-verified 2026-07-16 — cross-user read+write 404).
+- **[S] Content sharing model** (calibre + KEAP) — calibre is per-user (FS doctrine class 3);
+  sharing via **DB-row visibility** (KEAP content model is already sharing-ready + RBAC-
+  enforced), files-once-in-shared-store + per-user DB-filtered view — preferred over
+  symlink-per-share (fragile across container mounts).
+- **[S] Config surface revision** — `default.config.yml`/`config.yml` are outgrowing
+  themselves (42 path vars + ~87 toggles + hundreds of tuning vars). A grouping/namespacing/
+  derivation pass; FS-doctrine P1 should *reduce* path-var lines via derivation, not add.
 
 ### P0 — roadmap truth (security truth now closed)
 - **Doc reconciliation** (NOW #3) — fix the counts in CLAUDE.md:350 + active-work.md
