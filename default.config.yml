@@ -1839,7 +1839,7 @@ authentik_oidc_homeassistant_client_secret: "{{ global_password_prefix }}_pw_oid
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "1.0.0-alpha.93"         # CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386)
+rustfs_version: "1.0.0-beta.9"         # CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386)
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

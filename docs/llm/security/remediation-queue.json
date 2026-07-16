@@ -1292,14 +1292,13 @@
       "fix_version": "SEC-02 gate (arch mitigation)",
       "remediation_type": "workaround",
       "remediation_detail": "Calibre-Web ReDoS in strip_whitespaces() function (CVE-2025-6998, CVSS 8.7). Unauthenticated attacker can cause denial of service via crafted username during login. Affects janeczku/calibre-web 0.6.24 (our linuxserver image). No upstream fix available \u2014 janeczku/calibre-web appears unmaintained. Workaround: rate-limit /login endpoint in nginx (limit_req). Alternative: migrate to Autocaliweb fork (fixed in 0.7.1). Risk mitigated by Authentik proxy auth \u2014 login form not directly reachable without SSO session. | 2026-06-24 cycle-16 re-assessment: the pin moved 0.6.24->0.6.26 ('Ismara'). OSV records CVE-2025-6998 with last_affected 0.6.24, so a version-keyed scanner flags 0.6.26 CLEAN \u2014 BUT janeczku published NO security-fix commit (the fix landed only in the Autocaliweb fork 0.7.1) and SECURITY.md's history stops at 0.6.23, so it is NOT proven that 0.6.26 changed strip_whitespaces() -> confidence MEDIUM that 0.6.26 is actually fixed. Perimeter posture makes this moot regardless: calibre_web is forward_auth (traefik_auth_modes.calibre_web=proxy) so the /login form is behind the Authentik wall, plus 127.0.0.1:8083 loopback bind and Tier 3 -> the 'unauthenticated' ReDoS is NOT anonymously reachable over the Traefik route. Definitive fix = Autocaliweb migration or a Traefik/nginx rate-limit on /login. (Same batch: CVE-2025-7404 OS-command-injection also caps at OSV last_affected 0.6.24, requires an authed HIGH-priv admin behind Authentik, CVSS 5.9 -> assessed, not separately queued.)",
-      "status": "resolved",
+      "status": "pending",
       "auto_fixable": false,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2025-6998",
       "confidence": "high",
       "found_at": "2026-04-10T22:00:00Z",
       "scan_cycle": 12,
-      "resolved_at": "2026-07-16",
-      "resolution": "Mitigated by SEC-02 architecture (the \"workaround\" this finding asks for). CVE-2025-6998 is an UNAUTHENTICATED ReDoS via the Calibre-Web LOGIN form, but calibre-web is gated_net-only (verified: single network gated_net) reachable exclusively through Traefik authentik@file forward-auth. An unauthenticated attacker hits the Authentik wall first and never reaches the login form -> the unauth vector has no surface."
+      "resolution": "REOPENED 2026-07-16: calibre-web upstream is UNPATCHED for CVE-2025-6998 (login ReDoS); the fix exists only in the Autocaliweb fork (>=0.7.1, commit 1315b063). A gate is not a fix \u2014 real remediation = migrate to Autocaliweb. In progress."
     },
     {
       "id": "REM-075",
@@ -1536,14 +1535,15 @@
       "fix_version": "1.0.0-beta.9",
       "remediation_type": "version_bump",
       "remediation_detail": "Two RustFS authorization flaws affect the pinned 1.0.0-alpha.93: (1) CVE-2026-40937 (HIGH, GHSA-pfcq-4gjr-6gjm) \u2014 missing admin authorization on the notification-target endpoints permits UNAUTHENTICATED configuration of event webhooks (an SSRF / data-exfiltration pivot); upstream Docker fix is 1.0.0-alpha.94. (2) GHSA-mm2q-qcmx-gw4w (HIGH) \u2014 ListServiceAccount authorizes against the wrong admin action, enabling cross-user service-account enumeration and ROOT service-account takeover; fixed in 1.0.0-alpha.98. Bump rustfs_version 1.0.0-alpha.93 -> 1.0.0-alpha.98 (default.config.yml is source-of-truth; mirror the role default per version-pins-default-config-shadow) to clear both with margin (alpha.98 is the highest patched version across all reviewed RustFS advisories). nOS mitigation lowering real-world reach: the S3 + admin API (RUSTFS_ACCESS_KEY/SECRET) binds 127.0.0.1:9010 only \u2014 loopback / Docker shared_net reachable, NOT external; only the web console (9001) is Traefik-routed, and that router carries auth: none (traefik_auth_modes['rustfs']='none', no authentik@file forward-auth) so it relies solely on RustFS's own alpha-grade credential login. Residual risk = a loopback/shared_net actor or a console-login bypass; defense-in-depth bump still warranted for a Tier-1 storage admin that is install_rustfs=true by default. Already covered by the current alpha.93 pin (no action, logged for lineage): CVE-2026-21862 (X-Forwarded-For SourceIp bypass, fix a78), CVE-2025-68705 (path traversal, fix a79), CVE-2026-22042/22043 (IAM priv-esc, fix a79), CVE-2026-24762 (cred log leak, fix a82), CVE-2025-69255 (gRPC DoS, fix a78). SUPERSEDED 2026-07-01 (cycle-16 batch-11): the alpha.98 bump target is now INSUFFICIENT -- a June-27/29-2026 RustFS cluster (CVE-2026-55188/55189/49991/55838 + the incomplete-fix Critical console stored-XSS GHSA-7gcx-wg4x-q9x6) is fixed only in the new 1.0.0-beta line, so the fix target advances to 1.0.0-beta.9 (see REM-116, which supersedes/extends this item with the same rustfs_version bump). fix_version updated alpha.98 -> beta.9 accordingly.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/advisories/GHSA-pfcq-4gjr-6gjm ; https://github.com/advisories/GHSA-mm2q-qcmx-gw4w",
       "confidence": "high",
       "found_at": "2026-06-20T04:08:33+02:00",
       "scan_cycle": 16,
       "rechecked_at": "2026-07-12T04:02:42+02:00",
-      "resolved_at": null
+      "resolved_at": "2026-07-16",
+      "resolution": "rustfs 1.0.0-alpha.93 -> 1.0.0-beta.9; live-verified iiab-rustfs-1 healthy on beta.9 (reads alpha.93 data, converge failed=0). Real version fix."
     },
     {
       "id": "REM-094",
@@ -1944,13 +1944,15 @@
       "fix_version": "1.0.0-beta.9",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-11 (2026-07-01) CVE scan. RustFS shipped a June-2026 advisory cluster (published 2026-06-27 and 2026-06-29, AFTER the 2026-06-20 REM-093 scan) fixed ONLY in the new 1.0.0-beta release line, so the pinned rustfs_version 1.0.0-alpha.93 AND the REM-093 bump target 1.0.0-alpha.98 are BOTH below the fix and remain affected -> REM-093's alpha.98 target is now STALE and the real fix target advances to 1.0.0-beta.9. CLUSTER: (1) CVE-2026-55188 (HIGH CVSS 8.2, GHSA-796f-j7xp-hwf4) -- the ListRemoteTargetHandler bucket-replication admin API checks only that request credentials EXIST, not that the caller holds replication/admin permission, so any authenticated user with no effective permissions can list a bucket's remote replication targets, and the returned BucketTarget objects INCLUDE the remote target access key + secret key (credential disclosure); affected 1.0.0-alpha.1..<beta.9, fix beta.9. (2) CVE-2026-49991 (HIGH CVSS 8.6, GHSA-f4vq-9ffr-m8m3) -- Snowball auto-extract path traversal: an authenticated user holding only PutObject on their own bucket injects objects ACROSS bucket boundaries (multi-tenant isolation break, CWE-22); affected through 1.0.0-beta.4, fixed in the beta line. (3) CVE-2026-55189 (HIGH CVSS 7.7, GHSA-3g29-xff2-92vp) -- the FTP frontend RETR/SIZE/MDTM/CWD handlers dispatch straight to the storage backend WITHOUT the IAM authorization call the FTP write/list handlers (and the whole HTTP S3 path) use, so any FTP-authenticated user (even one whose IAM policy carries an explicit Deny on s3:GetObject) can read + stat + probe any object in any bucket regardless of policy; affected 1.0.0-alpha.1..<beta.9, fix beta.9 -- reachable ONLY if the RustFS FTP frontend is enabled (nOS does NOT enable it by default -> latent here). (4) CVE-2026-55838 (MEDIUM CVSS 4.3, GHSA-f5cv-v44x-2xgf) -- /rustfs/admin/v3/metrics skips validate_admin_request, so any IAM user (even one scoped to only their own bucket) reads server-wide operational metrics (disk I/O, network throughput, scanner-cycle timing, cluster RPC state); affected <=1.0.0-beta.7, fix beta.7/beta.9. (5) GHSA-7gcx-wg4x-q9x6 (CRITICAL) 'Incomplete fix: Critical Stored XSS in Preview Modal' -- the earlier CVE-2026-27822 console preview-modal stored XSS (nominally covered by alpha.93 at its alpha.83 fix) had an INCOMPLETE fix; the COMPLETE fix lands only in the beta line. This is the PROBE-RELEVANT leg (unauthenticated_endpoint_scan focus): the RustFS web console (9001) is the ONLY Traefik-routed RustFS surface and its router carries traefik_auth_modes['rustfs']='none' (NO authentik@file forward-auth), relying solely on RustFS's own beta-grade credential login -- so a stored XSS firing JavaScript in the console context steals the S3 admin access/secret keys from localStorage -> full console/account takeover, an especially sharp risk with install_rustfs=true (Tier-1 storage ON by default). PROBE verdict: the genuinely-UNAUTHENTICATED leg remains CVE-2026-40937 (REM-093, notification-target webhook config, still valid); the rest of the June cluster is authenticated (FTP/IAM users) EXCEPT the auth:none-console-reachable stored XSS. nOS MITIGATION lowering real-world reach: the S3 + admin API (RUSTFS_ACCESS_KEY/SECRET) binds 127.0.0.1:9010 loopback / Docker shared_net only (NOT external); only the console (9001) is edge-routed; the FTP frontend and bucket replication are NOT configured by default (so 55189 + 55188 are latent). ACTION: bump rustfs_version 1.0.0-alpha.93 -> 1.0.0-beta.9 (default.config.yml source-of-truth + mirror roles/pazny.rustfs/defaults/main.yml per version-pins-default-config-shadow) -- clears the entire June cluster AND supersedes REM-093's alpha.98 target with margin; ALSO gate the console router with authentik@file forward-auth (flip traefik_auth_modes['rustfs']='proxy') as defense-in-depth against the console-XSS class. Already covered by the current alpha.93 pin, recorded for lineage (fix <= alpha.83, no incremental action beyond the incomplete-fix caveat): CVE-2026-27822 (Critical Stored XSS console preview modal, fix alpha.83 -- but the COMPLETE fix needs beta.9, see above) + CVE-2026-27607 (presigned POST-policy validation bypass -> arbitrary object write + content-length/content-type-constraint bypass, fix alpha.83). Supersedes/extends REM-093 (same rustfs_version bump, higher target).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/rustfs/rustfs/security/advisories/GHSA-796f-j7xp-hwf4 (CVE-2026-55188) ; https://github.com/rustfs/rustfs/security/advisories/GHSA-f4vq-9ffr-m8m3 (CVE-2026-49991) ; https://cve.threatint.eu/CVE/CVE-2026-55189 (GHSA-3g29-xff2-92vp) ; https://cve.threatint.eu/CVE/CVE-2026-55838 (GHSA-f5cv-v44x-2xgf) ; https://github.com/rustfs/rustfs/security ; https://app.opencve.io/cve/?vendor=rustfs",
       "confidence": "high",
       "found_at": "2026-07-01T04:08:06+02:00",
       "scan_cycle": 16,
-      "rechecked_at": "2026-07-12T04:02:42+02:00"
+      "rechecked_at": "2026-07-12T04:02:42+02:00",
+      "resolved_at": "2026-07-16",
+      "resolution": "rustfs 1.0.0-alpha.93 -> 1.0.0-beta.9; live-verified iiab-rustfs-1 healthy on beta.9 (reads alpha.93 data, converge failed=0). Real version fix."
     },
     {
       "id": "REM-117",
@@ -2113,14 +2115,14 @@
       "fix_version": null,
       "remediation_type": "mitigation",
       "remediation_detail": "Cycle-16 batch-25 RE-SCAN (2026-07-11, unauthenticated_endpoint_scan). CVE-2026-5757 (CERT/CC VU#518910, 'Ollama GGUF Quantization Remote Memory Leak') -- an UNAUTHENTICATED remote information-disclosure flaw in Ollama's model quantization engine, DISTINCT from the covered CVE-2026-7482 'Bleeding Llama' (REM-096, /api/create GGUF loader OOB-read, fixed 0.17.1). Here the quantization engine trusts tensor metadata in a user-supplied GGUF file header without verifying it against the actual data size: an attacker uploads a crafted GGUF and triggers quantization, causing an out-of-bounds heap read whose leaked bytes are written into a NEW model layer, which Ollama's registry API can then /api/push to an attacker-controlled server -> full heap exfiltration (env vars/API keys/system prompts/other users' conversation data), same impact class as CVE-2026-7482. STATUS: UNPATCHED -- per CERT/CC the vendor could not be reached to coordinate and no fix release exists (zero-day; interim guidance = restrict/disable the model-upload + quantization functionality in any environment exposed to untrusted users). This is NOT closable by a version bump (unlike REM-096), so it parallels the REM-064 'no upstream fix' pattern -- the control is perimeter, not a patch. nOS MITIGATION (the decisive control): Ollama is the HOST Homebrew install (roles/pazny.openclaw), and its launchd plist (roles/pazny.openclaw/templates/com.ollama.agent.plist.j2) hard-sets OLLAMA_HOST=127.0.0.1:11434 -- the API (incl. the /api/create quantization + /api/push registry endpoints) binds LOOPBACK ONLY, not 0.0.0.0, so the unauthenticated attack surface is not reachable from the LAN/Tailscale; only the on-host OpenClaw gateway consumes it. There is NO ollama_version var to pin (same host-install reality as REM-024/REM-096). NOT applicable: CVE-2026-42248/42249 (Windows auto-updater signature-verify RCE) -- macOS/Linux Homebrew build. RESIDUAL RISK: a local/on-host process (or a compromised OpenClaw agent) could still trigger it; when an upstream fix ships, the floating brew state=latest install will pick it up automatically (verify via REM-024). ACTION: keep OLLAMA_HOST bound to 127.0.0.1 (already enforced -- do NOT set OLLAMA_HOST=0.0.0.0); operator-side brew-currency watch for the eventual fix release (cross-ref REM-024).",
-      "status": "resolved",
+      "status": "vendor-blocked",
       "auto_fixable": false,
       "source": "https://kb.cert.org/vuls/id/518910 ; https://www.tenable.com/cve/CVE-2026-5757 ; https://securityonline.info/ollama-heap-memory-leak-cve-2026-5757-zero-day/ ; https://cybersecuritynews.com/hackers-exploit-ollama-model/",
       "confidence": "high",
       "found_at": "2026-07-11T04:12:00+02:00",
       "scan_cycle": 16,
       "resolved_at": "2026-07-16",
-      "resolution": "Mitigated by loopback bind + SSO gate. CVE-2026-5757 (GGUF quantization remote memory leak) is \"unauthenticated remote\", but ollama binds 127.0.0.1:11434 only (verified lsof) and the ai/ollama route is authentik forward-auth gated. No unauthenticated remote reaches the quantization endpoint; residual is authenticated-user-only (same posture as REM-096 Bleeding Llama, fixed 0.17.1<0.30.7)."
+      "resolution": "No upstream fix \u2014 CVE-2026-5757 (GGUF quantization heap leak) is UNPATCHED; CERT/CC (VU#518910) could not reach the vendor. Distinct from CVE-2026-7482 Bleeding Llama (fixed 0.17.1 < our 0.30.7). Vendor-blocked like FreePBX: unfixable in the current upstream. Residual controls (loopback 127.0.0.1 bind + SSO gate) noted but do NOT constitute a fix. Re-evaluate on an ollama patch."
     },
     {
       "id": "REM-127",
@@ -2150,9 +2152,9 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 15,
+      "pending": 14,
       "resolved": 103,
-      "vendor-blocked": 3,
+      "vendor-blocked": 4,
       "wontfix": 1
     },
     "auto_fixable": 101,
