@@ -48,19 +48,36 @@
     mode: '0600'
   notify: Restart keap
 
+# Resolve Traefik's watched conf.d from the GLOBAL traefik_config_dir, NOT the
+# role-scoped traefik_dynamic_dir (undefined outside pazny.traefik → its old
+# fallback ignored the external-storage override and pointed at a ~/stacks path
+# that doesn't exist when traefik_config_dir is redirected to an SSD). external-
+# paths.yml set_facts traefik_config_dir globally; default installs fall back to
+# ~/stacks/infra/traefik. Ensure the dir exists so we don't depend on traefik's
+# ordering (Traefik merges every file in the dir anyway).
+- name: "[pazny.keap] Resolve Traefik conf.d dir"
+  ansible.builtin.set_fact:
+    _keap_traefik_confd: "{{ traefik_config_dir | default(stacks_dir + '/infra/traefik') }}/conf.d"
+
+- name: "[pazny.keap] Ensure Traefik conf.d exists"
+  ansible.builtin.file:
+    path: "{{ _keap_traefik_confd }}"
+    state: directory
+    mode: '0755'
+
 # Public bearer-only ingest route (DEVICE entry point — AR glasses etc.).
 # A 4th file in Traefik's watched conf.d next to the traefik-role-rendered
 # {services,middlewares,tls}.yml; Traefik merges all files in the dir.
 - name: "[pazny.keap] Render public ingest route (keap-ingest.yml)"
   ansible.builtin.template:
     src: traefik-ingest.yml.j2
-    dest: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ingest.yml"
+    dest: "{{ _keap_traefik_confd }}/keap-ingest.yml"
     mode: '0644'
   when: keap_public_ingest | default(true)
 
 - name: "[pazny.keap] Remove public ingest route when disabled"
   ansible.builtin.file:
-    path: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ingest.yml"
+    path: "{{ _keap_traefik_confd }}/keap-ingest.yml"
     state: absent
   when: not (keap_public_ingest | default(true))
 
@@ -72,13 +89,13 @@
 - name: "[pazny.keap] Render browser-extension route (keap-ext.yml)"
   ansible.builtin.template:
     src: traefik-ext.yml.j2
-    dest: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ext.yml"
+    dest: "{{ _keap_traefik_confd }}/keap-ext.yml"
     mode: '0644'
   when: keap_extension_surface | default(true)
 
 - name: "[pazny.keap] Remove browser-extension route when disabled"
   ansible.builtin.file:
-    path: "{{ traefik_dynamic_dir | default(stacks_dir + '/infra/traefik/conf.d') }}/keap-ext.yml"
+    path: "{{ _keap_traefik_confd }}/keap-ext.yml"
     state: absent
   when: not (keap_extension_surface | default(true))
 
