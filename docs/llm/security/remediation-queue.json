@@ -611,14 +611,16 @@
       "fix_version": "1.29.5+",
       "remediation_type": "version_bump",
       "remediation_detail": "Nginx SSL upstream injection (CVE-2026-1642, medium) + ngx_mail buffer overread (CVE-2025-53859, low) + TLS session reuse bypass (CVE-2025-23419, medium). Run 'brew upgrade nginx' to ensure latest stable.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nginx.org/en/security_advisories.html",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
       "scan_cycle": 2,
       "decision_at": "2026-05-31T00:00:00Z",
-      "decision": "NOT a mechanical image-pin / no in-repo change applied. nginx in nOS is the HOST package (Homebrew 'nginx' on macOS via tasks/nginx.yml; apt 'nginx' on Linux via roles/pazny.linux.nginx, var linux_nginx_package='nginx'). There is NO Docker nginx image and NO pinnable version tag anywhere in the repo (Traefik is the primary edge proxy; install_nginx defaults to false). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.5, which cannot be expressed as a repo image-pin. Left pending: operator host-package upgrade; no version-var bump possible without changing the install model."
+      "decision": "NOT a mechanical image-pin / no in-repo change applied. nginx in nOS is the HOST package (Homebrew 'nginx' on macOS via tasks/nginx.yml; apt 'nginx' on Linux via roles/pazny.linux.nginx, var linux_nginx_package='nginx'). There is NO Docker nginx image and NO pinnable version tag anywhere in the repo (Traefik is the primary edge proxy; install_nginx defaults to false). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.5, which cannot be expressed as a repo image-pin. Left pending: operator host-package upgrade; no version-var bump possible without changing the install model.",
+      "resolved_at": "2026-07-16",
+      "resolution": "N/A in this deployment \u2014 host nginx is NOT installed or running (install_nginx=false default; Traefik is the primary edge proxy per C1 doctrine). The nginx CVE cluster has no attack surface here. Applies ONLY if an operator opts into host nginx (install_nginx=true) \u2014 documented accept-condition: bump the brew nginx pin then. Evidence 2026-07-16: pgrep nginx empty, brew nginx not installed."
     },
     {
       "id": "REM-036",
@@ -1095,14 +1097,16 @@
       "fix_version": "1.29.7+",
       "remediation_type": "version_bump",
       "remediation_detail": "Nginx 4 new CVEs (April 2026): CVE-2026-27654 (medium) heap buffer overflow in ngx_http_dav_module via COPY/MOVE with alias \u2014 path escape outside document root. CVE-2026-27784 (medium) + CVE-2026-32647 (medium) buffer overflow in ngx_http_mp4_module \u2014 memory overwrite/code execution via crafted MP4 files. CVE-2026-27651 (low) NULL pointer deref in CRAM-MD5/APOP (ngx_mail). All affect 0.5.x through 1.29.6, fixed in 1.29.7+ / 1.28.3+. Run 'brew upgrade nginx' to ensure >= 1.29.7. DAV and MP4 modules require explicit config to be active \u2014 check if enabled in nOS nginx.conf.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nginx.org/en/security_advisories.html",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
       "scan_cycle": 10,
       "decision_at": "2026-05-31T00:00:00Z",
-      "decision": "NOT a mechanical image-pin / no in-repo change applied (same as REM-035). nginx is the HOST package (Homebrew 'nginx' / apt 'nginx'), no Docker image and no pinnable version tag in the repo; install_nginx defaults to false (Traefik is primary proxy). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.7. Note: the affected ngx_http_dav_module and ngx_http_mp4_module are not enabled in nOS vhost templates (templates/nginx/sites-available/), so the DAV/MP4 vectors are not active even on hosts that opt in; ngx_mail (CVE-2026-27651) is also unused. Left pending: operator host-package upgrade; cannot be expressed as a repo image-pin."
+      "decision": "NOT a mechanical image-pin / no in-repo change applied (same as REM-035). nginx is the HOST package (Homebrew 'nginx' / apt 'nginx'), no Docker image and no pinnable version tag in the repo; install_nginx defaults to false (Traefik is primary proxy). Remediation is operator-side 'brew upgrade nginx' / apt upgrade to >=1.29.7. Note: the affected ngx_http_dav_module and ngx_http_mp4_module are not enabled in nOS vhost templates (templates/nginx/sites-available/), so the DAV/MP4 vectors are not active even on hosts that opt in; ngx_mail (CVE-2026-27651) is also unused. Left pending: operator host-package upgrade; cannot be expressed as a repo image-pin.",
+      "resolved_at": "2026-07-16",
+      "resolution": "N/A in this deployment \u2014 host nginx is NOT installed or running (install_nginx=false default; Traefik is the primary edge proxy per C1 doctrine). The nginx CVE cluster has no attack surface here. Applies ONLY if an operator opts into host nginx (install_nginx=true) \u2014 documented accept-condition: bump the brew nginx pin then. Evidence 2026-07-16: pgrep nginx empty, brew nginx not installed."
     },
     {
       "id": "REM-064",
@@ -1614,14 +1618,16 @@
       "fix_version": "1.31.2+ (or 1.30.3+ on the 1.30.x branch)",
       "remediation_type": "version_bump",
       "remediation_detail": "New 2026 nginx CVE cluster, post-dating REM-035/REM-063 (which capped at 1.29.7): (1) CVE-2026-42945 \u2014 buffer overflow in ngx_http_rewrite_module (nginx.org severity 'medium'; media-reported CVSSv4 9.2 and ACTIVELY EXPLOITED in the wild within days of disclosure; worker crash -> DoS, potential RCE); fixed 1.31.0+ / 1.30.1+. (2) CVE-2026-42530 \u2014 use-after-free in HTTP/3 (severity 'major'); fixed 1.31.2+. (3) CVE-2026-42055 \u2014 buffer overflow in ngx_http_proxy_v2_module + ngx_http_grpc_module, remote unauthenticated worker-process restart; fixed 1.31.2+ / 1.30.3+. (4) CVE-2026-9256 \u2014 second ngx_http_rewrite_module overflow; fixed 1.31.1+ / 1.30.2+. nginx 1.31.2+ (or 1.30.3+) clears the whole cluster. DISPOSITION (same as REM-035/REM-063): nginx in nOS is the HOST package (Homebrew on macOS via tasks/nginx.yml; apt on Linux, linux_nginx_package='nginx'), NOT a Docker image \u2014 there is no pinnable version tag in the repo and install_nginx defaults to FALSE (Traefik is the primary edge proxy). Remediation is operator-side 'brew upgrade nginx' / 'apt upgrade nginx' to >= 1.31.2; it cannot be expressed as a repo image-pin. SURFACE NOTE: unlike the earlier DAV/MP4 CVEs (REM-063, modules not compiled/enabled in nOS vhosts), ngx_http_rewrite_module is ALWAYS compiled into core and rewrite/return/if directives appear in vhost templates, so CVE-2026-42945/9256 are in active surface whenever a host opts into nginx; HTTP/3 (42530) is not enabled in templates/nginx/nginx.conf; server_tokens off is set. Left pending: operator host-package upgrade. | 2026-07-11 RE-SCAN (cycle-16 batch-25): three ADDITIONAL 2026 nginx CVEs surfaced, ALL cleared by the SAME >=1.31.2 fix target (no change to the remediation) -- folded in for lineage: CVE-2026-48142 (LOW, buffer OVERREAD in ngx_http_charset_module, info-disclosure, affects 0.3.50-1.31.1, fix 1.31.2+/1.30.3+ -- charset module is compiled by default so in active surface), CVE-2026-42926 (MEDIUM, HTTP/2 request injection in ngx_http_proxy_module, affects 1.29.4-1.30.0, fix 1.31.0+/1.30.1+), CVE-2026-42946 (MEDIUM, buffer overread in ngx_http_scgi_module + ngx_http_uwsgi_module, affects 0.8.42-1.30.0, fix 1.31.0+/1.30.1+ -- SCGI/uWSGI not used by nOS vhosts, latent). nginx >=1.31.2 clears the entire 2026 set (42945/42530/42055/9256 + 48142/42926/42946). Disposition unchanged: host package (install_nginx=false default, Traefik is primary edge), operator-side brew/apt upgrade to >=1.31.2, no repo image-pin possible.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nginx.org/en/security_advisories.html ; https://thehackernews.com/2026/05/18-year-old-nginx-rewrite-module-flaw.html",
       "confidence": "high",
       "found_at": "2026-06-21T04:03:29+02:00",
       "scan_cycle": 16,
       "decision_at": "2026-06-21T04:03:29+02:00",
-      "decision": "Host-package upgrade, no repo image-pin possible (install_nginx=false default; Traefik is primary proxy). Operator action: brew/apt upgrade nginx to >= 1.31.2."
+      "decision": "Host-package upgrade, no repo image-pin possible (install_nginx=false default; Traefik is primary proxy). Operator action: brew/apt upgrade nginx to >= 1.31.2.",
+      "resolved_at": "2026-07-16",
+      "resolution": "N/A in this deployment \u2014 host nginx is NOT installed or running (install_nginx=false default; Traefik is the primary edge proxy per C1 doctrine). The nginx CVE cluster has no attack surface here. Applies ONLY if an operator opts into host nginx (install_nginx=true) \u2014 documented accept-condition: bump the brew nginx pin then. Evidence 2026-07-16: pgrep nginx empty, brew nginx not installed."
     },
     {
       "id": "REM-099",
@@ -2132,8 +2138,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 24,
-      "resolved": 95,
+      "pending": 21,
+      "resolved": 98,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,
