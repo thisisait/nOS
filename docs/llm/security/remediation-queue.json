@@ -412,17 +412,19 @@
       "component": "ollama",
       "severity": "HIGH",
       "current_version": "latest (Homebrew)",
-      "fix_version": "latest",
+      "fix_version": "0.30.7 (pazny/local tap)",
       "remediation_type": "version_bump",
       "remediation_detail": "Ollama OS Command Injection via Model URL (CVE-2026-34940). Plus SSRF in pull API (CVE-2026-5530). Ensure brew upgrade ollama and OLLAMA_HOST=127.0.0.1:11434.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://www.tenable.com/cve/CVE-2026-34940",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
       "scan_cycle": 1,
       "decision_at": "2026-05-31T00:00:00Z",
-      "decision": "NOT a mechanical image-pin / no in-repo change applied. Ollama is the host Homebrew install (roles/pazny.openclaw/tasks/main.yml installs via community.general.homebrew with state: latest), not a Docker image \u2014 there is no ollama_version var anywhere in the repo to pin. Every playbook run already does state: latest (brew upgrade ollama), so the host floats to the current formula which is past the CVE-2026-34940 / CVE-2026-5530 fixes. Hardening the OLLAMA_HOST bind to 127.0.0.1 is a separate config_change, not an image-pin. Left pending: operator-side brew upgrade verification; no version-var bump possible."
+      "decision": "NOT a mechanical image-pin / no in-repo change applied. Ollama is the host Homebrew install (roles/pazny.openclaw/tasks/main.yml installs via community.general.homebrew with state: latest), not a Docker image \u2014 there is no ollama_version var anywhere in the repo to pin. Every playbook run already does state: latest (brew upgrade ollama), so the host floats to the current formula which is past the CVE-2026-34940 / CVE-2026-5530 fixes. Hardening the OLLAMA_HOST bind to 127.0.0.1 is a separate config_change, not an image-pin. Left pending: operator-side brew upgrade verification; no version-var bump possible.",
+      "resolved_at": "2026-07-16",
+      "resolution": "Current: ollama 0.30.7 (verified running) via the intentional pazny/local tap (the core Homebrew bottle lacks llama-server -> all-GGUF HTTP 500; see memory ollama-brew-mlx-only-bottle). The \"latest->latest\" freshness target is met; specific CVEs (REM-096 fixed 0.17.1, REM-126 mitigated) are covered."
     },
     {
       "id": "REM-025",
@@ -1117,13 +1119,15 @@
       "fix_version": "none (vendor-disputed / WONTFIX-by-design)",
       "remediation_type": "config_change",
       "remediation_detail": "Open WebUI 2 RCE via command injection (ZDI-26-031 / CVE-2026-0765 + ZDI-26-032 / CVE-2026-0766, CVSS 8.8). CVE-2026-0765: install_frontmatter_requirements \u2014 unsanitized PIP package names from tool frontmatter enable arbitrary command execution. CVE-2026-0766: load_tool_module_by_id \u2014 user-supplied string used to execute Python code without validation. Both require authenticated ADMIN access (tool/function authoring is admin-gated). 2026-06-22 RE-CHECK (cycle 16): there is STILL no upstream fix version \u2014 NVD lists only 0.6.32 as affected with no patched version; GHSA-cggw-334c-f4mj (0766) has an empty version block; SentinelOne's writeup advises upgrading to a release published AFTER 0.6.32 'as the vendor makes one available' (none was). Live source on master still does subprocess pip-install of comma-split frontmatter names and exec()s the tool module body \u2014 unchanged. This is intended admin-only extensibility (authoring a tool == running code by design), which is why the vendor issued no patch and disputes the framing. CONSEQUENCE: the current pin 0.8.12 does NOT fix it, and neither does 0.9.6 (see REM-101) \u2014 do NOT close this against a version bump. Mitigation is operational only: restrict who may author tools/functions to trusted admins, disable custom tool upload if unused; defense-in-depth = Authentik OIDC wall + Tier gating in front of Open WebUI. Treat as vendor-disputed admin-trust, not version-fixable.",
-      "status": "pending",
+      "status": "wontfix",
       "auto_fixable": false,
       "source": "https://www.zerodayinitiative.com/advisories/ZDI-26-031/ ; https://www.zerodayinitiative.com/advisories/ZDI-26-032/ ; https://github.com/advisories/GHSA-cggw-334c-f4mj ; https://nvd.nist.gov/vuln/detail/CVE-2026-0765",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
       "scan_cycle": 10,
-      "rechecked_at": "2026-06-22T04:01:33+02:00"
+      "rechecked_at": "2026-06-22T04:01:33+02:00",
+      "resolved_at": "2026-07-16",
+      "resolution": "Vendor-disputed WONTFIX-by-design (no fix version exists). CVE-2026-0765/0766 both require AUTHENTICATED ADMIN access (tool frontmatter / load_tool_module_by_id). In a single-operator lab the Open WebUI admin IS the operator (already has host access), so an admin-only RCE is not a privilege escalation. Open WebUI now on 0.9.6. Accept-risk, mirrors FreePBX/vendor-blocked pattern."
     },
     {
       "id": "REM-065",
@@ -1285,15 +1289,17 @@
       "component": "calibreweb",
       "severity": "HIGH",
       "current_version": "0.6.26",
-      "fix_version": null,
+      "fix_version": "SEC-02 gate (arch mitigation)",
       "remediation_type": "workaround",
       "remediation_detail": "Calibre-Web ReDoS in strip_whitespaces() function (CVE-2025-6998, CVSS 8.7). Unauthenticated attacker can cause denial of service via crafted username during login. Affects janeczku/calibre-web 0.6.24 (our linuxserver image). No upstream fix available \u2014 janeczku/calibre-web appears unmaintained. Workaround: rate-limit /login endpoint in nginx (limit_req). Alternative: migrate to Autocaliweb fork (fixed in 0.7.1). Risk mitigated by Authentik proxy auth \u2014 login form not directly reachable without SSO session. | 2026-06-24 cycle-16 re-assessment: the pin moved 0.6.24->0.6.26 ('Ismara'). OSV records CVE-2025-6998 with last_affected 0.6.24, so a version-keyed scanner flags 0.6.26 CLEAN \u2014 BUT janeczku published NO security-fix commit (the fix landed only in the Autocaliweb fork 0.7.1) and SECURITY.md's history stops at 0.6.23, so it is NOT proven that 0.6.26 changed strip_whitespaces() -> confidence MEDIUM that 0.6.26 is actually fixed. Perimeter posture makes this moot regardless: calibre_web is forward_auth (traefik_auth_modes.calibre_web=proxy) so the /login form is behind the Authentik wall, plus 127.0.0.1:8083 loopback bind and Tier 3 -> the 'unauthenticated' ReDoS is NOT anonymously reachable over the Traefik route. Definitive fix = Autocaliweb migration or a Traefik/nginx rate-limit on /login. (Same batch: CVE-2025-7404 OS-command-injection also caps at OSV last_affected 0.6.24, requires an authed HIGH-priv admin behind Authentik, CVSS 5.9 -> assessed, not separately queued.)",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2025-6998",
       "confidence": "high",
       "found_at": "2026-04-10T22:00:00Z",
-      "scan_cycle": 12
+      "scan_cycle": 12,
+      "resolved_at": "2026-07-16",
+      "resolution": "Mitigated by SEC-02 architecture (the \"workaround\" this finding asks for). CVE-2025-6998 is an UNAUTHENTICATED ReDoS via the Calibre-Web LOGIN form, but calibre-web is gated_net-only (verified: single network gated_net) reachable exclusively through Traefik authentik@file forward-auth. An unauthenticated attacker hits the Authentik wall first and never reaches the login form -> the unauth vector has no surface."
     },
     {
       "id": "REM-075",
@@ -1765,12 +1771,14 @@
       "fix_version": "2.92rel2",
       "remediation_type": "version_bump",
       "remediation_detail": "May-2026 dnsmasq CERT/CC cluster (VU#471747): six CVEs fixed in 2.92rel2 (and the upcoming 2.93). Our host pin 2.91 is AFFECTED. APPLICABLE to nOS's config (DNS forwarder, no DNSSEC, no DHCP): CVE-2026-2291 (CVSS 7.3 HIGH, AV:N/AC:L/PR:N/UI:N \u2014 heap buffer overflow in extract_name() while parsing DNS RESPONSES -> false DNS-cache injection / redirect to attacker IP, or DoS; UNAUTHENTICATED + network) and CVE-2026-5172 (heap OOB read in extract_addresses() on a malformed DNS response -> crash/DoS). Reachable because tasks/dnsmasq.yml binds the LAN interface by DEFAULT \u2014 dnsmasq_lan_access defaults true, so listen-address=127.0.0.1,<en0 LAN IP> + bind-interfaces \u2014 and dnsmasq forwards every non-{dev.local} query upstream, so a LAN/Tailscale client that makes it resolve an attacker-controlled domain feeds malformed responses into the vulnerable parsers. NOT applicable to nOS: CVE-2026-4890/4891 (DNSSEC-validation infinite-loop DoS + heap OOB read \u2014 nOS sets NO `dnssec` directive in dnsmasq.conf, validation disabled), CVE-2026-4892 (DHCPv6 heap OOB write -> local root RCE \u2014 nOS runs DNS-only, no `dhcp-range`/DHCP server), CVE-2026-4893 (RFC-7871 client-subnet source-check bypass \u2014 `add-subnet` not configured). dnsmasq is a HOST Homebrew package (community.general.homebrew state:present in tasks/dnsmasq.yml; the dnsmasq_version='2.91' var is documentation only, not enforced \u2014 like REM-035 nginx / REM-024 ollama there is no pinnable image). REMEDIATION: (1) operator-side `brew upgrade dnsmasq` to >=2.92rel2 once the formula ships it (Homebrew may still carry 2.91); (2) defence-in-depth \u2014 set dnsmasq_lan_access=false to bind 127.0.0.1 only and remove all LAN reach if LAN-wide *.dev.local resolution is not required.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2026-2291 ; https://kb.cert.org/vuls/id/471747 ; https://www.helpnetsecurity.com/2026/05/12/dnsmasq-vulnerabilities-cve/ ; https://thekelleys.org.uk/dnsmasq/CHANGELOG",
       "confidence": "high",
       "found_at": "2026-06-24T04:05:45+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "N/A in this deployment \u2014 dnsmasq is the .dev.local LOCAL-TLD resolver (tasks/dnsmasq.yml, macOS /etc/resolver). This tenant is pazny.eu (PUBLIC TLD): dnsmasq is not installed (brew empty), no /opt/homebrew/etc/dnsmasq.conf, not running. No attack surface. Applies only to a .local-TLD install."
     },
     {
       "id": "REM-107",
@@ -2105,12 +2113,14 @@
       "fix_version": null,
       "remediation_type": "mitigation",
       "remediation_detail": "Cycle-16 batch-25 RE-SCAN (2026-07-11, unauthenticated_endpoint_scan). CVE-2026-5757 (CERT/CC VU#518910, 'Ollama GGUF Quantization Remote Memory Leak') -- an UNAUTHENTICATED remote information-disclosure flaw in Ollama's model quantization engine, DISTINCT from the covered CVE-2026-7482 'Bleeding Llama' (REM-096, /api/create GGUF loader OOB-read, fixed 0.17.1). Here the quantization engine trusts tensor metadata in a user-supplied GGUF file header without verifying it against the actual data size: an attacker uploads a crafted GGUF and triggers quantization, causing an out-of-bounds heap read whose leaked bytes are written into a NEW model layer, which Ollama's registry API can then /api/push to an attacker-controlled server -> full heap exfiltration (env vars/API keys/system prompts/other users' conversation data), same impact class as CVE-2026-7482. STATUS: UNPATCHED -- per CERT/CC the vendor could not be reached to coordinate and no fix release exists (zero-day; interim guidance = restrict/disable the model-upload + quantization functionality in any environment exposed to untrusted users). This is NOT closable by a version bump (unlike REM-096), so it parallels the REM-064 'no upstream fix' pattern -- the control is perimeter, not a patch. nOS MITIGATION (the decisive control): Ollama is the HOST Homebrew install (roles/pazny.openclaw), and its launchd plist (roles/pazny.openclaw/templates/com.ollama.agent.plist.j2) hard-sets OLLAMA_HOST=127.0.0.1:11434 -- the API (incl. the /api/create quantization + /api/push registry endpoints) binds LOOPBACK ONLY, not 0.0.0.0, so the unauthenticated attack surface is not reachable from the LAN/Tailscale; only the on-host OpenClaw gateway consumes it. There is NO ollama_version var to pin (same host-install reality as REM-024/REM-096). NOT applicable: CVE-2026-42248/42249 (Windows auto-updater signature-verify RCE) -- macOS/Linux Homebrew build. RESIDUAL RISK: a local/on-host process (or a compromised OpenClaw agent) could still trigger it; when an upstream fix ships, the floating brew state=latest install will pick it up automatically (verify via REM-024). ACTION: keep OLLAMA_HOST bound to 127.0.0.1 (already enforced -- do NOT set OLLAMA_HOST=0.0.0.0); operator-side brew-currency watch for the eventual fix release (cross-ref REM-024).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://kb.cert.org/vuls/id/518910 ; https://www.tenable.com/cve/CVE-2026-5757 ; https://securityonline.info/ollama-heap-memory-leak-cve-2026-5757-zero-day/ ; https://cybersecuritynews.com/hackers-exploit-ollama-model/",
       "confidence": "high",
       "found_at": "2026-07-11T04:12:00+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-16",
+      "resolution": "Mitigated by loopback bind + SSO gate. CVE-2026-5757 (GGUF quantization remote memory leak) is \"unauthenticated remote\", but ollama binds 127.0.0.1:11434 only (verified lsof) and the ai/ollama route is authentik forward-auth gated. No unauthenticated remote reaches the quantization endpoint; residual is authenticated-user-only (same posture as REM-096 Bleeding Llama, fixed 0.17.1<0.30.7)."
     },
     {
       "id": "REM-127",
@@ -2140,9 +2150,10 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 20,
-      "resolved": 99,
-      "vendor-blocked": 3
+      "pending": 15,
+      "resolved": 103,
+      "vendor-blocked": 3,
+      "wontfix": 1
     },
     "auto_fixable": 101,
     "manual_review_required": 21,
