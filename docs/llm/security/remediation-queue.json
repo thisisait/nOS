@@ -1670,13 +1670,15 @@
       "fix_version": "0.9.6",
       "remediation_type": "version_bump",
       "remediation_detail": "Open WebUI 0.8.12 (2026-03-27) predates a large coordinated-disclosure batch shipped across 0.9.0 / 0.9.3 / 0.9.5 / 0.9.6; OSV's version-aware query flags 0.8.12 as affected by 1 CRITICAL + 27 HIGH CVEs. The CRITICAL \u2014 CVE-2026-44551 (LDAP empty-password authentication bypass, UNAUTHENTICATED, fix 0.9.0) \u2014 is NOT APPLICABLE to nOS: Open WebUI authenticates via OAuth/OIDC (Authentik), no LDAP is configured, so the LDAP bypass path is dead. The 27 HIGH are dominated by AUTHENTICATED cross-user / SSRF / stored-XSS / IDOR bugs (CVE-2026-45331/45400/45401/54008/54017/54018 SSRF family; CVE-2026-54010/54012/45402/45671 cross-user file read/delete; CVE-2026-44721/54011/54013/45314/45315 stored XSS; CVE-2026-44554 KB/RAG poisoning; CVE-2026-44552/44553 cache/role isolation), all reachable only AFTER login \u2014 gated in nOS by the Authentik OIDC wall + WEBUI_AUTH=true + 127.0.0.1:3004 loopback + native_oidc route. Two are unauth-adjacent: CVE-2026-45675 (OAuth/LDAP first-user race -> extra admin, fix 0.9.0) is blunted because nOS seeds and claims the first admin in roles/pazny.open_webui/tasks/post.yml before any OAuth login; CVE-2026-54007 (cross-origin postMessage confirmation bypass, fix 0.9.6) requires victim interaction. REMEDIATION: bump openwebui_version 0.8.12 -> 0.9.6 (single image-pin clears the whole cluster). SEPARATELY: CVE-2026-0765/0766 (ZDI-26-031/032) are tracked in REM-064 and have NO upstream fix \u2014 NOT closed by 0.8.12 or 0.9.6 (vendor-disputed admin code-exec); mitigate by restricting tool/function authoring. Already-tracked CVE-2025-64495/64496 (REM-005/032) + CVE-2026-28786 (REM-065) remain fixed at 0.8.12.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://osv.dev/list?ecosystem=PyPI&q=open-webui ; https://github.com/advisories/GHSA-2r4p-jpmg-48f4 ; https://github.com/open-webui/open-webui/releases ; https://www.sentinelone.com/vulnerability-database/cve-2026-56399/ ; https://advisories.gitlab.com/pypi/open-webui/CVE-2026-44566/",
       "confidence": "high",
       "found_at": "2026-06-22T04:01:33+02:00",
       "scan_cycle": 16,
-      "rechecked_at": "2026-07-12T04:02:42+02:00"
+      "rechecked_at": "2026-07-12T04:02:42+02:00",
+      "resolved_at": "2026-07-16",
+      "resolution": "openwebui 0.8.12 -> 0.9.6 (HIGH). DB migration 0.8->0.9 clean under STRICT health-wait; live-verified iiab-open-webui-1 healthy, /health 200, route 200, idempotent re-converge failed=0. Shadow-pins bumped (default.config.yml + role default)."
     },
     {
       "id": "REM-102",
@@ -2130,8 +2132,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 25,
-      "resolved": 94,
+      "pending": 24,
+      "resolved": 95,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,
