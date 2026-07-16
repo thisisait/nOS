@@ -307,6 +307,29 @@
   when:
     - _nc_container.stdout | default('') | length > 0
     - install_onlyoffice | default(false)
+
+# Register OnlyOffice as the DEFAULT editor for office formats — else a
+# double-clicked .xlsx/.docx opens Nextcloud's fallback viewer (which can't
+# render it → "Download failed") instead of redirecting to the OnlyOffice
+# editor. Uses `command:` (no shell) so the compact JSON (no spaces) is passed
+# as ONE literal argv element — a `shell:` here would brace-expand the JSON
+# commas and corrupt it.
+- name: "[pazny.nextcloud Post] OnlyOffice = default editor for office formats"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ config:app:set onlyoffice {{ item.k }} --value={{ item.v }}
+  loop:
+    - k: defFormats
+      v: '{"csv":true,"doc":true,"docx":true,"odp":true,"ods":true,"odt":true,"pdf":true,"ppt":true,"pptx":true,"rtf":true,"txt":true,"xls":true,"xlsx":true}'
+    - k: editFormats
+      v: '{"csv":true,"docx":true,"odp":true,"ods":true,"odt":true,"pptx":true,"rtf":true,"txt":true,"xlsx":true}'
+  loop_control:
+    label: "onlyoffice {{ item.k }}"
+  changed_when: false
+  failed_when: false
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - install_onlyoffice | default(false)
   changed_when: false
   failed_when: false
   check_mode: false
