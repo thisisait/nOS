@@ -228,6 +228,23 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
 
 ## Backlog
 
+### P0 — FS doctrine epic (NEW 2026-07-16, foundational — blocks release-green + euro-office)
+- **[L] Filesystem doctrine** — `docs/plans/fs-doctrine.md` (DESIGN, review-gated). The
+  layout is 42 scattered `~/<service>` data dirs with zero tenant/user/agent isolation;
+  this blocks (a) multi-tenant/user/multi-agent-per-user security isolation, (b) the
+  calibre-web→Autocaliweb fix REM-074 (needs a doctrine-conformant library volume, not an
+  ad-hoc remap), (c) the Puter→euro-office→KEAP document flow (documents need a structured
+  home the KEAP consolidator auto-maps). Design classifies data into 3 classes (platform
+  engine / tenant-shared app-content / FS-native per-user), introduces a single
+  `nos_data_root` root (collapsing external-paths.yml), and phases P1 resolver → P2
+  per-user tree + KEAP/euro-office wiring → P3 isolation → P4 migration. **Release-green
+  now depends on this**: the last 3 HIGH (uptime_kuma v2 Phase-D deferral, calibre-web
+  Autocaliweb) are architecture-gated, not quick pins.
+- **euro-office document flow** (folds into the FS doctrine P2) — Puter (`os.<tld>`) create
+  → euro-office editor → files in `tenants/<t>/users/<uid>/documents/` → auto-mapped to
+  KEAP. Current bug: euro-office welcome page renders but the sample document doesn't open;
+  triage after the FS-doctrine P1/P2 gives documents a home.
+
 ### P0 — roadmap truth (security truth now closed)
 - **Doc reconciliation** (NOW #3) — fix the counts in CLAUDE.md:350 + active-work.md
   (still claim the stale 14/71/2-of-87) and add the 2026-07-08 shipped list.
