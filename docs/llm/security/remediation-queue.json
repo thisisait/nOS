@@ -1544,13 +1544,14 @@
       "fix_version": "2026.6.0",
       "remediation_type": "version_bump",
       "remediation_detail": "CVE-2026-54317 (upstream HIGH) \u2014 Home Assistant Konnected alarm-panel switch state + zone topology disclosed to UNAUTHENTICATED actors on the LAN; fixed in Core 2026.6.0 (vulnerable < 2026.6.0), published 2026-06-19. The pinned homeassistant_version 2026.4 is affected. Bump homeassistant_version 2026.4 -> 2026.6.0 (default.config.yml source-of-truth + role default). nOS context lowers real-world severity to MEDIUM: (a) install_homeassistant=false (disabled by default); (b) the disclosure is specific to the Konnected alarm-panel integration \u2014 only active if an operator adds a Konnected device; (c) the container binds 127.0.0.1:8123 (host network_mode only when homeassistant_privileged=true); (d) Traefik routes HA in native-OIDC mode (traefik_auth_modes['homeassistant']='oidc', HA's own login + auth_oidc HACS plugin). Resolved-by-pin and logged for the record (no action): CVE-2026-33045/33044 (stored XSS, fix 2026.01), CVE-2025-65713 (directory traversal, fix 2025.8.0), CVE-2025-62172 (energy-dashboard stored XSS, fix 2025.10.2) \u2014 all covered by 2026.4. NOT applicable: CVE-2026-44698 (companion mobile-app token exfiltration/RCE) targets the iOS/Android companion apps, not the HA Core server image nOS runs. RE-VERIFIED cycle-16 batch-10 (2026-06-30): STILL PENDING at the pinned 2026.4; the home-assistant.io/security advisory list shows NO Core server CVE with a fixed version newer than 2026.6.0, so the bump target is unchanged. The two new June-2026 advisories are mobile-app only and N/A to the Core server image: CVE-2026-55844 (HIGH 7.5, iOS Companion app ignores the internal-SSID allowlist -> token/sensor-data leak, fix iOS 2026.5.0) + CVE-2026-54318 (HIGH 7.1, Android BroadcastReceiver spoofing, fix Android 2026.5.3).",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2026-54317",
       "confidence": "high",
       "found_at": "2026-06-20T04:08:33+02:00",
       "scan_cycle": 16,
-      "resolved_at": null
+      "resolved_at": "2026-07-16",
+      "resolution": "live-verified: iiab-homeassistant-1 running homeassistant/home-assistant:2026.6.0, stable (no restart-loop). Bumped default.config.yml + role default (shadow)."
     },
     {
       "id": "REM-095",
@@ -1647,16 +1648,18 @@
       "component": "portainer",
       "severity": "HIGH",
       "current_version": "2.27.3",
-      "fix_version": "2.33.8 (supported LTS)",
+      "fix_version": "2.33.8",
       "remediation_type": "version_bump",
       "remediation_detail": "Portainer 2.27 LTS reached END-OF-LIFE in Nov 2025 (superseded by 2.33 LTS) \u2014 pin 2.27.3 receives ZERO further security patches. A 2026 container-escape cluster was disclosed: CVE-2026-44848 + CVE-2026-44849 (both CRITICAL 9.4) \u2014 an AUTHENTICATED non-admin user with Docker/Swarm endpoint access reaches host-root RCE (missing authz on Docker plugin endpoints; Swarm service create/update skips 6-7 of 7 security checks -> Linux caps / bind-mount). CVE-2026-44850/44881/44883/44882 (HIGH) add bind-mount-restriction bypass / Git-symlink arbitrary file read / JWT-in-URL token leak / k8s middleware authz bypass. NUANCE: the formal OSV/GHSA affected ranges all START at 2.33.0, so a version-keyed scanner reports 2.27.3 'clean' \u2014 but the advisory prose states the vulnerable validation logic 'has never' existed (every Swarm-capable release), so 2.27.3's paths are very likely exploitable, just officially un-fixed on the EOL line (hence confidence: medium on the cluster, high on the EOL fact). SEPARATELY the 2.27.x container IMAGE base layer almost certainly carries CVE-2025-15467 (HIGH 8.8, pre-auth OpenSSL CMS/PKCS#7 stack overflow -> DoS/RCE) with no rebuilt 2.27.x image. nOS MITIGATION (reduces, not removes): the host-RCE bugs need an authenticated Portainer session; Portainer is Tier-1 admin-only, native_oidc behind Authentik, 127.0.0.1:9002 loopback, and reaches Docker via docker-socket-proxy (REM-001) not the raw socket. REMEDIATION: bump portainer_version 2.27.3 -> a supported LTS (2.33.8; or STS 2.39.2 / 2.41.0), carrying the full 44848..44885 fix cluster AND the rebuilt-OpenSSL base image. Note: already-tracked CVE-2025-49593 (REM-034) is only partially closed on 2.27.3 \u2014 its Moderate header-leak variant (GHSA-h5jw-8c32-xfv6) fixes in 2.27.7.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/portainer/portainer/security/advisories/GHSA-rrmm-9v76-h3p4 ; https://github.com/portainer/portainer/security/advisories/GHSA-5fxq-qcf3-244w ; https://nvd.nist.gov/vuln/detail/CVE-2025-15467 ; https://docs.portainer.io/start/lifecycle",
       "confidence": "medium",
       "found_at": "2026-06-22T04:01:33+02:00",
       "scan_cycle": 16,
-      "rechecked_at": "2026-07-12T04:02:42+02:00"
+      "rechecked_at": "2026-07-12T04:02:42+02:00",
+      "resolved_at": "2026-07-16",
+      "resolution": "live-verified: infra-portainer-1 running portainer/portainer-ce:2.33.8 (no-hc, running); post-start OIDC/admin reconverge clean."
     },
     {
       "id": "REM-101",
@@ -2127,8 +2130,8 @@
       "LOW": 4
     },
     "by_status": {
-      "pending": 27,
-      "resolved": 92,
+      "pending": 25,
+      "resolved": 94,
       "vendor-blocked": 3
     },
     "auto_fixable": 101,

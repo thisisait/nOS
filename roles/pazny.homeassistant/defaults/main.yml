@@ -7,7 +7,7 @@
 # Role defaults poskytuji fallback hodnoty.
 # ==============================================================================
 
-homeassistant_version: "2026.4"                     # CVE-2026-34205 pin (Supervisor bypass); aligned with default.config.yml (source of truth — bump there too)
+homeassistant_version: "2026.6.0"                     # CVE-2026-34205 pin (Supervisor bypass); aligned with default.config.yml (source of truth — bump there too)
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"

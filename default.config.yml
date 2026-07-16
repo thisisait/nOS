@@ -1501,7 +1501,7 @@ woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
 
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
-portainer_version: "2.27.3"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
+portainer_version: "2.33.8"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
 portainer_data_dir: "{{ ansible_facts['env']['HOME'] }}/portainer"
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 # Self-heal an admin-password DRIFT (admin exists but neither the current nor
@@ -1818,7 +1818,7 @@ hermes_web_port: 18790
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "2026.4"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
+homeassistant_version: "2026.6.0"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
