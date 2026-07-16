@@ -182,9 +182,19 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   live-verified `infra-traefik-1` healthy + routes green; queue → resolved
   (**31 pending / 88 resolved / 3 vendor-blocked** of 122).
 - **Security agents run** (stale since 2026-06-15): scout drift-scan surfaced a HIGH
-  (wing.db write-lock contention, see P1) + a MEDIUM telemetry gap; remediator triage
+  (wing.db write-lock contention) + a MEDIUM telemetry gap; remediator triage
   cleared the two open findings (GHSA advisory-IDs mis-flagged by gitleaks →
   allowlisted, `gitleaks detect` now clean).
+- **wing.db `database is locked` (scout HIGH) — FIXED + live-deployed.** WAL is an
+  on-file property but a per-connection busy timeout was missing on **13 of 15**
+  wing.db writer scripts, so the losing concurrent writer failed instantly rather than
+  waiting (hourly recurrences on `dispatch-notifications` + breach escalate). Added
+  `busyTimeout(5000)` / `PDO::ATTR_TIMEOUT=5s` to all 13, pinned by
+  `test_wing_db_busy_timeout.py`, deployed live via `--tags wing` (daemon reloaded,
+  deployed scripts carry the timeout).
+- **KEAP rebuilt to v1.6.2 live** — `nos/keap:1.6.2` healthy, self-report 1.6.2 (image
+  == tag == package.json), `KEAP_PUBLIC_URL` live, corpus 1750 nodes / 3036 embeddings;
+  the version-coherence loop is closed on the running container, not just in the repo.
 - **GitLab forge reconciled** — the 3 open MRs (#2/#3/#4 = the upgrade→migration→
   coexistence epic) were **stale fake-leads** (content already on dev via the GitHub
   trunk); closed with provenance notes + GitLab `dev` force-synced to trunk
@@ -250,12 +260,9 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   agent_* tables are unpurged.
 - **[S] Infisical MTI oauth2/proxy orphan render fix** — the aggregator still emits an
   orphan OAuth2Provider for a forward_auth service; reappears every apply.
-- **[S] wing.db write-lock contention** (scout HIGH, 2026-07-15) — `gdpr-breach:breach-
-  deadline-scan` (`rc=3 escalate failed: database is locked`) + `wing:dispatch-
-  notifications` (`SQLite3Exception` at `dispatch-notifications.php:104`) fail on a
-  `database is locked` **4×/7d — structural, not transient**, each recovering the next
-  hourly run. Fix: WAL mode + `busy_timeout` on the wing.db writer paths. Recurs hourly
-  until fixed; low blast radius (self-recovers) but noisy + a real concurrency defect.
+- ~~**[S] wing.db write-lock contention** (scout HIGH, 2026-07-15)~~ — **DONE
+  2026-07-15**: `busyTimeout` added to all 13 unprotected wing.db writers + regression
+  gate + live-deployed (`--tags wing`). See the shipped block above.
 
 ### P2 — feature tails + robustness
 - **[M] VirtioFS class-risk doctrine** — the gitlab puma socket is **fixed** (tmpfs,
