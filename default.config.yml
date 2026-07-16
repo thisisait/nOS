@@ -2044,7 +2044,7 @@ puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
-keap_version: "1.6.2"                          # nos/keap image tag — MUST match keap_repo_ref (v1.6.2) so the label is honest
+keap_version: "1.7.0"                          # nos/keap image tag — MUST match keap_repo_ref (v1.7.0) so the label is honest
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
