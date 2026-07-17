@@ -112,6 +112,18 @@
   register: _wing_frankenphp_install
   when: ansible_os_family == 'Darwin'
 
+# frankenphp dynamically links libsybdb.5.dylib from freetds (a transitive dep).
+# `brew autoremove` has been observed to prune freetds as an "unused" leaf,
+# leaving frankenphp with a DANGLING dylib → dyld abort → `--version` returns
+# rc=-6 empty and the preflight below refuses. Installing freetds EXPLICITLY
+# makes it a leaf brew won't autoremove; `state: present` is a no-op once there,
+# so this also self-heals a host where it was already pruned.
+- name: "[pazny.wing] Ensure frankenphp runtime dep freetds (autoremove-proof)"
+  community.general.homebrew:
+    name: freetds
+    state: present
+  when: ansible_os_family == 'Darwin'
+
 # ---- Linux: static binary (self-contained PHP — NEEDS-VM-VALIDATION) ----
 # FrankenPHP ships a static per-arch binary on GitHub releases; its embedded
 # PHP also runs composer via `frankenphp php-cli`, so no separate php package
