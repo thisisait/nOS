@@ -1779,6 +1779,13 @@ docker_autoheal_external_mount: false
 #   offline/pre-loaded-registry replica can point it at a locally-present image.
 docker_mount_probe_image: "alpine:3"
 
+# tofu_reconcile_async_timeout: seconds budget for the tofu-Authentik state-PK
+# self-reconcile preflight (tasks/tofu-authentik.yml). It re-imports every
+# drifted provider on a non-blank re-converge (blueprints churn all PKs), which
+# is dozens of ~2-4s tofu spawns → minutes. Runs async with a heartbeat wait so
+# ansible.log shows liveness; tail ~/.nos/tofu-reconcile.progress for detail.
+tofu_reconcile_async_timeout: 600
+
 # coexistence_secondary_ttl_days: cooling window applied to the PRIOR primary
 # when a coexistence track is promoted (it becomes a read-only secondary). This
 # is the one-click-rollback window — re-promote the demoted track within it to

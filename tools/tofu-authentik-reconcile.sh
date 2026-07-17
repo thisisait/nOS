@@ -84,6 +84,21 @@ statepk_for() { echo "$STATEPK" | awk -v s="$1" '$1==s{print $2; exit}'; }
 
 RECON=0; ALIGNED=0; SKIP=0; FAILS=0
 : > /tmp/reconcile-err.log
+
+# Live progress (the loop below is ~2-4s per DRIFTED service — dozens on a
+# non-blank re-converge where the blueprints churn every provider PK — so the
+# wrapping Ansible task looks "frozen" for minutes). Write one overwritten line
+# to ~/.nos so an operator/agent can `tail -f` it; tasks/tofu-authentik.yml runs
+# this async and heartbeats the same file into ansible.log. TOTAL = registry size.
+PROG="${HOME}/.nos/tofu-reconcile.progress"
+mkdir -p "${HOME}/.nos" 2>/dev/null || true
+TOTAL="$(python3 -c "
+import yaml
+print(len(yaml.safe_load(open('$REG'))['tofu_authentik_services']))" 2>/dev/null || echo '?')"
+N=0
+progress() {  # <slug>
+  echo "reconcile: ${N}/${TOTAL} services  (reconciled=${RECON} aligned=${ALIGNED} skipped=${SKIP} fails=${FAILS})  current=${1}" > "$PROG" 2>/dev/null || true
+}
 BACKED_UP=0
 backup_once() {
   [ "$DRY" = 1 ] && return
@@ -105,6 +120,7 @@ reimport() {  # <address> <id>
 
 while IFS=' ' read -r slug mode; do
   [ -z "$slug" ] && continue
+  N=$((N+1)); progress "$slug"
   spk="$(statepk_for "$slug")"
   [ -z "$spk" ] && { SKIP=$((SKIP+1)); continue; }   # not in tofu state → not managed
   pk="$(pk_for "$slug")"
@@ -124,6 +140,7 @@ import yaml
 for s in yaml.safe_load(open('$REG'))['tofu_authentik_services']:
     print(s['slug'], s['mode'])")
 
+echo "reconcile: ${N}/${TOTAL} services  (reconciled=${RECON} aligned=${ALIGNED} skipped=${SKIP} fails=${FAILS})  DONE" > "$PROG" 2>/dev/null || true
 echo "[reconcile] reconciled=$RECON aligned=$ALIGNED skipped=$SKIP import-fails=$FAILS"
 [ "$DRY" = 1 ] && exit 0
 [ "$MODE" = preflight ] && exit 0
