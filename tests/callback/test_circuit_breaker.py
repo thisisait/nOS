@@ -124,6 +124,40 @@ def test_5xx_is_retried(monkeypatch):
     assert len(fake.calls) == 3  # 5xx is transient — all retries used
 
 
+def test_secret_reheal_on_401(monkeypatch, tmp_path):
+    """Mid-run secret rotation (a blank regenerates the HMAC secret after the
+    callback loaded it): a 401 re-reads secrets.yml, rebuilds the transport with
+    the fresh secret, and does NOT count toward the circuit-breaker."""
+    from callback_plugins import wing_telemetry as gt
+
+    monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK", str(tmp_path / "fb.db"))
+    monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "1")
+    monkeypatch.setenv("WING_EVENTS_URL", "http://127.0.0.1:9/api/v1/events")
+
+    plugin = gt.CallbackModule()
+    plugin._finalize_activation({"wing_telemetry_enabled": True})
+    plugin._consecutive_failures = 0
+    plugin._telemetry_disabled = False
+    plugin._secret = "STALE-SECRET"
+
+    # secrets.yml now holds the rotated value.
+    monkeypatch.setattr(gt, "load_hmac_secret_fallback",
+                        lambda *a, **k: "FRESH-SECRET")
+
+    class Auth401:
+        def send_batch(self, events):
+            raise gt.TransportError("bad status 401: invalid signature")
+
+    plugin._http = Auth401()
+    plugin._emit("task_ok", task="a")  # 401 → re-heal
+
+    assert plugin._secret == "FRESH-SECRET"
+    assert plugin._consecutive_failures == 0        # not counted as a failure
+    assert plugin._telemetry_disabled is False
+    assert not isinstance(plugin._http, Auth401)     # transport rebuilt
+
+
 def test_unrendered_template_playvars_are_rejected(monkeypatch, tmp_path):
     """play.get_vars() returns RAW templates. A literal "{{ … }}" URL/secret
     must NEVER be used — the callback keeps DEFAULT_URL and the secrets.yml

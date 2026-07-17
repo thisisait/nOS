@@ -786,6 +786,26 @@ class CallbackModule(CallbackBase):
                 self._http.send_batch(batch)
             self._consecutive_failures = 0  # success — reset the breaker
         except TransportError as exc:
+            # Mid-run secret-rotation self-heal (mirrors the Bone-side self-heal):
+            # a blank REGENERATES wing_events_hmac_secret AFTER the callback loaded
+            # it at process start, so Bone (reloaded to the new secret) 401s the
+            # callback and every per-task event spills to fallback (live 2026-07-17:
+            # ~150 task_ok/task_start rows in the fallback, 0 in wing.db). On a 401,
+            # re-read secrets.yml; if it rotated, rebuild the transport and DON'T
+            # count this as a breaker failure — the NEXT flush signs with the fresh
+            # secret and lands in Bone; this batch spills to fallback (drains later).
+            if "401" in str(exc):
+                fresh = load_hmac_secret_fallback()
+                if fresh and fresh != self._secret:
+                    self._secret = fresh
+                    self._http = HTTPTransport(url=self._url, secret=self._secret)
+                    self._consecutive_failures = 0
+                    if self._sqlite is not None:
+                        try:
+                            self._sqlite.enqueue(batch)
+                        except sqlite3.Error:
+                            pass
+                    return
             self._consecutive_failures += 1
             if self._consecutive_failures >= self._failure_threshold:
                 # Trip the breaker: stop trying for the rest of the run. Do NOT
