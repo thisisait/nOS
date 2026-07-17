@@ -37,6 +37,17 @@
 - name: "[pazny.woodpecker Post Repo] Activate nOS repo (token present)"
   when: woodpecker_api_token | default('') | length > 0
   block:
+    # Reach Woodpecker over its loopback-published port, NOT the public domain.
+    # The Bearer-token API endpoints are host-agnostic, so a loopback call works
+    # exactly like the Gitea calls below — and it does NOT depend on the host
+    # being able to resolve woodpecker_domain (a public subdomain that may have
+    # no DNS record on a local/CF-DNS-only tenant → the run died here with
+    # "nodename nor servname provided" on 2026-07-17). Loopback also bypasses the
+    # CloudFlare edge, matching the local-first-forge doctrine.
+    - name: "[pazny.woodpecker Post Repo] Resolve loopback API base"
+      ansible.builtin.set_fact:
+        _woodpecker_api: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}"
+
     - name: "[pazny.woodpecker Post Repo] Discover Gitea forge_remote_id"
       no_log: true   # Basic-auth embeds gitea_admin_password (SEC-18 gap)
       ansible.builtin.uri:
@@ -54,35 +65,52 @@
       # list from Gitea — so a bare /api/repos?forge_remote_id=<id> activate
       # returns "forge repo not found". POST /api/user/repos?flush=true tells
       # Woodpecker to re-query Gitea and rebuild the available-repos cache.
+      # TOLERANT: a persisted woodpecker_api_token (credentials.yml) references
+      # user-id 1, but on a blank Woodpecker's DB is fresh and NO user exists
+      # until the first OAuth login → this 401s. Repo activation is a post-login
+      # convenience (same as the empty-token branch above), so a failure here
+      # must NOT fatal a release run; degrade + guide the operator instead.
       ansible.builtin.uri:
-        url: "https://{{ woodpecker_domain }}/api/user/repos?all=true&flush=true"
+        url: "{{ _woodpecker_api }}/api/user/repos?all=true&flush=true"
         method: POST
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 204]
-        validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
-      changed_when: true
+      register: _woodpecker_flush
+      failed_when: false
+      changed_when: (_woodpecker_flush.status | default(0)) in [200, 204]
+
+    - name: "[pazny.woodpecker Post Repo] Activation deferred — token not yet valid"
+      ansible.builtin.debug:
+        msg: >-
+          Woodpecker repo activation skipped (flush returned
+          {{ _woodpecker_flush.status | default('unreachable') }}). The persisted
+          API token isn't valid until the operator completes the first OAuth
+          login (Woodpecker's DB is fresh on a blank). After login, re-run:
+          ansible-playbook main.yml --tags woodpecker
+      when: (_woodpecker_flush.status | default(0)) not in [200, 204]
 
     - name: "[pazny.woodpecker Post Repo] Check if repo is already activated"
+      when: (_woodpecker_flush.status | default(0)) in [200, 204]
       no_log: true   # Bearer header embeds woodpecker_api_token
       ansible.builtin.uri:
-        url: "https://{{ woodpecker_domain }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
+        url: "{{ _woodpecker_api }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
         method: GET
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 404]
-        validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
       register: _woodpecker_repo_check
       changed_when: false
 
     - name: "[pazny.woodpecker Post Repo] Activate nOS repo (first run only)"
       no_log: true   # Bearer header embeds woodpecker_api_token
       ansible.builtin.uri:
-        url: "https://{{ woodpecker_domain }}/api/repos?forge_remote_id={{ _woodpecker_gitea_repo.json.id }}"
+        url: "{{ _woodpecker_api }}/api/repos?forge_remote_id={{ _woodpecker_gitea_repo.json.id }}"
         method: POST
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 201, 409]
-        validate_certs: "{{ not (tenant_domain_is_local | default(true) | bool) }}"
-      when: _woodpecker_repo_check.status == 404
+      when:
+        - (_woodpecker_flush.status | default(0)) in [200, 204]
+        - (_woodpecker_repo_check.status | default(0)) == 404
       changed_when: true
