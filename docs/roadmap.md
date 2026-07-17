@@ -200,6 +200,44 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   trunk); closed with provenance notes + GitLab `dev` force-synced to trunk
   (`archive/dev-fakelead-ed11b624` preserves the old tip). 0 open MRs.
 
+## Shipped this session (2026-07-17) — release-blank hardening + resilience doctrine
+
+Driven by iterating a full `blank + all-on + gov-local` to green. Each failure was a
+real robustness gap, not a one-off; fixes are structural.
+
+- **Telemetry can never wedge a run (5 commits).** A callback↔Bone HMAC secret desync
+  made every event 401 → spilled to an UNBOUNDED `/tmp` SQLite (258 MB) an IDE indexer
+  had locked → per-event page-cache thrash CRAWLED a release blank for minutes.
+  Defensive: **circuit-breaker** (disable after N consecutive fails, no POST/no spill),
+  fallback `/tmp`→`~/.nos` + **ring cap** + WAL/busy_timeout, **4xx-no-retry**. Root:
+  the callback signed with an un-rendered `{{ … }}` URL AND a self-referential secret
+  template — now renders only the URL and reads the secret from `secrets.yml` (==
+  Bone's plist secret, end-to-end proven 200/insert); Bone **self-heals** a stale env
+  secret inline (signed-ping → reload) independent of end-of-play handler flush. New
+  doctrine: [`docs/doctrine/observability.md`](doctrine/observability.md).
+- **External-volume mount preflight + self-heal** — a remounted external SSD leaves
+  Docker Desktop's VM a stale `/host_mnt` ref → every bind-mount fails, containers stick
+  in `Created`, the STRICT health-wait hangs ~20 min with no clue. Probe before the
+  first `compose up`; on blank, restart Docker Desktop and re-probe (no manual restart);
+  else fail fast with the remedy. (Folds into the macOS-27 "Docker-Desktop preflight".)
+- **Gitea OIDC source registration** — `gitea admin auth add-oauth --auto-discover-url`
+  fetches `https://auth.<tld>/…` server-side, but the container had no `auth.<tld>` host
+  mapping → Docker DNS can't resolve a public TLD → add-oauth failed silently and the
+  loud verify caught an empty auth list (blank died at ok=1262). Added
+  `auth.<tld>:host-gateway` (+ mkcert CA for local), matching nextcloud-base; live-proven
+  discovery 200. **Class-risk:** other native_oidc services that fetch discovery at
+  provisioning time may share the gap → folds into the "native_oidc runtime-verify" epic.
+- **Woodpecker post-repo** — routed the 3 Bearer API calls through `127.0.0.1:port`
+  (public-domain DNS fatal) + made repo activation blank-tolerant (stale persisted token
+  vs fresh WP DB degrades to a notice, not a play failure).
+- **tofu Authentik reconcile is heartbeat-visible** — dozens of serial `tofu import`s on
+  a non-blank re-converge looked FROZEN (~3 min, one task line); now async +
+  `async_status` liveness + a `~/.nos/tofu-reconcile.progress` counter.
+- **Nextcloud OnlyOffice connector** — guarded against an uninstalled NC (the one occ
+  post-task missing the `__NC_NOT_INSTALLED__` sentinel fataled the whole play).
+- **Portable-SSD offline replication** captured as a roadmap `[XL]` epic (P2) + memory —
+  the external-mount preflight is its shipped prerequisite.
+
 ## NOW — the immediate queue
 
 0. **[operator] Master release reconciliation — release debt is 6 weeks deep.** master
