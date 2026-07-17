@@ -331,6 +331,23 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   never subject-purged) + DSAR/export bundle encryption.
 - **[M] RustFS / OpenWebUI / Woodpecker CVE clusters** (pending, not vendor-blocked).
 - **[M] Wing-on-Linux validation** (drop the `install_wing:false` stale workaround).
+- **[XL] Portable-SSD offline replication** (NEW 2026-07-17, extends the "fully
+  replicable / all data local" vision to physical media) — unplug the data SSD,
+  move it to another Apple-Silicon Mac (PoC: Mac Studio, compatibility), run one
+  script on the SSD, and nOS comes up — **optimally fully offline** (images +
+  libraries pre-seeded, no registry/galaxy/brew network fetch). Builds on the FS
+  doctrine (data already on `nos_data_root`=external SSD). Blocks/needs:
+  **(1) images** — a `docker save` bundle or a local OCI registry mirror on the
+  SSD, populated by a `seed` step, `docker load`ed offline on the target;
+  **(2) libraries** — vendor the brew bottles cache, the lockfile-pinned galaxy
+  collections, pip wheels (Bone/Pulse venvs), and git-cloned sources (keap etc.)
+  onto the SSD; **(3) a `bootstrap.sh` at the SSD root** — checks/installs Docker
+  Desktop, `docker load`s the image bundle, sets `nos_data_root` to the SSD, and
+  runs the playbook in **(4) an offline profile** that skips every network fetch
+  and consumes only the vendored caches. The external-mount preflight (shipped
+  2026-07-17) is a prerequisite — the target Mac WILL hit the stale-mount case on
+  first plug-in, and the preflight now self-heals it. Design-first; needs a plan
+  doc + `profiles/offline.yml` before any build.
 - **[S] Roadmap consolidation** — ✅ 2026-07-14: the 59 plan docs were triaged (2-agent
   survey); 14 done/resolved moved to `docs/archive/`, the opens folded into this backlog
   (below). Remaining: **add a machine-checkable active-work freshness gate** (the 150-line
