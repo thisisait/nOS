@@ -50,8 +50,8 @@
   (`tools/tofu-authentik-reconcile.sh --preflight`, via the stable
   `application.slug → provider` bridge). PROVEN live (3-converge arc). The
   destroy-guard now also catches dangerous in-place UPDATEs (`d4647b49`).
-- **Version-pin drift wave (post-Gitea):** ~28 pending, 1 CRITICAL (REM-002
-  Woodpecker). Gitea (REM-099) closed first via the agentic recipe path — the
+- **Version-pin drift wave (post-Gitea):** ~13 pending, 0 CRITICAL (REM-002
+  Woodpecker resolved). Gitea (REM-099) closed first via the agentic recipe path — the
   template for the rest (GitLab REM-016 → 18.11.7, etc.). Mechanical same-org bumps.
 - **Architect at-target refresh drafts (2026-07-09 sweep, uncommitted):** the
   upgrade-architect also drafted `freescout-2.1-current`, `gitlab-18-to-current`
@@ -64,7 +64,7 @@
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
   track; queued by upgrade-advisor this session (`coexistence_planned`); the actual
   cutover (logical dump/restore + atomic switch) is still operator-gated.
-- **Security backlog:** ~36 pending / 79 resolved / 3 vendor-blocked
+- **Security backlog:** ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix
   (`docs/llm/security/remediation-queue.json`); dominated by the pin wave above.
   Phase C hardening + Phase D architectural remain.
 - **Gov P0 (profile-gated, not blocking non-gov):** ISDS + NIA/eIDAS federation
@@ -100,7 +100,7 @@
 | CI | **all jobs green** on dev HEAD (pytest + contracts drift were red 3 commits, now fixed) |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
 | Upgrades | Gitea 1.26.4 armed (agent-authored recipe+migration); PG17 coexistence queued |
-| Remediation queue | ~36 pending / 79 resolved / 3 vendor-blocked (pin wave dominant) |
+| Remediation queue | ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix (pin wave dominant) |
 
 ## Update protocol
 

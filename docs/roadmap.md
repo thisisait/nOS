@@ -180,7 +180,9 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   bypass (`X_authentik_groups` survives `Header.Del` → identity/RBAC forgery on the SSO
   gate) + X-Forwarded-Proto inject. Bumped `traefik_image_version` v3.6.21→**v3.6.23**,
   live-verified `infra-traefik-1` healthy + routes green; queue → resolved
-  (**31 pending / 88 resolved / 3 vendor-blocked** of 122).
+  (**31 pending / 88 resolved / 3 vendor-blocked** of 122 — mid-session snapshot; the
+  same-day queue regen reconciled to **13 pending / 104 resolved / 4 vendor-blocked /
+  1 wontfix**, see the Doc reconciliation section for the authoritative current count).
 - **Security agents run** (stale since 2026-06-15): scout drift-scan surfaced a HIGH
   (wing.db write-lock contention) + a MEDIUM telemetry gap; remediator triage
   cleared the two open findings (GHSA advisory-IDs mis-flagged by gitleaks →
@@ -552,8 +554,9 @@ real robustness gap, not a one-off; fixes are structural.
   re-plan shipped work or miss live-degraded services.
 
 ## Doc reconciliation
-- **Security counts**: CLAUDE.md:~350 + active-work.md → **36 pending / 79 resolved /
-  3 vendor-blocked of 118**. Vendor-blocked set = FreePBX-only (REM-014/046/113).
+- **Security counts** (✅ RECONCILED 2026-07-15 against `remediation-queue.json`): CLAUDE.md:~350
+  + active-work.md → **13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix of 122**
+  (0 CRITICAL pending). Vendor-blocked set = FreePBX (REM-014/046/113) **+ Ollama (REM-126)**.
 - **CLAUDE.md "Recently shipped"** — add the 2026-07-08 batch (REM-107/110/118 + qgis +
   gitlab-VirtioFS + puter + first upgrade recipe), reset-scope 1-4, macOS 1-3c
   (live-validated), migration-author Phase-4, sso-autologin epic. Fix the ERPNext bullet
