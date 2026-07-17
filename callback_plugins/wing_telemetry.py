@@ -540,6 +540,41 @@ class CallbackModule(CallbackBase):
 
     # ----- activation / schema ---------------------------------------------
 
+    def _render_playvars(self, play, play_vars, keys):
+        """play.get_vars() returns RAW, UN-templated vars — so a play-scope var
+        like  wing_events_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/…"
+        or    wing_events_hmac_secret: "{{ wing_events_hmac_secret | default(...) }}"
+        reaches the callback as a literal "{{ … }}" string. Left unrendered, the
+        callback POSTs to an unparseable URL and SIGNS with a literal-template
+        "secret" → every event 401s (live 2026-07-17: the circuit-breaker tripped
+        with "Failed to parse: …/{{ bone_port | default(8099) }}/…").
+
+        Render exactly the keys the callback consumes, through the play's own
+        Templar, so it uses the SAME resolved values ansible renders elsewhere
+        (notably Bone's plist WING_EVENTS_HMAC_SECRET → guaranteed to match).
+        Best-effort: on ANY templating failure, DROP the raw value so the
+        env / DEFAULT_URL / secrets.yml fallback wins instead of a broken literal.
+        """
+        for k in keys:
+            v = play_vars.get(k)
+            if not isinstance(v, str) or "{{" not in v:
+                continue
+            rendered = None
+            try:
+                from ansible.template import Templar
+                templar = Templar(loader=getattr(play, "_loader", None),
+                                  variables=play_vars)
+                rendered = templar.template(v)
+            except Exception:  # noqa: BLE001 — filters may be unloaded here
+                rendered = None
+            if isinstance(rendered, str) and "{{" not in rendered:
+                play_vars[k] = rendered
+            else:
+                # Un-renderable → remove it so the caller's fallback (env var,
+                # DEFAULT_URL, or the secrets.yml-loaded secret) takes over.
+                play_vars.pop(k, None)
+        return play_vars
+
     def _finalize_activation(self, play_vars):
         was_active = self._active
         if self._activated_by_env:
@@ -555,8 +590,12 @@ class CallbackModule(CallbackBase):
         # exist), prefer it over the hardcoded DEFAULT_URL. The env var
         # WING_EVENTS_URL still wins because it's the most explicit signal.
         env_url = os.environ.get("WING_EVENTS_URL", "")
-        if not env_url and play_vars and play_vars.get("wing_events_url"):
-            self._url = play_vars["wing_events_url"]
+        _pv_url = play_vars.get("wing_events_url") if play_vars else None
+        # Never accept an un-rendered template — a literal "{{ … }}" URL is
+        # unparseable; keep DEFAULT_URL (correct for the default bone_port) or
+        # the explicit env var instead.
+        if not env_url and _pv_url and "{{" not in _pv_url:
+            self._url = _pv_url
         # Late SECRET resolution mirroring URL: if the operator set
         # wing_events_hmac_secret at play scope (typical now that the
         # 2026-05-03 fix removed it from ~/.nos/secrets.yml — its
@@ -571,8 +610,12 @@ class CallbackModule(CallbackBase):
         # apps_runner's explicit HMAC POST landed). Surfaced 2026-05-04
         # during sanity check after the live Qdrant verification.
         env_secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "")
-        if not env_secret and play_vars and play_vars.get("wing_events_hmac_secret"):
-            self._secret = play_vars["wing_events_hmac_secret"]
+        _pv_secret = play_vars.get("wing_events_hmac_secret") if play_vars else None
+        # Never sign with an un-rendered template — a literal "{{ … }}" secret
+        # produces a signature Bone can't match (401 every event). Keep the
+        # secrets.yml-loaded value from __init__ instead.
+        if not env_secret and _pv_secret and "{{" not in _pv_secret:
+            self._secret = _pv_secret
         if self._http is None:
             self._http = HTTPTransport(url=self._url, secret=self._secret)
         if self._sqlite is None:
@@ -882,6 +925,14 @@ class CallbackModule(CallbackBase):
             play_vars = play.get_vars() if hasattr(play, "get_vars") else {}
         except Exception:  # noqa: BLE001
             play_vars = {}
+        # get_vars() returns RAW templates — render the values the callback
+        # consumes so it never uses a literal "{{ … }}" URL or secret.
+        try:
+            play_vars = self._render_playvars(
+                play, play_vars,
+                ("wing_events_url", "wing_events_hmac_secret"))
+        except Exception:  # noqa: BLE001 — never let rendering break the run
+            pass
         if not self._active:
             self._finalize_activation(play_vars)
             if self._active:

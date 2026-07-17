@@ -25,6 +25,10 @@ def _make_plugin(monkeypatch, tmp_path, threshold=None):
     monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "fallback.db"))
     monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "1")  # flush every event
+    # Hermetic: point the transport at a black-hole port so activation-time
+    # emits (retro playbook_start + fallback drain) never touch a real Bone that
+    # happens to be running on this box (127.0.0.1:8099 = DEFAULT_URL).
+    monkeypatch.setenv("WING_EVENTS_URL", "http://127.0.0.1:9/api/v1/events")
     if threshold is not None:
         monkeypatch.setenv("WING_EVENTS_FAILURE_THRESHOLD", str(threshold))
     plugin = gt.CallbackModule()
@@ -67,6 +71,9 @@ def test_success_resets_the_breaker(monkeypatch, tmp_path):
                 raise gt.TransportError("temporary 503")
 
     plugin._http = FlakyThenOK()
+    # Start from a known state — activation-time emits are not what we test here.
+    plugin._consecutive_failures = 0
+    plugin._telemetry_disabled = False
     for i in range(6):
         plugin._emit("task_ok", task="t%d" % i)
 
@@ -115,6 +122,31 @@ def test_5xx_is_retried(monkeypatch):
     except gt.TransportError:
         pass
     assert len(fake.calls) == 3  # 5xx is transient — all retries used
+
+
+def test_unrendered_template_playvars_are_rejected(monkeypatch, tmp_path):
+    """play.get_vars() returns RAW templates. A literal "{{ … }}" URL/secret
+    must NEVER be used — the callback keeps DEFAULT_URL and the secrets.yml
+    secret instead of signing/POSTing with a broken literal (live 2026-07-17:
+    'Failed to parse: …/{{ bone_port | default(8099) }}/…')."""
+    from callback_plugins import wing_telemetry as gt
+
+    monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
+                       str(tmp_path / "fb.db"))
+    monkeypatch.delenv("WING_EVENTS_URL", raising=False)
+    monkeypatch.delenv("WING_EVENTS_HMAC_SECRET", raising=False)
+
+    plugin = gt.CallbackModule()
+    plugin._finalize_activation({
+        "wing_telemetry_enabled": True,
+        "wing_events_url": "http://127.0.0.1:{{ bone_port | default(8099) }}/api/v1/events",
+        "wing_events_hmac_secret": "{{ wing_events_hmac_secret | default(bone_secret) }}",
+    })
+
+    assert "{{" not in plugin._url
+    assert plugin._url == gt.CallbackModule.DEFAULT_URL
+    assert plugin._secret is None or "{{" not in str(plugin._secret)
 
 
 def test_default_fallback_path_is_private_sidecar_not_tmp():
