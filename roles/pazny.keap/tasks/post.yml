@@ -81,6 +81,12 @@
 - name: "[pazny.keap] Kick keap-embed-sync for new knowledge (best-effort)"
   ansible.builtin.command:
     cmd: "{{ ansible_python_interpreter | default('python3') }} {{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
+  # Same env the Pulse job gets (plugin.yml keap-base) — without it the script
+  # exits "KEAP_AGENT_TOKEN_RW not set" and failed_when:false hid that, so the
+  # kick was a silent no-op on every converge (caught on the 2026-07-17 blank).
+  environment:
+    KEAP_API_URL: "http://127.0.0.1:{{ keap_port | default(8091) }}"
+    KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
   register: _keap_embed
   changed_when: false
   failed_when: false
