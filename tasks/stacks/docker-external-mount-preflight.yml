@@ -1,0 +1,115 @@
+---
+# ============================================================================
+# Docker external-volume mount preflight (macOS / Docker Desktop)
+#
+# WHY: when nos_data_root is redirected onto an external disk (/Volumes/<disk>
+# via external-paths.yml), Docker Desktop's Linux VM shares the PARENT /Volumes
+# over VirtioFS — but an external disk mounted UNDER /Volumes is a SEPARATE
+# macOS mount. If it is (re)mounted AFTER Docker Desktop started (reboot,
+# sleep/wake, eject+replug), the VM keeps a STALE /host_mnt/<path> reference and
+# every bind-mount fails at container-create with:
+#     error while creating mount source path '/host_mnt/Volumes/<disk>/...':
+#     mkdir /host_mnt/Volumes/<disk>: file exists
+# Containers then sit in `Created`, never start, and the STRICT health-wait
+# hangs the WHOLE run for the full stack_up_wait_timeout before failing with no
+# diagnosis (observed 2026-07-17: infra frozen at 3/11 for 59 ticks).
+#
+# This probe catches it in ~5s BEFORE the first `docker compose up` and:
+#   • on a blank run (or docker_autoheal_external_mount=true) → SELF-HEALS by
+#     restarting Docker Desktop and re-probing, so NO manual restart is needed;
+#   • otherwise (live non-blank system) → FAILS FAST with the exact remedy
+#     instead of a silent 20-min hang, and never surprise-restarts Docker under
+#     the operator's running containers.
+#
+# Linux has no VM/mount-propagation layer (bind mounts hit the host FS
+# directly), so the whole file is a no-op off Docker Desktop.
+# ============================================================================
+
+- name: "[Preflight] Resolve whether nos_data_root is on an external /Volumes disk"
+  ansible.builtin.set_fact:
+    _ext_mount_probe_needed: >-
+      {{ (ansible_os_family == 'Darwin')
+         and (nos_docker_ready | default(false) | bool)
+         and ((nos_data_root | default('')) is match('^/Volumes/')) }}
+  tags: ['core', 'always']
+
+- name: "External-mount preflight (only when data lives on an external /Volumes disk)"
+  when: _ext_mount_probe_needed | bool
+  tags: ['core', 'always']
+  block:
+    - name: "[Preflight] Probe: can the Docker VM bind-mount nos_data_root?"
+      ansible.builtin.command: >
+        {{ docker_bin }} run --rm --entrypoint true
+        -v {{ nos_data_root }}:/probe {{ docker_mount_probe_image | default('alpine:3') }}
+      register: _ext_probe
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    # A stale VM mount fails at container-create with a "mount source path" /
+    # "file exists" stderr — distinguish it from an ordinary run failure (bad
+    # image, etc.) so self-heal only fires for the propagation bug.
+    - name: "[Preflight] Classify the probe failure"
+      ansible.builtin.set_fact:
+        _ext_probe_stale: >-
+          {{ (_ext_probe.rc | default(1)) != 0
+             and (('file exists' in (_ext_probe.stderr | default('')))
+                  or ('mount source path' in (_ext_probe.stderr | default('')))) }}
+
+    - name: "[Preflight] Self-heal: restart Docker Desktop to re-propagate the mount"
+      when:
+        - _ext_probe_stale | bool
+        - (blank | default(false) | bool) or (docker_autoheal_external_mount | default(false) | bool)
+      block:
+        - name: "[Preflight] Quit Docker Desktop"
+          ansible.builtin.command: osascript -e 'quit app "Docker"'
+          changed_when: true
+          failed_when: false
+
+        - name: "[Preflight] Wait for the daemon to go down"
+          ansible.builtin.command: "{{ docker_bin }} info"
+          register: _dk_down
+          until: _dk_down.rc != 0
+          retries: 20
+          delay: 2
+          changed_when: false
+          failed_when: false
+          check_mode: false
+
+        - name: "[Preflight] Relaunch Docker Desktop"
+          ansible.builtin.command: open -a Docker
+          changed_when: true
+
+        - name: "[Preflight] Wait for the daemon to come back healthy"
+          ansible.builtin.command: "{{ docker_bin }} info"
+          register: _dk_up
+          until: _dk_up.rc == 0
+          retries: 90
+          delay: 3
+          changed_when: false
+          check_mode: false
+
+        - name: "[Preflight] Re-probe the external mount after restart"
+          ansible.builtin.command: >
+            {{ docker_bin }} run --rm --entrypoint true
+            -v {{ nos_data_root }}:/probe {{ docker_mount_probe_image | default('alpine:3') }}
+          register: _ext_probe
+          changed_when: false
+          failed_when: false
+          check_mode: false
+
+    - name: "[Preflight] Fail fast if the external mount is still not propagated"
+      ansible.builtin.fail:
+        msg: |
+          Docker Desktop's Linux VM cannot bind-mount the external data volume:
+              {{ nos_data_root }}
+          stderr: {{ _ext_probe.stderr | default('') | trim }}
+
+          The external disk was (re)mounted AFTER Docker Desktop started, so the
+          VM holds a stale /host_mnt reference. Recover with either:
+            1) Restart Docker Desktop (Quit + reopen), then re-run; OR
+            2) Re-run with  -e docker_autoheal_external_mount=true  to have the
+               playbook restart Docker Desktop for you.
+          Verify by hand:
+              {{ docker_bin }} run --rm -v {{ nos_data_root }}:/mnt alpine ls /mnt
+      when: (_ext_probe.rc | default(1)) != 0

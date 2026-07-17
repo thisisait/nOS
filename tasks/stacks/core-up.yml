@@ -409,6 +409,14 @@
   register: _observability_overrides
   check_mode: false
 
+# ── External-volume mount preflight (macOS / Docker Desktop) ────────────────
+# Catch a stale VM /host_mnt reference (external disk remounted after Docker
+# Desktop started) in ~5s BEFORE `up -d`, self-healing on blank — instead of a
+# silent 20-min health-wait hang with containers stuck in `Created`.
+- name: "[Core] Docker external-volume mount preflight"
+  tags: ['core', 'always']
+  ansible.builtin.include_tasks: docker-external-mount-preflight.yml
+
 # ── Start INFRA stack first (DB must be ready before anything else) ─────────
 
 # up -d (NO --wait): starts containers + does the image pull/build, returns

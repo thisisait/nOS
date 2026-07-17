@@ -1762,6 +1762,23 @@ stack_up_wait_timeout: 540
 # the log. 15s is a good balance of heartbeat freshness vs task-count noise.
 stack_wait_tick_interval: 15
 
+# ── External-volume mount preflight (macOS / Docker Desktop) ─────────────────
+# When nos_data_root is redirected onto an external disk (/Volumes/<disk>), an
+# external mount that was (re)mounted AFTER Docker Desktop started leaves the VM
+# with a stale /host_mnt reference — every bind-mount then fails and the whole
+# run hangs at the STRICT health-wait. tasks/stacks/docker-external-mount-
+# preflight.yml probes for this in ~5s before the first `docker compose up`.
+# docker_autoheal_external_mount: restart Docker Desktop automatically to
+#   re-propagate the mount when the probe finds it stale. Default false = fail
+#   fast with the remedy (never surprise-restart Docker under live containers);
+#   a `blank=true` run auto-heals regardless (from-scratch rebuild, nothing to
+#   lose). Set true to auto-heal on a non-blank run too.
+docker_autoheal_external_mount: false
+# docker_mount_probe_image: throwaway image used only to test the bind-mount
+#   (container exits immediately via --entrypoint true). Kept overridable so an
+#   offline/pre-loaded-registry replica can point it at a locally-present image.
+docker_mount_probe_image: "alpine:3"
+
 # coexistence_secondary_ttl_days: cooling window applied to the PRIOR primary
 # when a coexistence track is promoted (it becomes a read-only secondary). This
 # is the one-click-rollback window — re-promote the demoted track within it to
