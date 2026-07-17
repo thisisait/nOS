@@ -33,3 +33,71 @@
       Common causes: missing pyenv python ({{ bone_python }}), venv not built,
       port {{ bone_port }} occupied by leftover container, missing dep in venv.
       {% endif %}
+
+# ── HMAC secret self-heal (2026-07-17) ──────────────────────────────────────
+# The "Restart bone" handler does a full bootout+bootstrap so a rotated secret
+# reaches the running process — BUT handlers only flush at END of play, and a
+# run that FAILS earlier (as several release blanks did) leaves the new plist on
+# disk while Bone keeps the STALE env secret. Every telemetry event then 401s
+# for every subsequent run → the callback used to spill them all to a /tmp
+# SQLite that grew to 258 MB and crawled the run (fixed defensively by the
+# callback circuit-breaker; fixed at the ROOT here). This signed-ping self-test
+# is independent of the handler: if the running Bone can't verify our secret, we
+# reload it INLINE, right now, and re-verify — so telemetry actually flows.
+- name: "[pazny.bone] HMAC self-test (signed /events ping — detects secret desync)"
+  ansible.builtin.command:
+    argv: ["python3", "{{ role_path }}/files/hmac_selftest.py"]
+  environment:
+    WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default(bone_secret | default('')) }}"
+    BONE_PORT: "{{ bone_port }}"
+  register: _bone_hmac
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true   # secret in the environment
+  when: (_bone_health.status | default(0)) == 200
+
+- name: "[pazny.bone] Self-heal: full launchd reload when the running Bone has a stale secret"
+  when:
+    - (_bone_health.status | default(0)) == 200
+    - "'DESYNC' in (_bone_hmac.stdout | default(''))"
+    - (nos_service_manager | default('launchd')) != 'systemd-user'
+  block:
+    - name: "[pazny.bone] Reload Bone (bootout + bootstrap picks up the new env)"
+      ansible.builtin.shell: |
+        LABEL="{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
+        PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+        UID_NUM=$(id -u)
+        launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+      changed_when: true
+
+    - name: "[pazny.bone] Wait for Bone to answer again after reload"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ bone_port }}/api/health"
+        status_code: 200
+      register: _bone_rehealth
+      retries: 12
+      delay: 5
+      until: _bone_rehealth.status | default(0) == 200
+      failed_when: false
+
+    - name: "[pazny.bone] Re-verify HMAC after reload"
+      ansible.builtin.command:
+        argv: ["python3", "{{ role_path }}/files/hmac_selftest.py"]
+      environment:
+        WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default(bone_secret | default('')) }}"
+        BONE_PORT: "{{ bone_port }}"
+      register: _bone_hmac2
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: "[pazny.bone] HMAC self-heal result"
+      ansible.builtin.debug:
+        msg: >-
+          Bone HMAC self-heal: {{ 'RESOLVED — telemetry secret now matches'
+          if ('DESYNC' not in (_bone_hmac2.stdout | default('DESYNC')))
+          else 'STILL DESYNCED after reload — check wing_events_hmac_secret vs the plist' }}

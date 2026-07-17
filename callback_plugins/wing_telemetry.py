@@ -274,6 +274,12 @@ class HTTPTransport(object):
                 last_err = TransportError(
                     "bad status {}: {}".format(status,
                                                getattr(resp, "text", "")[:200]))
+                # 4xx is a CLIENT error (auth/schema) — not transient. Retrying
+                # a 401 secret-desync 3× just burns wall-clock; fail fast and let
+                # the circuit-breaker count it. Only 5xx / connection errors
+                # below are worth a backoff retry.
+                if status is not None and 400 <= status < 500:
+                    break
             except Exception as exc:  # noqa: BLE001 — any transport failure
                 last_err = exc
             if attempt < self.max_retries:
@@ -306,12 +312,32 @@ class SQLiteFallback(object):
         ON fallback_events(run_id);
     """
 
+    # Hard ceiling on retained fallback rows — a ring buffer. Prevents the
+    # unbounded growth that produced a 258 MB db (live 2026-07-17). Oldest rows
+    # are trimmed first; the operator's replay tool only ever needs the tail.
+    MAX_ROWS = 20000
+
     def __init__(self, path):
         self.path = path
+        # The default path lives under ~/.nos — make sure it exists (Docker /
+        # blank resets remove it) so connect() doesn't raise.
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        except OSError:
+            pass
         self._ensure_schema()
 
     def _conn(self):
-        return sqlite3.connect(self.path, timeout=5.0)
+        # WAL + a short busy_timeout: writers don't block on readers (so a stray
+        # reader can't starve us), and any residual lock wait is bounded to 2s
+        # instead of the old 5s — telemetry must never sit on a lock.
+        conn = sqlite3.connect(self.path, timeout=2.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=2000")
+        except sqlite3.Error:
+            pass
+        return conn
 
     def _ensure_schema(self):
         conn = self._conn()
@@ -337,6 +363,13 @@ class SQLiteFallback(object):
                 "INSERT INTO fallback_events (run_id, ts, type, payload) "
                 "VALUES (?, ?, ?, ?)",
                 rows,
+            )
+            # Ring-buffer trim: keep only the newest MAX_ROWS. One bounded
+            # DELETE per enqueue keeps the db small and writes fast.
+            conn.execute(
+                "DELETE FROM fallback_events WHERE id <= "
+                "(SELECT MAX(id) FROM fallback_events) - ?",
+                (self.MAX_ROWS,),
             )
             conn.commit()
         finally:
@@ -403,9 +436,20 @@ class CallbackModule(CallbackBase):
     # and would break a plain-HTTP plugin). Override with WING_EVENTS_URL when
     # running on a remote box.
     DEFAULT_URL = "http://127.0.0.1:8099/api/v1/events"
-    DEFAULT_SQLITE = "/tmp/nos-events-fallback.db"
+    # ~/.nos is the private runtime sidecar (doctrine), NOT world-shared /tmp.
+    # The old /tmp default let unrelated IDE indexers (e.g. Codeium/Windsurf
+    # language servers) open the growing db and hold read locks → the callback's
+    # write starved and CRAWLED the whole playbook (live 2026-07-17: a 258 MB
+    # /tmp/nos-events-fallback.db thrashed the page cache, minutes per write).
+    DEFAULT_SQLITE = os.path.join(
+        os.path.expanduser("~/.nos"), "events-fallback.db")
     DEFAULT_BATCH_SIZE = 10
     DEFAULT_FLUSH_INTERVAL = 5.0
+    # Circuit-breaker: after this many CONSECUTIVE transport failures, telemetry
+    # disables itself for the rest of the run — no more POST attempts, no more
+    # fallback writes. Observability must NEVER slow or wedge a run (the fallback
+    # crawl above). Reset to 0 on the first success. Tunable via env.
+    DEFAULT_FAILURE_THRESHOLD = 15
     SCHEMA_RELATIVE_PATH = "state/schema/event.schema.json"
 
     # ----- lifecycle -------------------------------------------------------
@@ -420,6 +464,18 @@ class CallbackModule(CallbackBase):
         self._run_id = new_run_id()
         self._buffer = []
         self._last_flush = time.time()
+
+        # Circuit-breaker state — telemetry self-disables after a run of
+        # consecutive transport failures so a broken pipeline (e.g. an HMAC
+        # secret desync between the callback and Bone) can never crawl the run.
+        self._consecutive_failures = 0
+        self._telemetry_disabled = False
+        try:
+            self._failure_threshold = int(os.environ.get(
+                "WING_EVENTS_FAILURE_THRESHOLD",
+                self.DEFAULT_FAILURE_THRESHOLD))
+        except (TypeError, ValueError):
+            self._failure_threshold = self.DEFAULT_FAILURE_THRESHOLD
 
         self._playbook_name = None
         self._play_name = None
@@ -672,13 +728,36 @@ class CallbackModule(CallbackBase):
         if not self._buffer:
             self._last_flush = time.time()
             return
+        # Circuit open — drop buffered events on the floor (no POST, no fallback
+        # write). Observability degraded, run unharmed. This is the guarantee
+        # that a broken telemetry pipeline can never slow or wedge the playbook.
+        if self._telemetry_disabled:
+            self._buffer = []
+            self._last_flush = time.time()
+            return
         batch = self._buffer
         self._buffer = []
         self._last_flush = time.time()
         try:
             if self._http is not None:
                 self._http.send_batch(batch)
+            self._consecutive_failures = 0  # success — reset the breaker
         except TransportError as exc:
+            self._consecutive_failures += 1
+            if self._consecutive_failures >= self._failure_threshold:
+                # Trip the breaker: stop trying for the rest of the run. Do NOT
+                # fallback-write this batch either — a systemic failure (secret
+                # desync, Bone down) would otherwise spill every remaining event
+                # to disk and thrash it. One warning, then silence.
+                self._telemetry_disabled = True
+                sys.stderr.write(
+                    "[wing_telemetry] transport failed %d times consecutively "
+                    "(%s) — DISABLING telemetry for this run so it cannot slow "
+                    "the playbook. Fix the pipeline (commonly an HMAC secret "
+                    "desync: callback vs Bone WING_EVENTS_HMAC_SECRET) and "
+                    "re-run.\n" % (self._consecutive_failures, exc))
+                sys.stderr.flush()
+                return
             if self._sqlite is not None:
                 try:
                     self._sqlite.enqueue(batch)

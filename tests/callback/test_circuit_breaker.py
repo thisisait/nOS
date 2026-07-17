@@ -1,0 +1,125 @@
+"""Robustness (2026-07-17): telemetry must never slow or wedge the playbook.
+
+Regression cover for the live incident where an HMAC secret desync between the
+callback and Bone made every event 401 → every event spilled to an unbounded
+/tmp SQLite db that grew to 258 MB and crawled the run (minutes per write).
+
+Guards:
+  1. circuit-breaker — after N consecutive transport failures telemetry
+     self-disables (no more POST, no more fallback write) for the run;
+  2. ring-buffer cap — the fallback db is bounded (never unbounded growth);
+  3. 4xx is not retried — a 401 secret-desync fails fast, not 3× backoff;
+  4. the fallback default lives under ~/.nos, not world-shared /tmp.
+"""
+from __future__ import annotations
+
+import os
+
+from tests.callback.conftest import FakePlay, FakePlaybook
+
+
+def _make_plugin(monkeypatch, tmp_path, threshold=None):
+    from callback_plugins import wing_telemetry as gt
+
+    monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
+    monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
+                       str(tmp_path / "fallback.db"))
+    monkeypatch.setenv("WING_EVENTS_BATCH_SIZE", "1")  # flush every event
+    if threshold is not None:
+        monkeypatch.setenv("WING_EVENTS_FAILURE_THRESHOLD", str(threshold))
+    plugin = gt.CallbackModule()
+    plugin._finalize_activation(None)
+    plugin.v2_playbook_on_start(FakePlaybook("main.yml"))
+    plugin.v2_playbook_on_play_start(FakePlay("p1"))
+    return gt, plugin
+
+
+def test_circuit_breaker_disables_after_threshold(monkeypatch, tmp_path):
+    gt, plugin = _make_plugin(monkeypatch, tmp_path, threshold=5)
+
+    class AlwaysFail:
+        def send_batch(self, events):
+            raise gt.TransportError("401 invalid signature")
+
+    plugin._http = AlwaysFail()
+
+    # Drive past the threshold.
+    for i in range(20):
+        plugin._emit("task_ok", task="t%d" % i)
+
+    assert plugin._telemetry_disabled is True
+    # Once tripped, the fallback stops growing — it holds at most the events
+    # spilled BEFORE the breaker opened (threshold-1), never all 20.
+    assert plugin._sqlite.count() < 20
+    assert plugin._sqlite.count() <= 5
+
+
+def test_success_resets_the_breaker(monkeypatch, tmp_path):
+    gt, plugin = _make_plugin(monkeypatch, tmp_path, threshold=5)
+
+    class FlakyThenOK:
+        def __init__(self):
+            self.calls = 0
+
+        def send_batch(self, events):
+            self.calls += 1
+            if self.calls <= 3:
+                raise gt.TransportError("temporary 503")
+
+    plugin._http = FlakyThenOK()
+    for i in range(6):
+        plugin._emit("task_ok", task="t%d" % i)
+
+    # 3 failures then successes — never reached the threshold of 5.
+    assert plugin._telemetry_disabled is False
+    assert plugin._consecutive_failures == 0
+
+
+def test_fallback_ring_buffer_is_bounded(monkeypatch, tmp_path):
+    from callback_plugins import wing_telemetry as gt
+
+    fb = gt.SQLiteFallback(str(tmp_path / "ring.db"))
+    monkeypatch.setattr(fb, "MAX_ROWS", 50, raising=False)
+    for i in range(200):
+        fb.enqueue([{"run_id": "r", "ts": "t", "type": "task_ok", "n": i}])
+    # Bounded to MAX_ROWS (+ at most the last batch), never all 200.
+    assert fb.count() <= 51
+
+
+def test_4xx_is_not_retried(monkeypatch, tmp_path):
+    from callback_plugins import wing_telemetry as gt
+    from tests.callback.test_http_transport import FakeRequests, FakeResponse
+
+    fake = FakeRequests([FakeResponse(status_code=401, text="bad sig")])
+    tr = gt.HTTPTransport("http://x/events", secret="s", session=fake,
+                          max_retries=3)
+    try:
+        tr.send_batch([{"ts": "t", "run_id": "r", "type": "task_ok"}])
+    except gt.TransportError:
+        pass
+    # A single POST — 401 is a client error, no backoff retries.
+    assert len(fake.calls) == 1
+
+
+def test_5xx_is_retried(monkeypatch):
+    from callback_plugins import wing_telemetry as gt
+    from tests.callback.test_http_transport import FakeRequests, FakeResponse
+
+    fake = FakeRequests([FakeResponse(status_code=503),
+                         FakeResponse(status_code=503),
+                         FakeResponse(status_code=503)])
+    tr = gt.HTTPTransport("http://x/events", secret="s", session=fake,
+                          max_retries=3, backoff_base=0.0)
+    try:
+        tr.send_batch([{"ts": "t", "run_id": "r", "type": "task_ok"}])
+    except gt.TransportError:
+        pass
+    assert len(fake.calls) == 3  # 5xx is transient — all retries used
+
+
+def test_default_fallback_path_is_private_sidecar_not_tmp():
+    from callback_plugins import wing_telemetry as gt
+
+    assert gt.CallbackModule.DEFAULT_SQLITE.endswith(
+        os.path.join(".nos", "events-fallback.db"))
+    assert not gt.CallbackModule.DEFAULT_SQLITE.startswith("/tmp")
