@@ -20,6 +20,14 @@ services:
       - "127.0.0.1:{{ gitea_ssh_port | default(2222) }}:22"
     volumes:
       - {{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}:/data
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # mkcert root CA so add-oauth's server-side discovery fetch trusts the
+      # LOCAL Traefik cert for https://auth.<tld>. Public tenants use the LE
+      # chain (already trusted), so this is gated to local. Gitea's rootless
+      # image runs update-ca-certificates over /usr/local/share/ca-certificates
+      # on boot. Pairs with the auth.<tld> extra_host above (D2 mkcert-CA gate).
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
     environment:
       USER_UID: "{{ ansible_facts['user_uid'] }}"
       USER_GID: "{{ ansible_facts['user_gid'] }}"
@@ -59,9 +67,22 @@ services:
       GITEA__mailer__USER: ""
       GITEA__mailer__PASSWD: ""
 {% endif %}
-{% if install_mailpit | default(false) %}
+{% if (install_mailpit | default(false)) or (install_authentik | default(false)) %}
     extra_hosts:
+{% if install_mailpit | default(false) %}
       - "host.docker.internal:host-gateway"
+{% endif %}
+{% if install_authentik | default(false) %}
+      # Gitea's `admin auth add-oauth --auto-discover-url` AND the runtime OIDC
+      # token exchange fetch https://auth.<tld>/…/.well-known/openid-configuration
+      # SERVER-SIDE. Docker's embedded DNS (127.0.0.11) can't resolve a public
+      # TLD → "lookup auth.pazny.eu … server misbehaving", so add-oauth failed
+      # silently (failed_when:false) and the loud verify caught an empty auth
+      # list (live 2026-07-17, ok=1262). Map auth.<tld> to the host gateway
+      # (Traefik :443) — same pattern as nextcloud-base. Required on PUBLIC
+      # tenants too (the LE cert is already trusted; only DNS was missing).
+      - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}
 {% endif %}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3000/api/v1/version"]
