@@ -307,6 +307,12 @@
   when:
     - _nc_container.stdout | default('') | length > 0
     - install_onlyoffice | default(false)
+    # Every sibling occ task tolerates a not-yet-installed NC (the DB has no
+    # oc_appconfig table → occ throws). This one MUST too, or a half-installed
+    # Nextcloud (config.php present, schema absent — the documented non-blank-
+    # after-path-move hazard) fatals the WHOLE play instead of skipping like its
+    # siblings. Guard on the same __NC_NOT_INSTALLED__ sentinel as lines 115/134.
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
 
 # Register OnlyOffice as the DEFAULT editor for office formats — else a
 # double-clicked .xlsx/.docx opens Nextcloud's fallback viewer (which can't
@@ -330,6 +336,7 @@
   when:
     - _nc_container.stdout | default('') | length > 0
     - install_onlyoffice | default(false)
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
   changed_when: false
   failed_when: false
   check_mode: false
